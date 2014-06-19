@@ -1,0 +1,30 @@
+PATH_SIMULATION   
+1  				simulation_type
+0				setup_type(1=warm_start)
+1				ensemble_type(1=NVT)
+10				ncycle1
+10				ncycle2
+1000				nshoot
+1000				nswaps
+1000				nswapstates   
+1000				nreverse
+20				beta
+0.01				dt_path
+1				friction
+
+100				check_freq
+1				graphics_freq
+
+PATH_PARAMETERS
+200                             nslices
+1                               ninter
+-15.0 				fixed_energy
+0.1				dvmax
+1				stable_min
+
+INITIAL_SYSTEM_PARAMETERS
+7                              npart
+8                               x_box_size(unit_cell_lattice)
+8                               y_box_size(unit_cell_lattice)
+8                               z_box_size(unit_cell_lattice)
+

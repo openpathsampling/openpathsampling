@@ -1,0 +1,55 @@
+
+
+
+cd crosshistAB_0
+perl ../WHAM_cuttoff.perl ../crosshistAB_0.dat 
+cd ..
+
+cd crosshistAB_1
+perl ../WHAM_cuttoff.perl ../crosshistAB_1.dat 
+cd ..
+
+cd crosshistAB_2
+perl ../WHAM_cuttoff.perl ../crosshistAB_2.dat 
+cd ..
+
+cd crosshistAB_3
+perl ../WHAM_cuttoff.perl ../crosshistAB_3.dat 
+cd ..
+
+cd crosshistAB_4
+perl ../WHAM_cuttoff.perl ../crosshistAB_4.dat 
+cd ..
+
+cd crosshistAB_5
+perl ../WHAM_cuttoff.perl ../crosshistAB_5.dat 
+cd ..
+
+cd crosshistAB_6
+perl ../WHAM_cuttoff.perl ../crosshistAB_6.dat 
+cd ..
+
+cd crosshistAB_7
+perl ../WHAM_cuttoff.perl ../crosshistAB_7.dat 
+cd ..
+
+cd crosshistAB_8
+perl ../WHAM_cuttoff.perl ../crosshistAB_8.dat 
+cd ..
+
+cd crosshistAB_9
+perl ../WHAM_cuttoff.perl ../crosshistAB_9.dat 
+cd ..
+
+cd crosshistAB_10
+perl ../WHAM_cuttoff.perl ../crosshistAB_10.dat 
+cd ..
+
+cd crosshistAB_11
+perl ../WHAM_cuttoff.perl ../crosshistAB_11.dat 
+cd ..
+
+cd crosshistAB_12
+perl ../WHAM_cuttoff.perl ../crosshistAB_12.dat 
+cd ..
+
