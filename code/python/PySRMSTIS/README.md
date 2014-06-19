@@ -27,23 +27,7 @@ if you try to install OpenMM on a Mac using 10.9  and especially a new MacBook P
   and the CUDA developer kit for Mac OS X 10.9 found at
   
   https://developer.nvidia.com/cuda-downloads
-
-### Installation Procedure
-1. create new directoy where you would like to install openmm, like `openmm`
-  ```
-  mkdir openmm
-  ```
-
-2. inside of it clone the github repository using the ssh github
-  ```
-  git clone git@github.com:SimTk/openmm.git
-  ```
-
-3. rename openmm to openmm.simtk to make sure that you always have the original version available
-  ```
-  mv openmm/ openmm.simtk
-  ```
-
+  
 4. install doxygen using
   ```
   sudo port install doxygen
@@ -61,6 +45,24 @@ if you try to install OpenMM on a Mac using 10.9  and especially a new MacBook P
 6. install fftw library for discrete fast fourier transformation
   ```
   sudo port install fftw-3-single
+  ```
+
+
+### Installation Procedure
+1. create new directoy where you would like to install openmm, like `openmm`
+  ```
+  mkdir openmm
+  cd openmm
+  ```
+
+2. inside of it clone the github repository using the ssh github
+  ```
+  git clone git@github.com:SimTk/openmm.git
+  ```
+
+3. rename (the inner) openmm to openmm.simtk to make sure that you always have the original version available
+  ```
+  mv openmm/ openmm.simtk
   ```
 
 7. run CMake to create the Makefile configuration `CMakeCache.txt`
