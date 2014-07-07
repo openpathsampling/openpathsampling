@@ -10,14 +10,20 @@ solvating a pdb structure
 
 """
 
+
+
 #imports
 from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
 import time
 
+numPlatforms = Platform.getNumPlatforms()
+print("There are", numPlatforms, "Platforms available:")
+print()
 
-platform = openmm.Platform.getPlatformByName("Reference") # platform to use <- change accordingly to Cuda or OpenCL
+platform = openmm.Platform.getPlatformByName('CPU') # platform to use <- change accordingly to Cuda or CPU
+print ('Platform used is ' + platform.getName())
 
 start_time = time.time()
 

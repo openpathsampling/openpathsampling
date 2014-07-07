@@ -1,0 +1,1283 @@
+% ********************************************************************
+% classicthesis-mystyle.sty 
+%  
+% Jan-Hendrik Prinz
+%
+% Thanks to Andr\'e Miede http://www.miede.de
+%
+% ********************************************************************  
+
+%\NeedsTeXFormat{LaTeX2e}
+%\ProvidesPackage{mystyle}[v1.0 My personal preamble for classic-thesis]
+
+% ********************************************************************
+% Do stuff
+% ********************************************************************
+
+
+%\usepackage[OMLmathrm,OMLmathbf]{isomath} % allows to get upright greek letters
+\usepackage{upgreek} 
+\usepackage{lscape} % allows landscape figure - I think this is absolete
+\usepackage{bbold} % allows bold greek letters
+
+%\usepackage{bibtopic} % cannot be used in lyx, so use only in LaTeX directly, allows multiple bibliographies
+
+\newcommand{\DeltaT}{\Delta t}
+
+% mathematical operators
+
+\DeclareMathOperator{\diag}{diag}
+\def\argmax{\mathop{\text{argmax}}} 
+
+% italicized boldface for math (e.g. vectors)
+%\newcommand{\bfv}[1]{{\mbox{\boldmath{$\mathrm{#1}$}}}}
+
+% non-italicized boldface for math (e.g. matrices)
+%\newcommand{\bfm}[1]{{\bf #1}}
+
+\renewcommand{\theenumi}{\arabic{enumi}}
+
+% short boldface math
+
+\newcommand{\bm}[1]{\mathbf{#1}}
+
+\newcommand{\expect}[1]{\left \langle #1 \right \rangle}                
+
+% main stlye of vectors, matrices, operators and functions
+
+\newcommand{\fn}[1]{\mathrm{#1}}								% rm
+\newcommand{\op}[1]{\mathrm{#1}}								% rm
+\renewcommand{\vec}[1]{\mathbf {#1}}							% bold
+\newcommand{\mat}[1]{{\mathbf {#1}}}							% bold
+
+\newcommand{\m}[1]{\mat{#1}}
+\renewcommand{\v}[1]{\vec{#1}}
+
+% small integration index
+
+\newcommand{\idx}[1]{\!\!\int\!\!\mbox{\scriptsize $\mathbf{d}#1\,$}}
+\newcommand{\dx}[1]{\!\mbox{\scriptsize $\mathbf{d}#1\,$}}
+
+%\newcommand{\q}{\vec{q}} 										% committor plain
+%\newcommand{\qc}{q} 											% committor plain (components)
+%\newcommand{\qf}{\q^{f}} 										% committor f(old)
+%\newcommand{\qfc}{\qc^{f}} 										% committor f(old) (components)
+%\newcommand{\qa}{\q^{\A}} 										% committor to A
+%\newcommand{\qac}{\qc^{\A}} 									% committor to A(components)
+%\newcommand{\qb}{\q^{\B}} 										% committor to B
+%\newcommand{\qbc}{\qc^{\B}} 									% committor to B(components)
+%\newcommand{\qX}[1]{\q^{#1}} 									% committor to X
+%\newcommand{\qXc}[1]{\qc^{#1}} 									% committor to X(components)
+\newcommand{\p}{\vec{p}} 										% propability vector
+\newcommand{\z}{\vec{z}} 										% phase space point
+\newcommand{\x}{\vec{x}} 										% general vector x
+\newcommand{\e}{\vec{e}} 										% canonical basis vectors
+\renewcommand{\l}{\vec{l}} 										% left eigenvectors
+\renewcommand{\r}{\vec{r}} 										% right eigenvectors
+
+\newcommand{\M}{\mat{M}} 										% diagonal mass matrix
+\newcommand{\T}{\mat{T}} 										% transition matrix
+%\newcommand{\Th}{\mat{\hat{T}}}									% transition matrix with hat
+\newcommand{\Thc}{\hat{T}} 										% transition matrix with hat (components)
+\newcommand{\R}{\mat{R}} 										% matrix of right eigenvectors
+\renewcommand{\L}{\mat{L}} 										% matrix of left eigenvectors
+\newcommand{\K}{\mat{K}} 										% rate matrix
+\renewcommand{\S}{\mat{S}} 										% mixing matrix
+
+\newcommand{\F}{\setF} 									% set F
+\newcommand{\A}{\setA} 									% set A
+\newcommand{\B}{\setB} 									% set B
+\newcommand{\Y}{\setY} 									% set Y
+	
+\newcommand{\grad}{\nabla}										% gradient
+\newcommand{\timeavg}[1]{\overline{#1}}    					% time average over a trajectory
+
+\newcommand{\bfc}{\bfm{c}}
+\newcommand{\hatf}{\hat{f}}
+
+\newcommand{\tr}[1]{{#1}^{\mathrm{T}}}							% transpose
+\newcommand{\inv}[1]{{#1}^{\text{-}1}}							% inverse
+\newcommand{\trinv}[1]{{#1}^{\mathrm{\text{-}T}}}				% inverse transpose
+
+\newcommand{\tohalf}[1]{{#1}^{\nicefrac{1}{2}}}				% power of 1/2
+\newcommand{\tomhalf}[1]{{#1}^{\text{-}\nicefrac{1}{2}}}		% power of -1/2
+
+\newcommand{\pT}[1]{{#1}^{\mathrm{T}}}							% transpose
+\newcommand{\pIT}[1]{{#1}^{\mathrm{\text{-}T}}}				% inverse transpose
+\newcommand{\pI}[1]{{#1}^{\text{-}1}}							% inverse
+\newcommand{\pM}[1]{{#1}^{\text{-}}}							% generalized symmetric inverse
+\newcommand{\pP}[1]{{#1}^{+}}									% Moore-Penrose Inverse (Pseudo-Inverse)
+\newcommand{\pC}[1]{{#1}^{*}}									% Conjugate Transpose
+\newcommand{\pA}[1]{{#1}^{\dagger}}								% Adjungated Operator
+\newcommand{\pRM}[2]{{#1}^{\mathrm{#2}}}						% superscript mathrm
+\newcommand{\pX}[1]{{#1}^{\mathrm{X}}}							% superscript X for clustered systems
+
+\newcommand{\bTheta}{\bfm{\Theta}}
+\newcommand{\btheta}{\bfm{\theta}}
+\newcommand{\bhatf}{\bfm{\hat{f}}}
+\newcommand{\Cov}[1]{\mathrm{cov}\left( #1 \right)}
+\newcommand{\Ept}[1]{{\mathrm E}\left[ #1 \right]}
+\newcommand{\Eptk}[2]{{\mathrm E}\left[ #2 \,|\, #1\right]}
+
+\newcommand{\kcalPerMol}{k\text{Cal}/\text{Mol}}
+\newcommand{\kB}{k_{\mathrm{B}}}
+
+\newcommand{\oft}{(t)}
+\newcommand{\oftau}{(\tau)}
+\newcommand{\oftb}{(\tau;\beta)}
+\newcommand{\ofbeta}{(\beta)}
+
+\newcommand{\Itau}{{\tau}}
+\newcommand{\Ittau}{{t+\tau}}
+\newcommand{\Itktau}{{t+k\tau}}
+\newcommand{\It}{{t}}
+
+\newcommand{\xHandle}{x^{\text{hdl}}}
+\newcommand{\xTotal}{x^{\text{tot}}}
+\newcommand{\xTrap}{x^{\text{trp}}}
+\newcommand{\xRNA}{x^{\text{rna}}}
+\newcommand{\xRNAc}{x^{\text{rna}}_{c}}
+
+\newcommand{\xHandleOne}{x^{\text{hdl(1)}}}
+\newcommand{\xHandleTwo}{x^{\text{hdl(2)}}}
+
+\newcommand{\UHandle}{U^{\text{hd}}}
+\newcommand{\UTotal}{U^{\text{Tot}}}
+\newcommand{\UTrap}{U^{\text{trp}}}
+\newcommand{\UHandleOne}{U^{\text{hdl(1)}}}
+\newcommand{\UHandleTwo}{U^{\text{hdl(2)}}}
+\newcommand{\URNA}{U^{\text{rna}}}
+\newcommand{\URNAc}{U^{\text{rna}}_{c}}
+\newcommand{\UEff}{U^{\text{eff}}}
+\newcommand{\UDistn}{U^{\text{dst}}_{n}}
+
+\newcommand{\LTwo}{L^{2}_{\mu}}
+
+\newcommand{\inBrackets}[1]{(#1)}
+
+\newcommand{\sOne}{\mathbb{1}}
+\newcommand{\vOne}{\v{1}}
+
+\newcommand{\back}[1]{{#1}^{\text{-}}}
+\newcommand{\forw}[1]{{#1}^{\text{+}}}
+
+\newcommand{\autocorr}{\text{acf}}
+\newcommand{\corr}{\text{cf}}
+
+\newcommand{\sgn}{\text{sgn}}
+
+\newcommand{\tuple}{\mathrm{T}}
+\newcommand{\perm}{\mathrm{P}}
+\newcommand{\permP}{\perm^{+}}
+
+\newcommand{\ginv}[1]{\left[{#1}\right]^{\text{+}}} % generalized inverse / moore-penrose inverse
+
+\usepackage{myHyphenation}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  \set... Sets
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\asSet}[1]{\mathrm{#1}}
+
+\newcommand{\setA}{\asSet{A}}
+\newcommand{\setB}{\asSet{B}}
+\newcommand{\setC}{\asSet{C}}
+\newcommand{\setI}{\asSet{I}}
+\newcommand{\setF}{\asSet{F}}
+\newcommand{\setM}{\asSet{M}}
+\newcommand{\setN}{\asSet{N}}
+\newcommand{\setP}{\asSet{P}}
+\newcommand{\setQ}{\asSet{Q}}
+\newcommand{\setT}{\asSet{T}}
+\newcommand{\setX}{\asSet{X}}
+\newcommand{\setY}{\asSet{Y}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  \m[Symbol][X - Upper X indicator for projected][T - Transpose][I - Inverse]... Matrices
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\Idn}[1]{{\text{Id}_{#1}}}
+\newcommand{\Id}{{\text{Id}}}
+
+\newcommand{\deltaij}{\delta_{\Iij}}
+\newcommand{\Idij}{\Deltaij}
+
+% - A
+\newcommand{\mA}{\m{A}}
+\newcommand{\mAX}{\pX{\mA}}
+\newcommand{\mAXB}{\inBrackets{ \mAX }}
+\newcommand{\mAI}{\inv{\mA}}
+\newcommand{\mAT}{\tr{\mA}}
+\newcommand{\mATI}{\trinv{\mA}}
+\newcommand{\mAXI}{\inv{\mAXB}}
+\newcommand{\mAXT}{\tr{\mAXB}}
+\newcommand{\mAXTI}{\trinv{\mAXB}}
+
+% - B
+\newcommand{\mB}{\m{B}}
+\newcommand{\mBX}{\pX{\mB}}
+\newcommand{\mBXB}{\inBrackets{ \mBX }}
+\newcommand{\mBI}{\inv{\mB}}
+\newcommand{\mBT}{\tr{\mB}}
+\newcommand{\mBTI}{\trinv{\mB}}
+\newcommand{\mBXI}{\inv{\mBXB}}
+\newcommand{\mBXT}{\tr{\mBXB}}
+\newcommand{\mBXTI}{\trinv{\mBXB}}
+
+% - C (correlation matrix / observation matrix)
+\newcommand{\mC}{\m{C}}
+\newcommand{\mCX}{\pX{\mC}}
+\newcommand{\mCXB}{\inBrackets{ \mCX }}
+\newcommand{\mCI}{\inv{\mC}}
+\newcommand{\mCT}{\tr{\mC}}
+\newcommand{\mCTI}{\trinv{\mC}}
+\newcommand{\mCXI}{\inv{\mCXB}}
+\newcommand{\mCXT}{\tr{\mCXB}}
+\newcommand{\mCXTI}{\trinv{\mCXB}}
+
+% - Ch (correlation matrix / observation matrix with hat)
+\newcommand{\mCh}{\hat{\m{C}}}
+\newcommand{\mChX}{\pX{\mCh}}
+\newcommand{\mChXB}{\inBrackets{ \mChX }}
+\newcommand{\mChI}{\inv{\mCh}}
+\newcommand{\mChT}{\tr{\mCh}}
+\newcommand{\mChTI}{\trinv{\mCh}}
+\newcommand{\mChXI}{\inv{\mChXB}}
+\newcommand{\mChXT}{\tr{\mChXB}}
+\newcommand{\mChXTI}{\trinv{\mChXB}}
+
+% - D (dual matrix / reweighting with stationary distribution)
+\newcommand{\mD}{\m{D}}
+\newcommand{\mDX}{\pX{\mD}}
+\newcommand{\mDXB}{\inBrackets{ \mDX }}
+\newcommand{\mDI}{\inv{\mD}}
+\newcommand{\mDT}{\tr{\mD}}
+\newcommand{\mDTI}{\trinv{\mD}}
+\newcommand{\mDXI}{\inv{\mDXB}}
+\newcommand{\mDXT}{\tr{\mDXB}}
+\newcommand{\mDXTI}{\trinv{\mDXB}}
+
+% - E
+\newcommand{\mE}{\m{E}}
+\newcommand{\mEX}{\pX{\mE}}
+\newcommand{\mEXB}{\inBrackets{ \mEX }}
+\newcommand{\mEI}{\inv{\mE}}
+\newcommand{\mET}{\tr{\mE}}
+\newcommand{\mETI}{\trinv{\mE}}
+\newcommand{\mEXI}{\inv{\mEXB}}
+\newcommand{\mEXT}{\tr{\mEXB}}
+\newcommand{\mEXTI}{\trinv{\mEXB}}
+
+% - F 
+\newcommand{\mF}{\m{F}}
+\newcommand{\mFX}{\pX{\mF}}
+\newcommand{\mFXB}{\inBrackets{ \mFX }}
+\newcommand{\mFI}{\inv{\mF}}
+\newcommand{\mFT}{\tr{\mF}}
+\newcommand{\mFTI}{\trinv{\mF}}
+\newcommand{\mFXI}{\inv{\mFXB}}
+\newcommand{\mFXT}{\tr{\mFXB}}
+\newcommand{\mFXTI}{\trinv{\mFXB}}
+
+% - G (rate matrix)
+\newcommand{\mG}{\m{G}}
+\newcommand{\mGX}{\pX{\mG}}
+\newcommand{\mGXB}{\inBrackets{ \mGX }}
+\newcommand{\mGI}{\inv{\mG}}
+\newcommand{\mGT}{\tr{\mG}}
+\newcommand{\mGTI}{\trinv{\mG}}
+\newcommand{\mGXI}{\inv{\mGXB}}
+\newcommand{\mGXT}{\tr{\mGXB}}
+\newcommand{\mGXTI}{\trinv{\mGXB}}
+
+% - H 
+\newcommand{\mH}{\m{H}}
+\newcommand{\mHX}{\pX{\mH}}
+\newcommand{\mHXB}{\inBrackets{ \mHX }}
+\newcommand{\mHI}{\inv{\mH}}
+\newcommand{\mHT}{\tr{\mH}}
+\newcommand{\mHTI}{\trinv{\mH}}
+\newcommand{\mHXI}{\inv{\mHXB}}
+\newcommand{\mHXT}{\tr{\mHXB}}
+\newcommand{\mHXTI}{\trinv{\mHXB}}
+
+% - K
+\newcommand{\mK}{\m{K}}
+\newcommand{\mKX}{\pX{\mK}}
+\newcommand{\mKXB}{\inBrackets{ \mKX }}
+\newcommand{\mKI}{\inv{\mK}}
+\newcommand{\mKT}{\tr{\mK}}
+\newcommand{\mKTI}{\trinv{\mK}}
+\newcommand{\mKXI}{\inv{\mKXB}}
+\newcommand{\mKXT}{\tr{\mKXB}}
+\newcommand{\mKXTI}{\trinv{\mKXB}}
+
+% - L (left eigenvectors)
+\newcommand{\mL}{\m{L}}
+\newcommand{\mLX}{\pX{\mL}}
+\newcommand{\mLXB}{\inBrackets{ \mLX }}
+\newcommand{\mLI}{\inv{\mL}}
+\newcommand{\mLT}{\tr{\mL}}
+\newcommand{\mLTI}{\trinv{\mL}}
+\newcommand{\mLXI}{\inv{\mLXB}}
+\newcommand{\mLXT}{\tr{\mLXB}}
+\newcommand{\mLXTI}{\trinv{\mLXB}}
+
+% - \Lambda (matrix of eigenvalues)
+\newcommand{\mLambda}{ \m{\boldsymbol \Lambda}}
+\newcommand{\mLambdaX}{\pX{\mLambda}}
+\newcommand{\mLambdaXB}{\inBrackets{ \mLambdaX }}
+\newcommand{\mLambdaI}{\inv{\mLambda}}
+\newcommand{\mLambdaT}{\tr{\mLambda}}
+\newcommand{\mLambdaTI}{\trinv{\mLambda}}
+\newcommand{\mLambdaXI}{\inv{\mLambdaXB}}
+\newcommand{\mLambdaXT}{\tr{\mLambdaXB}}
+\newcommand{\mLambdaXTI}{\trinv{\mLambdaXB}}
+
+% - \Phi
+\newcommand{\mPhi}{ \m{\boldsymbol \Phi}}
+\newcommand{\mPhiX}{\pX{\mPhi}}
+\newcommand{\mPhiXB}{\inBrackets{ \mPhiX }}
+\newcommand{\mPhiI}{\inv{\mPhi}}
+\newcommand{\mPhiT}{\tr{\mPhi}}
+\newcommand{\mPhiTI}{\trinv{\mPhi}}
+\newcommand{\mPhiXI}{\inv{\mPhiXB}}
+\newcommand{\mPhiXT}{\tr{\mPhiXB}}
+\newcommand{\mPhiXTI}{\trinv{\mPhiXB}}
+
+% - \Psi
+\newcommand{\mPsi}{ \m{\boldsymbol \Psi}}
+\newcommand{\mPsiX}{\pX{\mPsi}}
+\newcommand{\mPsiXB}{\inBrackets{ \mPsiX }}
+\newcommand{\mPsiI}{\inv{\mPsi}}
+\newcommand{\mPsiT}{\tr{\mPsi}}
+\newcommand{\mPsiTI}{\trinv{\mPsi}}
+\newcommand{\mPsiXI}{\inv{\mPsiXB}}
+\newcommand{\mPsiXT}{\tr{\mPsiXB}}
+\newcommand{\mPsiXTI}{\trinv{\mPsiXB}}
+
+% - \Pi
+\newcommand{\mPi}{ \m{\boldsymbol \Pi}}
+\newcommand{\mPiX}{\pX{\mPi}}
+\newcommand{\mPiXB}{\inBrackets{ \mPiX }}
+\newcommand{\mPiI}{\inv{\mPi}}
+\newcommand{\mPiT}{\tr{\mPi}}
+\newcommand{\mPiTI}{\trinv{\mPi}}
+\newcommand{\mPiXI}{\inv{\mPiXB}}
+\newcommand{\mPiXT}{\tr{\mPiXB}}
+\newcommand{\mPiXTI}{\trinv{\mPiXB}}
+
+% - M
+\newcommand{\mM}{\m{M}}
+\newcommand{\mMX}{\pX{\mM}}
+\newcommand{\mMXB}{\inBrackets{ \mMX }}
+\newcommand{\mMI}{\inv{\mM}}
+\newcommand{\mMT}{\tr{\mM}}
+\newcommand{\mMTI}{\trinv{\mM}}
+\newcommand{\mMXI}{\inv{\mMXB}}
+\newcommand{\mMXT}{\tr{\mMXB}}
+\newcommand{\mMXTI}{\trinv{\mMXB}}
+
+% - N
+\newcommand{\mN}{\m{N}}
+\newcommand{\mNX}{\pX{\mN}}
+\newcommand{\mNXB}{\inBrackets{ \mNX }}
+\newcommand{\mNI}{\inv{\mN}}
+\newcommand{\mNT}{\tr{\mN}}
+\newcommand{\mNTI}{\trinv{\mN}}
+\newcommand{\mNXI}{\inv{\mNXB}}
+\newcommand{\mNXT}{\tr{\mNXB}}
+\newcommand{\mNXTI}{\trinv{\mNXB}}
+
+% - O
+\newcommand{\mO}{\m{O}}
+\newcommand{\mOX}{\pX{\mO}}
+\newcommand{\mOXB}{\inBrackets{ \mOX }}
+\newcommand{\mOI}{\inv{\mO}}
+\newcommand{\mOT}{\tr{\mO}}
+\newcommand{\mOTI}{\trinv{\mO}}
+\newcommand{\mOXI}{\inv{\mOXB}}
+\newcommand{\mOXT}{\tr{\mOXB}}
+\newcommand{\mOXTI}{\trinv{\mOXB}}
+
+% - P
+\newcommand{\mP}{\m{P}}
+\newcommand{\mPX}{\pX{\mP}}
+\newcommand{\mPXB}{\inBrackets{ \mPX }}
+\newcommand{\mPI}{\inv{\mP}}
+\newcommand{\mPT}{\tr{\mP}}
+\newcommand{\mPTI}{\trinv{\mP}}
+\newcommand{\mPXI}{\inv{\mPXB}}
+\newcommand{\mPXT}{\tr{\mPXB}}
+\newcommand{\mPXTI}{\trinv{\mPXB}}
+
+% - Q (projected left eigenvectors)
+\newcommand{\mQ}{\m{Q}}
+\newcommand{\mQX}{\pX{\mQ}}
+\newcommand{\mQXB}{\inBrackets{ \mQX }}
+\newcommand{\mQI}{\inv{\mQ}}
+\newcommand{\mQT}{\tr{\mQ}}
+\newcommand{\mQTI}{\trinv{\mQ}}
+\newcommand{\mQXI}{\inv{\mQXB}}
+\newcommand{\mQXT}{\tr{\mQXB}}
+\newcommand{\mQXTI}{\trinv{\mQXB}}
+
+% - R (right eigenvectors)
+\newcommand{\mR}{\m{R}}
+\newcommand{\mRX}{\pX{\mR}}
+\newcommand{\mRXB}{\inBrackets{ \mRX }}
+\newcommand{\mRI}{\inv{\mR}}
+\newcommand{\mRT}{\tr{\mR}}
+\newcommand{\mRTI}{\trinv{\mR}}
+\newcommand{\mRXI}{\inv{\mRXB}}
+\newcommand{\mRXT}{\tr{\mRXB}}
+\newcommand{\mRXTI}{\trinv{\mRXB}}
+
+% - S
+\newcommand{\mS}{\m{S}}
+\newcommand{\mSX}{\pX{\mS}}
+\newcommand{\mSXB}{\inBrackets{ \mSX }}
+\newcommand{\mSI}{\inv{\mS}}
+\newcommand{\mST}{\tr{\mS}}
+\newcommand{\mSTI}{\trinv{\mS}}
+\newcommand{\mSXI}{\inv{\mSXB}}
+\newcommand{\mSXT}{\tr{\mSXB}}
+\newcommand{\mSXTI}{\trinv{\mSXB}}
+
+% - T (transition matrix)
+\newcommand{\mT}{\m{T}}
+\newcommand{\mTX}{\pX{\mT}}
+\newcommand{\mTXB}{\inBrackets{ \mTX }}
+\newcommand{\mTI}{\inv{\mT}}
+\newcommand{\mTT}{\tr{\mT}}
+\newcommand{\mTTI}{\trinv{\mT}}
+\newcommand{\mTXI}{\inv{\mTXB}}
+\newcommand{\mTXT}{\tr{\mTXB}}
+\newcommand{\mTXTI}{\trinv{\mTXB}}
+
+% - Th (transition matrix with hat)
+\newcommand{\mTh}{\hat{\m{T}}}
+\newcommand{\mThX}{\pX{\mTh}}
+\newcommand{\mThXB}{\inBrackets{ \mThX }}
+\newcommand{\mThI}{\inv{\mTh}}
+\newcommand{\mThT}{\tr{\mTh}}
+\newcommand{\mThTI}{\trinv{\mTh}}
+\newcommand{\mThXI}{\inv{\mThXB}}
+\newcommand{\mThXT}{\tr{\mThXB}}
+\newcommand{\mThXTI}{\trinv{\mThXB}}
+
+% - Tt (transition matrix with tilde)
+\newcommand{\Tt}{\tilde{\m{T}}}
+\newcommand{\TtX}{\pX{\Tt}}
+\newcommand{\TtXB}{\inBrackets{ \TtX }}
+\newcommand{\TtI}{\inv{\Tt}}
+\newcommand{\TtT}{\tr{\Tt}}
+\newcommand{\TtTI}{\trinv{\Tt}}
+\newcommand{\TtXI}{\inv{\TtXB}}
+\newcommand{\TtXT}{\tr{\TtXB}}
+\newcommand{\TtXTI}{\trinv{\TtXB}}
+
+% - TAB (transition matrix)
+\newcommand{\mTAB}{\tilde{\m{T}}}
+\newcommand{\mTABB}{\inBrackets{ \mTAB }}
+\newcommand{\mTABX}{\inBrackets{ \pX{\mTAB}}}
+\newcommand{\mTABXB}{\inBrackets{ \mTABX }}
+\newcommand{\mTABI}{\inv{\mTABB}}
+\newcommand{\mTABT}{\tr{\mTABB}}
+\newcommand{\mTABTI}{\trinv{\mTABB}}
+\newcommand{\mTABXI}{\inv{\mTABXB}}
+\newcommand{\mTABXT}{\tr{\mTABXB}}
+\newcommand{\mTABXTI}{\trinv{\mTABXB}}
+
+% - U (transition matrix)
+\newcommand{\mU}{\m{U}}
+\newcommand{\mUX}{\pX{\mU}}
+\newcommand{\mUXB}{\inBrackets{ \mUX }}
+\newcommand{\mUI}{\inv{\mU}}
+\newcommand{\mUT}{\tr{\mU}}
+\newcommand{\mUTI}{\trinv{\mU}}
+\newcommand{\mUXI}{\inv{\mUXB}}
+\newcommand{\mUXT}{\tr{\mUXB}}
+\newcommand{\mUXTI}{\trinv{\mUXB}}
+
+% - V (transition matrix)
+\newcommand{\mV}{\m{V}}
+\newcommand{\mVX}{\pX{\mV}}
+\newcommand{\mVXB}{\inBrackets{ \mVX }}
+\newcommand{\mVI}{\inv{\mV}}
+\newcommand{\mVT}{\tr{\mV}}
+\newcommand{\mVTI}{\trinv{\mV}}
+\newcommand{\mVXI}{\inv{\mVXB}}
+\newcommand{\mVXT}{\tr{\mVXB}}
+\newcommand{\mVXTI}{\trinv{\mVXB}}
+
+% - W (weight matrix - dynamical reweighting)
+\newcommand{\mW}{\m{W}}
+\newcommand{\mWX}{\pX{\mW}}
+\newcommand{\mWXB}{\inBrackets{ \mWX }}
+\newcommand{\mWI}{\inv{\mW}}
+\newcommand{\mWT}{\tr{\mW}}
+\newcommand{\mWTI}{\trinv{\mW}}
+\newcommand{\mWXI}{\inv{\mWXB}}
+\newcommand{\mWXT}{\tr{\mWXB}}
+\newcommand{\mWXTI}{\trinv{\mWXB}}
+
+% - X (projection matrix)
+\newcommand{\mX}{\m{X}}
+\newcommand{\mXX}{\pX{\mX}}
+\newcommand{\mXXB}{\inBrackets{ \mXX }}
+\newcommand{\mXI}{\inv{\mX}}
+\newcommand{\mXT}{\tr{\mX}}
+\newcommand{\mXTI}{\trinv{\mX}}
+\newcommand{\mXXI}{\inv{\mXXB}}
+\newcommand{\mXXT}{\tr{\mXXB}}
+\newcommand{\mXXTI}{\trinv{\mXXB}}
+
+% - Y (generalized eigenvectors / inverse projected eigenvectors)
+\newcommand{\mY}{\m{Y}}
+\newcommand{\mYX}{\pX{\mY}}
+\newcommand{\mYXB}{\inBrackets{ \mYX }}
+\newcommand{\mYI}{\inv{\mY}}
+\newcommand{\mYT}{\tr{\mY}}
+\newcommand{\mYTI}{\trinv{\mY}}
+\newcommand{\mYXI}{\inv{\mYXB}}
+\newcommand{\mYXT}{\tr{\mYXB}}
+\newcommand{\mYXTI}{\trinv{\mYXB}}
+
+% - Z (count matrix)
+\newcommand{\mZ}{\m{Z}}
+\newcommand{\mZX}{\pX{\mZ}}
+\newcommand{\mZXB}{\inBrackets{ \mZX }}
+\newcommand{\mZI}{\inv{\mZ}}
+\newcommand{\mZT}{\tr{\mZ}}
+\newcommand{\mZTI}{\trinv{\mZ}}
+\newcommand{\mZXI}{\inv{\mZXB}}
+\newcommand{\mZXT}{\tr{\mZXB}}
+\newcommand{\mZXTI}{\trinv{\mZXB}}
+
+% - \Sigma (count matrix)
+\newcommand{\mSigma}{\m{\boldsymbol \Sigma}}
+\newcommand{\mSigmaX}{\pX{\mSigma}}
+\newcommand{\mSigmaXB}{\inBrackets{ \mSigmaX }}
+\newcommand{\mSigmaI}{\inv{\mSigma}}
+\newcommand{\mSigmaT}{\tr{\mSigma}}
+\newcommand{\mSigmaTI}{\trinv{\mSigma}}
+\newcommand{\mSigmaXI}{\inv{\mSigmaXB}}
+\newcommand{\mSigmaXT}{\tr{\mSigmaXB}}
+\newcommand{\mSigmaXTI}{\trinv{\mSigmaXB}}
+
+% - \Theta 
+\newcommand{\mTheta}{\m{\boldsymbol \Theta}}
+\newcommand{\mThetaX}{\pX{\mTheta}}
+\newcommand{\mThetaXB}{\inBrackets{ \mThetaX }}
+\newcommand{\mThetaI}{\inv{\mTheta}}
+\newcommand{\mThetaT}{\tr{\mTheta}}
+\newcommand{\mThetaTI}{\trinv{\mTheta}}
+\newcommand{\mThetaXI}{\inv{\mThetaXB}}
+\newcommand{\mThetaXT}{\tr{\mThetaXB}}
+\newcommand{\mThetaXTI}{\trinv{\mThetaXB}}
+
+% - \Thetah 
+\newcommand{\mThetah}{\hat{\m{\boldsymbol \Theta}}}
+\newcommand{\mThetahX}{\pX{\mThetah}}
+\newcommand{\mThetahXB}{\inBrackets{ \mThetahX }}
+\newcommand{\mThetahI}{\inv{\mThetah}}
+\newcommand{\mThetahT}{\tr{\mThetah}}
+\newcommand{\mThetahTI}{\trinv{\mThetah}}
+\newcommand{\mThetahXI}{\inv{\mThetahXB}}
+\newcommand{\mThetahXT}{\tr{\mThetahXB}}
+\newcommand{\mThetahXTI}{\trinv{\mThetahXB}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  Operators \op[Symbol][T Transposed][I Inverse]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% - A
+\newcommand{\opA}{\op{A}}
+\newcommand{\opAB}{\inBrackets{ \opA }}
+\newcommand{\opAT}{\tr{\opA}}
+\newcommand{\opAI}{\inv{\opA}}
+\newcommand{\opATI}{\trinv{\opA}}
+
+% - Dual D
+\newcommand{\opDual}{\op{D}}
+\newcommand{\opDualB}{\inBrackets{ \opDual }}
+\newcommand{\opDualT}{\tr{\opDual}}
+\newcommand{\opDualI}{\inv{\opDual}}
+\newcommand{\opDualTI}{\trinv{\opDual}}
+
+% - Propagator Q
+\newcommand{\opProp}{\op{Q}}
+\newcommand{\opPropB}{\inBrackets{ \opProp }}
+\newcommand{\opPropT}{\tr{\opProp}}
+\newcommand{\opPropI}{\inv{\opProp}}
+\newcommand{\opPropTI}{\trinv{\opProp}}
+
+% - Projection X
+\newcommand{\opProj}{\op{X}}
+\newcommand{\opProjB}{\inBrackets{ \opProj }}
+\newcommand{\opProjT}{\tr{\opProj}}
+\newcommand{\opProjI}{\inv{\opProj}}
+\newcommand{\opProjTI}{\trinv{\opProj}}
+
+% - Single Projection Operator P
+\newcommand{\fnProj}{\mathcal{P}}
+\newcommand{\fnProjB}{\inBrackets{ \fnProj }}
+\newcommand{\fnProjT}{\tr{\fnProj}}
+\newcommand{\fnProjI}{\inv{\fnProj}}
+\newcommand{\fnProjTI}{\trinv{\fnProj}}
+
+% - L
+\newcommand{\opL}{\op{L}}
+\newcommand{\opLB}{\inBrackets{ \opL }}
+\newcommand{\opLT}{\tr{\opL}}
+\newcommand{\opLI}{\inv{\opL}}
+\newcommand{\opLTI}{\trinv{\opL}}
+
+% - M
+\newcommand{\opM}{\op{M}}
+\newcommand{\opMB}{\inBrackets{ \opM }}
+\newcommand{\opMT}{\tr{\opM}}
+\newcommand{\opMI}{\inv{\opM}}
+\newcommand{\opMTI}{\trinv{\opM}}
+
+% - P
+\newcommand{\opP}{\op{P}}
+\newcommand{\opPB}{\inBrackets{ \opP }}
+\newcommand{\opPT}{\tr{\opP}}
+\newcommand{\opPI}{\inv{\opP}}
+\newcommand{\opPTI}{\trinv{\opP}}
+
+% - Q
+\newcommand{\opQ}{\op{Q}}
+\newcommand{\opQB}{\inBrackets{ \opQ }}
+\newcommand{\opQT}{\tr{\opQ}}
+\newcommand{\opQI}{\inv{\opQ}}
+\newcommand{\opQTI}{\trinv{\opQ}}
+
+% - T
+\newcommand{\opT}{\op{T}}
+\newcommand{\opTB}{\inBrackets{ \opT }}
+\newcommand{\opTT}{\tr{\opT}}
+\newcommand{\opTI}{\inv{\opT}}
+\newcommand{\opTTI}{\trinv{\opT}}
+
+% - U
+\newcommand{\opU}{\op{U}}
+\newcommand{\opUB}{\inBrackets{ \opU }}
+\newcommand{\opUT}{\tr{\opU}}
+\newcommand{\opUI}{\inv{\opU}}
+\newcommand{\opUTI}{\trinv{\opU}}
+
+% - T^X
+\newcommand{\opTX}{{\opT}^{\mathrm{X}}}
+\newcommand{\opTXB}{\inBrackets{ \opTX }}
+\newcommand{\opTXT}{\tr{\opTXB}}
+\newcommand{\opTXI}{\inv{\opTXB}}
+\newcommand{\opTXTI}{\trinv{\opTXB}}
+
+% - X
+\newcommand{\opX}{\op{X}}
+\newcommand{\opXB}{\inBrackets{ \opX }}
+\newcommand{\opXT}{\tr{\opX}}
+\newcommand{\opXI}{\inv{\opX}}
+\newcommand{\opXTI}{\trinv{\opX}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  Vectors \v[Symbol][X Upper X][T Transposed]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% - a
+\newcommand{\va}{\v{a}}
+\newcommand{\vaX}{\pX{\va}}
+\newcommand{\vaXB}{\inBrackets{ \vaX }}
+\newcommand{\vaT}{\tr{\va}}
+\newcommand{\vaXT}{\tr{\vaXB}}
+
+
+% - b
+\newcommand{\vb}{\v{b}}
+\newcommand{\vbX}{\pX{\vb}}
+\newcommand{\vbXB}{\inBrackets{ \vbX }}
+\newcommand{\vbT}{\tr{\vb}}
+\newcommand{\vbXT}{\tr{\vbXB}}
+
+% - c
+\newcommand{\vc}{\v{c}}
+\newcommand{\vcX}{\pX{\vc}}
+\newcommand{\vcXB}{\inBrackets{ \vcX }}
+\newcommand{\vcT}{\tr{\vc}}
+\newcommand{\vcXT}{\tr{\vcXB}}
+
+% - e
+\newcommand{\ve}{\v{e}}
+\newcommand{\veX}{\pX{\ve}}
+\newcommand{\veXB}{\inBrackets{ \veX }}
+\newcommand{\veT}{\tr{\ve}}
+\newcommand{\veXT}{\tr{\veXB}}
+
+% - g
+\newcommand{\vg}{\v{g}}
+\newcommand{\vgX}{\pX{\vg}}
+\newcommand{\vgXB}{\inBrackets{ \vgX }}
+\newcommand{\vgT}{\tr{\vg}}
+\newcommand{\vgXT}{\tr{\vgXB}}
+
+% - i
+\newcommand{\vi}{\v{i}}
+\newcommand{\viX}{\pX{\vi}}
+\newcommand{\viXB}{\inBrackets{ \viX }}
+\newcommand{\viT}{\tr{\vi}}
+\newcommand{\viXT}{\tr{\viXB}}
+
+% - j
+\newcommand{\vj}{\v{j}}
+\newcommand{\vjX}{\pX{\vj}}
+\newcommand{\vjXB}{\inBrackets{ \vjX }}
+\newcommand{\vjT}{\tr{\vj}}
+\newcommand{\vjXT}{\tr{\vjXB}}
+
+% - k
+\newcommand{\vk}{\v{k}}
+\newcommand{\vkX}{\pX{\vk}}
+\newcommand{\vkXB}{\inBrackets{ \vkX }}
+\newcommand{\vkT}{\tr{\vk}}
+\newcommand{\vkXT}{\tr{\vkXB}}
+
+% - l
+\newcommand{\vl}{\v{l}}
+\newcommand{\vlX}{\pX{\vl}}
+\newcommand{\vlXB}{\inBrackets{ \vlX }}
+\newcommand{\vlT}{\tr{\vl}}
+\newcommand{\vlXT}{\tr{\vlXB}}
+
+% - m
+\newcommand{\vm}{\v{m}}
+\newcommand{\vmX}{\pX{\vm}}
+\newcommand{\vmXB}{\inBrackets{ \vmX }}
+\newcommand{\vmT}{\tr{\vm}}
+\newcommand{\vmXT}{\tr{\vmXB}}
+
+% - p
+\newcommand{\vp}{\v{p}}
+\newcommand{\vpX}{\pX{\vp}}
+\newcommand{\vpXB}{\inBrackets{ \vpX }}
+\newcommand{\vpT}{\tr{\vp}}
+\newcommand{\vpXT}{\tr{\vpXB}}
+
+% - q+
+\newcommand{\vqp}{\v{q}^{\text{+}}}
+\newcommand{\vqpX}{\pX{\vqp}}
+\newcommand{\vqpXB}{\inBrackets{ \vqpX }}
+\newcommand{\vqpT}{\inBrackets{\tr{\vqp}}}
+\newcommand{\vqpXT}{\tr{\vqpXB}}
+
+% - q-
+\newcommand{\vqm}{\v{q}^{\text{-}}}
+\newcommand{\vqmX}{\pX{\vqm}}
+\newcommand{\vqmXB}{\inBrackets{ \vqmX }}
+\newcommand{\vqmT}{\inBrackets{\tr{\vqm}}}
+\newcommand{\vqmXT}{\tr{\vqmXB}}
+
+% - q
+\newcommand{\vq}{\v{q}}
+\newcommand{\vqX}{\pX{\vq}}
+\newcommand{\vqXB}{\inBrackets{ \vqX }}
+\newcommand{\vqT}{\tr{\vq}}
+\newcommand{\vqXT}{\tr{\vqXB}}
+
+% - r
+\renewcommand{\vr}{\v{r}}
+\newcommand{\vrX}{\pX{\vr}}
+\newcommand{\vrXB}{\inBrackets{ \vrX }}
+\newcommand{\vrT}{\tr{\vr}}
+\newcommand{\vrXT}{\tr{\vrXB}}
+
+% - t
+\newcommand{\vt}{\v{t}}
+\newcommand{\vtX}{\pX{\vt}}
+\newcommand{\vtXB}{\inBrackets{ \vtX }}
+\newcommand{\vtT}{\tr{\vt}}
+\newcommand{\vtXT}{\tr{\vtXB}}
+
+% - u
+\newcommand{\vu}{\v{u}}
+\newcommand{\vuX}{\pX{\vu}}
+\newcommand{\vuXB}{\inBrackets{ \vuX }}
+\newcommand{\vuT}{\tr{\vu}}
+\newcommand{\vuXT}{\tr{\vuXB}}
+
+% - v
+\newcommand{\vv}{\v{v}}
+\newcommand{\vvX}{\pX{\vv}}
+\newcommand{\vvXB}{\inBrackets{ \vvX }}
+\newcommand{\vvT}{\tr{\vv}}
+\newcommand{\vvXT}{\tr{\vvXB}}
+
+% - \alpha
+\newcommand{\valpha}{\v{\boldsymbol \alpha}}
+\newcommand{\valphaX}{\pX{\valpha}}
+\newcommand{\valphaXB}{\inBrackets{ \valphaX }}
+\newcommand{\valphaT}{\tr{\valpha}}
+\newcommand{\valphaXT}{\tr{\valphaXB}}
+
+% - \xi
+\newcommand{\vxi}{\v{\boldsymbol \xi}}
+\newcommand{\vxiX}{\pX{\vxi}}
+\newcommand{\vxiXB}{\inBrackets{ \vxiX }}
+\newcommand{\vxiT}{\tr{\vxi}}
+\newcommand{\vxiXT}{\tr{\vxiXB}}
+
+% - w
+\newcommand{\vw}{\v{w}}
+\newcommand{\vwX}{\pX{\vw}}
+\newcommand{\vwXB}{\inBrackets{ \vwX }}
+\newcommand{\vwT}{\tr{\vw}}
+\newcommand{\vwXT}{\tr{\vwXB}}
+
+% - x
+\newcommand{\vx}{\v{x}}
+\newcommand{\vxX}{\pX{\vx}}
+\newcommand{\vxXB}{\inBrackets{ \vxX }}
+\newcommand{\vxT}{\tr{\vx}}
+\newcommand{\vxXT}{\tr{\vxXB}}
+
+% - y
+\newcommand{\vy}{\v{y}}
+\newcommand{\vyX}{\pX{\vy}}
+\newcommand{\vyXB}{\inBrackets{ \vyX }}
+\newcommand{\vyT}{\tr{\vy}}
+\newcommand{\vyXT}{\tr{\vyXB}}
+
+% - z
+\newcommand{\vz}{\v{z}}
+\newcommand{\vzX}{\pX{\vz}}
+\newcommand{\vzXB}{\inBrackets{ \vzX }}
+\newcommand{\vzT}{\tr{\vz}}
+\newcommand{\vzXT}{\tr{\vzXB}}
+
+
+% - \phi
+\newcommand{\vphi}{\v{\boldsymbol \phi}}
+\newcommand{\vphiX}{\pX{\vphi}}
+\newcommand{\vphiXB}{\inBrackets{ \vphiX }}
+\newcommand{\vphiT}{\tr{\vphi}}
+\newcommand{\vphiXT}{\tr{\vphiXB}}
+
+% - \psi
+\newcommand{\vpsi}{\v{\boldsymbol \psi}}
+\newcommand{\vpsiX}{\pX{\vpsi}}
+\newcommand{\vpsiXB}{\inBrackets{ \vpsiX }}
+\newcommand{\vpsiT}{\tr{\vpsi}}
+\newcommand{\vpsiXT}{\tr{\vpsiXB}}
+
+% - \pi
+\newcommand{\vpi}{\v{\boldsymbol \pi}}
+\newcommand{\vpiX}{\pX{\vpi}}
+\newcommand{\vpiXB}{\inBrackets{ \vpiX }}
+\newcommand{\vpiT}{\tr{\vpi}}
+\newcommand{\vpiXT}{\tr{\vpiXB}}
+
+% - \chi (observation)
+\newcommand{\vchi}{\v{\boldsymbol \chi}}
+\newcommand{\vchiX}{\pX{\vchi}}
+\newcommand{\vchiXB}{\inBrackets{ \vchiX }}
+\newcommand{\vchiT}{\tr{\vchi}}
+\newcommand{\vchiXT}{\tr{\vchiXB}}
+
+% - \mu
+\newcommand{\vmu}{\v{\boldsymbol \mu}}
+\newcommand{\vmuX}{\pX{\vmu}}
+\newcommand{\vmuXB}{\inBrackets{ \vmuX }}
+\newcommand{\vmuT}{\tr{\vmu}}
+\newcommand{\vmuXT}{\tr{\vmuXB}}
+
+% - \gamma
+\newcommand{\vgamma}{\v{\boldsymbol \gamma}}
+\newcommand{\vgammaX}{\pX{\vgamma}}
+\newcommand{\vgammaXB}{\inBrackets{ \vgammaX }}
+\newcommand{\vgammaT}{\tr{\vgamma}}
+\newcommand{\vgammaXT}{\tr{\vgammaXB}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  Functions \f[Symbol][X Upper X]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% - a
+\newcommand{\fa}{\fn{a}}
+\newcommand{\faX}{\pX{\fa}}
+\newcommand{\faXB}{\inBrackets{ \faX }}
+\newcommand{\faI}{\inv{\fa}}
+\newcommand{\faXI}{\inv{\faXB}}
+
+
+% - b
+\newcommand{\fb}{\fn{b}}
+\newcommand{\fbX}{\pX{\fb}}
+\newcommand{\fbXB}{\inBrackets{ \fbX }}
+\newcommand{\fbI}{\inv{\fb}}
+\newcommand{\fbXI}{\inv{\fbXB}}
+
+% - c
+\newcommand{\fc}{\fn{c}}
+\newcommand{\fcX}{\pX{\fc}}
+\newcommand{\fcXB}{\inBrackets{ \fcX }}
+\newcommand{\fcI}{\inv{\fc}}
+\newcommand{\fcXI}{\inv{\fcXB}}
+
+% - e
+\newcommand{\fe}{\fn{e}}
+\newcommand{\feX}{\pX{\fe}}
+\newcommand{\feXB}{\inBrackets{ \feX }}
+\newcommand{\feI}{\inv{\fe}}
+\newcommand{\feXI}{\inv{\feXB}}
+
+% - f
+\newcommand{\ff}{\fn{f}}
+\newcommand{\ffX}{\pX{\ff}}
+\newcommand{\ffXB}{\inBrackets{ \ffX }}
+\newcommand{\ffI}{\inv{\ff}}
+\newcommand{\ffXI}{\inv{\ffXB}}
+
+
+% - g
+\newcommand{\fg}{\fn{g}}
+\newcommand{\fgX}{\pX{\fg}}
+\newcommand{\fgXB}{\inBrackets{ \fgX }}
+\newcommand{\fgI}{\inv{\fg}}
+\newcommand{\fgXI}{\inv{\fgXB}}
+
+% - j
+\newcommand{\fj}{\fn{j}}
+\newcommand{\fjX}{\pX{\fj}}
+\newcommand{\fjXB}{\inBrackets{ \fjX }}
+\newcommand{\fjI}{\inv{\fj}}
+\newcommand{\fjXI}{\inv{\fjXB}}
+
+% - k
+\newcommand{\fk}{\fn{k}}
+\newcommand{\fkX}{\pX{\fk}}
+\newcommand{\fkXB}{\inBrackets{ \fkX }}
+\newcommand{\fkI}{\inv{\fk}}
+\newcommand{\fkXI}{\inv{\fkXB}}
+
+% - l
+\newcommand{\fl}{\fn{l}}
+\newcommand{\flX}{\pX{\fl}}
+\newcommand{\flXB}{\inBrackets{ \flX }}
+\newcommand{\flI}{\inv{\fl}}
+\newcommand{\flXI}{\inv{\flXB}}
+
+% - m
+\newcommand{\fm}{\fn{m}}
+\newcommand{\fmX}{\pX{\fm}}
+\newcommand{\fmXB}{\inBrackets{ \fmX }}
+\newcommand{\fmI}{\inv{\fm}}
+\newcommand{\fmXI}{\inv{\fmXB}}
+
+% - p
+\newcommand{\fp}{\fn{p}}
+\newcommand{\fpX}{\pX{\fp}}
+\newcommand{\fpXB}{\inBrackets{ \fpX }}
+\newcommand{\fpI}{\inv{\fp}}
+\newcommand{\fpXI}{\inv{\fpXB}}
+
+% - q
+\newcommand{\fq}{\fn{q}}
+\newcommand{\fqX}{\pX{\fq}}
+\newcommand{\fqXB}{\inBrackets{ \fqX }}
+\newcommand{\fqI}{\inv{\fq}}
+\newcommand{\fqXI}{\inv{\fqXB}}
+
+% - r
+\newcommand{\fr}{\fn{r}}
+\newcommand{\frX}{\pX{\fr}}
+\newcommand{\frXB}{\inBrackets{ \frX }}
+\newcommand{\frI}{\inv{\fr}}
+\newcommand{\frXI}{\inv{\frXB}}
+
+% - t
+\newcommand{\fI}{\fn{I}}
+\newcommand{\ftX}{\pX{\fI}}
+\newcommand{\ftXB}{\inBrackets{ \ftX }}
+\newcommand{\ftI}{\inv{\fI}}
+\newcommand{\ftXI}{\inv{\ftXB}}
+
+% - u
+\newcommand{\fu}{\fn{u}}
+\newcommand{\fuX}{\pX{\fu}}
+\newcommand{\fuXB}{\inBrackets{ \fuX }}
+\newcommand{\fuI}{\inv{\fu}}
+\newcommand{\fuXI}{\inv{\fuXB}}
+
+% - v
+\newcommand{\fv}{\fn{v}}
+\newcommand{\fvX}{\pX{\fv}}
+\newcommand{\fvXB}{\inBrackets{ \fvX }}
+\newcommand{\fvI}{\inv{\fv}}
+\newcommand{\fvXI}{\inv{\fvXB}}
+
+% - \alpha
+\newcommand{\falpha}{\fn{\alpha}}
+\newcommand{\falphaX}{\pX{\falpha}}
+\newcommand{\falphaXB}{\inBrackets{ \falphaX }}
+\newcommand{\falphaI}{\inv{\falpha}}
+\newcommand{\falphaXI}{\inv{\falphaXB}}
+
+% - \xi
+\newcommand{\fxi}{\fn{\xi}}
+\newcommand{\fxiX}{\pX{\fxi}}
+\newcommand{\fxiXB}{\inBrackets{ \fxiX }}
+\newcommand{\fxiI}{\inv{\fxi}}
+\newcommand{\fxiXI}{\inv{\fxiXB}}
+
+% - x
+\newcommand{\fx}{\fn{x}}
+\newcommand{\fxX}{\pX{\fx}}
+\newcommand{\fxXB}{\inBrackets{ \fxX }}
+\newcommand{\fxI}{\inv{\fx}}
+\newcommand{\fxXI}{\inv{\fxXB}}
+
+% - y
+\newcommand{\fy}{\fn{y}}
+\newcommand{\fyX}{\pX{\fy}}
+\newcommand{\fyXB}{\inBrackets{ \fyX }}
+\newcommand{\fyI}{\inv{\fy}}
+\newcommand{\fyXI}{\inv{\fyXB}}
+
+% - z
+\newcommand{\fz}{\fn{z}}
+\newcommand{\fzX}{\pX{\fz}}
+\newcommand{\fzXB}{\inBrackets{ \fzX }}
+\newcommand{\fzI}{\inv{\fz}}
+\newcommand{\fzXI}{\inv{\fzXB}}
+
+
+% - \phi
+\newcommand{\fphi}{\fn{\upphi}}
+\newcommand{\fphiX}{\pX{\fphi}}
+\newcommand{\fphiXB}{\inBrackets{ \fphiX }}
+\newcommand{\fphiI}{\inv{\fphi}}
+\newcommand{\fphiXI}{\inv{\fphiXB}}
+
+% - \psi
+\newcommand{\fpsi}{\fn{\psi}}
+\newcommand{\fpsiX}{\pX{\fpsi}}
+\newcommand{\fpsiXB}{\inBrackets{ \fpsiX }}
+\newcommand{\fpsiI}{\inv{\fpsi}}
+\newcommand{\fpsiXI}{\inv{\fpsiXB}}
+
+% - \pi
+\newcommand{\fpi}{\fn{\pi}}
+\newcommand{\fpiX}{\pX{\fpi}}
+\newcommand{\fpiXB}{\inBrackets{ \fpiX }}
+\newcommand{\fpiI}{\inv{\fpi}}
+\newcommand{\fpiXI}{\inv{\fpiXB}}
+
+% - \chi (observation)
+\newcommand{\fchi}{\fn{\chi}}
+\newcommand{\fchiX}{\pX{\fchi}}
+\newcommand{\fchiXB}{\inBrackets{ \fchiX }}
+\newcommand{\fchiI}{\inv{\fchi}}
+\newcommand{\fchiXI}{\inv{\fchiXB}}
+
+% - \mu
+\newcommand{\fmu}{\fn{\mu}}
+\newcommand{\fmuX}{\pX{\fmu}}
+\newcommand{\fmuXB}{\inBrackets{ \fmuX }}
+\newcommand{\fmuI}{\inv{\fmu}}
+\newcommand{\fmuXI}{\inv{\fmuXB}}
+
+% - \gamma
+\newcommand{\fgamma}{\fn{\gamma}}
+\newcommand{\fgammaX}{\pX{\fgamma}}
+\newcommand{\fgammaXB}{\inBrackets{ \fgammaX }}
+\newcommand{\fgammaI}{\inv{\fgamma}}
+\newcommand{\fgammaXI}{\inv{\fgammaXB}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  \s... scalars
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\spi}{\v{\boldsymbol \chi}}
+\newcommand{\spiX}{\pX{\spi}}
+\newcommand{\spiXB}{\inBrackets{ \spiX }}
+
+\newcommand{\sqm}{q^{\text{-}}}
+\newcommand{\sqp}{q^{\text{+}}}
+
+% - TAB (transition matrix for committor AB)
+\newcommand{\upAB}[1]{{#1^{\text{AB}}}}
+
+\newcommand{\sTAB}{\upAB{T}}
+\newcommand{\sTABB}{\inBrackets{ \upAB{T}}}
+\newcommand{\sTABI}{\inv{\sTABB}}
+\newcommand{\sTABT}{\tr{\sTABB}}
+\newcommand{\sTABTI}{\trinv{\sTABB}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  \D... partial derivatives
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\del}[1]{\partial_{#1}}
+
+\newcommand{\Dtheta}{\del{\theta}}
+\newcommand{\Di}{\del{\Ii}}
+\newcommand{\Dj}{\del{\Ij}}
+\newcommand{\Dij}{\del{\Iij}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  \F... function of (in brackets)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% styles
+
+\newcommand{\asFunction}[1]{({#1})}
+\newcommand{\funcSep}{,}
+\newcommand{\funcSepB}{\mid}
+\newcommand{\fnc}[1]{\asFunction{#1}}
+
+% concrete implementations
+
+\newcommand{\Fi}{\asFunction{i}}
+\newcommand{\Fii}{\asFunction{i \funcSep i}}
+\newcommand{\Fij}{\asFunction{i \funcSep j}}
+\newcommand{\Fji}{\asFunction{j \funcSep i}}
+\newcommand{\Fik}{\asFunction{i \funcSep k}}
+\newcommand{\Fj}{\asFunction{j}}
+\newcommand{\Fk}{\asFunction{k}}
+\newcommand{\Fx}{\asFunction{x}}
+\newcommand{\Fy}{\asFunction{y}}
+\newcommand{\Fix}{\asFunction{i \funcSep x}}
+\newcommand{\Fiy}{\asFunction{i \funcSep y}}
+\newcommand{\Fjx}{\asFunction{j \funcSep x}}
+\newcommand{\Fxy}{\asFunction{x \funcSep y}}
+\newcommand{\Fyx}{\asFunction{y \funcSep x}}
+\newcommand{\FiX}{\asFunction{i \funcSep \cdot}}
+\newcommand{\FjX}{\asFunction{j \funcSep \cdot}}
+\newcommand{\Fxb}{\asFunction{x \funcSep b}}
+\newcommand{\Fn}{\asFunction{n}}
+
+\newcommand{\Fab}{\asFunction{a \funcSep b}}
+\newcommand{\Fa}{\asFunction{a}}
+\newcommand{\Fb}{\asFunction{b}}
+
+\newcommand{\FA}{\asFunction{\setA}}
+\newcommand{\FB}{\asFunction{\setB}}
+\newcommand{\FiA}{\asFunction{i \funcSep \setA}}
+\newcommand{\FiB}{\asFunction{i \funcSep \setB}}
+\newcommand{\FxA}{\asFunction{x \funcSep \setA}}
+\newcommand{\FyA}{\asFunction{y \funcSep \setA}}
+\newcommand{\FjA}{\asFunction{j \funcSep \setA}}
+\newcommand{\FjB}{\asFunction{j \funcSep \setB}}
+\newcommand{\FAB}{\asFunction{\setA \funcSep \setB}}
+\newcommand{\FBA}{\asFunction{\setB \funcSep \setA}}
+\newcommand{\FAA}{\asFunction{\setA \funcSep \setA}}
+\newcommand{\FBB}{\asFunction{\setB \funcSep \setB}}
+
+\newcommand{\FNN}{\asFunctionB{1:n \funcSepB 1:n}}
+\newcommand{\FNX}{\asFunctionB{1:n \funcSepB \cdot}}
+\newcommand{\FXN}{\asFunctionB{\cdot \funcSepB 1:n}}
+\newcommand{\FMM}{\asFunctionB{1:m \funcSepB 1:m}}
+\newcommand{\FMX}{\asFunctionB{1:n \funcSepB \cdot}}
+\newcommand{\FXM}{\asFunctionB{\cdot \funcSepB 1:m}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  \I... indices (in brackets)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% styles
+
+\newcommand{\asIndex}[1]{{#1}}
+\newcommand{\asIndexB}[1]{[{#1}]}
+\newcommand{\indSep}{}
+\newcommand{\indSepB}{,}
+\newcommand{\ind}[1]{\asIndex{#1}}
+
+% concrete implementations
+
+\newcommand{\Ii}{\asIndex{i}}
+\newcommand{\Iii}{\asIndex{i \indSep i}}
+\newcommand{\Iij}{\asIndex{i \indSep j}}
+\newcommand{\Iji}{\asIndex{j \indSep i}}
+\newcommand{\Iik}{\asIndex{i \indSep k}}
+\newcommand{\Ij}{\asIndex{j}}
+\newcommand{\Ik}{\asIndex{k}}
+\newcommand{\Ix}{\asIndex{x}}
+\newcommand{\Iy}{\asIndex{y}}
+\newcommand{\Iix}{\asIndex{i \indSep x}}
+\newcommand{\Iiy}{\asIndex{i \indSep y}}
+\newcommand{\Ijx}{\asIndex{j \indSep x}}
+\newcommand{\Ixy}{\asIndex{x \indSep y}}
+\newcommand{\Iyx}{\asIndex{y \indSep x}}
+\newcommand{\IiX}{\asIndex{i \indSep \cdot}}
+\newcommand{\IjX}{\asIndex{j \indSep \cdot}}
+\newcommand{\Ixb}{\asIndex{x \indSep b}}
+\newcommand{\In}{\asIndex{n}}
+
+\newcommand{\Iab}{\asIndex{a \indSep b}}
+\newcommand{\Ia}{\asIndex{a}}
+\newcommand{\Ib}{\asIndex{b}}
+
+\newcommand{\IA}{\asIndex{\setA}}
+\newcommand{\IB}{\asIndex{\setB}}
+\newcommand{\IiA}{\asIndex{i \indSep \setA}}
+\newcommand{\IiB}{\asIndex{i \indSep \setB}}
+\newcommand{\IxA}{\asIndex{x \indSep \setA}}
+\newcommand{\IyA}{\asIndex{y \indSep \setA}}
+\newcommand{\IjA}{\asIndex{j \indSep \setA}}
+\newcommand{\IjB}{\asIndex{j \indSep \setB}}
+\newcommand{\IAB}{\asIndex{\setA \indSep \setB}}
+\newcommand{\IBA}{\asIndex{\setB \indSep \setA}}
+\newcommand{\IAA}{\asIndex{\setA \indSep \setA}}
+\newcommand{\IBB}{\asIndex{\setB \indSep \setB}}
+
+\newcommand{\INN}{\asIndexB{1:n \indSepB 1:n}}
+\newcommand{\INX}{\asIndexB{1:n \indSepB \cdot}}
+\newcommand{\IXN}{\asIndexB{\cdot \indSepB 1:n}}
+\newcommand{\IMM}{\asIndexB{1:m \indSepB 1:m}}
+\newcommand{\IMX}{\asIndexB{1:n \indSepB \cdot}}
+\newcommand{\IXM}{\asIndexB{\cdot \indSepB 1:m}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  special functions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\restricted}[1]{{\mbox{\scriptsize $[{#1}]$}}} % Vector restricted to set #1
+\newcommand{\indicator}[1]{{\vOne \restricted{#1}}}		% One Vector restricted / Indicator function
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  float settings
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+% sets wide figure/tables to use full width with facing pages /two-sided documents
+
+%\usepackage{floatrow}
+%\floatsetup[widefigure]{%
+%		margins=hangoutside,%
+%		floatwidth=\textwidth,%
+%		facing=yes%
+%}
+%\floatsetup[widetable]{%
+%		margins=hangoutside,%
+%		floatwidth=\textwidth,%
+%		facing=yes%
+%}
+%\floatsetup[widerotfloat]{%
+%		floatwidth=\textheight,%
+%		valign=c,%
+%		facing=yes%
+%}
+
+% allows rotated floats / not directly compatible with LyX
+\usepackage{rotating}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  other packages
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% nicer tables
+\usepackage{booktabs}

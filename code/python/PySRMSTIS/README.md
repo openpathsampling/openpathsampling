@@ -1,6 +1,14 @@
-so far contains only an OpenMM Tutorial for python from ASJS Mey
+So far contains only an OpenMM Tutorial for python from ASJS Mey
 
-if you try to install OpenMM on a Mac using 10.9  and especially a new MacBook Pro and want to use CUDA the following installation guide might help
+The project is setup in Eclipse using PyDev. To use CUDA the environment variables need to be set correctly in your
+Eclipse / PyDev settings. Go to `PyDev -> Interpreters -> Python Interpreter`. Select the interpeter setting in the upper
+and select environment in the lower bow. Add
+```
+DYLD_LIBRARY_PATH -> [path to openmm]/lib:/usr/local/cuda/lib
+```
+provided that cuda is installed in /usr/local/ and add your path (especially if you use the guid below)
+
+If you try to install OpenMM on a Mac using 10.9  and especially a new MacBook Pro and want to use CUDA the following installation guide might help
 
 ## Installation of OpenMM under Mac OS X 10.9
 

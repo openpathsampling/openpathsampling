@@ -18,8 +18,11 @@ setting up an nvt equilibration with position constraints
 
 from simtk.openmm.app import *
 from simtk.openmm import *
+#from simtk.unit import *
+
 from simtk.unit import *
-from sys import stdout
+from simtk.unit import nanometer, femtoseconds, picoseconds, Quantity, dalton
+
 import numpy as np
 import time
 
@@ -34,7 +37,7 @@ nequib_steps = 200 #number of nvt equilibration steps with position constraints 
 #platform = openmm.Platform.getPlatformByName("Cuda") # platform to use
 
 Alanine_atoms = 22
-platform = openmm.Platform.getPlatformByName("Reference") # platform to use
+platform = openmm.Platform.getPlatformByName("CPU") # platform to use
 
 #=============================================================================================
 # Main simulation body

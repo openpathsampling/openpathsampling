@@ -36,7 +36,7 @@ nequib_steps = 100 #number of nvt equilibration steps with position constraints 
 max_iterations = 10 # number of iterations of nsteps_per_interation of dynamics to run
 nsteps_per_iteration = 1000 # number of steps of dynamics per iteration
 Alanine_atoms = 22
-platform = openmm.Platform.getPlatformByName("CPU") # platform to use
+platform = openmm.Platform.getPlatformByName("CUDA") # platform to use
 
 #=============================================================================================
 # Main simulation body
@@ -70,8 +70,8 @@ for i in range(Alanine_atoms):
 #tracking data
 for iteration in range(max_iterations):
 	simulation.step(nsteps_per_iteration)
-  	state = simulation.context.getState(getEnergy=True, enforcePeriodicBox = True)
-    	print "Iteration %5d / %5d | kinetic %8.3f kJ/mol | potential %8.3f kJ/mol" % (iteration, max_iterations, state.getKineticEnergy() / kilojoules_per_mole, state.getPotentialEnergy() / kilojoules_per_mole)
+	state = simulation.context.getState(getEnergy=True, enforcePeriodicBox = True)
+	print "Iteration %5d / %5d | kinetic %8.3f kJ/mol | potential %8.3f kJ/mol" % (iteration, max_iterations, state.getKineticEnergy() / kilojoules_per_mole, state.getPotentialEnergy() / kilojoules_per_mole)
 	
 end_time = time.time()
 print "total time "+str(end_time-start_time)	
