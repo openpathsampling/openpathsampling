@@ -3,8 +3,9 @@ Simple OpenMM Example
 
 Loading PDB, Solvating, Minimizing and short production run
 
-@author: Jan-Hendrik Prinz
 @author: Antonia Mey
+@author: Jan-Hendrik Prinz
+
 '''
 
 
