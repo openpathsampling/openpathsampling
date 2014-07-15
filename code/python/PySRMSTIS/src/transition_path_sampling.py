@@ -14,7 +14,7 @@ from simtk.unit import *
 from trajectory import Trajectory
 from snapshot import Snapshot
 
-from integrators import AndersenVelocityVerletIntegrator
+from integrators import VVVRIntegrator
 
 
 #=============================================================================================
@@ -68,16 +68,10 @@ class TransitionPathSampling(object):
 #         self.nsteps_per_frame = nsteps_per_frame
 #         self.delta_t = timestep * nsteps_per_frame
 # 
-        self.temperature = 300
-        self.collision_rate = 1.0
-        self.timestep = 1.0
 
         # Compute thermal energy and inverse temperature from specified temperature.
         self.kT = kB * self.temperature # thermal energy
         self.beta = 1.0 / self.kT # inverse temperature
-
-        # Create a Verlet integrator.
-        self.integrator = VerletIntegrator(self.timestep)
 
         # Create a Context for integration.
         if platform:
@@ -92,7 +86,10 @@ class TransitionPathSampling(object):
 #        self.H_reduced_unit = self.epsilon # reduced unit for path Hamiltonian (energy)
 #        self.beta_reduced_unit = 1.0 / self.epsilon # reduced unit for inverse temperature
 
-        self.integrator = AndersenVelocityVerletIntegrator(self.temperature, self.collision_rate, self.timestep)
+        self.temperature = 298.0 * kelvin
+        self.collision_rate = 91.0 / picoseconds
+        self.timestep = 1.0 * femtoseconds
+        self.integrator = VVVRIntegrator(self.temperature, self.collision_rate, self.timestep)
 
         return
 
@@ -139,15 +136,17 @@ class TransitionPathSampling(object):
         # Propagate dynamics by velocity Verlet.
         in_void = True
         
-        while frame < self.xframes && in_void == True:
+        self.frame = 0
+        
+        while self.frame < self.xframes and in_void == True:
             
             # Do integrator x steps
             self.integrator.step()
             
-            # 
+            
             
             # Check if reached a core set
-            in_void = check_void()
+            in_void = self.check_void()
             
 
         # Store final snapshot of trajectory.

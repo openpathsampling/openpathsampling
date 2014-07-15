@@ -817,7 +817,7 @@ class ReplicaExchangeTPS(object):
                 raise Exception("Don't know what to do with 'trajectories' object; doesn't seem to be a Trajectory object or list of Trajectories.")
 
         # Store number of frames per trajectory.
-        self.nframes = len(self.trajectories[0])
+        self.n_frames = len(self.trajectories[0])
 
         # Set default options.
         self.number_of_iterations = 50
@@ -1113,7 +1113,7 @@ class ReplicaExchangeTPS(object):
         # Create dimensions.
         ncfile.createDimension('iteration', 0) # unlimited number of iterations
         ncfile.createDimension('replica', self.nstates) # number of replicas
-        ncfile.createDimension('frame', self.nframes) # number of frames per run
+        ncfile.createDimension('frame', self.n_frames) # number of frames per run
         ncfile.createDimension('atom', self.natoms) # number of atoms in system
         ncfile.createDimension('spatial', 3) # number of spatial dimensions
 
@@ -1197,7 +1197,7 @@ class ReplicaExchangeTPS(object):
         # Store trajectories.
         for replica_index in range(self.nstates):
             trajectory = self.trajectories[replica_index]
-            for frame_index in range(self.nframes):                
+            for frame_index in range(self.n_frames):                
                 self.ncfile.variables['trajectory_coordinates'][replica_index,frame_index,:,:] = (trajectory[frame_index].coordinates / nanometers).astype(numpy.float32)
                 self.ncfile.variables['trajectory_velocities'][replica_index,frame_index,:,:] = (trajectory[frame_index].velocities / (nanometers / picoseconds)).astype(numpy.float32)
                 self.ncfile.variables['trajectory_potential'][replica_index,frame_index] = trajectory[frame_index].potential_energy / kilojoules_per_mole                                
@@ -1249,7 +1249,7 @@ class ReplicaExchangeTPS(object):
         # Get current dimensions.
         self.iteration = ncfile.variables['activities'].shape[0] - 1
         self.nstates = ncfile.variables['activities'].shape[1]
-        self.nframes = ncfile.variables['trajectory_coordinates'].shape[1]
+        self.n_frames = ncfile.variables['trajectory_coordinates'].shape[1]
         self.natoms = ncfile.variables['trajectory_coordinates'].shape[2]
 
         print "iteration = %d, nstates = %d, natoms = %d" % (self.iteration, self.nstates, self.natoms)
@@ -1258,7 +1258,7 @@ class ReplicaExchangeTPS(object):
         self.trajectories = list()
         for replica_index in range(self.nstates):
             trajectory = Trajectory()
-            for frame_index in range(self.nframes):                
+            for frame_index in range(self.n_frames):                
                 x = ncfile.variables['trajectory_coordinates'][replica_index,frame_index,:,:].astype(numpy.float32).copy()
                 coordinates = Quantity(x, nanometers)                
                 v = ncfile.variables['trajectory_velocities'][replica_index,frame_index,:,:].astype(numpy.float32).copy()

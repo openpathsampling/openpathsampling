@@ -41,7 +41,9 @@ import simtk.unit
 import simtk.unit as units
 import simtk.openmm as mm
 
-from repex.constants import kB
+#from repex.constants import kB
+
+kB = units.BOLTZMANN_CONSTANT_kB * units.AVOGADRO_CONSTANT_NA # Boltzmann constant
 
 
 #=============================================================================================

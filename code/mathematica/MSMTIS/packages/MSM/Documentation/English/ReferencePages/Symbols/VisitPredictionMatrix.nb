@@ -1,0 +1,186 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 9.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       157,          7]
+NotebookDataLength[      5676,        177]
+NotebookOptionsPosition[      3569,        123]
+NotebookOutlinePosition[      5616,        174]
+CellTagsIndexPosition[      5573,        171]
+WindowTitle->VisitPredictionMatrix - Wolfram Mathematica
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[GridBox[{
+   {Cell["M S M PACKAGE SYMBOL", "PacletNameCell"], Cell[TextData[Cell[BoxData[
+     ActionMenuBox[
+      FrameBox["\<\"URL \[RightGuillemet]\"\>",
+       StripOnInput->False], {"\<\"MSM/ref/VisitPredictionMatrix\"\>":>
+      None, "\<\"Copy Mathematica url\"\>":>
+      Module[{DocumentationSearch`Private`nb$}, 
+       DocumentationSearch`Private`nb$ = NotebookPut[
+          Notebook[{
+            Cell["MSM/ref/VisitPredictionMatrix"]}, Visible -> False]]; 
+       SelectionMove[DocumentationSearch`Private`nb$, All, Notebook]; 
+       FrontEndTokenExecute[DocumentationSearch`Private`nb$, "Copy"]; 
+       NotebookClose[DocumentationSearch`Private`nb$]; Null], 
+      Delimiter, "\<\"Copy web url\"\>":>
+      Module[{DocumentationSearch`Private`nb$}, 
+       DocumentationSearch`Private`nb$ = NotebookPut[
+          Notebook[{
+            Cell[
+             BoxData[
+              MakeBoxes[
+               Hyperlink[
+               "http://reference.wolfram.com/mathematica/MSM/ref/\
+VisitPredictionMatrix.html"], StandardForm]], "Input", TextClipboardType -> 
+             "PlainText"]}, Visible -> False]]; 
+       SelectionMove[DocumentationSearch`Private`nb$, All, Notebook]; 
+       FrontEndTokenExecute[DocumentationSearch`Private`nb$, "Copy"]; 
+       NotebookClose[DocumentationSearch`Private`nb$]; 
+       Null], "\<\"Go to web url\"\>":>FrontEndExecute[{
+        NotebookLocate[{
+          URL[
+           StringJoin[
+           "http://reference.wolfram.com/mathematica/", 
+            "MSM/ref/VisitPredictionMatrix", ".html"]], None}]}]},
+      Appearance->None,
+      MenuAppearance->Automatic]],
+     LineSpacing->{1.4, 0}]], "AnchorBar"]}
+  }]], "AnchorBarGrid",
+ GridBoxOptions->{GridBoxItemSize->{"Columns" -> {
+     Scaled[0.65], {
+      Scaled[0.34]}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
+   "RowsIndexed" -> {}}},
+ CellID->1],
+
+Cell["VisitPredictionMatrix", "ObjectName",
+ CellID->1224892054],
+
+Cell[BoxData[GridBox[{
+   {"", Cell[TextData[{
+     "VisitPredictionMatrix[transitionmatrix, steps]",
+     "\[LineSeparator]returns a matrix of estimated transitions under the \
+dynamics in the given ",
+     Cell[BoxData[
+      ButtonBox["TransitionMatrix",
+       BaseStyle->"Link",
+       ButtonData->"paclet:MSM/ref/TransitionMatrix"]], "InlineFormula"],
+     ".",
+     " ",
+     "If",
+     " ",
+     "multiplied",
+     " ",
+     "with",
+     " ",
+     "an",
+     " ",
+     "initial",
+     " ",
+     "vector",
+     " ",
+     "the",
+     " ",
+     "returning",
+     " ",
+     "vector",
+     " ",
+     "will",
+     " ",
+     "represent",
+     " ",
+     "the",
+     " ",
+     "average",
+     " ",
+     "times",
+     " ",
+     "a",
+     " ",
+     "state",
+     " ",
+     "is",
+     " ",
+     "visited",
+     "."
+    }]]}
+  }]], "Usage",
+ GridBoxOptions->{
+ GridBoxBackground->{
+  "Columns" -> {{None}}, "ColumnsIndexed" -> {}, "Rows" -> {{None}}, 
+   "RowsIndexed" -> {}}}],
+
+Cell[" ", "FooterCell"]
+},
+Saveable->False,
+ScreenStyleEnvironment->"Working",
+WindowSize->{725, 750},
+WindowMargins->{{0, Automatic}, {Automatic, 0}},
+WindowTitle->"VisitPredictionMatrix - Wolfram Mathematica",
+TaggingRules->{
+ "ModificationHighlight" -> False, "ColorType" -> "SymbolColor", "LinkTrails" -> 
+  GridBox[{{
+      RowBox[{
+        ButtonBox[
+        "Markov State Models", ButtonData -> "paclet:MSM/guide/MSM", 
+         BaseStyle -> {"Link", "DockedLinkTrail"}], 
+        Cell[">", "DockedLinkTrailSeparator"]}]}}, ColumnAlignments -> Left], 
+  "Metadata" -> {
+   "built" -> "{2013, 5, 5, 16, 23, 28.160171}", 
+    "history" -> {"XX", "", "", ""}, "context" -> "MSM`", "keywords" -> {}, 
+    "specialkeywords" -> {}, "tutorialcollectionlinks" -> {}, "index" -> True,
+     "label" -> "M S M Package Symbol", "language" -> "en", "paclet" -> 
+    "MSM Package", "status" -> "None", "summary" -> 
+    "VisitPredictionMatrix[transitionmatrix, steps] returns a matrix of \
+estimated transitions under the dynamics in the given TransitionMatrix. If \
+multiplied with an initial vector the returning vector will represent the \
+average times a state is visited.", "synonyms" -> {}, "title" -> 
+    "VisitPredictionMatrix", "titlemodifier" -> "", "windowtitle" -> 
+    "VisitPredictionMatrix", "type" -> "Symbol", "uri" -> 
+    "MSM/ref/VisitPredictionMatrix"}, "SearchTextTranslated" -> ""},
+CellContext->"Global`",
+FrontEndVersion->"9.0 for Mac OS X x86 (32-bit, 64-bit Kernel) (November 20, \
+2012)",
+StyleDefinitions->Notebook[{
+   Cell[
+    StyleData[
+    StyleDefinitions -> FrontEnd`FileName[{"Wolfram"}, "Reference.nb"]]], 
+   Cell[
+    StyleData["Input"], CellContext -> "Global`"], 
+   Cell[
+    StyleData["Output"], CellContext -> "Global`"]}, Visible -> False, 
+  FrontEndVersion -> 
+  "9.0 for Mac OS X x86 (32-bit, 64-bit Kernel) (November 20, 2012)", 
+  StyleDefinitions -> "Default.nb"]
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[614, 21, 1883, 41, 70, "AnchorBarGrid",
+ CellID->1],
+Cell[2500, 64, 64, 1, 70, "ObjectName",
+ CellID->1224892054],
+Cell[2567, 67, 972, 52, 70, "Usage"],
+Cell[3542, 121, 23, 0, 70, "FooterCell"]
+}
+]
+*)
+
+(* End of internal cache information *)

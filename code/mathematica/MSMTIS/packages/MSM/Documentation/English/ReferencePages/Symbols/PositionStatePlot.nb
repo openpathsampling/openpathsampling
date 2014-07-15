@@ -1,0 +1,257 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 9.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       157,          7]
+NotebookDataLength[      8433,        248]
+NotebookOptionsPosition[      6339,        189]
+NotebookOutlinePosition[      8110,        236]
+CellTagsIndexPosition[      8067,        233]
+WindowTitle->PositionStatePlot - Wolfram Mathematica
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[GridBox[{
+   {Cell["M S M PACKAGE SYMBOL", "PacletNameCell"], Cell[TextData[Cell[BoxData[
+     ActionMenuBox[
+      FrameBox["\<\"URL \[RightGuillemet]\"\>",
+       StripOnInput->False], {"\<\"MSM/ref/PositionStatePlot\"\>":>
+      None, "\<\"Copy Mathematica url\"\>":>
+      Module[{DocumentationSearch`Private`nb$}, 
+       DocumentationSearch`Private`nb$ = NotebookPut[
+          Notebook[{
+            Cell["MSM/ref/PositionStatePlot"]}, Visible -> False]]; 
+       SelectionMove[DocumentationSearch`Private`nb$, All, Notebook]; 
+       FrontEndTokenExecute[DocumentationSearch`Private`nb$, "Copy"]; 
+       NotebookClose[DocumentationSearch`Private`nb$]; Null], 
+      Delimiter, "\<\"Copy web url\"\>":>
+      Module[{DocumentationSearch`Private`nb$}, 
+       DocumentationSearch`Private`nb$ = NotebookPut[
+          Notebook[{
+            Cell[
+             BoxData[
+              MakeBoxes[
+               Hyperlink[
+               "http://reference.wolfram.com/mathematica/MSM/ref/\
+PositionStatePlot.html"], StandardForm]], "Input", TextClipboardType -> 
+             "PlainText"]}, Visible -> False]]; 
+       SelectionMove[DocumentationSearch`Private`nb$, All, Notebook]; 
+       FrontEndTokenExecute[DocumentationSearch`Private`nb$, "Copy"]; 
+       NotebookClose[DocumentationSearch`Private`nb$]; 
+       Null], "\<\"Go to web url\"\>":>FrontEndExecute[{
+        NotebookLocate[{
+          URL[
+           StringJoin[
+           "http://reference.wolfram.com/mathematica/", 
+            "MSM/ref/PositionStatePlot", ".html"]], None}]}]},
+      Appearance->None,
+      MenuAppearance->Automatic]],
+     LineSpacing->{1.4, 0}]], "AnchorBar"]}
+  }]], "AnchorBarGrid",
+ GridBoxOptions->{GridBoxItemSize->{"Columns" -> {
+     Scaled[0.65], {
+      Scaled[0.34]}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
+   "RowsIndexed" -> {}}},
+ CellID->1],
+
+Cell["PositionStatePlot", "ObjectName",
+ CellID->1224892054],
+
+Cell[BoxData[
+ GridBox[
+  Cell[{"", 
+    Cell[
+     TextData[""]]}]]], "Usage",
+ GridBoxOptions->{
+ GridBoxBackground->{
+  "Columns" -> {{None}}, "ColumnsIndexed" -> {}, "Rows" -> {{
+      Cell[None]}}, "RowsIndexed" -> {}}}],
+
+Cell[CellGroupData[{
+
+Cell[TextData[Cell[BoxData[
+ ButtonBox[
+  FrameBox[
+   StyleBox[
+    RowBox[{"MORE", " ", "INFORMATION"}], "NotesFrameText"],
+   StripOnInput->False],
+  Appearance->{Automatic, None},
+  BaseStyle->None,
+  ButtonFunction:>(FrontEndExecute[{
+     FrontEnd`SelectionMove[
+      FrontEnd`SelectedNotebook[], All, ButtonCell], 
+     FrontEndToken["OpenCloseGroup"], 
+     FrontEnd`SelectionMove[
+      FrontEnd`SelectedNotebook[], After, CellContents]}]& ),
+  Evaluator->None,
+  Method->"Preemptive"]]]], "NotesSection",
+ WholeCellGroupOpener->True,
+ CellGroupingRules->{"SectionGrouping", 50},
+ CellID->1401870973],
+
+Cell[CellGroupData[{
+
+Cell["The following options can be given: ", "Notes"],
+
+Cell[BoxData[GridBox[{
+   {Cell["      ", "TableRowIcon"], 
+    ButtonBox["Text",
+     BaseStyle->"Link",
+     ButtonData->"paclet:ref/Text"], 
+    ButtonBox["False",
+     BaseStyle->"Link",
+     ButtonData->"paclet:ref/False"], Cell[TextData[{
+     Cell[BoxData[
+      RowBox[{"Text", "[", 
+       StyleBox["expr", "TI"], "]"}]], "InlineFormula"],
+     " displays with ",
+     Cell[BoxData[
+      StyleBox["expr", "TI"]], "InlineFormula"],
+     " in plain text format. \n",
+     Cell[BoxData[
+      RowBox[{"Text", "[", 
+       RowBox[{
+        StyleBox["expr", "TI"], ",", 
+        StyleBox["coords", "TI"]}], "]"}]], "InlineFormula"],
+     " is a graphics primitive that displays the textual form of ",
+     Cell[BoxData[
+      StyleBox["expr", "TI"]], "InlineFormula"],
+     " centered at the point specified by ",
+     Cell[BoxData[
+      StyleBox["coords", "TI"]], "InlineFormula"],
+     ". "
+    }], "TableText"]},
+   {Cell["      ", "TableRowIcon"], 
+    ButtonBox["TextStyle",
+     BaseStyle->"Link",
+     ButtonData->"paclet:ref/TextStyle"], 
+    RowBox[{"{", 
+     RowBox[{"RGBColor", "[", 
+      RowBox[{"1", ",", " ", "1", ",", " ", "1"}], "]"}], "}"}], Cell["\<\
+TextStyle is an option for graphics functions and for Text which specifies \
+the default style and font options with which text should be rendered. \
+\>", "TableText"]},
+   {Cell["      ", "TableRowIcon"], 
+    ButtonBox["Grid",
+     BaseStyle->"Link",
+     ButtonData->"paclet:ref/Grid"], 
+    ButtonBox["True",
+     BaseStyle->"Link",
+     ButtonData->"paclet:ref/True"], Cell[TextData[{
+     Cell[BoxData[
+      RowBox[{"Grid", "[", 
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{
+           SubscriptBox[
+            StyleBox["expr", "TI"], 
+            StyleBox["11", "TR"]], ",", 
+           SubscriptBox[
+            StyleBox["expr", "TI"], 
+            StyleBox["12", "TR"]], ",", 
+           StyleBox["\[Ellipsis]", "TR"]}], "}"}], ",", 
+         RowBox[{"{", 
+          RowBox[{
+           SubscriptBox[
+            StyleBox["expr", "TI"], 
+            StyleBox["21", "TR"]], ",", 
+           SubscriptBox[
+            StyleBox["expr", "TI"], 
+            StyleBox["22", "TR"]], ",", 
+           StyleBox["\[Ellipsis]", "TR"]}], "}"}], ",", 
+         StyleBox["\[Ellipsis]", "TR"]}], "}"}], "]"}]], "InlineFormula"],
+     " is an object that formats with the ",
+     Cell[BoxData[
+      SubscriptBox[
+       StyleBox["expr", "TI"], 
+       StyleBox["ij", "TI"]]], "InlineFormula"],
+     " arranged in a two-dimensional grid. "
+    }], "TableText"]}
+  }]], "3ColumnTableMod",
+ GridBoxOptions->{
+ GridBoxBackground->{
+  "Columns" -> {{None}}, "ColumnsIndexed" -> {}, 
+   "Rows" -> {None, None, {None}}, "RowsIndexed" -> {}},
+ GridBoxDividers->{"Rows" -> {{True, True, True, True}}}}]
+}, Open  ]]
+}, Closed]],
+
+Cell[" ", "FooterCell"]
+},
+Saveable->False,
+ScreenStyleEnvironment->"Working",
+WindowSize->{725, 750},
+WindowMargins->{{0, Automatic}, {Automatic, 0}},
+WindowTitle->"PositionStatePlot - Wolfram Mathematica",
+TaggingRules->{
+ "ModificationHighlight" -> False, "ColorType" -> "SymbolColor", "LinkTrails" -> 
+  GridBox[{{
+      RowBox[{
+        ButtonBox[
+        "Markov State Models", ButtonData -> "paclet:MSM/guide/MSM", 
+         BaseStyle -> {"Link", "DockedLinkTrail"}], 
+        Cell[">", "DockedLinkTrailSeparator"]}]}}, ColumnAlignments -> Left], 
+  "Metadata" -> {
+   "built" -> "{2013, 5, 3, 16, 53, 3.393522}", 
+    "history" -> {"XX", "", "", ""}, "context" -> "MSM`", "keywords" -> {}, 
+    "specialkeywords" -> {}, "tutorialcollectionlinks" -> {}, "index" -> True,
+     "label" -> "M S M Package Symbol", "language" -> "en", "paclet" -> 
+    "MSM Package", "status" -> "None", "summary" -> " ", "synonyms" -> {}, 
+    "title" -> "PositionStatePlot", "titlemodifier" -> "", "windowtitle" -> 
+    "PositionStatePlot", "type" -> "Symbol", "uri" -> 
+    "MSM/ref/PositionStatePlot"}, "SearchTextTranslated" -> ""},
+CellContext->"Global`",
+FrontEndVersion->"9.0 for Mac OS X x86 (32-bit, 64-bit Kernel) (November 20, \
+2012)",
+StyleDefinitions->Notebook[{
+   Cell[
+    StyleData[
+    StyleDefinitions -> FrontEnd`FileName[{"Wolfram"}, "Reference.nb"]]], 
+   Cell[
+    StyleData["Input"], CellContext -> "Global`"], 
+   Cell[
+    StyleData["Output"], CellContext -> "Global`"]}, Visible -> False, 
+  FrontEndVersion -> 
+  "9.0 for Mac OS X x86 (32-bit, 64-bit Kernel) (November 20, 2012)", 
+  StyleDefinitions -> "Default.nb"]
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[610, 21, 1867, 41, 70, "AnchorBarGrid",
+ CellID->1],
+Cell[2480, 64, 60, 1, 70, "ObjectName",
+ CellID->1224892054],
+Cell[2543, 67, 225, 8, 70, "Usage"],
+Cell[CellGroupData[{
+Cell[2793, 79, 610, 18, 70, "NotesSection",
+ CellGroupingRules->{"SectionGrouping", 50},
+ CellID->1401870973],
+Cell[CellGroupData[{
+Cell[3428, 101, 53, 0, 70, "Notes"],
+Cell[3484, 103, 2801, 80, 70, "3ColumnTableMod"]
+}, Open  ]]
+}, Closed]],
+Cell[6312, 187, 23, 0, 70, "FooterCell"]
+}
+]
+*)
+
+(* End of internal cache information *)

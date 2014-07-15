@@ -1,0 +1,695 @@
+(* Content-type: application/mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 6.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       145,          7]
+NotebookDataLength[     19296,        686]
+NotebookOptionsPosition[      9309,        411]
+NotebookOutlinePosition[     15646,        559]
+CellTagsIndexPosition[     15603,        556]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[TextData[
+ValueBox["DateLong"]], "Date",
+ FontSize->11,
+ FontColor->Automatic],
+
+Cell[CellGroupData[{
+
+Cell["NetCDFReader Package", "Title",
+ Background->None],
+
+Cell["A convenience package for reading NetCDF Files", "Subtitle",
+ CellMargins->{{32, Inherited}, {20, 2}}],
+
+Cell[BoxData[
+ FormBox[
+  RowBox[{"Version", " ", "0.1"}], TraditionalForm]], "Equation"],
+
+Cell["Jan-Hendrik Prinz", "Author",
+ CellDingbat->None,
+ CellFrameMargins->4,
+ CellChangeTimes->{{3.4373747020098267`*^9, 3.437374705118013*^9}},
+ FontSize->12],
+
+Cell["CompMolBio Group, Matheon, FU Berlin", "AuthorAffiliation"],
+
+Cell["jan-hendrik.prinz@iwr.uni-heidelberg.de", "AuthorEmail",
+ CellChangeTimes->{{3.437375005393919*^9, 3.437375019406493*^9}, {
+  3.43737514026406*^9, 3.4373751440070677`*^9}}],
+
+Cell["\<\
+Please send any errors, problems, comments or suggestions to me. \
+\>", "Subsubsubsection",
+ FontSize->13],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ StyleBox[
+ CounterBox["Section"],
+  FontSize->24],
+ StyleBox[".",
+  FontSize->24],
+ "FOREWORD & VERSION"
+}], "Section",
+ CellFrame->{{0, 0}, {0.5, 0}}],
+
+Cell[TextData[{
+ "Reading NetCDF Files in ",
+ StyleBox["Mathematica",
+  FontSlant->"Italic"],
+ " is quite cumbersome. This package should provide an easy way to read \
+NetCDF Files and extract all contained information with minimum effort. "
+}], "Text"],
+
+Cell[CellGroupData[{
+
+Cell["Last changes", "Subsubsubsection"],
+
+Cell["First Version Finished", "Text"]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ StyleBox[
+ CounterBox["Section"],
+  FontSize->24],
+ StyleBox[".",
+  FontSize->24],
+ "DOCUMENTATION"
+}], "Section"],
+
+Cell[TextData[{
+ "I will start with a short introduction on the idea behind the package, then \
+give some examples on the usage and the list all functions implmented yet. \
+Some short infos can be obtained with the questions mark operator ",
+ StyleBox["?",
+  FontWeight->"Bold"],
+ StyleBox["function.",
+  FontWeight->"Bold",
+  FontSlant->"Italic"]
+}], "Text"],
+
+Cell[CellGroupData[{
+
+Cell["Load the package", "Subsection"],
+
+Cell["Whereever it is located...", "Text"],
+
+Cell[BoxData[
+ RowBox[{"<<", 
+  "\"\</Users/jan-hendrikprinz/Desktop/NetCDFReader.m\>\""}]], "Input",
+ InitializationCell->True]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["The NetCDFFile Object", "Subsection"],
+
+Cell["The NetCDFFile", "Text"],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ "NetCDFFile (",
+ Cell[BoxData[
+  FormBox["NetCDF", TraditionalForm]]],
+ ")"
+}], "Subsubsection"],
+
+Cell["\<\
+Contains all the information from an NetCDFFile except the datasets itself. \
+These might be really large and not all of the should be read. The Objects \
+should not be created by hand. Only by the appropriate read functions. \
+\>", "Text"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Structure", "Subsubsection"],
+
+Cell[BoxData[
+ RowBox[{"NetCDFFile", "[", 
+  RowBox[{
+  "filename", ",", "metadata", ",", "datasetinformation", ",", "options"}], 
+  "]"}]], "Input"],
+
+Cell[CellGroupData[{
+
+Cell["DisplayForm", "Subsubsubsection"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{
+   SubscriptBox["NetCDF", "1"], "(", 
+   RowBox[{"texst", ".", "nc"}], ")"}],
+  NetCDFReader`NetCDFFile[
+  "/Users/jan-hendrikprinz/Desktop/texst.nc", {}, {{
+    "temperature", {100, 100, 100}, "Real64", {
+     "units" -> "K", "variable" -> "temperature", "description" -> 
+      "Temperature at place_index x and time_index t", "d0" -> "x", "d1" -> 
+      "t", "d2" -> "n"}}}]]], "Equation"],
+
+Cell["\<\
+In the round brackets the filename is shown. The subscript number indicates \
+the number of contained datasets.\
+\>", "Text"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Read Functions", "Subsection"],
+
+Cell[CellGroupData[{
+
+Cell["OpenNetCDFFile", "Subsubsection"],
+
+Cell["\<\
+Returns a NetCDFFile Object containing all the essential meta data of the \
+specified file.\
+\>", "Text"],
+
+Cell[CellGroupData[{
+
+Cell["Syntax", "Subsubsubsection"],
+
+Cell[BoxData[
+ RowBox[{"OpenNetCDFFile", 
+  StyleBox["[", "Equation"], 
+  StyleBox["filename", "Equation"], 
+  StyleBox["]", "Equation"]}]], "Input"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Example", "Subsubsubsection"],
+
+Cell[BoxData[
+ RowBox[{"ncFile", "=", 
+  RowBox[{"OpenNetCDFFile", "[", "\"\<test.nc\>\"", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{
+   SubscriptBox["NetCDF", "1"], "(", 
+   RowBox[{"texst", ".", "nc"}], ")"}],
+  NetCDFReader`NetCDFFile[
+  "/Users/jan-hendrikprinz/Desktop/texst.nc", {}, {{
+    "temperature", {100, 100, 100}, "Real64", {
+     "units" -> "K", "variable" -> "temperature", "description" -> 
+      "Temperature at place_index x and time_index t", "d0" -> "x", "d1" -> 
+      "t", "d2" -> "n"}}}]]], "Equation"]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["GetDataset", "Subsubsection"],
+
+Cell["\<\
+Return a dataset stored in the NetCDF File. The second argument can either be \
+the index in the file starting with one or the actual name of the dataset.\
+\>", "Text"],
+
+Cell[CellGroupData[{
+
+Cell["Syntax", "Subsubsubsection"],
+
+Cell[BoxData[
+ RowBox[{"GetDataset", "[", 
+  RowBox[{"netCDFFile", ",", "datasetIndex"}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"GetDataset", "[", 
+  RowBox[{"netCDFFile", ",", "datasetName"}], "]"}]], "Input"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Example", "Subsubsubsection"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"data", "=", 
+   RowBox[{"GetDataset", "[", 
+    RowBox[{"ncFile", ",", "1"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Dimensions", "[", "data", "]"}]}], "Input"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"100", ",", "100", ",", "100"}], "}"}]], "Output"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Basic Functions", "Subsection"],
+
+Cell[CellGroupData[{
+
+Cell["ListDatasets", "Subsubsection"],
+
+Cell["\<\
+Returns a list of names of all the datasets (variables) in the NetCDFFile.\
+\>", "Text"],
+
+Cell[CellGroupData[{
+
+Cell["Syntax", "Subsubsubsection"],
+
+Cell[BoxData[
+ RowBox[{"ListDatasets", "[", "netCDFFile", "]"}]], "Input"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Example", "Subsubsubsection"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ListDatasets", "[", "ncFile", "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"{", "\<\"temperature\"\>", "}"}]], "Output"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["ListDatasetsFull", "Subsubsection"],
+
+Cell["\<\
+Returns a list of names of all the datasets (variables) in the NetCDFFile \
+including all their metadata in the form: \
+\>", "Text"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"Name", ",", "Dimensions", ",", "DataType", ",", "MetaData"}], 
+  "}"}]], "Equation"],
+
+Cell[CellGroupData[{
+
+Cell["Syntax", "Subsubsubsection"],
+
+Cell[BoxData[
+ RowBox[{"ListDatasetsFull", "[", "netCDFFile", "]"}]], "Input"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Example", "Subsubsubsection"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ListDatasetsFull", "[", "ncFile", "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"{", 
+   RowBox[{"\<\"temperature\"\>", ",", 
+    RowBox[{"{", 
+     RowBox[{"100", ",", "100", ",", "100"}], "}"}], ",", "\<\"Real64\"\>", 
+    ",", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"\<\"units\"\>", "\[Rule]", "\<\"K\"\>"}], ",", 
+      RowBox[{"\<\"variable\"\>", "\[Rule]", "\<\"temperature\"\>"}], ",", 
+      RowBox[{"\<\"description\"\>", 
+       "\[Rule]", "\<\"Temperature at place_index x and time_index t\"\>"}], 
+      ",", 
+      RowBox[{"\<\"d0\"\>", "\[Rule]", "\<\"x\"\>"}], ",", 
+      RowBox[{"\<\"d1\"\>", "\[Rule]", "\<\"t\"\>"}], ",", 
+      RowBox[{"\<\"d2\"\>", "\[Rule]", "\<\"n\"\>"}]}], "}"}]}], "}"}], 
+  "}"}]], "Output"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ StyleBox[
+ CounterBox["Section"],
+  FontSize->24],
+ StyleBox[".",
+  FontSize->24],
+ "STILL TO BE IMPLEMENTED"
+}], "Section"],
+
+Cell[CellGroupData[{
+
+Cell["Error Messages", "Subsubsection"],
+
+Cell["\<\
+Enter all error messages necessary for reasonable usage and debugging\
+\>", "Text"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Documentation", "Subsubsection"],
+
+Cell["\<\
+Extended Examples Section, Introduction and Bibliography still missing\
+\>", "Text"]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ StyleBox[
+ CounterBox["Section"],
+  FontSize->24],
+ StyleBox[".",
+  FontSize->24],
+ "BIBLIOGRAPHY"
+}], "Section"],
+
+Cell["Literature Links, etc.", "Text"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ StyleBox[
+ CounterBox["Section"],
+  FontSize->24],
+ StyleBox[".",
+  FontSize->24],
+ "APPENDIX"
+}], "Section"],
+
+Cell["Additional Material", "Text",
+ CellChangeTimes->{{3.43737854744133*^9, 3.4373785489594812`*^9}}]
+}, Open  ]]
+}, Open  ]]
+},
+AutoGeneratedPackage->None,
+WindowSize->{1241, 756},
+WindowMargins->{{0, Automatic}, {Automatic, 0}},
+PrintingCopies->1,
+PrintingPageRange->{1, Automatic},
+DefaultNewCellStyle->"Input",
+Magnification:>FEPrivate`If[
+  FEPrivate`Equal[FEPrivate`$VersionNumber, 6.], 1.5, 1.5 Inherited],
+FrontEndVersion->"7.0 for Mac OS X x86 (32-bit) (February 18, 2009)",
+StyleDefinitions->Notebook[{
+   Cell[
+    StyleData[
+    StyleDefinitions -> 
+     FrontEnd`FileName[{"Book"}, "Compilation.nb", CharacterEncoding -> 
+       "UTF-8"]], Background -> None], 
+   Cell[
+    CellGroupData[{
+      Cell[
+       StyleData["Title"], CellMargins -> {{32, Inherited}, {6, 12}}, 
+       MenuPosition -> 10000, FontFamily -> "Gill Sans Light", FontSize -> 36,
+        FontWeight -> "Plain", FontSlant -> "Plain"], 
+      Cell[
+       StyleData["Title", "Printout"], 
+       CellMargins -> {{32, Inherited}, {6, 12}}, MenuPosition -> 10000, 
+       FontFamily -> "Gill Sans Light", FontSize -> 36, FontWeight -> "Plain",
+        FontSlant -> "Plain"]}, Open]], 
+   Cell[
+    CellGroupData[{
+      Cell[
+       StyleData["Subtitle"], CellMargins -> {{32, 12}, {20, 2}}, 
+       MenuPosition -> 10000, FontFamily -> "Gill Sans Light", FontSize -> 18,
+        FontWeight -> "Plain", FontSlant -> "Plain", Background -> None], 
+      Cell[
+       StyleData["Subtitle", "Printout"], CellMargins -> {{32, 12}, {20, 2}}, 
+       MenuPosition -> 10000, FontFamily -> "Gill Sans", Background -> None]},
+      Open]], 
+   Cell[
+    CellGroupData[{
+      Cell[
+       StyleData["Date"], CellFrame -> None, 
+       CellMargins -> {{12, 12}, {12, 12}}, TextAlignment -> Right, 
+       MenuPosition -> 10000, FontFamily -> "Gill Sans Light", FontSize -> 9, 
+       FontWeight -> "Plain", FontSlant -> "Plain", FontColor -> 
+       GrayLevel[0.3], Background -> None], 
+      Cell[
+       StyleData["Date", "Printout"], CellFrame -> None, 
+       CellMargins -> {{12, 12}, {12, 12}}, TextAlignment -> Right, 
+       MenuPosition -> 10000, FontFamily -> "Gill Sans Light", FontSize -> 9, 
+       FontWeight -> "Plain", FontSlant -> "Plain", FontColor -> 
+       GrayLevel[0.3], Background -> None]}, Open]], 
+   Cell[
+    CellGroupData[{
+      Cell[
+       StyleData["Section"], CellFrame -> {{0, 0}, {0.5, 0}}, CellDingbat -> 
+       None, CellMargins -> {{41, 12}, {8, 24}}, CellFrameMargins -> -4, 
+       CellFrameLabels -> {{None, None}, {None, None}}, FontFamily -> 
+       "Gill Sans Light", FontSize -> 15, FontWeight -> "Plain", FontSlant -> 
+       "Plain", FontTracking -> 8, Background -> None, 
+       CounterBoxOptions -> {CounterFunction :> Identity}], 
+      Cell[
+       StyleData["Section", "Printout"], CellMargins -> {{21, 2}, {6, 21}}, 
+       FontSize -> 13]}, Open]], 
+   Cell[
+    StyleData["Subsubsection"], FontFamily -> "Gill Sans", FontSize -> 11, 
+    FontWeight -> "Bold", FontSlant -> "Plain", Background -> None], 
+   Cell[
+    StyleData["Subsubsubsection"], CellMargins -> {{65, 12}, {3, 3}}, 
+    FontFamily -> "Gill Sans", FontSize -> 11, FontWeight -> "Bold", 
+    FontSlant -> "Italic", Background -> None], 
+   Cell[
+    StyleData["Input"], CellMargins -> {{66, 10}, {5, 5}}, Background -> 
+    None], 
+   Cell[
+    CellGroupData[{
+      Cell[
+       StyleData["Author"], CellFrame -> {{0, 0}, {0.5, 0}}, 
+       CellMargins -> {{64, 24}, {0, 6}}, MenuPosition -> 10000, FontFamily -> 
+       "Gill Sans", FontSize -> 12, FontWeight -> "Bold", FontSlant -> 
+       "Italic", FontColor -> GrayLevel[0], Background -> None], 
+      Cell[
+       StyleData["Author", "Printout"], CellFrame -> {{0, 0}, {0.5, 0}}, 
+       CellMargins -> {{64, 24}, {0, 6}}, MenuPosition -> 10000, FontFamily -> 
+       "Gill Sans", FontSize -> 12, FontWeight -> "Bold", FontSlant -> 
+       "Italic", FontColor -> GrayLevel[0], Background -> None]}, Open]], 
+   Cell[
+    StyleData[All], FontColor -> Automatic, Background -> None], 
+   Cell[
+    CellGroupData[{
+      Cell[
+       StyleData["AuthorEmail"], CellMargins -> {{80, 24}, {0, 6}}, 
+       MenuPosition -> 10000, FontFamily -> "Courier", FontSize -> 11, 
+       FontWeight -> "Plain", FontSlant -> "Plain", FontColor -> Automatic, 
+       Background -> None], 
+      Cell[
+       StyleData["AuthorEmail", "Printout"], 
+       CellMargins -> {{80, 24}, {0, 6}}, MenuPosition -> 10000, FontFamily -> 
+       "Courier", FontSize -> 11, FontWeight -> "Plain", FontSlant -> "Plain",
+        FontColor -> Automatic, Background -> None]}, Open]], 
+   Cell[
+    StyleData["AuthorAffiliation"], CellMargins -> {{80, 24}, {0, 6}}, 
+    MenuPosition -> 10000, FontFamily -> "Gill Sans Light", FontSize -> 12, 
+    FontWeight -> "Plain", FontSlant -> "Plain", FontColor -> Automatic, 
+    Background -> None], 
+   Cell[
+    StyleData["AuthorThanks"], CellMargins -> {{80, 24}, {0, 6}}, 
+    MenuPosition -> 10000, FontFamily -> "Gill Sans Light", FontSize -> 12, 
+    FontWeight -> "Plain", FontSlant -> "Plain", FontColor -> Automatic, 
+    Background -> None], 
+   Cell[
+    CellGroupData[{
+      Cell[
+       StyleData["Abstract"], CellFrame -> False, 
+       CellMargins -> {{96, 96}, {36, 36}}, MenuPosition -> 10000, Background -> 
+       None], 
+      Cell[
+       StyleData["Abstract", "Printout"], CellFrame -> False, 
+       CellMargins -> {{96, 96}, {36, 36}}, MenuPosition -> 10000, Background -> 
+       None]}, Open]], 
+   Cell[
+    StyleData["Subsection"], CellDingbat -> Cell[
+      TextData[{
+        CounterBox["Section"], ".", 
+        CounterBox["Subsection"]}], "SubsectionLabel", TextAlignment -> 
+      Right], CellMargins -> {{65, 12}, {8, 20}}, FontFamily -> "Gill Sans", 
+    FontSize -> 13, FontWeight -> "Plain", FontSlant -> "Plain", Background -> 
+    None], 
+   Cell[
+    CellGroupData[{
+      Cell[
+       StyleData["Text"], CellMargins -> {{41, 10}, {4, 1}}, ParagraphIndent -> 
+       0, MenuPosition -> 10000], 
+      Cell[
+       StyleData["Text", "Printout"], CellMargins -> {{41, 2}, {0, 0}}, 
+       ParagraphIndent -> 0, MenuPosition -> 10000]}, Open]]}, Visible -> 
+  False, FrontEndVersion -> 
+  "7.0 for Mac OS X x86 (32-bit) (February 18, 2009)", StyleDefinitions -> 
+  "PrivateStylesheetFormatting.nb"]
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[545, 20, 83, 3, 56, "Date"],
+Cell[CellGroupData[{
+Cell[653, 27, 56, 1, 88, "Title"],
+Cell[712, 30, 108, 1, 63, "Subtitle"],
+Cell[823, 33, 89, 2, 39, "Equation"],
+Cell[915, 37, 160, 4, 36, "Author"],
+Cell[1078, 43, 65, 0, 29, "AuthorAffiliation"],
+Cell[1146, 45, 178, 2, 25, "AuthorEmail"],
+Cell[1327, 49, 116, 3, 30, "Subsubsubsection"],
+Cell[CellGroupData[{
+Cell[1468, 56, 168, 8, 55, "Section"],
+Cell[1639, 66, 253, 6, 48, "Text"],
+Cell[CellGroupData[{
+Cell[1917, 76, 40, 0, 28, "Subsubsubsection"],
+Cell[1960, 78, 38, 0, 25, "Text"]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[2047, 84, 131, 7, 87, "Section"],
+Cell[2181, 93, 359, 9, 48, "Text"],
+Cell[CellGroupData[{
+Cell[2565, 106, 38, 0, 64, "Subsection"],
+Cell[2606, 108, 42, 0, 25, "Text"],
+Cell[2651, 110, 128, 3, 33, "Input",
+ InitializationCell->True]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[2816, 118, 43, 0, 64, "Subsection"],
+Cell[2862, 120, 30, 0, 25, "Text"],
+Cell[CellGroupData[{
+Cell[2917, 124, 113, 5, 53, "Subsubsection"],
+Cell[3033, 131, 250, 4, 48, "Text"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[3320, 140, 34, 0, 53, "Subsubsection"],
+Cell[3357, 142, 149, 4, 33, "Input"],
+Cell[CellGroupData[{
+Cell[3531, 150, 39, 0, 28, "Subsubsubsection"],
+Cell[3573, 152, 437, 10, 39, "Equation"],
+Cell[4013, 164, 135, 3, 25, "Text"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[4209, 174, 36, 0, 64, "Subsection"],
+Cell[CellGroupData[{
+Cell[4270, 178, 39, 0, 53, "Subsubsection"],
+Cell[4312, 180, 115, 3, 25, "Text"],
+Cell[CellGroupData[{
+Cell[4452, 187, 34, 0, 28, "Subsubsubsection"],
+Cell[4489, 189, 149, 4, 33, "Input"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[4675, 198, 35, 0, 28, "Subsubsubsection"],
+Cell[4713, 200, 109, 2, 33, "Input"],
+Cell[4825, 204, 437, 10, 39, "Equation"]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[5311, 220, 35, 0, 53, "Subsubsection"],
+Cell[5349, 222, 178, 3, 25, "Text"],
+Cell[CellGroupData[{
+Cell[5552, 229, 34, 0, 28, "Subsubsubsection"],
+Cell[5589, 231, 106, 2, 33, "Input"],
+Cell[5698, 235, 105, 2, 33, "Input"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[5840, 242, 35, 0, 28, "Subsubsubsection"],
+Cell[CellGroupData[{
+Cell[5900, 246, 207, 5, 57, "Input"],
+Cell[6110, 253, 89, 2, 40, "Output"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[6272, 263, 37, 0, 64, "Subsection"],
+Cell[CellGroupData[{
+Cell[6334, 267, 37, 0, 53, "Subsubsection"],
+Cell[6374, 269, 98, 2, 25, "Text"],
+Cell[CellGroupData[{
+Cell[6497, 275, 34, 0, 28, "Subsubsubsection"],
+Cell[6534, 277, 74, 1, 33, "Input"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[6645, 283, 35, 0, 28, "Subsubsubsection"],
+Cell[CellGroupData[{
+Cell[6705, 287, 70, 1, 33, "Input"],
+Cell[6778, 290, 68, 1, 40, "Output"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[6907, 298, 41, 0, 53, "Subsubsection"],
+Cell[6951, 300, 142, 3, 25, "Text"],
+Cell[7096, 305, 124, 3, 39, "Equation"],
+Cell[CellGroupData[{
+Cell[7245, 312, 34, 0, 28, "Subsubsubsection"],
+Cell[7282, 314, 78, 1, 33, "Input"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[7397, 320, 35, 0, 28, "Subsubsubsection"],
+Cell[CellGroupData[{
+Cell[7457, 324, 74, 1, 33, "Input"],
+Cell[7534, 327, 701, 17, 65, "Output"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[8320, 353, 141, 7, 87, "Section"],
+Cell[CellGroupData[{
+Cell[8486, 364, 39, 0, 53, "Subsubsection"],
+Cell[8528, 366, 93, 2, 25, "Text"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[8658, 373, 38, 0, 53, "Subsubsection"],
+Cell[8699, 375, 94, 2, 25, "Text"]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[8842, 383, 130, 7, 87, "Section"],
+Cell[8975, 392, 38, 0, 25, "Text"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[9050, 397, 126, 7, 87, "Section"],
+Cell[9179, 406, 102, 1, 25, "Text"]
+}, Open  ]]
+}, Open  ]]
+}
+]
+*)
+
+(* End of internal cache information *)

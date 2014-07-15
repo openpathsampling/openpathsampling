@@ -1,0 +1,2316 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass revtex4
+\options aps,twocolumn,showkeys,nofootinbib,superscriptaddress,showpacs,floatfix
+\use_default_options false
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman palatino
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize letterpaper
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\use_mathdots 1
+\use_mhchem 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+A generalized model for the projected dynamics of metastable Markov state
+ models
+\end_layout
+
+\begin_layout Author
+Jan-Hendrik Prinz
+\end_layout
+
+\begin_layout Affiliation
+DFG Research Center Matheon, Free University Berlin, Arnimallee 6, 14195
+ Berlin, Germany
+\end_layout
+
+\begin_layout Author Email
+jan-hendrik.prinz@fu-berlin.de
+\end_layout
+
+\begin_layout Author
+Hao Wu
+\end_layout
+
+\begin_layout Author Email
+hao.wu@fu-berlin.de
+\end_layout
+
+\begin_layout Affiliation
+DFG Research Center Matheon, Free University Berlin, Arnimallee 6, 14195
+ Berlin, Germany
+\end_layout
+
+\begin_layout Author
+John D.
+ Chodera
+\end_layout
+
+\begin_layout Author Email
+choderaj@mskcc.org
+\end_layout
+
+\begin_layout Affiliation
+Memorial Sloan-Kettering Cancer Center, Zuckerman Research Institute, Zuckerman
+ Research Center, 417 East 68th Street, New York, NY 10065, US
+\end_layout
+
+\begin_layout Author
+Frank Noé
+\end_layout
+
+\begin_layout Author Email
+frank.noe@fu-berlin.de
+\end_layout
+
+\begin_layout Affiliation
+DFG Research Center Matheon, Free University Berlin, Arnimallee 6, 14195
+ Berlin, Germany
+\end_layout
+
+\begin_layout Abstract
+The application of small-sized Markov state models (MSMs) has become a standard
+ tool for the analysis of the dynamics in molecular dynamics (MD) simulations
+ and computation of key properties.
+ As has been proven before, the predictive quality of the MSMs depends strongly
+ on the selected discretization, which can results in unfeasible parametrization
+s especially when low-dimensional experimental results are used.
+ For the case of meta-stable dynamics we present a generalized theory to
+ correctly describe the projection of markovian dynamics.
+ This allows a much improved estimation of timescales and eigenvectors projected
+ on the observable space.
+ We demonstrate the presented approach on a numerical example.
+\end_layout
+
+\begin_layout PACS
+[add]
+\end_layout
+
+\begin_layout Keywords
+Time Series Analysis, Timescale Estimation, Markov State Models, Implied
+ Timescales
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Standard
+In recent years Markov State Models (MSMs) have matured into a useful tool
+ for the descriptions of dynamics that shows stochastic, but metastable
+ behavior on the timescales of interest 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Prinz:2011id"
+
+\end_inset
+
+.
+ This includes protein dynamics, chemical [cite], physical systems [cite],
+ etc.
+ Its application spans dynamics that can be written using a differential
+ equation that is first order in time and has also been applied for various
+ types of dynamics, e.g.
+ Brownian dynamics, Langevin dynamics, etc...
+ Once a MSM has been succesfully parametrized from data it allows to quickly
+ compute a large variety of target properties like relaxation timescales,
+ mean first passage times, metastable subsets 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Roblitz:2013cg,DeuflhardWeber_PCCA"
+
+\end_inset
+
+ and path related properties like reactive pathways and committor probabilities
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "VandenEijnden:2006ki,Metzner:2009ub"
+
+\end_inset
+
+.
+ The usage of conditional jump probabilities also allows to effectively
+ split the generation of necessary statistics into independent subproblems
+ that require only local equilibrium and can be thus be parallelized as
+ used in adaptive sampling techniques.
+\end_layout
+
+\begin_layout Standard
+A MSM requires a crisp or fuzzy decomposition of the available state space
+ into finite set of states between which the system can jump.
+ If done carefully this can reduce the dominant dynamics to a very small
+ system of transition probabilities.
+ However, the prediction quality crucially depends on the choice of this
+ subsets 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Djurdjevac:MYsgGZyA,Sarich:2010wa"
+
+\end_inset
+
+ and the task of finding an optimal decomposition requires full knowledge
+ of the dominant eigenvectors and eigenvalues of the associated propagator.
+ Often this propagator is approximated by a fine discretization that can
+ then be clustered using a metastability anaylsis 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Roblitz:2013cg,DeuflhardWeber_PCCA"
+
+\end_inset
+
+ from the data in a finite timeseries.
+ Even if we have perfect statistics, an optimal decomposition requires access
+ to the dynamics in the full state space which is only available in atomistic
+ simulations and even then usually a dimension reduction is unavoidable
+ to keep the system size tractable.
+ In most feasible cases 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+--
+\end_layout
+
+\end_inset
+
+ especially dynamics observed from experiments 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+--
+\end_layout
+
+\end_inset
+
+ the available timeseries might be deteriorated by stochastic noise and
+ more important a projection onto the observable subspace.
+ In these cases the MSM approach fails since dominant eigenvectors cannot
+ be approximated with sufficient accuracy.
+\end_layout
+
+\begin_layout Standard
+Single-molecule experiments, e.g FRET, AFM and Optical Tweezer [cite examples],
+ provide access to exactly these kind of projected dynamics that can already
+ span much larger timescales than accessible with simulations.
+ To make use of these data a generalization of MSMs for these projected
+ Markovian dynamics is necessary.
+ In this paper we present a novel approach to treat these projected dynamics
+ in the case of metastability correct and overcome some of the previously
+ described deficiencies of MSMs, leading to a deeper understanding of the
+ projection error.
+\end_layout
+
+\begin_layout Section
+Theory
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $\{x_{t}\mid x_{t}\in\Omega,t\in\mathbb{R}^{+}\}$
+\end_inset
+
+ be the (stochastic) process of interest in full state space 
+\begin_inset Formula $\Omega$
+\end_inset
+
+ which we require to be Markovian, time-homogeneous, ergodic and reversible
+ wrt.
+ its unique stationary distribution 
+\begin_inset Formula $\mu$
+\end_inset
+
+.
+ For a time-homogeneous Markov process the time evolution of the probability
+ density 
+\begin_inset Formula $p_{t}(x)\equiv\mathbb{P}(x_{t}=x)$
+\end_inset
+
+ can be expressed using a time-step 
+\begin_inset Formula $\tau$
+\end_inset
+
+ (also called lag time) dependent propagator 
+\begin_inset Formula $\mathcal{P}_{\tau}$
+\end_inset
+
+ by 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Schutte:1999ju,Schutte:2003ty"
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{eqnarray*}
+p_{t}(x) & = & \mathcal{P}_{\tau}\left[p_{t}\right](x)\\
+ & \equiv & \int_{\Omega}\text{d}x'\,\mathbb{P}\left[x_{t+\tau}=x\mid x_{t}=x'\right]p_{t}(x').
+\end{eqnarray*}
+
+\end_inset
+
+Ergodicity and reversibility of 
+\begin_inset Formula $\{x_{t}\}$
+\end_inset
+
+ then implies that 
+\begin_inset Formula $\mathcal{P}_{\tau}$
+\end_inset
+
+ is compact and self-adjoint wrt.
+ the stationary density 
+\begin_inset Formula $\mu$
+\end_inset
+
+ on a Hilbert space defined by the inner product
+\begin_inset Formula 
+\[
+\langle u,v\rangle\equiv\int_{\Omega}\text{d}x\, u(x)v(x)\mu^{-1}(x)
+\]
+
+\end_inset
+
+and we can expand the propagator into a countable sum 
+\begin_inset Formula 
+\[
+\mathcal{P}_{\tau}p_{t}=\sum_{k=1}^{\infty}\lambda_{i}(\tau)\phi_{i}\langle\phi_{i},p_{t}\rangle
+\]
+
+\end_inset
+
+of orthogonal eigenfunction/eigenvalue pairs 
+\begin_inset Formula $\{(\lambda_{i}(\tau),\phi_{i})\mid i\in\mathbb{N}\}$
+\end_inset
+
+ with 
+\begin_inset Formula $\langle\phi_{i},\phi_{i}\rangle=\delta_{ij}$
+\end_inset
+
+ and 
+\begin_inset Formula $\Vert\lambda_{i}\Vert\leq1$
+\end_inset
+
+.
+ For convenience we order all pairs with descending magnitude of the eigenvalue
+ where the uniqueness of the stationary distribution ensures that the eigenvalue
+ of one 
+\begin_inset Formula $\lambda_{1}$
+\end_inset
+
+ is single and so 
+\begin_inset Formula $\phi_{1}=\mu$
+\end_inset
+
+.
+ The semi-group property of a markov chain also implies a relation 
+\begin_inset Formula $\lambda_{i}(k\tau)=\lambda_{i}^{k}(\tau)$
+\end_inset
+
+ s.t.
+ we can define 
+\begin_inset Formula $\lambda_{i}^{\tau}\equiv\lambda_{i}^{\tau}(1)$
+\end_inset
+
+ as the eigenvalues at the native lag time 
+\begin_inset Formula $\tau=1$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+To describe metastability which we required we use that metastability leads
+ to gaps in the spectrum of the propagator 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "bovier:2005a"
+
+\end_inset
+
+ where the finite set of 
+\begin_inset Formula $m$
+\end_inset
+
+ eigenvalue/eigenfunction pairs above the gap (being slower) describe the
+ metastable dynamics while the remaining faster pairs describe the fast
+ dynamics within metastable sets.
+ That these separation is possible and the dynamics do not mix follows from
+ the orthogonality of the eigenfunctions.
+ Thus we can split the propagator
+\begin_inset Formula 
+\begin{eqnarray}
+\mathcal{P}_{\tau} & = & \mathcal{P}_{\tau}^{\text{meta}}+\mathcal{P}_{\tau}^{\text{fast}}\nonumber \\
+ &  & \sum_{k=1}^{m}\lambda_{i}(\tau)\phi_{i}\langle\phi_{i},\,\cdot\,\rangle+\mathcal{P}_{\tau}^{\text{fast}}\label{eq:metastable-dynamics}
+\end{eqnarray}
+
+\end_inset
+
+with 
+\begin_inset Formula $\Vert\mathcal{P}_{\tau}^{\text{fast}}\Vert\in\mathcal{O}\left(\lambda_{m+1}^{\tau}\right)$
+\end_inset
+
+ and conclusively, if 
+\begin_inset Formula $\tau\gg-1/\log\lambda_{m+1}$
+\end_inset
+
+ the fast part of 
+\begin_inset Formula $\mathcal{P}_{\tau}$
+\end_inset
+
+ has decayed and the dynamics can be well approximated by the metastable
+ part 
+\begin_inset Formula $\mathcal{P}_{\tau}\approx\mathcal{P}_{\tau}^{\text{meta}}$
+\end_inset
+
+.
+ In this paper we will be dealing with this type of dynamics and call this
+ an 
+\begin_inset Quotes eld
+\end_inset
+
+
+\begin_inset Formula $m$
+\end_inset
+
+-metastable
+\begin_inset Quotes erd
+\end_inset
+
+ system.
+ 
+\end_layout
+
+\begin_layout Standard
+Usually, the full dynamics is not directly observable, either by an artificially
+ induced discretization, the experimental setup or unavoidable sideeffects
+ like noise.
+ Instead we have to deal with a projected process 
+\begin_inset Formula $\{y_{t}\mid y_{t}\in\Upsilon,t\in\mathbb{R}^{+}\}$
+\end_inset
+
+ on an observable space 
+\begin_inset Formula $\Upsilon=\{1,\ldots,K\}$
+\end_inset
+
+ with 
+\begin_inset Formula $K$
+\end_inset
+
+ states which we choose to be finite.
+ To describe the probabilistic relation between 
+\begin_inset Formula $x_{t}$
+\end_inset
+
+ and 
+\begin_inset Formula $y_{t}$
+\end_inset
+
+ we use a output probability functions 
+\begin_inset Formula $\chi_{i}$
+\end_inset
+
+ so that
+\begin_inset Formula 
+\[
+\chi_{k}(x)\equiv\mathbb{P}\left(y_{t}=k\mid x_{t}=x\right)
+\]
+
+\end_inset
+
+which explicitely assumes that the output probabilities are time independent
+ and also contain no memory s.t.
+ each state 
+\begin_inset Formula $x\in\Omega$
+\end_inset
+
+ in the full state space always maps into 
+\begin_inset Formula $\Upsilon$
+\end_inset
+
+ in the same way.
+ The combination of the reversible Markov state model and output probabilities
+ will be called a 
+\emph on
+projected Markov model 
+\emph default
+(PMM), if in addition the full state dynamics is 
+\begin_inset Formula $m$
+\end_inset
+
+-metastable we will refer to 
+\begin_inset Formula $m$
+\end_inset
+
+-metastable PMM or short 
+\begin_inset Formula $m$
+\end_inset
+
+-PMM.
+ Note, that 
+\begin_inset Formula $\{y_{t}\}$
+\end_inset
+
+ is 
+\emph on
+not
+\emph default
+ a Markov chain anymore unless the output probability functions exactly
+ span the space of the 
+\begin_inset Formula $m$
+\end_inset
+
+ dominant eigenfunctions, which is either impossible due to experimental
+ constraints or requires explicit knowledge of the propagator.
+ Therefore the popular modelling using a Markov state model (MSM) is often
+ only approximate 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Sarich:2010wa"
+
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+To capture the dynamics of a PMM we compute the state-to-state correlation
+ matrix 
+\begin_inset Formula $C_{ij}(\tau)$
+\end_inset
+
+ in the observable space 
+\begin_inset Formula 
+\begin{eqnarray*}
+C_{ij}(\tau) & \equiv & \mathbb{P}\left[y_{t+\tau}=j\,\wedge\, y_{t}=i\right]\\
+ & = & \iint_{\Omega^{2}}\text{d}x\,\text{d}x'\,\chi_{i}(x)\mathbb{P}\left[x_{t+\tau}=x\,\wedge\, x_{t}=x'\right]\chi_{j}(x')
+\end{eqnarray*}
+
+\end_inset
+
+for the stochstic process 
+\begin_inset Formula $y_{t}$
+\end_inset
+
+ which implicitely assumes infinite statistics.
+ In this case the expression can be rewritten as
+\begin_inset Formula 
+\begin{eqnarray*}
+C_{ij}(\tau) & = & \sum_{k=1}^{\infty}\lambda_{i}(\tau)\int_{\Omega}\text{d}x\,\chi_{i}(x)\phi_{k}(x)\int_{\Omega}\text{d}x'\,\phi_{k}(x')\chi_{j}(x')\\
+ & = & \sum_{k=1}^{\infty}\lambda_{i}(\tau)Q_{ki}\, Q_{kj}
+\end{eqnarray*}
+
+\end_inset
+
+with the matrix 
+\begin_inset Formula $Q$
+\end_inset
+
+ of 
+\emph on
+projected eigenfunctions 
+\emph default
+
+\begin_inset Formula 
+\[
+Q_{ki}\equiv\int_{\Omega}\text{d}x\,\chi_{i}(x)\phi_{k}(x).
+\]
+
+\end_inset
+
+Using the diagonal matrix of eigenvalues 
+\begin_inset Formula $\Lambda\equiv\text{diag}\left(\lambda_{1},\ldots\right)$
+\end_inset
+
+ we can finally write
+\begin_inset Formula 
+\[
+C(\tau)=Q^{\text{T}}\Lambda(\tau)Q
+\]
+
+\end_inset
+
+which is exact for any PMM but might require countable, but infinite sized
+ 
+\begin_inset Formula $Q$
+\end_inset
+
+ and 
+\begin_inset Formula $\Lambda$
+\end_inset
+
+.
+ For a 
+\begin_inset Formula $m$
+\end_inset
+
+-PMM the metastability reduces this size to 
+\begin_inset Formula $Q\in\mathbb{R}^{m\times K}$
+\end_inset
+
+ and 
+\begin_inset Formula $\Lambda\in\mathbb{R}^{m\times m}$
+\end_inset
+
+ which is much more tractable.
+ We conclude that all correlation functions on the observable space of a
+ 
+\begin_inset Formula $m$
+\end_inset
+
+-PMM can exactly be represented by the parametrization into 
+\begin_inset Formula $Q$
+\end_inset
+
+ and 
+\begin_inset Formula $\Lambda$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Section
+Spectral Estimation
+\end_layout
+
+\begin_layout Standard
+The goal will be to construct a learning algorithm to estimate 
+\begin_inset Formula $Q$
+\end_inset
+
+ and 
+\begin_inset Formula $\Lambda$
+\end_inset
+
+ from a given observation 
+\begin_inset Formula $\{y_{t}\}$
+\end_inset
+
+.
+ This will allow us to correctly estimate all dominant eigenvalues 
+\begin_inset Formula $\lambda_{i}$
+\end_inset
+
+ of the full propagator.
+ As input for the learning algorithm we use the state-to-state correlation
+ matrices 
+\begin_inset Formula $C(\tau)$
+\end_inset
+
+, which can easily be estimated from a finite timeseries.
+ Since 
+\begin_inset Formula $C(\tau)$
+\end_inset
+
+ is by construction symmetric 
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+The real 
+\begin_inset Formula $C(\tau)$
+\end_inset
+
+ is symmetric for reversible dynamics, while an estimated 
+\begin_inset Formula $C(\tau)$
+\end_inset
+
+ might not, depending on the estimation procedure.
+ Also if the the used data is finite and is not sampled from global equilibrium
+ the estimated 
+\begin_inset Formula $C(\tau)$
+\end_inset
+
+ is not symmetric!
+\end_layout
+
+\end_inset
+
+, the number of independent variables in a single 
+\begin_inset Formula $C(\tau)$
+\end_inset
+
+ is smaller than the variables to be parametrized in 
+\begin_inset Formula $Q$
+\end_inset
+
+ and 
+\begin_inset Formula $\Lambda(\tau)$
+\end_inset
+
+.
+ Conclusively, a single 
+\begin_inset Formula $C(\tau)$
+\end_inset
+
+ does not contain enough information to allow for a unique decomposition
+ of a given 
+\begin_inset Formula $C(\tau)$
+\end_inset
+
+ into 
+\begin_inset Formula $Q$
+\end_inset
+
+ and 
+\begin_inset Formula $\Lambda$
+\end_inset
+
+.
+ In MSMs this lack of information is filled by an orthogonality constraint
+ 
+\begin_inset Formula 
+\[
+Q^{T}Q=\text{diag}(\pi)
+\]
+
+\end_inset
+
+wrt.
+ the observed stationary distribution 
+\begin_inset Formula $\pi$
+\end_inset
+
+.
+ Other decompositions of this type include the singular value decomposition
+ for symmetric matrices (SVD) or, equivalently, the eigenvalue decomposition
+ (EVD) which both assume orthogonality 
+\begin_inset Formula $Q^{T}Q=\text{Id}$
+\end_inset
+
+ or the Cholesky decomposition that instead uses a triangular shaped 
+\begin_inset Formula $Q$
+\end_inset
+
+.
+ It can be shown (see SI), that two correlation matrices at two different
+ lagtimes 
+\begin_inset Formula $\tau_{1}$
+\end_inset
+
+ and 
+\begin_inset Formula $\tau_{2}$
+\end_inset
+
+ provide enough information to solve this problem uniquely in the case of
+ an 
+\begin_inset Formula $m$
+\end_inset
+
+-PMM and positive eigenvalues.
+\end_layout
+
+\begin_layout Standard
+We will first address the special case where the number of dominant eigenvalues
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $m$
+\end_inset
+
+ equals the number of observable states 
+\begin_inset Formula $K$
+\end_inset
+
+ so that 
+\begin_inset Formula $Q$
+\end_inset
+
+ is square.
+ This case can always be achieved by an additional projection onto 
+\begin_inset Formula $m$
+\end_inset
+
+ states provided that initially the number of observed states is larger
+ than the number of processes 
+\begin_inset Formula $K>m$
+\end_inset
+
+.
+ The problem then (see SI) reduces to a solving the generalized hermitian
+ eigenvalue problem (GHEP)
+\begin_inset Formula 
+\[
+C(\tau_{1})u_{i}=\nu_{i}C(\tau_{2})u_{i}
+\]
+
+\end_inset
+
+for the generalized eigenvalues 
+\begin_inset Formula $\nu$
+\end_inset
+
+ and eigenvectors 
+\begin_inset Formula $u_{i}$
+\end_inset
+
+ that are related to the dominant eigenvalues by
+\begin_inset Formula 
+\[
+\lambda_{i}=\nu_{i}^{1/(\tau_{1}-\tau_{2})}
+\]
+
+\end_inset
+
+to compute the matrix 
+\begin_inset Formula $Q$
+\end_inset
+
+ of projected eigenvectors by
+\begin_inset Formula 
+\[
+Q=U^{-1}
+\]
+
+\end_inset
+
+where 
+\begin_inset Formula $U=[u_{1},\ldots,u_{m}]$
+\end_inset
+
+ is the matrix of the generalized eigenvectors 
+\begin_inset Formula $u_{i}$
+\end_inset
+
+ that are normalized so that 
+\begin_inset Formula 
+\[
+\Vert u_{i}\Vert^{2}=\lambda_{i}^{\tau_{1}}\left(u_{i}^{T}C(\tau_{1})u_{i}\right)^{-1}
+\]
+
+\end_inset
+
+holds.
+ Note, that a GHEP can also be solved using an inversion of one matrix,
+ but this is not necessary.
+ Also this transforms into a non-symmetric problem and the inversion might
+ be badly conditioned.
+ Nonetheless, we can compute the solutions using an ordinary EVD of 
+\begin_inset Formula $C^{-1}(\tau_{2})C(\tau_{2})$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Section
+Low-rank approximation
+\end_layout
+
+\begin_layout Standard
+In most cases we are only interested in the dominant processes that govern
+ the dynamics as stated in Eq.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:metastable-dynamics"
+
+\end_inset
+
+.
+ Since the spectral estimation method is (almost) independent of the projection
+ we can project onto a set of 
+\begin_inset Formula $N$
+\end_inset
+
+ states, then apply the spectral estimation method and retrieve the dominant
+ timescales.
+ If we also want to reconstruct the dominant processes on the complete observabl
+e space we need to use a generating set of vectors for the space spanned
+ by the projected left eigenvectors.
+ Since we have no direct access to the eigenvectors we can use the singular
+ value decomposition 
+\begin_inset Formula 
+\begin{equation}
+C(\tau)\rightarrow V(\tau)\Sigma(\tau)V^{T}(\tau)\label{eq:svd-decomposition}
+\end{equation}
+
+\end_inset
+
+which for a symmetric matrix provides for a decomposition into a matrix
+ 
+\begin_inset Formula $V$
+\end_inset
+
+ and a diagonal matrix 
+\begin_inset Formula $\Sigma$
+\end_inset
+
+.
+ If for a particular 
+\begin_inset Formula $\tau>\tau_{\text{min}}$
+\end_inset
+
+ only 
+\begin_inset Formula $m$
+\end_inset
+
+ singular values exist then 
+\begin_inset Formula $V$
+\end_inset
+
+ must span the same subspace of 
+\begin_inset Formula $\Upsilon$
+\end_inset
+
+ as 
+\begin_inset Formula $Q$
+\end_inset
+
+ which follows from rank considerations.
+ As stated before, the decomposition in Eq.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:svd-decomposition"
+
+\end_inset
+
+ is not unique and the SVD requires 
+\begin_inset Formula $V^{T}V=\text{Id}$
+\end_inset
+
+ which is not the correct solution.
+ The most general form the correct solution can take is 
+\begin_inset Formula $Q=AV$
+\end_inset
+
+ with 
+\begin_inset Formula $A$
+\end_inset
+
+ being an 
+\begin_inset Formula $m\times m$
+\end_inset
+
+ matrix that captures the linear recombination and a second correlation
+ matrix 
+\begin_inset Formula $C(\tau_{2})$
+\end_inset
+
+ makes the decomposition unique.
+ Finally, we propose the following procedure to compute the dominant 
+\begin_inset Formula $Q$
+\end_inset
+
+ and 
+\begin_inset Formula $\Lambda$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+Estimate a reasonable range of lagtimes using the singular value decomposition
+ (SVD) which hints to the number 
+\begin_inset Formula $N$
+\end_inset
+
+ of processes needed to approximate the dynamics,
+\end_layout
+
+\begin_layout Enumerate
+Select two lagtimes 
+\begin_inset Formula $\tau_{1}$
+\end_inset
+
+ and 
+\begin_inset Formula $\tau_{2}$
+\end_inset
+
+ which lie in the range that at least 
+\begin_inset Formula $m$
+\end_inset
+
+ singular values are non-zero.
+\end_layout
+
+\begin_layout Enumerate
+Compute the two symmetric correlation matrices 
+\begin_inset Formula $C(\tau_{1})$
+\end_inset
+
+ and 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $C(\tau_{2})$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+Compute the low-rank approximation of rank 
+\begin_inset Formula $m$
+\end_inset
+
+ using the SVD of 
+\begin_inset Formula $C(\tau_{1})=V\Sigma V^{T}$
+\end_inset
+
+ with 
+\begin_inset Formula $V\in\mathbb{R}^{K\times m}$
+\end_inset
+
+ and 
+\begin_inset Formula $\Lambda\in\mathbb{R}^{m\times m}$
+\end_inset
+
+ 
+\end_layout
+
+\begin_layout Enumerate
+Compute the projections 
+\begin_inset Formula 
+\[
+B(\tau)\equiv V^{T}C(\tau_{1})V
+\]
+
+\end_inset
+
+onto the sub-space spanned by the dominant 
+\begin_inset Formula $m$
+\end_inset
+
+ singular vectors for both lagtimes 
+\begin_inset Formula $B_{1}\equiv B(\tau_{1})=\Sigma,\, B_{2}\equiv B(\tau_{2})$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+Compute the spectral decomposition (SD) by solving the GHEP 
+\begin_inset Formula $B_{1}u_{i}=\nu B_{2}u_{i}$
+\end_inset
+
+ as given above to get 
+\begin_inset Formula $A$
+\end_inset
+
+ and 
+\begin_inset Formula $\Lambda$
+\end_inset
+
+ so that we can write 
+\begin_inset Formula $B(\tau)=A^{T}\Lambda(\tau)A$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Enumerate
+The final approximation is given by 
+\begin_inset Formula $Q=V\, A^{T}$
+\end_inset
+
+ and 
+\begin_inset Formula $\Lambda$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Section
+Example
+\end_layout
+
+\begin_layout Standard
+We demonstrate the improved estimation qualities of the new method at a
+ simple 2D-model that represents a case where MSMs fail.
+ Fig.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Energy-Landscape"
+
+\end_inset
+
+ shows the stationary distribution of the overdamped langevin process in
+ a potential 
+\begin_inset Formula $U$
+\end_inset
+
+ at inverse temperature 
+\begin_inset Formula $\beta=1$
+\end_inset
+
+.
+ The system is designed to consist of 4 distinct metastable states labeled
+ 
+\begin_inset Formula $A$
+\end_inset
+
+ to 
+\begin_inset Formula $D$
+\end_inset
+
+ in Fig.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Energy-Landscape"
+
+\end_inset
+
+.
+ The process 
+\begin_inset Formula $x_{t}\in\Omega$
+\end_inset
+
+ in the full state space is also projected onto the second (
+\begin_inset Formula $y$
+\end_inset
+
+) coordinate which is then clustered onto 28 equidistant bins (
+\begin_inset Formula $\Delta x=0.05$
+\end_inset
+
+) as 
+\begin_inset Formula $y_{t}$
+\end_inset
+
+ 
+\begin_inset Formula 
+\[
+x_{t}\in\Omega\mapsto x_{t}^{(2)}\mapsto y_{t}\in\Upsilon=\{1,\ldots,28\}
+\]
+
+\end_inset
+
+where the bins comprise the observable space 
+\begin_inset Formula $\Upsilon=\{1,\ldots,28\}$
+\end_inset
+
+.
+ For the computation of reference values we also discretized the system
+ into a set of 
+\begin_inset Formula $28\times28$
+\end_inset
+
+ equidistant bins while the SE and MSM is applied to the observed space
+ only.
+ Two cases of data are considered (I) infinite statistics 
+\begin_inset Formula $L\rightarrow\infty$
+\end_inset
+
+ and (II) a timeseries of length 
+\begin_inset Formula $L=10^{6}$
+\end_inset
+
+ which is long compared to the slowest relaxation timescale of 
+\begin_inset Formula $t_{2}=382.4$
+\end_inset
+
+ and can thus be considered a case of converged and good, but finite statistics.
+\end_layout
+
+\begin_layout Standard
+Fig.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Singular-values"
+
+\end_inset
+
+ shows the singular values of 
+\begin_inset Formula $C(t)$
+\end_inset
+
+ computed from the timeseries and show the presence of the 4 distinct timescales
+ as anticipated from the shape of the stationary distribution.
+ The plot allows to estimate that for lagtimes 
+\begin_inset Formula $\tau>125$
+\end_inset
+
+ the low-rank approximation of the 4 dominant processes (eigenvectors) is
+ best.
+\end_layout
+
+\begin_layout Standard
+Fig.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Estimation-results"
+
+\end_inset
+
+ presents the estimation results (see caption for details) indicating the
+ the SE estimator allows for a much faster convergence of the estimated
+ timescales to the true values in comparison to the MSM approach.
+ It is also able to much more accurately predict the non-orthogonal projected
+ eigenvectors 
+\begin_inset Formula $Q$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename img/EnergyLandscape.pdf
+	width 100col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Energy-Landscape"
+
+\end_inset
+
+
+\series bold
+Stationary probability.
+
+\series default
+ Energy Landscape of illustrative 2D potential
+\series bold
+ 
+\series default
+with 4 distinct basins (metastable states) 
+\begin_inset Formula $A$
+\end_inset
+
+, 
+\begin_inset Formula $B$
+\end_inset
+
+, 
+\begin_inset Formula $C$
+\end_inset
+
+ and 
+\begin_inset Formula $D$
+\end_inset
+
+.
+ The dynamics in full space 
+\begin_inset Formula $x_{t}\in\Omega$
+\end_inset
+
+ is mapped onto coordinate 
+\begin_inset Formula $x^{(2)}$
+\end_inset
+
+ and discretized into 28 bins constituting the observable space 
+\begin_inset Formula $y_{t}\in\Upsilon$
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename img/new_SVD.pdf
+	width 100col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Singular-values"
+
+\end_inset
+
+
+\series bold
+Estimated Singular values.
+ 
+\series default
+Singular values of the correlation matrices 
+\begin_inset Formula $C(\tau)$
+\end_inset
+
+ symmetrically estimated from a trajectory (
+\begin_inset Formula $L=10^{6}$
+\end_inset
+
+) in the 2D illustrative potential.
+ Even for small lag times 
+\begin_inset Formula $\tau$
+\end_inset
+
+ four disctint singular values are present.
+ For lagtimes 
+\begin_inset Formula $\tau\gtrapprox150$
+\end_inset
+
+ all but the 4 dominant singular values have reached noise level and remain
+ approximately constant.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename img/Estimated Timescales.pdf
+	width 90col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Caption
+
+\begin_layout Plain Layout
+
+\series bold
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Estimation-results"
+
+\end_inset
+
+Estimated timescales 
+\series default
+Various estimation results for a simple diffusion process in a potential
+ defined by the stationary distribution in Fig.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Energy-Landscape"
+
+\end_inset
+
+.
+ Comparison of timescales estimation for 
+\begin_inset Formula $t_{2}$
+\end_inset
+
+ (yellow), 
+\begin_inset Formula $t_{3}$
+\end_inset
+
+ (green) and 
+\begin_inset Formula $t_{4}$
+\end_inset
+
+ (blue) in 3 cases: (thin solid and constant) exact solution from 28x28
+ bin discretization of full space, (thick, solid) 
+\emph on
+spectral estimate
+\emph default
+ (SE) for infinite statistics and using 
+\begin_inset Formula $\tau_{2}=2\tau_{1}$
+\end_inset
+
+, (dashed) SE estimate for finite statistics (
+\begin_inset Formula $L=10^{6}$
+\end_inset
+
+) using 
+\begin_inset Formula $\tau_{2}=2\tau_{1}$
+\end_inset
+
+ and (dashed) MSM estimate using single 
+\begin_inset Formula $\tau$
+\end_inset
+
+.
+ The corresponding arrows in the middle plot indicate locations of the the
+ used lagtimes 
+\begin_inset Formula $\tau_{1},\tau_{2}$
+\end_inset
+
+.
+ The SE estimates converge much faster (
+\begin_inset Formula $\tau\approx200$
+\end_inset
+
+) compared to the MSM method.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename img/Estimated Eigenvectors.pdf
+	width 90col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Caption
+
+\begin_layout Plain Layout
+
+\series bold
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Estimation-results-EVec"
+
+\end_inset
+
+Estimated projected eigenvectors
+\series default
+ 
+\begin_inset Formula $Q$
+\end_inset
+
+.
+ (
+\series bold
+\emph on
+a
+\series default
+)
+\emph default
+ SE at 
+\begin_inset Formula $\tau_{1}=125,\,\tau_{2}=175$
+\end_inset
+
+ using infinite statistics (
+\begin_inset Formula $L=\infty$
+\end_inset
+
+), (
+\series bold
+b
+\series default
+) MSM at 
+\begin_inset Formula $\tau=175$
+\end_inset
+
+ estimate using infinite statistics.
+ The (
+\series bold
+solid
+\series default
+) lines correspond to the estimation, while the (
+\series bold
+dashed
+\series default
+) lines are the reference solution.
+ The smaller the colored areas, the better the approximation.
+ Although both approaches correctly predict the stationary distribution,
+ the MSM estimate performs worse than the SE estimate.
+ SE can almost predict the slowest process (
+\begin_inset Formula $\lambda_{2}$
+\end_inset
+
+, yellow) correctly while process 3 (green) and 4 (blue) are less accurate.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+\begin_inset Float figure
+wide true
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename img/EstimationFull.pdf
+	width 90text%
+
+\end_inset
+
+
+\begin_inset Caption
+
+\begin_layout Plain Layout
+
+\series bold
+Estimation results 
+\series default
+Various Estimation results for a simple diffusion process in a potential
+ defined by the stationary distribution in Fig.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Energy-Landscape"
+
+\end_inset
+
+.
+ (
+\series bold
+\emph on
+middle
+\series default
+\emph default
+) Relvative estimation error [-70%, +70%] of the slowest relaxation timescale
+ 
+\begin_inset Formula $t_{2}=382.343$
+\end_inset
+
+ using infinite statistics (
+\begin_inset Formula $L=\infty$
+\end_inset
+
+) (upper-left half) and a finite trajectory also used in Fig.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Singular-values"
+
+\end_inset
+
+.
+ (
+\begin_inset Formula $L=10^{6}$
+\end_inset
+
+) (lower-right half).
+ The diagonal show the relative error in the MSM estimate using a single
+ lagtime and infinite statistics.
+ Clearly the MSM estimate is worse then the SE estimate even for finite
+ statistics.
+ Also, for infinite statistics the MSM and SE estimate both always understimate
+ the true timescales.
+ 
+\emph on
+(
+\series bold
+bottom-left
+\series default
+\emph default
+) Comparison of timescales estimation for 
+\begin_inset Formula $t_{2}$
+\end_inset
+
+ (yellow), 
+\begin_inset Formula $t_{3}$
+\end_inset
+
+ (green) and 
+\begin_inset Formula $t_{4}$
+\end_inset
+
+ (blue) in 3 cases: (thin solid and constant) exact solution, (thick, solid)
+ SE estimate for infinite statistics and using 
+\begin_inset Formula $\tau_{2}=2\tau_{1}$
+\end_inset
+
+, (dashed) SE estimate for finite statistics (
+\begin_inset Formula $L=10^{6}$
+\end_inset
+
+) using 
+\begin_inset Formula $\tau_{2}=2\tau_{1}$
+\end_inset
+
+ and (dashed) MSM estimate using single 
+\begin_inset Formula $\tau$
+\end_inset
+
+.
+ The corresponding arrows in the middle plot indicate locations of the the
+ used lagtimes 
+\begin_inset Formula $\tau_{1},\tau_{2}$
+\end_inset
+
+.
+ The SE estimates converge much faster (
+\begin_inset Formula $\tau\approx200$
+\end_inset
+
+) compared to the MSM method.
+ (
+\series bold
+\emph on
+top-left
+\emph default
+, top-right, bottom-right
+\series default
+) for the projected eigenvectors 
+\begin_inset Formula $Q$
+\end_inset
+
+ estimates for different estimators, (
+\series bold
+\emph on
+top-left)
+\series default
+\emph default
+ SE estimate using infinite statistics (
+\begin_inset Formula $L=\infty$
+\end_inset
+
+), (
+\series bold
+\emph on
+bottom-right
+\series default
+\emph default
+) SE estimate using finite trajectory (
+\begin_inset Formula $L=10^{6}$
+\end_inset
+
+), (
+\series bold
+\emph on
+top-right
+\series default
+\emph default
+) MSM estimate using infinite statistics.
+ The MSM estimate performs worst, although it correctly predicts the stationary
+ distribution.
+ The SE estimators perform equally well suggesting sufficient statistics
+ and allow for a good approximation of the true projected eigenvectors.
+ The arrows indicate the used lag times for the estimates 
+\begin_inset Formula $\tau_{1}$
+\end_inset
+
+ and 
+\begin_inset Formula $\tau_{2}$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Multi-Lagtime Estimation
+\end_layout
+
+\begin_layout Standard
+To address the issue of statistical uncertainties we rewrite the problem
+ into an optimization problem.
+ We use the list of time scales used in the estimation 
+\begin_inset Formula $\mathcal{T}=\{\tau_{1},\tau_{2}\}$
+\end_inset
+
+ and write
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\left\{ Q,\Lambda\right\} =\underset{Q,\Lambda}{\text{argmin}}\sum_{\tau\in\mathcal{T}}\Vert C(\tau)-Q^{\text{T}}\Lambda(\tau)Q\Vert_{\text{F}}
+\]
+
+\end_inset
+
+which is equivalent of estimation the parameters of a PMM as described above.
+ This can be generalized to more than 2 lagtimes by expanding 
+\begin_inset Formula $\mathcal{T}$
+\end_inset
+
+.
+ Fig.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:StatisticalUncertainty"
+
+\end_inset
+
+ shows estimation results from the multi-
+\begin_inset Formula $\tau$
+\end_inset
+
+ estimation for the 2D example from Fig.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Energy-Landscape"
+
+\end_inset
+
+.
+ For this we simulated 100 trajectories starting in the center of state
+ 
+\begin_inset Formula $B$
+\end_inset
+
+ for 6 different lagtime lengths 
+\begin_inset Formula $L\in\{50k,80k,100k,150k,200k,500k\}$
+\end_inset
+
+.
+ With increasing length 
+\begin_inset Formula $L$
+\end_inset
+
+ the distribution becomes more narrow providing a more reliable estimate.
+ The MSM estimate (lighter colors) show a systematically too small estimate
+ compared to the spectral estimations (darker colors).
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename img/StatisticsEstimation.pdf
+	width 100col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:StatisticalUncertainty"
+
+\end_inset
+
+
+\series bold
+Statistical Uncertainty
+\series default
+ Variance in the estimation of timescales due to statistical variation for
+ a timeseries in the potential of Fig.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Energy-Landscape"
+
+\end_inset
+
+.
+ All timeseries start in the center of state 
+\begin_inset Formula $B$
+\end_inset
+
+.
+ Shown are the distributions of the estimated time scales 
+\begin_inset Formula $t_{i}$
+\end_inset
+
+ of 100 trajectories for 6 different trajectory lengths 
+\begin_inset Formula $L\in\{50k,80k,100k,150k,200k,500k\}$
+\end_inset
+
+.
+ Colors indicate the processes (red: slowest, yellow: 2nd slowest, green:3rd
+ slowest).
+ Darker colors refer to the result of Spectral Estimation with 
+\begin_inset Formula $\mathcal{T}=\{50,\ldots,150\}$
+\end_inset
+
+ and lighter color is the MSM estimation of a model computed for 
+\begin_inset Formula $\tau=150$
+\end_inset
+
+.
+ With incresing trajectory length the estimation becomes more accurate.
+ While the MSM estimation is sharper the estimation is significantly less
+ accurate.
+ Both methods seem to converge to underestimated timescales, as the theory
+ predicts.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Apo-Myoglobin Example
+\end_layout
+
+\begin_layout Standard
+We demonstrate the method on the Apo-Myoglobin.
+ [Copy experimental details from PRX publication].
+\end_layout
+
+\begin_layout Standard
+In order to illustrate the performance of spectral estimation on real data,
+ it is applied to optical tweezer measurements of the extension fluctuations
+ of a biomolecule examined in a recent optical force spectroscopy study:
+ the H36Q mutant of sperm whale apo-myoglobin at low pH 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Elms:2012jb"
+
+\end_inset
+
+.
+ The apo-myoglobin [crystal structure shown in Fig.
+ 3(4)] hops between unfolded and molten globule states at the experimental
+ pH.
+ Experimental force trajectory data were generously provided by the authors
+ of Refs.
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Elms:2012jb"
+
+\end_inset
+
+.
+ Experimental details are given therein, but we briefly summarize aspects
+ of the apparatus and experimental data collection procedure relevant to
+ our analysis.
+ The instrument used to collect the data sets was a dual-beam counterpropagating
+ optical trap 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Bustamante:wb"
+
+\end_inset
+
+.
+ The molecule of interest was tethered to polystyrene beads by means of
+ dsDNA handles, with one bead suctioned onto a pipette and the other held
+ in the optical trap.
+ A piezoactuator controlled the position of the trap and allowed position
+ resolution to within 0.5 nm, with the instrument operated in passive (equilibriu
+m) mode such that the trap was stationary relative to the pipette during
+ data collection.
+ The force on the bead held in the optical trap was recorded at 50 kHz,
+ with each recorded force trajectory 60 s in duration resulting in 
+\begin_inset Formula $3\cdot10^{6}$
+\end_inset
+
+ data points each.
+ From the set of presentes fibers we chose to analyze fiber no.
+ 6.
+ [check how this is mentioned in Ref.
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Elms:2012jb"
+
+\end_inset
+
+]
+\end_layout
+
+\begin_layout Standard
+Fig.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:ApoMyoglobin"
+
+\end_inset
+
+ shows estimation results for 
+\begin_inset Formula $\mathcal{T}=\{150,\ldots,500\}$
+\end_inset
+
+ and computing the projective SVD also at 
+\begin_inset Formula $\tau=150$
+\end_inset
+
+.
+ The estimations show a consistent estimation of two processes [maybe we
+ can find a fourth one for 15-17? Actually I checked and it looks like it,
+ but haven't finished this yet.] For #IDs 15-17 the blue process seems to
+ switch to a different one at lower bead extensions.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename img/ApoEstimatedTimeScales_V2.pdf
+	width 100col%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:ApoMyoglobin"
+
+\end_inset
+
+
+\series bold
+Apo-Myoglobin estimation results
+\series default
+ Results for a series of 11 timeseries recorded in a optical tweezer experiment
+ of Apo-Myoglobin [cite ElmsEtAl, fiber 2].
+ 
+\series bold
+(upper) 
+\series default
+3 dominant eigenvectors (gray: stationary distribution, red: more extended
+ process, blue: less extended process).
+ The shift in measured bead position is due to in increase in the pulling
+ force, moving the whole protein toward the force exerting bead.
+ 
+\series bold
+(lower) 
+\series default
+Time scales for the slowest processes.
+ Colors are the same as in the upper part.
+ The smaller extended process shows an almost constant time scale while
+ the other process gets slower with increasing force [check if this is consisten
+t with prior publication].
+ For positions 14 and 15 also the 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+For further analysis we constructed a 
+\emph on
+kinetic map 
+\emph default
+[cite GuilleEtAl, tICA and kinetic maps] using that visualizes the shift
+ in the dominant slow processes with increasing force in the trap settings.
+ [I have also finished a PCCA+ based MSM using the spectral estimation.
+ This leads to transition models, see Fig.
+\begin_inset space ~
+\end_inset
+
+ which are consisten with what we see in the kinetic map.
+ I can also compute a nice plot of stationary distributions.
+ See]
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+\begin_inset Float figure
+wide true
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename img/KineticMap.pdf
+	width 80text%
+
+\end_inset
+
+
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:KineticMap"
+
+\end_inset
+
+
+\series bold
+Kinetic map
+\series default
+ Projection of the observable state in the space spanned by the slowest
+ two eigenvectors.
+ Vertical axis depicts the slowest process corresponding to the results
+ shown in red in Fig.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:ApoMyoglobin"
+
+\end_inset
+
+, while the horizontal axis corresponds to the second process shown in blue/gree
+n in the same figure.
+ The thickness and color corresponds to the equilibrium probability in the
+ observable space.
+ [I don't think this is really helpful in getting more understanding about
+ the what is happening.] One can see that the process moves from mainly inside
+ the blue eigenvector slowly over to the red process until only the green
+ process is observed.
+ This is what we would expect from an opening due to increasing pulling
+ force which each next trap force setting (7-18).
+ 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+\begin_inset Float figure
+wide true
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename img/MSMModel.pdf
+	width 100text%
+
+\end_inset
+
+
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:TransitionMatrices"
+
+\end_inset
+
+
+\series bold
+Transition Matrix
+\series default
+ (
+\series bold
+a
+\series default
+) Transition Matrices for Tweezer Position IDs 7-17 generated using PCCA+
+ on the reweighted projected left eigenvectors.
+ Shown is a 4-state model where actually for ID 7-13 states C/D are assumed
+ to be merged and for ID 16-17 states A/B are merged.
+ Both of these cases are evaluated using a 3 state model presented before,
+ while for state 14-15 the spectral estimation has been used with 4 states.
+ One can see, that with increasing Position ID the system shifts from left
+ (state A) slowly to state C/D which is what is to be assumed for an unfolding
+ protein due to increasing pulling force on their ends.
+ (
+\series bold
+b
+\series default
+) Equilibrium probabilities 
+\begin_inset Formula $\pi_{i}$
+\end_inset
+
+ for states A, B, C, D of the MSM for tweezer position IDs 7-17.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Conclusion
+\end_layout
+
+\begin_layout Standard
+We presented a novel approach to estimate the parameters 
+\begin_inset Formula $Q$
+\end_inset
+
+ and 
+\begin_inset Formula $\Lambda$
+\end_inset
+
+ of a projected Markov state model (PMM).
+ The method has been demonstated at a simple illustrative model and shows
+ much improved convergence in the estimation of the dominant timescales
+ as well as related projected eigenvectors.
+ Although the sensitivity to statistical noise has increased the method
+ still provides better results compared to the MSM approach.
+ The sensitivity can be reduced if the estimation is reformulated into an
+ optimization problem that fits the result at more than two lagtimes.
+ We have applied the optimizational approach to data from Apo-Myoglobin
+ and showed a consistent set of two processes (maybe four).
+ On first sight the estimation for 
+\begin_inset Formula $m$
+\end_inset
+
+-PMMs looks identical to and 
+\begin_inset Formula $m$
+\end_inset
+
+-state HMM, but it can be shown that HMMs are not able to capture all possible
+ dynamics of 
+\begin_inset Formula $m$
+\end_inset
+
+-PMMs and HMMs can model a subset of the dynamics of PMMs.
+ Thus the HMM solution might be close, but rarely exact
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Noe:2013tx"
+
+\end_inset
+
+.
+ Finally, the cases of low-statistics and non-reversible dynamics is interesting
+ and subject of active research.
+\end_layout
+
+\begin_layout Section
+Acknowledgements
+\end_layout
+
+\begin_layout Standard
+The authors would like to thank Ralf Banisch for stimulating discussions
+ on the topic.
+ JHP acknowledges support from the DFG research center 
+\shape smallcaps
+Matheon
+\shape default
+.
+ HW [missing] .
+ FN acknowledges funding from DFG grant NO 825/2-2 and ERC starting grant
+ 'pcCell' ".
+ JDC acknowledges funding from [@JDC: missing]
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+bibfiles "complete"
+options "apsrmp"
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

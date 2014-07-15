@@ -6,9 +6,15 @@ Created on 01.07.2014
 '''
 
 
-import numpy
+from sys import stdout
 
-import netCDF4 as netcdf # for netcdf interface provided by netCDF4 in enthought python
+import numpy as np
+
+import time
+
+from simtk.openmm.app import *
+from simtk.openmm import *
+from simtk.unit import *
 
 
 from simtk.unit import nanosecond, picosecond, nanometers, nanometer, picoseconds, femtoseconds, femtosecond, kilojoules_per_mole, Quantity
@@ -16,6 +22,9 @@ from simtk.unit import nanosecond, picosecond, nanometers, nanometer, picosecond
 from trajectory import Trajectory
 from snapshot import Snapshot
 from forkable_trajectory_storage import ForkableTrajectoryStorage
+from integrators import VVVRIntegrator
+
+from simulator import Simulator
 
 
 #=============================================================================================
@@ -53,30 +62,22 @@ class MultiStateTIS(object):
     - a way to cluster all data into a MSM and get back the state definition.
     
     Class Objects needed.
-    - trajectory: list of snapshots        [ok]
-    - snapshot                             [ok]
-    - storage using netCDF                 [ok]
-    - TPS with stopping                    
-    - Clustering
+    - trajectory: list of snapshots       [ok]
+    - snapshot                            [ok]
+    - storage using netCDF                [ok]
+    - TPS with stopping                   [ok]
+    - Clustering                          [ok]
     - MSM
-    - MSM Analysis
+    - MSM Analysis                        [..]
     - region predicter
-    - 
     '''
 
 
-    def __init__(self, params):
+    def __init__(self):
         '''
         Constructor
         
         '''
         
-        self.xframes = 1000;            # maximal length of trajectories in saved frames, needed for 
-        self.natoms = 10;               # number of atoms in the system
-        
-        Snapshot.context = self.context
-        
-        # Create a trajectory storage
-        # TODO: Add naming capabilities, other options and add the system to be simulated
-        self.storage = ForkableTrajectoryStorage()
-        
+    def _fnc_false(self):
+        return False

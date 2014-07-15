@@ -22,19 +22,12 @@ class BoundedMatrix(object):
         
         self._compute_LDR()        
         self._compute_stationary_idx()
-        
-        print self.stat_idx
-        
+                
         if self.has_unique_equilibrium():
             self.set_norm('right_equilibrium')
         else:
             self.set_norm('right_2norm')
-            
-        print "Check"
-        print self.T
-        print np.dot(np.dot(self.right_eigenvectors, np.diagflat(self.evals)), self.left_eigenvectors)        
-        print self.T - np.dot(np.dot(self.right_eigenvectors, np.diagflat(self.evals)), self.left_eigenvectors)
-            
+                    
         return
     
     def _compute_stationary_idx(self):
@@ -66,19 +59,19 @@ class BoundedMatrix(object):
             leftEigenvectors=leftEigenvectors[:,permR].T
             
             rank = np.linalg.matrix_rank(self.T)
-            
+                        
             if rank < self.size:
                 leftEigenvectors = leftEigenvectors[0:rank]
                 rightEigenvectors = rightEigenvectors[:,0:rank]
                 eValues = eValues[0:rank]
             
-            # Check of eigenvalues agree, if not use inversion, which might be slower for sparse matrices?
+            # Check if eigenvalues agree, if not use inversion, which might be slower for sparse matrices?
             # For now we stick with good luck :)
             
             if False:
                 # no more permutation needed in this case
                 leftEigenvectors = np.linalg.inv(rightEigenvectors)    
-                            
+                                            
             self.evals = eValues
             self.L = leftEigenvectors
             self.R = rightEigenvectors
@@ -175,18 +168,17 @@ class BoundedMatrix(object):
                     self.right_norm = 1.0 / (norm * self.left_norm)
 
             if mode == 'right_2norm':
-                if eq is not None:
-                    norm_eq = np.sqrt(self._get_ev_right_product())
-                    
-                    for i in self.stationary_idx:
-                        if np.sum(self.R[:,i]) < 0.0:
-                            norm_eq[i] = -norm_eq[i]
-                    
-                    self.right_norm = 1.0 / norm_eq
-                    self.left_norm = 1.0 / (norm * self.right_norm)
+                norm_eq = np.sqrt(self._get_ev_right_product())
+                
+                for i in self.stationary_idx:
+                    if np.sum(self.R[:,i]) < 0.0:
+                        norm_eq[i] = -norm_eq[i]
+                
+                self.right_norm = 1.0 / norm_eq
+                self.left_norm = 1.0 / (norm * self.right_norm)
 
             self.normalization = mode
-              
+                          
         return
         
     @property
@@ -231,7 +223,6 @@ class BoundedMatrix(object):
         
         if type(end) is int:
             arr = [ (np.power(l, end + 1) - np.power(l, beg)) / (l - 1.0) if l < 1.0 else end - beg + 1 for l in self.evals ]
-            print arr
             di = np.array( arr )
         else:
             di = np.zeros(self.size)
@@ -798,7 +789,6 @@ class MSM(BoundedMatrix):
     def all(self):
         return range(self.size)
         
-    
 X = MSM(np.array([[0.9,0.02,0.08], [0.03,0.92,0.05], [0.01,0.02,0.97]]))
 
 #X._compute_LDR()
