@@ -13,7 +13,7 @@ from simulator import Simulator
 from pymbar import MBAR
 
 if __name__ == '__main__':
-    simulator = Simulator.Alanine_system('restore')
+    simulator = Simulator.Alanine_system('create')
 
     print "Currently ", simulator.storage.number_of_trajectories(), " simulations in the storage"
 

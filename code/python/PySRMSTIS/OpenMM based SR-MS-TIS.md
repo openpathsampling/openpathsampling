@@ -53,3 +53,10 @@
 - 1 state. Compute Commute Distance for all states and use this to define states of a specific level of stability.
 - 1 state. Compute Mean First Passage Time from Center to state x and use this to define states of a specific time distance to identify states.
 - 2+ states. Compute Multi-state Committor and use a percentile based way (no timescales are included anymore!)
+
+### Ideas for the storage system
+It turns out that the storage actually should only contain the opening and closing of the netCDF file. Write some Version settings, etc and provide functions to convert python objects into storable strings and back. All classes that want to be able to be saved should register with the storage and then the storage gets initialized and calls all functions in (the correct) order. E.g. Trajectory needs to know about Snapshots and load and save these, but not the other way round. 
+
+We could say that the whole project has a storage with a filename. Then we tell all parts to register with the storage. Then we can either restore from or create a new netCDF file. The netCDF file also knows what parts have been saved. These could all be separate groups. This way we can also easily access only parts of it.
+
+Is this too complicated?

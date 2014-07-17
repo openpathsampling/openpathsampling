@@ -228,27 +228,23 @@ class Snapshot(object):
         initializes the associates storage to save snapshots in it
         '''           
         # save associated storage in class variable for all Snapshot instances to access
-        
-        ncgrp = storage.ncfile.createGroup('snapshot')
-
-        
-        Snapshot.storage = ncgrp
-        ncgrp = storage.ncfile
+        Snapshot.storage = storage
+        ncfile = storage.ncfile
         
         storage.snapshot_idx = 1;
         
         system = Snapshot.simulator.simulation.system
         
         # define dimensions used in snapshots
-        ncgrp.createDimension('snapshot', 0)                       # unlimited number of snapshots
-        ncgrp.createDimension('atom', system.getNumParticles())    # number of atoms in the simulated system
-        ncgrp.createDimension('spatial', 3)                        # number of spatial dimensions
+        ncfile.createDimension('snapshot', 0)                       # unlimited number of snapshots
+        ncfile.createDimension('atom', system.getNumParticles())    # number of atoms in the simulated system
+        ncfile.createDimension('spatial', 3)                        # number of spatial dimensions
 
         # define variables for snapshots
-        ncvar_snapshot_coordinates          = ncgrp.createVariable('snapshot_coordinates', 'f', ('snapshot','atom','spatial'))
-        ncvar_snapshot_velocities           = ncgrp.createVariable('snapshot_velocities',  'f', ('snapshot','atom','spatial'))
-        ncvar_snapshot_potential            = ncgrp.createVariable('snapshot_potential',   'f', ('snapshot'))
-        ncvar_snapshot_kinetic              = ncgrp.createVariable('snapshot_kinetic',     'f', ('snapshot'))
+        ncvar_snapshot_coordinates          = ncfile.createVariable('snapshot_coordinates', 'f', ('snapshot','atom','spatial'))
+        ncvar_snapshot_velocities           = ncfile.createVariable('snapshot_velocities',  'f', ('snapshot','atom','spatial'))
+        ncvar_snapshot_potential            = ncfile.createVariable('snapshot_potential',   'f', ('snapshot'))
+        ncvar_snapshot_kinetic              = ncfile.createVariable('snapshot_kinetic',     'f', ('snapshot'))
 
         # Define units for snapshot variables.
         setattr(ncvar_snapshot_coordinates, 'units', 'nm')
