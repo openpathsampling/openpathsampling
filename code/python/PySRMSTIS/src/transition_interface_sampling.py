@@ -145,3 +145,5 @@ class TransitionInterfaceSampling(object):
         
 
         return trial_trajectory
+    
+# Store interface definitions -> might go to a class like collective variable or 

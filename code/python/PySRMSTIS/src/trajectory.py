@@ -466,7 +466,6 @@ class Trajectory(list):
         """
         Fill in missing part after the storage has been loaded from a file and is not initialize freshly
         
-        
         """
         
         Trajectory.storage = storage

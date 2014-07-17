@@ -11,8 +11,6 @@ Main file copied from Cluster.py from MSMBuilder
 from __future__ import print_function, absolute_import, division
 import numpy as np
 
-from pymbar import MBAR
-
 from msmbuilder.metrics import (RMSD)
 
 class Object(object):
@@ -244,3 +242,45 @@ class TISInterfaces(object):
                 n_matrix[f,l,k,m] += 1
                     
         return n_matrix
+    
+    def compute_max_ensembles(self, first, last):
+        n_cores = len(self.generators)
+        n_interfaces = self.lambdas.shape[1] #for now assume that all cores have the same number of interfaces
+        n_matrix = np.zeros((n_cores, n_cores, n_interfaces, n_interfaces), dtype='int')
+        
+        all_traj_indices = self.storage.all_trajectory_indices()
+        
+        ret = []
+        
+        for indices in all_traj_indices:
+            connectors = self.split_into_connections_indices(indices)
+            for connection in connectors:
+                f, l, m, k = self._get_TIS_Info_from_connection(connection)
+                if (f == first and l == last):
+                    ret.append(m)
+                
+        return np.array(ret)
+    
+    def compute_mbar_array(self, first, last, infinite_energy = 1e10):
+        # We need an array that contains all probabilities to find each sample in one of the ensembles. Alternatively pymbar accept a reduced form which will try to avoid.
+        
+        maxlist = self.compute_max_ensembles(first, last)
+        
+        n_interfaces = np.max(maxlist)
+        n_trajectories = len(maxlist)
+        
+        mbar = np.zeros((n_interfaces, n_interfaces, n_trajectories), dtype='float')
+        num = -1.0 * np.ones(n_interfaces, dtype='int')
+        
+        print(maxlist)
+        
+        for mface in range(1,n_interfaces+1):
+            n_max = maxlist[maxlist == mface].shape[0]
+            mbar[mface - 1, mface:n_interfaces+1, 0:n_max] = infinite_energy
+            mbar[mface - 1, 0:mface, 0:n_max] = 0.0
+            num[mface - 1] = n_max
+            print(n_max)
+            
+        mbar = mbar[:,:,0:int(np.max(num))]
+        
+        return mbar, num

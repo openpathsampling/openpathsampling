@@ -187,13 +187,13 @@ class Simulator(object):
             self.storage._restore_options(self)        
             
             # This is not stored yet so we need to set it again. Should be stored in the database along with the still missing topology
-            self.solute_indices = range(22)
+#            self.solute_indices = range(22)
 
             # Finally create the OpenMM simulation system
             self._create_OpenMMSimulation()
                         
             # Still missing is the topology which is still not in the database and can only be accessed after the simulation has been created
-            self.storage.topology = md.Topology.from_openmm(self.simulation.topology)
+            self.storage.topology = md.Topology.from_openmm(self.topology)
             
         # Finished
         self.initialized = True
@@ -213,7 +213,9 @@ class Simulator(object):
                                  'fn_initial_pdb',
                                  'integrator_class',
                                  'fn_storage',
-                                 'platform'
+                                 'platform',
+                                 'topology',
+                                 'solute_indices'
                                  ]
         
         self.temperature = 300.0 * kelvin                       # temperature
@@ -231,6 +233,10 @@ class Simulator(object):
         self.n_frames_max = 5000;                               # maximal length of trajectories in saved frames
         
         self.start_time = time.time()                           # the time when we started
+        
+        self.pdb = PDBFile(self.fn_initial_pdb)
+        self.topology = self.pdb.topology
+
 
     def _create_OpenMMSimulation(self):
         '''
@@ -245,16 +251,14 @@ class Simulator(object):
         platform = openmm.Platform.getPlatformByName(self.platform)    # platform to use
         
         #TODO: Serialize initial pdb or better the used topology so that we do not need to read an external file
-        self.pdb = PDBFile(self.fn_initial_pdb)
         forcefield = ForceField(self.forcefield_solute, self.forcefield_solvent)
         
-        system = forcefield.createSystem(self.pdb.topology, nonbondedMethod=PME, nonbondedCutoff=1*nanometer, constraints=HBonds)
+        system = forcefield.createSystem(self.topology, nonbondedMethod=PME, nonbondedCutoff=1*nanometer, constraints=HBonds)
         
         integrator = VVVRIntegrator(self.temperature, self.collision_rate, self.timestep)
         self.integrator_class = type(integrator).__name__
         
-        simulation = Simulation(self.pdb.topology, system, integrator, platform)
-        simulation.context.setPositions(self.pdb.positions)
+        simulation = Simulation(self.topology, system, integrator, platform)
                 
         self.simulation = simulation
         
@@ -266,6 +270,8 @@ class Simulator(object):
         #=============================================================================================
         # Dirty Equilibration using NVT and Alanine constraint
         #=============================================================================================
+
+        simulation.context.setPositions(self.pdb.positions)
 
         print "Equilibration"
         
