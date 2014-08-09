@@ -129,8 +129,7 @@ class Snapshot(object):
         
         if self.idx == 0:
             if idx is None:
-                idx = storage.snapshot_idx
-                storage.snapshot_idx += 1        
+                idx = Snapshot.load_free()
     
             # Store snapshot.
             storage.ncfile.variables['snapshot_coordinates'][idx,:,:] = (self.coordinates / nanometers).astype(np.float32)
@@ -138,8 +137,7 @@ class Snapshot(object):
             storage.ncfile.variables['snapshot_potential'][idx] = self.potential_energy / kilojoules_per_mole                                
             storage.ncfile.variables['snapshot_kinetic'][idx] = self.kinetic_energy / kilojoules_per_mole
             
-            # increase snapshout counter and store for later reference in Snapshot object
-            
+            # store ID# for later reference in Snapshot object
             self.idx = idx
     
             # Force sync to disk to avoid data loss.
@@ -156,11 +154,17 @@ class Snapshot(object):
         
         number (int) - number of stored snapshots
         '''
-        length = len(Snapshot.storage.ncfile.dimensions['snapshot']) - 1
+        length = int(len(Snapshot.storage.ncfile.dimensions['snapshot'])) - 1
         if length < 0:
             length = 0
         return length
-        
+    
+    @staticmethod
+    def load_free():
+        '''
+        Return the number of the next free ID
+        '''
+        return Snapshot.load_number() + 1
     
     @staticmethod
     def load(idx):
@@ -217,9 +221,7 @@ class Snapshot(object):
         """
         
         Snapshot.storage = storage
-        
-        storage.snapshot_idx = int(storage.ncfile.variables['snapshot_coordinates'].shape[0])
-        
+                
         return
         
     @staticmethod

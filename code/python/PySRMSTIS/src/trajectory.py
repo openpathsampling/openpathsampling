@@ -391,7 +391,7 @@ class Trajectory(list):
         """
         
         ncfile = Trajectory.storage.ncfile
-        idx = Trajectory.storage.trajectory_idx
+        idx = Trajectory.load_free( )
 
         # Make sure snapshots are stored and have an index and then add the snapshot index to the trajectory
 
@@ -402,9 +402,7 @@ class Trajectory(list):
             ncfile.variables['trajectory_idx'][idx,frame_index] = frame.idx         
              
         ncfile.variables['trajectory_length'][idx] = nframes
-        
-        Trajectory.storage.trajectory_idx += 1
-        
+                
         return 
 
     @staticmethod
@@ -445,7 +443,14 @@ class Trajectory(list):
         if length < 0:
             length = 0
         return length
-            
+    
+    @staticmethod
+    def load_free():
+        '''
+        Return the number of the next free ID
+        '''
+        return Trajectory.load_number() + 1
+    
     @staticmethod
     def load_all_indices():
         '''
@@ -467,11 +472,7 @@ class Trajectory(list):
         Fill in missing part after the storage has been loaded from a file and is not initialize freshly
         
         """
-        
-        Trajectory.storage = storage
-        
-        storage.trajectory_idx = int(storage.ncfile.variables['trajectory_idx'].shape[0])
-        
+        Trajectory.storage = storage        
     
     @staticmethod
     def _init_netcdf(storage):        

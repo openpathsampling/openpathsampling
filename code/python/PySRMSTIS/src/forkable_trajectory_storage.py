@@ -17,10 +17,12 @@ from trajectory import Trajectory
 from snapshot import Snapshot
 
 import pickle
-
 import mdtraj as md
+import inspect
 
 import os.path
+
+# TODO: Remove all stuff that is content related and allow to register a class with the storage
 
 #=============================================================================================
 # SOURCE CONTROL
@@ -68,6 +70,24 @@ class ForkableTrajectoryStorage(object):
             self._initialize_netcdf()
         elif mode == 'restore':
             self._restore_netcdf()
+            
+        self.links = []
+        
+    def add(self, class_obj):
+        
+        if hasattr(class_obj, '_initialize_netCDF') and hasattr(class_obj, '_restore_netCDF'):
+            #class is compatible and has necessary classes
+            self.links.append(class_obj)
+            
+        pass
+    
+    def init_classes(self):
+        for cls in self.links:
+            cls._initialize_netcdf(self)
+            
+            # add all static methods fromt cls to self.'cls'.method_name
+            
+#            methods = inspect.getmembers(cls, predicate)
 
     def _initialize_netcdf(self):
         """
@@ -144,7 +164,6 @@ class ForkableTrajectoryStorage(object):
     def last_trajectory(self):
         return self.trajectory(self.number_of_trajectories())
 
-    
     def all_trajectory_indices(self):
         '''
         Return a list of list of frame indices

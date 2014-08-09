@@ -53,3 +53,14 @@
 - 1 state. Compute Commute Distance for all states and use this to define states of a specific level of stability.
 - 1 state. Compute Mean First Passage Time from Center to state x and use this to define states of a specific time distance to identify states.
 - 2+ states. Compute Multi-state Committor and use a percentile based way (no timescales are included anymore!)
+
+### 
+
+### Classes
+ShootingPointPicker : A scheme to pick a shooting point from a trajectory
+PathMover : Takes a path and changes it according to its moving pattern and a ShootingPointPicker
+Interface : A closed subset in configuration space, can be a typical TIS Interface using an order parameter or a Voronoi-based region 
+PathEnsembleSet : Defines a set of path ensembles that can then be samples using a Sampling scheme
+PathEnsembleSampling : Samples from the set of PathEnsembles using a set of PathMovers
+OrderParameter : A projection from configuration space to a real-valued number
+NetCDFStorage : A netCDF file that can store information for Python objects of specific types
