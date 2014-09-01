@@ -259,9 +259,9 @@ class Simulator(object):
         self.integrator_class = type(integrator).__name__
         
         simulation = Simulation(self.topology, system, integrator, platform)
-                
+                                
         self.simulation = simulation
-        
+                
     def _equilibrate_system(self):
         '''
         Equilibrate the Alanine System. Just a helper to keep the code clean. One could also provide an equilibrated structure from the start

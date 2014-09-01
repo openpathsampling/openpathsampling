@@ -41,7 +41,7 @@ if __name__ == '__main__':
 #    msm.assign_storage()
     
 #    print msm.assign_all_trajectories()
-    
+        
     print "Interfaces"    
     # Create Interaces around first and last frame of the first trajectory and use only solute coordinates
     

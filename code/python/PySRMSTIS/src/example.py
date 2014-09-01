@@ -24,6 +24,7 @@ from simtk.unit import *
 import time
 from sys import stdout
 
+print version.full_version
 
 start_time = time.time()
 
@@ -31,7 +32,7 @@ start_time = time.time()
 # Available OpenMM Platforms
 #=============================================================================================
 
-platform = openmm.Platform.getPlatformByName('CPU') # platform to use <- change accordingly to 'Cuda' or 'CPU' or 'Reference' (VERY slow)
+platform = openmm.Platform.getPlatformByName('CUDA') # platform to use <- change accordingly to 'Cuda' or 'CPU' or 'Reference' (VERY slow)
 print ('Platform used is : ' + platform.getName())
 
 
