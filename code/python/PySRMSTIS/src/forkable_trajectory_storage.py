@@ -18,7 +18,6 @@ from snapshot import Snapshot
 
 import pickle
 import mdtraj as md
-import inspect
 
 import os.path
 

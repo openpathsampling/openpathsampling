@@ -9,13 +9,17 @@ import numpy as np
 from tis_interfaces import TISInterfaces
 from transition_interface_sampling import TransitionInterfaceSampling
 from simulator import Simulator
+from OrderParameter import OP_RMSD_To_Lambda
+from Volume import LambdaVolume
+from Ensemble import EnsembleFactory as ef
+import time
 
 from pymbar import MBAR
 
 if __name__ == '__main__':
     simulator = Simulator.Alanine_system('restore')
 
-    print "Currently ", simulator.storage.number_of_trajectories(), " simulations in the storage"
+    print "Currently", simulator.storage.number_of_trajectories(), "simulations in the storage"
 
     if simulator.storage.number_of_trajectories() == 0:        
         # load initial equilibrate snapshot given by ID #0
@@ -27,6 +31,54 @@ if __name__ == '__main__':
         
         # Save as Multi-Frame pdb  (only alanine, no water !)  
         traj.solute.md().save_pdb('data/mdtraj.pdb', True)    
+        
+    cc = simulator.storage.trajectory(40)[ 0 ]
+    op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices)
+    dd = simulator.storage.trajectory(40)[ 0:1000 ]
+#    op.cache.fill()
+
+#    print op(dd)
+    
+    lV = LambdaVolume(op, 0.0, 0.06)
+    lV2 = LambdaVolume(op, 0.0, 0.03)
+    start_time = time.time()
+    
+    print time.time() - start_time
+
+    # if this uses the same OrderParameter it is fast, since the values are cached!
+    tis = ef.TISEnsemble(
+                   LambdaVolume(op, 0.0, 0.06),
+                   LambdaVolume(op, 0.0, 0.06),
+                   LambdaVolume(op, 0.0, 0.08),
+                   True
+                   )
+    
+    tt = simulator.storage.trajectory(1)[26:42]
+    
+    # This is to cache the values for all snapshots in tt. Makes later access MUCH faster. 
+    # Especially because the frames do not have to be read one by one.
+    op(tt)
+    
+#    print tis
+
+    print [ (lV.inside(d)) for d in tt ]
+    print [ (op(d)) for d in tt ]
+    
+    # This tests, if the iteration request works. It basically return True if it makes sense to simulate or if the ensemble cannot
+    # be true in the next step. This should be passed to the pathmover to stop simulating for a particular ensemble
+    
+    print "Iteration test"
+    for l in range(0,tt.frames + 1):
+        print tis.iterate(tt[0:l]), tis.inside(tt[0:l])
+        
+
+    # Check if the trajectory goes from lambda < 0.06 to lambda >0.08 and back    
+    print tis.inside(tt)
+    
+#    print op(dd)
+
+    exit()
+
            
 #    print "Clustering"
 
@@ -55,8 +107,9 @@ if __name__ == '__main__':
 
 #    mat = tis.compute_N_IJ_l_kI()
 #    print mat
+
     
-    if simulator.storage.number_of_trajectories() > 50:  
+    if simulator.storage.number_of_trajectories() > 100:  
         u_kln, N_k = tis.compute_mbar_array(0, 0, infinite_energy = 1e5)
             
         mbar = MBAR(u_kln, N_k, method = 'adaptive', relative_tolerance=1.0e-10, verbose=False)
@@ -111,6 +164,12 @@ if __name__ == '__main__':
 #    tis.assign_all_trajectories()
 
 #    print tis.assign_all_trajectories()
+
+    for l in range(1,simulator.storage.number_of_trajectories()+1):
+        traj = simulator.storage.trajectory(l)
+
+    print "Last"
+    ltraj = simulator.storage.last_trajectory()
 
     initial = tis.split_into_connections(simulator.storage.last_trajectory())
     

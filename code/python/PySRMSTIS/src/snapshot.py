@@ -9,7 +9,6 @@ import mdtraj as md
 
 from simtk.unit import nanosecond, picosecond, nanometers, nanometer, picoseconds, femtoseconds, femtosecond, kilojoules_per_mole, Quantity
 
-
 #=============================================================================================
 # SIMULATION SNAPSHOT 
 #=============================================================================================
@@ -23,7 +22,6 @@ class Snapshot(object):
     # Class variables to store the global storage and the system context describing the system to be safed as snapshots
     storage = None
     simulator = None
-    
     
     def __init__(self, context=None, coordinates=None, velocities=None, box_vectors=None, potential_energy=None, kinetic_energy=None):
         """
@@ -130,7 +128,7 @@ class Snapshot(object):
         if self.idx == 0:
             if idx is None:
                 idx = Snapshot.load_free()
-    
+
             # Store snapshot.
             storage.ncfile.variables['snapshot_coordinates'][idx,:,:] = (self.coordinates / nanometers).astype(np.float32)
             storage.ncfile.variables['snapshot_velocities'][idx,:,:] = (self.velocities / (nanometers / picoseconds)).astype(np.float32)
@@ -148,9 +146,10 @@ class Snapshot(object):
     @staticmethod
     def load_number():
         '''
-        Load a snapshot from the storage
+        Load the number of stored snapshots
         
-        RETURNS
+        Returns
+        -------
         
         number (int) - number of stored snapshots
         '''
@@ -182,7 +181,6 @@ class Snapshot(object):
         
         storage = Snapshot.storage
         
-#        print type(idx)
         #TODO: Check, for some reason some idx are given as numpy.in32 and netcdf4 is not compatible with indices given in this format!!!!!
         idx = int(idx)
         
@@ -196,6 +194,7 @@ class Snapshot(object):
         kinetic_energy = Quantity(T, kilojoules_per_mole)
         snapshot = Snapshot(coordinates=coordinates, velocities=velocities, kinetic_energy=kinetic_energy, potential_energy=potential_energy)
         snapshot.idx = idx
+
         return snapshot
 
     @staticmethod
@@ -215,6 +214,7 @@ class Snapshot(object):
         Fill in missing part after the storage has been loaded from a file and is not initialize freshly
         
         NOTES
+        -----
         
         We need to allow for reversed snapshots to save memory. Would be nice
         
@@ -227,17 +227,14 @@ class Snapshot(object):
     @staticmethod
     def _init_netcdf(storage):
         '''
-        initializes the associates storage to save snapshots in it
+        initializes the associated storage to save snapshots in it
         '''           
         # save associated storage in class variable for all Snapshot instances to access
         
-        ncgrp = storage.ncfile.createGroup('snapshot')
-
+#        ncgrp = storage.ncfile.createGroup('snapshot')
         
-        Snapshot.storage = ncgrp
+        Snapshot.storage = storage
         ncgrp = storage.ncfile
-        
-        storage.snapshot_idx = 1;
         
         system = Snapshot.simulator.simulation.system
         

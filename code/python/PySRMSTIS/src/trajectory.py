@@ -29,7 +29,7 @@ class Trajectory(list):
 
         OPTIONAL ARGUMENTS
 
-        trajectory (Trajectory) - if specfiied, make a deep copy of specified trajectory
+        trajectory (Trajectory) - if specified, make a deep copy of specified trajectory
         
         """
 
@@ -208,8 +208,7 @@ class Trajectory(list):
             ret = [ super(Trajectory, self).__getitem__(i) for i in index ]
         else:
             ret = super(Trajectory, self).__getitem__(index)
-            
-            
+                
         if isinstance(ret, list):
             ret = Trajectory(ret)
             ret.atom_indices = self.atom_indices
@@ -429,6 +428,10 @@ class Trajectory(list):
     @staticmethod
     def load(idx):
         frames = Trajectory.load_indices(idx)
+        return Trajectory.from_indices(frames)
+
+    @staticmethod
+    def from_indices(frames):
         trajectory = Trajectory()
 
         for frame in frames:                
@@ -485,24 +488,24 @@ class Trajectory(list):
         # save associated storage in class variable for all Trajectory instances to access
         Trajectory.storage = storage
         ncfile = storage.ncfile
-        
-        storage.trajectory_idx = 1;
-        
+                
         nframes = Trajectory.simulator.n_frames_max
         
         # define dimensions used in trajectories
         ncfile.createDimension('trajectory', 0)                 # unlimited number of iterations
-        ncfile.createDimension('frame', nframes)     # number of maximal frames per trajectory
+        ncfile.createDimension('max_frames', nframes)     # number of maximal frames per trajectory
 
         # Create variables for trajectories        
-        ncvar_trajectory_idx                = ncfile.createVariable('trajectory_idx', 'u4', ('trajectory','frame'))
+        ncvar_trajectory_idx                = ncfile.createVariable('trajectory_idx', 'u4', ('trajectory','max_frames'))
         ncvar_trajectory_length             = ncfile.createVariable('trajectory_length', 'u4', ('trajectory'))
-        ncvar_trajectory_path_hamiltonian   = ncfile.createVariable('path_hamiltonians', 'f', ('trajectory'))
+        ncvar_trajectory_inversion          = ncfile.createVariable('trajectory_inverted', 'u4', ('trajectory'))
+        ncvar_trajectory_path_hamiltonian   = ncfile.createVariable('trajectory_path_hamiltonians', 'f', ('trajectory'))
 
         # Define units for snapshot variables.
         setattr(ncvar_trajectory_path_hamiltonian,      'units', 'none')
         setattr(ncvar_trajectory_idx,                   'units', 'none')
         setattr(ncvar_trajectory_length,                'units', 'none')
+        setattr(ncvar_trajectory_inversion,             'units', 'none')
         
         # Define long (human-readable) names for variables.
         setattr(ncvar_trajectory_idx,    "long_name", "trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.")

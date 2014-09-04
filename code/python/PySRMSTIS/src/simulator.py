@@ -34,7 +34,6 @@ from integrators import VVVRIntegrator
 __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 
 
-
 #=============================================================================================
 # Multi-State Transition Interface Sampling
 #=============================================================================================
@@ -173,7 +172,6 @@ class Simulator(object):
             # save initial equilibrated frame as snapshot ID #0. Might be useful later, who knows
             snapshot = Snapshot(self.simulation.context)
             snapshot.save(0)
-
         
         if mode == 'restore':
             # Need the oposite order, first open database 
@@ -271,7 +269,7 @@ class Simulator(object):
         # Dirty Equilibration using NVT and Alanine constraint
         #=============================================================================================
 
-        simulation.context.setPositions(self.pdb.positions)
+        self.simulation.context.setPositions(self.pdb.positions)
 
         print "Equilibration"
         
