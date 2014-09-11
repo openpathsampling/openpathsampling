@@ -6,7 +6,6 @@ Created on 06.07.2014
 '''
 
 import numpy
-
 import netCDF4 as netcdf # for netcdf interface provided by netCDF4 in enthought python
 
 import simtk.unit as units
@@ -76,7 +75,7 @@ class ForkableTrajectoryStorage(object):
         
         if hasattr(class_obj, '_initialize_netCDF') and hasattr(class_obj, '_restore_netCDF'):
             #class is compatible and has necessary classes
-            self.links.append(class_obj)
+            self.links.forward(class_obj)
             
         pass
     
@@ -100,11 +99,15 @@ class ForkableTrajectoryStorage(object):
         # Store netcdf file handle.
         self.ncfile = ncfile
 
+        # add shared dimension for everyone. scalar and spatial
         if 'scalar' not in self.ncfile.dimensions:
             self.ncfile.createDimension('scalar', 1) # scalar dimension
+            
+        if 'spatial' not in self.ncfile.dimensions:
+            self.ncfile.createDimension('spatial', 3) # number of spatial dimensions
         
         # Set global attributes.
-        setattr(ncfile, 'title', 'Multi-State-Transition-Interface-Sampling')
+        setattr(ncfile, 'title', 'Open-Transition-Interface-Sampling')
         setattr(ncfile, 'application', 'Host-Guest-System')
         setattr(ncfile, 'program', 'run.py')
         setattr(ncfile, 'programVersion', __version__)
@@ -173,8 +176,8 @@ class ForkableTrajectoryStorage(object):
         """
         Return all snapshots as a mdtraj.Trajectory object using only the specified atoms
         
-        OPTIONAL ARGUMENTS
-        
+        Parameters
+        ----------        
         atom_indices (list of int, Default: None) - list of atom indices to be used for the trajectory
          
         """
@@ -225,6 +228,39 @@ class ForkableTrajectoryStorage(object):
             if self.verbose_root: print "Storing option: %s -> %s (type: %s)" % (option_name, option_value, type(option_value))            
 
         return
+    
+    def _restore_options(self, obj, group_name = 'options'):
+        """
+        Restore run parameters from NetCDF file.
+        """
+        
+        self.verbose_root = False
+
+        if self.verbose_root: print "Attempting to restore options from NetCDF file..."
+
+        # Make sure this NetCDF file contains option information
+        if not group_name in self.ncfile.groups:
+            # Not found, signal failure.
+            return False
+
+        # Find the group.
+        ncgrp_options = self.ncfile.groups[group_name]
+        
+        print ncgrp_options.variables.keys()
+
+        # Load run parameters.
+        for option_name in ncgrp_options.variables.keys():
+            # Get NetCDF variable.
+            option_value = self._restore_single_option(ncgrp_options, option_name)
+            
+            print option_name
+            
+            # Store option.
+            if self.verbose_root: print "Restoring option: %s -> %s (type: %s)" % (option_name, str(option_value), type(option_value))
+            setattr(obj, option_name, option_value)
+            
+        # Signal success.
+        return True
 
     def _store_single_option(self, ncgrp, obj_name, obj_value):
         """
@@ -276,39 +312,6 @@ class ForkableTrajectoryStorage(object):
 
         return
 
-
-    def _restore_options(self, obj, group_name = 'options'):
-        """
-        Restore run parameters from NetCDF file.
-        """
-        
-        self.verbose_root = False
-
-        if self.verbose_root: print "Attempting to restore options from NetCDF file..."
-
-        # Make sure this NetCDF file contains option information
-        if not group_name in self.ncfile.groups:
-            # Not found, signal failure.
-            return False
-
-        # Find the group.
-        ncgrp_options = self.ncfile.groups[group_name]
-        
-        print ncgrp_options.variables.keys()
-
-        # Load run parameters.
-        for option_name in ncgrp_options.variables.keys():
-            # Get NetCDF variable.
-            option_value = self._restore_single_option(ncgrp_options, option_name)
-            
-            print option_name
-            
-            # Store option.
-            if self.verbose_root: print "Restoring option: %s -> %s (type: %s)" % (option_name, str(option_value), type(option_value))
-            setattr(obj, option_name, option_value)
-            
-        # Signal success.
-        return True
     
     def _restore_single_option(self, ncgrp, obj_name):
         """

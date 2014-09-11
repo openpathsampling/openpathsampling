@@ -23,7 +23,8 @@ class VoronoiTesselation(object):
     '''
     Hold the MSM Clustering description and the associated state assignments to decide if a trajectory has hit a core
     
-    NOTES
+    Notes
+    -----
     
     
     '''
@@ -37,7 +38,7 @@ class VoronoiTesselation(object):
         '''
         
         self.storage = None
-        self.generator = None
+        self._generator = None
         self.metric = RMSD(None)
         self.atom_indices = None
         self.snapshot_distances = None
@@ -49,7 +50,8 @@ class VoronoiTesselation(object):
         '''
         Update the set of generators from the associates trajectory storage
         
-        NOTES
+        Notes
+        -----
         
         '''
         traj = self.storage.all_snapshot_coordinates_as_mdtraj( self.atom_indices )
@@ -65,13 +67,17 @@ class VoronoiTesselation(object):
 
         ptrajs = None
     
-        clusterer = clustering.HybridKMedoids(self.metric, trajectories=traj,
-            prep_trajectories=ptrajs, k=args.hybrid_num_clusters,
+        clusterer = clustering.HybridKMedoids(
+            self.metric, 
+            trajectories=traj,
+            prep_trajectories=ptrajs, 
+            k=args.hybrid_num_clusters,
             distance_cutoff=args.hybrid_distance_cutoff,
             local_num_iters=args.hybrid_local_num_iters,
             global_num_iters=args.hybrid_global_iters,
             too_close_cutoff=args.hybrid_too_close_cutoff,
-            ignore_max_objective=args.hybrid_ignore_max_objective)
+            ignore_max_objective=args.hybrid_ignore_max_objective
+        )
     
         gen_inds = clusterer.get_generator_indices()
 
@@ -85,12 +91,11 @@ class VoronoiTesselation(object):
         '''
         Return the number of generators used in the tesselation
         
-        RETURNS
-        
-        length (int) - number of generators
-        
-        NOTES
-        
+        Returns
+        -------
+        length : int
+            number of generators
+
         '''
 
         return len(self.generators)
@@ -99,8 +104,8 @@ class VoronoiTesselation(object):
         '''
         Assign all snapshots in the associates trajectory storage to the generators
                 
-        NOTES
-        
+        Notes
+        -----
         This allows later to access everything fast
         '''
         
@@ -128,12 +133,13 @@ class VoronoiTesselation(object):
         '''
         Assign all trajectories in the associates trajectory storage to the generators
         
-        RETURNS
+        Returns
+        -------
+        clusterlist : list of int
+            list of cluster IDs
         
-        clusterlist (list of int) - list of cluster IDs
-        
-        NOTES
-        
+        Notes
+        -----        
         This needs assign_storage() to be run before!
         
         '''
@@ -144,8 +150,8 @@ class VoronoiTesselation(object):
         '''
         Assign snapshots with IDs indices to the generators
         
-        RETURNS
-        
+        Returns
+        -------
         clusterlist (list of int) - list of cluster IDs
         
         NOTES
@@ -161,13 +167,13 @@ class VoronoiTesselation(object):
         '''
         Assign a single snapshot to the cluster centers
         
-        RETURNS
+        Returns
+        -------
+        assignment : int
+            cluster IDs
+        distance: float
+            distance to cluster _generator in measure of the metric (RMSD)
         
-        assignment (int) - cluster IDs
-        distance (float) - distance to cluster generator in measure of the metric (RMSD)
-        
-        NOTES
-                
         '''
         
         assignments, distances = self.assign(Trajectory([snapshot]))    
@@ -177,20 +183,17 @@ class VoronoiTesselation(object):
         '''
         Assign a Trajectory object to the cluster
         
-        ARGUMENTS
-        
-        traj (Trajectory) - trajectory to be clustered
-        
-        OPTIONAL ARGUMENTS
-        
-        recalc (Default False) - forces a calculation of the cluster center and not using the cached assignments
+        Parameters
+        ----------        
+        traj : Trajectory
+            trajectory to be clustered
+        recalc : bool
+            forces a calculation of the cluster center and not using the cached assignments (Default False) 
         
         RETURNS
         
         assignments (numpy.array(n_frames, dtype='int')) - array of cluster IDs
-        distances (numpy.array(n_frames, dtype='float')) - distances to cluster generator in measure of the metric (RMSD)
-        
-        NOTES
+        distances (numpy.array(n_frames, dtype='float')) - distances to cluster _generator in measure of the metric (RMSD)
                 
         '''
 

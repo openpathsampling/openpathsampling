@@ -96,7 +96,7 @@ class TransitionInterfaceSampling(object):
                 # Shoot forward.
                 print "Shooting forward from frame %d" % frame_index
                 l_max = xframes - frame_index - 1
-                partial_trajectory = self.simulator.generate(trajectory[frame_index], l_max, stopping = stopper)
+                partial_trajectory = self.simulator.generate(trajectory[frame_index], l_max, running = stopper)
                 print "Trial was ", len(partial_trajectory) + frame_index, " long"                
                 if len(partial_trajectory) == l_max + 1:
                     print "Rejected. Too long"            
@@ -108,7 +108,7 @@ class TransitionInterfaceSampling(object):
                 # Shoot backwards
                 print "Shooting backward from frame %d" % frame_index     
                 l_max = xframes - nframes + frame_index
-                partial_trajectory = self.simulator.generate(trajectory[frame_index], l_max, stopping = stopper)
+                partial_trajectory = self.simulator.generate(trajectory[frame_index], l_max, running = stopper)
                 print "Trial was ", len(partial_trajectory) + nframes - frame_index, " long"                
                 
                 if len(partial_trajectory) == l_max + 1:
@@ -127,12 +127,12 @@ class TransitionInterfaceSampling(object):
             if (np.random.rand() < 0.5):
                 print "Shifting by +%d" % nshift
                 # Shoot forward from end.
-                partial_trajectory = self.simulator.generate(trajectory[-1], xframes - nframes + nshift, stopping = stopper)
+                partial_trajectory = self.simulator.generate(trajectory[-1], xframes - nframes + nshift, running = stopper)
                 trial_trajectory = trajectory[nshift:-1] + partial_trajectory
             else:
                 # Shoot backwards from beginning.
                 print "Shifting by -%d" % nshift
-                partial_trajectory = self.simulator.generate(trajectory[0], xframes - nframes + nshift, stopping = stopper)
+                partial_trajectory = self.simulator.generate(trajectory[0], xframes - nframes + nshift, running = stopper)
                 partial_trajectory.reverse()
                 trial_trajectory = partial_trajectory[:-1] + trajectory[0:-nshift]
 

@@ -27,10 +27,10 @@ class VoronoiInterface(object):
         self.tesselation = tesselation
         self.cutoff = cutoff
         if generators is None:
-            # Use all generators as inside cells
+            # Use all generators as __call__ cells
             self.generators = range(tesselation.size)
         else:
             self.generators = generators
 
-    def inside(self, snapshot):
+    def __call__(self, snapshot):
         self.tesselation.assign(snapshot)

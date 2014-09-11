@@ -1,0 +1,1595 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>API Functions &mdash; OpenTIS 0.1 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="OpenTIS 0.1 documentation" href="index.html"/>
+        <link rel="prev" title="Welcome to OpenTIS’s documentation!" href="index.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="index.html" class="fa fa-home"> OpenTIS</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="">API Functions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-OrderParameter">OrderParameter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-msm_analysis">MSMAnalysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-Simulator">Simulator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-Ensemble">Ensemble</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-Volume">Volume</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-pathmover">PathMover</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-forkable_trajectory_storage">Storage</a></li>
+</ul>
+</li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">OpenTIS</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>API Functions</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          <a href="_sources/api.txt" rel="nofollow"> View page source</a>
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <div class="section" id="api-functions">
+<h1>API Functions<a class="headerlink" href="#api-functions" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul class="simple">
+</ul>
+</div>
+<p>Blablabla...</p>
+<div class="section" id="module-OrderParameter">
+<span id="orderparameter"></span><h2>OrderParameter<a class="headerlink" href="#module-OrderParameter" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="OrderParameter.Cache">
+<em class="property">class </em><tt class="descclassname">OrderParameter.</tt><tt class="descname">Cache</tt><big>(</big><em>fnc</em><big>)</big><a class="reference internal" href="_modules/OrderParameter.html#Cache"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#OrderParameter.Cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Initializes an OrderParameter object that is essentially a function that maps a frame (Snapshot) within a trajectory (Trajectory) to a number.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fnc</strong> : index (int) -&gt; value (float)</p>
+<blockquote class="last">
+<div><p>the function used to generate the cache values for the specified index. In essence a list</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Does it have to be between 0 and 1?
+Do we want to save this in the netCDF?
+And if yes, do we want one big table for all OrderParameters or several ones. One for each. Second might be nicer.</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="9%" />
+<col width="91%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>cache</td>
+<td>(list) A list object contained all cached values so far</td>
+</tr>
+<tr class="row-even"><td>is_cached</td>
+<td>(set) A set of indices that are cached for quick queries if an index is in the list or not.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="OrderParameter.Cache.in_cache">
+<tt class="descname">in_cache</tt><big>(</big><em>indices</em><big>)</big><a class="reference internal" href="_modules/OrderParameter.html#Cache.in_cache"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#OrderParameter.Cache.in_cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find a subset of indices that are present in the cache</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>indices</strong> : list of int</p>
+<blockquote>
+<div><p>the initial list of indices to be tested</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>in_cache</strong> : list of int</p>
+<blockquote class="last">
+<div><p>the subset of indices present in the cache</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="OrderParameter.Cache.not_in_cache">
+<tt class="descname">not_in_cache</tt><big>(</big><em>indices</em><big>)</big><a class="reference internal" href="_modules/OrderParameter.html#Cache.not_in_cache"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#OrderParameter.Cache.not_in_cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find a subset of indices that are NOT present in the cache</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>indices</strong> : list of int</p>
+<blockquote>
+<div><p>the initial list of indices to be tested</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>in_cache</strong> : list of int</p>
+<blockquote class="last">
+<div><p>the subset of indices NOT present in the cache</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="OrderParameter.Cache.resize">
+<tt class="descname">resize</tt><big>(</big><em>size</em><big>)</big><a class="reference internal" href="_modules/OrderParameter.html#Cache.resize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#OrderParameter.Cache.resize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Will increase the size of the cache to the specified size</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>size</strong> : int</p>
+<blockquote class="last">
+<div><p>The new minimal size of the cache</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="OrderParameter.Cache.size">
+<tt class="descname">size</tt><a class="reference internal" href="_modules/OrderParameter.html#Cache.size"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#OrderParameter.Cache.size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the current size of the cache and thus the maximal index possibly in the cache.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>size</strong> : int</p>
+<blockquote class="last">
+<div><p>the length of the <cite>cache</cite> member variable</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="OrderParameter.OP_Multi_RMSD">
+<em class="property">class </em><tt class="descclassname">OrderParameter.</tt><tt class="descname">OP_Multi_RMSD</tt><big>(</big><em>name</em>, <em>centers</em>, <em>atom_indices=None</em>, <em>metric=None</em><big>)</big><a class="reference internal" href="_modules/OrderParameter.html#OP_Multi_RMSD"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#OrderParameter.OP_Multi_RMSD" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#OrderParameter.OrderParameter" title="OrderParameter.OrderParameter"><tt class="xref py py-class docutils literal"><span class="pre">OrderParameter.OrderParameter</span></tt></a></p>
+<p>An OrderParameter that transforms the RMSD to a set of centers.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>centers</strong> : trajectory</p>
+<blockquote>
+<div><p>a trajectory of snapshots that are used as the points to compute the RMSD to</p>
+</div></blockquote>
+<p><strong>atom_indices</strong> : list of integers (optional)</p>
+<blockquote>
+<div><p>a list of integers that is used in the rmsd computation. Usually solvent should be excluded</p>
+</div></blockquote>
+<p><strong>metric</strong> : msmbuilder.metrics.Metric</p>
+<blockquote class="last">
+<div><p>the metric object used to compute the RMSD</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="9%" />
+<col width="91%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>centers</td>
+<td>(trajectory) a trajectory of snapshots that are used as the points to compute the RMSD to</td>
+</tr>
+<tr class="row-even"><td>atom_indices</td>
+<td>(list of integers (optional)) a list of integers that is used in the rmsd computation. Usually solvent should be excluded</td>
+</tr>
+<tr class="row-odd"><td>metric</td>
+<td>(msmbuilder.metrics.RMSD) the RMSD metric object used to compute the RMSD</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="OrderParameter.OP_RMSD_To_Lambda">
+<em class="property">class </em><tt class="descclassname">OrderParameter.</tt><tt class="descname">OP_RMSD_To_Lambda</tt><big>(</big><em>name</em>, <em>center</em>, <em>lambda_min</em>, <em>max_lambda</em>, <em>atom_indices=None</em><big>)</big><a class="reference internal" href="_modules/OrderParameter.html#OP_RMSD_To_Lambda"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#OrderParameter.OP_RMSD_To_Lambda" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#OrderParameter.OrderParameter" title="OrderParameter.OrderParameter"><tt class="xref py py-class docutils literal"><span class="pre">OrderParameter.OrderParameter</span></tt></a></p>
+<p>An OrderParameter that transforms the RMSD to a specific center to a lambda value between zero and one.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>center</strong> : snapshot</p>
+<blockquote>
+<div><p>a trajectory snapshot that is used as the point to compute the RMSD to</p>
+</div></blockquote>
+<p><strong>lambda_min</strong> : float</p>
+<blockquote>
+<div><p>rmsd value that corresponds to lambda zero</p>
+</div></blockquote>
+<p><strong>max_lambda</strong> : float</p>
+<blockquote>
+<div><p>rmsd value that corresponds to lambda one</p>
+</div></blockquote>
+<p><strong>atom_indices</strong> : list of integers (optional)</p>
+<blockquote class="last">
+<div><p>a list of integers that is used in the rmsd computation. Usually solvent should be excluded</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="7%" />
+<col width="93%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>center</td>
+<td>(snapshot) a trajectory snapshot that is used as the point to compute the RMSD to</td>
+</tr>
+<tr class="row-even"><td>lambda_min</td>
+<td>(float) rmsd value that corresponds to lambda zero</td>
+</tr>
+<tr class="row-odd"><td>max_lambda</td>
+<td>(float) rmsd value that corresponds to lambda one</td>
+</tr>
+<tr class="row-even"><td>atom_indices</td>
+<td>(list of integers (optional)) a list of integers that is used in the rmsd computation. Usually solvent should be excluded</td>
+</tr>
+<tr class="row-odd"><td>metric</td>
+<td>(msmbuilder.metrics.RMSD) the RMSD metric object used to compute the RMSD</td>
+</tr>
+<tr class="row-even"><td>_generator</td>
+<td>(mdtraj.Trajectory prepared by metric.prepare_trajectory) trajectory object that contains only the center configuration to which the RMSD is computed to</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="OrderParameter.OrderParameter">
+<em class="property">class </em><tt class="descclassname">OrderParameter.</tt><tt class="descname">OrderParameter</tt><big>(</big><em>name</em><big>)</big><a class="reference internal" href="_modules/OrderParameter.html#OrderParameter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#OrderParameter.OrderParameter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Initializes an OrderParameter object that is essentially a function that maps a frame (Snapshot) within a trajectory (Trajectory) to a number.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>name</strong> : string</p>
+<blockquote class="last">
+<div><p>A descriptive name of the orderparameter. It is used in the string representation.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Do we want to save this in the netCDF?
+And if yes, do we want one big table for all OrderParameters or several ones. One for each. Second might be nicer.</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="5%" />
+<col width="95%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>name</td>
+<td>(string)</td>
+</tr>
+<tr class="row-even"><td>use_cache</td>
+<td>(bool) If set to <cite>True</cite> then the generated information is cached for further computation. This requires that the used snapshots have an index &gt; 0 which means they need to have been saved to the storage.</td>
+</tr>
+<tr class="row-odd"><td>use_storage</td>
+<td>(bool) If set to <cite>True</cite> the cached information will also be stored in the associated netCDF file. This still needs testing.</td>
+</tr>
+<tr class="row-even"><td>size</td>
+<td>(int) The number of dimensions of the output order parameter. So far this is not used and will be necessary or useful when storage is available</td>
+</tr>
+<tr class="row-odd"><td>cache</td>
+<td>(SnapshotCache) A cache object that holds all the values.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="OrderParameter.SnapshotCache">
+<em class="property">class </em><tt class="descclassname">OrderParameter.</tt><tt class="descname">SnapshotCache</tt><big>(</big><em>name</em>, <em>fnc</em><big>)</big><a class="reference internal" href="_modules/OrderParameter.html#SnapshotCache"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#OrderParameter.SnapshotCache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#OrderParameter.Cache" title="OrderParameter.Cache"><tt class="xref py py-class docutils literal"><span class="pre">OrderParameter.Cache</span></tt></a></p>
+<p>A cache that is attached to snapshot indices store in the Snapshot storage</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>name</strong> : string</p>
+<blockquote class="last">
+<div><p>A short and unique name to be used in storage</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="7%" />
+<col width="93%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>name</td>
+<td>(string) A short and unique name to be used in storage</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="OrderParameter.SnapshotCache.fill">
+<tt class="descname">fill</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/OrderParameter.html#SnapshotCache.fill"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#OrderParameter.SnapshotCache.fill" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute all distances for all snapshots to be used later using the cache.</p>
+<p class="rubric">Notes</p>
+<p>Make sure that all snapshots are saved. Otherwise we cannot cache them!</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="OrderParameter.SnapshotCache.in_cache">
+<tt class="descname">in_cache</tt><big>(</big><em>indices</em><big>)</big><a class="headerlink" href="#OrderParameter.SnapshotCache.in_cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find a subset of indices that are present in the cache</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>indices</strong> : list of int</p>
+<blockquote>
+<div><p>the initial list of indices to be tested</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>in_cache</strong> : list of int</p>
+<blockquote class="last">
+<div><p>the subset of indices present in the cache</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="OrderParameter.SnapshotCache.load">
+<tt class="descname">load</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/OrderParameter.html#SnapshotCache.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#OrderParameter.SnapshotCache.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Restores the cache from the storage</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="OrderParameter.SnapshotCache.not_in_cache">
+<tt class="descname">not_in_cache</tt><big>(</big><em>indices</em><big>)</big><a class="headerlink" href="#OrderParameter.SnapshotCache.not_in_cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find a subset of indices that are NOT present in the cache</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>indices</strong> : list of int</p>
+<blockquote>
+<div><p>the initial list of indices to be tested</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>in_cache</strong> : list of int</p>
+<blockquote class="last">
+<div><p>the subset of indices NOT present in the cache</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="OrderParameter.SnapshotCache.resize">
+<tt class="descname">resize</tt><big>(</big><em>size</em><big>)</big><a class="headerlink" href="#OrderParameter.SnapshotCache.resize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Will increase the size of the cache to the specified size</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>size</strong> : int</p>
+<blockquote class="last">
+<div><p>The new minimal size of the cache</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="OrderParameter.SnapshotCache.save">
+<tt class="descname">save</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/OrderParameter.html#SnapshotCache.save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#OrderParameter.SnapshotCache.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the current state of the cache to the storage</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="OrderParameter.SnapshotCache.size">
+<tt class="descname">size</tt><a class="headerlink" href="#OrderParameter.SnapshotCache.size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the current size of the cache and thus the maximal index possibly in the cache.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>size</strong> : int</p>
+<blockquote class="last">
+<div><p>the length of the <cite>cache</cite> member variable</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="OrderParameter.TrajectoryCache">
+<em class="property">class </em><tt class="descclassname">OrderParameter.</tt><tt class="descname">TrajectoryCache</tt><big>(</big><em>name</em>, <em>fnc</em><big>)</big><a class="reference internal" href="_modules/OrderParameter.html#TrajectoryCache"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#OrderParameter.TrajectoryCache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#OrderParameter.Cache" title="OrderParameter.Cache"><tt class="xref py py-class docutils literal"><span class="pre">OrderParameter.Cache</span></tt></a></p>
+<p>A cache that is attached to trajectories stored in the Snapshot storage</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>name</strong> : string</p>
+<blockquote class="last">
+<div><p>A short and unique name to be used in storage</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="7%" />
+<col width="93%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>name</td>
+<td>(string) A short and unique name to be used in storage</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="OrderParameter.TrajectoryCache.fill">
+<tt class="descname">fill</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/OrderParameter.html#TrajectoryCache.fill"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#OrderParameter.TrajectoryCache.fill" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute all distances for all snapshots to be used later using the cache.</p>
+<p class="rubric">Notes</p>
+<p>Make sure that all snapshots are saved. Otherwise we cannot cache them!</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="OrderParameter.TrajectoryCache.in_cache">
+<tt class="descname">in_cache</tt><big>(</big><em>indices</em><big>)</big><a class="headerlink" href="#OrderParameter.TrajectoryCache.in_cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find a subset of indices that are present in the cache</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>indices</strong> : list of int</p>
+<blockquote>
+<div><p>the initial list of indices to be tested</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>in_cache</strong> : list of int</p>
+<blockquote class="last">
+<div><p>the subset of indices present in the cache</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="OrderParameter.TrajectoryCache.load">
+<tt class="descname">load</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/OrderParameter.html#TrajectoryCache.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#OrderParameter.TrajectoryCache.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Restores the cache from the storage</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="OrderParameter.TrajectoryCache.not_in_cache">
+<tt class="descname">not_in_cache</tt><big>(</big><em>indices</em><big>)</big><a class="headerlink" href="#OrderParameter.TrajectoryCache.not_in_cache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find a subset of indices that are NOT present in the cache</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>indices</strong> : list of int</p>
+<blockquote>
+<div><p>the initial list of indices to be tested</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>in_cache</strong> : list of int</p>
+<blockquote class="last">
+<div><p>the subset of indices NOT present in the cache</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="OrderParameter.TrajectoryCache.resize">
+<tt class="descname">resize</tt><big>(</big><em>size</em><big>)</big><a class="headerlink" href="#OrderParameter.TrajectoryCache.resize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Will increase the size of the cache to the specified size</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>size</strong> : int</p>
+<blockquote class="last">
+<div><p>The new minimal size of the cache</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="OrderParameter.TrajectoryCache.save">
+<tt class="descname">save</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/OrderParameter.html#TrajectoryCache.save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#OrderParameter.TrajectoryCache.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the current state of the cache to the storage</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="OrderParameter.TrajectoryCache.size">
+<tt class="descname">size</tt><a class="headerlink" href="#OrderParameter.TrajectoryCache.size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the current size of the cache and thus the maximal index possibly in the cache.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>size</strong> : int</p>
+<blockquote class="last">
+<div><p>the length of the <cite>cache</cite> member variable</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-msm_analysis">
+<span id="msmanalysis"></span><h2>MSMAnalysis<a class="headerlink" href="#module-msm_analysis" title="Permalink to this headline">¶</a></h2>
+<p>Created on 06.07.2014</p>
+<p>&#64;author: jan-hendrikprinz</p>
+<dl class="class">
+<dt id="msm_analysis.BoundedMatrix">
+<em class="property">class </em><tt class="descclassname">msm_analysis.</tt><tt class="descname">BoundedMatrix</tt><big>(</big><em>T</em><big>)</big><a class="reference internal" href="_modules/msm_analysis.html#BoundedMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#msm_analysis.BoundedMatrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Representation of a Matrix with finite matrix norm</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="4%" />
+<col width="96%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>T</td>
+<td>(numpy.ndarray([n,n], type=float)) a numpy matrix that contains the matrix entries</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="msm_analysis.BoundedMatrix.equilibrium">
+<tt class="descname">equilibrium</tt><a class="reference internal" href="_modules/msm_analysis.html#BoundedMatrix.equilibrium"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#msm_analysis.BoundedMatrix.equilibrium" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="msm_analysis.BoundedMatrix.has_unique_equilibrium">
+<tt class="descname">has_unique_equilibrium</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/msm_analysis.html#BoundedMatrix.has_unique_equilibrium"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#msm_analysis.BoundedMatrix.has_unique_equilibrium" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="msm_analysis.MSM">
+<em class="property">class </em><tt class="descclassname">msm_analysis.</tt><tt class="descname">MSM</tt><big>(</big><em>T</em><big>)</big><a class="reference internal" href="_modules/msm_analysis.html#MSM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#msm_analysis.MSM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#msm_analysis.BoundedMatrix" title="msm_analysis.BoundedMatrix"><tt class="xref py py-class docutils literal"><span class="pre">msm_analysis.BoundedMatrix</span></tt></a></p>
+<p>Representation of a Markov State Model. Allows for several ways to compute properties of a MSM</p>
+<p>Parameters
+T : BoundedMatrix</p>
+<dl class="method">
+<dt id="msm_analysis.MSM.backward_committor_sensitivity">
+<tt class="descname">backward_committor_sensitivity</tt><big>(</big><em>A</em>, <em>B</em>, <em>index</em><big>)</big><a class="reference internal" href="_modules/msm_analysis.html#MSM.backward_committor_sensitivity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#msm_analysis.MSM.backward_committor_sensitivity" title="Permalink to this definition">¶</a></dt>
+<dd><p>calculate the sensitivity matrix for index of the backward committor from A to B given transition matrix T.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>T</strong> : np.ndarray shape = (n, n)</p>
+<blockquote>
+<div><p>Transition matrix</p>
+</div></blockquote>
+<p><strong>A</strong> : array like</p>
+<blockquote>
+<div><p>List of integer state labels for set A</p>
+</div></blockquote>
+<p><strong>B</strong> : array like</p>
+<blockquote>
+<div><p>List of integer state labels for set B</p>
+</div></blockquote>
+<p><strong>index</strong> : int</p>
+<blockquote>
+<div><p>entry of the committor for which the sensitivity is to be computed</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>x</strong> : ndarray, shape=(n, n)</p>
+<blockquote class="last">
+<div><p>Sensitivity matrix for entry index around transition matrix T. Reversibility is not assumed.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="msm_analysis.MSM.eigenvalue_sensitivity">
+<tt class="descname">eigenvalue_sensitivity</tt><big>(</big><em>k</em><big>)</big><a class="reference internal" href="_modules/msm_analysis.html#MSM.eigenvalue_sensitivity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#msm_analysis.MSM.eigenvalue_sensitivity" title="Permalink to this definition">¶</a></dt>
+<dd><p>calculate the sensitivity matrix for eigenvalue k given transition matrix T.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>T</strong> : np.ndarray shape = (n, n)</p>
+<blockquote>
+<div><p>Transition matrix</p>
+</div></blockquote>
+<p><strong>k</strong> : int</p>
+<blockquote>
+<div><p>eigenvalue index for eigenvalues order descending</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>x</strong> : ndarray, shape=(n, n)</p>
+<blockquote class="last">
+<div><p>Sensitivity matrix for entry index around transition matrix T. Reversibility is not assumed.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="msm_analysis.MSM.eigenvector_sensitivity">
+<tt class="descname">eigenvector_sensitivity</tt><big>(</big><em>k</em>, <em>j</em>, <em>right=True</em><big>)</big><a class="reference internal" href="_modules/msm_analysis.html#MSM.eigenvector_sensitivity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#msm_analysis.MSM.eigenvector_sensitivity" title="Permalink to this definition">¶</a></dt>
+<dd><p>calculate the sensitivity matrix for entry j of left or right eigenvector k given transition matrix T.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>T</strong> : np.ndarray shape = (n, n)</p>
+<blockquote>
+<div><p>Transition matrix</p>
+</div></blockquote>
+<p><strong>k</strong> : int</p>
+<blockquote>
+<div><p>eigenvector index ordered with descending eigenvalues</p>
+</div></blockquote>
+<p><strong>j</strong> : int</p>
+<blockquote>
+<div><p>entry of eigenvector k for which the sensitivity is to be computed</p>
+</div></blockquote>
+<p><strong>right</strong> : boolean (default: True)</p>
+<blockquote>
+<div><p>If set to True (default) the right eigenvectors are considered, otherwise the left ones</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>x</strong> : ndarray, shape=(n, n)</p>
+<blockquote class="last">
+<div><p>Sensitivity matrix for entry index around transition matrix T. Reversibility is not assumed.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Eigenvectors can naturally be scaled and so will their sensitivity depend on their size.
+For that reason we need to agree on a normalization for which the sensitivity is computed.
+Here we use the natural norm(vector) = 1 condition which is different from the results, e.g.
+the rdl_decomposition returns. 
+This is especially important for the stationary distribution, which is the first left eigenvector.
+For this reason this function return a different sensitivity for the first left eigenvector
+than the function stationary_distribution_sensitivity and this function should not be used in this
+case!</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="msm_analysis.MSM.equilibrium">
+<tt class="descname">equilibrium</tt><a class="headerlink" href="#msm_analysis.MSM.equilibrium" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="msm_analysis.MSM.expectation_sensitivity">
+<tt class="descname">expectation_sensitivity</tt><big>(</big><em>a</em><big>)</big><a class="reference internal" href="_modules/msm_analysis.html#MSM.expectation_sensitivity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#msm_analysis.MSM.expectation_sensitivity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sensitivity of expectation value of observable A=(a_i).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>T</strong> : (M, M) ndarray</p>
+<blockquote>
+<div><p>Transition matrix</p>
+</div></blockquote>
+<p><strong>a</strong> : (M,) ndarray</p>
+<blockquote>
+<div><p>Observable, a[i] is the value of the observable at state i.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>S</strong> : (M, M) ndarray</p>
+<blockquote class="last">
+<div><p>Sensitivity matrix of the expectation value.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="msm_analysis.MSM.forward_committor_sensitivity">
+<tt class="descname">forward_committor_sensitivity</tt><big>(</big><em>A</em>, <em>B</em>, <em>index</em><big>)</big><a class="reference internal" href="_modules/msm_analysis.html#MSM.forward_committor_sensitivity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#msm_analysis.MSM.forward_committor_sensitivity" title="Permalink to this definition">¶</a></dt>
+<dd><p>calculate the sensitivity matrix for index of the forward committor from A to B given transition matrix T.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>T</strong> : np.ndarray shape = (n, n)</p>
+<blockquote>
+<div><p>Transition matrix</p>
+</div></blockquote>
+<p><strong>A</strong> : array like</p>
+<blockquote>
+<div><p>List of integer state labels for set A</p>
+</div></blockquote>
+<p><strong>B</strong> : array like</p>
+<blockquote>
+<div><p>List of integer state labels for set B</p>
+</div></blockquote>
+<p><strong>index</strong> : int</p>
+<blockquote>
+<div><p>entry of the committor for which the sensitivity is to be computed</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>x</strong> : ndarray, shape=(n, n)</p>
+<blockquote class="last">
+<div><p>Sensitivity matrix for entry index around transition matrix T. Reversibility is not assumed.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="msm_analysis.MSM.has_unique_equilibrium">
+<tt class="descname">has_unique_equilibrium</tt><big>(</big><big>)</big><a class="headerlink" href="#msm_analysis.MSM.has_unique_equilibrium" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="msm_analysis.MSM.mfpt_sensitivity">
+<tt class="descname">mfpt_sensitivity</tt><big>(</big><em>target</em>, <em>j</em><big>)</big><a class="reference internal" href="_modules/msm_analysis.html#MSM.mfpt_sensitivity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#msm_analysis.MSM.mfpt_sensitivity" title="Permalink to this definition">¶</a></dt>
+<dd><p>calculate the sensitivity matrix for entry j of the mean first passage time (MFPT) given transition matrix T.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>T</strong> : np.ndarray shape = (n, n)</p>
+<blockquote>
+<div><p>Transition matrix</p>
+</div></blockquote>
+<p><strong>target</strong> : int</p>
+<blockquote>
+<div><p>target state to which the MFPT is computed</p>
+</div></blockquote>
+<p><strong>j</strong> : int</p>
+<blockquote>
+<div><p>entry of the mfpt vector for which the sensitivity is to be computed</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>x</strong> : ndarray, shape=(n, n)</p>
+<blockquote class="last">
+<div><p>Sensitivity matrix for entry index around transition matrix T. Reversibility is not assumed.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="msm_analysis.MSM.stationary_distribution_sensitivity">
+<tt class="descname">stationary_distribution_sensitivity</tt><big>(</big><em>j</em><big>)</big><a class="reference internal" href="_modules/msm_analysis.html#MSM.stationary_distribution_sensitivity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#msm_analysis.MSM.stationary_distribution_sensitivity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the sensitivity matrix for entry j the stationary distribution vector given transition matrix T.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>T</strong> : np.ndarray shape = (n, n)</p>
+<blockquote>
+<div><p>Transition matrix</p>
+</div></blockquote>
+<p><strong>j</strong> : int</p>
+<blockquote>
+<div><p>entry of stationary distribution for which the sensitivity is to be computed</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>x</strong> : ndarray, shape=(n, n)</p>
+<blockquote class="last">
+<div><p>Sensitivity matrix for entry index around transition matrix T. Reversibility is not assumed.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Note, that this function uses a different normalization convention for the sensitivity compared to
+eigenvector_sensitivity. See there for further information.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="msm_analysis.MSM.timescale_sensitivity">
+<tt class="descname">timescale_sensitivity</tt><big>(</big><em>k</em><big>)</big><a class="reference internal" href="_modules/msm_analysis.html#MSM.timescale_sensitivity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#msm_analysis.MSM.timescale_sensitivity" title="Permalink to this definition">¶</a></dt>
+<dd><p>calculate the sensitivity matrix for timescale k given transition matrix T.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>T</strong> : np.ndarray shape = (n, n)</p>
+<blockquote>
+<div><p>Transition matrix</p>
+</div></blockquote>
+<p><strong>k</strong> : int</p>
+<blockquote>
+<div><p>timescale index for timescales of descending order (k = 0 for the infinite one)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>x</strong> : ndarray, shape=(n, n)</p>
+<blockquote class="last">
+<div><p>Sensitivity matrix for entry index around transition matrix T. Reversibility is not assumed.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-Simulator">
+<span id="simulator"></span><h2>Simulator<a class="headerlink" href="#module-Simulator" title="Permalink to this headline">¶</a></h2>
+<p>Created on 01.07.2014</p>
+<p>&#64;author JDC Chodera
+&#64;author: JH Prinz</p>
+<dl class="class">
+<dt id="Simulator.Simulator">
+<em class="property">class </em><tt class="descclassname">Simulator.</tt><tt class="descname">Simulator</tt><a class="reference internal" href="_modules/Simulator.html#Simulator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Simulator.Simulator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Class to wrap a simulation tool to store the context and rerun, needed parameters, storage, etc.</p>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li>Should only be contructed through factory functions</li>
+<li>This is the main object knowing about all things of the simulation. It might be possible to replace this with other simulation tools than OpenMM</li>
+</ul>
+<dl class="staticmethod">
+<dt id="Simulator.Simulator.Alanine_system">
+<em class="property">static </em><tt class="descname">Alanine_system</tt><big>(</big><em>mode='auto'</em><big>)</big><a class="reference internal" href="_modules/Simulator.html#Simulator.Alanine_system"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Simulator.Simulator.Alanine_system" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setup / Restore a simulator for the Alanine Dipeptide system</p>
+<p>OPTIONAL ARGUMENTS</p>
+<p>mode (string) - Set to &#8216;restore&#8217; to restore from file, &#8216;create&#8217; to create fresh simulation and &#8216;auto&#8217; to restore only if no database is present</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Simulator.Simulator.generate">
+<tt class="descname">generate</tt><big>(</big><em>snapshot</em>, <em>running=None</em><big>)</big><a class="reference internal" href="_modules/Simulator.html#Simulator.generate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Simulator.Simulator.generate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a velocity Verlet trajectory consisting of ntau segments of tau_steps in between storage of Snapshots and randomization of velocities.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>snapshot</strong> : Snapshot</p>
+<blockquote>
+<div><p>initial coordinates; velocities will be assigned from Maxwell-Boltzmann distribution</p>
+</div></blockquote>
+<p><strong>running</strong> : function(Snapshot)</p>
+<blockquote>
+<div><p>callable function of a &#8216;Snapshot&#8217; that returns True or False</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>trajectory</strong> : Trajectory</p>
+<blockquote class="last">
+<div><p>generated trajectory of initial conditions, including initial coordinate set</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Might add a return variable of the reason why the trajectory was aborted. Otherwise check the length and compare to max_frames</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-Ensemble">
+<span id="ensemble"></span><h2>Ensemble<a class="headerlink" href="#module-Ensemble" title="Permalink to this headline">¶</a></h2>
+<p>Created on 03.09.2014</p>
+<p>&#64;author: jan-hendrikprinz</p>
+<dl class="class">
+<dt id="Ensemble.AlteredTrajectoryEnsemble">
+<em class="property">class </em><tt class="descclassname">Ensemble.</tt><tt class="descname">AlteredTrajectoryEnsemble</tt><big>(</big><em>ensemble</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#AlteredTrajectoryEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.AlteredTrajectoryEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents an ensemble where an altered version of a trajectory (extended, reversed, cropped) is part of a given ensemble</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="Ensemble.BackwardPrependedTrajectoryEnsemble">
+<em class="property">class </em><tt class="descclassname">Ensemble.</tt><tt class="descname">BackwardPrependedTrajectoryEnsemble</tt><big>(</big><em>ensemble</em>, <em>trajectory</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#BackwardPrependedTrajectoryEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.BackwardPrependedTrajectoryEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="Ensemble.EmptyEnsemble">
+<em class="property">class </em><tt class="descclassname">Ensemble.</tt><tt class="descname">EmptyEnsemble</tt><a class="reference internal" href="_modules/Ensemble.html#EmptyEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.EmptyEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>The empty path ensemble of no trajectories.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="Ensemble.Ensemble">
+<em class="property">class </em><tt class="descclassname">Ensemble.</tt><tt class="descname">Ensemble</tt><a class="reference internal" href="_modules/Ensemble.html#Ensemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.Ensemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>An Ensemble represents a path ensemble, effectively a set of trajectories.
+Typical set operations are allowed, here: and, or, xor, -(without), ~ (inverse = all - x)</p>
+<p class="rubric">Notes</p>
+<p>Maybe replace - by / to get better notation. So war its not been used</p>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">EnsembleFactory</span><span class="o">.</span><span class="n">TISEnsemble</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">LambdaVolume</span><span class="p">(</span><span class="n">orderparameter_A</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">),</span> 
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">LambdaVolume</span><span class="p">(</span><span class="n">orderparameter_A</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">),</span> 
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">LambdaVolume</span><span class="p">(</span><span class="n">orderparameter_A</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.08</span><span class="p">),</span> 
+<span class="gp">&gt;&gt;&gt; </span>    <span class="bp">True</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="p">)</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="Ensemble.Ensemble.backward">
+<tt class="descname">backward</tt><big>(</big><em>trajectory</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#Ensemble.backward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.Ensemble.backward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns true, if the trajectory so far can still be in the ensemble if it is prepended by a frame. To check, it assumes that the
+trajectory from index 1 is okay. This is mainly for interactive usage, when a trajectory is generated using a backward move.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>trajectory</strong> : Trajectory</p>
+<blockquote>
+<div><p>the actual trajectory to be tested</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>backward</strong> : bool</p>
+<blockquote>
+<div><p>Returns true or false if using a backward step (extending the trajectory backwards in time at its beginning) <cite>trajectory</cite> could  
+still be in the ensemble and thus makes sense to continue a simulation</p>
+</div></blockquote>
+<p>Notes</p>
+<p>This is only tricky for this that depend on the history like HitXEnsemble or LeaveXEnsembles. In theory these can only</p>
+<p>be checked if the full range of frames has been generated. This could be triggered, when the last frame is reached.</p>
+<p class="last">This is even more difficult if this depends on the length.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="Ensemble.Ensemble.forward">
+<tt class="descname">forward</tt><big>(</big><em>trajectory</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#Ensemble.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.Ensemble.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns true, if the trajectory so far can still be in the ensemble if it is appended by a frame. To check, it assumes that the
+trajectory to length L-1 is okay. This is mainly for interactive usage, when a trajectory is generated.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>trajectory</strong> : Trajectory</p>
+<blockquote>
+<div><p>the actual trajectory to be tested</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>forward</strong> : bool</p>
+<blockquote class="last">
+<div><p>Returns true or false if using a forward step (extending the trajectory forward in time at its end) <cite>trajectory</cite> could  
+still be in the ensemble and thus makes sense to continue a simulation</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>This is only tricky for this that depend on the history like HitXEnsemble or LeaveXEnsembles. In theory these can only
+be checked if the full range of frames has been generated. This could be triggered, when the last frame is reached.
+This is even more difficult if this depends on the length.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Ensemble.EnsembleCombination">
+<em class="property">class </em><tt class="descclassname">Ensemble.</tt><tt class="descname">EnsembleCombination</tt><big>(</big><em>ensemble1</em>, <em>ensemble2</em>, <em>fnc</em>, <em>str_fnc</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#EnsembleCombination"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.EnsembleCombination" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represent the boolean concatenation of two ensembles</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="Ensemble.EnsembleFactory">
+<em class="property">class </em><tt class="descclassname">Ensemble.</tt><tt class="descname">EnsembleFactory</tt><a class="reference internal" href="_modules/Ensemble.html#EnsembleFactory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.EnsembleFactory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience class to construct Ensembles</p>
+<dl class="staticmethod">
+<dt id="Ensemble.EnsembleFactory.A2BEnsemble">
+<em class="property">static </em><tt class="descname">A2BEnsemble</tt><big>(</big><em>volume_a</em>, <em>volume_b</em>, <em>lazy=True</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#EnsembleFactory.A2BEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.EnsembleFactory.A2BEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct an ensemble that starts in (x[0]) in volume_a, ends in volume_b and is in either volumes in between</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>volume_a</strong> : Volume</p>
+<blockquote>
+<div><p>The volume to start in</p>
+</div></blockquote>
+<p><strong>volume_b</strong> : Volume</p>
+<blockquote>
+<div><p>The volume to end in</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>ensemble</strong> : Ensemble</p>
+<blockquote class="last">
+<div><p>The constructed Ensemble</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="Ensemble.EnsembleFactory.EndXEnsemble">
+<em class="property">static </em><tt class="descname">EndXEnsemble</tt><big>(</big><em>volume</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#EnsembleFactory.EndXEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.EnsembleFactory.EndXEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct an ensemble that ends (x[-1]) in the specified Volume</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>volume</strong> : Volume</p>
+<blockquote>
+<div><p>The volume to end in</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>ensemble</strong> : Ensemble</p>
+<blockquote class="last">
+<div><p>The constructed Ensemble</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="Ensemble.EnsembleFactory.StartXEnsemble">
+<em class="property">static </em><tt class="descname">StartXEnsemble</tt><big>(</big><em>volume</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#EnsembleFactory.StartXEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.EnsembleFactory.StartXEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct an ensemble that starts (x[0]) in the specified Volume</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>volume</strong> : Volume</p>
+<blockquote>
+<div><p>The volume to start in</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>ensemble</strong> : Ensemble</p>
+<blockquote class="last">
+<div><p>The constructed Ensemble</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="Ensemble.EnsembleFactory.TISEnsemble">
+<em class="property">static </em><tt class="descname">TISEnsemble</tt><big>(</big><em>volume_a</em>, <em>volume_b</em>, <em>volume_x</em>, <em>lazy=True</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#EnsembleFactory.TISEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.EnsembleFactory.TISEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct an TIS ensemble that starts in (x[0]) in volume_a, ends in volume_b and is in either volumes in between
+and will also leave volume_x at some point</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>volume_a</strong> : Volume</p>
+<blockquote>
+<div><p>The volume to start in</p>
+</div></blockquote>
+<p><strong>volume_b</strong> : Volume</p>
+<blockquote>
+<div><p>The volume to end in</p>
+</div></blockquote>
+<p><strong>volume_x</strong> : Volume</p>
+<blockquote>
+<div><p>The volume to leave</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>ensemble</strong> : Ensemble</p>
+<blockquote class="last">
+<div><p>The constructed Ensemble</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="Ensemble.EnsembleFactory.hbar">
+<em class="property">static </em><tt class="descname">hbar</tt><big>(</big><em>volume</em><big>)</big><a class="headerlink" href="#Ensemble.EnsembleFactory.hbar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct an ensemble that starts (x[0]) in the specified Volume</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>volume</strong> : Volume</p>
+<blockquote>
+<div><p>The volume to start in</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>ensemble</strong> : Ensemble</p>
+<blockquote class="last">
+<div><p>The constructed Ensemble</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Ensemble.ForwardAppendedTrajectoryEnsemble">
+<em class="property">class </em><tt class="descclassname">Ensemble.</tt><tt class="descname">ForwardAppendedTrajectoryEnsemble</tt><big>(</big><em>ensemble</em>, <em>trajectory</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#ForwardAppendedTrajectoryEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.ForwardAppendedTrajectoryEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents an ensemble which is the given ensemble but for trajectories where some trajectory is appended</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="Ensemble.FullEnsemble">
+<em class="property">class </em><tt class="descclassname">Ensemble.</tt><tt class="descname">FullEnsemble</tt><a class="reference internal" href="_modules/Ensemble.html#FullEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.FullEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>The full path ensemble of all possible trajectories.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="Ensemble.HitXEnsemble">
+<em class="property">class </em><tt class="descclassname">Ensemble.</tt><tt class="descname">HitXEnsemble</tt><big>(</big><em>volume</em>, <em>frames=slice(1</em>, <em>-1</em>, <em>None)</em>, <em>lazy=True</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#HitXEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.HitXEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents an ensemble where part of the trajectory visits a specified volume at least for one frame</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="Ensemble.InXEnsemble">
+<em class="property">class </em><tt class="descclassname">Ensemble.</tt><tt class="descname">InXEnsemble</tt><big>(</big><em>volume</em>, <em>frames=slice(1</em>, <em>-1</em>, <em>None)</em>, <em>lazy=True</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#InXEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.InXEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents an ensemble where part of the trajectory is in a specified volume</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="Ensemble.LeaveXEnsemble">
+<em class="property">class </em><tt class="descclassname">Ensemble.</tt><tt class="descname">LeaveXEnsemble</tt><big>(</big><em>volume</em>, <em>frames=slice(1</em>, <em>-1</em>, <em>None)</em>, <em>lazy=True</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#LeaveXEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.LeaveXEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents an ensemble where part of the trajectory leaves a specified volume at least for one frame</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="Ensemble.LengthEnsemble">
+<em class="property">class </em><tt class="descclassname">Ensemble.</tt><tt class="descname">LengthEnsemble</tt><big>(</big><em>length</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#LengthEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.LengthEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents an ensemble the contains trajectories of a specific length</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="Ensemble.NegatedEnsemble">
+<em class="property">class </em><tt class="descclassname">Ensemble.</tt><tt class="descname">NegatedEnsemble</tt><big>(</big><em>volume</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#NegatedEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.NegatedEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>Negates an Ensemble and simulates a <cite>not</cite> statement</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="Ensemble.OutXEnsemble">
+<em class="property">class </em><tt class="descclassname">Ensemble.</tt><tt class="descname">OutXEnsemble</tt><big>(</big><em>volume</em>, <em>frames=slice(1</em>, <em>-1</em>, <em>None)</em>, <em>lazy=True</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#OutXEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.OutXEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents an ensemble where part of the trajectory is outside a specified volume</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="Ensemble.ReversedTrajectoryEnsemble">
+<em class="property">class </em><tt class="descclassname">Ensemble.</tt><tt class="descname">ReversedTrajectoryEnsemble</tt><big>(</big><em>ensemble</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#ReversedTrajectoryEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.ReversedTrajectoryEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents an ensemble</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="Ensemble.VolumeEnsemble">
+<em class="property">class </em><tt class="descclassname">Ensemble.</tt><tt class="descname">VolumeEnsemble</tt><big>(</big><em>volume</em>, <em>frames=slice(1</em>, <em>-1</em>, <em>None)</em>, <em>lazy=True</em><big>)</big><a class="reference internal" href="_modules/Ensemble.html#VolumeEnsemble"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.VolumeEnsemble" title="Permalink to this definition">¶</a></dt>
+<dd><p>Describes an path ensemble using a Volume object</p>
+<dl class="attribute">
+<dt id="Ensemble.VolumeEnsemble.volume">
+<tt class="descname">volume</tt><a class="reference internal" href="_modules/Ensemble.html#VolumeEnsemble.volume"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Ensemble.VolumeEnsemble.volume" title="Permalink to this definition">¶</a></dt>
+<dd><p>The volume that is used in the specification.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-Volume">
+<span id="volume"></span><h2>Volume<a class="headerlink" href="#module-Volume" title="Permalink to this headline">¶</a></h2>
+<p>Created on 03.09.2014</p>
+<p>&#64;author: jan-hendrikprinz</p>
+<dl class="class">
+<dt id="Volume.LambdaVolume">
+<em class="property">class </em><tt class="descclassname">Volume.</tt><tt class="descname">LambdaVolume</tt><big>(</big><em>orderparameter</em>, <em>lambda_min=0.0</em>, <em>lambda_max=1.0</em><big>)</big><a class="reference internal" href="_modules/Volume.html#LambdaVolume"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Volume.LambdaVolume" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines a Volue that is given all states whose orderparameter is in a given range.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="Volume.VoronoiVolume">
+<em class="property">class </em><tt class="descclassname">Volume.</tt><tt class="descname">VoronoiVolume</tt><big>(</big><em>orderparameter</em>, <em>state</em><big>)</big><a class="reference internal" href="_modules/Volume.html#VoronoiVolume"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Volume.VoronoiVolume" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines a Volume that is given by a Voronoi cell specified by a set of centers</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>orderparameter</strong> : OP_Multi_RMSD</p>
+<blockquote>
+<div><p>must be an OP_Multi_RMSD orderparameter that returns several RMSDs</p>
+</div></blockquote>
+<p><strong>state</strong> : int</p>
+<blockquote class="last">
+<div><p>the index of the center for the chosen voronoi cell</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>orderparameter</td>
+<td>(OrderParameter) the orderparameter object</td>
+</tr>
+<tr class="row-even"><td>state</td>
+<td>(int) the index of the center for the chosen voronoi cell</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="Volume.VoronoiVolume.cell">
+<tt class="descname">cell</tt><big>(</big><em>snapshot</em><big>)</big><a class="reference internal" href="_modules/Volume.html#VoronoiVolume.cell"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#Volume.VoronoiVolume.cell" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the index of the voronoicell snapshot is in</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>snapshot</strong> : Snapshot</p>
+<blockquote>
+<div><p>the snapshot to be tested</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">int</p>
+<blockquote class="last">
+<div><p>index of the voronoi cell</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pathmover">
+<span id="pathmover"></span><h2>PathMover<a class="headerlink" href="#module-pathmover" title="Permalink to this headline">¶</a></h2>
+<p>Created on 19.07.2014</p>
+<p>&#64;author: Jan-Hendrik Prinz</p>
+<dl class="class">
+<dt id="pathmover.BackwardShootMover">
+<em class="property">class </em><tt class="descclassname">pathmover.</tt><tt class="descname">BackwardShootMover</tt><big>(</big><em>selector</em>, <em>ensemble</em><big>)</big><a class="reference internal" href="_modules/pathmover.html#BackwardShootMover"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pathmover.BackwardShootMover" title="Permalink to this definition">¶</a></dt>
+<dd><p>A pathmover that implements the backward shooting algorithm</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pathmover.ForwardShootMover">
+<em class="property">class </em><tt class="descclassname">pathmover.</tt><tt class="descname">ForwardShootMover</tt><big>(</big><em>selector</em>, <em>ensemble</em><big>)</big><a class="reference internal" href="_modules/pathmover.html#ForwardShootMover"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pathmover.ForwardShootMover" title="Permalink to this definition">¶</a></dt>
+<dd><p>A pathmover that implements the forward shooting algorithm</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pathmover.MixedMover">
+<em class="property">class </em><tt class="descclassname">pathmover.</tt><tt class="descname">MixedMover</tt><big>(</big><em>movers</em>, <em>weights=None</em><big>)</big><a class="reference internal" href="_modules/pathmover.html#MixedMover"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pathmover.MixedMover" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines a mover that picks a over from a set of movers with specific weights.</p>
+<p class="rubric">Notes</p>
+<p>Channel functions from self.mover to self. Does NOT work yet. Think about a good way to implement this...</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pathmover.PathMover">
+<em class="property">class </em><tt class="descclassname">pathmover.</tt><tt class="descname">PathMover</tt><a class="reference internal" href="_modules/pathmover.html#PathMover"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pathmover.PathMover" title="Permalink to this definition">¶</a></dt>
+<dd><p>A PathMover is the description of how to generate a new path from an old one.</p>
+<p class="rubric">Notes</p>
+<p>Basically this describes the proposal step for a MC in path space.</p>
+<p>We might detach this from the acceptance step?!?!?
+This would mean that a PathMover needs only an old trajectory and gives a new one.</p>
+<p>For example a ForwardShoot then uses a shooting point selector and runs a new trajectory and combine them to get
+a new one.</p>
+<p>After the move has been made, we can retrieve information about the move, as well as the new trajectory from the
+PathMover object</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="12%" />
+<col width="88%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>simulator</td>
+<td>(Simulator) the attached simulator used to generate new trajectories</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pathmover.PathMover.move">
+<tt class="descname">move</tt><big>(</big><em>trajectory</em><big>)</big><a class="reference internal" href="_modules/pathmover.html#PathMover.move"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pathmover.PathMover.move" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the generation starting with the initial trajectory specified.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>trajectory</strong> : Trajectory</p>
+<blockquote>
+<div><p>the initial trajectory</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>final</strong> : Trajectory()</p>
+<blockquote class="last">
+<div><p>the final new proposed trajectory</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>After this command additional information can be accessed from this object</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pathmover.PathMover.proposal_bias">
+<tt class="descname">proposal_bias</tt><a class="reference internal" href="_modules/pathmover.html#PathMover.proposal_bias"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pathmover.PathMover.proposal_bias" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the proposal bias necessary to correct for an asymmetric proposal.</p>
+<p class="rubric">Notes</p>
+<p>This is effectively the ratio of proposal probabilities for a mover. For symmetric proposal
+this is one. In the case of e.g. Shooters this depends on the used ShootingPointSelector and
+the start and final trajectory.</p>
+<p>I am not sure if it makes sense that to define it this way, but for Shooters this is,
+what we need for the acceptance step in addition to the check if we have a trajectory of
+the target ensemble.</p>
+<p>What about Minus Move and PathReversalMove?</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pathmover.ShootMover">
+<em class="property">class </em><tt class="descclassname">pathmover.</tt><tt class="descname">ShootMover</tt><big>(</big><em>selector</em>, <em>ensemble</em><big>)</big><a class="reference internal" href="_modules/pathmover.html#ShootMover"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pathmover.ShootMover" title="Permalink to this definition">¶</a></dt>
+<dd><p>A pathmover that implements a general shooting algorithm that generates a sample from a specified ensemble</p>
+<dl class="attribute">
+<dt id="pathmover.ShootMover.generator_stopper">
+<tt class="descname">generator_stopper</tt><a class="reference internal" href="_modules/pathmover.html#ShootMover.generator_stopper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pathmover.ShootMover.generator_stopper" title="Permalink to this definition">¶</a></dt>
+<dd><p>the ensemble used by the generator</p>
+<p class="rubric">Notes</p>
+<p>contains the status of the generator if there has been a too long trajectory generated</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pathmover.ShootMover.proposal_bias">
+<tt class="descname">proposal_bias</tt><a class="reference internal" href="_modules/pathmover.html#ShootMover.proposal_bias"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pathmover.ShootMover.proposal_bias" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the proposal bias for Shooting Moves. These are given by the ratio of partition functions</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-forkable_trajectory_storage">
+<span id="storage"></span><h2>Storage<a class="headerlink" href="#module-forkable_trajectory_storage" title="Permalink to this headline">¶</a></h2>
+<p>Created on 06.07.2014</p>
+<p>&#64;author: JDC Chodera
+&#64;author: JH Prinz</p>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="index.html" class="btn btn-neutral" title="Welcome to OpenTIS’s documentation!"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014, Jan-Hendrik Prinz, John Chodera, David Swensen, Peter Bolhuis.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

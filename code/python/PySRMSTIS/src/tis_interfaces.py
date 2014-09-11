@@ -128,7 +128,7 @@ class TISInterfaces(object):
         return c != -1 and i != -1       # hit a core
     
     def within_interface(self, idx):
-        def stopper(snapshot):
+        def ensemble(snapshot):
             c, i, d = self.assign_snapshot(snapshot)
             return c != -1 and i == idx      # hit a core
         
@@ -154,12 +154,12 @@ class TISInterfaces(object):
                 first = snapshot
             elif (i[index] != 0  and first is not None):
                 # in void
-                t.append(snapshot)
+                t.forward(snapshot)
                 traj_mode = 1                
             elif (c[index] != -1 and i[index]==0 and traj_mode == 1):
                 t.insert(0, first)
-                t.append(snapshot)
-                l_traj.append(t)
+                t.forward(snapshot)
+                l_traj.forward(t)
                 t = Trajectory()
                 first = snapshot
                 traj_mode = 0
@@ -178,12 +178,12 @@ class TISInterfaces(object):
                 first = index
             elif (i[index] != 0  and first is not None):
                 # in void
-                t.append(indices[index])
+                t.forward(indices[index])
                 traj_mode = 1                
             elif (c[index] != -1 and i[index]==0 and traj_mode == 1):
                 t.insert(0, first)
-                t.append(indices[index])
-                l_traj.append(t)
+                t.forward(indices[index])
+                l_traj.forward(t)
                 t = Trajectory()
                 first = indices[index]
                 traj_mode = 0
@@ -257,7 +257,7 @@ class TISInterfaces(object):
             for connection in connectors:
                 f, l, m, k = self._get_TIS_Info_from_connection(connection)
                 if (f == first and l == last):
-                    ret.append(m)
+                    ret.forward(m)
                 
         return np.array(ret)
     

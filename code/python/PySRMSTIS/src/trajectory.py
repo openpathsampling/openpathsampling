@@ -27,10 +27,11 @@ class Trajectory(list):
         """
         Create a simulation trajectory object
 
-        OPTIONAL ARGUMENTS
+        Parameters
+        ----------
 
-        trajectory (Trajectory) - if specified, make a deep copy of specified trajectory
-        
+        trajectory : Trajectory
+            if specified, make a deep copy of specified trajectory
         """
 
         # Initialize list.
@@ -42,23 +43,35 @@ class Trajectory(list):
             # Try to make a copy out of whatever container we were provided
             if hasattr(trajectory, 'atom_indices'):
                 self.atom_indices = trajectory.atom_indices
+            else:
+                self.atom_indices = None
                 
             if (self.use_lazy):
                 self.extend(trajectory)
             else:
                 for snapshot in trajectory:
                     snapshot_copy = copy.deepcopy(snapshot)                    
-                    self.append(snapshot_copy)
+                    self.forward(snapshot_copy)
         else:
             self.atom_indices = None
         return
 
+    @property
+    def reversed(self):
+        '''
+        Returns a reversed (shallow) copy of the trajectory itself.
+        '''
+
+        t = Trajectory(self)
+        t.reverse()
+        return t
+    
     def reverse(self):
         """
         Reverse the trajectory.
 
-        NOTE
-
+        Notes
+        -----        
         We cannot handle the velocities correctly when reversing the trajectory, so velocities will no longer be meaningful.
         Kinetic energies are correctly updated, however, and path actions should be accurate.
 
@@ -82,6 +95,8 @@ class Trajectory(list):
         # this keeps everything the same and we do not need to resave the snapshots and a -idx just means take snapshot idx but invert momenta
         #for frame in self:
         #    frame.idx = -frame.idx
+            
+        # Alternatively we 
         
         return
     
@@ -89,10 +104,9 @@ class Trajectory(list):
         """
         Return all coordinates as a numpy array
         
-        RETURNS
-        
+        Returns
+        -------        
         coordinates (numpy.array(n_frames, n_atoms, 3) - numpy.array of coordinates of size number of frames 'n_frames' x number of atoms 'n_atoms' x 3 in x,y,z
-        
         """
         
         # Make sure snapshots are stored and have an index and then add the snapshot index to the trajectory
@@ -115,8 +129,8 @@ class Trajectory(list):
         """
         Return the number of frames in the trajectory
         
-        RETURNS
-        
+        Returns
+        -------        
         length (int) - the number of frames in the trajectory
         
         """
@@ -127,12 +141,12 @@ class Trajectory(list):
         """
         Return a list of the snapshot IDs in the trajectory
         
-        RETURNS
-        
+        Returns
+        -------        
         indices (list of int) - the list of indices
         
-        NOTES
-        
+        Notes
+        -----        
         The IDs are only non-zero if the snapshots have been saved before!
         
         """
@@ -143,11 +157,12 @@ class Trajectory(list):
         """
         Return the number of atoms in the trajectory in the current view. 
         
-        RETURNS
-
+        Returns
+        -------        
         n_atoms (int) - number of atoms
-        NOTES
-        
+
+        Notes
+        -----        
         If a trajectory has been subsetted then this returns only the number of the view otherwise if equals the number of atoms in the snapshots stored
         
         """
@@ -166,26 +181,15 @@ class Trajectory(list):
         """
         Return the contained list of snapshots as a python list object
         
-        RETURNS
-                
-        trajectory (list of Snapshot) - the indexed trajectory
+        Returns
+        -------        
+        trajectory : list of Snapshot 
+            the indexed trajectory
         
         """
         return list(self)
             
     def __getslice__(self, *args, **kwargs):
-        """
-        allows to use slicing and retains a Trajetory object!
-
-        RETURNS
-        
-        trajectory (Trajectory) - the sliced trajectory
-        
-        NOTES
-        
-        This function is deprecated and will not be present in python 3 anymore
-        
-        """        
         ret =  super(Trajectory, self).__getslice__(*args, **kwargs)
         if isinstance(ret, list):
             ret = Trajectory(ret)
@@ -194,15 +198,6 @@ class Trajectory(list):
         return ret
         
     def __getitem__(self, index):
-        """
-        Adds the possibility to use indexing and retains a Trajetory object!
-        
-        RETURNS
-        
-        trajectory (Trajectory) - the indexed trajectory
-                
-        """        
-        
         # Allow for numpy style of selecting several indices using a list as index parameter
         if type(index) is list:
             ret = [ super(Trajectory, self).__getitem__(i) for i in index ]
@@ -216,15 +211,6 @@ class Trajectory(list):
         return ret
     
     def __add__(self, other):        
-        """
-        Adds the possibility to join Trajectories and retains a Trajetory object!
-
-        RETURNS
-        
-        trajectory (Trajectory) - the joined trajectory
-        
-        """        
-
         t = Trajectory(self)
         t.extend(other)
         return t
@@ -237,21 +223,21 @@ class Trajectory(list):
         """
         Compute the generalized path Hamiltonian of the trajectory.
 
-        ARGUMENTS
-
+        Parameters
+        ----------
         trajectory (Trajectory) - the trajectory
 
-        RETURNS
+        Returns
+        -------        
+        H : simtk.unit.Quantity with units of energy
+            the generalized path Hamiltonian
 
-        H (simtk.unit.Quantity with units of energy) - the generalized path Hamiltonian
-
-        REFERENCES
-
+        References
+        ----------       
         For a description of the path Hamiltonian, see [1]:
 
         [1] Chodera JD, Swope WC, Noe F, Prinz JH, Shirts MR, and Pande VS. Dynamical reweighting:
         Improved estimates of dynamical properties from simulations at multiple temperatures.    
-
         """
 
         nsnapshots = len(self)
@@ -298,12 +284,12 @@ class Trajectory(list):
         Compute the (temperatureless!) log equilibrium probability (up to an unknown additive constant) of an unbiased trajectory evolved according to Verlet dynamics with Andersen thermostatting.
 
         ARGUMENTS
-
         trajectory (Trajectory) - the trajectory
 
-        RETURNS
-
-        log_q (float) - the log equilibrium probability of the trajectory divided by the inverse temperature beta
+        Returns
+        -------        
+        log_q : float
+            the log equilibrium probability of the trajectory divided by the inverse temperature beta
         
         NOTES
         This might be better places into the trajectory class. The trajectory should know the system and ensemble? and so it is not necessarily 
@@ -327,9 +313,10 @@ class Trajectory(list):
         """
         Reduce the view of the trajectory to a subset of atoms specified. This is only a view, no data will be changed or copied.
         
-        RETURNS
-        
-        trajectory (Trajectory) - the trajectory showing the subsets of atoms
+        Returns
+        -------        
+        trajectory : Trajectory
+            the trajectory showing the subsets of atoms
         """        
 
         t = Trajectory(self)
@@ -339,11 +326,12 @@ class Trajectory(list):
     @property
     def solute(self):
         """
-        Reduce the view of the trajectory to a subset of solute atoms specified in the associated simulator
+        Reduce the view of the trajectory to a subset of solute atoms specified in the associated Simulator
         
-        RETURNS
-        
-        trajectory (Trajectory) - the trajectory showing the subsets of solute atoms
+        Returns
+        -------        
+        trajectory : Trajectory
+            the trajectory showing the subsets of solute atoms
         """        
 
         return self.subset(Trajectory.simulator.solute_indices)
@@ -352,9 +340,10 @@ class Trajectory(list):
         """
         Construct a mdtraj.Trajectory object from the Trajectory itself
         
-        RETURNS
-        
-        trajectory (mdtraj.Trajectory) - the trajectory
+        Returns
+        -------        
+        trajectory : mdtraj.Trajectory
+            the trajectory
         """        
 
         output = self.coordinates()
@@ -367,9 +356,10 @@ class Trajectory(list):
         """
         Return a mdtraj.Topology object representing the topology of the current view of the trajectory
         
-        RETURNS
-        
-        topology (mdtraj.Topology) - the topology
+        Returns
+        -------        
+        topology : mdtraj.Topology
+            the topology
         """        
 
         topology = md.Topology.from_openmm(Trajectory.simulator.simulation.topology)
@@ -413,8 +403,8 @@ class Trajectory(list):
         
         idx (int) - ID of the trajectory
         
-        RETURNS
-        
+        Returns
+        -------        
         trajectory (list of int) - trajectory indices
         '''    
         
@@ -423,15 +413,54 @@ class Trajectory(list):
 
     @staticmethod
     def load_length(idx):
+        '''
+        Return the length of a trajectory from the storage
+        
+        Parameters
+        ----------
+        idx : int
+            index of the trajectory
+            
+        Returns
+        -------
+        length : int
+            Number of frames in the trajectory
+        '''
         return Trajectory.storage.ncfile.variables['trajectory_length'][idx]
     
     @staticmethod
     def load(idx):
+        '''
+        Return a trajectory from the storage
+        
+        Parameters
+        ----------
+        idx : int
+            index of the trajectory
+            
+        Returns
+        -------
+        trajectory : Trajectory
+            the trajectory
+        '''        
         frames = Trajectory.load_indices(idx)
         return Trajectory.from_indices(frames)
 
     @staticmethod
     def from_indices(frames):
+        '''
+        Return a trajectory from the storage constructed from a list of snapshot indices
+        
+        Parameters
+        ----------
+        frames : list of int
+            list of snapshot indices to be used to generate the trajectory
+            
+        Returns
+        -------
+        trajectory : Trajectory
+            the trajectory
+        '''
         trajectory = Trajectory()
 
         for frame in frames:                
@@ -442,6 +471,14 @@ class Trajectory(list):
     
     @staticmethod
     def load_number():
+        '''
+        Return the number of trajectories in the storage
+        
+        Returns
+        -------
+        number : int
+            number of trajectories in the storage. Their indexing starts with 1.
+        '''
         length = int(len(Trajectory.storage.ncfile.dimensions['trajectory'])) - 1
         if length < 0:
             length = 0
@@ -451,6 +488,11 @@ class Trajectory(list):
     def load_free():
         '''
         Return the number of the next free ID
+        
+        Returns
+        -------
+        index : int
+            the number of the next free index in the storage. Used to store a new snapshot.
         '''
         return Trajectory.load_number() + 1
     
@@ -459,9 +501,10 @@ class Trajectory(list):
         '''
         Return a list of frame indices for all trajectories in the storage
         
-        RETURNS
-        
-        list (list of list of int) - list of frame IDs
+        Returns
+        -------        
+        list : list of list of int
+            a list of list of frame IDs for all trajectories.
         '''
         ind = Trajectory.storage.ncfile.variables['trajectory_idx'][:,:].astype(np.int32).copy()
         lengths = Trajectory.storage.ncfile.variables['trajectory_length'][:].astype(np.int32).copy()
@@ -482,7 +525,6 @@ class Trajectory(list):
         """
         Initialize the associated storage to allow for trajectory storage
         
-        NOTES
         """        
 
         # save associated storage in class variable for all Trajectory instances to access
@@ -500,6 +542,7 @@ class Trajectory(list):
         ncvar_trajectory_length             = ncfile.createVariable('trajectory_length', 'u4', ('trajectory'))
         ncvar_trajectory_inversion          = ncfile.createVariable('trajectory_inverted', 'u4', ('trajectory'))
         ncvar_trajectory_path_hamiltonian   = ncfile.createVariable('trajectory_path_hamiltonians', 'f', ('trajectory'))
+
 
         # Define units for snapshot variables.
         setattr(ncvar_trajectory_path_hamiltonian,      'units', 'none')

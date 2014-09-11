@@ -1,0 +1,798 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Ensemble &mdash; OpenTIS 0.1 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="OpenTIS 0.1 documentation" href="../index.html"/>
+        <link rel="up" title="Module code" href="index.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="../index.html" class="fa fa-home"> OpenTIS</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Functions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-OrderParameter">OrderParameter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-msm_analysis">MSMAnalysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-Simulator">Simulator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-Ensemble">Ensemble</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-Volume">Volume</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-pathmover">PathMover</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-forkable_trajectory_storage">Storage</a></li>
+</ul>
+</li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">OpenTIS</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="index.html">Module code</a> &raquo;</li>
+      
+    <li>Ensemble</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <h1>Source code for Ensemble</h1><div class="highlight"><pre>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Created on 03.09.2014</span>
+
+<span class="sd">@author: jan-hendrikprinz</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<div class="viewcode-block" id="Ensemble"><a class="viewcode-back" href="../api.html#Ensemble.Ensemble">[docs]</a><span class="k">class</span> <span class="nc">Ensemble</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;    </span>
+<span class="sd">    An Ensemble represents a path ensemble, effectively a set of trajectories.</span>
+<span class="sd">    Typical set operations are allowed, here: and, or, xor, -(without), ~ (inverse = all - x)     </span>
+<span class="sd">    </span>
+<span class="sd">    Examples</span>
+<span class="sd">    --------    </span>
+<span class="sd">    &gt;&gt;&gt; EnsembleFactory.TISEnsemble(</span>
+<span class="sd">    &gt;&gt;&gt;     LambdaVolume(orderparameter_A, 0.0, 0.02), </span>
+<span class="sd">    &gt;&gt;&gt;     LambdaVolume(orderparameter_A, 0.0, 0.02), </span>
+<span class="sd">    &gt;&gt;&gt;     LambdaVolume(orderparameter_A, 0.0, 0.08), </span>
+<span class="sd">    &gt;&gt;&gt;     True</span>
+<span class="sd">    &gt;&gt;&gt;     )</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Maybe replace - by / to get better notation. So war its not been used</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        A path volume defines a set of paths.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_traj</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">last</span> <span class="o">=</span> <span class="bp">None</span>
+        
+        <span class="k">return</span>
+    
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns `True` if the trajectory is part of the path ensemble.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="bp">False</span>
+    
+<div class="viewcode-block" id="Ensemble.forward"><a class="viewcode-back" href="../api.html#Ensemble.Ensemble.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns true, if the trajectory so far can still be in the ensemble if it is appended by a frame. To check, it assumes that the</span>
+<span class="sd">        trajectory to length L-1 is okay. This is mainly for interactive usage, when a trajectory is generated.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        trajectory : Trajectory</span>
+<span class="sd">            the actual trajectory to be tested</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        forward : bool</span>
+<span class="sd">            Returns true or false if using a forward step (extending the trajectory forward in time at its end) `trajectory` could  </span>
+<span class="sd">            still be in the ensemble and thus makes sense to continue a simulation</span>
+<span class="sd">        </span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        This is only tricky for this that depend on the history like HitXEnsemble or LeaveXEnsembles. In theory these can only</span>
+<span class="sd">        be checked if the full range of frames has been generated. This could be triggered, when the last frame is reached.</span>
+<span class="sd">        This is even more difficult if this depends on the length.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="k">return</span> <span class="bp">False</span>        
+        <span class="k">pass</span>
+    </div>
+<div class="viewcode-block" id="Ensemble.backward"><a class="viewcode-back" href="../api.html#Ensemble.Ensemble.backward">[docs]</a>    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns true, if the trajectory so far can still be in the ensemble if it is prepended by a frame. To check, it assumes that the</span>
+<span class="sd">        trajectory from index 1 is okay. This is mainly for interactive usage, when a trajectory is generated using a backward move.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        trajectory : Trajectory</span>
+<span class="sd">            the actual trajectory to be tested</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        backward : bool</span>
+<span class="sd">            Returns true or false if using a backward step (extending the trajectory backwards in time at its beginning) `trajectory` could  </span>
+<span class="sd">            still be in the ensemble and thus makes sense to continue a simulation</span>
+<span class="sd">        </span>
+<span class="sd">        Notes</span>
+<span class="sd">        </span>
+<span class="sd">        This is only tricky for this that depend on the history like HitXEnsemble or LeaveXEnsembles. In theory these can only</span>
+<span class="sd">        be checked if the full range of frames has been generated. This could be triggered, when the last frame is reached.</span>
+<span class="sd">        This is even more difficult if this depends on the length.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="k">return</span> <span class="bp">False</span>        
+        <span class="k">pass</span>
+</div>
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns a complete mathematical expression that defines the current ensemble in a readable form.</span>
+<span class="sd">        </span>
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        This should be cleaned up a little</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="s">&#39;Ensemble&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__or__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span> <span class="ow">is</span> <span class="n">other</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="ow">is</span> <span class="n">EmptyEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">other</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">is</span> <span class="n">EmptyEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="ow">is</span> <span class="n">FullEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">is</span> <span class="n">FullEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">other</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">EnsembleCombination</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">fnc</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">a</span><span class="p">,</span><span class="n">b</span> <span class="p">:</span> <span class="n">a</span> <span class="ow">or</span> <span class="n">b</span><span class="p">,</span> <span class="n">str_fnc</span> <span class="o">=</span> <span class="s">&#39;{0}</span><span class="se">\n</span><span class="s">or</span><span class="se">\n</span><span class="s">{1}&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__xor__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span> <span class="ow">is</span> <span class="n">other</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">EmptyEnsemble</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="ow">is</span> <span class="n">EmptyEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">other</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">is</span> <span class="n">EmptyEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="ow">is</span> <span class="n">FullEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">NegatedEnsemble</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">is</span> <span class="n">FullEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">NegatedEnsemble</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>        
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">EnsembleCombination</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">fnc</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">a</span><span class="p">,</span><span class="n">b</span> <span class="p">:</span> <span class="n">a</span> <span class="o">^</span> <span class="n">b</span><span class="p">,</span> <span class="n">str_fnc</span> <span class="o">=</span> <span class="s">&#39;{0}</span><span class="se">\n</span><span class="s">xor</span><span class="se">\n</span><span class="s">{1}&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__and__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span> <span class="ow">is</span> <span class="n">other</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="ow">is</span> <span class="n">EmptyEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">is</span> <span class="n">EmptyEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">other</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="ow">is</span> <span class="n">FullEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">other</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">is</span> <span class="n">FullEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">EnsembleCombination</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">fnc</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">a</span><span class="p">,</span><span class="n">b</span> <span class="p">:</span> <span class="n">a</span> <span class="ow">and</span> <span class="n">b</span><span class="p">,</span> <span class="n">str_fnc</span> <span class="o">=</span> <span class="s">&#39;{0}</span><span class="se">\n</span><span class="s">and</span><span class="se">\n</span><span class="s">{1}&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__sub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span> <span class="ow">is</span> <span class="n">other</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">EmptyEnsemble</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="ow">is</span> <span class="n">EmptyEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">is</span> <span class="n">EmptyEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="ow">is</span> <span class="n">FullEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">NegatedEnsemble</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">is</span> <span class="n">FullEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">EmptyEnsemble</span><span class="p">()</span>        
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">EnsembleCombination</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">fnc</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">a</span><span class="p">,</span><span class="n">b</span> <span class="p">:</span> <span class="n">a</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">b</span><span class="p">,</span> <span class="n">str_fnc</span> <span class="o">=</span> <span class="s">&#39;{0}</span><span class="se">\n</span><span class="s">and not</span><span class="se">\n</span><span class="s">{1}&#39;</span><span class="p">)</span>
+        
+    <span class="k">def</span> <span class="nf">__invert__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="ow">is</span> <span class="n">EmptyEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">FullEnsemble</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="ow">is</span> <span class="n">FullEnsemble</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">EmptyEnsemble</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">NegatedEnsemble</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_indent</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+        <span class="n">spl</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+        <span class="n">spl</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;  &#39;</span> <span class="o">+</span> <span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">spl</span><span class="p">]</span>
+        <span class="k">return</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spl</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">_lencheck</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;frames&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">trajectory</span><span class="o">.</span><span class="n">frames</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span> <span class="ow">and</span> <span class="n">trajectory</span><span class="o">.</span><span class="n">frames</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span>
+                
+    </div>
+<div class="viewcode-block" id="EmptyEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.EmptyEnsemble">[docs]</a><span class="k">class</span> <span class="nc">EmptyEnsemble</span><span class="p">(</span><span class="n">Ensemble</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    The empty path ensemble of no trajectories.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EmptyEnsemble</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;empty&#39;</span>
+</div>
+<div class="viewcode-block" id="FullEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.FullEnsemble">[docs]</a><span class="k">class</span> <span class="nc">FullEnsemble</span><span class="p">(</span><span class="n">Ensemble</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    The full path ensemble of all possible trajectories.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EmptyEnsemble</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;all&#39;</span>
+    </div>
+<div class="viewcode-block" id="NegatedEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.NegatedEnsemble">[docs]</a><span class="k">class</span> <span class="nc">NegatedEnsemble</span><span class="p">(</span><span class="n">Ensemble</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Negates an Ensemble and simulates a `not` statement</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">volume</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">NegatedEnsemble</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ensemble</span> <span class="o">=</span> <span class="n">volume</span>
+        
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensemble</span><span class="p">(</span><span class="n">trajectory</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensemble</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">trajectory</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensemble</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">trajectory</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;not &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensemble2</span><span class="p">)</span>
+
+    </div>
+<div class="viewcode-block" id="EnsembleCombination"><a class="viewcode-back" href="../api.html#Ensemble.EnsembleCombination">[docs]</a><span class="k">class</span> <span class="nc">EnsembleCombination</span><span class="p">(</span><span class="n">Ensemble</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Represent the boolean concatenation of two ensembles</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ensemble1</span><span class="p">,</span> <span class="n">ensemble2</span><span class="p">,</span> <span class="n">fnc</span><span class="p">,</span> <span class="n">str_fnc</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EnsembleCombination</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ensemble1</span> <span class="o">=</span> <span class="n">ensemble1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ensemble2</span> <span class="o">=</span> <span class="n">ensemble2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fnc</span> <span class="o">=</span> <span class="n">fnc</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sfnc</span> <span class="o">=</span> <span class="n">str_fnc</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fnc</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensemble1</span><span class="p">(</span><span class="n">trajectory</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensemble2</span><span class="p">(</span><span class="n">trajectory</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fnc</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensemble1</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">trajectory</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensemble2</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">trajectory</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fnc</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensemble1</span><span class="o">.</span><span class="n">backward</span><span class="p">(</span><span class="n">trajectory</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensemble2</span><span class="o">.</span><span class="n">backward</span><span class="p">(</span><span class="n">trajectory</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="c">#        print self.sfnc, self.ensemble1, self.ensemble2, self.sfnc.format(&#39;(&#39; + str(self.ensemble1) + &#39;)&#39; , &#39;(&#39; + str(self.ensemble1) + &#39;)&#39;)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sfnc</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s">&#39;(</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">+</span> <span class="n">Ensemble</span><span class="o">.</span><span class="n">_indent</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensemble1</span><span class="p">))</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">)&#39;</span> <span class="p">,</span> <span class="s">&#39;(</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">+</span> <span class="n">Ensemble</span><span class="o">.</span><span class="n">_indent</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensemble2</span><span class="p">))</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">)&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="LengthEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.LengthEnsemble">[docs]</a><span class="k">class</span> <span class="nc">LengthEnsemble</span><span class="p">(</span><span class="n">Ensemble</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Represents an ensemble the contains trajectories of a specific length</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">length</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        A path ensemble that describes path of a specific length</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        length : int or slice</span>
+<span class="sd">            The specific length (int) or the range of allowed trajectory lengths (slice)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">length</span>
+        <span class="k">pass</span>
+    
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="n">trajectory</span><span class="o">.</span><span class="n">frames</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">length</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">length</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="o">.</span><span class="n">start</span> <span class="ow">and</span> <span class="n">length</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="o">.</span><span class="n">stop</span>
+        
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="n">trajectory</span><span class="o">.</span><span class="n">frames</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">length</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">length</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="o">.</span><span class="n">stop</span>
+
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="n">trajectory</span><span class="o">.</span><span class="n">frames</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">length</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">length</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="o">.</span><span class="n">stop</span>
+                
+    
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;len(x) = {0}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;len(x) in [{0}, {1}]&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="o">.</span><span class="n">stop</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="VolumeEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.VolumeEnsemble">[docs]</a><span class="k">class</span> <span class="nc">VolumeEnsemble</span><span class="p">(</span><span class="n">Ensemble</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Describes an path ensemble using a Volume object</span>
+<span class="sd">    &#39;&#39;&#39;</span>    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">volume</span><span class="p">,</span> <span class="n">frames</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">lazy</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">VolumeEnsemble</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_volume</span> <span class="o">=</span> <span class="n">volume</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frames</span> <span class="o">=</span> <span class="n">frames</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lazy</span> <span class="o">=</span> <span class="n">lazy</span>
+        <span class="k">pass</span>
+    
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="VolumeEnsemble.volume"><a class="viewcode-back" href="../api.html#Ensemble.VolumeEnsemble.volume">[docs]</a>    <span class="k">def</span> <span class="nf">volume</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        The volume that is used in the specification.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_volume</span>
+    </div></div>
+<div class="viewcode-block" id="InXEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.InXEnsemble">[docs]</a><span class="k">class</span> <span class="nc">InXEnsemble</span><span class="p">(</span><span class="n">VolumeEnsemble</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Represents an ensemble where part of the trajectory is in a specified volume</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">trajectory</span><span class="o">.</span><span class="n">frames</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> 
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span> <span class="o">==</span> <span class="n">pos</span><span class="p">:</span>
+                    <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">pos</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">start</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">stop</span> <span class="o">&gt;=</span><span class="mi">0</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">start</span> <span class="o">&lt;=</span> <span class="n">pos</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">stop</span> <span class="o">&gt;=</span> <span class="n">pos</span><span class="p">:</span>
+                        <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">pos</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">pos</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">stop</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">start</span><span class="p">:</span>
+                        <span class="n">checkpoint</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">pos</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">stop</span>
+                                        
+        <span class="k">if</span> <span class="n">checkpoint</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+<span class="c">#            print &#39;Out:&#39;,checkpoint          </span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">(</span><span class="n">trajectory</span><span class="p">[</span><span class="n">checkpoint</span><span class="p">])</span>  
+        
+        <span class="k">return</span> <span class="bp">True</span>    
+    
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="o">-</span> <span class="n">trajectory</span><span class="o">.</span><span class="n">frames</span>
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span> <span class="o">==</span> <span class="n">pos</span><span class="p">:</span>
+                    <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">pos</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">stop</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">start</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">start</span> <span class="o">&lt;=</span> <span class="n">pos</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">stop</span> <span class="o">&gt;=</span> <span class="n">pos</span><span class="p">:</span>
+                        <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">pos</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">pos</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">start</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">stop</span><span class="p">:</span>
+                        <span class="n">checkpoint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">start</span> <span class="o">-</span> <span class="mi">1</span>
+                                        
+        <span class="k">if</span> <span class="n">checkpoint</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+<span class="c">#            print &#39;Out:&#39;,checkpoint            </span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">(</span><span class="n">trajectory</span><span class="p">[</span><span class="n">checkpoint</span><span class="p">])</span>  
+        
+        <span class="k">return</span> <span class="bp">True</span>    
+    
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">trajectory</span><span class="o">.</span><span class="n">frames</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span> <span class="ow">and</span> <span class="n">trajectory</span><span class="o">.</span><span class="n">frames</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">(</span><span class="n">trajectory</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">])</span>            
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lazy</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">trajectory</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">][</span><span class="mi">0</span><span class="p">::</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">trajectory</span><span class="o">.</span><span class="n">frames</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+                        <span class="k">return</span> <span class="bp">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">trajectory</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+                        <span class="k">return</span> <span class="bp">False</span>
+                        
+            <span class="k">return</span> <span class="bp">True</span>
+
+</div>
+<div class="viewcode-block" id="OutXEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.OutXEnsemble">[docs]</a><span class="k">class</span> <span class="nc">OutXEnsemble</span><span class="p">(</span><span class="n">InXEnsemble</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Represents an ensemble where part of the trajectory is outside a specified volume</span>
+<span class="sd">    &#39;&#39;&#39;</span>    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">volume</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="o">~</span> <span class="bp">self</span><span class="o">.</span><span class="n">_volume</span>
+    
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;x[{0}] not in {1}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;x[t] not in {2} for all t in [{0}:{1}])&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">stop</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">)</span>
+
+
+
+        </div>
+<div class="viewcode-block" id="HitXEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.HitXEnsemble">[docs]</a><span class="k">class</span> <span class="nc">HitXEnsemble</span><span class="p">(</span><span class="n">VolumeEnsemble</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Represents an ensemble where part of the trajectory visits a specified volume at least for one frame</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;x[{0}] in {1}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;x[t] in {2} for one t in [{0}:{1}]&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">stop</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">trajectory</span><span class="o">.</span><span class="n">frames</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span> <span class="o">==</span> <span class="n">pos</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">(</span><span class="n">trajectory</span><span class="p">[</span><span class="n">pos</span><span class="p">])</span>  
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lazy</span><span class="p">:</span>
+                <span class="c"># There is no way to test in a lazy way without storing the result from previous frames. So keep on running</span>
+                <span class="k">return</span> <span class="bp">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">stop</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">start</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="mi">1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">stop</span> <span class="o">&lt;=</span> <span class="n">pos</span><span class="p">:</span>
+                            <span class="k">return</span> <span class="bp">self</span><span class="p">(</span><span class="n">trajectory</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="bp">True</span>
+                                        
+        <span class="k">return</span> <span class="bp">True</span>    
+
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="o">-</span> <span class="n">trajectory</span><span class="o">.</span><span class="n">frames</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span> <span class="o">==</span> <span class="n">pos</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">(</span><span class="n">trajectory</span><span class="p">[</span><span class="n">pos</span><span class="p">])</span>  
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lazy</span><span class="p">:</span>
+                <span class="c"># There is no way to test in a lazy way without storing the result from previous frames</span>
+                <span class="k">return</span> <span class="bp">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">stop</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">start</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">start</span> <span class="o">&gt;=</span> <span class="n">pos</span><span class="p">:</span>
+                            <span class="k">return</span> <span class="bp">self</span><span class="p">(</span><span class="n">trajectory</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="bp">True</span>
+                                                
+        <span class="k">return</span> <span class="bp">True</span>    
+
+    
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns True if the trajectory is part of the PathEnsemble</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        trajectory : Trajectory</span>
+<span class="sd">            The trajectory to be checked</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">trajectory</span><span class="o">.</span><span class="n">frames</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span> <span class="ow">and</span> <span class="n">trajectory</span><span class="o">.</span><span class="n">frames</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">(</span><span class="n">trajectory</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">])</span>            
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">False</span>          
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">trajectory</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="bp">True</span>    
+
+            <span class="k">return</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="LeaveXEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.LeaveXEnsemble">[docs]</a><span class="k">class</span> <span class="nc">LeaveXEnsemble</span><span class="p">(</span><span class="n">HitXEnsemble</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Represents an ensemble where part of the trajectory leaves a specified volume at least for one frame</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;x[{0}] not in {1}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;x[t] in {2} for one t in [{0}:{1}])&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">stop</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">volume</span><span class="p">)</span>
+        
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">volume</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="o">~</span> <span class="bp">self</span><span class="o">.</span><span class="n">_volume</span>
+        </div>
+<div class="viewcode-block" id="AlteredTrajectoryEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.AlteredTrajectoryEnsemble">[docs]</a><span class="k">class</span> <span class="nc">AlteredTrajectoryEnsemble</span><span class="p">(</span><span class="n">Ensemble</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Represents an ensemble where an altered version of a trajectory (extended, reversed, cropped) is part of a given ensemble</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ensemble</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="nb">super</span><span class="p">(</span><span class="n">AlteredTrajectoryEnsemble</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ensemble</span> <span class="o">=</span> <span class="n">ensemble</span>
+                
+    <span class="k">def</span> <span class="nf">_alter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">trajectory</span>
+        
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensemble</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_alter</span><span class="p">(</span><span class="n">trajectory</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensemble</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_alter</span><span class="p">(</span><span class="n">trajectory</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensemble</span><span class="o">.</span><span class="n">backward</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_alter</span><span class="p">(</span><span class="n">trajectory</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="BackwardPrependedTrajectoryEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.BackwardPrependedTrajectoryEnsemble">[docs]</a><span class="k">class</span> <span class="nc">BackwardPrependedTrajectoryEnsemble</span><span class="p">(</span><span class="n">AlteredTrajectoryEnsemble</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ensemble</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>        
+        <span class="nb">super</span><span class="p">(</span><span class="n">BackwardPrependedTrajectoryEnsemble</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">ensemble</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_traj</span> <span class="o">=</span> <span class="n">trajectory</span>        
+
+    <span class="k">def</span> <span class="nf">_alter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+<span class="c">#        print [ s.idx for s in trajectory.reversed + self.add_traj]</span>
+        <span class="k">return</span> <span class="n">trajectory</span><span class="o">.</span><span class="n">reversed</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_traj</span>
+</div>
+<div class="viewcode-block" id="ForwardAppendedTrajectoryEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.ForwardAppendedTrajectoryEnsemble">[docs]</a><span class="k">class</span> <span class="nc">ForwardAppendedTrajectoryEnsemble</span><span class="p">(</span><span class="n">AlteredTrajectoryEnsemble</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Represents an ensemble which is the given ensemble but for trajectories where some trajectory is appended</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ensemble</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ForwardAppendedTrajectoryEnsemble</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">ensemble</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_traj</span> <span class="o">=</span> <span class="n">trajectory</span>
+
+    <span class="k">def</span> <span class="nf">_alter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_traj</span> <span class="o">+</span> <span class="n">trajectory</span>
+    </div>
+<div class="viewcode-block" id="ReversedTrajectoryEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.ReversedTrajectoryEnsemble">[docs]</a><span class="k">class</span> <span class="nc">ReversedTrajectoryEnsemble</span><span class="p">(</span><span class="n">AlteredTrajectoryEnsemble</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Represents an ensemble </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">_alter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">trajectory</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+    </div>
+<div class="viewcode-block" id="EnsembleFactory"><a class="viewcode-back" href="../api.html#Ensemble.EnsembleFactory">[docs]</a><span class="k">class</span> <span class="nc">EnsembleFactory</span><span class="p">():</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Convenience class to construct Ensembles</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="EnsembleFactory.StartXEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.EnsembleFactory.StartXEnsemble">[docs]</a>    <span class="k">def</span> <span class="nf">StartXEnsemble</span><span class="p">(</span><span class="n">volume</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Construct an ensemble that starts (x[0]) in the specified Volume</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        volume : Volume</span>
+<span class="sd">            The volume to start in </span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ensemble : Ensemble</span>
+<span class="sd">            The constructed Ensemble</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">InXEnsemble</span><span class="p">(</span><span class="n">volume</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="EnsembleFactory.EndXEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.EnsembleFactory.EndXEnsemble">[docs]</a>    <span class="k">def</span> <span class="nf">EndXEnsemble</span><span class="p">(</span><span class="n">volume</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Construct an ensemble that ends (x[-1]) in the specified Volume</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        volume : Volume</span>
+<span class="sd">            The volume to end in </span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ensemble : Ensemble</span>
+<span class="sd">            The constructed Ensemble</span>
+<span class="sd">        &#39;&#39;&#39;</span>        
+        <span class="k">return</span> <span class="n">InXEnsemble</span><span class="p">(</span><span class="n">volume</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="EnsembleFactory.A2BEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.EnsembleFactory.A2BEnsemble">[docs]</a>    <span class="k">def</span> <span class="nf">A2BEnsemble</span><span class="p">(</span><span class="n">volume_a</span><span class="p">,</span> <span class="n">volume_b</span><span class="p">,</span> <span class="n">lazy</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Construct an ensemble that starts in (x[0]) in volume_a, ends in volume_b and is in either volumes in between</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        volume_a : Volume</span>
+<span class="sd">            The volume to start in </span>
+<span class="sd">        volume_b : Volume</span>
+<span class="sd">            The volume to end in </span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ensemble : Ensemble</span>
+<span class="sd">            The constructed Ensemble</span>
+<span class="sd">        &#39;&#39;&#39;</span>        
+        <span class="k">return</span> <span class="p">(</span><span class="n">InXEnsemble</span><span class="p">(</span><span class="n">volume_a</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">InXEnsemble</span><span class="p">(</span><span class="n">volume_b</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span> <span class="o">&amp;</span> <span class="n">OutXEnsemble</span><span class="p">(</span><span class="n">volume_a</span> <span class="o">|</span> <span class="n">volume_b</span><span class="p">,</span> <span class="nb">slice</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">lazy</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="EnsembleFactory.TISEnsemble"><a class="viewcode-back" href="../api.html#Ensemble.EnsembleFactory.TISEnsemble">[docs]</a>    <span class="k">def</span> <span class="nf">TISEnsemble</span><span class="p">(</span><span class="n">volume_a</span><span class="p">,</span> <span class="n">volume_b</span><span class="p">,</span> <span class="n">volume_x</span><span class="p">,</span> <span class="n">lazy</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Construct an TIS ensemble that starts in (x[0]) in volume_a, ends in volume_b and is in either volumes in between</span>
+<span class="sd">        and will also leave volume_x at some point</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        volume_a : Volume</span>
+<span class="sd">            The volume to start in </span>
+<span class="sd">        volume_b : Volume</span>
+<span class="sd">            The volume to end in </span>
+<span class="sd">        volume_x : Volume</span>
+<span class="sd">            The volume to leave </span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ensemble : Ensemble</span>
+<span class="sd">            The constructed Ensemble</span>
+<span class="sd">        &#39;&#39;&#39;</span>        
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">InXEnsemble</span><span class="p">(</span><span class="n">volume_a</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">InXEnsemble</span><span class="p">(</span><span class="n">volume_b</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">LeaveXEnsemble</span><span class="p">(</span><span class="n">volume_x</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">OutXEnsemble</span><span class="p">(</span><span class="n">volume_a</span> <span class="o">|</span> <span class="n">volume_b</span><span class="p">,</span> <span class="nb">slice</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">lazy</span><span class="p">))</span>
+    </div>
+    <span class="n">hbar</span> <span class="o">=</span> <span class="n">StartXEnsemble</span></div>
+</pre></div>
+
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014, Jan-Hendrik Prinz, John Chodera, David Swensen, Peter Bolhuis.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

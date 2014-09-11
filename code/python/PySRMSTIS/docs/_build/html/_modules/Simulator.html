@@ -1,0 +1,472 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Simulator &mdash; OpenTIS 0.1 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="OpenTIS 0.1 documentation" href="../index.html"/>
+        <link rel="up" title="Module code" href="index.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="../index.html" class="fa fa-home"> OpenTIS</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Functions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-OrderParameter">OrderParameter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-msm_analysis">MSMAnalysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-Simulator">Simulator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-Ensemble">Ensemble</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-Volume">Volume</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-pathmover">PathMover</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-forkable_trajectory_storage">Storage</a></li>
+</ul>
+</li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">OpenTIS</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="index.html">Module code</a> &raquo;</li>
+      
+    <li>Simulator</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <h1>Source code for Simulator</h1><div class="highlight"><pre>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Created on 01.07.2014</span>
+
+<span class="sd">@author JDC Chodera</span>
+<span class="sd">@author: JH Prinz</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+
+<span class="kn">from</span> <span class="nn">sys</span> <span class="kn">import</span> <span class="n">stdout</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">from</span> <span class="nn">simtk.openmm.app</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">simtk.openmm</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">simtk.unit</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="kn">import</span> <span class="nn">mdtraj</span> <span class="kn">as</span> <span class="nn">md</span>
+
+
+<span class="kn">from</span> <span class="nn">simtk.unit</span> <span class="kn">import</span> <span class="n">nanosecond</span><span class="p">,</span> <span class="n">picosecond</span><span class="p">,</span> <span class="n">nanometers</span><span class="p">,</span> <span class="n">nanometer</span><span class="p">,</span> <span class="n">picoseconds</span><span class="p">,</span> <span class="n">femtoseconds</span><span class="p">,</span> <span class="n">femtosecond</span><span class="p">,</span> <span class="n">kilojoules_per_mole</span><span class="p">,</span> <span class="n">Quantity</span>
+
+<span class="kn">from</span> <span class="nn">trajectory</span> <span class="kn">import</span> <span class="n">Trajectory</span>
+<span class="kn">from</span> <span class="nn">snapshot</span> <span class="kn">import</span> <span class="n">Snapshot</span>
+<span class="kn">from</span> <span class="nn">forkable_trajectory_storage</span> <span class="kn">import</span> <span class="n">ForkableTrajectoryStorage</span>
+<span class="kn">from</span> <span class="nn">integrators</span> <span class="kn">import</span> <span class="n">VVVRIntegrator</span>
+<span class="kn">from</span> <span class="nn">Ensemble</span> <span class="kn">import</span> <span class="n">LengthEnsemble</span>
+
+<span class="c">#=============================================================================================</span>
+<span class="c"># SOURCE CONTROL</span>
+<span class="c">#=============================================================================================</span>
+
+<span class="n">__version__</span> <span class="o">=</span> <span class="s">&quot;$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $&quot;</span>
+
+<span class="c">#=============================================================================================</span>
+<span class="c"># Multi-State Transition Interface Sampling</span>
+<span class="c">#=============================================================================================</span>
+
+<div class="viewcode-block" id="Simulator"><a class="viewcode-back" href="../api.html#Simulator.Simulator">[docs]</a><span class="k">class</span> <span class="nc">Simulator</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Class to wrap a simulation tool to store the context and rerun, needed parameters, storage, etc. </span>
+<span class="sd">    </span>
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    </span>
+<span class="sd">    - Should only be contructed through factory functions</span>
+<span class="sd">    - This is the main object knowing about all things of the simulation. It might be possible to replace this with other simulation tools than OpenMM</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Create an empty simulator object</span>
+<span class="sd">        </span>
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The purpose of a simulator is to create simulations and keep track of the results. The main method is &#39;generate&#39; to create a trajectory, which is</span>
+<span class="sd">        a list of snapshots and then can store the in the associated storage. In the initialization this storage is created as well as the related</span>
+<span class="sd">        Trajectory and Snapshot classes are initialized.</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">op</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">initialized</span> <span class="o">=</span> <span class="bp">False</span>
+        
+<div class="viewcode-block" id="Simulator.generate"><a class="viewcode-back" href="../api.html#Simulator.Simulator.generate">[docs]</a>    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snapshot</span><span class="p">,</span> <span class="n">running</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">r&quot;&quot;&quot;</span>
+<span class="sd">        Generate a velocity Verlet trajectory consisting of ntau segments of tau_steps in between storage of Snapshots and randomization of velocities.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        snapshot : Snapshot </span>
+<span class="sd">            initial coordinates; velocities will be assigned from Maxwell-Boltzmann distribution            </span>
+<span class="sd">        running : function(Snapshot) </span>
+<span class="sd">            callable function of a &#39;Snapshot&#39; that returns True or False</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------    </span>
+<span class="sd">        trajectory : Trajectory</span>
+<span class="sd">            generated trajectory of initial conditions, including initial coordinate set</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Might add a return variable of the reason why the trajectory was aborted. Otherwise check the length and compare to max_frames</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># Are we ready to rumble ?</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">initialized</span><span class="p">:</span>
+            <span class="c"># Store initial state for each trajectory segment in trajectory.</span>
+            <span class="n">trajectory</span> <span class="o">=</span> <span class="n">Trajectory</span><span class="p">()</span>
+            
+            <span class="c"># Set initial positions</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">snapshot</span><span class="o">.</span><span class="n">coordinates</span><span class="p">)</span>
+            <span class="n">trajectory</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">snapshot</span><span class="p">)</span>
+            
+            <span class="c"># Assign velocities from Maxwell-Boltzmann distribution            </span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">setVelocitiesToTemperature</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temperature</span><span class="p">)</span>
+        
+            <span class="c"># Propagate dynamics by velocity Verlet.            </span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">nsteps_per_iteration</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nframes_per_iteration</span>            
+            
+            <span class="n">stop</span> <span class="o">=</span> <span class="bp">False</span>
+
+            <span class="k">while</span> <span class="n">stop</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+                                
+                <span class="c"># Do integrator x steps</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">nsteps_per_iteration</span><span class="p">)</span>            
+                <span class="n">frame</span> <span class="o">+=</span> <span class="mi">1</span>
+                
+                <span class="c"># Store snapshot and add it to the trajectory. Stores also final frame the last time</span>
+                <span class="n">snapshot</span> <span class="o">=</span> <span class="n">Snapshot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="p">)</span>
+                <span class="n">snapshot</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+                <span class="n">trajectory</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">snapshot</span><span class="p">)</span>
+                
+                <span class="c"># Check if reached a core set. If not, continue simulation</span>
+                <span class="k">if</span> <span class="n">running</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">runner</span> <span class="ow">in</span> <span class="n">running</span><span class="p">:</span>
+<span class="c">#                        print str(runner), runner(trajectory)</span>
+                        <span class="n">stop</span> <span class="o">=</span> <span class="n">stop</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">runner</span><span class="p">(</span><span class="n">trajectory</span><span class="p">)</span>
+
+                <span class="c"># We could also just count the number of frames. Might be faster but not as nice :)                </span>
+                <span class="n">stop</span> <span class="o">=</span> <span class="n">stop</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_length_stopper</span><span class="p">(</span><span class="n">trajectory</span><span class="p">)</span>
+                
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">:</span>
+                    <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_length_stopper</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_length_stopper</span><span class="p">(</span><span class="n">trajectory</span><span class="p">)</span>
+                    <span class="k">print</span> <span class="n">frame</span>
+                    <span class="k">print</span> <span class="nb">len</span><span class="p">(</span><span class="n">trajectory</span><span class="p">)</span>
+<span class="c">#                    print [ s.idx for s in trajectory]</span>
+                    
+                    <span class="k">print</span> <span class="s">&#39;OP :&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">snapshot</span><span class="p">)</span>
+                
+                    
+            <span class="k">return</span> <span class="n">trajectory</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># TODO: Throw an error! Needs to be initialized</span>
+            <span class="k">return</span> <span class="bp">None</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Simulator.Alanine_system"><a class="viewcode-back" href="../api.html#Simulator.Simulator.Alanine_system">[docs]</a>    <span class="k">def</span> <span class="nf">Alanine_system</span><span class="p">(</span><span class="n">mode</span> <span class="o">=</span><span class="s">&#39;auto&#39;</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Setup / Restore a simulator for the Alanine Dipeptide system</span>
+<span class="sd">        </span>
+<span class="sd">        OPTIONAL ARGUMENTS</span>
+<span class="sd">        </span>
+<span class="sd">        mode (string) - Set to &#39;restore&#39; to restore from file, &#39;create&#39; to create fresh simulation and &#39;auto&#39; to restore only if no database is present</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="bp">self</span> <span class="o">=</span> <span class="n">Simulator</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fn_storage</span> <span class="o">=</span> <span class="s">&quot;data/trajectory.nc&quot;</span>
+        
+        <span class="c"># associate Snapshots and Trajecotories with this simulation</span>
+        <span class="n">Snapshot</span><span class="o">.</span><span class="n">simulator</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="n">Trajectory</span><span class="o">.</span><span class="n">simulator</span> <span class="o">=</span> <span class="bp">self</span>
+        
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;auto&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fn_storage</span><span class="p">):</span>
+                <span class="n">mode</span> <span class="o">=</span> <span class="s">&#39;restore&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mode</span> <span class="o">=</span> <span class="s">&#39;create&#39;</span>
+
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;create&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_alanine_options</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_OpenMMSimulation</span><span class="p">()</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">system_serial</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">XmlSerializer</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">system</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_equilibrate_system</span><span class="p">()</span>
+            
+            <span class="c"># Create a trajectory storage</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">storage</span> <span class="o">=</span> <span class="n">ForkableTrajectoryStorage</span><span class="p">(</span>
+                                                 <span class="n">topology</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="p">,</span>
+                                                 <span class="n">filename</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fn_storage</span><span class="p">,</span>
+                                                 <span class="n">mode</span> <span class="o">=</span> <span class="s">&#39;create&#39;</span>
+                                                 <span class="p">)</span>
+
+            <span class="c"># save options</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">_store_options</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            
+            <span class="c"># save initial equilibrated frame as snapshot ID #0. Might be useful later, who knows</span>
+            <span class="n">snapshot</span> <span class="o">=</span> <span class="n">Snapshot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="p">)</span>
+            <span class="n">snapshot</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;restore&#39;</span><span class="p">:</span>
+            <span class="c"># Need the oposite order, first open database </span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">storage</span> <span class="o">=</span> <span class="n">ForkableTrajectoryStorage</span><span class="p">(</span>
+                                                     <span class="n">topology</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                                     <span class="n">filename</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fn_storage</span><span class="p">,</span>
+                                                     <span class="n">mode</span> <span class="o">=</span> <span class="s">&#39;restore&#39;</span>
+                                                     <span class="p">)</span>
+
+            <span class="c"># and load options</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">_restore_options</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>        
+            
+            <span class="c"># This is not stored yet so we need to set it again. Should be stored in the database along with the still missing topology</span>
+<span class="c">#            self.solute_indices = range(22)</span>
+
+            <span class="c"># Finally create the OpenMM simulation system</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_OpenMMSimulation</span><span class="p">()</span>
+                        
+            <span class="c"># Still missing is the topology which is still not in the database and can only be accessed after the simulation has been created</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">topology</span> <span class="o">=</span> <span class="n">md</span><span class="o">.</span><span class="n">Topology</span><span class="o">.</span><span class="n">from_openmm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">topology</span><span class="p">)</span>
+            
+        <span class="c"># Finished</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">initialized</span> <span class="o">=</span> <span class="bp">True</span>
+        
+        <span class="k">return</span> <span class="bp">self</span>
+            </div>
+    <span class="k">def</span> <span class="nf">_set_alanine_options</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>        
+        <span class="bp">self</span><span class="o">.</span><span class="n">options_to_store</span> <span class="o">=</span> <span class="p">[</span> 
+                                 <span class="s">&#39;temperature&#39;</span><span class="p">,</span> 
+                                 <span class="s">&#39;collision_rate&#39;</span><span class="p">,</span> 
+                                 <span class="s">&#39;timestep&#39;</span><span class="p">,</span> 
+                                 <span class="s">&#39;forcefield_solute&#39;</span><span class="p">,</span> 
+                                 <span class="s">&#39;forcefield_solvent&#39;</span><span class="p">,</span> 
+                                 <span class="s">&#39;nframes_per_iteration&#39;</span><span class="p">,</span>
+                                 <span class="s">&#39;n_frames_max&#39;</span><span class="p">,</span>
+                                 <span class="s">&#39;start_time&#39;</span><span class="p">,</span>
+                                 <span class="s">&#39;fn_initial_pdb&#39;</span><span class="p">,</span>
+                                 <span class="s">&#39;integrator_class&#39;</span><span class="p">,</span>
+                                 <span class="s">&#39;fn_storage&#39;</span><span class="p">,</span>
+                                 <span class="s">&#39;platform&#39;</span><span class="p">,</span>
+                                 <span class="s">&#39;topology&#39;</span><span class="p">,</span>
+                                 <span class="s">&#39;solute_indices&#39;</span>
+                                 <span class="p">]</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">temperature</span> <span class="o">=</span> <span class="mf">300.0</span> <span class="o">*</span> <span class="n">kelvin</span>                       <span class="c"># temperature</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collision_rate</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">picoseconds</span>                 <span class="c"># collision rate for VVVR integrator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timestep</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">femtoseconds</span>                      <span class="c"># timestep for Langevin integrator</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">nframes_per_iteration</span> <span class="o">=</span> <span class="mi">10</span>                         <span class="c"># number of steps of dynamics per iteration</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">fn_initial_pdb</span> <span class="o">=</span> <span class="s">&#39;data/Alanine_solvated.pdb&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">forcefield_solute</span> <span class="o">=</span> <span class="s">&#39;amber99sbildn.xml&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">forcefield_solvent</span> <span class="o">=</span> <span class="s">&#39;tip3p.xml&#39;</span>        
+        <span class="bp">self</span><span class="o">.</span><span class="n">platform</span> <span class="o">=</span> <span class="s">&#39;CUDA&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">solute_indices</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">22</span><span class="p">)</span>                         <span class="c"># indices of Alanine without water</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_frames_max</span> <span class="o">=</span> <span class="mi">5000</span><span class="p">;</span>                               <span class="c"># maximal length of trajectories in saved frames</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>                           <span class="c"># the time when we started</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">pdb</span> <span class="o">=</span> <span class="n">PDBFile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fn_initial_pdb</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">topology</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pdb</span><span class="o">.</span><span class="n">topology</span>
+
+
+    <span class="k">def</span> <span class="nf">_create_OpenMMSimulation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Create an OpenMM simulation from the parameters specified before.</span>
+<span class="sd">        </span>
+<span class="sd">        NOTES</span>
+<span class="sd">        </span>
+<span class="sd">        This should be generic and not depend on other parameters than then ones stored in the netcdf file. Still missing is the integrator type, the topology and the solute coordinates</span>
+<span class="sd">        which at some point might be accessible from the topology</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="n">platform</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Platform</span><span class="o">.</span><span class="n">getPlatformByName</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">platform</span><span class="p">)</span>    <span class="c"># platform to use</span>
+        
+        <span class="c">#TODO: Serialize initial pdb or better the used topology so that we do not need to read an external file</span>
+        <span class="n">forcefield</span> <span class="o">=</span> <span class="n">ForceField</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">forcefield_solute</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">forcefield_solvent</span><span class="p">)</span>
+        
+        <span class="n">system</span> <span class="o">=</span> <span class="n">forcefield</span><span class="o">.</span><span class="n">createSystem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">topology</span><span class="p">,</span> <span class="n">nonbondedMethod</span><span class="o">=</span><span class="n">PME</span><span class="p">,</span> <span class="n">nonbondedCutoff</span><span class="o">=</span><span class="mi">1</span><span class="o">*</span><span class="n">nanometer</span><span class="p">,</span> <span class="n">constraints</span><span class="o">=</span><span class="n">HBonds</span><span class="p">)</span>
+        
+        
+        <span class="n">integrator</span> <span class="o">=</span> <span class="n">VVVRIntegrator</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temperature</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">collision_rate</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestep</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">integrator_class</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">integrator</span><span class="p">)</span><span class="o">.</span><span class="n">__name__</span>
+        
+        <span class="n">simulation</span> <span class="o">=</span> <span class="n">Simulation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">topology</span><span class="p">,</span> <span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="p">,</span> <span class="n">platform</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">system_serial</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">XmlSerializer</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">system</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">integrator_serial</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">XmlSerializer</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">integrator</span><span class="p">)</span>
+        
+        <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">system_serial</span>
+                
+        <span class="c"># This could be moved to initialization since it will not change</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_length_stopper</span> <span class="o">=</span> <span class="n">LengthEnsemble</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_frames_max</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>        
+                                
+        <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span> <span class="o">=</span> <span class="n">simulation</span>
+                
+    <span class="k">def</span> <span class="nf">_equilibrate_system</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Equilibrate the Alanine System. Just a helper to keep the code clean. One could also provide an equilibrated structure from the start</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="c">#=============================================================================================</span>
+        <span class="c"># Dirty Equilibration using NVT and Alanine constraint</span>
+        <span class="c">#=============================================================================================</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pdb</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
+
+        <span class="k">print</span> <span class="s">&quot;Equilibration&quot;</span>
+        
+        <span class="n">system</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">system</span>
+        <span class="n">simulation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span>
+                
+        <span class="n">nequib_steps</span> <span class="o">=</span> <span class="mi">5</span> <span class="c">#number of nvt equilibration steps with position constraints on Alanine</span>
+        <span class="n">Alanine_atoms</span> <span class="o">=</span> <span class="mi">22</span>
+                
+        <span class="n">Alanine_masses</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">Alanine_atoms</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">double</span><span class="p">)</span>
+        <span class="n">Alanine_masses</span> <span class="o">=</span> <span class="n">Quantity</span><span class="p">(</span><span class="n">Alanine_masses</span><span class="p">,</span> <span class="n">dalton</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Alanine_atoms</span><span class="p">):</span>
+            <span class="n">Alanine_masses</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">getParticleMass</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="n">system</span><span class="o">.</span><span class="n">setParticleMass</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+        
+        <span class="n">simulation</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">nequib_steps</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Alanine_atoms</span><span class="p">):</span>
+            <span class="n">system</span><span class="o">.</span><span class="n">setParticleMass</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">Alanine_masses</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span><span class="n">dalton</span><span class="p">))</span></div>
+</pre></div>
+
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014, Jan-Hendrik Prinz, John Chodera, David Swensen, Peter Bolhuis.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

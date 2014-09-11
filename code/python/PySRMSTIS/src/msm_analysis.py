@@ -9,6 +9,12 @@ import numpy as np
 class BoundedMatrix(object):
     '''
     Representation of a Matrix with finite matrix norm
+    
+    Attributes
+    ----------
+    T : numpy.ndarray([n,n], type=float)
+        a numpy matrix that contains the matrix entries
+    
     '''
     
     def __init__(self, T):
@@ -244,13 +250,13 @@ class BoundedMatrix(object):
 class MSM(BoundedMatrix):
     '''
     Representation of a Markov State Model. Allows for several ways to compute properties of a MSM
+    
+    Parameters
+    T : BoundedMatrix
     '''
 
 
     def __init__(self, T):
-        '''
-        Constructor
-        '''
         super(MSM, self).__init__(T)
         
     def __repr__(self, *args, **kwargs):
@@ -420,6 +426,7 @@ class MSM(BoundedMatrix):
     def forward_committor_sensitivity(self, A, B, index):
         """ 
         calculate the sensitivity matrix for index of the forward committor from A to B given transition matrix T.
+        
         Parameters
         ----------
         T : np.ndarray shape = (n, n)
@@ -428,8 +435,9 @@ class MSM(BoundedMatrix):
             List of integer state labels for set A
         B : array like
             List of integer state labels for set B
-        index : entry of the committor for which the sensitivity is to be computed
-            
+        index : int     
+            entry of the committor for which the sensitivity is to be computed
+
         Returns
         -------
         x : ndarray, shape=(n, n)
@@ -477,6 +485,7 @@ class MSM(BoundedMatrix):
     def backward_committor_sensitivity(self, A, B, index):
         """ 
         calculate the sensitivity matrix for index of the backward committor from A to B given transition matrix T.
+        
         Parameters
         ----------
         T : np.ndarray shape = (n, n)
@@ -485,12 +494,14 @@ class MSM(BoundedMatrix):
             List of integer state labels for set A
         B : array like
             List of integer state labels for set B
-        index : entry of the committor for which the sensitivity is to be computed
+        index : int 
+            entry of the committor for which the sensitivity is to be computed
             
         Returns
         -------
         x : ndarray, shape=(n, n)
             Sensitivity matrix for entry index around transition matrix T. Reversibility is not assumed.
+            
         """
         
         # This is really ugly to compute. The problem is, that changes in T induce changes in
@@ -541,6 +552,7 @@ class MSM(BoundedMatrix):
     def eigenvalue_sensitivity(self, k):
         """ 
         calculate the sensitivity matrix for eigenvalue k given transition matrix T.
+        
         Parameters
         ----------
         T : np.ndarray shape = (n, n)
@@ -552,6 +564,7 @@ class MSM(BoundedMatrix):
         -------
         x : ndarray, shape=(n, n)
             Sensitivity matrix for entry index around transition matrix T. Reversibility is not assumed.
+            
         """
             
         eValues, rightEigenvectors = np.linalg.eig(self.T)
@@ -569,6 +582,7 @@ class MSM(BoundedMatrix):
     def timescale_sensitivity(self, k):
         """ 
         calculate the sensitivity matrix for timescale k given transition matrix T.
+        
         Parameters
         ----------
         T : np.ndarray shape = (n, n)
@@ -615,6 +629,7 @@ class MSM(BoundedMatrix):
     def eigenvector_sensitivity(self, k, j, right=True):
         """ 
         calculate the sensitivity matrix for entry j of left or right eigenvector k given transition matrix T.
+        
         Parameters
         ----------
         T : np.ndarray shape = (n, n)
@@ -631,8 +646,8 @@ class MSM(BoundedMatrix):
         x : ndarray, shape=(n, n)
             Sensitivity matrix for entry index around transition matrix T. Reversibility is not assumed.
         
-        Remarks
-        -------
+        Notes
+        -----
         Eigenvectors can naturally be scaled and so will their sensitivity depend on their size.
         For that reason we need to agree on a normalization for which the sensitivity is computed.
         Here we use the natural norm(vector) = 1 condition which is different from the results, e.g.
@@ -641,6 +656,7 @@ class MSM(BoundedMatrix):
         For this reason this function return a different sensitivity for the first left eigenvector
         than the function stationary_distribution_sensitivity and this function should not be used in this
         case!
+        
         """
         
         n = len(self.T)
@@ -680,8 +696,7 @@ class MSM(BoundedMatrix):
         return sensitivity
     
     def stationary_distribution_sensitivity(self, j):
-        r"""Calculate the sensitivity matrix for entry j the stationary
-        distribution vector given transition matrix T.
+        r"""Calculate the sensitivity matrix for entry j the stationary distribution vector given transition matrix T.
     
         Parameters
         ----------
@@ -695,8 +710,8 @@ class MSM(BoundedMatrix):
         x : ndarray, shape=(n, n)
             Sensitivity matrix for entry index around transition matrix T. Reversibility is not assumed.
         
-        Remark
-        ------
+        Notes
+        -----
         Note, that this function uses a different normalization convention for the sensitivity compared to
         eigenvector_sensitivity. See there for further information.
         """
@@ -726,6 +741,7 @@ class MSM(BoundedMatrix):
     def mfpt_sensitivity(self, target, j):
         """ 
         calculate the sensitivity matrix for entry j of the mean first passage time (MFPT) given transition matrix T.
+        
         Parameters
         ----------
         T : np.ndarray shape = (n, n)

@@ -27,14 +27,36 @@ class Snapshot(object):
         """
         Create a simulation snapshot from either an OpenMM context or individually-specified components.
 
-        OPTIONAL ARGUMENTS
-
-        context (simtk.chem.openContext) - if not None, the current state will be queried to populate simulation snapshot; otherwise, can specify individual components (default: None)
-        coordinates (simtk.unit.Quantity wrapping Nx3 np array of dimension length) - atomic coordinates (default: None)
-        velocities (simtk.unit.Quantity wrapping Nx3 np array of dimension length) - atomic velocities (default: None)
-        box_vectors - periodic box vectors (default: None)
-        potential_energy (simtk.unit.Quantity of units energy/mole) - potential energy at current timestep (default: None)
-        kinetic_energy (simtk.unit.Quantity of units energy/mole) - kinetic energy at current timestep (default: None)
+        Parameters
+        ----------
+        context : simtk.chem.openContext
+            if not None, the current state will be queried to populate simulation snapshot; 
+            otherwise, can specify individual components (default: None)
+        coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
+            atomic coordinates (default: None)
+        velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
+            atomic velocities (default: None)
+        box_vectors : periodic box vectors (default: None)
+            the periodic box vectors at current timestep (defautl: None)
+        potential_energy : simtk.unit.Quantity of units energy/mole
+            potential energy at current timestep (default: None)
+        kinetic_energy : simtk.unit.Quantity of units energy/mole
+            kinetic energy at current timestep (default: None)
+            
+        Attributes
+        ----------
+        coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
+            atomic coordinates
+        velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
+            atomic velocities
+        box_vectors : periodic box vectors
+            the periodic box vectors 
+        potential_energy : simtk.unit.Quantity of units energy/mole
+            potential energy
+        kinetic_energy : simtk.unit.Quantity of units energy/mole
+            kinetic energy
+        idx : int
+            index for storing in the storage or for using with caching
         
         """
         
@@ -50,7 +72,7 @@ class Snapshot(object):
             # Populate current snapshot data.
             self.coordinates = state.getPositions(asNumpy=True)
             self.velocities = state.getVelocities(asNumpy=True)
-            self.box_vectors = state.getPeriodicBoxVectors() # TODO: set asNumpy=True once bug in OpenMM is fixed
+            self.box_vectors = state.getPeriodicBoxVectors()
             self.potential_energy = state.getPotentialEnergy()
             self.kinetic_energy = state.getKineticEnergy()
         else:
@@ -69,14 +91,14 @@ class Snapshot(object):
     @property
     def atoms(self):
         '''
-        returns the number of atoms in the snapshot
+        The number of atoms in the snapshot
         '''   
         return len(self.coordinates.shape[0])  
 
     @property
     def total_energy(self):
         '''
-        returns the total energy (sum of potential and kinetic) of the snapshot
+        The total energy (sum of potential and kinetic) of the snapshot
         '''   
         return self.kinetic_energy + self.potential_energy
     
@@ -84,12 +106,17 @@ class Snapshot(object):
     # Utility functions
     #=============================================================================================
 
+    def reverse(self):
+        snapshot = copy.deepcopy(self)
+        snapshot.velocities *= -1.0
+        return snapshot
+    
     def md(self):
         '''
-        returns a mdtraj Trajectory object that contains only one frame
+        Returns a mdtraj Trajectory object that contains only one frame
         
-        NOTES
-        
+        Notes
+        -----        
         Rather slow since the topology has to be made each time. Try to avoid it
         '''        
         
@@ -105,7 +132,7 @@ class Snapshot(object):
     
     def md_topology(self): 
         '''
-        returns a mdtraj topology object that can be used with the stored snapshot
+        Returns a mdtraj topology object that can be used with the stored snapshot
         '''   
         return md.Topology.from_openmm(Snapshot.simulator.simulation.topology)
  
@@ -115,12 +142,11 @@ class Snapshot(object):
     
     def save(self, idx = None):
         """
-        Save positions, states, and energies of current iteration to NetCDF file.
+        Save positions, velocities, boxvectors and energies of current iteration to NetCDF file.
         
-        NOTES
-        
-        We need to allow for reversed snapshots to save memory. Would be nice
-        
+        Notes
+        -----        
+        We need to allow for reversed snapshots to save memory. Would be nice        
         """
         
         storage = Snapshot.storage
@@ -134,6 +160,7 @@ class Snapshot(object):
             storage.ncfile.variables['snapshot_velocities'][idx,:,:] = (self.velocities / (nanometers / picoseconds)).astype(np.float32)
             storage.ncfile.variables['snapshot_potential'][idx] = self.potential_energy / kilojoules_per_mole                                
             storage.ncfile.variables['snapshot_kinetic'][idx] = self.kinetic_energy / kilojoules_per_mole
+#            storage.ncfile.variables['snapshot_box_vectors'][idx,:] = (self.box_vectors / nanometers).astype(np.float32)
             
             # store ID# for later reference in Snapshot object
             self.idx = idx
@@ -150,7 +177,6 @@ class Snapshot(object):
         
         Returns
         -------
-        
         number (int) - number of stored snapshots
         '''
         length = int(len(Snapshot.storage.ncfile.dimensions['snapshot'])) - 1
@@ -170,13 +196,15 @@ class Snapshot(object):
         '''
         Load a snapshot from the storage
         
-        ARGUMENTS
+        Parameters
+        ----------
+        idx : int
+            index of the snapshot in the database 'idx' > 0
         
-        idx (int) - index of the snapshot in the database 'idx' > 0
-        
-        RETURNS
-        
-        snapshot (Snapshot) - the snapshot
+        Returns
+        -------
+        snapshot : Snapshot
+            the snapshot
         '''
         
         storage = Snapshot.storage
@@ -187,11 +215,14 @@ class Snapshot(object):
         x = storage.ncfile.variables['snapshot_coordinates'][idx,:,:].astype(np.float32).copy()
         coordinates = Quantity(x, nanometers)                
         v = storage.ncfile.variables['snapshot_velocities'][idx,:,:].astype(np.float32).copy()
-        velocities = Quantity(v, nanometers / picoseconds)                
+        velocities = Quantity(v, nanometers / picoseconds)              
+#        b = storage.ncfile.variables['snapshot_box_vectors'][idx]
+#        box_vectors = Quantity(b, nanometers)              
         V = storage.ncfile.variables['snapshot_potential'][idx]
         potential_energy = Quantity(V, kilojoules_per_mole)
         T = storage.ncfile.variables['snapshot_kinetic'][idx]
         kinetic_energy = Quantity(T, kilojoules_per_mole)
+    
         snapshot = Snapshot(coordinates=coordinates, velocities=velocities, kinetic_energy=kinetic_energy, potential_energy=potential_energy)
         snapshot.idx = idx
 
@@ -213,13 +244,8 @@ class Snapshot(object):
         """
         Fill in missing part after the storage has been loaded from a file and is not initialize freshly
         
-        NOTES
-        -----
-        
-        We need to allow for reversed snapshots to save memory. Would be nice
-        
         """
-        
+                
         Snapshot.storage = storage
                 
         return
@@ -227,7 +253,7 @@ class Snapshot(object):
     @staticmethod
     def _init_netcdf(storage):
         '''
-        initializes the associated storage to save snapshots in it
+        Initializes the associated storage to save snapshots in it
         '''           
         # save associated storage in class variable for all Snapshot instances to access
         
@@ -241,20 +267,24 @@ class Snapshot(object):
         # define dimensions used in snapshots
         ncgrp.createDimension('snapshot', 0)                       # unlimited number of snapshots
         ncgrp.createDimension('atom', system.getNumParticles())    # number of atoms in the simulated system
-        ncgrp.createDimension('spatial', 3)                        # number of spatial dimensions
+        
+        if 'spatial' not in ncgrp.dimensions:
+            ncgrp.createDimension('spatial', 3) # number of spatial dimensions        
 
         # define variables for snapshots
         ncvar_snapshot_coordinates          = ncgrp.createVariable('snapshot_coordinates', 'f', ('snapshot','atom','spatial'))
         ncvar_snapshot_velocities           = ncgrp.createVariable('snapshot_velocities',  'f', ('snapshot','atom','spatial'))
         ncvar_snapshot_potential            = ncgrp.createVariable('snapshot_potential',   'f', ('snapshot'))
         ncvar_snapshot_kinetic              = ncgrp.createVariable('snapshot_kinetic',     'f', ('snapshot'))
+        ncvar_snapshot_box_vectors          = ncgrp.createVariable('snapshot_box_vectors', 'f', ('snapshot', 'spatial'))
 
         # Define units for snapshot variables.
         setattr(ncvar_snapshot_coordinates, 'units', 'nm')
         setattr(ncvar_snapshot_velocities,  'units', 'nm/ps')
         setattr(ncvar_snapshot_potential,   'units', 'kJ/mol')
         setattr(ncvar_snapshot_kinetic,     'units', 'kJ/mol')
+        setattr(ncvar_snapshot_box_vectors,  'units', 'nm')
         
         # Define long (human-readable) names for variables.
-        setattr(ncvar_snapshot_coordinates,    "long_name", "coordinates[snapshot][atom][coordinate] are coordinate of atom 'atom' in dimension 'coordinate' of snapshot 'snapshot'.")
+        setattr(ncvar_snapshot_coordinates,   "long_name", "coordinates[snapshot][atom][coordinate] are coordinate of atom 'atom' in dimension 'coordinate' of snapshot 'snapshot'.")
         setattr(ncvar_snapshot_velocities,    "long_name", "velocities[snapshot][atom][coordinate] are velocities of atom 'atom' in dimension 'coordinate' of snapshot 'snapshot'.")
