@@ -308,7 +308,7 @@ class LengthEnsemble(Ensemble):
         
 class VolumeEnsemble(Ensemble):
     '''
-    Describes an path ensemble using a Volume object
+    Describes an path ensemble using a volume object
     '''    
     def __init__(self, volume, frames = slice(1,-1), lazy = True):
         super(VolumeEnsemble, self).__init__()
@@ -559,11 +559,11 @@ class EnsembleFactory():
     @staticmethod
     def StartXEnsemble(volume):
         '''
-        Construct an ensemble that starts (x[0]) in the specified Volume
+        Construct an ensemble that starts (x[0]) in the specified volume
         
         Parameters
         ----------
-        volume : Volume
+        volume : volume
             The volume to start in 
         
         Returns
@@ -576,11 +576,11 @@ class EnsembleFactory():
     @staticmethod
     def EndXEnsemble(volume):
         '''
-        Construct an ensemble that ends (x[-1]) in the specified Volume
+        Construct an ensemble that ends (x[-1]) in the specified volume
         
         Parameters
         ----------
-        volume : Volume
+        volume : volume
             The volume to end in 
         
         Returns
@@ -597,9 +597,9 @@ class EnsembleFactory():
         
         Parameters
         ----------
-        volume_a : Volume
+        volume_a : volume
             The volume to start in 
-        volume_b : Volume
+        volume_b : volume
             The volume to end in 
         
         Returns
@@ -617,11 +617,11 @@ class EnsembleFactory():
         
         Parameters
         ----------
-        volume_a : Volume
+        volume_a : volume
             The volume to start in 
-        volume_b : Volume
+        volume_b : volume
             The volume to end in 
-        volume_x : Volume
+        volume_x : volume
             The volume to leave 
         
         Returns

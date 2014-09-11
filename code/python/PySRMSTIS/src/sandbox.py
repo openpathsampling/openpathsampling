@@ -9,13 +9,13 @@ import numpy as np
 from tis_interfaces import TISInterfaces
 from transition_interface_sampling import TransitionInterfaceSampling
 from Simulator import Simulator
-from OrderParameter import OP_RMSD_To_Lambda, OP_Multi_RMSD
-from Volume import LambdaVolume, VoronoiVolume
-from Ensemble import EnsembleFactory as ef
+from orderparameter import OP_RMSD_To_Lambda, OP_Multi_RMSD
+from volume import LambdaVolume, VoronoiVolume
+from ensemble import EnsembleFactory as ef
 import time
 from pathmover import ForwardShootMover, BackwardShootMover, PathMover, MixedMover
-from ShootingPoint import UniformSelector
-from Ensemble import LengthEnsemble, InXEnsemble, OutXEnsemble
+from shooting import UniformSelector
+from ensemble import LengthEnsemble, InXEnsemble, OutXEnsemble
 
 from pymbar import MBAR
 from snapshot import Snapshot
@@ -53,7 +53,7 @@ if __name__ == '__main__':
         
 #        print time.time() - start_time
     
-        # if this uses the same OrderParameter it is fast, since the values are cached!
+        # if this uses the same orderparameter it is fast, since the values are cached!
         tis = ef.TISEnsemble(
                        LambdaVolume(op, 0.0, 0.06),
                        LambdaVolume(op, 0.0, 0.06),
@@ -102,7 +102,7 @@ if __name__ == '__main__':
                 
     
         # Check if the trajectory goes from lambda < 0.06 to lambda >0.08 and back    
-        print 'In Ensemble'
+        print 'In ensemble'
         print tis(tt)
         
         en = ef.A2BEnsemble(lV, lV, True)
@@ -132,7 +132,7 @@ if __name__ == '__main__':
         pm = MixedMover([bm, fm])
         
         pm.move(tt)
-        print 'Ensemble Check :', pm.ensemble(tt)
+        print 'ensemble Check :', pm.ensemble(tt)
         
         print pm.ensemble(pm.final)
         print 'Accepted : ', pm.accepted

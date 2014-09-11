@@ -143,7 +143,7 @@ class LambdaVolume(Volume):
         '''
         Attributes
         ----------
-        orderparameter : OrderParameter
+        orderparameter : orderparameter
             the orderparameter object
         lambda_min : float
             the minimal allowed orderparameter
@@ -175,7 +175,7 @@ class VoronoiVolume(Volume):
 
     Attributes
     ----------
-    orderparameter : OrderParameter
+    orderparameter : orderparameter
         the orderparameter object
     state : int
         the index of the center for the chosen voronoi cell

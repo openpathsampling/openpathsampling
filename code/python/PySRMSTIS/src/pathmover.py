@@ -4,8 +4,8 @@ Created on 19.07.2014
 @author: Jan-Hendrik Prinz
 '''
 
-from ShootingPoint import ShootingPoint
-from Ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble, LengthEnsemble
+import shooting.ShootingPoint
+from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble, LengthEnsemble
 
 import numpy as np
 
@@ -38,7 +38,7 @@ class PathMover(object):
     
     def __init__(self):
         
-        # An Ensemble that is at the same time triggering the stopping criterion and the final acceptance and the end.
+        # An ensemble that is at the same time triggering the stopping criterion and the final acceptance and the end.
         # This is because the goal is to sample trajectories in a specific ensemble. So we want to generate and stop
         # as soon as this cannot be fulfilled anymore. Some of the conditions cannot be checked during runtime, so we
         # have to do that at the end to make sure.
@@ -159,7 +159,7 @@ class ForwardShootMover(ShootMover):
                                                 ).forward, self.length_stopper.forward]
                                      )        
         self.final = self.start[0:self.start_point.index] + partial_trajectory    
-        self.final_point = ShootingPoint(self.selector, self.final, self.start_point.index)
+        self.final_point = shooting(self.selector, self.final, self.start_point.index)
 
         pass
     
@@ -180,7 +180,7 @@ class BackwardShootMover(ShootMover):
                                      )
         
         self.final = partial_trajectory.reversed + self.start[self.start_point.index + 1:]    
-        self.final_point = ShootingPoint(self.selector, self.final, partial_trajectory.frames - 1)
+        self.final_point = shooting(self.selector, self.final, partial_trajectory.frames - 1)
         
         pass
 

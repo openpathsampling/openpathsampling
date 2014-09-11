@@ -23,9 +23,9 @@ from simtk.unit import nanosecond, picosecond, nanometers, nanometer, picosecond
 
 from trajectory import Trajectory
 from snapshot import Snapshot
-from forkable_trajectory_storage import ForkableTrajectoryStorage
+from storage import ForkableTrajectoryStorage
 from integrators import VVVRIntegrator
-from Ensemble import LengthEnsemble
+from ensemble import LengthEnsemble
 
 #=============================================================================================
 # SOURCE CONTROL

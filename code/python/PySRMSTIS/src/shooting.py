@@ -87,7 +87,7 @@ class ShootingPointSelector(object):
         Notes
         -----
         
-        In principle this is an OrderParameter so we could easily add caching if useful
+        In principle this is an orderparameter so we could easily add caching if useful
         '''
         return 1.0
     
