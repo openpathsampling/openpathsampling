@@ -23,7 +23,7 @@ from simtk.unit import nanosecond, picosecond, nanometers, nanometer, picosecond
 
 from trajectory import Trajectory
 from snapshot import Snapshot
-from storage import ForkableTrajectoryStorage
+from storage import TrajectoryStorage
 from integrators import VVVRIntegrator
 from ensemble import LengthEnsemble
 
@@ -169,7 +169,7 @@ class Simulator(object):
             self._equilibrate_system()
             
             # Create a trajectory storage
-            self.storage = ForkableTrajectoryStorage(
+            self.storage = TrajectoryStorage(
                                                  topology = self.simulation.topology,
                                                  filename = self.fn_storage,
                                                  mode = 'create'
@@ -184,7 +184,7 @@ class Simulator(object):
         
         if mode == 'restore':
             # Need the oposite order, first open database 
-            self.storage = ForkableTrajectoryStorage(
+            self.storage = TrajectoryStorage(
                                                      topology = None,
                                                      filename = self.fn_storage,
                                                      mode = 'restore'

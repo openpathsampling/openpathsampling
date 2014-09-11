@@ -34,7 +34,7 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 # Multi-State Transition Interface Sampling
 #=============================================================================================
 
-class ForkableTrajectoryStorage(object):
+class TrajectoryStorage(object):
     '''
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM simulation. This allows effective storage of shooting trajectories
     '''
@@ -44,14 +44,14 @@ class ForkableTrajectoryStorage(object):
         '''
         Create a storage for trajectories that are stored by snapshots and list of their indices
         
-        ARGUMENTS
-        
-        topology (openmm.app.Topology) - the topology of the system to be stored. Needed for 
-        filename (string) - filename of the netcdf file
-        
-        OPTIONAL ARGUMENTS
-        
-        mode (string, default: 'auto') - the mode of file creation, one of 'create', 'restore' or 'auto'
+        Parameters
+        ----------        
+        topology : openmm.app.Topology
+            the topology of the system to be stored. Needed for 
+        filename : string
+            filename of the netcdf file
+        mode : string, default: 'auto'
+            the mode of file creation, one of 'create', 'restore' or 'auto'
         '''
         
         self.fn_storage = filename
@@ -122,7 +122,6 @@ class ForkableTrajectoryStorage(object):
                         
         # Force sync to disk to avoid data loss.
         ncfile.sync()
-
         return
     
     def _restore_netcdf(self):
@@ -151,7 +150,6 @@ class ForkableTrajectoryStorage(object):
         
     def trajectory_coordinates_as_array(self, idx, atom_indices=None):
         frame_indices = Trajectory.load_indices(idx)
-        
         return self.snapshot_coordinates_as_array(frame_indices, atom_indices)        
     
     def trajectory(self, idx):        
@@ -169,6 +167,11 @@ class ForkableTrajectoryStorage(object):
     def all_trajectory_indices(self):
         '''
         Return a list of list of frame indices
+        
+        Returns
+        -------
+        Trajectory
+            
         '''
         return Trajectory.load_all_indices()
     
