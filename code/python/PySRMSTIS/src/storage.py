@@ -13,7 +13,7 @@ import simtk.unit as units
 from simtk.unit import nanosecond, picosecond, nanometers, nanometer, picoseconds, femtoseconds, femtosecond, kilojoules_per_mole, Quantity
 
 from trajectory import Trajectory
-from snapshot import Snapshot
+from snapshot import Snapshot, Configuration, Momentum
 
 import pickle
 import mdtraj as md
@@ -141,25 +141,48 @@ class TrajectoryStorage(object):
         Trajectory._restore_netcdf(self)
         
         return
+
+    def configuration(self, idx):
+        return Configuration.load(idx)
     
-    def snapshot(self, idx):
-        return Snapshot.load(idx)
+    def momentum(self, idx):
+        return Momentum.load(idx)
     
-    def snapshot_coordinates_as_array(self, frame_indices=None, atom_indices=None):
-        return Snapshot.coordinates_as_numpy(self, frame_indices, atom_indices)
+    def snapshot(self, idx_configuration, idx_momentum):
+        return Snapshot.load(idx_configuration, idx_momentum)    
+
+    def trajectory(self, idx, momentum = True):        
+        configuration_frame_indices = Trajectory.load_configuration_indices(idx)
+        if momentum:
+            momentum_frame_indices = Trajectory.load_configuration_indices(idx)
+            return Trajectory.from_indices(configuration_frame_indices, momentum_frame_indices)
+        else:
+            return Trajectory.from_indices(configuration_frame_indices, None)
+            
+        return Trajectory.load(idx)
+    
+    def coordinates_as_array(self, frame_indices=None, atom_indices=None):
+        return Configuration.coordinates_as_numpy(self, frame_indices, atom_indices)
+
+    def velocities_as_array(self, frame_indices=None, atom_indices=None):
+        return Momentum.velocities_as_numpy(self, frame_indices, atom_indices)
         
     def trajectory_coordinates_as_array(self, idx, atom_indices=None):
-        frame_indices = Trajectory.load_indices(idx)
-        return self.snapshot_coordinates_as_array(frame_indices, atom_indices)        
-    
-    def trajectory(self, idx):        
-        return Trajectory.load(idx)
+        frame_indices = Trajectory.load_configuration_indices(idx)
+        return self.coordinates_as_array(frame_indices, atom_indices)        
+
+    def trajectory_velocities_as_array(self, idx, atom_indices=None):
+        frame_indices = Trajectory.load_configuration_indices(idx)
+        return self.coordinates_as_array(frame_indices, atom_indices)            
     
     def number_of_trajectories(self):
         return Trajectory.load_number()
 
-    def number_of_snapshots(self):
-        return Snapshot.load_number()
+    def number_of_configurations(self):
+        return Configuration.load_number()
+
+    def number_of_momenta(self):
+        return Momentum.load_number()
     
     def last_trajectory(self):
         return self.trajectory(self.number_of_trajectories())

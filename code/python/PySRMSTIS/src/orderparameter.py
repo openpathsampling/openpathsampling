@@ -4,7 +4,7 @@
 
 from msmbuilder.metrics import RMSD
 from trajectory import Trajectory
-from snapshot import Snapshot
+from snapshot import Configuration, Snapshot
 import numpy as np
 
 class Cache(object):
@@ -155,7 +155,7 @@ class SnapshotCache(Cache):
         Make sure that all snapshots are saved. Otherwise we cannot cache them!        
         '''
 
-        self[1:Snapshot.load_number() + 1]
+        self[1:Configuration.load_number() + 1]
 
 
     def _init_netcdf(self, storage):
@@ -397,7 +397,7 @@ class OrderParameter(object):
         else:
             traj = snapshots
 
-        traj_indices = traj.indices()
+        traj_indices = traj.configurations()
         
         if self.use_cache:
             # pick all non-stored snapshots and compute these anyway without storage
@@ -502,11 +502,13 @@ class OP_RMSD_To_Lambda(OrderParameter):
     ################################################################################    
     
     def _eval_idx(self, indices):
-        return self._eval(Trajectory.from_indices(indices))
+        return self._eval(Trajectory(Configuration.get(indices)))
     
     def _eval(self, trajectory):
         ptraj = self.metric.prepare_trajectory(trajectory.subset(self.atom_indices).md())
+        print ptraj
         results = self.metric.one_to_all(self._generator, ptraj, 0)
+        print results
                 
         return map(self._scale_fnc(self.min_lambda, self.max_lambda), results )
 

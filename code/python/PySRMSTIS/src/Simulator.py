@@ -94,8 +94,10 @@ class Simulator(object):
             self.simulation.context.setPositions(snapshot.coordinates)
             trajectory.append(snapshot)
             
-            # Assign velocities from Maxwell-Boltzmann distribution            
-            self.simulation.context.setVelocitiesToTemperature(self.temperature)
+            # Assign velocities from Maxwell-Boltzmann distribution          
+            print 'Velocities', snapshot.velocities 
+            self.simulation.context.setVelocities(snapshot.velocities)
+#            self.simulation.context.setVelocitiesToTemperature(self.temperature)
         
             # Propagate dynamics by velocity Verlet.            
             frame = 0
@@ -112,12 +114,13 @@ class Simulator(object):
                 # Store snapshot and add it to the trajectory. Stores also final frame the last time
                 snapshot = Snapshot(self.simulation.context)
                 snapshot.save()
+                print frame
                 trajectory.append(snapshot)
                 
                 # Check if reached a core set. If not, continue simulation
                 if running is not None:
                     for runner in running:
-#                        print str(runner), runner(trajectory)
+                        print str(runner), runner(trajectory)
                         stop = stop or not runner(trajectory)
 
                 # We could also just count the number of frames. Might be faster but not as nice :)                
@@ -164,7 +167,7 @@ class Simulator(object):
             self._set_alanine_options()
             self._create_OpenMMSimulation()
             
-            self.system_serial = openmm.XmlSerializer.serialize(self.system)
+#            self.system_serial = openmm.XmlSerializer.serialize(self.system)
             
             self._equilibrate_system()
             
@@ -180,7 +183,8 @@ class Simulator(object):
             
             # save initial equilibrated frame as snapshot ID #0. Might be useful later, who knows
             snapshot = Snapshot(self.simulation.context)
-            snapshot.save(0)
+            print 'Velocities', snapshot.velocities
+            snapshot.save(0,0)
         
         if mode == 'restore':
             # Need the oposite order, first open database 
@@ -271,10 +275,10 @@ class Simulator(object):
         self.system_serial = openmm.XmlSerializer.serialize(system)
         self.integrator_serial = openmm.XmlSerializer.serialize(integrator)
         
-        print self.system_serial
+#        print self.system_serial
                 
         # This could be moved to initialization since it will not change
-        self.max_length_stopper = LengthEnsemble(self.n_frames_max - 1)        
+        self.max_length_stopper = LengthEnsemble(slice(0,self.n_frames_max - 1))        
                                 
         self.simulation = simulation
                 
