@@ -1,0 +1,427 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>snapshot &mdash; OpenTIS 0.1 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="OpenTIS 0.1 documentation" href="../index.html"/>
+        <link rel="up" title="Module code" href="index.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="../index.html" class="fa fa-home"> OpenTIS</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Functions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-OrderParameter">OrderParameter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-msm_analysis">MSMAnalysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-Simulator">Simulator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-Ensemble">Ensemble</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-Volume">Volume</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-pathmover">PathMover</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#module-forkable_trajectory_storage">Storage</a></li>
+</ul>
+</li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">OpenTIS</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="index.html">Module code</a> &raquo;</li>
+      
+    <li>snapshot</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <h1>Source code for snapshot</h1><div class="highlight"><pre>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="sd">@author: JD Chodera</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">mdtraj</span> <span class="kn">as</span> <span class="nn">md</span>
+
+<span class="kn">from</span> <span class="nn">simtk.unit</span> <span class="kn">import</span> <span class="n">nanosecond</span><span class="p">,</span> <span class="n">picosecond</span><span class="p">,</span> <span class="n">nanometers</span><span class="p">,</span> <span class="n">nanometer</span><span class="p">,</span> <span class="n">picoseconds</span><span class="p">,</span> <span class="n">femtoseconds</span><span class="p">,</span> <span class="n">femtosecond</span><span class="p">,</span> <span class="n">kilojoules_per_mole</span><span class="p">,</span> <span class="n">Quantity</span>
+
+<span class="c">#=============================================================================================</span>
+<span class="c"># SIMULATION SNAPSHOT </span>
+<span class="c">#=============================================================================================</span>
+
+<div class="viewcode-block" id="Snapshot"><a class="viewcode-back" href="../index.html#snapshot.Snapshot">[docs]</a><span class="k">class</span> <span class="nc">Snapshot</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simulation snapshot.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c"># Class variables to store the global storage and the system context describing the system to be safed as snapshots</span>
+    <span class="n">storage</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">simulator</span> <span class="o">=</span> <span class="bp">None</span>
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">coordinates</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">velocities</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">box_vectors</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">potential_energy</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">kinetic_energy</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a simulation snapshot from either an OpenMM context or individually-specified components.</span>
+
+<span class="sd">        OPTIONAL ARGUMENTS</span>
+
+<span class="sd">        context (simtk.chem.openContext) - if not None, the current state will be queried to populate simulation snapshot; otherwise, can specify individual components (default: None)</span>
+<span class="sd">        coordinates (simtk.unit.Quantity wrapping Nx3 np array of dimension length) - atomic coordinates (default: None)</span>
+<span class="sd">        velocities (simtk.unit.Quantity wrapping Nx3 np array of dimension length) - atomic velocities (default: None)</span>
+<span class="sd">        box_vectors - periodic box vectors (default: None)</span>
+<span class="sd">        potential_energy (simtk.unit.Quantity of units energy/mole) - potential energy at current timestep (default: None)</span>
+<span class="sd">        kinetic_energy (simtk.unit.Quantity of units energy/mole) - kinetic energy at current timestep (default: None)</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>        <span class="c"># potential idx in a netcdf storage, if 0 then not stored yet. Attention! Cannot be stored in 2 repositories at the same time</span>
+
+        <span class="k">if</span> <span class="n">context</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># Get current state from OpenMM Context object.</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="n">getPositions</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">getVelocities</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">getEnergy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            
+            <span class="c"># Store the associated context</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">context</span> <span class="o">=</span> <span class="n">context</span>
+            
+            <span class="c"># Populate current snapshot data.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getPositions</span><span class="p">(</span><span class="n">asNumpy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">velocities</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getVelocities</span><span class="p">(</span><span class="n">asNumpy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">box_vectors</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getPeriodicBoxVectors</span><span class="p">()</span> <span class="c"># TODO: set asNumpy=True once bug in OpenMM is fixed</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">potential_energy</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getPotentialEnergy</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">kinetic_energy</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getKineticEnergy</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">coordinates</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">coordinates</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">velocities</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">velocities</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">velocities</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">box_vectors</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">box_vectors</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">box_vectors</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">potential_energy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">potential_energy</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">potential_energy</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">kinetic_energy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kinetic_energy</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">kinetic_energy</span><span class="p">)</span>                       
+
+        <span class="c"># Check for nans in coordinates, and raise an exception if something is wrong.</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Some coordinates became &#39;nan&#39;; simulation is unstable or buggy.&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span>
+
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="Snapshot.atoms"><a class="viewcode-back" href="../index.html#snapshot.Snapshot.atoms">[docs]</a>    <span class="k">def</span> <span class="nf">atoms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        returns the number of atoms in the snapshot</span>
+<span class="sd">        &#39;&#39;&#39;</span>   
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>  
+</div>
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="Snapshot.total_energy"><a class="viewcode-back" href="../index.html#snapshot.Snapshot.total_energy">[docs]</a>    <span class="k">def</span> <span class="nf">total_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        returns the total energy (sum of potential and kinetic) of the snapshot</span>
+<span class="sd">        &#39;&#39;&#39;</span>   
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">kinetic_energy</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">potential_energy</span>
+    
+    <span class="c">#=============================================================================================</span>
+    <span class="c"># Utility functions</span>
+    <span class="c">#=============================================================================================</span>
+</div>
+    <span class="k">def</span> <span class="nf">reverse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">snapshot</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">snapshot</span><span class="o">.</span><span class="n">velocities</span> <span class="o">*=</span> <span class="o">-</span><span class="mf">1.0</span>
+        <span class="k">return</span> <span class="n">snapshot</span>
+    
+<div class="viewcode-block" id="Snapshot.md"><a class="viewcode-back" href="../index.html#snapshot.Snapshot.md">[docs]</a>    <span class="k">def</span> <span class="nf">md</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        returns a mdtraj Trajectory object that contains only one frame</span>
+<span class="sd">        </span>
+<span class="sd">        NOTES</span>
+<span class="sd">        </span>
+<span class="sd">        Rather slow since the topology has to be made each time. Try to avoid it</span>
+<span class="sd">        &#39;&#39;&#39;</span>        
+        
+        <span class="n">n_atoms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">atoms</span>
+                            
+        <span class="n">output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_atoms</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span>
+        
+        <span class="n">topology</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">md_topology</span><span class="p">()</span>
+                                                         
+        <span class="k">return</span> <span class="n">md</span><span class="o">.</span><span class="n">Trajectory</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">topology</span><span class="p">)</span>      
+
+    </div>
+<div class="viewcode-block" id="Snapshot.md_topology"><a class="viewcode-back" href="../index.html#snapshot.Snapshot.md_topology">[docs]</a>    <span class="k">def</span> <span class="nf">md_topology</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        returns a mdtraj topology object that can be used with the stored snapshot</span>
+<span class="sd">        &#39;&#39;&#39;</span>   
+        <span class="k">return</span> <span class="n">md</span><span class="o">.</span><span class="n">Topology</span><span class="o">.</span><span class="n">from_openmm</span><span class="p">(</span><span class="n">Snapshot</span><span class="o">.</span><span class="n">simulator</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="p">)</span>
+ 
+    <span class="c">#=============================================================================================</span>
+    <span class="c"># Storage functions</span>
+    <span class="c">#=============================================================================================</span>
+    </div>
+<div class="viewcode-block" id="Snapshot.save"><a class="viewcode-back" href="../index.html#snapshot.Snapshot.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save positions, states, and energies of current iteration to NetCDF file.</span>
+<span class="sd">        </span>
+<span class="sd">        NOTES</span>
+<span class="sd">        </span>
+<span class="sd">        We need to allow for reversed snapshots to save memory. Would be nice</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">storage</span> <span class="o">=</span> <span class="n">Snapshot</span><span class="o">.</span><span class="n">storage</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">idx</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">idx</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">idx</span> <span class="o">=</span> <span class="n">Snapshot</span><span class="o">.</span><span class="n">load_free</span><span class="p">()</span>
+
+            <span class="c"># Store snapshot.</span>
+            <span class="n">storage</span><span class="o">.</span><span class="n">ncfile</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s">&#39;snapshot_coordinates&#39;</span><span class="p">][</span><span class="n">idx</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coordinates</span> <span class="o">/</span> <span class="n">nanometers</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="n">storage</span><span class="o">.</span><span class="n">ncfile</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s">&#39;snapshot_velocities&#39;</span><span class="p">][</span><span class="n">idx</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">velocities</span> <span class="o">/</span> <span class="p">(</span><span class="n">nanometers</span> <span class="o">/</span> <span class="n">picoseconds</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="n">storage</span><span class="o">.</span><span class="n">ncfile</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s">&#39;snapshot_potential&#39;</span><span class="p">][</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">potential_energy</span> <span class="o">/</span> <span class="n">kilojoules_per_mole</span>                                
+            <span class="n">storage</span><span class="o">.</span><span class="n">ncfile</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s">&#39;snapshot_kinetic&#39;</span><span class="p">][</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kinetic_energy</span> <span class="o">/</span> <span class="n">kilojoules_per_mole</span>
+            
+            <span class="c"># store ID# for later reference in Snapshot object</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">idx</span> <span class="o">=</span> <span class="n">idx</span>
+    
+            <span class="c"># Force sync to disk to avoid data loss.</span>
+            <span class="n">storage</span><span class="o">.</span><span class="n">ncfile</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
+
+        <span class="k">return</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Snapshot.load_number"><a class="viewcode-back" href="../index.html#snapshot.Snapshot.load_number">[docs]</a>    <span class="k">def</span> <span class="nf">load_number</span><span class="p">():</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Load the number of stored snapshots</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        </span>
+<span class="sd">        number (int) - number of stored snapshots</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Snapshot</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">ncfile</span><span class="o">.</span><span class="n">dimensions</span><span class="p">[</span><span class="s">&#39;snapshot&#39;</span><span class="p">]))</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">length</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">length</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="n">length</span>
+    </div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Snapshot.load_free"><a class="viewcode-back" href="../index.html#snapshot.Snapshot.load_free">[docs]</a>    <span class="k">def</span> <span class="nf">load_free</span><span class="p">():</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Return the number of the next free ID</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">Snapshot</span><span class="o">.</span><span class="n">load_number</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span>
+    </div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Snapshot.load"><a class="viewcode-back" href="../index.html#snapshot.Snapshot.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">idx</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Load a snapshot from the storage</span>
+<span class="sd">        </span>
+<span class="sd">        ARGUMENTS</span>
+<span class="sd">        </span>
+<span class="sd">        idx (int) - index of the snapshot in the database &#39;idx&#39; &gt; 0</span>
+<span class="sd">        </span>
+<span class="sd">        RETURNS</span>
+<span class="sd">        </span>
+<span class="sd">        snapshot (Snapshot) - the snapshot</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="n">storage</span> <span class="o">=</span> <span class="n">Snapshot</span><span class="o">.</span><span class="n">storage</span>
+        
+        <span class="c">#TODO: Check, for some reason some idx are given as numpy.in32 and netcdf4 is not compatible with indices given in this format!!!!!</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+        
+        <span class="n">x</span> <span class="o">=</span> <span class="n">storage</span><span class="o">.</span><span class="n">ncfile</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s">&#39;snapshot_coordinates&#39;</span><span class="p">][</span><span class="n">idx</span><span class="p">,:,:]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">coordinates</span> <span class="o">=</span> <span class="n">Quantity</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">nanometers</span><span class="p">)</span>                
+        <span class="n">v</span> <span class="o">=</span> <span class="n">storage</span><span class="o">.</span><span class="n">ncfile</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s">&#39;snapshot_velocities&#39;</span><span class="p">][</span><span class="n">idx</span><span class="p">,:,:]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">velocities</span> <span class="o">=</span> <span class="n">Quantity</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">nanometers</span> <span class="o">/</span> <span class="n">picoseconds</span><span class="p">)</span>                
+        <span class="n">V</span> <span class="o">=</span> <span class="n">storage</span><span class="o">.</span><span class="n">ncfile</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s">&#39;snapshot_potential&#39;</span><span class="p">][</span><span class="n">idx</span><span class="p">]</span>
+        <span class="n">potential_energy</span> <span class="o">=</span> <span class="n">Quantity</span><span class="p">(</span><span class="n">V</span><span class="p">,</span> <span class="n">kilojoules_per_mole</span><span class="p">)</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">storage</span><span class="o">.</span><span class="n">ncfile</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s">&#39;snapshot_kinetic&#39;</span><span class="p">][</span><span class="n">idx</span><span class="p">]</span>
+        <span class="n">kinetic_energy</span> <span class="o">=</span> <span class="n">Quantity</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">kilojoules_per_mole</span><span class="p">)</span>
+        <span class="n">snapshot</span> <span class="o">=</span> <span class="n">Snapshot</span><span class="p">(</span><span class="n">coordinates</span><span class="o">=</span><span class="n">coordinates</span><span class="p">,</span> <span class="n">velocities</span><span class="o">=</span><span class="n">velocities</span><span class="p">,</span> <span class="n">kinetic_energy</span><span class="o">=</span><span class="n">kinetic_energy</span><span class="p">,</span> <span class="n">potential_energy</span><span class="o">=</span><span class="n">potential_energy</span><span class="p">)</span>
+        <span class="n">snapshot</span><span class="o">.</span><span class="n">idx</span> <span class="o">=</span> <span class="n">idx</span>
+
+        <span class="k">return</span> <span class="n">snapshot</span>
+</div>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">coordinates_as_numpy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame_indices</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">atom_indices</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        
+        <span class="k">if</span> <span class="n">frame_indices</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">frame_indices</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">atom_indices</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">atom_indices</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ncfile</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="s">&#39;snapshot_coordinates&#39;</span><span class="p">][</span><span class="n">frame_indices</span><span class="p">,</span><span class="n">atom_indices</span><span class="p">,:]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_restore_netcdf</span><span class="p">(</span><span class="n">storage</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fill in missing part after the storage has been loaded from a file and is not initialize freshly</span>
+<span class="sd">        </span>
+<span class="sd">        NOTES</span>
+<span class="sd">        -----</span>
+<span class="sd">        </span>
+<span class="sd">        We need to allow for reversed snapshots to save memory. Would be nice</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">Snapshot</span><span class="o">.</span><span class="n">storage</span> <span class="o">=</span> <span class="n">storage</span>
+                
+        <span class="k">return</span>
+        
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_init_netcdf</span><span class="p">(</span><span class="n">storage</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        initializes the associated storage to save snapshots in it</span>
+<span class="sd">        &#39;&#39;&#39;</span>           
+        <span class="c"># save associated storage in class variable for all Snapshot instances to access</span>
+        
+<span class="c">#        ncgrp = storage.ncfile.createGroup(&#39;snapshot&#39;)</span>
+        
+        <span class="n">Snapshot</span><span class="o">.</span><span class="n">storage</span> <span class="o">=</span> <span class="n">storage</span>
+        <span class="n">ncgrp</span> <span class="o">=</span> <span class="n">storage</span><span class="o">.</span><span class="n">ncfile</span>
+        
+        <span class="n">system</span> <span class="o">=</span> <span class="n">Snapshot</span><span class="o">.</span><span class="n">simulator</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">system</span>
+        
+        <span class="c"># define dimensions used in snapshots</span>
+        <span class="n">ncgrp</span><span class="o">.</span><span class="n">createDimension</span><span class="p">(</span><span class="s">&#39;snapshot&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>                       <span class="c"># unlimited number of snapshots</span>
+        <span class="n">ncgrp</span><span class="o">.</span><span class="n">createDimension</span><span class="p">(</span><span class="s">&#39;atom&#39;</span><span class="p">,</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">())</span>    <span class="c"># number of atoms in the simulated system</span>
+        <span class="n">ncgrp</span><span class="o">.</span><span class="n">createDimension</span><span class="p">(</span><span class="s">&#39;spatial&#39;</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>                        <span class="c"># number of spatial dimensions</span>
+
+        <span class="c"># define variables for snapshots</span>
+        <span class="n">ncvar_snapshot_coordinates</span>          <span class="o">=</span> <span class="n">ncgrp</span><span class="o">.</span><span class="n">createVariable</span><span class="p">(</span><span class="s">&#39;snapshot_coordinates&#39;</span><span class="p">,</span> <span class="s">&#39;f&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s">&#39;snapshot&#39;</span><span class="p">,</span><span class="s">&#39;atom&#39;</span><span class="p">,</span><span class="s">&#39;spatial&#39;</span><span class="p">))</span>
+        <span class="n">ncvar_snapshot_velocities</span>           <span class="o">=</span> <span class="n">ncgrp</span><span class="o">.</span><span class="n">createVariable</span><span class="p">(</span><span class="s">&#39;snapshot_velocities&#39;</span><span class="p">,</span>  <span class="s">&#39;f&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s">&#39;snapshot&#39;</span><span class="p">,</span><span class="s">&#39;atom&#39;</span><span class="p">,</span><span class="s">&#39;spatial&#39;</span><span class="p">))</span>
+        <span class="n">ncvar_snapshot_potential</span>            <span class="o">=</span> <span class="n">ncgrp</span><span class="o">.</span><span class="n">createVariable</span><span class="p">(</span><span class="s">&#39;snapshot_potential&#39;</span><span class="p">,</span>   <span class="s">&#39;f&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s">&#39;snapshot&#39;</span><span class="p">))</span>
+        <span class="n">ncvar_snapshot_kinetic</span>              <span class="o">=</span> <span class="n">ncgrp</span><span class="o">.</span><span class="n">createVariable</span><span class="p">(</span><span class="s">&#39;snapshot_kinetic&#39;</span><span class="p">,</span>     <span class="s">&#39;f&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s">&#39;snapshot&#39;</span><span class="p">))</span>
+
+        <span class="c"># Define units for snapshot variables.</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">ncvar_snapshot_coordinates</span><span class="p">,</span> <span class="s">&#39;units&#39;</span><span class="p">,</span> <span class="s">&#39;nm&#39;</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">ncvar_snapshot_velocities</span><span class="p">,</span>  <span class="s">&#39;units&#39;</span><span class="p">,</span> <span class="s">&#39;nm/ps&#39;</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">ncvar_snapshot_potential</span><span class="p">,</span>   <span class="s">&#39;units&#39;</span><span class="p">,</span> <span class="s">&#39;kJ/mol&#39;</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">ncvar_snapshot_kinetic</span><span class="p">,</span>     <span class="s">&#39;units&#39;</span><span class="p">,</span> <span class="s">&#39;kJ/mol&#39;</span><span class="p">)</span>
+        
+        <span class="c"># Define long (human-readable) names for variables.</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">ncvar_snapshot_coordinates</span><span class="p">,</span>    <span class="s">&quot;long_name&quot;</span><span class="p">,</span> <span class="s">&quot;coordinates[snapshot][atom][coordinate] are coordinate of atom &#39;atom&#39; in dimension &#39;coordinate&#39; of snapshot &#39;snapshot&#39;.&quot;</span><span class="p">)</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">ncvar_snapshot_velocities</span><span class="p">,</span>    <span class="s">&quot;long_name&quot;</span><span class="p">,</span> <span class="s">&quot;velocities[snapshot][atom][coordinate] are velocities of atom &#39;atom&#39; in dimension &#39;coordinate&#39; of snapshot &#39;snapshot&#39;.&quot;</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014, Jan-Hendrik Prinz, John Chodera, David Swensen, Peter Bolhuis.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
