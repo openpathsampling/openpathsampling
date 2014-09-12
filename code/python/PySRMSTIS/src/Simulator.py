@@ -6,10 +6,7 @@ Created on 01.07.2014
 '''
 
 
-from sys import stdout
-
 import numpy as np
-
 import time
 
 from simtk.openmm.app import *

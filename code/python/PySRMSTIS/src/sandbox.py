@@ -1,7 +1,7 @@
 '''
 Created on 08.07.2014
 
-@author: jan-hendrikprinz
+@author: Jan-Hendrik Prinz
 '''
 
 import numpy as np
