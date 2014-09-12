@@ -506,9 +506,7 @@ class OP_RMSD_To_Lambda(OrderParameter):
     
     def _eval(self, trajectory):
         ptraj = self.metric.prepare_trajectory(trajectory.subset(self.atom_indices).md())
-        print ptraj
         results = self.metric.one_to_all(self._generator, ptraj, 0)
-        print results
                 
         return map(self._scale_fnc(self.min_lambda, self.max_lambda), results )
 
@@ -539,7 +537,7 @@ class OP_Multi_RMSD(OrderParameter):
         super(OP_Multi_RMSD, self).__init__(name)
                 
         self.atom_indices = atom_indices
-        self.center = centers
+        self.centers = centers
         
         self.size = len(centers)
                 
@@ -550,6 +548,14 @@ class OP_Multi_RMSD(OrderParameter):
             self.metric = metric
         self._generator = self.metric.prepare_trajectory(centers.subset(self.atom_indices).md())  
         return 
+    
+    def _eval_idx(self, indices):
+        return self._eval(Trajectory(Configuration.get(indices)))
+    
+    def _eval(self, trajectory):
+        ptraj = self.metric.prepare_trajectory(trajectory.subset(self.atom_indices).md())
+        return [ self.metric.one_to_all(ptraj, self._generator, idx) for idx in range(0,len(ptraj)) ]
+                
     
 if __name__ == '__main__':
     def ident(indices):

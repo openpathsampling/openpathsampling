@@ -186,17 +186,6 @@ class TrajectoryStorage(object):
     
     def last_trajectory(self):
         return self.trajectory(self.number_of_trajectories())
-
-    def all_trajectory_indices(self):
-        '''
-        Return a list of list of frame indices
-        
-        Returns
-        -------
-        Trajectory
-            
-        '''
-        return Trajectory.load_all_indices()
     
     def all_snapshot_coordinates_as_mdtraj(self, atom_indices = None):
         """

@@ -301,8 +301,7 @@ class Momentum(object):
         """
         
         self.idx = 0        # potential idx in a netcdf storage, if 0 then not stored yet. Attention! Cannot be stored in 2 repositories at the same time
-        self.reversed = False
-        self._velocities = None
+        self.velocities = None
         self.kinetic_energy = None
         
         if context is not None:
@@ -313,10 +312,10 @@ class Momentum(object):
             self.context = context
             
             # Populate current momentum data.
-            self._velocities = state.getVelocities(asNumpy=True)
+            self.velocities = state.getVelocities(asNumpy=True)
             self.kinetic_energy = state.getKineticEnergy()
         else:
-            if velocities is not None: self._velocities = copy.deepcopy(velocities)
+            if velocities is not None: self.velocities = copy.deepcopy(velocities)
             if kinetic_energy is not None: self.kinetic_energy = copy.deepcopy(kinetic_energy)                       
 
         # Check for nans in coordinates, and raise an exception if something is wrong.
@@ -325,15 +324,6 @@ class Momentum(object):
 
         return
     
-    @property
-    def velocities(self):
-        if self.reversed is True:
-            momentum = np.copy(self._velocities)
-            momentum *= -1.0
-            return momentum
-        else:
-            return self._velocities
-
     @property
     def atoms(self):
         '''
@@ -346,8 +336,12 @@ class Momentum(object):
     #=============================================================================================
 
     def reverse(self):
-        self.reversed = True
-        return 
+        self.velocities *= 1.0
+    
+    def reversed_copy(self):
+        this = copy.deepcopy(self)
+        this.reverse()
+        return this
      
     #=============================================================================================
     # Storage functions
@@ -365,7 +359,7 @@ class Momentum(object):
                 idx = Momentum.load_free()
 
             # Store momentum.
-            storage.ncfile.variables['momentum_velocities'][idx,:,:] = (self._velocities / (nanometers / picoseconds)).astype(np.float32)
+            storage.ncfile.variables['momentumvelocities'][idx,:,:] = (self.velocities / (nanometers / picoseconds)).astype(np.float32)
             storage.ncfile.variables['momentum_kinetic'][idx] = self.kinetic_energy / kilojoules_per_mole
             
             # store ID# for later reference in Momentum object
@@ -418,7 +412,7 @@ class Momentum(object):
         #TODO: Check, for some reason some idx are given as numpy.in32 and netcdf4 is not compatible with indices given in this format!!!!!
         idx = int(idx)
         
-        v = storage.ncfile.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
+        v = storage.ncfile.variables['momentumvelocities'][idx,:,:].astype(np.float32).copy()
         velocities = Quantity(v, nanometers / picoseconds)              
         T = storage.ncfile.variables['momentum_kinetic'][idx]
         kinetic_energy = Quantity(T, kilojoules_per_mole)
@@ -437,7 +431,7 @@ class Momentum(object):
         if atom_indices is None:
             atom_indices = slice(None)
 
-        return self.ncfile.variables['momentum_velocities'][frame_indices,atom_indices,:].astype(np.float32).copy()
+        return self.ncfile.variables['momentumvelocities'][frame_indices,atom_indices,:].astype(np.float32).copy()
     
     @staticmethod
     def get(indices):
@@ -479,15 +473,15 @@ class Momentum(object):
             ncgrp.createDimension('spatial', 3) # number of spatial dimensions        
 
         # define variables for momentums
-        ncvar_momentum_velocities           = ncgrp.createVariable('momentum_velocities',  'f', ('momentum','atom','spatial'))
+        ncvar_momentumvelocities           = ncgrp.createVariable('momentumvelocities',  'f', ('momentum','atom','spatial'))
         ncvar_momentum_kinetic              = ncgrp.createVariable('momentum_kinetic',     'f', ('momentum'))
 
         # Define units for momentum variables.
-        setattr(ncvar_momentum_velocities,  'units', 'nm/ps')
+        setattr(ncvar_momentumvelocities,  'units', 'nm/ps')
         setattr(ncvar_momentum_kinetic,     'units', 'kJ/mol')
         
         # Define long (human-readable) names for variables.
-        setattr(ncvar_momentum_velocities,    "long_name", "velocities[momentum][atom][coordinate] are velocities of atom 'atom' in dimension 'coordinate' of momentum 'momentum'.")
+        setattr(ncvar_momentumvelocities,    "long_name", "velocities[momentum][atom][coordinate] are velocities of atom 'atom' in dimension 'coordinate' of momentum 'momentum'.")
 
 class Snapshot(object):
     """
@@ -539,10 +533,10 @@ class Snapshot(object):
         self.idx = 0        # potential idx in a netcdf storage, if 0 then not stored yet. Attention! Cannot be stored in 2 repositories at the same time
         self.configuration = Configuration()
         self.momentum = Momentum()
+        self.reversed = False
 
         if context is not None:
             # Get current state from OpenMM Context object.
-            print 'Context', context
             state = context.getState(getPositions=True, getVelocities=True, getEnergy=True)
             
             # Store the associated context
@@ -550,15 +544,13 @@ class Snapshot(object):
             
             # Populate current snapshot data.
             self.configuration.coordinates = state.getPositions(asNumpy=True)
-            self.momentum._velocities = state.getVelocities(asNumpy=True)
+            self.momentum.velocities = state.getVelocities(asNumpy=True)
             self.configuration.box_vectors = state.getPeriodicBoxVectors(asNumpy=True)
             self.configuration.potential_energy = state.getPotentialEnergy()
-            self.momentum.kinetic_energy = state.getKineticEnergy()
-            
-            print self.momentum._velocities
+            self.momentum.kinetic_energy = state.getKineticEnergy()            
         else:
             if coordinates is not None: self.configuration.coordinates = copy.deepcopy(coordinates)
-            if velocities is not None: self.momentum._velocities = copy.deepcopy(velocities)
+            if velocities is not None: self.momentum.velocities = copy.deepcopy(velocities)
             if box_vectors is not None: self.configuration.box_vectors = copy.deepcopy(box_vectors)
             if potential_energy is not None: self.configuration.potential_energy = copy.deepcopy(potential_energy)
             if kinetic_energy is not None: self.momentum.kinetic_energy = copy.deepcopy(kinetic_energy)                       
@@ -568,8 +560,6 @@ class Snapshot(object):
             if np.any(np.isnan(self.coordinates)):
                 raise Exception("Some coordinates became 'nan'; simulation is unstable or buggy.")
                 
-                
-        print self.momentum.velocities
         pass
     
     @property
@@ -578,7 +568,10 @@ class Snapshot(object):
 
     @property
     def velocities(self):
-        return self.momentum.velocities
+        if self.reversed:
+            return self.momentum.reversed_copy().velocities
+        else:
+            return self.momentum.velocities
     
     @property
     def box_vectors(self):
@@ -610,9 +603,18 @@ class Snapshot(object):
     # Utility functions
     #=============================================================================================
 
+    def copy(self):
+        this = Snapshot()
+        this.momentum = self.momentum
+        this.configuration = self.configuration
+        return this
+    
+    def reversed_copy(self):
+        return self.copy().reverse()
+
     def reverse(self):
-        self.momentum.reverse()
-        pass
+        self.reversed = not self.reversed
+        return self
     
     def md(self):
         '''
@@ -643,10 +645,7 @@ class Snapshot(object):
         We need to allow for reversed snapshots to save memory. Would be nice        
         """
         
-        print self.__dict__
-        print self.configuration
         self.configuration.save(idx_configuration)
-        print self.momentum.__dict__
         self.momentum.save(idx_momentum)
         
     @staticmethod

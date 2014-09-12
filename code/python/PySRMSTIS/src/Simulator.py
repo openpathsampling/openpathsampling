@@ -95,7 +95,6 @@ class Simulator(object):
             trajectory.append(snapshot)
             
             # Assign velocities from Maxwell-Boltzmann distribution          
-            print 'Velocities', snapshot.velocities 
             self.simulation.context.setVelocities(snapshot.velocities)
 #            self.simulation.context.setVelocitiesToTemperature(self.temperature)
         
@@ -114,13 +113,12 @@ class Simulator(object):
                 # Store snapshot and add it to the trajectory. Stores also final frame the last time
                 snapshot = Snapshot(self.simulation.context)
                 snapshot.save()
-                print frame
                 trajectory.append(snapshot)
                 
                 # Check if reached a core set. If not, continue simulation
                 if running is not None:
                     for runner in running:
-                        print str(runner), runner(trajectory)
+#                        print str(runner), runner(trajectory)
                         stop = stop or not runner(trajectory)
 
                 # We could also just count the number of frames. Might be faster but not as nice :)                
@@ -130,7 +128,7 @@ class Simulator(object):
                     print self.max_length_stopper, self.max_length_stopper(trajectory)
                     print frame
                     print len(trajectory)
-#                    print [ s.idx for s in trajectory]
+                    print [ s.idx for s in trajectory]
                     
                     print 'OP :', self.op(snapshot)
                 
@@ -183,7 +181,6 @@ class Simulator(object):
             
             # save initial equilibrated frame as snapshot ID #0. Might be useful later, who knows
             snapshot = Snapshot(self.simulation.context)
-            print 'Velocities', snapshot.velocities
             snapshot.save(0,0)
         
         if mode == 'restore':
@@ -292,8 +289,6 @@ class Simulator(object):
         #=============================================================================================
 
         self.simulation.context.setPositions(self.pdb.positions)
-
-        print "Equilibration"
         
         system = self.simulation.system
         simulation = self.simulation

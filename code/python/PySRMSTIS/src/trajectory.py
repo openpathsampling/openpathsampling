@@ -93,10 +93,9 @@ class Trajectory(list):
         
         # We could easily indicate reversed momenta by using a minus sign in front of the index
         # this keeps everything the same and we do not need to resave the snapshots and a -idx just means take snapshot idx but invert momenta
-        #for frame in self:
-        #    frame.idx = -frame.idx
-            
-        # Alternatively we 
+
+        for frame in self:
+            frame.reversed = not frame.reversed
         
         return
     
@@ -406,6 +405,7 @@ class Trajectory(list):
             frame.save()
             ncfile.variables['trajectory_configuration_idx'][idx,frame_index] = frame.configuration.idx         
             ncfile.variables['trajectory_momentum_idx'][idx,frame_index] = frame.momentum.idx                     
+            ncfile.variables['trajectory_momentum_reversed'][idx,frame_index] = frame.reversed                     
              
         ncfile.variables['trajectory_length'][idx] = nframes
                 
@@ -613,7 +613,7 @@ class Trajectory(list):
         # Create variables for trajectories        
         ncvar_trajectory_configuration_idx  = ncfile.createVariable('trajectory_configuration_idx', 'u4', ('trajectory','max_frames'))
         ncvar_trajectory_momentum_idx       = ncfile.createVariable('trajectory_momentum_idx', 'u4', ('trajectory','max_frames'))
-        ncvar_trajectory_momentum_reversed  = ncfile.createVariable('trajectory_momentum_reversed', 'u4', ('trajectory', 'max_frames'))
+        ncvar_trajectory_momentum_reversed  = ncfile.createVariable('trajectory_momentum_reversed', 'b', ('trajectory', 'max_frames'))
         ncvar_trajectory_path_hamiltonian   = ncfile.createVariable('trajectory_path_hamiltonians', 'f', ('trajectory'))
         ncvar_trajectory_length             = ncfile.createVariable('trajectory_length', 'u4', ('trajectory'))
 

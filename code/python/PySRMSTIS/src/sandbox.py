@@ -33,7 +33,7 @@ if __name__ == '__main__':
         snapshot = Snapshot.load(0,0)    
         
         # generate from this snapshot a trajectory with 50 steps
-        traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,10))])
+        traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,50))])
         print len(traj)
         traj.save()
         
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     if True:        
         cc = Trajectory.load(1)[ 0 ]
         op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices)
-        dd = simulator.storage.trajectory(1)[ 0:10 ]
+        dd = simulator.storage.trajectory(1)[ 0:50 ]
     #    op.cache.fill()
     
     #    print op(dd)
@@ -64,14 +64,9 @@ if __name__ == '__main__':
         
         tt = simulator.storage.trajectory(1)[4:18]
         
-        print tt
-        
         # This is to cache the values for all snapshots in tt. Makes later access MUCH faster. 
         # Especially because the frames do not have to be read one by one.
         op(tt)
-        
-        print 'CACHED'
-        
         # print tis
 #        print [ s.idx for s in tt]
 #        print [ (lV(d)) for d in tt ]
@@ -81,7 +76,7 @@ if __name__ == '__main__':
         # be true in the next step. This should be passed to the pathmover to stop simulating for a particular ensemble
 
         vn = VoronoiVolume(
-                OP_Multi_RMSD('Voronoi', tt[[0,1]], atom_indices=simulator.solute_indices),
+                OP_Multi_RMSD('Voronoi', tt[[0,10]], atom_indices=simulator.solute_indices),
                 state = 0
                 )
 
@@ -94,7 +89,6 @@ if __name__ == '__main__':
         for l in range(0,tt.frames + 0):
             print tis.forward(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
             
-        exit()
         print op(tt[0])
         s = Snapshot(coordinates = tt[0].coordinates)
         print op(s)
