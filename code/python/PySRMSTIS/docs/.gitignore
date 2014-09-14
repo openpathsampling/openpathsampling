@@ -1,0 +1,2 @@
+# ignore _build/, which is where the generated docs go
+_build
