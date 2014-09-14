@@ -47,6 +47,8 @@ class Hull(object):
         '''
         if (points==[]): points=self.vertices
         self.hull = qhull.Delaunay(points)
+        # abstract out the qhull object as much as possible
+        self.find_simplex = self.hull.find_simplex 
         self.simplices = self.hull.simplices
         self.simplex_neighbors = self.hull.neighbors
 
@@ -178,6 +180,13 @@ class Hull(object):
 
         for hole in [r for r in isHole.keys() if isHole[r]==1]:
             self.label_connected(self.regions[hole][0], 1)
+
+    def hull_volume_simplices(self):
+        return self.regions[1]
+
+    def hull_volume_facets(self):
+        #TODO
+        pass
             
                 
 
