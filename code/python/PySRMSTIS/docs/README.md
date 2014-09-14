@@ -13,6 +13,6 @@ for a guide.
 
 *Requires*: 
 
-* [Sphinx](http://www.sphinx-docs.org/)
-* [sphinx_rtd_theme]() : `pip install sphinx_rtd_theme`
-* [numpydoc]() : `pip install numpydoc`
+* [Sphinx](http://www.sphinx-doc.org/)
+* [sphinx_rtd_theme](https://github.com/snide/sphinx_rtd_theme) : `pip install sphinx_rtd_theme`
+* [numpydoc](https://pypi.python.org/pypi/numpydoc) : `pip install numpydoc`
