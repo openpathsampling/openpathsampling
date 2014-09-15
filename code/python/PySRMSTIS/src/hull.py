@@ -184,10 +184,36 @@ class Hull(object):
     def hull_volume_simplices(self):
         return self.regions[1]
 
-    def hull_volume_facets(self):
-        #TODO
-        pass
-            
+    def hull_facets(self):
+        # The trick to this algorithm is in the ordering of the
+        # self.simplex_neighbors and self.simplices lists. Assume we have a
+        # simplex s defined by vertices [a b c]. It has neighboring simplices
+        # [na nb nc]. These lists are constructed such that simplex na is
+        # the neighbor "across" from vertex a; i.e., the facet shared by
+        # simplex s and simplex na includes all the vertices of simplex s
+        # *except* vertex a. The Qhull-based Delaunay triangulation builds
+        # structures in this format.
+        facets = []
+        for s in self.regions[1]:
+            for i in range(len(self.simplex_neighbors[s])): 
+                if self.simplex_neighbors[s][i] not in self.regions[1]:
+                    facets.append([v for v in self.simplices[s] 
+                                        if v!=self.simplices[s][i] ])
+        # TODO: test for correctness (results look credible, tho)
+        return facets
+
+    def vertex_list_to_points(self, vlist):
+        ''' Takes a list of vertices (arbitrary shape) and returns the
+        spatial points associated with those vertices (same shape with added
+        dimension of length d, dimensionality of space)
+        '''
+        nplist = np.array(vlist)
+        pts = []
+        ndim = len(self.vertices[0])
+        for p in nplist.flat:
+            pts.append(self.vertices[p])
+        pts = np.array(pts).reshape( nplist.shape + tuple([ndim]) )
+        return pts
                 
 
     def generate_hull(self,points=[]):
