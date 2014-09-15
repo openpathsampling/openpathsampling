@@ -26,7 +26,8 @@ class HullVolume(Volume):
         self.orderparameter = orderparameter
 
     def cell(self, snapshot):
-        return self.hull.find_simplex(orderparameter(snapshot))
+        '''Returns the simplex number for the snapshot'''
+        return self.hull.find_simplex(self.orderparameter(snapshot))
 
     def __call__(self, snapshot):
         '''

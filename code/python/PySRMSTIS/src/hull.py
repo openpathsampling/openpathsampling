@@ -83,6 +83,7 @@ class Hull(object):
             self.regions[0].append(i)
 
     def move_simplex_to_region(self, simplex, region):
+        '''Reassigns a simplex from its old region to a new region.'''
         old_region = self.labels[simplex]
         self.labels[simplex] = region
         self.regions[old_region].remove(simplex)
@@ -110,6 +111,8 @@ class Hull(object):
             self.check_edge(edge)
 
     def label_connected(self, initial, newregion=1):
+        ''' Labels all regions connected to `initial` as belonging to region
+        `newregion`.'''
         oldlabel = self.labels[initial]
         to_scan = [initial]
         if (not (newregion in self.regions.keys())):
@@ -123,6 +126,8 @@ class Hull(object):
             to_scan.pop(0)
 
     def region_neighbors(self, region):
+        ''' Returns a list of regions numbers which are neighbors to
+        `region`'''
         initial = self.regions[region][0]
         label = self.labels[initial]
         to_scan = [initial]
@@ -142,6 +147,8 @@ class Hull(object):
         return rneighbors
 
     def label_all_regions(self, initial, undefined_regions=[0]):
+        '''Relabels regions according to connectivity, for any region in the
+        set `undefined_regions`'''
         regionnum=sorted(self.regions.keys())[-1] + 1
         self.label_connected(initial,regionnum)
         for r in undefined_regions:
@@ -150,6 +157,7 @@ class Hull(object):
                 self.label_connected(self.regions[r][0], regionnum)
 
     def remove_holes(self):
+        '''Assigns holes in the interface (region 1) to the interface.'''
         rset = [r for r in self.regions.keys() if r>1]
         rneighbors = {}
         isHole = {}
@@ -182,9 +190,12 @@ class Hull(object):
             self.label_connected(self.regions[hole][0], 1)
 
     def hull_volume_simplices(self):
+        ''' Returns simplices that are within the interface.'''
         return self.regions[1]
 
     def hull_facets(self):
+        '''Returns vertex numbers that form the facets of the outside of
+        the hull.'''
         # The trick to this algorithm is in the ordering of the
         # self.simplex_neighbors and self.simplices lists. Assume we have a
         # simplex s defined by vertices [a b c]. It has neighboring simplices
