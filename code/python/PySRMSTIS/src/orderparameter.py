@@ -4,7 +4,7 @@
 
 from msmbuilder.metrics import RMSD
 from trajectory import Trajectory
-from snapshot import Snapshot
+from snapshot import Snapshot, Configuration
 import numpy as np
 
 class Cache(object):
@@ -155,7 +155,7 @@ class SnapshotCache(Cache):
         Make sure that all snapshots are saved. Otherwise we cannot cache them!        
         '''
 
-        self[1:Snapshot.load_number() + 1]
+        self[1:Configuration.load_number() + 1]
 
 
     def _init_netcdf(self, storage):
@@ -188,87 +188,6 @@ class SnapshotCache(Cache):
         
         # Define long (human-readable) names for variables.
         setattr(ncvar_order_parameter,    "long_name", "orderparameter[snapshot][index] is the orderparameter of snapshot 'snapshot'.")
-        
-    def save(self):
-        """
-        Save the current state of the cache to the storage
-        """
-        
-        ncfile = self.storage.ncfile
-
-        # Make sure snapshots are stored and have an index and then add the snapshot index to the trajectory
-        var_name = 'order_parameter_' + self.name
-        indices = list(self.is_cached)
-        ncfile.variables[var_name][:,0] = np.array(self.cache)
-        ncfile.variables[var_name + '_idx'] = np.array(indices) 
-        
-        
-    def load(self):
-        '''
-        Restores the cache from the storage        
-        '''
-        var_name = 'order_parameter_' + self.name
-        self.cache = self.storage.ncfile.variables[var_name][:,0].astype(np.float).copy().as_list()
-        self.is_cached = set(self.storage.ncfile.variables[var_name + '_idx'].astype(np.int).copy().as_list())  
-
-class TrajectoryCache(Cache):
-    '''
-    A cache that is attached to trajectories stored in the Snapshot storage
-
-    Attributes
-    ----------
-    name : string
-        A short and unique name to be used in storage
-
-    Parameters
-    ----------
-    name : string
-        A short and unique name to be used in storage
-
-    '''
-    def __init__(self, name, fnc):
-
-        super(TrajectoryCache, self).__init__(fnc = fnc)        
-        self.name = name
-
-    def fill(self):
-        '''
-        Compute all distances for all snapshots to be used later using the cache. 
-        
-        Notes
-        -----
-        Make sure that all snapshots are saved. Otherwise we cannot cache them!        
-        '''
-
-        self[1:TrajectoryCache.load_number() + 1]
-
-
-    def _init_netcdf(self, storage):
-        '''
-        initializes the associated storage to save a specific order parameter in it.
-        
-        NEEDS implementation
-        '''           
-        # save associated storage in class variable for all Snapshot instances to access
-        
-#        ncgrp = storage.ncfile.createGroup('snapshot')
-        
-        self.storage = storage
-        ncgrp = storage.ncfile
-        
-        # define dimensions used in snapshots
-#        size_dimension = 'op_size_' + self.name
-#        ncgrp.createDimension(size_dimension, self.size)                       # unlimited number of snapshots
-        
-        # define variables for OrderParameters
-        var_name = 'order_parameter_' + self.name
-        ncvar_order_parameter          = ncgrp.createVariable(var_name, 'f', ('trajectory', 'scalar'))
-
-        # Define units for snapshot variables.
-        setattr(ncvar_order_parameter, 'units', 'None')
-        
-        # Define long (human-readable) names for variables.
-        setattr(ncvar_order_parameter,    "long_name", "orderparameter[trajectory][index] is the orderparameter of trajectory 'trajectory'.")
         
     def save(self):
         """
@@ -397,7 +316,7 @@ class OrderParameter(object):
         else:
             traj = snapshots
 
-        traj_indices = traj.indices()
+        traj_indices = traj.configurations()
         
         if self.use_cache:
             # pick all non-stored snapshots and compute these anyway without storage
@@ -502,7 +421,7 @@ class OP_RMSD_To_Lambda(OrderParameter):
     ################################################################################    
     
     def _eval_idx(self, indices):
-        return self._eval(Trajectory.from_indices(indices))
+        return self._eval(Trajectory(Configuration.get(indices)))
     
     def _eval(self, trajectory):
         ptraj = self.metric.prepare_trajectory(trajectory.subset(self.atom_indices).md())
@@ -548,6 +467,13 @@ class OP_Multi_RMSD(OrderParameter):
             self.metric = metric
         self._generator = self.metric.prepare_trajectory(centers.subset(self.atom_indices).md())  
         return 
+    
+    def _eval_idx(self, indices):
+        return self._eval(Trajectory(Configuration.get(indices)))
+    
+    def _eval(self, trajectory):
+        ptraj = self.metric.prepare_trajectory(trajectory.subset(self.atom_indices).md())
+        return [ self.metric.one_to_all(ptraj, self._generator, idx) for idx in range(0,len(ptraj)) ]
     
 if __name__ == '__main__':
     def ident(indices):

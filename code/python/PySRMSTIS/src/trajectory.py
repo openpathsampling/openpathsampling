@@ -93,10 +93,9 @@ class Trajectory(list):
         
         # We could easily indicate reversed momenta by using a minus sign in front of the index
         # this keeps everything the same and we do not need to resave the snapshots and a -idx just means take snapshot idx but invert momenta
-        #for frame in self:
-        #    frame.idx = -frame.idx
-            
-        # Alternatively we 
+
+        for frame in self:
+            frame.reversed = not frame.reversed
         
         return
     
@@ -137,7 +136,7 @@ class Trajectory(list):
 
         return len(self)
         
-    def indices(self):
+    def configurations(self):
         """
         Return a list of the snapshot IDs in the trajectory
         
@@ -150,7 +149,23 @@ class Trajectory(list):
         The IDs are only non-zero if the snapshots have been saved before!
         
         """
-        return [f.idx for f in self]
+        return [f.configuration.idx for f in self]
+
+    def momenta(self):
+        """
+        Return a list of the snapshot IDs in the trajectory
+        
+        Returns
+        -------        
+        indices (list of int) - the list of indices
+        
+        Notes
+        -----        
+        The IDs are only non-zero if the snapshots have been saved before!
+        
+        """
+        return [f.momenta.idx for f in self]
+
     
     @property
     def atoms(self):
@@ -388,11 +403,70 @@ class Trajectory(list):
         for frame_index in range(nframes):      
             frame = self[frame_index]         
             frame.save()
-            ncfile.variables['trajectory_idx'][idx,frame_index] = frame.idx         
+            ncfile.variables['trajectory_configuration_idx'][idx,frame_index] = frame.configuration.idx         
+            ncfile.variables['trajectory_momentum_idx'][idx,frame_index] = frame.momentum.idx                     
+            ncfile.variables['trajectory_momentum_reversed'][idx,frame_index] = frame.reversed                     
              
         ncfile.variables['trajectory_length'][idx] = nframes
                 
         return 
+
+    @staticmethod
+    def load_momentum_indices(idx):
+        '''
+        Load trajectory indices for trajectory with ID 'idx' from the storage
+        
+        ARGUMENTS
+        
+        idx (int) - ID of the trajectory
+        
+        Returns
+        -------        
+        trajectory (list of int) - trajectory indices
+        '''    
+        
+        
+        
+        length = Trajectory.load_length(idx)
+        return Trajectory.storage.ncfile.variables['trajectory_momentum_idx'][idx,:length]    
+
+    @staticmethod
+    def load_momentum_reversed(idx):
+        '''
+        Load trajectory with ID 'idx' from the storage and return a list of reversed indicators for the momenta
+        
+        Parameters
+        ----------
+        
+        idx : int
+            index of the trajectory
+        
+        Returns
+        -------        
+        list of boolean
+            list of boolean which frames in the trajectory are reversed
+        '''    
+                
+        length = Trajectory.load_length(idx)
+        return Trajectory.storage.ncfile.variables['trajectory_momentum_reversed'][idx,:length]    
+    
+    @staticmethod
+    def load_configuration_indices(idx):
+        '''
+        Load trajectory indices for trajectory with ID 'idx' from the storage
+        
+        ARGUMENTS
+        
+        idx (int) - ID of the trajectory
+        
+        Returns
+        -------        
+        trajectory (list of int) - trajectory indices
+        '''    
+        
+        
+        length = Trajectory.load_length(idx)
+        return Trajectory.storage.ncfile.variables['trajectory_configuration_idx'][idx,:length]    
 
     @staticmethod
     def load_indices(idx):
@@ -409,7 +483,8 @@ class Trajectory(list):
         '''    
         
         length = Trajectory.load_length(idx)
-        return Trajectory.storage.ncfile.variables['trajectory_idx'][idx,:length]
+        return (Trajectory.storage.ncfile.variables['trajectory_configuration_idx'][idx,:length],
+                   Trajectory.storage.ncfile.variables['trajectory_momentum_idx'][idx,:length])
 
     @staticmethod
     def load_length(idx):
@@ -443,18 +518,25 @@ class Trajectory(list):
         trajectory : Trajectory
             the trajectory
         '''        
-        frames = Trajectory.load_indices(idx)
-        return Trajectory.from_indices(frames)
+        frames_c = Trajectory.load_configuration_indices(idx)
+        frames_m = Trajectory.load_momentum_indices(idx)
+        reversed_m = Trajectory.load_momentum_reversed(idx)
+        frames_c, frames_m = Trajectory.load_indices(idx)
+        return Trajectory.from_indices(frames_c, frames_m, reversed_m)
 
     @staticmethod
-    def from_indices(frames):
+    def from_indices(frames_configuration, frames_momentum, momenta_reversed):
         '''
         Return a trajectory from the storage constructed from a list of snapshot indices
         
         Parameters
         ----------
-        frames : list of int
-            list of snapshot indices to be used to generate the trajectory
+        frames_configuration : list of int
+            list of configuration indices to be used to generate the trajectory
+        frames_momentum : list of int
+            list of momentum indices to be used to generate the trajectory
+        momentum_reversed : list of bool
+            list indicating if frames are reversed 
             
         Returns
         -------
@@ -462,10 +544,15 @@ class Trajectory(list):
             the trajectory
         '''
         trajectory = Trajectory()
-
-        for frame in frames:                
-            snapshot = Trajectory.storage.snapshot( frame )
-            trajectory.append(snapshot)
+        
+        if frames_momentum is not None:
+            for frame in zip(frames_configuration, frames_momentum, momenta_reversed):                
+                snapshot = Trajectory.storage.snapshot( frame[0], frame[1] , frame[2])
+                trajectory.append(snapshot)
+        else:
+            for frame in zip(frames_configuration, momenta_reversed):                
+                snapshot = Trajectory.storage.snapshot( frame[0], None , frame[2])
+                trajectory.append(snapshot)
         
         return trajectory
     
@@ -495,9 +582,9 @@ class Trajectory(list):
             the number of the next free index in the storage. Used to store a new snapshot.
         '''
         return Trajectory.load_number() + 1
-    
+
     @staticmethod
-    def load_all_indices():
+    def load_all_momentum_indices():
         '''
         Return a list of frame indices for all trajectories in the storage
         
@@ -506,7 +593,23 @@ class Trajectory(list):
         list : list of list of int
             a list of list of frame IDs for all trajectories.
         '''
-        ind = Trajectory.storage.ncfile.variables['trajectory_idx'][:,:].astype(np.int32).copy()
+        ind = Trajectory.storage.ncfile.variables['trajectory_momentum_idx'][:,:].astype(np.int32).copy()
+        lengths = Trajectory.storage.ncfile.variables['trajectory_length'][:].astype(np.int32).copy()
+        n_traj = Trajectory.load_number()
+        
+        return [ ind[i,:lengths[i]] for i in range(1,n_traj + 1) ]    
+    
+    @staticmethod
+    def load_all_configuration_indices():
+        '''
+        Return a list of frame indices for all trajectories in the storage
+        
+        Returns
+        -------        
+        list : list of list of int
+            a list of list of frame IDs for all trajectories.
+        '''
+        ind = Trajectory.storage.ncfile.variables['trajectory_configuration_idx'][:,:].astype(np.int32).copy()
         lengths = Trajectory.storage.ncfile.variables['trajectory_length'][:].astype(np.int32).copy()
         n_traj = Trajectory.load_number()
         
@@ -538,17 +641,19 @@ class Trajectory(list):
         ncfile.createDimension('max_frames', nframes)     # number of maximal frames per trajectory
 
         # Create variables for trajectories        
-        ncvar_trajectory_idx                = ncfile.createVariable('trajectory_idx', 'u4', ('trajectory','max_frames'))
-        ncvar_trajectory_length             = ncfile.createVariable('trajectory_length', 'u4', ('trajectory'))
-        ncvar_trajectory_inversion          = ncfile.createVariable('trajectory_inverted', 'u4', ('trajectory'))
+        ncvar_trajectory_configuration_idx  = ncfile.createVariable('trajectory_configuration_idx', 'u4', ('trajectory','max_frames'))
+        ncvar_trajectory_momentum_idx       = ncfile.createVariable('trajectory_momentum_idx', 'u4', ('trajectory','max_frames'))
+        ncvar_trajectory_momentum_reversed  = ncfile.createVariable('trajectory_momentum_reversed', 'b', ('trajectory', 'max_frames'))
         ncvar_trajectory_path_hamiltonian   = ncfile.createVariable('trajectory_path_hamiltonians', 'f', ('trajectory'))
-
+        ncvar_trajectory_length             = ncfile.createVariable('trajectory_length', 'u4', ('trajectory'))
 
         # Define units for snapshot variables.
         setattr(ncvar_trajectory_path_hamiltonian,      'units', 'none')
-        setattr(ncvar_trajectory_idx,                   'units', 'none')
+        setattr(ncvar_trajectory_configuration_idx,     'units', 'none')
+        setattr(ncvar_trajectory_momentum_idx,          'units', 'none')
         setattr(ncvar_trajectory_length,                'units', 'none')
-        setattr(ncvar_trajectory_inversion,             'units', 'none')
+        setattr(ncvar_trajectory_momentum_reversed,     'units', 'none')
         
         # Define long (human-readable) names for variables.
-        setattr(ncvar_trajectory_idx,    "long_name", "trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.")
+        setattr(ncvar_trajectory_configuration_idx,    "long_name", "trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.")
+        setattr(ncvar_trajectory_momentum_idx,         "long_name", "trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.")

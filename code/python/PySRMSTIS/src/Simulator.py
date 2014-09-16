@@ -6,10 +6,7 @@ Created on 01.07.2014
 '''
 
 
-from sys import stdout
-
 import numpy as np
-
 import time
 
 from simtk.openmm.app import *
@@ -94,8 +91,9 @@ class Simulator(object):
             self.simulation.context.setPositions(snapshot.coordinates)
             trajectory.append(snapshot)
             
-            # Assign velocities from Maxwell-Boltzmann distribution            
-            self.simulation.context.setVelocitiesToTemperature(self.temperature)
+            # Assign velocities from Maxwell-Boltzmann distribution          
+            self.simulation.context.setVelocities(snapshot.velocities)
+#            self.simulation.context.setVelocitiesToTemperature(self.temperature)
         
             # Propagate dynamics by velocity Verlet.            
             frame = 0
@@ -127,7 +125,7 @@ class Simulator(object):
                     print self.max_length_stopper, self.max_length_stopper(trajectory)
                     print frame
                     print len(trajectory)
-#                    print [ s.idx for s in trajectory]
+                    print [ s.idx for s in trajectory]
                     
                     print 'OP :', self.op(snapshot)
                 
@@ -164,7 +162,7 @@ class Simulator(object):
             self._set_alanine_options()
             self._create_OpenMMSimulation()
             
-            self.system_serial = openmm.XmlSerializer.serialize(self.system)
+#            self.system_serial = openmm.XmlSerializer.serialize(self.system)
             
             self._equilibrate_system()
             
@@ -180,7 +178,7 @@ class Simulator(object):
             
             # save initial equilibrated frame as snapshot ID #0. Might be useful later, who knows
             snapshot = Snapshot(self.simulation.context)
-            snapshot.save(0)
+            snapshot.save(0,0)
         
         if mode == 'restore':
             # Need the oposite order, first open database 
@@ -222,7 +220,9 @@ class Simulator(object):
                                  'fn_storage',
                                  'platform',
                                  'topology',
-                                 'solute_indices'
+                                 'solute_indices',
+                                 'system_serial',
+                                 'integrator_serial'
                                  ]
         
         self.temperature = 300.0 * kelvin                       # temperature
@@ -271,10 +271,10 @@ class Simulator(object):
         self.system_serial = openmm.XmlSerializer.serialize(system)
         self.integrator_serial = openmm.XmlSerializer.serialize(integrator)
         
-        print self.system_serial
+#        print self.system_serial
                 
         # This could be moved to initialization since it will not change
-        self.max_length_stopper = LengthEnsemble(self.n_frames_max - 1)        
+        self.max_length_stopper = LengthEnsemble(slice(0,self.n_frames_max - 1))        
                                 
         self.simulation = simulation
                 
@@ -288,8 +288,6 @@ class Simulator(object):
         #=============================================================================================
 
         self.simulation.context.setPositions(self.pdb.positions)
-
-        print "Equilibration"
         
         system = self.simulation.system
         simulation = self.simulation
