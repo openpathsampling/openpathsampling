@@ -59,7 +59,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'OpenTIS'
-copyright = u'2014, Jan-Hendrik Prinz, John Chodera, David Swensen, Peter Bolhuis'
+copyright = u'2014, Jan-Hendrik Prinz, John Chodera, David W.H. Swenson, Peter Bolhuis'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -222,7 +222,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
   ('index', 'OpenTIS.tex', u'OpenTIS Documentation',
-   u'Jan-Hendrik Prinz, John Chodera, David Swensen, Peter Bolhuis', 'manual'),
+   u'Jan-Hendrik Prinz, John Chodera, David W.H. Swenson, Peter Bolhuis', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -252,7 +252,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'opentis', u'OpenTIS Documentation',
-     [u'Jan-Hendrik Prinz, John Chodera, David Swensen, Peter Bolhuis'], 1)
+     [u'Jan-Hendrik Prinz, John Chodera, David W.H. Swenson, Peter Bolhuis'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -266,7 +266,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'OpenTIS', u'OpenTIS Documentation',
-   u'Jan-Hendrik Prinz, John Chodera, David Swensen, Peter Bolhuis', 'OpenTIS', 'One line description of project.',
+   u'Jan-Hendrik Prinz, John Chodera, David W.H. Swenson, Peter Bolhuis', 'OpenTIS', 'One line description of project.',
    'Miscellaneous'),
 ]
 
