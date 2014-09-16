@@ -287,12 +287,18 @@ class Simulator(object):
         # Dirty Equilibration using NVT and Alanine constraint
         #=============================================================================================
 
+<<<<<<< HEAD:code/python/PySRMSTIS/src/simulator.py
+=======
         self.simulation.context.setPositions(self.pdb.positions)
+>>>>>>> dev_storage:code/python/PySRMSTIS/src/Simulator.py
 
         print "Equilibration"
         
         system = self.simulation.system
         simulation = self.simulation
+
+        simulation.context.setPositions(self.pdb.positions)
+
                 
         nequib_steps = 5 #number of nvt equilibration steps with position constraints on Alanine
         Alanine_atoms = 22

@@ -21,11 +21,15 @@ from pymbar import MBAR
 from snapshot import Snapshot
 
 if __name__ == '__main__':
+<<<<<<< HEAD
+    simulator = Simulator.Alanine_system('create')
+=======
     simulator = Simulator.Alanine_system('restore')
     PathMover.simulator = simulator
 
     print "Currently", simulator.storage.number_of_trajectories(), "simulations in the storage"
     print "Currently", simulator.storage.number_of_snapshots(), "total frames in the storage"
+>>>>>>> dev_storage
 
 
     if simulator.storage.number_of_trajectories() == 0:        
