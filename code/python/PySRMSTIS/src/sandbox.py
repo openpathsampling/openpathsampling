@@ -1,7 +1,7 @@
 '''
 Created on 08.07.2014
 
-@author: jan-hendrikprinz
+@author: Jan-Hendrik Prinz
 '''
 
 import numpy as np
@@ -16,37 +16,33 @@ import time
 from pathmover import ForwardShootMover, BackwardShootMover, PathMover, MixedMover
 from shooting import UniformSelector
 from ensemble import LengthEnsemble, InXEnsemble, OutXEnsemble
-
+from trajectory import Trajectory
 from pymbar import MBAR
 from snapshot import Snapshot
 
 if __name__ == '__main__':
-<<<<<<< HEAD
-    simulator = Simulator.Alanine_system('create')
-=======
     simulator = Simulator.Alanine_system('restore')
     PathMover.simulator = simulator
 
     print "Currently", simulator.storage.number_of_trajectories(), "simulations in the storage"
-    print "Currently", simulator.storage.number_of_snapshots(), "total frames in the storage"
->>>>>>> dev_storage
-
+    print "Currently", simulator.storage.number_of_configurations(), "total frames in the storage"
 
     if simulator.storage.number_of_trajectories() == 0:        
         # load initial equilibrate snapshot given by ID #0
-        snapshot = simulator.storage.snapshot(0)    
+        snapshot = Snapshot.load(0,0)    
         
         # generate from this snapshot a trajectory with 50 steps
-        traj = simulator.generate(snapshot, 50)
+        traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,50))])
+        print len(traj)
         traj.save()
         
         # Save as Multi-Frame pdb  (only alanine, no water !)  
         traj.solute.md().save_pdb('data/mdtraj.pdb', True)    
         
     if True:        
-        cc = simulator.storage.trajectory(1)[ 0 ]
+        cc = Trajectory.load(1)[ 0 ]
         op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices)
-        dd = simulator.storage.trajectory(1)[ 0:1000 ]
+        dd = simulator.storage.trajectory(1)[ 0:50 ]
     #    op.cache.fill()
     
     #    print op(dd)
@@ -70,7 +66,6 @@ if __name__ == '__main__':
         # This is to cache the values for all snapshots in tt. Makes later access MUCH faster. 
         # Especially because the frames do not have to be read one by one.
         op(tt)
-        
         # print tis
 #        print [ s.idx for s in tt]
 #        print [ (lV(d)) for d in tt ]
@@ -80,7 +75,7 @@ if __name__ == '__main__':
         # be true in the next step. This should be passed to the pathmover to stop simulating for a particular ensemble
 
         vn = VoronoiVolume(
-                OP_Multi_RMSD('Voronoi', tt[[0,1]], atom_indices=simulator.solute_indices),
+                OP_Multi_RMSD('Voronoi', tt[[0,10]], atom_indices=simulator.solute_indices),
                 state = 0
                 )
 
@@ -93,7 +88,6 @@ if __name__ == '__main__':
         for l in range(0,tt.frames + 0):
             print tis.forward(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
             
-        exit()
         print op(tt[0])
         s = Snapshot(coordinates = tt[0].coordinates)
         print op(s)
