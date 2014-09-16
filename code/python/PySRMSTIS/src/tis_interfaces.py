@@ -128,7 +128,7 @@ class TISInterfaces(object):
         return c != -1 and i != -1       # hit a core
     
     def within_interface(self, idx):
-        def stopper(snapshot):
+        def ensemble(snapshot):
             c, i, d = self.assign_snapshot(snapshot)
             return c != -1 and i == idx      # hit a core
         
@@ -154,12 +154,12 @@ class TISInterfaces(object):
                 first = snapshot
             elif (i[index] != 0  and first is not None):
                 # in void
-                t.append(snapshot)
+                t.forward(snapshot)
                 traj_mode = 1                
             elif (c[index] != -1 and i[index]==0 and traj_mode == 1):
                 t.insert(0, first)
-                t.append(snapshot)
-                l_traj.append(t)
+                t.forward(snapshot)
+                l_traj.forward(t)
                 t = Trajectory()
                 first = snapshot
                 traj_mode = 0
@@ -178,12 +178,12 @@ class TISInterfaces(object):
                 first = index
             elif (i[index] != 0  and first is not None):
                 # in void
-                t.append(indices[index])
+                t.forward(indices[index])
                 traj_mode = 1                
             elif (c[index] != -1 and i[index]==0 and traj_mode == 1):
                 t.insert(0, first)
-                t.append(indices[index])
-                l_traj.append(t)
+                t.forward(indices[index])
+                l_traj.forward(t)
                 t = Trajectory()
                 first = indices[index]
                 traj_mode = 0
@@ -257,7 +257,7 @@ class TISInterfaces(object):
             for connection in connectors:
                 f, l, m, k = self._get_TIS_Info_from_connection(connection)
                 if (f == first and l == last):
-                    ret.append(m)
+                    ret.forward(m)
                 
         return np.array(ret)
     
@@ -271,9 +271,7 @@ class TISInterfaces(object):
         
         mbar = np.zeros((n_interfaces, n_interfaces, n_trajectories), dtype='float')
         num = -1.0 * np.ones(n_interfaces, dtype='int')
-        
-        print(maxlist)
-        
+                
         for mface in range(1,n_interfaces+1):
             n_max = maxlist[maxlist == mface].shape[0]
             mbar[mface - 1, mface:n_interfaces+1, 0:n_max] = infinite_energy
@@ -284,3 +282,75 @@ class TISInterfaces(object):
         mbar = mbar[:,:,0:int(np.max(num))]
         
         return mbar, num
+    
+# Store interface definitions -> might go to a class like collective variable or lambda definition
+# This might be very specific
+
+class TISInterface(object):
+    def __init__(self):
+        self.iface_set = -1
+        self.allowed_initial_state = [ 1 ]
+        self.allowed_final_state = [ 1, 2 ]
+        self.lambda_j = 0.0
+        self.order_param = None
+    
+    def hbar(self, path, state):
+        '''Calculates \\bar{h} from TIS: basically, whether this path is
+        ever in a state except at the endpoints (0 if it is, 1 if it is
+        not)'''
+        hbar = 1
+        for frame in path[1:-2]:
+            hbar = hbar * state.inState(frame,path)
+        return hbar
+
+    def hhat_frame(self, frame, path, state):
+        '''This tests whether a given frame is across the interface (the
+        default is quite trivial, but there can be complicated examples in
+        subclasses)'''
+        if (self.order_param(frame) > self.lambda_j):
+            return 1
+        else:
+            return 0
+
+    def indicator(self, path, state):
+        '''This is the practical indicator function -- assuming other moves
+        behave consistently, this should be enough to test'''
+        init_state = state.inState[path[0]]
+        final_state = state.inState[path[-1]]
+        h_I = 1 if init_state in allowed_initial_state else 0
+        h_J = 1 if final_state in allowed_final_state else 0
+        hhat = 1 if path.max_lambda > self.lambda_j else 0
+        # this hhat is technically a test of whether any frame gives
+        # hhat_frame==1; in the simple example of a single order parameter
+        # this is easiest
+        return h_I*h_J*hhat
+
+    def full_indicator(self, path, state):
+        '''Under most situations, you trust that the path generation (i.e.,
+        shooting moves) generate paths that satisfy most certain aspects of
+        the ensemble. full_indicator checks whether that holds.'''
+        return self.indicator(path,state)*self.hbar(path,state)
+
+
+class MultiStateInterface(TISInterface):
+    
+    def __init__(self):
+        pass
+
+    def indicator(self, path, state):
+        pass
+
+
+class MultipleSetMinusInterface(TISInterface):
+    def __init__(self):
+        pass
+
+    def hhat_frame(self, frame, path, state):
+        pass
+
+    def indicator(self, path, state):
+        pass
+
+    def full_indicator(self, path, state):
+        pass
+

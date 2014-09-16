@@ -54,9 +54,22 @@
 - 1 state. Compute Mean First Passage Time from Center to state x and use this to define states of a specific time distance to identify states.
 - 2+ states. Compute Multi-state Committor and use a percentile based way (no timescales are included anymore!)
 
+<<<<<<< HEAD
 ### Ideas for the storage system
 It turns out that the storage actually should only contain the opening and closing of the netCDF file. Write some Version settings, etc and provide functions to convert python objects into storable strings and back. All classes that want to be able to be saved should register with the storage and then the storage gets initialized and calls all functions in (the correct) order. E.g. Trajectory needs to know about Snapshots and load and save these, but not the other way round. 
 
 We could say that the whole project has a storage with a filename. Then we tell all parts to register with the storage. Then we can either restore from or create a new netCDF file. The netCDF file also knows what parts have been saved. These could all be separate groups. This way we can also easily access only parts of it.
 
 Is this too complicated?
+=======
+### 
+
+### Classes
+ShootingPointPicker : A scheme to pick a shooting point from a trajectory
+PathMover : Takes a path and changes it according to its moving pattern and a ShootingPointPicker
+Interface : A closed subset in configuration space, can be a typical TIS Interface using an order parameter or a Voronoi-based region 
+PathEnsembleSet : Defines a set of path ensembles that can then be samples using a Sampling scheme
+PathEnsembleSampling : Samples from the set of PathEnsembles using a set of PathMovers
+OrderParameter : A projection from configuration space to a real-valued number
+NetCDFStorage : A netCDF file that can store information for Python objects of specific types
+>>>>>>> dev_storage

@@ -8,14 +8,29 @@ import numpy as np
 
 from tis_interfaces import TISInterfaces
 from transition_interface_sampling import TransitionInterfaceSampling
-from simulator import Simulator
+from Simulator import Simulator
+from orderparameter import OP_RMSD_To_Lambda, OP_Multi_RMSD
+from volume import LambdaVolume, VoronoiVolume
+from ensemble import EnsembleFactory as ef
+import time
+from pathmover import ForwardShootMover, BackwardShootMover, PathMover, MixedMover
+from shooting import UniformSelector
+from ensemble import LengthEnsemble, InXEnsemble, OutXEnsemble
 
 from pymbar import MBAR
+from snapshot import Snapshot
 
 if __name__ == '__main__':
+<<<<<<< HEAD
     simulator = Simulator.Alanine_system('create')
+=======
+    simulator = Simulator.Alanine_system('restore')
+    PathMover.simulator = simulator
 
-    print "Currently ", simulator.storage.number_of_trajectories(), " simulations in the storage"
+    print "Currently", simulator.storage.number_of_trajectories(), "simulations in the storage"
+    print "Currently", simulator.storage.number_of_snapshots(), "total frames in the storage"
+>>>>>>> dev_storage
+
 
     if simulator.storage.number_of_trajectories() == 0:        
         # load initial equilibrate snapshot given by ID #0
@@ -27,11 +42,130 @@ if __name__ == '__main__':
         
         # Save as Multi-Frame pdb  (only alanine, no water !)  
         traj.solute.md().save_pdb('data/mdtraj.pdb', True)    
+        
+    if True:        
+        cc = simulator.storage.trajectory(1)[ 0 ]
+        op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices)
+        dd = simulator.storage.trajectory(1)[ 0:1000 ]
+    #    op.cache.fill()
+    
+    #    print op(dd)
+        
+        lV = LambdaVolume(op, 0.0, 0.06)
+        lV2 = LambdaVolume(op, 0.0, 0.08)
+        start_time = time.time()
+        
+#        print time.time() - start_time
+    
+        # if this uses the same orderparameter it is fast, since the values are cached!
+        tis = ef.TISEnsemble(
+                       LambdaVolume(op, 0.0, 0.06),
+                       LambdaVolume(op, 0.0, 0.06),
+                       LambdaVolume(op, 0.0, 0.08),
+                       True
+                       )
+        
+        tt = simulator.storage.trajectory(1)[4:18]
+        
+        # This is to cache the values for all snapshots in tt. Makes later access MUCH faster. 
+        # Especially because the frames do not have to be read one by one.
+        op(tt)
+        
+        # print tis
+#        print [ s.idx for s in tt]
+#        print [ (lV(d)) for d in tt ]
+#        print [ (op(d)) for d in tt ]
+        
+        # This tests, if the iteration request works. It basically return True if it makes sense to simulate or if the ensemble cannot
+        # be true in the next step. This should be passed to the pathmover to stop simulating for a particular ensemble
+
+        vn = VoronoiVolume(
+                OP_Multi_RMSD('Voronoi', tt[[0,1]], atom_indices=simulator.solute_indices),
+                state = 0
+                )
+
+        
+        print "Iteration test"
+        for l in range(0,tt.frames + 0):
+            print tis.forward(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
+
+        print "Iteration test"
+        for l in range(0,tt.frames + 0):
+            print tis.forward(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
+            
+        exit()
+        print op(tt[0])
+        s = Snapshot(coordinates = tt[0].coordinates)
+        print op(s)
+        s.idx = 0
+        print op(s)
+        
+                           
+        
+        
+                
+    
+        # Check if the trajectory goes from lambda < 0.06 to lambda >0.08 and back    
+        print 'In ensemble'
+        print tis(tt)
+        
+        en = ef.A2BEnsemble(lV, lV, True)
+        print en(tt)
+
+        en = InXEnsemble(lV, 0)
+        print en(tt)
+
+        en = InXEnsemble(lV, -1)
+        print en(tt)
+
+        en = OutXEnsemble(lV, slice(1,-1), lazy = False)
+        print en(tt)
+        
+#        Simulator.op = op
+        
+        bm = BackwardShootMover(
+                selector = UniformSelector(),
+                ensemble = tis
+                )
+
+        fm = ForwardShootMover(
+                selector = UniformSelector(),
+                ensemble = tis
+                )
+
+        pm = MixedMover([bm, fm])
+        
+        pm.move(tt)
+        print 'ensemble Check :', pm.ensemble(tt)
+        
+        print pm.ensemble(pm.final)
+        print 'Accepted : ', pm.accepted
+        print len(pm.final)
+        
+        print 'Next Check:'
+        
+        
+        en = ef.A2BEnsemble(lV, lV, True)
+        print en(pm.final)
+
+        en = InXEnsemble(lV, 0)
+        print en(pm.final)
+
+        en = InXEnsemble(lV, -1)
+        print en(pm.final)
+
+        en = OutXEnsemble(lV, slice(1,-1), lazy = False)
+        print en(pm.final)
+        
+        
+        
+        exit()
+
            
 #    print "Clustering"
 
 #    msm = VoronoiTesselation()
-#    msm.storage = simulator.storage
+#    msm.storage = Simulator.storage
 #    msm.n_centers = 10
 #    msm.atom_indices = atom_indices
 
@@ -41,7 +175,7 @@ if __name__ == '__main__':
 #    msm.assign_storage()
     
 #    print msm.assign_all_trajectories()
-    
+        
     print "Interfaces"    
     # Create Interaces around first and last frame of the first trajectory and use only solute coordinates
     
@@ -52,11 +186,23 @@ if __name__ == '__main__':
     tis.create_rmsd_metric()
 
     tis.assign_storage()
+    
+    initial = tis.split_into_connections(simulator.storage.last_trajectory())
+    
+    sampling = TransitionInterfaceSampling(simulator, tis)
+    old = initial[0]
+    
+    for i in range(10):
+        new = sampling.sampleTrajectory(old)
+        new.save()
+             
+        old = new    
 
 #    mat = tis.compute_N_IJ_l_kI()
 #    print mat
+
     
-    if simulator.storage.number_of_trajectories() > 50:  
+    if simulator.storage.number_of_trajectories() > 100:  
         u_kln, N_k = tis.compute_mbar_array(0, 0, infinite_energy = 1e5)
             
         mbar = MBAR(u_kln, N_k, method = 'adaptive', relative_tolerance=1.0e-10, verbose=False)
@@ -85,7 +231,7 @@ if __name__ == '__main__':
                     
         print np.sum(weights,axis=0)
                        
-#    simulator.storage.ncfile.close()
+#    Simulator.storage.ncfile.close()
 #    exit()
  
 #    print tis.cores
@@ -101,7 +247,7 @@ if __name__ == '__main__':
 
 #    print tis.assign_snapshot(traj[10])
     
-#    traj_test = simulator.generate(traj[15], 200, stopping = tis.within_interface(4) )
+#    traj_test = Simulator.generate(traj[15], 200, stopping = tis.within_interface(4) )
 #    traj_test.save()
 #    tis.assign_storage()
 
@@ -111,6 +257,12 @@ if __name__ == '__main__':
 #    tis.assign_all_trajectories()
 
 #    print tis.assign_all_trajectories()
+
+    for l in range(1,simulator.storage.number_of_trajectories()+1):
+        traj = simulator.storage.trajectory(l)
+
+    print "Last"
+    ltraj = simulator.storage.last_trajectory()
 
     initial = tis.split_into_connections(simulator.storage.last_trajectory())
     
