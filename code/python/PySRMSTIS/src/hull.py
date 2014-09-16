@@ -1,6 +1,8 @@
-'''
+""" Module for generating cluster center based interfaces from Delaunay
+triangulation. Only contains fully independent objects.
+
 @author David W.H. Swenson
-'''
+"""
 import scipy.spatial as qhull
 import numpy as np
 
@@ -12,6 +14,8 @@ class Edge(object):
     make the edge, and Edge.simplices gives a list of simplex numbers which
     share the edge.
     '''
+    # TODO: this should probably be replaced by a dictionary -- no need for
+    # the extra code here
     def __init__(self, edge, simplices):
         ''' Obvious initialization.  '''
         self.edge = edge
@@ -29,6 +33,18 @@ class Hull(object):
         Initialization. If dist_test and autopt are defined, and if autogen
         is true, then the initizaliation will also generate the hull
         according to the algorithm in generate_hull().
+
+        Parameters
+        ----------
+        vertices : list (of int)
+            The vertices of the triangulation (cluster centers for CCBIs).
+        dist_test : object, optional
+            Distance test.
+        initpt : list (of floats), optional
+            A point which is known to be in the region of primary interest.
+        autogen : bool
+            Whether or not to generate the hull on initialization. Only
+            valid if all `dist_test` and `initpt` are given.
         '''
         self.vertices = np.array(vertices)
         self.initpt = initpt

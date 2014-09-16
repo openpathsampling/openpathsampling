@@ -8,10 +8,10 @@ from volume import Volume
 class HullVolume(Volume):
     '''Defines a Volume based on a Hull object.
 
-    Parameters
+    Attributes
     ----------
     hull : Hull
-        a hull object 
+        a hull object
     orderparameter : orderparameter
         object that takes a system and return a point in the space within
         which the hull is defined
@@ -26,7 +26,18 @@ class HullVolume(Volume):
         self.orderparameter = orderparameter
 
     def cell(self, snapshot):
-        '''Returns the simplex number for the snapshot'''
+        '''Returns the simplex number for the snapshot
+        
+        Parameters
+        ----------
+        snapshot : Snapshot
+            the snapshot to test
+
+        Returns
+        -------
+        int
+            the number of the simplex (in the order used in the hull)
+        '''
         return self.hull.find_simplex(self.orderparameter(snapshot))
 
     def __call__(self, snapshot):
@@ -41,7 +52,7 @@ class HullVolume(Volume):
         Returns
         -------
         bool
-            return `True` if snapshot is within the hull
+            `True` if snapshot is within the hull
         '''
         # with enough simplices, a lookup table is_in_volume[simplex] would
         # be faster here, but this'll do the job
