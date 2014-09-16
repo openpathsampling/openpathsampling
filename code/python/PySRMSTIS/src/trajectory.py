@@ -430,6 +430,25 @@ class Trajectory(list):
         length = Trajectory.load_length(idx)
         return Trajectory.storage.ncfile.variables['trajectory_momentum_idx'][idx,:length]    
 
+    @staticmethod
+    def load_momentum_reversed(idx):
+        '''
+        Load trajectory with ID 'idx' from the storage and return a list of reversed indicators for the momenta
+        
+        Parameters
+        ----------
+        
+        idx : int
+            index of the trajectory
+        
+        Returns
+        -------        
+        list of boolean
+            list of boolean which frames in the trajectory are reversed
+        '''    
+                
+        length = Trajectory.load_length(idx)
+        return Trajectory.storage.ncfile.variables['trajectory_momentum_reversed'][idx,:length]    
     
     @staticmethod
     def load_configuration_indices(idx):
@@ -444,7 +463,6 @@ class Trajectory(list):
         -------        
         trajectory (list of int) - trajectory indices
         '''    
-        
         
         
         length = Trajectory.load_length(idx)
@@ -500,18 +518,25 @@ class Trajectory(list):
         trajectory : Trajectory
             the trajectory
         '''        
+        frames_c = Trajectory.load_configuration_indices(idx)
+        frames_m = Trajectory.load_momentum_indices(idx)
+        reversed_m = Trajectory.load_momentum_reversed(idx)
         frames_c, frames_m = Trajectory.load_indices(idx)
-        return Trajectory.from_indices(frames_c, frames_m)
+        return Trajectory.from_indices(frames_c, frames_m, reversed_m)
 
     @staticmethod
-    def from_indices(frames_configuration, frames_momentum):
+    def from_indices(frames_configuration, frames_momentum, momenta_reversed):
         '''
         Return a trajectory from the storage constructed from a list of snapshot indices
         
         Parameters
         ----------
-        frames : list of int
-            list of snapshot indices to be used to generate the trajectory
+        frames_configuration : list of int
+            list of configuration indices to be used to generate the trajectory
+        frames_momentum : list of int
+            list of momentum indices to be used to generate the trajectory
+        momentum_reversed : list of bool
+            list indicating if frames are reversed 
             
         Returns
         -------
@@ -519,10 +544,15 @@ class Trajectory(list):
             the trajectory
         '''
         trajectory = Trajectory()
-
-        for frame in zip(frames_configuration, frames_momentum):                
-            snapshot = Trajectory.storage.snapshot( frame[0], frame[1] )
-            trajectory.append(snapshot)
+        
+        if frames_momentum is not None:
+            for frame in zip(frames_configuration, frames_momentum, momenta_reversed):                
+                snapshot = Trajectory.storage.snapshot( frame[0], frame[1] , frame[2])
+                trajectory.append(snapshot)
+        else:
+            for frame in zip(frames_configuration, momenta_reversed):                
+                snapshot = Trajectory.storage.snapshot( frame[0], None , frame[2])
+                trajectory.append(snapshot)
         
         return trajectory
     

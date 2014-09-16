@@ -21,12 +21,11 @@ from pymbar import MBAR
 from snapshot import Snapshot
 
 if __name__ == '__main__':
-    simulator = Simulator.Alanine_system('create')
+    simulator = Simulator.Alanine_system('restore')
     PathMover.simulator = simulator
 
     print "Currently", simulator.storage.number_of_trajectories(), "simulations in the storage"
     print "Currently", simulator.storage.number_of_configurations(), "total frames in the storage"
-
 
     if simulator.storage.number_of_trajectories() == 0:        
         # load initial equilibrate snapshot given by ID #0

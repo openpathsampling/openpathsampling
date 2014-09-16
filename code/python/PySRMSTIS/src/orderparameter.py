@@ -4,7 +4,7 @@
 
 from msmbuilder.metrics import RMSD
 from trajectory import Trajectory
-from snapshot import Configuration, Snapshot, Momentum
+from snapshot import Snapshot, Configuration
 import numpy as np
 
 class Cache(object):
@@ -125,7 +125,7 @@ class Cache(object):
                 
         return ret
     
-class StorageCache(Cache):
+class SnapshotCache(Cache):
     '''
     A cache that is attached to snapshot indices store in the Snapshot storage
 
@@ -142,7 +142,7 @@ class StorageCache(Cache):
     '''
     def __init__(self, name, fnc):
 
-        super(ConfigurationCache, self).__init__(fnc = fnc)
+        super(SnapshotCache, self).__init__(fnc = fnc)
         
         self.name = name
 
@@ -155,7 +155,8 @@ class StorageCache(Cache):
         Make sure that all snapshots are saved. Otherwise we cannot cache them!        
         '''
 
-        pass
+        self[1:Configuration.load_number() + 1]
+
 
     def _init_netcdf(self, storage):
         '''
@@ -209,95 +210,6 @@ class StorageCache(Cache):
         var_name = 'order_parameter_' + self.name
         self.cache = self.storage.ncfile.variables[var_name][:,0].astype(np.float).copy().as_list()
         self.is_cached = set(self.storage.ncfile.variables[var_name + '_idx'].astype(np.int).copy().as_list())  
-    
-class ConfigurationCache(StorageCache):
-    '''
-    A cache that is attached to snapshot indices store in the Snapshot storage
-
-    Attributes
-    ----------
-    name : string
-        A short and unique name to be used in storage
-
-    Parameters
-    ----------
-    name : string
-        A short and unique name to be used in storage
-
-    '''
-    def fill(self):
-        '''
-        Compute all distances for all snapshots to be used later using the cache. 
-        
-        Notes
-        -----        
-        Make sure that all snapshots are saved. Otherwise we cannot cache them!        
-        '''
-
-        self[1:Configuration.load_number() + 1]
-
-    def _eval_idx(self, indices):
-        return self._eval(Trajectory(Configuration.get(indices)))
-    
-class MomentumCache(StorageCache):
-    '''
-    A cache that is attached to snapshot indices store in the Snapshot storage
-
-    Attributes
-    ----------
-    name : string
-        A short and unique name to be used in storage
-
-    Parameters
-    ----------
-    name : string
-        A short and unique name to be used in storage
-
-    '''
-    def fill(self):
-        '''
-        Compute all distances for all snapshots to be used later using the cache. 
-        
-        Notes
-        -----        
-        Make sure that all snapshots are saved. Otherwise we cannot cache them!        
-        '''
-
-        self[1:Configuration.load_number() + 1]
-
-    def _eval_idx(self, indices):
-        return self._eval(Trajectory(Momentum.get(indices)))
-
-
-class TrajectoryCache(StorageCache):
-    '''
-    A cache that is attached to trajectories stored in the Snapshot storage
-
-    Attributes
-    ----------
-    name : string
-        A short and unique name to be used in storage
-
-    Parameters
-    ----------
-    name : string
-        A short and unique name to be used in storage
-
-    '''
-    def fill(self):
-        '''
-        Compute all distances for all snapshots to be used later using the cache. 
-        
-        Notes
-        -----
-        Make sure that all snapshots are saved. Otherwise we cannot cache them!        
-        '''
-
-        self[1:TrajectoryCache.load_number() + 1]
-
-    def _eval_idx(self, indices):
-        return self._eval([Trajectory.load(idx) for idx in indices])
-
 
 class OrderParameter(object):
     '''
@@ -320,7 +232,7 @@ class OrderParameter(object):
     size : int
         The number of dimensions of the output order parameter. So far this is not used and will be necessary
         or useful when storage is available
-    cache : ConfigurationCache
+    cache : SnapshotCache
         A cache object that holds all the values.
         
     Notes
@@ -342,7 +254,7 @@ class OrderParameter(object):
         self.size = 1
         
         if self.use_cache:
-            self.cache = ConfigurationCache(name = self.name, fnc = self._eval_idx)
+            self.cache = SnapshotCache(name = self.name, fnc = self._eval_idx)
         else:
             self.cache = None
             
@@ -507,7 +419,10 @@ class OP_RMSD_To_Lambda(OrderParameter):
     ################################################################################
     ##  Actual computation of closest point using RMSD
     ################################################################################    
-        
+    
+    def _eval_idx(self, indices):
+        return self._eval(Trajectory(Configuration.get(indices)))
+    
     def _eval(self, trajectory):
         ptraj = self.metric.prepare_trajectory(trajectory.subset(self.atom_indices).md())
         results = self.metric.one_to_all(self._generator, ptraj, 0)
@@ -541,7 +456,7 @@ class OP_Multi_RMSD(OrderParameter):
         super(OP_Multi_RMSD, self).__init__(name)
                 
         self.atom_indices = atom_indices
-        self.centers = centers
+        self.center = centers
         
         self.size = len(centers)
                 
@@ -559,7 +474,6 @@ class OP_Multi_RMSD(OrderParameter):
     def _eval(self, trajectory):
         ptraj = self.metric.prepare_trajectory(trajectory.subset(self.atom_indices).md())
         return [ self.metric.one_to_all(ptraj, self._generator, idx) for idx in range(0,len(ptraj)) ]
-                
     
 if __name__ == '__main__':
     def ident(indices):
@@ -568,7 +482,7 @@ if __name__ == '__main__':
         else:
             return float(indices)
         
-    s = ConfigurationCache(name = 'TestList', fnc = ident)
+    s = SnapshotCache(name = 'TestList', fnc = ident)
     
     print s[10]
     print s[5]

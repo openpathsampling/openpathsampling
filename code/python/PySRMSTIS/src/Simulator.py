@@ -220,7 +220,9 @@ class Simulator(object):
                                  'fn_storage',
                                  'platform',
                                  'topology',
-                                 'solute_indices'
+                                 'solute_indices',
+                                 'system_serial',
+                                 'integrator_serial'
                                  ]
         
         self.temperature = 300.0 * kelvin                       # temperature

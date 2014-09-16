@@ -530,7 +530,7 @@ class Snapshot(object):
         
         """
         
-        self.idx = 0        # potential idx in a netcdf storage, if 0 then not stored yet. Attention! Cannot be stored in 2 repositories at the same time
+#        self.idx = 0        # potential idx in a netcdf storage, if 0 then not stored yet. Attention! Cannot be stored in 2 repositories at the same time
         self.configuration = Configuration()
         self.momentum = Momentum()
         self.reversed = False
@@ -649,7 +649,7 @@ class Snapshot(object):
         self.momentum.save(idx_momentum)
         
     @staticmethod
-    def load(idx_configuration = None, idx_momentum = None):
+    def load(idx_configuration = None, idx_momentum = None, reversed = False):
         '''
         Load a snapshot from the storage
         
@@ -667,6 +667,7 @@ class Snapshot(object):
         #TODO: Check, for some reason some idx are given as numpy.in32 and netcdf4 is not compatible with indices given in this format!!!!!
 
         snapshot = Snapshot()
+        snapshot.reversed = reversed
         
         if idx_configuration is not None:
             idx_c = int(idx_configuration)
