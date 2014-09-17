@@ -13,7 +13,7 @@ import simtk.unit as units
 from simtk.unit import nanosecond, picosecond, nanometers, nanometer, picoseconds, femtoseconds, femtosecond, kilojoules_per_mole, Quantity
 
 from trajectory import Trajectory
-from snapshot import Snapshot
+from snapshot import Snapshot, Configuration, Momentum
 
 import pickle
 import mdtraj as md
@@ -34,7 +34,7 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 # Multi-State Transition Interface Sampling
 #=============================================================================================
 
-class ForkableTrajectoryStorage(object):
+class TrajectoryStorage(object):
     '''
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM simulation. This allows effective storage of shooting trajectories
     '''
@@ -44,15 +44,19 @@ class ForkableTrajectoryStorage(object):
         '''
         Create a storage for trajectories that are stored by snapshots and list of their indices
         
-        ARGUMENTS
-        
-        topology (openmm.app.Topology) - the topology of the system to be stored. Needed for 
-        filename (string) - filename of the netcdf file
-        
-        OPTIONAL ARGUMENTS
-        
-        mode (string, default: 'auto') - the mode of file creation, one of 'create', 'restore' or 'auto'
+        Parameters
+        ----------        
+        topology : openmm.app.Topology
+            the topology of the system to be stored. Needed for 
+        filename : string
+            filename of the netcdf file
+        mode : string, default: 'auto'
+            the mode of file creation, one of 'create', 'restore' or 'auto'
         '''
+        
+        self.links = []        
+        self.add(Snapshot)
+        self.add(Trajectory)
         
         self.fn_storage = filename
 
@@ -65,29 +69,45 @@ class ForkableTrajectoryStorage(object):
         
         if mode == 'create':
             self.topology = md.Topology.from_openmm(topology)
-            self._initialize_netcdf()
+            self._init_netcdf()
         elif mode == 'restore':
             self._restore_netcdf()
             
-        self.links = []
+        
         
     def add(self, class_obj):
+        '''
+        Add a class to the storage
         
-        if hasattr(class_obj, '_initialize_netCDF') and hasattr(class_obj, '_restore_netCDF'):
-            #class is compatible and has necessary classes
-            self.links.forward(class_obj)
+        Parameters
+        ----------
+        class_obj : Class
+            the class to be added
+        '''
+
+        #if class is compatible and has necessary classes, add it
+        if hasattr(class_obj, '_init_netcdf') and hasattr(class_obj, '_restore_netcdf'):
+            print 'Added : ', class_obj.__class__
+            self.links.append(class_obj)
             
         pass
     
     def init_classes(self):
+        '''
+        Run the initialization on all added classes
+        '''
         for cls in self.links:
-            cls._initialize_netcdf(self)
-            
-            # add all static methods fromt cls to self.'cls'.method_name
-            
-#            methods = inspect.getmembers(cls, predicate)
+            cls._init_netcdf(self)
 
-    def _initialize_netcdf(self):
+    def restore_classes(self):
+        '''
+        Run restore on all added classes
+        '''
+        for cls in self.links:
+            cls._restore_netcdf(self)
+
+
+    def _init_netcdf(self):
         """
         Initialize the netCDF file for storage.
         
@@ -113,16 +133,11 @@ class ForkableTrajectoryStorage(object):
         setattr(ncfile, 'programVersion', __version__)
         setattr(ncfile, 'Conventions', 'Multi-State Transition Interface TPS')
         setattr(ncfile, 'ConventionVersion', '0.1')
-        
-        # initialize arrays used for snapshots
-        Snapshot._init_netcdf(self)
-
-        # initialize arrays used for trajectories
-        Trajectory._init_netcdf(self)
+                
+        self._init_netcdf()
                         
         # Force sync to disk to avoid data loss.
         ncfile.sync()
-
         return
     
     def _restore_netcdf(self):
@@ -134,43 +149,173 @@ class ForkableTrajectoryStorage(object):
         
         # Store netcdf file handle.
         self.ncfile = ncfile
-        
-        # initialize arrays used for snapshots
-        Snapshot._restore_netcdf(self)
-
-        # initialize arrays used for trajectories
-        Trajectory._restore_netcdf(self)
+        self.restore_classes()
         
         return
+
+    def configuration(self, idx):
+        return Configuration.load(idx)
     
-    def snapshot(self, idx):
-        return Snapshot.load(idx)
+    def momentum(self, idx):
+        return Momentum.load(idx)
     
-    def snapshot_coordinates_as_array(self, frame_indices=None, atom_indices=None):
-        return Snapshot.coordinates_as_numpy(self, frame_indices, atom_indices)
+    def snapshot(self, idx_configuration, idx_momentum, momentum_reversed):
+        return Snapshot.load(idx_configuration, idx_momentum, momentum_reversed)    
+
+    def trajectory(self, idx, momentum = True):        
+        '''
+        Returns the trajectory object with the given index
+
+        Parameters
+        ----------
+        idx : int
+            index of the trajectory to be loaded
+        momentum : boolen
+            if `True` also the momenta will be loaded. Otherwise the trajectory will only have a reference to coordinates.
+            if only coordinates are returned the trajectory index will be set to zero to not accidentally delete the reference to the momenta
+        
+        Returns
+        -------
+        Trajectory
+            returns an array with `l` the number of frames and `n` the number of atoms 
+        '''
+        
+        configuration_frame_indices = Trajectory.load_configuration_indices(idx)
+        momentum_frame_reversed = Trajectory.load_momentum_reversed(idx)            
+        if momentum:
+            momentum_frame_indices = Trajectory.load_momentum_indices(idx)
+            t = Trajectory.from_indices(configuration_frame_indices, momentum_frame_indices, momentum_frame_reversed)
+            t.idx = idx
+            return t
+        else:
+            t = Trajectory.from_indices(configuration_frame_indices, None, momentum_frame_reversed)
+            t.idx = 0
+            return t
+                
+    def coordinates_as_array(self, frame_indices=None, atom_indices=None):
+        '''
+        Returns a numpy array consisting of all coordinates at the given indices
+
+        Parameters
+        ----------
+        frame_indices : list of int
+            configuration indices to be loaded
+        atom_indices : list of int
+            selects only the atoms to be returned. If None (Default) all atoms will be selected
+        
+        Returns
+        -------
+        numpy.ndarray, shape = (l,n)
+            returns an array with `l` the number of frames and `n` the number of atoms 
+        '''
+
+        return Configuration.coordinates_as_numpy(self, frame_indices, atom_indices)
+
+    def velocities_as_array(self, frame_indices=None, atom_indices=None):
+        '''
+        Returns a numpy array consisting of all velocities at the given indices
+
+        Parameters
+        ----------
+        frame_indices : list of int
+            momenta indices to be loaded
+        atom_indices : list of int
+            selects only the atoms to be returned. If None (Default) all atoms will be selected
+
+        
+        Returns
+        -------
+        numpy.ndarray, shape = (l,n)
+            returns an array with `l` the number of frames and `n` the number of atoms 
+        '''
+
+        return Momentum.velocities_as_numpy(self, frame_indices, atom_indices)
         
     def trajectory_coordinates_as_array(self, idx, atom_indices=None):
-        frame_indices = Trajectory.load_indices(idx)
+        '''
+        Returns a numpy array consisting of all coordinates of a trajectory
+
+        Parameters
+        ----------
+        idx : int
+            index of the trajectory to be loaded
+        atom_indices : list of int
+            selects only the atoms to be returned. If None (Default) all atoms will be selected
+
         
-        return self.snapshot_coordinates_as_array(frame_indices, atom_indices)        
-    
-    def trajectory(self, idx):        
-        return Trajectory.load(idx)
+        Returns
+        -------
+        numpy.ndarray, shape = (l,n)
+            returns an array with `l` the number of frames and `n` the number of atoms 
+        '''
+
+        frame_indices = Trajectory.load_configuration_indices(idx)
+        return self.coordinates_as_array(frame_indices, atom_indices)        
+
+    def trajectory_velocities_as_array(self, idx, atom_indices=None):
+        '''
+        Returns a numpy array consisting of all velocities of a trajectory
+        
+        Parameters
+        ----------
+        idx : int
+            index of the trajectory to be loaded
+        atom_indices : list of int
+            selects only the atoms to be returned. If None (Default) all atoms will be selected
+        
+        Returns
+        -------
+        numpy.ndarray, shape = (l,n)
+            returns an array with `l` the number of frames and `n` the number of atoms 
+        '''
+        frame_indices = Trajectory.load_configuration_indices(idx)
+        return self.coordinates_as_array(frame_indices, atom_indices)            
     
     def number_of_trajectories(self):
+        '''
+        Returns the number of stored trajectories in the storage
+        
+        Returns
+        -------
+        int
+            number of stored trajectories
+        '''
+
         return Trajectory.load_number()
 
-    def number_of_snapshots(self):
-        return Snapshot.load_number()
+    def number_of_configurations(self):
+        '''
+        Returns the number of stored configurations in the storage
+        
+        Returns
+        -------
+        int
+            number of stored frames
+        '''
+
+        return Configuration.load_number()
+
+    def number_of_momenta(self):
+        '''
+        Returns the number of stored momenta in the storage
+        
+        Returns
+        -------
+        int
+            number of stored frames
+        '''
+        return Momentum.load_number()
     
     def last_trajectory(self):
+        '''
+        Returns the last generated trajectory. Useful to continue a run.
+        
+        Returns
+        -------
+        Trajectoy
+            the actual trajectory object
+        '''
         return self.trajectory(self.number_of_trajectories())
-
-    def all_trajectory_indices(self):
-        '''
-        Return a list of list of frame indices
-        '''
-        return Trajectory.load_all_indices()
     
     def all_snapshot_coordinates_as_mdtraj(self, atom_indices = None):
         """
@@ -182,7 +327,7 @@ class ForkableTrajectoryStorage(object):
          
         """
                     
-        output = self.snapshot_coordinates_as_array(atom_indices = atom_indices)
+        output = self.coordinates_as_array(atom_indices = atom_indices)
                 
         topology = self.topology
                 
