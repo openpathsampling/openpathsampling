@@ -4,7 +4,11 @@
 
 import sys
 import os
-# I assume we're in the directory above the 
+
+# only for XYZTranslate.guess_fname_format():
+import re
+
+# I assume the next directory above us is where the msm-tis classes hide
 sys.path.append(os.path.abspath('../'))
 
 import TrajFile
@@ -42,7 +46,10 @@ class XYZTranslator(object):
         '''Takes an file name and tries to guess the format from that (under
         the assumption that I'm using my normal convention that the last
         number before the .xyz is the trajectory number).'''
-        pass
+        num = re.search(".*[^0-9]([0-9]+)[^0-9]*.xyz", fname).group(1)
+        numfmt = "%0"+str(len(num))+"d"
+        fmt = re.sub(num, numfmt, fname)
+        return fmt
 
     def load_trajfile(self, tfile):
         '''Loads xyz file into self.traj, which is a TrajFile object'''

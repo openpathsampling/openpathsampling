@@ -39,11 +39,11 @@ class testXYZTranslator(object):
         result2="mytraj00_%04d.xyz"
         test3="mytraj00_0003acc.xyz"
         result3="mytraj00_%04dacc.xyz"
+        fail3="mytraj%02d_0003acc.xyz"
         assert_equal(self.translator.guess_fname_format(test1), result1)
         assert_equal(self.translator.guess_fname_format(test2), result2)
         assert_equal(self.translator.guess_fname_format(test3), result3)
-        assert_not_equal(self.translator.guess_fname_format(test3, 
-                        "mytraj%02d_0003acc.xyz"))
+        assert_not_equal(self.translator.guess_fname_format(test3),fail3)
 
     def test_trajfile_storage_trajfile(self):
         '''Integration test: '''
