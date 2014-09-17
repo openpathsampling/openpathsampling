@@ -4,7 +4,7 @@ Created on 19.07.2014
 @author: Jan-Hendrik Prinz
 '''
 
-import shooting.ShootingPoint
+from shooting import ShootingPoint
 from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble, LengthEnsemble
 
 import numpy as np
@@ -159,7 +159,7 @@ class ForwardShootMover(ShootMover):
                                                 ).forward, self.length_stopper.forward]
                                      )        
         self.final = self.start[0:self.start_point.index] + partial_trajectory    
-        self.final_point = shooting(self.selector, self.final, self.start_point.index)
+        self.final_point = ShootingPoint(self.selector, self.final, self.start_point.index)
 
         pass
     
@@ -169,18 +169,25 @@ class BackwardShootMover(ShootMover):
     '''
     def _generate(self):
         print "Shooting backward from frame %d" % self.start_point.index
-        
+#        print self.start_point
         # Run until one of the stoppers is triggered
         partial_trajectory = PathMover.simulator.generate(
-                                     self.start_point.snapshot.reverse(), 
+                                     self.start_point.snapshot.reversed_copy(), 
                                      running = [BackwardPrependedTrajectoryEnsemble(
                                                      self.ensemble, 
                                                      self.start[self.start_point.index + 1:]
                                                 ).backward, self.length_stopper.backward]
                                      )
         
+        
         self.final = partial_trajectory.reversed + self.start[self.start_point.index + 1:]    
-        self.final_point = shooting(self.selector, self.final, partial_trajectory.frames - 1)
+        self.final_point = ShootingPoint(self.selector, self.final, partial_trajectory.frames - 1)
+
+#        print self.start_point.snapshot.velocities
+#        print self.start_point.snapshot.momentum.idx
+#        print self.final_point.snapshot.velocities
+#        print self.final_point.snapshot.momentum.idx
+
         
         pass
 
