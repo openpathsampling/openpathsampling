@@ -342,6 +342,32 @@ def mass_parse(str_mass, natoms):
             mass[i] = float(mass[i])
     return mass
 
+def frames_equal(f1, f2):
+    isEqual = True
+    if f1.natoms!=f2.natoms: isEqual = False
+    i=0
+    while (i<range(len(f1.natoms)) and isEqual==True):
+        if (f1.mass[i] != f2.mass[i]): isEqual = False
+        if (f1.labels[i] != f2.labels[i]): isEqual = False
+        if (f1.dd != f2.dd): isEqual = False
+        d=0
+        while (d<f1.dd and isEqual==True):
+            if (f1.pos[i][d] != f2.pos[i][d]): isEqual=False
+            if (f1.vel[i][d] != f2.vel[i][d]): isEqual=False
+            d+=1
+        i+=1
+
+    return isEqual
+
+def trajs_equal(t1, t2):
+    isEqual = True
+    i=0
+    while (i<range(len(t1.frames)) and isEqual==True):
+        if (not frames_equal(t1.frames[i], t2.frames[i])):
+            isEqual = False
+        i += 1
+    return isEqual
+
 
 if __name__ == "__main__":
     myfile = TrajFile()

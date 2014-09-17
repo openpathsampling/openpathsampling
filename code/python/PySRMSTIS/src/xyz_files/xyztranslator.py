@@ -12,7 +12,7 @@ import trajectory
 import snapshot
 import storage
 
-class TranslatorXYZ(object):
+class XYZTranslator(object):
     '''
     We consider two data formats: xyz and storage (the latter being native
     for this code). Each format has associated with it trajectory object.
@@ -36,6 +36,13 @@ class TranslatorXYZ(object):
     def __init__(self):
         self.traj = None
         self.trajectory = None
+        self.xyz_fname_format = None
+
+    def guess_fname_format(self, fname):
+        '''Takes an file name and tries to guess the format from that (under
+        the assumption that I'm using my normal convention that the last
+        number before the .xyz is the trajectory number).'''
+        pass
 
     def load_trajfile(self, tfile):
         '''Loads xyz file into self.traj, which is a TrajFile object'''
@@ -76,11 +83,11 @@ class TranslatorXYZ(object):
             self.traj = self.trajectory2trajfile(self.trajectory)
 
 
-    def output_storage(self, outfname):
+    def output_storage(self, outfname=sys.stdout):
         '''Writes trajectory to `outfname` as NetCDF'''
         pass
 
-    def output_xyz(self, outfname):
+    def output_xyz(self, outfname=sys.stdout):
         '''Writes trajectory to `outfname` as .xyz file'''
         self.traj.write_xyz(outfname)
 
