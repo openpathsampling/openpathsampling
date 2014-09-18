@@ -1,6 +1,7 @@
 '''
 @author David W.H. Swenson
 '''
+import os, os.path
 
 from xyztranslator import XYZTranslator
 from TrajFile import TrajFile, TrajFrame, trajs_equal
@@ -42,6 +43,7 @@ class testXYZTranslator(object):
 
 
     def teardown(self):
+        if os.path.isfile("test.nc"): os.remove("test.nc")
         del self.translator
 
     def test_guess_fname_format(self):

@@ -12,6 +12,7 @@ import numpy as np
 from simtk.openmm.app.topology import Topology
 from simtk.openmm.app.element import Element
 from simtk.unit import amu
+import mdtraj
 
 # I assume the next directory above us is where the msm-tis classes hide
 sys.path.append(os.path.abspath('../'))
@@ -78,6 +79,11 @@ class XYZTranslator(object):
                                 number=atom+1, # abnormal
                                 name=label, symbol=label, mass=mass*amu
                              )
+            # we need to add the elements to the mdtraj dictionaries, too
+            mdtrajelem = mdtraj.element.Element( 
+                                number=atom+1,
+                                name=label, symbol=label, mass=mass
+                            )
             #element = mdtraj.element.Element(atom,label,label,mass)
             residue = topol.addResidue(label, chain)
             topol.addAtom(label, element, residue)
@@ -87,7 +93,7 @@ class XYZTranslator(object):
         topol = self.trajfile_topology(self.trajfile)
         self.storage = TrajectoryStorage( topology=topol,
                                           filename=fname, 
-                                          mode='create')
+                                          mode='auto')
     
 
     def trajfile2trajectory(self, trajfile):
