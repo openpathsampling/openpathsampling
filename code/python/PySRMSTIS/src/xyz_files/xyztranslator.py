@@ -5,16 +5,20 @@
 import sys
 import os
 
-# only for XYZTranslate.guess_fname_format():
+# re only for XYZTranslate.guess_fname_format():
 import re
+import numpy as np
+
+from simtk.openmm.app.topology import Topology
+from simtk.openmm.app.element import Element
+from simtk.unit import amu
 
 # I assume the next directory above us is where the msm-tis classes hide
 sys.path.append(os.path.abspath('../'))
-
 import TrajFile
 import trajectory
 import snapshot
-import storage
+from storage import TrajectoryStorage
 
 class XYZTranslator(object):
     '''
@@ -34,13 +38,13 @@ class XYZTranslator(object):
     NB: there is no support yet for converting periodic boundary conditions
     between the to formats. In principle, that shouldn't be too hard, but it
     isn't necessary for current purposes (playing with 2D models with no
-    periodicity).
+    periodicity). 
     '''
     
     def __init__(self):
         self.traj = None
         self.trajectory = None
-        self.xyz_fname_format = None
+        self.storage = None
 
     def guess_fname_format(self, fname):
         '''Takes an file name and tries to guess the format from that (under
@@ -59,13 +63,49 @@ class XYZTranslator(object):
         '''Loads data from storage object into self.trajectory'''
         self.trajectory = trajectory.Trajectory.load(loadnum)
 
+    def trajfile_topology(self, trajfile):
+        '''Creates a (fake-ish) OpenMM Topology from an xyz file'''
+        topol = Topology()
+        # assume that the atoms are constant through the xyz trajectory, so
+        # we can just use the first frame:
+        myframe = trajfile.frames[0]
+        chain = topol.addChain()
+        for atom in range(myframe.natoms):
+            # make each atom a separate element and a separate residue
+            label = "_"+myframe.labels[atom] # underscore to avoid conflicts
+            mass = myframe.mass[atom]
+            element = Element(   
+                                number=atom+1, # abnormal
+                                name=label, symbol=label, mass=mass*amu
+                             )
+            #element = mdtraj.element.Element(atom,label,label,mass)
+            residue = topol.addResidue(label, chain)
+            topol.addAtom(label, element, residue)
+        return topol # note that we can easily make this into mdtraj
+
+    def init_storage(self, fname="test.nc"):
+        topol = self.trajfile_topology(self.trajfile)
+        self.storage = TrajectoryStorage( topology=topol,
+                                          filename=fname, 
+                                          mode='create')
+    
+
     def trajfile2trajectory(self, trajfile):
         '''Converts TrajFile.TrajFile to trajectory.Trajectory'''
         res = trajectory.Trajectory()
+        # make sure there's some storage in place
+        if (res.storage == None):
+            if (self.storage == None):
+                
+                self.init_storage()
+            res.storage = self.storage
+
         for frame in trajfile.frames:
-            mysnap = snapshot.snapshot( coordinates=frame.pos,
-                                        velocities=frame.vel )
-            res.extend(mysnap)
+            mysnap = snapshot.Snapshot( coordinates=np.array(frame.pos),
+                                        velocities=np.array(frame.vel) )
+            mysnap.save()
+            res.append(mysnap)
+            res.save()
         return res
 
     def trajectory2trajfile(self, trajectory):
