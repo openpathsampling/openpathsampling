@@ -11,7 +11,7 @@ import numpy as np
 
 from simtk.openmm.app.topology import Topology
 from simtk.openmm.app.element import Element
-from simtk.unit import amu
+from simtk.unit import amu, nanometers, picoseconds, Quantity
 import mdtraj
 
 # I assume the next directory above us is where the msm-tis classes hide
@@ -20,6 +20,22 @@ import TrajFile
 import trajectory
 import snapshot
 from storage import TrajectoryStorage
+
+class AtomCounter(object):
+    '''Let's be honest: that's all we're using the simulation.system object
+    for. So I'll duck-punch.'''
+    def __init__(self, natoms):
+        self.natoms = natoms
+
+    def getNumParticles(self):
+        return self.natoms
+
+class SimulationDuckPunch(object):
+    '''This is what happens when you find a stranger in the Alps.'''
+    def __init__(self, topology, system):
+        self.system = system
+        self.topology = topology
+        
 
 class XYZTranslator(object):
     '''
@@ -46,6 +62,7 @@ class XYZTranslator(object):
         self.traj = None
         self.trajectory = None
         self.storage = None
+        self.n_frames_max = 10000
 
     def guess_fname_format(self, fname):
         '''Takes an file name and tries to guess the format from that (under
@@ -91,24 +108,31 @@ class XYZTranslator(object):
 
     def init_storage(self, fname="test.nc"):
         topol = self.trajfile_topology(self.trajfile)
+        system = AtomCounter(self.trajfile.frames[0].natoms)
+        self.simulation = SimulationDuckPunch(topol, system)
         self.storage = TrajectoryStorage( topology=topol,
                                           filename=fname, 
                                           mode='auto')
+        snapshot.Snapshot.simulator = self
+        self.storage.simulator = self
+        self.storage.init_classes()
     
 
     def trajfile2trajectory(self, trajfile):
         '''Converts TrajFile.TrajFile to trajectory.Trajectory'''
-        res = trajectory.Trajectory()
         # make sure there's some storage in place
+        res = trajectory.Trajectory()
+        trajectory.Trajectory.simulator = self
         if (res.storage == None):
             if (self.storage == None):
-                
                 self.init_storage()
             res.storage = self.storage
 
         for frame in trajfile.frames:
-            mysnap = snapshot.Snapshot( coordinates=np.array(frame.pos),
-                                        velocities=np.array(frame.vel) )
+            pos = Quantity(np.array(frame.pos),nanometers)
+            vel = Quantity(np.array(frame.pos),nanometers/picoseconds)
+            mysnap = snapshot.Snapshot( coordinates=pos,
+                                        velocities=vel )
             mysnap.save()
             res.append(mysnap)
             res.save()
@@ -124,7 +148,7 @@ class XYZTranslator(object):
             myframe.vel = mysnap.velocities()
             myframe.pos = mysnap.positions()
             #myframe.label = mysnap.labels() # TODO: atomlabels in snap
-            myframe.mass = mysnap.masses()
+            #myframe.mass = mysnap.masses()
             res.frames.append(myframe)
         return res
 
@@ -134,11 +158,6 @@ class XYZTranslator(object):
             self.trajectory = self.trajfile2trajectory(self.traj)
         if self.trajfile==None:
             self.traj = self.trajectory2trajfile(self.trajectory)
-
-
-    def output_storage(self, outfname=sys.stdout):
-        '''Writes trajectory to `outfname` as NetCDF'''
-        pass
 
     def output_xyz(self, outfname=sys.stdout):
         '''Writes trajectory to `outfname` as .xyz file'''

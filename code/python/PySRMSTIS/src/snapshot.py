@@ -139,7 +139,8 @@ class Configuration(object):
 
             # Store configuration.
             storage.ncfile.variables['configuration_coordinates'][idx,:,:] = (self.coordinates / nanometers).astype(np.float32)
-            storage.ncfile.variables['configuration_potential'][idx] = self.potential_energy / kilojoules_per_mole                                
+            if self.potential_energy is not None: 
+                storage.ncfile.variables['configuration_potential'][idx] = self.potential_energy / kilojoules_per_mole                                
 #            storage.ncfile.variables['configuration_box_vectors'][idx,:] = (self.box_vectors / nanometers).astype(np.float32)
             
             # store ID# for later reference in configuration object
@@ -360,7 +361,8 @@ class Momentum(object):
 
             # Store momentum.
             storage.ncfile.variables['momentumvelocities'][idx,:,:] = (self.velocities / (nanometers / picoseconds)).astype(np.float32)
-            storage.ncfile.variables['momentum_kinetic'][idx] = self.kinetic_energy / kilojoules_per_mole
+            if self.kinetic_energy is not None:
+                storage.ncfile.variables['momentum_kinetic'][idx] = self.kinetic_energy / kilojoules_per_mole
             
             # store ID# for later reference in Momentum object
             self.idx = idx
