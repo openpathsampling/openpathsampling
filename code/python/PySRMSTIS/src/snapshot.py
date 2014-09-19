@@ -87,7 +87,7 @@ class Configuration(object):
         '''
         The number of atoms in the configuration
         '''   
-        return len(self.coordinates.shape[0])  
+        return self.coordinates.shape[0]
     
     #=============================================================================================
     # Utility functions
@@ -330,7 +330,7 @@ class Momentum(object):
         '''
         The number of atoms in the momentum
         '''   
-        return len(self.coordinates.shape[0])
+        return self.velocities.shape[0]
 
     #=============================================================================================
     # Utility functions
@@ -591,8 +591,8 @@ class Snapshot(object):
     def atoms(self):
         '''
         The number of atoms in the snapshot
-        '''   
-        return len(self.coordinates.shape[0])  
+        ''' 
+        return self.coordinates.shape[0]
 
     @property
     def total_energy(self):

@@ -64,12 +64,12 @@ class testXYZTranslator(object):
 
     def test_trajfile_trajectory_trajfile(self):
         '''Integration test: round trip TrajFile->trajectory->TrajFile'''
-        self.translator.trajfile2trajectory(self.translator.trajfile)
+        self.translator.trajectory = self.translator.trajfile2trajectory(self.translator.trajfile)
         # TODO assert that we have the appropriate number of trajectories
         # and the appropriate number of frames
         oldtrajfile = self.translator.trajfile
         self.translator.trajfile = None
-        self.translator.trajectory2trajfile(self.translator.trajectory)
+        self.translator.trajfile = self.translator.trajectory2trajfile(self.translator.trajectory)
         # the two TrajFile objects shouldn't be the same object
         assert_not_equal(self.translator.trajfile, oldtrajfile)
         # but they should be equal on a deep content comparison

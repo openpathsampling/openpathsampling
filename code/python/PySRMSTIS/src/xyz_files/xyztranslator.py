@@ -135,20 +135,22 @@ class XYZTranslator(object):
                                         velocities=vel )
             mysnap.save()
             res.append(mysnap)
-            res.save()
+        res.save()
         return res
 
     def trajectory2trajfile(self, trajectory):
         '''Converts trajectory.Trajectory to TrajFile.TrajFile'''
         res = TrajFile.TrajFile()
-        for snap_i in len(range(trajectory.snapshots())):
-            mysnap = trajectory.snapshot(snap_i)
-            myframe = TrajFrame()
-            myframe.natoms = mysnap.atoms()
-            myframe.vel = mysnap.velocities()
-            myframe.pos = mysnap.positions()
-            #myframe.label = mysnap.labels() # TODO: atomlabels in snap
-            #myframe.mass = mysnap.masses()
+        for snap in trajectory:
+            myframe = TrajFile.TrajFrame()
+            myframe.natoms = snap.atoms
+            for atom in range(myframe.natoms):
+                vel = snap.velocities / (nanometers/picoseconds)
+                pos = snap.coordinates / nanometers
+                #myframe.labels = labels # TODO: atomlabels in snap
+                #myframe.mass = mass
+                myframe.vel = vel.tolist()
+                myframe.pos = pos.tolist()
             res.frames.append(myframe)
         return res
 
