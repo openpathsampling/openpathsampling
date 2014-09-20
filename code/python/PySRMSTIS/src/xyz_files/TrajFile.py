@@ -352,7 +352,6 @@ def frames_equal(f1, f2):
         if (f1.dd != f2.dd): isEqual = False
         d=0
         while (d<f1.dd and isEqual==True):
-            print "Testing atom "+str(i)+" dof "+str(d)
             if (f1.pos[i][d] != f2.pos[i][d]): isEqual=False
             if (f1.vel[i][d] != f2.vel[i][d]): isEqual=False
             d+=1

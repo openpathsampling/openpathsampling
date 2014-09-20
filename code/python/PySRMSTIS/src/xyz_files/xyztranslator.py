@@ -144,13 +144,20 @@ class XYZTranslator(object):
         for snap in trajectory:
             myframe = TrajFile.TrajFrame()
             myframe.natoms = snap.atoms
-            for atom in range(myframe.natoms):
-                vel = snap.velocities / (nanometers/picoseconds)
-                pos = snap.coordinates / nanometers
-                #myframe.labels = labels # TODO: atomlabels in snap
-                #myframe.mass = mass
-                myframe.vel = vel.tolist()
-                myframe.pos = pos.tolist()
+            vel = snap.velocities / (nanometers/picoseconds)
+            pos = snap.coordinates / nanometers
+            myframe.vel = vel.tolist()
+            myframe.pos = pos.tolist()
+            topol = trajectory.simulator.simulation.topology 
+            labels = []
+            mass = []
+            for atom in topol.atoms():
+                labels.append(re.sub("^_", "", atom.element.name))
+                mass.append(atom.element.mass / amu)
+                # TODO: when loading a file in trajectory, need to load
+                # simulator too; for the RT that's entirely too easy
+            myframe.mass = mass
+            myframe.labels = labels
             res.frames.append(myframe)
         return res
 
