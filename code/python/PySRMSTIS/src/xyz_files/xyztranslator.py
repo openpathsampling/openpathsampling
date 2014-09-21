@@ -5,8 +5,9 @@
 import sys
 import os
 
-# re only for XYZTranslate.guess_fname_format():
 import re
+import optparse
+
 import numpy as np
 
 from simtk.openmm.app.topology import Topology
@@ -63,6 +64,7 @@ class XYZTranslator(object):
         self.trajectory = None
         self.storage = None
         self.n_frames_max = 10000
+        self.outfile = None
 
     def guess_fname_format(self, fname):
         '''Takes an file name and tries to guess the format from that (under
@@ -72,6 +74,22 @@ class XYZTranslator(object):
         numfmt = "%0"+str(len(num))+"d"
         fmt = re.sub(num, numfmt, fname)
         return fmt
+
+    # TODO: this should be a class method, right?
+    def build_parser(self, parser):
+        parser.add_option("-o", "--output", help="output file")
+        return parser
+
+    def set_infile_outfile(self, infile, outfile):
+        if re.match(".*\.xyz$", infile):
+            if not re.match(".*\.nc$", outfile): outfile = outfile+".nc"
+            self.infile = (infile, "xyz")
+            self.outfile = (outfile, "nc")
+        elif re.match(".*\.nc$", infile):
+            if not re.match(".*\.xyz$", outfile): outfile = outfile+".xyz"
+            self.infile = (infile, "nc")
+            self.outfile = (outfile, "xyz")
+        return
 
     def load_trajfile(self, tfile):
         '''Loads xyz file into self.traj, which is a TrajFile object'''
@@ -92,21 +110,29 @@ class XYZTranslator(object):
             # make each atom a separate element and a separate residue
             label = "_"+myframe.labels[atom] # underscore to avoid conflicts
             mass = myframe.mass[atom]
-            element = Element(   
-                                number=atom+1, # abnormal
-                                name=label, symbol=label, mass=mass*amu
-                             )
+            # Check whether atom is already in the topol; add it if not.
+            # I hate this approach, since it assume the internal structure
+            # of the Element classes
+            try:
+                element = Element.getBySymbol(label)
+            except KeyError:
+                element = Element(   
+                                    number=atom+1, # abnormal
+                                    name=label, symbol=label, mass=mass*amu
+                                 )
             # we need to add the elements to the mdtraj dictionaries, too
-            mdtrajelem = mdtraj.element.Element( 
+            try:
+                mdtrajelem = mdtraj.element.Element.getBySymbol(label)
+            except KeyError:
+                mdtrajelem = mdtraj.element.Element( 
                                 number=atom+1,
                                 name=label, symbol=label, mass=mass
-                            )
-            #element = mdtraj.element.Element(atom,label,label,mass)
+                                )
             residue = topol.addResidue(label, chain)
             topol.addAtom(label, element, residue)
         return topol # note that we can easily make this into mdtraj
 
-    def init_storage(self, fname="test.nc"):
+    def init_storage(self, fname):
         topol = self.trajfile_topology(self.trajfile)
         system = AtomCounter(self.trajfile.frames[0].natoms)
         self.simulation = SimulationDuckPunch(topol, system)
@@ -125,7 +151,7 @@ class XYZTranslator(object):
         trajectory.Trajectory.simulator = self
         if (res.storage == None):
             if (self.storage == None):
-                self.init_storage()
+                self.init_storage(self.outfile[0])
             res.storage = self.storage
 
         for frame in trajfile.frames:
@@ -161,6 +187,20 @@ class XYZTranslator(object):
             res.frames.append(myframe)
         return res
 
+    def translate(self):
+        if (self.infile[1] == "xyz"):
+            self.trajfile = TrajFile.TrajFile()
+            self.trajfile.read_xyz(self.infile[0])
+            if (self.trajfile.frames[0].mass == []):
+                mass = TrajFile.mass_parse("unit",
+                                            self.trajfile.frames[0].natoms)
+                for frame in self.trajfile.frames:
+                    frame.mass = mass
+            self.trajectory = self.trajfile2trajectory(self.trajfile)
+        elif (self.infile[1] == "nc"):
+            print "Translation from .nc not yet implemented"
+            pass
+
     def regularize(self):
         '''Assuming we loaded one of the objects, make the other one'''
         if self.trajectory==None:
@@ -172,4 +212,13 @@ class XYZTranslator(object):
         '''Writes trajectory to `outfname` as .xyz file'''
         self.traj.write_xyz(outfname)
 
+
+if __name__=="__main__":
+    parser = optparse.OptionParser()
+    translator = XYZTranslator()
+    parser = translator.build_parser(parser)
+    (opts, args) = parser.parse_args(sys.argv[1:])
+    translator.set_infile_outfile(args[0], opts.output)
+    translator.translate()
+    
 

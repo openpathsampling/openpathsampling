@@ -17,22 +17,22 @@ class testXYZTranslator(object):
     def setUp(self):
         self.translator=XYZTranslator()
         # fill translator's trajfile object with fake data
-        labels = ["A", "B"]
-        mass = [1.5, 1.8]
+        labels = ["A", "B", "A"]
+        mass = [1.5, 1.8, 1.5]
 
-        pos1 = [ [0.5,0.5,0.5], [0.6,0.6,0.6] ]
-        vel1 = [ [0.5,0.5,0.5], [0.6,0.6,0.6] ]
+        pos1 = [ [0.5,0.5,0.5], [0.6,0.6,0.6], [0.4,0.4,0.4] ]
+        vel1 = [ [0.5,0.5,0.5], [0.6,0.6,0.6], [0.4,0.4,0.4] ]
         f1 = TrajFrame()
-        f1.natoms = 2
+        f1.natoms = 3
         f1.mass = mass
         f1.labels = labels
         f1.pos = pos1
         f1.vel = vel1
 
-        pos2 = [ [0.7,0.7,0.7], [0.8,0.8,0.8] ]
-        vel2 = [ [0.7,0.7,0.7], [0.8,0.8,0.8] ]
+        pos2 = [ [0.7,0.7,0.7], [0.8,0.8,0.8], [0.9,0.9,0.9] ]
+        vel2 = [ [0.7,0.7,0.7], [0.8,0.8,0.8], [0.9,0.9,0.9] ]
         f2 = TrajFrame()
-        f2.natoms = 2
+        f2.natoms = 3
         f2.mass = mass
         f2.labels = labels
         f2.pos = pos2
@@ -64,6 +64,7 @@ class testXYZTranslator(object):
 
     def test_trajfile_trajectory_trajfile(self):
         '''Integration test: round trip TrajFile->trajectory->TrajFile'''
+        self.translator.outfile = "test.nc"
         self.translator.trajectory = self.translator.trajfile2trajectory(self.translator.trajfile)
         # TODO assert that we have the appropriate number of trajectories
         # and the appropriate number of frames
