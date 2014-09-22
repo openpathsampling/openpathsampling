@@ -12,7 +12,8 @@ from nose.tools import raises
 class testXYZTranslator(object):
     '''Technically, this is more about integration testing than unit testing
     per se, but the point is that these tests should add up to us being able
-    to round-trip between the formats.'''
+    to round-trip between the formats.
+    '''
 
     def setUp(self):
         self.translator=XYZTranslator()
@@ -21,7 +22,7 @@ class testXYZTranslator(object):
         mass = [1.5, 1.8, 1.5]
 
         pos1 = [ [0.5,0.5,0.5], [0.6,0.6,0.6], [0.4,0.4,0.4] ]
-        vel1 = [ [0.5,0.5,0.5], [0.6,0.6,0.6], [0.4,0.4,0.4] ]
+        vel1 = [ [1.5,1.5,1.5], [1.6,1.6,1.6], [1.4,1.4,1.4] ]
         f1 = TrajFrame()
         f1.natoms = 3
         f1.mass = mass
@@ -30,7 +31,7 @@ class testXYZTranslator(object):
         f1.vel = vel1
 
         pos2 = [ [0.7,0.7,0.7], [0.8,0.8,0.8], [0.9,0.9,0.9] ]
-        vel2 = [ [0.7,0.7,0.7], [0.8,0.8,0.8], [0.9,0.9,0.9] ]
+        vel2 = [ [1.7,1.7,1.7], [1.8,1.8,1.8], [1.9,1.9,1.9] ]
         f2 = TrajFrame()
         f2.natoms = 3
         f2.mass = mass
@@ -64,7 +65,7 @@ class testXYZTranslator(object):
 
     def test_trajfile_trajectory_trajfile(self):
         '''Integration test: round trip TrajFile->trajectory->TrajFile'''
-        self.translator.outfile = "test.nc"
+        self.translator.outfile = ("test.nc", "nc")
         self.translator.trajectory = self.translator.trajfile2trajectory(self.translator.trajfile)
         # TODO assert that we have the appropriate number of trajectories
         # and the appropriate number of frames

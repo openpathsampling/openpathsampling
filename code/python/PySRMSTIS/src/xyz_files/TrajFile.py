@@ -163,7 +163,7 @@ class TrajFrame(object):
         self.labels = []
         self.mass = []
         self.natoms = 0
-        self.molecule = ""
+        self.molecule = "Empty Molecule Line\n"
         self.dd=3
         self.cubic_pbc=1000000
 
@@ -330,6 +330,17 @@ class TrajFile(object):
             reverse_frames[i].reverse_momenta()
         self.frames = reverse_frames
         return
+
+def set_default_mass(trajfile):
+    mass = []
+    if trajfile.frames[0].mass == []:
+        mass = mass_parse("unit", trajfile.frames[0].natoms)
+    else:
+        mass = trajfile.frames[0].mass
+    for frame in trajfile.frames:
+        if frame.mass == []:
+            frame.mass = mass
+
 
 def mass_parse(str_mass, natoms):
     mass = []

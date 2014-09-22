@@ -78,6 +78,7 @@ class XYZTranslator(object):
     # TODO: this should be a class method, right?
     def build_parser(self, parser):
         parser.add_option("-o", "--output", help="output file")
+        parser.add_option("-t", "--topology", help="topology (PDB or XYZ)")
         return parser
 
     def set_infile_outfile(self, infile, outfile):
@@ -91,9 +92,19 @@ class XYZTranslator(object):
             self.outfile = (outfile, "xyz")
         return
 
+    def topology_from_file(self, fname):
+        if re.match(".*\.xyz$", fname):
+            topo_f = TrajFile.TrajFile()
+            topo_f.read_xyz(fname)
+            TrajFile.set_default_mass(topo_f)
+            return self.trajfile_topology(topo_f)
+        else:
+            print "Topology must be .xyz for now"
+        return None
+        
     def load_trajfile(self, tfile):
-        '''Loads xyz file into self.traj, which is a TrajFile object'''
-        self.traj = TrajFile.TrajFile().read_xyz(tfile)
+        '''Loads xyz file into self.trajfile, which is a TrajFile object'''
+        self.trajfile = TrajFile.TrajFile().read_xyz(tfile)
 
     def load_from_storage(self, storage, loadnum=0):
         '''Loads data from storage object into self.trajectory'''
@@ -156,7 +167,7 @@ class XYZTranslator(object):
 
         for frame in trajfile.frames:
             pos = Quantity(np.array(frame.pos),nanometers)
-            vel = Quantity(np.array(frame.pos),nanometers/picoseconds)
+            vel = Quantity(np.array(frame.vel),nanometers/picoseconds)
             mysnap = snapshot.Snapshot( coordinates=pos,
                                         velocities=vel )
             mysnap.save()
@@ -191,15 +202,26 @@ class XYZTranslator(object):
         if (self.infile[1] == "xyz"):
             self.trajfile = TrajFile.TrajFile()
             self.trajfile.read_xyz(self.infile[0])
-            if (self.trajfile.frames[0].mass == []):
-                mass = TrajFile.mass_parse("unit",
-                                            self.trajfile.frames[0].natoms)
-                for frame in self.trajfile.frames:
-                    frame.mass = mass
+            TrajFile.set_default_mass(self.trajfile)
             self.trajectory = self.trajfile2trajectory(self.trajfile)
         elif (self.infile[1] == "nc"):
-            print "Translation from .nc not yet implemented"
-            pass
+            self.storage = TrajectoryStorage( 
+                                    topology=None,
+                                    filename=self.infile[0],
+                                    mode='restore'
+                                )
+            self.storage.simulator = self
+            self.trajectory = self.storage.trajectory(1)
+            self.trajectory.simulator = self
+            self.storage.verbose_root = True # DEBUG
+            self.storage._restore_options(self)
+            self.storage.topology = self.topology_from_file(self.topol_file)
+            natoms = len(self.trajectory[0].coordinates) # ugly
+            system = AtomCounter(natoms)
+            self.simulation = SimulationDuckPunch(self.storage.topology,
+                                                  system)
+            self.trajfile = self.trajectory2trajfile(self.trajectory)
+            self.trajfile.write_xyz(self.outfile[0])
 
     def regularize(self):
         '''Assuming we loaded one of the objects, make the other one'''
@@ -219,6 +241,7 @@ if __name__=="__main__":
     parser = translator.build_parser(parser)
     (opts, args) = parser.parse_args(sys.argv[1:])
     translator.set_infile_outfile(args[0], opts.output)
+    translator.topol_file = opts.topology
     translator.translate()
     
 

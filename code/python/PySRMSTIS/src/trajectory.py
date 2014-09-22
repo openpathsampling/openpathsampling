@@ -511,7 +511,7 @@ class Trajectory(list):
         Parameters
         ----------
         idx : int
-            index of the trajectory
+            index of the trajectory (counts from 1)
             
         Returns
         -------
