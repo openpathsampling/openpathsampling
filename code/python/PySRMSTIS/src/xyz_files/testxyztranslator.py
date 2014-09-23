@@ -1,7 +1,8 @@
 '''
 @author David W.H. Swenson
 '''
-import os, os.path
+import os
+import shutil
 
 from xyztranslator import XYZTranslator
 from TrajFile import TrajFile, TrajFrame, trajs_equal
@@ -45,6 +46,7 @@ class testXYZTranslator(object):
 
     def teardown(self):
         if os.path.isfile("test.nc"): os.remove("test.nc")
+        if os.path.isdir("mydir00"): shutil.rmtree("mydir00")
         del self.translator
 
     def test_guess_fname_format(self):
@@ -77,3 +79,32 @@ class testXYZTranslator(object):
         # but they should be equal on a deep content comparison
         assert_equal(trajs_equal(self.translator.trajfile, oldtrajfile),True)
 
+    def test_set_infile_outfile(self):
+        # get filenames for xyz->nc
+        testin=["sometest_00_000003.xyz"]
+        testout="sometest_00_000003.nc"
+        self.translator.set_infile_outfile(testin, testout)
+        assert_equal(self.translator.infiles, testin)
+        assert_equal(self.translator.outfile, testout)
+        assert_equal(self.translator.intype, "xyz")
+        assert_equal(self.translator.outtype, "nc")
+        # get filenames for nc->xyz
+        testin=["sometest_00_000003.nc"]
+        testout="sometest_00_000003.xyz"
+        self.translator.set_infile_outfile(testin, testout)
+        assert_equal(self.translator.infiles, testin)
+        assert_equal(self.translator.outfile, testout)
+        assert_equal(self.translator.intype, "nc")
+        assert_equal(self.translator.outtype, "xyz")
+        # split off directory for nc->xyz dir
+        testin=["sometest.nc"]
+        testout="mydir00/myfile_00_%06d.xyz"
+        self.translator.set_infile_outfile(testin, testout)
+        assert_equal(self.translator.infiles, testin)
+        assert_equal(self.translator.outfile, testout)
+        assert_equal(self.translator.intype, "nc")
+        assert_equal(self.translator.outtype, "xyz")
+        assert_equal(os.path.isdir("mydir00"), True)
+        # get multiple files for xyz dir->nc
+        testin=["mydir00/myfile_00_000000.xyz", "mydir00/myfile_00_000001.xyz"]
+        testout="sometest.nc"

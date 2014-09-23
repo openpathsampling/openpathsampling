@@ -29,6 +29,7 @@ class AtomCounter(object):
         self.natoms = natoms
 
     def getNumParticles(self):
+        '''QUAAAAACK'''
         return self.natoms
 
 class SimulationDuckPunch(object):
@@ -65,6 +66,8 @@ class XYZTranslator(object):
         self.storage = None
         self.n_frames_max = 10000
         self.outfile = None
+        self.intype = None
+        self.outtype = None
 
     def guess_fname_format(self, fname):
         '''Takes an file name and tries to guess the format from that (under
@@ -81,15 +84,27 @@ class XYZTranslator(object):
         parser.add_option("-t", "--topology", help="topology (PDB or XYZ)")
         return parser
 
-    def set_infile_outfile(self, infile, outfile):
-        if re.match(".*\.xyz$", infile):
-            if not re.match(".*\.nc$", outfile): outfile = outfile+".nc"
-            self.infile = (infile, "xyz")
-            self.outfile = (outfile, "nc")
-        elif re.match(".*\.nc$", infile):
-            if not re.match(".*\.xyz$", outfile): outfile = outfile+".xyz"
-            self.infile = (infile, "nc")
-            self.outfile = (outfile, "xyz")
+    def set_infile_outfile(self, infiles, outfile):
+        if re.search("\/", outfile):
+            directory=re.match("(.*)\/[^\/]*",outfile).group(1)
+            if not os.path.isdir(directory):
+                os.makedirs(directory)
+        self.infiles = []
+        for f in infiles:
+            if re.match(".*\.xyz$", f):
+                self.intype = "xyz"
+                self.outtype = "nc"
+                self.infiles.append(f)
+                self.outfile = (outfile, "nc")
+            elif re.match(".*\.nc$", f):
+                self.intype = "nc"
+                self.outtype = "xyz"
+                self.infiles.append(f)
+        if self.intype == "xyz" and not re.match(".*\.nc$", outfile): 
+            outfile = outfile+".nc"
+        elif self.intype == "nc" and not re.match(".*\.xyz$", outfile): 
+            outfile = outfile+".xyz"
+        self.outfile = outfile
         return
 
     def topology_from_file(self, fname):
@@ -162,7 +177,7 @@ class XYZTranslator(object):
         trajectory.Trajectory.simulator = self
         if (res.storage == None):
             if (self.storage == None):
-                self.init_storage(self.outfile[0])
+                self.init_storage(self.outfile)
             res.storage = self.storage
 
         for frame in trajfile.frames:
@@ -191,37 +206,44 @@ class XYZTranslator(object):
             for atom in topol.atoms():
                 labels.append(re.sub("^_", "", atom.element.name))
                 mass.append(atom.element.mass / amu)
-                # TODO: when loading a file in trajectory, need to load
-                # simulator too; for the RT that's entirely too easy
             myframe.mass = mass
             myframe.labels = labels
             res.frames.append(myframe)
         return res
 
     def translate(self):
-        if (self.infile[1] == "xyz"):
-            self.trajfile = TrajFile.TrajFile()
-            self.trajfile.read_xyz(self.infile[0])
-            TrajFile.set_default_mass(self.trajfile)
-            self.trajectory = self.trajfile2trajectory(self.trajfile)
-        elif (self.infile[1] == "nc"):
+        if (self.intype == "xyz"):
+            for f in self.infiles:
+                print "xyz->nc: "+f
+                self.trajfile = TrajFile.TrajFile()
+                self.trajfile.read_xyz(f)
+                TrajFile.set_default_mass(self.trajfile)
+                self.trajectory = self.trajfile2trajectory(self.trajfile)
+        elif (self.intype == "nc"):
             self.storage = TrajectoryStorage( 
                                     topology=None,
-                                    filename=self.infile[0],
+                                    filename=self.infiles[0],
                                     mode='restore'
                                 )
             self.storage.simulator = self
-            self.trajectory = self.storage.trajectory(1)
-            self.trajectory.simulator = self
-            self.storage.verbose_root = True # DEBUG
-            self.storage._restore_options(self)
+            #self.storage.verbose_root = True # DEBUG
+            self.storage._restore_options(self) # not used? (for topol)
+            # for now, topology must come from a separate file
             self.storage.topology = self.topology_from_file(self.topol_file)
-            natoms = len(self.trajectory[0].coordinates) # ugly
-            system = AtomCounter(natoms)
-            self.simulation = SimulationDuckPunch(self.storage.topology,
-                                                  system)
-            self.trajfile = self.trajectory2trajfile(self.trajectory)
-            self.trajfile.write_xyz(self.outfile[0])
+            ntrajs = self.storage.number_of_trajectories()
+            for traj_i in range(ntrajs):
+                self.trajectory = self.storage.trajectory(traj_i+1)
+                self.trajectory.simulator = self
+                natoms = len(self.trajectory[0].coordinates) # ugly
+                system = AtomCounter(natoms)
+                self.simulation = SimulationDuckPunch(self.storage.topology,
+                                                      system)
+                self.trajfile = self.trajectory2trajfile(self.trajectory)
+                myout = self.outfile
+                if re.search("%[0-9]*d", self.outfile):
+                    myout = self.outfile % (traj_i+1)
+                print "nc->xyz ("+str(traj_i+1)+"/"+str(ntrajs)+"): "+myout
+                self.trajfile.write_xyz(myout)
 
     def regularize(self):
         '''Assuming we loaded one of the objects, make the other one'''
@@ -240,7 +262,7 @@ if __name__=="__main__":
     translator = XYZTranslator()
     parser = translator.build_parser(parser)
     (opts, args) = parser.parse_args(sys.argv[1:])
-    translator.set_infile_outfile(args[0], opts.output)
+    translator.set_infile_outfile(args, opts.output)
     translator.topol_file = opts.topology
     translator.translate()
     
