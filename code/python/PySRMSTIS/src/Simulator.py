@@ -172,7 +172,8 @@ class Simulator(object):
                                                  filename = self.fn_storage,
                                                  mode = 'create'
                                                  )
-
+            self.storage.simulator = self
+            self.storage.init_classes()
             # save options
             self.storage._store_options(self)
             
@@ -235,6 +236,7 @@ class Simulator(object):
         self.forcefield_solute = 'amber99sbildn.xml'
         self.forcefield_solvent = 'tip3p.xml'        
         self.platform = 'CUDA'
+        self.platform = 'CPU'
         self.solute_indices = range(22)                         # indices of Alanine without water
 
         self.n_frames_max = 5000;                               # maximal length of trajectories in saved frames

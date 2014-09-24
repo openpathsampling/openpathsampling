@@ -21,7 +21,7 @@ from pymbar import MBAR
 from snapshot import Snapshot
 
 if __name__ == '__main__':
-    simulator = Simulator.Alanine_system('restore')
+    simulator = Simulator.Alanine_system('auto')
     PathMover.simulator = simulator
 
     print "Currently", simulator.storage.number_of_trajectories(), "simulations in the storage"
