@@ -291,6 +291,14 @@ class OrderParameter(object):
         else:
             self.cache = None
 
+    def save(self):
+        """
+        Saves the order parameter to the same storage as used in Configuration.storage if self.use_storage is set to True
+        """
+        if self.use_storage:
+            self.cache.save()
+        pass
+
     def _eval(self, trajectory):
         """
         Actual evaluation of a list of snapshots.
