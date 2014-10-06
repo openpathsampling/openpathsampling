@@ -152,6 +152,8 @@ if __name__ == '__main__':
         en = OutXEnsemble(lV, slice(1,-1), lazy = False)
         print en(pm.final)
 
+        op.save()
+
         exit()
 
            

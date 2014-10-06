@@ -233,7 +233,7 @@ class ConfigurationCache(Cache):
         size_name = self.storage.ncfile.variables[var_name].dimensions[1]
         size = len(self.storage.ncfile.dimensions[size_name])
 
-        data_idx = self.storage.ncfile.variables[var_name + '_idx'][:length].astype(np.int)
+        data_idx = self.storage.ncfile.variables[var_name + '_idx'][:length,0].astype(np.int).copy()
         self.is_cached = set([int(i) for i in data_idx])
 
         if size == 1:
@@ -242,7 +242,6 @@ class ConfigurationCache(Cache):
         else:
             data = self.storage.ncfile.variables[var_name][:, :].astype(np.float).copy()
             self.cache = [v for v in data]
-
 
 class OrderParameter(object):
     """
