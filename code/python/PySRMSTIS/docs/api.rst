@@ -16,9 +16,9 @@ OrderParameter
 	:inherited-members:
 	:show-inheritance:
 
-**************
+***********
 MSMAnalysis
-**************
+***********
 	
 .. automodule:: msm_analysis
 	:members:

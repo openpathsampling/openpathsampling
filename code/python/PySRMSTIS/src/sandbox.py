@@ -41,7 +41,8 @@ if __name__ == '__main__':
         
     if True:        
         cc = Trajectory.load(1)[ 0 ]
-        op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices)
+        op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices, use_storage=True)
+
         dd = simulator.storage.trajectory(1)[ 0:50 ]
     #    op.cache.fill()
     
@@ -150,9 +151,9 @@ if __name__ == '__main__':
 
         en = OutXEnsemble(lV, slice(1,-1), lazy = False)
         print en(pm.final)
-        
-        
-        
+
+        op.save()
+
         exit()
 
            
