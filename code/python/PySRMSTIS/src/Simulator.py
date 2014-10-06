@@ -193,6 +193,7 @@ class Simulator(object):
             
             # This is not stored yet so we need to set it again. Should be stored in the database along with the still missing topology
 #            self.solute_indices = range(22)
+            self.platform = 'CPU'
 
             # Finally create the OpenMM simulation system
             self._create_OpenMMSimulation()
@@ -234,7 +235,7 @@ class Simulator(object):
         self.fn_initial_pdb = 'data/Alanine_solvated.pdb'
         self.forcefield_solute = 'amber99sbildn.xml'
         self.forcefield_solvent = 'tip3p.xml'        
-        self.platform = 'CUDA'
+        self.platform = 'CPU'
         self.solute_indices = range(22)                         # indices of Alanine without water
 
         self.n_frames_max = 5000;                               # maximal length of trajectories in saved frames
