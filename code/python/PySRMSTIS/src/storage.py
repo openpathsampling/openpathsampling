@@ -134,7 +134,7 @@ class TrajectoryStorage(object):
         setattr(ncfile, 'Conventions', 'Multi-State Transition Interface TPS')
         setattr(ncfile, 'ConventionVersion', '0.1')
                 
-        self._init_netcdf()
+        #self._init_netcdf() #WTF? Was this supposed to be something else?
                         
         # Force sync to disk to avoid data loss.
         ncfile.sync()
