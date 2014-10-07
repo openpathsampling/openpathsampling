@@ -18,7 +18,6 @@ class BoundedMatrix(object):
     '''
     
     def __init__(self, T):
-        
         self.T = T
         self.idx_computed = False
         self.evd_computed = False
@@ -41,7 +40,6 @@ class BoundedMatrix(object):
         '''
         
         if not self.idx_computed:
-    
             # find eigenvalues to the eigenvalue of one        
                         
             self.stat_idx = np.where(np.isclose(self.eigenvalues,1))[0]
@@ -280,9 +278,8 @@ class MSM(BoundedMatrix):
         for i in c:
             s[i] = 1
         return s
-            
+
     def path_probabilities(self, description):
-        
 #        s = self._sv(description[0])
         s = np.ones(self.size)
         
@@ -296,8 +293,7 @@ class MSM(BoundedMatrix):
                     s = np.dot(s, BoundedMatrix(self._tau(i[0])).range_sum(i[1]))
             else:
                 s = np.dot(s, self._tau(i))
-                
-                
+
         return np.dot(s, np.ones(self.size))
     
     def OOM_representation(self):

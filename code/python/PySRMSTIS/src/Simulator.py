@@ -194,6 +194,7 @@ class Simulator(object):
             
             # This is not stored yet so we need to set it again. Should be stored in the database along with the still missing topology
 #            self.solute_indices = range(22)
+            self.platform = 'CPU'
 
             # Finally create the OpenMM simulation system
             self._create_OpenMMSimulation()

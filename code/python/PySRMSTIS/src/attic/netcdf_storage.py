@@ -247,7 +247,8 @@ class NetCDFStorage(object):
         ncgrp_options = ncgrp
         
         # Get option value.
-        option_value = 
+        option_value = None
+
         # If Quantity, strip off units first.
         option_unit = None
         if type(option_value) == units.Quantity:
