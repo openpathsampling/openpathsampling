@@ -396,10 +396,32 @@ class EnsembleCombination(Ensemble):
             return self.fnc(self.ensemble1(trajectory, lazy), self.ensemble2(trajectory, lazy))
 
     def forward(self, trajectory):
-        return self.fnc(self.ensemble1.forward(trajectory), self.ensemble2.forward(trajectory))
+        if Ensemble.use_shortcircuit:
+            a = self.ensemble1.forward(trajectory)
+            res_true = self.fnc(a, True)
+            res_false = self.fnc(a, False)
+            if res_false == res_true:
+                # result is independent of ensemble_b so ignore it
+                return res_true
+            else:
+                b = self.ensemble2.forward(trajectory)
+                return self.fnc(a, b)
+        else:
+            return self.fnc(self.ensemble1.forward(trajectory), self.ensemble2.forward(trajectory))
 
     def backward(self, trajectory):
-        return self.fnc(self.ensemble1.backward(trajectory), self.ensemble2.backward(trajectory))
+        if Ensemble.use_shortcircuit:
+            a = self.ensemble1.backward(trajectory)
+            res_true = self.fnc(a, True)
+            res_false = self.fnc(a, False)
+            if res_false == res_true:
+                # result is independent of ensemble_b so ignore it
+                return res_true
+            else:
+                b = self.ensemble2.backward(trajectory)
+                return self.fnc(a, b)
+        else:
+            return self.fnc(self.ensemble1.backward(trajectory), self.ensemble2.backward(trajectory))
 
     def __str__(self):
 #        print self.sfnc, self.ensemble1, self.ensemble2, self.sfnc.format('(' + str(self.ensemble1) + ')' , '(' + str(self.ensemble1) + ')')
