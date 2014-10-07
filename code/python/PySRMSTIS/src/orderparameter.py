@@ -266,9 +266,10 @@ class OrderParameter(object):
     
     def _eval_idx(self, indices, path = None):
         '''
-        Actual evaluation of indices of snapshots.
+        Actual evaluation of indices of snapshots. Default version applies
+        self._eval to all the indices.
         '''
-        pass
+        return self._eval(Trajectory(Configuration.get(indices)))
 
     def __call__(self, snapshot):
         '''
@@ -475,6 +476,55 @@ class OP_Multi_RMSD(OrderParameter):
         ptraj = self.metric.prepare_trajectory(trajectory.subset(self.atom_indices).md())
         return [ self.metric.one_to_all(ptraj, self._generator, idx) for idx in range(0,len(ptraj)) ]
     
+class OP_Function(OrderParameter):
+    """ Wrapper to decorate any appropriate function as an OrderParameter.
+
+    Examples
+    -------
+    >>> # To create an order parameter which calculates the dihedral formed
+    >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
+    >>> import mdtraj as md
+    >>> psi_atoms = [7,9,15,17]
+    >>> psi_orderparam = OP_Function("psi", md.compute_dihedrals,
+    >>>                              trajdatafmt="mdtraj",
+    >>>                              indices=[phi_atoms])
+    >>> print psi_orderparam( traj.md() )
+    """
+    def __init__(self, name, fcn, trajdatafmt=None, **kwargs):
+        """
+        Parameters
+        ----------
+        name : str
+        fcn : function
+        trajdatafmt : str
+            which format the trajectory data needs to be in for the `fcn`.
+            Currently supports "mdtraj", otherwise defaults to our own 
+        kwargs : 
+            named arguments which should be given to `fcn` (for example, the
+            atoms which define a specific distance/angle)
+
+        Notes
+        -----
+            We may decide that it is better not to use the trajdatafmt
+            trick, and to instead create separate wrapper classes for each
+            supported trajformat.
+        """
+        super(OP_Function, self).__init__(name)
+        self.fcn = fcn
+        self.trajdatafmt = trajdatafmt
+        self.kwargs = kwargs
+        return
+
+
+    def _eval(self, trajectory, *args):
+        if self.trajdatafmt=='mdtraj':
+            t = trajectory.md()
+        else:
+            t = trajectory
+        return self.fcn(t, *args, **self.kwargs)
+    
+
+
 if __name__ == '__main__':
     def ident(indices):
         if type(indices) is list:
@@ -490,3 +540,5 @@ if __name__ == '__main__':
     print s.cache
     print s[1:10]
     print s.cache
+
+
