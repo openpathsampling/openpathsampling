@@ -10,7 +10,7 @@ import numpy as np
 
 class Cache(object):
     """
-    Initializes an OrderParameter object that is essentially a function that maps a frame (Snapshot) within a trajectory (Trajectory) to a number.
+    A simple cache implementation
 
     Parameters
     ----------
@@ -140,7 +140,7 @@ class Cache(object):
 
 class ConfigurationCache(Cache):
     """
-    A cache that is attached to snapshot indices store in the Snapshot storage
+    A cache that is attached to Configuration indices store in the Configuration storage
 
     Attributes
     ----------
@@ -180,8 +180,8 @@ class ConfigurationCache(Cache):
         initializes the associated storage to save a specific order parameter in it
 
         """
-        # save associated storage in class variable for all Snapshot instances to access
-        #        ncgrp = storage.ncfile.createGroup('snapshot')
+        # save associated storage in class variable for all Configuration instances to access
+        #        ncgrp = storage.ncfile.createGroup('configuration')
 
         self.storage = Configuration.storage
         ncgrp = self.storage.ncfile
@@ -200,7 +200,7 @@ class ConfigurationCache(Cache):
             ncvar_op_idx = ncgrp.createVariable(var_name + '_idx', 'u4', 'configuration')
             ncvar_op_length = ncgrp.createVariable(var_name + '_length', 'u4', size_dimension)
 
-            # Define units for snapshot variables.
+            # Define units for configuration variables.
             setattr(ncvar_op, 'units', 'None')
 
             # Define long (human-readable) names for variables.
@@ -213,7 +213,7 @@ class ConfigurationCache(Cache):
 
         ncfile = self.storage.ncfile
 
-        # Make sure snapshots are stored and have an index and then add the snapshot index to the trajectory
+        # Make sure configurations are stored and have an index and then add the configuration index to the trajectory
         var_name = 'op_' + self.name
         indices = list(self.is_cached)
         ncfile.variables[var_name][:, :] = np.array(self.cache)
@@ -245,7 +245,7 @@ class ConfigurationCache(Cache):
 
 class OrderParameter(object):
     """
-    Initializes an OrderParameter object that is essentially a function that maps a frame (Snapshot) within a trajectory (Trajectory) to a number.
+    Initializes an OrderParameter object that is essentially a function that maps a frame (Configuration) within a trajectory (Trajectory) to a number.
 
     Parameters
     ----------
@@ -257,14 +257,14 @@ class OrderParameter(object):
     name : string
     use_cache : bool
         If set to `True` then the generated information is cached for further computation. This requires that the
-        used snapshots have an index > 0 which means they need to have been saved to the storage.
+        used configurations have an index > 0 which means they need to have been saved to the storage.
     use_storage : bool
         If set to `True` the cached information will also be stored in the associated netCDF file.
         This still needs testing.
     size : int
         The number of dimensions of the output order parameter. So far this is not used and will be necessary
         or useful when storage is available
-    cache : SnapshotCache
+    cache : ConfigurationCache
         A cache object that holds all the values.
 
     Notes
@@ -277,11 +277,11 @@ class OrderParameter(object):
         # Name needed to eventually store to netCDF. This is not yet done
         self.name = name
 
-        # We will use a cache since we assume the snapshots objects, the OrderParameter Instance and the ID# of snapshots to be immutable
+        # We will use a cache since we assume the configurations objects, the OrderParameter Instance and the ID# of configurations to be immutable
         self.use_cache = use_cache
         self.use_storage = use_storage
 
-        # Run the OrderParameter on the initial snapshot to get the size
+        # Run the OrderParameter on the initial configuration to get the size
         #        self.size = len(self._eval(0))
         self.size = 1
 
@@ -300,13 +300,13 @@ class OrderParameter(object):
 
     def _eval(self, trajectory):
         """
-        Actual evaluation of a list of snapshots.
+        Actual evaluation of a list of configurations.
         """
         pass
 
     def _eval_idx(self, indices):
         """
-        Actual evaluation of indices of snapshots.
+        Actual evaluation of indices of configurations.
         """
         pass
 

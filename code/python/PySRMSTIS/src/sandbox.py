@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     if simulator.storage.number_of_trajectories() == 0:        
         # load initial equilibrate snapshot given by ID #0
-        snapshot = Snapshot.load(0,0)    
+        snapshot = Snapshot.load(0, 0)
         
         # generate from this snapshot a trajectory with 50 steps
         traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,50))])
@@ -44,10 +44,7 @@ if __name__ == '__main__':
         op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices, use_storage=True)
 
         dd = simulator.storage.trajectory(1)[ 0:50 ]
-    #    op.cache.fill()
-    
-    #    print op(dd)
-        
+
         lV = LambdaVolume(op, 0.0, 0.06)
         lV2 = LambdaVolume(op, 0.0, 0.08)
         start_time = time.time()
@@ -56,21 +53,45 @@ if __name__ == '__main__':
     
         # if this uses the same orderparameter it is fast, since the values are cached!
         tis = ef.TISEnsemble(
-                       LambdaVolume(op, 0.0, 0.06),
-                       LambdaVolume(op, 0.0, 0.06),
-                       LambdaVolume(op, 0.0, 0.08),
+                       LambdaVolume(op, 0.0, 0.041),
+                       LambdaVolume(op, 0.0, 0.041),
+                       LambdaVolume(op, 0.0, 0.045),
+                       True
+                       )
+
+        enAB = ef.A2BEnsemble(
+                       LambdaVolume(op, 0.0, 0.041),
+                       LambdaVolume(op, 0.0, 0.041),
                        True
                        )
         
         tt = simulator.storage.trajectory(1)[4:18]
-        
+
+        print [ (op(d)) for d in dd ]
+
+        stime = time.time()
+        print tis.locate(dd, lazy=True, overlap=50)
+        print time.time() - stime
+        stime = time.time()
+        print tis.locate(dd, lazy=False, overlap=50)
+        print time.time() - stime
+
+        stime = time.time()
+        print enAB.locate(dd, lazy=True, overlap=50)
+        print time.time() - stime
+        stime = time.time()
+        print enAB.locate(dd, lazy=False, overlap=50)
+        print time.time() - stime
+
+        print 'Lazy is about 20 times faster in this example!!!'
+
         # This is to cache the values for all snapshots in tt. Makes later access MUCH faster. 
         # Especially because the frames do not have to be read one by one.
         op(tt)
         # print tis
 #        print [ s.idx for s in tt]
 #        print [ (lV(d)) for d in tt ]
-#        print [ (op(d)) for d in tt ]
+        print [ (op(d)) for d in dd ]
         
         # This tests, if the iteration request works. It basically return True if it makes sense to simulate or if the ensemble cannot
         # be true in the next step. This should be passed to the pathmover to stop simulating for a particular ensemble
@@ -80,7 +101,6 @@ if __name__ == '__main__':
                 state = 0
                 )
 
-        
         print "Iteration test"
         for l in range(0,tt.frames + 0):
             print tis.forward(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
