@@ -486,26 +486,42 @@ class OP_Function(OrderParameter):
     >>> import mdtraj as md
     >>> psi_atoms = [7,9,15,17]
     >>> psi_orderparam = OP_Function("psi", md.compute_dihedrals,
-    >>>                              atom_indices=[phi_atoms])
+    >>>                              trajdatafmt="mdtraj",
+    >>>                              indices=[phi_atoms])
     >>> print psi_orderparam( traj.md() )
     """
-    def __init__(self, name, fcn, **kwargs):
+    def __init__(self, name, fcn, trajdatafmt=None, **kwargs):
         """
         Parameters
         ----------
         name : str
         fcn : function
+        trajdatafmt : str
+            which format the trajectory data needs to be in for the `fcn`.
+            Currently supports "mdtraj", otherwise defaults to our own 
         kwargs : 
             named arguments which should be given to `fcn` (for example, the
             atoms which define a specific distance/angle)
+
+        Notes
+        -----
+            We may decide that it is better not to use the trajdatafmt
+            trick, and to instead create separate wrapper classes for each
+            supported trajformat.
         """
         super(OP_Function, self).__init__(name)
         self.fcn = fcn
+        self.trajdatafmt = trajdatafmt
         self.kwargs = kwargs
+        return
 
 
     def _eval(self, trajectory, *args):
-        return self.fcn(trajectory, *args, **self.kwargs)
+        if self.trajdatafmt=='mdtraj':
+            t = trajectory.md()
+        else:
+            t = trajectory
+        return self.fcn(t, *args, **self.kwargs)
     
 
 
