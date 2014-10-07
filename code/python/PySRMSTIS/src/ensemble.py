@@ -24,6 +24,9 @@ class Ensemble(object):
     -----
     Maybe replace - by / to get better notation. So war its not been used
     '''
+
+    use_shortcircuit = True
+
     def __init__(self):
         '''
         A path volume defines a set of paths.
@@ -377,7 +380,20 @@ class EnsembleCombination(Ensemble):
         self.sfnc = str_fnc
 
     def __call__(self, trajectory, lazy=None):
-        return self.fnc(self.ensemble1(trajectory, lazy), self.ensemble2(trajectory, lazy))
+        # Shortcircuit will automatically skip the second part of the combination if the result does not depend on it!
+        # This makes sense since the expensive part is the ensemble testing not computing two logic operations
+        if Ensemble.use_shortcircuit:
+            a = self.ensemble1(trajectory, lazy)
+            res_true = self.fnc(a, True)
+            res_false = self.fnc(a, False)
+            if res_false == res_true:
+                # result is independent of ensemble_b so ignore it
+                return res_true
+            else:
+                b = self.ensemble2(trajectory, lazy)
+                return self.fnc(a, b)
+        else:
+            return self.fnc(self.ensemble1(trajectory, lazy), self.ensemble2(trajectory, lazy))
 
     def forward(self, trajectory):
         return self.fnc(self.ensemble1.forward(trajectory), self.ensemble2.forward(trajectory))
