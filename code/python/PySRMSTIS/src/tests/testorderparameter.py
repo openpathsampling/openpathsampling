@@ -44,9 +44,9 @@ class testOP_Function(object):
         psi_atoms = [7,9,15,17]
         dihedral_op = op.OP_Function("psi", md.compute_dihedrals,
                                     trajdatafmt="mdtraj",
-                                    indices=[phi_atoms])
+                                    indices=[psi_atoms])
         mdtraj_version = trajectory.Trajectory.load(1).md()
-        md_dihed = md.compute_dihedrals(mdtraj_version, indices=[phi_atoms])
+        md_dihed = md.compute_dihedrals(mdtraj_version, indices=[psi_atoms])
         my_dihed =  dihedral_op( trajectory.Trajectory.load(1) )
         for (truth, beauty) in zip(md_dihed, my_dihed):
             assert_equal(truth, beauty)
