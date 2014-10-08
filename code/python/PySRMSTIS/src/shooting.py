@@ -14,7 +14,7 @@ import numpy as np
 #############################################################################
 
 class ShootingPoint(object):
-    def __init__(self, selector, trajectory, index, f = None, Z = None):
+    def __init__(self, selector, trajectory, index, f = None, sum_bias = None):
         '''
         Constructs a ShootingPoint object.
         
@@ -28,9 +28,9 @@ class ShootingPoint(object):
         index : int
             The actual index of the point picked from the trajectory
         f : float
-            The unnormalized bias for the point picked
-        Z : float 
-            The unnormalize bias for the trajectory from which the point was picked
+            The unnormalized probability for the point picked
+        sum_bias : float
+            The unnormalize probability for the trajectory from which the point was picked
 
         Notes
         -----
@@ -39,31 +39,31 @@ class ShootingPoint(object):
         self.selector = selector
         self.trajectory = trajectory
         self.idx = index
-        self._f = None
-        self._Z = None
+        self._f = f
+        self._sum_bias = sum_bias
         
     @property
     def snapshot(self):
         return self.trajectory[self.idx]
 
     @property
-    def Z(self):
+    def sum_bias(self):
         '''
-        Return the unnormalized bias for the total trajectory where the point has been chosen from.
+        Return the unnormalized probability for the total trajectory where the point has been chosen from.
         
         Notes
         -----
         These partition function like normalizations for a trajectory should only be computed only once.
         Think about a way to store this. Maybe use a cache for the ShootingPoint
         '''
-        if self._Z is None:
-            self._Z = self.selector.Z(self.trajectory)
+        if self._sum_bias is None:
+            self._sum_bias = self.selector.sum_bias(self.trajectory)
 
-        return self._Z
+        return self._sum_bias
     
     @property
-    def bias(self):
-        return self._f / self._Z
+    def probability(self):
+        return self._f / self._sum_bias
     
     @property
     def f(self):
@@ -71,6 +71,10 @@ class ShootingPoint(object):
             self._f = self.selector.f(self.snapshot)
             
         return self._f
+
+    @property
+    def bias(self):
+        return self.f
     
     @property
     def index(self):
@@ -91,29 +95,29 @@ class ShootingPointSelector(object):
         '''
         return 1.0
     
-    def bias(self, snapshot, trajectory):
-        return self.f(snapshot) / self.Z(trajectory)
+    def probabilities(self, snapshot, trajectory):
+        return self.f(snapshot) / self.sum_bias(trajectory)
     
-    def _probabilities(self, trajectory):
+    def _biases(self, trajectory):
         '''
         Returns a list of unnormalized proposal probabilities for all snapshots in trajectory
         '''
         return [ self.f(s) for s in trajectory ]
     
-    def Z(self, trajectory):
+    def sum_bias(self, trajectory):
         '''
-        Returns the unnormalized bias probability of a trajectory. This is just the sum of all proposal probabilities in a trajectory.
+        Returns the unnormalized probability probability of a trajectory. This is just the sum of all proposal probabilities in a trajectory.
         
         Notes
         -----
         For a uniform distribution this is proportional to the length of the trajectory.
         In this case we can estimate the maximal accepted trajectory length for a given acceptance probability.
         
-        After we have generated a new trajectory the acceptance bias only for the non-symmetric proposal of 
-        different snapshots is given by `bias(old_trajectory) / bias(new_trajectory)`
+        After we have generated a new trajectory the acceptance probability only for the non-symmetric proposal of
+        different snapshots is given by `probability(old_trajectory) / probability(new_trajectory)`
         '''
 
-        return sum(self._probabilities(trajectory))
+        return sum(self._biases(trajectory))
     
     def pick(self, trajectory):
         '''
@@ -125,17 +129,17 @@ class ShootingPointSelector(object):
         The native implementation is very slow. Simple picking algorithm should override this function.
         '''
         
-        prob_list = self._probabilities(trajectory)
-        Z = sum(prob_list)
+        prob_list = self._biases(trajectory)
+        sum_bias = sum(prob_list)
         
-        rand = np.random.random() * Z
+        rand = np.random.random() * sum_bias
         idx = 0
         prob = prob_list[0]
         while prob <= rand and idx < len(prob_list):
             idx += 1
             prob += prob_list[idx]
             
-        point = ShootingPoint(self, trajectory, idx, f = prob_list[idx], Z = Z)
+        point = ShootingPoint(self, trajectory, idx, f = prob_list[idx], sum_bias= sum_bias)
 
         return point
 
@@ -167,12 +171,12 @@ class UniformSelector(ShootingPointSelector):
         '''
         return 1.0
     
-    def Z(self, trajectory):
+    def sum_bias(self, trajectory):
         return float(trajectory.frames - self.pad_start - self.pad_end)
         
     def pick(self, trajectory):
         idx = np.random.random_integers(self.pad_start, trajectory.frames - self.pad_end - 1)
         
-        point = ShootingPoint(self, trajectory, idx, f = 1.0, Z = self.Z(trajectory))
+        point = ShootingPoint(self, trajectory, idx, f = 1.0, sum_bias= self.sum_bias(trajectory))
         
         return point
