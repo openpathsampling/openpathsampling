@@ -83,7 +83,8 @@ if __name__ == '__main__':
         print enAB.locate(dd, lazy=False, overlap=50)
         print time.time() - stime
 
-        print 'Lazy is about 20 times faster in this example!!!'
+        print 'Lazy is about 20 times faster in this example and 10 times with shortcircuit active!!!'
+        print 'If Shortcircuit is active general speedup of 30%!!!'
 
         # This is to cache the values for all snapshots in tt. Makes later access MUCH faster. 
         # Especially because the frames do not have to be read one by one.

@@ -198,7 +198,9 @@ class ConfigurationCache(Cache):
             # define variables for OrderParameters
             ncvar_op = ncgrp.createVariable(var_name, 'f', ('configuration', size_dimension))
             ncvar_op_idx = ncgrp.createVariable(var_name + '_idx', 'u4', 'configuration')
-            ncvar_op_length = ncgrp.createVariable(var_name + '_length', 'u4', size_dimension)
+            ncvar_op_length = ncgrp.createVariable(var_name + '_length', 'u4', 'scalar')
+            
+            ncvar_op_length[0] = 0
 
             # Define units for configuration variables.
             setattr(ncvar_op, 'units', 'None')
@@ -229,11 +231,12 @@ class ConfigurationCache(Cache):
         Make sure that you use unique names otherwise you might load the wrong parameters!
         """
         var_name = 'op_' + self.name
-        length = self.storage.ncfile.variables[var_name + '_length'][0]
+        length = int(self.storage.ncfile.variables[var_name + '_length'][0])
+        print 'Length : ', length
         size_name = self.storage.ncfile.variables[var_name].dimensions[1]
         size = len(self.storage.ncfile.dimensions[size_name])
 
-        data_idx = self.storage.ncfile.variables[var_name + '_idx'][:length,0].astype(np.int).copy()
+        data_idx = self.storage.ncfile.variables[var_name + '_idx'][:length].astype(np.int).copy()
         self.is_cached = set([int(i) for i in data_idx])
 
         if size == 1:
