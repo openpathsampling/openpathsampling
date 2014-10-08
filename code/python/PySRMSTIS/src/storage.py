@@ -446,8 +446,11 @@ class TrajectoryStorage(object):
             packed_data[0] = obj_value
             ncvar[:] = packed_data
         else:
-            ncvar = ncgrp.createVariable(obj_name, type(obj_value))
-            ncvar.assignValue(obj_value)
+            ncvar = ncgrp.createVariable(obj_name, type(obj_value), 'scalar')
+            packed_data = numpy.empty(1, 'O')
+            packed_data[0] = obj_value
+            ncvar[:] = packed_data
+#            ncvar.assignValue(obj_value)
             
         if option_unit: 
             setattr(ncvar, 'units', str(option_unit))

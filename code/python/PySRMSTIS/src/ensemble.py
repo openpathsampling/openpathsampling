@@ -4,8 +4,6 @@ Created on 03.09.2014
 @author: jan-hendrikprinz
 '''
 
-from trajectory import Trajectory
-
 class Ensemble(object):
     '''    
     An Ensemble represents a path ensemble, effectively a set of trajectories.
@@ -204,7 +202,7 @@ class Ensemble(object):
             if set this determines the minimal size to be tested (in lazy mode might no
         overlap : int >= 0
             determines the allowed overlap of all trajectories to be found. A value of x means that
-            two sub-trajectorie can share up to x frames at the beginning and x frames at the end.
+            two sub-trajectory can share up to x frames at the beginning and x frames at the end.
             Default is 1
 
         Returns

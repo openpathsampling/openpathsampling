@@ -53,7 +53,7 @@ class ShootingPoint(object):
         
         Notes
         -----
-        These partition function like normalizations for a trajectoy should only be computed only once.
+        These partition function like normalizations for a trajectory should only be computed only once.
         Think about a way to store this. Maybe use a cache for the ShootingPoint
         '''
         if self._Z is None:

@@ -139,8 +139,8 @@ class Configuration(object):
 
             # Store configuration.
             storage.ncfile.variables['configuration_coordinates'][idx,:,:] = (self.coordinates / nanometers).astype(np.float32)
-            if self.potential_energy is not None: 
-                storage.ncfile.variables['configuration_potential'][idx] = self.potential_energy / kilojoules_per_mole                                
+            if self.potential_energy is not None:
+                storage.ncfile.variables['configuration_potential'][idx] = self.potential_energy / kilojoules_per_mole
 #            storage.ncfile.variables['configuration_box_vectors'][idx,:] = (self.box_vectors / nanometers).astype(np.float32)
             
             # store ID# for later reference in configuration object
@@ -197,9 +197,10 @@ class Configuration(object):
         
         #TODO: Check, for some reason some idx are given as numpy.in32 and netcdf4 is not compatible with indices given in this format!!!!!
         idx = int(idx)
-        
+
+        #TODO: Use newest simtk.units since there was an inconcistance with the new numpy
         x = storage.ncfile.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
-        coordinates = Quantity(x, nanometers)                
+        coordinates = Quantity(x, nanometers)
         b = storage.ncfile.variables['configuration_box_vectors'][idx]
         box_vectors = Quantity(b, nanometers)              
         V = storage.ncfile.variables['configuration_potential'][idx]
