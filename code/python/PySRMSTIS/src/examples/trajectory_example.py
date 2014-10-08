@@ -14,6 +14,8 @@ from snapshot import Snapshot
 from volume import LambdaVolume
 from ensemble import EnsembleFactory as ef
 from ensemble import LengthEnsemble
+from storage import TrajectoryStorage
+from trajectory import Trajectory
 
 from simtk.unit import femtoseconds, picoseconds, nanometers, kelvin, dalton
 from simtk.unit import Quantity
@@ -31,39 +33,65 @@ from simtk.openmm.app import Simulation
 
 class AlanineDipeptideTrajectorySimulator(Simulator):
     def __init__(self, filename, topology, opts, mode='auto'):
-        opts['fn_storage'] = filename
+        super(AlanineDipeptideTrajectorySimulator, self).__init__()
+        Snapshot.simulator = self
+        Trajectory.simulator = self
+        self.opts = {}
+        self.add_stored_parameters(opts)
+        self.fn_storage = filename 
+
         self.pdb = PDBFile(topology)
-        opts['topology'] = self.pdb.topology
+        self.topology = self.pdb.topology
 
         if mode == 'create':
-            platform = openmm.Platform.getPlatformByName(opts['platform'])
-            forcefield = ForceField( opts['forcefield_solute'],
-                                     opts['forcefield_solvect'] )   
-            system = forcefield.createSystem( opts['topology'], 
+            self.storage = TrajectoryStorage(
+                                    topology=self.topology,
+                                    filename=self.fn_storage,
+                                    mode='create' )
+            platform = openmm.Platform.getPlatformByName(self.platform)
+            forcefield = ForceField( self.forcefield_solute,
+                                     self.forcefield_solvect )   
+            system = forcefield.createSystem( self.topology, 
                                               nonbondedMethod=PME,
                                               nonbondedCutoff=1*nanometers,
                                               constraints=HBonds )
-            opts['system_serial'] = openmm.XmlSerializer.serialize(system)
-            integrator = VVVRIntegrator( opts['temperature'],
-                                         opts['collision_rate'],
-                                         opts['timestep'] )
-            simulation = Simulation( opts['topology'], system, 
-                                     integrator, platform )
-            opts['integrator_serial'] = openmm.XmlSerializer.serialize(system)
-            opts['integrator_class'] = type(integrator).__name__
+            self.system_serial = openmm.XmlSerializer.serialize(system)
 
-            self.max_length_stopper = LengthEnsemble(slice(0,opts['n_frames_max']-1))
+            integrator = VVVRIntegrator( self.temperature,
+                                         self.collision_rate,
+                                         self.timestep )
+            self.integrator_serial = openmm.XmlSerializer.serialize(system)
+            self.integrator_class = type(integrator).__name__
+
+            simulation = Simulation( self.topology, system, 
+                                     integrator, platform )
+
+            self.max_length_stopper = LengthEnsemble(slice(0,self.n_frames_max-1))
             self.simulation = simulation
+            self.storage.simulator = self
+            self.storage.init_classes()
+            self.storage._store_options(self)
         if mode == 'restore':
             pass
-        self.opts = opts
-        pass
+        return
 
-    def __getattr__(self, name):
-        if name in self.opts.keys():
-            return self.opts[name]
-        else:
-            raise AttributeError
+    def add_stored_parameters(self, param_dict):
+        '''Adds parameters in param_dict to the attribute dictionary of the
+        simulator object, and saves the relevant keys as options to store.
+
+        Parameters
+        ----------
+        param_dict : dict
+            dictionary of attributes to be added (and stored); attribute
+            names are keys, with appropriate values
+        '''
+        # TODO: I think this should go into the Simulator object
+        for key in param_dict.keys():
+            self.opts[key] = param_dict[key]
+            setattr(self, key, param_dict[key])
+        self.options_to_store = self.opts.keys()
+        return
+        
 
     def equilibrate(self, nsteps):
         self.simulation.context.setPositions(self.pdb.positions)
@@ -81,8 +109,6 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
             system.setParticleMass(i, solute_masses[i].value_in_unit(dalton))
 
 
-    def run_trajectory(self, nsteps):
-        pass
 
 
 if __name__=="__main__":
@@ -109,8 +135,10 @@ if __name__=="__main__":
     
     
     simulator.equilibrate(5)
+    Snapshot(simulator.simulation.context).save(0,0)
+    simulator.initialized = True
 
-    snapshot = Snapshot.load(0,0,)
+    snapshot = Snapshot.load(0,0)
     traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,50))])
     
 
