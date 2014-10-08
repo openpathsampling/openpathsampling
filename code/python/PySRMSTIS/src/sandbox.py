@@ -64,7 +64,7 @@ if __name__ == '__main__':
                        LambdaVolume(op, 0.0, 0.041),
                        True
                        )
-        
+
         tt = simulator.storage.trajectory(1)[4:18]
 
         print [ (op(d)) for d in dd ]
