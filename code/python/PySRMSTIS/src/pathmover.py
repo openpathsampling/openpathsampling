@@ -73,7 +73,7 @@ class PathMover(object):
         return self.final
 
     @property
-    def proposal_bias(self):
+    def selection_probability_ratio(self):
         '''
         Return the proposal probability necessary to correct for an asymmetric proposal.
         
@@ -114,7 +114,7 @@ class ShootMover(PathMover):
         return PathMover.simulator.max_length_stopper
     
     @property
-    def proposal_bias(self):
+    def selection_probability_ratio(self):
         '''
         Return the proposal probability for Shooting Moves. These are given by the ratio of partition functions
         '''
@@ -136,8 +136,8 @@ class ShootMover(PathMover):
         
         if self.accepted:
             rand = np.random.random()
-            print 'Proposal probability', self.proposal_bias, '/ random :', rand
-            if (rand < self.proposal_bias):
+            print 'Proposal probability', self.selection_probability_ratio, '/ random :', rand
+            if (rand < self.selection_probability_ratio):
                 return self.final
             
         return self.start

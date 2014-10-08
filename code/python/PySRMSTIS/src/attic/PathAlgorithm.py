@@ -32,7 +32,7 @@ class PathAlgorithm(object):
         self.proposal_traj = self.mover.move(trajectory)
 
         # Compute biases from proposal
-        self.proposal_bias = self.mover.proposal_bias
+        self.proposal_bias = self.mover.selection_probability_ratio
         
         # and acceptor, which is usually zero or one
         self.acceptor_bias = self.acceptor.test(self.proposal_traj)
