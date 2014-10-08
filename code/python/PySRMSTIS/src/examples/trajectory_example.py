@@ -7,10 +7,11 @@ import os
 sys.path.append(os.path.abspath('../'))
 
 import numpy as np
+import mdtraj as md
  
 from Simulator import Simulator
 from orderparameter import OP_Function
-from snapshot import Snapshot
+from snapshot import Snapshot, Configuration
 from volume import LambdaVolume
 from ensemble import EnsembleFactory as ef
 from ensemble import LengthEnsemble
@@ -35,6 +36,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
     def __init__(self, filename, topology, opts, mode='auto'):
         super(AlanineDipeptideTrajectorySimulator, self).__init__()
         Snapshot.simulator = self
+        Configuration.simulator = self
         Trajectory.simulator = self
         self.opts = {}
         self.add_stored_parameters(opts)
@@ -110,8 +112,6 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
             system.setParticleMass(i, solute_masses[i].value_in_unit(dalton))
 
 
-
-
 if __name__=="__main__":
     start_time = time.time()
     options = {
@@ -140,6 +140,15 @@ if __name__=="__main__":
     simulator.initialized = True
 
     snapshot = Snapshot.load(0,0)
-    traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,50))])
-    
+    psi_atoms = [6,8,14,16]
+    phi_atoms = [4,6,8,14]
+    psi = OP_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
+                            indices=[psi_atoms])
+    phi = OP_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
+                            indices=[phi_atoms])
+    traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,10))])
+    for frame in traj:
+        print phi(frame)[0], psi(frame)[0]
+        #print md.compute_phi(frame.md())[1][0][0], md.compute_psi(frame.md())[1][0][0]
+
 
