@@ -50,7 +50,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
                                     mode='create' )
             platform = openmm.Platform.getPlatformByName(self.platform)
             forcefield = ForceField( self.forcefield_solute,
-                                     self.forcefield_solvect )   
+                                     self.forcefield_solvent )
             system = forcefield.createSystem( self.topology, 
                                               nonbondedMethod=PME,
                                               nonbondedCutoff=1*nanometers,
@@ -74,6 +74,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
         if mode == 'restore':
             pass
         return
+
 
     def add_stored_parameters(self, param_dict):
         '''Adds parameters in param_dict to the attribute dictionary of the
@@ -124,7 +125,7 @@ if __name__=="__main__":
                 'platform' : 'CPU',
                 'solute_indices' : range(22),
                 'forcefield_solute' : 'amber99sbildn.xml',
-                'forcefield_solvect' : 'tip3p.xml'
+                'forcefield_solvent' : 'tip3p.xml'
                }
     simulator = AlanineDipeptideTrajectorySimulator(
                     filename="trajectory.nc",
