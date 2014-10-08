@@ -75,7 +75,7 @@ class PathMover(object):
     @property
     def proposal_bias(self):
         '''
-        Return the proposal bias necessary to correct for an asymmetric proposal.
+        Return the proposal probability necessary to correct for an asymmetric proposal.
         
         Notes
         -----
@@ -116,9 +116,9 @@ class ShootMover(PathMover):
     @property
     def proposal_bias(self):
         '''
-        Return the proposal bias for Shooting Moves. These are given by the ratio of partition functions
+        Return the proposal probability for Shooting Moves. These are given by the ratio of partition functions
         '''
-        return self.start_point.Z / self.final_point.Z
+        return self.start_point.sum_bias / self.final_point.sum_bias
     
     def _generate(self):
         self.final = self.start
