@@ -137,7 +137,7 @@ class FullVolume(Volume):
 
 class LambdaVolume(Volume):
     '''
-    Defines a Volue that is given all states whose orderparameter is in a given range.
+    Defines a Volume containing all states where orderparameter is in a given range.
     '''
     def __init__(self, orderparameter, lambda_min = 0.0, lambda_max = 1.0):
         '''
@@ -161,6 +161,71 @@ class LambdaVolume(Volume):
 
     def __str__(self):
         return '{{x|{2}(x) in [{0}, {1}]}}'.format( self.lambda_min, self.lambda_max, self.orderparameter.name)
+
+class LambdaVolumePeriodic(LambdaVolume):
+    """
+    Defines a Volume containing all states where orderparameter, a periodic
+    function wrapping into the range [period_min, period_max], is in the
+    given range [lambda_min, lambda_max].
+
+    """
+    def __init__(self, orderparameter, lambda_min = 0.0, lambda_max = 1.0,
+                                       period_min = None, period_max = None):
+        """
+        Attributes
+        ----------
+        period_min : float (optional)
+            minimum of the periodic domain
+        period_max : float (optional)
+            maximum of the periodic domain
+        """
+        super(LambdaVolumePeriodic, self).__init__(orderparameter,
+                                                    lambda_min, lambda_max)        
+        if (period_min is not None) and (period_max is not None):
+            self.period_shift = period_min
+            self.period_len = period_max - period_min
+            if self.lambda_max - self.lambda_min > self.period_len:
+                raise Exception("Range of volume larger than periodic bounds.")
+            elif self.lambda_max-self.lambda_min == self.period_len:
+                self.lambda_min = period_min
+                self.lambda_max = period_max
+            else:
+                self.lambda_min = self.do_wrap(lambda_min)
+                self.lambda_max = self.do_wrap(lambda_max)
+            self.wrap = True
+        else:
+            self.wrap = False
+
+    def do_wrap(self, value):
+        return ((value-self.period_shift) % self.period_len) + self.period_shift
+        
+    def __call__(self, snapshot):
+        l = self.orderparameter(snapshot)
+        if self.wrap:
+            l = self.do_wrap(l)
+        if self.lambda_min > self.lambda_max:
+            return l >= self.lambda_min or l <= self.lambda_max
+        else:
+            return l >= self.lambda_min and l <= self.lambda_max
+
+    def __str__(self):
+        if self.wrap:
+            fcn = 'x|({0}(x) - {2}) % {1} + {2}'.format(
+                        self.orderparameter.name,
+                        self.period_len, self.period_shift)
+            if self.lambda_min < self.lambda_max:
+                domain = '[{0}, {1}]'.format(
+                        self.lambda_min, self.lambda_max)
+            else:
+                domain = '[{0}, {1}] union [{2}, {3}]'.format(
+                        self.period_shift, self.lambda_max,
+                        self.lambda_min, self.period_shift+self.period_len)
+            return '{'+fcn+' in '+domain+'}'
+        else:
+            return '{{x|{2}(x) [periodic] in [{0}, {1}]}}'.format( 
+                        self.lambda_min, self.lambda_max, 
+                        self.orderparameter.name)
+
     
 class VoronoiVolume(Volume):
     '''
