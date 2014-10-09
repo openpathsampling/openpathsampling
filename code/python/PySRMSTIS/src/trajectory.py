@@ -393,7 +393,7 @@ class Trajectory(list):
         Add the current state of the trajectory in the database. If nothing has changed then the trajectory gets stored using the same snapshots as before. Saving lots of diskspace
         
         """
-        
+
         ncfile = Trajectory.storage.ncfile
         idx = Trajectory.load_free( )
 
@@ -408,8 +408,8 @@ class Trajectory(list):
             ncfile.variables['trajectory_momentum_reversed'][idx,frame_index] = frame.reversed                     
              
         ncfile.variables['trajectory_length'][idx] = nframes
-                
-        return 
+
+        return
 
     @staticmethod
     def load_momentum_indices(idx):
