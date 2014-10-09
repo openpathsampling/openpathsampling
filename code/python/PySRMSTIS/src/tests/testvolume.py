@@ -113,7 +113,6 @@ class testLambdaVolumePeriodic(object):
     def test_volume_equals_bounds(self):
         '''max-min == pbc_range allows all points'''
         vol = volume.LambdaVolumePeriodic(self.op, 0, 360, -180, 180)
-        # TODO: __str__
         assert_equal(vol.__str__(),
             "{x|(Id(x) - -180) % 360 + -180 in [-180, 180]}")
         assert_equal(True, vol(0))
