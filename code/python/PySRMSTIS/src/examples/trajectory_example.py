@@ -1,6 +1,14 @@
 """
+This is an example file of what a user might actually need to do to run a
+TIS simulation on alanine dipeptide.
+
 @author: David W.H. Swenson
 """
+# NOTE: while in development, the goal here is to get something working,
+# then to abstract out anything that isn't really necessary. The hope is
+# that more of what the user will need to do will be in the __main__ of this
+# script
+
 # hack until this is a proper package
 import sys
 import os
@@ -124,7 +132,7 @@ if __name__=="__main__":
                 'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
                 'platform' : 'CPU',
                 'solute_indices' : range(22),
-                'forcefield_solute' : 'amber99sbildn.xml',
+                'forcefield_solute' : 'amber96.xml',
                 'forcefield_solvent' : 'tip3p.xml'
                }
     simulator = AlanineDipeptideTrajectorySimulator(
@@ -140,15 +148,34 @@ if __name__=="__main__":
     simulator.initialized = True
 
     snapshot = Snapshot.load(0,0)
+    # this generates an order parameter (callable) object named psi (so if
+    # we call `psi(trajectory)` we get a list of the values of psi for each
+    # frame in the trajectory). This particular order parameter uses
+    # mdtraj's compute_dihedrals function, with the atoms in psi_atoms
     psi_atoms = [6,8,14,16]
-    phi_atoms = [4,6,8,14]
     psi = OP_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
                             indices=[psi_atoms])
+    # same story for phi, although we won't use that
+    phi_atoms = [4,6,8,14]
     phi = OP_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
                             indices=[phi_atoms])
-    traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,10))])
+
+    # now we define our states and our interfaces
+    degrees = 180/3.14159 # psi reports in radians; I think in degrees
+    stateA = LambdaVolume(psi, -120.0/degrees, -30.0/degrees)
+    stateB = LambdaVolume(psi, 100/degrees, 180/degrees) # TODO: periodic?
+    interface0 = LambdaVolume(psi, -120.0/degrees, -30.0/degrees)
+    
+    # TODO: this should be made into some wrapper to clean it up for the
+    # user
+    paths_AA_interface_0 = ef.TISEnsemble(stateA, stateA, interface0, lazy=True)
+    paths_AB_interface_0 = ef.TISEnsemble(stateA, stateB, interface0, lazy=True)
+
+    traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,100))])
+
+    print "Does our full trajectory satisfy the ensemble?",
+    print (paths_AA_interface_0(traj) or paths_AB_interface_0(traj))
     for frame in traj:
-        print phi(frame)[0], psi(frame)[0]
-        #print md.compute_phi(frame.md())[1][0][0], md.compute_psi(frame.md())[1][0][0]
+        print phi(frame)[0], psi(frame)[0], stateA(frame), interface0(frame), stateB(frame)
 
 
