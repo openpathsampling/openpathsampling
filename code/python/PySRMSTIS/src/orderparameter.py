@@ -521,10 +521,10 @@ class OP_Function(OrderParameter):
     >>> # To create an order parameter which calculates the dihedral formed
     >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
     >>> import mdtraj as md
-    >>> psi_atoms = [7,9,15,17]
+    >>> psi_atoms = [6,8,14,16]
     >>> psi_orderparam = OP_Function("psi", md.compute_dihedrals,
     >>>                              trajdatafmt="mdtraj",
-    >>>                              indices=[phi_atoms])
+    >>>                              indices=[psi_atoms])
     >>> print psi_orderparam( traj.md() )
     """
     def __init__(self, name, fcn, trajdatafmt=None, **kwargs):
