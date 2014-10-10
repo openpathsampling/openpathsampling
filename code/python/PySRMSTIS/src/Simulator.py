@@ -20,7 +20,7 @@ from simtk.unit import nanosecond, picosecond, nanometers, nanometer, picosecond
 
 from trajectory import Trajectory
 from snapshot import Snapshot
-from storage import TrajectoryStorage
+from storage import Storage
 from integrators import VVVRIntegrator
 from ensemble import LengthEnsemble
 
@@ -89,6 +89,7 @@ class Simulator(object):
             
             # Set initial positions
             self.simulation.context.setPositions(snapshot.coordinates)
+
             trajectory.append(snapshot)
             
             # Assign velocities from Maxwell-Boltzmann distribution          
@@ -109,7 +110,7 @@ class Simulator(object):
                 
                 # Store snapshot and add it to the trajectory. Stores also final frame the last time
                 snapshot = Snapshot(self.simulation.context)
-                snapshot.save()
+                self.storage.snapshot.save(snapshot)
                 trajectory.append(snapshot)
                 
                 # Check if reached a core set. If not, continue simulation
@@ -167,26 +168,26 @@ class Simulator(object):
             self._equilibrate_system()
             
             # Create a trajectory storage
-            self.storage = TrajectoryStorage(
-                                                 topology = self.simulation.topology,
+            self.storage = Storage(
+                                                 topology = self.fn_initial_pdb,
                                                  filename = self.fn_storage,
-                                                 mode = 'create'
+                                                 mode = 'w'
                                                  )
             self.storage.simulator = self
-            self.storage.init_classes()
             # save options
             self.storage._store_options(self)
             
             # save initial equilibrated frame as snapshot ID #0. Might be useful later, who knows
             snapshot = Snapshot(self.simulation.context)
-            snapshot.save(0,0)
+
+            self.storage.snapshot.save(snapshot, 0,0)
         
         if mode == 'restore':
             # Need the oposite order, first open database 
-            self.storage = TrajectoryStorage(
+            self.storage = Storage(
                                                      topology = None,
                                                      filename = self.fn_storage,
-                                                     mode = 'restore'
+                                                     mode = 'a'
                                                      )
 
             # and load options

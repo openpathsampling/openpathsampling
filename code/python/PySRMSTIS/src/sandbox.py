@@ -21,29 +21,33 @@ from pymbar import MBAR
 from snapshot import Snapshot
 
 if __name__ == '__main__':
-    simulator = Simulator.Alanine_system('auto')
+    simulator = Simulator.Alanine_system('create')
     PathMover.simulator = simulator
 
-    print "Currently", simulator.storage.number_of_trajectories(), "simulations in the storage"
-    print "Currently", simulator.storage.number_of_configurations(), "total frames in the storage"
+    print "Currently", simulator.storage.trajectory.number(), "simulations in the storage"
+    print "Currently", simulator.storage.configuration.number(), "total frames in the storage"
 
-    if simulator.storage.number_of_trajectories() == 0:        
+    if simulator.storage.trajectory.number() == 0:
         # load initial equilibrate snapshot given by ID #0
-        snapshot = Snapshot.load(0, 0)
-        
+        snapshot = simulator.storage.snapshot.load(0, 0)
+
+        Trajectory.storage = simulator.storage.trajectory
+
+        print snapshot.coordinates
+
         # generate from this snapshot a trajectory with 50 steps
-        traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,50))])
+        traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,2))])
         print len(traj)
-        traj.save()
+        simulator.storage.trajectory.save(traj)
         
         # Save as Multi-Frame pdb  (only alanine, no water !)  
         traj.solute.md().save_pdb('data/mdtraj.pdb', True)    
         
     if True:        
-        cc = Trajectory.load(1)[ 0 ]
-        op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices, use_storage=True)
+        cc = Trajectory.storage.load(1)[ 0 ]
+        op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices, use_storage=False)
 
-        dd = simulator.storage.trajectory(1)[ 0:50 ]
+        dd = simulator.storage.trajectory.load(1)[ 0:50 ]
 
         lV = LambdaVolume(op, 0.0, 0.06)
         lV2 = LambdaVolume(op, 0.0, 0.08)
@@ -65,7 +69,7 @@ if __name__ == '__main__':
                        True
                        )
 
-        tt = simulator.storage.trajectory(1)[4:18]
+        tt = simulator.storage.trajectory.load(1)[4:18]
 
         print [ (op(d)) for d in dd ]
 

@@ -13,7 +13,7 @@ import mdtraj as md
 sys.path.append(os.path.abspath('../'))
 import snapshot
 import trajectory
-from storage import TrajectoryStorage
+from storage import Storage
 import orderparameter as op
 
 
@@ -22,7 +22,7 @@ class testOP_Function(object):
     def setUp(self):
         # setUp is just reading in some alanine dipeptide frames: this is an
         # ugly hack
-        storage = TrajectoryStorage(    
+        storage = Storage(
                                     #topology="../data/Alanine_solvated.pdb",
                                     topology=None,
                                     filename="../data/trajectory.nc",

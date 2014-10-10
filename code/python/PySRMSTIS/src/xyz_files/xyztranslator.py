@@ -20,7 +20,7 @@ sys.path.append(os.path.abspath('../'))
 import TrajFile
 import trajectory
 import snapshot
-from storage import TrajectoryStorage
+from storage import Storage
 
 class AtomCounter(object):
     '''Let's be honest: that's all we're using the simulation.system object
@@ -244,7 +244,7 @@ class XYZTranslator(object):
         topol = self.trajfile_topology(self.trajfile)
         system = AtomCounter(self.trajfile.frames[0].natoms)
         self.simulation = SimulationDuckPunch(topol, system)
-        self.storage = TrajectoryStorage( topology=topol,
+        self.storage = Storage( topology=topol,
                                           filename=fname, 
                                           mode='auto')
         snapshot.Snapshot.simulator = self
@@ -330,7 +330,7 @@ class XYZTranslator(object):
         '''Entire conversion from a nc file to (possibly multiple) xyz
         files. Includes all trajectoris. Can only run when self.infiles,
         self.outfile, and self.topol_file are set.'''
-        self.storage = TrajectoryStorage( 
+        self.storage = Storage(
                                 topology=None,
                                 filename=self.infiles[0],
                                 mode='restore'
