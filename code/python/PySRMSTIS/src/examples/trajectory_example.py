@@ -17,12 +17,15 @@ sys.path.append(os.path.abspath('../'))
 import numpy as np
 import mdtraj as md
  
+# in principle, all of these imports should be simplified once this is a
+# package
 from Simulator import Simulator
 from orderparameter import OP_Function
 from snapshot import Snapshot, Configuration
-from volume import LambdaVolume
+from volume import LambdaVolume, FullVolume
 from ensemble import EnsembleFactory as ef
-from ensemble import LengthEnsemble
+from ensemble import (LengthEnsemble, FullEnsemble,
+                        ForwardAppendedTrajectoryEnsemble)
 from storage import TrajectoryStorage
 from trajectory import Trajectory
 
@@ -32,6 +35,7 @@ from simtk.unit import Quantity
 import time
 
 from integrators import VVVRIntegrator
+
 from simtk.openmm.app.pdbfile import PDBFile
 import simtk.openmm as openmm
 from simtk.openmm.app import ForceField, PME, HBonds
@@ -43,21 +47,25 @@ from simtk.openmm.app import Simulation
 class AlanineDipeptideTrajectorySimulator(Simulator):
     def __init__(self, filename, topology, opts, mode='auto'):
         super(AlanineDipeptideTrajectorySimulator, self).__init__()
+
+        # tell everybody who their simulator is
         Snapshot.simulator = self
         Configuration.simulator = self
         Trajectory.simulator = self
+
+        # set up the opts
         self.opts = {}
         self.add_stored_parameters(opts)
+
+        # storage
         self.fn_storage = filename 
 
+        # topology
         self.pdb = PDBFile(topology)
         self.topology = self.pdb.topology
 
         if mode == 'create':
-            self.storage = TrajectoryStorage(
-                                    topology=self.topology,
-                                    filename=self.fn_storage,
-                                    mode='create' )
+            # set up the OpenMM simulation
             platform = openmm.Platform.getPlatformByName(self.platform)
             forcefield = ForceField( self.forcefield_solute,
                                      self.forcefield_solvent )
@@ -76,8 +84,17 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
             simulation = Simulation( self.topology, system, 
                                      integrator, platform )
 
-            self.max_length_stopper = LengthEnsemble(slice(0,self.n_frames_max-1))
+            # claim the OpenMM simulation as our own
             self.simulation = simulation
+
+            # set up the max_length_stopper (if n_frames_max is given)
+            self.max_length_stopper = LengthEnsemble(slice(0,self.n_frames_max-1))
+
+            # storage
+            self.storage = TrajectoryStorage(
+                                    topology=self.topology,
+                                    filename=self.fn_storage,
+                                    mode='create' )
             self.storage.simulator = self
             self.storage.init_classes()
             self.storage._store_options(self)
@@ -105,6 +122,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
         
 
     def equilibrate(self, nsteps):
+        # TODO: rename... this is position restrained equil, right?
         self.simulation.context.setPositions(self.pdb.positions)
         system = self.simulation.system
         n_solute = len(self.solute_indices)
@@ -121,7 +139,6 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
 
 
 if __name__=="__main__":
-    start_time = time.time()
     options = {
                 'temperature' : 300.0 * kelvin,
                 'collision_rate' : 1.0 / picoseconds,
@@ -147,7 +164,6 @@ if __name__=="__main__":
     Snapshot(simulator.simulation.context).save(0,0)
     simulator.initialized = True
 
-    snapshot = Snapshot.load(0,0)
     # this generates an order parameter (callable) object named psi (so if
     # we call `psi(trajectory)` we get a list of the values of psi for each
     # frame in the trajectory). This particular order parameter uses
@@ -157,7 +173,7 @@ if __name__=="__main__":
                             indices=[psi_atoms])
     # same story for phi, although we won't use that
     phi_atoms = [4,6,8,14]
-    phi = OP_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
+    phi = OP_Function("phi", md.compute_dihedrals, trajdatafmt="mdtraj",
                             indices=[phi_atoms])
 
     # now we define our states and our interfaces
@@ -166,16 +182,59 @@ if __name__=="__main__":
     stateB = LambdaVolume(psi, 100/degrees, 180/degrees) # TODO: periodic?
     interface0 = LambdaVolume(psi, -120.0/degrees, -30.0/degrees)
     
-    # TODO: this should be made into some wrapper to clean it up for the
-    # user
-    paths_AA_interface_0 = ef.TISEnsemble(stateA, stateA, interface0, lazy=True)
-    paths_AB_interface_0 = ef.TISEnsemble(stateA, stateB, interface0, lazy=True)
+    # TODO: make a wrapper to generate a full interface set: (problem: needs
+    # the ability to define a minimum lambda)
+    #   interface_set(orderparam, [stateA], [stateA, stateB], [lambda_j],
+    #                   lazy=True)
+    interface0_ensemble = ef.TISEnsemble(stateA,
+                                         stateA or stateB,
+                                         interface0,
+                                         lazy=True)
 
-    traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,100))])
+    print """
+PART ONE: Generate an initial trajectory which satisfies the path ensemble
+for the innermost interface.
+
+We do this by using a special ensemble definition that allows any starting
+condition, but doesn't stop until a subtrajectory satisfies the path
+ensemble we've set up. Once it does, we trim the total_path to the
+good_path, which satisfies the ensemble.
+    """
+    # TODO: iterate until we have the desired trajectory type? or create a
+    # new ensemble (with new continue_forward) to do this more cleanly.
+    snapshot = Snapshot.load(0,0)
+
+    first_traj_ensemble = ef.TISEnsemble( FullVolume(),
+                                          stateA or stateB,
+                                          interface0,
+                                          lazy=False)
+
+    get_first_traj = ForwardAppendedTrajectoryEnsemble(
+                            first_traj_ensemble, Trajectory([snapshot]))
+    
+    print "start path generation"
+    total_path = simulator.generate(snapshot, [get_first_traj])
+    print "path generation complete"
+    print
+    print "Total trajectory length: ", len(total_path)
+    segments = interface0_ensemble.split(total_path)
+    print "Traj in first_traj_ensemble?", first_traj_ensemble(total_path)
+    print "nsegments =", len(segments)
+    for i in range(len(segments)):
+        print "seg[{0}]: {1}".format(i, len(segments[i]))
+
+    print "Full traj"
+    for frame in total_path:
+        print phi(frame)[0]*degrees, psi(frame)[0]*degrees, stateA(frame), interface0(frame), stateB(frame)
 
     print "Does our full trajectory satisfy the ensemble?",
-    print (paths_AA_interface_0(traj) or paths_AB_interface_0(traj))
-    for frame in traj:
-        print phi(frame)[0], psi(frame)[0], stateA(frame), interface0(frame), stateB(frame)
+    print interface0_ensemble(total_path)
+    print "Do our segments satisfy the ensemble?",
+    #for seg in segments:
+    #    print interface0_ensemble(seg),
+    #print
+
+    #for frame in segments[0]:
+    #    print phi(frame)[0]*degrees, psi(frame)[0]*degrees, stateA(frame), interface0(frame), stateB(frame)
 
 
