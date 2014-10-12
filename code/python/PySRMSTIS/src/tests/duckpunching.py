@@ -1,3 +1,17 @@
+"""
+Stubs and other tricks used across many tests to get make things quack like
+a duck.
+
+@author David W.H. Swenson
+"""
+
+class CallIdentity(object):
+    '''Stub for a callable that returns itself'''
+    def __init__(self):
+        self.name = "Id"
+    def __call__(self, value):
+        return value
+
 
 class AtomCounter(object):
     '''Let's be honest: that's all we're using the simulation.system object

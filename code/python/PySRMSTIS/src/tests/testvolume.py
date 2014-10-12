@@ -6,15 +6,11 @@ import os
 import sys
 from nose.tools import assert_equal, assert_not_equal, raises
 from nose.plugins.skip import Skip, SkipTest
+from duckpunching import CallIdentity
 
 sys.path.append(os.path.abspath('../'))
 import volume
 
-class CallIdentity(object):
-    def __init__(self):
-        self.name = "Id"
-    def __call__(self, value):
-        return value
 
 class testLambdaVolumePeriodic(object):
     

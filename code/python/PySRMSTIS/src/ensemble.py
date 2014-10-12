@@ -683,11 +683,14 @@ class ExitsXEnsemble(VolumeEnsemble):
 
     def __call__(self, trajectory, lazy=None):
         if type(self.frame) is int:
+            # TODO: what's the best default behavior? False or Exception?
+            #       I'm pretty sure the answer should be Exception, actually
             return False # this is meaningless on a single frame
         else:
-            for i in range(len(trajectory[self.frames])-1):
-                frame_i = trajectory[self.frames][i]
-                frame_iplus = trajectory[self.frames][i+1]
+            subtraj = trajectory[self.frames]
+            for i in range(len(subtraj)-1):
+                frame_i = subtraj[i]
+                frame_iplus = subtraj[i+1]
                 if not self.volume(frame_i) and self.volume(frame_iplus):
                     return True
         return False
