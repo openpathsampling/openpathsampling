@@ -127,7 +127,7 @@ class EmptyVolume(Volume):
     
 class FullVolume(Volume):
     def __init__(self):
-        super(EmptyVolume, self).__init__()
+        super(FullVolume, self).__init__()
 
     def __call__(self, snapshot):
         return True
