@@ -668,30 +668,28 @@ class ExitsXEnsemble(VolumeEnsemble):
     frames of the trajectory crossing from inside to outside the given volume.
     """
     def __init__(self, volume, frames = slice(None), lazy=False):
-        # just changing the defaults for frames and lazy
-        super(ExitsXEnsemble, self).__init__(volume,frames,lazy))
+        # changing the defaults for frames and lazy; prevent single frame
+        if type(frames) is int:
+            raise ValueError('Exits/EntersXEnsemble require more than one frame')
+        super(ExitsXEnsemble, self).__init__(volume,frames,lazy)
 
     def __str__(self):
-        if type(self.frames) is int:
-            return 'False: single frame cannot define crossing'
-        else:
-            domain = 'exists x[t], x[t+1] in [{0}:{1}] '.format(
-                                self.frames.start, self.frames.stop )
-            result = 'such that x[t] in {0} and x[t+1] not in {0}'.format(
-                                self.volume)
-            return domain+result
+        domain = 'exists x[t], x[t+1] in [{0}:{1}] '.format(
+                            self.frames.start, self.frames.stop )
+        result = 'such that x[t] in {0} and x[t+1] not in {0}'.format(
+                            self.volume)
+        return domain+result
 
     def __call__(self, trajectory, lazy=None):
-        if type(self.frame) is int:
-            # TODO: what's the best default behavior? False or Exception?
-            #       I'm pretty sure the answer should be Exception, actually
-            return False # this is meaningless on a single frame
+        if type(self.frames) is int:
+            # in case you changed self.frames after intialization
+            raise ValueError('ExitsXEnsemble requires more than one frame')
         else:
             subtraj = trajectory[self.frames]
             for i in range(len(subtraj)-1):
                 frame_i = subtraj[i]
                 frame_iplus = subtraj[i+1]
-                if not self.volume(frame_i) and self.volume(frame_iplus):
+                if self.volume(frame_i) and not self.volume(frame_iplus):
                     return True
         return False
 
@@ -701,11 +699,25 @@ class EntersXEnsemble(ExitsXEnsemble):
     frames of the trajectory crossing from outside to inside the given volume.
     """
     def __str__(self):
-        pass
+        domain = 'exists x[t], x[t+1] in [{0}:{1}] '.format(
+                            self.frames.start, self.frames.stop )
+        result = 'such that x[t] not in {0} and x[t+1] in {0}'.format(
+                            self.volume)
+        return domain+result
 
-    def __call__(self):
-        pass
-
+    def __call__(self, trajectory, lazy=None):
+        if type(self.frames) is int:
+            # in case you changed self.frames after intialization
+            raise ValueError('EntersXEnsemble requires more than one frame')
+        else:
+            subtraj = trajectory[self.frames]
+            for i in range(len(subtraj)-1):
+                frame_i = subtraj[i]
+                frame_iplus = subtraj[i+1]
+                if not self.volume(frame_i) and self.volume(frame_iplus):
+                    return True
+        return False
+            
         
 class AlteredTrajectoryEnsemble(Ensemble):
     '''
