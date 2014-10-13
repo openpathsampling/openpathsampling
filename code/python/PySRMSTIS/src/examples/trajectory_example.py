@@ -203,15 +203,10 @@ good_path, which satisfies the ensemble.
     # TODO: iterate until we have the desired trajectory type? or create a
     # new ensemble (with new continue_forward) to do this more cleanly.
     snapshot = Snapshot.load(0,0)
-
-    first_traj_ensemble = ef.TISEnsemble( FullVolume(),
-                                          stateA or stateB,
-                                          interface0,
-                                          lazy=False)
-
-    get_first_traj = ForwardAppendedTrajectoryEnsemble(
-                            first_traj_ensemble, Trajectory([snapshot]))
     
+    # TODO: ensemble the consists of successive segments of various types
+
+
     print "start path generation"
     total_path = simulator.generate(snapshot, [get_first_traj])
     print "path generation complete"
