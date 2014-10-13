@@ -73,7 +73,7 @@ class Ensemble(object):
         This is even more difficult if this depends on the length.
         '''
 
-        return False        
+        return True        
         pass
     
     def backward(self, trajectory):
@@ -99,7 +99,7 @@ class Ensemble(object):
         This is even more difficult if this depends on the length.
         '''
 
-        return False        
+        return True        
         pass
 
     def locate(self, trajectory, lazy=True, max_length=None, min_length=1, overlap=1):
@@ -331,7 +331,7 @@ class FullEnsemble(Ensemble):
     The full path ensemble of all possible trajectories.
     '''
     def __init__(self):
-        super(EmptyEnsemble, self).__init__()
+        super(FullEnsemble, self).__init__()
 
     def __call__(self, trajectory, lazy=None):
         return True
@@ -485,7 +485,8 @@ class VolumeEnsemble(Ensemble):
     
 class InXEnsemble(VolumeEnsemble):
     '''
-    Represents an ensemble where part of the trajectory is in a specified volume
+    Represents an ensemble where all the selected frames of the trajectory
+    are in a specified volume
     '''
     
     def forward(self, trajectory):
@@ -553,7 +554,8 @@ class InXEnsemble(VolumeEnsemble):
 
 class OutXEnsemble(InXEnsemble):
     '''
-    Represents an ensemble where part of the trajectory is outside a specified volume
+    Represents an ensemble where all the selected frames from the trajectory
+    are outside a specified volume
     '''    
     @property
     def volume(self):
@@ -570,7 +572,8 @@ class OutXEnsemble(InXEnsemble):
         
 class HitXEnsemble(VolumeEnsemble):
     '''
-    Represents an ensemble where part of the trajectory visits a specified volume at least for one frame
+    Represents an ensemble where at least one of the selected frames from
+    the trajectory visit a specified volume
     '''
 
     def __str__(self):
@@ -645,7 +648,8 @@ class HitXEnsemble(VolumeEnsemble):
 
 class LeaveXEnsemble(HitXEnsemble):
     '''
-    Represents an ensemble where part of the trajectory leaves a specified volume at least for one frame
+    Represents an ensemble where at least one frame of the trajectory is
+    outside the specified volume
     '''
     def __str__(self):
         if type(self.frames) is int:
@@ -656,6 +660,64 @@ class LeaveXEnsemble(HitXEnsemble):
     @property
     def volume(self):
         return ~ self._volume
+
+
+class ExitsXEnsemble(VolumeEnsemble):
+    """
+    Represents an ensemble where two successive frames from the selected
+    frames of the trajectory crossing from inside to outside the given volume.
+    """
+    def __init__(self, volume, frames = slice(None), lazy=False):
+        # changing the defaults for frames and lazy; prevent single frame
+        if type(frames) is int:
+            raise ValueError('Exits/EntersXEnsemble require more than one frame')
+        super(ExitsXEnsemble, self).__init__(volume,frames,lazy)
+
+    def __str__(self):
+        domain = 'exists x[t], x[t+1] in [{0}:{1}] '.format(
+                            self.frames.start, self.frames.stop )
+        result = 'such that x[t] in {0} and x[t+1] not in {0}'.format(
+                            self.volume)
+        return domain+result
+
+    def __call__(self, trajectory, lazy=None):
+        if type(self.frames) is int:
+            # in case you changed self.frames after intialization
+            raise ValueError('ExitsXEnsemble requires more than one frame')
+        else:
+            subtraj = trajectory[self.frames]
+            for i in range(len(subtraj)-1):
+                frame_i = subtraj[i]
+                frame_iplus = subtraj[i+1]
+                if self.volume(frame_i) and not self.volume(frame_iplus):
+                    return True
+        return False
+
+class EntersXEnsemble(ExitsXEnsemble):
+    """
+    Represents an ensemble where two successive frames from the selected
+    frames of the trajectory crossing from outside to inside the given volume.
+    """
+    def __str__(self):
+        domain = 'exists x[t], x[t+1] in [{0}:{1}] '.format(
+                            self.frames.start, self.frames.stop )
+        result = 'such that x[t] not in {0} and x[t+1] in {0}'.format(
+                            self.volume)
+        return domain+result
+
+    def __call__(self, trajectory, lazy=None):
+        if type(self.frames) is int:
+            # in case you changed self.frames after intialization
+            raise ValueError('EntersXEnsemble requires more than one frame')
+        else:
+            subtraj = trajectory[self.frames]
+            for i in range(len(subtraj)-1):
+                frame_i = subtraj[i]
+                frame_iplus = subtraj[i+1]
+                if not self.volume(frame_i) and self.volume(frame_iplus):
+                    return True
+        return False
+            
         
 class AlteredTrajectoryEnsemble(Ensemble):
     '''
