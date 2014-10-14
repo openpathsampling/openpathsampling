@@ -5,7 +5,7 @@ import os
 import sys
 sys.path.append(os.path.abspath('../'))
 from volume import LambdaVolume
-from ensemble import ExitsXEnsemble, EntersXEnsemble
+from ensemble import *
 
 def wrap_traj(traj, start, length):
     """Wraps the traj such that the original traj starts at frame `start`
@@ -33,19 +33,12 @@ def test_wrap_traj():
 
 def setUp():
     ''' Setup for tests tests of classes in ensemble.py. '''
-    global lower
-    global upper
-    global op 
+    global lower, upper, op, vol1, ttraj
     lower = 0.1
     upper = 0.5
     op = CallIdentity()
-
-    global vol1
     vol1 = LambdaVolume(op, lower, upper)
-
-    global ttraj
     ttraj = {}
-
 
     all_positive = [0.1, 0.05, 0.15]
     # generate trajectories always outside the border
@@ -82,8 +75,14 @@ def setUp():
     ttraj['upper_out_in_out_in'] = map(upper.__sub__, doublecross)
     ttraj['upper_in_out_in_out'] = map(upper.__add__, doublecross)
 
+class EnsembleTest(object):
+    def _single_test(self, ensemble, traj, res, failmsg):
+        try:
+            assert_equal(res, ensemble(traj))
+        except AssertionError as e:
+            prepend_exception_message(e, failmsg)
+            raise
 
-class testExitsXEnsemble(object):
     def _run(self, results):
         """Actually run tests on the trajectory and the wrapped trajectory.
 
@@ -92,26 +91,20 @@ class testExitsXEnsemble(object):
         into loops instead of making tons of lines of code.
         """
         for test in results.keys():
-            try:
-                assert_equal(results[test], self.ensemble(ttraj[test]))
-            except AssertionError as e:
-                failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-                prepend_exception_message(e, failmsg)
-                raise 
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.ensemble, ttraj[test], results[test], failmsg)
+
             wrapped = wrap_traj(ttraj[test], self.wrapstart, self.wrapend)
             lentt = len(ttraj[test])
-            try: 
-                assert_equal(results[test], self.ensemble(wrapped))
-            except AssertionError:
-                failmsg = "Failure in wrapped "+test+"("+str(ttraj[test])+"): "
-                prepend_exception_message(e, failmsg)
-                raise 
-            try:
-                assert_equal(results[test], self.slice_ens(wrapped))
-            except AssertionError:
-                failmsg = "Failure in slice_ens "+test+"("+str(ttraj[test])+"): "
-                raise
 
+            failmsg = "Failure in wrapped "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.ensemble, wrapped, results[test], failmsg)
+
+            failmsg = "Failure in slice_ens "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.slice_ens, wrapped, results[test], failmsg)
+
+
+class testExitsXEnsemble(EnsembleTest):
     def setUp(self):
         self.ensemble = ExitsXEnsemble(vol1)
         # longest ttraj is 5 = 8-3 frames long
@@ -254,3 +247,53 @@ class testEntersXEnsemble(testExitsXEnsemble):
             'exists x[t], x[t+1] in [3:8] such that x[t] not in {0} and x[t+1] in {0}'.format(vol1))
 
 
+class testSequentialEnsembles(EnsembleTest):
+    def setUp(self):
+        self.inX = InXEnsemble(vol1)
+        self.outX = OutXEnsemble(vol1)
+        self.hitX = HitXEnsemble(vol1)
+        self.leaveX = LeaveXEnsemble(vol1)
+        self.enterX = EntersXEnsemble(vol1)
+        self.exitX = ExitsXEnsemble(vol1)
+
+    @raises(ValueError)
+    def test_maxminoverlap_size(self):
+        """SequentialEnsemble error if max/min overlap sizes different"""
+        SequentialEnsemble([self.inX, self.outX, self.inX], (0,0), (0,0,0))
+
+    @raises(ValueError)
+    def test_maxoverlap_ensemble_size(self):
+        """SequentialEnsemble error if overlap sizes don't match ensemble size"""
+        SequentialEnsemble([self.inX, self.outX, self.inX], (0,0,0), (0,0,0))
+
+    @raises(ValueError)
+    def test_minmax_order(self):
+        """SequentialEnsemble error if min_overlap > max_overlap"""
+        SequentialEnsemble([self.inX, self.outX, self.inX], (0,1), (0,0))
+
+    def test_allowed_initializations(self):
+        """SequentialEnsemble initializes correctly"""
+        A = SequentialEnsemble([self.inX, self.outX, self.inX], (0,0), (0,0))
+        B = SequentialEnsemble([self.inX, self.outX, self.inX],0,0)
+        C = SequentialEnsemble([self.inX, self.outX, self.inX])
+        assert_equal(A.min_overlap,B.min_overlap)
+        assert_equal(A.min_overlap,C.min_overlap)
+        assert_equal(A.max_overlap,B.max_overlap)
+        assert_equal(A.max_overlap,C.max_overlap)
+
+    def test_sequential_in_out(self):
+        """SequentialEnsembles based on In/OutXEnsemble"""
+        # idea: for each ttraj, use the key name to define in/out behavior,
+        # dynamically construct a 
+        pass
+
+    def test_sequential_hit_leave(self):
+        """SequentialEnsembles based on Hit/LeaveXEnsemble"""
+        pass
+
+    def test_sequential_enter_exit(self):
+        """SequentialEnsembles based on Enters/ExitsXEnsemble"""
+        pass
+
+    def test_sequential_str(self):
+        pass

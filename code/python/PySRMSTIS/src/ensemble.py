@@ -425,6 +425,72 @@ class EnsembleCombination(Ensemble):
 #        print self.sfnc, self.ensemble1, self.ensemble2, self.sfnc.format('(' + str(self.ensemble1) + ')' , '(' + str(self.ensemble1) + ')')
         return self.sfnc.format('(\n' + Ensemble._indent(str(self.ensemble1)) + '\n)' , '(\n' + Ensemble._indent(str(self.ensemble2)) + '\n)')
 
+class SequentialEnsemble(Ensemble):
+    """
+    An ensemble that consists of several ensembles which are satisfied by
+    the trajectory in sequence. 
+
+    Attributes
+    ----------
+    ensembles : tuple of Ensemble
+        The ensembles, in time-order of when they should occur in the
+        trajectory.
+    min_overlap : int or tuple of int
+        The minimum number of frames that overlap between two ensembles in
+        the sequence. A positive number n indicates that at least n frames
+        must be in both ensembles at the transition between them. A negative
+        number -n indicates that at least n frames in neither ensemble at
+        the transition between them. If given as a list, the list should be
+        of length len(ensembles)-1, with one value for each transition. If
+        given as an integer, that value will be used for all transitions.
+    max_overlap : int or list of int
+        The maximum number of frames that overlap between two ensembles in
+        the sequence. A positive number n indicates that no more than n
+        frames can be in both ensembles at the transition between them. A
+        negative number -n indicates no more than n frames in neither
+        ensemble at the transition between them. If given as a list, the
+        list should be of length len(ensembles)-1, with one value for each
+        transition. If given as an integer, that value will be used for all
+        transitions.
+    """
+
+    def __init__(self, ensembles, min_overlap=0, max_overlap=0):
+        # make tuples of the min/max overlaps
+        if type(min_overlap) is int:
+            min_overlap = (min_overlap, )*(len(ensembles)-1)
+        if type(max_overlap) is int:
+            max_overlap = (max_overlap, )*(len(ensembles)-1)
+
+        self.ensembles = tuple(ensembles)
+        self.min_overlap = tuple(min_overlap)
+        self.max_overlap = tuple(max_overlap)
+
+        # sanity checks
+        if len(self.min_overlap) != len(self.max_overlap):
+            raise ValueError("len(min_overlap) != len(max_overlap)")
+        if len(self.min_overlap) != len(self.ensembles)-1:
+            raise ValueError("Number of overlaps doesn't match number of transitions")
+        for i in range(len(self.min_overlap)):
+            if min_overlap[i] > max_overlap[i]:
+                raise ValueError("min_overlap greater than max_overlap!")
+
+
+    def __call__(self, trajectory, lazy=None):
+        # TODO: is there a way to hack a lazy approach?
+        transition = 0
+        for frame in trajectory:
+            pass
+        pass
+
+    def forward(self, trajectory):
+        pass
+
+    def backward(self, trajectory):
+        pass
+
+    def __str__(self):
+        pass
+
 class LengthEnsemble(Ensemble):
     '''
     Represents an ensemble the contains trajectories of a specific length
@@ -474,7 +540,6 @@ class VolumeEnsemble(Ensemble):
         self._volume = volume
         self.frames = frames
         self.lazy = lazy
-        pass
     
     @property
     def volume(self):
