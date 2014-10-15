@@ -1,4 +1,5 @@
 from nose.tools import assert_equal, assert_not_equal, raises
+from nose.plugins.skip import Skip, SkipTest
 from duckpunching import CallIdentity, prepend_exception_message
 
 import os
@@ -6,6 +7,8 @@ import sys
 sys.path.append(os.path.abspath('../'))
 from volume import LambdaVolume
 from ensemble import *
+
+import re
 
 def wrap_traj(traj, start, length):
     """Wraps the traj such that the original traj starts at frame `start`
@@ -32,7 +35,7 @@ def test_wrap_traj():
     assert_equal(wrap_traj(intraj, 3, 8)[slice(3, 6)], intraj)
 
 def setUp():
-    ''' Setup for tests tests of classes in ensemble.py. '''
+    ''' Setup for tests of classes in ensemble.py. '''
     global lower, upper, op, vol1, ttraj
     lower = 0.1
     upper = 0.5
@@ -54,7 +57,7 @@ def setUp():
     ttraj['upper_in_hit_in'] = map(upper.__sub__, hits_border)
     ttraj['upper_out_hit_out'] = map(upper.__add__, hits_border)
 
-    crosses = [-0.05, 0.05, 0.1]
+    crosses = [-0.05, 0.05]
     border_then_cross = [-0.1, 0.0, 0.1]
     # generate trajectories which cross the border from the inside
     ttraj['lower_in_out'] = map(lower.__sub__, crosses)
@@ -75,13 +78,60 @@ def setUp():
     ttraj['upper_out_in_out_in'] = map(upper.__sub__, doublecross)
     ttraj['upper_in_out_in_out'] = map(upper.__add__, doublecross)
 
+    ttraj['lower_hit_1'] = [lower]
+    ttraj['upper_hit_1'] = [upper]
+
+    aba = [-0.05, 0.05, -0.1]
+    ttraj['lower_in_out_in'] = map(lower.__sub__, aba)
+    ttraj['upper_in_out_in'] = map(upper.__add__, aba)
+    ttraj['lower_out_in_out'] = map(lower.__add__, aba)
+    ttraj['upper_out_in_out'] = map(upper.__sub__, aba)
+    abaab = [-0.05, 0.05, -0.1, -0.05, 0.1]
+    a = [-0.05]
+    ttraj['upper_in_1'] = map(upper.__add__, a)
+    ttraj['lower_in_1'] = map(lower.__sub__, a)
+    ttraj['upper_out_1'] = map(upper.__sub__, a)
+    ttraj['lower_out_1'] = map(lower.__add__, a)
+    abaa = [-0.05, 0.05, -0.1, -0.05]
+    ttraj['upper_in_out_in_in'] = map(upper.__add__, abaa)
+    ttraj['lower_in_out_in_in'] = map(lower.__sub__, abaa)
+    ttraj['upper_out_in_out_out'] = map(upper.__sub__, abaa)
+    ttraj['lower_out_in_out_out'] = map(lower.__add__, abaa)
+    ababa = [-0.05, 0.05, -0.1, 0.1, -0.05]
+    ttraj['upper_in_out_in_out_in'] = map(upper.__add__, ababa)
+    ttraj['lower_in_out_in_out_in'] = map(lower.__sub__, ababa)
+    ttraj['upper_out_in_out_in_out'] = map(upper.__sub__, ababa)
+    ttraj['lower_out_in_out_in_out'] = map(lower.__add__, ababa)
+    abaaba = [-0.05, 0.05, -0.1, -0.15, 0.05, -0.05]
+    ttraj['upper_in_out_in_in_out_in'] = map(upper.__add__, abaaba)
+    ttraj['lower_in_out_in_in_out_in'] = map(lower.__sub__, abaaba)
+    ttraj['upper_out_in_out_out_in_out'] = map(upper.__sub__, abaaba)
+    ttraj['lower_out_in_out_out_in_out'] = map(lower.__add__, abaaba)
+    abaab = [-0.05, 0.05, -0.15, -0.1, 0.05]
+    ttraj['upper_in_out_in_in_out'] = map(upper.__add__, abaab)
+    ttraj['lower_in_out_in_in_out'] = map(lower.__sub__, abaab)
+    ttraj['upper_out_in_out_out_in'] = map(upper.__sub__, abaab)
+    ttraj['lower_out_in_out_out_in'] = map(lower.__add__, abaab)
+    abba = [-0.05, 0.1, 0.05, -0.1]
+    ttraj['upper_in_out_out_in'] = map(upper.__add__, abba)
+    ttraj['lower_in_out_out_in'] = map(lower.__sub__, abba)
+    ttraj['upper_out_in_in_out'] = map(upper.__sub__, abba)
+    ttraj['lower_out_in_in_out'] = map(lower.__add__, abba)
+    abbab = [-0.05, 0.1, 0.05, -0.1, 0.15]
+    ttraj['upper_in_out_out_in_out'] = map(upper.__add__, abbab)
+    ttraj['lower_in_out_out_in_out'] = map(lower.__sub__, abbab)
+    ttraj['upper_out_in_in_out_in'] = map(upper.__sub__, abbab)
+    ttraj['lower_out_in_in_out_in'] = map(lower.__add__, abbab)
+
+
 class EnsembleTest(object):
-    def _single_test(self, ensemble, traj, res, failmsg):
+    def _single_test(self, ensemble_fcn, traj, res, failmsg):
         try:
-            assert_equal(res, ensemble(traj))
+            assert_equal(res, ensemble_fcn(traj))
         except AssertionError as e:
             prepend_exception_message(e, failmsg)
             raise
+
 
     def _run(self, results):
         """Actually run tests on the trajectory and the wrapped trajectory.
@@ -107,10 +157,10 @@ class EnsembleTest(object):
 class testExitsXEnsemble(EnsembleTest):
     def setUp(self):
         self.ensemble = ExitsXEnsemble(vol1)
-        # longest ttraj is 5 = 8-3 frames long
-        self.slice_ens = ExitsXEnsemble(vol1, slice(3,8))
+        # longest ttraj is 6 = 9-3 frames long
+        self.slice_ens = ExitsXEnsemble(vol1, slice(3,9))
         self.wrapstart = 3
-        self.wrapend = 10
+        self.wrapend = 12
 
     @raises(ValueError)
     def test_single_frame(self):
@@ -178,10 +228,10 @@ class testExitsXEnsemble(EnsembleTest):
 class testEntersXEnsemble(testExitsXEnsemble):
     def setUp(self):
         self.ensemble = EntersXEnsemble(vol1)
-        # longest ttraj is 5 = 8-3 frames long
-        self.slice_ens = EntersXEnsemble(vol1, slice(3,8))
+        # longest ttraj is 6 = 9-3 frames long
+        self.slice_ens = EntersXEnsemble(vol1, slice(3,9))
         self.wrapstart = 3
-        self.wrapend = 10
+        self.wrapend = 12
 
     @raises(ValueError)
     def test_single_frame(self):
@@ -255,24 +305,40 @@ class testSequentialEnsembles(EnsembleTest):
         self.leaveX = LeaveXEnsemble(vol1)
         self.enterX = EntersXEnsemble(vol1)
         self.exitX = ExitsXEnsemble(vol1)
+        self.length1 = LengthEnsemble(1)
+        # properly speaking, tis and minus ensembles require outX and
+        # leave_interface; but for now I'll just do the easy way
+        self.tis_ensemble = SequentialEnsemble( [
+                                    self.inX and self.length1,
+                                    self.outX,
+                                    self.inX and self.length1 ]
+                                    )
+        self.minus_ensemble = SequentialEnsemble( [
+                                    self.inX and self.length1,
+                                    self.outX,
+                                    self.inX,
+                                    self.outX,
+                                    self.inX and self.length1 ]
+                                    )
+            
 
     @raises(ValueError)
     def test_maxminoverlap_size(self):
-        """SequentialEnsemble error if max/min overlap sizes different"""
+        """SequentialEnsemble errors if max/min overlap sizes different"""
         SequentialEnsemble([self.inX, self.outX, self.inX], (0,0), (0,0,0))
 
     @raises(ValueError)
     def test_maxoverlap_ensemble_size(self):
-        """SequentialEnsemble error if overlap sizes don't match ensemble size"""
+        """SequentialEnsemble errors if overlap sizes don't match ensemble size"""
         SequentialEnsemble([self.inX, self.outX, self.inX], (0,0,0), (0,0,0))
 
     @raises(ValueError)
     def test_minmax_order(self):
-        """SequentialEnsemble error if min_overlap > max_overlap"""
+        """SequentialEnsemble errors if min_overlap > max_overlap"""
         SequentialEnsemble([self.inX, self.outX, self.inX], (0,1), (0,0))
 
     def test_allowed_initializations(self):
-        """SequentialEnsemble initializes correctly"""
+        """SequentialEnsemble initializes correctly with defaults"""
         A = SequentialEnsemble([self.inX, self.outX, self.inX], (0,0), (0,0))
         B = SequentialEnsemble([self.inX, self.outX, self.inX],0,0)
         C = SequentialEnsemble([self.inX, self.outX, self.inX])
@@ -281,19 +347,132 @@ class testSequentialEnsembles(EnsembleTest):
         assert_equal(A.max_overlap,B.max_overlap)
         assert_equal(A.max_overlap,C.max_overlap)
 
+    def test_overlap_max(self):
+        """SequentialEnsemble allows overlaps up to overlap max, no more"""
+        raise SkipTest
+
+    def test_overlap_min(self):
+        """SequentialEnsemble requires overlaps of at least overlap min"""
+        raise SkipTest
+
+    def test_overlap_max_inf(self):
+        """SequentialEnsemble works if max overlap in infinite"""
+        raise SkipTest
+
+    def test_overlap_min_gap(self):
+        """SequentialEnsemble works in mix overlap is negative (gap)"""
+        raise SkipTest
+
+    def test_overlap_max_gap(self):
+        """SequentialEnsemble works if max overlap is negative (gap)"""
+        raise SkipTest
+
+    def test_subtraj_doesnt_pass(self):
+        """
+        SequentialEnsemble doesn't accept if only a subtraj could be accepted
+        """
+        raise SkipTest
+
+    def test_can_append_tis(self):
+        """SequentialEnsemble as TISEnsemble knows when it can append"""
+        results =   {   'upper_in_out' : True,
+                        'lower_in_out' : True,
+                        'upper_in_out_in' : False,
+                        'lower_in_out_in' : False,
+                        'upper_in_1' : True,
+                        'lower_in_1' : True,
+                        'upper_in' : False,
+                        'lower_in' : False,
+                        'upper_out' : True,
+                        'lower_out' : True,
+                        'upper_out_in' : False,
+                        'lower_out_in' : False,
+                        'upper_out_1' : True,
+                        'lower_out_1' : True,
+                        'upper_in_out_in_in' : False,
+                        'lower_in_out_in_in' : False,
+                        'upper_in_out_in_out_in' : False,
+                        'lower_in_out_in_out_in' : False
+                    }   
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.tis_ensemble.forward, 
+                                ttraj[test], results[test], failmsg)
+
+    def test_can_append_minus(self):
+        """SequentialEnsemble as MinusEnsemble knows when it can append"""
+        # TODO
+        raise SkipTest
+
+    def test_can_prepend_tis(self):
+        """SequentialEnsemble as TISEnsemble knows when it can prepend"""
+        results =   {   'upper_in_out' : False,
+                        'lower_in_out' : False,
+                        'upper_in_out_in' : False,
+                        'lower_in_out_in' : False,
+                        'upper_in_1' : True,
+                        'lower_in_1' : True,
+                        'upper_in' : False,
+                        'lower_in' : False,
+                        'upper_out' : True,
+                        'lower_out' : True,
+                        'upper_out_in' : True,
+                        'lower_out_in' : True,
+                        'upper_out_1' : True,
+                        'lower_out_1' : True,
+                        'upper_in_out_in_in' : False,
+                        'lower_in_out_in_in' : False,
+                        'upper_in_out_in_out_in' : False,
+                        'lower_in_out_in_out_in' : False
+                    }   
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.tis_ensemble.backward, 
+                                ttraj[test], results[test], failmsg)
+
+
+    def test_can_prepend_minus(self):
+        """SequentialEnsemble as MinusEnsemble knows when it can prepend"""
+        # TODO
+        raise SkipTest
+
     def test_sequential_in_out(self):
         """SequentialEnsembles based on In/OutXEnsemble"""
+        raise SkipTest
         # idea: for each ttraj, use the key name to define in/out behavior,
-        # dynamically construct a 
-        pass
+        # dynamically construct a SequentialEnsemble
+        ens_dict = {'in' : self.inX, 'out' : self.outX }
+        #for test in ttraj.keys():
+        for test in [ttraj.keys()[0]]:
+            # TODO: change this to a parser, which then we'll use for
+            # everything
+            parts = re.split("_", test)
+            ens = []
+            for part in parts:
+                my_ens = None
+                try:
+                    my_ens = ens_dict[part]
+                except KeyError:
+                    if part == 'hit':
+                        if 'upper' in parts:
+                            my_ens = ens_dict['in']
+                        elif 'lower' in parts:
+                            my_ens = ens_dict['in']
+                if my_ens != None:
+                    ens.append(my_ens)
+            ensemble = SequentialEnsemble(ens)
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(ensemble, ttraj[test], True, failmsg)
+
 
     def test_sequential_hit_leave(self):
         """SequentialEnsembles based on Hit/LeaveXEnsemble"""
-        pass
+        raise SkipTest
 
     def test_sequential_enter_exit(self):
         """SequentialEnsembles based on Enters/ExitsXEnsemble"""
-        pass
+        # TODO: this includes a test of the overlap ability
+        raise SkipTest
 
     def test_sequential_str(self):
-        pass
+        raise SkipTest
