@@ -454,7 +454,7 @@ class SequentialEnsemble(Ensemble):
         transitions.
     """
 
-    def __init__(self, ensembles, min_overlap=0, max_overlap=0):
+    def __init__(self, ensembles, min_overlap=0, max_overlap=0, greedy=False):
         # make tuples of the min/max overlaps
         if type(min_overlap) is int:
             min_overlap = (min_overlap, )*(len(ensembles)-1)
@@ -464,6 +464,7 @@ class SequentialEnsemble(Ensemble):
         self.ensembles = tuple(ensembles)
         self.min_overlap = tuple(min_overlap)
         self.max_overlap = tuple(max_overlap)
+        self.greedy = greedy
 
         # sanity checks
         if len(self.min_overlap) != len(self.max_overlap):
@@ -477,10 +478,65 @@ class SequentialEnsemble(Ensemble):
 
     def __call__(self, trajectory, lazy=None):
         # TODO: is there a way to hack a lazy approach?
+        nensembles = len(self.ensembles) # DEBUG
+        trajlen = len(trajectory)        # DEBUG
         transition = 0
-        for frame in trajectory:
-            pass
-        pass
+        min_overlap = self.min_overlap[transition]
+        max_overlap = self.max_overlap[transition]
+        ensemble = self.ensembles[transition]
+        start=0
+        end=0
+        wasTrue=False
+        segment = []
+        last_segment = []
+        start0=0
+        #print # DEBUG
+        # TODO: a lot of this logic should be moved into `forward`;
+        while end < len(trajectory)-1 and start < len(trajectory)-1:
+            if start==end or self.forward(tt): 
+                end += 1
+            else:
+                start += 1
+            tt = trajectory[start:end]
+            if ensemble(tt, lazy=False):
+                wasTrue = True
+                if self.greedy==False:
+                    last_segment = segment
+                    segment = [start, end]
+                    start = end - max_overlap
+                    end = start
+            else:
+                if wasTrue==True and self.greedy==True:
+                    last_segment = segment
+                    segment = [start, end-1]
+                    start = end - max_overlap
+                    end = start
+                wasTrue = False
+            if end==start: # we just found something
+                #print "found", transition, segment # DEBUG
+                transition+=1
+                if last_segment==[]: # first find
+                    start0 = segment[0]
+                else:
+                    overlap = last_segment[1]-segment[0]
+                    if overlap <= max_overlap and overlap >= min_overlap:
+                        #print transition, "("+str(nensembles)+")", # DEBUG
+                        #print end+1, "("+str(trajlen)+")" # DEBUG
+                        if (transition==len(self.ensembles) and
+                                end+1==len(trajectory)):
+                            # we're done
+                            return True
+                    else:
+                        # if we fail, we restart from where we last tried
+                        transition=0
+                        start = start0+1
+                        end = start0+1
+                if transition > 0: 
+                    min_overlap = self.min_overlap[transition-1]
+                    max_overlap = self.max_overlap[transition-1]
+                    ensemble = self.ensembles[transition]
+                    
+        return False
 
     def forward(self, trajectory):
         pass
@@ -615,6 +671,12 @@ class InXEnsemble(VolumeEnsemble):
                         return False
                         
             return True
+
+    def __str__(self):
+        if type(self.frames) is int:
+            return 'x[{0}] in {1}'.format(str(self.frames), str(self.volume))
+        else:
+            return 'x[t] in {2} for all t in [{0}:{1}])'.format(self.frames.start, self.frames.stop, self.volume)
 
 
 class OutXEnsemble(InXEnsemble):
