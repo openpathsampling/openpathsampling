@@ -401,8 +401,40 @@ class testSequentialEnsembles(EnsembleTest):
 
     def test_can_append_minus(self):
         """SequentialEnsemble as MinusEnsemble knows when it can append"""
-        # TODO
-        raise SkipTest
+        results =   {   'upper_in_out' : True,
+                        'lower_in_out' : True,
+                        'upper_in_out_in' : True,
+                        'lower_in_out_in' : True,
+                        'upper_in_1' : True,
+                        'lower_in_1' : True,
+                        'upper_in' : True,
+                        'lower_in' : True,
+                        'upper_out' : True,
+                        'lower_out' : True,
+                        'upper_out_in' : True,
+                        'lower_out_in' : True,
+                        'upper_out_1' : True,
+                        'lower_out_1' : True,
+
+                        'upper_in_out_in_in' : True,
+                        'lower_in_out_in_in' : True,
+                        'upper_in_out_in_out_in' : True,
+                        'lower_in_out_in_out_in' : True,
+                        'upper_in_out_in_in_out' : True,
+                        'lower_in_out_in_in_out' : True,
+                        'upper_out_in_out' : True,
+                        'lower_out_in_out' : True,
+                        'upper_out_in_in_out' : True,
+                        'lower_out_in_in_out' : True,
+                        'upper_out_in_out_in': True,
+                        'lower_out_in_out_in': True,
+                        'upper_out_in_in_out_in' : False,
+                        'lower_out_in_in_out_in' : False
+                    }   
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.tis_ensemble.forward, 
+                                ttraj[test], results[test], failmsg)
 
     def test_can_prepend_tis(self):
         """SequentialEnsemble as TISEnsemble knows when it can prepend"""
@@ -433,8 +465,41 @@ class testSequentialEnsembles(EnsembleTest):
 
     def test_can_prepend_minus(self):
         """SequentialEnsemble as MinusEnsemble knows when it can prepend"""
-        # TODO
-        raise SkipTest
+        results =   {   'upper_in_out' : True,
+                        'lower_in_out' : True,
+                        'upper_in_out_in' : True,
+                        'lower_in_out_in' : True,
+                        'upper_in_1' : True,
+                        'lower_in_1' : True,
+                        'upper_in' : True,
+                        'lower_in' : True,
+                        'upper_out' : True,
+                        'lower_out' : True,
+                        'upper_out_in' : True,
+                        'lower_out_in' : True,
+                        'upper_out_1' : True,
+                        'lower_out_1' : True,
+
+                        'upper_in_out_in_in' : False,
+                        'lower_in_out_in_in' : False,
+                        'upper_in_out_in_out_in' : False,
+                        'lower_in_out_in_out_in' : False,
+                        'upper_in_out_in_in_out' : False,
+                        'lower_in_out_in_in_out' : False,
+                        'upper_out_in_out' : True,
+                        'lower_out_in_out' : True,
+                        'upper_out_in_in_out' : True,
+                        'lower_out_in_in_out' : True,
+                        'upper_out_in_out_in': True,
+                        'lower_out_in_out_in': True,
+                        'upper_out_in_in_out_in' : True,
+                        'lower_out_in_in_out_in' : True
+                    }   
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.tis_ensemble.backward, 
+                                ttraj[test], results[test], failmsg)
+
 
     def test_sequential_in_out(self):
         """SequentialEnsembles based on In/OutXEnsemble"""
