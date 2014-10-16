@@ -1,16 +1,43 @@
 import numpy as np
 import mdtraj as md
 
+from storage_utils import ObjectStorage
 from storage_utils import setstorage
 from trajectory import Trajectory
 
 from functools import wraps
 
 
-class TrajectoryStorage(object):
+class TrajectoryStorage(ObjectStorage):
 
     def __init__(self, storage):
-        self.storage = storage
+        super(TrajectoryStorage, self).__init__(storage, Trajectory)
+
+    def _slice(self, idx):
+        idx = self._idx(idx)
+        end =  idx + self.length(idx)
+        return slice(idx,end)
+
+    @wraps(setstorage)
+    def _idx(self, idx):
+        return int(self.storage.variables['trajectory_idx'][idx])
+
+    @wraps(setstorage)
+    def length(self, idx):
+        '''
+        Return the length of a trajectory from the storage
+
+        Parameters
+        ----------
+        idx : int
+            index of the trajectory
+
+        Returns
+        -------
+        length : int
+            Number of frames in the trajectory
+        '''
+        return int(self.storage.variables['trajectory_length'][idx])
 
     @wraps(setstorage)
     def save(self, trajectory, idx=None):
@@ -30,36 +57,29 @@ class TrajectoryStorage(object):
 
         """
 
-        storage = self.storage
-        if idx is None:
-            if storage in trajectory.idx:
-                # has been saved so quit and do nothing
-                return
-            else:
-                idx = self.free()
+        idx = super(TrajectoryStorage, self).save(trajectory, idx)
 
-        # Make sure snapshots are stored and have an index and then add the snapshot index to the trajectory
+        if idx is not None:
+            storage = self.storage
 
-        begin = self.free_idx()
+            begin = self._free_idx()
 
-        print 'Begin :', begin
-        print 'Index :', idx
+    #        print 'Begin :', _idx
+    #        print 'Index :', idx
 
-        nframes = len(trajectory)
-        for frame_index in range(nframes):
-            frame = trajectory[frame_index]
-            storage.snapshot.save(frame)
+            nframes = len(trajectory)
+            for frame_index in range(nframes):
+                frame = trajectory[frame_index]
+                storage.snapshot.save(frame)
 
-            print 'Position :', begin + frame_index
+#                print 'Position :', begin + frame_index
 
-            storage.variables['trajectory_configuration_idx'][begin + frame_index] = frame.configuration.idx[storage]
-            storage.variables['trajectory_momentum_idx'][begin + frame_index] = frame.momentum.idx[storage]
-            storage.variables['trajectory_momentum_reversed'][begin + frame_index] = frame.reversed
+                storage.variables['trajectory_configuration_idx'][begin + frame_index] = frame.configuration.idx[storage]
+                storage.variables['trajectory_momentum_idx'][begin + frame_index] = frame.momentum.idx[storage]
+                storage.variables['trajectory_momentum_reversed'][begin + frame_index] = frame.reversed
 
-        storage.variables['trajectory_length'][idx] = nframes
-        storage.variables['trajectory_idx'][idx] = begin
-
-        trajectory.idx[storage] = idx
+            storage.variables['trajectory_length'][idx] = nframes
+            storage.variables['trajectory_idx'][idx] = begin
 
         return
 
@@ -77,12 +97,8 @@ class TrajectoryStorage(object):
         -------
         trajectory (list of int) - trajectory indices
         '''
+        return self.storage.variables['trajectory_momentum_idx'][self._slice(idx)]
 
-        storage = self.storage
-
-        idx = self.begin(idx)
-        end = idx + self.length(idx)
-        return storage.variables['trajectory_momentum_reversed'][idx:end]
 
 
     @wraps(setstorage)
@@ -101,12 +117,7 @@ class TrajectoryStorage(object):
         list of boolean
             list of boolean which frames in the trajectory are reversed
         '''
-
-        storage = self.storage
-
-        idx = self.begin(idx)
-        end =  idx + self.length(idx)
-        return storage.variables['trajectory_momentum_reversed'][idx:end]
+        return self.storage.variables['trajectory_momentum_reversed'][self._slice(idx)]
 
 
     @wraps(setstorage)
@@ -122,16 +133,8 @@ class TrajectoryStorage(object):
         -------
         trajectory (list of int) - trajectory indices
         '''
+        return self.storage.variables['trajectory_configuration_idx'][self._slice(idx)]
 
-        storage = self.storage
-
-        idx = self.begin(idx)
-        end = idx + self.length(idx)
-        return storage.variables['trajectory_configuration_idx'][idx:end]
-
-    @wraps(setstorage)
-    def begin(self, idx):
-        return int(self.storage.variables['trajectory_idx'][idx])
 
 
     @wraps(setstorage)
@@ -152,25 +155,6 @@ class TrajectoryStorage(object):
                 self.configuration_indices(idx),
                 self.momentum_indices(idx)
         )
-
-
-    @wraps(setstorage)
-    def length(self, idx):
-        '''
-        Return the length of a trajectory from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the trajectory
-
-        Returns
-        -------
-        length : int
-            Number of frames in the trajectory
-        '''
-        print idx
-        return int(self.storage.variables['trajectory_length'][idx])
 
 
     @wraps(setstorage)
@@ -231,59 +215,17 @@ class TrajectoryStorage(object):
         return trajectory
 
     @wraps(setstorage)
-    def last_trajectory(self):
+    def _free_idx(self):
         '''
-        Returns the last generated trajectory. Useful to continue a run.
-
-        Returns
-        -------
-        Trajectoy
-            the actual trajectory object
-        '''
-        return self.load(self.number_of_trajectories())
-
-
-    @wraps(setstorage)
-    def number(self):
-        '''
-        Return the number of trajectories in the storage
-
-        Returns
-        -------
-        number : int
-            number of trajectories in the storage. Their indexing starts with 1.
-        '''
-        length = int(len(self.storage.dimensions['trajectory'])) - 1
-        if length < 0:
-            length = 0
-        return length
-
-
-    @wraps(setstorage)
-    def free(self):
-        '''
-        Return the number of the next free_idx ID
+        Return the number of the next _free_idx ID
 
         Returns
         -------
         index : int
-            the number of the next free_idx index in the storage. Used to store a new snapshot.
-        '''
-        return  self.number() + 1
-
-    @wraps(setstorage)
-    def free_idx(self):
-        '''
-        Return the number of the next free_idx ID
-
-        Returns
-        -------
-        index : int
-            the number of the next free_idx index in the storage. Used to store a new snapshot.
+            the number of the next _free_idx index in the storage. Used to store a new snapshot.
         '''
         length = int(len(self.storage.dimensions['frames']))
         return length + 1
-
 
     @wraps(setstorage)
     def all_momentum_indices(self):
@@ -351,22 +293,21 @@ class TrajectoryStorage(object):
         Initialize the associated storage to allow for trajectory storage
 
         """
+        super(TrajectoryStorage, self)._init()
 
         # save associated storage in class variable for all Trajectory instances to access
         ncfile = self.storage
 
         # define dimensions used in trajectories
-        ncfile.createDimension('trajectory', 0)                 # unlimited number of iterations
         ncfile.createDimension('frames', 0)                     # unlimited number of iterations
-
 
         # Create variables for trajectories
         ncvar_trajectory_configuration_idx  = ncfile.createVariable('trajectory_configuration_idx', 'u4', 'frames')
         ncvar_trajectory_momentum_idx       = ncfile.createVariable('trajectory_momentum_idx', 'u4', 'frames')
         ncvar_trajectory_momentum_reversed  = ncfile.createVariable('trajectory_momentum_reversed', 'b', 'frames')
         ncvar_trajectory_path_hamiltonian   = ncfile.createVariable('trajectory_path_hamiltonians', 'f', 'frames')
-        ncvar_trajectory_length             = ncfile.createVariable('trajectory_length', 'u4', 'trajectory')
-        ncvar_trajectory_idx                = ncfile.createVariable('trajectory_idx', 'u4', 'trajectory')
+        ncvar_trajectory_length             = ncfile.createVariable('trajectory_length', 'u4', self.idx_dimension)
+        ncvar_trajectory_idx                = ncfile.createVariable('trajectory_idx', 'u4', self.idx_dimension)
 
 
         # Define units for snapshot variables.

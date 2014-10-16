@@ -20,6 +20,8 @@ from trajectory_store import TrajectoryStorage
 from snapshot_store import SnapshotStorage
 
 import mdtraj as md
+import copy
+
 
 # TODO: Remove all stuff that is content related and allow to register a class with the storage
 
@@ -68,8 +70,11 @@ class Storage(netcdf.Dataset):
 
         # t = md.Topology()
 
+        self._register_classes()
 
         if mode == 'w':
+            self._init()
+
             if type(topology) is str:
                 self.topology = md.load(topology)
             else:
@@ -77,13 +82,23 @@ class Storage(netcdf.Dataset):
 
             self.atoms = self.topology.n_atoms
 
-            self._init()
+            self.topology.save_pdb('tempXXX.pdb')
+
+            with open ('tempXXX.pdb', "r") as myfile:
+                pdb_string=myfile.read()
+
+            self.variables['pdb'][0] = pdb_string
             self._init_classes()
+            self.sync()
+
 
         elif mode == 'a':
             self.pdb = self.variables['pdb'][0]
-            self.topology = md.load(StringIO.StringIO(self.pdb))
 
+            with open ('tempXXX.pdb', "w") as myfile:
+                myfile.write(self.pdb)
+
+            self.topology = md.load('tempXXX.pdb')
             self._restore_classes()
 
         pass
@@ -111,8 +126,8 @@ class Storage(netcdf.Dataset):
             self.links.append(class_obj)
             
         pass
-    
-    def _init_classes(self):
+
+    def _register_classes(self):
         '''
         Run the initialization on all added classes
         '''
@@ -123,25 +138,30 @@ class Storage(netcdf.Dataset):
         self.add(SnapshotStorage)
         self.add(TrajectoryStorage)
 
-
-
         for cls in self.links:
             # create a member variable which is the associated Class itself
             store_name = cls.__name__[:-7].lower()
 
             setattr(self, store_name, cls(self))
-            print 'Call', store_name
-            getattr(self, store_name)._init()
             getattr(self, store_name).storage = self
 
-        print self.__dict__
+    def _init_classes(self):
+        '''
+        Run the initialization on all added classes
+        '''
+
+        for cls in self.links:
+            # create a member variable which is the associated Class itself
+            store_name = cls.__name__[:-7].lower()
+            getattr(self, store_name)._init()
 
     def _restore_classes(self):
         '''
         Run restore on all added classes
         '''
         for cls in self.links:
-            cls._restore(self)
+            store_name = cls.__name__[:-7].lower()
+#            getattr(self, store_name)._restore()
 
 
     def _init(self):
@@ -169,7 +189,7 @@ class Storage(netcdf.Dataset):
 
         pdb_string = ""
 
-        ncvar = self.createVariable('topology', 'str', 'scalar')
+        ncvar = self.createVariable('pdb', 'str', 'scalar')
         packed_data = numpy.empty(1, 'O')
         packed_data[0] = ""
         ncvar[:] = packed_data
@@ -233,14 +253,14 @@ class Storage(netcdf.Dataset):
         # Find the group.
         ncgrp_options = self.groups[group_name]
         
-        print ncgrp_options.variables.keys()
+#        print ncgrp_options.variables.keys()
 
         # Load run parameters.
         for option_name in ncgrp_options.variables.keys():
             # Get NetCDF variable.
             option_value = self._restore_single_option(ncgrp_options, option_name)
             
-            print option_name
+#            print option_name
             
             # Store option.
             if self.verbose_root: print "Restoring option: %s -> %s (type: %s)" % (option_name, str(option_value), type(option_value))

@@ -26,7 +26,7 @@ COPYRIGHT
 
 This source file is released under the GNU General Public License.
 
-This program is free_idx software: you can redistribute it and/or modify it under
+This program is _free_idx software: you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
 Foundation, either version 3 of the License, or (at your option) any later
 version.
@@ -898,7 +898,7 @@ class ReplicaExchangeTPS(object):
 
         """
 
-        # Make sure we've initialized everything and bound to a storage file before we begin execution.
+        # Make sure we've initialized everything and bound to a storage file before we _idx execution.
         if not self._initialized:
             self._initialize()
 

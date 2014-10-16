@@ -16,7 +16,7 @@ COPYRIGHT AND LICENSE
 
 All code in this repository is released under the GNU General Public License.
 
-This program is free_idx software: you can redistribute it and/or modify it under
+This program is _free_idx software: you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
 Foundation, either version 3 of the License, or (at your option) any later
 version.
@@ -620,7 +620,7 @@ def VVVRIntegrator(temperature=298.0*simtk.unit.kelvin, collision_rate=91.0/simt
     Notes
     -----
     This integrator is equivalent to a Langevin integrator in the velocity Verlet discretization with a
-    timestep correction to ensure that the field-free_idx diffusion constant is timestep invariant.
+    timestep correction to ensure that the field-_free_idx diffusion constant is timestep invariant.
 
     The global 'pseudowork' keeps track of the pseudowork accumulated during integration, and can be
     used to correct the sampled statistics or in a Metropolization scheme.

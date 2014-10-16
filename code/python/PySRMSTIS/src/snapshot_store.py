@@ -1,13 +1,12 @@
 from snapshot import Snapshot, Configuration, Momentum
-
 from storage_utils import setstorage
-
 from functools import wraps
+from storage_utils import ObjectStorage
 
-class SnapshotStorage(object):
+class SnapshotStorage(ObjectStorage):
 
     def __init__(self, storage = None):
-        self.storage = storage
+        super(SnapshotStorage, self).__init__(storage, Snapshot)
 
     @wraps(setstorage)
     def save(self, snapshot, idx_configuration = None, idx_momentum = None):
@@ -46,7 +45,7 @@ class SnapshotStorage(object):
         if idx_configuration is not None:
             idx_c = int(idx_configuration)
             snapshot.configuration = self.storage.configuration.load(idx_c)
-            print snapshot.configuration.idx
+#            print snapshot.configuration.idx
 
         if idx_momentum is not None:
             idx_m = int(idx_momentum)
@@ -55,7 +54,19 @@ class SnapshotStorage(object):
         return snapshot
 
     def _init(self):
-        """
-        Initialize the associated storage to allow for snapshot storage
+        pass
 
-        """
+    def free(self):
+        return 1
+
+    def number(self):
+        return 0
+
+    def first(self):
+        return None
+
+    def last(self):
+        return None
+
+    def get(self, indices):
+        return None

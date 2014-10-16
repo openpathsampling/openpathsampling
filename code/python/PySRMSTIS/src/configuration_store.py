@@ -6,42 +6,35 @@ from snapshot import Configuration
 from storage_utils import setstorage
 
 from functools import wraps
+from storage_utils import ObjectStorage
 
-class ConfigurationStorage(object):
+class ConfigurationStorage(ObjectStorage):
     def __init__(self, storage = None):
-        self.storage = storage
+        super(ConfigurationStorage, self).__init__(storage, Configuration)
 
-    def save(self, configuration, idx = None, storage = None):
+    def save(self, configuration, idx = None):
         """
         Save positions, velocities, boxvectors and energies of current iteration to NetCDF file.
 
         Notes
         -----
-        We need to allow for reversed configurations to save memory. Would be nice
+        We need to allow for reversed configuration_indices to save memory. Would be nice
         """
 
-        storage = self.storage
-        if idx is None:
-            if storage in configuration.idx:
-                # has been saved so quit and do nothing
-                return
-            else:
-                idx = self.free()
+        idx = super(ConfigurationStorage, self).save(configuration, idx)
+        if idx is not None:
+            storage = self.storage
 
-        # Store configuration.
-        storage.variables['configuration_coordinates'][idx,:,:] = (configuration.coordinates / nanometers).astype(np.float32)
+            # Store configuration.
+            storage.variables['configuration_coordinates'][idx,:,:] = (configuration.coordinates / nanometers).astype(np.float32)
 
-        if configuration.potential_energy is not None:
-            storage.variables['configuration_potential'][idx] = configuration.potential_energy / kilojoules_per_mole
-#            storage.variables['configuration_box_vectors'][idx,:] = (self.box_vectors / nanometers).astype(np.float32)
+            if configuration.potential_energy is not None:
+                storage.variables['configuration_potential'][idx] = configuration.potential_energy / kilojoules_per_mole
+    #            storage.variables['configuration_box_vectors'][idx,:] = (self.box_vectors / nanometers).astype(np.float32)
 
-        # store ID# for later reference in configuration object
-        configuration.idx[storage] = idx
+            # Force sync to disk to avoid data loss.
+            storage.sync()
 
-        # Force sync to disk to avoid data loss.
-        storage.sync()
-
-        pass
 
     @wraps(setstorage)
     def coordinates_as_numpy(self, frame_indices=None, atom_indices=None, storage = None):
@@ -50,27 +43,6 @@ class ConfigurationStorage(object):
     @wraps(setstorage)
     def get(self, indices):
         return [ self.load(idx) for idx in indices ]
-
-    @wraps(setstorage)
-    def number(self):
-        '''
-        Load the number of stored configurations
-
-        Returns
-        -------
-        number (int) - number of stored configurations
-        '''
-        length = int(len(self.storage.dimensions['configuration'])) - 1
-        if length < 0:
-            length = 0
-        return length
-
-    @wraps(setstorage)
-    def free(self):
-        '''
-        Return the number of the next free_idx ID
-        '''
-        return self.number() + 1
 
     @wraps(setstorage)
     def load(self, idx):
@@ -87,7 +59,6 @@ class ConfigurationStorage(object):
         configuration : configuration
             the configuration
         '''
-
 
         storage = self.storage
 
@@ -138,7 +109,6 @@ class ConfigurationStorage(object):
 
         return self.coordinates_as_numpy(frame_indices, atom_indices)
 
-    @wraps(setstorage)
     def trajectory_coordinates_as_array(self, idx, atom_indices=None):
         '''
         Returns a numpy array consisting of all coordinates of a trajectory
@@ -160,33 +130,32 @@ class ConfigurationStorage(object):
         frame_indices = self.configuration_indices(idx)
         return self.coordinates_as_array(frame_indices, atom_indices)
 
-    @wraps(setstorage)
     def _init(self):
         '''
-        Initializes the associated storage to save configurations in it
+        Initializes the associated storage to save configuration_indices in it
         '''
         # save associated storage in class variable for all configuration instances to access
 
 #        ncgrp = storage.createGroup('configuration')
 
-        ncgrp = self.storage
+        super(ConfigurationStorage, self)._init()
 
+        ncgrp = self.storage
         atoms = self.storage.atoms
 
-        print 'ATOMS : ', atoms
-
-        # define dimensions used in configurations
-        ncgrp.createDimension('configuration', 0)                       # unlimited number of configurations
+        # define dimensions used in configuration_indices
         if 'atom' not in ncgrp.dimensions:
             ncgrp.createDimension('atom', atoms)    # number of atoms in the simulated system
 
         if 'spatial' not in ncgrp.dimensions:
             ncgrp.createDimension('spatial', 3) # number of spatial dimensions
 
-        # define variables for configurations
-        ncvar_configuration_coordinates          = ncgrp.createVariable('configuration_coordinates', 'f', ('configuration','atom','spatial'))
-        ncvar_configuration_box_vectors          = ncgrp.createVariable('configuration_box_vectors', 'f', ('configuration', 'spatial'))
-        ncvar_configuration_potential            = ncgrp.createVariable('configuration_potential',   'f', ('configuration'))
+#        print 'NAME', self.idx_dimension
+
+        # define variables for configuration_indices
+        ncvar_configuration_coordinates          = ncgrp.createVariable('configuration_coordinates', 'f', (self.idx_dimension,'atom','spatial'))
+        ncvar_configuration_box_vectors          = ncgrp.createVariable('configuration_box_vectors', 'f', (self.idx_dimension, 'spatial'))
+        ncvar_configuration_potential            = ncgrp.createVariable('configuration_potential',   'f', self.idx_dimension)
 
         # Define units for configuration variables.
         setattr(ncvar_configuration_coordinates, 'units', 'nm')

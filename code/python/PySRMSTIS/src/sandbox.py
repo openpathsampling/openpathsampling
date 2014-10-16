@@ -21,31 +21,33 @@ from pymbar import MBAR
 from snapshot import Snapshot
 
 if __name__ == '__main__':
-    simulator = Simulator.Alanine_system('create')
+    simulator = Simulator.Alanine_system('auto')
     PathMover.simulator = simulator
 
     print "Currently", simulator.storage.trajectory.number(), "simulations in the storage"
     print "Currently", simulator.storage.configuration.number(), "total frames in the storage"
 
+    Trajectory.storage = simulator.storage.trajectory
+
+
     if simulator.storage.trajectory.number() == 0:
         # load initial equilibrate snapshot given by ID #0
         snapshot = simulator.storage.snapshot.load(0, 0)
 
-        Trajectory.storage = simulator.storage.trajectory
-
-        print snapshot.coordinates
-
         # generate from this snapshot a trajectory with 50 steps
-        traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,2))])
-        print len(traj)
+        traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,30))])
         simulator.storage.trajectory.save(traj)
         
         # Save as Multi-Frame pdb  (only alanine, no water !)  
-        traj.solute.md().save_pdb('data/mdtraj.pdb', True)    
+        traj.solute.md().save_pdb('data/mdtraj.pdb', True)
         
-    if True:        
+    if True:
+
+        cc = Trajectory.storage.load(1)
+
         cc = Trajectory.storage.load(1)[ 0 ]
-        op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices, use_storage=False)
+
+        op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices, storages=simulator.storage.configuration)
 
         dd = simulator.storage.trajectory.load(1)[ 0:50 ]
 
@@ -71,20 +73,26 @@ if __name__ == '__main__':
 
         tt = simulator.storage.trajectory.load(1)[4:18]
 
-        print [ (op(d)) for d in dd ]
+#        print [ (op(d)) for d in dd ]
+
+        op.load()
+
+        print op.storage_caches
+
+#        op.save()
 
         stime = time.time()
-        print tis.locate(dd, lazy=True, overlap=50)
+        print tis.locate(dd, lazy=True, overlap=1)
         print time.time() - stime
         stime = time.time()
-        print tis.locate(dd, lazy=False, overlap=50)
+        print tis.locate(dd, lazy=False, overlap=1)
         print time.time() - stime
 
         stime = time.time()
-        print enAB.locate(dd, lazy=True, overlap=50)
+        print enAB.locate(dd, lazy=True, overlap=1)
         print time.time() - stime
         stime = time.time()
-        print enAB.locate(dd, lazy=False, overlap=50)
+        print enAB.locate(dd, lazy=False, overlap=1)
         print time.time() - stime
 
         print 'Lazy is about 20 times faster in this example and 10 times with shortcircuit active!!!'

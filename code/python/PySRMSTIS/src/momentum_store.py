@@ -9,11 +9,11 @@ from snapshot import Momentum
 from storage_utils import setstorage
 
 from functools import wraps
+from storage_utils import ObjectStorage
 
-
-class MomentumStorage(object):
+class MomentumStorage(ObjectStorage):
     def __init__(self, storage = None):
-        self.storage = storage
+        super(MomentumStorage, self).__init__(storage, Momentum)
 
     @wraps(setstorage)
     def save(self, momentum, idx = None):
@@ -21,47 +21,21 @@ class MomentumStorage(object):
         Save velocities and kinetic energies of current iteration to NetCDF file.
         """
 
-        storage = self.storage
-        if idx is None:
-            if storage in momentum.idx:
-                # has been saved so quit and do nothing
-                return
-            else:
-                idx = self.free()
+        idx = super(MomentumStorage, self).save(momentum, idx)
 
-        # Store momentum.
-        storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / (nanometers / picoseconds)).astype(np.float32)
-        if momentum.kinetic_energy is not None:
-            storage.variables['momentum_kinetic'][idx] = momentum.kinetic_energy / kilojoules_per_mole
+        if idx is not None:
+            storage = self.storage
 
-        # store ID# for later reference in self object
-        momentum.idx[storage] = idx
+            # Store momentum.
+            storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / (nanometers / picoseconds)).astype(np.float32)
+            if momentum.kinetic_energy is not None:
+                storage.variables['momentum_kinetic'][idx] = momentum.kinetic_energy / kilojoules_per_mole
 
-        # Force sync to disk to avoid data loss.
-        storage.sync()
+            # Force sync to disk to avoid data loss.
+            storage.sync()
 
         return
 
-    @wraps(setstorage)
-    def number(self):
-        '''
-        Load the number of stored momentums
-
-        Returns
-        -------
-        number (int) - number of stored momentums
-        '''
-        length = int(len(self.storage.dimensions['momentum'])) - 1
-        if length < 0:
-            length = 0
-        return length
-
-    @wraps(setstorage)
-    def free(self):
-        '''
-        Return the number of the next free_idx ID
-        '''
-        return self.number() + 1
 
     def load(self, idx):
         '''
@@ -103,11 +77,6 @@ class MomentumStorage(object):
             atom_indices = slice(None)
 
         return self.variables['momentum_velocities'][frame_indices,atom_indices,:].astype(np.float32).copy()
-
-    @wraps(setstorage)
-    def get(self, indices):
-        return [self.load(idx) for idx in range(0,self.number())[indices] ]
-
 
     @wraps(setstorage)
     def velocities_as_array(self, frame_indices=None, atom_indices=None):

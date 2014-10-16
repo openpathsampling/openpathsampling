@@ -225,7 +225,8 @@ class Simulator(object):
                                  'topology',
                                  'solute_indices',
                                  'system_serial',
-                                 'integrator_serial'
+                                 'integrator_serial',
+                                 'pdb_file'
                                  ]
         
         self.temperature = 300.0 * kelvin                       # temperature
@@ -245,8 +246,8 @@ class Simulator(object):
         
         self.start_time = time.time()                           # the time when we started
         
-        self.pdb = PDBFile(self.fn_initial_pdb)
-        self.topology = self.pdb.topology
+        self.pdb_file = PDBFile(self.fn_initial_pdb)
+        self.topology = self.pdb_file.topology
 
 
     def _create_OpenMMSimulation(self):
@@ -291,7 +292,7 @@ class Simulator(object):
         # Dirty Equilibration using NVT and Alanine constraint
         #=============================================================================================
 
-        self.simulation.context.setPositions(self.pdb.positions)
+        self.simulation.context.setPositions(self.pdb_file.positions)
         
         system = self.simulation.system
         simulation = self.simulation

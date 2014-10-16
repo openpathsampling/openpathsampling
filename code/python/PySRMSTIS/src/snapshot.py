@@ -21,7 +21,7 @@ class Configuration(object):
 
     """
     
-    # Class variables to store the global storage and the system context describing the system to be safed as configurations
+    # Class variables to store the global storage and the system context describing the system to be safed as configuration_indices
     storage = None
     simulator = None
     
@@ -81,6 +81,28 @@ class Configuration(object):
                 raise Exception("Some coordinates became 'nan'; simulation is unstable or buggy.")
 
         return
+
+    #=============================================================================================
+    # Comparison functions
+    #=============================================================================================
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        for storage in self.idx:
+            if storage in other.idx and other.idx[storage] == self.idx[storage]:
+                return True
+
+        return False
+
+#        return self is other
+
+    def __hash__(self):
+        # We need to make sure that a configuration from storage can be found. So just take the numpy
+        # array of coordinates call a tostring and use this. That should be reasonably fast and should
+        # only avoid checking all coordinates. The final check is really, if the elements were loaded
+        # from the same idx in the same file (see __eq__)
+        return hash(self.coordinates.tostring())
 
     @property
     def atoms(self):
@@ -189,10 +211,10 @@ class Momentum(object):
     #=============================================================================================
 
     def reverse(self):
-        self.velocities *= 1.0
+        self.velocities *= -1.0
     
     def reversed_copy(self):
-        this = copy.deepcopy(self)
+        this = Momentum(velocities=self.velocities, kinetic_energy=self.kinetic_energy)
         this.reverse()
         return this
      
@@ -217,7 +239,7 @@ class Snapshot(object):
     storage = None
     simulator = None
     
-    def __init__(self, context=None, coordinates=None, velocities=None, box_vectors=None, potential_energy=None, kinetic_energy=None):
+    def __init__(self, context=None, coordinates=None, velocities=None, box_vectors=None, potential_energy=None, kinetic_energy=None, configuration=None, momentum=None, reversed=False):
         """
         Create a simulation snapshot from either an OpenMM context or individually-specified components.
 
@@ -255,9 +277,16 @@ class Snapshot(object):
         """
         
 #        self.idx = 0        # potential idx in a netcdf storage, if 0 then not stored yet. Attention! Cannot be stored in 2 repositories at the same time
-        self.configuration = Configuration()
-        self.momentum = Momentum()
-        self.reversed = False
+        if configuration is None:
+            self.configuration = Configuration()
+        else:
+            self.configuration = configuration
+        if momentum is None:
+            self.momentum = Momentum()
+        else:
+            self.momentum = momentum
+
+        self.reversed = reversed
 
         if context is not None:
             # Get current state from OpenMM Context object.
@@ -328,9 +357,7 @@ class Snapshot(object):
     #=============================================================================================
 
     def copy(self):
-        this = Snapshot()
-        this.momentum = self.momentum
-        this.configuration = self.configuration
+        this = Snapshot(configuration=self.configuration, momentum=self.momentum, reversed=self.reversed)
         return this
     
     def reversed_copy(self):
@@ -368,5 +395,4 @@ class Snapshot(object):
         We need to allow for reversed snapshots to save memory. Would be nice
         """
 
-        print 'Called'
         self.storage.snapshot.save(self, idx_configuration, idx_momentum)
