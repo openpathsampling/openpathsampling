@@ -102,6 +102,10 @@ class Ensemble(object):
         return True        
         pass
 
+    can_append = forward
+    can_prepend = backward
+
+
     def locate(self, trajectory, lazy=True, max_length=None, min_length=1, overlap=1):
         '''
         Returns a list of trajectories that contain sub-trajectories which are in the given ensemble.
@@ -452,6 +456,11 @@ class SequentialEnsemble(Ensemble):
         list should be of length len(ensembles)-1, with one value for each
         transition. If given as an integer, that value will be used for all
         transitions.
+
+    Todo
+    ----
+        Overlap features not implemented because ohmygod this was hard
+        enough already.
     """
 
     def __init__(self, ensembles, min_overlap=0, max_overlap=0, greedy=False):
@@ -539,7 +548,59 @@ class SequentialEnsemble(Ensemble):
         return False
 
     def forward(self, trajectory):
-        pass
+        subtraj_start = len(trajectory)-1
+        subtraj_end = len(trajectory)
+        subtraj = trajectory[slice(subtraj_start, subtraj_end)]
+        ens_num = len(self.ensembles)-1
+        print
+        while (ens_num >= 0) and (subtraj_start >= 0):
+            ens = self.ensembles[ens_num]
+            # do-while loop implemented with break conditions
+
+            # conditions when you can append:
+            # 1. if ens(subtraj) and not ens.can_append(subtraj) and
+            #                        ens != self.ensembles[-1]
+            #    # This means that we fully satisfy some ensemble, but not
+            #    # the last one. 
+            # 2. if ens.can_append(subtraj) 
+            #    # TODO: here we need something to mark if the earlier
+            #    # segments violate
+            # 3. ....
+
+            # conditions when you can not append:
+            # 1. if subtraj==traj and self(subtraj) and 
+            #                       not self.ensembles[-1].can_append(subtraj)
+            #    # We match whole ensemble and can't append at the end
+            # 2. ....
+
+            # Yet another approach: think of this as being like matching a
+            # regular expression... the desired trajectory is the string,
+            # the existing trajectory is the pattern. 
+            while True:
+                print "Ensemble", ens_num, "(", subtraj_start, subtraj_end, ")"#, ens.__str__()
+                if ens.can_append(subtraj) == False:
+                    # previous subtraj was last accepted
+                    subtraj_start += 1
+                    print "(+1)", subtraj_start, subtraj_end
+                    break
+                if subtraj_start == 0:
+                    # full traj is accepted: previous `if` tested it 
+                    break
+                else:
+                    # only get here if BOTH if statements fail
+                    subtraj_start -= 1
+                    print "(-1)", subtraj_start, subtraj_end
+                    subtraj = trajectory[slice(subtraj_start, subtraj_end)]
+            
+            print subtraj_start, subtraj_end
+            if subtraj_start == subtraj_end:
+                # no subtraj satisfies this ensemble
+                return False
+            #subtraj_end = subtraj_start
+            ens_num -= 1
+
+        
+        return True
 
     def backward(self, trajectory):
         pass
@@ -580,6 +641,7 @@ class LengthEnsemble(Ensemble):
 
     def backward(self, trajectory):
         return self.forward(trajectory)
+
     
     def __str__(self):
         if type(self.length) is int:
@@ -609,6 +671,13 @@ class InXEnsemble(VolumeEnsemble):
     Represents an ensemble where all the selected frames of the trajectory
     are in a specified volume
     '''
+
+    def can_append(self, trajectory):
+        return self(trajectory[slice(trajectory.frames-1, None)])
+
+    def can_prepend(self, trajectory):
+        return self(trajectory[slice(0,1)])
+        
     
     def forward(self, trajectory):
         pos = trajectory.frames - 1
@@ -708,6 +777,12 @@ class HitXEnsemble(VolumeEnsemble):
             return 'x[{0}] in {1}'.format(str(self.frames), str(self.volume))
         else:
             return 'x[t] in {2} for one t in [{0}:{1}]'.format(self.frames.start, self.frames.stop, self.volume)
+
+    def can_append(self, trajectory):
+        return True
+
+    def can_prepend(self, trajectory):
+        return True
 
 
     def forward(self, trajectory):
