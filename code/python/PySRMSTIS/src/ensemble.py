@@ -399,17 +399,17 @@ class EnsembleCombination(Ensemble):
 
     def forward(self, trajectory):
         if Ensemble.use_shortcircuit:
-            a = self.ensemble1.forward(trajectory)
+            a = self.ensemble1.can_append(trajectory)
             res_true = self.fnc(a, True)
             res_false = self.fnc(a, False)
             if res_false == res_true:
                 # result is independent of ensemble_b so ignore it
                 return res_true
             else:
-                b = self.ensemble2.forward(trajectory)
+                b = self.ensemble2.can_append(trajectory)
                 return self.fnc(a, b)
         else:
-            return self.fnc(self.ensemble1.forward(trajectory), self.ensemble2.forward(trajectory))
+            return self.fnc(self.ensemble1.can_append(trajectory), self.ensemble2.can_append(trajectory))
 
     def backward(self, trajectory):
         if Ensemble.use_shortcircuit:
@@ -424,6 +424,9 @@ class EnsembleCombination(Ensemble):
                 return self.fnc(a, b)
         else:
             return self.fnc(self.ensemble1.backward(trajectory), self.ensemble2.backward(trajectory))
+
+    can_append = forward
+    can_prepend = backward
 
     def __str__(self):
 #        print self.sfnc, self.ensemble1, self.ensemble2, self.sfnc.format('(' + str(self.ensemble1) + ')' , '(' + str(self.ensemble1) + ')')
@@ -547,60 +550,85 @@ class SequentialEnsemble(Ensemble):
                     
         return False
 
+    def _find_subtraj_final(self, traj, subtraj_first, ens_num):
+        """
+        Find the longest subtrajectory of trajectory which starts at
+        subtraj_first and satifies self.ensembles[ens_num].forward
+
+        """
+        subtraj_final = subtraj_first
+        traj_final = len(traj)
+        ens = self.ensembles[ens_num]
+        subtraj = traj[slice(subtraj_first, subtraj_final+1)]
+        # if we're in the ensemble or could eventually be in the ensemble,
+        # we keep building the subtrajectory
+        while ( (ens.can_append(subtraj) or ens(subtraj)) and 
+                    subtraj_final < traj_final):
+            subtraj_final += 1
+            # TODO: replace with append; probably faster
+            subtraj = traj[slice(subtraj_first, subtraj_final+1)]
+        return subtraj_final
+
     def forward(self, trajectory):
-        subtraj_start = len(trajectory)-1
-        subtraj_end = len(trajectory)
-        subtraj = trajectory[slice(subtraj_start, subtraj_end)]
-        ens_num = len(self.ensembles)-1
-        print
-        while (ens_num >= 0) and (subtraj_start >= 0):
-            ens = self.ensembles[ens_num]
-            # do-while loop implemented with break conditions
-
-            # conditions when you can append:
-            # 1. if ens(subtraj) and not ens.can_append(subtraj) and
-            #                        ens != self.ensembles[-1]
-            #    # This means that we fully satisfy some ensemble, but not
-            #    # the last one. 
-            # 2. if ens.can_append(subtraj) 
-            #    # TODO: here we need something to mark if the earlier
-            #    # segments violate
-            # 3. ....
-
-            # conditions when you can not append:
-            # 1. if subtraj==traj and self(subtraj) and 
-            #                       not self.ensembles[-1].can_append(subtraj)
-            #    # We match whole ensemble and can't append at the end
-            # 2. ....
-
-            # Yet another approach: think of this as being like matching a
-            # regular expression... the desired trajectory is the string,
-            # the existing trajectory is the pattern. 
-            while True:
-                print "Ensemble", ens_num, "(", subtraj_start, subtraj_end, ")"#, ens.__str__()
-                if ens.can_append(subtraj) == False:
-                    # previous subtraj was last accepted
-                    subtraj_start += 1
-                    print "(+1)", subtraj_start, subtraj_end
-                    break
-                if subtraj_start == 0:
-                    # full traj is accepted: previous `if` tested it 
-                    break
+        # treat this like we're implementing a regular expression parser ...
+        # .*ensemble.+ ; but we have to do this for all possible matches
+        # There are three tests we consider:
+        # 1. subtraj_final - subtraj_first > 0: Do we obtain a subtrajectory?
+        # 2. subtraj_final == traj_final: Have we assigned all the frames?
+        # 3. ens_num == final_ens: are we looking at the last ensemble
+        # Vaious combinations of these result in three possible outcomes:
+        # (a) return True (we can append)
+        # (b) return False (we can't append)
+        # (c) loop around to text another subtrajectory (we can't tell)
+        # Returning false can only happen if all ensembles have been tested
+        traj_final = len(trajectory)
+        final_ens = len(self.ensembles)-1
+        #print traj_final, final_ens
+        subtraj_first = 0
+        ens_num = 0
+        ens_first = 0
+        while True: #  main loop, with various 
+            subtraj_final = self._find_subtraj_final(trajectory, 
+                                                     subtraj_first, ens_num)
+            #print (ens_num,
+                    #"("+str(subtraj_first)+","+str(subtraj_final)+")"
+                  #)
+            if subtraj_final - subtraj_first > 0:
+                subtraj = trajectory[slice(subtraj_first, subtraj_final)]
+                if ens_num == final_ens:
+                    if subtraj_final == traj_final:
+                        # we're in the last ensemble and the whole
+                        # trajectory is assigned: can we append?
+                        #print "Returning can_append"
+                        return self.ensembles[ens_num].can_append(subtraj)
+                    else:
+                        #print "Returning false due to incomplete assigns:",
+                        #print subtraj_final, "!=", traj_final
+                        return False # in final ensemble, not all assigned
                 else:
-                    # only get here if BOTH if statements fail
-                    subtraj_start -= 1
-                    print "(-1)", subtraj_start, subtraj_end
-                    subtraj = trajectory[slice(subtraj_start, subtraj_end)]
-            
-            print subtraj_start, subtraj_end
-            if subtraj_start == subtraj_end:
-                # no subtraj satisfies this ensemble
-                return False
-            #subtraj_end = subtraj_start
-            ens_num -= 1
+                    # subtraj existed, but not yet final ensemble
+                    # so we start with the next ensemble
+                    ens_num += 1
+                    subtraj_first = subtraj_final
+                    #print "Moving to the next ensemble", ens_num
+            else:
+                if subtraj_final == traj_final:
+                    # all frames assigned, but not all ensembles finished;
+                    # next frame might satisfy next ensemble
+                    return True
+                else:
+                    # not all frames assigned, couldn't find a sequence
+                    # start over with sequences that begin with the next
+                    # ensemble
+                    if ens_first == final_ens:
+                        #print "Started with the last ensemble, got nothin'"
+                        return False
+                    else:
+                        ens_first += 1
+                        ens_num = ens_first
+                        subtraj_first = 0
+                    
 
-        
-        return True
 
     def backward(self, trajectory):
         pass
@@ -642,7 +670,9 @@ class LengthEnsemble(Ensemble):
     def backward(self, trajectory):
         return self.forward(trajectory)
 
-    
+    can_append = forward
+    can_prepend = backward
+
     def __str__(self):
         if type(self.length) is int:
             return 'len(x) = {0}'.format(self.length)

@@ -378,21 +378,9 @@ class testSequentialEnsembles(EnsembleTest):
         """
         raise SkipTest
 
-    def test_temporary_append_tis(self):
-        #assert_equal(self.inX.can_append(ttraj['upper_in'][slice(0,1)]), True)
-        #assert_equal(self.inX.can_append(ttraj['upper_out'][slice(0,1)]), False)
-        inX_seq = SequentialEnsemble([self.inX])
-        #assert_equal(inX_seq.forward(ttraj['upper_in']), True)
-        #assert_equal(inX_seq.forward(ttraj['upper_out']), False)
-        #assert_equal((self.inX & self.length1).forward(ttraj['upper_in']), False)
-        #assert_equal((self.inX & self.length1).forward(ttraj['upper_out']), False)
-
-        assert_equal(self.tis_ensemble.forward(ttraj['upper_out_in']), False)
-
-
     def test_can_append_tis(self):
         """SequentialEnsemble as TISEnsemble knows when it can append"""
-        raise SkipTest
+        raise SkipTest # DEBUG
         results =   {   'upper_in_out' : True,
                         'lower_in_out' : True,
                         'upper_in_out_in' : False,
@@ -419,7 +407,6 @@ class testSequentialEnsembles(EnsembleTest):
 
     def test_can_append_minus(self):
         """SequentialEnsemble as MinusEnsemble knows when it can append"""
-        raise SkipTest
         results =   {   'upper_in_out' : True,
                         'lower_in_out' : True,
                         'upper_in_out_in' : True,
@@ -437,22 +424,22 @@ class testSequentialEnsembles(EnsembleTest):
 
                         'upper_in_out_in_in' : True,
                         'lower_in_out_in_in' : True,
-                        'upper_in_out_in_out_in' : True,
-                        'lower_in_out_in_out_in' : True,
+                        'upper_in_out_in_out_in' : False,
+                        'lower_in_out_in_out_in' : False,
                         'upper_in_out_in_in_out' : True,
                         'lower_in_out_in_in_out' : True,
                         'upper_out_in_out' : True,
                         'lower_out_in_out' : True,
                         'upper_out_in_in_out' : True,
                         'lower_out_in_in_out' : True,
-                        'upper_out_in_out_in': True,
-                        'lower_out_in_out_in': True,
+                        'upper_out_in_out_in': False,
+                        'lower_out_in_out_in': False,
                         'upper_out_in_in_out_in' : False,
                         'lower_out_in_in_out_in' : False
                     }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.tis_ensemble.forward, 
+            self._single_test(self.minus_ensemble.forward, 
                                 ttraj[test], results[test], failmsg)
 
     def test_can_prepend_tis(self):
