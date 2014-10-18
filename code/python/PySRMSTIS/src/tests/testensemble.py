@@ -380,7 +380,6 @@ class testSequentialEnsembles(EnsembleTest):
 
     def test_can_append_tis(self):
         """SequentialEnsemble as TISEnsemble knows when it can append"""
-        raise SkipTest # DEBUG
         results =   {   'upper_in_out' : True,
                         'lower_in_out' : True,
                         'upper_in_out_in' : False,
@@ -471,8 +470,8 @@ class testSequentialEnsembles(EnsembleTest):
 
 
     def test_can_prepend_minus(self):
-        raise SkipTest
         """SequentialEnsemble as MinusEnsemble knows when it can prepend"""
+        raise SkipTest
         results =   {   'upper_in_out' : True,
                         'lower_in_out' : True,
                         'upper_in_out_in' : True,
@@ -505,13 +504,12 @@ class testSequentialEnsembles(EnsembleTest):
                     }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.tis_ensemble.backward, 
+            self._single_test(self.minus_ensemble.backward, 
                                 ttraj[test], results[test], failmsg)
 
 
     def test_sequential_in_out(self):
         """SequentialEnsembles based on In/OutXEnsemble"""
-        raise SkipTest
         # idea: for each ttraj, use the key name to define in/out behavior,
         # dynamically construct a SequentialEnsemble
         ens_dict = {'in' : self.inX, 'out' : self.outX }

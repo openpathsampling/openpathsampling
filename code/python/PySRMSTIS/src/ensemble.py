@@ -489,72 +489,39 @@ class SequentialEnsemble(Ensemble):
 
 
     def __call__(self, trajectory, lazy=None):
-        # TODO: is there a way to hack a lazy approach?
-        nensembles = len(self.ensembles) # DEBUG
-        trajlen = len(trajectory)        # DEBUG
-        transition = 0
-        min_overlap = self.min_overlap[transition]
-        max_overlap = self.max_overlap[transition]
-        ensemble = self.ensembles[transition]
-        start=0
-        end=0
-        wasTrue=False
-        segment = []
-        last_segment = []
-        start0=0
-        #print # DEBUG
-        # TODO: a lot of this logic should be moved into `forward`;
-        while end < len(trajectory)-1 and start < len(trajectory)-1:
-            if start==end or self.forward(tt): 
-                end += 1
-            else:
-                start += 1
-            tt = trajectory[start:end]
-            if ensemble(tt, lazy=False):
-                wasTrue = True
-                if self.greedy==False:
-                    last_segment = segment
-                    segment = [start, end]
-                    start = end - max_overlap
-                    end = start
-            else:
-                if wasTrue==True and self.greedy==True:
-                    last_segment = segment
-                    segment = [start, end-1]
-                    start = end - max_overlap
-                    end = start
-                wasTrue = False
-            if end==start: # we just found something
-                #print "found", transition, segment # DEBUG
-                transition+=1
-                if last_segment==[]: # first find
-                    start0 = segment[0]
-                else:
-                    overlap = last_segment[1]-segment[0]
-                    if overlap <= max_overlap and overlap >= min_overlap:
-                        #print transition, "("+str(nensembles)+")", # DEBUG
-                        #print end+1, "("+str(trajlen)+")" # DEBUG
-                        if (transition==len(self.ensembles) and
-                                end+1==len(trajectory)):
-                            # we're done
-                            return True
+        # it is easiest to understand this decision tree as a simplified
+        # version of the can_append decision tree; see that for detailed
+        # comments
+        ens_num = 0
+        subtraj_first = 0
+        traj_final = len(trajectory)
+        final_ens = len(self.ensembles)-1
+        while True:
+            subtraj_final = self._find_subtraj_final(trajectory, 
+                                                     subtraj_first, ens_num)
+            if subtraj_final - subtraj_first > 0:
+                subtraj = trajectory[slice(subtraj_first, subtraj_final)]
+                if ens_num == final_ens:
+                    if subtraj_final == traj_final:
+                        return True # assigned all frames; all ensembles
                     else:
-                        # if we fail, we restart from where we last tried
-                        transition=0
-                        start = start0+1
-                        end = start0+1
-                if transition > 0: 
-                    min_overlap = self.min_overlap[transition-1]
-                    max_overlap = self.max_overlap[transition-1]
-                    ensemble = self.ensembles[transition]
+                        return False
+                else:
+                    ens_num += 1
+                    subtraj_first = subtraj_final
+            else:
+                return False
                     
-        return False
 
     def _find_subtraj_final(self, traj, subtraj_first, ens_num):
         """
         Find the longest subtrajectory of trajectory which starts at
-        subtraj_first and satifies self.ensembles[ens_num].forward
+        subtraj_first and satifies self.ensembles[ens_num].can_append
 
+        Returns
+        -------
+        int
+            Frame of traj which gives the 
         """
         subtraj_final = subtraj_first
         traj_final = len(traj)
