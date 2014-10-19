@@ -453,7 +453,6 @@ class testSequentialEnsembles(EnsembleTest):
 
     def test_can_prepend_tis(self):
         """SequentialEnsemble as TISEnsemble knows when it can prepend"""
-        raise SkipTest
         results =   {   'upper_in_out' : False,
                         'lower_in_out' : False,
                         'upper_in_out_in' : False,
@@ -481,7 +480,6 @@ class testSequentialEnsembles(EnsembleTest):
 
     def test_can_prepend_minus(self):
         """SequentialEnsemble as MinusEnsemble knows when it can prepend"""
-        raise SkipTest
         results =   {   'upper_in_out' : True,
                         'lower_in_out' : True,
                         'upper_in_out_in' : True,

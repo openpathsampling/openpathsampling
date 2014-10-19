@@ -1,7 +1,7 @@
 '''
 Created on 03.09.2014
 
-@author: jan-hendrikprinz
+@author: jan-hendrikprinz, David W.H. Swenson
 '''
 
 class Ensemble(object):
@@ -521,7 +521,8 @@ class SequentialEnsemble(Ensemble):
         Returns
         -------
         int
-            Frame of traj which gives the 
+            Frame of traj which is the final frame for a subtraj starting at
+            subtraj_first and satisfying self.ensembles[ens_num]
         """
         subtraj_final = subtraj_first
         traj_final = len(traj)
@@ -535,6 +536,18 @@ class SequentialEnsemble(Ensemble):
             # TODO: replace with append; probably faster
             subtraj = traj[slice(subtraj_first, subtraj_final+1)]
         return subtraj_final
+    
+    def _find_subtraj_first(self, traj, subtraj_final, ens_num):
+        subtraj_first = subtraj_final-1
+        traj_first = 0
+        ens = self.ensembles[ens_num]
+        subtraj = traj[slice(subtraj_first, subtraj_final)]
+        while ( (ens.can_prepend(subtraj) or ens(subtraj)) and
+               subtraj_first >= traj_first):
+            subtraj_first -= 1
+            subtraj = traj[slice(subtraj_first, subtraj_final)]
+        return subtraj_first+1
+
 
     def forward(self, trajectory):
         # treat this like we're implementing a regular expression parser ...
@@ -598,7 +611,38 @@ class SequentialEnsemble(Ensemble):
 
 
     def backward(self, trajectory):
-        pass
+        # based on .forward(); see notes there for algorithm details
+        traj_first = 0
+        first_ens = 0
+        subtraj_final = len(trajectory)
+        ens_final = len(self.ensembles)-1
+        ens_num = ens_final
+        while True:
+            subtraj_first = self._find_subtraj_first(trajectory,
+                                                     subtraj_final, ens_num)
+            #print (ens_num,
+                    #"("+str(subtraj_first)+","+str(subtraj_final)+")"
+                  #)
+            if subtraj_final - subtraj_first > 0:
+                subtraj = trajectory[slice(subtraj_first, subtraj_final)]
+                if ens_num == first_ens:
+                    if subtraj_first == traj_first:
+                        return self.ensembles[ens_num].can_prepend(subtraj)
+                    else:
+                        return False
+                else:
+                    ens_num -= 1
+                    subtraj_final = subtraj_first
+            else:
+                if subtraj_first == traj_first:
+                    return True
+                else:
+                    if ens_final == first_ens:
+                        return False
+                    else:
+                        ens_final -= 1
+                        ens_num = ens_final
+                        subtraj_final = len(trajectory)
 
     def __str__(self):
         pass
