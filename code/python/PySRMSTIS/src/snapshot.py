@@ -25,7 +25,7 @@ class Configuration(object):
     storage = None
     simulator = None
     
-    def __init__(self, context=None, coordinates=None, box_vectors=None, potential_energy=None):
+    def __init__(self, context=None, coordinates=None, box_vectors=None, potential_energy=None, simulator=None):
         """
         Create a simulation configuration from either an OpenMM context or individually-specified components.
 
@@ -58,6 +58,11 @@ class Configuration(object):
         self.coordinates = None
         self.box_vectors = None
         self.potential_energy = None
+        self.topology = None
+
+        if simulator is not None:
+            context = simulator.simulation.context
+            self.topology = simulator.storage.topology
         
         if context is not None:
             # Get current state from OpenMM Context object.
@@ -314,6 +319,12 @@ class Snapshot(object):
                 raise Exception("Some coordinates became 'nan'; simulation is unstable or buggy.")
                 
         pass
+
+    @property
+    def topology(self):
+        if self.configuration is not None:
+            return self.configuration.topology
+        return None
     
     @property
     def coordinates(self):

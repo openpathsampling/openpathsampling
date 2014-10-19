@@ -54,11 +54,11 @@ class Trajectory(list):
                 self.extend(trajectory)
             else:
                 for snapshot in trajectory:
-                    snapshot_copy = copy.deepcopy(snapshot)                    
+                    snapshot_copy = copy.deepcopy(snapshot)
                     self.forward(snapshot_copy)
         else:
             self.atom_indices = None
-        return
+
 
     @property
     def reversed(self):
@@ -371,7 +371,7 @@ class Trajectory(list):
 
         return self.subset(Trajectory.simulator.solute_indices)
 
-    def md(self):
+    def md(self, topology = None):
         """
         Construct a mdtraj.Trajectory object from the Trajectory itself
         
@@ -379,12 +379,13 @@ class Trajectory(list):
         -------        
         trajectory : mdtraj.Trajectory
             the trajectory
-        """        
+        """
 
         output = self.coordinates()
-        topology = self.md_topology()
-                                                 
-        return md.Trajectory(output, topology)             
+        if topology is None:
+            topology = self.md_topology()
+
+        return md.Trajectory(output, topology)
                 
     
     def md_topology(self):
@@ -397,7 +398,12 @@ class Trajectory(list):
             the topology
         """        
 
-        topology = md.Topology.from_openmm(Trajectory.simulator.simulation.topology)
+        if hasattr(self[0], 'topology') and self[0].topology is not None:
+            # if no topology is defined
+            topology = self[0].topology
+        else:
+            # TODO: kind of ugly fall-back, but helps for now
+            topology = md.Topology.from_openmm(Trajectory.simulator.simulation.topology)
         
         if self.atom_indices is not None:
             topology = topology.subset(self.atom_indices)       

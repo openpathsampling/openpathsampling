@@ -29,7 +29,6 @@ if __name__ == '__main__':
 
     Trajectory.storage = simulator.storage.trajectory
 
-
     if simulator.storage.trajectory.number() == 0:
         # load initial equilibrate snapshot given by ID #0
         snapshot = simulator.storage.snapshot.load(0, 0)
@@ -42,21 +41,12 @@ if __name__ == '__main__':
         traj.solute.md().save_pdb('data/mdtraj.pdb', True)
         
     if True:
-
-        cc = Trajectory.storage.load(1)
-
         cc = Trajectory.storage.load(1)[ 0 ]
-
         op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices, storages=simulator.storage.configuration)
-
         dd = simulator.storage.trajectory.load(1)[ 0:50 ]
-
         lV = LambdaVolume(op, 0.0, 0.06)
         lV2 = LambdaVolume(op, 0.0, 0.08)
-        start_time = time.time()
-        
-#        print time.time() - start_time
-    
+
         # if this uses the same orderparameter it is fast, since the values are cached!
         tis = ef.TISEnsemble(
                        LambdaVolume(op, 0.0, 0.041),
@@ -74,11 +64,6 @@ if __name__ == '__main__':
         tt = simulator.storage.trajectory.load(1)[4:18]
 
 #        print [ (op(d)) for d in dd ]
-
-        op.load()
-
-        print op.storage_caches
-
 #        op.save()
 
         stime = time.time()
@@ -94,9 +79,6 @@ if __name__ == '__main__':
         stime = time.time()
         print enAB.locate(dd, lazy=False, overlap=1)
         print time.time() - stime
-
-        print 'Lazy is about 20 times faster in this example and 10 times with shortcircuit active!!!'
-        print 'If Shortcircuit is active general speedup of 30%!!!'
 
         # This is to cache the values for all snapshots in tt. Makes later access MUCH faster. 
         # Especially because the frames do not have to be read one by one.
@@ -121,18 +103,11 @@ if __name__ == '__main__':
         print "Iteration test"
         for l in range(0,tt.frames + 0):
             print tis.forward(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
-            
+
         print op(tt[0])
-        s = Snapshot(coordinates = tt[0].coordinates)
+        s = Snapshot(coordinates=tt[0].coordinates)
         print op(s)
-        s.idx = 0
-        print op(s)
-        
-                           
-        
-        
-                
-    
+
         # Check if the trajectory goes from lambda < 0.06 to lambda >0.08 and back    
         print 'In ensemble'
         print tis(tt)
@@ -150,7 +125,7 @@ if __name__ == '__main__':
         print en(tt)
         
 #        Simulator.op = op
-        
+
         bm = BackwardShootMover(
                 selector = UniformSelector(),
                 ensemble = tis
@@ -171,8 +146,7 @@ if __name__ == '__main__':
         print len(pm.final)
         
         print 'Next Check:'
-        
-        
+
         en = ef.A2BEnsemble(lV, lV, True)
         print en(pm.final)
 
@@ -182,7 +156,7 @@ if __name__ == '__main__':
         en = InXEnsemble(lV, -1)
         print en(pm.final)
 
-        en = OutXEnsemble(lV, slice(1,-1), lazy = False)
+        en = OutXEnsemble(lV, slice(1, -1), lazy = False)
         print en(pm.final)
 
         op.save()

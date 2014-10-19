@@ -23,18 +23,14 @@ import mdtraj as md
 import copy
 
 
-# TODO: Remove all stuff that is content related and allow to register a class with the storage
-
 #=============================================================================================
 # SOURCE CONTROL
 #=============================================================================================
 
 __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 
-
-
 #=============================================================================================
-# Multi-State Transition Interface Sampling
+# NetCDF Storage for multiple forked trajectories
 #=============================================================================================
 
 class Storage(netcdf.Dataset):
@@ -64,12 +60,7 @@ class Storage(netcdf.Dataset):
 
         self.filename = filename
 
-        # if not specified then create if not existing
-
         super(Storage, self).__init__(filename, mode)
-
-        # t = md.Topology()
-
         self._register_classes()
 
         if mode == 'w':
@@ -81,7 +72,6 @@ class Storage(netcdf.Dataset):
                 self.topology = topology
 
             self.atoms = self.topology.n_atoms
-
             self.topology.save_pdb('tempXXX.pdb')
 
             with open ('tempXXX.pdb', "r") as myfile:
@@ -90,7 +80,6 @@ class Storage(netcdf.Dataset):
             self.variables['pdb'][0] = pdb_string
             self._init_classes()
             self.sync()
-
 
         elif mode == 'a':
             self.pdb = self.variables['pdb'][0]
@@ -101,7 +90,6 @@ class Storage(netcdf.Dataset):
             self.topology = md.load('tempXXX.pdb')
             self._restore_classes()
 
-        pass
 
     def __getattr__(self, item):
         return self.__dict__[item]
@@ -120,12 +108,8 @@ class Storage(netcdf.Dataset):
             the class to be added
         '''
 
-        #if class is compatible and has necessary classes, add it
         if hasattr(class_obj, '_init'):
-#            print 'Added : ', class_obj.__name__
             self.links.append(class_obj)
-            
-        pass
 
     def _register_classes(self):
         '''
@@ -184,10 +168,6 @@ class Storage(netcdf.Dataset):
         setattr(self, 'programVersion', __version__)
         setattr(self, 'Conventions', 'Multi-State Transition Interface TPS')
         setattr(self, 'ConventionVersion', '0.1')
-                
-        #self.init() #WTF? Was this supposed to be something else?
-
-        pdb_string = ""
 
         ncvar = self.createVariable('pdb', 'str', 'scalar')
         packed_data = numpy.empty(1, 'O')
@@ -196,7 +176,6 @@ class Storage(netcdf.Dataset):
                         
         # Force sync to disk to avoid data loss.
         self.sync()
-        return
 
     def _store_metadata(self, groupname, metadata):
         """
@@ -213,8 +192,7 @@ class Storage(netcdf.Dataset):
             ncvar = ncgrp.createVariable(key, type(value))
             ncvar.assignValue(value)
 
-        return
-        
+
     def _store_options(self, obj, group_name = 'options'):
         """
         Store run parameters in NetCDF file.
@@ -234,8 +212,6 @@ class Storage(netcdf.Dataset):
             
             if self.verbose_root: print "Storing option: %s -> %s (type: %s)" % (option_name, option_value, type(option_value))            
 
-        return
-    
     def _restore_options(self, obj, group_name = 'options'):
         """
         Restore run parameters from NetCDF file.
@@ -252,15 +228,11 @@ class Storage(netcdf.Dataset):
 
         # Find the group.
         ncgrp_options = self.groups[group_name]
-        
-#        print ncgrp_options.variables.keys()
 
         # Load run parameters.
         for option_name in ncgrp_options.variables.keys():
             # Get NetCDF variable.
             option_value = self._restore_single_option(ncgrp_options, option_name)
-            
-#            print option_name
             
             # Store option.
             if self.verbose_root: print "Restoring option: %s -> %s (type: %s)" % (option_name, str(option_value), type(option_value))
@@ -312,8 +284,7 @@ class Storage(netcdf.Dataset):
             packed_data = numpy.empty(1, 'O')
             packed_data[0] = obj_value
             ncvar[:] = packed_data
-#            ncvar.assignValue(obj_value)
-            
+
         if option_unit: 
             setattr(ncvar, 'units', str(option_unit))
  

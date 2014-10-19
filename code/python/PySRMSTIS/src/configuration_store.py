@@ -76,6 +76,8 @@ class ConfigurationStorage(ObjectStorage):
         configuration = Configuration(coordinates=coordinates, box_vectors = box_vectors, potential_energy=potential_energy)
         configuration.idx[storage] = idx
 
+        configuration.topology = self.storage.topology
+
         return configuration
 
     @wraps(setstorage)

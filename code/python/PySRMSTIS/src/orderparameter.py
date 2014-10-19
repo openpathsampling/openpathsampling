@@ -36,9 +36,6 @@ class FunctionalDict(dict):
         self.allow_multiple = allow_multiple
         self.dimensions = dimensions
 
-    def pre(self, items):
-        return items
-
     def existing(self, items):
         """
         Find a subset of indices that are present in the cache
@@ -78,7 +75,7 @@ class FunctionalDict(dict):
         return self[obj]
 
     def _get(self, item):
-        return dict.__getitem__(self, self.pre(item))
+        return dict.__getitem__(self, item)
 
     def _update_missing(self, items):
         if type(items) is list:
@@ -164,7 +161,6 @@ class StorableFunctionDict(FunctionalDict):
         return False
 
     def __contains__(self, item):
-        # Either in memory cache
         return super(StorableFunctionDict, self).__contains__(item) or self.in_store(item)
 
     def _get_from_stores(self, item):
@@ -183,7 +179,6 @@ class StorableFunctionDict(FunctionalDict):
     def _init_storage(self, object_storage = None):
         """
         initializes the associated storage to save a specific order parameter in it
-
         """
         if object_storage is None:
             # just run this function with all registered storages
@@ -221,7 +216,6 @@ class StorableFunctionDict(FunctionalDict):
         the file storage.
         """
         if storage is None:
-            # just run this function with all registered storages
             if len(self.storage_caches) > 0:
                 map(self._update_store, self.storage_caches.keys())
         else:
@@ -240,7 +234,6 @@ class StorableFunctionDict(FunctionalDict):
         the file storage.
         """
         if storage is None:
-            # just run this function with all registered storages
             if len(self.storage_caches) > 0:
                 map(self.tidy_cache, self.storage_caches.keys())
         else:
@@ -260,17 +253,12 @@ class StorableFunctionDict(FunctionalDict):
         """
 
         if storage is None:
-            # just run this function with all registered storages
             if len(self.storage_caches) > 0:
                 map(self.save, self.storage_caches.keys())
         else:
             # Make sure configuration_indices are stored and have an index and then add the configuration index to the trajectory
 
             self._update_store(storage)
-
-            # this might test if the storage has the actual size of the date to be stored. Need to be updated!
-#            assert(self.size == len(store.itervalues().next()))
-
             store = self.storage_caches[storage]
 
             storage.variables[self.var_name][:, :] = np.array(store.values())
@@ -287,7 +275,6 @@ class StorableFunctionDict(FunctionalDict):
         """
 
         if storage is None:
-            # just run this function with all registered storages
             if len(self.storage_caches) > 0:
                 map(self.load, self.storage_caches.keys())
         else:
@@ -452,6 +439,45 @@ class OP_Multi_RMSD(OrderParameter):
 
         ptraj = self.metric.prepare_trajectory(trajectory.subset(self.atom_indices).md())
         return [self.metric.one_to_all(ptraj, self._generator, idx) for idx in range(0, len(ptraj))]
+
+class OP_MD_Function(OrderParameter):
+    """ Wrapper to decorate any appropriate function as an OrderParameter with a function that need an mdtraj object as input.
+
+    Examples
+    -------
+    >>> # To create an order parameter which calculates the dihedral formed
+    >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
+    >>> import mdtraj as md
+    >>> psi_atoms = [7,9,15,17]
+    >>> psi_orderparam = OP_Function("psi", md.compute_dihedrals,
+    >>>                              indices=[phi_atoms])
+    >>> print psi_orderparam( traj.md() )
+    """
+    def __init__(self, name, fcn, **kwargs):
+        """
+        Parameters
+        ----------
+        name : str
+        fcn : function
+        kwargs :
+            named arguments which should be given to `fcn` (for example, the
+            atoms which define a specific distance/angle)
+
+        """
+        super(OP_Function, self).__init__(name)
+        self.fcn = fcn
+        self.kwargs = kwargs
+        self.topology = None
+        return
+
+    def _eval(self, trajectory, *args):
+        if self.topology is None:
+            # first time ever compute the used topology for this orderparameter to construct the mdtraj objects
+            self.topology = trajectory.md_topology()
+
+        t = trajectory.md(self.topology)
+        return self.fcn(t, *args, **self.kwargs)
+
 
 class OP_Function(OrderParameter):
     """ Wrapper to decorate any appropriate function as an OrderParameter.
