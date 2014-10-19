@@ -645,7 +645,10 @@ class SequentialEnsemble(Ensemble):
                         subtraj_final = len(trajectory)
 
     def __str__(self):
-        pass
+        head = "[\n"
+        tail = "\n]"
+        sequence_str = ",\n".join([str(ens) for ens in self.ensembles])
+        return head+sequence_str+tail
 
 class LengthEnsemble(Ensemble):
     '''

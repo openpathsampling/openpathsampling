@@ -566,5 +566,24 @@ class testSequentialEnsembles(EnsembleTest):
         # TODO: this includes a test of the overlap ability
         raise SkipTest
 
-    def test_sequential_str(self):
-        raise SkipTest
+    def test_str(self):
+        #TODO: passes test, but isn't right -- need to fix another part of
+        #string function somewhere
+        assert_equal(self.tis_ensemble.__str__(), """[
+(
+  x[t] in {x|Id(x) in [0.1, 0.5]} for all t in [None:None])
+)
+and
+(
+  len(x) = 1
+),
+x[t] not in (not {x|Id(x) in [0.1, 0.5]}) for all t in [None:None]),
+(
+  x[t] in {x|Id(x) in [0.1, 0.5]} for all t in [None:None])
+)
+and
+(
+  len(x) = 1
+)
+]""")
+        self.minus_ensemble.__str__()
