@@ -1,36 +1,54 @@
 import copy
 
 class ObjectStorage(object):
+    """
+    Base Class for storing complex objects in a netCDF4 file. It holds a reference to the store file.
+    """
 
     def __init__(self, storage, obj):
+        """
+
+        :param storage: a reference to the netCDF4 file
+        :param obj: a reference to the Class to be stored
+        :return:
+        """
         self.storage = storage
         self.content_class = obj
         self.idx_dimension = obj.__name__.lower()
 
     def copy(self):
+        """
+        Create a deep copy of the ObjectStorage instance
+
+        Returns
+        -------
+        ObjectStorage()
+            the copied instance
+        """
         store = copy.deepcopy(self)
         return store
 
     def __call__(self, storage):
+        """
+        Create a deep copy of the ObjectStorage instance using the new store provided as function argument
+
+        Returns
+        -------
+        ObjectStorage()
+            the copied instance
+        """
         store = self.copy()
         store.storage = storage
         return store
 
-    def save(self, obj, idx=None):
+    def index(self, obj, idx=None):
         """
-        Add the current state of the trajectory in the database. If nothing has changed then the trajectory gets stored using the same snapshots as before. Saving lots of diskspace
+        Return the appropriate index for saving or None if the object is already stored!
 
-        Parameters
-        ----------
-        storage : TrajectoryStorage()
-            If set this specifies the storage to be used. If the storage is None the default storage is used, which needs to
-            be set in advance.
-
-        Notes
-        -----
-        This also saves all contained frames in the trajectory if not done yet.
-        A single Trajectory object can only be saved once!
-
+        Returns
+        -------
+        int
+            the index that should be used or None if no saving is required.
         """
 
         storage = self.storage
@@ -45,23 +63,27 @@ class ObjectStorage(object):
         else:
             return idx
 
-    def load(self, idx, momentum = True):
+    def load(self, idx):
         '''
-        Return a trajectory from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the trajectory (counts from 1)
-
-        Returns
-        -------
-        trajectory : Trajectory
-            the trajectory
+        Returns an object from the storage. Needs to be implented from the specific storage class.
         '''
         return None
 
     def get(self, indices):
+        """
+        Returns a list of objects from the given list of indices
+
+        Arguments
+        ---------
+        indices : list of int
+            the list of integers specifying the object to be returned
+
+        Returns
+        -------
+        list of objects
+            a list of objects stored under the given indices
+
+        """
         return [self.load(idx) for idx in range(0, self.number())[indices] ]
 
 
@@ -78,23 +100,23 @@ class ObjectStorage(object):
 
     def first(self):
         '''
-        Returns the last generated trajectory. Useful to continue a run.
+        Returns the last stored object. Useful to continue a run.
 
         Returns
         -------
-        Trajectoy
-            the actual trajectory object
+        Object
+            the actual last stored object
         '''
         return self.load(1)
 
     def number(self):
         '''
-        Return the number of trajectories in the storage
+        Return the number of objects in the storage
 
         Returns
         -------
         number : int
-            number of trajectories in the storage. Their indexing starts with 1.
+            number of objects in the storage.
         '''
         length = int(len(self.storage.dimensions[self.idx_dimension])) - 1
         if length < 0:
@@ -104,19 +126,19 @@ class ObjectStorage(object):
 
     def free(self):
         '''
-        Return the number of the next _free_idx ID
+        Return the number of the next free index
 
         Returns
         -------
         index : int
-            the number of the next _free_idx index in the storage. Used to store a new snapshot.
+            the number of the next free index in the storage. Used to store a new object.
         '''
         return  self.number() + 1
 
     def _init(self):
         """
-        Initialize the associated storage to allow for trajectory storage
+        Initialize the associated storage to allow for object storage. Mainly creates an index dimension with the name of the object.
 
         """
-        # define dimensions used in trajectories
-        self.storage.createDimension(self.idx_dimension, 0)                 # unlimited number of iterations
+        # define dimensions used for the specific object
+        self.storage.createDimension(self.idx_dimension, 0)

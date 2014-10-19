@@ -20,7 +20,7 @@ import snapshot
 
 class testXYZTranslator(object):
     '''Technically, this is more about integration testing than unit testing
-    per se, but the point is that these tests should add up to us being able
+    per se, but the point is that these tests should _add_class up to us being able
     to round-trip between the formats.
     '''
 

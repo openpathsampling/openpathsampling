@@ -25,7 +25,7 @@ class Configuration(object):
     storage = None
     simulator = None
     
-    def __init__(self, context=None, coordinates=None, box_vectors=None, potential_energy=None, simulator=None, topology=None):
+    def __init__(self, context=None, simulator=None, coordinates=None, box_vectors=None, potential_energy=None, topology=None):
         """
         Create a simulation configuration from either an OpenMM context or individually-specified components.
 
@@ -34,6 +34,9 @@ class Configuration(object):
         context : simtk.chem.openContext
             if not None, the current state will be queried to populate simulation configuration; 
             otherwise, can specify individual components (default: None)
+        simulator : Simulator()
+            if not None, the context and the topology is taken from the simulator object. This
+            should be the preferred way when using simulations
         coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
             atomic coordinates (default: None)
         box_vectors : periodic box vectors (default: None)
@@ -49,8 +52,10 @@ class Configuration(object):
             the periodic box vectors 
         potential_energy : simtk.unit.Quantity of units energy/mole
             potential energy
-        idx : int
-            index for storing in the storage or for using with caching
+        idx : dict( Storage() : int )
+            dict for storing the used index per storage
+        topology : mdtraj.Topology()
+            a reference to the used topology. This is necessary to allow export to mdtraj objects
         
         """
         
@@ -115,7 +120,7 @@ class Configuration(object):
     @property
     def atoms(self):
         '''
-        The number of atoms in the configuration
+        Returns the number of atoms in the configuration
         '''   
         return self.coordinates.shape[0]
     
@@ -124,12 +129,27 @@ class Configuration(object):
     #=============================================================================================
 
     def copy(self):
+        """
+        Returns a deep copy of the instance itself. If this object is saved it will not be stored as a
+        separate object and consume additional memory. Should be avoided!
+
+        Returns
+        -------
+        Configuration()
+            the deep copy
+        """
+
         this = Configuration(coordinates=self.coordinates, box_vectors=self.box_vectors, potential_energy=self.potential_energy, topology=self.topology)
         return this
 
     def md(self):
         '''
-        Returns a mdtraj Trajectory object that contains only one frame
+        Returns a mdtraj.Trajectory() object that contains only one frame
+
+        Returns
+        -------
+        mdtraj.Tractory
+            the actual trajectory object. Can be used with all functions from mdtraj
         
         Notes
         -----        
@@ -156,7 +176,7 @@ class Momentum(object):
     storage = None
     simulator = None
     
-    def __init__(self, context=None, coordinates=None, velocities=None, box_vectors=None, potential_energy=None, kinetic_energy=None):
+    def __init__(self, context=None, simulator=None, velocities=None, kinetic_energy=None):
         """
         Create a simulation momentum from either an OpenMM context or individually-specified components.
 
@@ -165,6 +185,9 @@ class Momentum(object):
         context : simtk.chem.openContext
             if not None, the current state will be queried to populate simulation momentum; 
             otherwise, can specify individual components (default: None)
+        simulator : Simulator()
+            if not None, the context and the topology is taken from the simulator object. This
+            should be the preferred way when using simulations
         velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
             atomic velocities (default: None)
         kinetic_energy : simtk.unit.Quantity of units energy/mole
@@ -176,15 +199,18 @@ class Momentum(object):
             atomic velocities
         kinetic_energy : simtk.unit.Quantity of units energy/mole
             kinetic energy
-        idx : int
-            index for storing in the storage or for using with caching
+        idx : dict( Storage() : int )
+            dict for storing the used index per storage
         
         """
         
         self.idx = dict()        # potential idx in a netcdf storage, if 0 then not stored yet. Attention! Cannot be stored in 2 repositories at the same time
         self.velocities = None
         self.kinetic_energy = None
-        
+
+        if simulator is not None:
+            context = simulator.simulation.context
+
         if context is not None:
             # Get current state from OpenMM Context object.
             state = context.getState(getVelocities=True, getEnergy=True)
@@ -208,7 +234,7 @@ class Momentum(object):
     @property
     def atoms(self):
         '''
-        The number of atoms in the momentum
+        Returns the number of atoms in the momentum
         '''   
         return self.velocities.shape[0]
 
@@ -217,13 +243,38 @@ class Momentum(object):
     #=============================================================================================
 
     def copy(self):
+        """
+        Returns a deep copy of the instance itself. If this object is saved it will not be stored as a
+        separate object and consume additional memory. Should be avoided!
+
+        Returns
+        -------
+        Momentum()
+            the deep copy
+        """
         this = Momentum(velocities=self.velocities, kinetic_energy=self.kinetic_energy)
         return this
 
     def reverse(self):
+        """
+        Flips the velocities and erases the stored indices. If stores is will be treated as a new Momentum instance.
+        Should be avoided.
+
+        """
+        self.idx = dict()
         self.velocities *= -1.0
     
     def reversed_copy(self):
+        """
+        Create a copy and flips the velocities and erases the stored indices.
+        If stores is will be treated as a new Momentum instance.
+        Should be avoided.
+
+        Returns
+        -------
+        Momentum()
+            the deep copy with reversed velocities.
+        """
         this = self.copy()
         this.reverse()
         return this
@@ -234,7 +285,7 @@ class Momentum(object):
 
 class Snapshot(object):
     """
-    Simulation snapshot.
+    Simulation snapshot. Contains references to a configuration and momentum
 
     """
     
@@ -252,6 +303,9 @@ class Snapshot(object):
         context : simtk.chem.openContext
             if not None, the current state will be queried to populate simulation snapshot; 
             otherwise, can specify individual components (default: None)
+        simulator : Simulator()
+            if not None, the context and the topology is taken from the simulator object. This
+            should be the preferred way when using simulations
         coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
             atomic coordinates (default: None)
         velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
@@ -275,8 +329,8 @@ class Snapshot(object):
             potential energy
         kinetic_energy : simtk.unit.Quantity of units energy/mole
             kinetic energy
-        idx : int
-            index for storing in the storage or for using with caching
+        idx : dict( Storage() : int )
+            dict for storing the used index per storage
         
         """
         
@@ -327,16 +381,26 @@ class Snapshot(object):
 
     @property
     def topology(self):
+        """
+        The mdtraj.Topology store in the configuration if present.
+        """
         if self.configuration is not None:
             return self.configuration.topology
         return None
     
     @property
     def coordinates(self):
+        """
+        The coordinates in the configuration
+        """
         return self.configuration.coordinates
 
     @property
     def velocities(self):
+        """
+        The velocities in the configuration. If the snapshot is reversed a copy of the original
+        (unreversed) velocities is made which is then returned
+        """
         if self.reversed:
             return self.momentum.reversed_copy().velocities
         else:
@@ -344,14 +408,23 @@ class Snapshot(object):
     
     @property
     def box_vectors(self):
+        """
+        The box_vectors in the configuration
+        """
         return self.configuration.box_vectors
     
     @property
     def potential_energy(self):
+        """
+        The potential_energy in the configuration
+        """
         return self.configuration.potential_energy
     
     @property
     def kinetic_energy(self):
+        """
+        The kinetic_energy in the momentum
+        """
         return self.momentum.kinetic_energy
     
     @property
@@ -373,13 +446,35 @@ class Snapshot(object):
     #=============================================================================================
 
     def copy(self):
+        """
+        Returns a shallow copy of the instance itself. The contained configuration and momenta are not
+        copied.
+        Returns
+        -------
+        Snapshot()
+            the deep copy
+        """
         this = Snapshot(configuration=self.configuration, momentum=self.momentum, reversed=self.reversed)
         return this
     
     def reversed_copy(self):
+        """
+        Returns a shallow reversed copy of the instance itself. The contained configuration and momenta are not
+        copied and the momenta are marked reversed.
+        Returns
+        -------
+        Snapshot()
+            the deep copy
+        """
+
         return self.copy().reverse()
 
     def reverse(self):
+        """
+        Reversed the momenta. This only flips a boolean and marks the given snapshot are reversed. This is fast and
+        should be used instead of read velocity inversion.
+        """
+
         self.reversed = not self.reversed
         return self
     

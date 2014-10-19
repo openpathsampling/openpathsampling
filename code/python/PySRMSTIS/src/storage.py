@@ -35,7 +35,7 @@ class Storage(netcdf.Dataset):
 
     def __init__(self, filename = 'trajectory.nc', mode = None, topology = None):
         '''
-        Create a storage for trajectories that are stored by snapshots and list of their indices
+        Create a storage for complex objects in a netCDF file
         
         Parameters
         ----------        
@@ -43,8 +43,8 @@ class Storage(netcdf.Dataset):
             the topology of the system to be stored. Needed for 
         filename : string
             filename of the netcdf file
-        mode : string, default: 'auto'
-            the mode of file creation, one of 'create', 'restore' or 'auto'
+        mode : string, default: None
+            the mode of file creation, one of 'w' (write), 'a' (append) or None, which will append any existing files.
         '''
 
         if mode == None:
@@ -93,7 +93,7 @@ class Storage(netcdf.Dataset):
         self.__dict__[key] = value
 
 
-    def add(self, class_obj):
+    def _add_class(self, class_obj):
         '''
         Add a class to the storage
         
@@ -108,14 +108,18 @@ class Storage(netcdf.Dataset):
 
     def _register_classes(self):
         '''
-        Run the initialization on all added classes
+        Register all class types to be storable in the netCDF file.
+
+        Notes
+        -----
+        If you want more, add it here!
         '''
 
         self.links = []
-        self.add(MomentumStorage)
-        self.add(ConfigurationStorage)
-        self.add(SnapshotStorage)
-        self.add(TrajectoryStorage)
+        self._add_class(MomentumStorage)
+        self._add_class(ConfigurationStorage)
+        self._add_class(SnapshotStorage)
+        self._add_class(TrajectoryStorage)
 
         for cls in self.links:
             # create a member variable which is the associated Class itself
@@ -126,7 +130,11 @@ class Storage(netcdf.Dataset):
 
     def _init_classes(self):
         '''
-        Run the initialization on all added classes
+        Run the initialization on all added classes, when the storage is created only!
+
+        Notes
+        -----
+        Only runs when the storage is created.
         '''
 
         for cls in self.links:
@@ -136,7 +144,7 @@ class Storage(netcdf.Dataset):
 
     def _restore_classes(self):
         '''
-        Run restore on all added classes
+        Run restore on all added classes. Usually there is nothing to do.
         '''
         for cls in self.links:
             store_name = cls.__name__[:-7].lower()
@@ -145,11 +153,12 @@ class Storage(netcdf.Dataset):
 
     def _init(self):
         """
-        Initialize the netCDF file for storage.
-        
+        Initialize the netCDF file for storage itself.
         """
 
-        # add shared dimension for everyone. scalar and spatial
+        # TODO: Allow to set the project parameters somehow!
+
+        # _add_class shared dimension for everyone. scalar and spatial
         if 'scalar' not in self.dimensions:
             self.createDimension('scalar', 1) # scalar dimension
             

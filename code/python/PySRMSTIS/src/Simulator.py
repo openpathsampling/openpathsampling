@@ -60,6 +60,7 @@ class Simulator(object):
         '''
         self.op = None
         self.initialized = False
+        self.running = dict()
 
         
     def generate(self, snapshot, running = None):
@@ -70,8 +71,9 @@ class Simulator(object):
         ----------
         snapshot : Snapshot 
             initial coordinates; velocities will be assigned from Maxwell-Boltzmann distribution            
-        running : function(Snapshot) 
-            callable function of a 'Snapshot' that returns True or False
+        running : list of function(Snapshot)
+            callable function of a 'Snapshot' that returns True or False.
+            If one of these returns False the simulation is stopped.
 
         Returns
         -------    
@@ -109,16 +111,18 @@ class Simulator(object):
                 self.simulation.step(nsteps_per_iteration)            
                 frame += 1
                 
-                # Store snapshot and add it to the trajectory. Stores also final frame the last time
+                # Store snapshot and _add_class it to the trajectory. Stores also final frame the last time
                 snapshot = Snapshot(self.simulation.context)
-                self.storage.snapshot.save(snapshot)
+                self.storage.snapshot.index(snapshot)
                 trajectory.append(snapshot)
                 
                 # Check if reached a core set. If not, continue simulation
                 if running is not None:
                     for runner in running:
 #                        print str(runner), runner(trajectory)
-                        stop = stop or not runner(trajectory)
+                        keep_running = runner(trajectory)
+                        self.running[runner] = keep_running
+                        stop = stop or not keep_running
 
                 # We could also just count the number of frames. Might be faster but not as nice :)                
                 stop = stop or not self.max_length_stopper(trajectory)
@@ -130,8 +134,7 @@ class Simulator(object):
                     print [ s.idx for s in trajectory]
                     
                     print 'OP :', self.op(snapshot)
-                
-                    
+
             return trajectory
         else:
             # TODO: Throw an error! Needs to be initialized
@@ -142,9 +145,11 @@ class Simulator(object):
         '''
         Setup / Restore a simulator for the Alanine Dipeptide system
         
-        OPTIONAL ARGUMENTS
-        
-        mode (string) - Set to 'restore' to restore from file, 'create' to create fresh simulation and 'auto' to restore only if no database is present
+        Parameters
+        ----------
+        mode : string
+            Set to 'restore' to restore from file, 'create' to create fresh
+            simulation and 'auto' to restore only if no database is present
         '''
         
         self = Simulator()
@@ -175,13 +180,12 @@ class Simulator(object):
                                                  mode = 'w'
                                                  )
             self.storage.simulator = self
-            # save options
+            # index options
             self.storage._store_options(self)
             
-            # save initial equilibrated frame as snapshot ID #0. Might be useful later, who knows
+            # index initial equilibrated frame as snapshot ID #0. Might be useful later, who knows
             snapshot = Snapshot(self.simulation.context)
-
-            self.storage.snapshot.save(snapshot, 0, 0)
+            self.storage.snapshot.index(snapshot, 0, 0)
         
         if mode == 'restore':
             # Need the oposite order, first open database 
@@ -195,7 +199,6 @@ class Simulator(object):
             self.storage._restore_options(self)        
             
             # This is not stored yet so we need to set it again. Should be stored in the database along with the still missing topology
-#            self.solute_indices = range(22)
             self.platform = 'CPU'
 
             # Finally create the OpenMM simulation system
@@ -244,7 +247,6 @@ class Simulator(object):
         self.solute_indices = range(22)                         # indices of Alanine without water
 
         self.n_frames_max = 5000;                               # maximal length of trajectories in saved frames
-        
         self.start_time = time.time()                           # the time when we started
         
         self.pdb_file = PDBFile(self.fn_initial_pdb)
@@ -255,8 +257,8 @@ class Simulator(object):
         '''
         Create an OpenMM simulation from the parameters specified before.
         
-        NOTES
-        
+        Notes
+        -----
         This should be generic and not depend on other parameters than then ones stored in the netcdf file. Still missing is the integrator type, the topology and the solute coordinates
         which at some point might be accessible from the topology
         '''
@@ -276,9 +278,7 @@ class Simulator(object):
         
         self.system_serial = openmm.XmlSerializer.serialize(system)
         self.integrator_serial = openmm.XmlSerializer.serialize(integrator)
-        
-#        print self.system_serial
-                
+
         # This could be moved to initialization since it will not change
         self.max_length_stopper = LengthEnsemble(slice(0,self.n_frames_max - 1))        
                                 
@@ -298,7 +298,7 @@ class Simulator(object):
         system = self.simulation.system
         simulation = self.simulation
                 
-        nequib_steps = 5 #number of nvt equilibration steps with position constraints on Alanine
+        nequib_steps = 5 # number of nvt equilibration steps with position constraints on Alanine
         Alanine_atoms = 22
                 
         Alanine_masses = np.zeros(Alanine_atoms, np.double)

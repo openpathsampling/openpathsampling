@@ -204,7 +204,7 @@ class XYZTranslator(object):
             # make each atom a separate element and a separate residue
             label = "_"+myframe.labels[atom] # underscore to avoid conflicts
             mass = myframe.mass[atom]
-            # Check whether atom is already in the topol; add it if not.
+            # Check whether atom is already in the topol; _add_class it if not.
             # I hate this approach, since it assume the internal structure
             # of the Element classes
             try:
@@ -214,7 +214,7 @@ class XYZTranslator(object):
                                     number=atom+1, # abnormal
                                     name=label, symbol=label, mass=mass*amu
                                  )
-            # we need to add the elements to the mdtraj dictionaries, too,
+            # we need to _add_class the elements to the mdtraj dictionaries, too,
             # because the default conversion functions between mdtraj and
             # openmm topologies don't actually check whether the element
             # dictionaries match up

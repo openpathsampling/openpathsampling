@@ -4,35 +4,47 @@ from simtk.unit import Quantity, nanometers, kilojoules_per_mole, picoseconds
 import numpy as np
 
 class SnapshotStorage(ObjectStorage):
+    """
+    An ObjectStorage for Snapshots. Allow to store Snapshots instances in a netcdf file.
+    """
 
     def __init__(self, storage = None):
         super(SnapshotStorage, self).__init__(storage, Snapshot)
 
-    def save(self, snapshot, idx_configuration = None, idx_momentum = None):
+    def index(self, snapshot, idx_configuration = None, idx_momentum = None):
         """
         Save positions, velocities, boxvectors and energies of current iteration to NetCDF file.
 
-        Notes
-        -----
-        We need to allow for reversed snapshots to save memory. Would be nice
+        Parameters
+        ----------
+        snapshot : Snapshot()
+            the actual snapshot object to be saved.
+        idx_configuration : int or None
+            if not None the configuration is saved using the index specified. Might overwrite an existing configuration.
+        idx_momentum : int or None
+            if not None the momentum is saved using the index specified. Might overwrite an existing momentum.
         """
 
-        self.storage.configuration.save(snapshot.configuration, idx_configuration)
-        self.storage.momentum.save(snapshot.momentum, idx_momentum)
+        self.storage.configuration.index(snapshot.configuration, idx_configuration)
+        self.storage.momentum.index(snapshot.momentum, idx_momentum)
 
     def load(self, idx_configuration = None, idx_momentum = None, reversed = False):
         '''
-        Load a snapshot from the storage
+        Load a snapshot from the storage.
 
         Parameters
         ----------
-        idx : int
-            index of the snapshot in the database 'idx' > 0
+        idx_configuration : int
+            index of the configuration in the database 'idx' > 0
+        idx:momentum : int
+            index of the momentum in the database 'idx' > 0
+        reversed : boolean
+            if True the momenta are treated as reversed
 
         Returns
         -------
         snapshot : Snapshot
-            the snapshot
+            the loaded snapshot instance
         '''
 
         #TODO: Check, for some reason some idx are given as numpy.in32 and netcdf4 is not compatible with indices given in this format!!!!!
@@ -70,15 +82,26 @@ class SnapshotStorage(ObjectStorage):
         return None
 
 class MomentumStorage(ObjectStorage):
+    """
+    An ObjectStorage for Momenta. Allows to store Momentum() instances in a netcdf file.
+    """
+
     def __init__(self, storage = None):
         super(MomentumStorage, self).__init__(storage, Momentum)
 
-    def save(self, momentum, idx = None):
+    def index(self, momentum, idx = None):
         """
         Save velocities and kinetic energies of current iteration to NetCDF file.
+
+        Parameters
+        ----------
+        momentum : Momentum()
+            the actual Momentum() instance to be saved.
+        idx : int or None
+            if not None `idx`is used as the index to index the Momentum() instance. Might overwrite existing Momentum in the database.
         """
 
-        idx = super(MomentumStorage, self).save(momentum, idx)
+        idx = super(MomentumStorage, self).index(momentum, idx)
 
         if idx is not None:
             storage = self.storage
@@ -105,8 +128,8 @@ class MomentumStorage(ObjectStorage):
 
         Returns
         -------
-        momentum : self
-            the momentum
+        Momentum()
+            the loaded momentum instance
         '''
 
         storage = self.storage
@@ -125,6 +148,16 @@ class MomentumStorage(ObjectStorage):
         return momentum
 
     def velocities_as_numpy(self, frame_indices=None, atom_indices=None):
+        """
+        Return a block of stored velocities in the database as a numpy array.
+
+        Parameters
+        ----------
+        frame_indices : list of int or None
+            the indices of Momentum objects to be retrieved from the database. If `None` is specified then all indices are returned!
+        atom_indices : list of int of None
+            if not None only the specified atom_indices are returned. Might speed up reading a lot.
+        """
 
         if frame_indices is None:
             frame_indices = slice(None)
@@ -154,33 +187,10 @@ class MomentumStorage(ObjectStorage):
 
         return self.velocities_as_numpy(frame_indices, atom_indices)
 
-    def trajectory_velocities_as_array(self, idx, atom_indices=None):
-        '''
-        Returns a numpy array consisting of all velocities of a trajectory
-
-        Parameters
-        ----------
-        idx : int
-            index of the trajectory to be loaded
-        atom_indices : list of int
-            selects only the atoms to be returned. If None (Default) all atoms will be selected
-
-        Returns
-        -------
-        numpy.ndarray, shape = (l,n)
-            returns an array with `l` the number of frames and `n` the number of atoms
-        '''
-
-        frame_indices = self.load_configuration_indices(idx)
-        return self.coordinates_as_array(frame_indices, atom_indices)
-
     def _init(self):
         '''
-        Initializes the associated storage to save momentums in it
+        Initializes the associated storage to index momentums in it
         '''
-        # save associated storage in class variable for all self instances to access
-
-#        ncgrp = storage.createGroup('momentum')
 
         ncgrp = self.storage
 
@@ -210,16 +220,16 @@ class ConfigurationStorage(ObjectStorage):
     def __init__(self, storage = None):
         super(ConfigurationStorage, self).__init__(storage, Configuration)
 
-    def save(self, configuration, idx = None):
+    def index(self, configuration, idx = None):
         """
         Save positions, velocities, boxvectors and energies of current iteration to NetCDF file.
 
         Notes
         -----
-        We need to allow for reversed configuration_indices to save memory. Would be nice
+        We need to allow for reversed configuration_indices to index memory. Would be nice
         """
 
-        idx = super(ConfigurationStorage, self).save(configuration, idx)
+        idx = super(ConfigurationStorage, self).index(configuration, idx)
         if idx is not None:
             storage = self.storage
 
@@ -327,9 +337,9 @@ class ConfigurationStorage(ObjectStorage):
 
     def _init(self):
         '''
-        Initializes the associated storage to save configuration_indices in it
+        Initializes the associated storage to index configuration_indices in it
         '''
-        # save associated storage in class variable for all configuration instances to access
+        # index associated storage in class variable for all configuration instances to access
 
 #        ncgrp = storage.createGroup('configuration')
 

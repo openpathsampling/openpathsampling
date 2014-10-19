@@ -63,7 +63,14 @@ class Trajectory(list):
     @property
     def reversed(self):
         '''
-        Returns a reversed (shallow) copy of the trajectory itself.
+        Returns a reversed (shallow) copy of the trajectory itself. Effectively
+        creates a new Trajectory object and then fills it with shallow reversed copies
+        of the contained snapshots.
+
+        Returns
+        -------
+        Trajectory()
+            the reversed trajectory
         '''
 
         t = Trajectory(self)
@@ -111,7 +118,7 @@ class Trajectory(list):
         coordinates (numpy.array(n_frames, n_atoms, 3) - numpy.array of coordinates of size number of frames 'n_frames' x number of atoms 'n_atoms' x 3 in x,y,z
         """
 
-        # Make sure snapshots are stored and have an index and then add the snapshot index to the trajectory
+        # Make sure snapshots are stored and have an index and then _add_class the snapshot index to the trajectory
 
         n_frames = self.frames     
         n_atoms = self.atoms
@@ -210,19 +217,6 @@ class Trajectory(list):
     #=============================================================================================
     # LIST INHERITANCE FUNCTIONS
     #=============================================================================================
-    
-    def as_list(self):
-        """
-        Return the contained list of snapshots as a python list object. Should not be necessary since
-        we can just use list(self) to do so (DEPRECATED!)
-        
-        Returns
-        -------        
-        trajectory : list of Snapshot 
-            the indexed trajectory
-        
-        """
-        return list(self)
 
     def __getslice__(self, *args, **kwargs):
         ret =  super(Trajectory, self).__getslice__(*args, **kwargs)
@@ -374,6 +368,12 @@ class Trajectory(list):
     def md(self, topology = None):
         """
         Construct a mdtraj.Trajectory object from the Trajectory itself
+
+        Parameters
+        ----------
+        topology : mdtraj.Topology()
+            If not None this topology will be used to construct the mdtraj objects otherwise
+            the topology object will be taken from the configurations in the trajectory snapshots.
         
         Returns
         -------        
@@ -396,6 +396,11 @@ class Trajectory(list):
         -------        
         topology : mdtraj.Topology
             the topology
+
+        Notes
+        -----
+        This is taken from the configuration of the first frame. Otherwise there is still un ugly fall-back to look
+        for an openmm.Simulation object in Trajectory.simulator. and construct an mdtraj.Topology from this.
         """        
 
         if len(self) > 0 and self[0].topology is not None:
@@ -409,25 +414,3 @@ class Trajectory(list):
             topology = topology.subset(self.atom_indices)       
         
         return topology
-
-    #=============================================================================================
-    # STORAGE FUNCTIONS
-    #=============================================================================================
-
-    def save(self):
-        """
-        Add the current state of the trajectory in the database. If nothing has changed then the trajectory gets stored using the same snapshots as before. Saving lots of diskspace
-
-        Parameters
-        ----------
-        storage : TrajectoryStorage()
-            If set this specifies the storage to be used. If the storage is None the default storage is used, which needs to
-            be set in advance.
-
-        Notes
-        -----
-        This also saves all contained frames in the trajectory if not done yet.
-        A single Trajectory object can only be saved once!
-
-        """
-        self.storage.trajectory.save(self)

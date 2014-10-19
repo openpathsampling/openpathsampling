@@ -33,24 +33,24 @@ class TrajectoryStorage(ObjectStorage):
         '''
         return int(self.storage.variables['trajectory_length'][idx])
 
-    def save(self, trajectory, idx=None):
+    def index(self, trajectory, idx=None):
         """
         Add the current state of the trajectory in the database. If nothing has changed then the trajectory gets stored using the same snapshots as before. Saving lots of diskspace
 
         Parameters
         ----------
-        storage : TrajectoryStorage()
-            If set this specifies the storage to be used. If the storage is None the default storage is used, which needs to
-            be set in advance.
+        trajectory : Trajectory()
+            the trajectory to be saved
+        idx : int or None
+            if idx is not None the index will be used for saving in the storage. This might overwrite already existing trajectories!
 
         Notes
         -----
         This also saves all contained frames in the trajectory if not done yet.
         A single Trajectory object can only be saved once!
-
         """
 
-        idx = super(TrajectoryStorage, self).save(trajectory, idx)
+        idx = super(TrajectoryStorage, self).index(trajectory, idx)
 
         if idx is not None:
             storage = self.storage
@@ -63,7 +63,7 @@ class TrajectoryStorage(ObjectStorage):
             nframes = len(trajectory)
             for frame_index in range(nframes):
                 frame = trajectory[frame_index]
-                storage.snapshot.save(frame)
+                storage.snapshot.index(frame)
 
 #                print 'Position :', begin + frame_index
 
@@ -270,6 +270,27 @@ class TrajectoryStorage(ObjectStorage):
 
         return md.Trajectory(output, topology)
 
+    def velocities_as_array(self, idx, atom_indices=None):
+        '''
+        Returns a numpy array consisting of all velocities of a trajectory
+
+        Parameters
+        ----------
+        idx : int
+            index of the trajectory to be loaded
+        atom_indices : list of int
+            selects only the atoms to be returned. If None (Default) all atoms will be selected
+
+        Returns
+        -------
+        numpy.ndarray, shape = (l,n)
+            returns an array with `l` the number of frames and `n` the number of atoms
+        '''
+
+        frame_indices = self.configuration_indices(idx)
+        return self.storage.momentum.velocities_as_array(frame_indices, atom_indices)
+
+
     def _init(self):
         """
         Initialize the associated storage to allow for trajectory storage
@@ -277,7 +298,7 @@ class TrajectoryStorage(ObjectStorage):
         """
         super(TrajectoryStorage, self)._init()
 
-        # save associated storage in class variable for all Trajectory instances to access
+        # index associated storage in class variable for all Trajectory instances to access
         ncfile = self.storage
 
         # define dimensions used in trajectories

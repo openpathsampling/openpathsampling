@@ -9,26 +9,32 @@ import numpy as np
 
 class FunctionalDict(dict):
     """
-    A simple cache implementation
+    A simple dict implementation that will call a function for unknown values
 
     Parameters
     ----------
     fnc : index (int) -> value (float)
         the function used to generate the cache values for the specified index. In essence a list
+    dimensions : int
+        the dimension of the stored values. Default is `1`
+    content_class : Class
+        the class of objects that can be stored
+    allow_multiple : boolean
+        if True then in the case that the dict is called with several object at a time. The dict
+        creates a list of missing ones and passes all of these to the evaluating function at once.
+        Otherwise the fall-back is to call each item seperately. If possible always the multiple-
+        option should be used.
 
     Attributes
     ----------
-    cache : list
-        A list object contained all cached values so far
-    is_cached : set
-        A set of indices that are cached for quick queries if an index is in the list or not.
+    content_class
+    allow_multiple
+    dimensions
 
-    Notes
-    -----
-    Does it have to be between 0 and 1?
-    Do we want to save this in the netCDF?
-    And if yes, do we want one big table for all OrderParameters or several ones. One for each. Second might be nicer.
     """
+
+    # TODO: Maybe clean the use of __call__ and __get__ and only use __call__ for the function and
+    # then storage in the dict and keep __get__ and __set__ only for regular dict access???
 
     def __init__(self, fnc, dimensions = 1, content_class = None, allow_multiple = True):
         self._fnc = fnc
@@ -114,15 +120,15 @@ class StorableFunctionDict(FunctionalDict):
     """
     A cache that is attached to Configuration indices store in the Configuration storage
 
-    Attributes
-    ----------
-    name : string
-        A short and unique name to be used in storage
-
     Parameters
     ----------
     name : string
         A short and unique name to be used in storage
+
+    Attributes
+    ----------
+    name
+
     """
 
     def __init__(self, name, fnc, dimensions = 1, content_class = None, storages = None):
@@ -154,6 +160,9 @@ class StorableFunctionDict(FunctionalDict):
 
 
     def in_store(self, item):
+        """
+        Returns True, if the item is already stored in an associated cache.
+        """
         for s in self.storage_caches:
             if s in item.idx and item.idx[s] in self.storage_caches[s]:
                 return True
@@ -178,7 +187,7 @@ class StorableFunctionDict(FunctionalDict):
 
     def _init_storage(self, object_storage = None):
         """
-        initializes the associated storage to save a specific order parameter in it
+        initializes the associated storage to index a specific order parameter in it
         """
         if object_storage is None:
             # just run this function with all registered storages
@@ -214,6 +223,12 @@ class StorableFunctionDict(FunctionalDict):
         """
         This will transfer everything from the memory cache into the storage copy in memory which is used to interact with
         the file storage.
+
+        Parameters
+        ----------
+        storage : Storage() on None
+            The storage (not ObjectStorage) to store in. If None then all associated storages will be updated up.
+
         """
         if storage is None:
             if len(self.storage_caches) > 0:
@@ -232,12 +247,18 @@ class StorableFunctionDict(FunctionalDict):
         """
         This will transfer everything from the memory cache into the storage copy in memory which is used to interact with
         the file storage.
+
+        Parameters
+        ----------
+        storage : Storage() on None
+            The storage (not ObjectStorage) to store in. If None then all associated storages will be cleaned up.
+
         """
         if storage is None:
             if len(self.storage_caches) > 0:
                 map(self.tidy_cache, self.storage_caches.keys())
         else:
-            # Make sure configuration_indices are stored and have an index and then add the configuration index to the trajectory
+            # Make sure configuration_indices are stored and have an index and then _add_class the configuration index to the trajectory
 
             if storage not in self.storage_caches:
                 # TODO: Throw exception
@@ -249,14 +270,21 @@ class StorableFunctionDict(FunctionalDict):
 
     def save(self, storage = None):
         """
-        Save the current state of the cache to the storage
+        Save the current state of the cache to the storage.
+
+        Parameters
+        ----------
+        storage : Storage() on None
+            The storage (not ObjectStorage) to store in. If None then all associated storages will be saved in.
+
         """
 
         if storage is None:
             if len(self.storage_caches) > 0:
                 map(self.save, self.storage_caches.keys())
+                map(self.tidy_cache, self.storage_caches.keys())
         else:
-            # Make sure configuration_indices are stored and have an index and then add the configuration index to the trajectory
+            # Make sure configuration_indices are stored and have an index and then _add_class the configuration index to the trajectory
 
             self._update_store(storage)
             store = self.storage_caches[storage]
@@ -268,6 +296,11 @@ class StorableFunctionDict(FunctionalDict):
     def load(self, storage = None):
         """
         Restores the cache from the storage using the name of the orderparameter.
+
+        Parameters
+        ----------
+        storage : Storage() on None
+            The storage (not ObjectStorage) to store in. If None then all associated storages will be loaded from.
 
         Notes
         -----
@@ -292,26 +325,18 @@ class OrderParameter(StorableFunctionDict):
     ----------
     name : string
         A descriptive name of the orderparameter. It is used in the string representation.
+    dimensions : int
+        The number of dimensions of the output order parameter. So far this is not used and will be necessary
+        or useful when storage is available
+    storages : list of ConfigurationStorages()
+        contains the list of storages that will be used.
 
     Attributes
     ----------
-    name : string
-    use_cache : bool
-        If set to `True` then the generated information is cached for further computation. This requires that the
-        used configuration_indices have an index > 0 which means they need to have been saved to the storage.
-    use_storage : bool
-        If set to `True` the cached information will also be stored in the associated netCDF file.
-        This still needs testing.
-    size : int
-        The number of dimensions of the output order parameter. So far this is not used and will be necessary
-        or useful when storage is available
-    cache : ConfigurationCache
-        A cache object that holds all the values.
+    name
+    dimensions
+    storages
 
-    Notes
-    -----
-    Do we want to save this in the netCDF?
-    And if yes, do we want one big table for all OrderParameters or several ones. One for each. Second might be nicer.
     """
 
     def __init__(self, name, dimensions = 1, storages = None):
@@ -367,7 +392,7 @@ class OP_RMSD_To_Lambda(OrderParameter):
         self.min_lambda = lambda_min
         self.max_lambda = max_lambda
 
-        # Generate RMSD metric using only the needed indices. To save memory we crop the read snapshots from the database and do not use a cropping RMSD on the full snapshots
+        # Generate RMSD metric using only the needed indices. To index memory we crop the read snapshots from the database and do not use a cropping RMSD on the full snapshots
         self.metric = RMSD(None)
         self._generator = self.metric.prepare_trajectory(Trajectory([center]).subset(self.atom_indices).md())
         return
@@ -420,13 +445,13 @@ class OP_Multi_RMSD(OrderParameter):
         the RMSD metric object used to compute the RMSD
     """
 
-    def __init__(self, name, centers, atom_indices=None, metric=None, use_cache = True, storages=None):
+    def __init__(self, name, centers, atom_indices=None, metric=None, storages=None):
         super(OP_Multi_RMSD, self).__init__(name, dimensions=len(centers), storages=storages)
 
         self.atom_indices = atom_indices
         self.center = centers
 
-        # Generate RMSD metric using only the needed indices. To save memory we crop the read snapshots from the database and do not use a cropping RMSD on the full snapshots
+        # Generate RMSD metric using only the needed indices. To index memory we crop the read snapshots from the database and do not use a cropping RMSD on the full snapshots
         if metric is None:
             self.metric = RMSD(None)
         else:
