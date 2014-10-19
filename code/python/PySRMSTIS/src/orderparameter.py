@@ -254,6 +254,8 @@ class StorableFunctionDict(FunctionalDict):
             The storage (not ObjectStorage) to store in. If None then all associated storages will be cleaned up.
 
         """
+
+        # TODO: This doesnt work because the storage is changed during deleting superfluous elements
         if storage is None:
             if len(self.storage_caches) > 0:
                 map(self.tidy_cache, self.storage_caches.keys())
@@ -264,9 +266,10 @@ class StorableFunctionDict(FunctionalDict):
                 # TODO: Throw exception
                 self.storage_caches[storage] = dict()
 
-            for item, value in self.iteritems():
-                if storage in item.idx:
-                    del self[item]
+            new_dict = {item:value for item, value in self.iteritems() if storage not in item.idx}
+
+            self.clear()
+            self.update(new_dict)
 
     def save(self, storage = None):
         """

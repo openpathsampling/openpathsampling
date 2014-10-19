@@ -11,7 +11,7 @@ class SnapshotStorage(ObjectStorage):
     def __init__(self, storage = None):
         super(SnapshotStorage, self).__init__(storage, Snapshot)
 
-    def index(self, snapshot, idx_configuration = None, idx_momentum = None):
+    def save(self, snapshot, idx_configuration = None, idx_momentum = None):
         """
         Save positions, velocities, boxvectors and energies of current iteration to NetCDF file.
 
@@ -89,7 +89,7 @@ class MomentumStorage(ObjectStorage):
     def __init__(self, storage = None):
         super(MomentumStorage, self).__init__(storage, Momentum)
 
-    def index(self, momentum, idx = None):
+    def save(self, momentum, idx = None):
         """
         Save velocities and kinetic energies of current iteration to NetCDF file.
 
@@ -220,7 +220,7 @@ class ConfigurationStorage(ObjectStorage):
     def __init__(self, storage = None):
         super(ConfigurationStorage, self).__init__(storage, Configuration)
 
-    def index(self, configuration, idx = None):
+    def save(self, configuration, idx = None):
         """
         Save positions, velocities, boxvectors and energies of current iteration to NetCDF file.
 
