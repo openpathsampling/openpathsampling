@@ -25,8 +25,8 @@ class SnapshotStorage(ObjectStorage):
             if not None the momentum is saved using the index specified. Might overwrite an existing momentum.
         """
 
-        self.storage.configuration.index(snapshot.configuration, idx_configuration)
-        self.storage.momentum.index(snapshot.momentum, idx_momentum)
+        self.storage.configuration.save(snapshot.configuration, idx_configuration)
+        self.storage.momentum.save(snapshot.momentum, idx_momentum)
 
     def load(self, idx_configuration = None, idx_momentum = None, reversed = False):
         '''

@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
         # generate from this snapshot a trajectory with 50 steps
         traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,30))])
-        simulator.storage.trajectory.index(traj)
+        simulator.storage.trajectory.save(traj)
         
         # Save as Multi-Frame pdb  (only alanine, no water !)  
         traj.solute.md().save_pdb('data/mdtraj.pdb', True)
@@ -64,7 +64,7 @@ if __name__ == '__main__':
         tt = simulator.storage.trajectory.load(1)[4:18]
 
 #        print [ (op(d)) for d in dd ]
-#        op.index()
+#        op.save()
 
         stime = time.time()
         print tis.locate(dd, lazy=True, overlap=1)
@@ -196,7 +196,7 @@ if __name__ == '__main__':
     
     for i in range(10):
         new = sampling.sampleTrajectory(old)
-        new.index()
+        simulator.storage.trajectory.save(new)
              
         old = new    
 
@@ -250,7 +250,7 @@ if __name__ == '__main__':
 #    print tis.assign_snapshot(traj[10])
     
 #    traj_test = Simulator.generate(traj[15], 200, stopping = tis.within_interface(4) )
-#    traj_test.index()
+#    traj_test.save()
 #    tis.assign_storage()
 
 #    print traj_test.indices()
@@ -273,7 +273,7 @@ if __name__ == '__main__':
     
     for i in range(10):
         new = sampling.sampleTrajectory(old)
-        new.index()
+        new.save()
              
         old = new
     

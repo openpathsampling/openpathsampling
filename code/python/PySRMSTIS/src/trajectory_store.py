@@ -63,7 +63,7 @@ class TrajectoryStorage(ObjectStorage):
             nframes = len(trajectory)
             for frame_index in range(nframes):
                 frame = trajectory[frame_index]
-                storage.snapshot.index(frame)
+                storage.snapshot.save(frame)
 
 #                print 'Position :', begin + frame_index
 

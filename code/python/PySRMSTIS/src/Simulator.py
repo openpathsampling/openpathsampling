@@ -113,7 +113,7 @@ class Simulator(object):
                 
                 # Store snapshot and _add_class it to the trajectory. Stores also final frame the last time
                 snapshot = Snapshot(self.simulation.context)
-                self.storage.snapshot.index(snapshot)
+                self.storage.snapshot.save(snapshot)
                 trajectory.append(snapshot)
                 
                 # Check if reached a core set. If not, continue simulation
@@ -185,7 +185,7 @@ class Simulator(object):
             
             # index initial equilibrated frame as snapshot ID #0. Might be useful later, who knows
             snapshot = Snapshot(self.simulation.context)
-            self.storage.snapshot.index(snapshot, 0, 0)
+            self.storage.snapshot.save(snapshot, 0, 0)
         
         if mode == 'restore':
             # Need the oposite order, first open database 
