@@ -128,6 +128,25 @@ def setUp():
     for test in ttraj.keys():
         ttraj[test] = Trajectory(ttraj[test])
 
+def in_out_parser(testname):
+    allowed_parts = ['in', 'out']
+    parts = re.split("_", testname)
+    res = []
+    for part in parts:
+        to_append = None
+        if part in allowed_parts:
+            to_append = part
+        elif part == 'hit':
+            if 'upper' in parts:
+                to_append = 'in'
+            elif 'lower' in parts:
+                to_append = 'in'
+        if to_append != None:
+            if res == []:
+                res.append(to_append)
+            elif to_append != res[-1]:
+                res.append(to_append)
+    return res
 
 class EnsembleTest(object):
     def _single_test(self, ensemble_fcn, traj, res, failmsg):
@@ -157,7 +176,6 @@ class EnsembleTest(object):
 
             failmsg = "Failure in slice_ens "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.slice_ens, wrapped, results[test], failmsg)
-
 
 class testExitsXEnsemble(EnsembleTest):
     def setUp(self):
@@ -301,7 +319,6 @@ class testEntersXEnsemble(testExitsXEnsemble):
         assert_equal(self.ensemble.__str__(),
             'exists x[t], x[t+1] in [3:8] such that x[t] not in {0} and x[t+1] in {0}'.format(vol1))
 
-
 class testSequentialEnsembles(EnsembleTest):
     def setUp(self):
         self.inX = InXEnsemble(vol1, frames=slice(None,None))
@@ -325,7 +342,6 @@ class testSequentialEnsembles(EnsembleTest):
                                     self.outX,
                                     self.inX & self.length1 ]
                                     )
-            
 
     @raises(ValueError)
     def test_maxminoverlap_size(self):
@@ -370,12 +386,6 @@ class testSequentialEnsembles(EnsembleTest):
 
     def test_overlap_max_gap(self):
         """SequentialEnsemble works if max overlap is negative (gap)"""
-        raise SkipTest
-
-    def test_subtraj_doesnt_pass(self):
-        """
-        SequentialEnsemble doesn't accept if only a subtraj could be accepted
-        """
         raise SkipTest
 
     def test_can_append_tis(self):
@@ -513,32 +523,45 @@ class testSequentialEnsembles(EnsembleTest):
         # idea: for each ttraj, use the key name to define in/out behavior,
         # dynamically construct a SequentialEnsemble
         ens_dict = {'in' : self.inX, 'out' : self.outX }
-        #for test in ttraj.keys():
-        for test in [ttraj.keys()[0]]:
-            # TODO: change this to a parser, which then we'll use for
-            # everything
-            parts = re.split("_", test)
+        for test in ttraj.keys():
+            ens_list = in_out_parser(test)
             ens = []
-            for part in parts:
-                my_ens = None
-                try:
-                    my_ens = ens_dict[part]
-                except KeyError:
-                    if part == 'hit':
-                        if 'upper' in parts:
-                            my_ens = ens_dict['in']
-                        elif 'lower' in parts:
-                            my_ens = ens_dict['in']
-                if my_ens != None:
-                    ens.append(my_ens)
+
+            # how to pick ensembles is specific to this test
+            for ens_type in ens_list:
+                ens.append(ens_dict[ens_type])
+
             ensemble = SequentialEnsemble(ens)
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(ensemble, ttraj[test], True, failmsg)
 
+    def test_sequential_tis(self):
+        """SequentialEnsemble as TISEnsemble identifies paths"""
+        results = {}
+        for test in ttraj.keys():
+            results[test] = False
+        results['upper_in_out_in'] = True
+        results['lower_in_out_in'] = True
+        results['upper_in_out_out_in'] = True
+        results['lower_in_out_out_in'] = True
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.tis_ensemble, ttraj[test], results[test],
+                              failmsg)
 
-    def test_sequential_hit_leave(self):
-        """SequentialEnsembles based on Hit/LeaveXEnsemble"""
-        raise SkipTest
+    def test_sequential_minus(self):
+        """SequentialEnsemble as MinusEnsemble identifies paths"""
+        results = {}
+        for test in ttraj.keys():
+            results[test] = False
+        results['upper_in_out_in_out_in'] = True
+        results['lower_in_out_in_out_in'] = True
+        results['upper_in_out_in_in_out_in'] = True
+        results['lower_in_out_in_in_out_in'] = True
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.minus_ensemble, ttraj[test], results[test],
+                              failmsg)
 
     def test_sequential_enter_exit(self):
         """SequentialEnsembles based on Enters/ExitsXEnsemble"""
