@@ -323,7 +323,7 @@ class OrderParameter(StorableFunctionDict):
         elif isinstance(items, Configuration):
             return self[items]
         elif isinstance(items, Trajectory):
-            return self[[ s.configuration for s in items]]
+            return self[[snapshot.configuration for snapshot in items]]
         elif isinstance(items, list):
             if isinstance(items[0], Configuration):
                 return self[items]

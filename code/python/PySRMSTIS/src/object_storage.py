@@ -1,42 +1,4 @@
-def setstorage(cls):
-    def decorate(func):
-        def call(this, storage = None, *args, **kwargs):
-            if hasattr(kwargs, 'storage') and getattr(kwargs, 'storage') is not None:
-                assert(isinstance(kwargs['storage'], Storage))
-                old_storage = this.storage
-                this.storage = kwargs['storage']
-
-            result = func(*args, **kwargs)
-
-            if hasattr(kwargs, 'storage') and getattr(kwargs, 'storage') is not None:
-                this.storage = old_storage
-            return result
-        return call
-    return decorate
-
-def defaultstorage(cls):
-    def decorate(func):
-        def call(*args, **kwargs):
-            this = args[0]
-            if not hasattr(kwargs, 'storage') or getattr(kwargs, 'storage') is None:
-                kwargs['storage'] = this.default_storage
-
-            result = func(*args, **kwargs)
-            return result
-        return call
-    return decorate
-
-def setstorage(list_arg):
-    def decorate(func):
-        def call(this, *args, **kwargs):
-            if hasattr(kwargs, list_arg) and type(getattr(kwargs, list_arg)) is not list:
-                kwargs[list_arg] = list(kwargs[list_arg])
-                result = func(*args, **kwargs)
-                return result[0]
-            else:
-                return func(*args, **kwargs)
-        return call
-    return decorate
+import copy
 
 class ObjectStorage(object):
 
@@ -45,8 +7,12 @@ class ObjectStorage(object):
         self.content_class = obj
         self.idx_dimension = obj.__name__.lower()
 
-    def __call__(self, storage):
+    def copy(self):
         store = copy.deepcopy(self)
+        return store
+
+    def __call__(self, storage):
+        store = self.copy()
         store.storage = storage
         return store
 

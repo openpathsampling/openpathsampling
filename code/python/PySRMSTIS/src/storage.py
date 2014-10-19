@@ -7,20 +7,15 @@ Created on 06.07.2014
 
 import netCDF4 as netcdf # for netcdf interface provided by netCDF4 in enthought python
 import pickle
-import StringIO
 import os.path
 
 import numpy
 import simtk.unit as units
-import mdtraj as md
 
-from configuration_store import ConfigurationStorage
-from momentum_store import MomentumStorage
 from trajectory_store import TrajectoryStorage
-from snapshot_store import SnapshotStorage
+from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
 
 import mdtraj as md
-import copy
 
 
 #=============================================================================================

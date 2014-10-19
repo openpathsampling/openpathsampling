@@ -1,12 +1,8 @@
 import numpy as np
 import mdtraj as md
 
-from storage_utils import ObjectStorage
-from storage_utils import setstorage
+from object_storage import ObjectStorage
 from trajectory import Trajectory
-
-from functools import wraps
-
 
 class TrajectoryStorage(ObjectStorage):
 
@@ -18,11 +14,9 @@ class TrajectoryStorage(ObjectStorage):
         end =  idx + self.length(idx)
         return slice(idx,end)
 
-    @wraps(setstorage)
     def _idx(self, idx):
         return int(self.storage.variables['trajectory_idx'][idx])
 
-    @wraps(setstorage)
     def length(self, idx):
         '''
         Return the length of a trajectory from the storage
@@ -39,7 +33,6 @@ class TrajectoryStorage(ObjectStorage):
         '''
         return int(self.storage.variables['trajectory_length'][idx])
 
-    @wraps(setstorage)
     def save(self, trajectory, idx=None):
         """
         Add the current state of the trajectory in the database. If nothing has changed then the trajectory gets stored using the same snapshots as before. Saving lots of diskspace
@@ -84,7 +77,6 @@ class TrajectoryStorage(ObjectStorage):
         return
 
 
-    @wraps(setstorage)
     def momentum_indices(self, idx):
         '''
         Load trajectory indices for trajectory with ID 'idx' from the storage
@@ -101,7 +93,6 @@ class TrajectoryStorage(ObjectStorage):
 
 
 
-    @wraps(setstorage)
     def momentum_reversed(self, idx):
         '''
         Load trajectory with ID 'idx' from the storage and return a list of reversed indicators for the momenta
@@ -120,7 +111,6 @@ class TrajectoryStorage(ObjectStorage):
         return self.storage.variables['trajectory_momentum_reversed'][self._slice(idx)]
 
 
-    @wraps(setstorage)
     def configuration_indices(self, idx):
         '''
         Load trajectory indices for trajectory with ID 'idx' from the storage
@@ -137,7 +127,6 @@ class TrajectoryStorage(ObjectStorage):
 
 
 
-    @wraps(setstorage)
     def indices(self, idx):
         '''
         Load trajectory indices for trajectory with ID 'idx' from the storage
@@ -157,7 +146,6 @@ class TrajectoryStorage(ObjectStorage):
         )
 
 
-    @wraps(setstorage)
     def load(self, idx, momentum = True):
         '''
         Return a trajectory from the storage
@@ -182,7 +170,6 @@ class TrajectoryStorage(ObjectStorage):
 
 
 
-    @wraps(setstorage)
     def from_indices(self, frames_configuration, frames_momentum, momenta_reversed, storage = None):
         '''
         Return a trajectory from the storage constructed from a list of snapshot indices
@@ -214,7 +201,6 @@ class TrajectoryStorage(ObjectStorage):
 
         return trajectory
 
-    @wraps(setstorage)
     def _free_idx(self):
         '''
         Return the number of the next _free_idx ID
@@ -227,7 +213,6 @@ class TrajectoryStorage(ObjectStorage):
         length = int(len(self.storage.dimensions['frames']))
         return length + 1
 
-    @wraps(setstorage)
     def all_momentum_indices(self):
         '''
         Return a list of frame indices for all trajectories in the storage
@@ -248,7 +233,6 @@ class TrajectoryStorage(ObjectStorage):
         return [ frames[idx[i]:idx[i] + length[i] ] for i in range(1, n_traj + 1) ]
 
 
-    @wraps(setstorage)
     def all_configuration_indices(self):
         '''
         Return a list of frame indices for all trajectories in the storage
@@ -267,7 +251,6 @@ class TrajectoryStorage(ObjectStorage):
 
         return [ frames[idx[i]:idx[i] + length[i] ] for i in range(1, n_traj + 1) ]
 
-    @wraps(setstorage)
     def all_snapshot_coordinates_as_mdtraj(self, atom_indices = None):
         """
         Return all snapshots as a mdtraj.Trajectory object using only the specified atoms
@@ -287,7 +270,6 @@ class TrajectoryStorage(ObjectStorage):
 
         return md.Trajectory(output, topology)
 
-    @wraps(setstorage)
     def _init(self):
         """
         Initialize the associated storage to allow for trajectory storage

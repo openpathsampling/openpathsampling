@@ -11,7 +11,7 @@ import mdtraj as md
 from simtk.unit import nanosecond, picosecond, nanometers, nanometer, picoseconds, femtoseconds, femtosecond, kilojoules_per_mole, Quantity
 
 #=============================================================================================
-# SIMULATION SNAPSHOT 
+# SIMULATION CONFIGURATION
 #=============================================================================================
 
 class Configuration(object):
@@ -143,6 +143,9 @@ class Configuration(object):
 
         return md.Trajectory(output, self.topology)
 
+#=============================================================================================
+# SIMULATION MOMENTUM / VELOCITY
+#=============================================================================================
 
 class Momentum(object):
     """
@@ -224,11 +227,10 @@ class Momentum(object):
         this = self.copy()
         this.reverse()
         return this
-     
-    #=============================================================================================
-    # Storage functions
-    #=============================================================================================
-    
+
+#=============================================================================================
+# SIMULATION SNAPSHOT (COMPLETE FRAME WITH COORDINATES AND VELOCITIES)
+#=============================================================================================
 
 class Snapshot(object):
     """
@@ -236,7 +238,8 @@ class Snapshot(object):
 
     """
     
-    # Class variables to store the global storage and the system context describing the system to be safed as snapshots
+    # Class variables to store the global storage and the system context describing the system to be saved as snapshots
+    # Hopefully these class member variables will not be needed any longer
     storage = None
     simulator = None
     
@@ -277,7 +280,6 @@ class Snapshot(object):
         
         """
         
-#        self.idx = 0        # potential idx in a netcdf storage, if 0 then not stored yet. Attention! Cannot be stored in 2 repositories at the same time
         if configuration is None:
             self.configuration = Configuration()
         else:
@@ -390,12 +392,3 @@ class Snapshot(object):
         Rather slow since the topology has to be made each time. Try to avoid it
         '''        
         return self.configuration.md()
-    
-    def md_topology(self): 
-        '''
-        Returns a mdtraj topology object that can be used with the stored snapshot
-        '''   
-        return self.configuration.md_topology()
-    #=============================================================================================
-    # Storage functions
-    #=============================================================================================
