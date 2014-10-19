@@ -273,7 +273,7 @@ if __name__ == '__main__':
     
     for i in range(10):
         new = sampling.sampleTrajectory(old)
-        new.save()
+        simulator.storage.trajectory.save(new)
              
         old = new
     
