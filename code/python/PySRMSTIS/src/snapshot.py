@@ -25,7 +25,7 @@ class Configuration(object):
     storage = None
     simulator = None
     
-    def __init__(self, context=None, coordinates=None, box_vectors=None, potential_energy=None, simulator=None):
+    def __init__(self, context=None, coordinates=None, box_vectors=None, potential_energy=None, simulator=None, topology=None):
         """
         Create a simulation configuration from either an OpenMM context or individually-specified components.
 
@@ -63,7 +63,10 @@ class Configuration(object):
         if simulator is not None:
             context = simulator.simulation.context
             self.topology = simulator.storage.topology
-        
+
+        if topology is not None:
+            self.topology = topology
+
         if context is not None:
             # Get current state from OpenMM Context object.
             state = context.getState(getPositions=True, getEnergy=True)
@@ -119,7 +122,11 @@ class Configuration(object):
     #=============================================================================================
     # Utility functions
     #=============================================================================================
-    
+
+    def copy(self):
+        this = Configuration(coordinates=self.coordinates, box_vectors=self.box_vectors, potential_energy=self.potential_energy, topology=self.topology)
+        return this
+
     def md(self):
         '''
         Returns a mdtraj Trajectory object that contains only one frame
@@ -133,17 +140,8 @@ class Configuration(object):
                             
         output = np.zeros([1, n_atoms, 3], np.float32)
         output[0,:,:] = self.coordinates
-        
-        topology = self.md_topology()
-                                                         
-        return md.Trajectory(output, topology)      
 
-    
-    def md_topology(self): 
-        '''
-        Returns a mdtraj topology object that can be used with the stored configuration
-        '''   
-        return md.Topology.from_openmm(Configuration.simulator.simulation.topology)
+        return md.Trajectory(output, self.topology)
 
 
 class Momentum(object):
@@ -215,11 +213,15 @@ class Momentum(object):
     # Utility functions
     #=============================================================================================
 
+    def copy(self):
+        this = Momentum(velocities=self.velocities, kinetic_energy=self.kinetic_energy)
+        return this
+
     def reverse(self):
         self.velocities *= -1.0
     
     def reversed_copy(self):
-        this = Momentum(velocities=self.velocities, kinetic_energy=self.kinetic_energy)
+        this = self.copy()
         this.reverse()
         return this
      
@@ -227,12 +229,6 @@ class Momentum(object):
     # Storage functions
     #=============================================================================================
     
-    def save(self, idx = None, storage = None):
-        """
-        Save velocities and kinetic energies of current iteration to NetCDF file.
-        """
-
-        storage.momentum.save(idx)
 
 class Snapshot(object):
     """
@@ -244,7 +240,7 @@ class Snapshot(object):
     storage = None
     simulator = None
     
-    def __init__(self, context=None, coordinates=None, velocities=None, box_vectors=None, potential_energy=None, kinetic_energy=None, configuration=None, momentum=None, reversed=False):
+    def __init__(self, context=None, simulator=None, coordinates=None, velocities=None, box_vectors=None, potential_energy=None, kinetic_energy=None, configuration=None, momentum=None, reversed=False, topology=None):
         """
         Create a simulation snapshot from either an OpenMM context or individually-specified components.
 
@@ -290,6 +286,13 @@ class Snapshot(object):
             self.momentum = Momentum()
         else:
             self.momentum = momentum
+
+        if simulator is not None:
+            context = simulator.simulation.context
+            self.configuration.topology = simulator.storage.topology
+
+        if topology is not None:
+            self.configuration.topology = topology
 
         self.reversed = reversed
 
@@ -396,14 +399,3 @@ class Snapshot(object):
     #=============================================================================================
     # Storage functions
     #=============================================================================================
-
-    def save(self, idx_configuration = None, idx_momentum = None):
-        """
-        Save positions, velocities, boxvectors and energies of current iteration to NetCDF file.
-
-        Notes
-        -----
-        We need to allow for reversed snapshots to save memory. Would be nice
-        """
-
-        self.storage.snapshot.save(self, idx_configuration, idx_momentum)

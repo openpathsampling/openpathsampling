@@ -398,7 +398,7 @@ class Trajectory(list):
             the topology
         """        
 
-        if hasattr(self[0], 'topology') and self[0].topology is not None:
+        if len(self) > 0 and self[0].topology is not None:
             # if no topology is defined
             topology = self[0].topology
         else:
