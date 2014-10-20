@@ -501,7 +501,7 @@ class MSM(BoundedMatrix):
         """
         
         # This is really ugly to compute. The problem is, that changes in T induce changes in
-        # the stationary distribution and so we need to _add_class this influence, too
+        # the stationary distribution and so we need to add this influence, too
         # I implemented something which is correct, but don't ask me about the derivation
         
         n = len(self.T)
@@ -615,7 +615,7 @@ class MSM(BoundedMatrix):
         return sensitivity
     
     # TODO: The eigenvector sensitivity depends on the normalization, e.g. l^T r = 1 or norm(r) = 1
-    # Should we fix that or _add_class another option. Also the sensitivity depends on the initial eigenvectors
+    # Should we fix that or add another option. Also the sensitivity depends on the initial eigenvectors
     # Now everything is set to use norm(v) = 1 for left and right
     # In the case of the stationary distribution we want sum(pi) = 1, so this function
     # does NOT return the same as stationary_distribution_sensitivity if we choose k = 0 and right = False!

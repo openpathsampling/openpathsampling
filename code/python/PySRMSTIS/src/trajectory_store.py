@@ -57,7 +57,7 @@ class TrajectoryStorage(ObjectStorage):
 
             begin = self._free_idx()
 
-    #        print 'Begin :', _idx
+    #        print 'Begin :', begin
     #        print 'Index :', idx
 
             nframes = len(trajectory)
@@ -203,12 +203,12 @@ class TrajectoryStorage(ObjectStorage):
 
     def _free_idx(self):
         '''
-        Return the number of the next _free_idx ID
+        Return the number of the next free ID
 
         Returns
         -------
         index : int
-            the number of the next _free_idx index in the storage. Used to store a new snapshot.
+            the number of the next free index in the storage. Used to store a new snapshot.
         '''
         length = int(len(self.storage.dimensions['frames']))
         return length + 1

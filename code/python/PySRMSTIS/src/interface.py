@@ -24,7 +24,7 @@ class TISInterfaces(object):
     
     NOTES
     
-    Is the core / interface numbering unique? I don't think so, but then we need to _add_class this
+    Is the core / interface numbering unique? I don't think so, but then we need to add this
     '''
 
     def __init__(self, storage, atom_indices, generators, distances):

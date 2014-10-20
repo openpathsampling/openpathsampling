@@ -239,7 +239,7 @@ class StorableDict(ObjectDict):
             if len(self.storage_caches) > 0:
                 map(self.tidy_cache, self.storage_caches.keys())
         else:
-            # Make sure configuration_indices are stored and have an index and then _add_class the configuration index to the trajectory
+            # Make sure configuration_indices are stored and have an index and then add the configuration index to the trajectory
 
             if storage not in self.storage_caches:
                 # TODO: Throw exception
@@ -266,7 +266,7 @@ class StorableDict(ObjectDict):
                 map(self.save, self.storage_caches.keys())
                 map(self.tidy_cache, self.storage_caches.keys())
         else:
-            # Make sure configuration_indices are stored and have an index and then _add_class the configuration index to the trajectory
+            # Make sure configuration_indices are stored and have an index and then add the configuration index to the trajectory
 
             self._update_store(storage)
             store = self.storage_caches[storage]
@@ -596,7 +596,10 @@ class OP_Function(OrderParameter):
         return
 
 
-    def _eval(self, trajectory, *args):
+    def _eval(self, items, *args):
+
+        trajectory = Trajectory([Snapshot(configuration=c) for c in items])
+
         if self.trajdatafmt=='mdtraj':
             t = trajectory.md()
         else:

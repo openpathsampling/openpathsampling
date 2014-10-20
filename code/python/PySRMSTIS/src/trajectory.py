@@ -118,7 +118,7 @@ class Trajectory(list):
         coordinates (numpy.array(n_frames, n_atoms, 3) - numpy.array of coordinates of size number of frames 'n_frames' x number of atoms 'n_atoms' x 3 in x,y,z
         """
 
-        # Make sure snapshots are stored and have an index and then _add_class the snapshot index to the trajectory
+        # Make sure snapshots are stored and have an index and then add the snapshot index to the trajectory
 
         n_frames = self.frames     
         n_atoms = self.atoms

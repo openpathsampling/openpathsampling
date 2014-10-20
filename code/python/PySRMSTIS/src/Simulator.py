@@ -111,7 +111,7 @@ class Simulator(object):
                 self.simulation.step(nsteps_per_iteration)            
                 frame += 1
                 
-                # Store snapshot and _add_class it to the trajectory. Stores also final frame the last time
+                # Store snapshot and add it to the trajectory. Stores also final frame the last time
                 snapshot = Snapshot(self.simulation.context)
                 self.storage.snapshot.save(snapshot)
                 trajectory.append(snapshot)
@@ -251,7 +251,6 @@ class Simulator(object):
         
         self.pdb_file = PDBFile(self.fn_initial_pdb)
         self.topology = self.pdb_file.topology
-        print self.topology
 
 
     def _create_OpenMMSimulation(self):

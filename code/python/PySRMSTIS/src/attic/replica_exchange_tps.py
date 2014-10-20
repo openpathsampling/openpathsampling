@@ -157,7 +157,7 @@ class ReplicaExchangeTPS(object):
 
         """
 
-        # Make sure we've initialized everything and bound to a storage file before we _idx execution.
+        # Make sure we've initialized everything and bound to a storage file before we begin execution.
         if not self._initialized:
             self._initialize()
 

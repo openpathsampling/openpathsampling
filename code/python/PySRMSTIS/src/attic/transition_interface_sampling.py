@@ -160,4 +160,4 @@ class TransitionInterfaceSampling_David(object):
     
 # Store interface definitions -> might go to a class like collective variable or lambda definition
 # Store attempts with initial trajectory, final trajectory, result accepted/rejected wrong ensemble, rejected length, etc..., also which ensemble is sampled from
-# Store a list of which trajectory belongs to which ensemble. Hope this is enough to also _add_class all rejections to an ensemble later on.
+# Store a list of which trajectory belongs to which ensemble. Hope this is enough to also add all rejections to an ensemble later on.

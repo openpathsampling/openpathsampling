@@ -12,8 +12,10 @@ import os.path
 import numpy
 import simtk.unit as units
 
+import simtk.openmm.app
 from trajectory_store import TrajectoryStorage
 from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
+from simtk.unit import amu
 
 import mdtraj as md
 
@@ -65,12 +67,29 @@ class Storage(netcdf.Dataset):
 
         if mode == 'w':
             self._init()
-            self.topology = md.load(topology_file).topology
 
-            with open (topology_file, "r") as myfile:
-                pdb_string=myfile.read()
+            if isinstance(topology_file, md.Topology):
+                self.topology = topology_file
+                self._store_single_option(self, 'md_topology', self.topology)
+                self.variables['pdb'][0] = ''
+                elements = {key: tuple(el) for key, el in md.element.Element._elements_by_symbol.iteritems()}
+                self._store_single_option(self, 'md_elements', elements)
 
-            self.variables['pdb'][0] = pdb_string
+            elif isinstance(topology_file, simtk.openmm.app.Topology):
+                self.topology = md.Topology.from_openmm(topology_file)
+                self._store_single_option(self, 'om_topology', topology_file)
+                self.variables['pdb'][0] = ''
+                elements = {key: tuple(el) for key, el in md.element.Element._elements_by_symbol.iteritems()}
+                self._store_single_option(self, 'md_elements', elements)
+
+            elif type(topology_file) is str:
+                self.topology = md.load(topology_file).topology
+
+                with open (topology_file, "r") as myfile:
+                    pdb_string=myfile.read()
+
+                self.variables['pdb'][0] = pdb_string
+
 
             self.atoms = self.topology.n_atoms
 
@@ -80,15 +99,28 @@ class Storage(netcdf.Dataset):
         elif mode == 'a':
             self.pdb = self.variables['pdb'][0]
 
-            if os.path.isfile('tempXXX.pdb'):
-                print "File tempXXX.pdb exists - no overwriting! Quitting"
+            if len(self.pdb) > 0:
+                if os.path.isfile('tempXXX.pdb'):
+                    print "File tempXXX.pdb exists - no overwriting! Quitting"
 
-            # Create a temporary file since mdtraj cannot read from string
-            with open ('tempXXX.pdb', "w") as myfile:
-                myfile.write(self.pdb)
+                # Create a temporary file since mdtraj cannot read from string
+                with open ('tempXXX.pdb', "w") as myfile:
+                    myfile.write(self.pdb)
 
-            self.topology = md.load('tempXXX.pdb').topology
-            os.remove('tempXXX.pdb')
+                self.topology = md.load('tempXXX.pdb').topology
+                os.remove('tempXXX.pdb')
+            else:
+                # there is no pdb file stored
+                self.topology = md.Topology.from_openmm(self._restore_single_option(self, 'om_topology'))
+                elements = self._restore_single_option(self, 'md_elements')
+                for key, el in elements.iteritems():
+                    try:
+                        md.element.Element(
+                                    number=el[0], name=el[1], symbol=el[2], mass=el[3]*amu
+                                 )
+                    except(AssertionError):
+                        pass
+
 
             self._restore_classes()
 
@@ -128,7 +160,7 @@ class Storage(netcdf.Dataset):
 
         # TODO: Allow to set the project parameters somehow!
 
-        # _add_class shared dimension for everyone. scalar and spatial
+        # add shared dimension for everyone. scalar and spatial
         if 'scalar' not in self.dimensions:
             self.createDimension('scalar', 1) # scalar dimension
             
