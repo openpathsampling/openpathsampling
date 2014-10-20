@@ -89,7 +89,8 @@ if __name__ == '__main__':
         # print tis
 #        print [ s.idx for s in tt]
 #        print [ (lV(d)) for d in tt ]
-        print [ (op(d)) for d in dd ]
+        print "Results :"
+        print [ op(d) for d in dd ]
         
         # This tests, if the iteration request works. It basically return True if it makes sense to simulate or if the ensemble cannot
         # be true in the next step. This should be passed to the pathmover to stop simulating for a particular ensemble

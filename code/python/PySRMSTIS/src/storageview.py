@@ -21,7 +21,6 @@ if __name__ == '__main__':
         exit()
 
     storage = Storage(
-                                                     topology_file= None,
                                                      filename = file,
                                                      mode = 'a'
                                                      )

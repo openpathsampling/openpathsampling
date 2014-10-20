@@ -7,116 +7,7 @@ from trajectory import Trajectory
 from snapshot import Configuration, Snapshot
 import numpy as np
 
-class FunctionalDict(dict):
-    """
-    A simple dict implementation that will call a function for unknown values
-
-    Parameters
-    ----------
-    fnc : index (int) -> value (float)
-        the function used to generate the cache values for the specified index. In essence a list
-    dimensions : int
-        the dimension of the stored values. Default is `1`
-    content_class : Class
-        the class of objects that can be stored
-    allow_multiple : boolean
-        if True then in the case that the dict is called with several object at a time. The dict
-        creates a list of missing ones and passes all of these to the evaluating function at once.
-        Otherwise the fall-back is to call each item seperately. If possible always the multiple-
-        option should be used.
-
-    Attributes
-    ----------
-    content_class
-    allow_multiple
-    dimensions
-
-    """
-
-    # TODO: Maybe clean the use of __call__ and __get__ and only use __call__ for the function and
-    # then storage in the dict and keep __get__ and __set__ only for regular dict access???
-
-    def __init__(self, fnc, dimensions = 1, content_class = None, allow_multiple = True):
-        self._fnc = fnc
-        self.content_class = content_class
-        self.allow_multiple = allow_multiple
-        self.dimensions = dimensions
-
-    def existing(self, items):
-        """
-        Find a subset of indices that are present in the cache
-
-        Parameters
-        ----------
-        indices : list of int
-            the initial list of indices to be tested
-
-        Returns
-        -------
-        existing : list of int
-            the subset of indices present in the cache
-        """
-        return [key for key in items if key in self]
-
-    def missing(self, items):
-        """
-        Find a subset of indices that are NOT present in the cache
-
-        Parameters
-        ----------
-        indices : list of int
-            the initial list of indices to be tested
-
-        Returns
-        -------
-        existing : list of int
-            the subset of indices NOT present in the cache
-        """
-        return [idx for idx in items if idx not in self]
-
-    def _eval(self, val):
-        return self._fnc(val)
-
-    def __call__(self, obj):
-        return self[obj]
-
-    def _get(self, item):
-        return dict.__getitem__(self, item)
-
-    def _update_missing(self, items):
-        if type(items) is list:
-            input = items
-        else:
-            input = [items]
-
-        if self.content_class is not None and len(input) > 0 and isinstance(input[0], self.content_class):
-            no_cache = self.missing(input)
-
-            # Add not yet cached data
-            if len(no_cache) > 0:
-                if self.allow_multiple:
-                    result = self._eval(no_cache)
-
-                    for key, res in zip(no_cache, result):
-                        self[key] = res
-                else:
-                    for obj in no_cache:
-                        self[obj] = self._fnc(obj)
-        else:
-            return None
-
-    def __getitem__(self, items):
-        # Allow for numpy style of selecting several indices using a list as index parameter
-        self._update_missing(items)
-        if type(items) is list:
-            ret = [self._get(key) for key in items]
-        else:
-            ret = self._get(items)
-
-        return ret
-
-
-class StorableFunctionDict(FunctionalDict):
+class ObjectDict(dict):
     """
     A cache that is attached to Configuration indices store in the Configuration storage
 
@@ -131,9 +22,78 @@ class StorableFunctionDict(FunctionalDict):
 
     """
 
-    def __init__(self, name, fnc, dimensions = 1, content_class = None, storages = None):
+    def __init__(self, dimensions = 1, content_class = None):
 
-        super(StorableFunctionDict, self).__init__(fnc=fnc, dimensions=dimensions, content_class=content_class)
+        self.dimensions = dimensions
+        self.content_class = content_class
+
+    def _get(self, obj):
+        return dict.__getitem__(self, obj)
+
+    def _set(self, obj, value):
+        return dict.__setitem__(self, obj, value)
+
+    def __getitem__(self, items):
+        # Allow for numpy style of selecting several indices using a list as index parameter
+        if type(items) is list:
+            ret = [self._get(key) for key in items]
+        else:
+            ret = self._get(items)
+
+        return ret
+
+    def __setitem__(self, key, value):
+        self._set(key, value)
+
+    def existing(self, objs):
+        """
+        Find a subset of indices that are present in the cache
+
+        Parameters
+        ----------
+        indices : list of int
+            the initial list of indices to be tested
+
+        Returns
+        -------
+        existing : list of int
+            the subset of indices present in the cache
+        """
+        return [obj for obj in objs if obj in self]
+
+    def missing(self, objs):
+        """
+        Find a subset of indices that are NOT present in the cache
+
+        Parameters
+        ----------
+        indices : list of int
+            the initial list of indices to be tested
+
+        Returns
+        -------
+        existing : list of int
+            the subset of indices NOT present in the cache
+        """
+        return [obj for obj in objs if obj not in self]
+
+class StorableDict(ObjectDict):
+    """
+    A cache that is attached to Configuration indices store in the Configuration storage
+
+    Parameters
+    ----------
+    name : string
+        A short and unique name to be used in storage
+
+    Attributes
+    ----------
+    name
+
+    """
+
+    def __init__(self, name, dimensions = 1, content_class = None, storages = None):
+        super(StorableDict, self).__init__(dimensions=dimensions, content_class=content_class)
 
         self.name = name
         self.storage_caches = dict() # caches the values stored in the data file
@@ -158,6 +118,14 @@ class StorableFunctionDict(FunctionalDict):
         self._init_storage()
         self._update_store()
 
+    def storable(self, item):
+        """
+        Returns True if the given item has indices to be stored in an attached storage otherwise cache it in the dict itself
+        """
+        for s in self.storage_caches:
+            if s in item.idx and item.idx[s] > 0:
+                return True
+        return False
 
     def in_store(self, item):
         """
@@ -170,7 +138,7 @@ class StorableFunctionDict(FunctionalDict):
         return False
 
     def __contains__(self, item):
-        return super(StorableFunctionDict, self).__contains__(item) or self.in_store(item)
+        return dict.__contains__(self, item) or self.in_store(item)
 
     def _get_from_stores(self, item):
         for s in self.storage_caches:
@@ -178,6 +146,17 @@ class StorableFunctionDict(FunctionalDict):
                 return self.storage_caches[s][item.idx[s]]
 
         return None
+
+    def _set_to_stores(self, obj, value):
+        for s in self.storage_caches:
+            if s in obj.idx:
+                self.storage_caches[s][obj.idx[s]] = value
+
+    def _set(self, obj, value):
+        if self.storable(obj):
+            self._set_to_stores(obj, value)
+        else:
+            return dict.__setitem__(self, obj, value)
 
     def _get(self, item):
         if self.in_store(item):
@@ -320,7 +299,70 @@ class StorableFunctionDict(FunctionalDict):
             self.storage_caches[storage] = dict(zip(data_idx, data))
 
 
-class OrderParameter(StorableFunctionDict):
+class FunctionalStorableDict(StorableDict):
+    """
+    A simple dict implementation that will call a function for unknown values
+
+    Parameters
+    ----------
+    fnc : index (int) -> value (float)
+        the function used to generate the cache values for the specified index. In essence a list
+    dimensions : int
+        the dimension of the stored values. Default is `1`
+    content_class : Class
+        the class of objects that can be stored
+    allow_multiple : boolean
+        if True then in the case that the dict is called with several object at a time. The dict
+        creates a list of missing ones and passes all of these to the evaluating function at once.
+        Otherwise the fall-back is to call each item seperately. If possible always the multiple-
+        option should be used.
+
+    Attributes
+    ----------
+    content_class
+    allow_multiple
+    dimensions
+
+    """
+
+    def __init__(self, name, fnc, dimensions = 1, content_class = None, allow_multiple = True, storages = None):
+
+        super(FunctionalStorableDict, self).__init__(name=name, dimensions=dimensions, content_class=content_class, storages=storages)
+        self._fnc = fnc
+        self.allow_multiple = allow_multiple
+
+    def _eval(self, val):
+        return self._fnc(val)
+
+    def __call__(self, obj):
+        return self._update(obj)
+
+    def _update(self, items):
+        if type(items) is list:
+            input = items
+        else:
+            input = [items]
+
+        if self.content_class is not None and len(input) > 0 and isinstance(input[0], self.content_class):
+            no_cache = self.missing(input)
+
+            # Add not yet cached data
+            if len(no_cache) > 0:
+                if self.allow_multiple:
+                    result = self._eval(no_cache)
+
+                    for key, res in zip(no_cache, result):
+                        self[key] = res
+                else:
+                    for obj in no_cache:
+                        self[obj] = self._eval(obj)
+
+            return self[items]
+        else:
+            return []
+
+
+class OrderParameter(FunctionalStorableDict):
     """
     Initializes an OrderParameter object that is essentially a function that maps a frame (Configuration) within a trajectory (Trajectory) to a number.
 
@@ -343,18 +385,25 @@ class OrderParameter(StorableFunctionDict):
     """
 
     def __init__(self, name, dimensions = 1, storages = None):
-        super(OrderParameter, self).__init__(name, None, dimensions, Configuration, storages=storages)
+        super(OrderParameter, self).__init__(
+            name=name,
+            fnc=None,
+            dimensions=dimensions,
+            content_class=Configuration,
+            storages=storages)
 
     def __call__(self, items):
         if isinstance(items, Snapshot):
-            return self[items.configuration]
+            return self._update(items.configuration)
         elif isinstance(items, Configuration):
-            return self[items]
+            return self._update(items)
         elif isinstance(items, Trajectory):
-            return self[[snapshot.configuration for snapshot in items]]
+            return self._update([snapshot.configuration for snapshot in items])
         elif isinstance(items, list):
             if isinstance(items[0], Configuration):
-                return self[items]
+                return self._update(items)
+        else:
+            return None
 
 class OP_RMSD_To_Lambda(OrderParameter):
     """
@@ -553,20 +602,3 @@ class OP_Function(OrderParameter):
         else:
             t = trajectory
         return self.fcn(t, *args, **self.kwargs)
-
-
-if __name__ == '__main__':
-    def ident(indices):
-        if type(indices) is list:
-            return [float(i) for i in indices]
-        else:
-            return float(indices)
-
-    s = StorableFunctionDict(name='TestList', fnc=ident)
-
-    print s[10]
-    print s[5]
-    print s[5]
-    print s.cache
-    print s[1:10]
-    print s.cache
