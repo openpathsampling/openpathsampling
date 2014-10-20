@@ -4,71 +4,48 @@
 
 from msmbuilder.metrics import RMSD
 from trajectory import Trajectory
-from snapshot import Snapshot, Configuration
+from snapshot import Configuration, Snapshot
 import numpy as np
 
-
-class Cache(object):
+class ObjectDict(dict):
     """
-    A simple cache implementation
+    A cache that is attached to Configuration indices store in the Configuration storage
 
     Parameters
     ----------
-    fnc : index (int) -> value (float)
-        the function used to generate the cache values for the specified index. In essence a list
+    name : string
+        A short and unique name to be used in storage
 
     Attributes
     ----------
-    cache : list
-        A list object contained all cached values so far
-    is_cached : set
-        A set of indices that are cached for quick queries if an index is in the list or not.
+    name
 
-    Notes
-    -----
-    Does it have to be between 0 and 1?
-    Do we want to save this in the netCDF?
-    And if yes, do we want one big table for all OrderParameters or several ones. One for each. Second might be nicer.
     """
 
-    def __init__(self, fnc):
+    def __init__(self, dimensions = 1, content_class = None):
 
-        # Name needed to eventually store to netCDF. This is not yet done
-        self._eval = fnc
+        self.dimensions = dimensions
+        self.content_class = content_class
 
-        # We will use a cache since we assume the snapshots objects, the OrderParameter Instance and the ID# of snapshots to be immutable
-        self.cache = []
-        self.is_cached = set()
+    def _get(self, obj):
+        return dict.__getitem__(self, obj)
 
-    def __getslice__(self, *args, **kwargs):
-        sl = slice(*args, **kwargs)
-        return self[range(sl.stop)[sl]]
+    def _set(self, obj, value):
+        return dict.__setitem__(self, obj, value)
 
-    @property
-    def size(self):
-        """
-        Returns the current size of the cache and thus the maximal index possibly in the cache.
+    def __getitem__(self, items):
+        # Allow for numpy style of selecting several indices using a list as index parameter
+        if type(items) is list:
+            ret = [self._get(key) for key in items]
+        else:
+            ret = self._get(items)
 
-        Returns
-        -------
-        size : int
-            the length of the `cache` member variable
-        """
-        return len(self.cache)
+        return ret
 
-    def resize(self, size):
-        """
-        Will increase the size of the cache to the specified size
+    def __setitem__(self, key, value):
+        self._set(key, value)
 
-        Parameters
-        ----------
-        size : int
-            The new minimal size of the cache
-        """
-        if size > self.size:
-            self.cache.extend([0.0] * (size - self.size))
-
-    def in_cache(self, indices):
+    def existing(self, objs):
         """
         Find a subset of indices that are present in the cache
 
@@ -79,22 +56,12 @@ class Cache(object):
 
         Returns
         -------
-        in_cache : list of int
+        existing : list of int
             the subset of indices present in the cache
         """
-        return [idx for idx in indices if idx in self.is_cached]
+        return [obj for obj in objs if obj in self]
 
-    def clear(self):
-        """
-        Resets the cache to no content
-        """
-        self.cache = []
-        self.is_cached = set()
-
-        pass
-
-
-    def not_in_cache(self, indices):
+    def missing(self, objs):
         """
         Find a subset of indices that are NOT present in the cache
 
@@ -105,148 +72,297 @@ class Cache(object):
 
         Returns
         -------
-        in_cache : list of int
+        existing : list of int
             the subset of indices NOT present in the cache
         """
+        return [obj for obj in objs if obj not in self]
 
-        return [idx for idx in indices if idx not in self.is_cached]
-
-    def __getitem__(self, index):
-        # Allow for numpy style of selecting several indices using a list as index parameter
-        if type(index) is list:
-            max_idx = max(index) + 1
-            self.resize(max_idx)
-            no_cache = self.not_in_cache(index)
-        else:
-            self.resize(index + 1)
-            no_cache = self.not_in_cache([index])
-
-        # Add not yet cached data            
-        if len(no_cache) > 0:
-            result = self._eval(no_cache)
-
-            for no, res in enumerate(result):
-                self.cache[no_cache[no]] = res
-
-            self.is_cached.update(no_cache)
-
-        if type(index) is list:
-            ret = [self.cache[idx] if idx > 0 else None for idx in index]
-        else:
-            ret = self.cache[index]
-
-        return ret
-
-
-class ConfigurationCache(Cache):
+class StorableDict(ObjectDict):
     """
     A cache that is attached to Configuration indices store in the Configuration storage
-
-    Attributes
-    ----------
-    name : string
-        A short and unique name to be used in storage
 
     Parameters
     ----------
     name : string
         A short and unique name to be used in storage
 
+    Attributes
+    ----------
+    name
+
     """
 
-    def __init__(self, name, fnc, use_storage = False):
-        super(ConfigurationCache, self).__init__(fnc=fnc)
+    def __init__(self, name, dimensions = 1, content_class = None, storages = None):
+        super(StorableDict, self).__init__(dimensions=dimensions, content_class=content_class)
 
         self.name = name
-        self.use_storage = use_storage
+        self.storage_caches = dict() # caches the values stored in the data file
+        self.var_name = content_class.__name__.lower() + '_' + 'op_' + self.name
+        self.object_storages = [] # contains the list of associated ObjectStorages (that itself link to netCDF files)
 
-        if self.use_storage:
-            self._init_netcdf()
-            self.load()
+        if storages is None:
+            self.object_storages = []
+        elif type(storages) is list:
+            self.object_storages = storages
+        else:
+            self.object_storages = [storages]
 
-    def fill(self):
+        for s in self.object_storages:
+            if s.content_class is not content_class:
+                print 'One of the storages does not store objects of type :', content_class.__name__
+                return
+
+        for s in self.object_storages:
+            self.storage_caches[s.storage] = dict()
+
+        self._init_storage()
+        self._update_store()
+
+    def storable(self, item):
         """
-        Compute all distances for all snapshots to be used later using the cache.
+        Returns True if the given item has indices to be stored in an attached storage otherwise cache it in the dict itself
+        """
+        for s in self.storage_caches:
+            if s in item.idx and item.idx[s] > 0:
+                return True
+        return False
 
-        Notes
-        -----
-        Make sure that all snapshots are saved. Otherwise we cannot cache them!
+    def in_store(self, item):
+        """
+        Returns True, if the item is already stored in an associated cache.
+        """
+        for s in self.storage_caches:
+            if s in item.idx and item.idx[s] in self.storage_caches[s]:
+                return True
+
+        return False
+
+    def __contains__(self, item):
+        return dict.__contains__(self, item) or self.in_store(item)
+
+    def _get_from_stores(self, item):
+        for s in self.storage_caches:
+            if s in item.idx and item.idx[s] in self.storage_caches[s]:
+                return self.storage_caches[s][item.idx[s]]
+
+        return None
+
+    def _set_to_stores(self, obj, value):
+        for s in self.storage_caches:
+            if s in obj.idx:
+                self.storage_caches[s][obj.idx[s]] = value
+
+    def _set(self, obj, value):
+        if self.storable(obj):
+            self._set_to_stores(obj, value)
+        else:
+            return dict.__setitem__(self, obj, value)
+
+    def _get(self, item):
+        if self.in_store(item):
+            return self._get_from_stores(item)
+        else:
+            return dict.__getitem__(self, item)
+
+    def _init_storage(self, object_storage = None):
+        """
+        initializes the associated storage to index a specific order parameter in it
+        """
+        if object_storage is None:
+            # just run this function with all registered storages
+            if len(self.object_storages) > 0:
+                map(self._init_storage, self.object_storages)
+        else:
+            storage = object_storage.storage
+            if self.var_name not in storage.variables:
+                # define dimensions for non-scalar orderparameters
+                size_dimension_name = 'scalar'
+                if self.dimensions > 1:
+                    size_dimension_name = self.var_name + "_dimension"
+                    storage.createDimension(size_dimension_name, self.dimensions)
+
+                idx_dimension = self.object_storages[0].idx_dimension
+
+                # define variables for OrderParameters
+                ncvar_op = storage.createVariable(self.var_name, 'f', (idx_dimension, size_dimension_name))
+                ncvar_op_idx = storage.createVariable(self.var_name + '_idx', 'u4', idx_dimension)
+                ncvar_op_length = storage.createVariable(self.var_name + '_length', 'u4', 'scalar')
+
+                ncvar_op_length[0] = 0
+
+                # Define units for configuration variables.
+                setattr(ncvar_op, 'units', 'None')
+
+                # Define long (human-readable) names for variables.
+                setattr(ncvar_op, "long_name", "op_" + self.name + "[" + idx_dimension + "][" + size_dimension_name + "] is the orderparameter '" + self.name + "' of configuration 'configuration'.")
+            else:
+                self.load()
+
+    def _update_store(self, storage = None):
+        """
+        This will transfer everything from the memory cache into the storage copy in memory which is used to interact with
+        the file storage.
+
+        Parameters
+        ----------
+        storage : Storage() on None
+            The storage (not ObjectStorage) to store in. If None then all associated storages will be updated up.
+
+        """
+        if storage is None:
+            if len(self.storage_caches) > 0:
+                map(self._update_store, self.storage_caches.keys())
+        else:
+            if storage not in self.storage_caches:
+                # TODO: Throw exception
+                self.storage_caches[storage] = dict()
+
+            store = self.storage_caches[storage]
+            for item, value in self.iteritems():
+                if storage in item.idx:
+                    store[item.idx[storage]] = value
+
+    def tidy_cache(self, storage = None):
+        """
+        This will transfer everything from the memory cache into the storage copy in memory which is used to interact with
+        the file storage.
+
+        Parameters
+        ----------
+        storage : Storage() on None
+            The storage (not ObjectStorage) to store in. If None then all associated storages will be cleaned up.
+
         """
 
-        self[1:Configuration.load_number() + 1]
+        # TODO: This doesnt work because the storage is changed during deleting superfluous elements
+        if storage is None:
+            if len(self.storage_caches) > 0:
+                map(self.tidy_cache, self.storage_caches.keys())
+        else:
+            # Make sure configuration_indices are stored and have an index and then add the configuration index to the trajectory
 
-    def _init_netcdf(self):
+            if storage not in self.storage_caches:
+                # TODO: Throw exception
+                self.storage_caches[storage] = dict()
+
+            new_dict = {item:value for item, value in self.iteritems() if storage not in item.idx}
+
+            self.clear()
+            self.update(new_dict)
+
+    def save(self, storage = None):
         """
-        initializes the associated storage to save a specific order parameter in it
+        Save the current state of the cache to the storage.
 
-        """
-        # save associated storage in class variable for all Configuration instances to access
-        #        ncgrp = storage.ncfile.createGroup('configuration')
+        Parameters
+        ----------
+        storage : Storage() on None
+            The storage (not ObjectStorage) to store in. If None then all associated storages will be saved in.
 
-        self.storage = Configuration.storage
-        ncgrp = self.storage.ncfile
-
-        var_name = 'op_' + self.name
-
-        if var_name not in ncgrp.variables:
-            # define dimensions for non-scalar orderparameters
-            size_dimension = 'scalar'
-            if self.size > 1:
-                size_dimension = var_name + "_dimension"
-                ncgrp.createDimension(size_dimension, self.size)
-
-            # define variables for OrderParameters
-            ncvar_op = ncgrp.createVariable(var_name, 'f', ('configuration', size_dimension))
-            ncvar_op_idx = ncgrp.createVariable(var_name + '_idx', 'u4', 'configuration')
-            ncvar_op_length = ncgrp.createVariable(var_name + '_length', 'u4', 'scalar')
-            
-            ncvar_op_length[0] = 0
-
-            # Define units for configuration variables.
-            setattr(ncvar_op, 'units', 'None')
-
-            # Define long (human-readable) names for variables.
-            setattr(ncvar_op, "long_name", "op_" + self.name + "[configuration][index] is the orderparameter '" + self.name + "' of configuration 'configuration'.")
-
-    def save(self):
-        """
-        Save the current state of the cache to the storage
         """
 
-        ncfile = self.storage.ncfile
+        if storage is None:
+            if len(self.storage_caches) > 0:
+                map(self.save, self.storage_caches.keys())
+                map(self.tidy_cache, self.storage_caches.keys())
+        else:
+            # Make sure configuration_indices are stored and have an index and then add the configuration index to the trajectory
 
-        # Make sure configurations are stored and have an index and then add the configuration index to the trajectory
-        var_name = 'op_' + self.name
-        indices = list(self.is_cached)
-        ncfile.variables[var_name][:, :] = np.array(self.cache)
-        ncfile.variables[var_name + '_idx'][:] = np.array(indices)
-        ncfile.variables[var_name + '_length'][0] = len(indices)
+            self._update_store(storage)
+            store = self.storage_caches[storage]
 
-    def load(self):
+            storage.variables[self.var_name][:, :] = np.array(store.values())
+            storage.variables[self.var_name + '_idx'][:] = np.array(store.keys())
+            storage.variables[self.var_name + '_length'][0] = len(store)
+
+    def load(self, storage = None):
         """
         Restores the cache from the storage using the name of the orderparameter.
+
+        Parameters
+        ----------
+        storage : Storage() on None
+            The storage (not ObjectStorage) to store in. If None then all associated storages will be loaded from.
 
         Notes
         -----
         Make sure that you use unique names otherwise you might load the wrong parameters!
         """
-        var_name = 'op_' + self.name
-        length = int(self.storage.ncfile.variables[var_name + '_length'][0])
-        print 'Length : ', length
-        size_name = self.storage.ncfile.variables[var_name].dimensions[1]
-        size = len(self.storage.ncfile.dimensions[size_name])
 
-        data_idx = self.storage.ncfile.variables[var_name + '_idx'][:length].astype(np.int).copy()
-        self.is_cached = set([int(i) for i in data_idx])
-
-        if size == 1:
-            data = self.storage.ncfile.variables[var_name][:, 0].astype(np.float).copy()
-            self.cache = [v for v in data]
+        if storage is None:
+            if len(self.storage_caches) > 0:
+                map(self.load, self.storage_caches.keys())
         else:
-            data = self.storage.ncfile.variables[var_name][:, :].astype(np.float).copy()
-            self.cache = [v for v in data]
+            length = int(storage.variables[self.var_name + '_length'][0])
+            data_idx = storage.variables[self.var_name + '_idx'][:length].astype(np.int).copy()
+            data = storage.variables[self.var_name][:, 0].astype(np.float).tolist()
+            self.storage_caches[storage] = dict(zip(data_idx, data))
 
-class OrderParameter(object):
+
+class FunctionalStorableDict(StorableDict):
+    """
+    A simple dict implementation that will call a function for unknown values
+
+    Parameters
+    ----------
+    fnc : index (int) -> value (float)
+        the function used to generate the cache values for the specified index. In essence a list
+    dimensions : int
+        the dimension of the stored values. Default is `1`
+    content_class : Class
+        the class of objects that can be stored
+    allow_multiple : boolean
+        if True then in the case that the dict is called with several object at a time. The dict
+        creates a list of missing ones and passes all of these to the evaluating function at once.
+        Otherwise the fall-back is to call each item seperately. If possible always the multiple-
+        option should be used.
+
+    Attributes
+    ----------
+    content_class
+    allow_multiple
+    dimensions
+
+    """
+
+    def __init__(self, name, fnc, dimensions = 1, content_class = None, allow_multiple = True, storages = None):
+
+        super(FunctionalStorableDict, self).__init__(name=name, dimensions=dimensions, content_class=content_class, storages=storages)
+        self._fnc = fnc
+        self.allow_multiple = allow_multiple
+
+    def _eval(self, val):
+        return self._fnc(val)
+
+    def __call__(self, obj):
+        return self._update(obj)
+
+    def _update(self, items):
+        if type(items) is list:
+            input = items
+        else:
+            input = [items]
+
+        if self.content_class is not None and len(input) > 0 and isinstance(input[0], self.content_class):
+            no_cache = self.missing(input)
+
+            # Add not yet cached data
+            if len(no_cache) > 0:
+                if self.allow_multiple:
+                    result = self._eval(no_cache)
+
+                    for key, res in zip(no_cache, result):
+                        self[key] = res
+                else:
+                    for obj in no_cache:
+                        self[obj] = self._eval(obj)
+
+            return self[items]
+        else:
+            return []
+
+
+class OrderParameter(FunctionalStorableDict):
     """
     Initializes an OrderParameter object that is essentially a function that maps a frame (Configuration) within a trajectory (Trajectory) to a number.
 
@@ -254,163 +370,40 @@ class OrderParameter(object):
     ----------
     name : string
         A descriptive name of the orderparameter. It is used in the string representation.
+    dimensions : int
+        The number of dimensions of the output order parameter. So far this is not used and will be necessary
+        or useful when storage is available
+    storages : list of ConfigurationStorages()
+        contains the list of storages that will be used.
 
     Attributes
     ----------
-    name : string
-    use_cache : bool
-        If set to `True` then the generated information is cached for further computation. This requires that the
-        used configurations have an index > 0 which means they need to have been saved to the storage.
-    use_storage : bool
-        If set to `True` the cached information will also be stored in the associated netCDF file.
-        This still needs testing.
-    size : int
-        The number of dimensions of the output order parameter. So far this is not used and will be necessary
-        or useful when storage is available
-    cache : ConfigurationCache
-        A cache object that holds all the values.
+    name
+    dimensions
+    storages
 
-    Notes
-    -----
-    Do we want to save this in the netCDF?
-    And if yes, do we want one big table for all OrderParameters or several ones. One for each. Second might be nicer.
     """
 
-    def __init__(self, name, use_cache = True, use_storage = False):
-        # Name needed to eventually store to netCDF. This is not yet done
-        self.name = name
+    def __init__(self, name, dimensions = 1, storages = None):
+        super(OrderParameter, self).__init__(
+            name=name,
+            fnc=None,
+            dimensions=dimensions,
+            content_class=Configuration,
+            storages=storages)
 
-        # We will use a cache since we assume the configurations objects, the OrderParameter Instance and the ID# of configurations to be immutable
-        self.use_cache = use_cache
-        self.use_storage = use_storage
-
-        # Run the OrderParameter on the initial configuration to get the size
-        #        self.size = len(self._eval(0))
-        self.size = 1
-
-        if self.use_cache:
-            self.cache = ConfigurationCache(name=self.name, fnc=self._eval_idx, use_storage=self.use_storage)
+    def __call__(self, items):
+        if isinstance(items, Snapshot):
+            return self._update(items.configuration)
+        elif isinstance(items, Configuration):
+            return self._update(items)
+        elif isinstance(items, Trajectory):
+            return self._update([snapshot.configuration for snapshot in items])
+        elif isinstance(items, list):
+            if isinstance(items[0], Configuration):
+                return self._update(items)
         else:
-            self.cache = None
-
-    def save(self):
-        """
-        Saves the order parameter to the same storage as used in Configuration.storage if self.use_storage is set to True
-        """
-        if self.use_storage:
-            self.cache.save()
-        pass
-
-    def _eval(self, trajectory):
-        """
-        Actual evaluation of a list of configurations.
-        """
-        pass
-
-    def _eval_idx(self, indices):
-        '''
-        Actual evaluation of indices of configurations. Default version applies
-        self._eval to all the indices.
-        '''
-        return self._eval(Trajectory(Configuration.get(indices)))
-
-    def __call__(self, snapshot):
-        """
-        Calculates the actual order parameter by making the OrderParameter object into a function
-
-        Parameters
-        ----------
-        snapshot : Snapshot
-            snapshot object used to compute the lambda value
-
-        Returns
-        -------
-
-        float
-            the actual value of the orderparameter from the given snapshot
-
-        """
-        return self._assign(snapshot)
-
-    def _assign(self, snapshots):
-        """
-        Assign a single snapshot or a trajectory.
-
-        Parameters
-        ----------
-        snapshot : Snapshot
-            A list of or a single snapshot that should be assigned
-
-        Returns
-        -------
-        float
-            the computed orderparameters
-
-        Notes
-        -----
-        This calls self._eval with the relevant snapshots.
-        """
-        single = False
-
-        if type(snapshots) is Snapshot:
-            traj = Trajectory([snapshots])
-            single = True
-        else:
-            traj = snapshots
-
-        traj_indices = traj.configurations()
-
-        if self.use_cache:
-            # pick all non-stored snapshots and compute these anyway without storage
-            no_index = [i for i, idx in enumerate(traj_indices) if idx == 0]
-
-            d = self.cache[traj_indices]
-
-            if len(no_index) > 0:
-                # compute ones that cannot be cached
-                d_no_index = self._eval(traj[no_index])
-
-                # add unknowns
-                for ind, dist in enumerate(d_no_index):
-                    d[no_index[ind]] = dist
-
-        else:
-            d = self._eval(traj_indices)
-
-        if single:
-            return d[0]
-        else:
-            return d
-
-    @staticmethod
-    def _scale_fnc(mi, ma):
-        """
-        Helper function that returns a function that scale values in a specified range to a range between 0 and 1.
-
-        Parameters
-        ----------
-        mi : float
-            Minimal value. Corresponds to zero.
-        ma : float
-            Maximal value. Corresponds to one.
-
-        Returns
-        -------
-        function
-            The scaling function of float -> float
-
-        """
-
-        def scale(x):
-            if x < mi:
-                return 0.0
-            elif x > ma:
-                return 1.0
-            else:
-                return (x - mi) / (ma - mi)
-
-        return scale
-
+            return None
 
 class OP_RMSD_To_Lambda(OrderParameter):
     """
@@ -443,27 +436,38 @@ class OP_RMSD_To_Lambda(OrderParameter):
         trajectory object that contains only the center configuration to which the RMSD is computed to
     """
 
-    def __init__(self, name, center, lambda_min, max_lambda, atom_indices=None, use_cache = True, use_storage = False):
-        super(OP_RMSD_To_Lambda, self).__init__(name, use_cache= use_cache, use_storage= use_storage)
+    def __init__(self, name, center, lambda_min, max_lambda, atom_indices=None, storages = None):
+        super(OP_RMSD_To_Lambda, self).__init__(name, dimensions=1, storages=storages)
 
         self.atom_indices = atom_indices
         self.center = center
         self.min_lambda = lambda_min
         self.max_lambda = max_lambda
 
-        self.size = 1
-
-        # Generate RMSD metric using only the needed indices. To save memory we crop the read snapshots from the database and do not use a cropping RMSD on the full snapshots
+        # Generate RMSD metric using only the needed indices. To index memory we crop the read snapshots from the database and do not use a cropping RMSD on the full snapshots
         self.metric = RMSD(None)
         self._generator = self.metric.prepare_trajectory(Trajectory([center]).subset(self.atom_indices).md())
         return
 
-        ################################################################################
-
+    ################################################################################
     ##  Actual computation of closest point using RMSD
     ################################################################################
 
-    def _eval(self, trajectory):
+    @staticmethod
+    def _scale_fnc(mi, ma):
+        def scale(x):
+            if x < mi:
+                return 0.0
+            elif x > ma:
+                return 1.0
+            else:
+                return (x - mi) / (ma - mi)
+
+        return scale
+
+    def _eval(self, items):
+        trajectory = Trajectory([Snapshot(configuration=c) for c in items])
+
         ptraj = self.metric.prepare_trajectory(trajectory.subset(self.atom_indices).md())
         results = self.metric.one_to_all(self._generator, ptraj, 0)
 
@@ -493,15 +497,13 @@ class OP_Multi_RMSD(OrderParameter):
         the RMSD metric object used to compute the RMSD
     """
 
-    def __init__(self, name, centers, atom_indices=None, metric=None, use_cache = True, use_storage = False):
-        super(OP_Multi_RMSD, self).__init__(name, use_cache = use_cache, use_storage = use_storage)
+    def __init__(self, name, centers, atom_indices=None, metric=None, storages=None):
+        super(OP_Multi_RMSD, self).__init__(name, dimensions=len(centers), storages=storages)
 
         self.atom_indices = atom_indices
         self.center = centers
 
-        self.size = len(centers)
-
-        # Generate RMSD metric using only the needed indices. To save memory we crop the read snapshots from the database and do not use a cropping RMSD on the full snapshots
+        # Generate RMSD metric using only the needed indices. To index memory we crop the read snapshots from the database and do not use a cropping RMSD on the full snapshots
         if metric is None:
             self.metric = RMSD(None)
         else:
@@ -509,9 +511,50 @@ class OP_Multi_RMSD(OrderParameter):
         self._generator = self.metric.prepare_trajectory(centers.subset(self.atom_indices).md())
         return
 
-    def _eval(self, trajectory):
+    def _eval(self, items):
+        trajectory = Trajectory([Snapshot(configuration=c) for c in items])
+
         ptraj = self.metric.prepare_trajectory(trajectory.subset(self.atom_indices).md())
         return [self.metric.one_to_all(ptraj, self._generator, idx) for idx in range(0, len(ptraj))]
+
+class OP_MD_Function(OrderParameter):
+    """ Wrapper to decorate any appropriate function as an OrderParameter with a function that need an mdtraj object as input.
+
+    Examples
+    -------
+    >>> # To create an order parameter which calculates the dihedral formed
+    >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
+    >>> import mdtraj as md
+    >>> psi_atoms = [7,9,15,17]
+    >>> psi_orderparam = OP_Function("psi", md.compute_dihedrals,
+    >>>                              indices=[phi_atoms])
+    >>> print psi_orderparam( traj.md() )
+    """
+    def __init__(self, name, fcn, **kwargs):
+        """
+        Parameters
+        ----------
+        name : str
+        fcn : function
+        kwargs :
+            named arguments which should be given to `fcn` (for example, the
+            atoms which define a specific distance/angle)
+
+        """
+        super(OP_Function, self).__init__(name)
+        self.fcn = fcn
+        self.kwargs = kwargs
+        self.topology = None
+        return
+
+    def _eval(self, trajectory, *args):
+        if self.topology is None:
+            # first time ever compute the used topology for this orderparameter to construct the mdtraj objects
+            self.topology = trajectory.md_topology()
+
+        t = trajectory.md(self.topology)
+        return self.fcn(t, *args, **self.kwargs)
+
 
 class OP_Function(OrderParameter):
     """ Wrapper to decorate any appropriate function as an OrderParameter.
@@ -553,26 +596,12 @@ class OP_Function(OrderParameter):
         return
 
 
-    def _eval(self, trajectory, *args):
+    def _eval(self, items, *args):
+
+        trajectory = Trajectory([Snapshot(configuration=c) for c in items])
+
         if self.trajdatafmt=='mdtraj':
             t = trajectory.md()
         else:
             t = trajectory
         return self.fcn(t, *args, **self.kwargs)
-
-
-if __name__ == '__main__':
-    def ident(indices):
-        if type(indices) is list:
-            return [float(i) for i in indices]
-        else:
-            return float(indices)
-
-    s = ConfigurationCache(name='TestList', fnc=ident)
-
-    print s[10]
-    print s[5]
-    print s[5]
-    print s.cache
-    print s[1:10]
-    print s.cache
