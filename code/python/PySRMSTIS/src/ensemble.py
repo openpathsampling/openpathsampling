@@ -237,11 +237,7 @@ class Ensemble(object):
     def __or__(self, other):
         if self is other:
             return self
-        elif type(self) is EmptyEnsemble:
-            return other
         elif type(other) is EmptyEnsemble:
-            return self
-        elif type(self) is FullEnsemble:
             return self
         elif type(other) is FullEnsemble:
             return other
@@ -251,12 +247,8 @@ class Ensemble(object):
     def __xor__(self, other):
         if self is other:
             return EmptyEnsemble()
-        elif type(self) is EmptyEnsemble:
-            return other
         elif type(other) is EmptyEnsemble:
             return self
-        elif type(self) is FullEnsemble:
-            return NegatedEnsemble(other)
         elif type(other) is FullEnsemble:
             return NegatedEnsemble(self)        
         else:
@@ -265,11 +257,7 @@ class Ensemble(object):
     def __and__(self, other):
         if self is other:
             return self
-        elif type(self) is EmptyEnsemble:
-            return self
         elif type(other) is EmptyEnsemble:
-            return other
-        elif type(self) is FullEnsemble:
             return other
         elif type(other) is FullEnsemble:
             return self
@@ -279,25 +267,15 @@ class Ensemble(object):
     def __sub__(self, other):
         if self is other:
             return EmptyEnsemble()
-        elif type(self) is EmptyEnsemble:
-            return self
         elif type(other) is EmptyEnsemble:
             return self
-        elif type(self) is FullEnsemble:
-            return NegatedEnsemble(other)
         elif type(other) is FullEnsemble:
-            return EmptyEnsemble()        
+            return EmptyEnsemble()
         else:
             return EnsembleCombination(self, other, fnc = lambda a,b : a and not b, str_fnc = '{0}\nand not\n{1}')
         
     def __invert__(self):
-        if type(self) is EmptyEnsemble:
-            return FullEnsemble()
-        elif type(self) is FullEnsemble:
-            return EmptyEnsemble(self)
-        else:
-            return NegatedEnsemble(self)
-
+        return NegatedEnsemble(self)
         
     @staticmethod
     def _indent(s):
@@ -327,6 +305,21 @@ class EmptyEnsemble(Ensemble):
     def backward(self, trajectory):
         return False
 
+    def __invert__(self):
+        return FullEnsemble()
+
+    def __sub__(self, other):
+        return EmptyEnsemble()
+
+    def __and__(self, other):
+        return self
+
+    def __xor__(self, other):
+        return other
+
+    def __or__(self, other):
+        return other
+
     def __str__(self):
         return 'empty'
 
@@ -346,6 +339,31 @@ class FullEnsemble(Ensemble):
     def backward(self, trajectory):
         return True
 
+    def __invert__(self):
+        return EmptyEnsemble()
+
+    def __sub__(self, other):
+        if type(other) is EmptyEnsemble:
+            return self
+        elif type(other) is FullEnsemble:
+            return EmptyEnsemble()
+        else:
+            return NegatedEnsemble(other)
+
+    def __and__(self, other):
+        return other
+
+    def __xor__(self, other):
+        if type(other) is EmptyEnsemble:
+            return self
+        elif type(other) is FullEnsemble:
+            return EmptyEnsemble()
+        else:
+            return NegatedEnsemble(other)
+
+    def __or__(self, other):
+        return self
+
     def __str__(self):
         return 'all'
     
@@ -361,10 +379,12 @@ class NegatedEnsemble(Ensemble):
         return not self.ensemble(trajectory, lazy)
 
     def forward(self, trajectory):
-        return not self.ensemble.forward(trajectory)
+        # We cannot guess the result here so keep on running forever
+        return True
 
     def backward(self, trajectory):
-        return not self.ensemble.forward(trajectory)
+        # We cannot guess the result here so keep on running forever
+        return True
 
     def __str__(self):
         return 'not ' + str(self.ensemble2)
@@ -397,31 +417,55 @@ class EnsembleCombination(Ensemble):
         else:
             return self.fnc(self.ensemble1(trajectory, lazy), self.ensemble2(trajectory, lazy))
 
+    # Forward / Backward is tricky
+    # We can do the following. If a or b is true this means that the real result could be false or true, we just
+    # keep going but we should have stopped. If a or b is false this means for that ensemble continuing is not
+    # feasible and so false really means false. To check if a logical combination should be continued just
+    # try for all true values a potential false and check if we should continue.
+
+    def _continue_fnc(self, a, b):
+        fnc = self.fnc
+        res = fnc(a,b)
+        if a is True:
+            res |= fnc(False, b)
+        if b is True:
+            res |= fnc(a, False)
+        if a is True and b is True:
+            res |= fnc(False, False)
+
+        return res
+
     def forward(self, trajectory):
         if Ensemble.use_shortcircuit:
             a = self.ensemble1.can_append(trajectory)
-            res_true = self.fnc(a, True)
-            res_false = self.fnc(a, False)
+            res_true = self._continue_fnc(a, True)
+            res_false = self._continue_fnc(a, False)
             if res_false == res_true:
                 # result is independent of ensemble_b so ignore it
                 return res_true
             else:
-                b = self.ensemble2.can_append(trajectory)
-                return self.fnc(a, b)
+                b = self.ensemble2.forward(trajectory)
+                if b is True:
+                    return res_true
+                else:
+                    return res_false
         else:
             return self.fnc(self.ensemble1.can_append(trajectory), self.ensemble2.can_append(trajectory))
 
     def backward(self, trajectory):
         if Ensemble.use_shortcircuit:
             a = self.ensemble1.backward(trajectory)
-            res_true = self.fnc(a, True)
-            res_false = self.fnc(a, False)
+            res_true = self._continue_fnc(a, True)
+            res_false = self._continue_fnc(a, False)
             if res_false == res_true:
                 # result is independent of ensemble_b so ignore it
                 return res_true
             else:
                 b = self.ensemble2.backward(trajectory)
-                return self.fnc(a, b)
+                if b is True:
+                    return res_true
+                else:
+                    return res_false
         else:
             return self.fnc(self.ensemble1.backward(trajectory), self.ensemble2.backward(trajectory))
 
@@ -699,16 +743,17 @@ class VolumeEnsemble(Ensemble):
     '''    
     def __init__(self, volume, frames = slice(1,-1), lazy = True):
         super(VolumeEnsemble, self).__init__()
-        self._volume = volume
+        self._stored_volume = volume
         self.frames = frames
         self.lazy = lazy
-    
+        pass
+
     @property
-    def volume(self):
+    def _volume(self):
         '''
         The volume that is used in the specification.
         '''
-        return self._volume
+        return self._stored_volume
     
 class InXEnsemble(VolumeEnsemble):
     '''
@@ -741,7 +786,7 @@ class InXEnsemble(VolumeEnsemble):
                                         
         if checkpoint >= 0:
 #            print 'Out:',checkpoint          
-            return self.volume(trajectory[checkpoint])  
+            return self._volume(trajectory[checkpoint])
         
         return True    
     
@@ -763,33 +808,31 @@ class InXEnsemble(VolumeEnsemble):
                                         
         if checkpoint >= 0:
 #            print 'Out:',checkpoint            
-            return self.volume(trajectory[checkpoint])  
+            return self._volume(trajectory[checkpoint])
         
         return True    
     
     def __call__(self, trajectory, lazy=None):
         if type(self.frames) is int:
             if trajectory.frames > self.frames and trajectory.frames >= -self.frames:
-                return self.volume(trajectory[self.frames])            
+                return self._volume(trajectory[self.frames])
             else:
                 return True
         else:
             if (self.lazy and lazy is None) or (lazy and lazy is not None):
                 for s in trajectory[self.frames][0::max(1,trajectory.frames - 1)]:
-                    if not self.volume(s):
+                    if not self._volume(s):
                         return False
             else:
                 for s in trajectory[self.frames]:
-                    if not self.volume(s):
+                    if not self._volume(s):
                         return False
                         
             return True
 
-    def __str__(self):
-        if type(self.frames) is int:
-            return 'x[{0}] in {1}'.format(str(self.frames), str(self.volume))
-        else:
-            return 'x[t] in {2} for all t in [{0}:{1}])'.format(self.frames.start, self.frames.stop, self.volume)
+    def __invert__(self):
+        return LeaveXEnsemble(self._volume, self.frames, self.lazy)
+
 
 
 class OutXEnsemble(InXEnsemble):
@@ -798,16 +841,18 @@ class OutXEnsemble(InXEnsemble):
     are outside a specified volume
     '''    
     @property
-    def volume(self):
-        return ~ self._volume
+    def _volume(self):
+        return ~ self._stored_volume
     
     def __str__(self):
         if type(self.frames) is int:
-            return 'x[{0}] not in {1}'.format(str(self.frames), str(self.volume))
+            return 'x[{0}] not in {1}'.format(self.frames, self._volume)
         else:
-            return 'x[t] not in {2} for all t in [{0}:{1}])'.format(self.frames.start, self.frames.stop, self.volume)
+            return 'x[t] not in {2} for all t in [{0}:{1}])'.format(
+                self.frames.start, self.frames.stop, self._volume)
 
-
+    def __invert__(self):
+        return HitXEnsemble(self._volume, self.frames, self.lazy)
 
         
 class HitXEnsemble(VolumeEnsemble):
@@ -818,23 +863,17 @@ class HitXEnsemble(VolumeEnsemble):
 
     def __str__(self):
         if type(self.frames) is int:
-            return 'x[{0}] in {1}'.format(str(self.frames), str(self.volume))
+            return 'x[{0}] in {1}'.format(self.frames, self._volume)
         else:
-            return 'x[t] in {2} for one t in [{0}:{1}]'.format(self.frames.start, self.frames.stop, self.volume)
-
-    def can_append(self, trajectory):
-        return True
-
-    def can_prepend(self, trajectory):
-        return True
-
+            return 'x[t] in {2} for one t in [{0}:{1}]'.format(
+                self.frames.start, self.frames.stop, self._volume)
 
     def forward(self, trajectory):
         pos = trajectory.frames - 1
         if type(self.frames) is int:
             if self.frames >= 0:
                 if self.frames == pos:
-                    return self.volume(trajectory[pos])  
+                    return self._volume(trajectory[pos])
         else:
             if self.lazy:
                 # There is no way to test in a lazy way without storing the result from previous frames. So keep on running
@@ -854,7 +893,7 @@ class HitXEnsemble(VolumeEnsemble):
         if type(self.frames) is int:
             if self.frames < 0:
                 if self.frames == pos:
-                    return self.volume(trajectory[pos])  
+                    return self._volume(trajectory[pos])
         else:
             if self.lazy:
                 # There is no way to test in a lazy way without storing the result from previous frames
@@ -882,15 +921,19 @@ class HitXEnsemble(VolumeEnsemble):
 
         if type(self.frames) is int:
             if trajectory.frames > self.frames and trajectory.frames >= -self.frames:
-                return self.volume(trajectory[self.frames])            
+                return self._volume(trajectory[self.frames])
             else:
                 return False          
         else:
             for s in trajectory[self.frames]:
-                if self.volume(s):
+                if self._volume(s):
                     return True    
 
             return False
+
+    def __invert__(self):
+        return OutXEnsemble(self._volume, self.frames, self.lazy)
+
 
 class LeaveXEnsemble(HitXEnsemble):
     '''
@@ -899,13 +942,17 @@ class LeaveXEnsemble(HitXEnsemble):
     '''
     def __str__(self):
         if type(self.frames) is int:
-            return 'x[{0}] not in {1}'.format(str(self.frames), str(self.volume))
+            return 'x[{0}] not in {1}'.format(str(self.frames), self._volume)
         else:
-            return 'x[t] in {2} for one t in [{0}:{1}])'.format(self.frames.start, self.frames.stop, self.volume)
+            return 'x[t] in {2} for one t in [{0}:{1}])'.format(self.frames.start, self.frames.stop, self._volume)
         
     @property
-    def volume(self):
-        return ~ self._volume
+    def _volume(self):
+        # effectively use HitXEnsemble but with inverted volume
+        return ~ self._stored_volume
+
+    def __invert__(self):
+        return InXEnsemble(self._volume, self.frames, self.lazy)
 
 
 class ExitsXEnsemble(VolumeEnsemble):
@@ -923,7 +970,7 @@ class ExitsXEnsemble(VolumeEnsemble):
         domain = 'exists x[t], x[t+1] in [{0}:{1}] '.format(
                             self.frames.start, self.frames.stop )
         result = 'such that x[t] in {0} and x[t+1] not in {0}'.format(
-                            self.volume)
+                            self._volume)
         return domain+result
 
     def __call__(self, trajectory, lazy=None):
@@ -935,7 +982,7 @@ class ExitsXEnsemble(VolumeEnsemble):
             for i in range(len(subtraj)-1):
                 frame_i = subtraj[i]
                 frame_iplus = subtraj[i+1]
-                if self.volume(frame_i) and not self.volume(frame_iplus):
+                if self._volume(frame_i) and not self._volume(frame_iplus):
                     return True
         return False
 
@@ -948,7 +995,7 @@ class EntersXEnsemble(ExitsXEnsemble):
         domain = 'exists x[t], x[t+1] in [{0}:{1}] '.format(
                             self.frames.start, self.frames.stop )
         result = 'such that x[t] not in {0} and x[t+1] in {0}'.format(
-                            self.volume)
+                            self._volume)
         return domain+result
 
     def __call__(self, trajectory, lazy=None):
@@ -960,7 +1007,7 @@ class EntersXEnsemble(ExitsXEnsemble):
             for i in range(len(subtraj)-1):
                 frame_i = subtraj[i]
                 frame_iplus = subtraj[i+1]
-                if not self.volume(frame_i) and self.volume(frame_iplus):
+                if not self._volume(frame_i) and self._volume(frame_iplus):
                     return True
         return False
             
@@ -1098,5 +1145,3 @@ class EnsembleFactory():
         '''        
 
         return (LengthEnsemble(slice(3,None)) & InXEnsemble(volume_a, 0) & InXEnsemble(volume_b, -1)) & (LeaveXEnsemble(volume_x) & OutXEnsemble(volume_a | volume_b, slice(1,-1), lazy))
-    
-    hbar = StartXEnsemble

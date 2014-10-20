@@ -5,22 +5,20 @@ Created on 06.07.2014
 @author: JH Prinz
 '''
 
-import numpy
 import netCDF4 as netcdf # for netcdf interface provided by netCDF4 in enthought python
-
-import simtk.unit as units
-
-from simtk.unit import nanosecond, picosecond, nanometers, nanometer, picoseconds, femtoseconds, femtosecond, kilojoules_per_mole, Quantity
-
-from trajectory import Trajectory
-from snapshot import Snapshot, Configuration, Momentum
-
 import pickle
-import mdtraj as md
-
 import os.path
 
-# TODO: Remove all stuff that is content related and allow to register a class with the storage
+import numpy
+import simtk.unit as units
+
+import simtk.openmm.app
+from trajectory_store import TrajectoryStorage
+from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
+from simtk.unit import amu
+
+import mdtraj as md
+
 
 #=============================================================================================
 # SOURCE CONTROL
@@ -28,21 +26,18 @@ import os.path
 
 __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 
-
-
 #=============================================================================================
-# Multi-State Transition Interface Sampling
+# NetCDF Storage for multiple forked trajectories
 #=============================================================================================
 
-class TrajectoryStorage(object):
+class Storage(netcdf.Dataset):
     '''
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM simulation. This allows effective storage of shooting trajectories
     '''
 
-
-    def __init__(self, topology, filename = 'trajectory.nc', mode = 'auto'):
+    def __init__(self, filename = 'trajectory.nc', mode = None, topology_file = None):
         '''
-        Create a storage for trajectories that are stored by snapshots and list of their indices
+        Create a storage for complex objects in a netCDF file
         
         Parameters
         ----------        
@@ -50,292 +45,144 @@ class TrajectoryStorage(object):
             the topology of the system to be stored. Needed for 
         filename : string
             filename of the netcdf file
-        mode : string, default: 'auto'
-            the mode of file creation, one of 'create', 'restore' or 'auto'
+        mode : string, default: None
+            the mode of file creation, one of 'w' (write), 'a' (append) or None, which will append any existing files.
         '''
-        
-        self.links = []        
-        self.add(Snapshot)
-        self.add(Trajectory)
-        
-        self.fn_storage = filename
 
-        # if not specified then create if not existing
-        if mode == 'auto':                    
+        if mode == None:
             if os.path.isfile(filename):
-                mode = 'restore'
+                mode = 'a'
             else:
-                mode = 'create'
-        
-        if mode == 'create':
-            self.topology = md.Topology.from_openmm(topology)
-            self._init_netcdf()
-        elif mode == 'restore':
-            self._restore_netcdf()
-            
-        
-        
-    def add(self, class_obj):
+                mode = 'w'
+
+        self.filename = filename
+        self.links = []
+
+        super(Storage, self).__init__(filename, mode)
+
+        self.trajectory = TrajectoryStorage(self).register()
+        self.snapshot = SnapshotStorage(self).register()
+        self.configuration = ConfigurationStorage(self).register()
+        self.momentum = MomentumStorage(self).register()
+
+        if mode == 'w':
+            self._init()
+
+            if isinstance(topology_file, md.Topology):
+                self.topology = topology_file
+                self._store_single_option(self, 'md_topology', self.topology)
+                self.variables['pdb'][0] = ''
+                elements = {key: tuple(el) for key, el in md.element.Element._elements_by_symbol.iteritems()}
+                self._store_single_option(self, 'md_elements', elements)
+
+            elif isinstance(topology_file, simtk.openmm.app.Topology):
+                self.topology = md.Topology.from_openmm(topology_file)
+                self._store_single_option(self, 'om_topology', topology_file)
+                self.variables['pdb'][0] = ''
+                elements = {key: tuple(el) for key, el in md.element.Element._elements_by_symbol.iteritems()}
+                self._store_single_option(self, 'md_elements', elements)
+
+            elif type(topology_file) is str:
+                self.topology = md.load(topology_file).topology
+
+                with open (topology_file, "r") as myfile:
+                    pdb_string=myfile.read()
+
+                self.variables['pdb'][0] = pdb_string
+
+
+            self.atoms = self.topology.n_atoms
+
+            self._init_classes()
+            self.sync()
+
+        elif mode == 'a':
+            self.pdb = self.variables['pdb'][0]
+
+            if len(self.pdb) > 0:
+                if os.path.isfile('tempXXX.pdb'):
+                    print "File tempXXX.pdb exists - no overwriting! Quitting"
+
+                # Create a temporary file since mdtraj cannot read from string
+                with open ('tempXXX.pdb', "w") as myfile:
+                    myfile.write(self.pdb)
+
+                self.topology = md.load('tempXXX.pdb').topology
+                os.remove('tempXXX.pdb')
+            else:
+                # there is no pdb file stored
+                self.topology = md.Topology.from_openmm(self._restore_single_option(self, 'om_topology'))
+                elements = self._restore_single_option(self, 'md_elements')
+                for key, el in elements.iteritems():
+                    try:
+                        md.element.Element(
+                                    number=el[0], name=el[1], symbol=el[2], mass=el[3]*amu
+                                 )
+                    except(AssertionError):
+                        pass
+
+
+            self._restore_classes()
+
+
+    def __getattr__(self, item):
+        return self.__dict__[item]
+
+    def __setattr__(self, key, value):
+        self.__dict__[key] = value
+
+    def _init_classes(self):
         '''
-        Add a class to the storage
-        
-        Parameters
-        ----------
-        class_obj : Class
-            the class to be added
+        Run the initialization on all added classes, when the storage is created only!
+
+        Notes
+        -----
+        Only runs when the storage is created.
         '''
 
-        #if class is compatible and has necessary classes, add it
-        if hasattr(class_obj, '_init_netcdf') and hasattr(class_obj, '_restore_netcdf'):
-            print 'Added : ', class_obj.__class__
-            self.links.append(class_obj)
-            
+        for storage in self.links:
+            # create a member variable which is the associated Class itself
+            storage._init()
+
+    def _restore_classes(self):
+        '''
+        Run restore on all added classes. Usually there is nothing to do.
+        '''
+#        for storage in self.links:
+#            storage._restore()
         pass
-    
-    def init_classes(self):
-        '''
-        Run the initialization on all added classes
-        '''
-        for cls in self.links:
-            cls._init_netcdf(self)
-
-    def restore_classes(self):
-        '''
-        Run restore on all added classes
-        '''
-        for cls in self.links:
-            cls._restore_netcdf(self)
 
 
-    def _init_netcdf(self):
+    def _init(self):
         """
-        Initialize the netCDF file for storage.
-        
-        """    
+        Initialize the netCDF file for storage itself.
+        """
 
-        # Open NetCDF file for writing
-        ncfile = netcdf.Dataset(self.fn_storage, 'w') # for netCDF4
-        
-        # Store netcdf file handle.
-        self.ncfile = ncfile
+        # TODO: Allow to set the project parameters somehow!
 
         # add shared dimension for everyone. scalar and spatial
-        if 'scalar' not in self.ncfile.dimensions:
-            self.ncfile.createDimension('scalar', 1) # scalar dimension
+        if 'scalar' not in self.dimensions:
+            self.createDimension('scalar', 1) # scalar dimension
             
-        if 'spatial' not in self.ncfile.dimensions:
-            self.ncfile.createDimension('spatial', 3) # number of spatial dimensions
+        if 'spatial' not in self.dimensions:
+            self.createDimension('spatial', 3) # number of spatial dimensions
         
         # Set global attributes.
-        setattr(ncfile, 'title', 'Open-Transition-Interface-Sampling')
-        setattr(ncfile, 'application', 'Host-Guest-System')
-        setattr(ncfile, 'program', 'run.py')
-        setattr(ncfile, 'programVersion', __version__)
-        setattr(ncfile, 'Conventions', 'Multi-State Transition Interface TPS')
-        setattr(ncfile, 'ConventionVersion', '0.1')
-                
-        #self._init_netcdf() #WTF? Was this supposed to be something else?
+        setattr(self, 'title', 'Open-Transition-Interface-Sampling')
+        setattr(self, 'application', 'Host-Guest-System')
+        setattr(self, 'program', 'run.py')
+        setattr(self, 'programVersion', __version__)
+        setattr(self, 'Conventions', 'Multi-State Transition Interface TPS')
+        setattr(self, 'ConventionVersion', '0.1')
+
+        ncvar = self.createVariable('pdb', 'str', 'scalar')
+        packed_data = numpy.empty(1, 'O')
+        packed_data[0] = ""
+        ncvar[:] = packed_data
                         
         # Force sync to disk to avoid data loss.
-        ncfile.sync()
-        return
-    
-    def _restore_netcdf(self):
-        '''
-        Restore the storage from the netCDF file
-        '''
-        # Open NetCDF file for appending
-        ncfile = netcdf.Dataset(self.fn_storage, 'a')
-        
-        # Store netcdf file handle.
-        self.ncfile = ncfile
-        self.restore_classes()
-        
-        return
+        self.sync()
 
-    def configuration(self, idx):
-        return Configuration.load(idx)
-    
-    def momentum(self, idx):
-        return Momentum.load(idx)
-    
-    def snapshot(self, idx_configuration, idx_momentum, momentum_reversed):
-        return Snapshot.load(idx_configuration, idx_momentum, momentum_reversed)    
-
-    def trajectory(self, idx, momentum = True):        
-        '''
-        Returns the trajectory object with the given index
-
-        Parameters
-        ----------
-        idx : int
-            index of the trajectory to be loaded
-        momentum : boolen
-            if `True` also the momenta will be loaded. Otherwise the trajectory will only have a reference to coordinates.
-            if only coordinates are returned the trajectory index will be set to zero to not accidentally delete the reference to the momenta
-        
-        Returns
-        -------
-        Trajectory
-            returns an array with `l` the number of frames and `n` the number of atoms 
-        '''
-        
-        configuration_frame_indices = Trajectory.load_configuration_indices(idx)
-        momentum_frame_reversed = Trajectory.load_momentum_reversed(idx)            
-        if momentum:
-            momentum_frame_indices = Trajectory.load_momentum_indices(idx)
-            t = Trajectory.from_indices(configuration_frame_indices, momentum_frame_indices, momentum_frame_reversed)
-            t.idx = idx
-            return t
-        else:
-            t = Trajectory.from_indices(configuration_frame_indices, None, momentum_frame_reversed)
-            t.idx = 0
-            return t
-                
-    def coordinates_as_array(self, frame_indices=None, atom_indices=None):
-        '''
-        Returns a numpy array consisting of all coordinates at the given indices
-
-        Parameters
-        ----------
-        frame_indices : list of int
-            configuration indices to be loaded
-        atom_indices : list of int
-            selects only the atoms to be returned. If None (Default) all atoms will be selected
-        
-        Returns
-        -------
-        numpy.ndarray, shape = (l,n)
-            returns an array with `l` the number of frames and `n` the number of atoms 
-        '''
-
-        return Configuration.coordinates_as_numpy(self, frame_indices, atom_indices)
-
-    def velocities_as_array(self, frame_indices=None, atom_indices=None):
-        '''
-        Returns a numpy array consisting of all velocities at the given indices
-
-        Parameters
-        ----------
-        frame_indices : list of int
-            momenta indices to be loaded
-        atom_indices : list of int
-            selects only the atoms to be returned. If None (Default) all atoms will be selected
-
-        
-        Returns
-        -------
-        numpy.ndarray, shape = (l,n)
-            returns an array with `l` the number of frames and `n` the number of atoms 
-        '''
-
-        return Momentum.velocities_as_numpy(self, frame_indices, atom_indices)
-        
-    def trajectory_coordinates_as_array(self, idx, atom_indices=None):
-        '''
-        Returns a numpy array consisting of all coordinates of a trajectory
-
-        Parameters
-        ----------
-        idx : int
-            index of the trajectory to be loaded
-        atom_indices : list of int
-            selects only the atoms to be returned. If None (Default) all atoms will be selected
-
-        
-        Returns
-        -------
-        numpy.ndarray, shape = (l,n)
-            returns an array with `l` the number of frames and `n` the number of atoms 
-        '''
-
-        frame_indices = Trajectory.load_configuration_indices(idx)
-        return self.coordinates_as_array(frame_indices, atom_indices)        
-
-    def trajectory_velocities_as_array(self, idx, atom_indices=None):
-        '''
-        Returns a numpy array consisting of all velocities of a trajectory
-        
-        Parameters
-        ----------
-        idx : int
-            index of the trajectory to be loaded
-        atom_indices : list of int
-            selects only the atoms to be returned. If None (Default) all atoms will be selected
-        
-        Returns
-        -------
-        numpy.ndarray, shape = (l,n)
-            returns an array with `l` the number of frames and `n` the number of atoms 
-        '''
-        frame_indices = Trajectory.load_configuration_indices(idx)
-        return self.coordinates_as_array(frame_indices, atom_indices)            
-    
-    def number_of_trajectories(self):
-        '''
-        Returns the number of stored trajectories in the storage
-        
-        Returns
-        -------
-        int
-            number of stored trajectories
-        '''
-
-        return Trajectory.load_number()
-
-    def number_of_configurations(self):
-        '''
-        Returns the number of stored configurations in the storage
-        
-        Returns
-        -------
-        int
-            number of stored frames
-        '''
-
-        return Configuration.load_number()
-
-    def number_of_momenta(self):
-        '''
-        Returns the number of stored momenta in the storage
-        
-        Returns
-        -------
-        int
-            number of stored frames
-        '''
-        return Momentum.load_number()
-    
-    def last_trajectory(self):
-        '''
-        Returns the last generated trajectory. Useful to continue a run.
-        
-        Returns
-        -------
-        Trajectoy
-            the actual trajectory object
-        '''
-        return self.trajectory(self.number_of_trajectories())
-    
-    def all_snapshot_coordinates_as_mdtraj(self, atom_indices = None):
-        """
-        Return all snapshots as a mdtraj.Trajectory object using only the specified atoms
-        
-        Parameters
-        ----------        
-        atom_indices (list of int, Default: None) - list of atom indices to be used for the trajectory
-         
-        """
-                    
-        output = self.coordinates_as_array(atom_indices = atom_indices)
-                
-        topology = self.topology
-                
-        if atom_indices is not None:
-            topology = topology.subset(atom_indices)
-                                                 
-        return md.Trajectory(output, topology)
-        
     def _store_metadata(self, groupname, metadata):
         """
         Store metadata in NetCDF file.
@@ -343,7 +190,7 @@ class TrajectoryStorage(object):
         """
 
         # Create group.
-        ncgrp = self.ncfile.createGroup(groupname)
+        ncgrp = self.createGroup(groupname)
 
         # Store metadata.
         for (key, value) in metadata.iteritems():
@@ -351,8 +198,7 @@ class TrajectoryStorage(object):
             ncvar = ncgrp.createVariable(key, type(value))
             ncvar.assignValue(value)
 
-        return
-        
+
     def _store_options(self, obj, group_name = 'options'):
         """
         Store run parameters in NetCDF file.
@@ -362,7 +208,7 @@ class TrajectoryStorage(object):
         self.verbose_root = False
 
         # Create a group to store state information.
-        ncgrp_options = self.ncfile.createGroup(group_name)
+        ncgrp_options = self.createGroup(group_name)
         
         # Store run parameters.
         for option_name in obj.options_to_store:
@@ -372,8 +218,6 @@ class TrajectoryStorage(object):
             
             if self.verbose_root: print "Storing option: %s -> %s (type: %s)" % (option_name, option_value, type(option_value))            
 
-        return
-    
     def _restore_options(self, obj, group_name = 'options'):
         """
         Restore run parameters from NetCDF file.
@@ -384,21 +228,17 @@ class TrajectoryStorage(object):
         if self.verbose_root: print "Attempting to restore options from NetCDF file..."
 
         # Make sure this NetCDF file contains option information
-        if not group_name in self.ncfile.groups:
+        if not group_name in self.groups:
             # Not found, signal failure.
             return False
 
         # Find the group.
-        ncgrp_options = self.ncfile.groups[group_name]
-        
-        print ncgrp_options.variables.keys()
+        ncgrp_options = self.groups[group_name]
 
         # Load run parameters.
         for option_name in ncgrp_options.variables.keys():
             # Get NetCDF variable.
             option_value = self._restore_single_option(ncgrp_options, option_name)
-            
-            print option_name
             
             # Store option.
             if self.verbose_root: print "Restoring option: %s -> %s (type: %s)" % (option_name, str(option_value), type(option_value))
@@ -450,8 +290,7 @@ class TrajectoryStorage(object):
             packed_data = numpy.empty(1, 'O')
             packed_data[0] = obj_value
             ncvar[:] = packed_data
-#            ncvar.assignValue(obj_value)
-            
+
         if option_unit: 
             setattr(ncvar, 'units', str(option_unit))
  
