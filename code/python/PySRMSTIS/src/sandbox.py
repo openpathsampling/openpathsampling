@@ -6,8 +6,6 @@ Created on 08.07.2014
 
 import numpy as np
 
-from tis_interfaces import TISInterfaces
-from transition_interface_sampling import TransitionInterfaceSampling
 from Simulator import Simulator
 from orderparameter import OP_RMSD_To_Lambda, OP_Multi_RMSD
 from volume import LambdaVolume, VoronoiVolume
