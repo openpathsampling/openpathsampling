@@ -10,6 +10,7 @@ from volume import LambdaVolume
 from ensemble import *
 
 import re
+import random
 
 def wrap_traj(traj, start, length):
     """Wraps the traj such that the original traj starts at frame `start`
@@ -35,94 +36,54 @@ def test_wrap_traj():
     assert_equal(wrap_traj(intraj, 3, 8), [1, 1, 1, 1, 2, 3, 3, 3])
     assert_equal(wrap_traj(intraj, 3, 8)[slice(3, 6)], intraj)
 
+def build_trajdict(trajtypes, lower, upper):
+    upperadddict = { 'a' : 'in', 'b' : 'out', 'c' : 'cross', 'o' : 'hit' }
+    loweradddict = { 'a' : 'out', 'b' : 'in', 'c' : 'out', 'o' : 'hit' }
+    lowersubdict = { 'a' : 'in', 'b' : 'out', 'c' : 'cross', 'o' : 'hit' }
+    uppersubdict = { 'a' : 'out', 'b' : 'in', 'c' : 'out', 'o' : 'hit' }
+    adjustdict = { 'a' : (lambda x: -0.05*x), 'b' : (lambda x: 0.05*x),
+                   'c' : (lambda x: 0.05*x + 0.2), 'o' : (lambda x : 0.0) }
+    mydict = {}
+    for mystr in trajtypes:
+        upperaddkey = "upper"
+        uppersubkey = "upper"
+        loweraddkey = "lower"
+        lowersubkey = "lower"
+        delta = []
+        for char in mystr:
+            upperaddkey += "_"+upperadddict[char]
+            loweraddkey += "_"+loweradddict[char]
+            uppersubkey += "_"+uppersubdict[char]
+            lowersubkey += "_"+lowersubdict[char]
+            delta.append(adjustdict[char](random.randint(1,4)))
+
+        mydict[upperaddkey] = map(upper.__add__, delta)
+        mydict[loweraddkey] = map(lower.__add__, delta)
+        mydict[uppersubkey] = map(upper.__sub__, delta)
+        mydict[lowersubkey] = map(lower.__sub__, delta)
+    return mydict  
+
 def setUp():
     ''' Setup for tests of classes in ensemble.py. '''
-    global lower, upper, op, vol1, ttraj
+    random.seed
+    global lower, upper, op, vol1, vol2, ttraj
     lower = 0.1
     upper = 0.5
     op = CallIdentity()
     vol1 = LambdaVolume(op, lower, upper)
+    vol2 = LambdaVolume(op, -0.1, 0.7)
     ttraj = {}
-
-    all_positive = [0.1, 0.05, 0.15]
-    # generate trajectories always outside the border
-    ttraj['lower_in'] = map(lower.__add__, all_positive)
-    ttraj['upper_in'] = map(upper.__sub__, all_positive)
-    ttraj['lower_out'] = map(lower.__sub__, all_positive)
-    ttraj['upper_out'] = map(upper.__add__, all_positive)
-
-    hits_border = [0.1, 0.0, 0.15]
-    # generate trajectories which hit the border but do not cross
-    ttraj['lower_in_hit_in'] = map(lower.__add__, hits_border)
-    ttraj['lower_out_hit_out'] = map(lower.__sub__, hits_border)
-    ttraj['upper_in_hit_in'] = map(upper.__sub__, hits_border)
-    ttraj['upper_out_hit_out'] = map(upper.__add__, hits_border)
-
-    crosses = [-0.05, 0.05]
-    border_then_cross = [-0.1, 0.0, 0.1]
-    # generate trajectories which cross the border from the inside
-    ttraj['lower_in_out'] = map(lower.__sub__, crosses)
-    ttraj['lower_in_hit_out'] = map(lower.__sub__, border_then_cross)
-    ttraj['upper_in_out'] = map(upper.__add__, crosses)
-    ttraj['upper_in_hit_out'] = map(upper.__add__, border_then_cross)
-
-    # generate trajectories which cross the border from the outside
-    ttraj['lower_out_in'] = map(lower.__add__, crosses)
-    ttraj['lower_out_hit_in'] = map(lower.__add__, border_then_cross)
-    ttraj['upper_out_in'] = map(upper.__sub__, crosses)
-    ttraj['upper_out_hit_in'] = map(upper.__sub__, border_then_cross)
-
-    doublecross = [-0.1, 0.0, 0.1, -0.05, 0.05]
-    # generate trajectories which cross the border in both directions
-    ttraj['lower_out_in_out_in'] = map(lower.__add__, doublecross)
-    ttraj['lower_in_out_in_out'] = map(lower.__sub__, doublecross)
-    ttraj['upper_out_in_out_in'] = map(upper.__sub__, doublecross)
-    ttraj['upper_in_out_in_out'] = map(upper.__add__, doublecross)
-
-    ttraj['lower_hit_1'] = [lower]
-    ttraj['upper_hit_1'] = [upper]
-
-    aba = [-0.05, 0.05, -0.1]
-    ttraj['lower_in_out_in'] = map(lower.__sub__, aba)
-    ttraj['upper_in_out_in'] = map(upper.__add__, aba)
-    ttraj['lower_out_in_out'] = map(lower.__add__, aba)
-    ttraj['upper_out_in_out'] = map(upper.__sub__, aba)
-    abaab = [-0.05, 0.05, -0.1, -0.05, 0.1]
-    a = [-0.05]
-    ttraj['upper_in_1'] = map(upper.__add__, a)
-    ttraj['lower_in_1'] = map(lower.__sub__, a)
-    ttraj['upper_out_1'] = map(upper.__sub__, a)
-    ttraj['lower_out_1'] = map(lower.__add__, a)
-    abaa = [-0.05, 0.05, -0.1, -0.05]
-    ttraj['upper_in_out_in_in'] = map(upper.__add__, abaa)
-    ttraj['lower_in_out_in_in'] = map(lower.__sub__, abaa)
-    ttraj['upper_out_in_out_out'] = map(upper.__sub__, abaa)
-    ttraj['lower_out_in_out_out'] = map(lower.__add__, abaa)
-    ababa = [-0.05, 0.05, -0.1, 0.1, -0.05]
-    ttraj['upper_in_out_in_out_in'] = map(upper.__add__, ababa)
-    ttraj['lower_in_out_in_out_in'] = map(lower.__sub__, ababa)
-    ttraj['upper_out_in_out_in_out'] = map(upper.__sub__, ababa)
-    ttraj['lower_out_in_out_in_out'] = map(lower.__add__, ababa)
-    abaaba = [-0.05, 0.05, -0.1, -0.15, 0.05, -0.05]
-    ttraj['upper_in_out_in_in_out_in'] = map(upper.__add__, abaaba)
-    ttraj['lower_in_out_in_in_out_in'] = map(lower.__sub__, abaaba)
-    ttraj['upper_out_in_out_out_in_out'] = map(upper.__sub__, abaaba)
-    ttraj['lower_out_in_out_out_in_out'] = map(lower.__add__, abaaba)
-    abaab = [-0.05, 0.05, -0.15, -0.1, 0.05]
-    ttraj['upper_in_out_in_in_out'] = map(upper.__add__, abaab)
-    ttraj['lower_in_out_in_in_out'] = map(lower.__sub__, abaab)
-    ttraj['upper_out_in_out_out_in'] = map(upper.__sub__, abaab)
-    ttraj['lower_out_in_out_out_in'] = map(lower.__add__, abaab)
-    abba = [-0.05, 0.1, 0.05, -0.1]
-    ttraj['upper_in_out_out_in'] = map(upper.__add__, abba)
-    ttraj['lower_in_out_out_in'] = map(lower.__sub__, abba)
-    ttraj['upper_out_in_in_out'] = map(upper.__sub__, abba)
-    ttraj['lower_out_in_in_out'] = map(lower.__add__, abba)
-    abbab = [-0.05, 0.1, 0.05, -0.1, 0.15]
-    ttraj['upper_in_out_out_in_out'] = map(upper.__add__, abbab)
-    ttraj['lower_in_out_out_in_out'] = map(lower.__sub__, abbab)
-    ttraj['upper_out_in_in_out_in'] = map(upper.__sub__, abbab)
-    ttraj['lower_out_in_in_out_in'] = map(lower.__add__, abbab)
+    # we use the following codes to describe trajectories:
+    # in : in the state
+    # out : out of the state
+    # hit : on the state border
+    #
+    # a < 0 ; 0 < b < 0.2 ; c > 0.2; o = 0
+    trajtypes = ["a", "o", "ab", "aob", "bob", "aba", "aaa",
+                 "abaa", "abba", "abaab", "ababa", "abbab",
+                 "abaaba", "aobab", "abab"]
+    teststoadd = ["abcbababcba"]
+    ttraj = build_trajdict(trajtypes, lower, upper)
 
     # make the tests from lists into trajectories
     for test in ttraj.keys():
@@ -139,6 +100,11 @@ def in_out_parser(testname):
         elif part == 'hit':
             if 'upper' in parts:
                 to_append = 'in'
+            elif 'lower' in parts:
+                to_append = 'in'
+        elif part == 'cross':
+            if 'upper' in parts:
+                to_append = 'out'
             elif 'lower' in parts:
                 to_append = 'in'
         if to_append != None:
@@ -270,10 +236,10 @@ class testEntersXEnsemble(testExitsXEnsemble):
 
     def test_noncrossing(self):
         '''EntersXEnsemble for noncrossing trajectories'''
-        results = { 'upper_in' : False,
-                    'upper_out' : False,
-                    'lower_in' : False,
-                    'lower_out' : False
+        results = { 'upper_in_in_in' : False,
+                    'upper_out_out_out' : False,
+                    'lower_in_in_in' : False,
+                    'lower_out_out_out' : False
                   }
         self._run(results)
 
@@ -327,7 +293,10 @@ class testSequentialEnsembles(EnsembleTest):
         self.leaveX = LeaveXEnsemble(vol1, frames=slice(None,None))
         self.enterX = EntersXEnsemble(vol1, frames=slice(None,None))
         self.exitX = ExitsXEnsemble(vol1, frames=slice(None,None))
+        self.inInterface = InXEnsemble(vol2, frames=slice(None,None))
+        self.leaveInterface = LeaveXEnsemble(vol2, frames=slice(None,None))
         self.length1 = LengthEnsemble(1)
+        self.length0 = LengthEnsemble(0)
         # properly speaking, tis and minus ensembles require outX and
         # leave_interface; but for now I'll just do the easy way
         self.tis_ensemble = SequentialEnsemble( [
@@ -394,16 +363,16 @@ class testSequentialEnsembles(EnsembleTest):
                         'lower_in_out' : True,
                         'upper_in_out_in' : False,
                         'lower_in_out_in' : False,
-                        'upper_in_1' : True,
-                        'lower_in_1' : True,
-                        'upper_in' : False,
-                        'lower_in' : False,
-                        'upper_out' : True,
-                        'lower_out' : True,
+                        'upper_in' : True,
+                        'lower_in' : True,
+                        'upper_in_in_in' : False,
+                        'lower_in_in_in' : False,
+                        'upper_out_out_out' : True,
+                        'lower_out_out_out' : True,
                         'upper_out_in' : False,
                         'lower_out_in' : False,
-                        'upper_out_1' : True,
-                        'lower_out_1' : True,
+                        'upper_out' : True,
+                        'lower_out' : True,
                         'upper_in_out_in_in' : False,
                         'lower_in_out_in_in' : False,
                         'upper_in_out_in_out_in' : False,
@@ -420,16 +389,16 @@ class testSequentialEnsembles(EnsembleTest):
                         'lower_in_out' : True,
                         'upper_in_out_in' : True,
                         'lower_in_out_in' : True,
-                        'upper_in_1' : True,
-                        'lower_in_1' : True,
                         'upper_in' : True,
                         'lower_in' : True,
-                        'upper_out' : True,
-                        'lower_out' : True,
+                        'upper_in_in_in' : True,
+                        'lower_in_in_in' : True,
+                        'upper_out_out_out' : True,
+                        'lower_out_out_out' : True,
                         'upper_out_in' : True,
                         'lower_out_in' : True,
-                        'upper_out_1' : True,
-                        'lower_out_1' : True,
+                        'upper_out' : True,
+                        'lower_out' : True,
 
                         'upper_in_out_in_in' : True,
                         'lower_in_out_in_in' : True,
@@ -457,16 +426,16 @@ class testSequentialEnsembles(EnsembleTest):
                         'lower_in_out' : False,
                         'upper_in_out_in' : False,
                         'lower_in_out_in' : False,
-                        'upper_in_1' : True,
-                        'lower_in_1' : True,
-                        'upper_in' : False,
-                        'lower_in' : False,
-                        'upper_out' : True,
-                        'lower_out' : True,
+                        'upper_in' : True,
+                        'lower_in' : True,
+                        'upper_in_in_in' : False,
+                        'lower_in_in_in' : False,
+                        'upper_out_out_out' : True,
+                        'lower_out_out_out' : True,
                         'upper_out_in' : True,
                         'lower_out_in' : True,
-                        'upper_out_1' : True,
-                        'lower_out_1' : True,
+                        'upper_out' : True,
+                        'lower_out' : True,
                         'upper_in_out_in_in' : False,
                         'lower_in_out_in_in' : False,
                         'upper_in_out_in_out_in' : False,
@@ -484,16 +453,16 @@ class testSequentialEnsembles(EnsembleTest):
                         'lower_in_out' : True,
                         'upper_in_out_in' : True,
                         'lower_in_out_in' : True,
-                        'upper_in_1' : True,
-                        'lower_in_1' : True,
                         'upper_in' : True,
                         'lower_in' : True,
-                        'upper_out' : True,
-                        'lower_out' : True,
+                        'upper_in_in_in' : True,
+                        'lower_in_in_in' : True,
+                        'upper_out_out_out' : True,
+                        'lower_out_out_out' : True,
                         'upper_out_in' : True,
                         'lower_out_in' : True,
-                        'upper_out_1' : True,
-                        'lower_out_1' : True,
+                        'upper_out' : True,
+                        'lower_out' : True,
 
                         'upper_in_out_in_in' : False,
                         'lower_in_out_in_in' : False,
