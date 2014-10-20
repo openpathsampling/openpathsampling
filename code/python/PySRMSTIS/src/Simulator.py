@@ -175,7 +175,7 @@ class Simulator(object):
             
             # Create a trajectory storage
             self.storage = Storage(
-                                                 topology = self.fn_initial_pdb,
+                                                 topology_file= self.fn_initial_pdb,
                                                  filename = self.fn_storage,
                                                  mode = 'w'
                                                  )
@@ -190,7 +190,7 @@ class Simulator(object):
         if mode == 'restore':
             # Need the oposite order, first open database 
             self.storage = Storage(
-                                                     topology = None,
+                                                     topology_file= None,
                                                      filename = self.fn_storage,
                                                      mode = 'a'
                                                      )
@@ -251,6 +251,7 @@ class Simulator(object):
         
         self.pdb_file = PDBFile(self.fn_initial_pdb)
         self.topology = self.pdb_file.topology
+        print self.topology
 
 
     def _create_OpenMMSimulation(self):

@@ -244,7 +244,7 @@ class XYZTranslator(object):
         topol = self.trajfile_topology(self.trajfile)
         system = AtomCounter(self.trajfile.frames[0].natoms)
         self.simulation = SimulationDuckPunch(topol, system)
-        self.storage = Storage( topology=topol,
+        self.storage = Storage( topology_file=topol,
                                           filename=fname, 
                                           mode='auto')
         snapshot.Snapshot.simulator = self
@@ -331,7 +331,7 @@ class XYZTranslator(object):
         files. Includes all trajectoris. Can only run when self.infiles,
         self.outfile, and self.topol_file are set.'''
         self.storage = Storage(
-                                topology=None,
+                                topology_file=None,
                                 filename=self.infiles[0],
                                 mode='restore'
                             )

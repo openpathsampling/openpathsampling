@@ -23,6 +23,7 @@ from snapshot import Snapshot
 if __name__ == '__main__':
     simulator = Simulator.Alanine_system('auto')
     PathMover.simulator = simulator
+    storage = simulator.storage
 
     print "Currently", simulator.storage.trajectory.number(), "simulations in the storage"
     print "Currently", simulator.storage.configuration.number(), "total frames in the storage"
@@ -36,8 +37,10 @@ if __name__ == '__main__':
         # generate from this snapshot a trajectory with 50 steps
         traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,30))])
         simulator.storage.trajectory.save(traj)
-        
-        # Save as Multi-Frame pdb  (only alanine, no water !)  
+
+        print len(traj)
+
+        # Save as Multi-Frame pdb  (only alanine, no water ! and overwrite existing)
         traj.solute.md().save_pdb('data/mdtraj.pdb', True)
         
     if True:
@@ -140,7 +143,9 @@ if __name__ == '__main__':
         
         pm.move(tt)
         print 'ensemble Check :', pm.ensemble(tt)
-        
+
+        simulator.storage.trajectory.save(pm.final)
+
         print pm.ensemble(pm.final)
         print 'Accepted : ', pm.accepted
         print len(pm.final)

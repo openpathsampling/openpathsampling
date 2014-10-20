@@ -24,7 +24,7 @@ class testOP_Function(object):
         # ugly hack
         storage = Storage(
                                     #topology="../data/Alanine_solvated.pdb",
-                                    topology=None,
+                                    topology_file=None,
                                     filename="../data/trajectory.nc",
                                     mode="restore"  
                                     )

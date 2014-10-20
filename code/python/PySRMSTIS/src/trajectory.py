@@ -130,17 +130,21 @@ class Trajectory(list):
                 output[frame_index,:,:] = self[frame_index].coordinates
             else:
                 output[frame_index,:,:] = self[frame_index].coordinates[self.atom_indices,:]
-        
+
         return output
     
     @property
     def frames(self):
         """
-        Return the number of frames in the trajectory
+        Return the number of frames in the trajectory.
         
         Returns
         -------        
         length (int) - the number of frames in the trajectory
+
+        Notes
+        -----
+        Might be removed in later versions len(trajectory) is more intuitive
         
         """
 
@@ -365,6 +369,17 @@ class Trajectory(list):
 
         return self.subset(Trajectory.simulator.solute_indices)
 
+    def full(self):
+        """
+        Return a view of the trajectory with all atoms
+
+        Returns
+        -------
+        trajectory : Trajectory
+            the trajectory showing the subsets of solute atoms
+        """
+        return self.subset(None)
+
     def md(self, topology = None):
         """
         Construct a mdtraj.Trajectory object from the Trajectory itself
@@ -381,9 +396,10 @@ class Trajectory(list):
             the trajectory
         """
 
-        output = self.coordinates()
         if topology is None:
             topology = self.md_topology()
+
+        output = self.coordinates()
 
         return md.Trajectory(output, topology)
                 

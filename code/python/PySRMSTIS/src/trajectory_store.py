@@ -9,9 +9,9 @@ class TrajectoryStorage(ObjectStorage):
     def __init__(self, storage):
         super(TrajectoryStorage, self).__init__(storage, Trajectory)
 
-    def _slice(self, idx):
-        idx = self._idx(idx)
-        end =  idx + self.length(idx)
+    def _slice(self, traj_idx):
+        idx = self._idx(traj_idx)
+        end = idx + self.length(traj_idx)
         return slice(idx,end)
 
     def _idx(self, idx):
@@ -33,7 +33,7 @@ class TrajectoryStorage(ObjectStorage):
         '''
         return int(self.storage.variables['trajectory_length'][idx])
 
-    def index(self, trajectory, idx=None):
+    def save(self, trajectory, idx=None):
         """
         Add the current state of the trajectory in the database. If nothing has changed then the trajectory gets stored using the same snapshots as before. Saving lots of diskspace
 

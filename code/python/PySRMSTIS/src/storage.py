@@ -33,7 +33,7 @@ class Storage(netcdf.Dataset):
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM simulation. This allows effective storage of shooting trajectories
     '''
 
-    def __init__(self, filename = 'trajectory.nc', mode = None, topology = None):
+    def __init__(self, filename = 'trajectory.nc', mode = None, topology_file = None):
         '''
         Create a storage for complex objects in a netCDF file
         
@@ -54,35 +54,42 @@ class Storage(netcdf.Dataset):
                 mode = 'w'
 
         self.filename = filename
+        self.links = []
 
         super(Storage, self).__init__(filename, mode)
-        self._register_classes()
+
+        self.trajectory = TrajectoryStorage(self).register()
+        self.snapshot = SnapshotStorage(self).register()
+        self.configuration = ConfigurationStorage(self).register()
+        self.momentum = MomentumStorage(self).register()
 
         if mode == 'w':
             self._init()
+            self.topology = md.load(topology_file).topology
 
-            if type(topology) is str:
-                self.topology = md.load(topology)
-            else:
-                self.topology = topology
-
-            self.atoms = self.topology.n_atoms
-            self.topology.save_pdb('tempXXX.pdb')
-
-            with open ('tempXXX.pdb', "r") as myfile:
+            with open (topology_file, "r") as myfile:
                 pdb_string=myfile.read()
 
             self.variables['pdb'][0] = pdb_string
+
+            self.atoms = self.topology.n_atoms
+
             self._init_classes()
             self.sync()
 
         elif mode == 'a':
             self.pdb = self.variables['pdb'][0]
 
+            if os.path.isfile('tempXXX.pdb'):
+                print "File tempXXX.pdb exists - no overwriting! Quitting"
+
+            # Create a temporary file since mdtraj cannot read from string
             with open ('tempXXX.pdb', "w") as myfile:
                 myfile.write(self.pdb)
 
-            self.topology = md.load('tempXXX.pdb')
+            self.topology = md.load('tempXXX.pdb').topology
+            os.remove('tempXXX.pdb')
+
             self._restore_classes()
 
 
@@ -91,42 +98,6 @@ class Storage(netcdf.Dataset):
 
     def __setattr__(self, key, value):
         self.__dict__[key] = value
-
-
-    def _add_class(self, class_obj):
-        '''
-        Add a class to the storage
-        
-        Parameters
-        ----------
-        class_obj : Class
-            the class to be added
-        '''
-
-        if hasattr(class_obj, '_init'):
-            self.links.append(class_obj)
-
-    def _register_classes(self):
-        '''
-        Register all class types to be storable in the netCDF file.
-
-        Notes
-        -----
-        If you want more, add it here!
-        '''
-
-        self.links = []
-        self._add_class(MomentumStorage)
-        self._add_class(ConfigurationStorage)
-        self._add_class(SnapshotStorage)
-        self._add_class(TrajectoryStorage)
-
-        for cls in self.links:
-            # create a member variable which is the associated Class itself
-            store_name = cls.__name__[:-7].lower()
-
-            setattr(self, store_name, cls(self))
-            getattr(self, store_name).storage = self
 
     def _init_classes(self):
         '''
@@ -137,18 +108,17 @@ class Storage(netcdf.Dataset):
         Only runs when the storage is created.
         '''
 
-        for cls in self.links:
+        for storage in self.links:
             # create a member variable which is the associated Class itself
-            store_name = cls.__name__[:-7].lower()
-            getattr(self, store_name)._init()
+            storage._init()
 
     def _restore_classes(self):
         '''
         Run restore on all added classes. Usually there is nothing to do.
         '''
-        for cls in self.links:
-            store_name = cls.__name__[:-7].lower()
-#            getattr(self, store_name)._restore()
+#        for storage in self.links:
+#            storage._restore()
+        pass
 
 
     def _init(self):

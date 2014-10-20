@@ -5,7 +5,7 @@ class ObjectStorage(object):
     Base Class for storing complex objects in a netCDF4 file. It holds a reference to the store file.
     """
 
-    def __init__(self, storage, obj):
+    def __init__(self, storage, obj, register=False):
         """
 
         :param storage: a reference to the netCDF4 file
@@ -15,6 +15,10 @@ class ObjectStorage(object):
         self.storage = storage
         self.content_class = obj
         self.idx_dimension = obj.__name__.lower()
+
+    def register(self):
+        self.storage.links.append(self)
+        return self
 
     def copy(self):
         """
