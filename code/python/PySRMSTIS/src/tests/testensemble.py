@@ -38,11 +38,11 @@ def test_wrap_traj():
 
 def build_trajdict(trajtypes, lower, upper):
     upperadddict = { 'a' : 'in', 'b' : 'out', 'c' : 'cross', 'o' : 'hit' }
-    loweradddict = { 'a' : 'out', 'b' : 'in', 'c' : 'out', 'o' : 'hit' }
+    loweradddict = { 'a' : 'out', 'b' : 'in', 'c' : 'in', 'o' : 'hit' }
     lowersubdict = { 'a' : 'in', 'b' : 'out', 'c' : 'cross', 'o' : 'hit' }
-    uppersubdict = { 'a' : 'out', 'b' : 'in', 'c' : 'out', 'o' : 'hit' }
+    uppersubdict = { 'a' : 'out', 'b' : 'in', 'c' : 'in', 'o' : 'hit' }
     adjustdict = { 'a' : (lambda x: -0.05*x), 'b' : (lambda x: 0.05*x),
-                   'c' : (lambda x: 0.05*x + 0.2), 'o' : (lambda x : 0.0) }
+                   'c' : (lambda x: 0.05*x + 0.15), 'o' : (lambda x : 0.0) }
     mydict = {}
     for mystr in trajtypes:
         upperaddkey = "upper"
@@ -72,17 +72,16 @@ def setUp():
     op = CallIdentity()
     vol1 = LambdaVolume(op, lower, upper)
     vol2 = LambdaVolume(op, -0.1, 0.7)
-    ttraj = {}
     # we use the following codes to describe trajectories:
     # in : in the state
     # out : out of the state
     # hit : on the state border
     #
+    # deltas of each letter from state edge:
     # a < 0 ; 0 < b < 0.2 ; c > 0.2; o = 0
     trajtypes = ["a", "o", "ab", "aob", "bob", "aba", "aaa",
                  "abaa", "abba", "abaab", "ababa", "abbab",
-                 "abaaba", "aobab", "abab"]
-    teststoadd = ["abcbababcba"]
+                 "abaaba", "aobab", "abab", "abcbababcba"]
     ttraj = build_trajdict(trajtypes, lower, upper)
 
     # make the tests from lists into trajectories
@@ -103,10 +102,7 @@ def in_out_parser(testname):
             elif 'lower' in parts:
                 to_append = 'in'
         elif part == 'cross':
-            if 'upper' in parts:
                 to_append = 'out'
-            elif 'lower' in parts:
-                to_append = 'in'
         if to_append != None:
             if res == []:
                 res.append(to_append)
