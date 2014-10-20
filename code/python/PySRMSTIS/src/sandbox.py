@@ -21,34 +21,33 @@ from snapshot import Snapshot
 if __name__ == '__main__':
     simulator = Simulator.Alanine_system('auto')
     PathMover.simulator = simulator
+    storage = simulator.storage
 
-    print "Currently", simulator.storage.number_of_trajectories(), "simulations in the storage"
-    print "Currently", simulator.storage.number_of_configurations(), "total frames in the storage"
+    print "Currently", simulator.storage.trajectory.number(), "simulations in the storage"
+    print "Currently", simulator.storage.configuration.number(), "total frames in the storage"
 
-    if simulator.storage.number_of_trajectories() == 0:        
+    Trajectory.storage = simulator.storage.trajectory
+
+    if simulator.storage.trajectory.number() == 0:
         # load initial equilibrate snapshot given by ID #0
-        snapshot = Snapshot.load(0, 0)
-        
+        snapshot = simulator.storage.snapshot.load(0, 0)
+
         # generate from this snapshot a trajectory with 50 steps
-        traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,50))])
+        traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,30))])
+        simulator.storage.trajectory.save(traj)
+
         print len(traj)
-        traj.save()
-        
-        # Save as Multi-Frame pdb  (only alanine, no water !)  
-        traj.solute.md().save_pdb('data/mdtraj.pdb', True)    
-        
-    if True:        
-        cc = Trajectory.load(1)[ 0 ]
-        op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices, use_storage=True)
 
-        dd = simulator.storage.trajectory(1)[ 0:50 ]
-
+        # Save as Multi-Frame pdb  (only alanine, no water ! and overwrite existing)
+        traj.solute.md().save_pdb('data/mdtraj.pdb', True)
+        
+    if True:
+        cc = Trajectory.storage.load(1)[ 0 ]
+        op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices, storages=simulator.storage.configuration)
+        dd = simulator.storage.trajectory.load(1)[ 0:50 ]
         lV = LambdaVolume(op, 0.0, 0.06)
         lV2 = LambdaVolume(op, 0.0, 0.08)
-        start_time = time.time()
-        
-#        print time.time() - start_time
-    
+
         # if this uses the same orderparameter it is fast, since the values are cached!
         tis = ef.TISEnsemble(
                        LambdaVolume(op, 0.0, 0.041),
@@ -63,26 +62,24 @@ if __name__ == '__main__':
                        True
                        )
 
-        tt = simulator.storage.trajectory(1)[4:18]
+        tt = simulator.storage.trajectory.load(1)[4:18]
 
-        print [ (op(d)) for d in dd ]
-
-        stime = time.time()
-        print tis.locate(dd, lazy=True, overlap=50)
-        print time.time() - stime
-        stime = time.time()
-        print tis.locate(dd, lazy=False, overlap=50)
-        print time.time() - stime
+#        print [ (op(d)) for d in dd ]
+#        op.save()
 
         stime = time.time()
-        print enAB.locate(dd, lazy=True, overlap=50)
+        print tis.locate(dd, lazy=True, overlap=1)
         print time.time() - stime
         stime = time.time()
-        print enAB.locate(dd, lazy=False, overlap=50)
+        print tis.locate(dd, lazy=False, overlap=1)
         print time.time() - stime
 
-        print 'Lazy is about 20 times faster in this example and 10 times with shortcircuit active!!!'
-        print 'If Shortcircuit is active general speedup of 30%!!!'
+        stime = time.time()
+        print enAB.locate(dd, lazy=True, overlap=1)
+        print time.time() - stime
+        stime = time.time()
+        print enAB.locate(dd, lazy=False, overlap=1)
+        print time.time() - stime
 
         # This is to cache the values for all snapshots in tt. Makes later access MUCH faster. 
         # Especially because the frames do not have to be read one by one.
@@ -90,7 +87,8 @@ if __name__ == '__main__':
         # print tis
 #        print [ s.idx for s in tt]
 #        print [ (lV(d)) for d in tt ]
-        print [ (op(d)) for d in dd ]
+        print "Results :"
+        print [ op(d) for d in dd ]
         
         # This tests, if the iteration request works. It basically return True if it makes sense to simulate or if the ensemble cannot
         # be true in the next step. This should be passed to the pathmover to stop simulating for a particular ensemble
@@ -107,18 +105,11 @@ if __name__ == '__main__':
         print "Iteration test"
         for l in range(0,tt.frames + 0):
             print tis.forward(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
-            
+
         print op(tt[0])
-        s = Snapshot(coordinates = tt[0].coordinates)
+        s = Snapshot(coordinates=tt[0].coordinates)
         print op(s)
-        s.idx = 0
-        print op(s)
-        
-                           
-        
-        
-                
-    
+
         # Check if the trajectory goes from lambda < 0.06 to lambda >0.08 and back    
         print 'In ensemble'
         print tis(tt)
@@ -136,7 +127,7 @@ if __name__ == '__main__':
         print en(tt)
         
 #        Simulator.op = op
-        
+
         bm = BackwardShootMover(
                 selector = UniformSelector(),
                 ensemble = tis
@@ -151,14 +142,15 @@ if __name__ == '__main__':
         
         pm.move(tt)
         print 'ensemble Check :', pm.ensemble(tt)
-        
+
+        simulator.storage.trajectory.save(pm.final)
+
         print pm.ensemble(pm.final)
         print 'Accepted : ', pm.accepted
         print len(pm.final)
         
         print 'Next Check:'
-        
-        
+
         en = ef.A2BEnsemble(lV, lV, True)
         print en(pm.final)
 
@@ -168,7 +160,7 @@ if __name__ == '__main__':
         en = InXEnsemble(lV, -1)
         print en(pm.final)
 
-        en = OutXEnsemble(lV, slice(1,-1), lazy = False)
+        en = OutXEnsemble(lV, slice(1, -1), lazy = False)
         print en(pm.final)
 
         op.save()
@@ -208,7 +200,7 @@ if __name__ == '__main__':
     
     for i in range(10):
         new = sampling.sampleTrajectory(old)
-        new.save()
+        simulator.storage.trajectory.save(new)
              
         old = new    
 
@@ -285,7 +277,7 @@ if __name__ == '__main__':
     
     for i in range(10):
         new = sampling.sampleTrajectory(old)
-        new.save()
+        simulator.storage.trajectory.save(new)
              
         old = new
     
