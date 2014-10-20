@@ -200,6 +200,7 @@ class XYZTranslator(object):
         # we can just use the first frame:
         myframe = trajfile.frames[0]
         chain = topol.addChain()
+        Element._elements_by_symbol = dict()
         for atom in range(myframe.natoms):
             # make each atom a separate element and a separate residue
             label = "_"+myframe.labels[atom] # underscore to avoid conflicts
@@ -227,7 +228,8 @@ class XYZTranslator(object):
                                 )
             residue = topol.addResidue(label, chain)
             topol.addAtom(label, element, residue)
-        return topol 
+
+        return topol
 
     def init_storage(self, fname):
         '''
@@ -246,11 +248,10 @@ class XYZTranslator(object):
         self.simulation = SimulationDuckPunch(topol, system)
         self.storage = Storage( topology_file=topol,
                                           filename=fname, 
-                                          mode='auto')
+                                          mode=None)
         snapshot.Snapshot.simulator = self
         self.storage.simulator = self
-        self.storage.init_classes()
-    
+
 
     def trajfile2trajectory(self, trajfile):
         '''Converts TrajFile.TrajFile to trajectory.Trajectory
@@ -278,10 +279,12 @@ class XYZTranslator(object):
             pos = Quantity(np.array(frame.pos),nanometers)
             vel = Quantity(np.array(frame.vel),nanometers/picoseconds)
             mysnap = snapshot.Snapshot( coordinates=pos,
-                                        velocities=vel )
-            mysnap.save()
+                                        velocities=vel,
+                                        topology=self.storage.topology
+                                        )
             res.append(mysnap)
-        res.save()
+
+        self.storage.trajectory.save(res)
         return res
 
     def trajectory2trajfile(self, trajectory):
@@ -333,7 +336,7 @@ class XYZTranslator(object):
         self.storage = Storage(
                                 topology_file=None,
                                 filename=self.infiles[0],
-                                mode='restore'
+                                mode='a'
                             )
         self.storage.simulator = self
         #self.storage.verbose_root = True # DEBUG
