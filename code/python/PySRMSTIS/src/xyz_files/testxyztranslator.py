@@ -58,7 +58,7 @@ class testXYZTranslator(object):
 
 
     def teardown(self):
-        if os.path.isfile("test.nc"): os.remove("test.nc")
+#        if os.path.isfile("test.nc"): os.remove("test.nc")
         if os.path.isdir("mydir00"): shutil.rmtree("mydir00")
         snapshot.Configuration.storage=None
         snapshot.Momentum.storage=None
@@ -86,7 +86,7 @@ class testXYZTranslator(object):
         '''Integration test: round trip TrajFile->trajectory->TrajFile'''
         self.translator.outfile = "test.nc"
         self.translator.trajectory = self.translator.trajfile2trajectory(self.translator.trajfile)
-        assert_equal(self.translator.storage.trajectory.number(), 1)
+        assert_equal(self.translator.storage.trajectory.count(), 1)
         assert_equal( len(self.translator.storage.trajectory.load(1)),
                       len(self.translator.trajfile.frames) )
         oldtrajfile = self.translator.trajfile

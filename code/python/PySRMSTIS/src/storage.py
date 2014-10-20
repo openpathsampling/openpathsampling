@@ -111,16 +111,21 @@ class Storage(netcdf.Dataset):
                 os.remove('tempXXX.pdb')
             else:
                 # there is no pdb file stored
-                self.topology = md.Topology.from_openmm(self._restore_single_option(self, 'om_topology'))
                 elements = self._restore_single_option(self, 'md_elements')
                 for key, el in elements.iteritems():
                     try:
+                        print el
                         md.element.Element(
-                                    number=el[0], name=el[1], symbol=el[2], mass=el[3]*amu
+                                    number=int(el[0]), name=el[1], symbol=el[2], mass=float(el[3])
+                                 )
+                        simtk.openmm.app.Element(
+                                    number=int(el[0]), name=el[1], symbol=el[2], mass=float(el[3])*amu
                                  )
                     except(AssertionError):
+                        print el
                         pass
 
+            self.topology = md.Topology.from_openmm(self._restore_single_option(self, 'om_topology'))
 
             self._restore_classes()
 
