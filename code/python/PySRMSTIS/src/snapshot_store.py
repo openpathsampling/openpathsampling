@@ -69,7 +69,7 @@ class SnapshotStorage(ObjectStorage):
     def free(self):
         return 1
 
-    def number(self):
+    def count(self):
         return 0
 
     def first(self):

@@ -42,9 +42,9 @@ if __name__ == '__main__':
 
     headline("Content")
 
-    line("Number of trajectories", storage.trajectory.number())
-    line("Number of configurations", storage.configuration.number())
-    line("Number of momenta", storage.momentum.number())
+    line("Number of trajectories", storage.trajectory.count())
+    line("Number of configurations", storage.configuration.count())
+    line("Number of momenta", storage.momentum.count())
 
     headline("Topology")
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
     headline("Trajectories")
 
-    for t_idx in range(1, storage.trajectory.number() + 1):
+    for t_idx in range(1, storage.trajectory.count() + 1):
         traj = storage.trajectory.configuration_indices(t_idx)
         sys.stdout.write("  {:>4} [{:>5} frames] : ".format(str(t_idx),str(len(traj))))
         old_idx = -2
