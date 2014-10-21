@@ -479,7 +479,7 @@ class EnsembleCombination(Ensemble):
 class SequentialEnsemble(Ensemble):
     """
     An ensemble that consists of several ensembles which are satisfied by
-    the trajectory in sequence. 
+    the trajectory in sequence.
 
     Attributes
     ----------
@@ -651,7 +651,6 @@ class SequentialEnsemble(Ensemble):
                         ens_first += 1
                         ens_num = ens_first
                         subtraj_first = 0
-                    
 
 
     def backward(self, trajectory):
@@ -813,25 +812,39 @@ class InXEnsemble(VolumeEnsemble):
         return True    
     
     def __call__(self, trajectory, lazy=None):
-        if type(self.frames) is int:
-            if trajectory.frames > self.frames and trajectory.frames >= -self.frames:
-                return self._volume(trajectory[self.frames])
-            else:
-                return True
-        else:
-            if (self.lazy and lazy is None) or (lazy and lazy is not None):
-                for s in trajectory[self.frames][0::max(1,trajectory.frames - 1)]:
-                    if not self._volume(s):
-                        return False
-            else:
-                for s in trajectory[self.frames]:
-                    if not self._volume(s):
-                        return False
-                        
-            return True
+        if len(trajectory) == 0:
+            return False
+        for frame in trajectory:
+            if not self._volume(frame):
+                return False
+        return True
+
+        #if type(self.frames) is int:
+        #    if trajectory.frames > self.frames and trajectory.frames >= -self.frames:
+        #        return self._volume(trajectory[self.frames])
+        #    else:
+        #        return True
+        #else:
+        #    if (self.lazy and lazy is None) or (lazy and lazy is not None):
+        #        for s in trajectory[self.frames][0::max(1,trajectory.frames - 1)]:
+        #            if not self._volume(s):
+        #                return False
+        #    else:
+        #        for s in trajectory[self.frames]:
+        #            if not self._volume(s):
+        #                return False
+        #                
+        #    return True
 
     def __invert__(self):
         return LeaveXEnsemble(self._volume, self.frames, self.lazy)
+
+    def __str__(self):
+        if type(self.frames) is int:
+            return 'x[{0}] in {1}'.format(self.frames, self._volume)
+        else:
+            return 'x[t] in {2} for all t in [{0}:{1}])'.format(
+                self.frames.start, self.frames.stop, self._volume)
 
 
 
@@ -945,14 +958,21 @@ class LeaveXEnsemble(HitXEnsemble):
             return 'x[{0}] not in {1}'.format(str(self.frames), self._volume)
         else:
             return 'x[t] in {2} for one t in [{0}:{1}])'.format(self.frames.start, self.frames.stop, self._volume)
-        
+      
     @property
     def _volume(self):
         # effectively use HitXEnsemble but with inverted volume
         return ~ self._stored_volume
 
     def __invert__(self):
-        return InXEnsemble(self._volume, self.frames, self.lazy)
+        return InXEnsemble(self._stored_volume, self.frames, self.lazy)
+
+    def __call__(self, trajectory, lazy=None):
+        for frame in trajectory:
+            if self._volume(frame):
+                return True
+        return False
+
 
 
 class ExitsXEnsemble(VolumeEnsemble):
@@ -963,8 +983,9 @@ class ExitsXEnsemble(VolumeEnsemble):
     def __init__(self, volume, frames = slice(None), lazy=False):
         # changing the defaults for frames and lazy; prevent single frame
         if type(frames) is int:
-            raise ValueError('Exits/EntersXEnsemble require more than one frame')
-        super(ExitsXEnsemble, self).__init__(volume,frames,lazy)
+            raise ValueError(
+                'Exits/EntersXEnsemble require more than one frame')
+        super(ExitsXEnsemble, self).__init__(volume, frames, lazy)
 
     def __str__(self):
         domain = 'exists x[t], x[t+1] in [{0}:{1}] '.format(
@@ -1010,8 +1031,8 @@ class EntersXEnsemble(ExitsXEnsemble):
                 if not self._volume(frame_i) and self._volume(frame_iplus):
                     return True
         return False
-            
-        
+
+
 class AlteredTrajectoryEnsemble(Ensemble):
     '''
     Represents an ensemble where an altered version of a trajectory (extended, reversed, cropped) is part of a given ensemble

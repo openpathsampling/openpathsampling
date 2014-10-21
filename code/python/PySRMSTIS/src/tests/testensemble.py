@@ -1,5 +1,5 @@
 from nose.tools import assert_equal, assert_not_equal, raises
-from nose.plugins.skip import Skip, SkipTest
+from nose.plugins.skip import SkipTest
 from duckpunching import CallIdentity, prepend_exception_message
 
 import os
@@ -19,11 +19,11 @@ def wrap_traj(traj, start, length):
     if (start < 0) or (length < len(traj)+start):
         raise ValueError("""wrap_traj: start < 0 or length < len(traj)+start
                                 {0} < 0 or {1} < {2}+{0}""".format(
-                                start, length, len(traj)) )
+                                start, length, len(traj)))
     outtraj = traj[:] # shallow copy
     # prepend
     for i in range(start):
-        outtraj.insert(0,traj[0])
+        outtraj.insert(0, traj[0])
     # append
     for i in range(length - (len(traj)+start)):
         outtraj.append(traj[-1])
@@ -31,18 +31,18 @@ def wrap_traj(traj, start, length):
 
 def test_wrap_traj():
     """Testing wrap_traj (oh gods, the meta! a test for a test function!)"""
-    intraj = [1,2,3]
+    intraj = [1, 2, 3]
     assert_equal(wrap_traj(intraj, 3, 6), [1, 1, 1, 1, 2, 3])
     assert_equal(wrap_traj(intraj, 3, 8), [1, 1, 1, 1, 2, 3, 3, 3])
     assert_equal(wrap_traj(intraj, 3, 8)[slice(3, 6)], intraj)
 
 def build_trajdict(trajtypes, lower, upper):
-    upperadddict = { 'a' : 'in', 'b' : 'out', 'c' : 'cross', 'o' : 'hit' }
-    loweradddict = { 'a' : 'out', 'b' : 'in', 'c' : 'in', 'o' : 'hit' }
-    lowersubdict = { 'a' : 'in', 'b' : 'out', 'c' : 'cross', 'o' : 'hit' }
-    uppersubdict = { 'a' : 'out', 'b' : 'in', 'c' : 'in', 'o' : 'hit' }
-    adjustdict = { 'a' : (lambda x: -0.05*x), 'b' : (lambda x: 0.05*x),
-                   'c' : (lambda x: 0.05*x + 0.15), 'o' : (lambda x : 0.0) }
+    upperadddict = {'a' : 'in', 'b' : 'out', 'c' : 'cross', 'o' : 'hit'}
+    loweradddict = {'a' : 'out', 'b' : 'in', 'c' : 'in', 'o' : 'hit'}
+    lowersubdict = {'a' : 'in', 'b' : 'out', 'c' : 'cross', 'o' : 'hit'}
+    uppersubdict = {'a' : 'out', 'b' : 'in', 'c' : 'in', 'o' : 'hit'}
+    adjustdict = {'a' : (lambda x: -0.05*x), 'b' : (lambda x: 0.05*x),
+                  'c' : (lambda x: 0.05*x + 0.15), 'o' : (lambda x: 0.0)}
     mydict = {}
     for mystr in trajtypes:
         upperaddkey = "upper"
@@ -55,17 +55,17 @@ def build_trajdict(trajtypes, lower, upper):
             loweraddkey += "_"+loweradddict[char]
             uppersubkey += "_"+uppersubdict[char]
             lowersubkey += "_"+lowersubdict[char]
-            delta.append(adjustdict[char](random.randint(1,4)))
+            delta.append(adjustdict[char](random.randint(1, 4)))
 
         mydict[upperaddkey] = map(upper.__add__, delta)
         mydict[loweraddkey] = map(lower.__add__, delta)
         mydict[uppersubkey] = map(upper.__sub__, delta)
         mydict[lowersubkey] = map(lower.__sub__, delta)
-    return mydict  
+    return mydict 
 
 def setUp():
     ''' Setup for tests of classes in ensemble.py. '''
-    random.seed
+    #random.seed
     global lower, upper, op, vol1, vol2, ttraj
     lower = 0.1
     upper = 0.5
@@ -79,10 +79,13 @@ def setUp():
     #
     # deltas of each letter from state edge:
     # a < 0 ; 0 < b < 0.2 ; c > 0.2; o = 0
-    trajtypes = ["a", "o", "ab", "aob", "bob", "aba", "aaa",
+    trajtypes = ["a", "o", "ab", "aob", "bob", "aba", "aaa", "abcba",
                  "abaa", "abba", "abaab", "ababa", "abbab",
                  "abaaba", "aobab", "abab", "abcbababcba"]
     ttraj = build_trajdict(trajtypes, lower, upper)
+    # TODO: add support for empty traj to current tests (or perhaps add a
+    # separate test for empty traj)
+    #ttraj['empty'] = []
 
     # make the tests from lists into trajectories
     for test in ttraj.keys():
@@ -102,7 +105,7 @@ def in_out_parser(testname):
             elif 'lower' in parts:
                 to_append = 'in'
         elif part == 'cross':
-                to_append = 'out'
+            to_append = 'out'
         if to_append != None:
             if res == []:
                 res.append(to_append)
@@ -113,7 +116,7 @@ def in_out_parser(testname):
 class EnsembleTest(object):
     def _single_test(self, ensemble_fcn, traj, res, failmsg):
         try:
-            assert_equal(res, ensemble_fcn(traj))
+            assert_equal(ensemble_fcn(traj), res)
         except AssertionError as e:
             prepend_exception_message(e, failmsg)
             raise
@@ -138,6 +141,37 @@ class EnsembleTest(object):
 
             failmsg = "Failure in slice_ens "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.slice_ens, wrapped, results[test], failmsg)
+
+
+class testLeaveXEnsemble(EnsembleTest):
+    def setUp(self):
+        self.leaveX = LeaveXEnsemble(vol1)
+
+    def test_leaveX(self):
+        """LeaveXEnsemble passes the trajectory test suite"""
+        for test in ttraj.keys():
+            if "out" in in_out_parser(test):
+                res = True
+            else:
+                res = False
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.leaveX, ttraj[test], res, failmsg)
+
+class testInXEnsemble(EnsembleTest):
+    def setUp(self):
+        self.inX = InXEnsemble(vol1)
+
+    def test_inX(self):
+        """InXEnsemble passes the trajectory test suite"""
+        for test in ttraj.keys():
+            if "out" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.inX, ttraj[test], res, failmsg)
+
+
 
 class testExitsXEnsemble(EnsembleTest):
     def setUp(self):
@@ -290,23 +324,37 @@ class testSequentialEnsembles(EnsembleTest):
         self.enterX = EntersXEnsemble(vol1, frames=slice(None,None))
         self.exitX = ExitsXEnsemble(vol1, frames=slice(None,None))
         self.inInterface = InXEnsemble(vol2, frames=slice(None,None))
-        self.leaveInterface = LeaveXEnsemble(vol2, frames=slice(None,None))
+        self.leaveX0 = LeaveXEnsemble(vol2, frames=slice(None,None))
+        self.inX0 = InXEnsemble(vol2, frames=slice(None,None))
         self.length1 = LengthEnsemble(1)
         self.length0 = LengthEnsemble(0)
-        # properly speaking, tis and minus ensembles require outX and
-        # leave_interface; but for now I'll just do the easy way
-        self.tis_ensemble = SequentialEnsemble( [
+        # pseudo_tis and pseudo_minus assume that the interface is equal to
+        # the state boundary
+        self.pseudo_tis = SequentialEnsemble( [
                                     self.inX & self.length1,
                                     self.outX,
                                     self.inX & self.length1 ]
                                     )
-        self.minus_ensemble = SequentialEnsemble( [
+        self.pseudo_minus = SequentialEnsemble( [
                                     self.inX & self.length1,
                                     self.outX,
                                     self.inX,
                                     self.outX,
                                     self.inX & self.length1 ]
-                                    )
+        )
+        self.minus = SequentialEnsemble([
+            self.inX & self.length1,
+            self.outX & self.leaveX0,
+            self.inX & self.length1,
+            self.inX0 | self.length0,
+            self.outX & self.leaveX0,
+            self.inX & self.length1
+                                    ])
+        self.tis = SequentialEnsemble([
+            self.inX & self.length1,
+            self.outX & self.leaveX0,
+            self.inX & self.length1,
+        ])
 
     @raises(ValueError)
     def test_maxminoverlap_size(self):
@@ -376,7 +424,7 @@ class testSequentialEnsembles(EnsembleTest):
                     }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.tis_ensemble.forward, 
+            self._single_test(self.pseudo_tis.forward, 
                                 ttraj[test], results[test], failmsg)
 
     def test_can_append_minus(self):
@@ -413,7 +461,7 @@ class testSequentialEnsembles(EnsembleTest):
                     }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.minus_ensemble.forward, 
+            self._single_test(self.pseudo_minus.forward, 
                                 ttraj[test], results[test], failmsg)
 
     def test_can_prepend_tis(self):
@@ -439,7 +487,7 @@ class testSequentialEnsembles(EnsembleTest):
                     }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.tis_ensemble.backward, 
+            self._single_test(self.pseudo_tis.backward, 
                                 ttraj[test], results[test], failmsg)
 
 
@@ -477,7 +525,7 @@ class testSequentialEnsembles(EnsembleTest):
                     }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.minus_ensemble.backward, 
+            self._single_test(self.pseudo_minus.backward, 
                                 ttraj[test], results[test], failmsg)
 
 
@@ -498,8 +546,8 @@ class testSequentialEnsembles(EnsembleTest):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(ensemble, ttraj[test], True, failmsg)
 
-    def test_sequential_tis(self):
-        """SequentialEnsemble as TISEnsemble identifies paths"""
+    def test_sequential_pseudo_tis(self):
+        """SequentialEnsemble as Pseudo-TISEnsemble identifies paths"""
         results = {}
         for test in ttraj.keys():
             results[test] = False
@@ -507,13 +555,15 @@ class testSequentialEnsembles(EnsembleTest):
         results['lower_in_out_in'] = True
         results['upper_in_out_out_in'] = True
         results['lower_in_out_out_in'] = True
+        results['lower_in_out_cross_out_in'] = True
+        results['upper_in_out_cross_out_in'] = True
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.tis_ensemble, ttraj[test], results[test],
+            self._single_test(self.pseudo_tis, ttraj[test], results[test],
                               failmsg)
 
-    def test_sequential_minus(self):
-        """SequentialEnsemble as MinusEnsemble identifies paths"""
+    def test_sequential_pseudo_minus(self):
+        """SequentialEnsemble as Pseudo-MinusEnsemble identifies paths"""
         results = {}
         for test in ttraj.keys():
             results[test] = False
@@ -523,18 +573,33 @@ class testSequentialEnsembles(EnsembleTest):
         results['lower_in_out_in_in_out_in'] = True
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.minus_ensemble, ttraj[test], results[test],
+            self._single_test(self.pseudo_minus, ttraj[test], results[test],
                               failmsg)
+
+    def test_sequential_tis(self):
+        """SequentialEnsemble as TISEnsemble identifies paths"""
+        raise SkipTest # TODO
+        results = {}
+        for test in ttraj.keys():
+            results[test] = False
+        results['upper_in_out_cross_out_in'] = True
+        results['lower_in_out_cross_out_in'] = True
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.tis, ttraj[test], results[test],
+                              failmsg)
+
 
     def test_sequential_enter_exit(self):
         """SequentialEnsembles based on Enters/ExitsXEnsemble"""
         # TODO: this includes a test of the overlap ability
         raise SkipTest
 
+
     def test_str(self):
         #TODO: passes test, but isn't right -- need to fix another part of
         #string function somewhere
-        assert_equal(self.tis_ensemble.__str__(), """[
+        assert_equal(self.pseudo_tis.__str__(), """[
 (
   x[t] in {x|Id(x) in [0.1, 0.5]} for all t in [None:None])
 )
@@ -551,4 +616,4 @@ and
   len(x) = 1
 )
 ]""")
-        self.minus_ensemble.__str__()
+        self.pseudo_minus.__str__()
