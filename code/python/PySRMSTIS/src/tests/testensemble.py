@@ -157,6 +157,11 @@ class testLeaveXEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.leaveX, ttraj[test], res, failmsg)
 
+    def test_leaveX_str(self):
+        volstr = "{x|Id(x) in [0.1, 0.5]}"
+        assert_equal(self.leaveX.__str__(), 
+                     "x[t] in (not "+volstr+") for one t in [1:-1]")
+
 class testInXEnsemble(EnsembleTest):
     def setUp(self):
         self.inX = InXEnsemble(vol1)
@@ -170,6 +175,11 @@ class testInXEnsemble(EnsembleTest):
                 res = True
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.inX, ttraj[test], res, failmsg)
+
+    def test_inX_str(self):
+        volstr = "{x|Id(x) in [0.1, 0.5]}"
+        assert_equal(self.inX.__str__(),
+                     "x[t] in "+volstr+" for all t in [1:-1]")
 
 class testOutXEnsemble(EnsembleTest):
     def setUp(self):
@@ -185,6 +195,11 @@ class testOutXEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.outX, ttraj[test], res, failmsg)
 
+    def test_outX_str(self):
+        volstr = "{x|Id(x) in [0.1, 0.5]}"
+        assert_equal(self.outX.__str__(),
+                     "x[t] in (not "+volstr+") for all t in [1:-1]")
+
 class testHitXEnsemble(EnsembleTest):
     def setUp(self):
         self.hitX = HitXEnsemble(vol1)
@@ -199,7 +214,10 @@ class testHitXEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.hitX, ttraj[test], res, failmsg)
 
-
+    def test_hitX_str(self):
+        volstr = "{x|Id(x) in [0.1, 0.5]}"
+        assert_equal(self.hitX.__str__(),
+                     "x[t] in "+volstr+" for one t in [1:-1]")
 
 class testExitsXEnsemble(EnsembleTest):
     def setUp(self):
@@ -625,19 +643,17 @@ class testSequentialEnsembles(EnsembleTest):
 
 
     def test_str(self):
-        #TODO: passes test, but isn't right -- need to fix another part of
-        #string function somewhere
         assert_equal(self.pseudo_tis.__str__(), """[
 (
-  x[t] in {x|Id(x) in [0.1, 0.5]} for all t in [None:None])
+  x[t] in {x|Id(x) in [0.1, 0.5]} for all t in [None:None]
 )
 and
 (
   len(x) = 1
 ),
-x[t] not in (not {x|Id(x) in [0.1, 0.5]}) for all t in [None:None]),
+x[t] in (not {x|Id(x) in [0.1, 0.5]}) for all t in [None:None],
 (
-  x[t] in {x|Id(x) in [0.1, 0.5]} for all t in [None:None])
+  x[t] in {x|Id(x) in [0.1, 0.5]} for all t in [None:None]
 )
 and
 (

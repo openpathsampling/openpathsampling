@@ -843,7 +843,7 @@ class InXEnsemble(VolumeEnsemble):
         if type(self.frames) is int:
             return 'x[{0}] in {1}'.format(self.frames, self._volume)
         else:
-            return 'x[t] in {2} for all t in [{0}:{1}])'.format(
+            return 'x[t] in {2} for all t in [{0}:{1}]'.format(
                 self.frames.start, self.frames.stop, self._volume)
 
 
@@ -859,9 +859,9 @@ class OutXEnsemble(InXEnsemble):
     
     def __str__(self):
         if type(self.frames) is int:
-            return 'x[{0}] not in {1}'.format(self.frames, self._volume)
+            return 'x[{0}] in {1}'.format(self.frames, self._volume)
         else:
-            return 'x[t] not in {2} for all t in [{0}:{1}])'.format(
+            return 'x[t] in {2} for all t in [{0}:{1}]'.format(
                 self.frames.start, self.frames.stop, self._volume)
 
     def __invert__(self):
@@ -961,7 +961,7 @@ class LeaveXEnsemble(HitXEnsemble):
         if type(self.frames) is int:
             return 'x[{0}] not in {1}'.format(str(self.frames), self._volume)
         else:
-            return 'x[t] in {2} for one t in [{0}:{1}])'.format(self.frames.start, self.frames.stop, self._volume)
+            return 'x[t] in {2} for one t in [{0}:{1}]'.format(self.frames.start, self.frames.stop, self._volume)
       
     @property
     def _volume(self):
