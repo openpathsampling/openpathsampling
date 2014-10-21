@@ -9,8 +9,48 @@ from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTraject
 
 import numpy as np
 
+class Move(object):
+    """
+    A Move is the return object from a PathMover and contains all information about the move, initial trajectories,
+    new trajectories (both as references). Might move several trajectories at a time (swapping)
+
+    Notes
+    -----
+    Should contain inputs/outputs and success (accepted/rejected) as well as probability to succeed.
+    """
+
+    def __init__(self, start=None, final=None, acceptance=None, success=None, options=None):
+        self._start = start
+        self._final = final
+        self._acceptance = acceptance
+        self._success = success
+        self._options = options
+
+    def set_options(self, options):
+        self._options = options
+
+    @property
+    def start(self):
+        return self._start
+
+    @property
+    def final(self):
+        return self._final
+
+    @property
+    def acceptance(self):
+        return self._acceptance
+
+    @property
+    def start(self):
+        return self._success
+
+    def options(self):
+        return self._options
+
+
 class PathMover(object):
-    '''
+    """
     A PathMover is the description of how to generate a new path from an old one.
     
     Notes
@@ -31,10 +71,9 @@ class PathMover(object):
     ----------
     simulator : Simulator
         the attached simulator used to generate new trajectories
-        
-    '''
+    """
     
-    simulator = None        
+    simulator = None
     
     def __init__(self):
         
@@ -43,8 +82,8 @@ class PathMover(object):
         # as soon as this cannot be fulfilled anymore. Some of the conditions cannot be checked during runtime, so we
         # have to do that at the end to make sure.
         
-        self.ensemble = None
-        
+        self.success = None
+
         self.start = None
         self.final = None        
         pass
@@ -67,10 +106,23 @@ class PathMover(object):
         -----
         After this command additional information can be accessed from this object
         '''
+
         self.start = trajectory
         self.final = trajectory
+
+        self.success = True
                         
         return self.final
+
+    def _create_move_instance(self):
+        move = Move(
+            start=self.start,
+            final=self.final,
+            acceptance=self.selection_probability_ratio,
+            success=self.success,
+            options=self.options
+            )
+        return move
 
     @property
     def selection_probability_ratio(self):
@@ -138,6 +190,7 @@ class ShootMover(PathMover):
             rand = np.random.random()
             print 'Proposal probability', self.selection_probability_ratio, '/ random :', rand
             if (rand < self.selection_probability_ratio):
+                self.success = True
                 return self.final
             
         return self.start
@@ -169,7 +222,7 @@ class BackwardShootMover(ShootMover):
     '''
     def _generate(self):
         print "Shooting backward from frame %d" % self.start_point.index
-#        print self.start_point
+
         # Run until one of the stoppers is triggered
         partial_trajectory = PathMover.simulator.generate(
                                      self.start_point.snapshot.reversed_copy(), 
@@ -182,12 +235,6 @@ class BackwardShootMover(ShootMover):
         
         self.final = partial_trajectory.reversed + self.start[self.start_point.index + 1:]    
         self.final_point = ShootingPoint(self.selector, self.final, partial_trajectory.frames - 1)
-
-#        print self.start_point.snapshot.velocities
-#        print self.start_point.snapshot.momentum.idx
-#        print self.final_point.snapshot.velocities
-#        print self.final_point.snapshot.momentum.idx
-
         
         pass
 

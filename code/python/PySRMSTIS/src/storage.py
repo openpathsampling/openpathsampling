@@ -125,7 +125,7 @@ class Storage(netcdf.Dataset):
                         print el
                         pass
 
-            self.topology = md.Topology.from_openmm(self._restore_single_option(self, 'om_topology'))
+                self.topology = md.Topology.from_openmm(self._restore_single_option(self, 'om_topology'))
 
             self._restore_classes()
 

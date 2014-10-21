@@ -43,7 +43,10 @@ if __name__ == '__main__':
         
     if True:
         cc = Trajectory.storage.load(1)[ 0 ]
+        cc = storage.snapshot.load(0,0,False, lazy=False)
         op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices, storages=simulator.storage.configuration)
+        print "OP"
+        print op(Trajectory.storage.load(1)[0:2])
         dd = simulator.storage.trajectory.load(1)[ 0:50 ]
         lV = LambdaVolume(op, 0.0, 0.06)
         lV2 = LambdaVolume(op, 0.0, 0.08)

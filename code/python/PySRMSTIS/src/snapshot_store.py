@@ -28,7 +28,7 @@ class SnapshotStorage(ObjectStorage):
         self.storage.configuration.save(snapshot.configuration, idx_configuration)
         self.storage.momentum.save(snapshot.momentum, idx_momentum)
 
-    def load(self, idx_configuration = None, idx_momentum = None, reversed = False):
+    def load(self, idx_configuration = None, idx_momentum = None, reversed = False, lazy=None):
         '''
         Load a snapshot from the storage.
 
@@ -52,14 +52,20 @@ class SnapshotStorage(ObjectStorage):
         snapshot = Snapshot()
         snapshot.reversed = bool(reversed)
 
+        if lazy is None:
+            lazy_configuration = False
+            lazy_momentum = True
+        else:
+            lazy_configuration = lazy
+            lazy_momentum = lazy
+
         if idx_configuration is not None:
             idx_c = int(idx_configuration)
-            snapshot.configuration = self.storage.configuration.load(idx_c)
-#            print snapshot.configuration.idx
+            snapshot.configuration = self.storage.configuration.load(idx_c, lazy=lazy_configuration)
 
         if idx_momentum is not None:
             idx_m = int(idx_momentum)
-            snapshot.momentum = self.storage.momentum.load(idx_m)
+            snapshot.momentum = self.storage.momentum.load(idx_m, lazy=lazy_momentum)
 
         return snapshot
 
@@ -117,7 +123,7 @@ class MomentumStorage(ObjectStorage):
         return
 
 
-    def load(self, idx):
+    def load(self, idx, lazy=True):
         '''
         Load a momentum from the storage
 
@@ -137,8 +143,12 @@ class MomentumStorage(ObjectStorage):
         #TODO: Check, for some reason some idx are given as numpy.in32 and netcdf4 is not compatible with indices given in this format!!!!!
         idx = int(idx)
 
-        v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
-        velocities = Quantity(v, nanometers / picoseconds)
+        if not (Momentum.load_lazy and lazy):
+            v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
+            velocities = Quantity(v, nanometers / picoseconds)
+        else:
+            velocities = None
+
         T = storage.variables['momentum_kinetic'][idx]
         kinetic_energy = Quantity(T, kilojoules_per_mole)
 
@@ -146,6 +156,17 @@ class MomentumStorage(ObjectStorage):
         momentum.idx[storage] = idx
 
         return momentum
+
+    def update_velocities(self, obj):
+        storage = self.storage
+
+        #TODO: Check, for some reason some idx are given as numpy.in32 and netcdf4 is not compatible with indices given in this format!!!!!
+        idx = obj.idx[self.storage]
+
+        v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
+        velocities = Quantity(v, nanometers / picoseconds)
+
+        obj.velocities = velocities
 
     def velocities_as_numpy(self, frame_indices=None, atom_indices=None):
         """
@@ -250,7 +271,7 @@ class ConfigurationStorage(ObjectStorage):
     def get(self, indices):
         return [ self.load(idx) for idx in indices ]
 
-    def load(self, idx):
+    def load(self, idx, lazy=False):
         '''
         Load a configuration from the storage
 
@@ -271,8 +292,12 @@ class ConfigurationStorage(ObjectStorage):
         idx = int(idx)
 
         #TODO: Use newest simtk.units since there was an inconcistance with the new numpy
-        x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
-        coordinates = Quantity(x, nanometers)
+        if not (Configuration.load_lazy and lazy):
+            x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
+            coordinates = Quantity(x, nanometers)
+        else:
+            coordinates = None
+
         b = storage.variables['configuration_box_vectors'][idx]
         box_vectors = Quantity(b, nanometers)
         V = storage.variables['configuration_potential'][idx]
@@ -284,6 +309,16 @@ class ConfigurationStorage(ObjectStorage):
         configuration.topology = self.storage.topology
 
         return configuration
+
+    def update_coordinates(self, obj):
+        storage = self.storage
+
+        idx = obj.idx[self.storage]
+
+        x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
+        coordinates = Quantity(x, nanometers)
+
+        obj.coordinates = coordinates
 
     def coordinates_as_numpy(self, frame_indices=None, atom_indices=None):
 

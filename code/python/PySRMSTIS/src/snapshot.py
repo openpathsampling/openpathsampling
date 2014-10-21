@@ -24,6 +24,7 @@ class Configuration(object):
     # Class variables to store the global storage and the system context describing the system to be safed as configuration_indices
     storage = None
     simulator = None
+    load_lazy = True
     
     def __init__(self, context=None, simulator=None, coordinates=None, box_vectors=None, potential_energy=None, topology=None):
         """
@@ -60,7 +61,7 @@ class Configuration(object):
         """
         
         self.idx = dict()        # potential idx in a netcdf storage, if 0 then not stored yet. Attention! Cannot be stored in 2 repositories at the same time
-        self.coordinates = None
+        self._coordinates = None
         self.box_vectors = None
         self.potential_energy = None
         self.topology = None
@@ -80,20 +81,44 @@ class Configuration(object):
             self.context = context
             
             # Populate current configuration data.
-            self.coordinates = state.getPositions(asNumpy=True)
+            self._coordinates = state.getPositions(asNumpy=True)
             self.box_vectors = state.getPeriodicBoxVectors()
             self.potential_energy = state.getPotentialEnergy()
         else:
-            if coordinates is not None: self.coordinates = copy.deepcopy(coordinates)
+            if coordinates is not None: self._coordinates = copy.deepcopy(coordinates)
             if box_vectors is not None: self.box_vectors = copy.deepcopy(box_vectors)
             if potential_energy is not None: self.potential_energy = copy.deepcopy(potential_energy)
 
-        if self.coordinates is not None:
+        if self._coordinates is not None:
             # Check for nans in coordinates, and raise an exception if something is wrong.
-            if np.any(np.isnan(self.coordinates)):
+            if np.any(np.isnan(self._coordinates)):
                 raise Exception("Some coordinates became 'nan'; simulation is unstable or buggy.")
 
         return
+
+    @property
+    def coordinates(self):
+        if Configuration.load_lazy is True and self._coordinates is None and len(self.idx) > 0:
+            # this uses the first storage and loads the velocities from there
+            self.idx.iterkeys().next().configuration.update_coordinates(self)
+
+        return self._coordinates
+
+    @coordinates.setter
+    def coordinates(self, value):
+        if self._coordinates is None:
+            self._coordinates = value
+        else:
+            raise ValueError("Cannot change coordinates once they are set")
+
+    def forget(self):
+        """
+        Will remove the stored coordinates from memory if they are stored in a file to save memory.
+        Once the coordinates are accessed they are reloaded automatically
+        """
+
+        if Configuration.load_lazy and len(self.idx) > 0:
+            self.coordinates = None
 
     #=============================================================================================
     # Comparison functions
@@ -110,12 +135,13 @@ class Configuration(object):
 
 #        return self is other
 
-    def __hash__(self):
+#    def __hash__(self):
         # We need to make sure that a configuration from storage can be found. So just take the numpy
         # array of coordinates call a tostring and use this. That should be reasonably fast and should
         # only avoid checking all coordinates. The final check is really, if the elements were loaded
         # from the same idx in the same file (see __eq__)
-        return hash(self.coordinates.tostring())
+
+#        return hash(self.coordinates.tostring())
 
     @property
     def atoms(self):
@@ -163,6 +189,17 @@ class Configuration(object):
 
         return md.Trajectory(output, self.topology)
 
+
+
+
+
+
+
+
+
+
+
+
 #=============================================================================================
 # SIMULATION MOMENTUM / VELOCITY
 #=============================================================================================
@@ -175,6 +212,8 @@ class Momentum(object):
     # Class variables to store the global storage and the system context describing the system to be safed as momentums
     storage = None
     simulator = None
+    load_lazy = True
+
     
     def __init__(self, context=None, simulator=None, velocities=None, kinetic_energy=None):
         """
@@ -205,7 +244,7 @@ class Momentum(object):
         """
         
         self.idx = dict()        # potential idx in a netcdf storage, if 0 then not stored yet. Attention! Cannot be stored in 2 repositories at the same time
-        self.velocities = None
+        self._velocities = None
         self.kinetic_energy = None
 
         if simulator is not None:
@@ -219,10 +258,10 @@ class Momentum(object):
             self.context = context
             
             # Populate current momentum data.
-            self.velocities = state.getVelocities(asNumpy=True)
+            self._velocities = state.getVelocities(asNumpy=True)
             self.kinetic_energy = state.getKineticEnergy()
         else:
-            if velocities is not None: self.velocities = copy.deepcopy(velocities)
+            if velocities is not None: self._velocities = copy.deepcopy(velocities)
             if kinetic_energy is not None: self.kinetic_energy = copy.deepcopy(kinetic_energy)                       
 
         # Check for nans in coordinates, and raise an exception if something is wrong.
@@ -230,7 +269,22 @@ class Momentum(object):
 #            raise Exception("Some coordinates became 'nan'; simulation is unstable or buggy.")
 
         return
-    
+
+    @property
+    def velocities(self):
+        if Momentum.load_lazy is True and self._velocities is None and len(self.idx) > 0:
+            # this uses the first storage and loads the velocities from there
+            self.idx.iterkeys().next().momentum.update_velocities(self)
+
+        return self._velocities
+
+    @velocities.setter
+    def velocities(self, value):
+        if self._velocities is None:
+            self._velocities = value
+        else:
+            raise ValueError()
+
     @property
     def atoms(self):
         '''
@@ -244,8 +298,10 @@ class Momentum(object):
 
     def copy(self):
         """
-        Returns a deep copy of the instance itself. If this object is saved it will not be stored as a
-        separate object and consume additional memory. Should be avoided!
+        Returns a deep copy of the instance itself. If this object will not be saved as a
+        separate object and consumes additional memory. It is used to construct a reversed
+        copy that can be stored or used to start a simulation. If the momentum is shallow it
+        will be loaded for the copy
 
         Returns
         -------
@@ -253,6 +309,7 @@ class Momentum(object):
             the deep copy
         """
         this = Momentum(velocities=self.velocities, kinetic_energy=self.kinetic_energy)
+        this.idx = self.idx
         return this
 
     def reverse(self):
@@ -261,8 +318,9 @@ class Momentum(object):
         Should be avoided.
 
         """
+        self._velocities *= -1.0
         self.idx = dict()
-        self.velocities *= -1.0
+
     
     def reversed_copy(self):
         """
@@ -278,6 +336,17 @@ class Momentum(object):
         this = self.copy()
         this.reverse()
         return this
+
+
+
+
+
+
+
+
+
+
+
 
 #=============================================================================================
 # SIMULATION SNAPSHOT (COMPLETE FRAME WITH COORDINATES AND VELOCITIES)
