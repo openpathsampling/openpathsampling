@@ -171,6 +171,34 @@ class testInXEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.inX, ttraj[test], res, failmsg)
 
+class testOutXEnsemble(EnsembleTest):
+    def setUp(self):
+        self.outX = OutXEnsemble(vol1)
+
+    def test_outX(self):
+        """OutXEnsemble passes the trajectory test suite"""
+        for test in ttraj.keys():
+            if "in" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.outX, ttraj[test], res, failmsg)
+
+class testHitXEnsemble(EnsembleTest):
+    def setUp(self):
+        self.hitX = HitXEnsemble(vol1)
+
+    def test_hitX(self):
+        """HitXEnsemble passes the trajectory test suite"""
+        for test in ttraj.keys():
+            if "in" in in_out_parser(test):
+                res = True
+            else:
+                res = False
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.hitX, ttraj[test], res, failmsg)
+
 
 
 class testExitsXEnsemble(EnsembleTest):

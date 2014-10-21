@@ -931,18 +931,22 @@ class HitXEnsemble(VolumeEnsemble):
         trajectory : Trajectory
             The trajectory to be checked
         '''
+        for frame in trajectory:
+            if self._volume(frame):
+                return True
+        return False
 
-        if type(self.frames) is int:
-            if trajectory.frames > self.frames and trajectory.frames >= -self.frames:
-                return self._volume(trajectory[self.frames])
-            else:
-                return False          
-        else:
-            for s in trajectory[self.frames]:
-                if self._volume(s):
-                    return True    
-
-            return False
+        #if type(self.frames) is int:
+        #    if trajectory.frames > self.frames and trajectory.frames >= -self.frames:
+        #        return self._volume(trajectory[self.frames])
+        #    else:
+        #        return False          
+        #else:
+        #    for s in trajectory[self.frames]:
+        #        if self._volume(s):
+        #            return True    
+#
+#            return False
 
     def __invert__(self):
         return OutXEnsemble(self._volume, self.frames, self.lazy)
