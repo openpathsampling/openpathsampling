@@ -26,7 +26,7 @@ class Configuration(object):
     simulator = None
     load_lazy = True
     
-    def __init__(self, context=None, simulator=None, coordinates=None, box_vectors=None, potential_energy=None, topology=None):
+    def __init__(self, context=None, simulator=None, coordinates=None, box_vectors=None, potential_energy=None, topology=None, idx=None):
         """
         Create a simulation configuration from either an OpenMM context or individually-specified components.
 
@@ -59,8 +59,11 @@ class Configuration(object):
             a reference to the used topology. This is necessary to allow export to mdtraj objects
         
         """
-        
-        self.idx = dict()        # potential idx in a netcdf storage, if 0 then not stored yet. Attention! Cannot be stored in 2 repositories at the same time
+
+        if idx is None:
+            self.idx = dict()        # potential idx in a netcdf storage, if 0 then not stored yet. Attention! Cannot be stored in 2 repositories at the same time
+        else:
+            self.idx = idx
         self._coordinates = None
         self.box_vectors = None
         self.potential_energy = None
@@ -215,7 +218,7 @@ class Momentum(object):
     load_lazy = True
 
     
-    def __init__(self, context=None, simulator=None, velocities=None, kinetic_energy=None):
+    def __init__(self, context=None, simulator=None, velocities=None, kinetic_energy=None, idx=None):
         """
         Create a simulation momentum from either an OpenMM context or individually-specified components.
 
@@ -243,7 +246,10 @@ class Momentum(object):
         
         """
         
-        self.idx = dict()        # potential idx in a netcdf storage, if 0 then not stored yet. Attention! Cannot be stored in 2 repositories at the same time
+        if idx is None:
+            self.idx = dict()        # potential idx in a netcdf storage, if 0 then not stored yet. Attention! Cannot be stored in 2 repositories at the same time
+        else:
+            self.idx = idx
         self._velocities = None
         self.kinetic_energy = None
 
@@ -429,21 +435,21 @@ class Snapshot(object):
             self.context = context
             
             # Populate current snapshot data.
-            self.configuration.coordinates = state.getPositions(asNumpy=True)
-            self.momentum.velocities = state.getVelocities(asNumpy=True)
+            self.configuration._coordinates = state.getPositions(asNumpy=True)
+            self.momentum._velocities = state.getVelocities(asNumpy=True)
             self.configuration.box_vectors = state.getPeriodicBoxVectors(asNumpy=True)
             self.configuration.potential_energy = state.getPotentialEnergy()
             self.momentum.kinetic_energy = state.getKineticEnergy()            
         else:
-            if coordinates is not None: self.configuration.coordinates = copy.deepcopy(coordinates)
-            if velocities is not None: self.momentum.velocities = copy.deepcopy(velocities)
+            if coordinates is not None: self.configuration._coordinates = copy.deepcopy(coordinates)
+            if velocities is not None: self.momentum._velocities = copy.deepcopy(velocities)
             if box_vectors is not None: self.configuration.box_vectors = copy.deepcopy(box_vectors)
             if potential_energy is not None: self.configuration.potential_energy = copy.deepcopy(potential_energy)
             if kinetic_energy is not None: self.momentum.kinetic_energy = copy.deepcopy(kinetic_energy)                       
             
-        if self.coordinates is not None:
+        if self.configuration._coordinates is not None:
             # Check for nans in coordinates, and raise an exception if something is wrong.
-            if np.any(np.isnan(self.coordinates)):
+            if np.any(np.isnan(self.configuration._coordinates)):
                 raise Exception("Some coordinates became 'nan'; simulation is unstable or buggy.")
                 
         pass

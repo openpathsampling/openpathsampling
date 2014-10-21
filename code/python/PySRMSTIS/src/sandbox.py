@@ -17,6 +17,7 @@ from ensemble import LengthEnsemble, InXEnsemble, OutXEnsemble
 from trajectory import Trajectory
 from pymbar import MBAR
 from snapshot import Snapshot
+from sample_store import Sample
 
 if __name__ == '__main__':
     simulator = Simulator.Alanine_system('auto')
@@ -65,7 +66,7 @@ if __name__ == '__main__':
                        True
                        )
 
-        tt = simulator.storage.trajectory.load(1)[4:18]
+        tt = simulator.storage.trajectory.load(1)
 
 #        print [ (op(d)) for d in dd ]
 #        op.save()
@@ -126,10 +127,14 @@ if __name__ == '__main__':
         en = InXEnsemble(lV, -1)
         print en(tt)
 
-        en = OutXEnsemble(lV, slice(1,-1), lazy = False)
+        en = OutXEnsemble(lV, slice(1,-1), lazy = False).identify('OutXEnsemble1')
         print en(tt)
+
+        storage.ensemble.save(en)
         
 #        Simulator.op = op
+
+        tis.identify('TISEnsembleA:A')
 
         bm = BackwardShootMover(
                 selector = UniformSelector(),
@@ -145,6 +150,11 @@ if __name__ == '__main__':
         
         pm.move(tt)
         print 'ensemble Check :', pm.ensemble(tt)
+
+        print pm.origin()
+        print storage.origin.save(pm.origin())
+
+        smpl = Sample(trajectory=pm.result, ensemble=pm.ensemble, origin=pm.origin())
 
         simulator.storage.trajectory.save(pm.final)
 

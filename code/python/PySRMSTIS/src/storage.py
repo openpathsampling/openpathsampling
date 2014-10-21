@@ -15,6 +15,9 @@ import simtk.unit as units
 import simtk.openmm.app
 from trajectory_store import TrajectoryStorage
 from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
+from ensemble_store import EnsembleStorage
+from origin_store import OriginStorage
+from sample_store import SampleStorage
 from simtk.unit import amu
 
 import mdtraj as md
@@ -64,6 +67,9 @@ class Storage(netcdf.Dataset):
         self.snapshot = SnapshotStorage(self).register()
         self.configuration = ConfigurationStorage(self).register()
         self.momentum = MomentumStorage(self).register()
+        self.ensemble = EnsembleStorage(self).register()
+        self.origin = OriginStorage(self).register()
+        self.sample = SampleStorage(self).register()
 
         if mode == 'w':
             self._init()
@@ -114,7 +120,6 @@ class Storage(netcdf.Dataset):
                 elements = self._restore_single_option(self, 'md_elements')
                 for key, el in elements.iteritems():
                     try:
-                        print el
                         md.element.Element(
                                     number=int(el[0]), name=el[1], symbol=el[2], mass=float(el[3])
                                  )
@@ -122,7 +127,6 @@ class Storage(netcdf.Dataset):
                                     number=int(el[0]), name=el[1], symbol=el[2], mass=float(el[3])*amu
                                  )
                     except(AssertionError):
-                        print el
                         pass
 
                 self.topology = md.Topology.from_openmm(self._restore_single_option(self, 'om_topology'))

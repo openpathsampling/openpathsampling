@@ -35,6 +35,10 @@ if __name__ == '__main__':
     def line(a, b):
         print '    {:<32} : {:<30}'.format(a,b)
 
+    def nline(n, a, b):
+        print '    [{:<4}] {:<25} : {:<30}'.format(n,a,b)
+
+
     headline("General")
 
     line("Filename", file)
@@ -65,6 +69,18 @@ if __name__ == '__main__':
 
     line("Potential Energy",snapshot.potential_energy)
     line("Kinetic Energy",snapshot.kinetic_energy)
+
+    headline("Ensembles")
+
+    for e_idx in range(1, storage.ensemble.count() + 1):
+        ensemble = storage.ensemble.load(e_idx)
+        nline(e_idx,ensemble.name,ensemble.description.replace('\n', ''))
+
+    headline("Origins")
+
+    for o_idx in range(1, storage.origin.count() + 1):
+        origin = storage.origin.load(o_idx)
+        nline(o_idx, origin.name, str([t.idx[storage] for t in origin.inputs]) +" -> " + str(origin.final.idx[storage]) + " in " + origin.ensemble.name + " [" + str(origin.ensemble.idx[storage]) + "]")
 
     headline("Trajectories")
 

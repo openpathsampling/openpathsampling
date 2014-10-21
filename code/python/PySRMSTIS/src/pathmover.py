@@ -9,45 +9,8 @@ from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTraject
 
 import numpy as np
 
-class Move(object):
-    """
-    A Move is the return object from a PathMover and contains all information about the move, initial trajectories,
-    new trajectories (both as references). Might move several trajectories at a time (swapping)
-
-    Notes
-    -----
-    Should contain inputs/outputs and success (accepted/rejected) as well as probability to succeed.
-    """
-
-    def __init__(self, start=None, final=None, acceptance=None, success=None, options=None):
-        self._start = start
-        self._final = final
-        self._acceptance = acceptance
-        self._success = success
-        self._options = options
-
-    def set_options(self, options):
-        self._options = options
-
-    @property
-    def start(self):
-        return self._start
-
-    @property
-    def final(self):
-        return self._final
-
-    @property
-    def acceptance(self):
-        return self._acceptance
-
-    @property
-    def start(self):
-        return self._success
-
-    def options(self):
-        return self._options
-
+from origin_store import Origin
+from ensemble import FullEnsemble
 
 class PathMover(object):
     """
@@ -85,7 +48,10 @@ class PathMover(object):
         self.success = None
 
         self.start = None
-        self.final = None        
+        self.final = None
+        self.ensemble = FullEnsemble()
+        self.ensemble.name = 'FullEnsemble'
+        self.name = self.__class__.__name__
         pass
         
     def move(self, trajectory):
@@ -109,20 +75,29 @@ class PathMover(object):
 
         self.start = trajectory
         self.final = trajectory
+        self.result = trajectory
 
         self.success = True
                         
         return self.final
 
-    def _create_move_instance(self):
-        move = Move(
-            start=self.start,
+    def origin(self):
+        move = Origin(
+            name=self.name,
+            inputs=[self.start],
             final=self.final,
+            result=self.result,
             acceptance=self.selection_probability_ratio,
             success=self.success,
-            options=self.options
+            mover=self,
+            options=self.options,
+            ensemble=self.ensemble
             )
         return move
+
+    @property
+    def options(self):
+        return []
 
     @property
     def selection_probability_ratio(self):
@@ -175,7 +150,8 @@ class ShootMover(PathMover):
     def _generate(self):
         self.final = self.start
     
-    def move(self, trajectory):        
+    def move(self, trajectory):
+        self.success = False
         self.start = trajectory        
         self.start_point = self.selector.pick(self.start)
                         
@@ -185,15 +161,17 @@ class ShootMover(PathMover):
         self._generate()
 
         self.accepted = self.ensemble(self.final)
-        
+
+        self.result = self.start
+
         if self.accepted:
             rand = np.random.random()
             print 'Proposal probability', self.selection_probability_ratio, '/ random :', rand
             if (rand < self.selection_probability_ratio):
                 self.success = True
-                return self.final
-            
-        return self.start
+                self.result = self.final
+
+        return self.result
     
     
 class ForwardShootMover(ShootMover):    

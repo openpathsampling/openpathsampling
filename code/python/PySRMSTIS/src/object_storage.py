@@ -15,6 +15,7 @@ class ObjectStorage(object):
         self.storage = storage
         self.content_class = obj
         self.idx_dimension = obj.__name__.lower()
+        self.cache = dict()
 
     def register(self):
         self.storage.links.append(self)
@@ -66,6 +67,15 @@ class ObjectStorage(object):
                 return idx
         else:
             return idx
+
+    def from_cache(self, idx):
+        if idx in self.cache:
+            return self.cache[idx]
+        else:
+            return None
+
+    def to_cache(self, obj):
+        self.cache[obj.idx[self.storage]] = obj
 
     def load(self, idx):
         '''
@@ -146,3 +156,65 @@ class ObjectStorage(object):
         """
         # define dimensions used for the specific object
         self.storage.createDimension(self.idx_dimension, 0)
+
+    def slice(self, name, idx):
+        begin = self.idx(name, idx)
+        end = begin + self.len(name, idx)
+        return slice(begin, end)
+
+    def idx(self, name, idx):
+        return int(self.storage.variables[name + '_idx'][int(idx)])
+
+    def len(self, name, idx):
+        return int(self.storage.variables[name + '_length'][int(idx)])
+
+    def free_idx(self, name):
+        length = int(len(self.storage.dimensions[name]))
+        return length
+
+    def save_mixed(self, name, idx, values):
+        storage = self.storage
+        begin = self.free_idx(name)
+        length = len(values)
+        for position, value in enumerate(values):
+            storage.variables[name][begin + position] = value
+
+        storage.variables[name + '_length'][idx] = length
+        storage.variables[name + '_idx'][idx] = begin
+
+    def init_mixed_length(self, name, dimension=None):
+        # index associated storage in class variable for all Origin instances to access
+        ncfile = self.storage
+
+        # define dimensions used in trajectories
+        ncfile.createDimension(name, 0)                     # unlimited number of iterations
+
+        if dimension is None:
+            dimension = self.idx_dimension
+
+        # Create variables for trajectories
+        ncvar_name_idx  = ncfile.createVariable(name + '_idx', 'u4', dimension)
+        ncvar_name_length  = ncfile.createVariable(name + '_length', 'u4', dimension)
+
+        # Define units for snapshot variables.
+        setattr(ncvar_name_idx,      'units', 'none')
+        setattr(ncvar_name_length,      'units', 'none')
+
+    def init_variable(self, name, var_type, dimensions = None, units='none', description=None):
+
+        ncfile = self.storage
+
+        if dimensions is None:
+            dimensions = self.idx_dimension
+
+        ncvar     = ncfile.createVariable(name, var_type, dimensions)
+
+        # Define units for snapshot variables.
+        setattr(ncvar,      'units', units)
+
+        if description is not None:
+            # Define long (human-readable) names for variables.
+            setattr(ncvar,    "long_str", description)
+
+    def save_object(self, var, idx, obj):
+        self.storage.variables[var + '_idx'][idx] = obj.idx[self.storage]
