@@ -596,7 +596,7 @@ class InXEnsemble(VolumeEnsemble):
             return True
 
     def __invert__(self):
-        return LeaveXEnsemble(self._volume, self.frames, self.lazy)
+        return LeaveXEnsemble(self._stored_volume, self.frames, self.lazy)
 
 
 
@@ -617,7 +617,7 @@ class OutXEnsemble(InXEnsemble):
                 self.frames.start, self.frames.stop, self._volume)
 
     def __invert__(self):
-        return HitXEnsemble(self._volume, self.frames, self.lazy)
+        return HitXEnsemble(self._stored_volume, self.frames, self.lazy)
 
         
 class HitXEnsemble(VolumeEnsemble):
@@ -697,7 +697,7 @@ class HitXEnsemble(VolumeEnsemble):
             return False
 
     def __invert__(self):
-        return OutXEnsemble(self._volume, self.frames, self.lazy)
+        return OutXEnsemble(self._stored_volume, self.frames, self.lazy)
 
 
 class LeaveXEnsemble(HitXEnsemble):
@@ -717,7 +717,7 @@ class LeaveXEnsemble(HitXEnsemble):
         return ~ self._stored_volume
 
     def __invert__(self):
-        return InXEnsemble(self._volume, self.frames, self.lazy)
+        return InXEnsemble(self._stored_volume, self.frames, self.lazy)
 
 
 class ExitsXEnsemble(VolumeEnsemble):

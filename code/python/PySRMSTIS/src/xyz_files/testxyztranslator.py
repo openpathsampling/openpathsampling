@@ -58,7 +58,7 @@ class testXYZTranslator(object):
 
 
     def teardown(self):
-#        if os.path.isfile("test.nc"): os.remove("test.nc")
+        if os.path.isfile("test.nc"): os.remove("test.nc")
         if os.path.isdir("mydir00"): shutil.rmtree("mydir00")
         snapshot.Configuration.storage=None
         snapshot.Momentum.storage=None
