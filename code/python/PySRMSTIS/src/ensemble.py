@@ -531,8 +531,7 @@ class SequentialEnsemble(Ensemble):
             if min_overlap[i] > max_overlap[i]:
                 raise ValueError("min_overlap greater than max_overlap!")
 
-
-    def __call__(self, trajectory, lazy=None):
+    def transition_frames(self, trajectory, lazy=None):
         # it is easiest to understand this decision tree as a simplified
         # version of the can_append decision tree; see that for detailed
         # comments
@@ -540,6 +539,7 @@ class SequentialEnsemble(Ensemble):
         subtraj_first = 0
         traj_final = len(trajectory)
         final_ens = len(self.ensembles)-1
+        transitions = []
         while True:
             subtraj_final = self._find_subtraj_final(trajectory, 
                                                      subtraj_first, ens_num)
@@ -547,15 +547,42 @@ class SequentialEnsemble(Ensemble):
                 subtraj = trajectory[slice(subtraj_first, subtraj_final)]
                 if ens_num == final_ens:
                     if subtraj_final == traj_final:
-                        return True # assigned all frames; all ensembles
+                        # success
+                        transitions.append(subtraj_final)
+                        return transitions
                     else:
-                        return False
+                        # fails because we have more frames to assign
+                        transitions.append(subtraj_final) 
+                        return transitions
                 else:
                     ens_num += 1
+                    transitions.append(subtraj_final)
                     subtraj_first = subtraj_final
             else:
+                return transitions
+
+
+    def __call__(self, trajectory, lazy=None):
+        transitions = self.transition_frames(trajectory, lazy)
+        # if we don't have the right number of transitions, or if the last 
+        if len(transitions) != len(self.ensembles):
+            #print "Returns false b/c not enough ensembles"
+            return False
+        elif transitions[-1] != len(trajectory):
+            #print "Returns false b/c not all frames assigned"
+            return False
+
+        subtraj_first = 0
+        subtraj_i = 0
+        while subtraj_i < len(self.ensembles):
+            subtraj_final = transitions[subtraj_i]
+            subtraj = trajectory[slice(subtraj_first, subtraj_final)]
+            if self.ensembles[subtraj_i](subtraj) == False:
+                #print "Returns false b/c ensemble",subtraj_i," fails"
                 return False
-                    
+            subtraj_i += 1
+            subtraj_first = subtraj_final
+        return True
 
     def _find_subtraj_final(self, traj, subtraj_first, ens_num):
         """

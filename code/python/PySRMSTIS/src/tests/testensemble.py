@@ -574,6 +574,36 @@ class testSequentialEnsembles(EnsembleTest):
             self._single_test(self.pseudo_minus.backward, 
                                 ttraj[test], results[test], failmsg)
 
+    
+    def test_sequential_transition_frames(self):
+        """SequentialEnsemble identifies transitions frames correctly"""
+        ensemble = SequentialEnsemble([self.inX, self.outX])
+        results = {'upper_in_in_in' : [3],
+                   'upper_out_out_out' : [],
+                   'upper_in_out_in' : [1,2],
+                   'upper_in_out' : [1,2]
+                  }
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(ensemble.transition_frames, 
+                                ttraj[test], results[test], failmsg)
+
+    def test_sequential_simple_in_out_call(self):
+        """Simplest sequential ensemble identifies correctly"""
+        ensemble = SequentialEnsemble([self.inX, self.outX])
+        results = {'upper_in_in_in' : False,
+                   'upper_out_out_out' : False,
+                   'upper_in_out_in' : False,
+                   'upper_in_out' : True
+                  }
+        print
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            print test,
+            self._single_test(ensemble, 
+                                ttraj[test], results[test], failmsg)
+
+
 
     def test_sequential_in_out(self):
         """SequentialEnsembles based on In/OutXEnsemble"""
@@ -624,7 +654,7 @@ class testSequentialEnsembles(EnsembleTest):
 
     def test_sequential_tis(self):
         """SequentialEnsemble as TISEnsemble identifies paths"""
-        raise SkipTest # TODO
+        raise SkipTest
         results = {}
         for test in ttraj.keys():
             results[test] = False
