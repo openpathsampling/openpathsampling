@@ -88,7 +88,7 @@ class ObjectStorage(object):
             a list of objects stored under the given indices
 
         """
-        return [self.load(idx) for idx in range(0, self.number())[indices] ]
+        return [self.load(idx) for idx in range(0, self.count())[indices] ]
 
 
     def last(self):
@@ -100,7 +100,7 @@ class ObjectStorage(object):
         Trajectoy
             the actual trajectory object
         '''
-        return self.load(self.number())
+        return self.load(self.count())
 
     def first(self):
         '''
@@ -113,7 +113,7 @@ class ObjectStorage(object):
         '''
         return self.load(1)
 
-    def number(self):
+    def count(self):
         '''
         Return the number of objects in the storage
 
@@ -137,7 +137,7 @@ class ObjectStorage(object):
         index : int
             the number of the next free index in the storage. Used to store a new object.
         '''
-        return  self.number() + 1
+        return  self.count() + 1
 
     def _init(self):
         """

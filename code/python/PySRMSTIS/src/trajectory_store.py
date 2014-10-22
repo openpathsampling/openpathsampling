@@ -228,7 +228,7 @@ class TrajectoryStorage(ObjectStorage):
         frames = storage.variables['trajectory_momentum_idx'][:].astype(np.int32).copy()
         idx = storage.variables['trajectory_length'][:].astype(np.int32).copy()
         length = storage.variables['trajectory_length'][:].astype(np.int32).copy()
-        n_traj =  self.number(storage)
+        n_traj =  self.count(storage)
 
         return [ frames[idx[i]:idx[i] + length[i] ] for i in range(1, n_traj + 1) ]
 
@@ -247,7 +247,7 @@ class TrajectoryStorage(ObjectStorage):
         frames = storage.variables['trajectory_configuration_idx'][:].astype(np.int32).copy()
         idx = storage.variables['trajectory_length'][:].astype(np.int32).copy()
         length = storage.variables['trajectory_length'][:].astype(np.int32).copy()
-        n_traj =  self.number(storage)
+        n_traj =  self.count(storage)
 
         return [ frames[idx[i]:idx[i] + length[i] ] for i in range(1, n_traj + 1) ]
 
