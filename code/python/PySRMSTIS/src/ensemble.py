@@ -4,6 +4,8 @@ Created on 03.09.2014
 @author: jan-hendrikprinz, David W.H. Swenson
 '''
 
+from trajectory import Trajectory
+
 class Ensemble(object):
     '''    
     An Ensemble represents a path ensemble, effectively a set of trajectories.
@@ -559,12 +561,18 @@ class SequentialEnsemble(Ensemble):
                     transitions.append(subtraj_final)
                     subtraj_first = subtraj_final
             else:
-                return transitions
+                if self.ensembles[ens_num](Trajectory([])):
+                    ens_num += 1
+                    transitions.append(subtraj_final)
+                    subtraj_first = subtraj_final
+                else:
+                    return transitions
 
 
     def __call__(self, trajectory, lazy=None):
         transitions = self.transition_frames(trajectory, lazy)
         # if we don't have the right number of transitions, or if the last 
+        #print transitions
         if len(transitions) != len(self.ensembles):
             #print "Returns false b/c not enough ensembles"
             return False
@@ -654,7 +662,7 @@ class SequentialEnsemble(Ensemble):
                         return self.ensembles[ens_num].can_append(subtraj)
                     else:
                         #print "Returning false due to incomplete assigns:",
-                        #print subtraj_final, "!=", traj_final
+                        print subtraj_final, "!=", traj_final
                         return False # in final ensemble, not all assigned
                 else:
                     # subtraj existed, but not yet final ensemble
@@ -667,6 +675,10 @@ class SequentialEnsemble(Ensemble):
                     # all frames assigned, but not all ensembles finished;
                     # next frame might satisfy next ensemble
                     return True
+                elif self.ensembles[ens_num](Trajectory([])):
+                    #print "Moving on because of allowed zero-length ensemble"
+                    ens_num += 1
+                    subtraj_first = subtraj_final
                 else:
                     # not all frames assigned, couldn't find a sequence
                     # start over with sequences that begin with the next
@@ -706,6 +718,9 @@ class SequentialEnsemble(Ensemble):
             else:
                 if subtraj_first == traj_first:
                     return True
+                elif self.ensembles[ens_num](Trajectory([])):
+                    ens_num -= 1
+                    subtraj_final = subtraj_first
                 else:
                     if ens_final == first_ens:
                         return False
@@ -788,10 +803,16 @@ class InXEnsemble(VolumeEnsemble):
     '''
 
     def can_append(self, trajectory):
-        return self(trajectory[slice(trajectory.frames-1, None)])
+        if len(trajectory) == 0:
+            return True
+        else:
+            return self(trajectory[slice(trajectory.frames-1, None)])
 
     def can_prepend(self, trajectory):
-        return self(trajectory[slice(0,1)])
+        if len(trajectory) == 0:
+            return True
+        else:
+            return self(trajectory[slice(0,1)])
         
     
     def forward(self, trajectory):
