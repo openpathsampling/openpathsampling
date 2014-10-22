@@ -4,11 +4,11 @@
 '''
 
 import copy
+
 import numpy as np
-
 import mdtraj as md
+from simtk.unit import nanometers
 
-from simtk.unit import nanosecond, picosecond, nanometers, nanometer, picoseconds, femtoseconds, femtosecond, angstroms
 
 #=============================================================================================
 # SIMULATION TRAJECTORY
@@ -22,7 +22,8 @@ class Trajectory(list):
     
     storage = None
     simulator = None
-    
+    default_storage = None
+
     def __init__(self, trajectory=None):
         """
         Create a simulation trajectory object
@@ -36,8 +37,11 @@ class Trajectory(list):
 
         # Initialize list.
         list.__init__(self)
-        
+
+        self.idx = dict() # Contains references to positions in various files, will be set, once saved
         self.use_lazy = True    # We assume that snapshots are immutable. That should safe a lot of time to copy trajectories
+
+        self.path_probability = None # For future uses
 
         if trajectory is not None:
             # Try to make a copy out of whatever container we were provided
@@ -50,16 +54,23 @@ class Trajectory(list):
                 self.extend(trajectory)
             else:
                 for snapshot in trajectory:
-                    snapshot_copy = copy.deepcopy(snapshot)                    
+                    snapshot_copy = copy.deepcopy(snapshot)
                     self.forward(snapshot_copy)
         else:
             self.atom_indices = None
-        return
+
 
     @property
     def reversed(self):
         '''
-        Returns a reversed (shallow) copy of the trajectory itself.
+        Returns a reversed (shallow) copy of the trajectory itself. Effectively
+        creates a new Trajectory object and then fills it with shallow reversed copies
+        of the contained snapshots.
+
+        Returns
+        -------
+        Trajectory()
+            the reversed trajectory
         '''
 
         t = Trajectory(self)
@@ -88,14 +99,13 @@ class Trajectory(list):
 #        for t in range(nsnapshots-1):
 #            self[t].kinetic_energy = self[t+1].total_energy - self[t].potential_energy
 
-        # TODO: Snapshots are immutable. Find a way to store that a snapshot has reversed velocities
         # No use reversing momenta, since we can't determine what appropriate reversed momenta should be.
         
         # We could easily indicate reversed momenta by using a minus sign in front of the index
         # this keeps everything the same and we do not need to resave the snapshots and a -idx just means take snapshot idx but invert momenta
 
-        for frame in self:
-            frame.reversed = not frame.reversed
+        for snapshot in self:
+            snapshot.reversed = not snapshot.reversed
         
         return
     
@@ -107,7 +117,7 @@ class Trajectory(list):
         -------        
         coordinates (numpy.array(n_frames, n_atoms, 3) - numpy.array of coordinates of size number of frames 'n_frames' x number of atoms 'n_atoms' x 3 in x,y,z
         """
-        
+
         # Make sure snapshots are stored and have an index and then add the snapshot index to the trajectory
 
         n_frames = self.frames     
@@ -120,23 +130,27 @@ class Trajectory(list):
                 output[frame_index,:,:] = self[frame_index].coordinates
             else:
                 output[frame_index,:,:] = self[frame_index].coordinates[self.atom_indices,:]
-        
+
         return output
     
     @property
     def frames(self):
         """
-        Return the number of frames in the trajectory
+        Return the number of frames in the trajectory.
         
         Returns
         -------        
         length (int) - the number of frames in the trajectory
+
+        Notes
+        -----
+        Might be removed in later versions len(trajectory) is more intuitive
         
         """
 
         return len(self)
         
-    def configurations(self):
+    def configuration_indices(self):
         """
         Return a list of the snapshot IDs in the trajectory
         
@@ -150,6 +164,22 @@ class Trajectory(list):
         
         """
         return [f.configuration.idx for f in self]
+
+    def configurations(self):
+        """
+        Return a list of the snapshot IDs in the trajectory
+
+        Returns
+        -------
+        indices (list of int) - the list of indices
+
+        Notes
+        -----
+        The IDs are only non-zero if the snapshots have been saved before!
+
+        """
+        return [f.configuration for f in self]
+
 
     def momenta(self):
         """
@@ -191,19 +221,7 @@ class Trajectory(list):
     #=============================================================================================
     # LIST INHERITANCE FUNCTIONS
     #=============================================================================================
-    
-    def as_list(self):
-        """
-        Return the contained list of snapshots as a python list object
-        
-        Returns
-        -------        
-        trajectory : list of Snapshot 
-            the indexed trajectory
-        
-        """
-        return list(self)
-            
+
     def __getslice__(self, *args, **kwargs):
         ret =  super(Trajectory, self).__getslice__(*args, **kwargs)
         if isinstance(ret, list):
@@ -351,20 +369,39 @@ class Trajectory(list):
 
         return self.subset(Trajectory.simulator.solute_indices)
 
-    def md(self):
+    def full(self):
+        """
+        Return a view of the trajectory with all atoms
+
+        Returns
+        -------
+        trajectory : Trajectory
+            the trajectory showing the subsets of solute atoms
+        """
+        return self.subset(None)
+
+    def md(self, topology = None):
         """
         Construct a mdtraj.Trajectory object from the Trajectory itself
+
+        Parameters
+        ----------
+        topology : mdtraj.Topology()
+            If not None this topology will be used to construct the mdtraj objects otherwise
+            the topology object will be taken from the configurations in the trajectory snapshots.
         
         Returns
         -------        
         trajectory : mdtraj.Trajectory
             the trajectory
-        """        
+        """
+
+        if topology is None:
+            topology = self.md_topology()
 
         output = self.coordinates()
-        topology = self.md_topology()
-                                                 
-        return md.Trajectory(output, topology)             
+
+        return md.Trajectory(output, topology)
                 
     
     def md_topology(self):
@@ -375,285 +412,21 @@ class Trajectory(list):
         -------        
         topology : mdtraj.Topology
             the topology
+
+        Notes
+        -----
+        This is taken from the configuration of the first frame. Otherwise there is still un ugly fall-back to look
+        for an openmm.Simulation object in Trajectory.simulator. and construct an mdtraj.Topology from this.
         """        
 
-        topology = md.Topology.from_openmm(Trajectory.simulator.simulation.topology)
+        if len(self) > 0 and self[0].topology is not None:
+            # if no topology is defined
+            topology = self[0].topology
+        else:
+            # TODO: kind of ugly fall-back, but helps for now
+            topology = md.Topology.from_openmm(Trajectory.simulator.simulation.topology)
         
         if self.atom_indices is not None:
             topology = topology.subset(self.atom_indices)       
         
         return topology
-
-    #=============================================================================================
-    # STORAGE FUNCTIONS
-    #=============================================================================================
-    
-    def save(self):
-        """
-        Add the current state of the trajectory in the database. If nothing has changed then the trajectory gets stored using the same snapshots as before. Saving lots of diskspace
-        
-        """
-        
-        ncfile = Trajectory.storage.ncfile
-        idx = Trajectory.load_free( )
-
-        # Make sure snapshots are stored and have an index and then add the snapshot index to the trajectory
-
-        nframes = len(self)
-        for frame_index in range(nframes):      
-            frame = self[frame_index]         
-            frame.save()
-            ncfile.variables['trajectory_configuration_idx'][idx,frame_index] = frame.configuration.idx         
-            ncfile.variables['trajectory_momentum_idx'][idx,frame_index] = frame.momentum.idx                     
-            ncfile.variables['trajectory_momentum_reversed'][idx,frame_index] = frame.reversed                     
-             
-        ncfile.variables['trajectory_length'][idx] = nframes
-                
-        return 
-
-    @staticmethod
-    def load_momentum_indices(idx):
-        '''
-        Load trajectory indices for trajectory with ID 'idx' from the storage
-        
-        ARGUMENTS
-        
-        idx (int) - ID of the trajectory
-        
-        Returns
-        -------        
-        trajectory (list of int) - trajectory indices
-        '''    
-        
-        
-        
-        length = Trajectory.load_length(idx)
-        return Trajectory.storage.ncfile.variables['trajectory_momentum_idx'][idx,:length]    
-
-    @staticmethod
-    def load_momentum_reversed(idx):
-        '''
-        Load trajectory with ID 'idx' from the storage and return a list of reversed indicators for the momenta
-        
-        Parameters
-        ----------
-        
-        idx : int
-            index of the trajectory
-        
-        Returns
-        -------        
-        list of boolean
-            list of boolean which frames in the trajectory are reversed
-        '''    
-                
-        length = Trajectory.load_length(idx)
-        return Trajectory.storage.ncfile.variables['trajectory_momentum_reversed'][idx,:length]    
-    
-    @staticmethod
-    def load_configuration_indices(idx):
-        '''
-        Load trajectory indices for trajectory with ID 'idx' from the storage
-        
-        ARGUMENTS
-        
-        idx (int) - ID of the trajectory
-        
-        Returns
-        -------        
-        trajectory (list of int) - trajectory indices
-        '''    
-        
-        
-        length = Trajectory.load_length(idx)
-        return Trajectory.storage.ncfile.variables['trajectory_configuration_idx'][idx,:length]    
-
-    @staticmethod
-    def load_indices(idx):
-        '''
-        Load trajectory indices for trajectory with ID 'idx' from the storage
-        
-        ARGUMENTS
-        
-        idx (int) - ID of the trajectory
-        
-        Returns
-        -------        
-        trajectory (list of int) - trajectory indices
-        '''    
-        
-        length = Trajectory.load_length(idx)
-        return (Trajectory.storage.ncfile.variables['trajectory_configuration_idx'][idx,:length],
-                   Trajectory.storage.ncfile.variables['trajectory_momentum_idx'][idx,:length])
-
-    @staticmethod
-    def load_length(idx):
-        '''
-        Return the length of a trajectory from the storage
-        
-        Parameters
-        ----------
-        idx : int
-            index of the trajectory
-            
-        Returns
-        -------
-        length : int
-            Number of frames in the trajectory
-        '''
-        return Trajectory.storage.ncfile.variables['trajectory_length'][idx]
-    
-    @staticmethod
-    def load(idx):
-        '''
-        Return a trajectory from the storage
-        
-        Parameters
-        ----------
-        idx : int
-            index of the trajectory (counts from 1)
-            
-        Returns
-        -------
-        trajectory : Trajectory
-            the trajectory
-        '''        
-        frames_c = Trajectory.load_configuration_indices(idx)
-        frames_m = Trajectory.load_momentum_indices(idx)
-        reversed_m = Trajectory.load_momentum_reversed(idx)
-        frames_c, frames_m = Trajectory.load_indices(idx)
-        return Trajectory.from_indices(frames_c, frames_m, reversed_m)
-
-    @staticmethod
-    def from_indices(frames_configuration, frames_momentum, momenta_reversed):
-        '''
-        Return a trajectory from the storage constructed from a list of snapshot indices
-        
-        Parameters
-        ----------
-        frames_configuration : list of int
-            list of configuration indices to be used to generate the trajectory
-        frames_momentum : list of int
-            list of momentum indices to be used to generate the trajectory
-        momentum_reversed : list of bool
-            list indicating if frames are reversed 
-            
-        Returns
-        -------
-        trajectory : Trajectory
-            the trajectory
-        '''
-        trajectory = Trajectory()
-        
-        if frames_momentum is not None:
-            for frame in zip(frames_configuration, frames_momentum, momenta_reversed):                
-                snapshot = Trajectory.storage.snapshot( frame[0], frame[1] , frame[2])
-                trajectory.append(snapshot)
-        else:
-            for frame in zip(frames_configuration, momenta_reversed):                
-                snapshot = Trajectory.storage.snapshot( frame[0], None , frame[2])
-                trajectory.append(snapshot)
-        
-        return trajectory
-    
-    @staticmethod
-    def load_number():
-        '''
-        Return the number of trajectories in the storage
-        
-        Returns
-        -------
-        number : int
-            number of trajectories in the storage. Their indexing starts with 1.
-        '''
-        length = int(len(Trajectory.storage.ncfile.dimensions['trajectory'])) - 1
-        if length < 0:
-            length = 0
-        return length
-    
-    @staticmethod
-    def load_free():
-        '''
-        Return the number of the next free ID
-        
-        Returns
-        -------
-        index : int
-            the number of the next free index in the storage. Used to store a new snapshot.
-        '''
-        return Trajectory.load_number() + 1
-
-    @staticmethod
-    def load_all_momentum_indices():
-        '''
-        Return a list of frame indices for all trajectories in the storage
-        
-        Returns
-        -------        
-        list : list of list of int
-            a list of list of frame IDs for all trajectories.
-        '''
-        ind = Trajectory.storage.ncfile.variables['trajectory_momentum_idx'][:,:].astype(np.int32).copy()
-        lengths = Trajectory.storage.ncfile.variables['trajectory_length'][:].astype(np.int32).copy()
-        n_traj = Trajectory.load_number()
-        
-        return [ ind[i,:lengths[i]] for i in range(1,n_traj + 1) ]    
-    
-    @staticmethod
-    def load_all_configuration_indices():
-        '''
-        Return a list of frame indices for all trajectories in the storage
-        
-        Returns
-        -------        
-        list : list of list of int
-            a list of list of frame IDs for all trajectories.
-        '''
-        ind = Trajectory.storage.ncfile.variables['trajectory_configuration_idx'][:,:].astype(np.int32).copy()
-        lengths = Trajectory.storage.ncfile.variables['trajectory_length'][:].astype(np.int32).copy()
-        n_traj = Trajectory.load_number()
-        
-        return [ ind[i,:lengths[i]] for i in range(1,n_traj + 1) ]            
-    
-    @staticmethod
-    def _restore_netcdf(storage):
-        """
-        Fill in missing part after the storage has been loaded from a file and is not initialize freshly
-        
-        """
-        Trajectory.storage = storage        
-    
-    @staticmethod
-    def _init_netcdf(storage):        
-        """
-        Initialize the associated storage to allow for trajectory storage
-        
-        """        
-
-        # save associated storage in class variable for all Trajectory instances to access
-        Trajectory.storage = storage
-        ncfile = storage.ncfile
-                
-        nframes = Trajectory.simulator.n_frames_max
-        
-        # define dimensions used in trajectories
-        ncfile.createDimension('trajectory', 0)                 # unlimited number of iterations
-        ncfile.createDimension('max_frames', nframes)     # number of maximal frames per trajectory
-
-        # Create variables for trajectories        
-        ncvar_trajectory_configuration_idx  = ncfile.createVariable('trajectory_configuration_idx', 'u4', ('trajectory','max_frames'))
-        ncvar_trajectory_momentum_idx       = ncfile.createVariable('trajectory_momentum_idx', 'u4', ('trajectory','max_frames'))
-        ncvar_trajectory_momentum_reversed  = ncfile.createVariable('trajectory_momentum_reversed', 'b', ('trajectory', 'max_frames'))
-        ncvar_trajectory_path_hamiltonian   = ncfile.createVariable('trajectory_path_hamiltonians', 'f', ('trajectory'))
-        ncvar_trajectory_length             = ncfile.createVariable('trajectory_length', 'u4', ('trajectory'))
-
-        # Define units for snapshot variables.
-        setattr(ncvar_trajectory_path_hamiltonian,      'units', 'none')
-        setattr(ncvar_trajectory_configuration_idx,     'units', 'none')
-        setattr(ncvar_trajectory_momentum_idx,          'units', 'none')
-        setattr(ncvar_trajectory_length,                'units', 'none')
-        setattr(ncvar_trajectory_momentum_reversed,     'units', 'none')
-        
-        # Define long (human-readable) names for variables.
-        setattr(ncvar_trajectory_configuration_idx,    "long_name", "trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.")
-        setattr(ncvar_trajectory_momentum_idx,         "long_name", "trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.")

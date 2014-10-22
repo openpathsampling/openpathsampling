@@ -86,8 +86,8 @@ class testXYZTranslator(object):
         '''Integration test: round trip TrajFile->trajectory->TrajFile'''
         self.translator.outfile = "test.nc"
         self.translator.trajectory = self.translator.trajfile2trajectory(self.translator.trajfile)
-        assert_equal(self.translator.storage.number_of_trajectories(), 1)
-        assert_equal( len(self.translator.storage.trajectory(1)), 
+        assert_equal(self.translator.storage.trajectory.count(), 1)
+        assert_equal( len(self.translator.storage.trajectory.load(1)),
                       len(self.translator.trajfile.frames) )
         oldtrajfile = self.translator.trajfile
         self.translator.trajfile = None
