@@ -15,7 +15,6 @@ class Volume(object):
         '''
         Returns `True` if the given snapshot is part of the defined Region
         '''
-        
         return False
                 
     def __str__(self):
@@ -81,12 +80,7 @@ class Volume(object):
             return VolumeCombination(self, other, fnc = lambda a,b : a and not b, str_fnc = '{0} and not {1}')
         
     def __invert__(self):
-        if type(self) is EmptyVolume:
-            return FullVolume()
-        elif type(self) is FullVolume:
-            return EmptyVolume(self)
-        else:
-            return NegatedVolume(self)
+        return NegatedVolume(self)
 
     
 class VolumeCombination(Volume):
@@ -121,6 +115,9 @@ class EmptyVolume(Volume):
 
     def __call__(self, snapshot):
         return False
+
+    def __invert__(self):
+        return FullVolume()
     
     def __str__(self):
         return 'empty'
@@ -131,7 +128,10 @@ class FullVolume(Volume):
 
     def __call__(self, snapshot):
         return True
-    
+
+    def __invert__(self):
+        return EmptyVolume()
+
     def __str__(self):
         return 'all'
 

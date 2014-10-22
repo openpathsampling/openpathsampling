@@ -6,7 +6,7 @@ import os
 import sys
 from nose.tools import assert_equal, assert_not_equal, raises
 from nose.plugins.skip import Skip, SkipTest
-from duckpunching import AtomCounter, SimulationDuckPunch
+from test_helpers import AtomCounter, SimulationDuckPunch
 
 import mdtraj as md
 
