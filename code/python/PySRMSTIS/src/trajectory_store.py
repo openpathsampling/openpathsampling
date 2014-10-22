@@ -1,7 +1,7 @@
 import numpy as np
 import mdtraj as md
 
-from object_storage import ObjectStorage
+from object_storage import ObjectStorage, addcache
 from trajectory import Trajectory
 from snapshot import Configuration, Momentum, Snapshot
 
@@ -138,6 +138,7 @@ class TrajectoryStorage(ObjectStorage):
         )
 
 
+    @addcache
     def load(self, idx, lazy = None):
         '''
         Return a trajectory from the storage
@@ -153,19 +154,28 @@ class TrajectoryStorage(ObjectStorage):
             the trajectory
         '''
 
-        frames_c =  self.configuration_indices(idx)
-        frames_m =  self.momentum_indices(idx)
-        reversed_m =  self.momentum_reversed(idx)
-
         if lazy is not None and lazy is True and False:
-            confs = [ Configuration(idx={self.storage : c}) for c in frames_c]
-            moms = [ Momentum(idx={self.storage : m}) for m in frames_m]
+            if False:
+                # TODO: experimental with reading nothing only the length
+                # needs reimplementing the __getitem__ and __getslice__ in Trajectory
+                obj = Trajectory([ None ] * self.length(idx))
+            else:
+                frames_c =  self.configuration_indices(idx)
+                frames_m =  self.momentum_indices(idx)
+                reversed_m =  self.momentum_reversed(idx)
 
-            obj = Trajectory([
-                Snapshot(configuration=el[0], momentum=el[1], reversed=el[2])
-                for el in zip(confs,moms,reversed_m)
-            ])
+                confs = [ Configuration(idx={self.storage : c}) for c in frames_c]
+                moms = [ Momentum(idx={self.storage : m}) for m in frames_m]
+
+                obj = Trajectory([
+                    Snapshot(configuration=el[0], momentum=el[1], reversed=el[2])
+                    for el in zip(confs, moms, reversed_m)
+                ])
         else:
+            frames_c =  self.configuration_indices(idx)
+            frames_m =  self.momentum_indices(idx)
+            reversed_m =  self.momentum_reversed(idx)
+
             obj = self.from_indices(frames_c, frames_m, reversed_m, lazy=True)
 
         obj.idx[self.storage] = idx

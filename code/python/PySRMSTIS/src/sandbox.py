@@ -34,7 +34,7 @@ if __name__ == '__main__':
         snapshot = simulator.storage.snapshot.load(0, 0)
 
         # generate from this snapshot a trajectory with 50 steps
-        traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,30))])
+        traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,3))])
         simulator.storage.trajectory.save(traj)
 
         print len(traj)
@@ -48,7 +48,7 @@ if __name__ == '__main__':
         op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices, storages=simulator.storage.configuration)
         print "OP"
         print op(Trajectory.storage.load(1)[0:2])
-        dd = simulator.storage.trajectory.load(1)[ 0:50 ]
+        dd = simulator.storage.trajectory.load(1)[ 0:3 ]
         lV = LambdaVolume(op, 0.0, 0.06)
         lV2 = LambdaVolume(op, 0.0, 0.08)
 
@@ -98,7 +98,7 @@ if __name__ == '__main__':
         # be true in the next step. This should be passed to the pathmover to stop simulating for a particular ensemble
 
         vn = VoronoiVolume(
-                OP_Multi_RMSD('Voronoi', tt[[0,10]], atom_indices=simulator.solute_indices),
+                OP_Multi_RMSD('Voronoi', tt[[0,2]], atom_indices=simulator.solute_indices),
                 state = 0
                 )
 
@@ -146,35 +146,45 @@ if __name__ == '__main__':
                 ensemble = tis
                 )
 
-        pm = MixedMover([bm, fm])
-        
-        pm.move(tt)
-        print 'ensemble Check :', pm.ensemble(tt)
+#        fm = MixedMover([bm, fm])
+        fm.move(tt)
 
-        print pm.origin()
-        print storage.origin.save(pm.origin())
+        storage.ensemble.save(fm.ensemble)
+        storage.pathmover.save(fm)
 
-        smpl = Sample(trajectory=pm.result, ensemble=pm.ensemble, origin=pm.origin())
+        loaded = storage.pathmover.load(fm.idx[storage])
 
-        simulator.storage.trajectory.save(pm.final)
+        print 'Final 2', fm.final
+        print 'Final 1', loaded.final
 
-        print pm.ensemble(pm.final)
-        print 'Accepted : ', pm.accepted
-        print len(pm.final)
+
+
+        print 'ensemble Check :', fm.ensemble(tt)
+
+        print fm.origin()
+        print storage.origin.save(fm.origin())
+
+        smpl = Sample(trajectory=fm.result, ensemble=fm.ensemble, origin=fm.origin())
+
+        simulator.storage.trajectory.save(fm.final)
+
+        print fm.ensemble(fm.final)
+        print 'Accepted : ', fm.accepted
+        print len(fm.final)
         
         print 'Next Check:'
 
         en = ef.A2BEnsemble(lV, lV, True)
-        print en(pm.final)
+        print en(fm.final)
 
         en = InXEnsemble(lV, 0)
-        print en(pm.final)
+        print en(fm.final)
 
         en = InXEnsemble(lV, -1)
-        print en(pm.final)
+        print en(fm.final)
 
         en = OutXEnsemble(lV, slice(1, -1), lazy = False)
-        print en(pm.final)
+        print en(fm.final)
 
         op.save()
 

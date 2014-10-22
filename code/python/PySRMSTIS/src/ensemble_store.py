@@ -1,10 +1,10 @@
-from object_storage import ObjectStorage
+from object_storage import ObjectStorage, addcache
 from ensemble import Ensemble, LoadedEnsemble
 
 class EnsembleStorage(ObjectStorage):
 
     def __init__(self, storage):
-        super(EnsembleStorage, self).__init__(storage, Ensemble)
+        super(EnsembleStorage, self).__init__(storage, Ensemble, named=True)
 
     def save(self, ensemble, idx=None):
         """
@@ -23,17 +23,13 @@ class EnsembleStorage(ObjectStorage):
         A single Ensemble object can only be saved once!
         """
 
-        if ensemble.name is None:
-            raise ValueError('Can only save ensembles with a unique name')
-            return
-
         if idx is None:
-            find_idx = self.find_by_name(ensemble.name)
+            find_idx = self.find_by_name(str(ensemble))
             if find_idx is not None:
                 # found and does not need to be saved, but we will let this ensemble point to the storage
                 # in case we want to save and need the idx
                 ensemble.idx[self.storage] = find_idx
-
+                self.cache[find_idx] = ensemble
                 # TODO: We might check if the string representation agrees and throw an exception otherwise
                 return
 
@@ -49,14 +45,14 @@ class EnsembleStorage(ObjectStorage):
         return
 
     def find_by_name(self, needle):
-        all_names = self.storage.variables['ensemble_name'][:]
+        all_names = self.storage.variables['ensemble_str'][:]
         for idx, name in enumerate(all_names):
             if name == needle:
                 return idx
 
         return None
 
-
+    @addcache
     def load(self, idx, momentum = True):
         '''
         Return a ensemble from the storage
@@ -88,5 +84,4 @@ class EnsembleStorage(ObjectStorage):
         """
         super(EnsembleStorage, self)._init()
 
-        self.init_variable('ensemble_name', 'str', description="ensemble_str[ensemble] is the unique name to identify ensemble 'ensemble'.")
         self.init_variable('ensemble_str', 'str', description="ensemble_str[ensemble] is the description string of ensemble 'ensemble'.")

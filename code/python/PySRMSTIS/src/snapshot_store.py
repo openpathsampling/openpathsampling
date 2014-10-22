@@ -1,5 +1,5 @@
 from snapshot import Snapshot, Configuration, Momentum
-from object_storage import ObjectStorage
+from object_storage import ObjectStorage, addcache
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole, picoseconds
 import numpy as np
 
@@ -122,7 +122,7 @@ class MomentumStorage(ObjectStorage):
 
         return
 
-
+    @addcache
     def load(self, idx, lazy=True):
         '''
         Load a momentum from the storage
@@ -138,40 +138,42 @@ class MomentumStorage(ObjectStorage):
             the loaded momentum instance
         '''
 
-        #TODO: Check, for some reason some idx are given as numpy.in32 and netcdf4 is not compatible with indices given in this format!!!!!
-        idx = int(idx)
 
         storage = self.storage
-
-        if idx in self.cache:
-            return self.cache[idx]
 
         if not (Momentum.load_lazy and lazy):
             v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
             velocities = Quantity(v, nanometers / picoseconds)
+            T = storage.variables['momentum_kinetic'][idx]
+            kinetic_energy = Quantity(T, kilojoules_per_mole)
+
         else:
             velocities = None
-
-        T = storage.variables['momentum_kinetic'][idx]
-        kinetic_energy = Quantity(T, kilojoules_per_mole)
+            kinetic_energy = None
 
         momentum = Momentum(velocities=velocities, kinetic_energy=kinetic_energy)
         momentum.idx[storage] = idx
-
-        self.to_cache(momentum)
 
         return momentum
 
     def update_velocities(self, obj):
         storage = self.storage
 
-        #TODO: Check, for some reason some idx are given as numpy.in32 and netcdf4 is not compatible with indices given in this format!!!!!
         idx = obj.idx[self.storage]
-
         v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
         velocities = Quantity(v, nanometers / picoseconds)
 
         obj.velocities = velocities
+
+    def update_kinetic_energy(self, obj):
+        storage = self.storage
+
+        idx = obj.idx[self.storage]
+        T = storage.variables['momentum_kinetic'][idx]
+        kinetic_energy = Quantity(T, kilojoules_per_mole)
+
+        obj.kinetic_energy = kinetic_energy
+
 
     def velocities_as_numpy(self, frame_indices=None, atom_indices=None):
         """
@@ -276,6 +278,7 @@ class ConfigurationStorage(ObjectStorage):
     def get(self, indices):
         return [ self.load(idx) for idx in indices ]
 
+    @addcache
     def load(self, idx, lazy=False):
         '''
         Load a configuration from the storage
@@ -291,32 +294,25 @@ class ConfigurationStorage(ObjectStorage):
             the configuration
         '''
 
-        #TODO: Check, for some reason some idx are given as numpy.in32 and netcdf4 is not compatible with indices given in this format!!!!!
-        idx = int(idx)
-
-        if idx in self.cache:
-            return self.cache[idx]
-
         storage = self.storage
 
         #TODO: Use newest simtk.units since there was an inconcistance with the new numpy
         if not (Configuration.load_lazy and lazy):
             x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
             coordinates = Quantity(x, nanometers)
+            b = storage.variables['configuration_box_vectors'][idx]
+            box_vectors = Quantity(b, nanometers)
+            V = storage.variables['configuration_potential'][idx]
+            potential_energy = Quantity(V, kilojoules_per_mole)
         else:
             coordinates = None
-
-        b = storage.variables['configuration_box_vectors'][idx]
-        box_vectors = Quantity(b, nanometers)
-        V = storage.variables['configuration_potential'][idx]
-        potential_energy = Quantity(V, kilojoules_per_mole)
+            box_vectors = None
+            potential_energy = None
 
         configuration = Configuration(coordinates=coordinates, box_vectors = box_vectors, potential_energy=potential_energy)
         configuration.idx[storage] = idx
 
         configuration.topology = self.storage.topology
-
-        self.to_cache(configuration)
 
         return configuration
 

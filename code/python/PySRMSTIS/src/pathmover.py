@@ -35,9 +35,10 @@ class PathMover(object):
     simulator : Simulator
         the attached simulator used to generate new trajectories
     """
-    
+
+    cls = 'pathmover'
     simulator = None
-    
+
     def __init__(self):
         
         # An ensemble that is at the same time triggering the stopping criterion and the final acceptance and the end.
@@ -50,10 +51,10 @@ class PathMover(object):
         self.start = None
         self.final = None
         self.ensemble = FullEnsemble()
-        self.ensemble.name = 'FullEnsemble'
         self.name = self.__class__.__name__
-        pass
-        
+
+        self.idx = dict()
+
     def move(self, trajectory):
         '''
         Run the generation starting with the initial trajectory specified.
@@ -121,13 +122,14 @@ class PathMover(object):
 class ShootMover(PathMover):
     '''
     A pathmover that implements a general shooting algorithm that generates a sample from a specified ensemble
-    '''    
+    '''
+
     def __init__(self, selector, ensemble):
         super(ShootMover, self).__init__()
         self.selector = selector
         self.ensemble = ensemble
         self.length_stopper = LengthEnsemble(0)
-    
+
     @property
     def generator_stopper(self):
         '''
@@ -188,7 +190,8 @@ class ForwardShootMover(ShootMover):
                                                       self.ensemble, 
                                                       self.start[0:self.start_point.index]
                                                 ).forward, self.length_stopper.forward]
-                                     )        
+                                     )
+
         self.final = self.start[0:self.start_point.index] + partial_trajectory    
         self.final_point = ShootingPoint(self.selector, self.final, self.start_point.index)
 
@@ -209,8 +212,7 @@ class BackwardShootMover(ShootMover):
                                                      self.start[self.start_point.index + 1:]
                                                 ).backward, self.length_stopper.backward]
                                      )
-        
-        
+
         self.final = partial_trajectory.reversed + self.start[self.start_point.index + 1:]    
         self.final_point = ShootingPoint(self.selector, self.final, partial_trajectory.frames - 1)
         

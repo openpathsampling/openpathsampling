@@ -25,6 +25,8 @@ class Ensemble(object):
 
     use_shortcircuit = True
 
+    cls = 'ensemble'
+
     def __init__(self):
         '''
         A path volume defines a set of paths.
@@ -34,7 +36,7 @@ class Ensemble(object):
 
         self._traj = dict()
         self.last = None
-        self.name = None
+        self.name = ''
         
         return
 
@@ -518,7 +520,8 @@ class LengthEnsemble(Ensemble):
         length : int or slice
             The specific length (int) or the range of allowed trajectory lengths (slice)
         '''
-        
+
+        super(LengthEnsemble, self).__init__()
         self.length = length
         pass
     

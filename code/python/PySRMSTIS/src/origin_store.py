@@ -9,7 +9,10 @@ class Origin(object):
     -----
     Should contain inputs/outputs and success (accepted/rejected) as well as probability to succeed.
     """
-    def __init__(self, name, final, result, inputs, mover, acceptance, success, options, ensemble):
+
+    cls = 'origin'
+
+    def __init__(self, name=None, final=None, result=None, inputs=None, mover=None, acceptance=None, success=None, options=None, ensemble=None):
         self.name = name
         self.inputs = inputs
         self.mover = mover
@@ -107,7 +110,6 @@ class OriginStorage(ObjectStorage):
         obj.idx[self.storage] = idx
 
         return obj
-
 
     def _init(self):
         """

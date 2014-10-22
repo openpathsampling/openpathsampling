@@ -36,7 +36,7 @@ if __name__ == '__main__':
         print '    {:<32} : {:<30}'.format(a,b)
 
     def nline(n, a, b):
-        print '    [{:<4}] {:<25} : {:<30}'.format(n,a,b)
+        print '    [{:>4}] {:<25} : {:<30}'.format(n,a,b)
 
 
     headline("General")
@@ -74,7 +74,20 @@ if __name__ == '__main__':
 
     for e_idx in range(1, storage.ensemble.count() + 1):
         ensemble = storage.ensemble.load(e_idx)
-        nline(e_idx,ensemble.name,ensemble.description.replace('\n', ''))
+        nline(e_idx,ensemble.name, ensemble.description.replace('\n', ''))
+
+    headline("PathMovers")
+
+    for p_idx in range(1, storage.pathmover.count() + 1):
+        pathmover = storage.pathmover.load(p_idx)
+        nline(p_idx,pathmover.name, pathmover.cls)
+
+    headline("ShootingPoints")
+
+    for p_idx in range(1, storage.shootingpoint.count() + 1):
+        obj = storage.shootingpoint.load(p_idx)
+        nline(p_idx,obj.index, obj.cls)
+
 
     headline("Origins")
 
