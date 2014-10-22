@@ -24,8 +24,7 @@ from orderparameter import OP_Function
 from snapshot import Snapshot, Configuration
 from volume import LambdaVolume, FullVolume
 from ensemble import EnsembleFactory as ef
-from ensemble import (LengthEnsemble, FullEnsemble,
-                        ForwardAppendedTrajectoryEnsemble)
+from ensemble import (LengthEnsemble, SequentialEnsemble)
 from storage import TrajectoryStorage
 from trajectory import Trajectory
 
@@ -191,6 +190,7 @@ if __name__=="__main__":
                                          interface0,
                                          lazy=True)
 
+
     print """
 PART ONE: Generate an initial trajectory which satisfies the path ensemble
 for the innermost interface.
@@ -204,8 +204,12 @@ good_path, which satisfies the ensemble.
     # new ensemble (with new continue_forward) to do this more cleanly.
     snapshot = Snapshot.load(0,0)
     
-    # TODO: ensemble the consists of successive segments of various types
-
+    first_traj_ensemble = SequentialEnsemble([
+        OutXEnsemble(stateA) | LengthEnsemble(0),
+        InXEnsemble(stateA),
+        OutXEnsemble(stateA) & LeaveXEnsemble(interface0),
+        InXEnsemble(stateA) & LengthEnsemble(1)
+    ])
 
     print "start path generation"
     total_path = simulator.generate(snapshot, [get_first_traj])
