@@ -1,8 +1,10 @@
 '''
 Created on 03.09.2014
 
-@author: jan-hendrikprinz
+@author: jan-hendrikprinz, David W.H. Swenson
 '''
+
+from trajectory import Trajectory
 
 class Ensemble(object):
     '''    
@@ -101,6 +103,10 @@ class Ensemble(object):
 
         return True        
         pass
+
+    can_append = forward
+    can_prepend = backward
+
 
     def locate(self, trajectory, lazy=True, max_length=None, min_length=1, overlap=1):
         '''
@@ -433,7 +439,7 @@ class EnsembleCombination(Ensemble):
 
     def forward(self, trajectory):
         if Ensemble.use_shortcircuit:
-            a = self.ensemble1.forward(trajectory)
+            a = self.ensemble1.can_append(trajectory)
             res_true = self._continue_fnc(a, True)
             res_false = self._continue_fnc(a, False)
             if res_false == res_true:
@@ -446,7 +452,7 @@ class EnsembleCombination(Ensemble):
                 else:
                     return res_false
         else:
-            return self.fnc(self.ensemble1.forward(trajectory), self.ensemble2.forward(trajectory))
+            return self.fnc(self.ensemble1.can_append(trajectory), self.ensemble2.can_append(trajectory))
 
     def backward(self, trajectory):
         if Ensemble.use_shortcircuit:
@@ -465,9 +471,269 @@ class EnsembleCombination(Ensemble):
         else:
             return self.fnc(self.ensemble1.backward(trajectory), self.ensemble2.backward(trajectory))
 
+    can_append = forward
+    can_prepend = backward
+
     def __str__(self):
 #        print self.sfnc, self.ensemble1, self.ensemble2, self.sfnc.format('(' + str(self.ensemble1) + ')' , '(' + str(self.ensemble1) + ')')
         return self.sfnc.format('(\n' + Ensemble._indent(str(self.ensemble1)) + '\n)' , '(\n' + Ensemble._indent(str(self.ensemble2)) + '\n)')
+
+class SequentialEnsemble(Ensemble):
+    """
+    An ensemble that consists of several ensembles which are satisfied by
+    the trajectory in sequence.
+
+    Attributes
+    ----------
+    ensembles : tuple of Ensemble
+        The ensembles, in time-order of when they should occur in the
+        trajectory.
+    min_overlap : int or tuple of int
+        The minimum number of frames that overlap between two ensembles in
+        the sequence. A positive number n indicates that at least n frames
+        must be in both ensembles at the transition between them. A negative
+        number -n indicates that at least n frames in neither ensemble at
+        the transition between them. If given as a list, the list should be
+        of length len(ensembles)-1, with one value for each transition. If
+        given as an integer, that value will be used for all transitions.
+    max_overlap : int or list of int
+        The maximum number of frames that overlap between two ensembles in
+        the sequence. A positive number n indicates that no more than n
+        frames can be in both ensembles at the transition between them. A
+        negative number -n indicates no more than n frames in neither
+        ensemble at the transition between them. If given as a list, the
+        list should be of length len(ensembles)-1, with one value for each
+        transition. If given as an integer, that value will be used for all
+        transitions.
+
+    Todo
+    ----
+        Overlap features not implemented because ohmygod this was hard
+        enough already.
+    """
+
+    def __init__(self, ensembles, min_overlap=0, max_overlap=0, greedy=False):
+        # make tuples of the min/max overlaps
+        if type(min_overlap) is int:
+            min_overlap = (min_overlap, )*(len(ensembles)-1)
+        if type(max_overlap) is int:
+            max_overlap = (max_overlap, )*(len(ensembles)-1)
+
+        self.ensembles = tuple(ensembles)
+        self.min_overlap = tuple(min_overlap)
+        self.max_overlap = tuple(max_overlap)
+        self.greedy = greedy
+
+        # sanity checks
+        if len(self.min_overlap) != len(self.max_overlap):
+            raise ValueError("len(min_overlap) != len(max_overlap)")
+        if len(self.min_overlap) != len(self.ensembles)-1:
+            raise ValueError("Number of overlaps doesn't match number of transitions")
+        for i in range(len(self.min_overlap)):
+            if min_overlap[i] > max_overlap[i]:
+                raise ValueError("min_overlap greater than max_overlap!")
+
+    def transition_frames(self, trajectory, lazy=None):
+        # it is easiest to understand this decision tree as a simplified
+        # version of the can_append decision tree; see that for detailed
+        # comments
+        ens_num = 0
+        subtraj_first = 0
+        traj_final = len(trajectory)
+        final_ens = len(self.ensembles)-1
+        transitions = []
+        while True:
+            subtraj_final = self._find_subtraj_final(trajectory, 
+                                                     subtraj_first, ens_num)
+            if subtraj_final - subtraj_first > 0:
+                subtraj = trajectory[slice(subtraj_first, subtraj_final)]
+                if ens_num == final_ens:
+                    if subtraj_final == traj_final:
+                        # success
+                        transitions.append(subtraj_final)
+                        return transitions
+                    else:
+                        # fails because we have more frames to assign
+                        transitions.append(subtraj_final) 
+                        return transitions
+                else:
+                    ens_num += 1
+                    transitions.append(subtraj_final)
+                    subtraj_first = subtraj_final
+            else:
+                if self.ensembles[ens_num](Trajectory([])):
+                    ens_num += 1
+                    transitions.append(subtraj_final)
+                    subtraj_first = subtraj_final
+                else:
+                    return transitions
+
+
+    def __call__(self, trajectory, lazy=None):
+        transitions = self.transition_frames(trajectory, lazy)
+        # if we don't have the right number of transitions, or if the last 
+        #print transitions
+        if len(transitions) != len(self.ensembles):
+            #print "Returns false b/c not enough ensembles"
+            return False
+        elif transitions[-1] != len(trajectory):
+            #print "Returns false b/c not all frames assigned"
+            return False
+
+        subtraj_first = 0
+        subtraj_i = 0
+        while subtraj_i < len(self.ensembles):
+            subtraj_final = transitions[subtraj_i]
+            subtraj = trajectory[slice(subtraj_first, subtraj_final)]
+            if self.ensembles[subtraj_i](subtraj) == False:
+                #print "Returns false b/c ensemble",subtraj_i," fails"
+                return False
+            subtraj_i += 1
+            subtraj_first = subtraj_final
+        return True
+
+    def _find_subtraj_final(self, traj, subtraj_first, ens_num):
+        """
+        Find the longest subtrajectory of trajectory which starts at
+        subtraj_first and satifies self.ensembles[ens_num].can_append
+
+        Returns
+        -------
+        int
+            Frame of traj which is the final frame for a subtraj starting at
+            subtraj_first and satisfying self.ensembles[ens_num]
+        """
+        subtraj_final = subtraj_first
+        traj_final = len(traj)
+        ens = self.ensembles[ens_num]
+        subtraj = traj[slice(subtraj_first, subtraj_final+1)]
+        # if we're in the ensemble or could eventually be in the ensemble,
+        # we keep building the subtrajectory
+        while ( (ens.can_append(subtraj) or ens(subtraj)) and 
+                    subtraj_final < traj_final):
+            subtraj_final += 1
+            # TODO: replace with append; probably faster
+            subtraj = traj[slice(subtraj_first, subtraj_final+1)]
+        return subtraj_final
+    
+    def _find_subtraj_first(self, traj, subtraj_final, ens_num):
+        subtraj_first = subtraj_final-1
+        traj_first = 0
+        ens = self.ensembles[ens_num]
+        subtraj = traj[slice(subtraj_first, subtraj_final)]
+        while ( (ens.can_prepend(subtraj) or ens(subtraj)) and
+               subtraj_first >= traj_first):
+            subtraj_first -= 1
+            subtraj = traj[slice(subtraj_first, subtraj_final)]
+        return subtraj_first+1
+
+
+    def forward(self, trajectory):
+        # treat this like we're implementing a regular expression parser ...
+        # .*ensemble.+ ; but we have to do this for all possible matches
+        # There are three tests we consider:
+        # 1. subtraj_final - subtraj_first > 0: Do we obtain a subtrajectory?
+        # 2. subtraj_final == traj_final: Have we assigned all the frames?
+        # 3. ens_num == final_ens: are we looking at the last ensemble
+        # Vaious combinations of these result in three possible outcomes:
+        # (a) return True (we can append)
+        # (b) return False (we can't append)
+        # (c) loop around to text another subtrajectory (we can't tell)
+        # Returning false can only happen if all ensembles have been tested
+        traj_final = len(trajectory)
+        final_ens = len(self.ensembles)-1
+        #print traj_final, final_ens
+        subtraj_first = 0
+        ens_num = 0
+        ens_first = 0
+        while True: #  main loop, with various 
+            subtraj_final = self._find_subtraj_final(trajectory, 
+                                                     subtraj_first, ens_num)
+            #print (ens_num,
+                    #"("+str(subtraj_first)+","+str(subtraj_final)+")"
+                  #)
+            if subtraj_final - subtraj_first > 0:
+                subtraj = trajectory[slice(subtraj_first, subtraj_final)]
+                if ens_num == final_ens:
+                    if subtraj_final == traj_final:
+                        # we're in the last ensemble and the whole
+                        # trajectory is assigned: can we append?
+                        #print "Returning can_append"
+                        return self.ensembles[ens_num].can_append(subtraj)
+                    else:
+                        #print "Returning false due to incomplete assigns:",
+                        print subtraj_final, "!=", traj_final
+                        return False # in final ensemble, not all assigned
+                else:
+                    # subtraj existed, but not yet final ensemble
+                    # so we start with the next ensemble
+                    ens_num += 1
+                    subtraj_first = subtraj_final
+                    #print "Moving to the next ensemble", ens_num
+            else:
+                if subtraj_final == traj_final:
+                    # all frames assigned, but not all ensembles finished;
+                    # next frame might satisfy next ensemble
+                    return True
+                elif self.ensembles[ens_num](Trajectory([])):
+                    #print "Moving on because of allowed zero-length ensemble"
+                    ens_num += 1
+                    subtraj_first = subtraj_final
+                else:
+                    # not all frames assigned, couldn't find a sequence
+                    # start over with sequences that begin with the next
+                    # ensemble
+                    if ens_first == final_ens:
+                        #print "Started with the last ensemble, got nothin'"
+                        return False
+                    else:
+                        ens_first += 1
+                        ens_num = ens_first
+                        subtraj_first = 0
+
+
+    def backward(self, trajectory):
+        # based on .forward(); see notes there for algorithm details
+        traj_first = 0
+        first_ens = 0
+        subtraj_final = len(trajectory)
+        ens_final = len(self.ensembles)-1
+        ens_num = ens_final
+        while True:
+            subtraj_first = self._find_subtraj_first(trajectory,
+                                                     subtraj_final, ens_num)
+            #print (ens_num,
+                    #"("+str(subtraj_first)+","+str(subtraj_final)+")"
+                  #)
+            if subtraj_final - subtraj_first > 0:
+                subtraj = trajectory[slice(subtraj_first, subtraj_final)]
+                if ens_num == first_ens:
+                    if subtraj_first == traj_first:
+                        return self.ensembles[ens_num].can_prepend(subtraj)
+                    else:
+                        return False
+                else:
+                    ens_num -= 1
+                    subtraj_final = subtraj_first
+            else:
+                if subtraj_first == traj_first:
+                    return True
+                elif self.ensembles[ens_num](Trajectory([])):
+                    ens_num -= 1
+                    subtraj_final = subtraj_first
+                else:
+                    if ens_final == first_ens:
+                        return False
+                    else:
+                        ens_final -= 1
+                        ens_num = ens_final
+                        subtraj_final = len(trajectory)
+
+    def __str__(self):
+        head = "[\n"
+        tail = "\n]"
+        sequence_str = ",\n".join([str(ens) for ens in self.ensembles])
+        return head+sequence_str+tail
 
 class LengthEnsemble(Ensemble):
     '''
@@ -502,7 +768,10 @@ class LengthEnsemble(Ensemble):
 
     def backward(self, trajectory):
         return self.forward(trajectory)
-    
+
+    can_append = forward
+    can_prepend = backward
+
     def __str__(self):
         if type(self.length) is int:
             return 'len(x) = {0}'.format(self.length)
@@ -532,6 +801,19 @@ class InXEnsemble(VolumeEnsemble):
     Represents an ensemble where all the selected frames of the trajectory
     are in a specified volume
     '''
+
+    def can_append(self, trajectory):
+        if len(trajectory) == 0:
+            return True
+        else:
+            return self(trajectory[slice(trajectory.frames-1, None)])
+
+    def can_prepend(self, trajectory):
+        if len(trajectory) == 0:
+            return True
+        else:
+            return self(trajectory[slice(0,1)])
+        
     
     def forward(self, trajectory):
         pos = trajectory.frames - 1
@@ -578,25 +860,39 @@ class InXEnsemble(VolumeEnsemble):
         return True    
     
     def __call__(self, trajectory, lazy=None):
-        if type(self.frames) is int:
-            if trajectory.frames > self.frames and trajectory.frames >= -self.frames:
-                return self._volume(trajectory[self.frames])
-            else:
-                return True
-        else:
-            if (self.lazy and lazy is None) or (lazy and lazy is not None):
-                for s in trajectory[self.frames][0::max(1,trajectory.frames - 1)]:
-                    if not self._volume(s):
-                        return False
-            else:
-                for s in trajectory[self.frames]:
-                    if not self._volume(s):
-                        return False
-                        
-            return True
+        if len(trajectory) == 0:
+            return False
+        for frame in trajectory:
+            if not self._volume(frame):
+                return False
+        return True
+
+        #if type(self.frames) is int:
+        #    if trajectory.frames > self.frames and trajectory.frames >= -self.frames:
+        #        return self._volume(trajectory[self.frames])
+        #    else:
+        #        return True
+        #else:
+        #    if (self.lazy and lazy is None) or (lazy and lazy is not None):
+        #        for s in trajectory[self.frames][0::max(1,trajectory.frames - 1)]:
+        #            if not self._volume(s):
+        #                return False
+        #    else:
+        #        for s in trajectory[self.frames]:
+        #            if not self._volume(s):
+        #                return False
+        #                
+        #    return True
 
     def __invert__(self):
         return LeaveXEnsemble(self._stored_volume, self.frames, self.lazy)
+
+    def __str__(self):
+        if type(self.frames) is int:
+            return 'x[{0}] in {1}'.format(self.frames, self._volume)
+        else:
+            return 'x[t] in {2} for all t in [{0}:{1}]'.format(
+                self.frames.start, self.frames.stop, self._volume)
 
 
 
@@ -611,9 +907,9 @@ class OutXEnsemble(InXEnsemble):
     
     def __str__(self):
         if type(self.frames) is int:
-            return 'x[{0}] not in {1}'.format(self.frames, self._volume)
+            return 'x[{0}] in {1}'.format(self.frames, self._volume)
         else:
-            return 'x[t] not in {2} for all t in [{0}:{1}])'.format(
+            return 'x[t] in {2} for all t in [{0}:{1}]'.format(
                 self.frames.start, self.frames.stop, self._volume)
 
     def __invert__(self):
@@ -683,18 +979,22 @@ class HitXEnsemble(VolumeEnsemble):
         trajectory : Trajectory
             The trajectory to be checked
         '''
+        for frame in trajectory:
+            if self._volume(frame):
+                return True
+        return False
 
-        if type(self.frames) is int:
-            if trajectory.frames > self.frames and trajectory.frames >= -self.frames:
-                return self._volume(trajectory[self.frames])
-            else:
-                return False          
-        else:
-            for s in trajectory[self.frames]:
-                if self._volume(s):
-                    return True    
-
-            return False
+        #if type(self.frames) is int:
+        #    if trajectory.frames > self.frames and trajectory.frames >= -self.frames:
+        #        return self._volume(trajectory[self.frames])
+        #    else:
+        #        return False          
+        #else:
+        #    for s in trajectory[self.frames]:
+        #        if self._volume(s):
+        #            return True    
+#
+#            return False
 
     def __invert__(self):
         return OutXEnsemble(self._stored_volume, self.frames, self.lazy)
@@ -709,8 +1009,8 @@ class LeaveXEnsemble(HitXEnsemble):
         if type(self.frames) is int:
             return 'x[{0}] not in {1}'.format(str(self.frames), self._volume)
         else:
-            return 'x[t] in {2} for one t in [{0}:{1}])'.format(self.frames.start, self.frames.stop, self._volume)
-        
+            return 'x[t] in {2} for one t in [{0}:{1}]'.format(self.frames.start, self.frames.stop, self._volume)
+      
     @property
     def _volume(self):
         # effectively use HitXEnsemble but with inverted volume
@@ -719,6 +1019,11 @@ class LeaveXEnsemble(HitXEnsemble):
     def __invert__(self):
         return InXEnsemble(self._stored_volume, self.frames, self.lazy)
 
+    def __call__(self, trajectory, lazy=None):
+        for frame in trajectory:
+            if self._volume(frame):
+                return True
+        return False
 
 class ExitsXEnsemble(VolumeEnsemble):
     """
@@ -728,8 +1033,9 @@ class ExitsXEnsemble(VolumeEnsemble):
     def __init__(self, volume, frames = slice(None), lazy=False):
         # changing the defaults for frames and lazy; prevent single frame
         if type(frames) is int:
-            raise ValueError('Exits/EntersXEnsemble require more than one frame')
-        super(ExitsXEnsemble, self).__init__(volume,frames,lazy)
+            raise ValueError(
+                'Exits/EntersXEnsemble require more than one frame')
+        super(ExitsXEnsemble, self).__init__(volume, frames, lazy)
 
     def __str__(self):
         domain = 'exists x[t], x[t+1] in [{0}:{1}] '.format(
@@ -775,8 +1081,8 @@ class EntersXEnsemble(ExitsXEnsemble):
                 if not self._volume(frame_i) and self._volume(frame_iplus):
                     return True
         return False
-            
-        
+
+
 class AlteredTrajectoryEnsemble(Ensemble):
     '''
     Represents an ensemble where an altered version of a trajectory (extended, reversed, cropped) is part of a given ensemble
