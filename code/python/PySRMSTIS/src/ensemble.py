@@ -550,6 +550,7 @@ class SequentialEnsemble(Ensemble):
 
     def __init__(self, ensembles, min_overlap=0, max_overlap=0, greedy=False):
         # make tuples of the min/max overlaps
+        super(SequentialEnsemble, self).__init__()
         if type(min_overlap) is int:
             min_overlap = (min_overlap, )*(len(ensembles)-1)
         if type(max_overlap) is int:
