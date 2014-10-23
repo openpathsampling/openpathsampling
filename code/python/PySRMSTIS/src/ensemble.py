@@ -550,6 +550,7 @@ class SequentialEnsemble(Ensemble):
 
     def __init__(self, ensembles, min_overlap=0, max_overlap=0, greedy=False):
         # make tuples of the min/max overlaps
+        super(SequentialEnsemble, self).__init__()
         if type(min_overlap) is int:
             min_overlap = (min_overlap, )*(len(ensembles)-1)
         if type(max_overlap) is int:
@@ -1258,6 +1259,12 @@ class EnsembleFactory():
         -------
         ensemble : Ensemble
             The constructed Ensemble
-        '''        
-
-        return (LengthEnsemble(slice(3,None)) & InXEnsemble(volume_a, 0) & InXEnsemble(volume_b, -1)) & (LeaveXEnsemble(volume_x) & OutXEnsemble(volume_a | volume_b, slice(1,-1), lazy))
+        '''
+        length1 = LengthEnsemble(1)
+        ens = SequentialEnsemble([
+            InXEnsemble(volume_a) & length1,
+            OutXEnsemble(volume_a | volume_b) & LeaveXEnsemble(volume_x),
+            InXEnsemble(volume_a | volume_b) & length1
+        ])
+        return ens
+        #return (LengthEnsemble(slice(3,None)) & InXEnsemble(volume_a, 0) & InXEnsemble(volume_b, -1)) & (LeaveXEnsemble(volume_x) & OutXEnsemble(volume_a | volume_b, slice(1,-1), lazy))

@@ -174,11 +174,10 @@ class Simulator(object):
             self._equilibrate_system()
             
             # Create a trajectory storage
-            self.storage = Storage(
-                                                 topology_file= self.fn_initial_pdb,
-                                                 filename = self.fn_storage,
-                                                 mode = 'w'
-                                                 )
+            self.storage = Storage(topology_file=self.fn_initial_pdb,
+                                   filename=self.fn_storage, 
+                                   mode='w'
+                                  )
             self.storage.simulator = self
             # index options
             self.storage._store_options(self)
