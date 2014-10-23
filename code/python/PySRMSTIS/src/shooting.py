@@ -86,7 +86,14 @@ class ShootingPointSelector(object):
     def __init__(self):
         self.idx = dict()
         pass
-    
+
+    @property
+    def identifier(self):
+        if hasattr(self, 'json'):
+            return self.json
+        else:
+            return None
+
     def f(self, snapshot):
         '''
         Returns the unnormalized proposal probability of a snapshot

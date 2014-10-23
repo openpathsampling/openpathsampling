@@ -36,7 +36,7 @@ if __name__ == '__main__':
         print '    {:<32} : {:<30}'.format(a,b)
 
     def nline(n, a, b):
-        print '    [{:>4}] {:<25} : {:<30}'.format(n,a,b)
+        print '     {:>4}] {:<25} : {:<30}'.format(n,a,b)
 
 
     headline("General")
@@ -80,20 +80,59 @@ if __name__ == '__main__':
 
     for p_idx in range(1, storage.pathmover.count() + 1):
         pathmover = storage.pathmover.load(p_idx)
-        nline(p_idx,pathmover.name, pathmover.cls)
+        nline(p_idx,pathmover.name, pathmover.json)
 
-    headline("ShootingPoints")
+    headline("ShootingPointSelector")
+
+    for p_idx in range(1, storage.shootingpointselector.count() + 1):
+        obj = storage.shootingpointselector.load(p_idx)
+        nline(p_idx,obj.json, obj.cls)
+
+    headline("ShootingPoints (" + str(storage.shootingpoint.count()) + ")")
 
     for p_idx in range(1, storage.shootingpoint.count() + 1):
         obj = storage.shootingpoint.load(p_idx)
-        nline(p_idx,obj.index, obj.cls)
+#        nline(p_idx,obj.json, obj.cls)
 
 
-    headline("Origins")
+    headline("Samples")
 
-    for o_idx in range(1, storage.origin.count() + 1):
-        origin = storage.origin.load(o_idx)
-        nline(o_idx, origin.name, str([t.idx[storage] for t in origin.inputs]) +" -> " + str(origin.final.idx[storage]) + " in " + origin.ensemble.name + " [" + str(origin.ensemble.idx[storage]) + "]")
+    def print_traj(name, traj_obj):
+        traj = storage.trajectory.configuration_indices(traj_obj.idx[storage])
+        sys.stdout.write("      {:>10}:  {:>5} frames [".format(name, str(len(traj))))
+        old_idx = -2
+        count = 0
+        for idx in traj:
+            if idx == old_idx + 1 or idx == old_idx - 1:
+                count += 1
+            else:
+                if count > 1:
+                    sys.stdout.write(" <" + str(count - 1) + ">")
+                if old_idx >= 0 and count > 0:
+                    sys.stdout.write(" " + str(old_idx))
+                sys.stdout.write(" " + str(idx))
+                count = 0
+            old_idx = idx
+
+        if count > 1:
+            sys.stdout.write(" ... <" + str(count - 1) + "> ...")
+        if count > 0:
+            sys.stdout.write(" " + str(old_idx))
+
+
+        sys.stdout.write(" ]\n")
+
+
+    for o_idx in range(1, storage.sample.count() + 1):
+        sample = storage.sample.load(o_idx)
+#        nline(o_idx, '', sample.details.json)
+        nline(o_idx, str(sample.mover.name) + "/" + str(sample.details.mover.name), str([t.idx[storage] for t in sample.details.inputs]) +" -> " + str(sample.details.final.idx[storage]) + " in " + sample.ensemble.name + " [" + str(sample.ensemble.idx[storage]) + "]")
+#        nline(o_idx, '', str(sample.details.start_point.index) + " -> " + str(sample.details.final_point.index))
+        print_traj('start', sample.details.start)
+        print_traj('final', sample.details.final)
+        print_traj('chosen', sample.trajectory)
+
+
 
     headline("Trajectories")
 

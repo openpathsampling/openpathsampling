@@ -12,7 +12,47 @@ def addcache(func):
         return obj
     return inner
 
+def addidentifier_save(func):
+    def inner(self, obj, idx=None, *args, **kwargs):
+        if idx is None and hasattr(obj, 'identifier'):
+            if not hasattr(obj,'json'):
+                setattr(obj,'json',self.get_json(obj))
+
+            find_idx = self.find_by_identifier(obj.identifier)
+            if find_idx is not None:
+                # found and does not need to be saved, but we will let this ensemble point to the storage
+                # in case we want to save and need the idx
+                obj.idx[self.storage] = find_idx
+                self.cache[find_idx] = obj
+            else:
+                func(self, obj, idx, *args, **kwargs)
+                # Finally register with the new idx in the identifier cache dict.
+                new_idx = obj.idx[self.storage]
+                self.all_names[obj.identifier] = new_idx
+        else:
+            func(self, obj, idx, *args, **kwargs)
+
+    return inner
+
+def addcache_save(func):
+    def inner(self, obj, idx = None, *args, **kwargs):
+        idx = self.index(obj, idx)
+        if idx is not None:
+            func(self, obj, idx, *args, **kwargs)
+    return inner
+
 class StoredObject(object):
+
+    def __getattr__(self, item):
+        if hasattr(self, '_loader'):
+#            print 'Lazy Loading'
+            self._loader()
+            delattr(self, '_loader')
+#        else:
+#            print 'Already Loaded'
+
+        return self.__dict__[item]
+
     pass
 
 class ObjectStorage(object):
@@ -20,7 +60,7 @@ class ObjectStorage(object):
     Base Class for storing complex objects in a netCDF4 file. It holds a reference to the store file.
     """
 
-    def __init__(self, storage, obj, named=False, json=False):
+    def __init__(self, storage, obj, named=False, json=False, identifier=None):
         """
 
         :param storage: a reference to the netCDF4 file
@@ -33,6 +73,11 @@ class ObjectStorage(object):
         self.cache = dict()
         self.named = named
         self.json = json
+        self.all_names = None
+        if identifier is not None:
+            self.identifier = self.idx_dimension + '_' + identifier
+        else:
+            self.identifier = None
 
     def register(self):
         self.storage.links.append(self)
@@ -62,6 +107,15 @@ class ObjectStorage(object):
         store = self.copy()
         store.storage = storage
         return store
+
+    def find_by_identifier(self, needle):
+        if self.all_names is None:
+            self.all_names = { s : idx for idx,s in enumerate(self.storage.variables[self.identifier][:]) }
+
+        if needle in self.all_names:
+                return self.all_names[needle]
+
+        return None
 
     def index(self, obj, idx=None):
         """
@@ -99,7 +153,7 @@ class ObjectStorage(object):
         self.cache[obj.idx[self.storage]] = obj
 
     @addcache
-    def load(self, idx):
+    def load(self, idx, lazy=True):
         '''
         Returns an object from the storage. Needs to be implented from the specific storage class.
         '''
@@ -107,17 +161,27 @@ class ObjectStorage(object):
         # Create object first to break any unwanted recursion in loading
         obj = StoredObject()
         setattr(obj, 'idx', {self.storage : idx})
-        return self.load_json(self.idx_dimension + '_json', idx, obj)
+        if lazy:
+            # if lazy construct a function that will update the content. This will be loaded, once the object is accessed
+            def loader():
+                return self.load_json(self.idx_dimension + '_json', idx, obj)
 
+            setattr(obj, '_loader', loader)
+            return obj
+        else:
+            return self.load_json(self.idx_dimension + '_json', idx, obj)
+
+    @addidentifier_save
+    @addcache_save
     def save(self, obj, idx=None):
         '''
         Returns an object from the storage. Needs to be implented from the specific storage class.
         '''
 
-        idx = self.index(obj, idx)
+        if not hasattr(obj,'json'):
+            setattr(obj,'json',self.get_json(obj))
 
-        if idx is not None:
-            self.save_json(self.idx_dimension + '_json', idx, obj)
+        self.storage.variables[self.idx_dimension + '_json'][idx] = obj.json
 
 
     def get(self, indices):
@@ -191,7 +255,6 @@ class ObjectStorage(object):
         Initialize the associated storage to allow for object storage. Mainly creates an index dimension with the name of the object.
 
         """
-        print self.idx_dimension
         # define dimensions used for the specific object
         self.storage.createDimension(self.idx_dimension, 0)
         if self.named:
@@ -235,7 +298,7 @@ class ObjectStorage(object):
         return self.storage.variables[name][self.slice(dimension, idx)]
 
     def init_mixed_length(self, name, dimension=None):
-        # index associated storage in class variable for all Origin instances to access
+        # index associated storage in class variable for all Sample instances to access
         ncfile = self.storage
 
         # define dimensions used in trajectories
@@ -351,7 +414,7 @@ class ObjectStorage(object):
         elif type(obj) is list:
             return [self._simplify_var(o) for o in obj]
         elif type(obj) is dict:
-            return {key : self._simplify_var(o) for key, o in obj.iteritems() if type(key) is str and key != 'idx' }
+            return {key : self._simplify_var(o) for key, o in obj.iteritems() if type(key) is str and key != 'idx' and key != 'json' and key != 'identifier'}
         else:
             return obj
 
@@ -366,7 +429,7 @@ class ObjectStorage(object):
         else:
             return obj
 
-    def save_json(self, name, idx, obj):
+    def get_json(self, obj):
         data = obj.__dict__
         cls = obj.__class__.__name__
         store = obj.cls
@@ -374,19 +437,23 @@ class ObjectStorage(object):
         simplified = self._simplify_var([cls, store, data])
         json_string = json.dumps(simplified)
 
-        self.storage.variables[name][idx] = json_string
+        return json_string
 
     def load_json(self, name, idx, obj = None):
+        idx = int(idx)
         json_string = self.storage.variables[name][idx]
         simplified = yaml.load(json_string)
         if obj is None:
             obj = StoredObject()
+
+        setattr(obj, 'json', json_string)
 
         data = self._build_var(simplified[2])
         for key, value in data.iteritems():
             setattr(obj, key, value)
 
         setattr(obj, 'cls', simplified[1])
+
 
         return obj
 

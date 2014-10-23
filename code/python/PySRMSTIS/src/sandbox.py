@@ -17,7 +17,6 @@ from ensemble import LengthEnsemble, InXEnsemble, OutXEnsemble
 from trajectory import Trajectory
 from pymbar import MBAR
 from snapshot import Snapshot
-from sample_store import Sample
 
 if __name__ == '__main__':
     simulator = Simulator.Alanine_system('auto')
@@ -34,7 +33,7 @@ if __name__ == '__main__':
         snapshot = simulator.storage.snapshot.load(0, 0)
 
         # generate from this snapshot a trajectory with 50 steps
-        traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,3))])
+        traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,6))])
         simulator.storage.trajectory.save(traj)
 
         print len(traj)
@@ -48,7 +47,7 @@ if __name__ == '__main__':
         op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices, storages=simulator.storage.configuration)
         print "OP"
         print op(Trajectory.storage.load(1)[0:2])
-        dd = simulator.storage.trajectory.load(1)[ 0:3 ]
+        dd = simulator.storage.trajectory.load(1)[ 0:6 ]
         lV = LambdaVolume(op, 0.0, 0.06)
         lV2 = LambdaVolume(op, 0.0, 0.08)
 
@@ -146,45 +145,42 @@ if __name__ == '__main__':
                 ensemble = tis
                 )
 
-#        fm = MixedMover([bm, fm])
-        fm.move(tt)
+        # Not using MixedMover because its implementation is inconsistent with being an actual pathmover at the moment
+        rand = np.random.random()
+        if rand < 0.5:
+            mm = fm
+        else:
+            mm = bm
 
-        storage.ensemble.save(fm.ensemble)
-        storage.pathmover.save(fm)
+        mm = MixedMover([bm, fm])
 
-        loaded = storage.pathmover.load(fm.idx[storage])
+        pth = mm.move(tt)
 
-        print 'Final 2', fm.final
-        print 'Final 1', loaded.final
+        storage.sample.save(pth)
 
+        print pth.details.json
 
+        loaded = storage.pathmover.load(mm.idx[storage])
 
-        print 'ensemble Check :', fm.ensemble(tt)
+        print 'ensemble Check :', mm.ensemble(pth.trajectory)
 
-        print fm.origin()
-        print storage.origin.save(fm.origin())
-
-        smpl = Sample(trajectory=fm.result, ensemble=fm.ensemble, origin=fm.origin())
-
-        simulator.storage.trajectory.save(fm.final)
-
-        print fm.ensemble(fm.final)
-        print 'Accepted : ', fm.accepted
-        print len(fm.final)
+        print mm.ensemble(pth.details.final)
+        print 'Accepted : ', pth.details.accepted
+        print len(pth.details.final)
         
         print 'Next Check:'
 
         en = ef.A2BEnsemble(lV, lV, True)
-        print en(fm.final)
+        print en(pth.details.final)
 
         en = InXEnsemble(lV, 0)
-        print en(fm.final)
+        print en(pth.details.final)
 
         en = InXEnsemble(lV, -1)
-        print en(fm.final)
+        print en(pth.details.final)
 
         en = OutXEnsemble(lV, slice(1, -1), lazy = False)
-        print en(fm.final)
+        print en(pth.details.final)
 
         op.save()
 

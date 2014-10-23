@@ -45,8 +45,6 @@ class Ensemble(object):
     def __eq__(self, other):
         if self is other:
             return True
-        if self.name is not None and other.name is not None:
-            return self.name == other.name
         return str(self) == str(other)
 
     def identify(self, name):

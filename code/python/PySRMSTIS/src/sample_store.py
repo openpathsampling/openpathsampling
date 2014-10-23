@@ -1,100 +1,103 @@
-from object_storage import ObjectStorage
+from object_storage import ObjectStorage, addcache_save, addcache
 
 class Sample(object):
-    def __init__(self, trajectory, ensemble, origin):
-        self.trajectory = trajectory
-        self.ensemble = ensemble
-        self.origin = origin
-        pass
+    """
+    A Move is the return object from a PathMover and contains all information about the move, initial trajectories,
+    new trajectories (both as references). Might move several trajectories at a time (swapping)
 
+    Notes
+    -----
+    Should contain inputs/outputs and success (accepted/rejected) as well as probability to succeed.
+    """
+
+    cls = 'path'
+
+    def __init__(self, trajectory=None,  mover=None, ensemble=None, details=None):
+        self.idx = dict()
+
+        self.mover = mover
+        self.ensemble = ensemble
+        self.trajectory = trajectory
+        self.details = details
+
+    def __call__(self):
+        return self.trajectory
 
 class SampleStorage(ObjectStorage):
-
     def __init__(self, storage):
         super(SampleStorage, self).__init__(storage, Sample)
 
-    def save(self, sample, idx=None):
+    @addcache_save
+    def save(self, origin, idx=None):
         """
-        Add the current state of the sample in the database. If nothing has changed then the sample gets stored using the same snapshots as before. Saving lots of diskspace
+        Add the current state of the origin in the database. If nothing has changed then the origin gets stored using the same snapshots as before. Saving lots of diskspace
 
         Parameters
         ----------
-        sample : Sample()
-            the sample to be saved
+        origin : Sample()
+            the origin to be saved
         idx : int or None
             if idx is not None the index will be used for saving in the storage. This might overwrite already existing trajectories!
 
         Notes
         -----
-        This also saves all contained frames in the sample if not done yet.
+        This also saves all contained frames in the origin if not done yet.
         A single Sample object can only be saved once!
         """
-
-        idx = super(SampleStorage, self).index(sample, idx)
 
         if idx is not None:
             storage = self.storage
 
-            storage.trajectory.save(sample.trajectory)
-            storage.ensemble.save(sample.ensemble)
-            storage.origin.save(sample.origin)
+            self.storage.trajectory.save(origin.trajectory)
+            self.save_object('origin_trajectory', idx, origin.trajectory)
 
-            storage.variables['sample_trajectory_idx'][idx] = sample.trajectory.idx[self.storage]
-            storage.variables['sample_ensemble_idx'][idx] = sample.ensemble.idx[self.storage]
-            storage.variables['sample_origin_idx'][idx] = sample.origin.idx[self.storage]
+            self.storage.ensemble.save(origin.ensemble)
+            self.save_object('origin_ensemble', idx, origin.ensemble)
 
-        return
+            self.storage.pathmover.save(origin.mover)
+            self.save_object('origin_mover', idx, origin.mover)
 
+            self.storage.movedetails.save(origin.details)
+            self.save_object('origin_details', idx, origin.details)
+
+    @addcache
     def load(self, idx, momentum = True):
         '''
-        Return a sample from the storage
+        Return a origin from the storage
 
         Parameters
         ----------
         idx : int
-            index of the sample (counts from 1)
+            index of the origin (counts from 1)
 
         Returns
         -------
-        sample : Sample
-            the sample
+        origin : Sample
+            the origin
         '''
-        trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
-        ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
-        origin_idx = int(self.storage.variables['sample_origin_idx'][idx])
+        trajectory_idx = self.storage.variables['origin_trajectory_idx'][idx]
+        ensemble_idx = self.storage.variables['origin_ensemble_idx'][idx]
+        mover_idx = self.storage.variables['origin_mover_idx'][idx]
+        details_idx = self.storage.variables['origin_details_idx'][idx]
 
         obj = Sample(
-            trajectory=self.storage.trajectory.load(trajectory_idx),
-            ensemble = self.storage.ensemble.load(ensemble_idx),
-            origin = self.storage.origin.load(origin_idx)
+            trajectory=self.storage.trajectory.load(trajectory_idx, lazy=True),
+            mover=self.storage.pathmover.load(mover_idx, lazy=True),
+            ensemble=self.storage.ensemble.load(ensemble_idx),
+            details=self.storage.movedetails.load(details_idx)
         )
-        obj.idx[self.storage] = idx
 
         return obj
 
-
     def _init(self):
         """
-        Initialize the associated storage to allow for sample storage
+        Initialize the associated storage to allow for origin storage
 
         """
         super(SampleStorage, self)._init()
 
-        # index associated storage in class variable for all Sample instances to access
-        ncfile = self.storage
-
-        # Create variables for trajectories
-        ncvar_sample_trajectory_idx     = ncfile.createVariable('sample_trajectory_idx', 'u4', self.idx_dimension)
-        ncvar_sample_ensemble_idx       = ncfile.createVariable('sample_ensemble_idx', 'u4', self.idx_dimension)
-        ncvar_sample_origin_idx         = ncfile.createVariable('sample_origin_idx', 'u4', self.idx_dimension)
-
-
-        # Define units for snapshot variables.
-        setattr(ncvar_sample_trajectory_idx,      'units', 'none')
-        setattr(ncvar_sample_ensemble_idx,        'units', 'none')
-        setattr(ncvar_sample_origin_idx,          'units', 'none')
-
-        # Define long (human-readable) names for variables.
-        setattr(ncvar_sample_trajectory_idx,    "long_name", "sample[sample] is the trajectory index (0..trajectory-1) of sample 'sample'.")
-        setattr(ncvar_sample_ensemble_idx,      "long_name", "sample[sample] is the ensemble index (0..ensemble-1) of sample 'sample'.")
-        setattr(ncvar_sample_origin_idx,        "long_name", "sample[sample] is the origin index (0..origin-1) of sample 'sample'.")
+        # New short-hand definition
+        self.init_variable('origin_trajectory_idx', 'u4')
+        self.init_variable('origin_ensemble_idx', 'u4')
+        self.init_variable('origin_mover_idx', 'u4')
+        self.init_variable('origin_details_idx', 'u4')

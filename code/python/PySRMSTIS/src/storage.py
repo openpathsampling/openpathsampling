@@ -16,9 +16,8 @@ import simtk.openmm.app
 from trajectory_store import TrajectoryStorage
 from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
 from ensemble_store import EnsembleStorage
-from origin_store import OriginStorage
 from sample_store import SampleStorage
-from pathmover_store import PathMoverStorage, ShootingPointSelectorStorage, ShootingPointStorage
+from pathmover_store import PathMoverStorage, ShootingPointSelectorStorage, ShootingPointStorage, MoveDetailsStorage
 from simtk.unit import amu
 
 import mdtraj as md
@@ -69,9 +68,10 @@ class Storage(netcdf.Dataset):
         self.configuration = ConfigurationStorage(self).register()
         self.momentum = MomentumStorage(self).register()
         self.ensemble = EnsembleStorage(self).register()
-        self.origin = OriginStorage(self).register()
         self.sample = SampleStorage(self).register()
         self.pathmover = PathMoverStorage(self).register()
+        self.movedetails = MoveDetailsStorage(self).register()
+
         self.shootingpoint = ShootingPointStorage(self).register()
         self.shootingpointselector = ShootingPointSelectorStorage(self).register()
 
