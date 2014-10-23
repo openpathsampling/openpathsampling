@@ -182,7 +182,7 @@ if __name__=="__main__":
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
     stateA = LambdaVolumePeriodic(psi, -120.0/degrees, -30.0/degrees)
     stateB = LambdaVolumePeriodic(psi, 100/degrees, 180/degrees) 
-    interface0 = LambdaVolumePeriodic(psi, -120.0/degrees, -30.0/degrees)
+    interface0 = LambdaVolumePeriodic(psi, -125.0/degrees, -25.0/degrees)
     
     # TODO: make a wrapper to generate a full interface set: (problem: needs
     # the ability to define a minimum lambda)
@@ -198,45 +198,68 @@ if __name__=="__main__":
 PART ONE: Generate an initial trajectory which satisfies the path ensemble
 for the innermost interface.
 
-We do this by using a special ensemble definition that allows any starting
-condition, but doesn't stop until a subtrajectory satisfies the path
-ensemble we've set up. Once it does, we trim the total_path to the
-good_path, which satisfies the ensemble.
+We do this by using a special sequential ensemble for the sequence:
+1. Either out of the state or length 0 (making out of state optional).
+2. Inside the state
+3. (Outside the state and inside the interface) or length 0 (in case there
+is no such thing, i.e., if the state and the interface are equivalent) 
+4. Outside the interface
+5. Outside the state or length 0 (in case there is no such thing, i.e., if the state and the interface are equivalent)
+6. In the state and length 1
+
+This path ensemble is particularly complex because we want to be sure that
+the path we generate is in the ensemble we desire: this means that we can't
+use LeaveXEnsemble as we typically do with TIS paths.
+
+One trick is that anything outside the interface is also outside the state,
+so any number of crossings after the first one are handled by ensemble #5.
     """
-    # TODO: iterate until we have the desired trajectory type? or create a
-    # new ensemble (with new continue_forward) to do this more cleanly.
     snapshot = simulator.storage.snapshot.load(0,0)
+
     
     first_traj_ensemble = SequentialEnsemble([
         OutXEnsemble(stateA) | LengthEnsemble(0),
         InXEnsemble(stateA),
-        OutXEnsemble(stateA) & LeaveXEnsemble(interface0),
+        (OutXEnsemble(stateA) & InXEnsemble(interface0)) | LengthEnsemble(0),
+        OutXEnsemble(interface0),
+        OutXEnsemble(stateA) | LengthEnsemble(0),
         InXEnsemble(stateA) & LengthEnsemble(1)
-    ])
+    ]) 
 
     print "start path generation"
-    total_path = simulator.generate(snapshot, [first_traj_ensemble])
+    total_path = simulator.generate(snapshot, [first_traj_ensemble.forward])
     print "path generation complete"
     print
     print "Total trajectory length: ", len(total_path)
     segments = interface0_ensemble.split(total_path)
-    print "Traj in first_traj_ensemble?", first_traj_ensemble(total_path)
-    print "nsegments =", len(segments)
-    for i in range(len(segments)):
-        print "seg[{0}]: {1}".format(i, len(segments[i]))
-
-    print "Full traj"
-    for frame in total_path:
-        print phi(frame)[0]*degrees, psi(frame)[0]*degrees, stateA(frame), interface0(frame), stateB(frame)
-
-    print "Does our full trajectory satisfy the ensemble?",
+    print "Traj in first_traj_ensemble? (should be)", 
+    print first_traj_ensemble(total_path)
+    print "Traj in TIS ensemble? (probably not)", 
     print interface0_ensemble(total_path)
-    print "Do our segments satisfy the ensemble?",
-    #for seg in segments:
-    #    print interface0_ensemble(seg),
-    #print
+    print "Number of segments in TIS ensemble: ", len(segments)
+    if len(segments):
+        print "Length of each segment:"
+        for i in range(len(segments)):
+            print "  seg[{0}]: {1}".format(i, len(segments[i]))
 
-    #for frame in segments[0]:
-    #    print phi(frame)[0]*degrees, psi(frame)[0]*degrees, stateA(frame), interface0(frame), stateB(frame)
+    print "Full traj: phi psi ",
+    print "stateA iface0 stateB ",
+    print "can_append "
+    for frame in total_path:
+        print phi(frame)[0]*degrees, psi(frame)[0]*degrees, 
+        print stateA(frame), interface0(frame), stateB(frame),
+        print first_traj_ensemble.forward(
+            total_path[slice(0,total_path.index(frame)+1)]
+        )
+
+    print
+    if len(segments):
+        print "Do our segments satisfy the ensemble?",
+        for seg in segments:
+            print interface0_ensemble(seg),
+        print
+        print "Segment trajectory: phi psi stateA interface0 stateB"
+        for frame in segments[0]:
+            print phi(frame)[0]*degrees, psi(frame)[0]*degrees, stateA(frame), interface0(frame), stateB(frame)
 
 

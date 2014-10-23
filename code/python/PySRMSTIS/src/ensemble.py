@@ -1213,6 +1213,12 @@ class EnsembleFactory():
         -------
         ensemble : Ensemble
             The constructed Ensemble
-        '''        
-
-        return (LengthEnsemble(slice(3,None)) & InXEnsemble(volume_a, 0) & InXEnsemble(volume_b, -1)) & (LeaveXEnsemble(volume_x) & OutXEnsemble(volume_a | volume_b, slice(1,-1), lazy))
+        '''
+        length1 = LengthEnsemble(1)
+        ens = SequentialEnsemble([
+            InXEnsemble(volume_a) & length1,
+            OutXEnsemble(volume_a | volume_b) & LeaveXEnsemble(volume_x),
+            InXEnsemble(volume_a | volume_b) & length1
+        ])
+        return ens
+        #return (LengthEnsemble(slice(3,None)) & InXEnsemble(volume_a, 0) & InXEnsemble(volume_b, -1)) & (LeaveXEnsemble(volume_x) & OutXEnsemble(volume_a | volume_b, slice(1,-1), lazy))

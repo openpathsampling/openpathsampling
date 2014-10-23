@@ -82,12 +82,9 @@ def setUp():
     trajtypes = ["a", "o", "ab", "aob", "bob", "aba", "aaa", "abcba",
                  "abaa", "abba", "abaab", "ababa", "abbab",
                  "abaaba", "aobab", "abab", "abcbababcba", "aca", 
-                 "acaca", "acac", "caca"
+                 "acaca", "acac", "caca", "aaca", "baca", "aaba", "aab"
                 ]
     ttraj = build_trajdict(trajtypes, lower, upper)
-    # TODO: add support for empty traj to current tests (or perhaps add a
-    # separate test for empty traj)
-    #ttraj['empty'] = []
 
     # make the tests from lists into trajectories
     for test in ttraj.keys():
@@ -423,7 +420,7 @@ class testSequentialEnsemble(EnsembleTest):
             self.inX0 | self.length0,
             self.outX & self.leaveX0,
             self.inX & self.length1
-                                    ])
+        ])
         self.tis = SequentialEnsemble([
             self.inX & self.length1,
             self.outX & self.leaveX0,
@@ -748,6 +745,42 @@ class testSequentialEnsemble(EnsembleTest):
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.minus, ttraj[test], results[test], failmsg)
+
+    def test_sequential_generate_first_tis(self):
+        """SequentialEnsemble to generate the first TIS path"""
+        ensemble = SequentialEnsemble([
+            self.outX | self.length0,
+            self.inX,
+            self.outX & self.leaveX0,
+            self.inX & self.length1
+        ])
+        match_results = {
+            'upper_in_in_cross_in' : True,
+            'lower_in_in_cross_in' : True,
+            'upper_out_in_cross_in' : True,
+            'lower_out_in_cross_in' : True,
+            'upper_in_cross_in' : True,
+            'lower_in_cross_in' : True
+        }
+        for test in match_results.keys():
+            failmsg = "Match failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(ensemble, ttraj[test], 
+                              match_results[test], failmsg)
+
+        append_results = {
+            'upper_in' : True,
+            'upper_in_in_in' : True,
+            'upper_in_in_out' : True,
+            'upper_in_in_out_in' : False,
+            'upper_out' : True,
+            'upper_out_out_out' : True,
+            'upper_out_in_out' : True,
+            'upper_out_in_out_in' : False
+        }
+        for test in append_results.keys():
+            failmsg = "Append failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(ensemble.forward, ttraj[test], 
+                              append_results[test], failmsg)
 
     def test_sequential_enter_exit(self):
         """SequentialEnsembles based on Enters/ExitsXEnsemble"""
