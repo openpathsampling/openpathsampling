@@ -27,15 +27,29 @@ class Ensemble(object):
 
     use_shortcircuit = True
 
+    cls = 'ensemble'
+
     def __init__(self):
         '''
         A path volume defines a set of paths.
         '''
-        
+
+        self.idx = dict() # Contains references to positions in various files, will be set, once saved
+
         self._traj = dict()
         self.last = None
+        self.name = ''
         
         return
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        return str(self) == str(other)
+
+    def identify(self, name):
+        self.name = name
+        return self
     
     def __call__(self, trajectory, lazy=None):
         '''
@@ -290,7 +304,29 @@ class Ensemble(object):
             if type(self.frames) is int:
                 return trajectory.frames > self.frames and trajectory.frames >= -self.frames
                 
-    
+class LoadedEnsemble(Ensemble):
+    '''
+    Represents an ensemble the contains trajectories of a specific length
+    '''
+    def __init__(self, name, description):
+        '''
+        A path ensemble that describes path of a specific length
+
+        Parameters
+        ----------
+        length : int or slice
+            The specific length (int) or the range of allowed trajectory lengths (slice)
+        '''
+
+        super(LoadedEnsemble, self).__init__()
+
+        self.name = name
+        self.description = description
+        pass
+
+    def __str__(self):
+        return self.description
+
 class EmptyEnsemble(Ensemble):
     '''
     The empty path ensemble of no trajectories.
@@ -514,6 +550,7 @@ class SequentialEnsemble(Ensemble):
 
     def __init__(self, ensembles, min_overlap=0, max_overlap=0, greedy=False):
         # make tuples of the min/max overlaps
+        super(SequentialEnsemble, self).__init__()
         if type(min_overlap) is int:
             min_overlap = (min_overlap, )*(len(ensembles)-1)
         if type(max_overlap) is int:
@@ -748,7 +785,8 @@ class LengthEnsemble(Ensemble):
         length : int or slice
             The specific length (int) or the range of allowed trajectory lengths (slice)
         '''
-        
+
+        super(LengthEnsemble, self).__init__()
         self.length = length
         pass
     
@@ -776,7 +814,15 @@ class LengthEnsemble(Ensemble):
         if type(self.length) is int:
             return 'len(x) = {0}'.format(self.length)
         else:
-            return 'len(x) in [{0}, {1}]'.format(self.length.start, self.length.stop - 1)
+            start = self.length.start
+            if start is None:
+                start = 0
+            stop = self.length.stop
+            if stop is None:
+                stop = 'infty'
+            else:
+                stop = str(self.length.stop - 1)
+            return 'len(x) in [{0}, {1}]'.format(start, stop)
         
 class VolumeEnsemble(Ensemble):
     '''
@@ -1213,6 +1259,12 @@ class EnsembleFactory():
         -------
         ensemble : Ensemble
             The constructed Ensemble
-        '''        
-
-        return (LengthEnsemble(slice(3,None)) & InXEnsemble(volume_a, 0) & InXEnsemble(volume_b, -1)) & (LeaveXEnsemble(volume_x) & OutXEnsemble(volume_a | volume_b, slice(1,-1), lazy))
+        '''
+        length1 = LengthEnsemble(1)
+        ens = SequentialEnsemble([
+            InXEnsemble(volume_a) & length1,
+            OutXEnsemble(volume_a | volume_b) & LeaveXEnsemble(volume_x),
+            InXEnsemble(volume_a | volume_b) & length1
+        ])
+        return ens
+        #return (LengthEnsemble(slice(3,None)) & InXEnsemble(volume_a, 0) & InXEnsemble(volume_b, -1)) & (LeaveXEnsemble(volume_x) & OutXEnsemble(volume_a | volume_b, slice(1,-1), lazy))

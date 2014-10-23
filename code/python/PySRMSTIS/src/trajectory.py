@@ -23,6 +23,9 @@ class Trajectory(list):
     storage = None
     simulator = None
     default_storage = None
+    cls = 'trajectory'
+    use_lazy = True    # We assume that snapshots are immutable. That should safe a lot of time to copy trajectories
+
 
     def __init__(self, trajectory=None):
         """
@@ -39,7 +42,6 @@ class Trajectory(list):
         list.__init__(self)
 
         self.idx = dict() # Contains references to positions in various files, will be set, once saved
-        self.use_lazy = True    # We assume that snapshots are immutable. That should safe a lot of time to copy trajectories
 
         self.path_probability = None # For future uses
 
