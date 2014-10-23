@@ -9,8 +9,28 @@ from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTraject
 
 import numpy as np
 
+from sample_store import Sample
+from ensemble import FullEnsemble
+
+class MoveDetails(object):
+
+    cls = 'movedetails'
+
+    def __init__(self, **kwargs):
+        self.inputs=None
+        self.final=None
+        self.result=None
+        self.acceptance=None
+        self.success=None
+        self.accepted=None
+        self.mover=None
+        for key, value in kwargs:
+            setattr(self, key, value)
+
+        self.idx = dict()
+
 class PathMover(object):
-    '''
+    """
     A PathMover is the description of how to generate a new path from an old one.
     
     Notes
@@ -31,24 +51,30 @@ class PathMover(object):
     ----------
     simulator : Simulator
         the attached simulator used to generate new trajectories
-        
-    '''
-    
-    simulator = None        
-    
+    """
+
+    cls = 'pathmover'
+    simulator = None
+
+    @property
+    def identifier(self):
+        if hasattr(self, 'json'):
+            return self.json
+        else:
+            return None
+
     def __init__(self):
         
         # An ensemble that is at the same time triggering the stopping criterion and the final acceptance and the end.
         # This is because the goal is to sample trajectories in a specific ensemble. So we want to generate and stop
         # as soon as this cannot be fulfilled anymore. Some of the conditions cannot be checked during runtime, so we
         # have to do that at the end to make sure.
-        
-        self.ensemble = None
-        
-        self.start = None
-        self.final = None        
-        pass
-        
+
+        self.ensemble = FullEnsemble()
+        self.name = self.__class__.__name__
+
+        self.idx = dict()
+
     def move(self, trajectory):
         '''
         Run the generation starting with the initial trajectory specified.
@@ -67,13 +93,13 @@ class PathMover(object):
         -----
         After this command additional information can be accessed from this object
         '''
-        self.start = trajectory
-        self.final = trajectory
-                        
-        return self.final
 
-    @property
-    def selection_probability_ratio(self):
+        details = MoveDetails(inputs = [trajectory], result = trajectory, success=True)
+        path = Sample(trajectory=trajectory, mover=self, ensemble=self.ensemble, details=details)
+
+        return path
+
+    def selection_probability_ratio(self, details=None):
         '''
         Return the proposal probability necessary to correct for an asymmetric proposal.
         
@@ -94,13 +120,14 @@ class PathMover(object):
 class ShootMover(PathMover):
     '''
     A pathmover that implements a general shooting algorithm that generates a sample from a specified ensemble
-    '''    
+    '''
+
     def __init__(self, selector, ensemble):
         super(ShootMover, self).__init__()
         self.selector = selector
         self.ensemble = ensemble
         self.length_stopper = LengthEnsemble(0)
-    
+
     @property
     def generator_stopper(self):
         '''
@@ -113,53 +140,64 @@ class ShootMover(PathMover):
         '''
         return PathMover.simulator.max_length_stopper
     
-    @property
-    def selection_probability_ratio(self):
+    def selection_probability_ratio(self, details):
         '''
         Return the proposal probability for Shooting Moves. These are given by the ratio of partition functions
         '''
-        return self.start_point.sum_bias / self.final_point.sum_bias
+        return details.start_point.sum_bias / details.final_point.sum_bias
     
     def _generate(self):
         self.final = self.start
     
-    def move(self, trajectory):        
-        self.start = trajectory        
-        self.start_point = self.selector.pick(self.start)
-                        
-        max_frames = self.simulator.n_frames_max - trajectory.frames        
-        self.length_stopper.length = max_frames
-        
-        self._generate()
+    def move(self, trajectory):
+        details = MoveDetails()
+        details.success = False
+        details.inputs = [trajectory]
+        details.mover = self
+        setattr(details,'start', trajectory)
+        setattr(details,'start_point', self.selector.pick(details.start) )
+        setattr(details, 'final', None)
+        setattr(details, 'final_point', None)
 
-        self.accepted = self.ensemble(self.final)
-        
-        if self.accepted:
+        max_frames = PathMover.simulator.n_frames_max - trajectory.frames
+        self.length_stopper.length = max_frames
+        self._generate(details)
+
+
+        details.accepted = self.ensemble(details.final)
+        details.result = details.start
+
+        if details.accepted:
             rand = np.random.random()
-            print 'Proposal probability', self.selection_probability_ratio, '/ random :', rand
-            if (rand < self.selection_probability_ratio):
-                return self.final
-            
-        return self.start
+            print 'Proposal probability', self.selection_probability_ratio(details), '/ random :', rand
+            if (rand < self.selection_probability_ratio(details)):
+                details.success = True
+                details.result = details.final
+
+        path = Sample(trajectory=details.result, mover=self, ensemble=self.ensemble, details=details)
+
+        print path
+        return path
     
     
 class ForwardShootMover(ShootMover):    
     '''
     A pathmover that implements the forward shooting algorithm
     '''
-    def _generate(self):
-        print "Shooting forward from frame %d" % self.start_point.index
+    def _generate(self, details):
+        print "Shooting forward from frame %d" % details.start_point.index
         
         # Run until one of the stoppers is triggered
         partial_trajectory = PathMover.simulator.generate(
-                                     self.start_point.snapshot, 
+                                     details.start_point.snapshot,
                                      running = [ForwardAppendedTrajectoryEnsemble(
-                                                      self.ensemble, 
-                                                      self.start[0:self.start_point.index]
+                                                      self.ensemble,
+                                                      details.start[0:details.start_point.index]
                                                 ).forward, self.length_stopper.forward]
-                                     )        
-        self.final = self.start[0:self.start_point.index] + partial_trajectory    
-        self.final_point = ShootingPoint(self.selector, self.final, self.start_point.index)
+                                     )
+
+        details.final = details.start[0:details.start_point.index] + partial_trajectory
+        details.final_point = ShootingPoint(self.selector, details.final, details.start_point.index)
 
         pass
     
@@ -167,27 +205,20 @@ class BackwardShootMover(ShootMover):
     '''
     A pathmover that implements the backward shooting algorithm
     '''
-    def _generate(self):
-        print "Shooting backward from frame %d" % self.start_point.index
-#        print self.start_point
+    def _generate(self, details):
+        print "Shooting backward from frame %d" % details.start_point.index
+
         # Run until one of the stoppers is triggered
         partial_trajectory = PathMover.simulator.generate(
-                                     self.start_point.snapshot.reversed_copy(), 
+                                     details.start_point.snapshot.reversed_copy(),
                                      running = [BackwardPrependedTrajectoryEnsemble(
-                                                     self.ensemble, 
-                                                     self.start[self.start_point.index + 1:]
+                                                     self.ensemble,
+                                                     details.start[details.start_point.index + 1:]
                                                 ).backward, self.length_stopper.backward]
                                      )
-        
-        
-        self.final = partial_trajectory.reversed + self.start[self.start_point.index + 1:]    
-        self.final_point = ShootingPoint(self.selector, self.final, partial_trajectory.frames - 1)
 
-#        print self.start_point.snapshot.velocities
-#        print self.start_point.snapshot.momentum.idx
-#        print self.final_point.snapshot.velocities
-#        print self.final_point.snapshot.momentum.idx
-
+        details.final = partial_trajectory.reversed + details.start[details.start_point.index + 1:]
+        details.final_point = ShootingPoint(self.selector, details.final, partial_trajectory.frames - 1)
         
         pass
 
@@ -200,8 +231,9 @@ class MixedMover(PathMover):
     Channel functions from self.mover to self. Does NOT work yet. Think about a good way to implement this...
     '''
     def __init__(self, movers, weights = None):
-        self.movers = movers        
-        self.mover = None
+        super(MixedMover, self).__init__()
+
+        self.movers = movers
 
         if weights is None:
             self.weights = [1.0] * len(movers)
@@ -216,15 +248,14 @@ class MixedMover(PathMover):
         while prob <= rand and idx < len(self.weights):
             idx += 1
             prob += self.weights[idx]
-            
-        self.mover = self.movers[idx]
 
-        return self.mover.move(trajectory)
-    
-    def __getattr__(self, attr):
-        # relay the attributes from the selected mover to the class itself for easier access
-        return getattr(self.mover, attr)
+        mover = self.movers[idx]
 
+        sample = mover.move(trajectory)
+        setattr(sample.details, 'mover_idx', idx)
+
+        path = Sample(trajectory=sample.trajectory, mover=self, ensemble=mover.ensemble, details=sample.details)
+        return path
 
 #############################################################
 # The following moves still need to be implemented. Check what excactly they do

@@ -343,6 +343,7 @@ class FunctionalStorableDict(StorableDict):
         else:
             input = [items]
 
+
         if self.content_class is not None and len(input) > 0 and isinstance(input[0], self.content_class):
             no_cache = self.missing(input)
 
@@ -393,6 +394,8 @@ class OrderParameter(FunctionalStorableDict):
             storages=storages)
 
     def __call__(self, items):
+
+
         if isinstance(items, Snapshot):
             return self._update(items.configuration)
         elif isinstance(items, Configuration):
@@ -467,7 +470,6 @@ class OP_RMSD_To_Lambda(OrderParameter):
 
     def _eval(self, items):
         trajectory = Trajectory([Snapshot(configuration=c) for c in items])
-
         ptraj = self.metric.prepare_trajectory(trajectory.subset(self.atom_indices).md())
         results = self.metric.one_to_all(self._generator, ptraj, 0)
 

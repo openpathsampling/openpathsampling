@@ -33,7 +33,7 @@ if __name__ == '__main__':
         snapshot = simulator.storage.snapshot.load(0, 0)
 
         # generate from this snapshot a trajectory with 50 steps
-        traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,30))])
+        traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,6))])
         simulator.storage.trajectory.save(traj)
 
         print len(traj)
@@ -43,8 +43,11 @@ if __name__ == '__main__':
         
     if True:
         cc = Trajectory.storage.load(1)[ 0 ]
+        cc = storage.snapshot.load(0,0,False, lazy=False)
         op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices, storages=simulator.storage.configuration)
-        dd = simulator.storage.trajectory.load(1)[ 0:50 ]
+        print "OP"
+        print op(Trajectory.storage.load(1)[0:2])
+        dd = simulator.storage.trajectory.load(1)[ 0:6 ]
         lV = LambdaVolume(op, 0.0, 0.06)
         lV2 = LambdaVolume(op, 0.0, 0.08)
 
@@ -62,7 +65,7 @@ if __name__ == '__main__':
                        True
                        )
 
-        tt = simulator.storage.trajectory.load(1)[4:18]
+        tt = simulator.storage.trajectory.load(1)
 
 #        print [ (op(d)) for d in dd ]
 #        op.save()
@@ -94,7 +97,7 @@ if __name__ == '__main__':
         # be true in the next step. This should be passed to the pathmover to stop simulating for a particular ensemble
 
         vn = VoronoiVolume(
-                OP_Multi_RMSD('Voronoi', tt[[0,10]], atom_indices=simulator.solute_indices),
+                OP_Multi_RMSD('Voronoi', tt[[0,2]], atom_indices=simulator.solute_indices),
                 state = 0
                 )
 
@@ -123,10 +126,14 @@ if __name__ == '__main__':
         en = InXEnsemble(lV, -1)
         print en(tt)
 
-        en = OutXEnsemble(lV, slice(1,-1), lazy = False)
+        en = OutXEnsemble(lV, slice(1,-1), lazy = False).identify('OutXEnsemble1')
         print en(tt)
+
+        storage.ensemble.save(en)
         
 #        Simulator.op = op
+
+        tis.identify('TISEnsembleA:A')
 
         bm = BackwardShootMover(
                 selector = UniformSelector(),
@@ -138,30 +145,42 @@ if __name__ == '__main__':
                 ensemble = tis
                 )
 
-        pm = MixedMover([bm, fm])
-        
-        pm.move(tt)
-        print 'ensemble Check :', pm.ensemble(tt)
+        # Not using MixedMover because its implementation is inconsistent with being an actual pathmover at the moment
+        rand = np.random.random()
+        if rand < 0.5:
+            mm = fm
+        else:
+            mm = bm
 
-        simulator.storage.trajectory.save(pm.final)
+        mm = MixedMover([bm, fm])
 
-        print pm.ensemble(pm.final)
-        print 'Accepted : ', pm.accepted
-        print len(pm.final)
+        pth = mm.move(tt)
+
+        storage.sample.save(pth)
+
+        print pth.details.json
+
+        loaded = storage.pathmover.load(mm.idx[storage])
+
+        print 'ensemble Check :', mm.ensemble(pth.trajectory)
+
+        print mm.ensemble(pth.details.final)
+        print 'Accepted : ', pth.details.accepted
+        print len(pth.details.final)
         
         print 'Next Check:'
 
         en = ef.A2BEnsemble(lV, lV, True)
-        print en(pm.final)
+        print en(pth.details.final)
 
         en = InXEnsemble(lV, 0)
-        print en(pm.final)
+        print en(pth.details.final)
 
         en = InXEnsemble(lV, -1)
-        print en(pm.final)
+        print en(pth.details.final)
 
         en = OutXEnsemble(lV, slice(1, -1), lazy = False)
-        print en(pm.final)
+        print en(pth.details.final)
 
         op.save()
 
