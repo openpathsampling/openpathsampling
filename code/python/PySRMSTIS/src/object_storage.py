@@ -104,7 +104,10 @@ class ObjectStorage(object):
         Returns an object from the storage. Needs to be implented from the specific storage class.
         '''
 
-        return self.load_json(self.idx_dimension + '_json', idx)
+        # Create object first to break any unwanted recursion in loading
+        obj = StoredObject()
+        setattr(obj, 'idx', {self.storage : idx})
+        return self.load_json(self.idx_dimension + '_json', idx, obj)
 
     def save(self, obj, idx=None):
         '''
@@ -384,8 +387,6 @@ class ObjectStorage(object):
             setattr(obj, key, value)
 
         setattr(obj, 'cls', simplified[1])
-
-        setattr(obj, 'idx', {self.storage : idx})
 
         return obj
 
