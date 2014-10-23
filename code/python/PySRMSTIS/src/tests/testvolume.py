@@ -12,9 +12,10 @@ sys.path.append(os.path.abspath('../'))
 import volume
 
 def setUp():
-    global op_id, lambdavol
+    global op_id, volA, volB
     op_id = CallIdentity()
-    lambdavol = volume.LambdaVolume(op_id, -0.5, 0.5)
+    volA = volume.LambdaVolume(op_id, -0.5, 0.5)
+    volB = volume.LambdaVolume(op_id, 0.25, 0.75)
 
 
 class testEmptyVolume(object):
@@ -23,11 +24,12 @@ class testEmptyVolume(object):
         empty = volume.EmptyVolume()
         test = 0.1
         assert_equal(empty(test), False)
-        assert_equal((empty & lambdavol)(test), False)
-        assert_equal((lambdavol & empty)(test), False)
-        assert_equal((empty | lambdavol)(test), True)
-        assert_equal((lambdavol | empty)(test), True)
-        assert_equal((empty & lambdavol).__str__(), "empty")
+        print type( (volA & empty) )
+        assert_equal((empty & volA)(test), False)
+        assert_equal((volA & empty)(test), False)
+        assert_equal((empty | volA)(test), True)
+        assert_equal((volA | empty)(test), True)
+        assert_equal((empty & volA).__str__(), "empty")
         assert_equal((~ empty).__str__(), "all")
 
 class testFullVolume(object):
@@ -36,14 +38,50 @@ class testFullVolume(object):
         full = volume.FullVolume()
         test = 0.1
         assert_equal(full(test), True)
-        assert_equal((full & lambdavol)(test), True)
-        assert_equal((lambdavol & full)(test), True)
-        assert_equal((full | lambdavol)(test), True)
-        assert_equal((lambdavol | full)(test), True)
-        assert_equal((lambdavol | full).__str__(), "all")
+        assert_equal((full & volA)(test), True)
+        assert_equal((volA & full)(test), True)
+        assert_equal((full | volA)(test), True)
+        assert_equal((volA | full)(test), True)
+        assert_equal((volA | full).__str__(), "all")
 
 class testLambdaVolume(object):
-    pass
+    def setUp(self):
+        pass
+
+    def teardown(self):
+        pass
+
+    def test_lower_boundary(self):
+        pass
+
+    def test_upper_boundary(self):
+        pass
+
+    def test_negation(self):
+        pass
+
+    def test_autocombinations(self):
+        assert_equal(volA | volA, volA)
+        assert_equal(volA & volA, volA)
+        assert_equal(volA ^ volA, volume.EmptyVolume())
+
+    def test_and_combinations(self):
+        assert_equal((volA & volB)(0.45), True)
+        assert_equal((volA & volB)(0.55), False)
+        pass
+
+    def test_or_combinations(self):
+        pass
+
+    def test_xor_combinations(self):
+        pass
+
+    def test_sub_combinations(self):
+        pass
+
+    def test_str(self):
+        # string and inverted string
+        pass
 
 class testLambdaVolumePeriodic(object):
     

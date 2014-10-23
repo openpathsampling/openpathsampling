@@ -1,8 +1,10 @@
 '''
 Created on 03.09.2014
 
-@author: jan-hendrikprinz
+@author: jan-hendrikprinz, David W.H. Swenson
 '''
+
+from range_logic import range_and, range_or, range_sub
 
 class Volume(object):
     def __init__(self):
@@ -82,6 +84,9 @@ class Volume(object):
     def __invert__(self):
         return NegatedVolume(self)
 
+    def __eq__(self, other):
+        return str(self) == str(other)
+
     
 class VolumeCombination(Volume):
     def __init__(self, volume1, volume2, fnc, str_fnc):
@@ -155,6 +160,59 @@ class LambdaVolume(Volume):
         self.lambda_min = lambda_min
         self.lambda_max = lambda_max
         
+    # Typically, the logical combinations are only done once. Because of
+    # this, it is worth passing these through a check to speed up the logic.
+    def __and__(self, other):
+        if (type(other) is LambdaVolume and 
+                self.orderparameter == other.orderparameter):
+            lminmax = range_and(self.lambda_min, self.lambda_max,
+                                other.lambda_min, other.lambda_max)
+            if lminmax == None:
+                return EmptyVolume()
+            elif lminmax == 1:
+                return self
+            else:
+                return LambdaVolume(self.orderparameter, 
+                                    lminmax[0], lminmax[1])
+        else:
+            return super(LambdaVolume, self).__and__(other)
+
+    def __or__(self, other):
+        if (type(other) is LambdaVolume and 
+                self.orderparameter == other.orderparameter):
+            lminmax = range_or(self.lambda_min, self.lambda_max,
+                               other.lambda_min, other.lambda_max)
+            if lminmax == 1:
+                return self
+            else:
+                return LambdaVolume(self.orderparameter, 
+                                    lminmax[0], lminmax[1])
+        else:
+            return super(LambdaVolume, self).__or__(other)
+
+    def __xor__(self, other):
+        if (type(other) is LambdaVolume and 
+                self.orderparameter == other.orderparameter):
+            # taking the shortcut here
+            return ((self | other) - (self & other))
+        else:
+            return super(LambdaVolume, self).__xor__(other)
+
+    def __sub__(self, other):
+        if (type(other) is LambdaVolume and 
+                self.orderparameter == other.orderparameter):
+            lminmax = range_sub(self.lambda_min, self.lambda_max,
+                                other.lambda_min, other.lambda_max)
+            if lminmax == None:
+                return EmptyVolume()
+            elif lminmax == 1:
+                return self
+            else:
+                return LambdaVolume(self.orderparameter, 
+                                    lminmax[0], lminmax[1])
+        else:
+            return super(LambdaVolume, self).__sub__(other)
+
     def __call__(self, snapshot):
         l = self.orderparameter(snapshot)
         return l >= self.lambda_min and l <= self.lambda_max
