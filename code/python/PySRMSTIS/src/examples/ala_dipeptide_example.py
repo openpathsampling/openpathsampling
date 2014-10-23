@@ -22,10 +22,11 @@ import mdtraj as md
 from Simulator import Simulator
 from orderparameter import OP_Function
 from snapshot import Snapshot, Configuration
-from volume import LambdaVolume, FullVolume
+from volume import LambdaVolumePeriodic
 from ensemble import EnsembleFactory as ef
-from ensemble import (LengthEnsemble, SequentialEnsemble)
-from storage import TrajectoryStorage
+from ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
+                      LeaveXEnsemble, InXEnsemble)
+from storage import Storage
 from trajectory import Trajectory
 
 from simtk.unit import femtoseconds, picoseconds, nanometers, kelvin, dalton
@@ -44,7 +45,7 @@ from simtk.openmm.app import Simulation
 # TODO: figure out how much of this should be moved to Simulator 
 
 class AlanineDipeptideTrajectorySimulator(Simulator):
-    def __init__(self, filename, topology, opts, mode='auto'):
+    def __init__(self, filename, topology_file, opts, mode='auto'):
         super(AlanineDipeptideTrajectorySimulator, self).__init__()
 
         # tell everybody who their simulator is
@@ -60,7 +61,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
         self.fn_storage = filename 
 
         # topology
-        self.pdb = PDBFile(topology)
+        self.pdb = PDBFile(topology_file)
         self.topology = self.pdb.topology
 
         if mode == 'create':
@@ -90,13 +91,14 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
             self.max_length_stopper = LengthEnsemble(slice(0,self.n_frames_max-1))
 
             # storage
-            self.storage = TrajectoryStorage(
-                                    topology=self.topology,
-                                    filename=self.fn_storage,
-                                    mode='create' )
+            self.storage = Storage(
+                topology_file=self.topology,
+                filename=self.fn_storage,
+                mode='w'
+            )
             self.storage.simulator = self
-            self.storage.init_classes()
             self.storage._store_options(self)
+            Trajectory.storage = self.storage
         if mode == 'restore':
             pass
         return
@@ -153,14 +155,15 @@ if __name__=="__main__":
                }
     simulator = AlanineDipeptideTrajectorySimulator(
                     filename="trajectory.nc",
-                    topology="../data/Alanine_solvated.pdb",
+                    topology_file="../data/Alanine_solvated.pdb",
                     opts=options,
                     mode='create'
                     )
     
     
     simulator.equilibrate(5)
-    Snapshot(simulator.simulation.context).save(0,0)
+    snap = Snapshot(simulator.simulation.context)
+    simulator.storage.snapshot.save(snap, 0, 0)
     simulator.initialized = True
 
     # this generates an order parameter (callable) object named psi (so if
@@ -177,16 +180,16 @@ if __name__=="__main__":
 
     # now we define our states and our interfaces
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
-    stateA = LambdaVolume(psi, -120.0/degrees, -30.0/degrees)
-    stateB = LambdaVolume(psi, 100/degrees, 180/degrees) # TODO: periodic?
-    interface0 = LambdaVolume(psi, -120.0/degrees, -30.0/degrees)
+    stateA = LambdaVolumePeriodic(psi, -120.0/degrees, -30.0/degrees)
+    stateB = LambdaVolumePeriodic(psi, 100/degrees, 180/degrees) 
+    interface0 = LambdaVolumePeriodic(psi, -120.0/degrees, -30.0/degrees)
     
     # TODO: make a wrapper to generate a full interface set: (problem: needs
     # the ability to define a minimum lambda)
     #   interface_set(orderparam, [stateA], [stateA, stateB], [lambda_j],
     #                   lazy=True)
     interface0_ensemble = ef.TISEnsemble(stateA,
-                                         stateA or stateB,
+                                         stateA | stateB,
                                          interface0,
                                          lazy=True)
 
@@ -202,7 +205,7 @@ good_path, which satisfies the ensemble.
     """
     # TODO: iterate until we have the desired trajectory type? or create a
     # new ensemble (with new continue_forward) to do this more cleanly.
-    snapshot = Snapshot.load(0,0)
+    snapshot = simulator.storage.snapshot.load(0,0)
     
     first_traj_ensemble = SequentialEnsemble([
         OutXEnsemble(stateA) | LengthEnsemble(0),
@@ -212,7 +215,7 @@ good_path, which satisfies the ensemble.
     ])
 
     print "start path generation"
-    total_path = simulator.generate(snapshot, [get_first_traj])
+    total_path = simulator.generate(snapshot, [first_traj_ensemble])
     print "path generation complete"
     print
     print "Total trajectory length: ", len(total_path)
