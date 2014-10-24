@@ -11,19 +11,16 @@ import os.path
 
 import numpy
 import simtk.unit as units
-
 import simtk.openmm.app
-from trajectory_store import TrajectoryStorage
-from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
-from ensemble_store import EnsembleStorage
-from sample_store import SampleStorage
-from pathmover import PathMover, MoveDetails
-from shooting import ShootingPointSelector, ShootingPoint
-from object_storage import ObjectStorage
 from simtk.unit import amu
-
 import mdtraj as md
 
+from object_storage import ObjectStorage
+from pathmover import PathMover, MoveDetails
+from trajectory_store import TrajectoryStorage, SampleStorage
+from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
+from ensemble_store import EnsembleStorage
+from shooting import ShootingPointSelector, ShootingPoint
 
 #=============================================================================================
 # SOURCE CONTROL

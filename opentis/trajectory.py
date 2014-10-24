@@ -8,8 +8,7 @@ import copy
 import numpy as np
 import mdtraj as md
 from simtk.unit import nanometers
-from object_storage import storable
-
+from storage.wrapper import storable
 
 #=============================================================================================
 # SIMULATION TRAJECTORY
@@ -429,3 +428,26 @@ class Trajectory(list):
             topology = topology.subset(self.atom_indices)       
         
         return topology
+
+
+@storable
+class Sample(object):
+    """
+    A Move is the return object from a PathMover and contains all information about the move, initial trajectories,
+    new trajectories (both as references). Might move several trajectories at a time (swapping)
+
+    Notes
+    -----
+    Should contain inputs/outputs and success (accepted/rejected) as well as probability to succeed.
+    """
+
+    def __init__(self, trajectory=None,  mover=None, ensemble=None, details=None):
+        self.idx = dict()
+
+        self.mover = mover
+        self.ensemble = ensemble
+        self.trajectory = trajectory
+        self.details = details
+
+    def __call__(self):
+        return self.trajectory

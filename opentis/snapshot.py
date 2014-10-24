@@ -5,10 +5,11 @@
 '''
 
 import copy
+
 import numpy as np
 import mdtraj as md
-from object_storage import storable
-from simtk.unit import nanosecond, picosecond, nanometers, nanometer, picoseconds, femtoseconds, femtosecond, kilojoules_per_mole, Quantity
+from storage.wrapper import storable
+
 
 #=============================================================================================
 # SIMULATION CONFIGURATION

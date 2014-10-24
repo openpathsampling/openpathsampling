@@ -1,5 +1,7 @@
-from object_storage import ObjectStorage, loadcache, savecache
+from object_storage import ObjectStorage
 from ensemble import Ensemble, LoadedEnsemble
+from storage.wrapper import loadcache
+
 
 class EnsembleStorage(ObjectStorage):
 

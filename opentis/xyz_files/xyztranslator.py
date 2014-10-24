@@ -4,23 +4,22 @@
 
 import sys
 import os
-
 import re
 import optparse
 
 import numpy as np
-
 from simtk.openmm.app.topology import Topology
 from simtk.openmm.app.element import Element
 from simtk.unit import amu, nanometers, picoseconds, Quantity
 import mdtraj
+
 
 # I assume the next directory above us is where the msm-tis classes hide
 sys.path.append(os.path.abspath('../'))
 import TrajFile
 import trajectory
 import snapshot
-from storage import Storage
+from netcdf_storage.netcdf_storage import Storage
 
 class AtomCounter(object):
     '''Let's be honest: that's all we're using the simulation.system object

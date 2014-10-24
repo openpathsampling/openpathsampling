@@ -4,14 +4,15 @@ Created on 19.07.2014
 @author: Jan-Hendrik Prinz
 '''
 
-from shooting import ShootingPoint
-from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble, LengthEnsemble
-
 import numpy as np
 
-from sample_store import Sample
+from shooting import ShootingPoint
+from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble, LengthEnsemble
+from storage.wrapper import storable
 from ensemble import FullEnsemble
-from object_storage import storable
+from trajectory import Sample
+
+
 @storable
 class MoveDetails(object):
 

@@ -25,8 +25,8 @@ from snapshot import Snapshot, Configuration
 from volume import LambdaVolumePeriodic
 from ensemble import EnsembleFactory as ef
 from ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
-                      LeaveXEnsemble, InXEnsemble)
-from storage import Storage
+                      InXEnsemble)
+from netcdf_storage.netcdf_storage import Storage
 from trajectory import Trajectory
 
 from simtk.unit import femtoseconds, picoseconds, nanometers, kelvin, dalton
