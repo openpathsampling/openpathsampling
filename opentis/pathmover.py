@@ -124,20 +124,8 @@ class ShootMover(PathMover):
         super(ShootMover, self).__init__()
         self.selector = selector
         self.ensemble = ensemble
-        self.length_stopper = LengthEnsemble(0)
+        self.length_stopper = PathMover.simulator.max_length_stopper
 
-    @property
-    def generator_stopper(self):
-        '''
-        the ensemble used by the generator 
-        
-        Notes
-        -----
-        contains the status of the generator if there has been a too long trajectory generated
-        
-        '''
-        return PathMover.simulator.max_length_stopper
-    
     def selection_probability_ratio(self, details):
         '''
         Return the proposal probability for Shooting Moves. These are given by the ratio of partition functions
@@ -152,13 +140,11 @@ class ShootMover(PathMover):
         details.success = False
         details.inputs = [trajectory]
         details.mover = self
-        setattr(details,'start', trajectory)
-        setattr(details,'start_point', self.selector.pick(details.start) )
+        setattr(details, 'start', trajectory)
+        setattr(details, 'start_point', self.selector.pick(details.start) )
         setattr(details, 'final', None)
         setattr(details, 'final_point', None)
 
-        max_frames = PathMover.simulator.n_frames_max - trajectory.frames
-        self.length_stopper.length = max_frames
         self._generate(details)
 
 

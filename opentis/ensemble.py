@@ -696,7 +696,7 @@ class SequentialEnsemble(Ensemble):
                         return self.ensembles[ens_num].can_append(subtraj)
                     else:
                         #print "Returning false due to incomplete assigns:",
-                        print subtraj_final, "!=", traj_final
+                        #print subtraj_final, "!=", traj_final
                         return False # in final ensemble, not all assigned
                 else:
                     # subtraj existed, but not yet final ensemble
