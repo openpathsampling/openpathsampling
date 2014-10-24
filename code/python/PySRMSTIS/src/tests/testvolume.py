@@ -43,6 +43,7 @@ class testFullVolume(object):
         assert_equal((full | volA)(test), True)
         assert_equal((volA | full)(test), True)
         assert_equal((volA | full).__str__(), "all")
+        assert_equal((~ full).__str__(), "empty")
 
 class testLambdaVolume(object):
     def setUp(self):
