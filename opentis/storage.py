@@ -17,7 +17,9 @@ from trajectory_store import TrajectoryStorage
 from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
 from ensemble_store import EnsembleStorage
 from sample_store import SampleStorage
-from pathmover_store import PathMoverStorage, ShootingPointSelectorStorage, ShootingPointStorage, MoveDetailsStorage
+from pathmover import PathMover, MoveDetails
+from shooting import ShootingPointSelector, ShootingPoint
+from object_storage import ObjectStorage
 from simtk.unit import amu
 
 import mdtraj as md
@@ -69,11 +71,10 @@ class Storage(netcdf.Dataset):
         self.momentum = MomentumStorage(self).register()
         self.ensemble = EnsembleStorage(self).register()
         self.sample = SampleStorage(self).register()
-        self.pathmover = PathMoverStorage(self).register()
-        self.movedetails = MoveDetailsStorage(self).register()
-
-        self.shootingpoint = ShootingPointStorage(self).register()
-        self.shootingpointselector = ShootingPointSelectorStorage(self).register()
+        self.pathmover = ObjectStorage(self, PathMover, named=True, json=True, identifier='json').register()
+        self.movedetails = ObjectStorage(self, MoveDetails, named=False, json=True, identifier='json').register()
+        self.shootingpoint = ObjectStorage(self, ShootingPoint, named=True, json=True).register()
+        self.shootingpointselector = ObjectStorage(self, ShootingPointSelector, named=True, json=True, identifier='json').register()
 
         if mode == 'w':
             self._init()

@@ -222,7 +222,7 @@ class Trajectory(list):
     #=============================================================================================
 
     def __getslice__(self, *args, **kwargs):
-        ret =  super(Trajectory, self).__getslice__(*args, **kwargs)
+        ret =  list.__getslice__(self, *args, **kwargs)
         if isinstance(ret, list):
             ret = Trajectory(ret)
             ret.atom_indices = self.atom_indices
@@ -232,9 +232,9 @@ class Trajectory(list):
     def __getitem__(self, index):
         # Allow for numpy style of selecting several indices using a list as index parameter
         if type(index) is list:
-            ret = [ super(Trajectory, self).__getitem__(i) for i in index ]
+            ret = [ list.__getitem__(self, i) for i in index ]
         else:
-            ret = super(Trajectory, self).__getitem__(index)
+            ret = list.__getitem__(self, index)
                 
         if isinstance(ret, list):
             ret = Trajectory(ret)
