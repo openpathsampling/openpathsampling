@@ -1,5 +1,6 @@
-from object_storage import ObjectStorage, addcache_save, addcache
+from object_storage import ObjectStorage, savecache, loadcache, storable
 
+@storable
 class Sample(object):
     """
     A Move is the return object from a PathMover and contains all information about the move, initial trajectories,
@@ -9,8 +10,6 @@ class Sample(object):
     -----
     Should contain inputs/outputs and success (accepted/rejected) as well as probability to succeed.
     """
-
-    cls = 'path'
 
     def __init__(self, trajectory=None,  mover=None, ensemble=None, details=None):
         self.idx = dict()
@@ -23,11 +22,13 @@ class Sample(object):
     def __call__(self):
         return self.trajectory
 
+
+
 class SampleStorage(ObjectStorage):
     def __init__(self, storage):
         super(SampleStorage, self).__init__(storage, Sample)
 
-    @addcache_save
+    @savecache
     def save(self, origin, idx=None):
         """
         Add the current state of the origin in the database. If nothing has changed then the origin gets stored using the same snapshots as before. Saving lots of diskspace
@@ -60,7 +61,7 @@ class SampleStorage(ObjectStorage):
             self.storage.movedetails.save(origin.details)
             self.save_object('origin_details', idx, origin.details)
 
-    @addcache
+    @loadcache
     def load(self, idx, momentum = True):
         '''
         Return a origin from the storage

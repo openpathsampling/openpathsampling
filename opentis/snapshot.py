@@ -7,13 +7,14 @@
 import copy
 import numpy as np
 import mdtraj as md
-
+from object_storage import storable
 from simtk.unit import nanosecond, picosecond, nanometers, nanometer, picoseconds, femtoseconds, femtosecond, kilojoules_per_mole, Quantity
 
 #=============================================================================================
 # SIMULATION CONFIGURATION
 #=============================================================================================
 
+@storable
 class Configuration(object):
 
     """
@@ -22,10 +23,8 @@ class Configuration(object):
     """
 
     # Class variables to store the global storage and the system context describing the system to be safed as configuration_indices
-    storage = None
     simulator = None
     load_lazy = True
-    cls = 'configuration'
 
     def __init__(self, context=None, simulator=None, coordinates=None, box_vectors=None, potential_energy=None, topology=None, idx=None):
         """
@@ -61,10 +60,6 @@ class Configuration(object):
 
         """
 
-        if idx is None:
-            self.idx = dict()        # potential idx in a netcdf storage, if 0 then not stored yet. Attention! Cannot be stored in 2 repositories at the same time
-        else:
-            self.idx = idx
         self._coordinates = None
         self._box_vectors = None
         self._potential_energy = None
@@ -239,18 +234,16 @@ class Configuration(object):
 #=============================================================================================
 # SIMULATION MOMENTUM / VELOCITY
 #=============================================================================================
-
+@storable
 class Momentum(object):
     """
     Simulation momentum. Contains only velocities of all atoms and associated kinetic energies
     """
     
     # Class variables to store the global storage and the system context describing the system to be safed as momentums
-    storage = None
     simulator = None
     load_lazy = True
-    cls = 'momentum'
-    
+
     def __init__(self, context=None, simulator=None, velocities=None, kinetic_energy=None, idx=None):
         """
         Create a simulation momentum from either an OpenMM context or individually-specified components.
@@ -279,10 +272,6 @@ class Momentum(object):
         
         """
         
-        if idx is None:
-            self.idx = dict()        # potential idx in a netcdf storage, if 0 then not stored yet. Attention! Cannot be stored in 2 repositories at the same time
-        else:
-            self.idx = idx
         self._velocities = None
         self._kinetic_energy = None
 
@@ -427,9 +416,7 @@ class Snapshot(object):
     
     # Class variables to store the global storage and the system context describing the system to be saved as snapshots
     # Hopefully these class member variables will not be needed any longer
-    storage = None
     simulator = None
-    cls = 'snapshot'
 
     def __init__(self, context=None, simulator=None, coordinates=None, velocities=None, box_vectors=None, potential_energy=None, kinetic_energy=None, configuration=None, momentum=None, reversed=False, topology=None):
         """

@@ -5,7 +5,9 @@ Created on 03.09.2014
 '''
 
 from trajectory import Trajectory
+from object_storage import storable
 
+@storable
 class Ensemble(object):
     '''    
     An Ensemble represents a path ensemble, effectively a set of trajectories.
@@ -27,29 +29,24 @@ class Ensemble(object):
 
     use_shortcircuit = True
 
-    cls = 'ensemble'
 
     def __init__(self):
         '''
         A path volume defines a set of paths.
         '''
 
-        self.idx = dict() # Contains references to positions in various files, will be set, once saved
-
         self._traj = dict()
         self.last = None
         self.name = ''
-        
-        return
 
     def __eq__(self, other):
         if self is other:
             return True
         return str(self) == str(other)
 
-    def identify(self, name):
-        self.name = name
-        return self
+    @property
+    def identifier(self):
+        return str(self)
     
     def __call__(self, trajectory, lazy=None):
         '''

@@ -11,10 +11,9 @@ import numpy as np
 
 from sample_store import Sample
 from ensemble import FullEnsemble
-
+from object_storage import storable
+@storable
 class MoveDetails(object):
-
-    cls = 'movedetails'
 
     def __init__(self, **kwargs):
         self.inputs=None
@@ -26,8 +25,6 @@ class MoveDetails(object):
         self.mover=None
         for key, value in kwargs:
             setattr(self, key, value)
-
-        self.idx = dict()
 
 class PathMover(object):
     """

@@ -1,7 +1,7 @@
 import numpy as np
 import mdtraj as md
 
-from object_storage import ObjectStorage, addcache
+from object_storage import ObjectStorage, loadcache, savecache
 from trajectory import Trajectory
 from snapshot import Configuration, Momentum, Snapshot
 
@@ -26,6 +26,7 @@ class TrajectoryStorage(ObjectStorage):
         '''
         return int(self.storage.variables['trajectory_frames_length'][idx])
 
+    @savecache
     def save(self, trajectory, idx=None):
         """
         Add the current state of the trajectory in the database. If nothing has changed then the trajectory gets stored using the same snapshots as before. Saving lots of diskspace
@@ -43,31 +44,21 @@ class TrajectoryStorage(ObjectStorage):
         A single Trajectory object can only be saved once!
         """
 
-        idx = super(TrajectoryStorage, self).index(trajectory, idx)
+        storage = self.storage
 
-        if idx is not None:
-            storage = self.storage
+        begin = self.free_idx('trajectory_frames')
 
-            begin = self.free_idx('trajectory_frames')
+        nframes = len(trajectory)
+        for frame_index in range(nframes):
+            frame = trajectory[frame_index]
+            storage.snapshot.save(frame)
 
-    #        print 'Begin :', begin
-    #        print 'Index :', idx
+            storage.variables['trajectory_configuration_idx'][begin + frame_index] = frame.configuration.idx[storage]
+            storage.variables['trajectory_momentum_idx'][begin + frame_index] = frame.momentum.idx[storage]
+            storage.variables['trajectory_momentum_reversed'][begin + frame_index] = frame.reversed
 
-            nframes = len(trajectory)
-            for frame_index in range(nframes):
-                frame = trajectory[frame_index]
-                storage.snapshot.save(frame)
-
-#                print 'Position :', begin + frame_index
-
-                storage.variables['trajectory_configuration_idx'][begin + frame_index] = frame.configuration.idx[storage]
-                storage.variables['trajectory_momentum_idx'][begin + frame_index] = frame.momentum.idx[storage]
-                storage.variables['trajectory_momentum_reversed'][begin + frame_index] = frame.reversed
-
-            storage.variables['trajectory_frames_length'][idx] = nframes
-            storage.variables['trajectory_frames_idx'][idx] = begin
-
-        return
+        storage.variables['trajectory_frames_length'][idx] = nframes
+        storage.variables['trajectory_frames_idx'][idx] = begin
 
 
     def momentum_indices(self, idx):
@@ -138,7 +129,7 @@ class TrajectoryStorage(ObjectStorage):
         )
 
 
-    @addcache
+    @loadcache
     def load(self, idx, lazy = None):
         '''
         Return a trajectory from the storage

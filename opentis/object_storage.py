@@ -2,7 +2,7 @@ import copy
 import json
 import yaml
 
-def addcache(func):
+def loadcache(func):
     def inner(self, idx, *args, **kwargs):
         if idx in self.cache:
             return self.cache[idx]
@@ -12,7 +12,7 @@ def addcache(func):
         return obj
     return inner
 
-def addidentifier_save(func):
+def identifiable(func):
     def inner(self, obj, idx=None, *args, **kwargs):
         if idx is None and hasattr(obj, 'identifier'):
             if not hasattr(obj,'json'):
@@ -34,12 +34,25 @@ def addidentifier_save(func):
 
     return inner
 
-def addcache_save(func):
+def savecache(func):
     def inner(self, obj, idx = None, *args, **kwargs):
         idx = self.index(obj, idx)
         if idx is not None:
             func(self, obj, idx, *args, **kwargs)
     return inner
+
+def storable(super_class):
+    class NewClass(super_class):
+        cls = super_class.__name__.lower()
+        def __init__(self, *args, **kwargs):
+            super(NewClass, self).__init__(*args, **kwargs)
+            if 'idx' in kwargs:
+                self.idx = kwargs['idx']
+            else:
+                self.idx = dict()
+
+    NewClass.__name__ = super_class.__name__
+    return NewClass
 
 class StoredObject(object):
 
@@ -152,7 +165,7 @@ class ObjectStorage(object):
     def to_cache(self, obj):
         self.cache[obj.idx[self.storage]] = obj
 
-    @addcache
+    @loadcache
     def load(self, idx, lazy=True):
         '''
         Returns an object from the storage. Needs to be implented from the specific storage class.
@@ -171,8 +184,8 @@ class ObjectStorage(object):
         else:
             return self.load_json(self.idx_dimension + '_json', idx, obj)
 
-    @addidentifier_save
-    @addcache_save
+    @identifiable
+    @savecache
     def save(self, obj, idx=None):
         '''
         Returns an object from the storage. Needs to be implented from the specific storage class.

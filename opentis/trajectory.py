@@ -8,22 +8,21 @@ import copy
 import numpy as np
 import mdtraj as md
 from simtk.unit import nanometers
+from object_storage import storable
 
 
 #=============================================================================================
 # SIMULATION TRAJECTORY
 #=============================================================================================
 
+@storable
 class Trajectory(list):
     """
     Simulation trajectory. Essentially a python list of snapshots
 
     """
     
-    storage = None
     simulator = None
-    default_storage = None
-    cls = 'trajectory'
     use_lazy = True    # We assume that snapshots are immutable. That should safe a lot of time to copy trajectories
 
 
@@ -40,8 +39,6 @@ class Trajectory(list):
 
         # Initialize list.
         list.__init__(self)
-
-        self.idx = dict() # Contains references to positions in various files, will be set, once saved
 
         self.path_probability = None # For future uses
 
