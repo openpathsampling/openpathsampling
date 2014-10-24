@@ -24,16 +24,12 @@ class Volume(object):
         '''
         Returns a string representation of the volume
         '''
-        return 'volume'
+        return 'volume' # pragma: no cover
 
     def __or__(self, other):
         if self is other:
             return self
-        elif type(self) is EmptyVolume:
-            return other
         elif type(other) is EmptyVolume:
-            return self
-        elif type(self) is FullVolume:
             return self
         elif type(other) is FullVolume:
             return other
@@ -43,25 +39,17 @@ class Volume(object):
     def __xor__(self, other):
         if self is other:
             return EmptyVolume()
-        elif type(self) is EmptyVolume:
-            return other
         elif type(other) is EmptyVolume:
             return self
-        elif type(self) is FullVolume:
-            return NegatedVolume(other)
         elif type(other) is FullVolume:
-            return NegatedVolume(self)
+            return ~ self
         else:
             return VolumeCombination(self, other, fnc = lambda a,b : a ^ b, str_fnc = '{0} xor {1}')
 
     def __and__(self, other):
         if self is other:
             return self
-        elif type(self) is EmptyVolume:
-            return self
         elif type(other) is EmptyVolume:
-            return other
-        elif type(self) is FullVolume:
             return other
         elif type(other) is FullVolume:
             return self
@@ -71,12 +59,8 @@ class Volume(object):
     def __sub__(self, other):
         if self is other:
             return EmptyVolume()
-        elif type(self) is EmptyVolume:
-            return self
         elif type(other) is EmptyVolume:
             return self
-        elif type(self) is FullVolume:
-            return NegatedVolume(other)
         elif type(other) is FullVolume:
             return EmptyVolume()        
         else:
@@ -122,6 +106,18 @@ class EmptyVolume(Volume):
     def __call__(self, snapshot):
         return False
 
+    def __and__(self, other):
+        return self
+
+    def __or__(self, other):
+        return other
+
+    def __xor__(self, other):
+        return other
+
+    def __sub__(self, other):
+        return self
+
     def __invert__(self):
         return FullVolume()
     
@@ -137,6 +133,18 @@ class FullVolume(Volume):
 
     def __invert__(self):
         return EmptyVolume()
+
+    def __and__(self, other):
+        return other
+
+    def __or__(self, other):
+        return self
+
+    def __xor__(self, other):
+        return ~ other
+
+    def __sub__(self, other):
+        return ~ other
 
     def __str__(self):
         return 'all'
@@ -185,6 +193,8 @@ class LambdaVolume(Volume):
                                other.lambda_min, other.lambda_max)
             if lminmax == 1:
                 return self
+            elif lminmax == 2:
+                return super(LambdaVolume, self).__or__(other)
             else:
                 return LambdaVolume(self.orderparameter, 
                                     lminmax[0], lminmax[1])
@@ -208,6 +218,13 @@ class LambdaVolume(Volume):
                 return EmptyVolume()
             elif lminmax == 1:
                 return self
+            elif lminmax == 2:
+                return (
+                    LambdaVolume(self.orderparameter,
+                                 self.lambda_min, other.lambda_min) |
+                    LambdaVolume(self.orderparameter,
+                                 other.lambda_max, self.lambda_max)
+                )
             else:
                 return LambdaVolume(self.orderparameter, 
                                     lminmax[0], lminmax[1])
