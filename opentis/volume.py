@@ -17,7 +17,8 @@ class Volume(object):
         '''
         Returns `True` if the given snapshot is part of the defined Region
         '''
-        return False
+        
+        return False # pragma: no cover
                 
     def __str__(self):
         '''
