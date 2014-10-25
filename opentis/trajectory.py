@@ -4,11 +4,11 @@
 '''
 
 import copy
-
 import numpy as np
 import mdtraj as md
 from simtk.unit import nanometers
-from storage.wrapper import storable
+
+from wrapper import storable
 
 #=============================================================================================
 # SIMULATION TRAJECTORY

@@ -1,7 +1,8 @@
 import math
 
 import numpy as np
-from storage.wrapper import storable
+
+from wrapper import storable
 
 
 #############################################################################

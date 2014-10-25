@@ -7,8 +7,8 @@ Created on 19.07.2014
 import numpy as np
 
 from shooting import ShootingPoint
-from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble, LengthEnsemble
-from storage.wrapper import storable
+from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble
+from wrapper import storable
 from ensemble import FullEnsemble
 from trajectory import Sample
 

@@ -13,7 +13,7 @@ from duckpunching import SimulationDuckPunch
 
 sys.path.append(os.path.abspath('../'))
 import trajectory
-from netcdf_storage.netcdf_storage import Storage
+from storage import Storage
 import orderparameter as op
 
 

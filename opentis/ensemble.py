@@ -3,9 +3,8 @@ Created on 03.09.2014
 
 @author: jan-hendrikprinz, David W.H. Swenson
 '''
-from storage.wrapper import storable
+from wrapper import storable
 from trajectory import Trajectory
-
 
 @storable
 class Ensemble(object):

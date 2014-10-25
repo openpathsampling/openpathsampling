@@ -1,6 +1,6 @@
 from object_storage import ObjectStorage
 from ensemble import Ensemble, LoadedEnsemble
-from storage.wrapper import loadcache
+from wrapper import loadcache
 
 
 class EnsembleStorage(ObjectStorage):
