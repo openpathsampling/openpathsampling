@@ -341,7 +341,6 @@ class ConfigurationStorage(ObjectStorage):
 
         obj.potential_energy = potential_energy
 
-
     def coordinates_as_numpy(self, frame_indices=None, atom_indices=None):
 
         if frame_indices is None:

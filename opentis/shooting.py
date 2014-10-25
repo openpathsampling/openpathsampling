@@ -2,8 +2,6 @@ import math
 
 import numpy as np
 
-from wrapper import storable
-
 
 #############################################################################
 #
@@ -16,6 +14,8 @@ from wrapper import storable
 #
 #  
 #############################################################################
+from wrapper import storable
+
 
 @storable
 class ShootingPoint(object):

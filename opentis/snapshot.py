@@ -9,12 +9,12 @@ import copy
 import numpy as np
 import mdtraj as md
 
-from wrapper import storable
-
 
 #=============================================================================================
 # SIMULATION CONFIGURATION
 #=============================================================================================
+from wrapper import storable
+
 
 @storable
 class Configuration(object):

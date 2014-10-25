@@ -4,15 +4,17 @@
 '''
 
 import copy
+
 import numpy as np
 import mdtraj as md
 from simtk.unit import nanometers
 
-from wrapper import storable
 
 #=============================================================================================
 # SIMULATION TRAJECTORY
 #=============================================================================================
+from wrapper import storable
+
 
 @storable
 class Trajectory(list):
