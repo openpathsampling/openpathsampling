@@ -19,7 +19,7 @@ sys.path.append(os.path.abspath('../'))
 import TrajFile
 import trajectory
 import snapshot
-from netcdf_storage.netcdf_storage import Storage
+from storage import Storage
 
 class AtomCounter(object):
     '''Let's be honest: that's all we're using the simulation.system object

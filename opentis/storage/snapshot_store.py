@@ -321,6 +321,27 @@ class ConfigurationStorage(ObjectStorage):
 
         obj.coordinates = coordinates
 
+    def update_box_vectors(self, obj):
+        storage = self.storage
+
+        idx = obj.idx[self.storage]
+
+        b = storage.variables['configuration_box_vectors'][idx]
+        box_vectors = Quantity(b, nanometers)
+
+        obj.box_vectors = box_vectors
+
+    def update_potential_energy(self, obj):
+        storage = self.storage
+
+        idx = obj.idx[self.storage]
+
+        V = storage.variables['configuration_potential'][idx]
+        potential_energy = Quantity(V, kilojoules_per_mole)
+
+        obj.potential_energy = potential_energy
+
+
     def coordinates_as_numpy(self, frame_indices=None, atom_indices=None):
 
         if frame_indices is None:
