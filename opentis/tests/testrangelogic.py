@@ -35,3 +35,8 @@ class testRangeLogic(object):
         assert_equal(range_sub(2, 3, 1, 4), None)
         assert_equal(range_sub(1, 2, 1, 2), None)
 
+    def test_periodic_order(self):
+        periodic_ordering(1, 2, 3, 4)
+        periodic_ordering(4, 3, 2, 1)
+        periodic_ordering(1, 2, 4, 3)
+        pass

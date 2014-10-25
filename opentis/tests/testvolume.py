@@ -86,10 +86,18 @@ class testLambdaVolume(object):
         pass
 
     def test_autocombinations(self):
+        # volA tests this in the LambdaVolumes
         assert_equal(volA | volA, volA)
         assert_equal(volA & volA, volA)
         assert_equal(volA ^ volA, volume.EmptyVolume())
         assert_equal(volA - volA, volume.EmptyVolume())
+        # combo tests this with VolumeCombination of LambdaVolumes
+        combo = (volD - volA)
+        assert_is(combo | combo, combo)
+        assert_is(combo & combo, combo)
+        assert_equal(combo ^ combo, volume.EmptyVolume())
+        assert_equal(combo - combo, volume.EmptyVolume())
+
 
     def test_and_combinations(self):
         assert_equal((volA & volB), volume.LambdaVolume(op_id, 0.25, 0.5))
@@ -255,4 +263,20 @@ class testLambdaVolumePeriodic(object):
         assert_equal(True, vol(360))
         assert_equal(True, vol(-180))
         assert_equal(True, vol(180))
+
+    def test_periodic_and_combos(self):
+        pass
+
+    def test_periodic_or_combos(self):
+        pass
+
+    def test_periodic_xor_combos(self):
+        pass
+
+    def test_periodic_not_combos(self):
+        pass
+
+    def test_periodic_sub_combos(self):
+        pass
+
 

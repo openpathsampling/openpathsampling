@@ -274,7 +274,38 @@ class LambdaVolumePeriodic(LambdaVolume):
 
     def do_wrap(self, value):
         return ((value-self.period_shift) % self.period_len) + self.period_shift
-        
+
+    def __and__(self,other):
+        if False:
+            pass
+        else:
+            return super(LambdaVolumePeriodic, self).__and__(other)
+
+    def __or__(self,other):
+        if False:
+            pass
+        else:
+            return super(LambdaVolumePeriodic, self).__or__(other)
+
+    def __xor__(self,other):
+        if False:
+            pass
+        else:
+            return super(LambdaVolumePeriodic, self).__xor__(other)
+
+    def __sub__(self,other):
+        if False:
+            pass
+        else:
+            return super(LambdaVolumePeriodic, self).__sub__(other)
+
+    def __invert__(self):
+        # consists of swapping max and mix
+        return LambdaVolumePeriodic(self.orderparameters,
+                                    self.lambda_max, self.lambda_min,
+                                    self.period_min, self.period_max
+                                   )
+
     def __call__(self, snapshot):
         l = self.orderparameter(snapshot)
         if self.wrap:

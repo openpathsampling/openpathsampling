@@ -55,3 +55,38 @@ def range_sub(amin, amax, bmin, bmax):
             return None
         else:
             return (bmax, amax)
+
+# I make no claim that this is the fastest algorithm to solve this problem.
+# However, it is simple, and it is designed to allow me to re-use the code
+# above for periodic systems as well. This is unlikely to be a performance
+# bottleneck, so readability and testability rate much higher than speed.
+def periodic_ordering(amin, amax, bmin, bmax):
+    print
+    dict1 = {amin : 'a', amax : 'A', bmin : 'b', bmax : 'B'}
+    dict2 = {'a' : amin, 'A' : amax, 'b' : bmin, 'B' : bmax}
+    order = ['a']
+    # put the labels in the increasing order, starting at amin
+    for val in (amax, bmin, bmax):
+        i = 0
+        label = dict1[val]
+        while i < len(order):
+            if val < dict2[order[i]]:
+                order.insert(i, label)
+                break
+            i += 1
+        if label not in order:
+            order.append(label)
+    # Canonical order is 'a' before 'A' and 'b' before 'B'; with only these
+    # four elements, there is always a cyclic permutation where this is
+    # true. Find it:
+    idx0 = order.index('a')
+    out = []
+    for i in range(4):
+        out.append(order[(idx0+i) % 4])
+    if out[3] == 'b':
+        out = [out[3]] + out[slice(0,3)]
+    print out
+    final = [out.index(a) for a in ['a','A','b','B']]
+    print final
+
+
