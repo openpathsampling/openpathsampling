@@ -8,35 +8,55 @@ from range_logic import *
 
 class testRangeLogic(object):
     def test_range_and(self):
-        assert_equal(range_and(1, 3, 2, 4), (2, 3))
-        assert_equal(range_and(2, 4, 1, 3), (2, 3))
+        assert_equal(range_and(1, 3, 2, 4), [(2, 3)])
+        assert_equal(range_and(2, 4, 1, 3), [(2, 3)])
         assert_equal(range_and(1, 2, 3, 4), None)
         assert_equal(range_and(3, 4, 1, 2), None)
-        assert_equal(range_and(1, 4, 2, 3), (2, 3))
-        assert_equal(range_and(2, 3, 1, 4), (2, 3))
+        assert_equal(range_and(1, 4, 2, 3), [(2, 3)])
+        assert_equal(range_and(2, 3, 1, 4), [(2, 3)])
         assert_equal(range_and(1, 2, 1, 2), 1)
 
     def test_range_or(self):
-        assert_equal(range_or(1, 3, 2, 4), (1, 4))
-        assert_equal(range_or(2, 4, 1, 3), (1, 4))
-        assert_equal(range_or(1, 2, 3, 4), 2)
-        assert_equal(range_or(3, 4, 1, 2), 2)
-        assert_equal(range_or(1, 4, 2, 3), (1, 4))
-        assert_equal(range_or(2, 3, 1, 4), (1, 4))
+        assert_equal(range_or(1, 3, 2, 4), [(1, 4)])
+        assert_equal(range_or(2, 4, 1, 3), [(1, 4)])
+        assert_equal(range_or(1, 2, 3, 4), [(1, 2), (3, 4)])
+        assert_equal(range_or(3, 4, 1, 2), [(3, 4), (1, 2)])
+        assert_equal(range_or(1, 4, 2, 3), [(1, 4)])
+        assert_equal(range_or(2, 3, 1, 4), [(1, 4)])
         assert_equal(range_or(1, 2, 1, 2), 1)
 
 
     def test_range_sub(self):
-        assert_equal(range_sub(1, 3, 2, 4), (1, 2))
-        assert_equal(range_sub(2, 4, 1, 3), (3, 4))
+        assert_equal(range_sub(1, 3, 2, 4), [(1, 2)])
+        assert_equal(range_sub(2, 4, 1, 3), [(3, 4)])
         assert_equal(range_sub(1, 2, 3, 4), 1)
         assert_equal(range_sub(3, 4, 1, 2), 1)
-        assert_equal(range_sub(1, 4, 2, 3), 2)
+        assert_equal(range_sub(1, 4, 2, 3), [(1, 2), (3, 4)])
         assert_equal(range_sub(2, 3, 1, 4), None)
         assert_equal(range_sub(1, 2, 1, 2), None)
 
+
+class testPeriodicRangeLogic(object):
+
     def test_periodic_order(self):
-        periodic_ordering(1, 2, 3, 4)
-        periodic_ordering(4, 3, 2, 1)
-        periodic_ordering(1, 2, 4, 3)
-        pass
+        # orders without wrapping
+        assert_equal(periodic_ordering(1, 2, 3, 4), [0, 1, 2, 3])
+        assert_equal(periodic_ordering(1, 3, 2, 4), [0, 2, 1, 3])
+        assert_equal(periodic_ordering(4, 3, 2, 1), [0, 3, 2, 1])
+        assert_equal(periodic_ordering(1, 2, 1, 2), [0, 2, 1, 3])
+        assert_equal(periodic_ordering(2, 4, 1, 3), [1, 3, 0, 2])
+        # orders that require wrapping
+        assert_equal(periodic_ordering(1, 2, 4, 3), [1, 2, 0, 3])
+        # TODO more tests
+
+    def test_periodic_and(self):
+        assert_equal(periodic_range_and(0.1, 0.3, 0.2, 0.4), [(0.2, 0.3)])
+        assert_equal(periodic_range_and(0.2, 0.4, 0.1, 0.3), [(0.2, 0.3)])
+        assert_equal(periodic_range_and(1, 2, 3, 4), None)
+        assert_equal(periodic_range_and(3, 4, 1, 2), None)
+        assert_equal(periodic_range_and(1, 4, 2, 3), [(2, 3)])
+        assert_equal(periodic_range_and(2, 3, 1, 4), [(2, 3)])
+        assert_equal(periodic_range_and(1, 2, 1, 2), 1)
+        # TODO: tests where periodicity matters
+        # TODO: test with the special case
+

@@ -3,8 +3,7 @@ Created on 03.09.2014
 
 @author: jan-hendrikprinz, David W.H. Swenson
 '''
-
-from range_logic import range_and, range_or, range_sub
+import range_logic
 
 class Volume(object):
     def __init__(self):
@@ -171,38 +170,82 @@ class LambdaVolume(Volume):
         
     # Typically, the logical combinations are only done once. Because of
     # this, it is worth passing these through a check to speed up the logic.
+
+    # To get all the usefulness of the range logic in a subclass, all you
+    # should need to override is _copy_with_new_range (so that it inits any
+    # extra info the subclass carries) and range_and/or/sub, so that they
+    # return the correct behavior for the new subclass. Everything else
+    # comes for free.
+    def _copy_with_new_range(self, lmin, lmax):
+        """Shortcut to make a LambdaVolume with all parameters the same as
+        this one except the range. This is useful for the range logic when
+        dealing with subclasses: just override this function to copy extra
+        information.
+        """
+        return LambdaVolume(self.orderparameter, lmin, lmax)
+
+    @staticmethod
+    def range_and(amin, amax, bmin, bmax):
+        return range_logic.range_and(amin, amax, bmin, bmax)
+    @staticmethod
+    def range_or(amin, amax, bmin, bmax):
+        return range_logic.range_or(amin, amax, bmin, bmax)
+    @staticmethod
+    def range_sub(amin, amax, bmin, bmax):
+        return range_logic.range_sub(amin, amax, bmin, bmax)
+
+    def _lrange_to_Volume(self, lrange):
+        """Takes results from one of the range_logic functions and returns
+        the appropriate Volume.
+
+        Parameters
+        ----------
+        lrange : None or 1 or list of 2-tuples
+            Key to the volume to be returned: None returns the EmptyVolume, 1
+            returns self, and a list of 2-tuples is __or__'d as (min,max) to
+            make a VolumeCombinations
+
+        Returns
+        -------
+            : Volume
+        """
+        if lrange == None:
+            return EmptyVolume()
+        elif lrange == 1:
+            return self
+        elif len(lrange) == 1:
+            return self._copy_with_new_range(lrange[0][0], lrange[0][1])
+        elif len(lrange) == 2:
+            return VolumeCombination(
+                self._copy_with_new_range(lrange[0][0], lrange[0][1]),
+                self._copy_with_new_range(lrange[1][0], lrange[1][1]),
+                lambda a, b : a or b, '{0} or {1}'
+            )
+        else:
+            raise ValueError(
+                "lrange value not understood: {0}".format(lrange)
+            ) # pragma: no cover
+
     def __and__(self, other):
-        if (type(other) is LambdaVolume and 
+        if (type(other) is type(self) and 
                 self.orderparameter == other.orderparameter):
-            lminmax = range_and(self.lambda_min, self.lambda_max,
+            lminmax = self.range_and(self.lambda_min, self.lambda_max,
                                 other.lambda_min, other.lambda_max)
-            if lminmax == None:
-                return EmptyVolume()
-            elif lminmax == 1:
-                return self
-            else:
-                return LambdaVolume(self.orderparameter, 
-                                    lminmax[0], lminmax[1])
+            return self._lrange_to_Volume(lminmax)
         else:
             return super(LambdaVolume, self).__and__(other)
 
     def __or__(self, other):
-        if (type(other) is LambdaVolume and 
+        if (type(other) is type(self) and 
                 self.orderparameter == other.orderparameter):
-            lminmax = range_or(self.lambda_min, self.lambda_max,
+            lminmax = self.range_or(self.lambda_min, self.lambda_max,
                                other.lambda_min, other.lambda_max)
-            if lminmax == 1:
-                return self
-            elif lminmax == 2:
-                return super(LambdaVolume, self).__or__(other)
-            else:
-                return LambdaVolume(self.orderparameter, 
-                                    lminmax[0], lminmax[1])
+            return self._lrange_to_Volume(lminmax)
         else:
             return super(LambdaVolume, self).__or__(other)
 
     def __xor__(self, other):
-        if (type(other) is LambdaVolume and 
+        if (type(other) is type(self) and 
                 self.orderparameter == other.orderparameter):
             # taking the shortcut here
             return ((self | other) - (self & other))
@@ -210,24 +253,11 @@ class LambdaVolume(Volume):
             return super(LambdaVolume, self).__xor__(other)
 
     def __sub__(self, other):
-        if (type(other) is LambdaVolume and 
+        if (type(other) is type(self) and 
                 self.orderparameter == other.orderparameter):
-            lminmax = range_sub(self.lambda_min, self.lambda_max,
-                                other.lambda_min, other.lambda_max)
-            if lminmax == None:
-                return EmptyVolume()
-            elif lminmax == 1:
-                return self
-            elif lminmax == 2:
-                return (
-                    LambdaVolume(self.orderparameter,
-                                 self.lambda_min, other.lambda_min) |
-                    LambdaVolume(self.orderparameter,
-                                 other.lambda_max, self.lambda_max)
-                )
-            else:
-                return LambdaVolume(self.orderparameter, 
-                                    lminmax[0], lminmax[1])
+            lminmax = self.range_sub(self.lambda_min, self.lambda_max,
+                            other.lambda_min, other.lambda_max)
+            return self._lrange_to_Volume(lminmax)
         else:
             return super(LambdaVolume, self).__sub__(other)
 
@@ -257,6 +287,8 @@ class LambdaVolumePeriodic(LambdaVolume):
         """
         super(LambdaVolumePeriodic, self).__init__(orderparameter,
                                                     lambda_min, lambda_max)        
+        self.period_min = period_min
+        self.period_max = period_max
         if (period_min is not None) and (period_max is not None):
             self.period_shift = period_min
             self.period_len = period_max - period_min
@@ -275,29 +307,21 @@ class LambdaVolumePeriodic(LambdaVolume):
     def do_wrap(self, value):
         return ((value-self.period_shift) % self.period_len) + self.period_shift
 
-    def __and__(self,other):
-        if False:
-            pass
-        else:
-            return super(LambdaVolumePeriodic, self).__and__(other)
+    # next few functions add support for range logic
+    def _copy_with_new_range(self, lmin, lmax):
+        return LambdaVolumePeriodic(self.orderparameter, lmin, lmax,
+                                    self.period_min, self.period_max)
 
-    def __or__(self,other):
-        if False:
-            pass
-        else:
-            return super(LambdaVolumePeriodic, self).__or__(other)
+    @staticmethod
+    def range_and(amin, amax, bmin, bmax):
+        return range_logic.periodic_range_and(amin, amax, bmin, bmax)
+    @staticmethod
+    def range_or(amin, amax, bmin, bmax):
+        return range_logic.periodic_range_or(amin, amax, bmin, bmax)
+    @staticmethod
+    def range_sub(amin, amax, bmin, bmax):
+        return range_logic.periodic_range_sub(amin, amax, bmin, bmax)
 
-    def __xor__(self,other):
-        if False:
-            pass
-        else:
-            return super(LambdaVolumePeriodic, self).__xor__(other)
-
-    def __sub__(self,other):
-        if False:
-            pass
-        else:
-            return super(LambdaVolumePeriodic, self).__sub__(other)
 
     def __invert__(self):
         # consists of swapping max and mix

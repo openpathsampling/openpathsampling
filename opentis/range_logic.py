@@ -16,7 +16,7 @@ def range_and(amin, amax, bmin, bmax):
     if lmin > lmax:
         return None
     else:
-        return (lmin, lmax)
+        return [(lmin, lmax)]
 
 def range_or(amin, amax, bmin, bmax):
     if amin == bmin and amax == bmax:
@@ -34,9 +34,9 @@ def range_or(amin, amax, bmin, bmax):
         lmax = bmax
         gmax = amax
     if gmax > gmin:
-        return (lmin, lmax)
+        return [(lmin, lmax)]
     else:
-        return 2
+        return [(amin, amax), (bmin, bmax)]
 
 
 def range_sub(amin, amax, bmin, bmax):
@@ -47,28 +47,41 @@ def range_sub(amin, amax, bmin, bmax):
         return 1
     if amin < bmin:
         if amax > bmax:
-            return 2
+            return [(amin, bmin), (bmax, amax)]
         else:
-            return (amin, bmin)
+            return [(amin, bmin)]
     else:
         if amax < bmax:
             return None
         else:
-            return (bmax, amax)
+            return [(bmax, amax)]
 
 # I make no claim that this is the fastest algorithm to solve this problem.
 # However, it is simple, and it is designed to allow me to re-use the code
 # above for periodic systems as well. This is unlikely to be a performance
 # bottleneck, so readability and testability rate much higher than speed.
 def periodic_ordering(amin, amax, bmin, bmax):
-    print
+    """Figures out the order of the permutation that maps the minima and
+    maxima to their order, in canonical form (amin<amax, bmin<bmax if
+    possible).
+
+    Parameters
+    ----------
+
+    Return
+    -------
+        : list of int 0-3
+        Order index of amin, amax, bmin, bmax in that order; i.e. the return
+        value [0, 2, 1, 3] means amin < bmin < amax < bmax; amin in order
+        spot 0, amax in 2, bmin in 1, bmax in 3. 
+    """
     dict1 = {amin : 'a', amax : 'A', bmin : 'b', bmax : 'B'}
     dict2 = {'a' : amin, 'A' : amax, 'b' : bmin, 'B' : bmax}
     order = ['a']
     # put the labels in the increasing order, starting at amin
-    for val in (amax, bmin, bmax):
+    for label in ('A', 'b', 'B'):
         i = 0
-        label = dict1[val]
+        val = dict2[label]
         while i < len(order):
             if val < dict2[order[i]]:
                 order.insert(i, label)
@@ -76,17 +89,36 @@ def periodic_ordering(amin, amax, bmin, bmax):
             i += 1
         if label not in order:
             order.append(label)
-    # Canonical order is 'a' before 'A' and 'b' before 'B'; with only these
-    # four elements, there is always a cyclic permutation where this is
-    # true. Find it:
+    # Canonical order is 'a' always before 'A', and if possible, 'b' before
+    # 'B', and 'a' before 'B' (in that order of priority). This defines a
+    # unique member within the set of cyclic permutations; find that cyclic
+    # permutation.
     idx0 = order.index('a')
     out = []
     for i in range(4):
         out.append(order[(idx0+i) % 4])
     if out[3] == 'b':
         out = [out[3]] + out[slice(0,3)]
-    print out
     final = [out.index(a) for a in ['a','A','b','B']]
-    print final
+    return final
 
+def recover_periodic_range(lrange, order, adict):
+    if lrange == None or lrange == 1:
+        return lrange
+    else:
+        retval = []
+        for pair in lrange:
+            opair = [ order.index(pval) for pval in pair ]
+            retval.append(tuple(map(adict.get, opair)))
+        return retval
 
+def periodic_range_and(amin, amax, bmin, bmax):
+    adict = {0 : amin, 1 : amax, 2 : bmin, 3 : bmax}
+    if amin == bmin and amax == bmax:
+        return 1
+    order = periodic_ordering(amin, amax, bmin, bmax)
+    if order == [0, 3, 2, 1]: # aBbA
+        return # special handling
+    else:
+        and_res = range_and(order[0], order[1], order[2], order[3])
+        return recover_periodic_range(and_res, order, adict)

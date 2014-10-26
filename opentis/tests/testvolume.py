@@ -70,20 +70,14 @@ class testFullVolume(object):
         assert_equal((~ full).__str__(), "empty")
 
 class testLambdaVolume(object):
-    def setUp(self):
-        pass
-
-    def teardown(self):
-        pass
-
     def test_lower_boundary(self):
-        pass
+        raise SkipTest
 
     def test_upper_boundary(self):
-        pass
+        raise SkipTest
 
     def test_negation(self):
-        pass
+        raise SkipTest
 
     def test_autocombinations(self):
         # volA tests this in the LambdaVolumes
@@ -140,8 +134,6 @@ class testLambdaVolume(object):
         assert_equal((volA ^ volA2),
                      volume.VolumeCombination(volA, volA2, xor_fcn, xor_str))
 
-        pass
-
     def test_sub_combinations(self):
         sub_fcn = lambda a, b: a and not b
         sub_str = '{0} and not {1}'
@@ -157,13 +149,18 @@ class testLambdaVolume(object):
                     )
         assert_equal((volA2 - volA),
                      volume.VolumeCombination(volA2, volA, sub_fcn, sub_str))
-        pass
 
     def test_str(self):
         # string and inverted string
-        pass
+        raise SkipTest
 
 class testLambdaVolumePeriodic(object):
+    def setUp(self):
+        self.pvolA = volume.LambdaVolumePeriodic(op_id, -100, 75)
+        self.pvolA_ = volume.LambdaVolumePeriodic(op_id, 75, -100)
+        self.pvolB = volume.LambdaVolumePeriodic(op_id, 50, 100)
+        self.pvolC = volume.LambdaVolumePeriodic(op_id, -100, -50)
+        self.pvolD = volume.LambdaVolumePeriodic(op_id, -100, 100)
     
     def test_normal(self):
         """min<max and both within periodic domain"""
@@ -265,18 +262,26 @@ class testLambdaVolumePeriodic(object):
         assert_equal(True, vol(180))
 
     def test_periodic_and_combos(self):
-        pass
+        print (self.pvolA & self.pvolB).__str__()
+        print volume.LambdaVolumePeriodic(op_id, 50, 75).__str__()
+        assert_equal((self.pvolA & self.pvolB),
+                     volume.LambdaVolumePeriodic(op_id, 50, 75))
+        assert_equal((self.pvolA & self.pvolB)(60), True)
+        assert_equal((self.pvolA & self.pvolB)(80), False)
+        assert_equal((self.pvolB & self.pvolC), volume.EmptyVolume())
+        # go to  
+        #raise SkipTest
 
     def test_periodic_or_combos(self):
-        pass
+        raise SkipTest
 
     def test_periodic_xor_combos(self):
-        pass
+        raise SkipTest
 
     def test_periodic_not_combos(self):
-        pass
+        raise SkipTest
 
     def test_periodic_sub_combos(self):
-        pass
+        raise SkipTest
 
 
