@@ -6,7 +6,6 @@ Created on 03.09.2014
 from trajectory import Trajectory
 from wrapper import storable
 
-
 @storable
 class Ensemble(object):
     '''    
@@ -1265,3 +1264,4 @@ class EnsembleFactory():
         ])
         return ens
         #return (LengthEnsemble(slice(3,None)) & InXEnsemble(volume_a, 0) & InXEnsemble(volume_b, -1)) & (LeaveXEnsemble(volume_x) & OutXEnsemble(volume_a | volume_b, slice(1,-1), lazy))
+

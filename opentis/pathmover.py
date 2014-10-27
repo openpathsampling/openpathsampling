@@ -169,20 +169,21 @@ class ForwardShootMover(ShootMover):
     A pathmover that implements the forward shooting algorithm
     '''
     def _generate(self, details):
-        print "Shooting forward from frame %d" % details.start_point.index
+        shooting_point = details.start_point.index
+        print "Shooting forward from frame %d" % shooting_point
         
         # Run until one of the stoppers is triggered
         partial_trajectory = PathMover.simulator.generate(
-                                     details.start_point.snapshot,
-                                     running = [ForwardAppendedTrajectoryEnsemble(
-                                                      self.ensemble,
-                                                      details.start[0:details.start_point.index]
-                                                ).forward, self.length_stopper.forward]
-                                     )
+            details.start_point.snapshot,
+            running = [ForwardAppendedTrajectoryEnsemble(
+                self.ensemble, 
+                details.start[0:details.start_point.index]).forward, 
+                self.length_stopper.forward]
+             )
 
-        details.final = details.start[0:details.start_point.index] + partial_trajectory
-        details.final_point = ShootingPoint(self.selector, details.final, details.start_point.index)
-
+        details.final = details.start[0:shooting_point] + partial_trajectory
+        details.final_point = ShootingPoint(self.selector, details.final,
+                                            shooting_point)
         pass
     
 class BackwardShootMover(ShootMover):    

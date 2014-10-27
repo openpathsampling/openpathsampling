@@ -28,6 +28,10 @@ from ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
                       InXEnsemble)
 from storage import Storage
 from trajectory import Trajectory
+from calculation import Bootstrapping
+from pathmover import (PathMover, MixedMover, ForwardShootMover, 
+                       BackwardShootMover)
+from shooting import UniformSelector
 
 from simtk.unit import femtoseconds, picoseconds, nanometers, kelvin, dalton
 from simtk.unit import Quantity
@@ -172,17 +176,23 @@ if __name__=="__main__":
     # mdtraj's compute_dihedrals function, with the atoms in psi_atoms
     psi_atoms = [6,8,14,16]
     psi = OP_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
-                            indices=[psi_atoms])
+                      indices=[psi_atoms],
+                      storages=simulator.storage.configuration)
     # same story for phi, although we won't use that
     phi_atoms = [4,6,8,14]
     phi = OP_Function("phi", md.compute_dihedrals, trajdatafmt="mdtraj",
-                            indices=[phi_atoms])
+                      indices=[phi_atoms],
+                      storages=simulator.storage.configuration)
+
+    psi.save()
+    phi.save()
 
     # now we define our states and our interfaces
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
     stateA = LambdaVolumePeriodic(psi, -120.0/degrees, -30.0/degrees)
     stateB = LambdaVolumePeriodic(psi, 100/degrees, 180/degrees) 
     interface0 = LambdaVolumePeriodic(psi, -125.0/degrees, -25.0/degrees)
+    interface1 = LambdaVolumePeriodic(psi, -135.0/degrees, -15.0/degrees)
     
     # TODO: make a wrapper to generate a full interface set: (problem: needs
     # the ability to define a minimum lambda)
@@ -191,6 +201,11 @@ if __name__=="__main__":
     interface0_ensemble = ef.TISEnsemble(stateA,
                                          stateA | stateB,
                                          interface0,
+                                         lazy=True)
+
+    interface1_ensemble = ef.TISEnsemble(stateA,
+                                         stateA | stateB,
+                                         interface1,
                                          lazy=True)
 
 
@@ -262,4 +277,25 @@ so any number of crossings after the first one are handled by ensemble #5.
         for frame in segments[0]:
             print phi(frame)[0]*degrees, psi(frame)[0]*degrees, stateA(frame), interface0(frame), stateB(frame)
 
+    print """
+Starting the bootstrapping procedure to obtain initial paths. First we
+define our shooting movers (randomly pick fwd or bkwd shooting), then build
+the bootstrapping calculation, then we run it. 
+    """
+    PathMover.simulator = simulator
+    shooting_mover0 = MixedMover([
+        ForwardShootMover(UniformSelector(), interface0_ensemble),
+        BackwardShootMover(UniformSelector(), interface0_ensemble)
+    ])
+    shooting_mover1 = MixedMover([
+        ForwardShootMover(UniformSelector(), interface1_ensemble),
+        BackwardShootMover(UniformSelector(), interface1_ensemble)
+    ])
 
+    tis_ensembles = [interface0_ensemble, interface1_ensemble]
+    bootstrap_movers = [shooting_mover0, shooting_mover1]
+    bootstrap = Bootstrapping(simulator.storage, simulator, tis_ensembles,
+                              bootstrap_movers)
+    bootstrap.replicas = [segments[0]]
+
+    bootstrap.run(20)
