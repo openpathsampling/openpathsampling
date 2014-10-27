@@ -1,5 +1,7 @@
 import math
+
 import numpy as np
+
 
 #############################################################################
 #
@@ -12,10 +14,12 @@ import numpy as np
 #
 #  
 #############################################################################
+from wrapper import storable
 
+
+@storable
 class ShootingPoint(object):
 
-    cls = 'shootingpoint'
     def __init__(self, selector, trajectory, index, f = None, sum_bias = None):
         '''
         Constructs a ShootingPoint object.
@@ -43,8 +47,7 @@ class ShootingPoint(object):
         self.index = index
         self._f = f
         self._sum_bias = sum_bias
-        self.idx = dict()
-        
+
     @property
     def snapshot(self):
         return self.trajectory[self.index]
@@ -78,14 +81,9 @@ class ShootingPoint(object):
     @property
     def bias(self):
         return self.f
-    
+
+@storable
 class ShootingPointSelector(object):
-
-    cls = 'shootingpointselector'
-
-    def __init__(self):
-        self.idx = dict()
-        pass
 
     @property
     def identifier(self):

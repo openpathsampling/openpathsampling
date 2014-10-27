@@ -1,48 +1,12 @@
 import copy
 import json
+
 import yaml
 
-def addcache(func):
-    def inner(self, idx, *args, **kwargs):
-        if idx in self.cache:
-            return self.cache[idx]
+from wrapper import savecache, identifiable, loadcache
 
-        obj = func(self, idx, *args, **kwargs)
-        self.cache[idx] = obj
-        return obj
-    return inner
-
-def addidentifier_save(func):
-    def inner(self, obj, idx=None, *args, **kwargs):
-        if idx is None and hasattr(obj, 'identifier'):
-            if not hasattr(obj,'json'):
-                setattr(obj,'json',self.get_json(obj))
-
-            find_idx = self.find_by_identifier(obj.identifier)
-            if find_idx is not None:
-                # found and does not need to be saved, but we will let this ensemble point to the storage
-                # in case we want to save and need the idx
-                obj.idx[self.storage] = find_idx
-                self.cache[find_idx] = obj
-            else:
-                func(self, obj, idx, *args, **kwargs)
-                # Finally register with the new idx in the identifier cache dict.
-                new_idx = obj.idx[self.storage]
-                self.all_names[obj.identifier] = new_idx
-        else:
-            func(self, obj, idx, *args, **kwargs)
-
-    return inner
-
-def addcache_save(func):
-    def inner(self, obj, idx = None, *args, **kwargs):
-        idx = self.index(obj, idx)
-        if idx is not None:
-            func(self, obj, idx, *args, **kwargs)
-    return inner
 
 class StoredObject(object):
-
     def __getattr__(self, item):
         if hasattr(self, '_loader'):
 #            print 'Lazy Loading'
@@ -152,7 +116,7 @@ class ObjectStorage(object):
     def to_cache(self, obj):
         self.cache[obj.idx[self.storage]] = obj
 
-    @addcache
+    @loadcache
     def load(self, idx, lazy=True):
         '''
         Returns an object from the storage. Needs to be implented from the specific storage class.
@@ -171,8 +135,8 @@ class ObjectStorage(object):
         else:
             return self.load_json(self.idx_dimension + '_json', idx, obj)
 
-    @addidentifier_save
-    @addcache_save
+    @identifiable
+    @savecache
     def save(self, obj, idx=None):
         '''
         Returns an object from the storage. Needs to be implented from the specific storage class.

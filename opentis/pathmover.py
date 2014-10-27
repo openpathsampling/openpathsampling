@@ -4,17 +4,17 @@ Created on 19.07.2014
 @author: Jan-Hendrik Prinz
 '''
 
-from shooting import ShootingPoint
-from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble, LengthEnsemble
-
 import numpy as np
 
-from sample_store import Sample
+from shooting import ShootingPoint
+from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble
 from ensemble import FullEnsemble
+from trajectory import Sample
+from wrapper import storable
 
+
+@storable
 class MoveDetails(object):
-
-    cls = 'movedetails'
 
     def __init__(self, **kwargs):
         self.inputs=None
@@ -26,8 +26,6 @@ class MoveDetails(object):
         self.mover=None
         for key, value in kwargs:
             setattr(self, key, value)
-
-        self.idx = dict()
 
 class PathMover(object):
     """
@@ -126,20 +124,8 @@ class ShootMover(PathMover):
         super(ShootMover, self).__init__()
         self.selector = selector
         self.ensemble = ensemble
-        self.length_stopper = LengthEnsemble(0)
+        self.length_stopper = PathMover.simulator.max_length_stopper
 
-    @property
-    def generator_stopper(self):
-        '''
-        the ensemble used by the generator 
-        
-        Notes
-        -----
-        contains the status of the generator if there has been a too long trajectory generated
-        
-        '''
-        return PathMover.simulator.max_length_stopper
-    
     def selection_probability_ratio(self, details):
         '''
         Return the proposal probability for Shooting Moves. These are given by the ratio of partition functions
@@ -154,13 +140,11 @@ class ShootMover(PathMover):
         details.success = False
         details.inputs = [trajectory]
         details.mover = self
-        setattr(details,'start', trajectory)
-        setattr(details,'start_point', self.selector.pick(details.start) )
+        setattr(details, 'start', trajectory)
+        setattr(details, 'start_point', self.selector.pick(details.start) )
         setattr(details, 'final', None)
         setattr(details, 'final_point', None)
 
-        max_frames = PathMover.simulator.n_frames_max - trajectory.frames
-        self.length_stopper.length = max_frames
         self._generate(details)
 
 

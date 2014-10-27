@@ -13,17 +13,17 @@ from simtk.unit import nanometers
 #=============================================================================================
 # SIMULATION TRAJECTORY
 #=============================================================================================
+from wrapper import storable
 
+
+@storable
 class Trajectory(list):
     """
     Simulation trajectory. Essentially a python list of snapshots
 
     """
     
-    storage = None
     simulator = None
-    default_storage = None
-    cls = 'trajectory'
     use_lazy = True    # We assume that snapshots are immutable. That should safe a lot of time to copy trajectories
 
 
@@ -40,8 +40,6 @@ class Trajectory(list):
 
         # Initialize list.
         list.__init__(self)
-
-        self.idx = dict() # Contains references to positions in various files, will be set, once saved
 
         self.path_probability = None # For future uses
 
@@ -225,7 +223,7 @@ class Trajectory(list):
     #=============================================================================================
 
     def __getslice__(self, *args, **kwargs):
-        ret =  super(Trajectory, self).__getslice__(*args, **kwargs)
+        ret =  list.__getslice__(self, *args, **kwargs)
         if isinstance(ret, list):
             ret = Trajectory(ret)
             ret.atom_indices = self.atom_indices
@@ -235,9 +233,9 @@ class Trajectory(list):
     def __getitem__(self, index):
         # Allow for numpy style of selecting several indices using a list as index parameter
         if type(index) is list:
-            ret = [ super(Trajectory, self).__getitem__(i) for i in index ]
+            ret = [ list.__getitem__(self, i) for i in index ]
         else:
-            ret = super(Trajectory, self).__getitem__(index)
+            ret = list.__getitem__(self, index)
                 
         if isinstance(ret, list):
             ret = Trajectory(ret)
@@ -432,3 +430,26 @@ class Trajectory(list):
             topology = topology.subset(self.atom_indices)       
         
         return topology
+
+
+@storable
+class Sample(object):
+    """
+    A Move is the return object from a PathMover and contains all information about the move, initial trajectories,
+    new trajectories (both as references). Might move several trajectories at a time (swapping)
+
+    Notes
+    -----
+    Should contain inputs/outputs and success (accepted/rejected) as well as probability to succeed.
+    """
+
+    def __init__(self, trajectory=None,  mover=None, ensemble=None, details=None):
+        self.idx = dict()
+
+        self.mover = mover
+        self.ensemble = ensemble
+        self.trajectory = trajectory
+        self.details = details
+
+    def __call__(self):
+        return self.trajectory

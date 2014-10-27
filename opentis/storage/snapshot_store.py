@@ -1,7 +1,10 @@
-from snapshot import Snapshot, Configuration, Momentum
-from object_storage import ObjectStorage, addcache
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole, picoseconds
 import numpy as np
+
+from snapshot import Snapshot, Configuration, Momentum
+from object_storage import ObjectStorage
+from wrapper import savecache, loadcache
+
 
 class SnapshotStorage(ObjectStorage):
     """
@@ -46,8 +49,6 @@ class SnapshotStorage(ObjectStorage):
         snapshot : Snapshot
             the loaded snapshot instance
         '''
-
-        #TODO: Check, for some reason some idx are given as numpy.in32 and netcdf4 is not compatible with indices given in this format!!!!!
 
         snapshot = Snapshot()
         snapshot.reversed = bool(reversed)
@@ -95,6 +96,7 @@ class MomentumStorage(ObjectStorage):
     def __init__(self, storage = None):
         super(MomentumStorage, self).__init__(storage, Momentum)
 
+    @savecache
     def save(self, momentum, idx = None):
         """
         Save velocities and kinetic energies of current iteration to NetCDF file.
@@ -107,22 +109,17 @@ class MomentumStorage(ObjectStorage):
             if not None `idx`is used as the index to index the Momentum() instance. Might overwrite existing Momentum in the database.
         """
 
-        idx = super(MomentumStorage, self).index(momentum, idx)
+        storage = self.storage
 
-        if idx is not None:
-            storage = self.storage
+        # Store momentum.
+        storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / (nanometers / picoseconds)).astype(np.float32)
+        if momentum.kinetic_energy is not None:
+            storage.variables['momentum_kinetic'][idx] = momentum.kinetic_energy / kilojoules_per_mole
 
-            # Store momentum.
-            storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / (nanometers / picoseconds)).astype(np.float32)
-            if momentum.kinetic_energy is not None:
-                storage.variables['momentum_kinetic'][idx] = momentum.kinetic_energy / kilojoules_per_mole
+        # Force sync to disk to avoid data loss.
+        storage.sync()
 
-            # Force sync to disk to avoid data loss.
-            storage.sync()
-
-        return
-
-    @addcache
+    @loadcache
     def load(self, idx, lazy=True):
         '''
         Load a momentum from the storage
@@ -248,6 +245,7 @@ class ConfigurationStorage(ObjectStorage):
     def __init__(self, storage = None):
         super(ConfigurationStorage, self).__init__(storage, Configuration)
 
+    @savecache
     def save(self, configuration, idx = None):
         """
         Save positions, velocities, boxvectors and energies of current iteration to NetCDF file.
@@ -257,19 +255,17 @@ class ConfigurationStorage(ObjectStorage):
         We need to allow for reversed configuration_indices to index memory. Would be nice
         """
 
-        idx = super(ConfigurationStorage, self).index(configuration, idx)
-        if idx is not None:
-            storage = self.storage
+        storage = self.storage
 
-            # Store configuration.
-            storage.variables['configuration_coordinates'][idx,:,:] = (configuration.coordinates / nanometers).astype(np.float32)
+        # Store configuration.
+        storage.variables['configuration_coordinates'][idx,:,:] = (configuration.coordinates / nanometers).astype(np.float32)
 
-            if configuration.potential_energy is not None:
-                storage.variables['configuration_potential'][idx] = configuration.potential_energy / kilojoules_per_mole
-    #            storage.variables['configuration_box_vectors'][idx,:] = (self.box_vectors / nanometers).astype(np.float32)
+        if configuration.potential_energy is not None:
+            storage.variables['configuration_potential'][idx] = configuration.potential_energy / kilojoules_per_mole
+#            storage.variables['configuration_box_vectors'][idx,:] = (self.box_vectors / nanometers).astype(np.float32)
 
-            # Force sync to disk to avoid data loss.
-            storage.sync()
+        # Force sync to disk to avoid data loss.
+        storage.sync()
 
 
     def coordinates_as_numpy(self, frame_indices=None, atom_indices=None, storage = None):
@@ -278,7 +274,7 @@ class ConfigurationStorage(ObjectStorage):
     def get(self, indices):
         return [ self.load(idx) for idx in indices ]
 
-    @addcache
+    @loadcache
     def load(self, idx, lazy=False):
         '''
         Load a configuration from the storage
@@ -296,7 +292,6 @@ class ConfigurationStorage(ObjectStorage):
 
         storage = self.storage
 
-        #TODO: Use newest simtk.units since there was an inconcistance with the new numpy
         if not (Configuration.load_lazy and lazy):
             x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
             coordinates = Quantity(x, nanometers)
@@ -325,6 +320,26 @@ class ConfigurationStorage(ObjectStorage):
         coordinates = Quantity(x, nanometers)
 
         obj.coordinates = coordinates
+
+    def update_box_vectors(self, obj):
+        storage = self.storage
+
+        idx = obj.idx[self.storage]
+
+        b = storage.variables['configuration_box_vectors'][idx]
+        box_vectors = Quantity(b, nanometers)
+
+        obj.box_vectors = box_vectors
+
+    def update_potential_energy(self, obj):
+        storage = self.storage
+
+        idx = obj.idx[self.storage]
+
+        V = storage.variables['configuration_potential'][idx]
+        potential_energy = Quantity(V, kilojoules_per_mole)
+
+        obj.potential_energy = potential_energy
 
     def coordinates_as_numpy(self, frame_indices=None, atom_indices=None):
 
