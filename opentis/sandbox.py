@@ -150,6 +150,8 @@ if __name__ == '__main__':
 
         mm = MixedMover([bm, fm])
 
+        tt = storage.trajectory.last()
+
         pth = mm.move(tt)
 
         storage.sample.save(pth)

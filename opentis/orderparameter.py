@@ -250,6 +250,9 @@ class StorableDict(ObjectDict):
             self.clear()
             self.update(new_dict)
 
+    def __str__(self):
+        return "{ 'memory' : " + dict.__str__(self) + ", 'storages' : " + str(self.storage_caches) + " }"
+
     def save(self, storage = None):
         """
         Save the current state of the cache to the storage.
@@ -295,7 +298,7 @@ class StorableDict(ObjectDict):
         else:
             length = int(storage.variables[self.var_name + '_length'][0])
             data_idx = storage.variables[self.var_name + '_idx'][:length].astype(np.int).copy()
-            data = storage.variables[self.var_name][:, 0].astype(np.float).tolist()
+            data = storage.variables[self.var_name][:length, 0].astype(np.float).tolist()
             self.storage_caches[storage] = dict(zip(data_idx, data))
 
 
