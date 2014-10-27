@@ -59,4 +59,11 @@ class testPeriodicRangeLogic(object):
         assert_equal(periodic_range_and(1, 2, 1, 2), 1)
         # TODO: tests where periodicity matters
         # TODO: test with the special case
+        assert_equal(periodic_range_and(0.1, 0.4, 0.3, 0.2), 
+                     [(0.1, 0.2), (0.3, 0.4)])
 
+    def test_periodic_or(self):
+        raise SkipTest
+
+    def test_periodic_sub(self):
+        raise SkipTest

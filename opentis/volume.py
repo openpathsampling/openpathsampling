@@ -213,6 +213,8 @@ class LambdaVolume(Volume):
             return EmptyVolume()
         elif lrange == 1:
             return self
+        elif lrange == -1:
+            return FullEnsemble()
         elif len(lrange) == 1:
             return self._copy_with_new_range(lrange[0][0], lrange[0][1])
         elif len(lrange) == 2:

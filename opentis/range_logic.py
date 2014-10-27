@@ -118,7 +118,32 @@ def periodic_range_and(amin, amax, bmin, bmax):
         return 1
     order = periodic_ordering(amin, amax, bmin, bmax)
     if order == [0, 3, 2, 1]: # aBbA
-        return # special handling
+        special_res = [(0, 1), (2, 3)]
+        return recover_periodic_range(special_res, order, adict)
     else:
         and_res = range_and(order[0], order[1], order[2], order[3])
         return recover_periodic_range(and_res, order, adict)
+
+def periodic_range_or(amin, amax, bmin, bmax):
+    adict = {0 : amin, 1 : amax, 2 : bmin, 3 : bmax}
+    if amin == bmin and amax == bmax:
+        return 1
+    order = periodic_ordering(amin, amax, bmin, bmax)
+    if order == [0, 3, 2, 1]: # aBbA
+        return -1
+    else:
+        or_res = range_or(order[0], order[1], order[2], order[3])
+        return recover_periodic_range(or_res, order, adict)
+
+def periodic_range_sub(amin, amax, bmin, bmax):
+    adict = {0 : amin, 1 : amax, 2 : bmin, 3 : bmax}
+    if amin == bmin and amax == bmax:
+        return None
+    order = periodic_ordering(amin, amax, bmin, bmax)
+    if order == [0, 3, 2, 1]: # aBbA
+        special_res = [(3, 2)]
+        return recover_periodic_range(special_res, order, adict)
+    else:
+        sub_res = range_sub(order[0], order[1], order[2], order[3])
+        return recover_periodic_range(sub_res, order, adict)
+
