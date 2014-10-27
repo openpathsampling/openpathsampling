@@ -3,9 +3,9 @@ import argparse
 import os
 
 from storage import Storage
-
+from orderparameter import StorableDict
+from snapshot import Configuration
 if __name__ == '__main__':
-
 
     parser = argparse.ArgumentParser(description='Analyze a file.')
     parser.add_argument('file', metavar='file.nc', help='an integer for the accumulator')
@@ -64,8 +64,8 @@ if __name__ == '__main__':
     # load initial equilibrate snapshot given by ID #0
     snapshot = storage.snapshot.load(0, 0)
 
-    line("Potential Energy",snapshot.potential_energy)
-    line("Kinetic Energy",snapshot.kinetic_energy)
+    line("Potential Energy",str(snapshot.potential_energy))
+    line("Kinetic Energy",str(snapshot.kinetic_energy))
 
     headline("Ensembles")
 
@@ -91,6 +91,21 @@ if __name__ == '__main__':
         obj = storage.shootingpoint.load(p_idx)
 #        nline(p_idx,obj.json, obj.cls)
 
+    orderparameters =  [op for op in storage.variables if op[0:16] == "configuration_op" and len(op.split('_')) < 4]
+
+    headline("Orderparameters (" + str(len(orderparameters)) + ")")
+
+    for op_name in orderparameters:
+
+        op = StorableDict(op_name, content_class=Configuration, storages=storage.configuration)
+        line(op_name, str(op) )
+
+#    print op[[snapshot.configuration for snapshot in traj]]
+
+
+    for p_idx in range(1, storage.shootingpoint.count() + 1):
+        obj = storage.shootingpoint.load(p_idx)
+#        nline(p_idx,obj.json, obj.cls)
 
     headline("Samples")
 
@@ -128,8 +143,6 @@ if __name__ == '__main__':
         print_traj('start', sample.details.start)
         print_traj('final', sample.details.final)
         print_traj('chosen', sample.trajectory)
-
-
 
     headline("Trajectories")
 
