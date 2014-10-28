@@ -575,7 +575,7 @@ class OP_Function(OrderParameter):
     >>>                              indices=[psi_atoms])
     >>> print psi_orderparam( traj.md() )
     """
-    def __init__(self, name, fcn, trajdatafmt=None, **kwargs):
+    def __init__(self, name, fcn, trajdatafmt=None, storages=None, **kwargs):
         """
         Parameters
         ----------
@@ -594,7 +594,7 @@ class OP_Function(OrderParameter):
             trick, and to instead create separate wrapper classes for each
             supported trajformat.
         """
-        super(OP_Function, self).__init__(name)
+        super(OP_Function, self).__init__(name, storages=storages)
         self.fcn = fcn
         self.trajdatafmt = trajdatafmt
         self.kwargs = kwargs
