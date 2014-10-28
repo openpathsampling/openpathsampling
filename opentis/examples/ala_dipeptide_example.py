@@ -22,7 +22,8 @@ import mdtraj as md
 from Simulator import Simulator
 from orderparameter import OP_Function
 from snapshot import Snapshot, Configuration
-from volume import LambdaVolumePeriodic
+from volume import LambdaVolumePeriodic, VolumeFactory as vf
+from pathmover import PathMoverFactory as mf
 from ensemble import EnsembleFactory as ef
 from ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
                       InXEnsemble)
@@ -169,6 +170,7 @@ if __name__=="__main__":
     snap = Snapshot(simulator.simulation.context)
     simulator.storage.snapshot.save(snap, 0, 0)
     simulator.initialized = True
+    PathMover.simulator = simulator
 
     # this generates an order parameter (callable) object named psi (so if
     # we call `psi(trajectory)` we get a list of the values of psi for each
@@ -191,43 +193,26 @@ if __name__=="__main__":
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
     stateA = LambdaVolumePeriodic(psi, -120.0/degrees, -30.0/degrees)
     stateB = LambdaVolumePeriodic(psi, 100/degrees, 180/degrees) 
-    interface0 = LambdaVolumePeriodic(psi, -125.0/degrees, -25.0/degrees)
-    interface1 = LambdaVolumePeriodic(psi, -135.0/degrees, -15.0/degrees)
-    
-    # TODO: make a wrapper to generate a full interface set: (problem: needs
-    # the ability to define a minimum lambda)
-    #   interface_set(orderparam, [stateA], [stateA, stateB], [lambda_j],
-    #                   lazy=True)
-    interface0_ensemble = ef.TISEnsemble(stateA,
-                                         stateA | stateB,
-                                         interface0,
-                                         lazy=True)
 
-    interface1_ensemble = ef.TISEnsemble(stateA,
-                                         stateA | stateB,
-                                         interface1,
-                                         lazy=True)
+    # set up minima and maxima for this transition's interface set
+    minima = map((1.0 / degrees).__mul__,
+                 [-125, -135, -140, -142.5, -145.0, -147.0, 150.0])
+    maxima = map((1.0 / degrees).__mul__,
+                 [-25.0, -21.0, -18.5, -17.0, -15.0, -10.0, 0.0])
 
+    volume_set = vf.LambdaVolumePeriodicSet(psi, minima, maxima)
+    interface0 = volume_set[0]
+    interface_set = ef.TISEnsembleSet(stateA, stateA | stateB, volume_set)
+    mover_set = mf.OneWayShootingSet(UniformSelector(), interface_set)
 
     print """
 PART ONE: Generate an initial trajectory which satisfies the path ensemble
 for the innermost interface.
 
-We do this by using a special sequential ensemble for the sequence:
-1. Either out of the state or length 0 (making out of state optional).
-2. Inside the state
-3. (Outside the state and inside the interface) or length 0 (in case there
-is no such thing, i.e., if the state and the interface are equivalent) 
-4. Outside the interface
-5. Outside the state or length 0 (in case there is no such thing, i.e., if the state and the interface are equivalent)
-6. In the state and length 1
-
+We do this by using a special sequential ensemble for the sequence.
 This path ensemble is particularly complex because we want to be sure that
 the path we generate is in the ensemble we desire: this means that we can't
 use LeaveXEnsemble as we typically do with TIS paths.
-
-One trick is that anything outside the interface is also outside the state,
-so any number of crossings after the first one are handled by ensemble #5.
     """
     snapshot = simulator.storage.snapshot.load(0,0)
 
@@ -236,12 +221,14 @@ so any number of crossings after the first one are handled by ensemble #5.
         OutXEnsemble(stateA) | LengthEnsemble(0),
         InXEnsemble(stateA),
         (OutXEnsemble(stateA) & InXEnsemble(interface0)) | LengthEnsemble(0),
+        InXEnsemble(interface0) | LengthEnsemble(0),
         OutXEnsemble(interface0),
         OutXEnsemble(stateA) | LengthEnsemble(0),
         InXEnsemble(stateA) & LengthEnsemble(1)
     ]) 
 
-    print "start path generation"
+    interface0_ensemble = interface_set[0]
+    print "start path generation (should not take more than a few minutes)"
     total_path = simulator.generate(snapshot, [first_traj_ensemble.forward])
     print "path generation complete"
     print
@@ -282,20 +269,8 @@ Starting the bootstrapping procedure to obtain initial paths. First we
 define our shooting movers (randomly pick fwd or bkwd shooting), then build
 the bootstrapping calculation, then we run it. 
     """
-    PathMover.simulator = simulator
-    shooting_mover0 = MixedMover([
-        ForwardShootMover(UniformSelector(), interface0_ensemble),
-        BackwardShootMover(UniformSelector(), interface0_ensemble)
-    ])
-    shooting_mover1 = MixedMover([
-        ForwardShootMover(UniformSelector(), interface1_ensemble),
-        BackwardShootMover(UniformSelector(), interface1_ensemble)
-    ])
-
-    tis_ensembles = [interface0_ensemble, interface1_ensemble]
-    bootstrap_movers = [shooting_mover0, shooting_mover1]
-    bootstrap = Bootstrapping(simulator.storage, simulator, tis_ensembles,
-                              bootstrap_movers)
+    bootstrap = Bootstrapping(simulator.storage, simulator, interface_set,
+                              mover_set)
     bootstrap.replicas = [segments[0]]
 
     bootstrap.run(20)

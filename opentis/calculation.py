@@ -31,6 +31,7 @@ class Bootstrapping(Calculation):
     def run(self, nsteps):
         ens_num = 0
         failsteps = 0
+        # if we fail nsteps times in a row, kill the job
         while ens_num < len(self.ensembles) and failsteps < nsteps: 
             print "Trying move in ensemble", ens_num
             sample = self.movers[ens_num].move(self.replicas[0])
@@ -39,9 +40,8 @@ class Bootstrapping(Calculation):
             # formally, I should probably create a move to promote the
             # trajectory to another ensemble and save that sample;
             # practically, I don't care
-            if self.ensembles[ens_num+1](sample.trajectory):
+            add_to_ens = 0 if ens_num == len(self.ensembles) - 1 else 1
+            if self.ensembles[ens_num+add_to_ens](sample.trajectory):
                 failsteps = 0
                 ens_num += 1
             failsteps += 1
-
-

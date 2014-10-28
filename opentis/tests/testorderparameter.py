@@ -10,7 +10,6 @@ import mdtraj as md
 
 from duckpunching import SimulationDuckPunch
 
-
 sys.path.append(os.path.abspath('../'))
 import trajectory
 from storage import Storage

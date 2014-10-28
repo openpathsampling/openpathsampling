@@ -262,3 +262,25 @@ class PathReversal(object):
 class ReplicaExchange(object):
     def do_move(self, allpaths, state):
         pass
+
+class PathMoverFactory(object):
+    @staticmethod
+    def OneWayShootingSet(selector_set, interface_set):
+        if type(selector_set) is not list:
+            selector_set = [selector_set]*len(interface_set)
+        mover_set = [
+            MixedMover([
+                ForwardShootMover(sel, iface), 
+                BackwardShootMover(sel, iface)
+            ])
+            for (sel, iface) in zip(selector_set, interface_set)
+        ]
+        return mover_set
+
+    @staticmethod
+    def TwoWayShootingSet():
+        pass
+
+    @staticmethod
+    def NearestNeighborRepExSet():
+        pass

@@ -1265,3 +1265,13 @@ class EnsembleFactory():
         return ens
         #return (LengthEnsemble(slice(3,None)) & InXEnsemble(volume_a, 0) & InXEnsemble(volume_b, -1)) & (LeaveXEnsemble(volume_x) & OutXEnsemble(volume_a | volume_b, slice(1,-1), lazy))
 
+
+    @staticmethod
+    def TISEnsembleSet(volume_a, volume_b, volumes_x, lazy=True):
+        myset = []
+        for vol in volumes_x:
+            myset.append(
+                EnsembleFactory.TISEnsemble(volume_a, volume_b, vol, lazy)
+            )
+        return myset
+
