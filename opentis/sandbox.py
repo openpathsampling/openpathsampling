@@ -204,22 +204,6 @@ if __name__ == '__main__':
     
     traj = simulator.storage.trajectory(1)[ [0,-1] ].solute
     
-    # TODO: Change TISInterfaces to use only Trajectory object and not mdtraj.Trajectory
-    tis = TISInterfaces(simulator.storage, simulator.solute_indices, traj.md(), np.array([[0.040, 0.045, 0.050, 0.055, 0.060, 0.065, 0.070, 0.075, 0.080], [0.040, 0.045, 0.050, 0.055, 0.060, 0.065, 0.070, 0.075, 0.080]]))
-    tis.create_rmsd_metric()
-
-    tis.assign_storage()
-    
-    initial = tis.split_into_connections(simulator.storage.last_trajectory())
-    
-    sampling = TransitionInterfaceSampling(simulator, tis)
-    old = initial[0]
-    
-    for i in range(10):
-        new = sampling.sampleTrajectory(old)
-        simulator.storage.trajectory.save(new)
-             
-        old = new    
 
 #    mat = tis.compute_N_IJ_l_kI()
 #    print mat
@@ -288,16 +272,7 @@ if __name__ == '__main__':
     ltraj = simulator.storage.last_trajectory()
 
     initial = tis.split_into_connections(simulator.storage.last_trajectory())
-    
-    sampling = TransitionInterfaceSampling(simulator, tis)
-    old = initial[0]
-    
-    for i in range(10):
-        new = sampling.sampleTrajectory(old)
-        simulator.storage.trajectory.save(new)
-             
-        old = new
-    
+
 #    tis.assign_storage()    
 #    mat = tis.compute_N_IJ_l_kI()
 #    print mat
