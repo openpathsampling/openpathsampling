@@ -5,24 +5,20 @@ Created on 01.07.2014
 @author: JH Prinz
 '''
 
-
-import numpy as np
 import time
 
+import numpy as np
 from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
-
 import mdtraj as md
 
-
-from simtk.unit import nanosecond, picosecond, nanometers, nanometer, picoseconds, femtoseconds, femtosecond, kilojoules_per_mole, Quantity
-
+from storage import Storage
 from trajectory import Trajectory
 from snapshot import Snapshot
-from storage import Storage
 from integrators import VVVRIntegrator
 from ensemble import LengthEnsemble
+
 
 #=============================================================================================
 # SOURCE CONTROL

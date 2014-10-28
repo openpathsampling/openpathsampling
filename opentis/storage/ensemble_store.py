@@ -1,5 +1,6 @@
-from object_storage import ObjectStorage, addcache
+from object_storage import ObjectStorage
 from ensemble import Ensemble, LoadedEnsemble
+from wrapper import loadcache
 
 class EnsembleStorage(ObjectStorage):
 
@@ -52,7 +53,7 @@ class EnsembleStorage(ObjectStorage):
 
         return None
 
-    @addcache
+    @loadcache
     def load(self, idx, momentum = True):
         '''
         Return a ensemble from the storage

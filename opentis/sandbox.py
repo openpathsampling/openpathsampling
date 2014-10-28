@@ -126,14 +126,10 @@ if __name__ == '__main__':
         en = InXEnsemble(lV, -1)
         print en(tt)
 
-        en = OutXEnsemble(lV, slice(1,-1), lazy = False).identify('OutXEnsemble1')
+        en = OutXEnsemble(lV, slice(1,-1), lazy = False)
         print en(tt)
 
         storage.ensemble.save(en)
-        
-#        Simulator.op = op
-
-        tis.identify('TISEnsembleA:A')
 
         bm = BackwardShootMover(
                 selector = UniformSelector(),
@@ -153,6 +149,8 @@ if __name__ == '__main__':
             mm = bm
 
         mm = MixedMover([bm, fm])
+
+        tt = storage.trajectory.last()
 
         pth = mm.move(tt)
 

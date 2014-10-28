@@ -5,7 +5,6 @@ from test_helpers import CallIdentity, prepend_exception_message
 import os
 import sys
 sys.path.append(os.path.abspath('../'))
-from trajectory import Trajectory
 from volume import LambdaVolume
 from ensemble import *
 
