@@ -433,3 +433,31 @@ class VoronoiVolume(Volume):
             state = self.state
         
         return self.cell(snapshot) == state
+
+class VolumeFactory(object):
+    @staticmethod
+    def _check_minmax(minvals, maxvals):
+        # minvals could be an integer
+        if len(minvals) != len(maxvals):
+            raise ValueError(
+                "len(minvals) != len(maxvals) in LambdaVolumePeriodicSet")
+        return (minvals, maxvals)
+
+    @staticmethod
+    def LambdaVolumeSet(op, minvals, maxvals):
+
+        minvals, maxvals = VolumeFactory._check_minmax(minvals, maxvals)
+        myset = []
+        for i in range(len(maxvals)):
+            myset.append(LambdaVolume(op, minvals[i], maxvals[i]))
+        return myset
+
+    @staticmethod
+    def LambdaVolumePeriodicSet(op, minvals, maxvals, 
+                                period_min=None, period_max=None):
+        minvals, maxvals = VolumeFactory._check_minmax(minvals, maxvals)
+        myset = []
+        for i in range(len(maxvals)):
+            myset.append(LambdaVolumePeriodic(op, minvals[i], maxvals[i], 
+                                              period_min, period_max))
+        return myset
