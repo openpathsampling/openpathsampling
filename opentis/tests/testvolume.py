@@ -161,6 +161,7 @@ class testLambdaVolumePeriodic(object):
         self.pvolB = volume.LambdaVolumePeriodic(op_id, 50, 100)
         self.pvolC = volume.LambdaVolumePeriodic(op_id, -100, -50)
         self.pvolD = volume.LambdaVolumePeriodic(op_id, -100, 100)
+        self.pvolE = volume.LambdaVolumePeriodic(op_id, -150, 150)
     
     def test_normal(self):
         """min<max and both within periodic domain"""
@@ -262,18 +263,48 @@ class testLambdaVolumePeriodic(object):
         assert_equal(True, vol(180))
 
     def test_periodic_and_combos(self):
-        print (self.pvolA & self.pvolB).__str__()
-        print volume.LambdaVolumePeriodic(op_id, 50, 75).__str__()
         assert_equal((self.pvolA & self.pvolB),
                      volume.LambdaVolumePeriodic(op_id, 50, 75))
         assert_equal((self.pvolA & self.pvolB)(60), True)
         assert_equal((self.pvolA & self.pvolB)(80), False)
         assert_equal((self.pvolB & self.pvolC), volume.EmptyVolume())
-        # go to  
-        #raise SkipTest
+        assert_equal((self.pvolC & self.pvolB), volume.EmptyVolume())
+        assert_is((self.pvolA & self.pvolA), self.pvolA)
+        assert_equal((self.pvolA & self.pvolA_), volume.EmptyVolume())
+        assert_equal((self.pvolE & self.pvolD), self.pvolD)
+        # go to special case for cyclic permutation
+        assert_equal((self.pvolB & self.pvolD), self.pvolB)
+        # go to special case
+        assert_equal((self.pvolE & self.pvolA_),
+                     volume.VolumeCombination(
+                         volume.LambdaVolumePeriodic(op_id, -150,-100),
+                         volume.LambdaVolumePeriodic(op_id, 75, 150),
+                         lambda a, b: a or b, '{0} or {1}'
+                     )
+                    )
+        # go to super if needed
+        assert_equal(type(self.pvolA & volA), volume.VolumeCombination)
 
     def test_periodic_or_combos(self):
-        raise SkipTest
+        assert_equal((self.pvolA | self.pvolB), self.pvolD)
+        assert_equal((self.pvolA | self.pvolB)(60), True)
+        assert_equal((self.pvolA | self.pvolB)(80), True)
+        assert_equal((self.pvolA | self.pvolB)(125), False)
+        assert_equal((self.pvolB | self.pvolC),
+                     volume.VolumeCombination(self.pvolB, self.pvolC,
+                                              lambda a, b: a or b, 
+                                              '{0} or {1}'
+                                             ))
+        assert_equal((self.pvolC | self.pvolB), 
+                     volume.VolumeCombination(self.pvolC, self.pvolB,
+                                              lambda a, b: a or b, 
+                                              '{0} or {1}'
+                                             ))
+        assert_is((self.pvolA | self.pvolA), self.pvolA)
+        assert_equal((self.pvolA | self.pvolA_), volume.FullVolume())
+        assert_equal((self.pvolE | self.pvolD), self.pvolE)
+        assert_equal((self.pvolB | self.pvolD), self.pvolD)
+        assert_equal((self.pvolE | self.pvolA_), volume.FullVolume())
 
     def test_periodic_xor_combos(self):
         raise SkipTest
@@ -284,4 +315,31 @@ class testLambdaVolumePeriodic(object):
     def test_periodic_sub_combos(self):
         raise SkipTest
 
+class testVolumeFactor(object):
+    def test_check_minmax(self):
+        # for the eventual case that minvals or maxvals is an integer
+        raise SkipTest
 
+    @raises(ValueError)
+    def test_bad_minmax_error(self):
+        volume.VolumeFactory._check_minmax([0], [1, 2])
+
+    def test_LambdaVolumeSet(self):
+        mins = [-1.5, -3.5]
+        maxs = [2.0, 4.0]
+        lv0 = volume.LambdaVolume(op_id, mins[0], maxs[0])
+        lv1 = volume.LambdaVolume(op_id, mins[1], maxs[1])
+        assert_equal(
+            [lv0, lv1],
+            volume.VolumeFactory.LambdaVolumeSet(op_id, mins, maxs)
+        )
+
+    def test_LambdaVolumePeriodicSet(self):
+        mins = [-1.5, -3.5]
+        maxs = [2.0, 4.0]
+        lv0 = volume.LambdaVolumePeriodic(op_id, mins[0], maxs[0])
+        lv1 = volume.LambdaVolumePeriodic(op_id, mins[1], maxs[1])
+        assert_equal(
+            [lv0, lv1],
+            volume.VolumeFactory.LambdaVolumePeriodicSet(op_id, mins, maxs)
+        )

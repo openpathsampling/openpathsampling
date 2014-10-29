@@ -116,6 +116,8 @@ def periodic_range_and(amin, amax, bmin, bmax):
     adict = {0 : amin, 1 : amax, 2 : bmin, 3 : bmax}
     if amin == bmin and amax == bmax:
         return 1
+    if amin == bmax and bmin == amax:
+        return None
     order = periodic_ordering(amin, amax, bmin, bmax)
     if order == [0, 3, 2, 1]: # aBbA
         special_res = [(0, 1), (2, 3)]
@@ -128,6 +130,8 @@ def periodic_range_or(amin, amax, bmin, bmax):
     adict = {0 : amin, 1 : amax, 2 : bmin, 3 : bmax}
     if amin == bmin and amax == bmax:
         return 1
+    elif amin == bmax and bmin == amax:
+        return -1
     order = periodic_ordering(amin, amax, bmin, bmax)
     if order == [0, 3, 2, 1]: # aBbA
         return -1
@@ -138,6 +142,8 @@ def periodic_range_or(amin, amax, bmin, bmax):
 def periodic_range_sub(amin, amax, bmin, bmax):
     adict = {0 : amin, 1 : amax, 2 : bmin, 3 : bmax}
     if amin == bmin and amax == bmax:
+        return None
+    elif amin == bmax and bmin == amax:
         return None
     order = periodic_ordering(amin, amax, bmin, bmax)
     if order == [0, 3, 2, 1]: # aBbA
