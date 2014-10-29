@@ -82,7 +82,7 @@ class ObjectStorage(object):
 
         return None
 
-    def index(self, obj, idx=None):
+    def index(self, obj, idx=None, ):
         """
         Return the appropriate index for saving or None if the object is already stored!
 
@@ -364,11 +364,11 @@ class ObjectStorage(object):
         for key, value in data.iteritems():
             key_id = key.idx[self.storage]
             if value_type is int:
-                val = float(data[spec.name])
+                val = float(value)
             elif value_type is float:
-                val = float(data[spec.name])
+                val = float(value)
             elif value_type is bool:
-                val = float(data[spec.name])
+                val = float(value)
             elif value_type is str:
                 # NOT IMPLEMENTED...
                 pass

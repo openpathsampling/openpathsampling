@@ -8,7 +8,6 @@ class ObjectDictStorage(ObjectStorage):
         self.idx_dimension = 'dict_' + self.idx_dimension
         self.value_type = value_type
 
-    @savecache
     def save(self, objectdict, idx=None):
         """
         Save the current state of the cache to the storage.
@@ -20,10 +19,22 @@ class ObjectDictStorage(ObjectStorage):
 
         """
         storage = self.storage
+        if idx is None:
+            if storage in objectdict.idx:
+                self.cache[idx] = objectdict
+                idx = objectdict.idx[storage]
+            else:
+                idx = self.free()
+                objectdict.idx[storage] = idx
+                self.cache[idx] = objectdict
+        else:
+            idx = int(idx)
+            self.cache[idx] = objectdict
 
-        objectdict._update_store(storage)
+        self._update_store(objectdict)
         store = objectdict.storage_caches[storage]
         self.save_objectdict(self.idx_dimension, int(idx), store, self.value_type)
+        self.tidy_cache(objectdict)
 
 
     @loadcache
@@ -58,7 +69,7 @@ class ObjectDictStorage(ObjectStorage):
 
         self.init_objectdict(self.idx_dimension, self.content_class.__name__.lower())
 
-    def _update_store(self, storage = None):
+    def _update_store(self, obj):
         """
         This will transfer everything from the memory cache into the storage copy in memory which is used to interact with
         the file storage.
@@ -69,20 +80,19 @@ class ObjectDictStorage(ObjectStorage):
             The storage (not ObjectStorage) to store in. If None then all associated storages will be updated up.
 
         """
-        if storage is None:
-            if len(self.storage_caches) > 0:
-                map(self._update_store, self.storage_caches.keys())
-        else:
-            if storage not in self.storage_caches:
-                # TODO: Throw exception
-                self.storage_caches[storage] = dict()
 
-            store = self.storage_caches[storage]
-            for item, value in self.iteritems():
-                if storage in item.idx:
-                    store[item.idx[storage]] = value
+        storage = self.storage
 
-    def tidy_cache(self, storage = None):
+        if storage not in obj.storage_caches:
+            # TODO: Throw exception
+            obj.storage_caches[storage] = dict()
+
+        store = obj.storage_caches[storage]
+        for item, value in obj.iteritems():
+            if storage in item.idx:
+                store[item.idx[storage]] = value
+
+    def tidy_cache(self, obj):
         """
         This will transfer everything from the memory cache into the storage copy in memory which is used to interact with
         the file storage.
@@ -94,18 +104,13 @@ class ObjectDictStorage(ObjectStorage):
 
         """
 
-        # TODO: This doesnt work because the storage is changed during deleting superfluous elements
-        if storage is None:
-            if len(self.storage_caches) > 0:
-                map(self.tidy_cache, self.storage_caches.keys())
-        else:
-            # Make sure configuration_indices are stored and have an index and then add the configuration index to the trajectory
+        storage = self.storage
 
-            if storage not in self.storage_caches:
-                # TODO: Throw exception
-                self.storage_caches[storage] = dict()
+        if storage not in obj.storage_caches:
+            # TODO: Throw exception
+            obj.storage_caches[storage] = dict()
 
-            new_dict = {item:value for item, value in self.iteritems() if storage not in item.idx}
+        new_dict = {item: value for item, value in obj.iteritems() if storage not in item.idx}
 
-            self.clear()
-            self.update(new_dict)
+        obj.clear()
+        obj.update(new_dict)
