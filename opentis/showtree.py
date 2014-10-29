@@ -4,6 +4,8 @@ import argparse
 import os
 from storage import Storage
 
+from orderparameter import OP_Function
+import mdtraj as md
 if __name__ == '__main__':
 
 
@@ -12,10 +14,18 @@ if __name__ == '__main__':
                    const=True, default=False,
                    help='show also rejected paths')
     parser.add_argument('file', metavar='file.nc', help='an integer for the accumulator')
+    parser.add_argument('--psi', dest='psi', action='store_const',
+                   const=True, default=False,
+                   help='show psi angle instead of ID')
+#    parser.add_argument('--phi', dest='phi', action='store_const',
+#                   const=True, default=False,
+#                   help='show phi angle instead of ID')
+
 
     args = parser.parse_args()
     rejected = args.rejected
     file = args.file
+    show_psi = args.psi
 
     if not os.path.isfile(file):
         print file, 'does not exist ! ENDING!'
@@ -25,6 +35,11 @@ if __name__ == '__main__':
                                                      filename = file,
                                                      mode = 'a'
                                                      )
+
+    psi_atoms = [6,8,14,16]
+    psi = OP_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
+      indices=[psi_atoms])
+
 
     def headline(s):
         print
@@ -99,21 +114,16 @@ if __name__ == '__main__':
                                         fill = 'white'
                                         ))
 
-    svg_document = svgwrite.Drawing(
-        filename = "test-svgwrite.svg"
-    )
 
     p_x = dict()
     p_y = dict()
 
-    start_x = 500
-    start_y = 100
+    # First run to determine plot size
 
-    scale_x = 25
-    scale_y = 20
     t_count = 0
 
-    lightcolor = "lightgray"
+    min_x = 0
+    max_x = 0
 
     for o_idx in range(1, storage.sample.count() + 1):
         sample = storage.sample.load(o_idx)
@@ -139,7 +149,74 @@ if __name__ == '__main__':
                     pos_x = p_x[conf]
                     pos_y = p_y[conf]
 
-                    block(pos_x, pos_y, "blue", conf.idx[storage])
+                t_count += 0.8
+
+            shift = p_x[old_conf] - new_index
+
+            min_x = min(min_x, shift)
+            max_x = max(max_x, shift + len(new_traj) - 1)
+
+            for pos, snapshot in enumerate(new_traj):
+                conf = snapshot.configuration
+                if not conf in p_y:
+                    p_y[conf] = t_count
+                    p_x[conf] = shift + pos
+
+                    pos_x = p_x[conf]
+                    pos_y = p_y[conf]
+
+    svg_document = svgwrite.Drawing(
+        filename = "tree.svg"
+    )
+
+    p_x = dict()
+    p_y = dict()
+
+    scale_x = 18
+    scale_y = 18
+
+    totalwidth = (max_x - min_x + 5) * (scale_x)
+    left = (-min_x + 2.5) * (scale_x)
+
+    svg_document['width'] = str(totalwidth)+'px'
+
+    start_x = left
+    start_y = 0
+
+    t_count = 0
+
+    lightcolor = "lightgray"
+
+    degrees = 180/3.14159 # psi reports in radians; I think in degrees
+
+    for o_idx in range(1, storage.sample.count() + 1):
+        sample = storage.sample.load(o_idx)
+        length = len(sample.details.final)
+
+        old_traj = sample.details.start_point.trajectory
+        old_index = sample.details.start_point.index
+        old_conf = old_traj[old_index].configuration
+
+        new_traj = sample.details.final_point.trajectory
+        new_index = sample.details.final_point.index
+        new_conf = new_traj[new_index].configuration
+
+        if sample.trajectory is new_traj or rejected:
+            accepted = sample.trajectory is new_traj
+            t_count += 0.8
+            if not old_conf in p_x:
+                for pos, snapshot in enumerate(old_traj):
+                    conf = snapshot.configuration
+                    p_x[conf] = pos
+                    p_y[conf] = t_count
+
+                    pos_x = p_x[conf]
+                    pos_y = p_y[conf]
+
+                    if show_psi:
+                        block(pos_x, pos_y, "blue", str(int((degrees * psi(conf))) % 360 ))
+                    else:
+                        block(pos_x, pos_y, "blue", conf.idx[storage])
 
                 t_count += 0.8
 
@@ -201,6 +278,9 @@ if __name__ == '__main__':
                     pos_x = p_x[conf]
                     pos_y = p_y[conf]
 
-                    block(pos_x, pos_y, color, conf.idx[storage])
+                    if show_psi:
+                        block(pos_x, pos_y, color, str(int((degrees * psi(conf))) % 360 ))
+                    else:
+                        block(pos_x, pos_y, color, conf.idx[storage])
 
     svg_document.save()
