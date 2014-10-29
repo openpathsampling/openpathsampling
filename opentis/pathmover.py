@@ -246,22 +246,43 @@ class MixedMover(PathMover):
 # The following moves still need to be implemented. Check what excactly they do
 #############################################################
 
-class MinusMove(object):
-    def do_move(self, allpaths, state):
+class MinusMove(PathMover):
+    def move(self, allpaths, state):
         pass
 
-class PathReversal(object):
-    def do_move(self, allpaths, state):
+class PathReversal(PathMover):
+    def move(self, path, ensemble):
+        details = MoveDetails
+        details.success = False
+        details.inputs = path
+        details.mover = self
         pass
 
+class PathSwap(PathMover):
+    def move(self, pathA, pathB, ensembleA, ensembleB):
+        accepted = (ensembleA(pathB) and ensembleB(pathA))
+        details = MoveDetails()
+        details.success = accepted
+        details.inputs = [pathA, pathB]
+        details.mover = self
+        setattr(details, 'startA', pathA)
+        setattr(details, 'startB', pathB)
+        setattr(details, 'finalA', pathB if accepted else pathA)
+        setattr(details, 'finalB', pathA if accepted else pathB)
+        if accepted:
+            return [Sample(trajectory=pathB, mover=self, ensemble=ensembleA,
+                           details=details),
+                    Sample(trajectory=pathA, mover=self, ensemble=ensembleB,
+                           details=details)
+                   ]
+        else:
+            return [Sample(trajectory=pathA, mover=self, ensemble=ensembleA,
+                           details=details),
+                    Sample(trajectory=pathB, mover=self, ensemble=ensembleB,
+                           details=details)
+                   ]
 
-#############################################################
-# The following move should be moved to RETIS and just uses moves. It is not a move itself
-#############################################################
 
-class ReplicaExchange(object):
-    def do_move(self, allpaths, state):
-        pass
 
 class PathMoverFactory(object):
     @staticmethod

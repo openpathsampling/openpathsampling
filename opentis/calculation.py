@@ -45,3 +45,9 @@ class Bootstrapping(Calculation):
                 failsteps = 0
                 ens_num += 1
             failsteps += 1
+
+# whether you're doing TIS or TPS, the path sampling algorithm is the same
+# within the framework we've developed
+class PathSampling(Calculation):
+    pass
+

@@ -16,7 +16,7 @@ sys.path.append(os.path.abspath('../'))
 
 import numpy as np
 import mdtraj as md
- 
+
 # in principle, all of these imports should be simplified once this is a
 # package
 from Simulator import Simulator
@@ -30,7 +30,7 @@ from ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
 from storage import Storage
 from trajectory import Trajectory
 from calculation import Bootstrapping
-from pathmover import (PathMover, MixedMover, ForwardShootMover, 
+from pathmover import (PathMover, MixedMover, ForwardShootMover,
                        BackwardShootMover)
 from shooting import UniformSelector
 
@@ -63,7 +63,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
         self.add_stored_parameters(opts)
 
         # storage
-        self.fn_storage = filename 
+        self.fn_storage = filename
 
         # topology
         self.pdb = PDBFile(topology_file)
@@ -72,22 +72,22 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
         if mode == 'create':
             # set up the OpenMM simulation
             platform = openmm.Platform.getPlatformByName(self.platform)
-            forcefield = ForceField( self.forcefield_solute,
-                                     self.forcefield_solvent )
-            system = forcefield.createSystem( self.topology, 
-                                              nonbondedMethod=PME,
-                                              nonbondedCutoff=1*nanometers,
-                                              constraints=HBonds )
+            forcefield = ForceField(self.forcefield_solute,
+                                    self.forcefield_solvent)
+            system = forcefield.createSystem(self.topology, 
+                                             nonbondedMethod=PME,
+                                             nonbondedCutoff=1*nanometers,
+                                             constraints=HBonds)
             self.system_serial = openmm.XmlSerializer.serialize(system)
 
-            integrator = VVVRIntegrator( self.temperature,
-                                         self.collision_rate,
-                                         self.timestep )
+            integrator = VVVRIntegrator(self.temperature,
+                                        self.collision_rate,
+                                        self.timestep)
             self.integrator_serial = openmm.XmlSerializer.serialize(system)
             self.integrator_class = type(integrator).__name__
 
-            simulation = Simulation( self.topology, system, 
-                                     integrator, platform )
+            simulation = Simulation(self.topology, system, 
+                                    integrator, platform)
 
             # claim the OpenMM simulation as our own
             self.simulation = simulation
@@ -125,7 +125,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
             setattr(self, key, param_dict[key])
         self.options_to_store = self.opts.keys()
         return
-        
+
 
     def equilibrate(self, nsteps):
         # TODO: rename... this is position restrained equil, right?
@@ -136,7 +136,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
         solute_masses = Quantity(np.zeros(n_solute, np.double), dalton)
         for i in self.solute_indices:
             solute_masses[i] = system.getParticleMass(i)
-            system.setParticleMass(i,0.0)
+            system.setParticleMass(i, 0.0)
 
         self.simulation.step(nsteps)
 
@@ -144,28 +144,27 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
             system.setParticleMass(i, solute_masses[i].value_in_unit(dalton))
 
 
-if __name__=="__main__":
-    options = {
-                'temperature' : 300.0 * kelvin,
-                'collision_rate' : 1.0 / picoseconds,
-                'timestep' : 2.0 * femtoseconds,
-                'nframes_per_iteration' : 10,
-                'n_frames_max' : 5000,
-                'start_time' : time.time(),
-                'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
-                'platform' : 'CPU',
-                'solute_indices' : range(22),
-                'forcefield_solute' : 'amber96.xml',
-                'forcefield_solvent' : 'tip3p.xml'
-               }
+if __name__ == "__main__":
+    options = {'temperature' : 300.0 * kelvin,
+               'collision_rate' : 1.0 / picoseconds,
+               'timestep' : 2.0 * femtoseconds,
+               'nframes_per_iteration' : 10,
+               'n_frames_max' : 5000,
+               'start_time' : time.time(),
+               'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
+               'platform' : 'CPU',
+               'solute_indices' : range(22),
+               'forcefield_solute' : 'amber96.xml',
+               'forcefield_solvent' : 'tip3p.xml'
+              }
     simulator = AlanineDipeptideTrajectorySimulator(
-                    filename="trajectory.nc",
-                    topology_file="../data/Alanine_solvated.pdb",
-                    opts=options,
-                    mode='create'
-                    )
-    
-    
+        filename="trajectory.nc",
+        topology_file="../data/Alanine_solvated.pdb",
+        opts=options,
+        mode='create'
+    )
+
+
     simulator.equilibrate(5)
     snap = Snapshot(simulator.simulation.context)
     simulator.storage.snapshot.save(snap, 0, 0)
@@ -225,7 +224,7 @@ use LeaveXEnsemble as we typically do with TIS paths.
         OutXEnsemble(interface0),
         OutXEnsemble(stateA) | LengthEnsemble(0),
         InXEnsemble(stateA) & LengthEnsemble(1)
-    ]) 
+    ])
 
     interface0_ensemble = interface_set[0]
     print "start path generation (should not take more than a few minutes)"
@@ -251,7 +250,7 @@ use LeaveXEnsemble as we typically do with TIS paths.
         print phi(frame)[0]*degrees, psi(frame)[0]*degrees, 
         print stateA(frame), interface0(frame), stateB(frame),
         print first_traj_ensemble.forward(
-            total_path[slice(0,total_path.index(frame)+1)]
+            total_path[slice(0, total_path.index(frame)+1)]
         )
 
     print
