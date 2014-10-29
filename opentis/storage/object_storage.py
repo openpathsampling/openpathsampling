@@ -2,9 +2,9 @@ import copy
 import json
 
 import yaml
+import numpy as np
 
 from wrapper import savecache, identifiable, loadcache
-
 
 class StoredObject(object):
     def __getattr__(self, item):
@@ -34,6 +34,7 @@ class ObjectStorage(object):
         self.storage = storage
         self.content_class = obj
         self.idx_dimension = obj.__name__.lower()
+        self.db_name = obj.__name__.lower()
         self.cache = dict()
         self.named = named
         self.json = json
@@ -355,6 +356,83 @@ class ObjectStorage(object):
             obj[spec.name] = r
 
         return obj
+
+    def save_objectdict(self, name, idx, data, value_type):
+        values = [0.0] * len(data)
+        keys = [0] * len(data)
+        ct = 0
+        for key, value in data.iteritems():
+            key_id = key.idx[self.storage]
+            if value_type is int:
+                val = float(data[spec.name])
+            elif value_type is float:
+                val = float(data[spec.name])
+            elif value_type is bool:
+                val = float(data[spec.name])
+            elif value_type is str:
+                # NOT IMPLEMENTED...
+                pass
+            else:
+                index = value.idx[self.storage]
+                val = float(index)
+
+            keys[ct] = key_id
+            values[ct] = val
+            ct += 1
+
+        self.storage.variables[name + '_value'][idx, :] = np.array(values).astype(np.float32)
+        self.storage.variables[name + '_idx'][idx, :] = np.array(keys).astype(np.int32)
+        self.storage.variables[name + '_length'][idx] = len(data)
+
+
+    def load_objectdict(self, name, idx, key_type, value_type):
+        storage = self.storage
+
+        values = self.storage.variables[name + '_value'][idx, :]
+        keys = self.storage.variables[name + '_idx'][idx, :]
+        length = self.storage.variables[name + '_length'][idx]
+
+        key_store = getattr(storage, key_type)
+
+        obj = {}
+        for pos in range(0,length):
+            key_id = keys[pos]
+            key = key_store.load(int(key_id))
+
+            value = values[pos]
+            if value_type is int:
+                r = int(value)
+            elif value_type is float:
+                r = float(value)
+            elif value_type is bool:
+                r = bool(value)
+            elif value_type is str:
+                # NOT IMPLEMENTED...
+                pass
+            else:
+                store = getattr(storage, value_type)
+                r = store.load(int(value))
+
+            obj[key] = r
+
+        return obj
+
+    def init_objectdict(self, name, key_type):
+        # index associated storage in class variable for all Sample instances to access
+        storage = self.storage
+
+        # define dimensions used in trajectories
+        storage.createDimension(name, 0)                     # unlimited number of iterations
+
+        # Create variables for trajectories
+        ncvar_name_value  = storage.createVariable(name + '_value', 'f', (name, key_type))
+        ncvar_name_idx  = storage.createVariable(name + '_idx', 'u4', (name, key_type))
+        ncvar_name_length  = storage.createVariable(name + '_length', 'u4', name)
+
+        # Define units for snapshot variables.
+        setattr(ncvar_name_value,       'units', 'none')
+        setattr(ncvar_name_idx,         'units', 'none')
+        setattr(ncvar_name_length,      'units', 'none')
 
     def init_list(self, name):
         ncfile = self.storage
