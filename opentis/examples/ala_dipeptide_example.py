@@ -71,6 +71,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
 
         if mode == 'create':
             # set up the OpenMM simulation
+            self.platform = 'CUDA'
             platform = openmm.Platform.getPlatformByName(self.platform)
             forcefield = ForceField( self.forcefield_solute,
                                      self.forcefield_solvent )
@@ -149,7 +150,7 @@ if __name__=="__main__":
                 'temperature' : 300.0 * kelvin,
                 'collision_rate' : 1.0 / picoseconds,
                 'timestep' : 2.0 * femtoseconds,
-                'nframes_per_iteration' : 10,
+                'nframes_per_iteration' : 1000,
                 'n_frames_max' : 5000,
                 'start_time' : time.time(),
                 'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
