@@ -203,7 +203,7 @@ class testLambdaVolumePeriodic(object):
         assert_equal(True, vol(lambda_min))
         assert_equal(True, vol(lambda_max))
 
-    def test_inverted(self):
+    def test_wrapped_volume(self):
         """max<min and both within periodic domain"""
         lambda_min = 70
         lambda_max = -150
@@ -222,7 +222,7 @@ class testLambdaVolumePeriodic(object):
             assert_equal(True, vol(lambda_min + 360*periodic_image))
             assert_equal(True, vol(lambda_max + 360*periodic_image))
 
-    def test_inverted_implicit(self):
+    def test_wrapped_volume_implicit(self):
         """max<min, no periodic domain defined"""
         lambda_min = 70
         lambda_max = -150
@@ -310,12 +310,34 @@ class testLambdaVolumePeriodic(object):
         raise SkipTest
 
     def test_periodic_not_combos(self):
-        raise SkipTest
+        assert_equal(~self.pvolA, self.pvolA_)
+        assert_equal(self.pvolA, ~self.pvolA_)
+        assert_equal(~(self.pvolB | self.pvolC), 
+                     volume.NegatedVolume(self.pvolB | self.pvolC))
+        assert_equal((~(self.pvolB | self.pvolC))(25), True)
+        assert_equal((~(self.pvolB | self.pvolC))(75), False)
+        assert_equal((~(self.pvolB | self.pvolC))(-75), False)
 
     def test_periodic_sub_combos(self):
-        raise SkipTest
+        assert_equal(self.pvolA - self.pvolA_, self.pvolA)
+        assert_equal(self.pvolA_ - self.pvolA, self.pvolA_)
+        assert_equal(self.pvolD - self.pvolA,
+                     volume.LambdaVolumePeriodic(op_id, 75, 100))
+        assert_equal((self.pvolD - self.pvolA)(80), True)
+        assert_equal((self.pvolD - self.pvolA)(50), False)
+        assert_equal(self.pvolB - self.pvolC, self.pvolB)
+        assert_equal(self.pvolA - self.pvolA, volume.EmptyVolume())
+        assert_equal(self.pvolE - self.pvolD,
+                     volume.VolumeCombination(
+                         volume.LambdaVolumePeriodic(op_id, -150, -100),
+                         volume.LambdaVolumePeriodic(op_id, 100, 150),
+                         lambda a, b: a or b, '{0} or {1}'
+                     ))
+        assert_equal(self.pvolE - self.pvolA_,
+                     volume.LambdaVolumePeriodic(op_id, -100, 75))
 
-class testVolumeFactor(object):
+
+class testVolumeFactory(object):
     def test_check_minmax(self):
         # for the eventual case that minvals or maxvals is an integer
         raise SkipTest

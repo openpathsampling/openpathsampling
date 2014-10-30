@@ -1,5 +1,15 @@
 '''
 @author: David W.H. Swenson
+
+This file consists of the logic functions to combine two sets defined as
+ranges of numbers. The functions are such that "and" is the intersection of
+two sets, "or" is the union of two sets, and "sub" means that A - B is the
+relative complement of B in A (usually denoted A \ B).
+
+Defining the logic here means that we can explicitly use this logic to
+simplify combinations at either the volume level (when the two volumes have
+the same order parameter) or at the ensemble level (e.g., for
+`LengthEnsemble`s).
 '''
 
 def range_and(amin, amax, bmin, bmax):
@@ -102,15 +112,29 @@ def periodic_ordering(amin, amax, bmin, bmax):
     final = [out.index(a) for a in ['a','A','b','B']]
     return final
 
-def recover_periodic_range(lrange, order, adict):
+def recover_periodic_range(lrange, order, adict, aa_is_full=False):
+    # aa_is_full: [a:a] represents a 
     if lrange == None or lrange == 1:
         return lrange
     else:
         retval = []
         for pair in lrange:
             opair = [ order.index(pval) for pval in pair ]
-            retval.append(tuple(map(adict.get, opair)))
-        return retval
+            mytup = tuple(map(adict.get, opair))
+            if (mytup[0] == mytup[1]):
+                # periodic ordering sometimes leads to [a:a] ranges; for
+                # and/sub, this should be the empty volume; for or it should
+                # be the full ensemble
+                if aa_is_full == True:
+                    return -1
+                # otherwise, this is the empty ensemble, so ignore
+            else:
+                retval.append(mytup)
+        if len(retval) == 0:
+            # I don't think we can get here. If we do, correct behavior is:
+            return None # pragma: no cover
+        else:
+            return retval
 
 def periodic_range_and(amin, amax, bmin, bmax):
     adict = {0 : amin, 1 : amax, 2 : bmin, 3 : bmax}
@@ -137,17 +161,17 @@ def periodic_range_or(amin, amax, bmin, bmax):
         return -1
     else:
         or_res = range_or(order[0], order[1], order[2], order[3])
-        return recover_periodic_range(or_res, order, adict)
+        return recover_periodic_range(or_res, order, adict, aa_is_full=True)
 
 def periodic_range_sub(amin, amax, bmin, bmax):
     adict = {0 : amin, 1 : amax, 2 : bmin, 3 : bmax}
     if amin == bmin and amax == bmax:
         return None
     elif amin == bmax and bmin == amax:
-        return None
+        return 1
     order = periodic_ordering(amin, amax, bmin, bmax)
     if order == [0, 3, 2, 1]: # aBbA
-        special_res = [(3, 2)]
+        special_res = [(1, 2)] # order[1] to order[2]
         return recover_periodic_range(special_res, order, adict)
     else:
         sub_res = range_sub(order[0], order[1], order[2], order[3])

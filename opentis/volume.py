@@ -327,7 +327,7 @@ class LambdaVolumePeriodic(LambdaVolume):
 
     def __invert__(self):
         # consists of swapping max and mix
-        return LambdaVolumePeriodic(self.orderparameters,
+        return LambdaVolumePeriodic(self.orderparameter,
                                     self.lambda_max, self.lambda_min,
                                     self.period_min, self.period_max
                                    )
