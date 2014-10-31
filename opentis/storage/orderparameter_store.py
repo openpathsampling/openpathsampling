@@ -36,7 +36,6 @@ class ObjectDictStorage(ObjectStorage):
         self.save_objectdict(self.idx_dimension, int(idx), store, self.value_type)
         self.tidy_cache(objectdict)
 
-
     @loadcache
     def load(self, idx, op=None):
         """
