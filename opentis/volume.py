@@ -150,7 +150,8 @@ class FullVolume(Volume):
 
 class LambdaVolume(Volume):
     '''
-    Defines a Volume containing all states where orderparameter is in a given range.
+    Defines a Volume containing all states where orderparameter is in a
+    given range.
     '''
     def __init__(self, orderparameter, lambda_min = 0.0, lambda_max = 1.0):
         '''
@@ -207,7 +208,13 @@ class LambdaVolume(Volume):
 
         Returns
         -------
-            : Volume
+        Volume
+            appriate volume according to lrange
+
+        Raises
+        ------
+        ValueError
+            if the input lrange is not an allowed value
         """
         if lrange == None:
             return EmptyVolume()
@@ -276,17 +283,15 @@ class LambdaVolumePeriodic(LambdaVolume):
     function wrapping into the range [period_min, period_max], is in the
     given range [lambda_min, lambda_max].
 
+    Attributes
+    ----------
+    period_min : float (optional)
+        minimum of the periodic domain
+    period_max : float (optional)
+        maximum of the periodic domain
     """
     def __init__(self, orderparameter, lambda_min = 0.0, lambda_max = 1.0,
                                        period_min = None, period_max = None):
-        """
-        Attributes
-        ----------
-        period_min : float (optional)
-            minimum of the periodic domain
-        period_max : float (optional)
-            maximum of the periodic domain
-        """
         super(LambdaVolumePeriodic, self).__init__(orderparameter,
                                                     lambda_min, lambda_max)        
         self.period_min = period_min
@@ -307,6 +312,7 @@ class LambdaVolumePeriodic(LambdaVolume):
             self.wrap = False
 
     def do_wrap(self, value):
+        """Wraps `value` into the periodic domain."""
         return ((value-self.period_shift) % self.period_len) + self.period_shift
 
     # next few functions add support for range logic
@@ -326,7 +332,7 @@ class LambdaVolumePeriodic(LambdaVolume):
 
 
     def __invert__(self):
-        # consists of swapping max and mix
+        # consists of swapping max and min
         return LambdaVolumePeriodic(self.orderparameter,
                                     self.lambda_max, self.lambda_min,
                                     self.period_min, self.period_max
@@ -437,15 +443,24 @@ class VoronoiVolume(Volume):
 class VolumeFactory(object):
     @staticmethod
     def _check_minmax(minvals, maxvals):
-        # minvals could be an integer
+        # if one is an integer, convert it to a list
+        if type(minvals) == int or type(minvals) == float:
+            if type(maxvals) == list:
+                minvals = [minvals]*len(maxvals)
+            else:
+                raise ValueError("minvals is a scalar; maxvals is not a list")
+        elif type(maxvals) == int or type(maxvals) == float:
+            if type(minvals) == list:
+                maxvals = [maxvals]*len(minvals)
+            else:
+                raise ValueError("maxvals is a scalar; minvals is not a list")
+
         if len(minvals) != len(maxvals):
-            raise ValueError(
-                "len(minvals) != len(maxvals) in LambdaVolumePeriodicSet")
+            raise ValueError("len(minvals) != len(maxvals)")
         return (minvals, maxvals)
 
     @staticmethod
     def LambdaVolumeSet(op, minvals, maxvals):
-
         minvals, maxvals = VolumeFactory._check_minmax(minvals, maxvals)
         myset = []
         for i in range(len(maxvals)):

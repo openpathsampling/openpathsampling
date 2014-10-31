@@ -77,10 +77,18 @@ def periodic_ordering(amin, amax, bmin, bmax):
 
     Parameters
     ----------
+    amin : float
+        minimum of first range
+    amax : float
+        maximum of first range
+    bmin : float
+        minimum of second range
+    bmax : float
+        maximum of second range
 
-    Return
+    Returns
     -------
-        : list of int 0-3
+    list of int 0-3
         Order index of amin, amax, bmin, bmax in that order; i.e. the return
         value [0, 2, 1, 3] means amin < bmin < amax < bmax; amin in order
         spot 0, amax in 2, bmin in 1, bmax in 3. 

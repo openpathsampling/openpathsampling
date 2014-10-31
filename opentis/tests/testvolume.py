@@ -71,13 +71,20 @@ class testFullVolume(object):
 
 class testLambdaVolume(object):
     def test_lower_boundary(self):
-        raise SkipTest
+        assert_equal(volA(0.49), True)
+        assert_equal(volA(0.50), True)
+        assert_equal(volA(0.51), False)
 
     def test_upper_boundary(self):
-        raise SkipTest
+        assert_equal(volA(-0.49), True)
+        assert_equal(volA(-0.50), True)
+        assert_equal(volA(-0.51), False)
 
     def test_negation(self):
-        raise SkipTest
+        assert_equal((~volA)(0.25), False)
+        assert_equal((~volA)(0.75), True)
+        assert_equal((~volA)(0.5), False)
+        assert_equal((~volA)(-0.5), False)
 
     def test_autocombinations(self):
         # volA tests this in the LambdaVolumes
@@ -151,8 +158,8 @@ class testLambdaVolume(object):
                      volume.VolumeCombination(volA2, volA, sub_fcn, sub_str))
 
     def test_str(self):
-        # string and inverted string
-        raise SkipTest
+        assert_equal(volA.__str__(), "{x|Id(x) in [-0.5, 0.5]}")
+        assert_equal((~volA).__str__(), "(not {x|Id(x) in [-0.5, 0.5]})")
 
 class testLambdaVolumePeriodic(object):
     def setUp(self):
@@ -307,7 +314,17 @@ class testLambdaVolumePeriodic(object):
         assert_equal((self.pvolE | self.pvolA_), volume.FullVolume())
 
     def test_periodic_xor_combos(self):
-        raise SkipTest
+        assert_equal(self.pvolA ^ self.pvolA_, volume.FullVolume())
+        assert_equal(self.pvolA ^ self.pvolA, volume.EmptyVolume())
+        assert_equal(self.pvolE ^ self.pvolD,
+                     volume.VolumeCombination(
+                         volume.LambdaVolumePeriodic(op_id, -150, -100),
+                         volume.LambdaVolumePeriodic(op_id, 100, 150),
+                         lambda a, b: a or b, '{0} or {1}'
+                     ))
+        assert_equal(self.pvolB ^ self.pvolC, self.pvolB | self.pvolC)
+        assert_equal(self.pvolB ^ self.pvolD,
+                     volume.LambdaVolumePeriodic(op_id, -100, 50))
 
     def test_periodic_not_combos(self):
         assert_equal(~self.pvolA, self.pvolA_)
@@ -339,12 +356,24 @@ class testLambdaVolumePeriodic(object):
 
 class testVolumeFactory(object):
     def test_check_minmax(self):
+        minmax1 = volume.VolumeFactory._check_minmax(0, [2, 2])
+        minmax2 = volume.VolumeFactory._check_minmax([0, 0], 2)
+        minmax3 = volume.VolumeFactory._check_minmax([0, 0], [2, 2])
+        assert_equal(minmax1, minmax2)
+        assert_equal(minmax2, minmax3)
         # for the eventual case that minvals or maxvals is an integer
-        raise SkipTest
 
     @raises(ValueError)
-    def test_bad_minmax_error(self):
+    def test_minmax_length_mismatch_error(self):
         volume.VolumeFactory._check_minmax([0], [1, 2])
+
+    @raises(ValueError)
+    def test_minmax_min_not_list(self):
+        volume.VolumeFactory._check_minmax('a', 2)
+
+    @raises(ValueError)
+    def test_minmax_max_not_list(self):
+        volume.VolumeFactory._check_minmax(0, 'a')
 
     def test_LambdaVolumeSet(self):
         mins = [-1.5, -3.5]
