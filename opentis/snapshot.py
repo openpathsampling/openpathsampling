@@ -410,6 +410,7 @@ class Momentum(object):
 # SIMULATION SNAPSHOT (COMPLETE FRAME WITH COORDINATES AND VELOCITIES)
 #=============================================================================================
 
+@storable
 class Snapshot(object):
     """
     Simulation snapshot. Contains references to a configuration and momentum

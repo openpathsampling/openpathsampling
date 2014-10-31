@@ -3,10 +3,9 @@ from wrapper import loadcache, savecache
 
 class ObjectDictStorage(ObjectStorage):
 
-    def __init__(self, storage, cls, value_type):
+    def __init__(self, storage, cls):
         super(ObjectDictStorage, self).__init__(storage, cls, named=True)
         self.idx_dimension = 'dict_' + self.idx_dimension
-        self.value_type = value_type
 
     def save(self, objectdict, idx=None):
         """
@@ -33,7 +32,8 @@ class ObjectDictStorage(ObjectStorage):
 
         self._update_store(objectdict)
         store = objectdict.storage_caches[storage]
-        self.save_objectdict(self.idx_dimension, int(idx), store, self.value_type)
+
+        self.save_objectdict(self.idx_dimension, int(idx), store, float)
         self.tidy_cache(objectdict)
 
     @loadcache
@@ -52,7 +52,7 @@ class ObjectDictStorage(ObjectStorage):
         """
 
         storage = self.storage
-        data = self.load_objectdict(self.idx_dimension,int(idx), self.content_class.__name__.lower(), self.value_type)
+        data = self.load_objectdict(self.idx_dimension,int(idx), self.content_class.__name__.lower(), float)
         if op is None:
             # create StorageObject
             pass

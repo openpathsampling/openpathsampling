@@ -3,7 +3,7 @@ import argparse
 import os
 
 from storage import Storage
-from orderparameter import StorableDict
+from orderparameter import StorableObjectDict
 from snapshot import Configuration
 if __name__ == '__main__':
 
@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
     for op_name in orderparameters:
 
-        op = StorableDict(op_name, content_class=Configuration, storages=storage.configuration)
+        op = StorableObjectDict(op_name, key_class=Configuration, storages=storage.configuration)
         line(op_name, str(op) )
 
 #    print op[[snapshot.configuration for snapshot in traj]]

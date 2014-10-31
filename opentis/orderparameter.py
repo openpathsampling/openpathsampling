@@ -6,7 +6,7 @@ from msmbuilder.metrics import RMSD
 from trajectory import Trajectory
 from snapshot import Configuration, Snapshot
 import numpy as np
-
+from wrapper import storable
 class ObjectDict(dict):
     """
     A cache that is attached to Configuration indices store in the Configuration storage
@@ -22,10 +22,11 @@ class ObjectDict(dict):
 
     """
 
-    def __init__(self, dimensions = 1, content_class = None):
+    def __init__(self, dimensions = 1, key_class = None, value_cls = None):
 
         self.dimensions = dimensions
-        self.content_class = content_class
+        self.key_class = key_class
+        self.value_type = value_cls
 
     def _get(self, obj):
         return dict.__getitem__(self, obj)
@@ -77,7 +78,8 @@ class ObjectDict(dict):
         """
         return [obj for obj in objs if obj not in self]
 
-class StorableDict(ObjectDict):
+@storable
+class StorableObjectDict(ObjectDict):
     """
     A cache that is attached to Configuration indices store in the Configuration storage
 
@@ -92,12 +94,12 @@ class StorableDict(ObjectDict):
 
     """
 
-    def __init__(self, name, dimensions = 1, content_class = None, storages = None):
-        super(StorableDict, self).__init__(dimensions=dimensions, content_class=content_class)
+    def __init__(self, name, dimensions = 1, key_class = None):
+        super(StorableObjectDict, self).__init__(dimensions=dimensions, key_class=key_class)
 
         self.name = name
         self.storage_caches = dict() # caches the values stored in the data file
-        self.var_name = content_class.__name__.lower() + '_' + 'op_' + self.name
+        self.var_name = key_class.__name__.lower() + '_' + 'op_' + self.name
         self.object_storages = [] # contains the list of associated ObjectStorages (that itself link to netCDF files)
 
         if storages is None:
@@ -108,8 +110,8 @@ class StorableDict(ObjectDict):
             self.object_storages = [storages]
 
         for s in self.object_storages:
-            if s.content_class is not content_class:
-                print 'One of the storages does not store objects of type :', content_class.__name__
+            if s.content_class is not key_class:
+                print 'One of the storages does not store objects of type :', key_class.__name__
                 return
 
         for s in self.object_storages:
@@ -164,145 +166,12 @@ class StorableDict(ObjectDict):
         else:
             return dict.__getitem__(self, item)
 
-    def _init_storage(self, object_storage = None):
-        """
-        initializes the associated storage to index a specific order parameter in it
-        """
-        if object_storage is None:
-            # just run this function with all registered storages
-            if len(self.object_storages) > 0:
-                map(self._init_storage, self.object_storages)
-        else:
-            storage = object_storage.storage
-            if self.var_name not in storage.variables:
-                # define dimensions for non-scalar orderparameters
-                size_dimension_name = 'scalar'
-                if self.dimensions > 1:
-                    size_dimension_name = self.var_name + "_dimension"
-                    storage.createDimension(size_dimension_name, self.dimensions)
-
-                idx_dimension = self.object_storages[0].idx_dimension
-
-                # define variables for OrderParameters
-                ncvar_op = storage.createVariable(self.var_name, 'f', (idx_dimension, size_dimension_name))
-                ncvar_op_idx = storage.createVariable(self.var_name + '_idx', 'u4', idx_dimension)
-                ncvar_op_length = storage.createVariable(self.var_name + '_length', 'u4', 'scalar')
-
-                ncvar_op_length[0] = 0
-
-                # Define units for configuration variables.
-                setattr(ncvar_op, 'units', 'None')
-
-                # Define long (human-readable) names for variables.
-                setattr(ncvar_op, "long_name", "op_" + self.name + "[" + idx_dimension + "][" + size_dimension_name + "] is the orderparameter '" + self.name + "' of configuration 'configuration'.")
-            else:
-                self.load()
-
-    def _update_store(self, storage = None):
-        """
-        This will transfer everything from the memory cache into the storage copy in memory which is used to interact with
-        the file storage.
-
-        Parameters
-        ----------
-        storage : Storage() on None
-            The storage (not ObjectStorage) to store in. If None then all associated storages will be updated up.
-
-        """
-        if storage is None:
-            if len(self.storage_caches) > 0:
-                map(self._update_store, self.storage_caches.keys())
-        else:
-            if storage not in self.storage_caches:
-                # TODO: Throw exception
-                self.storage_caches[storage] = dict()
-
-            store = self.storage_caches[storage]
-            for item, value in self.iteritems():
-                if storage in item.idx:
-                    store[item.idx[storage]] = value
-
-    def tidy_cache(self, storage = None):
-        """
-        This will transfer everything from the memory cache into the storage copy in memory which is used to interact with
-        the file storage.
-
-        Parameters
-        ----------
-        storage : Storage() on None
-            The storage (not ObjectStorage) to store in. If None then all associated storages will be cleaned up.
-
-        """
-
-        # TODO: This doesnt work because the storage is changed during deleting superfluous elements
-        if storage is None:
-            if len(self.storage_caches) > 0:
-                map(self.tidy_cache, self.storage_caches.keys())
-        else:
-            # Make sure configuration_indices are stored and have an index and then add the configuration index to the trajectory
-
-            if storage not in self.storage_caches:
-                # TODO: Throw exception
-                self.storage_caches[storage] = dict()
-
-            new_dict = {item:value for item, value in self.iteritems() if storage not in item.idx}
-
-            self.clear()
-            self.update(new_dict)
-
     def __str__(self):
         return "{ 'memory' : " + dict.__str__(self) + ", 'storages' : " + str(self.storage_caches) + " }"
 
-    def save(self, storage = None):
-        """
-        Save the current state of the cache to the storage.
-
-        Parameters
-        ----------
-        storage : Storage() on None
-            The storage (not ObjectStorage) to store in. If None then all associated storages will be saved in.
-
-        """
-
-        if storage is None:
-            if len(self.storage_caches) > 0:
-                map(self.save, self.storage_caches.keys())
-                map(self.tidy_cache, self.storage_caches.keys())
-        else:
-            # Make sure configuration_indices are stored and have an index and then add the configuration index to the trajectory
-
-            self._update_store(storage)
-            store = self.storage_caches[storage]
-
-            storage.variables[self.var_name][:, :] = np.array(store.values())
-            storage.variables[self.var_name + '_idx'][:] = np.array(store.keys())
-            storage.variables[self.var_name + '_length'][0] = len(store)
-
-    def load(self, storage = None):
-        """
-        Restores the cache from the storage using the name of the orderparameter.
-
-        Parameters
-        ----------
-        storage : Storage() on None
-            The storage (not ObjectStorage) to store in. If None then all associated storages will be loaded from.
-
-        Notes
-        -----
-        Make sure that you use unique names otherwise you might load the wrong parameters!
-        """
-
-        if storage is None:
-            if len(self.storage_caches) > 0:
-                map(self.load, self.storage_caches.keys())
-        else:
-            length = int(storage.variables[self.var_name + '_length'][0])
-            data_idx = storage.variables[self.var_name + '_idx'][:length].astype(np.int).copy()
-            data = storage.variables[self.var_name][:length, 0].astype(np.float).tolist()
-            self.storage_caches[storage] = dict(zip(data_idx, data))
 
 
-class FunctionalStorableDict(StorableDict):
+class FunctionalStorableObjectDict(StorableObjectDict):
     """
     A simple dict implementation that will call a function for unknown values
 
@@ -328,9 +197,9 @@ class FunctionalStorableDict(StorableDict):
 
     """
 
-    def __init__(self, name, fnc, dimensions = 1, content_class = None, allow_multiple = True, storages = None):
+    def __init__(self, name, fnc, dimensions = 1, key_class = None, allow_multiple = True, storages = None):
 
-        super(FunctionalStorableDict, self).__init__(name=name, dimensions=dimensions, content_class=content_class, storages=storages)
+        super(FunctionalStorableObjectDict, self).__init__(name=name, dimensions=dimensions, key_class=key_class, storages=storages)
         self._fnc = fnc
         self.allow_multiple = allow_multiple
 
@@ -347,7 +216,7 @@ class FunctionalStorableDict(StorableDict):
             input = [items]
 
 
-        if self.content_class is not None and len(input) > 0 and isinstance(input[0], self.content_class):
+        if self.key_class is not None and len(input) > 0 and isinstance(input[0], self.key_class):
             no_cache = self.missing(input)
 
             # Add not yet cached data
@@ -366,7 +235,7 @@ class FunctionalStorableDict(StorableDict):
             return []
 
 
-class OrderParameter(FunctionalStorableDict):
+class OrderParameter(FunctionalStorableObjectDict):
     """
     Initializes an OrderParameter object that is essentially a function that maps a frame (Configuration) within a trajectory (Trajectory) to a number.
 
@@ -393,12 +262,10 @@ class OrderParameter(FunctionalStorableDict):
             name=name,
             fnc=None,
             dimensions=dimensions,
-            content_class=Configuration,
+            key_class=Configuration,
             storages=storages)
 
     def __call__(self, items):
-
-
         if isinstance(items, Snapshot):
             return self._update(items.configuration)
         elif isinstance(items, Configuration):
