@@ -11,6 +11,9 @@ class ToySimulation(object):
     def get_configurations(self):
         pass
 
+    def get_snapshot(self):
+        pass
+
     def get_kinetic_energy(self):
         pass
 
@@ -23,7 +26,7 @@ class ToySimulation(object):
     def init_trajectory_with_snapshot(self, snapshot):
         pass
 
-    def step(nsteps):
+    def step(self, nsteps):
         pass
 
 # TODO: mostly need to abstract out things in Simulator.py and snapshot.py
