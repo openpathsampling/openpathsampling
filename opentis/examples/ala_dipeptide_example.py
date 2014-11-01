@@ -20,6 +20,7 @@ import mdtraj as md
 # in principle, all of these imports should be simplified once this is a
 # package
 from Simulator import Simulator
+from openmm_simulation import OpenMMSimulation
 from orderparameter import OP_Function
 from snapshot import Snapshot, Configuration
 from volume import LambdaVolumePeriodic, VolumeFactory as vf
@@ -71,7 +72,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
 
         if mode == 'create':
             # set up the OpenMM simulation
-            self.platform = 'CUDA'
+            #self.platform = 'CUDA'
             platform = openmm.Platform.getPlatformByName(self.platform)
             forcefield = ForceField( self.forcefield_solute,
                                      self.forcefield_solvent )
@@ -87,8 +88,8 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
             self.integrator_serial = openmm.XmlSerializer.serialize(system)
             self.integrator_class = type(integrator).__name__
 
-            simulation = Simulation( self.topology, system, 
-                                     integrator, platform )
+            simulation = OpenMMSimulation(self.topology, system, 
+                                          integrator, platform )
 
             # claim the OpenMM simulation as our own
             self.simulation = simulation
@@ -168,7 +169,7 @@ if __name__=="__main__":
     
     
     simulator.equilibrate(5)
-    snap = Snapshot(simulator.simulation.context)
+    snap = Snapshot(simulator.simulation)
     simulator.storage.snapshot.save(snap, 0, 0)
     simulator.initialized = True
     PathMover.simulator = simulator

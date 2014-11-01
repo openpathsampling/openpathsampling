@@ -11,7 +11,7 @@ class OpenMMSimulation(Simulation):
     # might not use this
     @property
     def nsteps_per_iteration(self):
-        return self._nsteps_per_interation
+        return self._nsteps_per_iteration
 
     @nsteps_per_iteration.setter
     def nsteps_per_iteration(self, value):
@@ -66,15 +66,15 @@ class OpenMMSimulation(Simulation):
         snapshot.momentum._kinetic_energy = state.getKineticEnergy()
 
     def init_simulation_with_snapshot(self, snapshot):
-        self.simulation.context.setPositions(snapshot.coordinates)
-        self.simulation.context.setVelocities(snapshot.velocities)
+        self.context.setPositions(snapshot.coordinates)
+        self.context.setVelocities(snapshot.velocities)
 
 
-    def generate_next_frame():
+    def generate_next_frame(self):
         self.step(self.nsteps_per_iteration)
         return Snapshot(self)
 
-    def stop():
+    def stop(self):
         """Nothing special needs to be done to an OpenMMSimulation when you
         hit a stop condition."""
         pass
