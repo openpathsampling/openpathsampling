@@ -74,7 +74,7 @@ class OpenMMSimulation(Simulation):
         self.step(self.nsteps_per_iteration)
         return Snapshot(self)
 
-    def stop(self):
+    def stop(self, trajectory):
         """Nothing special needs to be done to an OpenMMSimulation when you
         hit a stop condition."""
         pass
