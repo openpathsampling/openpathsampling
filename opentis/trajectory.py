@@ -163,7 +163,7 @@ class Trajectory(list):
         The IDs are only non-zero if the snapshots have been saved before!
         
         """
-        return [f.configuration.idx for f in self]
+        return [f.configuration.begin for f in self]
 
     def configurations(self):
         """

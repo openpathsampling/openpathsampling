@@ -125,7 +125,7 @@ class StorableObjectDict(ObjectDict):
         Returns True if the given item has indices to be stored in an attached storage otherwise cache it in the dict itself
         """
         for s in self.storage_caches:
-            if s in item.idx and item.idx[s] > 0:
+            if s in item.begin and item.begin[s] > 0:
                 return True
         return False
 
@@ -134,7 +134,7 @@ class StorableObjectDict(ObjectDict):
         Returns True, if the item is already stored in an associated cache.
         """
         for s in self.storage_caches:
-            if s in item.idx and item.idx[s] in self.storage_caches[s]:
+            if s in item.begin and item.begin[s] in self.storage_caches[s]:
                 return True
 
         return False
@@ -144,15 +144,15 @@ class StorableObjectDict(ObjectDict):
 
     def _get_from_stores(self, item):
         for s in self.storage_caches:
-            if s in item.idx and item.idx[s] in self.storage_caches[s]:
-                return self.storage_caches[s][item.idx[s]]
+            if s in item.begin and item.begin[s] in self.storage_caches[s]:
+                return self.storage_caches[s][item.begin[s]]
 
         return None
 
     def _set_to_stores(self, obj, value):
         for s in self.storage_caches:
-            if s in obj.idx:
-                self.storage_caches[s][obj.idx[s]] = value
+            if s in obj.begin:
+                self.storage_caches[s][obj.begin[s]] = value
 
     def _set(self, obj, value):
         if self.storable(obj):

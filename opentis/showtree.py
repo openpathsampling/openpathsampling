@@ -55,7 +55,7 @@ if __name__ == '__main__':
         print '     {:>4}] {:<25} : {:<30}'.format(n,a,b)
 
     def print_traj(name, traj_obj):
-        traj = storage.trajectory.configuration_indices(traj_obj.idx[storage])
+        traj = storage.trajectory.configuration_indices(traj_obj.begin[storage])
         sys.stdout.write("      {:>10}:  {:>5} frames [".format(name, str(len(traj))))
         old_idx = -2
         count = 0
@@ -216,7 +216,7 @@ if __name__ == '__main__':
                     if show_psi:
                         block(pos_x, pos_y, "blue", str(int((degrees * psi(conf))) % 360 ))
                     else:
-                        block(pos_x, pos_y, "blue", conf.idx[storage])
+                        block(pos_x, pos_y, "blue", conf.begin[storage])
 
                 t_count += 0.8
 
@@ -236,7 +236,7 @@ if __name__ == '__main__':
                     stroke = color,
                 ))
                 svg_document.add(svg_document.text(
-                                        text = str(new_traj.idx[storage]) + 'b',
+                                        text = str(new_traj.begin[storage]) + 'b',
                                         insert = (start_x + (shift + 0 - 0.2) * scale_x,start_y + (t_count + 0.05) * scale_y),
                                         text_anchor = 'end',
                                         font_size = 0.4*scale_y,
@@ -257,7 +257,7 @@ if __name__ == '__main__':
                     stroke = color,
                 ))
                 svg_document.add(svg_document.text(
-                                        text = str(new_traj.idx[storage]) + 'f',
+                                        text = str(new_traj.begin[storage]) + 'f',
                                         insert = (start_x + (shift + len(new_traj) + 0.2) * scale_x,start_y + (t_count + 0.05) * scale_y),
                                         text_anchor = 'start',
                                         font_size = 0.4*scale_y,
@@ -281,6 +281,6 @@ if __name__ == '__main__':
                     if show_psi:
                         block(pos_x, pos_y, color, str(int((degrees * psi(conf))) % 360 ))
                     else:
-                        block(pos_x, pos_y, color, conf.idx[storage])
+                        block(pos_x, pos_y, color, conf.begin[storage])
 
     svg_document.save()

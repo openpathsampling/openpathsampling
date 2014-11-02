@@ -19,12 +19,12 @@ class ObjectDictStorage(ObjectStorage):
         """
         storage = self.storage
         if idx is None:
-            if storage in objectdict.idx:
+            if storage in objectdict.begin:
                 self.cache[idx] = objectdict
-                idx = objectdict.idx[storage]
+                idx = objectdict.begin[storage]
             else:
                 idx = self.free()
-                objectdict.idx[storage] = idx
+                objectdict.begin[storage] = idx
                 self.cache[idx] = objectdict
         else:
             idx = int(idx)
@@ -88,8 +88,8 @@ class ObjectDictStorage(ObjectStorage):
 
         store = obj.storage_caches[storage]
         for item, value in obj.iteritems():
-            if storage in item.idx:
-                store[item.idx[storage]] = value
+            if storage in item.begin:
+                store[item.begin[storage]] = value
 
     def tidy_cache(self, obj):
         """
@@ -109,7 +109,7 @@ class ObjectDictStorage(ObjectStorage):
             # TODO: Throw exception
             obj.storage_caches[storage] = dict()
 
-        new_dict = {item: value for item, value in obj.iteritems() if storage not in item.idx}
+        new_dict = {item: value for item, value in obj.iteritems() if storage not in item.begin}
 
         obj.clear()
         obj.update(new_dict)

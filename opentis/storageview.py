@@ -110,7 +110,7 @@ if __name__ == '__main__':
     headline("Samples")
 
     def print_traj(name, traj_obj):
-        traj = storage.trajectory.configuration_indices(traj_obj.idx[storage])
+        traj = storage.trajectory.configuration_indices(traj_obj.begin[storage])
         sys.stdout.write("      {:>10}:  {:>5} frames [".format(name, str(len(traj))))
         old_idx = -2
         count = 0
@@ -138,7 +138,7 @@ if __name__ == '__main__':
     for o_idx in range(1, storage.sample.count() + 1):
         sample = storage.sample.load(o_idx)
 #        nline(o_idx, '', sample.details.json)
-        nline(o_idx, str(sample.mover.name) + "/" + str(sample.details.mover.name), str([t.idx[storage] for t in sample.details.inputs]) +" -> " + str(sample.details.final.idx[storage]) + " in " + sample.ensemble.name + " [" + str(sample.ensemble.idx[storage]) + "]")
+        nline(o_idx, str(sample.mover.name) + "/" + str(sample.details.mover.name), str([t.begin[storage] for t in sample.details.inputs]) +" -> " + str(sample.details.final.begin[storage]) + " in " + sample.ensemble.name + " [" + str(sample.ensemble.begin[storage]) + "]")
 #        nline(o_idx, '', str(sample.details.start_point.index) + " -> " + str(sample.details.final_point.index))
         print_traj('start', sample.details.start)
         print_traj('final', sample.details.final)

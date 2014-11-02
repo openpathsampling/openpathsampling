@@ -161,7 +161,7 @@ class Configuration(object):
         if self is other:
             return True
         for storage in self.idx:
-            if storage in other.idx and other.idx[storage] == self.idx[storage]:
+            if storage in other.begin and other.begin[storage] == self.idx[storage]:
                 return True
 
         return False
@@ -224,15 +224,6 @@ class Configuration(object):
 
 
 
-
-
-
-
-
-
-
-
-
 #=============================================================================================
 # SIMULATION MOMENTUM / VELOCITY
 #=============================================================================================
@@ -271,7 +262,6 @@ class Momentum(object):
             kinetic energy
         idx : dict( Storage() : int )
             dict for storing the used index per storage
-        
         """
         
         self._velocities = None
@@ -394,13 +384,6 @@ class Momentum(object):
         this = self.copy()
         this.reverse()
         return this
-
-
-
-
-
-
-
 
 
 

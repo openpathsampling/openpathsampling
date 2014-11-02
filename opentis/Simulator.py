@@ -127,7 +127,7 @@ class Simulator(object):
                     print self.max_length_stopper, self.max_length_stopper(trajectory)
                     print frame
                     print len(trajectory)
-                    print [ s.idx for s in trajectory]
+                    print [ s.begin for s in trajectory]
                     
                     print 'OP :', self.op(snapshot)
 

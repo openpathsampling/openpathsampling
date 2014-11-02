@@ -10,18 +10,18 @@ def identifiable(func):
     def inner(self, obj, idx=None, *args, **kwargs):
         if idx is None and hasattr(obj, 'identifier'):
             if not hasattr(obj,'json'):
-                setattr(obj,'json',self.get_json(obj))
+                setattr(obj,'json',self.object_to_json(obj))
 
             find_idx = self.find_by_identifier(obj.identifier)
             if find_idx is not None:
                 # found and does not need to be saved, but we will let this ensemble point to the storage
                 # in case we want to save and need the idx
-                obj.idx[self.storage] = find_idx
+                obj.begin[self.storage] = find_idx
                 self.cache[find_idx] = obj
             else:
                 func(self, obj, idx, *args, **kwargs)
                 # Finally register with the new idx in the identifier cache dict.
-                new_idx = obj.idx[self.storage]
+                new_idx = obj.begin[self.storage]
                 self.all_names[obj.identifier] = new_idx
         else:
             func(self, obj, idx, *args, **kwargs)
