@@ -151,7 +151,7 @@ if __name__=="__main__":
                 'temperature' : 300.0 * kelvin,
                 'collision_rate' : 1.0 / picoseconds,
                 'timestep' : 2.0 * femtoseconds,
-                'nframes_per_iteration' : 1000,
+                'nframes_per_iteration' : 50,
                 'n_frames_max' : 5000,
                 'start_time' : time.time(),
                 'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
