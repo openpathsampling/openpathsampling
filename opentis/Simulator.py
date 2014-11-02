@@ -139,7 +139,7 @@ class Simulator(object):
                     
                     print 'OP :', self.op(snapshot)
 
-            simulation.stop(trajectory)
+            self.simulation.stop(trajectory)
             return trajectory
         else:
             # TODO: Throw an error! Needs to be initialized
