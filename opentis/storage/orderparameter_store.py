@@ -92,8 +92,6 @@ class ObjectDictStorage(ObjectStorage):
     def restore(self, obj):
         idx = self.find_by_identifier(obj.identifier)
 
-        print "IDX:", idx
-
         if idx is not None:
             return self.load(idx, obj)
         else:

@@ -219,10 +219,8 @@ class ObjectStorage(object):
 
         """
         # define dimensions used for the specific object
-        print self.idx_dimension
         self.storage.createDimension(self.idx_dimension, 0)
         if self.named:
-            print self.db
             self.init_variable(self.db + "_name", 'str', description='A short descriptive name for convenience')
         if self.json:
             self.init_variable(self.db + "_json", 'str', description='A json serialized version of the object')

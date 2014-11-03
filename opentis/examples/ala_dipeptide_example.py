@@ -170,7 +170,7 @@ if __name__=="__main__":
     
     simulator.equilibrate(5)
     snap = Snapshot(simulator.simulation)
-    simulator.storage.snapshot.save(snap, 0, 0)
+    simulator.storage.snapshot.save(snap, 0)
     simulator.initialized = True
     PathMover.simulator = simulator
 
@@ -180,16 +180,14 @@ if __name__=="__main__":
     # mdtraj's compute_dihedrals function, with the atoms in psi_atoms
     psi_atoms = [6,8,14,16]
     psi = OP_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
-                      indices=[psi_atoms],
-                      storages=simulator.storage.configuration)
+                      indices=[psi_atoms])
     # same story for phi, although we won't use that
     phi_atoms = [4,6,8,14]
     phi = OP_Function("phi", md.compute_dihedrals, trajdatafmt="mdtraj",
-                      indices=[phi_atoms],
-                      storages=simulator.storage.configuration)
+                      indices=[phi_atoms])
 
-    psi.save()
-    phi.save()
+    psi.save(storage=simulator.storage.cv)
+    phi.save(storage=simulator.storage.cv)
 
     # now we define our states and our interfaces
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
@@ -216,7 +214,7 @@ This path ensemble is particularly complex because we want to be sure that
 the path we generate is in the ensemble we desire: this means that we can't
 use LeaveXEnsemble as we typically do with TIS paths.
     """
-    snapshot = simulator.storage.snapshot.load(0,0)
+    snapshot = simulator.storage.snapshot.load(0)
 
     
     first_traj_ensemble = SequentialEnsemble([
@@ -276,3 +274,11 @@ the bootstrapping calculation, then we run it.
     bootstrap.replicas = [segments[0]]
 
     bootstrap.run(20)
+
+    print """
+    Saving all cached computations of orderparameters.
+    """
+
+
+    psi.save(storage=simulator.storage.cv)
+    phi.save(storage=simulator.storage.cv)

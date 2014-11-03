@@ -493,7 +493,6 @@ class Snapshot(object):
 
         #if context is not None:
         if simulation is not None:
-            print type(simulation)
             simulation.load_snapshot(self)
             # Get current state from OpenMM Context object.
             #state = context.getState(getPositions=True, getVelocities=True, 
