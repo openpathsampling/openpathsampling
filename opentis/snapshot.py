@@ -10,9 +10,9 @@ import numpy as np
 import mdtraj as md
 
 
-#=============================================================================================
+#=============================================================================
 # SIMULATION CONFIGURATION
-#=============================================================================================
+#=============================================================================
 from wrapper import storable
 
 
@@ -20,26 +20,31 @@ from wrapper import storable
 class Configuration(object):
 
     """
-    Simulation configuration. Only Coordinates, the associated boxvectors and the potential_energy
-
+    Simulation configuration. Only Coordinates, the associated boxvectors
+    and the potential_energy
     """
 
     # Class variables to store the global storage and the system context describing the system to be safed as configuration_indices
     simulator = None
     load_lazy = True
 
-    def __init__(self, context=None, simulator=None, coordinates=None, box_vectors=None, potential_energy=None, topology=None, idx=None):
+    def __init__(self, simulation=None, simulator=None, coordinates=None, 
+                 box_vectors=None, potential_energy=None, topology=None, 
+                 idx=None):
         """
-        Create a simulation configuration from either an OpenMM context or individually-specified components.
+        Create a simulation configuration from either an OpenMM context or
+        individually-specified components.
 
         Parameters
         ----------
         context : simtk.chem.openContext
-            if not None, the current state will be queried to populate simulation configuration;
-            otherwise, can specify individual components (default: None)
+            if not None, the current state will be queried to populate
+            simulation configuration; otherwise, can specify individual
+            components (default: None)
         simulator : Simulator()
-            if not None, the context and the topology is taken from the simulator object. This
-            should be the preferred way when using simulations
+            if not None, the context and the topology is taken from the
+            simulator object. This should be the preferred way when using
+            simulations
         coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
             atomic coordinates (default: None)
         box_vectors : periodic box vectors (default: None)
@@ -58,8 +63,8 @@ class Configuration(object):
         idx : dict( Storage() : int )
             dict for storing the used index per storage
         topology : mdtraj.Topology()
-            a reference to the used topology. This is necessary to allow export to mdtraj objects
-
+            a reference to the used topology. This is necessary to allow
+            export to mdtraj objects
         """
 
         self._coordinates = None
@@ -68,30 +73,37 @@ class Configuration(object):
         self.topology = None
 
         if simulator is not None:
-            context = simulator.simulation.context
+            #context = simulator.simulation.context
+            simulation = simulator.simulation
             self.topology = simulator.storage.topology
 
         if topology is not None:
             self.topology = topology
 
-        if context is not None:
+        #if context is not None:
+        if simulation is not None:
+            simulation.load_configuration(self)
             # Get current state from OpenMM Context object.
-            state = context.getState(getPositions=True, getEnergy=True)
+            #state = context.getState(getPositions=True, getEnergy=True)
 
             # Store the associated context
-            self.context = context
+            #self.context = context
 
             # Populate current configuration data.
-            self._coordinates = state.getPositions(asNumpy=True)
-            self._box_vectors = state.getPeriodicBoxVectors()
-            self._potential_energy = state.getPotentialEnergy()
+            #self._coordinates = state.getPositions(asNumpy=True)
+            #self._box_vectors = state.getPeriodicBoxVectors()
+            #self._potential_energy = state.getPotentialEnergy()
         else:
-            if coordinates is not None: self._coordinates = copy.deepcopy(coordinates)
-            if box_vectors is not None: self._box_vectors = copy.deepcopy(box_vectors)
-            if potential_energy is not None: self._potential_energy = copy.deepcopy(potential_energy)
+            if coordinates is not None: 
+                self._coordinates = copy.deepcopy(coordinates)
+            if box_vectors is not None: 
+                self._box_vectors = copy.deepcopy(box_vectors)
+            if potential_energy is not None: 
+                self._potential_energy = copy.deepcopy(potential_energy)
 
         if self._coordinates is not None:
-            # Check for nans in coordinates, and raise an exception if something is wrong.
+            # Check for nans in coordinates, and raise an exception if
+            # something is wrong.
             if np.any(np.isnan(self._coordinates)):
                 raise Exception("Some coordinates became 'nan'; simulation is unstable or buggy.")
 
@@ -144,8 +156,9 @@ class Configuration(object):
 
     def forget(self):
         """
-        Will remove the stored coordinates from memory if they are stored in a file to save memory.
-        Once the coordinates are accessed they are reloaded automatically
+        Will remove the stored coordinates from memory if they are stored in
+        a file to save memory.  Once the coordinates are accessed they are
+        reloaded automatically
         """
 
         if Configuration.load_lazy and len(self.idx) > 0:
@@ -153,15 +166,15 @@ class Configuration(object):
             self._box_vectors = None
             self._potential_energy = None
 
-    #=============================================================================================
+    #=========================================================================
     # Comparison functions
-    #=============================================================================================
+    #=========================================================================
 
     def __eq__(self, other):
         if self is other:
             return True
         for storage in self.idx:
-            if storage in other.begin and other.begin[storage] == self.idx[storage]:
+            if storage in other.idx and other.idx[storage] == self.idx[storage]:
                 return True
 
         return False
@@ -169,10 +182,12 @@ class Configuration(object):
 #        return self is other
 
 #    def __hash__(self):
-        # We need to make sure that a configuration from storage can be found. So just take the numpy
-        # array of coordinates call a tostring and use this. That should be reasonably fast and should
-        # only avoid checking all coordinates. The final check is really, if the elements were loaded
-        # from the same idx in the same file (see __eq__)
+        # We need to make sure that a configuration from storage can be
+        # found. So just take the numpy array of coordinates call a tostring
+        # and use this. That should be reasonably fast and should only avoid
+        # checking all coordinates. The final check is really, if the
+        # elements were loaded from the same idx in the same file (see
+        # __eq__)
 
 #        return hash(self.coordinates.tostring())
 
@@ -183,14 +198,15 @@ class Configuration(object):
         '''
         return self.coordinates.shape[0]
 
-    #=============================================================================================
+    #=========================================================================
     # Utility functions
-    #=============================================================================================
+    #=========================================================================
 
     def copy(self):
         """
-        Returns a deep copy of the instance itself. If this object is saved it will not be stored as a
-        separate object and consume additional memory. Should be avoided!
+        Returns a deep copy of the instance itself. If this object is saved
+        it will not be stored as a separate object and consume additional
+        memory. Should be avoided!
 
         Returns
         -------
@@ -226,7 +242,7 @@ class Configuration(object):
 
 #=============================================================================================
 # SIMULATION MOMENTUM / VELOCITY
-#=============================================================================================
+#=============================================================================
 @storable
 class Momentum(object):
     """
@@ -237,18 +253,21 @@ class Momentum(object):
     simulator = None
     load_lazy = True
 
-    def __init__(self, context=None, simulator=None, velocities=None, kinetic_energy=None, idx=None):
+    def __init__(self, simulation=None, simulator=None, velocities=None, 
+                 kinetic_energy=None, idx=None):
         """
         Create a simulation momentum from either an OpenMM context or individually-specified components.
 
         Parameters
         ----------
         context : simtk.chem.openContext
-            if not None, the current state will be queried to populate simulation momentum; 
-            otherwise, can specify individual components (default: None)
+            if not None, the current state will be queried to populate
+            simulation momentum; otherwise, can specify individual
+            components (default: None)
         simulator : Simulator()
-            if not None, the context and the topology is taken from the simulator object. This
-            should be the preferred way when using simulations
+            if not None, the context and the topology is taken from the
+            simulator object. This should be the preferred way when using
+            simulations
         velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
             atomic velocities (default: None)
         kinetic_energy : simtk.unit.Quantity of units energy/mole
@@ -268,21 +287,26 @@ class Momentum(object):
         self._kinetic_energy = None
 
         if simulator is not None:
-            context = simulator.simulation.context
+            simulation = simulator.simulation
+            #context = simulator.simulation.context
 
-        if context is not None:
+        #if context is not None:
+        if simulation is not None:
+            simulation.load_momentum(self)
             # Get current state from OpenMM Context object.
-            state = context.getState(getVelocities=True, getEnergy=True)
+            #state = context.getState(getVelocities=True, getEnergy=True)
             
             # Store the associated context
-            self.context = context
+            #self.context = context
             
             # Populate current momentum data.
-            self._velocities = state.getVelocities(asNumpy=True)
-            self._kinetic_energy = state.getKineticEnergy()
+            #self._velocities = state.getVelocities(asNumpy=True)
+            #self._kinetic_energy = state.getKineticEnergy()
         else:
-            if velocities is not None: self._velocities = copy.deepcopy(velocities)
-            if kinetic_energy is not None: self._kinetic_energy = copy.deepcopy(kinetic_energy)
+            if velocities is not None: 
+                self._velocities = copy.deepcopy(velocities)
+            if kinetic_energy is not None: 
+                self._kinetic_energy = copy.deepcopy(kinetic_energy)
 
         # Check for nans in coordinates, and raise an exception if something is wrong.
 #        if np.any(np.isnan(self.coordinates)):
@@ -322,8 +346,9 @@ class Momentum(object):
 
     def forget(self):
         """
-        Will remove the stored Momentum data from memory if they are stored in a file to save memory.
-        Once the coordinates are accessed they are reloaded automatically
+        Will remove the stored Momentum data from memory if they are stored
+        in a file to save memory.  Once the coordinates are accessed they
+        are reloaded automatically
         """
 
         if Momentum.load_lazy and len(self.idx) > 0:
@@ -343,10 +368,11 @@ class Momentum(object):
 
     def copy(self):
         """
-        Returns a deep copy of the instance itself. If this object will not be saved as a
-        separate object and consumes additional memory. It is used to construct a reversed
-        copy that can be stored or used to start a simulation. If the momentum is shallow it
-        will be loaded for the copy
+        Returns a deep copy of the instance itself. If this object will not
+        be saved as a separate object and consumes additional memory. It is
+        used to construct a reversed copy that can be stored or used to
+        start a simulation. If the momentum is shallow it will be loaded for
+        the copy
 
         Returns
         -------
@@ -359,9 +385,8 @@ class Momentum(object):
 
     def reverse(self):
         """
-        Flips the velocities and erases the stored indices. If stores is will be treated as a new Momentum instance.
-        Should be avoided.
-
+        Flips the velocities and erases the stored indices. If stores is
+        will be treated as a new Momentum instance.  Should be avoided.
         """
 
         # This trick loads both, velocities and the kinetic energy. Otherwise we might run into trouble when removing the index
@@ -389,33 +414,37 @@ class Momentum(object):
 
 
 
-#=============================================================================================
+
+#=============================================================================
 # SIMULATION SNAPSHOT (COMPLETE FRAME WITH COORDINATES AND VELOCITIES)
-#=============================================================================================
+#=============================================================================
 
 @storable
 class Snapshot(object):
     """
     Simulation snapshot. Contains references to a configuration and momentum
-
     """
     
-    # Class variables to store the global storage and the system context describing the system to be saved as snapshots
+    # Class variables to store the global storage and the system context
+    # describing the system to be saved as snapshots
     # Hopefully these class member variables will not be needed any longer
     simulator = None
 
-    def __init__(self, context=None, simulator=None, coordinates=None, velocities=None, box_vectors=None, potential_energy=None, kinetic_energy=None, configuration=None, momentum=None, reversed=False, topology=None):
+    def __init__(self, simulation=None, simulator=None, coordinates=None, velocities=None, box_vectors=None, potential_energy=None, kinetic_energy=None, configuration=None, momentum=None, reversed=False, topology=None):
         """
-        Create a simulation snapshot from either an OpenMM context or individually-specified components.
+        Create a simulation snapshot from either an OpenMM context or
+        individually-specified components.
 
         Parameters
         ----------
         context : simtk.chem.openContext
-            if not None, the current state will be queried to populate simulation snapshot; 
-            otherwise, can specify individual components (default: None)
+            if not None, the current state will be queried to populate
+            simulation snapshot; otherwise, can specify individual
+            components (default: None)
         simulator : Simulator()
-            if not None, the context and the topology is taken from the simulator object. This
-            should be the preferred way when using simulations
+            if not None, the context and the topology is taken from the
+            simulator object. This should be the preferred way when using
+            simulations
         coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
             atomic coordinates (default: None)
         velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
@@ -441,7 +470,6 @@ class Snapshot(object):
             kinetic energy
         idx : dict( Storage() : int )
             dict for storing the used index per storage
-        
         """
         
         if configuration is None:
@@ -454,7 +482,8 @@ class Snapshot(object):
             self.momentum = momentum
 
         if simulator is not None:
-            context = simulator.simulation.context
+            simulation  = simulator.simulation
+            #context = simulator.simulation.context
             self.configuration.topology = simulator.storage.topology
 
         if topology is not None:
@@ -462,25 +491,34 @@ class Snapshot(object):
 
         self.reversed = reversed
 
-        if context is not None:
+        #if context is not None:
+        if simulation is not None:
+            print type(simulation)
+            simulation.load_snapshot(self)
             # Get current state from OpenMM Context object.
-            state = context.getState(getPositions=True, getVelocities=True, getEnergy=True)
+            #state = context.getState(getPositions=True, getVelocities=True, 
+                                     #getEnergy=True)
             
             # Store the associated context
-            self.context = context
+            #self.context = context
             
             # Populate current snapshot data.
-            self.configuration._coordinates = state.getPositions(asNumpy=True)
-            self.momentum._velocities = state.getVelocities(asNumpy=True)
-            self.configuration._box_vectors = state.getPeriodicBoxVectors(asNumpy=True)
-            self.configuration._potential_energy = state.getPotentialEnergy()
-            self.momentum._kinetic_energy = state.getKineticEnergy()
+            #self.configuration._coordinates = state.getPositions(asNumpy=True)
+            #self.momentum._velocities = state.getVelocities(asNumpy=True)
+            #self.configuration._box_vectors = state.getPeriodicBoxVectors(asNumpy=True)
+            #self.configuration._potential_energy = state.getPotentialEnergy()
+            #self.momentum._kinetic_energy = state.getKineticEnergy()
         else:
-            if coordinates is not None: self.configuration._coordinates = copy.deepcopy(coordinates)
-            if velocities is not None: self.momentum._velocities = copy.deepcopy(velocities)
-            if box_vectors is not None: self.configuration._box_vectors = copy.deepcopy(box_vectors)
-            if potential_energy is not None: self.configuration._potential_energy = copy.deepcopy(potential_energy)
-            if kinetic_energy is not None: self.momentum._kinetic_energy = copy.deepcopy(kinetic_energy)
+            if coordinates is not None: 
+                self.configuration._coordinates = copy.deepcopy(coordinates)
+            if velocities is not None: 
+                self.momentum._velocities = copy.deepcopy(velocities)
+            if box_vectors is not None: 
+                self.configuration._box_vectors = copy.deepcopy(box_vectors)
+            if potential_energy is not None: 
+                self.configuration._potential_energy = copy.deepcopy(potential_energy)
+            if kinetic_energy is not None: 
+                self.momentum._kinetic_energy = copy.deepcopy(kinetic_energy)
             
         if self.configuration._coordinates is not None:
             # Check for nans in coordinates, and raise an exception if something is wrong.
