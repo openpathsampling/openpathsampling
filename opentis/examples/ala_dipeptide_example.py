@@ -72,7 +72,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
 
         if mode == 'create':
             # set up the OpenMM simulation
-            #self.platform = 'CUDA'
+            self.platform = 'CUDA'
             platform = openmm.Platform.getPlatformByName(self.platform)
             forcefield = ForceField( self.forcefield_solute,
                                      self.forcefield_solvent )
@@ -156,7 +156,7 @@ if __name__=="__main__":
                 'start_time' : time.time(),
                 'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
                 'platform' : 'CPU',
-                'solute_indices' : range(22),
+                'solute_indices' : range(22), # TODO: This could be determined automatically !?!?
                 'forcefield_solute' : 'amber96.xml',
                 'forcefield_solvent' : 'tip3p.xml'
                }
@@ -273,12 +273,16 @@ the bootstrapping calculation, then we run it.
                               mover_set)
     bootstrap.replicas = [segments[0]]
 
-    bootstrap.run(20)
+    bootstrap.run(50)
 
     print """
     Saving all cached computations of orderparameters.
     """
 
-
     psi.save(storage=simulator.storage.cv)
     phi.save(storage=simulator.storage.cv)
+
+    # Alternatively one could write
+
+    # simulator.storage.cv.save(psi)
+    # simulator.storage.cv.save(phi)
