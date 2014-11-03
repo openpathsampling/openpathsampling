@@ -180,7 +180,7 @@ class Simulator(object):
             
             # index initial equilibrated frame as snapshot ID #0. Might be useful later, who knows
             snapshot = Snapshot(self.simulation.context)
-            self.storage.snapshot.save(snapshot, 0, 0)
+            self.storage.snapshot.save(snapshot, 0)
         
         if mode == 'restore':
             # Need the oposite order, first open database 

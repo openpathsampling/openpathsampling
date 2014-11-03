@@ -4,7 +4,7 @@ import json
 import yaml
 import numpy as np
 
-from wrapper import savecache, identifiable, loadcache
+from wrapper import savecache, saveidentifiable, loadcache
 
 def add_storage_name(func):
     def inner(self, name, *args, **kwargs):
@@ -140,7 +140,7 @@ class ObjectStorage(object):
         else:
             return self.load_json(self.idx_dimension + '_json', idx, obj)
 
-    @identifiable
+    @saveidentifiable
     @savecache
     def save(self, obj, idx=None):
         '''
@@ -211,7 +211,7 @@ class ObjectStorage(object):
         index : int
             the number of the next free index in the storage. Used to store a new object.
         '''
-        return  self.count() + 1
+        return self.count() + 1
 
     def _init(self):
         """
@@ -219,27 +219,29 @@ class ObjectStorage(object):
 
         """
         # define dimensions used for the specific object
+        print self.idx_dimension
         self.storage.createDimension(self.idx_dimension, 0)
         if self.named:
-            self.init_variable("name", 'str', description='A short descriptive name for convenience')
+            print self.db
+            self.init_variable(self.db + "_name", 'str', description='A short descriptive name for convenience')
         if self.json:
-            self.init_variable("json", 'str', description='A json serialized version of the object')
+            self.init_variable(self.db + "_json", 'str', description='A json serialized version of the object')
 
     def var(self, name):
         return '_'.join([self.db, name])
 
     def begin(self, dimension, idx):
-        return int(self.storage.variables[dimension + '_dim_idx'][int(idx)])
+        return int(self.storage.variables[dimension + '_dim_begin'][int(idx)])
 
     def length(self, dimension, idx):
         return int(self.storage.variables[dimension + '_dim_length'][int(idx)])
 
     def set_slice(self, dimension, idx, begin, length):
-        self.storage.variables[dimension + '_dim_idx'][idx] = begin
+        self.storage.variables[dimension + '_dim_begin'][idx] = begin
         self.storage.variables[dimension + '_dim_length'][idx] = length
 
     def get_slice(self, dimension, idx):
-        begin = int(self.storage.variables[dimension + '_dim_idx'][int(idx)])
+        begin = int(self.storage.variables[dimension + '_dim_begin'][int(idx)])
         length = int(self.storage.variables[dimension + '_dim_length'][int(idx)])
         return slice(begin, begin+length)
 
@@ -253,16 +255,19 @@ class ObjectStorage(object):
 # INITIALISATION UTILITY FUNCTIONS
 #=============================================================================================
 
-    def init_mixed_dimension(self, name):
-        # index associated storage in class variable for all Sample instances to access
-        self.init_dimension(name, length=0, fixed_blocks=False)
+    def init_dimension(self, name, length = 0):
+        if name not in self.storage.dimensions:
+            self.storage.createDimension(name, length)
 
-    def init_dimension(self, name, length = 0, fixed_blocks = True):
-        self.init_dimension(name, length)
-        if not fixed_blocks:
-            # entry position is given by a start and a length
-            self.init_variable(name + '_dim_idx', 'index', name)
-            self.init_variable(name + '_dim_length', 'length', name)
+        self.storage.sync()
+
+    def init_mixed(self, name):
+        # entry position is given by a start and a length
+        self.init_variable(name + '_dim_begin', 'index', name)
+        self.init_variable(name + '_dim_length', 'length', name)
+
+        self.storage.sync()
+
 
     def init_variable(self, name, var_type, dimensions = None, units=None, description=None):
         '''
@@ -288,7 +293,7 @@ class ObjectStorage(object):
         if dimensions is None:
             dimensions = self.db
 
-        nctype = var_type
+        nc_type = var_type
         if var_type == 'float':
             nc_type = 'f4'   # 32-bit float
         elif var_type == 'int':
@@ -315,6 +320,8 @@ class ObjectStorage(object):
         if description is not None:
             # Define long (human-readable) names for variables.
             setattr(ncvar,    "long_str", description)
+
+        self.storage.sync()
 
 
     def init_objectdict(self, name, obj_cls, value_type):
@@ -346,26 +353,6 @@ class ObjectStorage(object):
         self.set_list_as_type(name + '_idx', idx, 0, data.keys(), key_type)
         self.set_list_as_type(name + '_value', idx, 0, data.items(), value_type)
         self.save_variable(name + '_length', idx, len(data))
-
-    def load_vector(self, name, idx, dimension=None, value_type = 'float'):
-        if dimension is None:
-            dimension = name
-
-        begin = self.begin(dimension, idx)
-        length = self.length(dimension, idx)
-
-        return self.get_list_as_type(name, idx, begin, length, value_type)
-
-    def save_vector(self, name, idx, values, dimension=None, value_type='float'):
-        if
-        begin = self.free_begin(name)
-        length = len(values)
-
-        if dimension is None:
-            dimension = name
-
-        self.set_slice(dimension, idx, begin, length)
-        self.set_list_as_type(name, idx, begin, length, value_type)
 
     def load_json(self, name, idx, obj = None):
         idx = int(idx)
@@ -442,7 +429,7 @@ class ObjectStorage(object):
             values = np.array(data).astype(np.uint32)
         else:
             # an object
-            values = [ value.begin[self.storage] for value in data ]
+            values = [ value.idx[self.storage] for value in data ]
             values = np.array(values).astype(np.uint32)
 
         return values.copy()
@@ -476,7 +463,7 @@ class ObjectStorage(object):
         return obj
 
     def set_object(self, name, idx, obj):
-        self.storage.variables[name + '_idx'][idx] = obj.begin[self.storage]
+        self.storage.variables[name + '_idx'][idx] = obj.idx[self.storage]
 
     def get_list_as_type(self, name, idx, begin, length, value_type):
         storage = self.storage

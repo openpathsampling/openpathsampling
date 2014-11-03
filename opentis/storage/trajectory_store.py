@@ -26,7 +26,7 @@ class TrajectoryStorage(ObjectStorage):
         length : int
             Number of frames in the trajectory
         '''
-        return int(self.storage.variables['trajectory_snapshots_length'][idx])
+        return super(TrajectoryStorage, self).length('trajectory_snapshot', idx)
 
     @savecache
     def save(self, trajectory, idx=None):
@@ -50,11 +50,14 @@ class TrajectoryStorage(ObjectStorage):
         map(self.storage.snapshot.save, trajectory)
 
         # Find a free position to save snapshot ids
-        begin = self.free_begin('trajectory_snapshots')
+        begin = self.free_begin('trajectory_snapshot')
         length = len(trajectory)
 
-        self.set_slice('trajectory_snapshots', idx, begin, length)
-        self.set_list_as_type('trajectory_snapshots', idx, begin, length, 'snapshot')
+        print 'IDX:', idx
+        self.set_slice('trajectory', idx, begin, length)
+
+        values = self.list_to_numpy(trajectory, 'snapshot')
+        self.storage.variables['trajectory_snapshot_idx'][begin:begin+length] = values
 
     def snapshot_indices(self, idx):
         '''
@@ -70,7 +73,7 @@ class TrajectoryStorage(ObjectStorage):
         '''
 
         # get the values
-        values = self.storage.variables['trajectory_snapshots'][idx, self.get_slice('trajectory_snapshots', idx)]
+        values = self.storage.variables['trajectory_snapshot_idx'][self.get_slice('trajectory', idx)]
 
         # typecast to integer
         return self.list_from_numpy(values, 'index')
@@ -91,7 +94,7 @@ class TrajectoryStorage(ObjectStorage):
             the trajectory
         '''
 
-        values = self.storage.variables['trajectory_snapshots'][idx, self.get_slice('trajectory_snapshots', idx)]
+        values = self.storage.variables['trajectory_snapshot_idx'][self.get_slice('trajectory', idx)]
 
         # typecast to snapshot
         snapshots = self.list_from_numpy(values, 'snapshot')
@@ -113,32 +116,11 @@ class TrajectoryStorage(ObjectStorage):
 
         storage = self.storage
         frames = storage.variables['trajectory_snapshot_idx'][:].astype(np.int32).copy().tolist()
-        idx = storage.variables['trajectory_snapshots_idx'][:].astype(np.int32).copy()
-        length = storage.variables['trajectory_snapshots_length'][:].astype(np.int32).copy()
+        idx = storage.variables['trajectory_snapshot_idx'][:].astype(np.int32).copy()
+        length = storage.variables['trajectory_snapshot_length'][:].astype(np.int32).copy()
         n_traj = self.count()
 
         return [ frames[idx[i]:idx[i] + length[i] ] for i in range(1, n_traj + 1) ]
-
-    def velocities_as_array(self, idx, atom_indices=None):
-        '''
-        Returns a numpy array consisting of all velocities of a trajectory
-
-        Parameters
-        ----------
-        idx : int
-            index of the trajectory to be loaded
-        atom_indices : list of int
-            selects only the atoms to be returned. If None (Default) all atoms will be selected
-
-        Returns
-        -------
-        numpy.ndarray, shape = (l,n)
-            returns an array with `l` the number of frames and `n` the number of atoms
-        '''
-
-        frame_indices = self.momentum_indices(idx)
-        return self.storage.momentum.velocities_as_array(frame_indices, atom_indices)
-
 
     def _init(self):
         """
@@ -150,8 +132,9 @@ class TrajectoryStorage(ObjectStorage):
         # index associated storage in class variable for all Trajectory instances to access
         ncfile = self.storage
 
-        self.init_dimension('trajectory_snapshots')
-        self.init_variable('trajectory_snapshot', 'index', 'trajectory_snapshots',
+        self.init_dimension('trajectory_snapshot')
+        self.init_mixed('trajectory')
+        self.init_variable('trajectory_snapshot_idx', 'index', 'trajectory_snapshot',
             description="trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'."
         )
 
@@ -160,55 +143,55 @@ class SampleStorage(ObjectStorage):
         super(SampleStorage, self).__init__(storage, Sample)
 
     @savecache
-    def save(self, origin, idx=None):
+    def save(self, sample, idx=None):
         """
-        Add the current state of the origin in the database. If nothing has changed then the origin gets stored using the same snapshots as before. Saving lots of diskspace
+        Add the current state of the sample in the database. If nothing has changed then the sample gets stored using the same snapshots as before. Saving lots of diskspace
 
         Parameters
         ----------
-        origin : Sample()
-            the origin to be saved
+        sample : Sample()
+            the sample to be saved
         idx : int or None
             if idx is not None the index will be used for saving in the storage. This might overwrite already existing trajectories!
 
         Notes
         -----
-        This also saves all contained frames in the origin if not done yet.
+        This also saves all contained frames in the sample if not done yet.
         A single Sample object can only be saved once!
         """
 
         if idx is not None:
-            self.storage.trajectory.save(origin.trajectory)
-            self.set_object('origin_trajectory', idx, origin.trajectory)
+            self.storage.trajectory.save(sample.trajectory)
+            self.set_object('sample_trajectory', idx, sample.trajectory)
 
-            self.storage.ensemble.save(origin.ensemble)
-            self.set_object('origin_ensemble', idx, origin.ensemble)
+            self.storage.ensemble.save(sample.ensemble)
+            self.set_object('sample_ensemble', idx, sample.ensemble)
 
-            self.storage.pathmover.save(origin.mover)
-            self.set_object('origin_mover', idx, origin.mover)
+            self.storage.pathmover.save(sample.mover)
+            self.set_object('sample_mover', idx, sample.mover)
 
-            self.storage.movedetails.save(origin.details)
-            self.set_object('origin_details', idx, origin.details)
+            self.storage.movedetails.save(sample.details)
+            self.set_object('sample_details', idx, sample.details)
 
     @loadcache
     def load(self, idx, momentum = True):
         '''
-        Return a origin from the storage
+        Return a sample from the storage
 
         Parameters
         ----------
         idx : int
-            index of the origin (counts from 1)
+            index of the sample (counts from 1)
 
         Returns
         -------
-        origin : Sample
-            the origin
+        sample : Sample
+            the sample
         '''
-        trajectory_idx = int(self.storage.variables['origin_trajectory_idx'][idx])
-        ensemble_idx = int(self.storage.variables['origin_ensemble_idx'][idx])
-        mover_idx = int(self.storage.variables['origin_mover_idx'][idx])
-        details_idx = int(self.storage.variables['origin_details_idx'][idx])
+        trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
+        ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
+        mover_idx = int(self.storage.variables['sample_mover_idx'][idx])
+        details_idx = int(self.storage.variables['sample_details_idx'][idx])
 
         obj = Sample(
             trajectory=self.storage.trajectory.load(trajectory_idx, lazy=True),
@@ -221,13 +204,13 @@ class SampleStorage(ObjectStorage):
 
     def _init(self):
         """
-        Initialize the associated storage to allow for origin storage
+        Initialize the associated storage to allow for sample storage
 
         """
         super(SampleStorage, self)._init()
 
         # New short-hand definition
-        self.init_variable('origin_trajectory_idx', 'u4')
-        self.init_variable('origin_ensemble_idx', 'u4')
-        self.init_variable('origin_mover_idx', 'u4')
-        self.init_variable('origin_details_idx', 'u4')
+        self.init_variable('sample_trajectory_idx', 'u4')
+        self.init_variable('sample_ensemble_idx', 'u4')
+        self.init_variable('sample_mover_idx', 'u4')
+        self.init_variable('sample_details_idx', 'u4')

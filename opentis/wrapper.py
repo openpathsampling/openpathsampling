@@ -1,19 +1,26 @@
 def storable(super_class):
-    class NewClass(super_class):
-        cls = super_class.__name__.lower()
-        default_storage = None
+    super_class.cls = super_class.__name__.lower()
+    super_class.default_storage = None
 
-        def __init__(self, *args, **kwargs):
-            super(NewClass, self).__init__(*args, **kwargs)
-            if 'idx' in kwargs:
-                self.idx = kwargs['idx']
-            else:
-                self.idx = dict()
+    def _init(self, *args, **kwargs):
+        super_class._init(self, *args, **kwargs)
 
-        def save(self, storage=None):
-            if storage is None:
-                storage = self.default_storage
-            storage.save(self)
+        if 'idx' in kwargs:
+            self.idx = kwargs['idx']
+        else:
+            self.idx = dict()
 
-    NewClass.__name__ = super_class.__name__
-    return NewClass
+        if 'storage' in kwargs:
+            self.default_storage = kwargs['storage']
+
+    def _save(self, storage=None):
+        if storage is None:
+            storage = self.default_storage
+        storage.save(self)
+
+    super_class._init = super_class.__init__
+    super_class.__init__ = _init
+
+    super_class.save = _save
+
+    return super_class

@@ -29,7 +29,6 @@ class SnapshotStorage(ObjectStorage):
         '''
 
         snapshot = Snapshot()
-        snapshot.reversed = bool(reversed)
 
         configuration_idx = self.configuration_idx(idx)
         momentum_idx = self.momentum_idx(idx)
@@ -46,6 +45,8 @@ class SnapshotStorage(ObjectStorage):
             snapshot.momentum = None
 
         snapshot.reversed = momentum_reversed
+
+        snapshot.idx[self.storage] = idx
 
         return snapshot
 
@@ -71,17 +72,17 @@ class SnapshotStorage(ObjectStorage):
 
         if snapshot.configuration is not None:
             storage.configuration.save(snapshot.configuration)
-            self.save_variable('configuration_idx', idx, snapshot.configuration.begin[storage])
+            self.save_variable('snapshot_configuration_idx', idx, snapshot.configuration.idx[storage])
         else:
-            self.save_variable('configuration_idx', idx, 0)
+            self.save_variable('snapshot_configuration_idx', idx, 0)
 
-        if snapshot.configuration is not None:
-            storage.configuration.save(snapshot.configuration)
-            self.save_variable('momentum_idx', idx, snapshot.momentum.idx[storage])
+        if snapshot.momentum is not None:
+            storage.momentum.save(snapshot.momentum)
+            self.save_variable('snapshot_momentum_idx', idx, snapshot.momentum.idx[storage])
         else:
-            self.save_variable('momentum_idx', idx, 0)
+            self.save_variable('snapshot_momentum_idx', idx, 0)
 
-        self.save_variable('momentum_reversed', idx, snapshot.reversed, int)
+        self.save_variable('snapshot_momentum_reversed', idx, int(snapshot.reversed))
 
 
     def configuration_idx(self, idx):
@@ -96,7 +97,7 @@ class SnapshotStorage(ObjectStorage):
         -------
         snapshot (list of int) - snapshot indices
         '''
-        return self.load_variable('configuration_idx', idx, int)
+        return int(self.load_variable('snapshot_configuration_idx', idx))
 
     def momentum_idx(self, idx):
         '''
@@ -110,7 +111,7 @@ class SnapshotStorage(ObjectStorage):
         -------
         snapshot (list of int) - snapshot indices
         '''
-        return self.load_variable('momentum_idx', idx, int)
+        return int(self.load_variable('snapshot_momentum_idx', idx))
 
 
     def momentum_reversed(self, idx):
@@ -128,14 +129,14 @@ class SnapshotStorage(ObjectStorage):
         list of boolean
             list of boolean which frames in the snapshot are reversed
         '''
-        return self.load_variable('momentum_reversed', idx, bool)
+        return bool(self.load_variable('snapshot_momentum_reversed', idx))
 
 
     def _init(self):
         '''
         Initializes the associated storage to index configuration_indices in it
         '''
-        super(ConfigurationStorage, self)._init()
+        super(SnapshotStorage, self)._init()
 
         self.init_variable('snapshot_configuration_idx', 'index', self.db,
                 description="snapshot[snapshot] is the snapshot index (0..n_configuration-1) of snapshot 'snapshot'.")
@@ -275,7 +276,7 @@ class MomentumStorage(ObjectStorage):
         Initializes the associated storage to index momentums in it
         '''
 
-        super(MomentumStorage, self).__init__()
+        super(MomentumStorage, self)._init()
 
         atoms = self.storage.atoms
 
@@ -283,7 +284,7 @@ class MomentumStorage(ObjectStorage):
         if 'atom' not in self.storage.dimensions:
             self.init_dimension('atom', atoms) # number of atoms in the simulated system
 
-        if 'spatial' not in self.storate.dimensions:
+        if 'spatial' not in self.storage.dimensions:
             self.init_dimension('spatial', 3)  # number of spatial dimensions
 
         self.init_variable('momentum_velocities', 'float', (self.db, 'atom','spatial'), 'nm',
@@ -458,7 +459,7 @@ class ConfigurationStorage(ObjectStorage):
         if 'atom' not in self.storage.dimensions:
             self.init_dimension('atom', atoms) # number of atoms in the simulated system
 
-        if 'spatial' not in self.storate.dimensions:
+        if 'spatial' not in self.storage.dimensions:
             self.init_dimension('spatial', 3)  # number of spatial dimensions
 
         self.init_variable('configuration_coordinates', 'float', (self.db, 'atom','spatial'), 'nm',

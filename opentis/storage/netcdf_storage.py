@@ -24,6 +24,7 @@ from pathmover import PathMover, MoveDetails
 from globalstate import GlobalState
 from orderparameter_store import ObjectDictStorage
 from orderparameter import OrderParameter
+from snapshot import Snapshot
 
 #=============================================================================================
 # SOURCE CONTROL
@@ -76,9 +77,7 @@ class Storage(netcdf.Dataset):
         self.shootingpoint = ObjectStorage(self, ShootingPoint, named=True, json=True).register()
         self.shootingpointselector = ObjectStorage(self, ShootingPointSelector, named=True, json=True, identifier='json').register()
         self.globalstate = ObjectStorage(self, GlobalState, named=True, json=True, identifier='json').register()
-        self.dict = dict()
-        self.dict.orderparameter = ObjectDictStorage(self, OrderParameter).register()
-
+        self.collectivevariable = ObjectDictStorage(self, OrderParameter, Snapshot).register()
 
         if mode == 'w':
             self._init()

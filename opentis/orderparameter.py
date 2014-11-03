@@ -22,11 +22,10 @@ class ObjectDict(dict):
 
     """
 
-    def __init__(self, dimensions = 1, key_class = None, value_cls = None):
-
+    def __init__(self, dimensions = 1, key_class = None):
+        dict.__init__(self)
         self.dimensions = dimensions
         self.key_class = key_class
-        self.value_type = value_cls
 
     def _get(self, obj):
         return dict.__getitem__(self, obj)
@@ -91,7 +90,6 @@ class StorableObjectDict(ObjectDict):
     Attributes
     ----------
     name
-
     """
 
     def __init__(self, name, dimensions = 1, key_class = None):
@@ -102,13 +100,6 @@ class StorableObjectDict(ObjectDict):
         self.var_name = key_class.__name__.lower() + '_' + 'op_' + self.name
         self.object_storages = [] # contains the list of associated ObjectStorages (that itself link to netCDF files)
 
-        if storages is None:
-            self.object_storages = []
-        elif type(storages) is list:
-            self.object_storages = storages
-        else:
-            self.object_storages = [storages]
-
         for s in self.object_storages:
             if s.content_class is not key_class:
                 print 'One of the storages does not store objects of type :', key_class.__name__
@@ -117,15 +108,12 @@ class StorableObjectDict(ObjectDict):
         for s in self.object_storages:
             self.storage_caches[s.storage] = dict()
 
-        self._init_storage()
-        self._update_store()
-
     def storable(self, item):
         """
         Returns True if the given item has indices to be stored in an attached storage otherwise cache it in the dict itself
         """
         for s in self.storage_caches:
-            if s in item.begin and item.begin[s] > 0:
+            if s in item.idx and item.idx[s] > 0:
                 return True
         return False
 
@@ -134,7 +122,7 @@ class StorableObjectDict(ObjectDict):
         Returns True, if the item is already stored in an associated cache.
         """
         for s in self.storage_caches:
-            if s in item.begin and item.begin[s] in self.storage_caches[s]:
+            if s in item.idx and item.idx[s] in self.storage_caches[s]:
                 return True
 
         return False
@@ -144,15 +132,15 @@ class StorableObjectDict(ObjectDict):
 
     def _get_from_stores(self, item):
         for s in self.storage_caches:
-            if s in item.begin and item.begin[s] in self.storage_caches[s]:
-                return self.storage_caches[s][item.begin[s]]
+            if s in item.idx and item.idx[s] in self.storage_caches[s]:
+                return self.storage_caches[s][item.idx[s]]
 
         return None
 
     def _set_to_stores(self, obj, value):
         for s in self.storage_caches:
-            if s in obj.begin:
-                self.storage_caches[s][obj.begin[s]] = value
+            if s in obj.idx:
+                self.storage_caches[s][obj.idx[s]] = value
 
     def _set(self, obj, value):
         if self.storable(obj):
@@ -197,9 +185,12 @@ class FunctionalStorableObjectDict(StorableObjectDict):
 
     """
 
-    def __init__(self, name, fnc, dimensions = 1, key_class = None, allow_multiple = True, storages = None):
-
-        super(FunctionalStorableObjectDict, self).__init__(name=name, dimensions=dimensions, key_class=key_class, storages=storages)
+    def __init__(self, name, fnc, dimensions = 1, key_class = None, allow_multiple = True):
+        super(FunctionalStorableObjectDict, self).__init__(
+            name=name,
+            dimensions=dimensions,
+            key_class=key_class
+        )
         self._fnc = fnc
         self.allow_multiple = allow_multiple
 
@@ -214,7 +205,6 @@ class FunctionalStorableObjectDict(StorableObjectDict):
             input = items
         else:
             input = [items]
-
 
         if self.key_class is not None and len(input) > 0 and isinstance(input[0], self.key_class):
             no_cache = self.missing(input)
@@ -257,13 +247,17 @@ class OrderParameter(FunctionalStorableObjectDict):
 
     """
 
-    def __init__(self, name, dimensions = 1, storages = None):
+    def __init__(self, name, dimensions = 1):
         super(OrderParameter, self).__init__(
             name=name,
             fnc=None,
             dimensions=dimensions,
-            key_class=Configuration,
-            storages=storages)
+            key_class=Configuration
+        )
+
+    @property
+    def identifier(self):
+        return self.name
 
     def __call__(self, items):
         if isinstance(items, Snapshot):
@@ -309,8 +303,8 @@ class OP_RMSD_To_Lambda(OrderParameter):
         trajectory object that contains only the center configuration to which the RMSD is computed to
     """
 
-    def __init__(self, name, center, lambda_min, max_lambda, atom_indices=None, storages = None):
-        super(OP_RMSD_To_Lambda, self).__init__(name, dimensions=1, storages=storages)
+    def __init__(self, name, center, lambda_min, max_lambda, atom_indices=None):
+        super(OP_RMSD_To_Lambda, self).__init__(name, dimensions=1)
 
         self.atom_indices = atom_indices
         self.center = center
@@ -369,8 +363,8 @@ class OP_Multi_RMSD(OrderParameter):
         the RMSD metric object used to compute the RMSD
     """
 
-    def __init__(self, name, centers, atom_indices=None, metric=None, storages=None):
-        super(OP_Multi_RMSD, self).__init__(name, dimensions=len(centers), storages=storages)
+    def __init__(self, name, centers, atom_indices=None, metric=None):
+        super(OP_Multi_RMSD, self).__init__(name, dimensions=len(centers))
 
         self.atom_indices = atom_indices
         self.center = centers
@@ -442,7 +436,7 @@ class OP_Function(OrderParameter):
     >>>                              indices=[psi_atoms])
     >>> print psi_orderparam( traj.md() )
     """
-    def __init__(self, name, fcn, trajdatafmt=None, storages=None, **kwargs):
+    def __init__(self, name, fcn, trajdatafmt=None, **kwargs):
         """
         Parameters
         ----------
@@ -461,7 +455,7 @@ class OP_Function(OrderParameter):
             trick, and to instead create separate wrapper classes for each
             supported trajformat.
         """
-        super(OP_Function, self).__init__(name, storages=storages)
+        super(OP_Function, self).__init__(name)
         self.fcn = fcn
         self.trajdatafmt = trajdatafmt
         self.kwargs = kwargs

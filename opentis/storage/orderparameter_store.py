@@ -1,11 +1,16 @@
 from object_storage import ObjectStorage
-from wrapper import loadcache, savecache
+from wrapper import loadcache, loadidentifiable
+from orderparameter import OrderParameter
+
+import numpy as np
 
 class ObjectDictStorage(ObjectStorage):
 
-    def __init__(self, storage, cls):
-        super(ObjectDictStorage, self).__init__(storage, cls, named=True)
-        self.idx_dimension = 'dict_' + self.idx_dimension
+    def __init__(self, storage, cls, key_class):
+        super(ObjectDictStorage, self).__init__(storage, cls, named=True, identifier='name')
+#        self.idx_dimension = 'dict_' + self.idx_dimension
+#        self.db = 'dict_' + self.db
+        self.key_class = key_class
 
     def save(self, objectdict, idx=None):
         """
@@ -19,12 +24,12 @@ class ObjectDictStorage(ObjectStorage):
         """
         storage = self.storage
         if idx is None:
-            if storage in objectdict.begin:
+            if storage in objectdict.idx:
                 self.cache[idx] = objectdict
-                idx = objectdict.begin[storage]
+                idx = objectdict.idx[storage]
             else:
                 idx = self.free()
-                objectdict.begin[storage] = idx
+                objectdict.idx[storage] = idx
                 self.cache[idx] = objectdict
         else:
             idx = int(idx)
@@ -33,9 +38,24 @@ class ObjectDictStorage(ObjectStorage):
         self._update_store(objectdict)
         store = objectdict.storage_caches[storage]
 
-        self.save_objectdict(self.idx_dimension, int(idx), store, float)
+#        self.save_objectdict(self.idx_dimension, int(idx), store, float)
+
+        length = len(store)
+
+        var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
+
+        if var_name + '_value' not in self.storage.variables:
+            self.init_variable(var_name + '_value', 'float', (self.key_class.__name__.lower()))
+            self.init_variable(var_name + '_set', 'index', (self.key_class.__name__.lower()))
+
+        self.storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
+        self.save_variable(self.idx_dimension + '_length', idx, length)
+        self.storage.variables[var_name + '_value'][store.keys()] = self.list_to_numpy(store.values(), 'float')
+        self.storage.variables[var_name + '_set'][0:length] = store.keys()
+
         self.tidy_cache(objectdict)
 
+    @loadidentifiable
     @loadcache
     def load(self, idx, op=None):
         """
@@ -52,12 +72,32 @@ class ObjectDictStorage(ObjectStorage):
         """
 
         storage = self.storage
-        data = self.load_objectdict(self.idx_dimension,int(idx), self.content_class.__name__.lower(), float)
-        if op is None:
-            # create StorageObject
-            pass
+#        data = self.load_objectdict(self.idx_dimension,int(idx), self.content_class.__name__.lower(), float)
 
-        op.storage_caches[storage] = data
+        name = storage.variables[self.idx_dimension + '_name'][idx]
+        var_name = self.idx_dimension + '_' + str(idx) + '_' + name
+        length = self.load_variable(self.idx_dimension + '_length', idx)
+        stored_idx = self.storage.variables[var_name + '_set'][0:length]
+        data_all = storage.variables[var_name + '_value'][:]
+        data = self.list_from_numpy(data_all[self.list_from_numpy(stored_idx, 'index')], 'float')
+
+        if op is None:
+            op = OrderParameter(name)
+
+        op.storage_caches[storage] = dict(zip(stored_idx, data))
+        op.idx[storage] = idx
+
+        return op
+
+    def restore(self, obj):
+        idx = self.find_by_identifier(obj.identifier)
+
+        print "IDX:", idx
+
+        if idx is not None:
+            return self.load(idx, obj)
+        else:
+            return None
 
     def _init(self):
         """
@@ -66,7 +106,9 @@ class ObjectDictStorage(ObjectStorage):
         """
         super(ObjectDictStorage, self)._init()
 
-        self.init_objectdict(self.idx_dimension, self.content_class.__name__.lower())
+#        self.init_objectdict(self.idx_dimension, self.content_class.__name__.lower())
+#        self.init_variable(self.idx_dimension + '_name', 'index', (self.idx_dimension)
+        self.init_variable(self.idx_dimension + '_length', 'index', self.idx_dimension)
 
     def _update_store(self, obj):
         """
@@ -88,8 +130,8 @@ class ObjectDictStorage(ObjectStorage):
 
         store = obj.storage_caches[storage]
         for item, value in obj.iteritems():
-            if storage in item.begin:
-                store[item.begin[storage]] = value
+            if storage in item.idx:
+                store[item.idx[storage]] = value
 
     def tidy_cache(self, obj):
         """
@@ -109,7 +151,7 @@ class ObjectDictStorage(ObjectStorage):
             # TODO: Throw exception
             obj.storage_caches[storage] = dict()
 
-        new_dict = {item: value for item, value in obj.iteritems() if storage not in item.begin}
+        new_dict = {item: value for item, value in obj.iteritems() if storage not in item.idx}
 
         obj.clear()
         obj.update(new_dict)

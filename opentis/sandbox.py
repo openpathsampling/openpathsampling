@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     if simulator.storage.trajectory.count() == 0:
         # load initial equilibrate snapshot given by ID #0
-        snapshot = simulator.storage.snapshot.load(0, 0)
+        snapshot = simulator.storage.snapshot.load(0)
 
         # generate from this snapshot a trajectory with 50 steps
         traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,6))])
@@ -43,9 +43,9 @@ if __name__ == '__main__':
         
     if True:
         cc = Trajectory.storage.load(1)[ 0 ]
-        cc = storage.snapshot.load(0,0,False, lazy=False)
-        op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices, storages=simulator.storage.configuration)
-        print "OP"
+        cc = storage.snapshot.load(0)
+        op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices)
+        storage.collectivevariable.restore(op)
         print op(Trajectory.storage.load(1)[0:2])
         dd = simulator.storage.trajectory.load(1)[ 0:6 ]
         lV = LambdaVolume(op, 0.0, 0.06)
@@ -180,7 +180,7 @@ if __name__ == '__main__':
         en = OutXEnsemble(lV, slice(1, -1), lazy = False)
         print en(pth.details.final)
 
-        op.save()
+        op.save(storage=storage.collectivevariable)
 
         exit()
 

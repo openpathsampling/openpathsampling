@@ -6,7 +6,7 @@ def savecache(func):
     return inner
 
 
-def identifiable(func):
+def saveidentifiable(func):
     def inner(self, obj, idx=None, *args, **kwargs):
         if idx is None and hasattr(obj, 'identifier'):
             if not hasattr(obj,'json'):
@@ -16,12 +16,12 @@ def identifiable(func):
             if find_idx is not None:
                 # found and does not need to be saved, but we will let this ensemble point to the storage
                 # in case we want to save and need the idx
-                obj.begin[self.storage] = find_idx
+                obj.idx[self.storage] = find_idx
                 self.cache[find_idx] = obj
             else:
                 func(self, obj, idx, *args, **kwargs)
                 # Finally register with the new idx in the identifier cache dict.
-                new_idx = obj.begin[self.storage]
+                new_idx = obj.idx[self.storage]
                 self.all_names[obj.identifier] = new_idx
         else:
             func(self, obj, idx, *args, **kwargs)
@@ -37,4 +37,19 @@ def loadcache(func):
         obj = func(self, idx, *args, **kwargs)
         self.cache[idx] = obj
         return obj
+    return inner
+
+def loadidentifiable(func):
+    def inner(self, idx=None, *args, **kwargs):
+        if idx is not None and type(idx) is str:
+            find_idx = self.find_by_identifier(idx)
+            if find_idx is not None:
+                # names id is found so load with normal id
+                return func(self, find_idx, *args, **kwargs)
+            else:
+                # named id does not exist
+                return None
+        else:
+            return func(self, idx, *args, **kwargs)
+
     return inner
