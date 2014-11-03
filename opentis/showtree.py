@@ -294,7 +294,8 @@ if __name__ == '__main__':
             # Show full trajectory once
             for pos, snapshot in enumerate(sample.trajectory):
                 conf = snapshot.configuration
-                p_x[conf] = pos
+                if conf not in p_x:
+                    p_x[conf] = pos
                 p_y[conf] = t_count
 
                 pos_x = p_x[conf]
