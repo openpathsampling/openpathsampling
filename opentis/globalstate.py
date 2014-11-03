@@ -10,7 +10,7 @@ class GlobalState(dict):
     """
 
     now = None       # globsl current state
-    time = 0         # globl current time
+    time = 0         # global current time
 
     def __init__(self, size, ensembles, time = None):
         super(GlobalState, self).__init__()
@@ -48,6 +48,8 @@ class GlobalState(dict):
         globalstate.old = self
         globalstate.samples = samples
         for sample in samples:
+            sample.time = self.time
+
             globalstate.ensemble_set[sample.ensemble] = sample.trajectory
 
         GlobalState.now = globalstate
