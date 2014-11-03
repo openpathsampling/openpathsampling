@@ -17,9 +17,11 @@ from ensemble import LengthEnsemble, InXEnsemble, OutXEnsemble
 from trajectory import Trajectory
 from pymbar import MBAR
 from snapshot import Snapshot
+from openmm_simulation import OpenMMSimulation
 
 if __name__ == '__main__':
     simulator = Simulator.Alanine_system('auto')
+
     PathMover.simulator = simulator
     storage = simulator.storage
 

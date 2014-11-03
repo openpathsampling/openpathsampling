@@ -18,6 +18,7 @@ from trajectory import Trajectory
 from snapshot import Snapshot
 from integrators import VVVRIntegrator
 from ensemble import LengthEnsemble
+from openmm_simulation import OpenMMSimulation
 
 
 #=============================================================================
@@ -183,6 +184,7 @@ class Simulator(object):
                                    filename=self.fn_storage, 
                                    mode='w'
                                   )
+
             self.storage.simulator = self
             # index options
             self.storage._store_options(self)
@@ -278,7 +280,8 @@ class Simulator(object):
         integrator = VVVRIntegrator(self.temperature, self.collision_rate, self.timestep)
         self.integrator_class = type(integrator).__name__
         
-        simulation = Simulation(self.topology, system, integrator, platform)
+        simulation = OpenMMSimulation(self.topology, system, integrator, platform )
+
         
         self.system_serial = openmm.XmlSerializer.serialize(system)
         self.integrator_serial = openmm.XmlSerializer.serialize(integrator)
