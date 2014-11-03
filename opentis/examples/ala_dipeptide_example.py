@@ -21,6 +21,7 @@ import mdtraj as md
 # package
 from opentis.Simulator import Simulator
 from opentis.orderparameter import OP_Function
+from opentis.openmm_simulation import OpenMMSimulation
 from opentis.snapshot import Snapshot, Configuration
 from opentis.volume import LambdaVolumePeriodic, VolumeFactory as vf
 from opentis.pathmover import PathMoverFactory as mf
@@ -87,8 +88,8 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
             self.integrator_serial = openmm.XmlSerializer.serialize(system)
             self.integrator_class = type(integrator).__name__
 
-            simulation = Simulation( self.topology, system, 
-                                     integrator, platform )
+            simulation = OpenMMSimulation(self.topology, system, 
+                                          integrator, platform )
 
             # claim the OpenMM simulation as our own
             self.simulation = simulation
@@ -150,7 +151,7 @@ if __name__=="__main__":
                 'temperature' : 300.0 * kelvin,
                 'collision_rate' : 1.0 / picoseconds,
                 'timestep' : 2.0 * femtoseconds,
-                'nframes_per_iteration' : 1000,
+                'nframes_per_iteration' : 50,
                 'n_frames_max' : 5000,
                 'start_time' : time.time(),
                 'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
@@ -168,7 +169,7 @@ if __name__=="__main__":
     
     
     simulator.equilibrate(5)
-    snap = Snapshot(simulator.simulation.context)
+    snap = Snapshot(simulator.simulation)
     simulator.storage.snapshot.save(snap, 0, 0)
     simulator.initialized = True
     PathMover.simulator = simulator
