@@ -20,6 +20,7 @@ import mdtraj as md
 # in principle, all of these imports should be simplified once this is a
 # package
 from Simulator import Simulator
+from openmm_simulation import OpenMMSimulation
 from orderparameter import OP_Function
 from snapshot import Snapshot, Configuration
 from volume import LambdaVolumePeriodic, VolumeFactory as vf
@@ -71,6 +72,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
 
         if mode == 'create':
             # set up the OpenMM simulation
+            #self.platform = 'CUDA'
             platform = openmm.Platform.getPlatformByName(self.platform)
             forcefield = ForceField(self.forcefield_solute,
                                     self.forcefield_solvent)
@@ -86,8 +88,8 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
             self.integrator_serial = openmm.XmlSerializer.serialize(system)
             self.integrator_class = type(integrator).__name__
 
-            simulation = Simulation(self.topology, system, 
-                                    integrator, platform)
+            simulation = OpenMMSimulation(self.topology, system, 
+                                          integrator, platform)
 
             # claim the OpenMM simulation as our own
             self.simulation = simulation
@@ -144,19 +146,20 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
             system.setParticleMass(i, solute_masses[i].value_in_unit(dalton))
 
 
-if __name__ == "__main__":
-    options = {'temperature' : 300.0 * kelvin,
-               'collision_rate' : 1.0 / picoseconds,
-               'timestep' : 2.0 * femtoseconds,
-               'nframes_per_iteration' : 10,
-               'n_frames_max' : 5000,
-               'start_time' : time.time(),
-               'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
-               'platform' : 'CPU',
-               'solute_indices' : range(22),
-               'forcefield_solute' : 'amber96.xml',
-               'forcefield_solvent' : 'tip3p.xml'
-              }
+if __name__=="__main__":
+    options = {
+                'temperature' : 300.0 * kelvin,
+                'collision_rate' : 1.0 / picoseconds,
+                'timestep' : 2.0 * femtoseconds,
+                'nframes_per_iteration' : 50,
+                'n_frames_max' : 5000,
+                'start_time' : time.time(),
+                'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
+                'platform' : 'CPU',
+                'solute_indices' : range(22),
+                'forcefield_solute' : 'amber96.xml',
+                'forcefield_solvent' : 'tip3p.xml'
+               }
     simulator = AlanineDipeptideTrajectorySimulator(
         filename="trajectory.nc",
         topology_file="../data/Alanine_solvated.pdb",
@@ -166,7 +169,7 @@ if __name__ == "__main__":
 
 
     simulator.equilibrate(5)
-    snap = Snapshot(simulator.simulation.context)
+    snap = Snapshot(simulator.simulation)
     simulator.storage.snapshot.save(snap, 0, 0)
     simulator.initialized = True
     PathMover.simulator = simulator
