@@ -2,11 +2,8 @@ from nose.tools import assert_equal, assert_not_equal, raises
 from nose.plugins.skip import SkipTest
 from duckpunching import CallIdentity, prepend_exception_message
 
-import os
-import sys
-sys.path.append(os.path.abspath('../'))
-from volume import LambdaVolume
-from ensemble import *
+from opentis.volume import LambdaVolume
+from opentis.ensemble import *
 
 import re
 import random

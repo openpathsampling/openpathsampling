@@ -19,8 +19,8 @@ from object_storage import ObjectStorage
 from trajectory_store import TrajectoryStorage, SampleStorage
 from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
 from ensemble_store import EnsembleStorage
-from shooting import ShootingPointSelector, ShootingPoint
-from pathmover import PathMover, MoveDetails
+from opentis.shooting import ShootingPointSelector, ShootingPoint
+from opentis.pathmover import PathMover, MoveDetails
 
 #=============================================================================================
 # SOURCE CONTROL

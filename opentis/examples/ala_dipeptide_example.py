@@ -10,36 +10,36 @@ TIS simulation on alanine dipeptide.
 # script
 
 # hack until this is a proper package
-import sys
-import os
-sys.path.append(os.path.abspath('../'))
+#import sys
+#import os
+#sys.path.append(os.path.abspath('../'))
 
 import numpy as np
 import mdtraj as md
  
 # in principle, all of these imports should be simplified once this is a
 # package
-from Simulator import Simulator
-from orderparameter import OP_Function
-from snapshot import Snapshot, Configuration
-from volume import LambdaVolumePeriodic, VolumeFactory as vf
-from pathmover import PathMoverFactory as mf
-from ensemble import EnsembleFactory as ef
-from ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
+from opentis.Simulator import Simulator
+from opentis.orderparameter import OP_Function
+from opentis.snapshot import Snapshot, Configuration
+from opentis.volume import LambdaVolumePeriodic, VolumeFactory as vf
+from opentis.pathmover import PathMoverFactory as mf
+from opentis.ensemble import EnsembleFactory as ef
+from opentis.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
                       InXEnsemble)
-from storage import Storage
-from trajectory import Trajectory
-from calculation import Bootstrapping
-from pathmover import (PathMover, MixedMover, ForwardShootMover, 
+from opentis.storage import Storage
+from opentis.trajectory import Trajectory
+from opentis.calculation import Bootstrapping
+from opentis.pathmover import (PathMover, MixedMover, ForwardShootMover, 
                        BackwardShootMover)
-from shooting import UniformSelector
+from opentis.shooting import UniformSelector
 
 from simtk.unit import femtoseconds, picoseconds, nanometers, kelvin, dalton
 from simtk.unit import Quantity
 
 import time
 
-from integrators import VVVRIntegrator
+from opentis.integrators import VVVRIntegrator
 
 from simtk.openmm.app.pdbfile import PDBFile
 import simtk.openmm as openmm
@@ -71,7 +71,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
 
         if mode == 'create':
             # set up the OpenMM simulation
-            self.platform = 'CUDA'
+            #self.platform = 'CUDA'
             platform = openmm.Platform.getPlatformByName(self.platform)
             forcefield = ForceField( self.forcefield_solute,
                                      self.forcefield_solvent )

@@ -2,18 +2,14 @@
 @author David W.H. Swenson
 """
 
-import os
-import sys
-
 from nose.tools import assert_equal
 import mdtraj as md
 
 from duckpunching import SimulationDuckPunch
 
-sys.path.append(os.path.abspath('../'))
-import trajectory
-from storage import Storage
-import orderparameter as op
+import opentis.trajectory as trajectory
+from opentis.storage import Storage
+import opentis.orderparameter as op
 
 
 class testOP_Function(object):
@@ -21,12 +17,10 @@ class testOP_Function(object):
     def setUp(self):
         # setUp is just reading in some alanine dipeptide frames: this is an
         # ugly hack
-        self.storage = Storage(
-                                    #topology="../data/Alanine_solvated.pdb",
-                                    topology_file=None,
-                                    filename="../data/trajectory.nc",
-                                    mode="a"
-                                    )
+        self.storage = Storage(topology_file=None,
+                               filename="../data/trajectory.nc",
+                               mode="a"
+                              )
 
         topol = md.load("../data/Alanine_solvated.pdb").top.to_openmm()
         self.simulation = SimulationDuckPunch(topol, None)
