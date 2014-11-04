@@ -297,9 +297,9 @@ class ObjectStorage(object):
         elif var_type == 'int':
             nc_type = 'i4'   # 32-bit signed integer
         elif var_type == 'index':
-            nc_type = 'u4'   # 32-bit unsigned integer / for indices
+            nc_type = 'i4'   # 32-bit signd integer / for indices / -1 indicates no index (None)
         elif var_type == 'length':
-            nc_type = 'u4'   # 32-bit unsigned integer / for indices
+            nc_type = 'i4'   # 32-bit signed integer / for indices / -1 indicated no length specified (None)
         elif var_type == 'bool':
             nc_type = 'i1'   # 8-bit signed integer for boolean
         elif var_type == 'str':
