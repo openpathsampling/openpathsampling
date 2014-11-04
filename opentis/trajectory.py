@@ -440,19 +440,19 @@ class Sample(object):
     a separate move object for each resulting trajectory is returned
     """
 
-    def __init__(self, trajectory=None,  mover=None, ensemble=None, details=None, time=None):
+    def __init__(self, trajectory=None,  mover=None, ensemble=None, details=None, step=-1):
         self.idx = dict()
 
         self.mover = mover
         self.ensemble = ensemble
         self.trajectory = trajectory
         self.details = details
-        self.time=time
+        self.step=step
 
     def __call__(self):
         return self.trajectory
 
     @staticmethod
-    def set_time(time, samples):
+    def set_time(step, samples):
         for sample in samples:
-            sample.time = time
+            sample.step = step
