@@ -89,6 +89,8 @@ class GlobalState(dict):
         Returns a new GlobalState object that takes the current instance and applies the samples in the given order as updates.
         The samples will get the actual timestamp for later analysis.
 
+        Parameters
+        ==========
         samples : list of Sample()
             The list of `Sample` objects used to update the current GlobalState
 
@@ -113,7 +115,10 @@ class GlobalState(dict):
         """
         Save all samples in the current GlobalState object. This should be called after a move has generated a new object since then
         all samples will get a timestamp that is associated with this
-        :param storage:
-        :return:
+
+        Parameters
+        ==========
+        storage : Storage()
+            the underlying netcdf file to be used for storage
         """
         map(storage.sample.save, self.samples)
