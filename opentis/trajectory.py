@@ -163,7 +163,7 @@ class Trajectory(list):
         The IDs are only non-zero if the snapshots have been saved before!
         
         """
-        return [f.configuration.idx for f in self]
+        return [f.configuration.begin for f in self]
 
     def configurations(self):
         """
@@ -435,21 +435,24 @@ class Trajectory(list):
 @storable
 class Sample(object):
     """
-    A Move is the return object from a PathMover and contains all information about the move, initial trajectories,
-    new trajectories (both as references). Might move several trajectories at a time (swapping)
-
-    Notes
-    -----
-    Should contain inputs/outputs and success (accepted/rejected) as well as probability to succeed.
+    A Sample is the return object from a PathMover and contains all information about the move, initial trajectories,
+    new trajectories (both as references). IF a Mover does several moves at a time (e.g. a swap) then
+    a separate move object for each resulting trajectory is returned
     """
 
-    def __init__(self, trajectory=None,  mover=None, ensemble=None, details=None):
+    def __init__(self, trajectory=None,  mover=None, ensemble=None, details=None, time=None):
         self.idx = dict()
 
         self.mover = mover
         self.ensemble = ensemble
         self.trajectory = trajectory
         self.details = details
+        self.time=time
 
     def __call__(self):
         return self.trajectory
+
+    @staticmethod
+    def set_time(time, samples):
+        for sample in samples:
+            sample.time = time

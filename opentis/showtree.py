@@ -125,7 +125,7 @@ if __name__ == '__main__':
     min_x = 0
     max_x = 0
 
-    for o_idx in range(1, storage.sample.count() + 1):
+    for o_idx in range(0, storage.sample.count()):
         sample = storage.sample.load(o_idx)
         length = len(sample.details.final)
 
@@ -150,6 +150,9 @@ if __name__ == '__main__':
                     pos_y = p_y[conf]
 
                 t_count += 0.8
+
+                min_x = min(min_x, 0)
+                max_x = max(max_x, len(old_traj) - 1)
 
             shift = p_x[old_conf] - new_index
 
@@ -189,7 +192,7 @@ if __name__ == '__main__':
 
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
 
-    for o_idx in range(1, storage.sample.count() + 1):
+    for o_idx in range(0, storage.sample.count()):
         sample = storage.sample.load(o_idx)
         length = len(sample.details.final)
 
@@ -214,9 +217,9 @@ if __name__ == '__main__':
                     pos_y = p_y[conf]
 
                     if show_psi:
-                        block(pos_x, pos_y, "blue", str(int((degrees * psi(conf))) % 360 ))
+                        block(pos_x, pos_y, "black", str(int((degrees * psi(conf))) % 360 ))
                     else:
-                        block(pos_x, pos_y, "blue", conf.idx[storage])
+                        block(pos_x, pos_y, "black", conf.idx[storage])
 
                 t_count += 0.8
 

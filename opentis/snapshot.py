@@ -29,7 +29,7 @@ class Configuration(object):
     load_lazy = True
 
     def __init__(self, simulation=None, simulator=None, coordinates=None, 
-                 box_vectors=None, potential_energy=None, topology=None, 
+                 box_vectors=None, potential_energy=None, topology=None,
                  idx=None):
         """
         Create a simulation configuration from either an OpenMM context or
@@ -240,8 +240,7 @@ class Configuration(object):
 
 
 
-
-#=============================================================================
+#=============================================================================================
 # SIMULATION MOMENTUM / VELOCITY
 #=============================================================================
 @storable
@@ -282,7 +281,6 @@ class Momentum(object):
             kinetic energy
         idx : dict( Storage() : int )
             dict for storing the used index per storage
-        
         """
         
         self._velocities = None
@@ -421,6 +419,20 @@ class Momentum(object):
 # SIMULATION SNAPSHOT (COMPLETE FRAME WITH COORDINATES AND VELOCITIES)
 #=============================================================================
 
+
+
+def has(attr):
+    def _has(func):
+        def inner(self, *args, **kwargs):
+            if hasattr(self, attr):
+                return func(self, *args, **kwargs)
+            else:
+                return None
+        return inner
+    return _has
+
+
+@storable
 class Snapshot(object):
     """
     Simulation snapshot. Contains references to a configuration and momentum
@@ -431,7 +443,10 @@ class Snapshot(object):
     # Hopefully these class member variables will not be needed any longer
     simulator = None
 
-    def __init__(self, simulation=None, simulator=None, coordinates=None, velocities=None, box_vectors=None, potential_energy=None, kinetic_energy=None, configuration=None, momentum=None, reversed=False, topology=None):
+    def __init__(self, simulation=None, simulator=None, coordinates=None,
+                 velocities=None, box_vectors=None, potential_energy=None,
+                 kinetic_energy=None, configuration=None, momentum=None,
+                 reversed=False, topology=None):
         """
         Create a simulation snapshot from either an OpenMM context or
         individually-specified components.
@@ -494,7 +509,6 @@ class Snapshot(object):
 
         #if context is not None:
         if simulation is not None:
-            print type(simulation)
             simulation.load_snapshot(self)
             # Get current state from OpenMM Context object.
             #state = context.getState(getPositions=True, getVelocities=True, 
@@ -529,15 +543,15 @@ class Snapshot(object):
         pass
 
     @property
+    @has('configuration')
     def topology(self):
         """
         The mdtraj.Topology store in the configuration if present.
         """
-        if self.configuration is not None:
-            return self.configuration.topology
-        return None
-    
+        return self.configuration.topology
+
     @property
+    @has('configuration')
     def coordinates(self):
         """
         The coordinates in the configuration
@@ -545,6 +559,7 @@ class Snapshot(object):
         return self.configuration.coordinates
 
     @property
+    @has('momentum')
     def velocities(self):
         """
         The velocities in the configuration. If the snapshot is reversed a copy of the original
@@ -556,34 +571,52 @@ class Snapshot(object):
             return self.momentum.velocities
     
     @property
+    @has('configuration')
     def box_vectors(self):
         """
         The box_vectors in the configuration
         """
-        return self.configuration.box_vectors
+        if self.configuration is not None:
+            return self.configuration.box_vectors
+        else:
+            return None
     
     @property
+    @has('configuration')
     def potential_energy(self):
         """
         The potential_energy in the configuration
         """
-        return self.configuration.potential_energy
+        if self.configuration is not None:
+            return self.configuration.potential_energy
+        else:
+            return None
     
     @property
+    @has('momentum')
     def kinetic_energy(self):
         """
         The kinetic_energy in the momentum
         """
-        return self.momentum.kinetic_energy
+        if self.momentum is not None:
+            return self.momentum.kinetic_energy
+        else:
+            return None
     
     @property
+    @has('configuration')
     def atoms(self):
         '''
         The number of atoms in the snapshot
-        ''' 
-        return self.coordinates.shape[0]
+        '''
+        if self.configuration is not None:
+            return self.coordinates.shape[0]
+        else:
+            return None
 
     @property
+    @has('configuration')
+    @has('momentum')
     def total_energy(self):
         '''
         The total energy (sum of potential and kinetic) of the snapshot
@@ -627,6 +660,7 @@ class Snapshot(object):
         self.reversed = not self.reversed
         return self
     
+    @has('configuration')
     def md(self):
         '''
         Returns a mdtraj Trajectory object that contains only one frame
