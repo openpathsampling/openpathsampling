@@ -9,7 +9,7 @@ import numpy as np
 import mdtraj as md
 from simtk.unit import nanometers, Quantity
 
-from snapshot import Snapshot
+from snapshot import Snapshot, Configuration, Momentum
 
 
 #=============================================================================================
@@ -421,6 +421,8 @@ class Trajectory(list):
         Trajectory
         """
         trajectory = Trajectory()
+        empty_momentum = Momentum()
+        empty_momentum.velocities = None
         for frame_num in range(mdtrajectory.n_frames):
             # mdtraj trajectories only have coordinates and box_vectors
             coord = Quantity(mdtrajectory.xyz[frame_num], nanometers)
@@ -429,14 +431,9 @@ class Trajectory(list):
                                  nanometers)
             else:
                 box_v = None
-            snap = Snapshot(coordinates=coord,
-                            box_vectors=box_v,
-                            velocities=None
-                           )
-            print snap.coordinates
-            print snap.velocities
-            print snap.box_vectors
-            print
+            config = Configuration(coordinates=coord, box_vectors=box_v)
+
+            snap = Snapshot(configuration=config, momentum=empty_momentum)
             trajectory.append(snap)
 
         return trajectory
