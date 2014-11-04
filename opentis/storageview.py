@@ -69,36 +69,36 @@ if __name__ == '__main__':
 
     headline("Ensembles")
 
-    for e_idx in range(1, storage.ensemble.count() + 1):
+    for e_idx in range(0, storage.ensemble.count()):
         ensemble = storage.ensemble.load(e_idx)
         nline(e_idx,ensemble.name, ensemble.description.replace('\n', ''))
 
     headline("PathMovers")
 
-    for p_idx in range(1, storage.pathmover.count() + 1):
+    for p_idx in range(0, storage.pathmover.count()):
         pathmover = storage.pathmover.load(p_idx)
         nline(p_idx,pathmover.name, pathmover.json)
 
     headline("ShootingPointSelector")
 
-    for p_idx in range(1, storage.shootingpointselector.count() + 1):
+    for p_idx in range(0, storage.shootingpointselector.count()):
         obj = storage.shootingpointselector.load(p_idx)
         nline(p_idx,obj.json, obj.cls)
 
     headline("ShootingPoints (" + str(storage.shootingpoint.count()) + ")")
 
-    for p_idx in range(1, storage.shootingpoint.count() + 1):
+    for p_idx in range(0, storage.shootingpoint.count()):
         obj = storage.shootingpoint.load(p_idx)
 #        nline(p_idx,obj.json, obj.cls)
 
     headline("Orderparameters (" + str(storage.collectivevariable.count()) + ")")
 
-    for p_idx in range(1, storage.collectivevariable.count() + 1):
+    for p_idx in range(0, storage.collectivevariable.count()):
         obj = storage.collectivevariable.load(p_idx)
         nline(p_idx,obj.name, str(obj.storage_caches[storage]))
 
 
-    for p_idx in range(1, storage.shootingpoint.count() + 1):
+    for p_idx in range(0, storage.shootingpoint.count()):
         obj = storage.shootingpoint.load(p_idx)
 #        nline(p_idx,obj.json, obj.cls)
 
@@ -151,7 +151,8 @@ if __name__ == '__main__':
         sys.stdout.write(" ]\n")
 
 
-    for o_idx in range(1, storage.sample.count() + 1):
+    for o_idx in range(0, storage.sample.count()):
+        print o_idx
         sample = storage.sample.load(o_idx)
 #        nline(o_idx, '', sample.details.json)
         nline(o_idx, str(sample.mover.name) + "/" + str(sample.details.mover.name), str([t.idx[storage] for t in sample.details.inputs]) +" -> " + str(sample.details.final.idx[storage]) + " in " + sample.ensemble.name + " [" + str(sample.ensemble.idx[storage]) + "]")
@@ -162,7 +163,7 @@ if __name__ == '__main__':
 
     headline("Trajectories")
 
-    for t_idx in range(1, storage.trajectory.count() + 1):
+    for t_idx in range(0, storage.trajectory.count()):
         traj = storage.trajectory.snapshot_indices(t_idx)
         sys.stdout.write("  {:>4} [{:>5} frames] : ".format(str(t_idx),str(len(traj))))
         old_idx = -2

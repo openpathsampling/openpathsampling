@@ -125,7 +125,7 @@ if __name__ == '__main__':
     min_x = 0
     max_x = 0
 
-    for o_idx in range(1, storage.sample.count() + 1):
+    for o_idx in range(0, storage.sample.count()):
         sample = storage.sample.load(o_idx)
         if hasattr(sample.details, 'start_point'):
             length = len(sample.details.final)
@@ -193,7 +193,7 @@ if __name__ == '__main__':
 
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
 
-    for o_idx in range(1, storage.sample.count() + 1):
+    for o_idx in range(0, storage.sample.count()):
         sample = storage.sample.load(o_idx)
         if hasattr(sample.details, 'start_point'):
             length = len(sample.details.final)

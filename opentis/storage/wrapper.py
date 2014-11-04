@@ -31,6 +31,10 @@ def saveidentifiable(func):
 
 def loadcache(func):
     def inner(self, idx, *args, **kwargs):
+        # TODO: Maybe this functionality should be in a separate function
+        if idx < 0:
+            return None
+
         if idx in self.cache:
             return self.cache[idx]
 

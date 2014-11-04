@@ -210,7 +210,7 @@ class SampleStorage(ObjectStorage):
         super(SampleStorage, self)._init()
 
         # New short-hand definition
-        self.init_variable('sample_trajectory_idx', 'u4')
-        self.init_variable('sample_ensemble_idx', 'u4')
-        self.init_variable('sample_mover_idx', 'u4')
-        self.init_variable('sample_details_idx', 'u4')
+        self.init_variable('sample_trajectory_idx', 'index')
+        self.init_variable('sample_ensemble_idx', 'index')
+        self.init_variable('sample_mover_idx', 'index')
+        self.init_variable('sample_details_idx', 'index')
