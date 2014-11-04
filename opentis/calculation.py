@@ -30,7 +30,7 @@ class Calculation(object):
         print "Running an empty calculation? Try a subclass, maybe!"
 
 class BootstrapEnsembleChangeMove(PathMover):
-    def do_move(self, trajectory, ensemble):
+    def move(self, trajectory, ensemble):
         details = MoveDetails()
         details.inputs = [trajectory]
         details.mover = self
@@ -82,7 +82,7 @@ class Bootstrapping(Calculation):
                 # fir in the next ensemble
                 if self.globalstate.ensembles[ens_num + 1](self.globalstate[ens_num]):
                     # Yes, so apply the BootStrapMove and generate a new sample in the next ensemble
-                    sample = bootstrapmove.do_move(self.globalstate[ens_num], self.globalstate.ensembles[ens_num + 1])
+                    sample = bootstrapmove.move(self.globalstate[ens_num], self.globalstate.ensembles[ens_num + 1])
                     globalstate = self.globalstate.move([sample])
 
                     # Now save all samples
