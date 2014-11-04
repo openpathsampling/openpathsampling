@@ -10,8 +10,8 @@ class GlobalState(dict):
     mutable objects the might screw up the storage
     """
 
-    now = None       # global current state
-    time = 0         # global current time
+    current = None       # global current state
+    now = 0         # global current time
 
     def __init__(self, ensembles, time=None):
         super(GlobalState, self).__init__()
@@ -20,16 +20,16 @@ class GlobalState(dict):
         self.samples = []
         self.clear()
         if time is None:
-            time = GlobalState.time + 1
+            time = GlobalState.now + 1
 
-        if time > GlobalState.time:
-            GlobalState.time = time
+        if time > GlobalState.now:
+            GlobalState.now = time
 
-        self.time = time
+        self.now = time
         for ensemble in self._ensembles:
             dict.__setitem__(self, ensemble, None)
 
-        GlobalState.now = self
+        GlobalState.current = self
 
     def __setitem__(self, key, value):
         if key in self:
@@ -98,15 +98,15 @@ class GlobalState(dict):
 
         """
         globalstate = GlobalState(self.ensembles)
-        globalstate.time = self.time + 1
+        globalstate.now = self.now + 1
         globalstate.old = self
         self.samples = samples
         for sample in samples:
-            sample.time = self.time
+            sample.time = self.now
 
             dict.__setitem__(globalstate, sample.ensemble, sample.trajectory)
 
-        GlobalState.now = globalstate
+        GlobalState.current = globalstate
         return globalstate
 
     def save_samples(self, storage):
