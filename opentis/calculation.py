@@ -1,7 +1,9 @@
 
 import os
 import sys
-
+from globalstate import GlobalState
+from pathmover import PathMover, MoveDetails
+from trajectory import Sample
 
 class Calculation(object):
 
@@ -11,16 +13,40 @@ class Calculation(object):
                  movers=None):
         self.storage = storage
         self.simulator = simulator
-        self.ensembles = ensembles
         self.movers = movers
+        self.globalstate = GlobalState(ensembles)
 
     # TODO: this should be a property
     def set_replicas(self, replicas):
-        self.replicas = replicas
-    
+        if type(replicas) is dict:
+            for ensemble, trajectory in dict.iteritems():
+                self.globalstate[ensemble] = trajectory
+        elif type(replicas) is list:
+            ensembles = self.globalstate.ensembles
+            for idx, trajectory in enumerate(replicas):
+                self.globalstate[ensembles[idx]] = trajectory
+
     def run(self, nsteps):
         print "Running an empty calculation? Try a subclass, maybe!"
 
+class BootstrapEnsembleChangeMove(PathMover):
+    def move(self, trajectory, ensemble):
+        details = MoveDetails()
+        details.inputs = [trajectory]
+        details.mover = self
+        details.final = trajectory
+        details.success = True
+        details.acceptance = 1.0
+        details.result = trajectory
+
+        sample = Sample(
+            trajectory=details.result,
+            mover=self,
+            ensemble=ensemble,
+            details=details
+        )
+
+        return sample
 
 class Bootstrapping(Calculation):
     """The ensembles for the Bootstrapping calculation must be one ensemble
@@ -29,19 +55,43 @@ class Bootstrapping(Calculation):
     calc_name = "Bootstrapping"
 
     def run(self, nsteps):
+
+        bootstrapmove = BootstrapEnsembleChangeMove()
+
         ens_num = 0
         failsteps = 0
         # if we fail nsteps times in a row, kill the job
-        while ens_num < len(self.ensembles) and failsteps < nsteps: 
+        while ens_num < self.globalstate.size - 1 and failsteps < nsteps:
             print "Trying move in ensemble", ens_num
-            sample = self.movers[ens_num].move(self.replicas[0])
-            self.storage.sample.save(sample)
-            self.replicas[0] = sample.trajectory
-            # formally, I should probably create a move to promote the
-            # trajectory to another ensemble and save that sample;
-            # practically, I don't care
-            add_to_ens = 0 if ens_num == len(self.ensembles) - 1 else 1
-            if self.ensembles[ens_num+add_to_ens](sample.trajectory):
-                failsteps = 0
-                ens_num += 1
+            # Generate Samples
+            sample = self.movers[ens_num].move(self.globalstate[ens_num])
+
+            # Generate new globalstate using only the one sample
+            globalstate = self.globalstate.move([sample])
+
+            # Now save all samples
+            self.globalstate.save_samples(self.storage)
+
+            # update to new globalstate
+            self.globalstate = globalstate
+
+            if ens_num < self.globalstate.size:
+                # We can try to switch to the next ensemble
+
+                # Check if the new trajectory (still in the old ensemble) would
+                # fir in the next ensemble
+                if self.globalstate.ensembles[ens_num + 1](self.globalstate[ens_num]):
+                    # Yes, so apply the BootStrapMove and generate a new sample in the next ensemble
+                    sample = bootstrapmove.move(self.globalstate[ens_num], self.globalstate.ensembles[ens_num + 1])
+                    globalstate = self.globalstate.move([sample])
+
+                    # Now save all samples
+                    self.globalstate.save_samples(self.storage)
+
+                    # update to new globalstate
+                    self.globalstate = globalstate
+
+                    failsteps = 0
+                    ens_num += 1
+
             failsteps += 1

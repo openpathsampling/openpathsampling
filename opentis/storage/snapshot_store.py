@@ -34,15 +34,8 @@ class SnapshotStorage(ObjectStorage):
         momentum_idx = self.momentum_idx(idx)
         momentum_reversed = self.momentum_reversed(idx)
 
-        if configuration_idx > 0:
-            snapshot.configuration = self.storage.configuration.load(configuration_idx)
-        else:
-            snapshot.configuration = None
-
-        if momentum_idx > 0:
-            snapshot.momentum = self.storage.momentum.load(momentum_idx)
-        else:
-            snapshot.momentum = None
+        snapshot.configuration = self.storage.configuration.load(configuration_idx)
+        snapshot.momentum = self.storage.momentum.load(momentum_idx)
 
         snapshot.reversed = momentum_reversed
 
@@ -74,13 +67,13 @@ class SnapshotStorage(ObjectStorage):
             storage.configuration.save(snapshot.configuration)
             self.save_variable('snapshot_configuration_idx', idx, snapshot.configuration.idx[storage])
         else:
-            self.save_variable('snapshot_configuration_idx', idx, 0)
+            self.save_variable('snapshot_configuration_idx', idx, -1)
 
         if snapshot.momentum is not None:
             storage.momentum.save(snapshot.momentum)
             self.save_variable('snapshot_momentum_idx', idx, snapshot.momentum.idx[storage])
         else:
-            self.save_variable('snapshot_momentum_idx', idx, 0)
+            self.save_variable('snapshot_momentum_idx', idx, -1)
 
         self.save_variable('snapshot_momentum_reversed', idx, int(snapshot.reversed))
 
@@ -170,11 +163,20 @@ class MomentumStorage(ObjectStorage):
 
         storage = self.storage
 
+        # TODO: This should never be empty when it is called. Since a Momentum() instance has velocities
+        # TODO: If it was load lazy then it should be registered as already saved and if a snapshot does not
+        # TODO: have velocities then it does not have a Momentum object
+
         # Store momentum.
         if momentum._velocities is not None:
             storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / (nanometers / picoseconds)).astype(np.float32)
+        else:
+            print 'ERROR : Momentum should not be empty'
         if momentum._kinetic_energy is not None:
             storage.variables['momentum_kinetic'][idx] = momentum.kinetic_energy / kilojoules_per_mole
+        else:
+            # TODO: No kinetic energy is not yet supported
+            print 'Think about how to handle this. It should only be None if loaded lazy and in this case it will never be saved.'
 
         # Force sync to disk to avoid data loss.
         storage.sync()

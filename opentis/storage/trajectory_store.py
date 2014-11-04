@@ -173,6 +173,8 @@ class SampleStorage(ObjectStorage):
             self.storage.movedetails.save(sample.details)
             self.set_object('sample_details', idx, sample.details)
 
+            self.save_variable('sample_step', idx, sample.time)
+
     @loadcache
     def load(self, idx, momentum = True):
         '''
@@ -192,12 +194,15 @@ class SampleStorage(ObjectStorage):
         ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
         mover_idx = int(self.storage.variables['sample_mover_idx'][idx])
         details_idx = int(self.storage.variables['sample_details_idx'][idx])
+        step=self.load_variable('sample_step', idx)
+
 
         obj = Sample(
             trajectory=self.storage.trajectory.load(trajectory_idx, lazy=True),
             mover=self.storage.pathmover.load(mover_idx, lazy=True),
             ensemble=self.storage.ensemble.load(ensemble_idx),
-            details=self.storage.movedetails.load(details_idx)
+            details=self.storage.movedetails.load(details_idx),
+            step=step
         )
 
         return obj
@@ -210,7 +215,8 @@ class SampleStorage(ObjectStorage):
         super(SampleStorage, self)._init()
 
         # New short-hand definition
-        self.init_variable('sample_trajectory_idx', 'u4')
-        self.init_variable('sample_ensemble_idx', 'u4')
-        self.init_variable('sample_mover_idx', 'u4')
-        self.init_variable('sample_details_idx', 'u4')
+        self.init_variable('sample_trajectory_idx', 'index')
+        self.init_variable('sample_ensemble_idx', 'index')
+        self.init_variable('sample_mover_idx', 'index')
+        self.init_variable('sample_details_idx', 'index')
+        self.init_variable('sample_step', 'index')

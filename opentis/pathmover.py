@@ -246,11 +246,11 @@ class MixedMover(PathMover):
 # The following moves still need to be implemented. Check what excactly they do
 #############################################################
 
-class MinusMove(object):
+class MinusMove(PathMover):
     def do_move(self, allpaths, state):
         pass
 
-class PathReversal(object):
+class PathReversal(PathMover):
     def do_move(self, trajectory, ensemble):
         details = MoveDetails()
         reversed_trajectory = trajectory.reversed()
