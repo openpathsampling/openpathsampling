@@ -269,9 +269,16 @@ Starting the bootstrapping procedure to obtain initial paths. First we
 define our shooting movers (randomly pick fwd or bkwd shooting), then build
 the bootstrapping calculation, then we run it. 
     """
-    bootstrap = Bootstrapping(simulator.storage, simulator, interface_set,
-                              mover_set)
-    bootstrap.replicas = [segments[0]]
+
+    print 'Check'
+    bootstrap = Bootstrapping(storage=simulator.storage,
+                              simulator=simulator,
+                              ensembles=interface_set,
+                              movers=mover_set)
+
+    print 'Hey'
+
+    bootstrap.set_replicas([segments[0]])
 
     bootstrap.run(50)
 
