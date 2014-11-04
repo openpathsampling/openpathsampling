@@ -247,7 +247,15 @@ class OrderParameter(FunctionalStorableObjectDict):
 
     """
 
+    _instances = dict()
+
     def __init__(self, name, dimensions = 1):
+        if type(name) is not str or len(name) == 0:
+            raise ValueError('name must be a non-empty string')
+        if name in OrderParameter._instances:
+            raise ValueError(name + ' already exists as an orderparameter. To load an existing one use get_existin(\'' + name + '\')')
+
+        OrderParameter._instances[name] = self
         super(OrderParameter, self).__init__(
             name=name,
             fnc=None,
@@ -255,9 +263,27 @@ class OrderParameter(FunctionalStorableObjectDict):
             key_class=Configuration
         )
 
+    def get_existing(self, name):
+        if name in OrderParameter._instances:
+            return OrderParameter._instances[name]
+        else:
+            raise ValueError(name + ' does not exist as an orderparameter')
+            return None
+
     @property
     def identifier(self):
         return self.name
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+
+        if type(other) is type(self):
+            if hasattr(self, 'name') and hasattr(other, 'name'):
+                if self.name is not None and other.name is not None:
+                    return self.name == other.name
+
+        return False
 
     def __call__(self, items):
         if isinstance(items, Snapshot):
