@@ -240,8 +240,7 @@ class Configuration(object):
 
 
 
-
-#=============================================================================
+#=============================================================================================
 # SIMULATION MOMENTUM / VELOCITY
 #=============================================================================
 @storable
@@ -282,7 +281,6 @@ class Momentum(object):
             kinetic energy
         idx : dict( Storage() : int )
             dict for storing the used index per storage
-        
         """
         
         self._velocities = None
@@ -421,6 +419,7 @@ class Momentum(object):
 # SIMULATION SNAPSHOT (COMPLETE FRAME WITH COORDINATES AND VELOCITIES)
 #=============================================================================
 
+@storable
 class Snapshot(object):
     """
     Simulation snapshot. Contains references to a configuration and momentum
@@ -494,7 +493,6 @@ class Snapshot(object):
 
         #if context is not None:
         if simulation is not None:
-            print type(simulation)
             simulation.load_snapshot(self)
             # Get current state from OpenMM Context object.
             #state = context.getState(getPositions=True, getVelocities=True, 

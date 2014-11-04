@@ -15,7 +15,7 @@ class Calculation(object):
         self.movers = movers
 
     # TODO: this should be a property
-    def set_replicas(replicas):
+    def set_replicas(self, replicas):
         self.replicas = replicas
     
     def run(self, nsteps):

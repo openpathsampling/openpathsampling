@@ -151,6 +151,9 @@ if __name__ == '__main__':
 
                 t_count += 0.8
 
+                min_x = min(min_x, 0)
+                max_x = max(max_x, len(old_traj) - 1)
+
             shift = p_x[old_conf] - new_index
 
             min_x = min(min_x, shift)
@@ -214,9 +217,9 @@ if __name__ == '__main__':
                     pos_y = p_y[conf]
 
                     if show_psi:
-                        block(pos_x, pos_y, "blue", str(int((degrees * psi(conf))) % 360 ))
+                        block(pos_x, pos_y, "black", str(int((degrees * psi(conf))) % 360 ))
                     else:
-                        block(pos_x, pos_y, "blue", conf.idx[storage])
+                        block(pos_x, pos_y, "black", conf.idx[storage])
 
                 t_count += 0.8
 

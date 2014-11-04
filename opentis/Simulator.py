@@ -18,6 +18,7 @@ from trajectory import Trajectory
 from snapshot import Snapshot
 from integrators import VVVRIntegrator
 from ensemble import LengthEnsemble
+from openmm_simulation import OpenMMSimulation
 
 
 #=============================================================================
@@ -135,7 +136,7 @@ class Simulator(object):
                     print self.max_length_stopper, self.max_length_stopper(trajectory)
                     print frame
                     print len(trajectory)
-                    print [ s.idx for s in trajectory]
+                    print [ s.begin for s in trajectory]
                     
                     print 'OP :', self.op(snapshot)
 
@@ -183,13 +184,14 @@ class Simulator(object):
                                    filename=self.fn_storage, 
                                    mode='w'
                                   )
+
             self.storage.simulator = self
             # index options
             self.storage._store_options(self)
             
             # index initial equilibrated frame as snapshot ID #0. Might be useful later, who knows
             snapshot = Snapshot(self.simulation.context)
-            self.storage.snapshot.save(snapshot, 0, 0)
+            self.storage.snapshot.save(snapshot, 0)
         
         if mode == 'restore':
             # Need the oposite order, first open database 
@@ -278,7 +280,8 @@ class Simulator(object):
         integrator = VVVRIntegrator(self.temperature, self.collision_rate, self.timestep)
         self.integrator_class = type(integrator).__name__
         
-        simulation = Simulation(self.topology, system, integrator, platform)
+        simulation = OpenMMSimulation(self.topology, system, integrator, platform )
+
         
         self.system_serial = openmm.XmlSerializer.serialize(system)
         self.integrator_serial = openmm.XmlSerializer.serialize(integrator)
