@@ -197,10 +197,7 @@ class ObjectStorage(object):
         number : int
             number of objects in the storage.
         '''
-        length = int(len(self.storage.dimensions[self.idx_dimension])) - 1
-        if length < 0:
-            length = 0
-        return length
+        return int(len(self.storage.dimensions[self.idx_dimension]))
 
     def free(self):
         '''
@@ -211,7 +208,7 @@ class ObjectStorage(object):
         index : int
             the number of the next free index in the storage. Used to store a new object.
         '''
-        return self.count() + 1
+        return self.count()
 
     def _init(self):
         """
@@ -414,7 +411,7 @@ class ObjectStorage(object):
         else:
             return obj
 
-    def list_to_numpy(self, data, value_type):
+    def list_to_numpy(self, data, value_type, allow_empty = True):
         if value_type == 'int':
             values = np.array(data).astype(np.float32)
         elif value_type == 'float':
@@ -427,12 +424,12 @@ class ObjectStorage(object):
             values = np.array(data).astype(np.uint32)
         else:
             # an object
-            values = [ value.idx[self.storage] for value in data ]
+            values = [ -1  if value is None and allow_empty is True else value.idx[self.storage] for value in data]
             values = np.array(values).astype(np.uint32)
 
         return values.copy()
 
-    def list_from_numpy(self, values, value_type):
+    def list_from_numpy(self, values, value_type, allow_empty = True):
         if value_type == 'int':
             data = values.tolist()
         elif value_type == 'float':
@@ -446,7 +443,7 @@ class ObjectStorage(object):
         else:
             # an object
             key_store = getattr(self.storage, value_type)
-            data = [ key_store.load(obj_idx) for obj_idx in values.tolist() ]
+            data = [ key_store.load(obj_idx) if allow_empty is False or obj_idx>=0 else None for obj_idx in values.tolist() ]
 
         return data
 
@@ -456,12 +453,18 @@ class ObjectStorage(object):
 
     def get_object(self, name, idx, cls):
         index = self.load_variable(name + '_idx', idx)
+        if index < 0:
+            return None
+
         store = getattr(self.storage, cls)
         obj = store.load(index)
         return obj
 
     def set_object(self, name, idx, obj):
-        self.storage.variables[name + '_idx'][idx] = obj.idx[self.storage]
+        if obj is not None:
+            self.storage.variables[name + '_idx'][idx] = obj.idx[self.storage]
+        else:
+            self.storage.variables[name + '_idx'][idx] = -1
 
     def get_list_as_type(self, name, idx, begin, length, value_type):
         storage = self.storage

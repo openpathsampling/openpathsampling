@@ -188,6 +188,8 @@ class SampleStorage(ObjectStorage):
         sample : Sample
             the sample
         '''
+        print idx
+        print self.storage.variables['sample_trajectory_idx'][:]
         trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
         ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
         mover_idx = int(self.storage.variables['sample_mover_idx'][idx])
@@ -210,7 +212,7 @@ class SampleStorage(ObjectStorage):
         super(SampleStorage, self)._init()
 
         # New short-hand definition
-        self.init_variable('sample_trajectory_idx', 'u4')
-        self.init_variable('sample_ensemble_idx', 'u4')
-        self.init_variable('sample_mover_idx', 'u4')
-        self.init_variable('sample_details_idx', 'u4')
+        self.init_variable('sample_trajectory_idx', 'index')
+        self.init_variable('sample_ensemble_idx', 'index')
+        self.init_variable('sample_mover_idx', 'index')
+        self.init_variable('sample_details_idx', 'index')
