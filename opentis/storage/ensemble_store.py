@@ -69,8 +69,6 @@ class EnsembleStorage(ObjectStorage):
             the ensemble
         '''
 
-        print idx
-        print self.storage.variables['ensemble_name'][:]
         name = self.storage.variables['ensemble_name'][int(idx)]
         description = self.storage.variables['ensemble_str'][int(idx)]
 

@@ -188,8 +188,6 @@ class SampleStorage(ObjectStorage):
         sample : Sample
             the sample
         '''
-        print idx
-        print self.storage.variables['sample_trajectory_idx'][:]
         trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
         ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
         mover_idx = int(self.storage.variables['sample_mover_idx'][idx])
