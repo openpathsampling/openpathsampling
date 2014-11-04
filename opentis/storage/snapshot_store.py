@@ -171,8 +171,9 @@ class MomentumStorage(ObjectStorage):
         storage = self.storage
 
         # Store momentum.
-        storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / (nanometers / picoseconds)).astype(np.float32)
-        if momentum.kinetic_energy is not None:
+        if momentum._velocities is not None:
+            storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / (nanometers / picoseconds)).astype(np.float32)
+        if momentum._kinetic_energy is not None:
             storage.variables['momentum_kinetic'][idx] = momentum.kinetic_energy / kilojoules_per_mole
 
         # Force sync to disk to avoid data loss.

@@ -190,7 +190,7 @@ class Simulator(object):
             self.storage._store_options(self)
             
             # index initial equilibrated frame as snapshot ID #0. Might be useful later, who knows
-            snapshot = Snapshot(self.simulation.context)
+            snapshot = Snapshot(self.simulation)
             self.storage.snapshot.save(snapshot, 0)
         
         if mode == 'restore':
