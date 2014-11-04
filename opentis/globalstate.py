@@ -25,7 +25,7 @@ class GlobalState(dict):
         if time > GlobalState.now:
             GlobalState.now = time
 
-        self.now = time
+        self.step = time
         for ensemble in self._ensembles:
             dict.__setitem__(self, ensemble, None)
 
@@ -98,11 +98,11 @@ class GlobalState(dict):
 
         """
         globalstate = GlobalState(self.ensembles)
-        globalstate.now = self.now + 1
+        globalstate.now = self.step + 1
         globalstate.old = self
         self.samples = samples
         for sample in samples:
-            sample.time = self.now
+            sample.time = self.step
 
             dict.__setitem__(globalstate, sample.ensemble, sample.trajectory)
 
