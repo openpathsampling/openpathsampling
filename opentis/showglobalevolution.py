@@ -168,14 +168,14 @@ if __name__ == '__main__':
                 ))
 
             svg_document.add(svg_document.line(
-                    start = (start_x + (pos_x - 0.16) * scale_x + 0,start_y + (pos_y - 0.08 - 0.5) * scale_y),
-                    end = (start_x  + (pos_x) * scale_x + 0,start_y + (pos_y + 0.08 - 0.5) * scale_y),
+                    start = (start_x + (pos_x - 0.1) * scale_x + 0,start_y + (pos_y - 0.05 - 0.5) * scale_y),
+                    end = (start_x  + (pos_x) * scale_x + 0,start_y + (pos_y + 0.05 - 0.5) * scale_y),
                     stroke_width = 0.05 * scale_x,
                     stroke = "black",
                 ))
             svg_document.add(svg_document.line(
-                    start = (start_x + (pos_x + 0.16) * scale_x + 0,start_y + (pos_y - 0.08 - 0.5) * scale_y),
-                    end = (start_x  + (pos_x) * scale_x + 0,start_y + (pos_y + 0.08 - 0.5) * scale_y),
+                    start = (start_x + (pos_x + 0.1) * scale_x + 0,start_y + (pos_y - 0.05 - 0.5) * scale_y),
+                    end = (start_x  + (pos_x) * scale_x + 0,start_y + (pos_y + 0.05 - 0.5) * scale_y),
                     stroke_width = 0.05 * scale_x,
                     stroke = "black",
                 ))
@@ -209,7 +209,7 @@ if __name__ == '__main__':
             if last_x >=0:
                 for ens, pos_yy in ensembles_y.iteritems():
                     if ens not in changed and state[ens] is not None:
-                        block(last_x, pos_yy, lightcolor, str(int(state[ens].idx[storage])))
+                        block(last_x, pos_yy, lightcolor, str(int(state[ens].trajectory.idx[storage])))
 
             changed = set()
 
@@ -224,7 +224,7 @@ if __name__ == '__main__':
     if last_x >=0:
         for ens, pos_yy in ensembles_y.iteritems():
             if ens not in changed and state[ens] is not None:
-                block(last_x, pos_yy, lightcolor, str(int(state[ens].idx[storage])))
+                block(last_x, pos_yy, lightcolor, str(int(state[ens].trajectory.idx[storage])))
 
 
     svg_document.save()
