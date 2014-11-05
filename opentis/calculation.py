@@ -2,7 +2,7 @@
 import os
 import sys
 from globalstate import GlobalState
-from pathmover import PathMover, MoveDetails
+from pathmover import PathMover, MoveDetails, ReplicaExchange
 from trajectory import Sample
 
 class Calculation(object):
@@ -54,8 +54,10 @@ class Bootstrapping(Calculation):
 
     calc_name = "Bootstrapping"
 
+
     def run(self, nsteps):
 
+        swapmove = ReplicaExchange()
         bootstrapmove = BootstrapEnsembleChangeMove()
 
         ens_num = 0
@@ -64,10 +66,15 @@ class Bootstrapping(Calculation):
         while ens_num < self.globalstate.size - 1 and failsteps < nsteps:
             print "Trying move in ensemble", ens_num
             # Generate Samples
-            sample = self.movers[ens_num].move(self.globalstate[ens_num])
+
+            samples = [ self.movers[ens_idx].move(self.globalstate[ens_idx]) for ens_idx in range(ens_num, ens_num + 1) ]
+
+            if ens_num > 1:
+                ex_samples = swapmove.move(self.globalstate[ens_num - 1], self.globalstate[ens_num - 2], self.globalstate.ensembles[ens_num - 1], self.globalstate.ensembles[ens_num - 2])
+                samples = samples + ex_samples
 
             # Generate new globalstate using only the one sample
-            globalstate = self.globalstate.move([sample])
+            globalstate = self.globalstate.move(samples)
 
             # Now save all samples
             self.globalstate.save_samples(self.storage)
