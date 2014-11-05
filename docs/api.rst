@@ -11,7 +11,7 @@ Blablabla...
 OrderParameter
 **************
 	
-.. automodule:: OrderParameter
+.. automodule:: orderparameter
 	:members:
 	:inherited-members:
 	:show-inheritance:
@@ -33,19 +33,29 @@ Simulator
 	:members:
 	:inherited-members:
 	:show-inheritance:
-
+	
+	
+********
+Shooting
+********
+	
+.. automodule:: shooting
+	:members:
+	:inherited-members:
+	:show-inheritance:
+	
 ********
 Ensemble
 ********
 
-.. automodule:: Ensemble 
+.. automodule:: ensemble 
 	:members:
 
 ******
 Volume
 ******
 
-.. automodule:: Volume
+.. automodule:: volume
 	:members:
 	
 *********
@@ -59,4 +69,12 @@ PathMover
 Storage
 *******
 
-.. automodule:: forkable_trajectory_storage
+.. automodule:: storage
+	:members:
+	
+********
+Snapshot
+********
+
+.. automodule:: snapshot
+	:members:

@@ -21,6 +21,12 @@ from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorag
 from ensemble_store import EnsembleStorage
 from shooting import ShootingPointSelector, ShootingPoint
 from pathmover import PathMover, MoveDetails
+from globalstate import GlobalState
+from orderparameter_store import ObjectDictStorage
+from orderparameter import OrderParameter
+from snapshot import Snapshot
+from trajectory import Trajectory
+
 
 #=============================================================================================
 # SOURCE CONTROL
@@ -72,6 +78,10 @@ class Storage(netcdf.Dataset):
         self.movedetails = ObjectStorage(self, MoveDetails, named=False, json=True, identifier='json').register()
         self.shootingpoint = ObjectStorage(self, ShootingPoint, named=True, json=True).register()
         self.shootingpointselector = ObjectStorage(self, ShootingPointSelector, named=True, json=True, identifier='json').register()
+        self.globalstate = ObjectStorage(self, GlobalState, named=True, json=True, identifier='json').register()
+        self.collectivevariable = ObjectDictStorage(self, OrderParameter, Snapshot).register()
+        self.cv = self.collectivevariable
+        self.trajectoryparameter = ObjectDictStorage(self, OrderParameter, Trajectory)
 
         if mode == 'w':
             self._init()

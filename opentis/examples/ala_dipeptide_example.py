@@ -72,7 +72,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
 
         if mode == 'create':
             # set up the OpenMM simulation
-            #self.platform = 'CUDA'
+            self.platform = 'CUDA'
             platform = openmm.Platform.getPlatformByName(self.platform)
             forcefield = ForceField( self.forcefield_solute,
                                      self.forcefield_solvent )
@@ -156,7 +156,7 @@ if __name__=="__main__":
                 'start_time' : time.time(),
                 'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
                 'platform' : 'CPU',
-                'solute_indices' : range(22),
+                'solute_indices' : range(22), # TODO: This could be determined automatically !?!?
                 'forcefield_solute' : 'amber96.xml',
                 'forcefield_solvent' : 'tip3p.xml'
                }
@@ -170,7 +170,7 @@ if __name__=="__main__":
     
     simulator.equilibrate(5)
     snap = Snapshot(simulator.simulation)
-    simulator.storage.snapshot.save(snap, 0, 0)
+    simulator.storage.snapshot.save(snap, 0)
     simulator.initialized = True
     PathMover.simulator = simulator
 
@@ -180,16 +180,14 @@ if __name__=="__main__":
     # mdtraj's compute_dihedrals function, with the atoms in psi_atoms
     psi_atoms = [6,8,14,16]
     psi = OP_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
-                      indices=[psi_atoms],
-                      storages=simulator.storage.configuration)
+                      indices=[psi_atoms])
     # same story for phi, although we won't use that
     phi_atoms = [4,6,8,14]
     phi = OP_Function("phi", md.compute_dihedrals, trajdatafmt="mdtraj",
-                      indices=[phi_atoms],
-                      storages=simulator.storage.configuration)
+                      indices=[phi_atoms])
 
-    psi.save()
-    phi.save()
+    psi.save(storage=simulator.storage.cv)
+    phi.save(storage=simulator.storage.cv)
 
     # now we define our states and our interfaces
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
@@ -216,7 +214,7 @@ This path ensemble is particularly complex because we want to be sure that
 the path we generate is in the ensemble we desire: this means that we can't
 use LeaveXEnsemble as we typically do with TIS paths.
     """
-    snapshot = simulator.storage.snapshot.load(0,0)
+    snapshot = simulator.storage.snapshot.load(0)
 
     
     first_traj_ensemble = SequentialEnsemble([
@@ -271,8 +269,27 @@ Starting the bootstrapping procedure to obtain initial paths. First we
 define our shooting movers (randomly pick fwd or bkwd shooting), then build
 the bootstrapping calculation, then we run it. 
     """
-    bootstrap = Bootstrapping(simulator.storage, simulator, interface_set,
-                              mover_set)
-    bootstrap.replicas = [segments[0]]
 
-    bootstrap.run(20)
+    print 'Check'
+    bootstrap = Bootstrapping(storage=simulator.storage,
+                              simulator=simulator,
+                              ensembles=interface_set,
+                              movers=mover_set)
+
+    print 'Hey'
+
+    bootstrap.set_replicas([segments[0]])
+
+    bootstrap.run(50)
+
+    print """
+    Saving all cached computations of orderparameters.
+    """
+
+    psi.save(storage=simulator.storage.cv)
+    phi.save(storage=simulator.storage.cv)
+
+    # Alternatively one could write
+
+    # simulator.storage.cv.save(psi)
+    # simulator.storage.cv.save(phi)

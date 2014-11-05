@@ -14,35 +14,13 @@ class SnapshotStorage(ObjectStorage):
     def __init__(self, storage = None):
         super(SnapshotStorage, self).__init__(storage, Snapshot)
 
-    def save(self, snapshot, idx_configuration = None, idx_momentum = None):
-        """
-        Save positions, velocities, boxvectors and energies of current iteration to NetCDF file.
-
-        Parameters
-        ----------
-        snapshot : Snapshot()
-            the actual snapshot object to be saved.
-        idx_configuration : int or None
-            if not None the configuration is saved using the index specified. Might overwrite an existing configuration.
-        idx_momentum : int or None
-            if not None the momentum is saved using the index specified. Might overwrite an existing momentum.
-        """
-
-        self.storage.configuration.save(snapshot.configuration, idx_configuration)
-        self.storage.momentum.save(snapshot.momentum, idx_momentum)
-
-    def load(self, idx_configuration = None, idx_momentum = None, reversed = False, lazy=None):
+    @loadcache
+    def load(self, idx=None):
         '''
         Load a snapshot from the storage.
 
         Parameters
         ----------
-        idx_configuration : int
-            index of the configuration in the database 'idx' > 0
-        idx:momentum : int
-            index of the momentum in the database 'idx' > 0
-        reversed : boolean
-            if True the momenta are treated as reversed
 
         Returns
         -------
@@ -51,42 +29,116 @@ class SnapshotStorage(ObjectStorage):
         '''
 
         snapshot = Snapshot()
-        snapshot.reversed = bool(reversed)
 
-        if lazy is None:
-            lazy_configuration = False
-            lazy_momentum = True
-        else:
-            lazy_configuration = lazy
-            lazy_momentum = lazy
+        configuration_idx = self.configuration_idx(idx)
+        momentum_idx = self.momentum_idx(idx)
+        momentum_reversed = self.momentum_reversed(idx)
 
-        if idx_configuration is not None:
-            idx_c = int(idx_configuration)
-            snapshot.configuration = self.storage.configuration.load(idx_c, lazy=lazy_configuration)
+        snapshot.configuration = self.storage.configuration.load(configuration_idx)
+        snapshot.momentum = self.storage.momentum.load(momentum_idx)
 
-        if idx_momentum is not None:
-            idx_m = int(idx_momentum)
-            snapshot.momentum = self.storage.momentum.load(idx_m, lazy=lazy_momentum)
+        snapshot.reversed = momentum_reversed
+
+        snapshot.idx[self.storage] = idx
 
         return snapshot
 
+    @savecache
+    def save(self, snapshot, idx=None):
+        """
+        Add the current state of the snapshot in the database. If nothing has changed then the snapshot gets stored using the same snapshots as before. Saving lots of diskspace
+
+        Parameters
+        ----------
+        snapshot : Snapshot()
+            the snapshot to be saved
+        idx : int or None
+            if idx is not None the index will be used for saving in the storage. This might overwrite already existing trajectories!
+
+        Notes
+        -----
+        This also saves all contained frames in the snapshot if not done yet.
+        A single Snapshot object can only be saved once!
+        """
+
+        storage = self.storage
+
+        if snapshot.configuration is not None:
+            storage.configuration.save(snapshot.configuration)
+            self.save_variable('snapshot_configuration_idx', idx, snapshot.configuration.idx[storage])
+        else:
+            self.save_variable('snapshot_configuration_idx', idx, -1)
+
+        if snapshot.momentum is not None:
+            storage.momentum.save(snapshot.momentum)
+            self.save_variable('snapshot_momentum_idx', idx, snapshot.momentum.idx[storage])
+        else:
+            self.save_variable('snapshot_momentum_idx', idx, -1)
+
+        self.save_variable('snapshot_momentum_reversed', idx, int(snapshot.reversed))
+
+
+    def configuration_idx(self, idx):
+        '''
+        Load snapshot indices for snapshot with ID 'idx' from the storage
+
+        ARGUMENTS
+
+        idx (int) - ID of the snapshot
+
+        Returns
+        -------
+        snapshot (list of int) - snapshot indices
+        '''
+        return int(self.load_variable('snapshot_configuration_idx', idx))
+
+    def momentum_idx(self, idx):
+        '''
+        Load snapshot indices for snapshot with ID 'idx' from the storage
+
+        ARGUMENTS
+
+        idx (int) - ID of the snapshot
+
+        Returns
+        -------
+        snapshot (list of int) - snapshot indices
+        '''
+        return int(self.load_variable('snapshot_momentum_idx', idx))
+
+
+    def momentum_reversed(self, idx):
+        '''
+        Load snapshot with ID 'idx' from the storage and return a list of reversed indicators for the momenta
+
+        Parameters
+        ----------
+
+        idx : int
+            index of the snapshot
+
+        Returns
+        -------
+        list of boolean
+            list of boolean which frames in the snapshot are reversed
+        '''
+        return bool(self.load_variable('snapshot_momentum_reversed', idx))
+
+
     def _init(self):
-        pass
+        '''
+        Initializes the associated storage to index configuration_indices in it
+        '''
+        super(SnapshotStorage, self)._init()
 
-    def free(self):
-        return 1
+        self.init_variable('snapshot_configuration_idx', 'index', self.db,
+                description="snapshot[snapshot] is the snapshot index (0..n_configuration-1) of snapshot 'snapshot'.")
 
-    def count(self):
-        return 0
+        self.init_variable('snapshot_momentum_idx', 'index', self.db,
+                description="snapshot[snapshot] is the snapshot index (0..n_momentum-1) 'frame' of snapshot 'snapshot'.")
 
-    def first(self):
-        return None
+        self.init_variable('snapshot_momentum_reversed', 'bool', self.db)
 
-    def last(self):
-        return None
-
-    def get(self, indices):
-        return None
 
 class MomentumStorage(ObjectStorage):
     """
@@ -111,10 +163,20 @@ class MomentumStorage(ObjectStorage):
 
         storage = self.storage
 
+        # TODO: This should never be empty when it is called. Since a Momentum() instance has velocities
+        # TODO: If it was load lazy then it should be registered as already saved and if a snapshot does not
+        # TODO: have velocities then it does not have a Momentum object
+
         # Store momentum.
-        storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / (nanometers / picoseconds)).astype(np.float32)
-        if momentum.kinetic_energy is not None:
+        if momentum._velocities is not None:
+            storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / (nanometers / picoseconds)).astype(np.float32)
+        else:
+            print 'ERROR : Momentum should not be empty'
+        if momentum._kinetic_energy is not None:
             storage.variables['momentum_kinetic'][idx] = momentum.kinetic_energy / kilojoules_per_mole
+        else:
+            # TODO: No kinetic energy is not yet supported
+            print 'Think about how to handle this. It should only be None if loaded lazy and in this case it will never be saved.'
 
         # Force sync to disk to avoid data loss.
         storage.sync()
@@ -217,29 +279,24 @@ class MomentumStorage(ObjectStorage):
         Initializes the associated storage to index momentums in it
         '''
 
-        ncgrp = self.storage
+        super(MomentumStorage, self)._init()
 
         atoms = self.storage.atoms
 
-        # define dimensions used in momentums
-        ncgrp.createDimension('momentum', 0)                       # unlimited number of momentums
-        if 'atom' not in ncgrp.dimensions:
-            ncgrp.createDimension('atom', atoms)    # number of atoms in the simulated system
+        # define dimensions used in configuration_indices
+        if 'atom' not in self.storage.dimensions:
+            self.init_dimension('atom', atoms) # number of atoms in the simulated system
 
-        if 'spatial' not in ncgrp.dimensions:
-            ncgrp.createDimension('spatial', 3) # number of spatial dimensions
+        if 'spatial' not in self.storage.dimensions:
+            self.init_dimension('spatial', 3)  # number of spatial dimensions
 
-        # define variables for momentums
-        ncvar_momentum_velocities           = ncgrp.createVariable('momentum_velocities',  'f', ('momentum','atom','spatial'))
-        ncvar_momentum_kinetic              = ncgrp.createVariable('momentum_kinetic',     'f', ('momentum'))
+        self.init_variable('momentum_velocities', 'float', (self.db, 'atom','spatial'), 'nm',
+                description="velocities[momentum][atom][coordinate] are velocities of atom 'atom' in" +
+                            " dimension 'coordinate' of momentum 'momentum'.")
 
-        # Define units for momentum variables.
-        setattr(ncvar_momentum_velocities,  'units', 'nm/ps')
-        setattr(ncvar_momentum_kinetic,     'units', 'kJ/mol')
+        self.init_variable('momentum_kinetic', 'float', self.db)
 
-        # Define long (human-readable) names for variables.
-        setattr(ncvar_momentum_velocities,    "long_name", "velocities[momentum][atom][coordinate] are velocities of atom 'atom' in dimension 'coordinate' of momentum 'momentum'.")
-        
+
     
 class ConfigurationStorage(ObjectStorage):
     def __init__(self, storage = None):
@@ -370,14 +427,14 @@ class ConfigurationStorage(ObjectStorage):
 
         return self.coordinates_as_numpy(frame_indices, atom_indices)
 
-    def trajectory_coordinates_as_array(self, idx, atom_indices=None):
+    def snapshot_coordinates_as_array(self, idx, atom_indices=None):
         '''
-        Returns a numpy array consisting of all coordinates of a trajectory
+        Returns a numpy array consisting of all coordinates of a snapshot
 
         Parameters
         ----------
         idx : int
-            index of the trajectory to be loaded
+            index of the snapshot to be loaded
         atom_indices : list of int
             selects only the atoms to be returned. If None (Default) all atoms will be selected
 
@@ -397,31 +454,21 @@ class ConfigurationStorage(ObjectStorage):
         '''
         # index associated storage in class variable for all configuration instances to access
 
-#        ncgrp = storage.createGroup('configuration')
-
         super(ConfigurationStorage, self)._init()
 
-        ncgrp = self.storage
         atoms = self.storage.atoms
 
         # define dimensions used in configuration_indices
-        if 'atom' not in ncgrp.dimensions:
-            ncgrp.createDimension('atom', atoms)    # number of atoms in the simulated system
+        if 'atom' not in self.storage.dimensions:
+            self.init_dimension('atom', atoms) # number of atoms in the simulated system
 
-        if 'spatial' not in ncgrp.dimensions:
-            ncgrp.createDimension('spatial', 3) # number of spatial dimensions
+        if 'spatial' not in self.storage.dimensions:
+            self.init_dimension('spatial', 3)  # number of spatial dimensions
 
-#        print 'NAME', self.idx_dimension
+        self.init_variable('configuration_coordinates', 'float', (self.db, 'atom','spatial'), 'nm',
+                description="coordinates[configuration][atom][coordinate] are coordinate of atom 'atom' " +
+                            "in dimension 'coordinate' of configuration 'configuration'.")
 
-        # define variables for configuration_indices
-        ncvar_configuration_coordinates          = ncgrp.createVariable('configuration_coordinates', 'f', (self.idx_dimension,'atom','spatial'))
-        ncvar_configuration_box_vectors          = ncgrp.createVariable('configuration_box_vectors', 'f', (self.idx_dimension, 'spatial'))
-        ncvar_configuration_potential            = ncgrp.createVariable('configuration_potential',   'f', self.idx_dimension)
+        self.init_variable('configuration_box_vectors', 'float', (self.db, 'spatial'))
 
-        # Define units for configuration variables.
-        setattr(ncvar_configuration_coordinates, 'units', 'nm')
-        setattr(ncvar_configuration_box_vectors,  'units', 'nm')
-        setattr(ncvar_configuration_potential,   'units', 'kJ/mol')
-
-        # Define long (human-readable) names for variables.
-        setattr(ncvar_configuration_coordinates,   "long_name", "coordinates[configuration][atom][coordinate] are coordinate of atom 'atom' in dimension 'coordinate' of configuration 'configuration'.")
+        self.init_variable('configuration_potential', 'float', self.db)

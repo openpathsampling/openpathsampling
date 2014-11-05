@@ -2,18 +2,22 @@ import copy
 import json
 
 import yaml
+import numpy as np
 
-from wrapper import savecache, identifiable, loadcache
+from wrapper import savecache, saveidentifiable, loadcache
 
+def add_storage_name(func):
+    def inner(self, name, *args, **kwargs):
+        var_name = '_'.join([self.db, name])
+        func(self, var_name, *args, **kwargs)
+
+    return inner
 
 class StoredObject(object):
     def __getattr__(self, item):
         if hasattr(self, '_loader'):
-#            print 'Lazy Loading'
             self._loader()
             delattr(self, '_loader')
-#        else:
-#            print 'Already Loaded'
 
         return self.__dict__[item]
 
@@ -34,6 +38,7 @@ class ObjectStorage(object):
         self.storage = storage
         self.content_class = obj
         self.idx_dimension = obj.__name__.lower()
+        self.db = obj.__name__.lower()
         self.cache = dict()
         self.named = named
         self.json = json
@@ -81,7 +86,7 @@ class ObjectStorage(object):
 
         return None
 
-    def index(self, obj, idx=None):
+    def index(self, obj, idx=None, ):
         """
         Return the appropriate index for saving or None if the object is already stored!
 
@@ -135,18 +140,14 @@ class ObjectStorage(object):
         else:
             return self.load_json(self.idx_dimension + '_json', idx, obj)
 
-    @identifiable
+    @saveidentifiable
     @savecache
     def save(self, obj, idx=None):
         '''
         Returns an object from the storage. Needs to be implented from the specific storage class.
         '''
 
-        if not hasattr(obj,'json'):
-            setattr(obj,'json',self.get_json(obj))
-
-        self.storage.variables[self.idx_dimension + '_json'][idx] = obj.json
-
+        self.save_json(self.idx_dimension + '_json', idx, obj)
 
     def get(self, indices):
         """
@@ -164,7 +165,6 @@ class ObjectStorage(object):
 
         """
         return [self.load(idx) for idx in range(0, self.count())[indices] ]
-
 
     def last(self):
         '''
@@ -197,11 +197,7 @@ class ObjectStorage(object):
         number : int
             number of objects in the storage.
         '''
-        length = int(len(self.storage.dimensions[self.idx_dimension])) - 1
-        if length < 0:
-            length = 0
-        return length
-
+        return int(len(self.storage.dimensions[self.idx_dimension]))
 
     def free(self):
         '''
@@ -212,7 +208,7 @@ class ObjectStorage(object):
         index : int
             the number of the next free index in the storage. Used to store a new object.
         '''
-        return  self.count() + 1
+        return self.count()
 
     def _init(self):
         """
@@ -222,151 +218,173 @@ class ObjectStorage(object):
         # define dimensions used for the specific object
         self.storage.createDimension(self.idx_dimension, 0)
         if self.named:
-            self.init_variable(self.idx_dimension + "_name", 'str', description='A short descriptive name for convenience')
+            self.init_variable(self.db + "_name", 'str', description='A short descriptive name for convenience')
         if self.json:
-            self.init_variable(self.idx_dimension + "_json", 'str', description='A json serialized version of the object')
+            self.init_variable(self.db + "_json", 'str', description='A json serialized version of the object')
 
+    def var(self, name):
+        return '_'.join([self.db, name])
 
-    def slice(self, name, idx):
-        begin = self.idx(name, idx)
-        end = begin + self.len(name, idx)
-        return slice(begin, end)
+    def begin(self, dimension, idx):
+        return int(self.storage.variables[dimension + '_dim_begin'][int(idx)])
 
-    def idx(self, name, idx):
-        return int(self.storage.variables[name + '_idx'][int(idx)])
+    def length(self, dimension, idx):
+        return int(self.storage.variables[dimension + '_dim_length'][int(idx)])
 
-    def len(self, name, idx):
-        return int(self.storage.variables[name + '_length'][int(idx)])
+    def set_slice(self, dimension, idx, begin, length):
+        self.storage.variables[dimension + '_dim_begin'][idx] = begin
+        self.storage.variables[dimension + '_dim_length'][idx] = length
 
-    def free_idx(self, name):
+    def get_slice(self, dimension, idx):
+        begin = int(self.storage.variables[dimension + '_dim_begin'][int(idx)])
+        length = int(self.storage.variables[dimension + '_dim_length'][int(idx)])
+        return slice(begin, begin+length)
+
+    slice = get_slice
+
+    def free_begin(self, name):
         length = int(len(self.storage.dimensions[name]))
         return length
 
-    def save_mixed(self, name, idx, values, dimension=None):
-        storage = self.storage
-        begin = self.free_idx(name)
-        length = len(values)
-        for position, value in enumerate(values):
-            storage.variables[name][begin + position] = value
+#=============================================================================================
+# INITIALISATION UTILITY FUNCTIONS
+#=============================================================================================
 
-        if dimension is None:
-            dimension = name
+    def init_dimension(self, name, length = 0):
+        if name not in self.storage.dimensions:
+            self.storage.createDimension(name, length)
 
-        storage.variables[dimension + '_length'][idx] = length
-        storage.variables[dimension + '_idx'][idx] = begin
+        self.storage.sync()
 
-    def load_mixed(self, name, idx, dimension=None):
-        if dimension is None:
-            dimension = name
+    def init_mixed(self, name):
+        # entry position is given by a start and a length
+        self.init_variable(name + '_dim_begin', 'index', name)
+        self.init_variable(name + '_dim_length', 'length', name)
 
-        return self.storage.variables[name][self.slice(dimension, idx)]
+        self.storage.sync()
 
-    def init_mixed_length(self, name, dimension=None):
-        # index associated storage in class variable for all Sample instances to access
-        ncfile = self.storage
 
-        # define dimensions used in trajectories
-        ncfile.createDimension(name, 0)                     # unlimited number of iterations
+    def init_variable(self, name, var_type, dimensions = None, units=None, description=None):
+        '''
+        Create a new variable in the netcdf storage. This is just a helper function to structure the code better.
 
-        if dimension is None:
-            dimension = self.idx_dimension
-
-        # Create variables for trajectories
-        ncvar_name_idx  = ncfile.createVariable(name + '_idx', 'u4', dimension)
-        ncvar_name_length  = ncfile.createVariable(name + '_length', 'u4', dimension)
-
-        # Define units for snapshot variables.
-        setattr(ncvar_name_idx,      'units', 'none')
-        setattr(ncvar_name_length,      'units', 'none')
-
-    def init_variable(self, name, var_type, dimensions = None, units='none', description=None):
+        Paramters
+        =========
+        name : str
+            The name of the variable to be created
+        var_type : str
+            The string representing the type of the data stored in the variable. Either the netcdf types can be used directly and
+            strings representing the python native types are translated to appropriate netcdf types.
+        dimensions : str or tuple of str
+            A tuple representing the dimensions used for the netcdf variable. If not specified then the default dimension of the storage is used.
+        units : str
+            A string representing the units used if the var_type is `float` the units is set to `none`
+        description : str
+            A string describing the variable in a readable form.
+        '''
 
         ncfile = self.storage
 
         if dimensions is None:
-            dimensions = self.idx_dimension
+            dimensions = self.db
 
-        ncvar     = ncfile.createVariable(name, var_type, dimensions)
+        nc_type = var_type
+        if var_type == 'float':
+            nc_type = 'f4'   # 32-bit float
+        elif var_type == 'int':
+            nc_type = 'i4'   # 32-bit signed integer
+        elif var_type == 'index':
+            nc_type = 'i4'   # 32-bit signd integer / for indices / -1 indicates no index (None)
+        elif var_type == 'length':
+            nc_type = 'i4'   # 32-bit signed integer / for indices / -1 indicated no length specified (None)
+        elif var_type == 'bool':
+            nc_type = 'i1'   # 8-bit signed integer for boolean
+        elif var_type == 'str':
+            nc_type = 'str'
 
-        # Define units for snapshot variables.
-        setattr(ncvar,      'units', units)
+        ncvar = ncfile.createVariable(name, nc_type, dimensions)
+
+        if var_type == 'float' or units is not None:
+
+            if units is None:
+                units = 'none'
+
+            # Define units for a float variable
+            setattr(ncvar,      'units', units)
 
         if description is not None:
             # Define long (human-readable) names for variables.
             setattr(ncvar,    "long_str", description)
 
-    def save_object(self, var, idx, obj):
-        self.storage.variables[var + '_idx'][idx] = obj.idx[self.storage]
+        self.storage.sync()
 
-    def save_object_list(self, name, idx, data, obj):
-        specs = obj.details_specs
-        self.storage.variables[name + '_reference_idx'][idx] = obj.idx[self.storage]
-        self.save_list(name, idx, data, specs)
 
-    def load_object_list(self, name, idx, cls):
-        spec_obj_idx = self.storage.variables[name + '_reference_idx'][idx]
-        store = getattr(self.storage, cls)
-        spec_obj = store.load(spec_obj_idx)
-        specs = spec_obj.specifications
-        return self.load_list(name, idx, specs)
+    def init_objectdict(self, name, obj_cls, value_type):
+        self.init_dimension(name)
 
-    def save_list(self, name, idx, data, specs):
-        values = [None] * len(specs)
+        self.init_variable(name + '_value', value_type, (name, obj_cls))
+        self.init_variable(name + '_idx', 'index', (name, obj_cls))
+        self.init_variable(name + '_length', 'length', (name))
 
-        for position, spec in enumerate(specs):
-            if spec.cls is int:
-                values[position] = float(data[spec.name])
-            elif spec.cls is float:
-                values[position] = float(data[spec.name])
-            elif spec.cls is bool:
-                values[position] = float(data[spec.name])
-            elif spec.cls is str:
-                # NOT IMPLEMENTED...
-                pass
-            else:
-                index = data[spec.name].idx[self.storage]
-                values[position] = float(index)
+#=============================================================================================
+# LOAD / SAVE UTILITY FUNCTIONS
+#=============================================================================================
 
-        self.save_mixed(name, idx, values)
+    def load_variable(self, name, idx):
+        return self.storage.variables[name][idx]
 
-    def load_list(self, name, idx, specs):
-        ncfile = self.storage
+    def save_variable(self, name, idx, value):
+        self.storage.variables[name][idx] = value
 
-        data = self.load_mixed(name, idx)
+    def load_objectdict(self, name, idx, key_type, value_type):
+        length = self.storage.variables[name + '_length'][idx]
+        values = self.get_list_as_type(name + '_value', idx, 0, length, value_type)
+        keys = self.get_list_as_type(name + '_idx', idx, 0, length, key_type)
 
-        if len(data) != len(specs):
-            raise ValueError('Loaded data has different length of specification!')
+        data = dict(zip(keys, values))
+        return data
 
-        obj = {}
-        for position, spec in enumerate(self.object_list_spec[name]):
-            if spec.cls is int:
-                r = int(data[position])
-            elif spec.cls is float:
-                r = float(data[position])
-            elif spec.cls is bool:
-                r = bool(data[position])
-            elif spec.cls is str:
-                # NOT IMPLEMENTED...
-                pass
-            else:
-                store = getattr(ncfile, spec.cls)
-                r = store.load(int(data[position]))
+    def save_objectdict(self, name, idx, data, key_type, value_type):
+        self.set_list_as_type(name + '_idx', idx, 0, data.keys(), key_type)
+        self.set_list_as_type(name + '_value', idx, 0, data.items(), value_type)
+        self.save_variable(name + '_length', idx, len(data))
 
-            obj[spec.name] = r
+    def load_json(self, name, idx, obj = None):
+        idx = int(idx)
+        json_string = self.storage.variables[name][idx]
+        simplified = yaml.load(json_string)
+        if obj is None:
+            obj = StoredObject()
+
+        setattr(obj, 'json', json_string)
+
+        data = self._build_var(simplified[2])
+        for key, value in data.iteritems():
+            setattr(obj, key, value)
+
+        setattr(obj, 'cls', simplified[1])
 
         return obj
 
-    def init_list(self, name):
-        ncfile = self.storage
+    def save_json(self, name, idx, obj):
+        if not hasattr(obj,'json'):
+            setattr(obj,'json',self.object_to_json(obj))
 
-        self.init_mixed_length(name)
-        ncvar_name_idx  = ncfile.createVariable(name, 'f', name)
+        self.storage.variables[name][idx] = obj.json
 
-    def init_str(self, name):
-        ncfile = self.storage
+#=============================================================================================
+# CONVERSION UTILITIES
+#=============================================================================================
 
-        self.init_mixed_length(name)
-        ncvar_name_idx  = ncfile.createVariable(name, 'str', name)
+    def object_to_json(self, obj):
+        data = obj.__dict__
+        cls = obj.__class__.__name__
+        store = obj.cls
+
+        simplified = self._simplify_var([cls, store, data])
+        json_string = json.dumps(simplified)
+
+        return json_string
 
     def _simplify_var(self,obj):
         if type(obj).__module__ != '__builtin__':
@@ -393,32 +411,68 @@ class ObjectStorage(object):
         else:
             return obj
 
-    def get_json(self, obj):
-        data = obj.__dict__
-        cls = obj.__class__.__name__
-        store = obj.cls
+    def list_to_numpy(self, data, value_type, allow_empty = True):
+        if value_type == 'int':
+            values = np.array(data).astype(np.float32)
+        elif value_type == 'float':
+            values = np.array(data).astype(np.float32)
+        elif value_type == 'bool':
+            values = np.array(data).astype(np.int8)
+        elif value_type == 'index':
+            values = np.array(data).astype(np.uint32)
+        elif value_type == 'length':
+            values = np.array(data).astype(np.uint32)
+        else:
+            # an object
+            values = [ -1  if value is None and allow_empty is True else value.idx[self.storage] for value in data]
+            values = np.array(values).astype(np.uint32)
 
-        simplified = self._simplify_var([cls, store, data])
-        json_string = json.dumps(simplified)
+        return values.copy()
 
-        return json_string
+    def list_from_numpy(self, values, value_type, allow_empty = True):
+        if value_type == 'int':
+            data = values.tolist()
+        elif value_type == 'float':
+            data = values.tolist()
+        elif value_type == 'bool':
+            data = values.tolist()
+        elif value_type == 'index':
+            data = values.tolist()
+        elif value_type == 'length':
+            data = values.tolist()
+        else:
+            # an object
+            key_store = getattr(self.storage, value_type)
+            data = [ key_store.load(obj_idx) if allow_empty is False or obj_idx>=0 else None for obj_idx in values.tolist() ]
 
-    def load_json(self, name, idx, obj = None):
-        idx = int(idx)
-        json_string = self.storage.variables[name][idx]
-        simplified = yaml.load(json_string)
-        if obj is None:
-            obj = StoredObject()
+        return data
 
-        setattr(obj, 'json', json_string)
+#=============================================================================================
+# SETTER / GETTER UTILITY FUNCTIONS
+#=============================================================================================
 
-        data = self._build_var(simplified[2])
-        for key, value in data.iteritems():
-            setattr(obj, key, value)
+    def get_object(self, name, idx, cls):
+        index = self.load_variable(name + '_idx', idx)
+        if index < 0:
+            return None
 
-        setattr(obj, 'cls', simplified[1])
-
-
+        store = getattr(self.storage, cls)
+        obj = store.load(index)
         return obj
 
+    def set_object(self, name, idx, obj):
+        if obj is not None:
+            self.storage.variables[name + '_idx'][idx] = obj.idx[self.storage]
+        else:
+            self.storage.variables[name + '_idx'][idx] = -1
 
+    def get_list_as_type(self, name, idx, begin, length, value_type):
+        storage = self.storage
+        values = storage.variables[name][idx, begin:begin+length]
+
+        data = self.list_from_numpy(values, value_type)
+        return data
+
+    def set_list_as_type(self, name, idx, begin, data, value_type):
+        values = self.list_to_numpy(data, value_type)
+        self.storage.variables[name][idx, begin:begin+len(data)] = values

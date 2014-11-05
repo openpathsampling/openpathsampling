@@ -6,11 +6,11 @@ def savecache(func):
     return inner
 
 
-def identifiable(func):
+def saveidentifiable(func):
     def inner(self, obj, idx=None, *args, **kwargs):
         if idx is None and hasattr(obj, 'identifier'):
             if not hasattr(obj,'json'):
-                setattr(obj,'json',self.get_json(obj))
+                setattr(obj,'json',self.object_to_json(obj))
 
             find_idx = self.find_by_identifier(obj.identifier)
             if find_idx is not None:
@@ -31,10 +31,29 @@ def identifiable(func):
 
 def loadcache(func):
     def inner(self, idx, *args, **kwargs):
+        # TODO: Maybe this functionality should be in a separate function
+        if idx < 0:
+            return None
+
         if idx in self.cache:
             return self.cache[idx]
 
         obj = func(self, idx, *args, **kwargs)
         self.cache[idx] = obj
         return obj
+    return inner
+
+def loadidentifiable(func):
+    def inner(self, idx=None, *args, **kwargs):
+        if idx is not None and type(idx) is str:
+            find_idx = self.find_by_identifier(idx)
+            if find_idx is not None:
+                # names id is found so load with normal id
+                return func(self, find_idx, *args, **kwargs)
+            else:
+                # named id does not exist
+                return None
+        else:
+            return func(self, idx, *args, **kwargs)
+
     return inner
