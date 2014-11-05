@@ -5,29 +5,38 @@ class ToySimulation(object):
     simulation objects as in OpenMM), but they all quack the same when it
     comes to things the Simulator calls on them for'''
 
-    def get_velocities(self):
+    def __init__(self, pes, integ):
+        self.pes = pes
+        self.integ = integ
+
+    @property
+    def nsteps_per_iteration(self):
+        return self._nsteps_per_iteration
+
+    @nsteps_per_iteration.setter
+    def nsteps_per_iteration(self, value):
+        self._nsteps_per_iteration = value
+
+    def load_momentum(self, momentum):
+        momentum._velocities = self._velocities
+        momentum._kinetic_energy = self.pes.kinetic_energy(self)
+
+    def load_configuration(self, configuration):
+        configuration._coordinates = self._coordinates
+        configuration._potential_energy = self.pes.potential_energy(self)
         pass
 
-    def get_configurations(self):
+    def load_snapshot(self, snapshot):
         pass
 
-    def get_snapshot(self):
+    def init_simulation_with_snapshot(self, snapshot)
+        self.positions = snapshot.configuration.coordinates
+        self.velocities = snap
         pass
 
-    def get_kinetic_energy(self):
+    def generate_next_frame(self):
         pass
 
-    def get_potential_energy(self):
+    def stop(self, trajectory):
         pass
 
-    def get_periodic_box(self):
-        pass
-
-    def init_trajectory_with_snapshot(self, snapshot):
-        pass
-
-    def step(self, nsteps):
-        pass
-
-# TODO: mostly need to abstract out things in Simulator.py and snapshot.py
-# into an OpenMMSimulation object that also looks like this one
