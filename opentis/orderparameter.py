@@ -158,7 +158,6 @@ class StorableObjectDict(ObjectDict):
         return "{ 'memory' : " + dict.__str__(self) + ", 'storages' : " + str(self.storage_caches) + " }"
 
 
-
 class FunctionalStorableObjectDict(StorableObjectDict):
     """
     A simple dict implementation that will call a function for unknown values

@@ -59,6 +59,11 @@ class Trajectory(list):
         else:
             self.atom_indices = None
 
+    def __str__(self):
+        return 'Trajectory[' + str(len(self)) + ']'
+
+    def __repr__(self):
+        return 'Trajectory[' + str(len(self)) + ']'
 
     @property
     def reversed(self):

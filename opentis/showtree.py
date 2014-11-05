@@ -306,7 +306,10 @@ if __name__ == '__main__':
                 else:
                     block(pos_x, pos_y, "black", conf.idx[storage])
 
-        shift = p_x[old_conf] - new_index
+            shift = p_x[old_conf] - new_index
 
 
     svg_document.save()
+
+    bashCommand = "open -a Safari tree.svg"
+    os.system(bashCommand)
