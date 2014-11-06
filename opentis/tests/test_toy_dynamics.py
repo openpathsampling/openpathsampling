@@ -8,7 +8,7 @@ from nose.plugins.skip import Skip, SkipTest
 from opentis.toy_dynamics.toy_pes import *
 from opentis.toy_dynamics.toy_integrators import *
 from opentis.toy_dynamics.toy_simulation import *
-#from opentis.snapshot import Snapshot
+from opentis.snapshot import Snapshot, Momentum, Configuration
 
 # =========================================================================
 # This single test module includes all the tests for the toy_dynamics
@@ -104,8 +104,8 @@ class testToySimulation(object):
         pes = linear
         integ = LeapfrogVerletIntegrator(dt=0.002)
         sim = ToySimulation(pes, integ)
-        sim.positions = init_pos
-        sim.velocities = init_vel
+        sim.positions = init_pos.copy()
+        sim.velocities = init_vel.copy()
         sim.mass = sys_mass
         sim.nsteps_per_iteration = 10
         self.sim = sim
@@ -116,20 +116,49 @@ class testToySimulation(object):
         assert_equal(self.sim.nsteps_per_iteration, 10)
 
     def test_load_momentum(self):
-        raise SkipTest
+        momentum = Momentum()
+        self.sim.load_momentum(momentum)
+        assert_items_equal(momentum.velocities, self.sim.velocities)
+        assert_equal(momentum.kinetic_energy,
+                     self.sim.pes.kinetic_energy(self.sim))
 
     def test_load_configuration(self):
-        raise SkipTest
+        configuration = Configuration()
+        self.sim.load_configuration(configuration)
+        assert_items_equal(configuration.coordinates, self.sim.positions)
+        assert_equal(configuration.potential_energy,
+                     self.sim.pes.V(self.sim))
+        assert_equal(configuration.box_vectors, None)
 
     def test_load_snapshot(self):
-        raise SkipTest
-
+        snapshot = Snapshot()
+        self.sim.load_snapshot(snapshot)
+        assert_items_equal(snapshot.momentum.velocities, self.sim.velocities)
+        assert_equal(snapshot.momentum.kinetic_energy,
+                     self.sim.pes.kinetic_energy(self.sim))
+        assert_items_equal(snapshot.configuration.coordinates,
+                           self.sim.positions)
+        assert_equal(snapshot.configuration.potential_energy,
+                     self.sim.pes.V(self.sim))
+        assert_equal(snapshot.configuration.box_vectors, None)
+        
     def test_init_simulation_with_snapshot(self):
-        raise SkipTest
+        snap = Snapshot(coordinates=[1,2,3], velocities=[4,5,6])
+        self.sim.init_simulation_with_snapshot(snap)
+        assert_items_equal(self.sim.positions, [1,2,3])
+        assert_items_equal(self.sim.velocities, [4,5,6])
 
     def test_generate_next_frame(self):
-        raise SkipTest
-
+        # we test correctness by integrating forward, then backward
+        assert_items_equal(self.sim.positions, init_pos)
+        assert_items_equal(self.sim.velocities, init_vel)
+        snap = self.sim.generate_next_frame()
+        for (new, old) in zip(snap.coordinates, init_pos):
+            assert_not_equal(new, old)
+        self.sim.velocities = -self.sim.velocities
+        snap2 = self.sim.generate_next_frame()
+        for (new, old) in zip(snap2.coordinates, init_pos):
+            assert_almost_equal(new, old)
 
 
 # === TESTS FOR TOY INTEGRATORS ===========================================
@@ -193,7 +222,6 @@ class testLangevinBAOABIntegrator(object):
         # tests that the same random number wasn't used for both:
         assert_not_equal(self.sim.velocities[0] - init_vel[0],
                          self.sim.velocities[1] - init_vel[1])
-        raise SkipTest
 
     def test_step(self):
         self.sim.generate_next_frame()

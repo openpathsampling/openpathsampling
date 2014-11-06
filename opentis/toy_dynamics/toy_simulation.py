@@ -22,12 +22,11 @@ class ToySimulation(object):
     @property
     def mass(self):
         return self._mass
+
     @mass.setter
     def mass(self, value):
         self._mass = value
         self.minv = np.reciprocal(value)
-
-
 
     def load_momentum(self, momentum):
         momentum._velocities = self.velocities
@@ -36,7 +35,7 @@ class ToySimulation(object):
     def load_configuration(self, configuration):
         configuration._coordinates = self.positions
         configuration._potential_energy = self.pes.V(self)
-        snapshot.configuration._box_vectors = None # toys without PBCs
+        configuration._box_vectors = None # toys without PBCs
 
     def load_snapshot(self, snapshot):
         snapshot.configuration._coordinates = self.positions
