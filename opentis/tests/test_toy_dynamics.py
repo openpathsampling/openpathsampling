@@ -1,7 +1,8 @@
 '''
 @author: David W.H. Swenson
 '''
-from nose.tools import assert_equal, assert_almost_equal, raises
+from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
+                        assert_almost_equal, raises)
 from nose.plugins.skip import Skip, SkipTest
 
 from opentis.toy_dynamics.toy_pes import *
@@ -21,9 +22,9 @@ def setUp():
     outer = OuterWalls([1.12, 2.0], [0.2, -0.25])
     linear = LinearSlope([1.5, 0.75], 0.5)
     global init_pos, init_vel, sys_mass
-    init_pos = [0.7, 0.65]
-    init_vel = [0.6, 0.5]
-    sys_mass = [1.5, 1.5]
+    init_pos = np.array([0.7, 0.65])
+    init_vel = np.array([0.6, 0.5])
+    sys_mass = np.array([1.5, 1.5])
 
 # === TESTS FOR TOY POTENTIAL ENERGY SURFACES =============================
 
@@ -101,7 +102,7 @@ class testCombinations(object):
 class testToySimulation(object):
     def setUp(self):
         pes = linear
-        integ = EulerIntegrator(dt=0.002)
+        integ = LeapfrogVerletIntegrator(dt=0.002)
         sim = ToySimulation(pes, integ)
         sim.positions = init_pos
         sim.velocities = init_vel
@@ -110,9 +111,8 @@ class testToySimulation(object):
         self.sim = sim
 
     def test_sanity(self):
-        assert_equal(self.sim.mass, sys_mass)
-        assert_equal(self.sim.minv[0], 1.0/sys_mass[0])
-        assert_equal(self.sim.minv[1], 1.0/sys_mass[1])
+        assert_items_equal(self.sim.mass, sys_mass)
+        assert_items_equal(self.sim.minv, [1.0/m_i for m_i in sys_mass])
         assert_equal(self.sim.nsteps_per_iteration, 10)
 
     def test_load_momentum(self):
@@ -134,25 +134,38 @@ class testToySimulation(object):
 
 # === TESTS FOR TOY INTEGRATORS ===========================================
 
-class testEulerIntegrator(object):
+class testLeapfrogVerletIntegrator(object):
     def setUp(self):
         pes = linear
-        integ = EulerIntegrator(dt=0.002)
+        integ = LeapfrogVerletIntegrator(dt=0.002)
         sim = ToySimulation(pes, integ)
-        sim.positions = init_pos
-        sim.velocities = init_vel
+        sim.positions = init_pos.copy()
+        sim.velocities = init_vel.copy()
         sim.mass = sys_mass
         sim.nsteps_per_iteration = 10
         self.sim = sim
-    
+
     def test_momentum_update(self):
-        raise SkipTest
+        self.sim.integ._momentum_update(self.sim, 0.002)
+        # velocities = init_vel - pes.dVdx(init_pos)/m*dt 
+        #            = [0.6, 0.5] - [1.5, 0.75]/[1.5, 1.5] * 0.002
+        #            = [0.598, 0.499]
+        assert_equal(self.sim.velocities[0], 0.598)
+        assert_equal(self.sim.velocities[1], 0.499)
     
     def test_position_update(self):
-        raise SkipTest
+        self.sim.integ._position_update(self.sim, 0.002)
+        # positions = init_pos + velocities * dt
+        #           = [0.7, 0.65] + [0.6, 0.5]*0.002 = [0.7012, 0.651]
+        assert_almost_equal(self.sim.positions[0], 0.7012)
+        assert_almost_equal(self.sim.positions[1], 0.651)
 
     def test_step(self):
-        raise SkipTest
+        # no assertions since the tests of position/momentum updates should
+        # handle that... this is just to make sure we run
+        self.sim.integ.step(self.sim, 2)
+
+
 
 class testLangevinBAOABIntegrator(object):
     '''Testing for correctness is hard, since this is a stochastic
@@ -163,11 +176,24 @@ class testLangevinBAOABIntegrator(object):
         integ = LangevinBAOABIntegrator(dt=0.002, temperature=0.5,
                                         gamma=1.0)
         sim = ToySimulation(pes, integ)
-        sim.positions = init_pos
-        sim.velocities = init_vel
+        sim.positions = init_pos.copy()
+        sim.velocities = init_vel.copy()
         sim.mass = sys_mass
         sim.nsteps_per_iteration = 10
         self.sim = sim
+
+    def test_OU_update(self):
+        # we can't actually test for correct values, but we *can* test that
+        # some things *don't* happen
+        assert_equal(self.sim.velocities[0], init_vel[0])
+        assert_equal(self.sim.velocities[1], init_vel[1])
+        self.sim.integ._OU_update(self.sim, 0.002)
+        assert_not_equal(self.sim.velocities[0], init_vel[0])
+        assert_not_equal(self.sim.velocities[1], init_vel[1])
+        # tests that the same random number wasn't used for both:
+        assert_not_equal(self.sim.velocities[0] - init_vel[0],
+                         self.sim.velocities[1] - init_vel[1])
+        raise SkipTest
 
     def test_step(self):
         self.sim.generate_next_frame()

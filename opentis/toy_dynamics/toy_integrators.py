@@ -1,9 +1,10 @@
 import math
 import numpy as np
 
-class EulerIntegrator(object):
-    """ Euler Integrator. Not for actual use; but the momentum and position
-    update functions are used in other integrators, so we inherit from this.
+class LeapfrogVerletIntegrator(object):
+    """Leapfrog Integrator. Not for actual use; but the momentum and
+    position update functions are used in other integrators, so we inherit
+    from this.
     """
     def __init__(self, dt):
         self.dt = dt
@@ -15,11 +16,12 @@ class EulerIntegrator(object):
         sys.positions += sys.velocities * mydt
 
     def step(self, sys, nsteps):
-        self._momentum_update(sys, mydt)
-        self._position_update(sys, mydt)
+        self._position_update(sys, 0.5*self.dt)
+        self._momentum_update(sys, self.dt)
+        self._position_update(sys, 0.5*self.dt)
 
 
-class LangevinBAOABIntegrator(EulerIntegrator):
+class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
     """ Langevin integrator for simple toy models
 
     Implementation of the BAOAB integrator of Leimkuhler and Matthews. In
