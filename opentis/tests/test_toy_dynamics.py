@@ -17,16 +17,33 @@ from opentis.snapshot import Snapshot, Momentum, Configuration
 
 def setUp():
     # set up globals
-    global gaussian, linear, outer
+    global gaussian, linear, outer, harmonic
     gaussian = Gaussian(6.0, [2.5, 40.0], [0.8, 0.5])
     outer = OuterWalls([1.12, 2.0], [0.2, -0.25])
     linear = LinearSlope([1.5, 0.75], 0.5)
+    harmonic = HarmonicOscillator([1.5, 2.0], [0.5, 3.0], [0.25, 0.75])
     global init_pos, init_vel, sys_mass
     init_pos = np.array([0.7, 0.65])
     init_vel = np.array([0.6, 0.5])
     sys_mass = np.array([1.5, 1.5])
 
 # === TESTS FOR TOY POTENTIAL ENERGY SURFACES =============================
+
+class testHarmonicOscillator(object):
+    def setUp(self):
+        self.positions = init_pos
+        self.velocities = init_vel
+        self.mass = sys_mass
+
+    def test_V(self):
+        # 0.5*1.5*0.5*((0.7)-0.25)^2+0.5*2.0*3.0*((0.65)-0.75)^2 = 0.1059375
+        assert_almost_equal(harmonic.V(self), 0.1059375)
+
+    def test_dVdx(self):
+        # [1.5, 2.0] * [0.5, 3.0] * [(0.7)-0.25, (0.65)-0.75]
+        # [1.5*0.5*((0.7)-0.25), 2.0*3.0*((0.65)-0.75)] = [0.375, -0.6]
+        for (experiment, theory) in zip(harmonic.dVdx(self), [0.3375, -0.6]):
+            assert_almost_equal(experiment, theory)
 
 class testGaussian(object):
     def setUp(self):

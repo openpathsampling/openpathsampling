@@ -34,6 +34,22 @@ class Toy_PES_Combination(Toy_PES):
         return self.dfdx_fcn(self.pes1.dVdx(sys), self.pes2.dVdx(sys))
 
 
+class HarmonicOscillator(Toy_PES):
+    def __init__(self, A, omega, x0):
+        self.A = np.array(A)
+        self.omega = np.array(omega)
+        self.x0 = np.array(x0)
+        self.local_dVdx = np.zeros(self.x0.size)
+
+    def V(self, sys):
+        dx = sys.positions - self.x0
+        return 0.5*np.dot(self.A * self.omega, dx * dx)
+
+    def dVdx(self, sys):
+        dx = sys.positions - self.x0
+        return self.A*self.omega*dx
+
+
 class Gaussian(Toy_PES):
     ''' Returns the Gaussian given by A*exp(-\sum_i alpha[i]*(x[i]-x0[i])^2)
     '''
