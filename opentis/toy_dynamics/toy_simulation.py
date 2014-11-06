@@ -1,3 +1,5 @@
+import numpy as np
+from opentis.snapshot import Snapshot
 
 class ToySimulation(object):
     '''The trick is that we have various "simulation" classes (either
@@ -17,25 +19,39 @@ class ToySimulation(object):
     def nsteps_per_iteration(self, value):
         self._nsteps_per_iteration = value
 
+    @property
+    def mass(self):
+        return self._mass
+    @mass.setter
+    def mass(self, value):
+        self._mass = value
+        self.minv = np.reciprocal(value)
+
+
+
     def load_momentum(self, momentum):
-        momentum._velocities = self._velocities
+        momentum._velocities = self.velocities
         momentum._kinetic_energy = self.pes.kinetic_energy(self)
 
     def load_configuration(self, configuration):
-        configuration._coordinates = self._coordinates
-        configuration._potential_energy = self.pes.potential_energy(self)
-        pass
+        configuration._coordinates = self.positions
+        configuration._potential_energy = self.pes.V(self)
+        snapshot.configuration._box_vectors = None # toys without PBCs
 
     def load_snapshot(self, snapshot):
-        pass
+        snapshot.configuration._coordinates = self.positions
+        snapshot.configuration._potential_energy = self.pes.V(self)
+        snapshot.momentum._velocities = self.velocities
+        snapshot.momentum._kinetic_energy = self.pes.kinetic_energy(self)
+        snapshot.configuration._box_vectors = None
 
     def init_simulation_with_snapshot(self, snapshot):
         self.positions = snapshot.configuration.coordinates
-        self.velocities = snap
-        pass
+        self.velocities = snapshot.momentum.velocities
 
     def generate_next_frame(self):
-        pass
+        self.integ.step(self, self.nsteps_per_iteration)
+        return Snapshot(self)
 
     def stop(self, trajectory):
         pass # pragma: no cover (no need to test this one)

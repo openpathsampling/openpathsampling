@@ -1,6 +1,5 @@
 import math
-
-from numpy.random import normal as random_normal
+import numpy as np
 
 class EulerIntegrator(object):
     """ Euler Integrator. Not for actual use; but the momentum and position
@@ -13,9 +12,9 @@ class EulerIntegrator(object):
         sys.velocities -= sys.pes.dVdx(sys) * sys.minv * mydt
 
     def _position_update(self, sys, mydt):
-        sys.positions += sys.pes.velocities * mydt
+        sys.positions += sys.velocities * mydt
 
-    def step(self, sys):
+    def step(self, sys, nsteps):
         self._momentum_update(sys, mydt)
         self._position_update(sys, mydt)
 
@@ -43,11 +42,11 @@ class LangevinBAOABIntegrator(EulerIntegrator):
         self.dt = dt
 
     def _OU_update(self, sys, mydt):
-        R = random_normal(size=len(sys.velocities))
-        self.velocities = (self.c1 * self.velocities + 
-                           self.c3 * math.sqrt(sys.minv) * R)
+        R = np.random.normal(size=len(sys.velocities))
+        sys.velocities = (self.c1 * sys.velocities + 
+                          self.c3 * np.sqrt(sys.minv) * R)
 
-    def step(self, config):
+    def step(self, sys, nsteps):
         self._momentum_update(sys, 0.5*self.dt)
         self._position_update(sys, 0.5*self.dt)
         self._OU_update(sys, self.dt)
