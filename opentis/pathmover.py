@@ -247,41 +247,76 @@ class MixedMover(PathMover):
 #############################################################
 
 class MinusMove(PathMover):
-    def move(self, allpaths, state):
+    def do_move(self, allpaths, state):
         pass
 
 class PathReversal(PathMover):
-    def move(self, path, ensemble):
-        details = MoveDetails
-        details.success = False
-        details.inputs = path
-        details.mover = self
-        pass
-
-class PathSwap(PathMover):
-    def move(self, pathA, pathB, ensembleA, ensembleB):
-        accepted = (ensembleA(pathB) and ensembleB(pathA))
+    def do_move(self, trajectory, ensemble):
         details = MoveDetails()
-        details.success = accepted
-        details.inputs = [pathA, pathB]
+        reversed_trajectory = trajectory.reversed()
+        details.inputs = [trajectory]
         details.mover = self
-        setattr(details, 'startA', pathA)
-        setattr(details, 'startB', pathB)
-        setattr(details, 'finalA', pathB if accepted else pathA)
-        setattr(details, 'finalB', pathA if accepted else pathB)
-        if accepted:
-            return [Sample(trajectory=pathB, mover=self, ensemble=ensembleA,
-                           details=details),
-                    Sample(trajectory=pathA, mover=self, ensemble=ensembleB,
-                           details=details)
-                   ]
-        else:
-            return [Sample(trajectory=pathA, mover=self, ensemble=ensembleA,
-                           details=details),
-                    Sample(trajectory=pathB, mover=self, ensemble=ensembleB,
-                           details=details)
-                   ]
+        details.final = reversed_trajectory
+        details.success = True
+        details.acceptance = 1.0
+        details.result = reversed_trajectory
 
+        sample = Sample(
+            trajectory=details.result,
+            mover=self,
+            ensemble=ensemble,
+            details=details
+        )
+
+
+#############################################################
+# The following move should be moved to RETIS and just uses moves. It is not a move itself
+#############################################################
+
+class ReplicaExchange(object):
+    # TODO: Might put the target ensembles into the Mover instance, which means we need lots of mover instances for all ensemble switches
+    def do_move(self, trajectory1, trajectory2, ensemble1, ensemble2):
+        success = True # Change to actual check for swapping
+        details1 = MoveDetails()
+        details2 = MoveDetails()
+        details1.inputs = [trajectory1, trajectory2]
+        details2.inputs = [trajectory1, trajectory2]
+        setattr(details1, 'ensembles', [ensemble1, ensemble2])
+        setattr(details2, 'ensembles', [ensemble1, ensemble2])
+        details1.mover = self
+        details2.mover = self
+        details2.final = trajectory1
+        details1.final = trajectory2
+        if success:
+            # Swap
+            details1.success = True
+            details2.success = True
+            details1.acceptance = 1.0
+            details2.acceptance = 1.0
+            details1.result = trajectory2
+            details2.result = trajectory1
+        else:
+            # No swap
+            details1.success = False
+            details2.success = False
+            details1.acceptance = 0.0
+            details2.acceptance = 0.0
+            details1.result = trajectory1
+            details2.result = trajectory2
+
+        sample1 = Sample(
+            trajectory=details1.result,
+            mover=self,
+            ensemble=ensemble1,
+            details=details1
+        )
+        sample2 = Sample(
+            trajectory=details2.result,
+            mover=self,
+            ensemble=ensemble2,
+            details=details2
+            )
+        return [sample1, sample2]
 
 
 class PathMoverFactory(object):

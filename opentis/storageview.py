@@ -3,7 +3,7 @@ import argparse
 import os
 
 from storage import Storage
-from orderparameter import StorableDict
+from orderparameter import StorableObjectDict
 from snapshot import Configuration
 if __name__ == '__main__':
 
@@ -62,55 +62,71 @@ if __name__ == '__main__':
 
     headline("Shapshot Zero")
     # load initial equilibrate snapshot given by ID #0
-    snapshot = storage.snapshot.load(0, 0)
+    snapshot = storage.snapshot.load(0)
 
     line("Potential Energy",str(snapshot.potential_energy))
     line("Kinetic Energy",str(snapshot.kinetic_energy))
 
     headline("Ensembles")
 
-    for e_idx in range(1, storage.ensemble.count() + 1):
+    for e_idx in range(0, storage.ensemble.count()):
         ensemble = storage.ensemble.load(e_idx)
         nline(e_idx,ensemble.name, ensemble.description.replace('\n', ''))
 
     headline("PathMovers")
 
-    for p_idx in range(1, storage.pathmover.count() + 1):
+    for p_idx in range(0, storage.pathmover.count()):
         pathmover = storage.pathmover.load(p_idx)
         nline(p_idx,pathmover.name, pathmover.json)
 
     headline("ShootingPointSelector")
 
-    for p_idx in range(1, storage.shootingpointselector.count() + 1):
+    for p_idx in range(0, storage.shootingpointselector.count()):
         obj = storage.shootingpointselector.load(p_idx)
         nline(p_idx,obj.json, obj.cls)
 
     headline("ShootingPoints (" + str(storage.shootingpoint.count()) + ")")
 
-    for p_idx in range(1, storage.shootingpoint.count() + 1):
+    for p_idx in range(0, storage.shootingpoint.count()):
         obj = storage.shootingpoint.load(p_idx)
 #        nline(p_idx,obj.json, obj.cls)
 
-    orderparameters =  [op for op in storage.variables if op[0:16] == "configuration_op" and len(op.split('_')) < 4]
+    headline("Orderparameters (" + str(storage.collectivevariable.count()) + ")")
 
-    headline("Orderparameters (" + str(len(orderparameters)) + ")")
-
-    for op_name in orderparameters:
-
-        op = StorableDict(op_name, content_class=Configuration, storages=storage.configuration)
-        line(op_name, str(op) )
-
-#    print op[[snapshot.configuration for snapshot in traj]]
+    for p_idx in range(0, storage.collectivevariable.count()):
+        obj = storage.collectivevariable.load(p_idx)
+        nline(p_idx,obj.name, str(obj.storage_caches[storage]))
 
 
-    for p_idx in range(1, storage.shootingpoint.count() + 1):
+    for p_idx in range(0, storage.shootingpoint.count()):
         obj = storage.shootingpoint.load(p_idx)
 #        nline(p_idx,obj.json, obj.cls)
 
     headline("Samples")
 
+    def shortened_dict(d):
+        keys = sorted(d.keys())
+        old_idx = -2
+        count = 0
+        for idx in keys:
+            if idx == old_idx + 1 or idx == old_idx - 1:
+                count += 1
+            else:
+                if count > 1:
+                    sys.stdout.write(" <" + str(count - 1) + ">")
+                if old_idx >= 0 and count > 0:
+                    sys.stdout.write(" " + str(old_idx))
+                sys.stdout.write(" " + str(idx))
+                count = 0
+            old_idx = idx
+
+        if count > 1:
+            sys.stdout.write(" <" + str(count - 1) + "> ")
+        if count > 0:
+            sys.stdout.write(" " + str(old_idx))
+
     def print_traj(name, traj_obj):
-        traj = storage.trajectory.configuration_indices(traj_obj.idx[storage])
+        traj = storage.trajectory.snapshot_indices(traj_obj.idx[storage])
         sys.stdout.write("      {:>10}:  {:>5} frames [".format(name, str(len(traj))))
         old_idx = -2
         count = 0
@@ -135,7 +151,8 @@ if __name__ == '__main__':
         sys.stdout.write(" ]\n")
 
 
-    for o_idx in range(1, storage.sample.count() + 1):
+    for o_idx in range(0, storage.sample.count()):
+        print o_idx
         sample = storage.sample.load(o_idx)
 #        nline(o_idx, '', sample.details.json)
         nline(o_idx, str(sample.mover.name) + "/" + str(sample.details.mover.name), str([t.idx[storage] for t in sample.details.inputs]) +" -> " + str(sample.details.final.idx[storage]) + " in " + sample.ensemble.name + " [" + str(sample.ensemble.idx[storage]) + "]")
@@ -146,8 +163,8 @@ if __name__ == '__main__':
 
     headline("Trajectories")
 
-    for t_idx in range(1, storage.trajectory.count() + 1):
-        traj = storage.trajectory.configuration_indices(t_idx)
+    for t_idx in range(0, storage.trajectory.count()):
+        traj = storage.trajectory.snapshot_indices(t_idx)
         sys.stdout.write("  {:>4} [{:>5} frames] : ".format(str(t_idx),str(len(traj))))
         old_idx = -2
         count = 0
