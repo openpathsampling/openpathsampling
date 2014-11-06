@@ -29,7 +29,7 @@ class ToySimulation(object):
     def load_snapshot(self, snapshot):
         pass
 
-    def init_simulation_with_snapshot(self, snapshot)
+    def init_simulation_with_snapshot(self, snapshot):
         self.positions = snapshot.configuration.coordinates
         self.velocities = snap
         pass
@@ -38,5 +38,5 @@ class ToySimulation(object):
         pass
 
     def stop(self, trajectory):
-        pass
+        pass # pragma: no cover (no need to test this one)
 

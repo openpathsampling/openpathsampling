@@ -1,8 +1,17 @@
-
+'''
+@author: David W.H. Swenson
+'''
 from nose.tools import assert_equal, assert_almost_equal, raises
 from nose.plugins.skip import Skip, SkipTest
 
 from opentis.toy_dynamics.toy_pes import *
+from opentis.toy_dynamics.toy_integrators import *
+from opentis.toy_dynamics.toy_simulation import *
+
+# =========================================================================
+# This single test module includes all the tests for the toy_dynamics
+# subpackage. 
+# =========================================================================
 
 def setUp():
     # set up globals
@@ -10,6 +19,8 @@ def setUp():
     gaussian = Gaussian(6.0, [2.5, 40.0], [0.8, 0.5])
     outer = OuterWalls([1.12, 2.0], [0.2, -0.25])
     linear = LinearSlope([1.5, 0.75], 0.5)
+
+# === TESTS FOR TOY POTENTIAL ENERGY SURFACES =============================
 
 class testGaussian(object):
     def setUp(self):
@@ -76,3 +87,8 @@ class testCombinations(object):
     def test_kinetic_energy(self):
         assert_almost_equal(self.simpletest.kinetic_energy(self), 0.4575)
 
+
+# === TESTS FOR TOY SIMULATION OBJECT =====================================
+
+
+# === TESTS FOR TOY INTEGRATORS ===========================================
