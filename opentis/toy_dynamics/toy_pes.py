@@ -6,25 +6,32 @@ class Toy_PES(object):
     # For now, we only support additive combinations; maybe someday that can
     # include multiplication, too
     def __add__(self, other):
-        pass
+        main_fcn = lambda a, b: a + b
+        dfdx_rule = lambda a, b: a + b
+        return Toy_PES_Combination(self, other, main_fcn, dfdx_rule)
 
     def __sub__(self, other):
-        pass
+        main_fcn = lambda a, b: a - b
+        dfdx_rule = lambda a, b: a - b
+        return Toy_PES_Combination(self, other, main_fcn, dfdx_rule)
 
     def kinetic_energy(self, sys):
         v = sys.velocities
         m = sys.mass
-        return np.dot(m, np.multiply(v,v))
+        return 0.5*np.dot(m, np.multiply(v,v))
 
 class Toy_PES_Combination(Toy_PES):
-    def __init__(self, pes1, pes2, fcn):
-        pass
+    def __init__(self, pes1, pes2, fcn, dfdx_fcn):
+        self.pes1 = pes1
+        self.pes2 = pes2
+        self.fcn = fcn
+        self.dfdx_fcn = dfdx_fcn
 
     def V(self, sys):
-        pass
+        return self.fcn(self.pes1.V(sys), self.pes2.V(sys))
 
     def dVdx(self, sys):
-        pass
+        return self.dfdx_fcn(self.pes1.dVdx(sys), self.pes2.dVdx(sys))
 
 
 class Gaussian(Toy_PES):
@@ -68,8 +75,14 @@ class OuterWalls(Toy_PES):
 
 
 class LinearSlope(Toy_PES):
+    def __init__(self, m, c):
+        self.m = m
+        self.c = c
+        self.local_dVdx = self.m
+
     def V(self, sys):
-        pass
+        return np.dot(self.m, sys.positions) + self.c
 
     def dVdx(self, sys):
-        pass
+        # this is independent of the position
+        return self.local_dVdx

@@ -9,6 +9,7 @@ def setUp():
     global gaussian, linear, outer
     gaussian = Gaussian(6.0, [2.5, 40.0], [0.8, 0.5])
     outer = OuterWalls([1.12, 2.0], [0.2, -0.25])
+    linear = LinearSlope([1.5, 0.75], 0.5)
 
 class testGaussian(object):
     def setUp(self):
@@ -41,19 +42,37 @@ class testOuterWalls(object):
         assert_almost_equal(outer.dVdx(self)[1], 7.08588)
 
 class testLinearSlope(object):
+    def setUp(self):
+        self.positions = [0.7, 0.65]
+        self.velocities = [0.6, 0.5]
+
     def test_V(self):
-        raise SkipTest
+        assert_almost_equal(linear.V(self), 2.0375)
+
     def test_dVdx(self):
-        raise SkipTest
+        assert_equal(linear.dVdx(self), [1.5, 0.75])
 
 class testCombinations(object):
     def setUp(self):
+        self.positions = [0.7, 0.65]
+        self.velocities = [0.6, 0.5]
+        self.mass = [1.5, 1.5]
         self.simpletest = gaussian + gaussian
+        self.fullertest = gaussian + outer - linear
 
     def test_V(self):
-        raise SkipTest
+        assert_almost_equal(self.simpletest.V(self), 2*2.37918851445)
+        assert_almost_equal(self.fullertest.V(self), 
+                            2.37918851445 + 1.080382 - 2.0375)
+
     def test_dVdx(self):
-        raise SkipTest
+        assert_almost_equal(self.simpletest.dVdx(self)[0], 2*1.18959425722)
+        assert_almost_equal(self.simpletest.dVdx(self)[1], 2*-28.5502621734)
+        assert_almost_equal(self.fullertest.dVdx(self)[0],
+                            1.18959425722 + 0.21 - 1.5)
+        assert_almost_equal(self.fullertest.dVdx(self)[1],
+                            -28.5502621734 + 7.08588 - 0.75)
+
     def test_kinetic_energy(self):
-        raise SkipTest
+        assert_almost_equal(self.simpletest.kinetic_energy(self), 0.4575)
 
