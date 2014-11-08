@@ -6,6 +6,9 @@ from storage import Storage
 
 from orderparameter import OP_Function
 import mdtraj as md
+import numpy as np
+
+
 if __name__ == '__main__':
 
 
@@ -21,8 +24,15 @@ if __name__ == '__main__':
 #                   const=True, default=False,
 #                   help='show phi angle instead of ID')
 
+    parser.add_argument('--pdf', dest='rejected', action='store_const',
+                   const=True, default=False,
+                   help='create a pdf instead of a svg. Uses wkhtmltopdf to make apdf using webkit and qt')
+
+
+    parser.add_argument('--state', nargs=2, action='append')
 
     args = parser.parse_args()
+
     rejected = args.rejected
     file = args.file
     show_psi = args.psi
@@ -84,7 +94,10 @@ if __name__ == '__main__':
     line("Filename", file)
     line("Size", str(os.path.getsize(file) / 1024 / 1024) + " MB")
 
-    def block(x,y, color = "blue", idx = ""):
+    matrix = [[]]
+
+    def block(x,y, color = "blue", idx = "", snapshot = None):
+        global matrix
         svg_document.add(svg_document.rect(
             insert = (start_x + (x +0.05) * scale_x ,start_y + (y - 0.3) * scale_y),
             size = (0.9 * scale_x, 0.6 * scale_y),
@@ -114,7 +127,6 @@ if __name__ == '__main__':
                                         fill = 'white'
                                         ))
 
-
     p_x = dict()
     p_y = dict()
 
@@ -124,6 +136,8 @@ if __name__ == '__main__':
 
     min_x = 0
     max_x = 0
+
+    matrix = [[None] * 1000 for n in range(500)]
 
     for o_idx in range(0, storage.sample.count()):
         sample = storage.sample.load(o_idx)
@@ -150,10 +164,12 @@ if __name__ == '__main__':
                         pos_x = p_x[conf]
                         pos_y = p_y[conf]
 
-                    t_count += 0.8
+                        x = int(pos_x)
+                        y = int(pos_y / 0.8 + 0.4)
+                        matrix[y][x + 500] = snapshot
 
-                    min_x = min(min_x, 0)
-                    max_x = max(max_x, len(old_traj) - 1)
+
+                    t_count += 0.8
 
                 shift = p_x[old_conf] - new_index
 
@@ -168,6 +184,34 @@ if __name__ == '__main__':
 
                         pos_x = p_x[conf]
                         pos_y = p_y[conf]
+
+                        x = int(pos_x)
+                        y = int(pos_y / 0.8 + 0.4)
+                        matrix[y][x + 500] = snapshot
+
+
+        else:
+            accepted = sample.trajectory is new_traj
+            t_count += 2 * 0.8
+            # Show full trajectory once
+            for pos, snapshot in enumerate(sample.trajectory):
+                conf = snapshot.configuration
+                if conf not in p_x:
+                    p_x[conf] = pos
+                p_y[conf] = t_count
+
+                pos_x = p_x[conf]
+                pos_y = p_y[conf]
+
+                x = int(pos_x)
+                y = int(pos_y / 0.8 + 0.4)
+                matrix[y][x + 500] = snapshot
+
+
+            shift = p_x[old_conf] - new_index
+
+    y_max = int(t_count / 0.8) + 1
+
 
     svg_document = svgwrite.Drawing(
         filename = "tree.svg"
@@ -192,6 +236,43 @@ if __name__ == '__main__':
     lightcolor = "lightgray"
 
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
+
+    op_names = { arg[0] : arg[1] for arg in args.state }
+    ops = {op : storage.cv.load(op) for op in op_names.keys() }
+
+    for y in range(0, y_max):
+        rr = { op_name : None for op_name in op_names.keys() }
+        for x in range(0, (max_x - min_x + 1)):
+            yp = y * 0.8
+            xp = x + min_x
+            for r in rr:
+                op = ops[r]
+                if matrix[y][xp + 500] is not None and bool(op(matrix[y][xp + 500])):
+                    if rr[r] is None:
+                        rr[r] = xp
+                else:
+                    if rr[r] is not None:
+                        svg_document.add(svg_document.rect(
+                            insert = (start_x + rr[r] * scale_x ,start_y + (yp - 0.35) * scale_y),
+                            size = ((1.0 + xp - rr[r] - 1) * scale_x, 0.7 * scale_y),
+                            fill = op_names[r],
+                            stroke = op_names[r],
+#                            stroke_dasharray='1,0.2',
+                            stroke_width = 0.8
+                        ))
+                        rr[r] = None
+
+        for r in rr:
+            if rr[r] is not None:
+                svg_document.add(svg_document.rect(
+                    insert = (start_x + (rr[r]) * scale_x ,start_y + (yp - 0.35) * scale_y),
+                    size = ((1.0 + xp - rr[r]) * scale_x, 0.7 * scale_y),
+                    fill = 'none',
+                    stroke = op_names[r],
+#                    stroke_dasharray='1.0,0.2',
+                    stroke_width = 0.8
+                ))
+
 
     for o_idx in range(0, storage.sample.count()):
         sample = storage.sample.load(o_idx)
@@ -219,9 +300,9 @@ if __name__ == '__main__':
                         pos_y = p_y[conf]
 
                         if show_psi:
-                            block(pos_x, pos_y, "black", str(int((degrees * psi(conf))) % 360 ))
+                            block(pos_x, pos_y, "black", str(int((degrees * psi(conf))) % 360 ), snapshot=snapshot)
                         else:
-                            block(pos_x, pos_y, "black", conf.idx[storage])
+                            block(pos_x, pos_y, "black", conf.idx[storage], snapshot=snapshot)
 
                     t_count += 0.8
 
@@ -284,9 +365,9 @@ if __name__ == '__main__':
                         pos_y = p_y[conf]
 
                         if show_psi:
-                            block(pos_x, pos_y, color, str(int((degrees * psi(conf))) % 360 ))
+                            block(pos_x, pos_y, color, str(int((degrees * psi(conf))) % 360 ), snapshot=snapshot)
                         else:
-                            block(pos_x, pos_y, color, conf.idx[storage])
+                            block(pos_x, pos_y, color, conf.idx[storage], snapshot=snapshot)
 
         else:
             accepted = sample.trajectory is new_traj
@@ -302,14 +383,39 @@ if __name__ == '__main__':
                 pos_y = p_y[conf]
 
                 if show_psi:
-                    block(pos_x, pos_y, "black", str(int((degrees * psi(conf))) % 360 ))
+                    block(pos_x, pos_y, "black", str(int((degrees * psi(conf))) % 360 ), snapshot=snapshot)
                 else:
-                    block(pos_x, pos_y, "black", conf.idx[storage])
+                    block(pos_x, pos_y, "black", conf.idx[storage], snapshot=snapshot)
 
             shift = p_x[old_conf] - new_index
 
+    svg_document['height'] = str(int(start_y + (t_count + 2)*scale_y))+'px'
 
     svg_document.save()
 
+    html_file = '<!DOCTYPE html><html style="margin:0px; padding:0px;">' + svg_document.tostring() + '<body style="margin:0px; padding:0px;"></body></html>'
+
+    h = int(start_y + (t_count + 2)*scale_y)
+    w = int(totalwidth)
+
+    h_margin = 20.0
+    v_margin = 22.0
+
+    page_height =str((210.0 - h_margin) * h/w + v_margin)+'mm'
+
+    with open('tree.html', 'w') as f:
+        f.write(html_file)
+    f.closed
+
     bashCommand = "open -a Safari tree.svg"
-    os.system(bashCommand)
+#    os.system(bashCommand)
+
+    if args.pdf:
+        bashCommand = "open -a Safari tree.html"
+    #    os.system(bashCommand)
+
+        bashCommand = "wkhtmltopdf -l --page-height " + page_height + " --page-width 210.0mm tree.html tree.pdf"
+        os.system(bashCommand)
+
+        bashCommand = "open tree.pdf"
+        os.system(bashCommand)

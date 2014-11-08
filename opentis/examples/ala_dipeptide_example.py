@@ -21,7 +21,7 @@ import mdtraj as md
 # package
 from Simulator import Simulator
 from openmm_simulation import OpenMMSimulation
-from orderparameter import OP_Function
+from orderparameter import OP_Function, OP_Volume
 from snapshot import Snapshot, Configuration
 from volume import LambdaVolumePeriodic, VolumeFactory as vf
 from pathmover import PathMoverFactory as mf
@@ -151,7 +151,7 @@ if __name__=="__main__":
                 'temperature' : 300.0 * kelvin,
                 'collision_rate' : 1.0 / picoseconds,
                 'timestep' : 2.0 * femtoseconds,
-                'nframes_per_iteration' : 50,
+                'nframes_per_iteration' : 10,
                 'n_frames_max' : 5000,
                 'start_time' : time.time(),
                 'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
@@ -234,7 +234,14 @@ use LeaveXEnsemble as we typically do with TIS paths.
         OutXEnsemble(interface0),
         OutXEnsemble(stateA) | LengthEnsemble(0),
         InXEnsemble(stateA) & LengthEnsemble(1)
-    ]) 
+    ])
+
+    # Create an orderparameter from a volume
+    op_inA = OP_Volume('StateA', stateA)
+    op_notinA = OP_Volume('StateB', ~ stateA)
+    # and save it to the storage
+    simulator.storage.cv.save(op_inA)
+    simulator.storage.cv.save(op_notinA)
 
     interface0_ensemble = interface_set[0]
     print "start path generation (should not take more than a few minutes)"
@@ -293,6 +300,13 @@ the bootstrapping calculation, then we run it.
 
     psi.save(storage=simulator.storage.cv)
     phi.save(storage=simulator.storage.cv)
+
+    # compute the orderparameter for all snapshots
+    op_inA(simulator.storage.snapshot.all())
+    op_notinA(simulator.storage.snapshot.all())
+
+    simulator.storage.cv.save(op_inA)
+    simulator.storage.cv.save(op_notinA)
 
     # Alternatively one could write
 

@@ -249,7 +249,7 @@ class OrderParameter(FunctionalStorableObjectDict):
     _instances = dict()
 
     def __init__(self, name, dimensions = 1):
-        if type(name) is not str or len(name) == 0:
+        if type(name) is str and len(name) == 0:
             raise ValueError('name must be a non-empty string')
         if name in OrderParameter._instances:
             raise ValueError(name + ' already exists as an orderparameter. To load an existing one use get_existin(\'' + name + '\')')
@@ -445,6 +445,27 @@ class OP_MD_Function(OrderParameter):
 
         t = trajectory.md(self.topology)
         return self.fcn(t, *args, **self.kwargs)
+
+class OP_Volume(OrderParameter):
+    """
+    Wrapper that turns a Volume, which can be considered a boolean order parameter into an
+    actual OrderParamter()
+    """
+
+    def __init__(self, name, volume):
+        """
+        Parameters
+        ----------
+
+        """
+
+        super(OP_Volume, self).__init__(name)
+        self.volume = volume
+
+    def _eval(self, items):
+        result = [ float(self.volume(item)) for item in items ]
+        print result
+        return result
 
 
 class OP_Function(OrderParameter):
