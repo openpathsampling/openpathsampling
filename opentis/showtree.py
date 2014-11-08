@@ -17,9 +17,6 @@ if __name__ == '__main__':
                    const=True, default=False,
                    help='show also rejected paths')
     parser.add_argument('file', metavar='file.nc', help='an integer for the accumulator')
-    parser.add_argument('--psi', dest='psi', action='store_const',
-                   const=True, default=False,
-                   help='show psi angle instead of ID')
     parser.add_argument('--show', metavar='orderparameter/snapshot/configuration/momentum', default='',
                    help='show an orderparameter or an id of the snapshot/configuration/momentum')
 
@@ -39,7 +36,6 @@ if __name__ == '__main__':
 
     rejected = args.rejected
     file = args.file
-    show_psi = args.psi
 
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
 
