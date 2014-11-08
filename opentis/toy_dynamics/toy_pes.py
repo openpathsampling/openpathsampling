@@ -43,11 +43,13 @@ class HarmonicOscillator(Toy_PES):
 
     def V(self, sys):
         dx = sys.positions - self.x0
-        return 0.5*np.dot(self.A * self.omega, dx * dx)
+        k = self.omega*self.omega*sys.mass
+        return 0.5*np.dot(self.A * k, dx * dx)
 
     def dVdx(self, sys):
         dx = sys.positions - self.x0
-        return self.A*self.omega*dx
+        k = self.omega*self.omega*sys.mass
+        return self.A*k*dx
 
 
 class Gaussian(Toy_PES):

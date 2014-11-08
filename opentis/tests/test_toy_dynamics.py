@@ -36,13 +36,18 @@ class testHarmonicOscillator(object):
         self.mass = sys_mass
 
     def test_V(self):
-        # 0.5*1.5*0.5*((0.7)-0.25)^2+0.5*2.0*3.0*((0.65)-0.75)^2 = 0.1059375
-        assert_almost_equal(harmonic.V(self), 0.1059375)
+        # k = m * omega^2 = [1.5, 1.5] * [0.5, 3.0]^2
+        #                 = [0.375, 13.5]
+        # V = 0.5*( 1.5*0.375*((0.7)-0.25)^2 + 2.0*13.5*((0.65)-0.75)^2)
+        #   = 0.191953125
+        assert_almost_equal(harmonic.V(self), 0.191953125)
 
     def test_dVdx(self):
-        # [1.5, 2.0] * [0.5, 3.0] * [(0.7)-0.25, (0.65)-0.75]
-        # [1.5*0.5*((0.7)-0.25), 2.0*3.0*((0.65)-0.75)] = [0.375, -0.6]
-        for (experiment, theory) in zip(harmonic.dVdx(self), [0.3375, -0.6]):
+        # [1.5, 2.0] * [1.5, 1.5] * [0.5, 3.0]^2 * [(0.7)-0.25, (0.65)-0.75]
+        #   = [1.5*1.5*0.5^2*((0.7)-0.25), 2.0*1.5*3.0^2*((0.65)-0.75)]
+        #   = [0.253125, -2.7]
+        for (experiment, theory) in zip(harmonic.dVdx(self),
+                                        [0.253125, -2.7]):
             assert_almost_equal(experiment, theory)
 
 class testGaussian(object):
