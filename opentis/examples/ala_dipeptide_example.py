@@ -236,13 +236,6 @@ use LeaveXEnsemble as we typically do with TIS paths.
         InXEnsemble(stateA) & LengthEnsemble(1)
     ])
 
-    # Create an orderparameter from a volume
-    op_inA = OP_Volume('StateA', stateA)
-    op_notinA = OP_Volume('StateB', ~ stateA)
-    # and save it to the storage
-    simulator.storage.cv.save(op_inA)
-    simulator.storage.cv.save(op_notinA)
-
     interface0_ensemble = interface_set[0]
     print "start path generation (should not take more than a few minutes)"
     total_path = simulator.generate(snapshot, [first_traj_ensemble.forward])
@@ -301,12 +294,26 @@ the bootstrapping calculation, then we run it.
     psi.save(storage=simulator.storage.cv)
     phi.save(storage=simulator.storage.cv)
 
+    # Save all interface volumes as orderparameters
+    op_vol_set = [OP_Volume('OP' + str(idx), vol) for idx, vol in enumerate(volume_set)]
+
+    for op in op_vol_set:
+        op(simulator.storage.snapshot.all())
+        simulator.storage.cv.save(op)
+
+    # Create an orderparameter from a volume
+    op_inA = OP_Volume('StateA', stateA)
+    op_inB = OP_Volume('StateB', stateB)
+    op_notinAorB = OP_Volume('StateX', ~ (stateA | stateB))
+
     # compute the orderparameter for all snapshots
     op_inA(simulator.storage.snapshot.all())
-    op_notinA(simulator.storage.snapshot.all())
+    op_inB(simulator.storage.snapshot.all())
+    op_notinAorB(simulator.storage.snapshot.all())
 
     simulator.storage.cv.save(op_inA)
-    simulator.storage.cv.save(op_notinA)
+    simulator.storage.cv.save(op_inB)
+    simulator.storage.cv.save(op_notinAorB)
 
     # Alternatively one could write
 

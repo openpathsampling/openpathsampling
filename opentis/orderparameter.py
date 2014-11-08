@@ -251,6 +251,9 @@ class OrderParameter(FunctionalStorableObjectDict):
     def __init__(self, name, dimensions = 1):
         if type(name) is str and len(name) == 0:
             raise ValueError('name must be a non-empty string')
+
+        print OrderParameter._instances
+
         if name in OrderParameter._instances:
             raise ValueError(name + ' already exists as an orderparameter. To load an existing one use get_existin(\'' + name + '\')')
 
@@ -464,7 +467,6 @@ class OP_Volume(OrderParameter):
 
     def _eval(self, items):
         result = [ float(self.volume(item)) for item in items ]
-        print result
         return result
 
 

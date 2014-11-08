@@ -20,16 +20,20 @@ if __name__ == '__main__':
     parser.add_argument('--psi', dest='psi', action='store_const',
                    const=True, default=False,
                    help='show psi angle instead of ID')
-#    parser.add_argument('--phi', dest='phi', action='store_const',
-#                   const=True, default=False,
-#                   help='show phi angle instead of ID')
+    parser.add_argument('--show', metavar='orderparameter/snapshot/configuration/momentum', default='',
+                   help='show an orderparameter or an id of the snapshot/configuration/momentum')
 
-    parser.add_argument('--pdf', dest='rejected', action='store_const',
+    parser.add_argument('--pdf', dest='pdf', action='store_const',
                    const=True, default=False,
                    help='create a pdf instead of a svg. Uses wkhtmltopdf to make apdf using webkit and qt')
 
+    parser.add_argument('--state', nargs=2, action='append',
+                        help='add a background coloring to s snapshot using the given orderparameter.',
+                        metavar=('orderparameter', 'color'))
 
-    parser.add_argument('--state', nargs=2, action='append')
+    parser.add_argument('--show-degree', dest='in_degree', action='store_const',
+                   const=True, default=False,
+                   help='shows orderparameters in degree and not plain')
 
     args = parser.parse_args()
 
@@ -37,66 +41,51 @@ if __name__ == '__main__':
     file = args.file
     show_psi = args.psi
 
+    degrees = 180/3.14159 # psi reports in radians; I think in degrees
+
     if not os.path.isfile(file):
         print file, 'does not exist ! ENDING!'
         exit()
 
     storage = Storage(
-                                                     filename = file,
-                                                     mode = 'a'
-                                                     )
-
-    psi_atoms = [6,8,14,16]
-    psi = OP_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
-      indices=[psi_atoms])
+         filename = file,
+         mode = 'a'
+         )
 
 
-    def headline(s):
-        print
-        print "###################################################################################"
-        print "##", s.upper()
-        print "###################################################################################"
-        print
+    if args.show == 'snapshot':
+        def show_id(s):
+            return s.idx[storage]
 
-    def line(a, b):
-        print '    {:<32} : {:<30}'.format(a,b)
+        show_op = show_id
+    elif args.show == 'configuration':
+        def show_id(s):
+            return s.configuration.idx[storage]
 
-    def nline(n, a, b):
-        print '     {:>4}] {:<25} : {:<30}'.format(n,a,b)
+        show_op = show_id
+    elif args.show == 'momentum':
+        def show_id(s):
+            return s.momentum.idx[storage]
 
-    def print_traj(name, traj_obj):
-        traj = storage.trajectory.configuration_indices(traj_obj.idx[storage])
-        sys.stdout.write("      {:>10}:  {:>5} frames [".format(name, str(len(traj))))
-        old_idx = -2
-        count = 0
-        for idx in traj:
-            if idx == old_idx + 1 or idx == old_idx - 1:
-                count += 1
-            else:
-                if count > 1:
-                    sys.stdout.write(" <" + str(count - 1) + ">")
-                if old_idx >= 0 and count > 0:
-                    sys.stdout.write(" " + str(old_idx))
-                sys.stdout.write(" " + str(idx))
-                count = 0
-            old_idx = idx
+        show_op = show_id
+    elif args.show == '':
+        def show_id(s):
+            return ''
 
-        if count > 1:
-            sys.stdout.write(" ... <" + str(count - 1) + "> ...")
-        if count > 0:
-            sys.stdout.write(" " + str(old_idx))
+        show_op = show_id
+    else:
+        show_op = storage.cv.load(args.show)
 
+    if args.in_degree:
+        inner = show_op
+        def func(s):
+            return degrees * inner(s)
 
-        sys.stdout.write(" ]\n")
-
-    headline("General")
-
-    line("Filename", file)
-    line("Size", str(os.path.getsize(file) / 1024 / 1024) + " MB")
+        show_op = func
 
     matrix = [[]]
 
-    def block(x,y, color = "blue", idx = "", snapshot = None):
+    def block(x,y, color = "blue", text = "", snapshot = None):
         global matrix
         svg_document.add(svg_document.rect(
             insert = (start_x + (x +0.05) * scale_x ,start_y + (y - 0.3) * scale_y),
@@ -118,10 +107,10 @@ if __name__ == '__main__':
                                                   fill = color
                                                   ))
         svg_document.add(svg_document.text(
-                                        text = str(idx),
+                                        text = ("     " + (str(text)[:5]))[-5:],
                                         insert = (start_x + (x + 0.5) * scale_x,start_y + (y + 0.05) * scale_y),
                                         text_anchor = 'middle',
-                                        font_size = 0.4*scale_y,
+                                        font_size = 0.3*scale_y,
                                         alignment_baseline = 'middle',
                                         font_family = 'Futura',
                                         fill = 'white'
@@ -235,8 +224,6 @@ if __name__ == '__main__':
 
     lightcolor = "lightgray"
 
-    degrees = 180/3.14159 # psi reports in radians; I think in degrees
-
     op_names = { arg[0] : arg[1] for arg in args.state }
     ops = {op : storage.cv.load(op) for op in op_names.keys() }
 
@@ -299,10 +286,7 @@ if __name__ == '__main__':
                         pos_x = p_x[conf]
                         pos_y = p_y[conf]
 
-                        if show_psi:
-                            block(pos_x, pos_y, "black", str(int((degrees * psi(conf))) % 360 ), snapshot=snapshot)
-                        else:
-                            block(pos_x, pos_y, "black", conf.idx[storage], snapshot=snapshot)
+                        block(pos_x, pos_y, "black", show_op(snapshot))
 
                     t_count += 0.8
 
@@ -364,10 +348,7 @@ if __name__ == '__main__':
                         pos_x = p_x[conf]
                         pos_y = p_y[conf]
 
-                        if show_psi:
-                            block(pos_x, pos_y, color, str(int((degrees * psi(conf))) % 360 ), snapshot=snapshot)
-                        else:
-                            block(pos_x, pos_y, color, conf.idx[storage], snapshot=snapshot)
+                        block(pos_x, pos_y, color, show_op(snapshot))
 
         else:
             accepted = sample.trajectory is new_traj
@@ -382,10 +363,7 @@ if __name__ == '__main__':
                 pos_x = p_x[conf]
                 pos_y = p_y[conf]
 
-                if show_psi:
-                    block(pos_x, pos_y, "black", str(int((degrees * psi(conf))) % 360 ), snapshot=snapshot)
-                else:
-                    block(pos_x, pos_y, "black", conf.idx[storage], snapshot=snapshot)
+                block(pos_x, pos_y, color, show_op(snapshot))
 
             shift = p_x[old_conf] - new_index
 
