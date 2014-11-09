@@ -1,6 +1,6 @@
 from object_storage import ObjectStorage
 from wrapper import loadcache, loadidentifiable
-from orderparameter import OrderParameter
+from opentis.orderparameter import OrderParameter
 
 import numpy as np
 

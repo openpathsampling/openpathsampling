@@ -19,13 +19,13 @@ from object_storage import ObjectStorage
 from trajectory_store import TrajectoryStorage, SampleStorage
 from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
 from ensemble_store import EnsembleStorage
-from shooting import ShootingPointSelector, ShootingPoint
-from pathmover import PathMover, MoveDetails
-from globalstate import GlobalState
+from opentis.shooting import ShootingPointSelector, ShootingPoint
+from opentis.pathmover import PathMover, MoveDetails
+from opentis.globalstate import GlobalState
 from orderparameter_store import ObjectDictStorage
-from orderparameter import OrderParameter
-from snapshot import Snapshot
-from trajectory import Trajectory
+from opentis.orderparameter import OrderParameter
+from opentis.snapshot import Snapshot
+from opentis.trajectory import Trajectory
 
 
 #=============================================================================================

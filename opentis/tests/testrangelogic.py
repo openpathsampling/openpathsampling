@@ -1,10 +1,7 @@
 
-import os
-import sys
 from nose.tools import assert_equal, assert_not_equal, raises
 from nose.plugins.skip import Skip, SkipTest
-sys.path.append(os.path.abspath('../'))
-from range_logic import *
+from opentis.range_logic import *
 
 class testRangeLogic(object):
     def test_range_and(self):
