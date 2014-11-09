@@ -25,7 +25,7 @@ script:
   - cd opentis/tests
   - nosetests --nocapture -vv
   - cd ..
-  - cd opentis/xyz_files
+  - cd xyz_files
   - nosetests --nocapture -vv
   - cd ..
   - cd examples
