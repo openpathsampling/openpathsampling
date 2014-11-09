@@ -102,8 +102,8 @@ def buildKeywordDictionary():
     setupKeywords["license"]           = "GPL 2.0"
     setupKeywords["url"]               = "http://github.com/choderalab/opentis"
     setupKeywords["download_url"]      = "http://github.com/choderalab/opentis"
-    setupKeywords["packages"]          = ['opentis', 'opentis.storage ']
-    setupKeywords["package_dir"]       = {'opentis' : 'opentis'}
+    setupKeywords["packages"]          = ['opentis', 'opentis.storage']
+    setupKeywords["package_dir"]       = {'opentis' : 'opentis', 'opentis.storage' : 'opentis/storage'}
     #setupKeywords["py_modules"]        = ["pymbar", "timeseries", "testsystems", "confidenceintervals"]
     setupKeywords["data_files"]        = []
     setupKeywords["ext_modules"]       = []
