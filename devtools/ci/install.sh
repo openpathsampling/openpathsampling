@@ -21,8 +21,8 @@ bash $MINICONDA -b
 export PATH=$HOME/miniconda/bin:$PATH
 
 conda config --add channels http://conda.binstar.org/omnia
-conda update --yes conda
 conda create --yes -n ${python} python=${python} --file devtools/ci/requirements-conda-${python}.txt
+conda update --yes conda
 source activate $python
 
 # Useful for debugging any issues with conda
