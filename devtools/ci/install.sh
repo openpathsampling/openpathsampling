@@ -22,23 +22,12 @@ export PATH=$HOME/miniconda/bin:$PATH
 
 conda update --yes conda
 conda config --add channels http://conda.binstar.org/omnia
+conda create --yes -n ${python} python=${python} --file devtools/ci/requirements-conda-${python}.txt
+source activate $python
 
 # Useful for debugging any issues with conda
 conda info -a
 
-conda create --yes -n ${python} --file devtools/ci/requirements-conda-${python}.txt
-conda build devtools/conda-recipe
-source activate $python
-conda install --yes $HOME/miniconda/conda-bld/linux-64/yank-*
-
-conda list -e
-
 # install python pip packages
-
 PIP_ARGS="-U"
 $HOME/miniconda/envs/${python}/bin/pip install $PIP_ARGS -r devtools/ci/requirements-${python}.txt
-
-# go back to the original directory we were in
-# cd $MDTRAJ_DIR
-
-pwd

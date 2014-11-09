@@ -15,15 +15,18 @@ install:
   - python setup.py install
 
 script:
-#  echo "No setup.py yet, but tests passed!"
-  - nosetests opentis/tests/.
-# - source deactivate
-# - conda install --yes conda-build
-# - conda build devtools/conda-recipe
-# - source activate $python
-# - conda install --yes $HOME/miniconda/conda-bld/linux-64/mdtraj-dev-*
-# - conda list -e
-# - pydir=$(which python); $precmd $(dirname $pydir)/nosetests --exclude-dir=MDTraj/html --with-coverage --cover-erase -vv
+  - source deactivate
+#  - conda install --yes conda-build jinja2
+  - conda build devtools/conda-recipe
+  - source activate $python
+  - conda install --yes $HOME/miniconda/conda-bld/linux-64/yank-*
+  - conda list -e
+  - # Run tests
+  - cd opentis/tests
+  - nosetests --nocapture -vv
+  - cd ../..
+  # Push to binstar anyway.
+#  - bash -x devtools/ci/after_sucess.sh
 
 env:
   matrix:
