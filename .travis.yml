@@ -13,14 +13,14 @@ install:
 # - python opentis/setup.py install
 
 script:
-  - source opentis/devtools/ci/nosetests.sh
-  # - source deactivate
-  # - conda install --yes conda-build
-  # - conda build devtools/conda-recipe
-  # - source activate $python
-  # - conda install --yes $HOME/miniconda/conda-bld/linux-64/mdtraj-dev-*
-  # - conda list -e
-  # - pydir=$(which python); $precmd $(dirname $pydir)/nosetests --exclude-dir=MDTraj/html --with-coverage --cover-erase -vv
+# - source opentis/devtools/ci/nosetests.sh
+# - source deactivate
+# - conda install --yes conda-build
+# - conda build devtools/conda-recipe
+# - source activate $python
+# - conda install --yes $HOME/miniconda/conda-bld/linux-64/mdtraj-dev-*
+# - conda list -e
+# - pydir=$(which python); $precmd $(dirname $pydir)/nosetests --exclude-dir=MDTraj/html --with-coverage --cover-erase -vv
 
 env:
   matrix:
