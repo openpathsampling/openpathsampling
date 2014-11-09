@@ -53,7 +53,6 @@ class TrajectoryStorage(ObjectStorage):
         begin = self.free_begin('trajectory_snapshot')
         length = len(trajectory)
 
-        print 'IDX:', idx
         self.set_slice('trajectory', idx, begin, length)
 
         values = self.list_to_numpy(trajectory, 'snapshot')
@@ -204,6 +203,8 @@ class SampleStorage(ObjectStorage):
             details=self.storage.movedetails.load(details_idx),
             step=step
         )
+
+        obj.idx[self.storage] = idx
 
         return obj
 

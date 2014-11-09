@@ -147,7 +147,6 @@ if __name__ == '__main__':
         if count > 0:
             sys.stdout.write(" " + str(old_idx))
 
-
         sys.stdout.write(" ]\n")
 
 
@@ -157,8 +156,10 @@ if __name__ == '__main__':
 #        nline(o_idx, '', sample.details.json)
         nline(o_idx, str(sample.mover.name) + "/" + str(sample.details.mover.name), str([t.idx[storage] for t in sample.details.inputs]) +" -> " + str(sample.details.final.idx[storage]) + " in " + sample.ensemble.name + " [" + str(sample.ensemble.idx[storage]) + "]")
 #        nline(o_idx, '', str(sample.details.start_point.index) + " -> " + str(sample.details.final_point.index))
-        print_traj('start', sample.details.start)
-        print_traj('final', sample.details.final)
+        if hasattr(sample.details, 'start'):
+            print_traj('start', sample.details.start)
+        if hasattr(sample.details, 'final'):
+            print_traj('final', sample.details.final)
         print_traj('chosen', sample.trajectory)
 
     headline("Trajectories")
