@@ -26,7 +26,11 @@ conda update --yes conda
 conda info -a
 
 conda create --yes -n ${python} --file devtools/ci/requirements-conda-${python}.txt
+conda build devtools/conda-recipe
 source activate $python
+conda install --yes $HOME/miniconda/conda-bld/linux-64/yank-*
+
+conda list -e
 
 # install python pip packages
 
