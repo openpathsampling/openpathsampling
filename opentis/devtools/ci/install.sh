@@ -36,3 +36,6 @@ $HOME/miniconda/envs/${python}/bin/pip install $PIP_ARGS -r devtools/ci/requirem
 
 # go back to the original directory we were in
 cd $MDTRAJ_DIR
+
+cd opentis/tests
+nosetests .
