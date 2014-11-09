@@ -26,7 +26,7 @@ conda update --yes conda
 source activate $python
 
 # Useful for debugging any issues with conda
-conda info -a
+# conda info -a
 
 # install python pip packages
 PIP_ARGS="-U"
