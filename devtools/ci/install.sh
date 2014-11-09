@@ -35,4 +35,6 @@ PIP_ARGS="-U"
 $HOME/miniconda/envs/${python}/bin/pip install $PIP_ARGS -r devtools/ci/requirements-${python}.txt
 
 # go back to the original directory we were in
-# cd $MDTRAJ_DIR
+cd $MDTRAJ_DIR
+
+pwd
