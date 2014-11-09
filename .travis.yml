@@ -10,6 +10,8 @@ install:
   # Don't know what this is meant for
   - export PYTHONUNBUFFERED=true
   # Try to install our package
+  - ls
+  - pwd
   - python setup.py install
 
 script:
