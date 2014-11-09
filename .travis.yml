@@ -24,6 +24,12 @@ script:
   - # Run tests
   - cd opentis/tests
   - nosetests --nocapture -vv
+  - cd ..
+  - cd opentis/xyz_files
+  - nosetests --nocapture -vv
+  - cd ..
+  - cd examples
+  - python ala_dipeptide_example.py
   - cd ../..
   # Push to binstar anyway.
 #  - bash -x devtools/ci/after_sucess.sh
