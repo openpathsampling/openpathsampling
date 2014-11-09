@@ -15,8 +15,8 @@ install:
   - python setup.py install
 
 script:
-  echo "No setup.py yet, but tests passed!"
-#  - nosetests opentis/tests/.
+#  echo "No setup.py yet, but tests passed!"
+  - nosetests opentis/tests/.
 # - source deactivate
 # - conda install --yes conda-build
 # - conda build devtools/conda-recipe
