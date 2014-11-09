@@ -48,6 +48,10 @@ class GlobalState(dict):
         else:
             return dict.__getitem__(self, item)
 
+    def __repr__(self):
+        return repr([ self[ens] for ens in self._ensembles ])
+
+
     @property
     def size(self):
         """
@@ -103,6 +107,9 @@ class GlobalState(dict):
         globalstate.now = self.step + 1
         globalstate.old = self
         self.samples = samples
+        for ensemble in self.ensembles:
+            globalstate[ensemble] = self[ensemble]
+
         for sample in samples:
             sample.time = self.step
 
@@ -122,3 +129,10 @@ class GlobalState(dict):
             the underlying netcdf file to be used for storage
         """
         map(storage.sample.save, self.samples)
+
+
+class GlobalStateMover(object):
+    """
+    A GlobalStateMover will take a GlobalState object and create in a specific way a new GlobalState by generating
+    the necessary samples, applying them and saving everything correctly.
+    """

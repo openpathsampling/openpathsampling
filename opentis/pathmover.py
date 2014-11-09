@@ -247,11 +247,11 @@ class MixedMover(PathMover):
 #############################################################
 
 class MinusMove(PathMover):
-    def do_move(self, allpaths, state):
+    def move(self, allpaths, state):
         pass
 
 class PathReversal(PathMover):
-    def do_move(self, trajectory, ensemble):
+    def move(self, trajectory, ensemble):
         details = MoveDetails()
         reversed_trajectory = trajectory.reversed()
         details.inputs = [trajectory]
@@ -273,9 +273,9 @@ class PathReversal(PathMover):
 # The following move should be moved to RETIS and just uses moves. It is not a move itself
 #############################################################
 
-class ReplicaExchange(object):
+class ReplicaExchange(PathMover):
     # TODO: Might put the target ensembles into the Mover instance, which means we need lots of mover instances for all ensemble switches
-    def do_move(self, trajectory1, trajectory2, ensemble1, ensemble2):
+    def move(self, trajectory1, trajectory2, ensemble1, ensemble2):
         success = True # Change to actual check for swapping
         details1 = MoveDetails()
         details2 = MoveDetails()
