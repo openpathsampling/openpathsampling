@@ -21,6 +21,7 @@ bash $MINICONDA -b
 export PATH=$HOME/miniconda/bin:$PATH
 
 conda update --yes conda
+conda config --add channels http://conda.binstar.org/omnia
 
 # Useful for debugging any issues with conda
 conda info -a
