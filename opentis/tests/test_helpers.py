@@ -5,6 +5,9 @@ a duck.
 @author David W.H. Swenson
 """
 
+import os
+from pkg_resources import resource_filename
+
 class CallIdentity(object):
     '''Stub for a callable that returns itself'''
     def __init__(self):
@@ -36,3 +39,8 @@ def prepend_exception_message(e, failmsg):
     else:
         arg0 = failmsg+e.args[0]
         e.args = tuple([arg0] + list(e.args[1:]))
+
+def data_filename(fname, subdir='test_data'):
+    return resource_filename('opentis', 
+                             os.path.join('tests', subdir, fname))
+

@@ -3,8 +3,8 @@ import mdtraj as md
 
 from object_storage import ObjectStorage
 from wrapper import savecache, loadcache
-from trajectory import Trajectory, Sample
-from snapshot import Configuration, Momentum, Snapshot
+from opentis.trajectory import Trajectory, Sample
+from opentis.snapshot import Configuration, Momentum, Snapshot
 
 
 class TrajectoryStorage(ObjectStorage):

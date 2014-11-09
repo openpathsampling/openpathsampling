@@ -1,10 +1,10 @@
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole, picoseconds
 import numpy as np
 
-from snapshot import Snapshot, Configuration, Momentum
+from opentis.snapshot import Snapshot, Configuration, Momentum
 from object_storage import ObjectStorage
 from wrapper import savecache, loadcache
-from trajectory import Trajectory
+from opentis.trajectory import Trajectory
 
 class SnapshotStorage(ObjectStorage):
     """

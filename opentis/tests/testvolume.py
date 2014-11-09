@@ -2,14 +2,11 @@
 @author David W.H. Swenson
 """
 
-import os
-import sys
 from nose.tools import assert_equal, assert_not_equal, assert_is, raises
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import CallIdentity
 
-sys.path.append(os.path.abspath('../'))
-import volume
+import opentis.volume as volume
 
 class Identity2(CallIdentity):
     def __str__(self):

@@ -7,7 +7,9 @@ import copy
 
 import numpy as np
 import mdtraj as md
-from simtk.unit import nanometers
+from simtk.unit import nanometers, Quantity
+
+from snapshot import Snapshot, Configuration, Momentum
 
 
 #=============================================================================================
@@ -392,8 +394,9 @@ class Trajectory(list):
         Parameters
         ----------
         topology : mdtraj.Topology()
-            If not None this topology will be used to construct the mdtraj objects otherwise
-            the topology object will be taken from the configurations in the trajectory snapshots.
+            If not None this topology will be used to construct the mdtraj
+            objects otherwise the topology object will be taken from the
+            configurations in the trajectory snapshots.
         
         Returns
         -------        
@@ -407,11 +410,45 @@ class Trajectory(list):
         output = self.coordinates()
 
         return md.Trajectory(output, topology)
+
+    @staticmethod
+    def from_mdtraj(mdtrajectory):
+        """
+        Construct a Trajectory object from an mdtraj.Trajectory object
+
+        Parameters
+        ----------
+        mdtrajectory : mdtraj.Trajectory
+            Input mdtraj.Trajectory
+
+        Returns
+        -------
+        Trajectory
+        """
+        trajectory = Trajectory()
+        empty_momentum = Momentum()
+        empty_momentum.velocities = None
+        for frame_num in range(mdtrajectory.n_frames):
+            # mdtraj trajectories only have coordinates and box_vectors
+            coord = Quantity(mdtrajectory.xyz[frame_num], nanometers)
+            if mdtrajectory.unitcell_vectors is not None:
+                box_v = Quantity(mdtrajectory.unitcell_vectors[frame_num],
+                                 nanometers)
+            else:
+                box_v = None
+            config = Configuration(coordinates=coord, box_vectors=box_v)
+
+            snap = Snapshot(configuration=config, momentum=empty_momentum)
+            trajectory.append(snap)
+
+        return trajectory
+
                 
     
     def md_topology(self):
         """
-        Return a mdtraj.Topology object representing the topology of the current view of the trajectory
+        Return a mdtraj.Topology object representing the topology of the
+        current view of the trajectory
         
         Returns
         -------        
@@ -420,8 +457,10 @@ class Trajectory(list):
 
         Notes
         -----
-        This is taken from the configuration of the first frame. Otherwise there is still un ugly fall-back to look
-        for an openmm.Simulation object in Trajectory.simulator. and construct an mdtraj.Topology from this.
+        This is taken from the configuration of the first frame. Otherwise
+        there is still un ugly fall-back to look for an openmm.Simulation
+        object in Trajectory.simulator. and construct an mdtraj.Topology
+        from this.
         """        
 
         if len(self) > 0 and self[0].topology is not None:
