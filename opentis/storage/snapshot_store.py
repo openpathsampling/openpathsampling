@@ -4,7 +4,7 @@ import numpy as np
 from opentis.snapshot import Snapshot, Configuration, Momentum
 from object_storage import ObjectStorage
 from wrapper import savecache, loadcache
-from trajectory import Trajectory
+from opentis.trajectory import Trajectory
 
 class SnapshotStorage(ObjectStorage):
     """

@@ -6,7 +6,7 @@ python:
 
 install:
   # Sets up a MINIConda enviroment in the name of the selected python verson
-  - source opentis/devtools/ci/install.sh
+  - source devtools/ci/install.sh
   # Don't know what this is meant for
   - export PYTHONUNBUFFERED=true
   # Try to install our package
@@ -14,7 +14,7 @@ install:
 
 script:
   echo "No setup.py yet, but tests passed!"
-# - source opentis/devtools/ci/nosetests.sh
+# - source devtools/ci/nosetests.sh
 # - source deactivate
 # - conda install --yes conda-build
 # - conda build devtools/conda-recipe
