@@ -16,8 +16,7 @@ install:
 
 script:
   - source deactivate
-#  - conda install --yes conda-build jinja2
-  - conda install conda-build
+  - conda install --yes conda-build jinja2
   - conda build devtools/conda-recipe
   - source activate $python
   - conda install --yes $HOME/miniconda/conda-bld/linux-64/yank-*
