@@ -3,4 +3,3 @@ scripttest
 nose-exclude
 coverage
 coveralls
-netcdf4
