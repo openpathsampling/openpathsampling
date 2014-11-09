@@ -4,7 +4,7 @@ import numpy as np
 from opentis.snapshot import Snapshot, Configuration, Momentum
 from object_storage import ObjectStorage
 from wrapper import savecache, loadcache
-
+from trajectory import Trajectory
 
 class SnapshotStorage(ObjectStorage):
     """
@@ -42,6 +42,17 @@ class SnapshotStorage(ObjectStorage):
         snapshot.idx[self.storage] = idx
 
         return snapshot
+
+    def all(self):
+        """
+        Return a trajectory consisting of all (unordered) frames in the storage
+        """
+        t = Trajectory()
+        count = self.count()
+        for snapshot_idx in range(0,count):
+            t.append(self.load(snapshot_idx))
+
+        return t
 
     @savecache
     def save(self, snapshot, idx=None):
