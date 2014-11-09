@@ -13,12 +13,12 @@ from simtk.openmm import *
 from simtk.unit import *
 import mdtraj as md
 
-from storage import Storage
-from trajectory import Trajectory
-from snapshot import Snapshot
-from integrators import VVVRIntegrator
-from ensemble import LengthEnsemble
-from openmm_simulation import OpenMMSimulation
+from opentis.storage import Storage
+from opentis.trajectory import Trajectory
+from opentis.snapshot import Snapshot
+from opentis.integrators import VVVRIntegrator
+from opentis.ensemble import LengthEnsemble
+from opentis.openmm_simulation import OpenMMSimulation
 
 
 #=============================================================================
