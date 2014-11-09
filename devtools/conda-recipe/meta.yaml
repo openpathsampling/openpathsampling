@@ -6,14 +6,14 @@ requirements:
   build:
     - python
     - numpy
-    - mdtraj
-    - openmm
+#    - mdtraj
+#    - openmm
     - setuptools
 
   run:
     - python
-    - openmm
-    - mdtraj
+#    - openmm
+#    - mdtraj
 
 about:
   home: https://github.com/choderalab/msm-tis
