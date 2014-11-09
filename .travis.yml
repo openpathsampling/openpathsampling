@@ -1,0 +1,42 @@
+language: python
+
+python:
+  # We don't actually use the Travis Python, but this keeps it organized.
+  - "2.7"
+
+install:
+  # Sets up a MINIConda enviroment in the name of the selected python verson
+  - source devtools/ci/install.sh
+  # Don't know what this is meant for
+  - export PYTHONUNBUFFERED=true
+  # Try to install our package
+  - ls
+  - pwd
+  - python setup.py install
+
+script:
+  - source deactivate
+  - conda install --yes conda-build jinja2
+  - conda build devtools/conda-recipe
+  - source activate $python
+  - conda install --yes $HOME/miniconda/conda-bld/linux-64/opentis-*
+  - conda list -e
+  - # Run tests
+  - cd opentis/tests
+  - nosetests --nocapture -vv
+  - cd ..
+  - cd xyz_files
+  - nosetests --nocapture -vv
+  - cd ..
+  - cd examples
+  - python ala_dipeptide_example.py
+  - cd ../..
+  # Push to binstar anyway.
+#  - bash -x devtools/ci/after_sucess.sh
+
+env:
+  matrix:
+# - python=2.6  CONDA_PY=26  CONDA_NPY=16
+    - python=2.7  CONDA_PY=27  CONDA_NPY=19
+# - python=3.3  CONDA_PY=33  CONDA_NPY=17
+# - python=3.4  CONDA_PY=34  CONDA_NPY=18

@@ -1,0 +1,10 @@
+numpy
+scipy
+pyyaml
+pip
+nose
+mdtraj
+openmm
+ambermini
+netcdf4
+msmbuilder

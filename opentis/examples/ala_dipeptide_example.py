@@ -16,6 +16,11 @@ TIS simulation on alanine dipeptide.
 
 import numpy as np
 import mdtraj as md
+
+import sys, os
+sys.path.append(os.path.abspath('../'))
+sys.path.append(os.path.abspath('../../'))
+
  
 # in principle, all of these imports should be simplified once this is a
 # package
@@ -155,7 +160,7 @@ if __name__=="__main__":
                 'n_frames_max' : 5000,
                 'start_time' : time.time(),
                 'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
-                'platform' : 'CUDA',
+                'platform' : 'CPU',
                 'solute_indices' : range(22), # TODO: This could be determined automatically !?!?
                 'forcefield_solute' : 'amber96.xml',
                 'forcefield_solvent' : 'tip3p.xml'
