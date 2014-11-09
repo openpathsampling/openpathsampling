@@ -7,5 +7,4 @@ mdtraj
 openmm
 ambermini
 netcdf4
-conda-build
 msmbuilder
