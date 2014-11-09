@@ -16,6 +16,11 @@ TIS simulation on alanine dipeptide.
 
 import numpy as np
 import mdtraj as md
+
+import sys, os
+sys.path.append(os.path.abspath('../'))
+sys.path.append(os.path.abspath('../../'))
+
  
 # in principle, all of these imports should be simplified once this is a
 # package
