@@ -13,7 +13,7 @@ from simtk.openmm import *
 from simtk.unit import *
 import mdtraj as md
 
-from opentis.storage import Storage
+from opentis.storage.netcdf_storage import Storage
 from opentis.trajectory import Trajectory
 from opentis.snapshot import Snapshot
 from opentis.integrators import VVVRIntegrator
