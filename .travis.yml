@@ -10,10 +10,10 @@ install:
   # Don't know what this is meant for
   - export PYTHONUNBUFFERED=true
   # Try to install our package
-# - python opentis/setup.py install
+  # - python opentis/setup.py install
 
 script:
-  - source opentis/devtools/ci/nosetest.sh
+  - source opentis/devtools/ci/nosetests.sh
   # - source deactivate
   # - conda install --yes conda-build
   # - conda build devtools/conda-recipe
