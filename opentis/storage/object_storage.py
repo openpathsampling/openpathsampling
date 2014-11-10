@@ -500,3 +500,17 @@ class ObjectStorage(object):
     def set_list_as_type(self, name, idx, begin, data, value_type):
         values = self.list_to_numpy(data, value_type)
         self.storage.variables[name][idx, begin:begin+len(data)] = values
+
+#=============================================================================================
+# ORDERPARAMETER UTILITY FUNCTIONS
+#=============================================================================================
+
+    @property
+    def op_idx(self):
+        """
+        Returns aa function that returns for an object of this storage the idx
+        """
+        def idx(obj):
+            return obj.idx[self.storage]
+
+        return idx

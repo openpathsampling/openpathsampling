@@ -51,20 +51,11 @@ if __name__ == '__main__':
 
 
     if args.show == 'snapshot':
-        def show_id(s):
-            return s.idx[storage]
-
-        show_op = show_id
+        show_op = storage.snapshot.op_idx
     elif args.show == 'configuration':
-        def show_id(s):
-            return s.configuration.idx[storage]
-
-        show_op = show_id
+        show_op = storage.snapshot.op_configuration_idx
     elif args.show == 'momentum':
-        def show_id(s):
-            return s.momentum.idx[storage]
-
-        show_op = show_id
+        show_op = storage.snapshot.op_momentum_idx
     elif args.show == '':
         def show_id(s):
             return ''
@@ -89,7 +80,6 @@ if __name__ == '__main__':
     tree.from_samples(samples)
 
     if args.pdf:
-
         tree.renderer.save_pdf()
 
         bashCommand = "open tree.pdf"
@@ -99,7 +89,6 @@ if __name__ == '__main__':
 
         bashCommand = "open -a Safari tree.html"
         os.system(bashCommand)
-
     else:
         bashCommand = "open -a Safari tree.svg"
     #    os.system(bashCommand)
