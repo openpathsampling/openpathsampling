@@ -27,8 +27,8 @@ script:
   - cd ..
   - cd xyz_files
   - nosetests --nocapture -vv
-  - cd ..
-  - cd examples
+  - cd ../..
+  - cd examples/alanine
   - python ala_dipeptide_example.py
   - cd ../..
   # Push to binstar anyway.
