@@ -10,4 +10,4 @@ ipython notebook
 ```
 
 ## Examples
-- Visualization (View Notebook)[http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/ipython/Visualization%20Example.ipynb]
+- Visualization [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/ipython/Visualization%20Example.ipynb)
