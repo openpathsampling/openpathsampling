@@ -220,7 +220,11 @@ if __name__ == '__main__':
 
     lightcolor = "lightgray"
 
-    op_names = { arg[0] : arg[1] for arg in args.state }
+    op_names = {}
+
+    if args.state is not None:
+        op_names = { arg[0] : arg[1] for arg in args.state }
+
     ops = {op : storage.cv.load(op) for op in op_names.keys() }
 
     for y in range(0, y_max):

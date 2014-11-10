@@ -54,7 +54,7 @@ class EnsembleStorage(ObjectStorage):
         return None
 
     @loadcache
-    def load(self, idx, momentum = True):
+    def load(self, idx):
         '''
         Return a ensemble from the storage
 

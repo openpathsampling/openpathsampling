@@ -2,8 +2,6 @@ from object_storage import ObjectStorage
 from wrapper import loadcache, loadidentifiable
 from opentis.orderparameter import OrderParameter
 
-import numpy as np
-
 class ObjectDictStorage(ObjectStorage):
 
     def __init__(self, storage, cls, key_class):
@@ -37,9 +35,6 @@ class ObjectDictStorage(ObjectStorage):
 
         self._update_store(objectdict)
         store = objectdict.storage_caches[storage]
-
-#        self.save_objectdict(self.idx_dimension, int(idx), store, float)
-
         length = len(store)
 
         var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name

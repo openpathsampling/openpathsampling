@@ -78,7 +78,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
         if mode == 'create':
             # set up the OpenMM simulation
             # self.platform = 'CUDA'
-            platform = openmm.Platform.getPlatformByName(self.platform)
+            # platform = openmm.Platform.getPlatformByName(self.platform)
             forcefield = ForceField( self.forcefield_solute,
                                      self.forcefield_solvent )
             system = forcefield.createSystem( self.topology, 
@@ -94,7 +94,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
             self.integrator_class = type(integrator).__name__
 
             simulation = OpenMMSimulation(self.topology, system, 
-                                          integrator, platform )
+                                          integrator)
 
             # claim the OpenMM simulation as our own
             self.simulation = simulation
@@ -160,7 +160,7 @@ if __name__=="__main__":
                 'n_frames_max' : 5000,
                 'start_time' : time.time(),
                 'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
-                'platform' : 'CPU',
+                'platform' : 'fastest',
                 'solute_indices' : range(22), # TODO: This could be determined automatically !?!?
                 'forcefield_solute' : 'amber96.xml',
                 'forcefield_solvent' : 'tip3p.xml'

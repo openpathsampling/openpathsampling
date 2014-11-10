@@ -59,6 +59,7 @@ class Simulator(object):
         initialized.
         '''
         self.op = None
+        self.storage = None
         self.initialized = False
         self.running = dict()
 
@@ -118,13 +119,14 @@ class Simulator(object):
                 
                 # Store snapshot and add it to the trajectory. Stores also final frame the last time
                 #snapshot = Snapshot(self.simulation.context)
-                self.storage.snapshot.save(snapshot)
+                if self.storage is not None:
+                    self.storage.snapshot.save(snapshot)
                 trajectory.append(snapshot)
                 
                 # Check if reached a core set. If not, continue simulation
                 if running is not None:
                     for runner in running:
-#                        print str(runner), runner(trajectory)
+                        #print str(runner), runner(trajectory)
                         keep_running = runner(trajectory)
                         self.running[runner] = keep_running
                         stop = stop or not keep_running
