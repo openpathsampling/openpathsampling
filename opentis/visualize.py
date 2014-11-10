@@ -8,9 +8,9 @@ class TreeRenderer(object):
     def __init__(self):
         self.start_x = 0
         self.start_y = 0
-        self.scale_x = 18
-        self.scale_y = 18
-        self.scale_th = 18
+        self.scale_x = 24
+        self.scale_y = 24
+        self.scale_th = 24
         self.font_family = "Futura"
         self.font_size = 0.3
         self.document = None
@@ -29,6 +29,7 @@ class TreeRenderer(object):
 
         self.obj = list()
         self.margin = 0
+        self.zoom = 1.0
 
     def __getattr__(self, item):
         if item in ['block', 'shade', 'v_connection', 'h_connection', 'label']:
@@ -60,10 +61,13 @@ class TreeRenderer(object):
         return self.start_y + self._h(y + self.shift_y)
 
     def _w(self, y):
-        return self.scale_y * y
+        return self.scale_x * self.zoom * y
 
     def _h(self, y):
-        return self.scale_y * y
+        return self.scale_y * self.zoom * y
+
+    def _th(self, th):
+        return self.scale_th * self.zoom * th
 
     def _xy(self, x, y):
         return (self._x(x), self._y(y))
@@ -74,8 +78,6 @@ class TreeRenderer(object):
     def _xb(self, x, y):
         return (self._x(x), self._y(y + self.font_baseline_shift))
 
-    def _th(self, th):
-        return self.scale_th * th
 
     def _pad(self, xy, wh):
         self.min_x = min(self.min_x, xy[0], xy[0] + wh[0])
@@ -126,6 +128,21 @@ class TreeRenderer(object):
         return ret
 
     def draw_shade(self, x, y, w, color, stroke_width = None):
+        document = self.document
+        if stroke_width is None:
+            stroke_width = self.stroke_width
+
+        self._pad(self._xy(x - 0.5, y - 0.35), self._wh(1.0, 0.7))
+
+        return [document.rect(
+            insert = self._xy(x - 0.5, y + 0.35),
+            size = self._wh(w, 0.1),
+            fill = color,
+            stroke = color,
+            stroke_width = self._th(stroke_width)
+        )]
+
+    def draw_shade_alt(self, x, y, w, color, stroke_width = None):
         document = self.document
         if stroke_width is None:
             stroke_width = self.stroke_width
@@ -262,6 +279,9 @@ class TreeRenderer(object):
         bashCommand = "wkhtmltopdf -l --page-width " + page_width + " --page-height " + page_height + " --disable-smart-shrinking -B 1mm -L 1mm -R 1mm -T 1mm tree_xxx.html " + file
         os.system(bashCommand)
 
+    def clear(self):
+        self.obj = []
+
 
 
 class PathTreeBuilder(object):
@@ -276,10 +296,13 @@ class PathTreeBuilder(object):
         self.op = op
         self.states = states
 
-    def from_samples(self, samples):
+    def from_samples(self, samples, clear=True):
 
         p_x = dict()
         p_y = dict()
+
+        if clear:
+            self.renderer.clear()
 
         t_count = 0
         shift = 0
@@ -296,8 +319,9 @@ class PathTreeBuilder(object):
                 new_index = sample.details.final_point.index
                 new_conf = new_traj[new_index].configuration
 
-                if sample.trajectory is new_traj or self.rejected or True:
-                    accepted = sample.trajectory is new_traj
+                accepted = sample.trajectory is new_traj
+
+                if sample.trajectory is new_traj or self.rejected:
                     t_count += 1
                     if not old_conf in p_x:
                         for pos, snapshot in enumerate(old_traj):
@@ -307,8 +331,14 @@ class PathTreeBuilder(object):
 
                             pos_x = p_x[conf]
                             pos_y = p_y[conf]
+                            if self.op is not None:
+                                self.renderer.add(self.renderer.block(pos_x, pos_y, "black", self.op(snapshot)))
+                            else:
+                                self.renderer.add(self.renderer.block(pos_x, pos_y, "black", ""))
 
-                            self.renderer.add(self.renderer.block(pos_x, pos_y, "black", self.op(snapshot)))
+                        self.renderer.add(
+                            self.renderer.label(0, t_count, 1, str(old_traj.idx[self.storage]) + 'b', align='end',color='black')
+                        )
 
                         t_count += 1
 
@@ -340,19 +370,21 @@ class PathTreeBuilder(object):
                             self.renderer.label(shift + len(new_traj) - 1, t_count, 1, str(new_traj.idx[self.storage]) + 'f', align='start',color=fontcolor)
                         )
 
-                if not accepted:
-                    color = lightcolor
+                    if not accepted:
+                        color = lightcolor
 
-                for pos, snapshot in enumerate(new_traj):
-                    conf = snapshot.configuration
-                    if not conf in p_y:
-                        p_y[conf] = t_count
-                        p_x[conf] = shift + pos
+                    for pos, snapshot in enumerate(new_traj):
+                        conf = snapshot.configuration
+                        if not conf in p_y:
+                            p_y[conf] = t_count
+                            p_x[conf] = shift + pos
 
-                        pos_x = p_x[conf]
-                        pos_y = p_y[conf]
-
-                        self.renderer.add(self.renderer.block(pos_x, pos_y, color, self.op(snapshot)))
+                            pos_x = p_x[conf]
+                            pos_y = p_y[conf]
+                            if self.op is not None:
+                                self.renderer.add(self.renderer.block(pos_x, pos_y, color, self.op(snapshot)))
+                            else:
+                                self.renderer.add(self.renderer.block(pos_x, pos_y, color, ""))
 
         self.p_x = p_x
         self.p_y = p_y
@@ -370,12 +402,10 @@ class PathTreeBuilder(object):
 
         matrix = self._to_matrix()
 
-        print op_names
-
         for y in range(0, max_y - min_y + 1):
             rr = { op_name : None for op_name in op_names.keys() }
+            yp = y + min_y
             for x in range(0, (max_x - min_x + 1)):
-                yp = y + min_y
                 xp = x + min_x
                 for r in rr:
                     op = ops[r]
@@ -392,7 +422,7 @@ class PathTreeBuilder(object):
             for r in rr:
                 if rr[r] is not None:
                     self.renderer.pre(
-                        self.renderer.shade(rr[r], yp, xp - rr[r], op_names[r])
+                        self.renderer.shade(rr[r], yp, xp - rr[r] + 1, op_names[r])
                     )
 
 

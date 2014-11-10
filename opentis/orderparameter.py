@@ -223,6 +223,12 @@ class FunctionalStorableObjectDict(StorableObjectDict):
         else:
             return []
 
+    def get_transformed_view(self, transform):
+        def fnc(obj):
+            return transform(self(obj))
+
+        return fnc
+
 
 class OrderParameter(FunctionalStorableObjectDict):
     """
@@ -251,8 +257,6 @@ class OrderParameter(FunctionalStorableObjectDict):
     def __init__(self, name, dimensions = 1):
         if type(name) is str and len(name) == 0:
             raise ValueError('name must be a non-empty string')
-
-        print OrderParameter._instances
 
         if name in OrderParameter._instances:
             raise ValueError(name + ' already exists as an orderparameter. To load an existing one use get_existin(\'' + name + '\')')

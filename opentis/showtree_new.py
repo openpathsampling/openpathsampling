@@ -72,11 +72,7 @@ if __name__ == '__main__':
         show_op = func
 
     tree = PathTreeBuilder(storage, op=show_op, states=args.state)
-
     samples = storage.sample.by_ensemble(storage.ensemble.load(4))
-
-    print 'Samples : ', len(samples)
-
     tree.from_samples(samples)
 
     if args.pdf:
