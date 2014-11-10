@@ -71,7 +71,9 @@ class ToySimulation(object):
 
     def generate_next_frame(self):
         self.integ.step(self, self.nsteps_per_iteration)
-        return Snapshot(self)
+        snap = Snapshot()
+        self.load_snapshot(snap)
+        return snap
 
     def stop(self, trajectory):
         pass # pragma: no cover (no need to test this one)

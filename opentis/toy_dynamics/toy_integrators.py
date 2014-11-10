@@ -52,8 +52,6 @@ class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
                           self.c3 * np.sqrt(sys.minv) * R)
 
     def step(self, sys, nsteps):
-        if self.dd == None:
-            self.dd = sys.pes.dim
         self._momentum_update(sys, 0.5*self.dt)
         self._position_update(sys, 0.5*self.dt)
         self._OU_update(sys, self.dt)
