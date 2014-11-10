@@ -121,6 +121,30 @@ class ObjectStorage(object):
     def to_cache(self, obj):
         self.cache[obj.idx[self.storage]] = obj
 
+    def iterator(this, iter_range = None):
+        class ObjectIterator:
+            def __init__(self):
+                self.storage = this
+                if iter_range is None:
+                    self.idx = 0
+                    self.end = self.storage.count()
+                else:
+                    self.idx = iter_range.start
+                    self.end = iter_range.stop
+
+            def __iter__(self):
+                return self
+
+            def next(self):
+                if self.idx < self.storage.count():
+                    obj = self.storage.load(self.idx)
+                    self.idx += 1
+                    return obj
+                else:
+                    raise StopIteration()
+
+        return ObjectIterator()
+
     @loadcache
     def load(self, idx, lazy=True):
         '''
@@ -476,3 +500,17 @@ class ObjectStorage(object):
     def set_list_as_type(self, name, idx, begin, data, value_type):
         values = self.list_to_numpy(data, value_type)
         self.storage.variables[name][idx, begin:begin+len(data)] = values
+
+#=============================================================================================
+# ORDERPARAMETER UTILITY FUNCTIONS
+#=============================================================================================
+
+    @property
+    def op_idx(self):
+        """
+        Returns aa function that returns for an object of this storage the idx
+        """
+        def idx(obj):
+            return obj.idx[self.storage]
+
+        return idx

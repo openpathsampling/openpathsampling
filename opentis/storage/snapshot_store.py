@@ -150,6 +150,30 @@ class SnapshotStorage(ObjectStorage):
 
         self.init_variable('snapshot_momentum_reversed', 'bool', self.db)
 
+#=============================================================================================
+# ORDERPARAMETER UTILITY FUNCTIONS
+#=============================================================================================
+
+    @property
+    def op_configuration_idx(self):
+        """
+        Returns aa function that returns for an object of this storage the idx
+        """
+        def idx(obj):
+            return obj.configuration.idx[self.storage]
+
+        return idx
+
+    @property
+    def op_momentum_idx(self):
+        """
+        Returns aa function that returns for an object of this storage the idx
+        """
+        def idx(obj):
+            return obj.momentum.idx[self.storage]
+
+        return idx
+
 
 class MomentumStorage(ObjectStorage):
     """
