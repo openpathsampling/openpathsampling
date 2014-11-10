@@ -11,11 +11,13 @@ if [[ "$TRAVIS_BRANCH" != "master" ]]; then
     echo "No deployment on BRANCH='$TRAVIS_BRANCH'"; exit 0
 fi
 
+echo "Not set for upload to binstar."
+exit 0
 
-# if [[ "2.7 3.3 3.4" =~ "$python" ]]; then
-#     conda install --yes binstar
-#     binstar -t $BINSTAR_TOKEN  upload --force -u omnia -p mdtraj-dev $HOME/miniconda/conda-bld/linux-64/mdtraj-dev-*
-# fi
+#if [[ "2.7" =~ "$python" ]]; then
+#    conda install --yes binstar
+#    binstar -t $BINSTAR_TOKEN  upload --force -u omnia -p opentis-dev $HOME/miniconda/conda-bld/linux-64/opentis-dev-*
+#fi
 
 if [[ "$python" != "2.7" ]]; then
     echo "No deploy on PYTHON_VERSION=${python}"; exit 0
