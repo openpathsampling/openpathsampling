@@ -78,7 +78,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
         if mode == 'create':
             # set up the OpenMM simulation
             # self.platform = 'CUDA'
-            platform = openmm.Platform.getPlatformByName(self.platform)
+            # platform = openmm.Platform.getPlatformByName(self.platform)
             forcefield = ForceField( self.forcefield_solute,
                                      self.forcefield_solvent )
             system = forcefield.createSystem( self.topology, 
