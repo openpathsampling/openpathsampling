@@ -208,6 +208,9 @@ class SampleStorage(ObjectStorage):
 
         return obj
 
+    def by_ensemble(self, ensemble):
+        return [ sample for sample in self.iterator() if sample.ensemble == ensemble ]
+
     def _init(self):
         """
         Initialize the associated storage to allow for sample storage
