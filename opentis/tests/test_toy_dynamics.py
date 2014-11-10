@@ -10,6 +10,8 @@ from opentis.toy_dynamics.toy_integrators import *
 from opentis.toy_dynamics.toy_simulation import *
 from opentis.snapshot import Snapshot, Momentum, Configuration
 
+import numpy as np
+
 # =========================================================================
 # This single test module includes all the tests for the toy_dynamics
 # subpackage. 
@@ -120,6 +122,18 @@ class testCombinations(object):
 
 
 # === TESTS FOR TOY SIMULATION OBJECT =====================================
+def assert_equal_array_array(truth, beauty):
+    for (t_atom, b_atom) in zip(truth, beauty):
+        assert_items_equal(t_atom, b_atom)
+
+class test_convert_fcn(object):
+    def test_convert_to_3Ndim(v):
+        assert_equal_array_array(convert_to_3Ndim([1.0, 2.0]),
+                                 np.array([[1.0, 2.0, 0.0]]))
+        assert_equal_array_array(convert_to_3Ndim([1.0, 2.0, 3.0]), 
+                                 np.array([[1.0, 2.0, 3.0]]))
+        assert_equal_array_array(convert_to_3Ndim([1.0, 2.0, 3.0, 4.0]),
+                                 np.array([[1.0, 2.0, 3.0], [4.0, 0.0, 0.0]]))
 
 class testToySimulation(object):
     def setUp(self):
