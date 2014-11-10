@@ -6,16 +6,21 @@ class LeapfrogVerletIntegrator(object):
     position update functions are used in other integrators, so we inherit
     from this.
     """
+    
+    dd = None
+
     def __init__(self, dt):
         self.dt = dt
 
     def _momentum_update(self, sys, mydt):
-        sys.velocities -= sys.pes.dVdx(sys) * sys.minv * mydt
+        sys.velocities[0,:self.dd] -= sys.pes.dVdx(sys)*sys.minv[0,:self.dd]*mydt
 
     def _position_update(self, sys, mydt):
         sys.positions += sys.velocities * mydt
 
     def step(self, sys, nsteps):
+        if self.dd == None:
+            self.dd = sys.pes.dim
         self._position_update(sys, 0.5*self.dt)
         self._momentum_update(sys, self.dt)
         self._position_update(sys, 0.5*self.dt)
@@ -44,11 +49,13 @@ class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
         self.dt = dt
 
     def _OU_update(self, sys, mydt):
-        R = np.random.normal(size=len(sys.velocities))
-        sys.velocities = (self.c1 * sys.velocities + 
-                          self.c3 * np.sqrt(sys.minv) * R)
+        R = np.random.normal(size=self.dd)
+        sys.velocities[0,:self.dd] = (self.c1 * sys.velocities[0,:self.dd] + 
+                                    self.c3 * np.sqrt(sys.minv[0,:self.dd]) * R)
 
     def step(self, sys, nsteps):
+        if self.dd == None:
+            self.dd = sys.pes.dim
         self._momentum_update(sys, 0.5*self.dt)
         self._position_update(sys, 0.5*self.dt)
         self._OU_update(sys, self.dt)
