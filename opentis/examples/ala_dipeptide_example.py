@@ -94,7 +94,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
             self.integrator_class = type(integrator).__name__
 
             simulation = OpenMMSimulation(self.topology, system, 
-                                          integrator, platform )
+                                          integrator)
 
             # claim the OpenMM simulation as our own
             self.simulation = simulation
