@@ -6,8 +6,6 @@ class Toy_PES(object):
     # For now, we only support additive combinations; maybe someday that can
     # include multiplication, too
 
-    dim = 2 # usually
-
     def __add__(self, other):
         main_fcn = lambda a, b: a + b
         dfdx_rule = lambda a, b: a + b
@@ -21,7 +19,7 @@ class Toy_PES(object):
     def kinetic_energy(self, sys):
         v = sys.velocities
         m = sys.mass
-        return 0.5*np.dot(m[0], np.multiply(v[0],v[0]))
+        return 0.5*np.dot(m, np.multiply(v,v))
 
 class Toy_PES_Combination(Toy_PES):
     def __init__(self, pes1, pes2, fcn, dfdx_fcn):
@@ -43,16 +41,15 @@ class HarmonicOscillator(Toy_PES):
         self.omega = np.array(omega)
         self.x0 = np.array(x0)
         self.local_dVdx = np.zeros(self.x0.size)
-        self.dim = len(x0)
 
     def V(self, sys):
-        dx = sys.positions[0,:self.dim] - self.x0
-        k = self.omega*self.omega*sys.mass[0,:self.dim]
+        dx = sys.positions - self.x0
+        k = self.omega*self.omega*sys.mass
         return 0.5*np.dot(self.A * k, dx * dx)
 
     def dVdx(self, sys):
-        dx = sys.positions[0,:self.dim] - self.x0
-        k = self.omega*self.omega*sys.mass[0,:self.dim]
+        dx = sys.positions - self.x0
+        k = self.omega*self.omega*sys.mass
         return self.A*k*dx
 
 
@@ -64,14 +61,13 @@ class Gaussian(Toy_PES):
         self.alpha = np.array(alpha)
         self.x0 = np.array(x0)
         self.local_dVdx = np.zeros(self.x0.size)
-        self.dim = len(x0)
 
     def V(self, sys):
-        dx = sys.positions[0,:self.dim] - self.x0
+        dx = sys.positions - self.x0
         return self.A*np.exp(-np.dot(self.alpha, np.multiply(dx, dx)))
 
     def dVdx(self, sys):
-        dx = sys.positions[0,:self.dim] - self.x0
+        dx = sys.positions - self.x0
         exp_part = self.A*np.exp(-np.dot(self.alpha, np.multiply(dx, dx)))
         for i in range(len(dx)):
             self.local_dVdx[i] = -2*self.alpha[i]*dx[i]*exp_part
@@ -82,17 +78,16 @@ class OuterWalls(Toy_PES):
         self.sigma = np.array(sigma)
         self.x0 = np.array(x0)
         self.local_dVdx = np.zeros(self.x0.size)
-        self.dim = len(self.x0)
 
     def V(self, sys):
-        dx = sys.positions[0,:self.dim] - self.x0
+        dx = sys.positions - self.x0
         myV = 0.0
         for i in range(len(dx)):
             myV += self.sigma[i]*dx[i]**6
         return myV
 
     def dVdx(self, sys):
-        dx = sys.positions[0,:self.dim] - self.x0
+        dx = sys.positions - self.x0
         for i in range(len(dx)):
             self.local_dVdx[i] = 6.0*self.sigma[i]*dx[i]**5
         return self.local_dVdx
@@ -106,7 +101,7 @@ class LinearSlope(Toy_PES):
         self.dim = len(self.m)
 
     def V(self, sys):
-        return np.dot(self.m, sys.positions[:self.dim]) + self.c
+        return np.dot(self.m, sys.positions) + self.c
 
     def dVdx(self, sys):
         # this is independent of the position

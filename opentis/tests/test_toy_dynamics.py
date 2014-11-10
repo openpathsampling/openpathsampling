@@ -154,14 +154,16 @@ class testToySimulation(object):
     def test_load_momentum(self):
         momentum = Momentum()
         self.sim.load_momentum(momentum)
-        assert_items_equal(momentum.velocities, self.sim.velocities)
+        assert_items_equal(momentum.velocities[0][:self.sim.ndim],
+                           self.sim.velocities)
         assert_equal(momentum.kinetic_energy,
                      self.sim.pes.kinetic_energy(self.sim))
 
     def test_load_configuration(self):
         configuration = Configuration()
         self.sim.load_configuration(configuration)
-        assert_items_equal(configuration.coordinates, self.sim.positions)
+        assert_items_equal(configuration.coordinates[0][:self.sim.ndim], 
+                           self.sim.positions)
         assert_equal(configuration.potential_energy,
                      self.sim.pes.V(self.sim))
         assert_equal(configuration.box_vectors, None)
@@ -169,17 +171,21 @@ class testToySimulation(object):
     def test_load_snapshot(self):
         snapshot = Snapshot()
         self.sim.load_snapshot(snapshot)
-        assert_items_equal(snapshot.momentum.velocities, self.sim.velocities)
+        ndim=self.sim.ndim
+        assert_items_equal(snapshot.momentum.velocities[0][:ndim], 
+                           self.sim.velocities)
         assert_equal(snapshot.momentum.kinetic_energy,
                      self.sim.pes.kinetic_energy(self.sim))
-        assert_items_equal(snapshot.configuration.coordinates,
+        assert_items_equal(snapshot.configuration.coordinates[0][:ndim],
                            self.sim.positions)
         assert_equal(snapshot.configuration.potential_energy,
                      self.sim.pes.V(self.sim))
         assert_equal(snapshot.configuration.box_vectors, None)
         
     def test_init_simulation_with_snapshot(self):
-        snap = Snapshot(coordinates=[1,2,3], velocities=[4,5,6])
+        snap = Snapshot(coordinates=np.array([[1,2,3]]), 
+                        velocities=np.array([[4,5,6]]))
+        self.sim.ndim = 3
         self.sim.init_simulation_with_snapshot(snap)
         assert_items_equal(self.sim.positions, [1,2,3])
         assert_items_equal(self.sim.velocities, [4,5,6])
@@ -189,12 +195,12 @@ class testToySimulation(object):
         assert_items_equal(self.sim.positions, init_pos)
         assert_items_equal(self.sim.velocities, init_vel)
         snap = self.sim.generate_next_frame()
-        for (new, old) in zip(snap.coordinates, init_pos):
-            assert_not_equal(new, old)
+        #assert_equal_array_array(snap.coordinates,
+                                 #np.array([init_pos.append(0.0)]))
         self.sim.velocities = -self.sim.velocities
         snap2 = self.sim.generate_next_frame()
-        for (new, old) in zip(snap2.coordinates, init_pos):
-            assert_almost_equal(new, old)
+        assert_equal_array_array(snap2.coordinates,
+                                 [np.append(init_pos, 0.0)])
 
 
 # === TESTS FOR TOY INTEGRATORS ===========================================

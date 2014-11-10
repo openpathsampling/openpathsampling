@@ -27,9 +27,10 @@ class ToySimulation(object):
     comes to things the Simulator calls on them for'''
 
 
-    def __init__(self, pes, integ):
+    def __init__(self, pes, integ, ndim=2):
         self.pes = pes
         self.integ = integ
+        self.ndim = ndim
 
     @property
     def nsteps_per_iteration(self):
@@ -49,24 +50,24 @@ class ToySimulation(object):
         self.minv = np.reciprocal(value)
 
     def load_momentum(self, momentum):
-        momentum._velocities = self.velocities
+        momentum._velocities = convert_to_3Ndim(self.velocities)
         momentum._kinetic_energy = self.pes.kinetic_energy(self)
 
     def load_configuration(self, configuration):
-        configuration._coordinates = self.positions
+        configuration._coordinates = convert_to_3Ndim(self.positions)
         configuration._potential_energy = self.pes.V(self)
         configuration._box_vectors = None # toys without PBCs
 
     def load_snapshot(self, snapshot):
-        snapshot.configuration._coordinates = self.positions
+        snapshot.configuration._coordinates = convert_to_3Ndim(self.positions)
         snapshot.configuration._potential_energy = self.pes.V(self)
-        snapshot.momentum._velocities = self.velocities
+        snapshot.momentum._velocities = convert_to_3Ndim(self.velocities)
         snapshot.momentum._kinetic_energy = self.pes.kinetic_energy(self)
         snapshot.configuration._box_vectors = None
 
-    def init_simulation_with_snapshot(self, snapshot):
-        self.positions = snapshot.configuration.coordinates
-        self.velocities = snapshot.momentum.velocities
+    def init_simulation_with_snapshot(self, snap):
+        self.positions = np.ravel(snap.configuration.coordinates)[:self.ndim]
+        self.velocities = np.ravel(snap.momentum.velocities)[:self.ndim]
 
     def generate_next_frame(self):
         self.integ.step(self, self.nsteps_per_iteration)
