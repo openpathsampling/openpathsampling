@@ -160,7 +160,7 @@ if __name__=="__main__":
                 'n_frames_max' : 5000,
                 'start_time' : time.time(),
                 'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
-                'platform' : 'CUDA',
+                'platform' : 'fastest',
                 'solute_indices' : range(22), # TODO: This could be determined automatically !?!?
                 'forcefield_solute' : 'amber96.xml',
                 'forcefield_solvent' : 'tip3p.xml'
