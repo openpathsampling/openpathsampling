@@ -24,7 +24,8 @@ class Configuration(object):
     and the potential_energy
     """
 
-    # Class variables to store the global storage and the system context describing the system to be safed as configuration_indices
+    # Class variables to store the global storage and the system context
+    # describing the system to be safed as configuration_indices
     simulator = None
     load_lazy = True
 
@@ -73,26 +74,14 @@ class Configuration(object):
         self.topology = None
 
         if simulator is not None:
-            #context = simulator.simulation.context
             simulation = simulator.simulation
             self.topology = simulator.storage.topology
 
         if topology is not None:
             self.topology = topology
 
-        #if context is not None:
         if simulation is not None:
             simulation.load_configuration(self)
-            # Get current state from OpenMM Context object.
-            #state = context.getState(getPositions=True, getEnergy=True)
-
-            # Store the associated context
-            #self.context = context
-
-            # Populate current configuration data.
-            #self._coordinates = state.getPositions(asNumpy=True)
-            #self._box_vectors = state.getPeriodicBoxVectors()
-            #self._potential_energy = state.getPotentialEnergy()
         else:
             if coordinates is not None: 
                 self._coordinates = copy.deepcopy(coordinates)
@@ -105,7 +94,7 @@ class Configuration(object):
             # Check for nans in coordinates, and raise an exception if
             # something is wrong.
             if np.any(np.isnan(self._coordinates)):
-                raise Exception("Some coordinates became 'nan'; simulation is unstable or buggy.")
+                raise ValueError("Some coordinates became 'nan'; simulation is unstable or buggy.")
 
         return
 
@@ -179,17 +168,6 @@ class Configuration(object):
 
         return False
 
-#        return self is other
-
-#    def __hash__(self):
-        # We need to make sure that a configuration from storage can be
-        # found. So just take the numpy array of coordinates call a tostring
-        # and use this. That should be reasonably fast and should only avoid
-        # checking all coordinates. The final check is really, if the
-        # elements were loaded from the same idx in the same file (see
-        # __eq__)
-
-#        return hash(self.coordinates.tostring())
 
     @property
     def atoms(self):
@@ -240,30 +218,31 @@ class Configuration(object):
 
 
 
-#=============================================================================================
+#=============================================================================
 # SIMULATION MOMENTUM / VELOCITY
 #=============================================================================
 @storable
 class Momentum(object):
     """
-    Simulation momentum. Contains only velocities of all atoms and associated kinetic energies
+    Simulation momentum. Contains only velocities of all atoms and
+    associated kinetic energies
     """
     
-    # Class variables to store the global storage and the system context describing the system to be safed as momentums
+    # Class variables to store the global storage and the system context
+    # describing the system to be safed as momentums
     simulator = None
     load_lazy = True
 
     def __init__(self, simulation=None, simulator=None, velocities=None, 
                  kinetic_energy=None, idx=None):
         """
-        Create a simulation momentum from either an OpenMM context or individually-specified components.
+        Create a simulation momentum from either an OpenMM context or
+        individually-specified components.
 
         Parameters
         ----------
-        context : simtk.chem.openContext
-            if not None, the current state will be queried to populate
-            simulation momentum; otherwise, can specify individual
-            components (default: None)
+        simulation : 
+            (default: None)
         simulator : Simulator()
             if not None, the context and the topology is taken from the
             simulator object. This should be the preferred way when using
@@ -288,29 +267,14 @@ class Momentum(object):
 
         if simulator is not None:
             simulation = simulator.simulation
-            #context = simulator.simulation.context
 
-        #if context is not None:
         if simulation is not None:
             simulation.load_momentum(self)
-            # Get current state from OpenMM Context object.
-            #state = context.getState(getVelocities=True, getEnergy=True)
-            
-            # Store the associated context
-            #self.context = context
-            
-            # Populate current momentum data.
-            #self._velocities = state.getVelocities(asNumpy=True)
-            #self._kinetic_energy = state.getKineticEnergy()
         else:
             if velocities is not None: 
                 self._velocities = copy.deepcopy(velocities)
             if kinetic_energy is not None: 
                 self._kinetic_energy = copy.deepcopy(kinetic_energy)
-
-        # Check for nans in coordinates, and raise an exception if something is wrong.
-#        if np.any(np.isnan(self.coordinates)):
-#            raise Exception("Some coordinates became 'nan'; simulation is unstable or buggy.")
 
         return
 
@@ -362,9 +326,9 @@ class Momentum(object):
         '''   
         return self.velocities.shape[0]
 
-    #=============================================================================================
+    #=========================================================================
     # Utility functions
-    #=============================================================================================
+    #=========================================================================
 
     def copy(self):
         """
@@ -406,6 +370,7 @@ class Momentum(object):
         Momentum()
             the deep copy with reversed velocities.
         """
+        # TODO: is this should be avoided, why do we keep it?
         this = self.copy()
         this.reverse()
         return this
@@ -453,10 +418,8 @@ class Snapshot(object):
 
         Parameters
         ----------
-        context : simtk.chem.openContext
-            if not None, the current state will be queried to populate
-            simulation snapshot; otherwise, can specify individual
-            components (default: None)
+        simulation : 
+            (default: None)
         simulator : Simulator()
             if not None, the context and the topology is taken from the
             simulator object. This should be the preferred way when using
@@ -499,7 +462,6 @@ class Snapshot(object):
 
         if simulator is not None:
             simulation  = simulator.simulation
-            #context = simulator.simulation.context
             self.configuration.topology = simulator.storage.topology
 
         if topology is not None:
@@ -507,22 +469,8 @@ class Snapshot(object):
 
         self.reversed = reversed
 
-        #if context is not None:
         if simulation is not None:
             simulation.load_snapshot(self)
-            # Get current state from OpenMM Context object.
-            #state = context.getState(getPositions=True, getVelocities=True, 
-                                     #getEnergy=True)
-            
-            # Store the associated context
-            #self.context = context
-            
-            # Populate current snapshot data.
-            #self.configuration._coordinates = state.getPositions(asNumpy=True)
-            #self.momentum._velocities = state.getVelocities(asNumpy=True)
-            #self.configuration._box_vectors = state.getPeriodicBoxVectors(asNumpy=True)
-            #self.configuration._potential_energy = state.getPotentialEnergy()
-            #self.momentum._kinetic_energy = state.getKineticEnergy()
         else:
             if coordinates is not None: 
                 self.configuration._coordinates = copy.deepcopy(coordinates)
@@ -538,7 +486,7 @@ class Snapshot(object):
         if self.configuration._coordinates is not None:
             # Check for nans in coordinates, and raise an exception if something is wrong.
             if np.any(np.isnan(self.configuration._coordinates)):
-                raise Exception("Some coordinates became 'nan'; simulation is unstable or buggy.")
+                raise ValueError("Some coordinates became 'nan'; simulation is unstable or buggy.")
                 
         pass
 
@@ -562,8 +510,9 @@ class Snapshot(object):
     @has('momentum')
     def velocities(self):
         """
-        The velocities in the configuration. If the snapshot is reversed a copy of the original
-        (unreversed) velocities is made which is then returned
+        The velocities in the configuration. If the snapshot is reversed a
+        copy of the original (unreversed) velocities is made which is then
+        returned
         """
         if self.reversed:
             return self.momentum.reversed_copy().velocities
@@ -623,14 +572,15 @@ class Snapshot(object):
         '''   
         return self.kinetic_energy + self.potential_energy
     
-    #=============================================================================================
+    #==========================================================================
     # Utility functions
-    #=============================================================================================
+    #==========================================================================
 
     def copy(self):
         """
-        Returns a shallow copy of the instance itself. The contained configuration and momenta are not
-        copied.
+        Returns a shallow copy of the instance itself. The contained
+        configuration and momenta are not copied.
+
         Returns
         -------
         Snapshot()
@@ -641,8 +591,10 @@ class Snapshot(object):
     
     def reversed_copy(self):
         """
-        Returns a shallow reversed copy of the instance itself. The contained configuration and momenta are not
-        copied and the momenta are marked reversed.
+        Returns a shallow reversed copy of the instance itself. The
+        contained configuration and momenta are not copied and the momenta
+        are marked reversed.
+
         Returns
         -------
         Snapshot()
@@ -653,10 +605,11 @@ class Snapshot(object):
 
     def reverse(self):
         """
-        Reversed the momenta. This only flips a boolean and marks the given snapshot are reversed. This is fast and
-        should be used instead of read velocity inversion.
+        Reversed the momenta. This only flips a boolean and marks the given
+        snapshot are reversed. This is fast and should be used instead of
+        read velocity inversion.
         """
-
+        # TODO: reversed=>is_reversed to avoid confusion w/ built-in reversed
         self.reversed = not self.reversed
         return self
     

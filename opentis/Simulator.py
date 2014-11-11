@@ -95,17 +95,12 @@ class Simulator(object):
         if self.initialized:
             
             self.simulation.init_simulation_with_snapshot(snapshot)
-            # Set initial positions
-            #self.simulation.context.setPositions(snapshot.coordinates)
-            #self.simulation.context.setVelocities(snapshot.velocities)
 
             # Store initial state for each trajectory segment in trajectory.
             trajectory = Trajectory()
             trajectory.append(snapshot)
             
-            # Propagate dynamics by velocity Verlet.            
             frame = 0
-            #nsteps_per_iteration = self.nframes_per_iteration
             self.simulation.nsteps_per_iteration = self.nframes_per_iteration
             
             stop = False
@@ -113,17 +108,16 @@ class Simulator(object):
             while stop == False:
                                 
                 # Do integrator x steps
-                #self.simulation.step(nsteps_per_iteration)            
                 snapshot = self.simulation.generate_next_frame()
                 frame += 1
                 
-                # Store snapshot and add it to the trajectory. Stores also final frame the last time
-                #snapshot = Snapshot(self.simulation.context)
+                # Store snapshot and add it to the trajectory. Stores also
+                # final frame the last time
                 if self.storage is not None:
                     self.storage.snapshot.save(snapshot)
                 trajectory.append(snapshot)
                 
-                # Check if reached a core set. If not, continue simulation
+                # Check if we should stop. If not, continue simulation
                 if running is not None:
                     for runner in running:
                         #print str(runner), runner(trajectory)
@@ -131,7 +125,7 @@ class Simulator(object):
                         self.running[runner] = keep_running
                         stop = stop or not keep_running
 
-                # We could also just count the number of frames. Might be faster but not as nice :)                
+                # TODO: switch max length to self.max_length_stopper.can_append()
                 stop = stop or not self.max_length_stopper(trajectory)
                 
                 if self.op:
@@ -145,9 +139,12 @@ class Simulator(object):
             self.simulation.stop(trajectory)
             return trajectory
         else:
-            # TODO: Throw an error! Needs to be initialized
+            raise RuntimeWarning("Can't generate from an uninitialized system!")
             return None
 
+# TODO: everything after this should now be obsolete; superceded by subclass
+# in ala_dipeptide_example.py. However, I think that sandbox.py may still
+# use this, so we need to fix it up first
     @staticmethod
     def Alanine_system(mode ='auto'):
         '''
