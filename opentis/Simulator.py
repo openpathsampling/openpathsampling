@@ -128,14 +128,6 @@ class Simulator(object):
                 # TODO: switch max length to self.max_length_stopper.can_append()
                 stop = stop or not self.max_length_stopper(trajectory)
                 
-                if self.op:
-                    print self.max_length_stopper, self.max_length_stopper(trajectory)
-                    print frame
-                    print len(trajectory)
-                    print [ s.begin for s in trajectory]
-                    
-                    print 'OP :', self.op(snapshot)
-
             self.simulation.stop(trajectory)
             return trajectory
         else:
