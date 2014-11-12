@@ -6,6 +6,8 @@ import numpy as np
 
 from wrapper import savecache, saveidentifiable, loadcache
 
+import simtk.unit as u
+
 def add_storage_name(func):
     def inner(self, name, *args, **kwargs):
         var_name = '_'.join([self.db, name])
@@ -415,6 +417,9 @@ class ObjectStorage(object):
             if hasattr(obj, 'cls'):
                 getattr(self.storage, obj.cls).save(obj)
                 return { 'idx' : obj.idx[self.storage], 'cls' : obj.cls}
+            elif type(obj) is u.Quantity:
+                # This is number with a unit so turn it into a list
+                return { 'value' : obj / obj.unit, 'units' : str(obj.unit) }
             else:
                 return None
         elif type(obj) is list:
@@ -426,8 +431,10 @@ class ObjectStorage(object):
 
     def _build_var(self,obj):
         if type(obj) is dict:
-            if 'cls' in obj:
+            if 'cls' in obj and 'idx' in obj:
                 return getattr(self.storage, obj['cls']).load(obj['idx'])
+            elif 'units' in obj and 'value' in obj:
+                return u.Quantity(obj['value'], eval(obj['units'], vars(u)))
             else:
                 return {key : self._build_var(o) for key, o in obj.iteritems()}
         elif type(obj) is list:
