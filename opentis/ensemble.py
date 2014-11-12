@@ -123,7 +123,8 @@ class Ensemble(object):
 
 
 
-    def locate(self, trajectory, lazy=True, max_length=None, min_length=1, overlap=1):
+    def find_valid_slices(self, trajectory, lazy=True, 
+                          max_length=None, min_length=1, overlap=1):
         '''
         Returns a list of trajectories that contain sub-trajectories which
         are in the given ensemble.
@@ -177,10 +178,12 @@ class Ensemble(object):
                         if l > min_length:
                             pad = min(overlap, l - 1)
                             tt_left = trajectory[0:start + pad]
-                            list_left = self.locate(tt_left, max_length=l)
+                            list_left = self.find_valid_slices(tt_left, 
+                                                               max_length=l)
 
                             tt_right = trajectory[start + l - pad:length]
-                            list_right = self.locate(tt_right, max_length=l)
+                            list_right = self.find_valid_slices(tt_right, 
+                                                                max_length=l)
 
 #                        ensemble_list = list_left + [tt] + list_right
                         ensemble_list = list_left + [slice(start,start+l)] + list_right
@@ -243,10 +246,11 @@ class Ensemble(object):
 
         Notes
         -----
-        This uses self.locate and returns the actual sub-trajectories
+        This uses self.find_valid_slices and returns the actual sub-trajectories
         '''
 
-        indices = self.locate(trajectory, lazy, max_length, min_length, overlap)
+        indices = self.find_valid_slices(trajectory, lazy, max_length, 
+                                         min_length, overlap)
 
         return [trajectory[part] for part in indices]
 
