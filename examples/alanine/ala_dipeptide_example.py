@@ -289,7 +289,6 @@ the bootstrapping calculation, then we run it.
                               movers=mover_set)
 
     bootstrap.set_replicas([segments[0]])
-
     bootstrap.run(50)
 
     print """
