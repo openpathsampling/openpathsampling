@@ -491,7 +491,7 @@ class testSequentialEnsemble(EnsembleTest):
                     }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.pseudo_tis.forward, 
+            self._single_test(self.pseudo_tis.can_append, 
                                 ttraj[test], results[test], failmsg)
 
     def test_can_append_pseudominus(self):
@@ -536,7 +536,7 @@ class testSequentialEnsemble(EnsembleTest):
                     }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.pseudo_minus.forward, 
+            self._single_test(self.pseudo_minus.can_append, 
                                 ttraj[test], results[test], failmsg)
 
     def test_can_append_minus(self):
@@ -551,7 +551,7 @@ class testSequentialEnsemble(EnsembleTest):
                   }
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.minus.forward, 
+            self._single_test(self.minus.can_append, 
                                 ttraj[test], results[test], failmsg)
 
     def test_can_prepend_minus(self):
@@ -566,7 +566,7 @@ class testSequentialEnsemble(EnsembleTest):
                   }
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.minus.forward, 
+            self._single_test(self.minus.can_append, 
                                 ttraj[test], results[test], failmsg)
 
     def test_can_prepend_pseudo_tis(self):
@@ -592,7 +592,7 @@ class testSequentialEnsemble(EnsembleTest):
                     }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.pseudo_tis.backward, 
+            self._single_test(self.pseudo_tis.can_prepend, 
                                 ttraj[test], results[test], failmsg)
 
 
@@ -630,7 +630,7 @@ class testSequentialEnsemble(EnsembleTest):
                     }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.pseudo_minus.backward, 
+            self._single_test(self.pseudo_minus.can_prepend, 
                                 ttraj[test], results[test], failmsg)
 
     
@@ -655,10 +655,8 @@ class testSequentialEnsemble(EnsembleTest):
                    'upper_in_out_in' : False,
                    'upper_in_out' : True
                   }
-        print
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            print test,
             self._single_test(ensemble, 
                                 ttraj[test], results[test], failmsg)
 
@@ -775,7 +773,7 @@ class testSequentialEnsemble(EnsembleTest):
         }
         for test in append_results.keys():
             failmsg = "Append failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(ensemble.forward, ttraj[test], 
+            self._single_test(ensemble.can_append, ttraj[test], 
                               append_results[test], failmsg)
 
     def test_sequential_enter_exit(self):
