@@ -24,7 +24,6 @@ sys.path.append(os.path.abspath('../../'))
  
 # in principle, all of these imports should be simplified once this is a
 # package
-from opentis.Simulator import Simulator
 from opentis.orderparameter import OP_Function, OP_Volume
 from opentis.openmm_simulation import OpenMMSimulation
 from opentis.snapshot import Snapshot, Configuration
@@ -45,118 +44,15 @@ from simtk.unit import Quantity
 
 import time
 
-from opentis.integrators import VVVRIntegrator
 
-from simtk.openmm.app.pdbfile import PDBFile
-import simtk.openmm as openmm
-from simtk.openmm.app import ForceField, PME, HBonds
-from simtk.openmm.app import Simulation
-
-
-# TODO: figure out how much of this should be moved to Simulator 
-
-class AlanineDipeptideTrajectorySimulator(Simulator):
-    def __init__(self, filename, topology_file, opts, mode='auto'):
-        super(AlanineDipeptideTrajectorySimulator, self).__init__()
-
-        # tell everybody who their simulator is
-        Snapshot.simulator = self
-        Configuration.simulator = self
-        Trajectory.simulator = self
-
-        # set up the opts
-        self.opts = {}
-        self.add_stored_parameters(opts)
-
-        # storage
-        self.fn_storage = filename 
-
-        # topology
-        self.pdb = PDBFile(topology_file)
-        self.topology = self.pdb.topology
-
-        if mode == 'create':
-            # set up the OpenMM simulation
-            # self.platform = 'CUDA'
-            # platform = openmm.Platform.getPlatformByName(self.platform)
-            forcefield = ForceField( self.forcefield_solute,
-                                     self.forcefield_solvent )
-            system = forcefield.createSystem( self.topology, 
-                                              nonbondedMethod=PME,
-                                              nonbondedCutoff=1*nanometers,
-                                              constraints=HBonds )
-            self.system_serial = openmm.XmlSerializer.serialize(system)
-
-            integrator = VVVRIntegrator( self.temperature,
-                                         self.collision_rate,
-                                         self.timestep )
-            self.integrator_serial = openmm.XmlSerializer.serialize(system)
-            self.integrator_class = type(integrator).__name__
-
-            simulation = OpenMMSimulation(self.topology, system, 
-                                          integrator)
-
-            # claim the OpenMM simulation as our own
-            self.simulation = simulation
-
-            # set up the max_length_stopper (if n_frames_max is given)
-            self.max_length_stopper = LengthEnsemble(slice(0,self.n_frames_max-1))
-
-            # storage
-            self.storage = Storage(
-                topology_file=self.topology,
-                filename=self.fn_storage,
-                mode='w'
-            )
-            self.storage.simulator = self
-            self.storage._store_options(self)
-            Trajectory.storage = self.storage
-        if mode == 'restore':
-            pass
-        return
-
-
-    def add_stored_parameters(self, param_dict):
-        '''Adds parameters in param_dict to the attribute dictionary of the
-        simulator object, and saves the relevant keys as options to store.
-
-        Parameters
-        ----------
-        param_dict : dict
-            dictionary of attributes to be added (and stored); attribute
-            names are keys, with appropriate values
-        '''
-        # TODO: I think this should go into the Simulator object
-        for key in param_dict.keys():
-            self.opts[key] = param_dict[key]
-            setattr(self, key, param_dict[key])
-        self.options_to_store = self.opts.keys()
-        return
-        
-
-    def equilibrate(self, nsteps):
-        # TODO: rename... this is position restrained equil, right?
-        self.simulation.context.setPositions(self.pdb.positions)
-        system = self.simulation.system
-        n_solute = len(self.solute_indices)
-
-        solute_masses = Quantity(np.zeros(n_solute, np.double), dalton)
-        for i in self.solute_indices:
-            solute_masses[i] = system.getParticleMass(i)
-            system.setParticleMass(i,0.0)
-
-        self.simulation.step(nsteps)
-
-        for i in self.solute_indices:
-            system.setParticleMass(i, solute_masses[i].value_in_unit(dalton))
-
+from opentis.openmm_simulation import OpenMMSimulation
 
 if __name__=="__main__":
     options = {
                 'temperature' : 300.0 * kelvin,
                 'collision_rate' : 1.0 / picoseconds,
                 'timestep' : 2.0 * femtoseconds,
-                'nframes_per_iteration' : 10,
+                'nsteps_per_frame' : 10,
                 'n_frames_max' : 5000,
                 'start_time' : time.time(),
                 'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
@@ -165,7 +61,7 @@ if __name__=="__main__":
                 'forcefield_solute' : 'amber96.xml',
                 'forcefield_solvent' : 'tip3p.xml'
                }
-    simulator = AlanineDipeptideTrajectorySimulator(
+    simulator = OpenMMSimulation(
                     filename="trajectory.nc",
                     topology_file="../data/Alanine_solvated.pdb",
                     opts=options,
@@ -173,7 +69,7 @@ if __name__=="__main__":
                     )
 
     simulator.equilibrate(5)
-    snap = Snapshot(simulator.simulation)
+    snap = Snapshot(simulator)
     simulator.storage.snapshot.save(snap, 0)
     simulator.initialized = True
     PathMover.simulator = simulator

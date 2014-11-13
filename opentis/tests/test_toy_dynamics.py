@@ -143,13 +143,13 @@ class testToySimulation(object):
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
         sim.mass = sys_mass
-        sim.nsteps_per_iteration = 10
+        sim.nsteps_per_frame = 10
         self.sim = sim
 
     def test_sanity(self):
         assert_items_equal(self.sim.mass, sys_mass)
         assert_items_equal(self.sim.minv, [1.0/m_i for m_i in sys_mass])
-        assert_equal(self.sim.nsteps_per_iteration, 10)
+        assert_equal(self.sim.nsteps_per_frame, 10)
 
     def test_load_momentum(self):
         momentum = Momentum()
@@ -213,7 +213,7 @@ class testLeapfrogVerletIntegrator(object):
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
         sim.mass = sys_mass
-        sim.nsteps_per_iteration = 10
+        sim.nsteps_per_frame = 10
         self.sim = sim
 
     def test_momentum_update(self):
@@ -250,7 +250,7 @@ class testLangevinBAOABIntegrator(object):
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
         sim.mass = sys_mass
-        sim.nsteps_per_iteration = 10
+        sim.nsteps_per_frame = 10
         self.sim = sim
 
     def test_OU_update(self):

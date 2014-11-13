@@ -1,5 +1,6 @@
 import numpy as np
 from opentis.snapshot import Snapshot
+from opentis.Simulator import Simulator
 
 def convert_to_3Ndim(v):
     ndofs = len(v)
@@ -20,12 +21,11 @@ def convert_to_3Ndim(v):
 
 
 
-class ToySimulation(object):
+class ToySimulation(Simulator):
     '''The trick is that we have various "simulation" classes (either
     generated directly as here, or subclassed for more complication
     simulation objects as in OpenMM), but they all quack the same when it
     comes to things the Simulator calls on them for'''
-
 
     def __init__(self, pes, integ, ndim=2):
         self.pes = pes
@@ -33,12 +33,12 @@ class ToySimulation(object):
         self.ndim = ndim
 
     @property
-    def nsteps_per_iteration(self):
-        return self._nsteps_per_iteration
+    def nsteps_per_frame(self):
+        return self._nsteps_per_frame
 
-    @nsteps_per_iteration.setter
-    def nsteps_per_iteration(self, value):
-        self._nsteps_per_iteration = value
+    @nsteps_per_frame.setter
+    def nsteps_per_frame(self, value):
+        self._nsteps_per_frame = value
 
     @property
     def mass(self):
@@ -70,7 +70,7 @@ class ToySimulation(object):
         self.velocities = np.ravel(snap.momentum.velocities)[:self.ndim]
 
     def generate_next_frame(self):
-        self.integ.step(self, self.nsteps_per_iteration)
+        self.integ.step(self, self.nsteps_per_frame)
         snap = Snapshot()
         self.load_snapshot(snap)
         return snap
