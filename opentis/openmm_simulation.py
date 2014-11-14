@@ -175,14 +175,32 @@ class OpenMMSimulation(Simulator):
         snapshot.momentum._velocities = state.getVelocities(asNumpy=True)
         snapshot.momentum._kinetic_energy = state.getKineticEnergy()
 
-    def init_simulation_with_snapshot(self, snapshot):
+    @property
+    def current_snapshot(self):
+        snapshot = Snapshot()
+        state = self.simulation.context.getState(getPositions=True,
+                                                 getVelocities=True,
+                                                 getEnergy=True)
+        snapshot.configuration._coordinates = state.getPositions(asNumpy=True)
+        snapshot.configuration._box_vectors = state.getPeriodicBoxVectors()
+        snapshot.configuration._potential_energy = state.getPotentialEnergy()
+        snapshot.momentum._velocities = state.getVelocities(asNumpy=True)
+        snapshot.momentum._kinetic_energy = state.getKineticEnergy()
+        return snapshot
+
+    @current_snapshot.setter
+    def current_snapshot(self, snapshot):
         self.simulation.context.setPositions(snapshot.coordinates)
         self.simulation.context.setVelocities(snapshot.velocities)
-
 
     def generate_next_frame(self):
         self.simulation.step(self.nsteps_per_frame)
         return Snapshot(self)
+
+    # TODO: these two become defaults in Simulator() when 
+    def start(self, snapshot=None):
+        if snapshot is not None:
+            self.current_snapshot = snapshot
 
     def stop(self, trajectory):
         """Nothing special needs to be done to an OpenMMSimulation when you

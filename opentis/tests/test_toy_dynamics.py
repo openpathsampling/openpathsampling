@@ -186,7 +186,8 @@ class testToySimulation(object):
         snap = Snapshot(coordinates=np.array([[1,2,3]]), 
                         velocities=np.array([[4,5,6]]))
         self.sim.ndim = 3
-        self.sim.init_simulation_with_snapshot(snap)
+        self.sim.current_snaphost = snap
+        #self.sim.init_simulation_with_snapshot(snap)
         assert_items_equal(self.sim.positions, [1,2,3])
         assert_items_equal(self.sim.velocities, [4,5,6])
 

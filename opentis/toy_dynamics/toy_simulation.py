@@ -65,7 +65,18 @@ class ToySimulation(Simulator):
         snapshot.momentum._kinetic_energy = self.pes.kinetic_energy(self)
         snapshot.configuration._box_vectors = None
 
-    def init_simulation_with_snapshot(self, snap):
+    @property
+    def current_snaphost(self):
+        snapshot = Snapshot()
+        snapshot.configuration._coordinates = convert_to_3Ndim(self.positions)
+        snapshot.configuration._potential_energy = self.pes.V(self)
+        snapshot.momentum._velocities = convert_to_3Ndim(self.velocities)
+        snapshot.momentum._kinetic_energy = self.pes.kinetic_energy(self)
+        snapshot.configuration._box_vectors = None
+        return snapshot
+
+    @current_snaphost.setter
+    def current_snaphost(self, snap):
         self.positions = np.ravel(snap.configuration.coordinates)[:self.ndim]
         self.velocities = np.ravel(snap.momentum.velocities)[:self.ndim]
 
@@ -74,6 +85,11 @@ class ToySimulation(Simulator):
         snap = Snapshot()
         self.load_snapshot(snap)
         return snap
+
+    def start(self, snapshot=None):
+        if snapshot is not None:
+            self.current_snaphost = snapshot
+
 
     def stop(self, trajectory):
         pass # pragma: no cover (no need to test this one)

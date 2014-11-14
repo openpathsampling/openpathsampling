@@ -63,6 +63,14 @@ class Simulator(object):
         self.initialized = False
         self.running = dict()
 
+    @property
+    def current_snapshot(self):
+        return self._snapshot
+
+    @current_snapshot.setter
+    def current_snaphost(self, snapshot):
+        self._snapshot = snapshot
+
         
     def generate(self, snapshot, running = None):
         r"""
@@ -94,7 +102,7 @@ class Simulator(object):
         # Are we ready to rumble ?
         if self.initialized:
             
-            self.init_simulation_with_snapshot(snapshot)
+            self.current_snapshot = snapshot
 
             # Store initial state for each trajectory segment in trajectory.
             trajectory = Trajectory()
