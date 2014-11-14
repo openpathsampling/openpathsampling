@@ -1,0 +1,72 @@
+# API Layers in OpenPathSampling
+
+
+## Simulation Layer API
+
+Many tools already exist to generate the trajectories that our path sampling
+methods are based on, and we see no reason to reimplement what has already
+been better implemented by others. In addition, the tools we provide in OPS
+are independent of the nature of the underlying trajectories.
+
+Because of these to points, we interact with the simulation layer, which
+generates trajectories, using a very simple API.
+
+To add support for a new dynamics engine, you must create a subclass of our
+`Simulator` object. This subclass must implement the following features:
+
+* `@property` called `Subclass.snapshot`: getting this returns the current
+  state of the simulation in the form of an `openpathsampling.Snapshot`
+  object. Setting initializes a simulation in the state given by the
+  `openpathsampling.Snapshot`.
+* `next_frame()`: a function that returns the next saved frame from the
+  simulation
+* `stop()`: a function that tells the simulation to stop. For simulations
+  where the frame generation is under direct control, this is often a no-op.
+  However, if your simulation uses an external process to generate frames,
+  it is likely that you'll continue generating frames after reaching the
+  stopping point. This function is where you do the clean-up.
+
+The most obvious way to combine OPS with another engine is if that engine
+has a convenient API such that you can, in one function call, obtain the
+next frame. This is what we mean by "direct control." For a very simple
+example of direct control, see our `ToySimulation` engine. The
+`OpenMMSimualtion` engine provides a much more powerful (and more
+complicated) interface with direct control.
+
+However, in some situations you can't exercise direct control over the
+simulation: it's quite possible that your dynamics engine doesn't provide a
+Python API. But even then, it may be possible to use your dynamics engine
+in OPS: to see an example of how that is done, see our `GromacsSimulation`
+engine.
+
+## Ensemble Layer API
+
+Path sampling approaches are fundamentally based on sampling path ensembles.
+Before trying to create your own `Ensemble` subclass, we strongly recommend
+you see if your goal can be met by creative usage of the path ensemble
+classes we've already created. However, if that isn't possible, you can
+always create a new subclass.
+
+Such an object must be a subclass of `Ensemble`, and it must implement the
+following methods:
+
+* `__call__(trajectory)`: determine whether the given trajectory is in the
+  ensemble.
+* `can_append(trajectory)`: determine whether appending to the given
+  trajectory would make it impossible for further appending to be in the
+  ensemble. Another way of thinking about this is to call this the logical
+  "not" of the forward stop condition: stop propagating the trajectory
+  forward if `can_append` returns `False`.
+* `can_prepend(trajectory)`: as with `can_append`, but in the direction of
+  decreasing time.
+* `__not__()`: return the set-logical "not" of the ensemble subclass. That
+  is to say, all trajectories (except the zero-length trajectory) should
+  either be in `ensemble_subclass(trajectory)` or
+  `ensemble_subclass.__not__(trajectory)`.
+
+## Calculation Layer API
+
+### PathMovers
+
+### GlobalMoves
+
