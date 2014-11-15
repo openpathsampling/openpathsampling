@@ -26,26 +26,17 @@ class Configuration(object):
 
     # Class variables to store the global storage and the system context
     # describing the system to be safed as configuration_indices
-    simulator = None
+    engine = None
     load_lazy = True
 
-    def __init__(self, simulation=None, simulator=None, coordinates=None, 
-                 box_vectors=None, potential_energy=None, topology=None,
-                 idx=None):
+    def __init__(self, coordinates=None, box_vectors=None,
+                 potential_energy=None, topology=None, idx=None):
         """
         Create a simulation configuration from either an OpenMM context or
         individually-specified components.
 
         Parameters
         ----------
-        context : simtk.chem.openContext
-            if not None, the current state will be queried to populate
-            simulation configuration; otherwise, can specify individual
-            components (default: None)
-        simulator : Simulator()
-            if not None, the context and the topology is taken from the
-            simulator object. This should be the preferred way when using
-            simulations
         coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
             atomic coordinates (default: None)
         box_vectors : periodic box vectors (default: None)
@@ -73,22 +64,15 @@ class Configuration(object):
         self._potential_energy = None
         self.topology = None
 
-        if simulator is not None:
-            simulation = simulator.simulation
-            self.topology = simulator.storage.topology
-
         if topology is not None:
             self.topology = topology
 
-        if simulation is not None:
-            simulation.load_configuration(self)
-        else:
-            if coordinates is not None: 
-                self._coordinates = copy.deepcopy(coordinates)
-            if box_vectors is not None: 
-                self._box_vectors = copy.deepcopy(box_vectors)
-            if potential_energy is not None: 
-                self._potential_energy = copy.deepcopy(potential_energy)
+        if coordinates is not None: 
+            self._coordinates = copy.deepcopy(coordinates)
+        if box_vectors is not None: 
+            self._box_vectors = copy.deepcopy(box_vectors)
+        if potential_energy is not None: 
+            self._potential_energy = copy.deepcopy(potential_energy)
 
         if self._coordinates is not None:
             # Check for nans in coordinates, and raise an exception if
@@ -230,23 +214,16 @@ class Momentum(object):
     
     # Class variables to store the global storage and the system context
     # describing the system to be safed as momentums
-    simulator = None
+    engine = None
     load_lazy = True
 
-    def __init__(self, simulation=None, simulator=None, velocities=None, 
-                 kinetic_energy=None, idx=None):
+    def __init__(self, velocities=None, kinetic_energy=None, idx=None):
         """
         Create a simulation momentum from either an OpenMM context or
         individually-specified components.
 
         Parameters
         ----------
-        simulation : 
-            (default: None)
-        simulator : Simulator()
-            if not None, the context and the topology is taken from the
-            simulator object. This should be the preferred way when using
-            simulations
         velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
             atomic velocities (default: None)
         kinetic_energy : simtk.unit.Quantity of units energy/mole
@@ -265,16 +242,10 @@ class Momentum(object):
         self._velocities = None
         self._kinetic_energy = None
 
-        if simulator is not None:
-            simulation = simulator.simulation
-
-        if simulation is not None:
-            simulation.load_momentum(self)
-        else:
-            if velocities is not None: 
-                self._velocities = copy.deepcopy(velocities)
-            if kinetic_energy is not None: 
-                self._kinetic_energy = copy.deepcopy(kinetic_energy)
+        if velocities is not None: 
+            self._velocities = copy.deepcopy(velocities)
+        if kinetic_energy is not None: 
+            self._kinetic_energy = copy.deepcopy(kinetic_energy)
 
         return
 
@@ -353,7 +324,8 @@ class Momentum(object):
         will be treated as a new Momentum instance.  Should be avoided.
         """
 
-        # This trick loads both, velocities and the kinetic energy. Otherwise we might run into trouble when removing the index
+        # This trick loads both, velocities and the kinetic energy.
+        # Otherwise we might run into trouble when removing the index
         self._velocities = -1.0 * self.velocities
         self.kinetic_energy
         self.idx = dict()
@@ -408,22 +380,21 @@ class Snapshot(object):
     # Hopefully these class member variables will not be needed any longer
     simulator = None
 
-    def __init__(self, simulation=None, simulator=None, coordinates=None,
-                 velocities=None, box_vectors=None, potential_energy=None,
-                 kinetic_energy=None, configuration=None, momentum=None,
-                 reversed=False, topology=None):
+    def __init__(self, coordinates=None, velocities=None, box_vectors=None,
+                 potential_energy=None, kinetic_energy=None, topology=None,
+                 configuration=None, momentum=None, reversed=False):
         """
-        Create a simulation snapshot from either an OpenMM context or
-        individually-specified components.
+        Create a simulation snapshot. Initialization happens primarily in
+        one of two ways:
+            1. Specify `Configuration` and `Momentum` objects
+            2. Specify the things which make up `Configuration` and
+               `Momentum` objects, i.e., coordinates, velocities, box
+               vectors, etc.
+        If you want to obtain a snapshot from a currently-running MD engine,
+        use that engine's .current_snapshot property.
 
         Parameters
         ----------
-        simulation : 
-            (default: None)
-        simulator : Simulator()
-            if not None, the context and the topology is taken from the
-            simulator object. This should be the preferred way when using
-            simulations
         coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
             atomic coordinates (default: None)
         velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
@@ -460,31 +431,25 @@ class Snapshot(object):
         else:
             self.momentum = momentum
 
-        if simulator is not None:
-            simulation  = simulator.simulation
-            self.configuration.topology = simulator.storage.topology
-
         if topology is not None:
             self.configuration.topology = topology
 
         self.reversed = reversed
 
-        if simulation is not None:
-            simulation.load_snapshot(self)
-        else:
-            if coordinates is not None: 
-                self.configuration._coordinates = copy.deepcopy(coordinates)
-            if velocities is not None: 
-                self.momentum._velocities = copy.deepcopy(velocities)
-            if box_vectors is not None: 
-                self.configuration._box_vectors = copy.deepcopy(box_vectors)
-            if potential_energy is not None: 
-                self.configuration._potential_energy = copy.deepcopy(potential_energy)
-            if kinetic_energy is not None: 
-                self.momentum._kinetic_energy = copy.deepcopy(kinetic_energy)
+        if coordinates is not None: 
+            self.configuration._coordinates = copy.deepcopy(coordinates)
+        if velocities is not None: 
+            self.momentum._velocities = copy.deepcopy(velocities)
+        if box_vectors is not None: 
+            self.configuration._box_vectors = copy.deepcopy(box_vectors)
+        if potential_energy is not None: 
+            self.configuration._potential_energy = copy.deepcopy(potential_energy)
+        if kinetic_energy is not None: 
+            self.momentum._kinetic_energy = copy.deepcopy(kinetic_energy)
             
         if self.configuration._coordinates is not None:
-            # Check for nans in coordinates, and raise an exception if something is wrong.
+            # Check for nans in coordinates, and raise an exception if
+            # something is wrong.
             if np.any(np.isnan(self.configuration._coordinates)):
                 raise ValueError("Some coordinates became 'nan'; simulation is unstable or buggy.")
                 

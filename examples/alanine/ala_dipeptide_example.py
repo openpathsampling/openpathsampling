@@ -69,7 +69,7 @@ if __name__=="__main__":
                     )
 
     simulator.equilibrate(5)
-    snap = Snapshot(simulator)
+    snap = simulator.current_snapshot
     simulator.storage.snapshot.save(snap, 0)
     simulator.initialized = True
     PathMover.simulator = simulator

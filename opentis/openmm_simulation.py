@@ -175,18 +175,30 @@ class OpenMMSimulation(Simulator):
         snapshot.momentum._velocities = state.getVelocities(asNumpy=True)
         snapshot.momentum._kinetic_energy = state.getKineticEnergy()
 
-    @property
-    def current_snapshot(self):
-        snapshot = Snapshot()
+    # TODO: there are two reasonable approaches to this: 
+    # 1. require that part of the engine.next_frame() function be that the
+    #    user saves a snapshot object called `self._current_snapshot`
+    # 2. build the current snapshot on the fly every time the snapshot is
+    #    needed
+    # The trade-off is that (1) will be faster if we ask for the snapshot
+    # frequently, but it is also much more likely to be a source of errors
+    # for users who forget to implement that last step.
+
+    def _build_current_snapshot(self):
         state = self.simulation.context.getState(getPositions=True,
                                                  getVelocities=True,
                                                  getEnergy=True)
-        snapshot.configuration._coordinates = state.getPositions(asNumpy=True)
-        snapshot.configuration._box_vectors = state.getPeriodicBoxVectors()
-        snapshot.configuration._potential_energy = state.getPotentialEnergy()
-        snapshot.momentum._velocities = state.getVelocities(asNumpy=True)
-        snapshot.momentum._kinetic_energy = state.getKineticEnergy()
-        return snapshot
+        return Snapshot(coordinates = state.getPositions(asNumpy=True),
+                        box_vectors = state.getPeriodicBoxVectors(),
+                        potential_energy = state.getPotentialEnergy(),
+                        velocities = state.getVelocities(asNumpy=True),
+                        kinetic_energy = state.getKineticEnergy(),
+                        topology = self.topology
+                       )
+
+    @property
+    def current_snapshot(self):
+        return self._build_current_snapshot()
 
     @current_snapshot.setter
     def current_snapshot(self, snapshot):
@@ -195,7 +207,7 @@ class OpenMMSimulation(Simulator):
 
     def generate_next_frame(self):
         self.simulation.step(self.nsteps_per_frame)
-        return Snapshot(self)
+        return self.current_snapshot
 
     # TODO: these two become defaults in Simulator() when 
     def start(self, snapshot=None):
