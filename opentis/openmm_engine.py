@@ -2,7 +2,7 @@ import numpy as np
 import simtk.openmm
 from snapshot import Snapshot, Configuration, Momentum
 from trajectory import Trajectory
-from Simulator import Simulator
+from dynamics_engine import DynamicsEngine
 from ensemble import LengthEnsemble
 from integrators import VVVRIntegrator
 from storage import Storage
@@ -15,18 +15,18 @@ import simtk.openmm as openmm
 from simtk.openmm.app import ForceField, PME, HBonds
 
 # TODO: figure out how much of this can be moved into the general case
-class OpenMMSimulation(Simulator):
+class OpenMMEngine(DynamicsEngine):
     """We only need a few things from the simulation. This object duck-types
     an OpenMM simulation object so that it quacks the methods we need to
     use."""
 
     def __init__(self, filename, topology_file, opts, mode='auto'):
-        super(OpenMMSimulation, self).__init__()
+        super(OpenMMEngine, self).__init__()
 
-        # tell everybody who their simulator is
-        Snapshot.simulator = self
-        Configuration.simulator = self
-        Trajectory.simulator = self
+        # tell everybody who their engine is
+        Snapshot.engine = self
+        Configuration.engine = self
+        Trajectory.engine = self
 
         # set up the opts
         self.opts = {}
@@ -70,7 +70,7 @@ class OpenMMSimulation(Simulator):
                 filename=self.fn_storage,
                 mode='w'
             )
-            self.storage.simulator = self
+            self.storage.engine = self
             self.storage._store_options(self)
             Trajectory.storage = self.storage
         if mode == 'restore':
@@ -80,7 +80,8 @@ class OpenMMSimulation(Simulator):
 
     def add_stored_parameters(self, param_dict):
         '''Adds parameters in param_dict to the attribute dictionary of the
-        simulator object, and saves the relevant keys as options to store.
+        DynamicsEngine object, and saves the relevant keys as options to
+        store.
 
         Parameters
         ----------
@@ -88,7 +89,7 @@ class OpenMMSimulation(Simulator):
             dictionary of attributes to be added (and stored); attribute
             names are keys, with appropriate values
         '''
-        # TODO: I think this should go into the Simulator object
+        # TODO: I think this should go into the DynamicsEngine object
         for key in param_dict.keys():
             self.opts[key] = param_dict[key]
             setattr(self, key, param_dict[key])
@@ -209,7 +210,7 @@ class OpenMMSimulation(Simulator):
         self.simulation.step(self.nsteps_per_frame)
         return self.current_snapshot
 
-    # TODO: these two become defaults in Simulator() when 
+    # TODO: these two become defaults in DynamicsEngine() when 
     def start(self, snapshot=None):
         if snapshot is not None:
             self.current_snapshot = snapshot

@@ -47,12 +47,12 @@ class PathMover(object):
     
     Attributes
     ----------
-    simulator : Simulator
-        the attached simulator used to generate new trajectories
+    engine : DynamicsEngine
+        the attached engine used to generate new trajectories
     """
 
     cls = 'pathmover'
-    simulator = None
+    engine = None
 
     @property
     def identifier(self):
@@ -124,7 +124,7 @@ class ShootMover(PathMover):
         super(ShootMover, self).__init__()
         self.selector = selector
         self.ensemble = ensemble
-        self.length_stopper = PathMover.simulator.max_length_stopper
+        self.length_stopper = PathMover.engine.max_length_stopper
 
     def selection_probability_ratio(self, details):
         '''
@@ -173,7 +173,7 @@ class ForwardShootMover(ShootMover):
         print "Shooting forward from frame %d" % shooting_point
         
         # Run until one of the stoppers is triggered
-        partial_trajectory = PathMover.simulator.generate(
+        partial_trajectory = PathMover.engine.generate(
             details.start_point.snapshot,
             running = [ForwardAppendedTrajectoryEnsemble(
                 self.ensemble, 
@@ -194,7 +194,7 @@ class BackwardShootMover(ShootMover):
         print "Shooting backward from frame %d" % details.start_point.index
 
         # Run until one of the stoppers is triggered
-        partial_trajectory = PathMover.simulator.generate(
+        partial_trajectory = PathMover.engine.generate(
                                      details.start_point.snapshot.reversed_copy(),
                                      running = [BackwardPrependedTrajectoryEnsemble(
                                                      self.ensemble,

@@ -31,7 +31,7 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 # Multi-State Transition Interface Sampling
 #=============================================================================
 
-class Simulator(object):
+class DynamicsEngine(object):
     '''
     Class to wrap a simulation tool to store the context and rerun, needed parameters, storage, etc. 
     
@@ -47,11 +47,11 @@ class Simulator(object):
 
     def __init__(self):
         '''
-        Create an empty simulator object
+        Create an empty DynamicsEngine object
         
         Notes
         -----
-        The purpose of a simulator is to create simulations and keep track
+        The purpose of an engine is to create trajectories and keep track
         of the results. The main method is 'generate' to create a
         trajectory, which is a list of snapshots and then can store the in
         the associated storage. In the initialization this storage is
@@ -63,15 +63,6 @@ class Simulator(object):
         self.initialized = False
         self.running = dict()
 
-    @property
-    def current_snapshot(self):
-        return self._snapshot
-
-    @current_snapshot.setter
-    def current_snaphost(self, snapshot):
-        self._snapshot = snapshot
-
-        
     def generate(self, snapshot, running = None):
         r"""
         Generate a velocity Verlet trajectory consisting of ntau segments of

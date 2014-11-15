@@ -7,7 +7,7 @@ from nose.plugins.skip import Skip, SkipTest
 
 from opentis.toy_dynamics.toy_pes import *
 from opentis.toy_dynamics.toy_integrators import *
-from opentis.toy_dynamics.toy_simulation import *
+from opentis.toy_dynamics.toy_engine import *
 from opentis.snapshot import Snapshot, Momentum, Configuration
 
 import numpy as np
@@ -135,11 +135,11 @@ class test_convert_fcn(object):
         assert_equal_array_array(convert_to_3Ndim([1.0, 2.0, 3.0, 4.0]),
                                  np.array([[1.0, 2.0, 3.0], [4.0, 0.0, 0.0]]))
 
-class testToySimulation(object):
+class testToyEngine(object):
     def setUp(self):
         pes = linear
         integ = LeapfrogVerletIntegrator(dt=0.002)
-        sim = ToySimulation(pes, integ)
+        sim = ToyEngine(pes, integ)
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
         sim.mass = sys_mass
@@ -169,8 +169,7 @@ class testToySimulation(object):
         assert_equal(configuration.box_vectors, None)
 
     def test_load_snapshot(self):
-        snapshot = Snapshot()
-        self.sim.load_snapshot(snapshot)
+        snapshot = self.sim.current_snapshot
         ndim=self.sim.ndim
         assert_items_equal(snapshot.momentum.velocities[0][:ndim], 
                            self.sim.velocities)
@@ -182,14 +181,14 @@ class testToySimulation(object):
                      self.sim.pes.V(self.sim))
         assert_equal(snapshot.configuration.box_vectors, None)
         
-    def test_init_simulation_with_snapshot(self):
+    def test_init_engine_with_snapshot(self):
         snap = Snapshot(coordinates=np.array([[1,2,3]]), 
                         velocities=np.array([[4,5,6]]))
-        self.sim.ndim = 3
-        self.sim.current_snaphost = snap
-        #self.sim.init_simulation_with_snapshot(snap)
-        assert_items_equal(self.sim.positions, [1,2,3])
-        assert_items_equal(self.sim.velocities, [4,5,6])
+        # note that we truncate the z-direction, regardless of what it is.
+        # This is for a 2D model!
+        self.sim.current_snapshot = snap
+        assert_items_equal(self.sim.positions, [1,2])
+        assert_items_equal(self.sim.velocities, [4,5])
 
     def test_generate_next_frame(self):
         # we test correctness by integrating forward, then backward
@@ -210,7 +209,7 @@ class testLeapfrogVerletIntegrator(object):
     def setUp(self):
         pes = linear
         integ = LeapfrogVerletIntegrator(dt=0.002)
-        sim = ToySimulation(pes, integ)
+        sim = ToyEngine(pes, integ)
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
         sim.mass = sys_mass
@@ -247,7 +246,7 @@ class testLangevinBAOABIntegrator(object):
         pes = linear
         integ = LangevinBAOABIntegrator(dt=0.002, temperature=0.5,
                                         gamma=1.0)
-        sim = ToySimulation(pes, integ)
+        sim = ToyEngine(pes, integ)
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
         sim.mass = sys_mass

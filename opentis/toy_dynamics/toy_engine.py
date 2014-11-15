@@ -1,6 +1,6 @@
 import numpy as np
 from opentis.snapshot import Snapshot
-from opentis.Simulator import Simulator
+from opentis.dynamics_engine import DynamicsEngine
 
 def convert_to_3Ndim(v):
     ndofs = len(v)
@@ -21,11 +21,11 @@ def convert_to_3Ndim(v):
 
 
 
-class ToySimulation(Simulator):
+class ToyEngine(DynamicsEngine):
     '''The trick is that we have various "simulation" classes (either
     generated directly as here, or subclassed for more complication
     simulation objects as in OpenMM), but they all quack the same when it
-    comes to things the Simulator calls on them for'''
+    comes to things the DynamicsEngine calls on them for'''
 
     def __init__(self, pes, integ, ndim=2):
         self.pes = pes
@@ -66,7 +66,7 @@ class ToySimulation(Simulator):
         snapshot.configuration._box_vectors = None
 
     @property
-    def current_snaphost(self):
+    def current_snapshot(self):
         snapshot = Snapshot()
         snapshot.configuration._coordinates = convert_to_3Ndim(self.positions)
         snapshot.configuration._potential_energy = self.pes.V(self)
@@ -75,8 +75,9 @@ class ToySimulation(Simulator):
         snapshot.configuration._box_vectors = None
         return snapshot
 
-    @current_snaphost.setter
-    def current_snaphost(self, snap):
+    @current_snapshot.setter
+    def current_snapshot(self, snap):
+        print "setting current_snapshot"
         self.positions = np.ravel(snap.configuration.coordinates)[:self.ndim]
         self.velocities = np.ravel(snap.momentum.velocities)[:self.ndim]
 
@@ -88,7 +89,7 @@ class ToySimulation(Simulator):
 
     def start(self, snapshot=None):
         if snapshot is not None:
-            self.current_snaphost = snapshot
+            self.current_snapshot = snapshot
 
 
     def stop(self, trajectory):

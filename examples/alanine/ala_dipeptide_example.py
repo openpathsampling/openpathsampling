@@ -25,7 +25,7 @@ sys.path.append(os.path.abspath('../../'))
 # in principle, all of these imports should be simplified once this is a
 # package
 from opentis.orderparameter import OP_Function, OP_Volume
-from opentis.openmm_simulation import OpenMMSimulation
+from opentis.openmm_engine import OpenMMEngine
 from opentis.snapshot import Snapshot, Configuration
 from opentis.volume import LambdaVolumePeriodic, VolumeFactory as vf
 from opentis.pathmover import PathMoverFactory as mf
@@ -45,8 +45,6 @@ from simtk.unit import Quantity
 import time
 
 
-from opentis.openmm_simulation import OpenMMSimulation
-
 if __name__=="__main__":
     options = {
                 'temperature' : 300.0 * kelvin,
@@ -61,18 +59,17 @@ if __name__=="__main__":
                 'forcefield_solute' : 'amber96.xml',
                 'forcefield_solvent' : 'tip3p.xml'
                }
-    simulator = OpenMMSimulation(
-                    filename="trajectory.nc",
-                    topology_file="../data/Alanine_solvated.pdb",
-                    opts=options,
-                    mode='create'
-                    )
+    engine = OpenMMEngine(filename="trajectory.nc",
+                          topology_file="../data/Alanine_solvated.pdb",
+                          opts=options, 
+                          mode='create'
+                         )
 
-    simulator.equilibrate(5)
-    snap = simulator.current_snapshot
-    simulator.storage.snapshot.save(snap, 0)
-    simulator.initialized = True
-    PathMover.simulator = simulator
+    engine.equilibrate(5)
+    snap = engine.current_snapshot
+    engine.storage.snapshot.save(snap, 0)
+    engine.initialized = True
+    PathMover.engine = engine
 
     # this generates an order parameter (callable) object named psi (so if
     # we call `psi(trajectory)` we get a list of the values of psi for each
@@ -91,8 +88,8 @@ if __name__=="__main__":
 
     # save the orderparameters in the storage
     # since they have no data cache this will only contain their name
-    psi.save(storage=simulator.storage.cv)
-    phi.save(storage=simulator.storage.cv)
+    psi.save(storage=engine.storage.cv)
+    phi.save(storage=engine.storage.cv)
 
     # now we define our states and our interfaces
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
@@ -112,7 +109,7 @@ if __name__=="__main__":
         # Give each interface a name
         interface.name = 'Interface '+str(no)
         # And save all of these
-        simulator.storage.ensemble.save(interface)
+        engine.storage.ensemble.save(interface)
 
     mover_set = mf.OneWayShootingSet(UniformSelector(), interface_set)
 
@@ -125,7 +122,7 @@ This path ensemble is particularly complex because we want to be sure that
 the path we generate is in the ensemble we desire: this means that we can't
 use LeaveXEnsemble as we typically do with TIS paths.
     """
-    snapshot = simulator.storage.snapshot.load(0)
+    snapshot = engine.storage.snapshot.load(0)
     
     first_traj_ensemble = SequentialEnsemble([
         OutXEnsemble(stateA) | LengthEnsemble(0),
@@ -139,7 +136,7 @@ use LeaveXEnsemble as we typically do with TIS paths.
 
     interface0_ensemble = interface_set[0]
     print "start path generation (should not take more than a few minutes)"
-    total_path = simulator.generate(snapshot, [first_traj_ensemble.forward])
+    total_path = engine.generate(snapshot, [first_traj_ensemble.forward])
     print "path generation complete"
     print
     print "Total trajectory length: ", len(total_path)
@@ -179,8 +176,8 @@ Starting the bootstrapping procedure to obtain initial paths. First we
 define our shooting movers (randomly pick fwd or bkwd shooting), then build
 the bootstrapping calculation, then we run it. 
     """
-    bootstrap = Bootstrapping(storage=simulator.storage,
-                              simulator=simulator,
+    bootstrap = Bootstrapping(storage=engine.storage,
+                              engine=engine,
                               ensembles=interface_set,
                               movers=mover_set)
 
@@ -192,15 +189,15 @@ the bootstrapping calculation, then we run it.
     Saving all cached computations of orderparameters.
     """
 
-    psi.save(storage=simulator.storage.cv)
-    phi.save(storage=simulator.storage.cv)
+    psi.save(storage=engine.storage.cv)
+    phi.save(storage=engine.storage.cv)
 
     # Save all interface volumes as orderparameters
     op_vol_set = [OP_Volume('OP' + str(idx), vol) for idx, vol in enumerate(volume_set)]
 
     for op in op_vol_set:
-        op(simulator.storage.snapshot.all())
-        simulator.storage.cv.save(op)
+        op(engine.storage.snapshot.all())
+        engine.storage.cv.save(op)
 
     # Create an orderparameter from a volume
     op_inA = OP_Volume('StateA', stateA)
@@ -208,15 +205,15 @@ the bootstrapping calculation, then we run it.
     op_notinAorB = OP_Volume('StateX', ~ (stateA | stateB))
 
     # compute the orderparameter for all snapshots
-    op_inA(simulator.storage.snapshot.all())
-    op_inB(simulator.storage.snapshot.all())
-    op_notinAorB(simulator.storage.snapshot.all())
+    op_inA(engine.storage.snapshot.all())
+    op_inB(engine.storage.snapshot.all())
+    op_notinAorB(engine.storage.snapshot.all())
 
-    simulator.storage.cv.save(op_inA)
-    simulator.storage.cv.save(op_inB)
-    simulator.storage.cv.save(op_notinAorB)
+    engine.storage.cv.save(op_inA)
+    engine.storage.cv.save(op_inB)
+    engine.storage.cv.save(op_notinAorB)
 
     # Alternatively one could write
 
-    # simulator.storage.cv.save(psi)
-    # simulator.storage.cv.save(phi)
+    # engine.storage.cv.save(psi)
+    # engine.storage.cv.save(phi)

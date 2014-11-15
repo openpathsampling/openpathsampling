@@ -378,7 +378,7 @@ class Snapshot(object):
     # Class variables to store the global storage and the system context
     # describing the system to be saved as snapshots
     # Hopefully these class member variables will not be needed any longer
-    simulator = None
+    engine = None
 
     def __init__(self, coordinates=None, velocities=None, box_vectors=None,
                  potential_energy=None, kinetic_energy=None, topology=None,
