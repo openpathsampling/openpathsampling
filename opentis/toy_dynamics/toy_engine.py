@@ -1,5 +1,6 @@
 import numpy as np
 from opentis.snapshot import Snapshot
+from opentis.snapshot import Momentum, Configuration
 from opentis.dynamics_engine import DynamicsEngine
 
 def convert_to_3Ndim(v):
@@ -49,43 +50,23 @@ class ToyEngine(DynamicsEngine):
         self._mass = value
         self.minv = np.reciprocal(value)
 
-    def load_momentum(self, momentum):
-        momentum._velocities = convert_to_3Ndim(self.velocities)
-        momentum._kinetic_energy = self.pes.kinetic_energy(self)
-
-    def load_configuration(self, configuration):
-        configuration._coordinates = convert_to_3Ndim(self.positions)
-        configuration._potential_energy = self.pes.V(self)
-        configuration._box_vectors = None # toys without PBCs
-
-    def load_snapshot(self, snapshot):
-        snapshot.configuration._coordinates = convert_to_3Ndim(self.positions)
-        snapshot.configuration._potential_energy = self.pes.V(self)
-        snapshot.momentum._velocities = convert_to_3Ndim(self.velocities)
-        snapshot.momentum._kinetic_energy = self.pes.kinetic_energy(self)
-        snapshot.configuration._box_vectors = None
-
     @property
     def current_snapshot(self):
-        snapshot = Snapshot()
-        snapshot.configuration._coordinates = convert_to_3Ndim(self.positions)
-        snapshot.configuration._potential_energy = self.pes.V(self)
-        snapshot.momentum._velocities = convert_to_3Ndim(self.velocities)
-        snapshot.momentum._kinetic_energy = self.pes.kinetic_energy(self)
-        snapshot.configuration._box_vectors = None
-        return snapshot
+        return Snapshot(coordinates=convert_to_3Ndim(self.positions),
+                        potential_energy=self.pes.V(self),
+                        box_vectors=None,
+                        velocities=convert_to_3Ndim(self.velocities),
+                        kinetic_energy=self.pes.kinetic_energy(self)
+                       )
 
     @current_snapshot.setter
     def current_snapshot(self, snap):
-        print "setting current_snapshot"
         self.positions = np.ravel(snap.configuration.coordinates)[:self.ndim]
         self.velocities = np.ravel(snap.momentum.velocities)[:self.ndim]
 
     def generate_next_frame(self):
         self.integ.step(self, self.nsteps_per_frame)
-        snap = Snapshot()
-        self.load_snapshot(snap)
-        return snap
+        return self.current_snapshot
 
     def start(self, snapshot=None):
         if snapshot is not None:
@@ -95,3 +76,27 @@ class ToyEngine(DynamicsEngine):
     def stop(self, trajectory):
         pass # pragma: no cover (no need to test this one)
 
+
+    # momentum and configuration properties; these may be removed at some
+    # point
+
+    @property
+    def momentum(self):
+        return Momentum(velocities=convert_to_3Ndim(self.velocities),
+                        kinetic_energy=self.pes.kinetic_energy(self)
+                       )
+
+    @momentum.setter
+    def momentum(self, momentum):
+        self.velocities = np.ravel(momentum.velocities)[:self.ndim]
+
+    @property
+    def configuration(self):
+        return Configuration(coordinates=convert_to_3Ndim(self.positions),
+                             box_vectors=None,
+                             potential_energy=self.pes.V(self)
+                            )
+
+    @configuration.setter
+    def configuration(self, configuration):
+        self.positions = np.ravel(configuration.coordinates)[:self.ndim]

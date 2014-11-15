@@ -191,6 +191,9 @@ the bootstrapping calculation, then we run it.
 
     psi.save(storage=engine.storage.cv)
     phi.save(storage=engine.storage.cv)
+    # Alternatively one could write
+    # engine.storage.cv.save(psi)
+    # engine.storage.cv.save(phi)
 
     # Save all interface volumes as orderparameters
     op_vol_set = [OP_Volume('OP' + str(idx), vol) for idx, vol in enumerate(volume_set)]
@@ -213,7 +216,3 @@ the bootstrapping calculation, then we run it.
     engine.storage.cv.save(op_inB)
     engine.storage.cv.save(op_notinAorB)
 
-    # Alternatively one could write
-
-    # engine.storage.cv.save(psi)
-    # engine.storage.cv.save(phi)

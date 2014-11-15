@@ -125,57 +125,6 @@ class OpenMMEngine(DynamicsEngine):
     def nsteps_per_frame(self, value):
         self._nsteps_per_frame = value
 
-
-    def load_momentum(self, momentum):
-        """Loads the current context velocities/kinetic energy into the
-        `Momentum` object given as a parameter
-
-        Parameters
-        ----------
-        momentum : Momentum
-            output object into which the current simulation state is loaded
-        """
-        state = self.simulation.context.getState(getVelocities=True,
-                                                 getEnergy=True)
-        momentum._velocities = state.getVelocities(asNumpy=True)
-        momentum._kinetic_energy = state.getKineticEnergy()
-
-    def load_configuration(self, configuration):
-        """Loads the current context positions/potential energy/box vectors
-        into the `Configuration` object given as a parameter
-
-        Parameters
-        ----------
-        configuration : Configuration
-            output object into which the current simulation state is loaded
-        """
-        # this is basically the stuff that used to be in
-        # Configuration.__init__ in the case that a context was given
-        state = self.simulation.context.getState(getPositions=True, 
-                                                 getEnergy=True)
-        configuration._coordinates = state.getPositions(asNumpy=True)
-        configuration._box_vectors = state.getPeriodicBoxVectors()
-        configuration._potential_energy = state.getPotentialEnergy()
-
-    def load_snapshot(self, snapshot):
-        """Loads the current context into the `Snapshot` object given as a
-        parameter. Include positions, velocities, kinetic and potential
-        energy, and box vectors.
-
-        Parameters
-        ----------
-        snapshot : Snapshot
-            output object into which the current simulation state is loaded
-        """
-        state = self.simulation.context.getState(getPositions=True,
-                                                 getVelocities=True,
-                                                 getEnergy=True)
-        snapshot.configuration._coordinates = state.getPositions(asNumpy=True)
-        snapshot.configuration._box_vectors = state.getPeriodicBoxVectors()
-        snapshot.configuration._potential_energy = state.getPotentialEnergy()
-        snapshot.momentum._velocities = state.getVelocities(asNumpy=True)
-        snapshot.momentum._kinetic_energy = state.getKineticEnergy()
-
     # TODO: there are two reasonable approaches to this: 
     # 1. require that part of the engine.next_frame() function be that the
     #    user saves a snapshot object called `self._current_snapshot`

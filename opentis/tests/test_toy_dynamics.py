@@ -121,7 +121,7 @@ class testCombinations(object):
         assert_almost_equal(self.simpletest.kinetic_energy(self), 0.4575)
 
 
-# === TESTS FOR TOY SIMULATION OBJECT =====================================
+# === TESTS FOR TOY ENGINE OBJECT =========================================
 def assert_equal_array_array(truth, beauty):
     for (t_atom, b_atom) in zip(truth, beauty):
         assert_items_equal(t_atom, b_atom)
@@ -151,24 +151,22 @@ class testToyEngine(object):
         assert_items_equal(self.sim.minv, [1.0/m_i for m_i in sys_mass])
         assert_equal(self.sim.nsteps_per_frame, 10)
 
-    def test_load_momentum(self):
-        momentum = Momentum()
-        self.sim.load_momentum(momentum)
+    def test_momentum_getter(self):
+        momentum = self.sim.momentum
         assert_items_equal(momentum.velocities[0][:self.sim.ndim],
                            self.sim.velocities)
         assert_equal(momentum.kinetic_energy,
                      self.sim.pes.kinetic_energy(self.sim))
 
     def test_load_configuration(self):
-        configuration = Configuration()
-        self.sim.load_configuration(configuration)
+        configuration = self.sim.configuration
         assert_items_equal(configuration.coordinates[0][:self.sim.ndim], 
                            self.sim.positions)
         assert_equal(configuration.potential_energy,
                      self.sim.pes.V(self.sim))
         assert_equal(configuration.box_vectors, None)
 
-    def test_load_snapshot(self):
+    def test_snapshot_get(self):
         snapshot = self.sim.current_snapshot
         ndim=self.sim.ndim
         assert_items_equal(snapshot.momentum.velocities[0][:ndim], 
@@ -181,7 +179,7 @@ class testToyEngine(object):
                      self.sim.pes.V(self.sim))
         assert_equal(snapshot.configuration.box_vectors, None)
         
-    def test_init_engine_with_snapshot(self):
+    def test_snapshot_set(self):
         snap = Snapshot(coordinates=np.array([[1,2,3]]), 
                         velocities=np.array([[4,5,6]]))
         # note that we truncate the z-direction, regardless of what it is.
