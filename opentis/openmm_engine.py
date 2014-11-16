@@ -14,30 +14,20 @@ from simtk.openmm.app.pdbfile import PDBFile
 import simtk.openmm as openmm
 from simtk.openmm.app import ForceField, PME, HBonds
 
-# TODO: figure out how much of this can be moved into the general case
 class OpenMMEngine(DynamicsEngine):
     """We only need a few things from the simulation. This object duck-types
     an OpenMM simulation object so that it quacks the methods we need to
     use."""
 
     def __init__(self, filename, topology_file, opts, mode='auto'):
-        super(OpenMMEngine, self).__init__()
-
-        # tell everybody who their engine is
-        Snapshot.engine = self
-        Configuration.engine = self
-        Trajectory.engine = self
-
-        # set up the opts
-        self.opts = {}
-        self.add_stored_parameters(opts)
-
-        # storage
-        self.fn_storage = filename 
-
-        # topology
+        # if topology exists, it must be defined before running
+        # super.__init__. This is ugly, but I don't see an easy way out.
         self.pdb = PDBFile(topology_file)
         self.topology = self.pdb.topology
+
+        super(OpenMMEngine, self).__init__(filename=filename,
+                                           opts=opts,
+                                           mode=mode)
 
         if mode == 'create':
             # set up the OpenMM simulation
@@ -61,41 +51,11 @@ class OpenMMEngine(DynamicsEngine):
             # claim the OpenMM simulation as our own
             self.simulation = simulation
 
-            # set up the max_length_stopper (if n_frames_max is given)
-            self.max_length_stopper = LengthEnsemble(slice(0,self.n_frames_max-1))
 
-            # storage
-            self.storage = Storage(
-                topology_file=self.topology,
-                filename=self.fn_storage,
-                mode='w'
-            )
-            self.storage.engine = self
-            self.storage._store_options(self)
-            Trajectory.storage = self.storage
         if mode == 'restore':
             pass
         return
 
-
-    def add_stored_parameters(self, param_dict):
-        '''Adds parameters in param_dict to the attribute dictionary of the
-        DynamicsEngine object, and saves the relevant keys as options to
-        store.
-
-        Parameters
-        ----------
-        param_dict : dict
-            dictionary of attributes to be added (and stored); attribute
-            names are keys, with appropriate values
-        '''
-        # TODO: I think this should go into the DynamicsEngine object
-        for key in param_dict.keys():
-            self.opts[key] = param_dict[key]
-            setattr(self, key, param_dict[key])
-        self.options_to_store = self.opts.keys()
-        return
-        
 
     def equilibrate(self, nsteps):
         # TODO: rename... this is position restrained equil, right?
@@ -115,8 +75,8 @@ class OpenMMEngine(DynamicsEngine):
 
 
 
-    # this property is specific to certain simulations: other simulations
-    # might not use this
+    # this property is specific to direct control simulations: other
+    # simulations might not use this
     @property
     def nsteps_per_frame(self):
         return self._nsteps_per_frame
@@ -159,15 +119,6 @@ class OpenMMEngine(DynamicsEngine):
         self.simulation.step(self.nsteps_per_frame)
         return self.current_snapshot
 
-    # TODO: these two become defaults in DynamicsEngine() when 
-    def start(self, snapshot=None):
-        if snapshot is not None:
-            self.current_snapshot = snapshot
-
-    def stop(self, trajectory):
-        """Nothing special needs to be done to an OpenMMSimulation when you
-        hit a stop condition."""
-        pass
 
     # (possibly temporary) shortcuts for momentum and configuration
     @property

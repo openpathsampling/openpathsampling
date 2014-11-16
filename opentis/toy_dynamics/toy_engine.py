@@ -68,14 +68,6 @@ class ToyEngine(DynamicsEngine):
         self.integ.step(self, self.nsteps_per_frame)
         return self.current_snapshot
 
-    def start(self, snapshot=None):
-        if snapshot is not None:
-            self.current_snapshot = snapshot
-
-
-    def stop(self, trajectory):
-        pass # pragma: no cover (no need to test this one)
-
 
     # momentum and configuration properties; these may be removed at some
     # point

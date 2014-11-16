@@ -16,6 +16,7 @@ import mdtraj as md
 from opentis.storage import Storage
 from opentis.trajectory import Trajectory
 from opentis.snapshot import Snapshot
+from opentis.snapshot import Configuration, Momentum
 from opentis.integrators import VVVRIntegrator
 from opentis.ensemble import LengthEnsemble
 #from opentis.openmm_simulation import OpenMMSimulation
@@ -33,19 +34,17 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 
 class DynamicsEngine(object):
     '''
-    Class to wrap a simulation tool to store the context and rerun, needed parameters, storage, etc. 
+    Class to wrap a simulation tool to store the context and rerun, needed
+    parameters, storage, etc. 
     
     Notes
     -----
-    - Should only be contructed through factory functions
-    - This is the main object knowing about all things of the simulation. It
-      might be possible to replace this with other simulation tools than
-      OpenMM
-    
+    Should be considered an abstract class: only its subclasses can be
+    instantiated.
     '''
 
 
-    def __init__(self):
+    def __init__(self, filename=None, opts=None, mode='auto'):
         '''
         Create an empty DynamicsEngine object
         
@@ -58,10 +57,70 @@ class DynamicsEngine(object):
         created as well as the related Trajectory and Snapshot classes are
         initialized.
         '''
+
         self.op = None
         self.storage = None
         self.initialized = False
         self.running = dict()
+
+        # set up the opts
+        self.opts = {}
+        self.add_stored_parameters(opts)
+
+        if not hasattr(self, 'topology'):
+            self.topology = None
+
+        # storage
+        self.fn_storage = filename 
+
+        # tell everybody who their engine is
+        Snapshot.engine = self
+        Configuration.engine = self
+        Trajectory.engine = self
+
+        if mode == 'create':
+            # set up the max_length_stopper (if n_frames_max is given)
+            # TODO: switch this not needing slice; use can_append
+            if hasattr(self, 'n_frames_max'):
+                self.max_length_stopper = LengthEnsemble(slice(0,self.n_frames_max-1))
+
+            # storage
+            self.storage = Storage(
+                topology_file=self.topology,
+                filename=self.fn_storage,
+                mode='w'
+            )
+            self.storage.engine = self
+            self.storage._store_options(self)
+            Trajectory.storage = self.storage
+ 
+
+    def add_stored_parameters(self, param_dict):
+        '''Adds parameters in param_dict to the attribute dictionary of the
+        DynamicsEngine object, and saves the relevant keys as options to
+        store.
+
+        Parameters
+        ----------
+        param_dict : dict
+            dictionary of attributes to be added (and stored); attribute
+            names are keys, with appropriate values
+        '''
+        if param_dict is not None:
+            for key in param_dict.keys():
+                self.opts[key] = param_dict[key]
+                setattr(self, key, param_dict[key])
+            self.options_to_store = self.opts.keys()
+        return
+ 
+    def start(self, snapshot=None):
+        if snapshot is not None:
+            self.current_snapshot = snapshot
+
+    def stop(self, trajectory):
+        """Nothing special needs to be done for direct-control simulations
+        when you hit a stop condition."""
+        pass
 
     def generate(self, snapshot, running = None):
         r"""
@@ -94,6 +153,7 @@ class DynamicsEngine(object):
         if self.initialized:
             
             self.current_snapshot = snapshot
+            self.start()
 
             # Store initial state for each trajectory segment in trajectory.
             trajectory = Trajectory()
@@ -102,6 +162,7 @@ class DynamicsEngine(object):
             frame = 0
             
             stop = False
+
 
             while stop == False:
                                 
