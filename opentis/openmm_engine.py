@@ -168,3 +168,31 @@ class OpenMMEngine(DynamicsEngine):
         """Nothing special needs to be done to an OpenMMSimulation when you
         hit a stop condition."""
         pass
+
+    # (possibly temporary) shortcuts for momentum and configuration
+    @property
+    def momentum(self):
+        state = self.simulation.context.getState(getVelocities=True,
+                                                 getEnergy=True)
+        return Momentum(velocities = state.getVelocities(asNumpy=True),
+                        kinetic_energy = state.getKineticEnergy()
+                       )
+
+    @momentum.setter
+    def momentum(self, momentum):
+        self.simulation.context.setVelocities(snapshot.velocities)
+
+    @property
+    def configuration(self):
+        state = self.simulation.context.getState(getPositions=True,
+                                                 getVelocities=True,
+                                                 getEnergy=True)
+        return Configuration(coordinates = state.getPositions(asNumpy=True),
+                             box_vectors = state.getPeriodicBoxVectors(),
+                             potential_energy = state.getPotentialEnergy(),
+                             topology = self.topology
+                            )
+
+    @configuration.setter
+    def configuration(self, config):
+        self.simulation.context.setPositions(snapshot.coordinates)
