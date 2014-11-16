@@ -5,21 +5,11 @@ Created on 01.07.2014
 @author: JH Prinz
 '''
 
-import time
-
-import numpy as np
-from simtk.openmm.app import *
-from simtk.openmm import *
-from simtk.unit import *
-import mdtraj as md
-
 from opentis.storage import Storage
 from opentis.trajectory import Trajectory
 from opentis.snapshot import Snapshot
 from opentis.snapshot import Configuration, Momentum
-from opentis.integrators import VVVRIntegrator
 from opentis.ensemble import LengthEnsemble
-#from opentis.openmm_simulation import OpenMMSimulation
 
 
 #=============================================================================
