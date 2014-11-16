@@ -122,6 +122,7 @@ class testCombinations(object):
 
 
 # === TESTS FOR TOY ENGINE OBJECT =========================================
+
 def assert_equal_array_array(truth, beauty):
     for (t_atom, b_atom) in zip(truth, beauty):
         assert_items_equal(t_atom, b_atom)
@@ -157,6 +158,17 @@ class testToyEngine(object):
                            self.sim.velocities)
         assert_equal(momentum.kinetic_energy,
                      self.sim.pes.kinetic_energy(self.sim))
+    
+    def test_momentum_setter(self):
+        self.sim.momentum = Momentum(velocities=np.array([[4, 5, 6]]))
+        assert_items_equal(self.sim.velocities, [4, 5])
+
+    def test_configuration_setter(self):
+        self.sim.configuration = Configuration(
+            coordinates=np.array([[1, 2, 3]])
+        )
+        assert_items_equal(self.sim.positions, [1, 2])
+
 
     def test_load_configuration(self):
         configuration = self.sim.configuration
