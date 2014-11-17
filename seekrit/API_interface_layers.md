@@ -25,6 +25,12 @@ To add support for a new dynamics engine, you must create a subclass of our
   However, if your simulation uses an external process to generate frames,
   it is likely that you'll continue generating frames after reaching the
   stopping point. This function is where you do the clean-up.
+* The type signature for `__init__` must include arguments `filename` (for
+  the netCDF output file), `mode` (which determines whether the file should
+  be written or just read), and `opts` (a dictionary which contains all the
+  options for the engine). Calling `super` with these arguments will open
+  the storage file and will also set all the options in `opts` as attributes
+  of the object.
 
 The most obvious way to combine OPS with another engine is if that engine
 has a convenient API such that you can, in one function call, obtain the
