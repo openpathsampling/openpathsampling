@@ -4,12 +4,14 @@ Created on 01.07.2014
 @author JDC Chodera
 @author: JH Prinz
 '''
+import os
 
 from opentis.storage import Storage
 from opentis.trajectory import Trajectory
 from opentis.snapshot import Snapshot
 from opentis.snapshot import Configuration, Momentum
 from opentis.ensemble import LengthEnsemble
+
 
 
 #=============================================================================
@@ -53,12 +55,23 @@ class DynamicsEngine(object):
         self.initialized = False
         self.running = dict()
 
+        if mode == 'auto':
+            if filename is not None:
+                if os.path.isfile(filename):
+                    mode = 'restore'
+                else:
+                    mode = 'create'
+
+
         # set up the opts
         self.opts = {}
         self.add_stored_parameters(opts)
 
         if not hasattr(self, 'topology'):
             self.topology = None
+
+        if not hasattr(self, 'n_atoms'):
+            self.n_atoms = None
 
         # storage
         self.fn_storage = filename 
@@ -68,6 +81,7 @@ class DynamicsEngine(object):
         Configuration.engine = self
         Trajectory.engine = self
 
+
         if mode == 'create':
             # set up the max_length_stopper (if n_frames_max is given)
             # TODO: switch this not needing slice; use can_append
@@ -75,14 +89,16 @@ class DynamicsEngine(object):
                 self.max_length_stopper = LengthEnsemble(slice(0,self.n_frames_max-1))
 
             # storage
-            self.storage = Storage(
-                topology_file=self.topology,
-                filename=self.fn_storage,
-                mode='w'
-            )
-            self.storage.engine = self
-            self.storage._store_options(self)
-            Trajectory.storage = self.storage
+            if filename is not None:
+                self.storage = Storage(
+                    topology_file=self.topology,
+                    n_atoms=self.n_atoms,
+                    filename=self.fn_storage,
+                    mode='w'
+                )
+                self.storage.engine = self
+                self.storage._store_options(self)
+                Trajectory.storage = self.storage
  
 
     def add_stored_parameters(self, param_dict):

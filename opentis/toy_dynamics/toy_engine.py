@@ -21,6 +21,10 @@ def convert_to_3Ndim(v):
     return np.array(out)
 
 
+def count_atoms(ndofs):
+    # first part gives whole atoms, second part says if a partial exists
+    return (ndofs / 3) + min(1, ndofs % 3)
+
 
 class ToyEngine(DynamicsEngine):
     '''The trick is that we have various "simulation" classes (either
@@ -30,10 +34,11 @@ class ToyEngine(DynamicsEngine):
 
     def __init__(self, filename=None, opts=None, mode='auto'):
         #TODO: redo __init__ to match the form of dynamics_engine
-        super(ToyEngine, self).__init__(filename=filename, opts=opts,
-                                        mode=mode)
         if 'ndim' not in opts:
-            self.ndim = 2
+            opts['ndim'] = 2
+        opts['n_atoms'] = count_atoms(opts['ndim'])
+        super(ToyEngine, self).__init__(filename=filename, mode=mode,
+                                        opts=opts)
 
     @property
     def nsteps_per_frame(self):

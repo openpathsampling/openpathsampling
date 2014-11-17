@@ -1,6 +1,9 @@
 '''
 @author: David W.H. Swenson
 '''
+import os
+import numpy as np
+
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, raises)
 from nose.plugins.skip import Skip, SkipTest
@@ -10,7 +13,6 @@ from opentis.toy_dynamics.toy_integrators import *
 from opentis.toy_dynamics.toy_engine import *
 from opentis.snapshot import Snapshot, Momentum, Configuration
 
-import numpy as np
 
 # =========================================================================
 # This single test module includes all the tests for the toy_dynamics
@@ -140,12 +142,20 @@ class testToyEngine(object):
     def setUp(self):
         pes = linear
         integ = LeapfrogVerletIntegrator(dt=0.002)
-        sim = ToyEngine(opts={'pes' : pes, 'integ' : integ})
+        sim = ToyEngine(opts={'pes' : pes, 'integ' : integ, 
+                              'n_frames_max' : 5,},
+                        filename='toy_tmp.nc',
+                        mode='create')
+
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
         sim.mass = sys_mass
         sim.nsteps_per_frame = 10
         self.sim = sim
+
+    def teardown(self):
+        if os.path.isfile('toy_tmp.nc'):
+            os.remove('toy_tmp.nc')
 
     def test_sanity(self):
         assert_items_equal(self.sim.mass, sys_mass)
