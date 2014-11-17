@@ -28,10 +28,12 @@ class ToyEngine(DynamicsEngine):
     simulation objects as in OpenMM), but they all quack the same when it
     comes to things the DynamicsEngine calls on them for'''
 
-    def __init__(self, pes, integ, ndim=2):
-        self.pes = pes
-        self.integ = integ
-        self.ndim = ndim
+    def __init__(self, filename=None, opts=None, mode='auto'):
+        #TODO: redo __init__ to match the form of dynamics_engine
+        super(ToyEngine, self).__init__(filename=filename, opts=opts,
+                                        mode=mode)
+        if 'ndim' not in opts:
+            self.ndim = 2
 
     @property
     def nsteps_per_frame(self):

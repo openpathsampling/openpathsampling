@@ -1,5 +1,4 @@
 import numpy as np
-import simtk.openmm
 from snapshot import Snapshot, Configuration, Momentum
 from trajectory import Trajectory
 from dynamics_engine import DynamicsEngine
@@ -10,9 +9,9 @@ from storage import Storage
 from simtk.unit import femtoseconds, picoseconds, nanometers, kelvin, dalton
 from simtk.unit import Quantity
 
-from simtk.openmm.app.pdbfile import PDBFile
 import simtk.openmm as openmm
 from simtk.openmm.app import ForceField, PME, HBonds
+from simtk.openmm.app.pdbfile import PDBFile
 
 class OpenMMEngine(DynamicsEngine):
     """We only need a few things from the simulation. This object duck-types

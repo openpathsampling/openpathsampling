@@ -140,7 +140,7 @@ class testToyEngine(object):
     def setUp(self):
         pes = linear
         integ = LeapfrogVerletIntegrator(dt=0.002)
-        sim = ToyEngine(pes, integ)
+        sim = ToyEngine(opts={'pes' : pes, 'integ' : integ})
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
         sim.mass = sys_mass
@@ -212,6 +212,10 @@ class testToyEngine(object):
         assert_equal_array_array(snap2.coordinates,
                                  [np.append(init_pos, 0.0)])
 
+    def test_generate(self):
+        # TODO
+        raise SkipTest
+
 
 # === TESTS FOR TOY INTEGRATORS ===========================================
 
@@ -219,7 +223,7 @@ class testLeapfrogVerletIntegrator(object):
     def setUp(self):
         pes = linear
         integ = LeapfrogVerletIntegrator(dt=0.002)
-        sim = ToyEngine(pes, integ)
+        sim = ToyEngine(opts={'pes' : pes, 'integ' : integ})
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
         sim.mass = sys_mass
@@ -256,7 +260,7 @@ class testLangevinBAOABIntegrator(object):
         pes = linear
         integ = LangevinBAOABIntegrator(dt=0.002, temperature=0.5,
                                         gamma=1.0)
-        sim = ToyEngine(pes, integ)
+        sim = ToyEngine(opts={'pes' : pes, 'integ' : integ})
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
         sim.mass = sys_mass
