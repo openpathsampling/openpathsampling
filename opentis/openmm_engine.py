@@ -23,8 +23,6 @@ class OpenMMEngine(DynamicsEngine):
         # super.__init__. This is ugly, but I don't see an easy way out.
         self.pdb = PDBFile(topology_file)
         self.topology = self.pdb.topology
-        self.n_atoms = self.topology.n_atoms
-
         super(OpenMMEngine, self).__init__(filename=filename,
                                            opts=opts,
                                            mode=mode)
