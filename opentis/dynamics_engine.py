@@ -197,5 +197,4 @@ class DynamicsEngine(object):
             return trajectory
         else:
             raise RuntimeWarning("Can't generate from an uninitialized system!")
-            return None
 

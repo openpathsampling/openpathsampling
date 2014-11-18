@@ -233,6 +233,12 @@ class testToyEngine(object):
     def test_generate_uninitialized(self):
         traj = self.sim.generate(self.sim.current_snapshot, [true_func])
 
+    def test_start_with_snapshot(self):
+        snap = Snapshot(coordinates=np.array([1,2]), 
+                        velocities=np.array([3,4]))
+        self.sim.start(snapshot=snap)
+        self.sim.stop([snap])
+
 
 
 # === TESTS FOR TOY INTEGRATORS ===========================================
