@@ -46,19 +46,18 @@ import time
 
 
 if __name__=="__main__":
-    options = {
-                'temperature' : 300.0 * kelvin,
-                'collision_rate' : 1.0 / picoseconds,
-                'timestep' : 2.0 * femtoseconds,
-                'nsteps_per_frame' : 10,
-                'n_frames_max' : 5000,
-                'start_time' : time.time(),
-                'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
-                'platform' : 'fastest',
-                'solute_indices' : range(22), # TODO: This could be determined automatically !?!?
-                'forcefield_solute' : 'amber96.xml',
-                'forcefield_solvent' : 'tip3p.xml'
-               }
+    options = {'temperature' : 300.0 * kelvin,
+               'collision_rate' : 1.0 / picoseconds,
+               'timestep' : 2.0 * femtoseconds,
+               'nsteps_per_frame' : 10,
+               'n_frames_max' : 5000,
+               'start_time' : time.time(),
+               'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
+               'platform' : 'fastest',
+               'solute_indices' : range(22), # TODO: This could be determined automatically !?!?
+               'forcefield_solute' : 'amber96.xml',
+               'forcefield_solvent' : 'tip3p.xml'
+              }
     engine = OpenMMEngine(filename="trajectory.nc",
                           topology_file="../data/Alanine_solvated.pdb",
                           opts=options, 
