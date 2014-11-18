@@ -58,7 +58,7 @@ class OpenMMEngine(DynamicsEngine):
 
     def equilibrate(self, nsteps):
         # TODO: rename... this is position restrained equil, right?
-        self.simulation.context.setPositions(self.pdb.positions)
+        #self.simulation.context.setPositions(self.pdb.positions) #TODO move
         system = self.simulation.system
         n_solute = len(self.solute_indices)
 
