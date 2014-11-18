@@ -81,13 +81,13 @@ class DynamicsEngine(object):
         Configuration.engine = self
         Trajectory.engine = self
 
+        # set up the max_length_stopper (if n_frames_max is given)
+        # TODO: switch this not needing slice; use can_append
+        if hasattr(self, 'n_frames_max'):
+            self.max_length_stopper = LengthEnsemble(slice(0,self.n_frames_max))
+
 
         if mode == 'create':
-            # set up the max_length_stopper (if n_frames_max is given)
-            # TODO: switch this not needing slice; use can_append
-            if hasattr(self, 'n_frames_max'):
-                self.max_length_stopper = LengthEnsemble(slice(0,self.n_frames_max-1))
-
             # storage
             if filename is not None:
                 self.storage = Storage(

@@ -44,3 +44,5 @@ def data_filename(fname, subdir='test_data'):
     return resource_filename('opentis', 
                              os.path.join('tests', subdir, fname))
 
+def true_func(value):
+    return True

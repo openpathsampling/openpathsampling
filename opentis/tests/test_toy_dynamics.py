@@ -7,6 +7,7 @@ import numpy as np
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, raises)
 from nose.plugins.skip import Skip, SkipTest
+from test_helpers import true_func
 
 from opentis.toy_dynamics.toy_pes import *
 from opentis.toy_dynamics.toy_integrators import *
@@ -143,9 +144,10 @@ class testToyEngine(object):
         pes = linear
         integ = LeapfrogVerletIntegrator(dt=0.002)
         sim = ToyEngine(opts={'pes' : pes, 'integ' : integ, 
-                              'n_frames_max' : 5,},
-                        filename='toy_tmp.nc',
-                        mode='create')
+                              'n_frames_max' : 5},
+                        #filename='toy_tmp.nc', mode='create'
+                        filename=None, mode='auto'
+                       )
 
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
@@ -223,8 +225,14 @@ class testToyEngine(object):
                                  [np.append(init_pos, 0.0)])
 
     def test_generate(self):
-        # TODO
-        raise SkipTest
+        self.sim.initialized = True
+        traj = self.sim.generate(self.sim.current_snapshot, [true_func])
+        assert_equal(len(traj), self.sim.n_frames_max)
+
+    @raises(RuntimeWarning)
+    def test_generate_uninitialized(self):
+        traj = self.sim.generate(self.sim.current_snapshot, [true_func])
+
 
 
 # === TESTS FOR TOY INTEGRATORS ===========================================

@@ -25,7 +25,6 @@ def count_atoms(ndofs):
     # first part gives whole atoms, second part says if a partial exists
     return (ndofs / 3) + min(1, ndofs % 3)
 
-
 class ToyEngine(DynamicsEngine):
     '''The trick is that we have various "simulation" classes (either
     generated directly as here, or subclassed for more complication
@@ -33,7 +32,7 @@ class ToyEngine(DynamicsEngine):
     comes to things the DynamicsEngine calls on them for'''
 
     def __init__(self, filename=None, opts=None, mode='auto'):
-        #TODO: redo __init__ to match the form of dynamics_engine
+        unit_dict = { 'length' : 1.0, 'time' : 1.0 }
         if 'ndim' not in opts:
             opts['ndim'] = 2
         opts['n_atoms'] = count_atoms(opts['ndim'])
@@ -59,11 +58,15 @@ class ToyEngine(DynamicsEngine):
 
     @property
     def current_snapshot(self):
-        return Snapshot(coordinates=convert_to_3Ndim(self.positions),
-                        potential_energy=self.pes.V(self),
+        snap_pos = convert_to_3Ndim(self.positions)
+        snap_vel = convert_to_3Ndim(self.velocities)
+        snap_pot = self.pes.V(self)
+        snap_kin = self.pes.kinetic_energy(self)
+        return Snapshot(coordinates=snap_pos,
+                        potential_energy=snap_pot,
                         box_vectors=None,
-                        velocities=convert_to_3Ndim(self.velocities),
-                        kinetic_energy=self.pes.kinetic_energy(self)
+                        velocities=snap_vel,
+                        kinetic_energy=snap_kin
                        )
 
     @current_snapshot.setter

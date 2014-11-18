@@ -111,10 +111,12 @@ class Storage(netcdf.Dataset):
                 self.variables['pdb'][0] = pdb_string
 
 
-            if n_atoms is None:
+            if n_atoms is not None:
+                self.atoms = n_atoms
+            elif self.topology is not None:
                 self.atoms = self.topology.n_atoms
             else:
-                self.atoms = n_atoms
+                raise RuntimeError("Storage given neither n_atoms nor topology")
 
             self._init_classes()
             self.sync()

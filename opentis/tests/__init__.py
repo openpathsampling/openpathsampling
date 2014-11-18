@@ -1,3 +1,5 @@
+import os
+
 from opentis.storage import Storage, TrajectoryStorage, SnapshotStorage
 from opentis.trajectory import Trajectory
 from opentis.dynamics_engine import DynamicsEngine
@@ -22,5 +24,5 @@ def setup_package():
 
 
 def teardown_package():
-    # this should delete the trajectory.nc file
-    pass
+    if os.path.isfile(data_filename("ala_small_traj.nc")):
+        os.remove(data_filename("ala_small_traj.nc"))
