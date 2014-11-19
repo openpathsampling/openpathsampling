@@ -18,6 +18,7 @@ def saveidentifiable(func):
                 # in case we want to save and need the idx
                 obj.idx[self.storage] = find_idx
                 self.cache[find_idx] = obj
+                self.all_names[obj.identifier] = find_idx
             else:
                 func(self, obj, idx, *args, **kwargs)
                 # Finally register with the new idx in the identifier cache dict.
