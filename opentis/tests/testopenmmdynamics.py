@@ -126,3 +126,41 @@ class testOpenMMEngine(object):
         self.engine.initialized = True
         traj = self.engine.generate(self.engine.current_snapshot, [true_func])
         assert_equal(len(traj), self.engine.n_frames_max)
+
+    def test_momentum_setter(self):
+        testvel = []
+        for i in range(self.engine.n_atoms):
+            testvel.append([0.1*i, 0.1*i, 0.1*i])
+        self.engine.momentum = Momentum(velocities=testvel,
+                                        kinetic_energy=None)
+        assert_equal_array_array(self.engine.current_snapshot.velocities /
+                                 (nanometers / picoseconds), testvel)
+
+    def test_momentum_getter(self):
+        momentum = self.engine.momentum
+        state = self.engine.simulation.context.getState(getVelocities=True)
+        velocities = state.getVelocities(asNumpy=True)
+        assert_equal_array_array(
+            momentum.velocities / (nanometers / picoseconds),
+            velocities / (nanometers / picoseconds)
+        )
+
+    def test_configuration_setter(self):
+        pdb_pos = (self.engine.pdb.positions / nanometers)
+        testpos = []
+        for i in range(len(pdb_pos)):
+            testpos.append(list(np.array(pdb_pos[i]) + 
+                                np.array([1.0, 1.0, 1.0]))
+                          )
+        self.engine.configuration = Configuration(coordinates=testpos)
+        assert_equal_array_array(self.engine.current_snapshot.coordinates /
+                                 nanometers, testpos)
+
+    def test_configuration_getter(self):
+        config = self.engine.configuration
+        state = self.engine.simulation.context.getState(getPositions=True)
+        positions = state.getPositions(asNumpy=True)
+        assert_equal_array_array(
+            config.coordinates / nanometers,
+            positions / nanometers
+        )

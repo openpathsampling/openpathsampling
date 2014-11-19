@@ -130,7 +130,7 @@ class OpenMMEngine(DynamicsEngine):
 
     @momentum.setter
     def momentum(self, momentum):
-        self.simulation.context.setVelocities(snapshot.velocities)
+        self.simulation.context.setVelocities(momentum.velocities)
 
     @property
     def configuration(self):
@@ -145,4 +145,4 @@ class OpenMMEngine(DynamicsEngine):
 
     @configuration.setter
     def configuration(self, config):
-        self.simulation.context.setPositions(snapshot.coordinates)
+        self.simulation.context.setPositions(config.coordinates)
