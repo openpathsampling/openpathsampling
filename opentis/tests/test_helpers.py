@@ -8,6 +8,22 @@ a duck.
 import os
 from pkg_resources import resource_filename
 
+from nose.tools import assert_items_equal
+
+def assert_equal_array_array(truth, beauty):
+    for (t_atom, b_atom) in zip(truth, beauty):
+        assert_items_equal(t_atom, b_atom)
+
+def assert_not_equal_array_array(list_a, list_b):
+    exist_diff = False
+    for (alpha, beta) in zip(list_a, list_b):
+        for (elem_a, elem_b) in zip(alpha, beta):
+            if elem_a != elem_b:
+                exist_diff = True
+    return exist_diff
+
+
+
 class CallIdentity(object):
     '''Stub for a callable that returns itself'''
     def __init__(self):

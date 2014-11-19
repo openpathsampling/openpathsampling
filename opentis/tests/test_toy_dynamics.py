@@ -1,13 +1,14 @@
 '''
 @author: David W.H. Swenson
 '''
+
 import os
 import numpy as np
 
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, raises)
 from nose.plugins.skip import Skip, SkipTest
-from test_helpers import true_func
+from test_helpers import true_func, assert_equal_array_array
 
 from opentis.toy_dynamics.toy_pes import *
 from opentis.toy_dynamics.toy_integrators import *
@@ -125,10 +126,6 @@ class testCombinations(object):
 
 
 # === TESTS FOR TOY ENGINE OBJECT =========================================
-
-def assert_equal_array_array(truth, beauty):
-    for (t_atom, b_atom) in zip(truth, beauty):
-        assert_items_equal(t_atom, b_atom)
 
 class test_convert_fcn(object):
     def test_convert_to_3Ndim(v):

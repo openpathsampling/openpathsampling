@@ -26,12 +26,13 @@ sys.path.append(os.path.abspath('../../'))
 # package
 from opentis.orderparameter import OP_Function, OP_Volume
 from opentis.openmm_engine import OpenMMEngine
-from opentis.snapshot import Snapshot, Configuration
+from opentis.snapshot import Snapshot, Momentum
+from opentis.snapshot import Configuration
 from opentis.volume import LambdaVolumePeriodic, VolumeFactory as vf
 from opentis.pathmover import PathMoverFactory as mf
 from opentis.ensemble import EnsembleFactory as ef
 from opentis.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
-                      InXEnsemble)
+                              InXEnsemble)
 from opentis.storage import Storage
 from opentis.trajectory import Trajectory
 from opentis.calculation import Bootstrapping
@@ -63,6 +64,15 @@ if __name__=="__main__":
                           opts=options, 
                           mode='create'
                          )
+    
+    # set up the initial conditions
+    init_pdb = md.load(options['fn_initial_pdb'], frame=0)
+    init_pos = init_pdb.xyz[0]
+    init_box = init_pdb.unitcell_vectors[0]
+    init_vel = np.zeros(init_pos.shape) # NOTE: need ways to assign Boltzmann
+    engine.current_snapshot = Snapshot(coordinates=init_pos,
+                                       box_vectors=init_box,
+                                       velocities=init_vel)
 
     engine.equilibrate(5)
     snap = engine.current_snapshot

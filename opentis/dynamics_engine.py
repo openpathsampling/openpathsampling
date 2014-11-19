@@ -99,6 +99,9 @@ class DynamicsEngine(object):
                 self.storage.engine = self
                 self.storage._store_options(self)
                 Trajectory.storage = self.storage
+
+        if self.n_atoms == None:
+            self.n_atoms = self.storage.atoms 
  
 
     def add_stored_parameters(self, param_dict):

@@ -148,7 +148,15 @@ class Storage(netcdf.Dataset):
                     except(AssertionError):
                         pass
 
-                self.topology = md.Topology.from_openmm(self._restore_single_option(self, 'om_topology'))
+                # TODO: I (DWHS) added this try/except to fix a problem I
+                # found. Originally it only looked for om_topology, so I
+                # have it look for that first. But shouldn't it take the
+                # md_topology first if available, and build the om_topology
+                # if not?
+                try:
+                    self.topology = md.Topology.from_openmm(self._restore_single_option(self, 'om_topology'))
+                except KeyError:
+                    self.topology = self._restore_single_option(self, 'md_topology')
 
             self._restore_classes()
 

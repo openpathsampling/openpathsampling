@@ -22,7 +22,7 @@ class OpenMMEngine(DynamicsEngine):
         # if topology exists, it must be defined before running
         # super.__init__. This is ugly, but I don't see an easy way out.
         self.pdb = PDBFile(topology_file)
-        self.topology = self.pdb.topology
+        opts['topology'] = self.pdb.topology
         super(OpenMMEngine, self).__init__(filename=filename,
                                            opts=opts,
                                            mode=mode)

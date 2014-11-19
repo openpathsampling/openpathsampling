@@ -11,14 +11,11 @@ def setup_package():
     # this should generate the trajectory.nc file which we'll use for
     # everything else
     mdtrajectory = md.load(data_filename("ala_small_traj.pdb"))
-    engine = DynamicsEngine()
-    engine.storage = Storage(
-        topology_file=data_filename("ala_small_traj.pdb"),
+    engine = DynamicsEngine(
         filename=data_filename("ala_small_traj.nc"),
-        mode='w'
+        opts={'topology' : mdtrajectory.topology},
+        mode='create'
     )
-    engine.storage.engine = engine
-    Trajectory.storage = engine.storage
     mytraj = Trajectory.from_mdtraj(mdtrajectory)
     engine.storage.trajectory.save(mytraj)
 
