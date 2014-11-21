@@ -1019,6 +1019,19 @@ class AlteredTrajectoryEnsemble(Ensemble):
     def can_prepend(self, trajectory):
         return self.ensemble.can_prepend(self._alter(trajectory))
 
+class SlicedTrajectoryEnsemble(AlteredTrajectoryEnsemble):
+    '''
+    An ensemble which alters the trajectory by looking at a given Python
+    slice of the list of frames.
+    '''
+    def __init__(self, ensemble, aslice):
+        self.ensemble = ensemble
+        self.slice = aslice
+
+    def _alter(self, trajectory):
+        return trajectory[self.slice]
+
+
 class BackwardPrependedTrajectoryEnsemble(AlteredTrajectoryEnsemble):
     '''
     Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
