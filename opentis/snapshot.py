@@ -446,8 +446,16 @@ class Snapshot(object):
             self.configuration._potential_energy = copy.deepcopy(potential_energy)
         if kinetic_energy is not None: 
             self.momentum._kinetic_energy = copy.deepcopy(kinetic_energy)
-            
-        if self.configuration._coordinates is not None:
+
+        config = self.configuration
+        if config.coordinates is None and config.box_vectors is None and config.potential_energy is None:
+            self.configuration = None
+        moment = self.momentum
+        if moment.velocities is None and moment.kinetic_energy is None:
+            self.momentum = None
+
+
+        if self.configuration is not None and self.configuration._coordinates is not None:
             # Check for nans in coordinates, and raise an exception if
             # something is wrong.
             if np.any(np.isnan(self.configuration._coordinates)):
