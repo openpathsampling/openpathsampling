@@ -204,9 +204,14 @@ class MomentumStorage(ObjectStorage):
 
         # Store momentum.
         if momentum._velocities is not None:
-            storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / self.storage.units["velocity"]).astype(np.float32)
+            if hasattr(momentum.velocities, 'unit'):
+                storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / self.storage.units["velocity"]).astype(np.float32)
+            else:
+                # in this case we blindly assume that the units are correct
+                storage.variables['momentum_velocities'][idx,:,:] = momentum.velocities.astype(np.float32)
         else:
             print 'ERROR : Momentum should not be empty'
+
         if momentum._kinetic_energy is not None:
             storage.variables['momentum_kinetic'][idx] = momentum.kinetic_energy / self.storage.units["energy"]
         else:

@@ -6,18 +6,22 @@ import numpy as np
 import pandas as pd
 import simtk.openmm.app
 
-class Simplifier(object):
+class ObjectSimplifier(object):
     """
     A simple implementation of a pickle algorithm to create object that can be converted to json and back
     """
-    def __init__(self):
+    def __init__(self, unit_system = None):
         self.excluded_keys = []
+        self.unit_system = unit_system
 
     def simplify(self,obj):
         if type(obj).__module__ != '__builtin__':
             if type(obj) is units.Quantity:
                 # This is number with a unit so turn it into a list
-                return { '_value' : obj / obj.unit, '_units' : self.unit_to_dict(obj.unit) }
+                if self.unit_system is not None:
+                    return { '_value' : obj.value_in_unit_system(self.unit_system), '_units' : self.unit_to_dict(obj.unit.in_unit_system(self.unit_system)) }
+                else:
+                    return { '_value' : obj / obj.unit, '_units' : self.unit_to_dict(obj.unit) }
             else:
                 return None
         elif type(obj) is list:
@@ -122,28 +126,27 @@ class Simplifier(object):
             except(AssertionError):
                 pass
 
-
         atoms = pd.DataFrame(top_dict['atoms'], columns=top_dict['atom_columns'])
         bonds = np.array(top_dict['bonds'])
 
         return md.Topology.from_dataframe(atoms, bonds)
 
-class ObjectSimplifier(Simplifier):
-    def __init__(self):
-        super(ObjectSimplifier, self).__init__()
+class StorableObjectSimplifier(ObjectSimplifier):
+    def __init__(self, unit_system = None):
+        super(StorableObjectSimplifier, self).__init__(unit_system)
         self.excluded_keys = ['idx', 'json', 'identifier']
 
     def simplify(self,obj):
         if type(obj).__module__ != '__builtin__':
             if hasattr(obj, 'cls'):
                 getattr(self.storage, obj.cls).save(obj)
-                return { 'idx' : obj.idx[self.storage], 'cls' : obj.cls}
+                return { '_idx' : obj.idx[self.storage], '_cls' : obj.cls}
 
-        super(ObjectSimplifier, self).simplifiy(obj)
+        super(StorableObjectSimplifier, self).simplifiy(obj)
 
     def build(self,obj):
         if type(obj) is dict:
-            if 'cls' in obj and 'idx' in obj:
-                return getattr(self.storage, obj['cls']).load(obj['idx'])
+            if '_cls' in obj and '_idx' in obj:
+                return getattr(self.storage, obj['_cls']).load(obj['idx'])
 
-        super(ObjectSimplifier, self).build(obj)
+        super(StorableObjectSimplifier, self).build(obj)

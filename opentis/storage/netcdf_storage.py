@@ -26,6 +26,8 @@ from opentis.orderparameter import OrderParameter
 from opentis.snapshot import Snapshot
 from opentis.trajectory import Trajectory
 
+from opentis.storage.util import ObjectSimplifier
+
 
 #=============================================================================================
 # SOURCE CONTROL
@@ -65,6 +67,8 @@ class Storage(netcdf.Dataset):
         self.filename = filename
         self.links = []
 
+        self.simplifier = ObjectSimplifier()
+
         if unit_system is not None:
             self.unit_system = unit_system
         else:
@@ -92,26 +96,15 @@ class Storage(netcdf.Dataset):
 
             if isinstance(topology_file, md.Topology):
                 self.topology = topology_file
-                self._store_single_option(self, 'md_topology', self.topology)
-                self.variables['pdb'][0] = ''
-                elements = {key: tuple(el) for key, el in md.element.Element._elements_by_symbol.iteritems()}
-                self._store_single_option(self, 'md_elements', elements)
 
             elif isinstance(topology_file, simtk.openmm.app.Topology):
                 self.topology = md.Topology.from_openmm(topology_file)
-                self.store_object( 'md_topology', topology_file)
-                self.variables['pdb'][0] = ''
-                elements = {key: tuple(el) for key, el in md.element.Element._elements_by_symbol.iteritems()}
-                self.store_object('md_elements', elements)
 
             elif type(topology_file) is str:
                 self.topology = md.load(topology_file).topology
 
-                with open (topology_file, "r") as myfile:
-                    pdb_string=myfile.read()
-
-                self.variables['pdb'][0] = pdb_string
-
+            # create a json from the mdtraj.Topology() and store it
+            self.write_str('topology', self.simplifier.to_json(self.simplifier.topology_to_dict(self.topology)))
 
             self.atoms = self.topology.n_atoms
 
@@ -119,33 +112,8 @@ class Storage(netcdf.Dataset):
             self.sync()
 
         elif mode == 'a':
-            self.pdb = self.variables['pdb'][0]
-
-            if len(self.pdb) > 0:
-                if os.path.isfile('tempXXX.pdb'):
-                    print "File tempXXX.pdb exists - no overwriting! Quitting"
-
-                # Create a temporary file since mdtraj cannot read from string
-                with open ('tempXXX.pdb', "w") as myfile:
-                    myfile.write(self.pdb)
-
-                self.topology = md.load('tempXXX.pdb').topology
-                os.remove('tempXXX.pdb')
-            else:
-                # there is no pdb file stored
-                elements = self._restore_single_option(self, 'md_elements')
-                for key, el in elements.iteritems():
-                    try:
-                        md.element.Element(
-                                    number=int(el[0]), name=el[1], symbol=el[2], mass=float(el[3])
-                                 )
-                        simtk.openmm.app.Element(
-                                    number=int(el[0]), name=el[1], symbol=el[2], mass=float(el[3])*amu
-                                 )
-                    except(AssertionError):
-                        pass
-
-                self.topology = md.Topology.from_openmm(self._restore_single_option(self, 'om_topology'))
+            self.topology = self.simplifier.topology_from_dict(self.simplifier.from_json(self.variables['topology'][0]))
+            self.atoms = self.topology.n_atoms
 
             self._restore_classes()
 
@@ -199,8 +167,8 @@ class Storage(netcdf.Dataset):
         setattr(self, 'ConventionVersion', '0.1')
 
         # Create a string to hold the topology
-        self.init_str('pdb')
-        self.write_str('pdf', '')
+        self.init_str('topology')
+        self.write_str('topology', '')
 
         # Force sync to disk to avoid data loss.
         self.sync()

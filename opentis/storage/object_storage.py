@@ -5,7 +5,9 @@ import numpy as np
 
 from wrapper import savecache, saveidentifiable, loadcache
 
-from util import ObjectSimplifier
+from util import StorableObjectSimplifier
+
+import simtk.unit as u
 
 def add_storage_name(func):
     def inner(self, name, *args, **kwargs):
@@ -44,7 +46,7 @@ class ObjectStorage(object):
         self.named = named
         self.json = json
         self.all_names = None
-        self.simplifier = ObjectSimplifier()
+        self.simplifier = StorableObjectSimplifier()
         if identifier is not None:
             self.identifier = self.idx_dimension + '_' + identifier
         else:
@@ -335,6 +337,9 @@ class ObjectStorage(object):
             if units is None:
                 units = 'none'
 
+            if isinstance(units, u.Unit):
+                units = units.get_symbol()
+
             # Define units for a float variable
             setattr(ncvar,      'units', units)
 
@@ -394,7 +399,7 @@ class ObjectStorage(object):
 
     def save_json(self, name, idx, obj):
         if not hasattr(obj,'json'):
-            setattr(obj,'json',self.object_to_json(obj))
+            setattr(obj, 'json', self.object_to_json(obj))
 
         self.storage.variables[name][idx] = obj.json
 
@@ -424,7 +429,7 @@ class ObjectStorage(object):
             values = np.array(data).astype(np.uint32)
         else:
             # an object
-            values = [ -1  if value is None and allow_empty is True else value.idx[self.storage] for value in data]
+            values = [-1 if value is None and allow_empty is True else value.idx[self.storage] for value in data]
             values = np.array(values).astype(np.uint32)
 
         return values.copy()
@@ -443,7 +448,7 @@ class ObjectStorage(object):
         else:
             # an object
             key_store = getattr(self.storage, value_type)
-            data = [ key_store.load(obj_idx) if allow_empty is False or obj_idx>=0 else None for obj_idx in values.tolist() ]
+            data = [key_store.load(obj_idx) if allow_empty is False or obj_idx >= 0 else None for obj_idx in values.tolist()]
 
         return data
 
