@@ -5,7 +5,7 @@ import numpy as np
 
 from wrapper import savecache, saveidentifiable, loadcache
 
-from netcdf_storage import Simplifier
+from util import ObjectSimplifier
 
 def add_storage_name(func):
     def inner(self, name, *args, **kwargs):
@@ -490,23 +490,3 @@ class ObjectStorage(object):
             return obj.idx[self.storage]
 
         return idx
-
-class ObjectSimplifier(Simplifier):
-    def __init__(self):
-        super(ObjectSimplifier, self).__init__()
-        self.excluded_keys = ['idx', 'json', 'identifier']
-
-    def simplify(self,obj):
-        if type(obj).__module__ != '__builtin__':
-            if hasattr(obj, 'cls'):
-                getattr(self.storage, obj.cls).save(obj)
-                return { 'idx' : obj.idx[self.storage], 'cls' : obj.cls}
-
-        super(ObjectSimplifier, self).simplifiy(obj)
-
-    def build(self,obj):
-        if type(obj) is dict:
-            if 'cls' in obj and 'idx' in obj:
-                return getattr(self.storage, obj['cls']).load(obj['idx'])
-
-        super(ObjectSimplifier, self).build(obj)

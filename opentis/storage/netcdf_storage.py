@@ -6,7 +6,6 @@ Created on 06.07.2014
 '''
 
 import netCDF4 as netcdf # for netcdf interface provided by netCDF4 in enthought python
-import pickle
 import os.path
 
 import numpy
@@ -14,10 +13,6 @@ import simtk.unit as units
 import simtk.openmm.app
 from simtk.unit import amu
 import mdtraj as md
-
-import json
-import yaml
-
 
 from object_storage import ObjectStorage
 from trajectory_store import TrajectoryStorage, SampleStorage
@@ -104,10 +99,10 @@ class Storage(netcdf.Dataset):
 
             elif isinstance(topology_file, simtk.openmm.app.Topology):
                 self.topology = md.Topology.from_openmm(topology_file)
-                self._store_single_option(self, 'om_topology', topology_file)
+                self.store_object( 'md_topology', topology_file)
                 self.variables['pdb'][0] = ''
                 elements = {key: tuple(el) for key, el in md.element.Element._elements_by_symbol.iteritems()}
-                self._store_single_option(self, 'md_elements', elements)
+                self.store_object('md_elements', elements)
 
             elif type(topology_file) is str:
                 self.topology = md.load(topology_file).topology
@@ -216,7 +211,7 @@ class Storage(netcdf.Dataset):
     def store_object(self, name, obj):
         self.write_str(name, self.simplifier.to_json(obj))
 
-    def restore_object(self, name, obj):
+    def restore_object(self, name):
         json_string = self.variables[name][0]
         return self.simplifier.from_json(json_string)
 
@@ -227,67 +222,3 @@ class Storage(netcdf.Dataset):
 
     def init_str(self, name):
         self.createVariable(name, 'str', 'scalar')
-
-
-class Simplifier(object):
-    def __init__(self):
-        self.excluded_keys = []
-
-    def simplify(self,obj):
-        if type(obj).__module__ != '__builtin__':
-            if type(obj) is units.Quantity:
-                # This is number with a unit so turn it into a list
-                return { 'value' : obj / obj.unit, 'units' : self.unit_to_dict(obj.unit) }
-            else:
-                return None
-        elif type(obj) is list:
-            return [self.simplify(o) for o in obj]
-        elif type(obj) is dict:
-            return {key : self.simplify(o) for key, o in obj.iteritems() if type(key) is str and key not in self.excluded_keys}
-        else:
-            return obj
-
-    def build(self,obj):
-        if type(obj) is dict:
-            if 'units' in obj and 'value' in obj:
-                return obj['value'] * self.dict_to_unit(obj['units'])
-            else:
-                return {key : self._build_var(o) for key, o in obj.iteritems()}
-        elif type(obj) is list:
-            return [self._build_var(o) for o in obj]
-        else:
-            return obj
-
-    def to_json(self, obj):
-        simplified = self.simplify(obj)
-        return json.dumps(simplified)
-
-    def from_json(self, json_string):
-        simplified = yaml.load(json_string)
-        return self.build(simplified)
-
-    def unitsytem_to_list(self, unit_system):
-        '''
-        Turn a simtk.UnitSystem() into a list of strings representing the unitsystem for serialization
-        '''
-        return [ u.name  for u in unit_system.units ]
-
-    def unit_system_from_list(self, unit_system_list):
-        '''
-        Create a simtk.UnitSystem() from a serialialized list of strings representing the unitsystem
-        '''
-        return units.UnitSystem([ getattr(units, unit_name).iter_all_base_units().next()[0] for unit_name in unit_system_list])
-
-    def unit_to_symbol(self, unit):
-        return str(1.0 * unit).split()[1]
-
-    def unit_to_dict(self, unit):
-        d = {p.name : int(fac) for p, fac in unit.iter_all_base_units()}
-        return d
-
-    def dict_to_unit(self, unit_dict):
-        unit = units.Unit({})
-        for unit_name, unit_multiplication in unit_dict.iteritems():
-            unit *= getattr(units, unit_name)**unit_multiplication
-
-        return unit
