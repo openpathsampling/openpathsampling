@@ -15,6 +15,10 @@ import simtk.openmm.app
 from simtk.unit import amu
 import mdtraj as md
 
+import json
+import yaml
+
+
 from object_storage import ObjectStorage
 from trajectory_store import TrajectoryStorage, SampleStorage
 from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
@@ -43,7 +47,7 @@ class Storage(netcdf.Dataset):
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM simulation. This allows effective storage of shooting trajectories
     '''
 
-    def __init__(self, filename = 'trajectory.nc', mode = None, topology_file = None):
+    def __init__(self, filename = 'trajectory.nc', mode = None, topology_file = None, unit_system = None):
         '''
         Create a storage for complex objects in a netCDF file
         
@@ -66,6 +70,11 @@ class Storage(netcdf.Dataset):
         self.filename = filename
         self.links = []
 
+        if unit_system is not None:
+            self.unit_system = unit_system
+        else:
+            self.unit_system = units.md_unit_system
+
         super(Storage, self).__init__(filename, mode)
 
         self.trajectory = TrajectoryStorage(self).register()
@@ -81,7 +90,7 @@ class Storage(netcdf.Dataset):
         self.globalstate = ObjectStorage(self, GlobalState, named=True, json=True, identifier='json').register()
         self.collectivevariable = ObjectDictStorage(self, OrderParameter, Snapshot).register()
         self.cv = self.collectivevariable
-        self.trajectoryparameter = ObjectDictStorage(self, OrderParameter, Trajectory)
+        self.trajectoryparameter = ObjectDictStorage(self, OrderParameter, Trajectory).register()
 
         if mode == 'w':
             self._init()
@@ -179,8 +188,6 @@ class Storage(netcdf.Dataset):
         Initialize the netCDF file for storage itself.
         """
 
-        # TODO: Allow to set the project parameters somehow!
-
         # add shared dimension for everyone. scalar and spatial
         if 'scalar' not in self.dimensions:
             self.createDimension('scalar', 1) # scalar dimension
@@ -196,158 +203,91 @@ class Storage(netcdf.Dataset):
         setattr(self, 'Conventions', 'Multi-State Transition Interface TPS')
         setattr(self, 'ConventionVersion', '0.1')
 
-        ncvar = self.createVariable('pdb', 'str', 'scalar')
-        packed_data = numpy.empty(1, 'O')
-        packed_data[0] = ""
-        ncvar[:] = packed_data
-                        
+        # Create a string to hold the topology
+        self.init_str('pdb')
+        self.write_str('pdf', '')
+
         # Force sync to disk to avoid data loss.
         self.sync()
 
-    def _store_metadata(self, groupname, metadata):
-        """
-        Store metadata in NetCDF file.
-        
-        """
+    def init_object(self, name):
+        self.init_str(name)
 
-        # Create group.
-        ncgrp = self.createGroup(groupname)
+    def store_object(self, name, obj):
+        self.write_str(name, self.simplifier.to_json(obj))
 
-        # Store metadata.
-        for (key, value) in metadata.iteritems():
-            # TODO: Handle more sophisticated types.
-            ncvar = ncgrp.createVariable(key, type(value))
-            ncvar.assignValue(value)
+    def restore_object(self, name, obj):
+        json_string = self.variables[name][0]
+        return self.simplifier.from_json(json_string)
 
+    def write_str(self, name, string):
+        packed_data = numpy.empty(1, 'O')
+        packed_data[0] = string
+        self.variables[name][:] = packed_data
 
-    def _store_options(self, obj, group_name = 'options'):
-        """
-        Store run parameters in NetCDF file.
-
-        """
-
-        self.verbose_root = False
-
-        # Create a group to store state information.
-        ncgrp_options = self.createGroup(group_name)
-        
-        # Store run parameters.
-        for option_name in obj.options_to_store:
-            # Get option value.
-            option_value = getattr(obj, option_name)            
-            self._store_single_option(ncgrp_options, option_name, option_value)
-            
-            if self.verbose_root: print "Storing option: %s -> %s (type: %s)" % (option_name, option_value, type(option_value))            
-
-    def _restore_options(self, obj, group_name = 'options'):
-        """
-        Restore run parameters from NetCDF file.
-        """
-        
-        self.verbose_root = False
-
-        if self.verbose_root: print "Attempting to restore options from NetCDF file..."
-
-        # Make sure this NetCDF file contains option information
-        if not group_name in self.groups:
-            # Not found, signal failure.
-            return False
-
-        # Find the group.
-        ncgrp_options = self.groups[group_name]
-
-        # Load run parameters.
-        for option_name in ncgrp_options.variables.keys():
-            # Get NetCDF variable.
-            option_value = self._restore_single_option(ncgrp_options, option_name)
-            
-            # Store option.
-            if self.verbose_root: print "Restoring option: %s -> %s (type: %s)" % (option_name, str(option_value), type(option_value))
-            setattr(obj, option_name, option_value)
-            
-        # Signal success.
-        return True
-
-    def _store_single_option(self, ncgrp, obj_name, obj_value):
-        """
-        Store run parameters in NetCDF file.
-
-        """
-                
-        # If Quantity, strip off units first.
-        option_unit = None
-        if type(obj_value) == units.Quantity:
-            option_unit = obj_value.unit
-            obj_value = obj_value / option_unit
-        # Store the Python type.
-        option_type = type(obj_value)
-        # Handle booleans
-        if type(obj_value) == bool:
-            obj_value = int(obj_value)
-        # Store the variable.
+    def init_str(self, name):
+        self.createVariable(name, 'str', 'scalar')
 
 
-        if option_type.__module__ != '__builtin__':
-            # non of the standard cases -> use pickle to serialize
-            obj_value = pickle.dumps(obj_value)
-            
-        if option_type is list:
-            obj_value = pickle.dumps(obj_value)
+class Simplifier(object):
+    def __init__(self):
+        self.excluded_keys = []
 
-        if option_type is dict:
-            obj_value = pickle.dumps(obj_value)
-
-        if option_type is tuple:
-            obj_value = pickle.dumps(obj_value)
-            
-            
-        if type(obj_value) == str:
-            ncvar = ncgrp.createVariable(obj_name, type(obj_value), 'scalar')
-            packed_data = numpy.empty(1, 'O')
-            packed_data[0] = obj_value
-            ncvar[:] = packed_data
+    def simplify(self,obj):
+        if type(obj).__module__ != '__builtin__':
+            if type(obj) is units.Quantity:
+                # This is number with a unit so turn it into a list
+                return { 'value' : obj / obj.unit, 'units' : self.unit_to_dict(obj.unit) }
+            else:
+                return None
+        elif type(obj) is list:
+            return [self.simplify(o) for o in obj]
+        elif type(obj) is dict:
+            return {key : self.simplify(o) for key, o in obj.iteritems() if type(key) is str and key not in self.excluded_keys}
         else:
-            ncvar = ncgrp.createVariable(obj_name, type(obj_value), 'scalar')
-            packed_data = numpy.empty(1, 'O')
-            packed_data[0] = obj_value
-            ncvar[:] = packed_data
+            return obj
 
-        if option_unit: 
-            setattr(ncvar, 'units', str(option_unit))
- 
-        setattr(ncvar, 'type', option_type.__name__) 
-        setattr(ncvar, 'module', option_type.__module__)         
-
-        return
-
-    
-    def _restore_single_option(self, ncgrp, obj_name):
-        """
-        Restore run parameters from NetCDF file.
-        """
-        
-        # Get NetCDF variable.
-        option_ncvar = ncgrp.variables[obj_name]
-        # Get option value.
-        obj_value = option_ncvar[0]
-        # Cast to Python type.
-        type_name = getattr(option_ncvar, 'type') 
-        module_name = getattr(option_ncvar, 'module')         
-        if module_name != '__builtin__':
-            obj_value = str(obj_value)
-            obj_value = pickle.loads(obj_value)
-        elif type_name == 'tuple' or type_name == 'dict' or type_name == 'list':
-            obj_value = str(obj_value)
-            obj_value = pickle.loads(obj_value)
+    def build(self,obj):
+        if type(obj) is dict:
+            if 'units' in obj and 'value' in obj:
+                return obj['value'] * self.dict_to_unit(obj['units'])
+            else:
+                return {key : self._build_var(o) for key, o in obj.iteritems()}
+        elif type(obj) is list:
+            return [self._build_var(o) for o in obj]
         else:
-            obj_value = eval(type_name + '(' + repr(obj_value) + ')')
-            # If Quantity, assign units.
-            if hasattr(option_ncvar, 'units'):
-                option_unit_name = getattr(option_ncvar, 'units')
-                if option_unit_name[0] == '/': 
-                    option_unit_name = '1' + option_unit_name
-                option_unit = eval(option_unit_name, vars(units))
-                obj_value = units.Quantity(obj_value, option_unit)
+            return obj
 
-        # Signal success.
-        return obj_value
+    def to_json(self, obj):
+        simplified = self.simplify(obj)
+        return json.dumps(simplified)
+
+    def from_json(self, json_string):
+        simplified = yaml.load(json_string)
+        return self.build(simplified)
+
+    def unitsytem_to_list(self, unit_system):
+        '''
+        Turn a simtk.UnitSystem() into a list of strings representing the unitsystem for serialization
+        '''
+        return [ u.name  for u in unit_system.units ]
+
+    def unit_system_from_list(self, unit_system_list):
+        '''
+        Create a simtk.UnitSystem() from a serialialized list of strings representing the unitsystem
+        '''
+        return units.UnitSystem([ getattr(units, unit_name).iter_all_base_units().next()[0] for unit_name in unit_system_list])
+
+    def unit_to_symbol(self, unit):
+        return str(1.0 * unit).split()[1]
+
+    def unit_to_dict(self, unit):
+        d = {p.name : int(fac) for p, fac in unit.iter_all_base_units()}
+        return d
+
+    def dict_to_unit(self, unit_dict):
+        unit = units.Unit({})
+        for unit_name, unit_multiplication in unit_dict.iteritems():
+            unit *= getattr(units, unit_name)**unit_multiplication
+
+        return unit

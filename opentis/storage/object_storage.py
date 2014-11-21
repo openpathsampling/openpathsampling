@@ -1,12 +1,11 @@
 import copy
-import json
 
 import yaml
 import numpy as np
 
 from wrapper import savecache, saveidentifiable, loadcache
 
-import simtk.unit as u
+from netcdf_storage import Simplifier
 
 def add_storage_name(func):
     def inner(self, name, *args, **kwargs):
@@ -45,6 +44,7 @@ class ObjectStorage(object):
         self.named = named
         self.json = json
         self.all_names = None
+        self.simplifier = ObjectSimplifier()
         if identifier is not None:
             self.identifier = self.idx_dimension + '_' + identifier
         else:
@@ -377,14 +377,14 @@ class ObjectStorage(object):
 
     def load_json(self, name, idx, obj = None):
         idx = int(idx)
-        json_string = self.storage.variables[name][idx]
-        simplified = yaml.load(json_string)
         if obj is None:
             obj = StoredObject()
 
+        json_string = self.storage.variables[name][idx]
         setattr(obj, 'json', json_string)
 
-        data = self._build_var(simplified[2])
+        simplified = yaml.load(json_string)
+        data = self.simplifier.build(simplified[2])
         for key, value in data.iteritems():
             setattr(obj, key, value)
 
@@ -407,40 +407,9 @@ class ObjectStorage(object):
         cls = obj.__class__.__name__
         store = obj.cls
 
-        simplified = self._simplify_var([cls, store, data])
-        json_string = json.dumps(simplified)
+        json_string = self.simplifier.to_json([cls, store, data])
 
         return json_string
-
-    def _simplify_var(self,obj):
-        if type(obj).__module__ != '__builtin__':
-            if hasattr(obj, 'cls'):
-                getattr(self.storage, obj.cls).save(obj)
-                return { 'idx' : obj.idx[self.storage], 'cls' : obj.cls}
-            elif type(obj) is u.Quantity:
-                # This is number with a unit so turn it into a list
-                return { 'value' : obj / obj.unit, 'units' : str(obj.unit) }
-            else:
-                return None
-        elif type(obj) is list:
-            return [self._simplify_var(o) for o in obj]
-        elif type(obj) is dict:
-            return {key : self._simplify_var(o) for key, o in obj.iteritems() if type(key) is str and key != 'idx' and key != 'json' and key != 'identifier'}
-        else:
-            return obj
-
-    def _build_var(self,obj):
-        if type(obj) is dict:
-            if 'cls' in obj and 'idx' in obj:
-                return getattr(self.storage, obj['cls']).load(obj['idx'])
-            elif 'units' in obj and 'value' in obj:
-                return u.Quantity(obj['value'], eval(obj['units'], vars(u)))
-            else:
-                return {key : self._build_var(o) for key, o in obj.iteritems()}
-        elif type(obj) is list:
-            return [self._build_var(o) for o in obj]
-        else:
-            return obj
 
     def list_to_numpy(self, data, value_type, allow_empty = True):
         if value_type == 'int':
@@ -521,3 +490,23 @@ class ObjectStorage(object):
             return obj.idx[self.storage]
 
         return idx
+
+class ObjectSimplifier(Simplifier):
+    def __init__(self):
+        super(ObjectSimplifier, self).__init__()
+        self.excluded_keys = ['idx', 'json', 'identifier']
+
+    def simplify(self,obj):
+        if type(obj).__module__ != '__builtin__':
+            if hasattr(obj, 'cls'):
+                getattr(self.storage, obj.cls).save(obj)
+                return { 'idx' : obj.idx[self.storage], 'cls' : obj.cls}
+
+        super(ObjectSimplifier, self).simplifiy(obj)
+
+    def build(self,obj):
+        if type(obj) is dict:
+            if 'cls' in obj and 'idx' in obj:
+                return getattr(self.storage, obj['cls']).load(obj['idx'])
+
+        super(ObjectSimplifier, self).build(obj)
