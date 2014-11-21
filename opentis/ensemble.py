@@ -784,6 +784,31 @@ class SequentialEnsemble(Ensemble):
         sequence_str = ",\n".join([str(ens) for ens in self.ensembles])
         return head+sequence_str+tail
 
+class OptionalEnsemble(Ensemble):
+    '''
+    Makes satisfying a given ensemble optional (primarily useful in
+    SequentialEnsembles)
+    '''
+    
+    _len0 = LengthEnsemble(0)
+
+    def __init__(self, ensemble):
+        self.ensemble=ensemble
+        self.optional_ens = self.ensemble | self._len0
+
+    def __call__(self, trajectory):
+        return self.optional_ens(trajectory)
+
+    def can_append(self, trajectory):
+        return self.optional_ens.can_append(trajectory)
+
+    def can_prepend(self, trajectory):
+        return self.optional_ens.can_prepend(trajectory)
+
+    def __str__(self):
+        return "{"+self.ensemble.__str__()+"} (OPTIONAL)"
+
+
 class LengthEnsemble(Ensemble):
     '''
     Represents an ensemble the contains trajectories of a specific length
