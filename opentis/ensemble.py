@@ -837,10 +837,9 @@ class VolumeEnsemble(Ensemble):
     '''
     Describes an path ensemble using a volume object
     '''    
-    def __init__(self, volume, frames = slice(1,-1), lazy = True):
+    def __init__(self, volume, lazy = True):
         super(VolumeEnsemble, self).__init__()
         self._stored_volume = volume
-        self.frames = frames
         self.lazy = lazy
         pass
 
@@ -882,11 +881,7 @@ class InXEnsemble(VolumeEnsemble):
         return LeaveXEnsemble(self._stored_volume, self.frames, self.lazy)
 
     def __str__(self):
-        if type(self.frames) is int:
-            return 'x[{0}] in {1}'.format(self.frames, self._volume)
-        else:
-            return 'x[t] in {2} for all t in [{0}:{1}]'.format(
-                self.frames.start, self.frames.stop, self._volume)
+        return 'x[t] in {0} for all t'.format(self._volume)
 
 
 
@@ -900,11 +895,7 @@ class OutXEnsemble(InXEnsemble):
         return ~ self._stored_volume
     
     def __str__(self):
-        if type(self.frames) is int:
-            return 'x[{0}] in {1}'.format(self.frames, self._volume)
-        else:
-            return 'x[t] in {2} for all t in [{0}:{1}]'.format(
-                self.frames.start, self.frames.stop, self._volume)
+        return 'x[t] in {0} for all t'.format(self._volume)
 
     def __invert__(self):
         return HitXEnsemble(self._stored_volume, self.frames, self.lazy)
@@ -917,11 +908,7 @@ class HitXEnsemble(VolumeEnsemble):
     '''
 
     def __str__(self):
-        if type(self.frames) is int:
-            return 'x[{0}] in {1}'.format(self.frames, self._volume)
-        else:
-            return 'x[t] in {2} for one t in [{0}:{1}]'.format(
-                self.frames.start, self.frames.stop, self._volume)
+        return 'exists t such that x[t] in {0}'.format(self._volume)
 
     def __call__(self, trajectory, lazy=None):
         '''
@@ -947,10 +934,7 @@ class LeaveXEnsemble(HitXEnsemble):
     outside the specified volume
     '''
     def __str__(self):
-        if type(self.frames) is int:
-            return 'x[{0}] not in {1}'.format(str(self.frames), self._volume)
-        else:
-            return 'x[t] in {2} for one t in [{0}:{1}]'.format(self.frames.start, self.frames.stop, self._volume)
+        return 'exists t such that x[t] in {0}'.format(self._volume)
       
     @property
     def _volume(self):
@@ -971,31 +955,23 @@ class ExitsXEnsemble(VolumeEnsemble):
     Represents an ensemble where two successive frames from the selected
     frames of the trajectory crossing from inside to outside the given volume.
     """
-    def __init__(self, volume, frames = slice(None), lazy=False):
+    def __init__(self, volume, lazy=False):
         # changing the defaults for frames and lazy; prevent single frame
-        if type(frames) is int:
-            raise ValueError(
-                'Exits/EntersXEnsemble require more than one frame')
-        super(ExitsXEnsemble, self).__init__(volume, frames, lazy)
+        super(ExitsXEnsemble, self).__init__(volume, lazy)
 
     def __str__(self):
-        domain = 'exists x[t], x[t+1] in [{0}:{1}] '.format(
-                            self.frames.start, self.frames.stop )
+        domain = 'exists x[t], x[t+1] '
         result = 'such that x[t] in {0} and x[t+1] not in {0}'.format(
                             self._volume)
         return domain+result
 
     def __call__(self, trajectory, lazy=None):
-        if type(self.frames) is int:
-            # in case you changed self.frames after intialization
-            raise ValueError('ExitsXEnsemble requires more than one frame')
-        else:
-            subtraj = trajectory[self.frames]
-            for i in range(len(subtraj)-1):
-                frame_i = subtraj[i]
-                frame_iplus = subtraj[i+1]
-                if self._volume(frame_i) and not self._volume(frame_iplus):
-                    return True
+        subtraj = trajectory
+        for i in range(len(subtraj)-1):
+            frame_i = subtraj[i]
+            frame_iplus = subtraj[i+1]
+            if self._volume(frame_i) and not self._volume(frame_iplus):
+                return True
         return False
 
 class EntersXEnsemble(ExitsXEnsemble):
@@ -1004,23 +980,18 @@ class EntersXEnsemble(ExitsXEnsemble):
     frames of the trajectory crossing from outside to inside the given volume.
     """
     def __str__(self):
-        domain = 'exists x[t], x[t+1] in [{0}:{1}] '.format(
-                            self.frames.start, self.frames.stop )
+        domain = 'exists x[t], x[t+1] '
         result = 'such that x[t] not in {0} and x[t+1] in {0}'.format(
                             self._volume)
         return domain+result
 
     def __call__(self, trajectory, lazy=None):
-        if type(self.frames) is int:
-            # in case you changed self.frames after intialization
-            raise ValueError('EntersXEnsemble requires more than one frame')
-        else:
-            subtraj = trajectory[self.frames]
-            for i in range(len(subtraj)-1):
-                frame_i = subtraj[i]
-                frame_iplus = subtraj[i+1]
-                if not self._volume(frame_i) and self._volume(frame_iplus):
-                    return True
+        subtraj = trajectory
+        for i in range(len(subtraj)-1):
+            frame_i = subtraj[i]
+            frame_iplus = subtraj[i+1]
+            if not self._volume(frame_i) and self._volume(frame_iplus):
+                return True
         return False
 
 

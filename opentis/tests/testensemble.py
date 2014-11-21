@@ -164,7 +164,7 @@ class testLeaveXEnsemble(EnsembleTest):
     def test_leaveX_str(self):
         volstr = "{x|Id(x) in [0.1, 0.5]}"
         assert_equal(self.leaveX.__str__(), 
-                     "x[t] in (not "+volstr+") for one t in [1:-1]")
+                     "exists t such that x[t] in (not "+volstr+")")
 
 class testInXEnsemble(EnsembleTest):
     def setUp(self):
@@ -189,7 +189,7 @@ class testInXEnsemble(EnsembleTest):
     def test_inX_str(self):
         volstr = "{x|Id(x) in [0.1, 0.5]}"
         assert_equal(self.inX.__str__(),
-                     "x[t] in "+volstr+" for all t in [1:-1]")
+                     "x[t] in "+volstr+" for all t")
 
 class testOutXEnsemble(EnsembleTest):
     def setUp(self):
@@ -214,7 +214,7 @@ class testOutXEnsemble(EnsembleTest):
     def test_outX_str(self):
         volstr = "{x|Id(x) in [0.1, 0.5]}"
         assert_equal(self.outX.__str__(),
-                     "x[t] in (not "+volstr+") for all t in [1:-1]")
+                     "x[t] in (not "+volstr+") for all t")
 
 class testHitXEnsemble(EnsembleTest):
     def setUp(self):
@@ -239,7 +239,7 @@ class testHitXEnsemble(EnsembleTest):
     def test_hitX_str(self):
         volstr = "{x|Id(x) in [0.1, 0.5]}"
         assert_equal(self.hitX.__str__(),
-                     "x[t] in "+volstr+" for one t in [1:-1]")
+                     "exists t such that x[t] in "+volstr)
 
 class testExitsXEnsemble(EnsembleTest):
     def setUp(self):
@@ -248,18 +248,6 @@ class testExitsXEnsemble(EnsembleTest):
         self.slice_ens = ExitsXEnsemble(vol1, slice(3,9))
         self.wrapstart = 3
         self.wrapend = 12
-
-    @raises(ValueError)
-    def test_single_frame(self):
-        '''ExitsXEnsemble built with single frame raises ValueError'''
-        single_frame_ensemble = ExitsXEnsemble(vol1, 2)
-
-    @raises(ValueError)
-    def test_single_frame_by_modification(self):
-        '''ExitsXEnsemble modified to have single frame raises ValueError'''
-        single_frame_ensemble = ExitsXEnsemble(vol1)
-        single_frame_ensemble.frames = 2
-        single_frame_ensemble(ttraj['upper_in_out'])
 
     def test_noncrossing(self):
         '''ExitsXEnsemble for noncrossing trajectories'''
@@ -307,10 +295,7 @@ class testExitsXEnsemble(EnsembleTest):
 
     def test_str(self):
         assert_equal(self.ensemble.__str__(),
-            'exists x[t], x[t+1] in [None:None] such that x[t] in {0} and x[t+1] not in {0}'.format(vol1))
-        self.ensemble.frames = slice(3,8)
-        assert_equal(self.ensemble.__str__(),
-            'exists x[t], x[t+1] in [3:8] such that x[t] in {0} and x[t+1] not in {0}'.format(vol1))
+            'exists x[t], x[t+1] such that x[t] in {0} and x[t+1] not in {0}'.format(vol1))
 
 class testEntersXEnsemble(testExitsXEnsemble):
     def setUp(self):
@@ -319,18 +304,6 @@ class testEntersXEnsemble(testExitsXEnsemble):
         self.slice_ens = EntersXEnsemble(vol1, slice(3,9))
         self.wrapstart = 3
         self.wrapend = 12
-
-    @raises(ValueError)
-    def test_single_frame(self):
-        '''EntersXEnsemble built with single frame raises ValueError'''
-        single_frame_ensemble = EntersXEnsemble(vol1, 2)
-
-    @raises(ValueError)
-    def test_single_frame_by_modification(self):
-        '''EntersXEnsemble modified to have single frame raises ValueError'''
-        single_frame_ensemble = EntersXEnsemble(vol1)
-        single_frame_ensemble.frames = 2
-        single_frame_ensemble(ttraj['upper_in_out'])
 
     def test_noncrossing(self):
         '''EntersXEnsemble for noncrossing trajectories'''
@@ -378,22 +351,19 @@ class testEntersXEnsemble(testExitsXEnsemble):
 
     def test_str(self):
         assert_equal(self.ensemble.__str__(),
-            'exists x[t], x[t+1] in [None:None] such that x[t] not in {0} and x[t+1] in {0}'.format(vol1))
-        self.ensemble.frames = slice(3,8)
-        assert_equal(self.ensemble.__str__(),
-            'exists x[t], x[t+1] in [3:8] such that x[t] not in {0} and x[t+1] in {0}'.format(vol1))
+            'exists x[t], x[t+1] such that x[t] not in {0} and x[t+1] in {0}'.format(vol1))
 
 class testSequentialEnsemble(EnsembleTest):
     def setUp(self):
-        self.inX = InXEnsemble(vol1, frames=slice(None,None))
-        self.outX = OutXEnsemble(vol1, frames=slice(None,None))
-        self.hitX = HitXEnsemble(vol1, frames=slice(None,None))
-        self.leaveX = LeaveXEnsemble(vol1, frames=slice(None,None))
-        self.enterX = EntersXEnsemble(vol1, frames=slice(None,None))
-        self.exitX = ExitsXEnsemble(vol1, frames=slice(None,None))
-        self.inInterface = InXEnsemble(vol2, frames=slice(None,None))
-        self.leaveX0 = LeaveXEnsemble(vol2, frames=slice(None,None))
-        self.inX0 = InXEnsemble(vol2, frames=slice(None,None))
+        self.inX = InXEnsemble(vol1)
+        self.outX = OutXEnsemble(vol1)
+        self.hitX = HitXEnsemble(vol1)
+        self.leaveX = LeaveXEnsemble(vol1)
+        self.enterX = EntersXEnsemble(vol1)
+        self.exitX = ExitsXEnsemble(vol1)
+        self.inInterface = InXEnsemble(vol2)
+        self.leaveX0 = LeaveXEnsemble(vol2)
+        self.inX0 = InXEnsemble(vol2)
         self.length1 = LengthEnsemble(1)
         # pseudo_tis and pseudo_minus assume that the interface is equal to
         # the state boundary
@@ -785,15 +755,15 @@ class testSequentialEnsemble(EnsembleTest):
     def test_str(self):
         assert_equal(self.pseudo_tis.__str__(), """[
 (
-  x[t] in {x|Id(x) in [0.1, 0.5]} for all t in [None:None]
+  x[t] in {x|Id(x) in [0.1, 0.5]} for all t
 )
 and
 (
   len(x) = 1
 ),
-x[t] in (not {x|Id(x) in [0.1, 0.5]}) for all t in [None:None],
+x[t] in (not {x|Id(x) in [0.1, 0.5]}) for all t,
 (
-  x[t] in {x|Id(x) in [0.1, 0.5]} for all t in [None:None]
+  x[t] in {x|Id(x) in [0.1, 0.5]} for all t
 )
 and
 (
