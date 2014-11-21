@@ -144,9 +144,10 @@ class ObjectJSON(object):
         return md.Topology.from_dataframe(atoms, bonds)
 
 class StorableObjectJSON(ObjectJSON):
-    def __init__(self, unit_system = None):
+    def __init__(self, storage, unit_system = None):
         super(StorableObjectJSON, self).__init__(unit_system)
         self.excluded_keys = ['idx', 'json', 'identifier']
+        self.storage = storage
 
     def simplify(self,obj):
         if type(obj).__module__ != '__builtin__':

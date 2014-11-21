@@ -356,12 +356,12 @@ class ConfigurationStorage(ObjectStorage):
         storage = self.storage
 
         # Store configuration.
-        storage.variables['configuration_coordinates'][idx,:,:] = (configuration.coordinates / self.storage.units["configuration_coordinates"]).astype(np.float32)
+        storage.variables['configuration_coordinates'][idx,:,:] = (configuration.coordinates / self.storage.unit["configuration_coordinates"]).astype(np.float32)
 
         if configuration.potential_energy is not None:
-            storage.variables['configuration_potential'][idx] = configuration.potential_energy / self.storage.units["configuration_potential"]
+            storage.variables['configuration_potential'][idx] = configuration.potential_energy / self.storage.unit["configuration_potential"]
 
-            storage.variables['configuration_box_vectors'][idx,:] = (configuration.box_vectors / self.storage.units["configuration_box_vectors"]).astype(np.float32)
+#        storage.variables['configuration_box_vectors'][idx,:] = (configuration.box_vectors / self.storage.unit["configuration_box_vectors"]).astype(np.float32)
 
         # Force sync to disk to avoid data loss.
         storage.sync()
@@ -393,11 +393,11 @@ class ConfigurationStorage(ObjectStorage):
 
         if not (Configuration.load_lazy and lazy):
             x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
-            coordinates = Quantity(x, self.storage.units["configuration_coordinates"])
+            coordinates = Quantity(x, self.storage.unit["configuration_coordinates"])
             b = storage.variables['configuration_box_vectors'][idx]
-            box_vectors = Quantity(b, self.storage.units["configuration_box_vectors"])
+            box_vectors = Quantity(b, self.storage.unit["configuration_box_vectors"])
             V = storage.variables['configuration_potential'][idx]
-            potential_energy = Quantity(V, self.storage.units["configuration_potential"])
+            potential_energy = Quantity(V, self.storage.unit["configuration_potential"])
         else:
             coordinates = None
             box_vectors = None
@@ -416,7 +416,7 @@ class ConfigurationStorage(ObjectStorage):
         idx = obj.idx[self.storage]
 
         x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
-        coordinates = Quantity(x, self.storage.units["configuration_coordinates"])
+        coordinates = Quantity(x, self.storage.unit["configuration_coordinates"])
 
         obj.coordinates = coordinates
 
@@ -510,6 +510,6 @@ class ConfigurationStorage(ObjectStorage):
                 description="coordinates[configuration][atom][coordinate] are coordinate of atom 'atom' " +
                             "in dimension 'coordinate' of configuration 'configuration'.")
 
-        self.init_variable('configuration_box_vectors', 'float', (self.db, 'spatial'))
+        self.init_variable('configuration_box_vectors', 'float', (self.db, 'spatial'), 'nanometers')
 
-        self.init_variable('configuration_potential', 'float', self.db)
+        self.init_variable('configuration_potential', 'float', self.db, 'kilojoules_per_mole')

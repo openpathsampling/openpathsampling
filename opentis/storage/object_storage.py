@@ -46,7 +46,7 @@ class ObjectStorage(object):
         self.named = named
         self.json = json
         self.all_names = None
-        self.simplifier = StorableObjectJSON()
+        self.simplifier = StorableObjectJSON(storage)
         if identifier is not None:
             self.identifier = self.idx_dimension + '_' + identifier
         else:
@@ -250,7 +250,6 @@ class ObjectStorage(object):
 
         """
         # define dimensions used for the specific object
-        print self.idx_dimension
         self.storage.createDimension(self.idx_dimension, 0)
         if self.named:
             self.init_variable(self.db + "_name", 'str', description='A short descriptive name for convenience')

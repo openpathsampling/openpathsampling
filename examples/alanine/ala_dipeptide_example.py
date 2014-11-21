@@ -109,7 +109,7 @@ class AlanineDipeptideTrajectorySimulator(Simulator):
                 mode='w'
             )
             self.storage.simulator = self
-            self.storage._store_options(self)
+#            self.storage._store_options(self)
             Trajectory.storage = self.storage
         if mode == 'restore':
             pass
