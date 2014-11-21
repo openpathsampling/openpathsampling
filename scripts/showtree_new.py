@@ -1,9 +1,7 @@
-import svgwrite
-import sys
 import argparse
 import os
-from storage import Storage
-from visualize import PathTreeBuilder
+from opentis.storage import Storage
+from opentis.visualize import PathTreeBuilder
 
 if __name__ == '__main__':
 

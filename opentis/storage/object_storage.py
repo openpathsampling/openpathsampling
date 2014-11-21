@@ -362,7 +362,7 @@ class ObjectStorage(object):
             self.storage.unit[name] = unit_instance
 
             # Define units for a float variable
-            setattr(ncvar,      'simtk', json_unit)
+            setattr(ncvar,      'unit_simtk', json_unit)
             setattr(ncvar,      'unit', symbol)
 
         if description is not None:

@@ -160,6 +160,6 @@ class StorableObjectJSON(ObjectJSON):
     def build(self,obj):
         if type(obj) is dict:
             if '_cls' in obj and '_idx' in obj:
-                return getattr(self.storage, obj['_cls']).load(obj['idx'])
+                return getattr(self.storage, obj['_cls']).load(obj['_idx'])
 
         return super(StorableObjectJSON, self).build(obj)
