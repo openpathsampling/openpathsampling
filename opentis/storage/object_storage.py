@@ -5,7 +5,7 @@ import numpy as np
 
 from wrapper import savecache, saveidentifiable, loadcache
 
-from util import StorableObjectSimplifier
+from util import StorableObjectJSON
 
 import simtk.unit as u
 
@@ -46,11 +46,17 @@ class ObjectStorage(object):
         self.named = named
         self.json = json
         self.all_names = None
-        self.simplifier = StorableObjectSimplifier()
+        self.simplifier = StorableObjectJSON()
         if identifier is not None:
             self.identifier = self.idx_dimension + '_' + identifier
         else:
             self.identifier = None
+
+        self._units = dict()
+
+    @property
+    def unit(self):
+        return self.storage.unit
 
     def register(self):
         self.storage.links.append(self)
@@ -244,6 +250,7 @@ class ObjectStorage(object):
 
         """
         # define dimensions used for the specific object
+        print self.idx_dimension
         self.storage.createDimension(self.idx_dimension, 0)
         if self.named:
             self.init_variable(self.db + "_name", 'str', description='A short descriptive name for convenience')
@@ -313,6 +320,7 @@ class ObjectStorage(object):
 
         ncfile = self.storage
 
+
         if dimensions is None:
             dimensions = self.db
 
@@ -334,14 +342,29 @@ class ObjectStorage(object):
 
         if var_type == 'float' or units is not None:
 
-            if units is None:
-                units = 'none'
+            unit_instance = u.Unit({})
+            symbol = 'none'
 
             if isinstance(units, u.Unit):
-                units = units.get_symbol()
+                unit_instance = units
+                symbol = unit_instance.get_symbol()
+            elif isinstance(units, u.BaseUnit):
+                unit_instance = u.Unit({units : 1.0})
+                symbol = unit_instance.get_symbol()
+            elif type(units) is str and hasattr(u, units):
+                unit_instance = getattr(u, units)
+                symbol = unit_instance.get_symbol()
+            elif type(units) is str and units is not None:
+                symbol = units
+
+            json_unit = self.simplifier.unit_to_json(unit_instance)
+
+            # store the unit in the dict inside the Storage object for fast access
+            self.storage.unit[name] = unit_instance
 
             # Define units for a float variable
-            setattr(ncvar,      'units', units)
+            setattr(ncvar,      'simtk', json_unit)
+            setattr(ncvar,      'unit', symbol)
 
         if description is not None:
             # Define long (human-readable) names for variables.

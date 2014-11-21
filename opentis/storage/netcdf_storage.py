@@ -26,7 +26,7 @@ from opentis.orderparameter import OrderParameter
 from opentis.snapshot import Snapshot
 from opentis.trajectory import Trajectory
 
-from opentis.storage.util import ObjectSimplifier
+from opentis.storage.util import ObjectJSON
 
 
 #=============================================================================================
@@ -67,12 +67,14 @@ class Storage(netcdf.Dataset):
         self.filename = filename
         self.links = []
 
-        self.simplifier = ObjectSimplifier()
+        self.simplifier = ObjectJSON()
 
         if unit_system is not None:
             self.unit_system = unit_system
         else:
             self.unit_system = units.md_unit_system
+
+        self.unit = dict()
 
         super(Storage, self).__init__(filename, mode)
 
@@ -89,7 +91,7 @@ class Storage(netcdf.Dataset):
         self.globalstate = ObjectStorage(self, GlobalState, named=True, json=True, identifier='json').register()
         self.collectivevariable = ObjectDictStorage(self, OrderParameter, Snapshot).register()
         self.cv = self.collectivevariable
-        self.trajectoryparameter = ObjectDictStorage(self, OrderParameter, Trajectory).register()
+#        self.trajectoryparameter = ObjectDictStorage(self, OrderParameter, Trajectory).register()
 
         if mode == 'w':
             self._init()
@@ -115,8 +117,25 @@ class Storage(netcdf.Dataset):
             self.topology = self.simplifier.topology_from_dict(self.simplifier.from_json(self.variables['topology'][0]))
             self.atoms = self.topology.n_atoms
 
+            # Create a dict of simtk.Unit() instances for all netCDF.Variable()
+            for variable_name in self.variables:
+                unit = None
+                variable = self.variables[variable_name]
+                if hasattr(variable, 'unit_simtk'):
+
+                    unit_dict = self.simplifier.from_json(getattr(variable, 'unit_simtk'))
+                    if unit_dict is not None:
+                        unit = self.simplifier.unit_from_dict(unit_dict)
+
+                self.unit[str(variable_name)] = unit
+
             self._restore_classes()
 
+    def get_unit(self, dimension):
+        """
+        Return a simtk.Unit instance from the unit_system the is of the specified dimension, e.g. length, time
+        """
+        return units.Unit({self.unit_system.base_units[units.BaseDimension(dimension)] : 1.0})
 
     def __getattr__(self, item):
         return self.__dict__[item]

@@ -5,6 +5,7 @@ from opentis.snapshot import Snapshot, Configuration, Momentum
 from object_storage import ObjectStorage
 from wrapper import savecache, loadcache
 from opentis.trajectory import Trajectory
+import simtk.unit as u
 
 class SnapshotStorage(ObjectStorage):
     """
@@ -205,7 +206,7 @@ class MomentumStorage(ObjectStorage):
         # Store momentum.
         if momentum._velocities is not None:
             if hasattr(momentum.velocities, 'unit'):
-                storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / self.storage.units["velocity"]).astype(np.float32)
+                storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / self.storage.unit["momentum_velocities"]).astype(np.float32)
             else:
                 # in this case we blindly assume that the units are correct
                 storage.variables['momentum_velocities'][idx,:,:] = momentum.velocities.astype(np.float32)
@@ -213,7 +214,7 @@ class MomentumStorage(ObjectStorage):
             print 'ERROR : Momentum should not be empty'
 
         if momentum._kinetic_energy is not None:
-            storage.variables['momentum_kinetic'][idx] = momentum.kinetic_energy / self.storage.units["energy"]
+            storage.variables['momentum_kinetic'][idx] = momentum.kinetic_energy / self.storage.unit["momentum_kinetic"]
         else:
             # TODO: No kinetic energy is not yet supported
             print 'Think about how to handle this. It should only be None if loaded lazy and in this case it will never be saved.'
@@ -242,9 +243,9 @@ class MomentumStorage(ObjectStorage):
 
         if not (Momentum.load_lazy and lazy):
             v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
-            velocities = Quantity(v, self.storage.units["velocity"])
+            velocities = Quantity(v, self.storage.unit["momentum_velocities"])
             T = storage.variables['momentum_kinetic'][idx]
-            kinetic_energy = Quantity(T, self.storage.units["energy"])
+            kinetic_energy = Quantity(T, self.storage.unit["momentum_kinetic"])
 
         else:
             velocities = None
@@ -260,7 +261,7 @@ class MomentumStorage(ObjectStorage):
 
         idx = obj.idx[self.storage]
         v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
-        velocities = Quantity(v, self.storage.units["velocity"])
+        velocities = Quantity(v, self.storage.unit["momentum_velocities"])
 
         obj.velocities = velocities
 
@@ -269,7 +270,7 @@ class MomentumStorage(ObjectStorage):
 
         idx = obj.idx[self.storage]
         T = storage.variables['momentum_kinetic'][idx]
-        kinetic_energy = Quantity(T, self.storage.units["energy"])
+        kinetic_energy = Quantity(T, self.storage.unit["momentum_kinetic"])
 
         obj.kinetic_energy = kinetic_energy
 
@@ -330,11 +331,11 @@ class MomentumStorage(ObjectStorage):
         if 'spatial' not in self.storage.dimensions:
             self.init_dimension('spatial', 3)  # number of spatial dimensions
 
-        self.init_variable('momentum_velocities', 'float', (self.db, 'atom','spatial'), 'nm',
+        self.init_variable('momentum_velocities', 'float', (self.db, 'atom','spatial'), u.nanometers / u.picoseconds,
                 description="velocities[momentum][atom][coordinate] are velocities of atom 'atom' in" +
                             " dimension 'coordinate' of momentum 'momentum'.")
 
-        self.init_variable('momentum_kinetic', 'float', self.db)
+        self.init_variable('momentum_kinetic', 'float', self.db, 'kilojoule_per_mole')
 
 
     
@@ -355,12 +356,12 @@ class ConfigurationStorage(ObjectStorage):
         storage = self.storage
 
         # Store configuration.
-        storage.variables['configuration_coordinates'][idx,:,:] = (configuration.coordinates / self.storage.units["length"]).astype(np.float32)
+        storage.variables['configuration_coordinates'][idx,:,:] = (configuration.coordinates / self.storage.units["configuration_coordinates"]).astype(np.float32)
 
         if configuration.potential_energy is not None:
-            storage.variables['configuration_potential'][idx] = configuration.potential_energy / self.storage.units["energy"]
+            storage.variables['configuration_potential'][idx] = configuration.potential_energy / self.storage.units["configuration_potential"]
 
-            storage.variables['configuration_box_vectors'][idx,:] = (configuration.box_vectors / self.storage.units["length"]).astype(np.float32)
+            storage.variables['configuration_box_vectors'][idx,:] = (configuration.box_vectors / self.storage.units["configuration_box_vectors"]).astype(np.float32)
 
         # Force sync to disk to avoid data loss.
         storage.sync()
@@ -392,11 +393,11 @@ class ConfigurationStorage(ObjectStorage):
 
         if not (Configuration.load_lazy and lazy):
             x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
-            coordinates = Quantity(x, self.storage.units["length"])
+            coordinates = Quantity(x, self.storage.units["configuration_coordinates"])
             b = storage.variables['configuration_box_vectors'][idx]
-            box_vectors = Quantity(b, self.storage.units["length"])
+            box_vectors = Quantity(b, self.storage.units["configuration_box_vectors"])
             V = storage.variables['configuration_potential'][idx]
-            potential_energy = Quantity(V, self.storage.units["energy"])
+            potential_energy = Quantity(V, self.storage.units["configuration_potential"])
         else:
             coordinates = None
             box_vectors = None
@@ -415,7 +416,7 @@ class ConfigurationStorage(ObjectStorage):
         idx = obj.idx[self.storage]
 
         x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
-        coordinates = Quantity(x, self.storage.units["length"])
+        coordinates = Quantity(x, self.storage.units["configuration_coordinates"])
 
         obj.coordinates = coordinates
 
@@ -425,7 +426,7 @@ class ConfigurationStorage(ObjectStorage):
         idx = obj.idx[self.storage]
 
         b = storage.variables['configuration_box_vectors'][idx]
-        box_vectors = Quantity(b, self.storage.units["length"])
+        box_vectors = Quantity(b, self.storage.unit["configuration_box_vectors"])
 
         obj.box_vectors = box_vectors
 
@@ -435,7 +436,7 @@ class ConfigurationStorage(ObjectStorage):
         idx = obj.idx[self.storage]
 
         V = storage.variables['configuration_potential'][idx]
-        potential_energy = Quantity(V, self.storage.units["energy"])
+        potential_energy = Quantity(V, self.storage.unit["configuration_potential"])
 
         obj.potential_energy = potential_energy
 
@@ -496,7 +497,6 @@ class ConfigurationStorage(ObjectStorage):
         # index associated storage in class variable for all configuration instances to access
 
         super(ConfigurationStorage, self)._init()
-
         atoms = self.storage.atoms
 
         # define dimensions used in configuration_indices
@@ -506,7 +506,7 @@ class ConfigurationStorage(ObjectStorage):
         if 'spatial' not in self.storage.dimensions:
             self.init_dimension('spatial', 3)  # number of spatial dimensions
 
-        self.init_variable('configuration_coordinates', 'float', (self.db, 'atom','spatial'), 'nm',
+        self.init_variable('configuration_coordinates', 'float', (self.db, 'atom','spatial'), 'nanometers',
                 description="coordinates[configuration][atom][coordinate] are coordinate of atom 'atom' " +
                             "in dimension 'coordinate' of configuration 'configuration'.")
 

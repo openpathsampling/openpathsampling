@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import simtk.openmm.app
 
-class ObjectSimplifier(object):
+class ObjectJSON(object):
     """
     A simple implementation of a pickle algorithm to create object that can be converted to json and back
     """
@@ -14,7 +14,7 @@ class ObjectSimplifier(object):
         self.excluded_keys = []
         self.unit_system = unit_system
 
-    def simplify(self,obj):
+    def simplify(self, obj):
         if type(obj).__module__ != '__builtin__':
             if type(obj) is units.Quantity:
                 # This is number with a unit so turn it into a list
@@ -29,14 +29,19 @@ class ObjectSimplifier(object):
         elif type(obj) is tuple:
             return tuple([self.simplify(o) for o in obj])
         elif type(obj) is dict:
-            return {key : self.simplify(o) for key, o in obj.iteritems() if type(key) is str and key not in self.excluded_keys}
+            result = {key : self.simplify(o) for key, o in obj.iteritems() if type(key) is str and key not in self.excluded_keys }
+            return result
         else:
-            return obj
+            oo = obj
+            return oo
+
+        return 'noway'
+
 
     def build(self,obj):
         if type(obj) is dict:
             if '_units' in obj and '_value' in obj:
-                return obj['_value'] * self.dict_to_unit(obj['_units'])
+                return obj['_value'] * self.unit_from_dict(obj['_units'])
             else:
                 return {key : self.build(o) for key, o in obj.iteritems()}
         elif type(obj) is tuple:
@@ -70,15 +75,22 @@ class ObjectSimplifier(object):
         return str(1.0 * unit).split()[1]
 
     def unit_to_dict(self, unit):
-        d = {p.name : int(fac) for p, fac in unit.iter_all_base_units()}
-        return d
+        unit_dict = {p.name : int(fac) for p, fac in unit.iter_all_base_units()}
+        return unit_dict
 
-    def dict_to_unit(self, unit_dict):
+    def unit_from_dict(self, unit_dict):
         unit = units.Unit({})
         for unit_name, unit_multiplication in unit_dict.iteritems():
             unit *= getattr(units, unit_name)**unit_multiplication
 
         return unit
+
+    def unit_to_json(self, unit):
+        simple = self.unit_to_dict(unit)
+        return self.to_json(simple)
+
+    def unit_from_json(self, json_string):
+        return self.unit_from_dict(self.from_json(json_string))
 
     def topology_to_dict(self, topology):
         """Return a copy of the topology
@@ -131,9 +143,9 @@ class ObjectSimplifier(object):
 
         return md.Topology.from_dataframe(atoms, bonds)
 
-class StorableObjectSimplifier(ObjectSimplifier):
+class StorableObjectJSON(ObjectJSON):
     def __init__(self, unit_system = None):
-        super(StorableObjectSimplifier, self).__init__(unit_system)
+        super(StorableObjectJSON, self).__init__(unit_system)
         self.excluded_keys = ['idx', 'json', 'identifier']
 
     def simplify(self,obj):
@@ -142,11 +154,11 @@ class StorableObjectSimplifier(ObjectSimplifier):
                 getattr(self.storage, obj.cls).save(obj)
                 return { '_idx' : obj.idx[self.storage], '_cls' : obj.cls}
 
-        super(StorableObjectSimplifier, self).simplifiy(obj)
+        return super(StorableObjectJSON, self).simplify(obj)
 
     def build(self,obj):
         if type(obj) is dict:
             if '_cls' in obj and '_idx' in obj:
                 return getattr(self.storage, obj['_cls']).load(obj['idx'])
 
-        super(StorableObjectSimplifier, self).build(obj)
+        return super(StorableObjectJSON, self).build(obj)
