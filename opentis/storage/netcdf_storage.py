@@ -23,8 +23,7 @@ from opentis.pathmover import PathMover, MoveDetails
 from opentis.globalstate import GlobalState
 from orderparameter_store import ObjectDictStorage
 from opentis.orderparameter import OrderParameter
-from opentis.snapshot import Snapshot
-from opentis.trajectory import Trajectory
+from opentis.snapshot import Snapshot, Configuration
 
 from opentis.storage.util import ObjectJSON
 
@@ -106,12 +105,26 @@ class Storage(netcdf.Dataset):
                 self.topology = md.Topology.from_openmm(topology_file)
 
             elif type(topology_file) is str:
-                self.topology = md.load(topology_file).topology
+                self.pdb = md.load(topology_file)
+                self.topology = self.pdb.topology
+                self.pdb
 
             print self.topology
 
             # create a json from the mdtraj.Topology() and store it
             self.write_str('topology', self.simplifier.to_json(self.simplifier.topology_to_dict(self.topology)))
+
+            self.initial_configuration = Configuration(
+                coordinates=self.pdb.xyz[0],
+                box_vectors=self.pdb.unitcell_vectors,
+                potential_energy=0.0
+            )
+
+            # Save the initial configuration
+            self.configuration.save(self.initial_configuration)
+
+            self.createVariable('initial_configuration_idx', 'i4', 'scalar')
+            self.variables['initial_configuration_idx'][:] = self.initial_configuration.idx[self]
 
             if n_atoms is not None:
                 self.atoms = n_atoms
@@ -124,8 +137,13 @@ class Storage(netcdf.Dataset):
             self.sync()
 
         elif mode == 'a':
+            self._restore_classes()
+
             self.topology = self.simplifier.topology_from_dict(self.simplifier.from_json(self.variables['topology'][0]))
             self.atoms = self.topology.n_atoms
+
+            # restore initial configuration
+            self.initial_configuration = self.configuration.load(int(self.variables['initial_configuration_idx'][0]))
 
             # Create a dict of simtk.Unit() instances for all netCDF.Variable()
             for variable_name in self.variables:
@@ -139,7 +157,6 @@ class Storage(netcdf.Dataset):
 
                 self.unit[str(variable_name)] = unit
 
-            self._restore_classes()
 
     def get_unit(self, dimension):
         """
@@ -219,3 +236,5 @@ class Storage(netcdf.Dataset):
 
     def init_str(self, name):
         self.createVariable(name, 'str', 'scalar')
+
+

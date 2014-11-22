@@ -35,7 +35,6 @@ class DynamicsEngine(object):
     instantiated.
     '''
 
-
     def __init__(self, filename=None, options=None, mode='auto'):
         '''
         Create an empty DynamicsEngine object
@@ -66,6 +65,10 @@ class DynamicsEngine(object):
         self.topology = None
         if 'topology' in options:
             self.topology = options['topology']
+
+        self.initial_configuration = None
+        if 'configuration' in options:
+            self.initial_configuration = options['configuration']
 
         self.n_atoms = None
         if 'n_atoms' in options:

@@ -1,16 +1,13 @@
 import numpy as np
 from snapshot import Snapshot, Configuration, Momentum
-from trajectory import Trajectory
 from dynamics_engine import DynamicsEngine
-from ensemble import LengthEnsemble
 from integrators import VVVRIntegrator
-from storage import Storage
 
 from simtk.unit import femtoseconds, picoseconds, nanometers, kelvin, dalton
 from simtk.unit import Quantity
 
 import simtk.openmm as openmm
-from simtk.openmm.app import ForceField, PME, HBonds
+from simtk.openmm.app import ForceField, PME, HBonds, PDBFile
 import mdtraj as md
 
 class OpenMMEngine(DynamicsEngine):
@@ -34,16 +31,16 @@ class OpenMMEngine(DynamicsEngine):
             forcefield = ForceField( opts["forcefield_solute"],
                                      opts["forcefield_solvent"] )
 
-            print 'CREATE'
-
-            print type(self.pdb.topology)
-
             openmm_topology = topology.to_openmm()
+
+            pdb_file = PDBFile(topology_file)
+            openmm_topology = pdb_file.topology
 
             system = forcefield.createSystem( openmm_topology,
                                               nonbondedMethod=PME,
                                               nonbondedCutoff=1.0 * nanometers,
                                               constraints=HBonds )
+
             self.system_serial = openmm.XmlSerializer.serialize(system)
 
             integrator = VVVRIntegrator( opts["temperature"],
@@ -106,7 +103,7 @@ class OpenMMEngine(DynamicsEngine):
                                                  getVelocities=True,
                                                  getEnergy=True)
         return Snapshot(coordinates = state.getPositions(asNumpy=True),
-                        box_vectors = state.getPeriodicBoxVectors(),
+                        box_vectors = state.getPeriodicBoxVectors(asNumpy=True),
                         potential_energy = state.getPotentialEnergy(),
                         velocities = state.getVelocities(asNumpy=True),
                         kinetic_energy = state.getKineticEnergy(),
@@ -119,8 +116,8 @@ class OpenMMEngine(DynamicsEngine):
 
     @current_snapshot.setter
     def current_snapshot(self, snapshot):
-        self.simulation.context.setPositions(snapshot.coordinates)
-        self.simulation.context.setVelocities(snapshot.velocities)
+        self.configuration = snapshot.configuration
+        self.momentum = snapshot.momentum
 
     def generate_next_frame(self):
         self.simulation.step(self.nsteps_per_frame)
@@ -146,7 +143,7 @@ class OpenMMEngine(DynamicsEngine):
                                                  getVelocities=True,
                                                  getEnergy=True)
         return Configuration(coordinates = state.getPositions(asNumpy=True),
-                             box_vectors = state.getPeriodicBoxVectors(),
+                             box_vectors = state.getPeriodicBoxVectors(asNumpy=True),
                              potential_energy = state.getPotentialEnergy(),
                              topology = self.topology
                             )
@@ -154,3 +151,5 @@ class OpenMMEngine(DynamicsEngine):
     @configuration.setter
     def configuration(self, config):
         self.simulation.context.setPositions(config.coordinates)
+        # TODO: Check if this is the right way to make sure the box is right!
+        # self.simulation.context.getPeriodicBoxVectors(config.box_vectors)
