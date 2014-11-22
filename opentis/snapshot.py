@@ -447,6 +447,8 @@ class Snapshot(object):
         if kinetic_energy is not None: 
             self.momentum._kinetic_energy = copy.deepcopy(kinetic_energy)
 
+        # TODO: consider whether it is cleaner to move this logic into the
+        # main allocation process instead of fixing things after the fact
         config = self.configuration
         if config.coordinates is None and config.box_vectors is None and config.potential_energy is None:
             self.configuration = None
