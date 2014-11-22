@@ -1020,7 +1020,7 @@ class EntersXEnsemble(ExitsXEnsemble):
         return False
 
 
-class AlteredTrajectoryEnsemble(Ensemble):
+class AlteredEnsemble(Ensemble):
     '''
     Represents an ensemble where an altered version of a trajectory (extended, reversed, cropped) is part of a given ensemble
     '''
@@ -1029,7 +1029,7 @@ class AlteredTrajectoryEnsemble(Ensemble):
         Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
         '''
         
-        super(AlteredTrajectoryEnsemble, self).__init__()
+        super(AlteredEnsemble, self).__init__()
         self.ensemble = ensemble
                 
     def _alter(self, trajectory):
@@ -1044,7 +1044,7 @@ class AlteredTrajectoryEnsemble(Ensemble):
     def can_prepend(self, trajectory):
         return self.ensemble.can_prepend(self._alter(trajectory))
 
-class BackwardPrependedTrajectoryEnsemble(AlteredTrajectoryEnsemble):
+class BackwardPrependedTrajectoryEnsemble(AlteredEnsemble):
     '''
     Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
     '''
@@ -1056,7 +1056,7 @@ class BackwardPrependedTrajectoryEnsemble(AlteredTrajectoryEnsemble):
 #        print [ s.idx for s in trajectory.reversed + self.add_traj]
         return trajectory.reversed + self.add_traj
 
-class ForwardAppendedTrajectoryEnsemble(AlteredTrajectoryEnsemble):
+class ForwardAppendedTrajectoryEnsemble(AlteredEnsemble):
     '''
     Represents an ensemble which is the given ensemble but for trajectories where some trajectory is appended
     '''
@@ -1067,7 +1067,7 @@ class ForwardAppendedTrajectoryEnsemble(AlteredTrajectoryEnsemble):
     def _alter(self, trajectory):
         return self.add_traj + trajectory
     
-class ReversedTrajectoryEnsemble(AlteredTrajectoryEnsemble):
+class ReversedTrajectoryEnsemble(AlteredEnsemble):
     '''
     Represents an ensemble 
     '''
