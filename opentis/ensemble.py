@@ -784,6 +784,8 @@ class SequentialEnsemble(Ensemble):
         sequence_str = ",\n".join([str(ens) for ens in self.ensembles])
         return head+sequence_str+tail
 
+
+
 class LengthEnsemble(Ensemble):
     '''
     Represents an ensemble the contains trajectories of a specific length
@@ -1061,6 +1063,18 @@ class ReversedTrajectoryEnsemble(AlteredEnsemble):
     '''
     def _alter(self, trajectory):
         return trajectory.reverse()
+
+class OptionalEnsemble(AlteredEnsemble):
+    '''
+    Makes satisfying a given ensemble optional (primarily useful in
+    SequentialEnsembles)
+    '''
+    def __init__(self, ensemble):
+        len0 = LengthEnsemble(0)
+        self.ensemble = ensemble | len0
+
+    def __str__(self):
+        return "{"+self.ensemble.__str__()+"} (OPTIONAL)"
     
 class EnsembleFactory():
     '''
