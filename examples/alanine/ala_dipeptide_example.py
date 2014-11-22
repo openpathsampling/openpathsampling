@@ -19,15 +19,15 @@ sys.path.append(os.path.abspath('../../'))
  
 # in principle, all of these imports should be simplified once this is a
 # package
-from opentis.Simulator import Simulator
 from opentis.orderparameter import OP_Function, OP_Volume
-from opentis.openmm_simulation import OpenMMSimulation
-from opentis.snapshot import Snapshot, Configuration
+from opentis.openmm_engine import OpenMMEngine
+from opentis.snapshot import Snapshot, Momentum
+from opentis.snapshot import Configuration
 from opentis.volume import LambdaVolumePeriodic, VolumeFactory as vf
 from opentis.pathmover import PathMoverFactory as mf
 from opentis.ensemble import EnsembleFactory as ef
 from opentis.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
-                      InXEnsemble)
+                              InXEnsemble)
 from opentis.storage import Storage
 from opentis.trajectory import Trajectory
 from opentis.calculation import Bootstrapping
@@ -40,123 +40,40 @@ from simtk.unit import Quantity
 
 import time
 
-from opentis.integrators import VVVRIntegrator
-
-import simtk.openmm as openmm
-from simtk.openmm.app import ForceField, PME, HBonds
-
-
-# TODO: figure out how much of this should be moved to Simulator
-
-class AlanineDipeptideTrajectorySimulator(Simulator):
-    def __init__(self, filename, topology_file, options, mode='auto'):
-        super(AlanineDipeptideTrajectorySimulator, self).__init__()
-
-        # tell everybody who their simulator is
-        Trajectory.simulator = self
-
-        # storage
-        self.fn_storage = filename
-
-        if mode == 'create':
-            # set up the options
-            self.options = options
-            opts = self.options
-
-            # storage
-            self.storage = Storage(
-                topology_file=topology_file,
-                filename=self.fn_storage,
-                mode='w'
-            )
-
-            # save simulator options
-            self.storage.init_str('simulation_options')
-            self.storage.write_as_json('simulation_options', self.options)
-
-        elif mode == 'restore':
-            # open storage
-            self.storage = Storage(
-                filename=self.fn_storage,
-                mode='a'
-            )
-
-            self.options = self.storage.restore_object('simulation_options')
-
-
-        self.topology = self.storage.topology
-
-        # set up the OpenMM simulation
-        forcefield = ForceField( opts["forcefield_solute"],
-                                 opts["forcefield_solvent"] )
-        system = forcefield.createSystem( self.topology,
-                                          nonbondedMethod=PME,
-                                          nonbondedCutoff=1*nanometers,
-                                          constraints=HBonds )
-        self.system_serial = openmm.XmlSerializer.serialize(system)
-
-        integrator = VVVRIntegrator( opts["temperature"],
-                                     opts["collision_rate"],
-                                     opts["timestep"] )
-
-        self.integrator_serial = openmm.XmlSerializer.serialize(system)
-        self.integrator_class = type(integrator).__name__
-
-        simulation = OpenMMSimulation(self.topology, system,
-                                      integrator)
-
-        # claim the OpenMM simulation as our own
-        self.simulation = simulation
-
-        # set up the max_length_stopper (if n_frames_max is given)
-        self.max_length_stopper = LengthEnsemble(slice(0, opts["n_frames_max"] - 1))
-        self.nframes_per_iteration = self.options['nframes_per_iteration']
-        self.solute_indices = self.options['solute_indices']
-
-    def equilibrate(self, nsteps):
-        # TODO: rename... this is position restrained equil, right?
-        self.simulation.context.setPositions(self.pdb.positions)
-        system = self.simulation.system
-        n_solute = len(self.solute_indices)
-
-        solute_masses = Quantity(np.zeros(n_solute, np.double), dalton)
-        for i in self.solute_indices:
-            solute_masses[i] = system.getParticleMass(i)
-            system.setParticleMass(i,0.0)
-
-        self.simulation.step(nsteps)
-
-        for i in self.solute_indices:
-            system.setParticleMass(i, solute_masses[i].value_in_unit(dalton))
-
 
 if __name__=="__main__":
-    options = {
-                'temperature' : 300.0 * kelvin,
-                'collision_rate' : 1.0 / picoseconds,
-                'timestep' : 2.0 * femtoseconds,
-                'nframes_per_iteration' : 10,
-                'n_frames_max' : 5000,
-                'start_time' : time.time(),
-                'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
-                'platform' : 'fastest',
-                'solute_indices' : range(22), # TODO: This could be determined automatically !?!?
-                'forcefield_solute' : 'amber96.xml',
-                'forcefield_solvent' : 'tip3p.xml'
-               }
+    options = {'temperature' : 300.0 * kelvin,
+               'collision_rate' : 1.0 / picoseconds,
+               'timestep' : 2.0 * femtoseconds,
+               'nsteps_per_frame' : 10,
+               'n_frames_max' : 5000,
+               'start_time' : time.time(),
+               'fn_initial_pdb' : "../data/Alanine_solvated.pdb",
+               'platform' : 'fastest',
+               'solute_indices' : range(22), # TODO: This could be determined automatically !?!?
+               'forcefield_solute' : 'amber96.xml',
+               'forcefield_solvent' : 'tip3p.xml'
+              }
+    engine = OpenMMEngine(filename="trajectory.nc",
+                          topology_file="../data/Alanine_solvated.pdb",
+                          opts=options, 
+                          mode='create'
+                         )
+    
+    # set up the initial conditions
+    init_pdb = md.load(options['fn_initial_pdb'], frame=0)
+    init_pos = init_pdb.xyz[0]
+    init_box = init_pdb.unitcell_vectors[0]
+    init_vel = np.zeros(init_pos.shape) # NOTE: need ways to assign Boltzmann
+    engine.current_snapshot = Snapshot(coordinates=init_pos,
+                                       box_vectors=init_box,
+                                       velocities=init_vel)
 
-    simulator = AlanineDipeptideTrajectorySimulator(
-                    filename="trajectory.nc",
-                    topology_file="../data/Alanine_solvated.pdb",
-                    options=options,
-                    mode='create'
-                    )
-
-    simulator.equilibrate(5)
-    snap = Snapshot(simulator.simulation)
-    simulator.storage.snapshot.save(snap, 0)
-    simulator.initialized = True
-    PathMover.simulator = simulator
+    engine.equilibrate(5)
+    snap = engine.current_snapshot
+    engine.storage.snapshot.save(snap, 0)
+    engine.initialized = True
+    PathMover.engine = engine
 
     # this generates an order parameter (callable) object named psi (so if
     # we call `psi(trajectory)` we get a list of the values of psi for each
@@ -175,8 +92,8 @@ if __name__=="__main__":
 
     # save the orderparameters in the storage
     # since they have no data cache this will only contain their name
-    psi.save(storage=simulator.storage.cv)
-    phi.save(storage=simulator.storage.cv)
+    psi.save(storage=engine.storage.cv)
+    phi.save(storage=engine.storage.cv)
 
     # now we define our states and our interfaces
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
@@ -196,7 +113,7 @@ if __name__=="__main__":
         # Give each interface a name
         interface.name = 'Interface '+str(no)
         # And save all of these
-        simulator.storage.ensemble.save(interface)
+        engine.storage.ensemble.save(interface)
 
     mover_set = mf.OneWayShootingSet(UniformSelector(), interface_set)
 
@@ -209,7 +126,7 @@ This path ensemble is particularly complex because we want to be sure that
 the path we generate is in the ensemble we desire: this means that we can't
 use LeaveXEnsemble as we typically do with TIS paths.
     """
-    snapshot = simulator.storage.snapshot.load(0)
+    snapshot = engine.storage.snapshot.load(0)
     
     first_traj_ensemble = SequentialEnsemble([
         OutXEnsemble(stateA) | LengthEnsemble(0),
@@ -223,7 +140,7 @@ use LeaveXEnsemble as we typically do with TIS paths.
 
     interface0_ensemble = interface_set[0]
     print "start path generation (should not take more than a few minutes)"
-    total_path = simulator.generate(snapshot, [first_traj_ensemble.forward])
+    total_path = engine.generate(snapshot, [first_traj_ensemble.forward])
     print "path generation complete"
     print
     print "Total trajectory length: ", len(total_path)
@@ -263,8 +180,8 @@ Starting the bootstrapping procedure to obtain initial paths. First we
 define our shooting movers (randomly pick fwd or bkwd shooting), then build
 the bootstrapping calculation, then we run it. 
     """
-    bootstrap = Bootstrapping(storage=simulator.storage,
-                              simulator=simulator,
+    bootstrap = Bootstrapping(storage=engine.storage,
+                              engine=engine,
                               ensembles=interface_set,
                               movers=mover_set)
 
@@ -275,15 +192,18 @@ the bootstrapping calculation, then we run it.
     Saving all cached computations of orderparameters.
     """
 
-    psi.save(storage=simulator.storage.cv)
-    phi.save(storage=simulator.storage.cv)
+    psi.save(storage=engine.storage.cv)
+    phi.save(storage=engine.storage.cv)
+    # Alternatively one could write
+    # engine.storage.cv.save(psi)
+    # engine.storage.cv.save(phi)
 
     # Save all interface volumes as orderparameters
     op_vol_set = [OP_Volume('OP' + str(idx), vol) for idx, vol in enumerate(volume_set)]
 
     for op in op_vol_set:
-        op(simulator.storage.snapshot.all())
-        simulator.storage.cv.save(op)
+        op(engine.storage.snapshot.all())
+        engine.storage.cv.save(op)
 
     # Create an orderparameter from a volume
     op_inA = OP_Volume('StateA', stateA)
@@ -291,15 +211,11 @@ the bootstrapping calculation, then we run it.
     op_notinAorB = OP_Volume('StateX', ~ (stateA | stateB))
 
     # compute the orderparameter for all snapshots
-    op_inA(simulator.storage.snapshot.all())
-    op_inB(simulator.storage.snapshot.all())
-    op_notinAorB(simulator.storage.snapshot.all())
+    op_inA(engine.storage.snapshot.all())
+    op_inB(engine.storage.snapshot.all())
+    op_notinAorB(engine.storage.snapshot.all())
 
-    simulator.storage.cv.save(op_inA)
-    simulator.storage.cv.save(op_inB)
-    simulator.storage.cv.save(op_notinAorB)
+    engine.storage.cv.save(op_inA)
+    engine.storage.cv.save(op_inB)
+    engine.storage.cv.save(op_notinAorB)
 
-    # Alternatively one could write
-
-    # simulator.storage.cv.save(psi)
-    # simulator.storage.cv.save(phi)

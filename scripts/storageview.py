@@ -3,6 +3,8 @@ import argparse
 import os
 
 from opentis.storage import Storage
+from opentis.orderparameter import StorableObjectDict
+from opentis.snapshot import Configuration
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Analyze a file.')
@@ -22,9 +24,9 @@ if __name__ == '__main__':
 
     def headline(s):
         print
-        print "###################################################################################"
+        print "###############################################################################"
         print "##", s.upper()
-        print "###################################################################################"
+        print "###############################################################################"
         print
 
     def line(a, b):

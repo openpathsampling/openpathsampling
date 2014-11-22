@@ -72,7 +72,6 @@ class SnapshotStorage(ObjectStorage):
         This also saves all contained frames in the snapshot if not done yet.
         A single Snapshot object can only be saved once!
         """
-
         storage = self.storage
 
         if snapshot.configuration is not None:

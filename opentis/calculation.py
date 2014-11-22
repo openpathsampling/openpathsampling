@@ -6,10 +6,9 @@ class Calculation(object):
 
     calc_name = "Calculation"
 
-    def __init__(self, storage, simulator=None, ensembles=None, 
-                 movers=None):
+    def __init__(self, storage, engine=None, ensembles=None, movers=None):
         self.storage = storage
-        self.simulator = simulator
+        self.engine = engine
         self.movers = movers
         self.globalstate = GlobalState(ensembles)
 

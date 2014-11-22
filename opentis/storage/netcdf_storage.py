@@ -41,10 +41,11 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 
 class Storage(netcdf.Dataset):
     '''
-    A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM simulation. This allows effective storage of shooting trajectories
-    '''
+    A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
+    simulation. This allows effective storage of shooting trajectories '''
 
-    def __init__(self, filename = 'trajectory.nc', mode = None, topology_file = None, unit_system = None):
+    def __init__(self, filename='trajectory.nc', mode=None, n_atoms=None, 
+                 topology_file=None):
         '''
         Create a storage for complex objects in a netCDF file
         
@@ -55,7 +56,8 @@ class Storage(netcdf.Dataset):
         filename : string
             filename of the netcdf file
         mode : string, default: None
-            the mode of file creation, one of 'w' (write), 'a' (append) or None, which will append any existing files.
+            the mode of file creation, one of 'w' (write), 'a' (append) or
+            None, which will append any existing files.
         '''
 
         if mode == None:
@@ -108,7 +110,15 @@ class Storage(netcdf.Dataset):
             # create a json from the mdtraj.Topology() and store it
             self.write_str('topology', self.simplifier.to_json(self.simplifier.topology_to_dict(self.topology)))
 
-            self.atoms = self.topology.n_atoms
+                self.variables['pdb'][0] = pdb_string
+
+
+            if n_atoms is not None:
+                self.atoms = n_atoms
+            elif self.topology is not None:
+                self.atoms = self.topology.n_atoms
+            else:
+                raise RuntimeError("Storage given neither n_atoms nor topology")
 
             self._init_classes()
             self.sync()
@@ -128,6 +138,16 @@ class Storage(netcdf.Dataset):
                         unit = self.simplifier.unit_from_dict(unit_dict)
 
                 self.unit[str(variable_name)] = unit
+
+                # TODO: I (DWHS) added this try/except to fix a problem I
+                # found. Originally it only looked for om_topology, so I
+                # have it look for that first. But shouldn't it take the
+                # md_topology first if available, and build the om_topology
+                # if not?
+                try:
+                    self.topology = md.Topology.from_openmm(self._restore_single_option(self, 'om_topology'))
+                except KeyError:
+                    self.topology = self._restore_single_option(self, 'md_topology')
 
             self._restore_classes()
 
