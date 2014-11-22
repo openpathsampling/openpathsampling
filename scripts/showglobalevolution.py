@@ -2,7 +2,7 @@ import svgwrite
 import sys
 import argparse
 import os
-from storage import Storage
+from opentis.storage import Storage
 
 from orderparameter import OP_Function
 import mdtraj as md

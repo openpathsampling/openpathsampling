@@ -1,7 +1,6 @@
 """
-The pymbar package contains the pymbar suite of tools for the analysis of
-simulated and experimental data with the multistate Bennett acceptance
-ratio (MBAR) estimator.
+The opentis package contains the Opentis python library to do transition
+interface sampling.
 
 """
 #from distutils.sysconfig import get_config_var
@@ -97,8 +96,8 @@ def buildKeywordDictionary():
     setupKeywords = {}
     setupKeywords["name"]              = "opentis"
     setupKeywords["version"]           = "0.0.1-alpha"
-    setupKeywords["author"]            = "David Swenson, Jan-Hendrik Prinz, Peter Bolhuis and John D. Chodera"
-    setupKeywords["author_email"]      = "jan.prinz@choderalab.org, p.g.bolhuis@uva.nl, choderaj@mskcc.org"
+    setupKeywords["author"]            = "David W.H. Swenson, Jan-Hendrik Prinz, Peter Bolhuis and John D. Chodera"
+    setupKeywords["author_email"]      = "dwhs@hyperblazer.net, jan.prinz@choderalab.org, p.g.bolhuis@uva.nl, choderaj@mskcc.org"
     setupKeywords["license"]           = "GPL 2.0"
     setupKeywords["url"]               = "http://github.com/choderalab/opentis"
     setupKeywords["download_url"]      = "http://github.com/choderalab/opentis"
