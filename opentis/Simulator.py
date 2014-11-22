@@ -134,14 +134,6 @@ class Simulator(object):
                 # We could also just count the number of frames. Might be faster but not as nice :)                
                 stop = stop or not self.max_length_stopper(trajectory)
                 
-                if self.op:
-                    print self.max_length_stopper, self.max_length_stopper(trajectory)
-                    print frame
-                    print len(trajectory)
-                    print [ s.begin for s in trajectory]
-                    
-                    print 'OP :', self.op(snapshot)
-
             self.simulation.stop(trajectory)
             return trajectory
         else:
