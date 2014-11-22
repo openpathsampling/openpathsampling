@@ -36,7 +36,7 @@ class DynamicsEngine(object):
     '''
 
 
-    def __init__(self, filename=None, opts=None, mode='auto'):
+    def __init__(self, filename=None, options=None, mode='auto'):
         '''
         Create an empty DynamicsEngine object
         
@@ -63,32 +63,30 @@ class DynamicsEngine(object):
                     mode = 'create'
 
 
-        # set up the opts
-        self.opts = {}
-        self.add_stored_parameters(opts)
+        self.topology = None
+        if 'topology' in options:
+            self.topology = options['topology']
 
-        if not hasattr(self, 'topology'):
-            self.topology = None
+        self.n_atoms = None
+        if 'n_atoms' in options:
+            self.n_atoms = options['n_atoms']
 
-        if not hasattr(self, 'n_atoms'):
-            self.n_atoms = None
-
-        # storage
+        # storage file name
         self.fn_storage = filename 
 
-        # tell everybody who their engine is
-        Snapshot.engine = self
-        Configuration.engine = self
+        # Trajectories need to know the engine as a hack to get the topology.
+        # Better would be a link to the topology directly. This is needed to create
+        # mdtraj.Trajectory() objects
+
         Trajectory.engine = self
-
-        # set up the max_length_stopper (if n_frames_max is given)
-        # TODO: switch this not needing slice; use can_append
-        if hasattr(self, 'n_frames_max'):
-            self.max_length_stopper = LengthEnsemble(slice(0,self.n_frames_max))
-
 
         if mode == 'create':
             # storage
+
+            self.options = options
+            options = self.options
+
+
             if filename is not None:
                 self.storage = Storage(
                     topology_file=self.topology,
@@ -96,32 +94,35 @@ class DynamicsEngine(object):
                     filename=self.fn_storage,
                     mode='w'
                 )
-                self.storage.engine = self
-                self.storage._store_options(self)
-                Trajectory.storage = self.storage
+
+                # save simulator options
+                self.storage.init_str('simulation_options')
+                self.storage.write_as_json('simulation_options', self.options)
+
+
+        elif mode == 'restore':
+            # open storage
+            self.storage = Storage(
+                filename=self.fn_storage,
+                mode='a'
+            )
+
+            self.options = self.storage.restore_object('simulation_options')
 
         if self.n_atoms == None:
-            self.n_atoms = self.storage.atoms 
- 
+            self.n_atoms = self.storage.atoms
 
-    def add_stored_parameters(self, param_dict):
-        '''Adds parameters in param_dict to the attribute dictionary of the
-        DynamicsEngine object, and saves the relevant keys as options to
-        store.
+        self.topology = self.storage.topology
 
-        Parameters
-        ----------
-        param_dict : dict
-            dictionary of attributes to be added (and stored); attribute
-            names are keys, with appropriate values
-        '''
-        if param_dict is not None:
-            for key in param_dict.keys():
-                self.opts[key] = param_dict[key]
-                setattr(self, key, param_dict[key])
-            self.options_to_store = self.opts.keys()
-        return
- 
+        # set up the max_length_stopper (if n_frames_max is given)
+        self.nframes_per_iteration = self.options['nsteps_per_frame']
+        self.solute_indices = self.options['solute_indices']
+
+        # set up the max_length_stopper (if n_frames_max is given)
+        # TODO: switch this not needing slice; use can_append
+        if 'n_frames_max' in self.options:
+            self.max_length_stopper = LengthEnsemble(slice(0, self.options['n_frames_max']))
+
     def start(self, snapshot=None):
         if snapshot is not None:
             self.current_snapshot = snapshot
@@ -169,9 +170,7 @@ class DynamicsEngine(object):
             trajectory.append(snapshot)
             
             frame = 0
-            
             stop = False
-
 
             while stop == False:
                                 

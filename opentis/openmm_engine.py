@@ -11,7 +11,7 @@ from simtk.unit import Quantity
 
 import simtk.openmm as openmm
 from simtk.openmm.app import ForceField, PME, HBonds
-from simtk.openmm.app.pdbfile import PDBFile
+import mdtraj as md
 
 class OpenMMEngine(DynamicsEngine):
     """We only need a few things from the simulation. This object duck-types
@@ -21,35 +21,43 @@ class OpenMMEngine(DynamicsEngine):
     def __init__(self, filename, topology_file, opts, mode='auto'):
         # if topology exists, it must be defined before running
         # super.__init__. This is ugly, but I don't see an easy way out.
-        self.pdb = PDBFile(topology_file)
-        opts['topology'] = self.pdb.topology
-        super(OpenMMEngine, self).__init__(filename=filename,
-                                           opts=opts,
-                                           mode=mode)
+        self.pdb = md.load(topology_file)
+        topology = self.pdb.topology
+        opts['topology'] = topology
 
+        super(OpenMMEngine, self).__init__(filename=filename,
+                                           options=opts,
+                                           mode=mode)
 
         if mode == 'create':
             # set up the OpenMM simulation
-            forcefield = ForceField(self.forcefield_solute,
-                                    self.forcefield_solvent)
-            system = forcefield.createSystem(self.topology, 
-                                             nonbondedMethod=PME,
-                                             nonbondedCutoff=1*nanometers,
-                                             constraints=HBonds)
+            forcefield = ForceField( opts["forcefield_solute"],
+                                     opts["forcefield_solvent"] )
+
+            print 'CREATE'
+
+            print type(self.pdb.topology)
+
+            openmm_topology = topology.to_openmm()
+
+            system = forcefield.createSystem( openmm_topology,
+                                              nonbondedMethod=PME,
+                                              nonbondedCutoff=1.0 * nanometers,
+                                              constraints=HBonds )
             self.system_serial = openmm.XmlSerializer.serialize(system)
 
-            integrator = VVVRIntegrator(self.temperature,
-                                        self.collision_rate,
-                                        self.timestep)
+            integrator = VVVRIntegrator( opts["temperature"],
+                                         opts["collision_rate"],
+                                         opts["timestep"] )
+
             self.integrator_serial = openmm.XmlSerializer.serialize(system)
             self.integrator_class = type(integrator).__name__
 
-            simulation = openmm.app.Simulation(self.topology, system, 
+            simulation = openmm.app.Simulation(openmm_topology, system,
                                                integrator)
 
             # claim the OpenMM simulation as our own
             self.simulation = simulation
-
 
         if mode == 'restore':
             pass

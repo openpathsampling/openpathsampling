@@ -21,8 +21,7 @@ sys.path.append(os.path.abspath('../../'))
 # package
 from opentis.orderparameter import OP_Function, OP_Volume
 from opentis.openmm_engine import OpenMMEngine
-from opentis.snapshot import Snapshot, Momentum
-from opentis.snapshot import Configuration
+from opentis.snapshot import Snapshot
 from opentis.volume import LambdaVolumePeriodic, VolumeFactory as vf
 from opentis.pathmover import PathMoverFactory as mf
 from opentis.ensemble import EnsembleFactory as ef
@@ -36,7 +35,6 @@ from opentis.pathmover import (PathMover, MixedMover, ForwardShootMover,
 from opentis.shooting import UniformSelector
 
 from simtk.unit import femtoseconds, picoseconds, nanometers, kelvin, dalton
-from simtk.unit import Quantity
 
 import time
 
@@ -54,9 +52,10 @@ if __name__=="__main__":
                'forcefield_solute' : 'amber96.xml',
                'forcefield_solvent' : 'tip3p.xml'
               }
+
     engine = OpenMMEngine(filename="trajectory.nc",
                           topology_file="../data/Alanine_solvated.pdb",
-                          opts=options, 
+                          opts=options,
                           mode='create'
                          )
     

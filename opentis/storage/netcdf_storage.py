@@ -45,7 +45,7 @@ class Storage(netcdf.Dataset):
     simulation. This allows effective storage of shooting trajectories '''
 
     def __init__(self, filename='trajectory.nc', mode=None, n_atoms=None, 
-                 topology_file=None):
+                 topology_file=None, unit_system=None):
         '''
         Create a storage for complex objects in a netCDF file
         
@@ -93,10 +93,11 @@ class Storage(netcdf.Dataset):
         self.globalstate = ObjectStorage(self, GlobalState, named=True, json=True, identifier='json').register()
         self.collectivevariable = ObjectDictStorage(self, OrderParameter, Snapshot).register()
         self.cv = self.collectivevariable
-#        self.trajectoryparameter = ObjectDictStorage(self, OrderParameter, Trajectory).register()
 
         if mode == 'w':
             self._init()
+
+            print topology_file
 
             if isinstance(topology_file, md.Topology):
                 self.topology = topology_file
@@ -107,11 +108,10 @@ class Storage(netcdf.Dataset):
             elif type(topology_file) is str:
                 self.topology = md.load(topology_file).topology
 
+            print self.topology
+
             # create a json from the mdtraj.Topology() and store it
             self.write_str('topology', self.simplifier.to_json(self.simplifier.topology_to_dict(self.topology)))
-
-                self.variables['pdb'][0] = pdb_string
-
 
             if n_atoms is not None:
                 self.atoms = n_atoms
@@ -138,16 +138,6 @@ class Storage(netcdf.Dataset):
                         unit = self.simplifier.unit_from_dict(unit_dict)
 
                 self.unit[str(variable_name)] = unit
-
-                # TODO: I (DWHS) added this try/except to fix a problem I
-                # found. Originally it only looked for om_topology, so I
-                # have it look for that first. But shouldn't it take the
-                # md_topology first if available, and build the om_topology
-                # if not?
-                try:
-                    self.topology = md.Topology.from_openmm(self._restore_single_option(self, 'om_topology'))
-                except KeyError:
-                    self.topology = self._restore_single_option(self, 'md_topology')
 
             self._restore_classes()
 
