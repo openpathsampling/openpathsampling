@@ -9,11 +9,6 @@ TIS simulation on alanine dipeptide.
 # that more of what the user will need to do will be in the __main__ of this
 # script
 
-# hack until this is a proper package
-#import sys
-#import os
-#sys.path.append(os.path.abspath('../'))
-
 import numpy as np
 import mdtraj as md
 
@@ -47,92 +42,76 @@ import time
 
 from opentis.integrators import VVVRIntegrator
 
-from simtk.openmm.app.pdbfile import PDBFile
 import simtk.openmm as openmm
 from simtk.openmm.app import ForceField, PME, HBonds
-from simtk.openmm.app import Simulation
 
 
-# TODO: figure out how much of this should be moved to Simulator 
+# TODO: figure out how much of this should be moved to Simulator
 
 class AlanineDipeptideTrajectorySimulator(Simulator):
-    def __init__(self, filename, topology_file, opts, mode='auto'):
+    def __init__(self, filename, topology_file, options, mode='auto'):
         super(AlanineDipeptideTrajectorySimulator, self).__init__()
 
         # tell everybody who their simulator is
-        Snapshot.simulator = self
-        Configuration.simulator = self
         Trajectory.simulator = self
 
-        # set up the opts
-        self.opts = {}
-        self.add_stored_parameters(opts)
-
         # storage
-        self.fn_storage = filename 
-
-        # topology
-        self.pdb = PDBFile(topology_file)
-        self.topology = self.pdb.topology
+        self.fn_storage = filename
 
         if mode == 'create':
-            # set up the OpenMM simulation
-            # self.platform = 'CUDA'
-            # platform = openmm.Platform.getPlatformByName(self.platform)
-            forcefield = ForceField( self.forcefield_solute,
-                                     self.forcefield_solvent )
-            system = forcefield.createSystem( self.topology, 
-                                              nonbondedMethod=PME,
-                                              nonbondedCutoff=1*nanometers,
-                                              constraints=HBonds )
-            self.system_serial = openmm.XmlSerializer.serialize(system)
-
-            integrator = VVVRIntegrator( self.temperature,
-                                         self.collision_rate,
-                                         self.timestep )
-            self.integrator_serial = openmm.XmlSerializer.serialize(system)
-            self.integrator_class = type(integrator).__name__
-
-            simulation = OpenMMSimulation(self.topology, system, 
-                                          integrator)
-
-            # claim the OpenMM simulation as our own
-            self.simulation = simulation
-
-            # set up the max_length_stopper (if n_frames_max is given)
-            self.max_length_stopper = LengthEnsemble(slice(0,self.n_frames_max-1))
+            # set up the options
+            self.options = options
+            opts = self.options
 
             # storage
             self.storage = Storage(
-                topology_file=self.topology,
+                topology_file=topology_file,
                 filename=self.fn_storage,
                 mode='w'
             )
-            self.storage.simulator = self
-#            self.storage._store_options(self)
-            Trajectory.storage = self.storage
-        if mode == 'restore':
-            pass
-        return
+
+            # save simulator options
+            self.storage.init_str('simulation_options')
+            self.storage.write_as_json('simulation_options', self.options)
+
+        elif mode == 'restore':
+            # open storage
+            self.storage = Storage(
+                filename=self.fn_storage,
+                mode='a'
+            )
+
+            self.options = self.storage.restore_object('simulation_options')
 
 
-    def add_stored_parameters(self, param_dict):
-        '''Adds parameters in param_dict to the attribute dictionary of the
-        simulator object, and saves the relevant keys as options to store.
+        self.topology = self.storage.topology
 
-        Parameters
-        ----------
-        param_dict : dict
-            dictionary of attributes to be added (and stored); attribute
-            names are keys, with appropriate values
-        '''
-        # TODO: I think this should go into the Simulator object
-        for key in param_dict.keys():
-            self.opts[key] = param_dict[key]
-            setattr(self, key, param_dict[key])
-        self.options_to_store = self.opts.keys()
-        return
-        
+        # set up the OpenMM simulation
+        forcefield = ForceField( opts["forcefield_solute"],
+                                 opts["forcefield_solvent"] )
+        system = forcefield.createSystem( self.topology,
+                                          nonbondedMethod=PME,
+                                          nonbondedCutoff=1*nanometers,
+                                          constraints=HBonds )
+        self.system_serial = openmm.XmlSerializer.serialize(system)
+
+        integrator = VVVRIntegrator( opts["temperature"],
+                                     opts["collision_rate"],
+                                     opts["timestep"] )
+
+        self.integrator_serial = openmm.XmlSerializer.serialize(system)
+        self.integrator_class = type(integrator).__name__
+
+        simulation = OpenMMSimulation(self.topology, system,
+                                      integrator)
+
+        # claim the OpenMM simulation as our own
+        self.simulation = simulation
+
+        # set up the max_length_stopper (if n_frames_max is given)
+        self.max_length_stopper = LengthEnsemble(slice(0, opts["n_frames_max"] - 1))
+        self.nframes_per_iteration = self.options['nframes_per_iteration']
+        self.solute_indices = self.options['solute_indices']
 
     def equilibrate(self, nsteps):
         # TODO: rename... this is position restrained equil, right?
@@ -165,10 +144,11 @@ if __name__=="__main__":
                 'forcefield_solute' : 'amber96.xml',
                 'forcefield_solvent' : 'tip3p.xml'
                }
+
     simulator = AlanineDipeptideTrajectorySimulator(
                     filename="trajectory.nc",
                     topology_file="../data/Alanine_solvated.pdb",
-                    opts=options,
+                    options=options,
                     mode='create'
                     )
 

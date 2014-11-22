@@ -195,7 +195,7 @@ class Storage(netcdf.Dataset):
     def init_object(self, name):
         self.init_str(name)
 
-    def store_object(self, name, obj):
+    def write_as_json(self, name, obj):
         self.write_str(name, self.simplifier.to_json(obj))
 
     def restore_object(self, name):

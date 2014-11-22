@@ -372,7 +372,7 @@ class Trajectory(list):
         -------        
         trajectory : Trajectory
             the trajectory showing the subsets of solute atoms
-        """        
+        """
 
         return self.subset(Trajectory.simulator.solute_indices)
 
@@ -443,8 +443,6 @@ class Trajectory(list):
 
         return trajectory
 
-                
-    
     def md_topology(self):
         """
         Return a mdtraj.Topology object representing the topology of the

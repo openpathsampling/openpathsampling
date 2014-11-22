@@ -35,8 +35,6 @@ class ObjectJSON(object):
             oo = obj
             return oo
 
-        return 'noway'
-
 
     def build(self,obj):
         if type(obj) is dict:
@@ -50,14 +48,6 @@ class ObjectJSON(object):
             return [self.build(o) for o in obj]
         else:
             return obj
-
-    def to_json(self, obj):
-        simplified = self.simplify(obj)
-        return json.dumps(simplified)
-
-    def from_json(self, json_string):
-        simplified = yaml.load(json_string)
-        return self.build(simplified)
 
     def unitsytem_to_list(self, unit_system):
         '''
@@ -84,13 +74,6 @@ class ObjectJSON(object):
             unit *= getattr(units, unit_name)**unit_multiplication
 
         return unit
-
-    def unit_to_json(self, unit):
-        simple = self.unit_to_dict(unit)
-        return self.to_json(simple)
-
-    def unit_from_json(self, json_string):
-        return self.unit_from_dict(self.from_json(json_string))
 
     def topology_to_dict(self, topology):
         """Return a copy of the topology
@@ -142,6 +125,28 @@ class ObjectJSON(object):
         bonds = np.array(top_dict['bonds'])
 
         return md.Topology.from_dataframe(atoms, bonds)
+
+    def to_json(self, obj):
+        simplified = self.simplify(obj)
+        return json.dumps(simplified)
+
+    def from_json(self, json_string):
+        simplified = yaml.load(json_string)
+        return self.build(simplified)
+
+    def topology_to_json(self, topology):
+        return self.to_json(self.topology_to_dict(topology))
+
+    def topology_from_json(self, json_string):
+        return self.topology_from_dict(self.from_json(json_string))
+
+    def unit_to_json(self, unit):
+        simple = self.unit_to_dict(unit)
+        return self.to_json(simple)
+
+    def unit_from_json(self, json_string):
+        return self.unit_from_dict(self.from_json(json_string))
+
 
 class StorableObjectJSON(ObjectJSON):
     def __init__(self, storage, unit_system = None):

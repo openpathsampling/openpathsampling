@@ -1,6 +1,3 @@
-
-import os
-import sys
 from globalstate import GlobalState
 from pathmover import PathMover, MoveDetails, ReplicaExchange
 from trajectory import Sample
