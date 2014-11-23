@@ -770,3 +770,61 @@ and
   len(x) = 1
 )
 ]""")
+
+class testSlicedTrajectoryEnsemble(object):
+    def setUp(self):
+        # set up A, B, interface
+        pass
+
+    def test_sliced_ensemble_init(self):
+        pass
+
+    def test_sliced_as_TISEnsemble(self):
+        #sliced_tis = (
+        #    SlicedTrajectoryEnsemble(InXEnsemble(self.A), 0) &
+        #    SlicedTrajectoryEnsemble(OutXEnsemble(self.A | self.B),
+        #                             slice(1,-1)) & 
+        #    SlicedTrajectoryEnsemble(LeaveXEnsemble(self.interface),
+        #                             slice(1,-1))
+        #    SlicedTrajectoryEnsemble(InXEnsemble(self.A | self.B), -1)
+        #)
+        #sequential_tis = SequentialEnsemble(
+        #    InXEnsemble(self.A) & LengthEnsemble(1),
+        #    OutXEnsemble(self.A | self.B) & LeaveXEnsemble(self.interface),
+        #    InXEnsemble(self.A | self.B) & LengthEnsemble(1)
+        #)
+        pass
+
+    def test_even_sliced_trajectory(self):
+        pass
+
+class testOptionalEnsemble(object):
+    def setUp(self):
+        pass
+
+    def test_optional_start(self):
+        pass
+
+    def test_optional_start_can_append(self):
+        pass
+
+    def test_optional_start_can_preprent(self):
+        pass
+
+    def test_optional_middle(self):
+        pass
+
+    def test_optional_middle_can_append(self):
+        pass
+
+    def test_optional_midle_can_preprend(self):
+        pass
+
+    def test_optional_end(self):
+        pass
+
+    def test_optional_end_can_append(self):
+        pass
+
+    def test_optional_middle_can_prepend(self):
+        pass
