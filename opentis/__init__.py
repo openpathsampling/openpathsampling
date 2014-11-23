@@ -26,8 +26,6 @@ from dynamics_engine import DynamicsEngine
 
 from openmm_engine import OpenMMEngine
 
-from openmm_simulation import OpenMMSimulation
-
 from visualize import PathTreeBuilder
 
 from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
