@@ -75,7 +75,7 @@ class Storage(netcdf.Dataset):
         else:
             self.unit_system = units.md_unit_system
 
-        self.unit = dict()
+        self.units = dict()
 
         super(Storage, self).__init__(filename, mode)
 
@@ -96,8 +96,6 @@ class Storage(netcdf.Dataset):
         if mode == 'w':
             self._init()
 
-            print topology_file
-
             if isinstance(topology_file, md.Topology):
                 self.topology = topology_file
 
@@ -108,8 +106,6 @@ class Storage(netcdf.Dataset):
                 self.pdb = md.load(topology_file)
                 self.topology = self.pdb.topology
                 self.pdb
-
-            print self.topology
 
             # create a json from the mdtraj.Topology() and store it
             self.write_str('topology', self.simplifier.to_json(self.simplifier.topology_to_dict(self.topology)))
@@ -155,7 +151,7 @@ class Storage(netcdf.Dataset):
                     if unit_dict is not None:
                         unit = self.simplifier.unit_from_dict(unit_dict)
 
-                self.unit[str(variable_name)] = unit
+                self.units[str(variable_name)] = unit
 
 
     def get_unit(self, dimension):

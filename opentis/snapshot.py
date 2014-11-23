@@ -356,8 +356,6 @@ class Momentum(object):
 # SIMULATION SNAPSHOT (COMPLETE FRAME WITH COORDINATES AND VELOCITIES)
 #=============================================================================
 
-
-
 def has(attr):
     def _has(func):
         def inner(self, *args, **kwargs):

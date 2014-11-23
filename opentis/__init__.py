@@ -22,7 +22,9 @@ from pathmover import BackwardShootMover, MinusMove, MixedMover, MoveDetails, \
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
     GaussianBiasSelector
 
-from Simulator import Simulator
+from dynamics_engine import DynamicsEngine
+
+from openmm_engine import OpenMMEngine
 
 from openmm_simulation import OpenMMSimulation
 
