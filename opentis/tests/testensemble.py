@@ -839,21 +839,44 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
         even_slice = slice(None, None, 2)
         ens = SlicedTrajectoryEnsemble(SequentialEnsemble([
             InXEnsemble(vol1),
-            OutXEnsemble(vol1),
-            InXEnsemble(vol1)
+            OutXEnsemble(vol1)
         ]), even_slice)
-        # TODO: asserts
-        raise SkipTest
+
+        bare_results = {'in_in_out' : True,
+                        'in_hit_out' : True,
+                        'in_out_out_in_out' : True,
+                        'in_hit_out_in_out' : True,
+                        'in_out_out_in' : True,
+                        'in_cross_in_cross' : False,
+                        'in_out_out_in' : True,
+                        'in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(ens, ttraj[test], results[test], failmsg)
+
 
     def test_sliced_sequential_subtraj_member(self):
         even_slice = slice(None, None, 2)
         ens = SequentialEnsemble([
             InXEnsemble(vol1),
-            SlicedTrajectoryEnsemble(OutXEnsemble(vol1), even_slice),
-            InXEnsemble(vol1)
+            SlicedTrajectoryEnsemble(OutXEnsemble(vol1), even_slice)
         ])
-        # TODO: asserts
-        raise SkipTest
+        bare_results = {'in_out_in' : True,
+                        'in_out_out_in' : False,
+                        'in_in_out_in' : True,
+                        'in_in_out' : True,
+                        'in_in_cross_in' : True,
+                        'in_out_in_out' : True,
+                        'in_out_cross_out_in_out_in_out_cross_out_in' : True,
+                        'in_out_in_in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(ens, ttraj[test], results[test], failmsg)
+
 
 class testOptionalEnsemble(object):
     def setUp(self):
@@ -881,7 +904,7 @@ class testOptionalEnsemble(object):
     def test_optional_start_can_append(self):
         raise SkipTest
 
-    def test_optional_start_can_preprent(self):
+    def test_optional_start_can_preprend(self):
         raise SkipTest
 
     def test_optional_middle(self):
