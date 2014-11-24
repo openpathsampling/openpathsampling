@@ -843,7 +843,6 @@ class VolumeEnsemble(Ensemble):
         super(VolumeEnsemble, self).__init__()
         self._stored_volume = volume
         self.lazy = lazy
-        pass
 
     @property
     def _volume(self):
@@ -1028,7 +1027,10 @@ class SlicedTrajectoryEnsemble(AlteredEnsemble):
     '''
     def __init__(self, ensemble, aslice):
         self.ensemble = ensemble
-        self.slice = aslice
+        if type(aslice) == int:
+            self.slice = slice(aslice, aslice+1)
+        else:
+            self.slice = aslice
 
     def _alter(self, trajectory):
         return trajectory[self.slice]

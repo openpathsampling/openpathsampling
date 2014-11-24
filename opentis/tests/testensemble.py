@@ -62,12 +62,13 @@ def build_trajdict(trajtypes, lower, upper):
 def setUp():
     ''' Setup for tests of classes in ensemble.py. '''
     #random.seed
-    global lower, upper, op, vol1, vol2, ttraj
+    global lower, upper, op, vol1, vol2, vol3, ttraj
     lower = 0.1
     upper = 0.5
     op = CallIdentity()
     vol1 = LambdaVolume(op, lower, upper)
     vol2 = LambdaVolume(op, -0.1, 0.7)
+    vol3 = LambdaVolume(op, 2.0, 2.5)
     # we use the following codes to describe trajectories:
     # in : in the state
     # out : out of the state
@@ -772,59 +773,103 @@ and
 ]""")
 
 class testSlicedTrajectoryEnsemble(object):
-    def setUp(self):
-        # set up A, B, interface
-        pass
-
     def test_sliced_ensemble_init(self):
-        pass
+        init_as_int = SlicedTrajectoryEnsemble(InXEnsemble(vol1), 3)
+        init_as_slice = SlicedTrajectoryEnsemble(InXEnsemble(vol1),
+                                                 slice(3, 4))
+        assert_equal(init_as_int, init_as_slice)
+        assert_equal(init_as_slice.slice, init_as_int.slice)
 
     def test_sliced_as_TISEnsemble(self):
-        #sliced_tis = (
-        #    SlicedTrajectoryEnsemble(InXEnsemble(self.A), 0) &
-        #    SlicedTrajectoryEnsemble(OutXEnsemble(self.A | self.B),
-        #                             slice(1,-1)) & 
-        #    SlicedTrajectoryEnsemble(LeaveXEnsemble(self.interface),
-        #                             slice(1,-1))
-        #    SlicedTrajectoryEnsemble(InXEnsemble(self.A | self.B), -1)
-        #)
-        #sequential_tis = SequentialEnsemble(
-        #    InXEnsemble(self.A) & LengthEnsemble(1),
-        #    OutXEnsemble(self.A | self.B) & LeaveXEnsemble(self.interface),
-        #    InXEnsemble(self.A | self.B) & LengthEnsemble(1)
-        #)
-        pass
+        '''SlicedTrajectory and Sequential give same TIS results'''
+        sliced_tis = (
+            SlicedTrajectoryEnsemble(InXEnsemble(vol1), 0) &
+            SlicedTrajectoryEnsemble(OutXEnsemble(vol1 | vol3), slice(1,-1)) & 
+            SlicedTrajectoryEnsemble(LeaveXEnsemble(vol2), slice(1,-1)) &
+            SlicedTrajectoryEnsemble(InXEnsemble(vol1 | vol3), -1)
+        )
+        sequential_tis = SequentialEnsemble([
+            InXEnsemble(vol1) & LengthEnsemble(1),
+            OutXEnsemble(vol1 | vol3) & LeaveXEnsemble(vol2),
+            InXEnsemble(vol1 | vol3) & LengthEnsemble(1)
+        ])
+        # TODO asserts
+        raise SkipTest
+
+    def test_slice_outside_trajectory_range(self):
+        ens = SlicedTrajectoryEnsemble(InXEnsemble(vol1), slice(5,9))
+        # TODO asserts
+        raise SkipTest
 
     def test_even_sliced_trajectory(self):
-        pass
+        even_slice = slice(None, None, 2)
+        ens = SlicedTrajectoryEnsemble(InXEnsemble(vol1), even_slice)
+        # TODO asserts
+        raise SkipTest
+
+    def test_sliced_sequential_global_whole(self):
+        even_slice = slice(None, None, 2)
+        ens = SlicedTrajectoryEnsemble(SequentialEnsemble([
+            InXEnsemble(vol1),
+            OutXEnsemble(vol1),
+            InXEnsemble(vol1)
+        ]), even_slice)
+        # TODO: asserts
+        raise SkipTest
+
+    def test_sliced_sequential_subtraj_member(self):
+        even_slice = slice(None, None, 2)
+        ens = SequentialEnsemble([
+            InXEnsemble(vol1),
+            SlicedTrajectoryEnsemble(OutXEnsemble(vol1), even_slice),
+            InXEnsemble(vol1)
+        ])
+        # TODO: asserts
+        raise SkipTest
 
 class testOptionalEnsemble(object):
     def setUp(self):
-        pass
+        self.start_opt = SequentialEnsemble([
+            OptionalEnsemble(OutXEnsemble(vol1)),
+            InXEnsemble(vol1),
+            OutXEnsemble(vol1),
+            InXEnsemble(vol1)
+        ])
+        self.end_opt = SequentialEnsemble([
+            InXEnsemble(vol1),
+            OutXEnsemble(vol1),
+            InXEnsemble(vol1),
+            OptionalEnsemble(OutXEnsemble(vol1))
+        ])
+        self.mid_opt = SequentialEnsemble([
+            InXEnsemble(vol1),
+            OptionalEnsemble(OutXEnsemble(vol1) & InXEnsemble(vol2)),
+            OutXEnsemble(vol2),
+        ])
 
     def test_optional_start(self):
-        pass
+        raise SkipTest
 
     def test_optional_start_can_append(self):
-        pass
+        raise SkipTest
 
     def test_optional_start_can_preprent(self):
-        pass
+        raise SkipTest
 
     def test_optional_middle(self):
-        pass
+        raise SkipTest
 
     def test_optional_middle_can_append(self):
-        pass
+        raise SkipTest
 
     def test_optional_midle_can_preprend(self):
-        pass
+        raise SkipTest
 
     def test_optional_end(self):
-        pass
+        raise SkipTest
 
     def test_optional_end_can_append(self):
-        pass
+        raise SkipTest
 
     def test_optional_middle_can_prepend(self):
-        pass
+        raise SkipTest
