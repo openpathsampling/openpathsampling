@@ -34,7 +34,7 @@ class testOpenMMEngine(object):
         self.engine = OpenMMEngine(
             filename=data_filename("openmmengine_test.nc"), 
             topology_file=data_filename("ala_small_traj.pdb"), 
-            opts=options, 
+            options=options,
             mode='create'
         )
         context = self.engine.simulation.context

@@ -55,7 +55,7 @@ if __name__=="__main__":
 
     engine = OpenMMEngine(filename="trajectory.nc",
                           topology_file="../data/Alanine_solvated.pdb",
-                          opts=options,
+                          options=options,
                           mode='create'
                          )
     

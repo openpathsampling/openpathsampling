@@ -9,6 +9,7 @@ import copy
 import numpy as np
 import mdtraj as md
 
+import simtk.unit as units
 
 #=============================================================================
 # SIMULATION CONFIGURATION
@@ -126,6 +127,17 @@ class Configuration(object):
             self._potential_energy = value
         else:
             raise ValueError("Cannot change potential_energy once they are set")
+
+    def to_openmm_topology(self):
+        if self.topology is not None:
+            openmm_topology = self.topology.to_openmm()
+            box_size_dimension = np.linalg.norm(self.box_vectors.value_in_unit(units.nanometer), axis=1)[0]
+            print box_size_dimension
+            openmm_topology.setUnitCellDimensions(box_size_dimension)
+
+            return openmm_topology
+        else:
+            return None
 
     def forget(self):
         """

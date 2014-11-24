@@ -6,35 +6,74 @@ from integrators import VVVRIntegrator
 from simtk.unit import femtoseconds, picoseconds, nanometers, kelvin, dalton
 from simtk.unit import Quantity
 
+import simtk.unit as units
+
+import simtk.openmm.app
+
 import simtk.openmm as openmm
 from simtk.openmm.app import ForceField, PME, HBonds, PDBFile
 import mdtraj as md
+
+from opentis.storage import Storage
 
 class OpenMMEngine(DynamicsEngine):
     """We only need a few things from the simulation. This object duck-types
     an OpenMM simulation object so that it quacks the methods we need to
     use."""
 
-    def __init__(self, filename, topology_file, opts, mode='auto'):
+    def __init__(self, filename, topology_file, options, mode='auto'):
         # if topology exists, it must be defined before running
         # super.__init__. This is ugly, but I don't see an easy way out.
-        self.pdb = md.load(topology_file)
-        topology = self.pdb.topology
-        opts['topology'] = topology
-
-        super(OpenMMEngine, self).__init__(filename=filename,
-                                           options=opts,
-                                           mode=mode)
 
         if mode == 'create':
+
+            self.options = options
+
+            # for openmm we will create a suitable for configuration with
+            # attached box_vectors and topolgy
+
+            self.initial_configuration = None
+
+            if isinstance(topology_file, md.Topology):
+                self.topology = topology_file
+
+            elif isinstance(topology_file, simtk.openmm.app.Topology):
+                self.topology = md.Topology.from_openmm(topology_file)
+
+            elif type(topology_file) is str:
+                self.pdb = md.load(topology_file)
+                self.topology = self.pdb.topology
+
+                self.initial_configuration = Configuration(
+                    coordinates=units.Quantity(self.pdb.xyz[0], units.nanometer),
+                    box_vectors=units.Quantity(self.pdb.unitcell_vectors, units.nanometer),
+                    potential_energy=units.Quantity(0.0, units.kilojoules_per_mole),
+                    topology=self.topology
+                )
+
+            # set up the max_length_stopper (if n_frames_max is given)
+            if 'nsteps_per_frame' in self.options:
+                self.nsteps_per_frame = self.options['nsteps_per_frame']
+                print 'Frame', self.nsteps_per_frame
+
+            if 'solute_indices' in self.options:
+                self.solute_indices = self.options['solute_indices']
+
+            storage = Storage(
+                filename=filename,
+                configuration_template=self.initial_configuration,
+                mode='w'
+            )
+
+            # save simulator options, should be replaced by just saving the simulator object
+            storage.init_str('simulation_options')
+            storage.write_as_json('simulation_options', self.options)
+
             # set up the OpenMM simulation
-            forcefield = ForceField( opts["forcefield_solute"],
-                                     opts["forcefield_solvent"] )
+            forcefield = ForceField( options["forcefield_solute"],
+                                     options["forcefield_solvent"] )
 
-            openmm_topology = topology.to_openmm()
-
-            pdb_file = PDBFile(topology_file)
-            openmm_topology = pdb_file.topology
+            openmm_topology = self.initial_configuration.to_openmm_topology()
 
             system = forcefield.createSystem( openmm_topology,
                                               nonbondedMethod=PME,
@@ -43,9 +82,9 @@ class OpenMMEngine(DynamicsEngine):
 
             self.system_serial = openmm.XmlSerializer.serialize(system)
 
-            integrator = VVVRIntegrator( opts["temperature"],
-                                         opts["collision_rate"],
-                                         opts["timestep"] )
+            integrator = VVVRIntegrator( options["temperature"],
+                                         options["collision_rate"],
+                                         options["timestep"] )
 
             self.integrator_serial = openmm.XmlSerializer.serialize(system)
             self.integrator_class = type(integrator).__name__
@@ -56,8 +95,25 @@ class OpenMMEngine(DynamicsEngine):
             # claim the OpenMM simulation as our own
             self.simulation = simulation
 
-        if mode == 'restore':
-            pass
+            print 'Topology', self.topology
+
+        elif mode == 'restore':
+            # open storage
+            self.storage = Storage(
+                filename=self.fn_storage,
+                mode='a'
+            )
+
+            self.options = self.storage.restore_object('simulation_options')
+
+
+        super(OpenMMEngine, self).__init__(
+            options=options,
+            mode=mode,
+            storage=storage
+        )
+
+
         return
 
 
@@ -145,7 +201,7 @@ class OpenMMEngine(DynamicsEngine):
         return Configuration(coordinates = state.getPositions(asNumpy=True),
                              box_vectors = state.getPeriodicBoxVectors(asNumpy=True),
                              potential_energy = state.getPotentialEnergy(),
-                             topology = self.topology
+                             topology = self.topology_file
                             )
 
     @configuration.setter

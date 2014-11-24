@@ -13,7 +13,7 @@ def setup_package():
     mdtrajectory = md.load(data_filename("ala_small_traj.pdb"))
     engine = DynamicsEngine(
         filename=data_filename("ala_small_traj.nc"),
-        opts={'topology' : mdtrajectory.topology},
+        options={'topology' : data_filename("ala_small_traj.pdb")},
         mode='create'
     )
     mytraj = Trajectory.from_mdtraj(mdtrajectory)

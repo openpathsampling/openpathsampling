@@ -205,7 +205,7 @@ class MomentumStorage(ObjectStorage):
         # Store momentum.
         if momentum._velocities is not None:
             if hasattr(momentum.velocities, 'unit'):
-                storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / self.storage.unit["momentum_velocities"]).astype(np.float32)
+                storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / self.storage.units["momentum_velocities"]).astype(np.float32)
             else:
                 # in this case we blindly assume that the units are correct
                 storage.variables['momentum_velocities'][idx,:,:] = momentum.velocities.astype(np.float32)
@@ -213,7 +213,7 @@ class MomentumStorage(ObjectStorage):
             print 'ERROR : Momentum should not be empty'
 
         if momentum._kinetic_energy is not None:
-            storage.variables['momentum_kinetic'][idx] = momentum.kinetic_energy / self.storage.unit["momentum_kinetic"]
+            storage.variables['momentum_kinetic'][idx] = momentum.kinetic_energy / self.storage.units["momentum_kinetic"]
         else:
             # TODO: No kinetic energy is not yet supported
             print 'Think about how to handle this. It should only be None if loaded lazy and in this case it will never be saved.'
@@ -242,9 +242,9 @@ class MomentumStorage(ObjectStorage):
 
         if not (Momentum.load_lazy and lazy):
             v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
-            velocities = Quantity(v, self.storage.unit["momentum_velocities"])
+            velocities = Quantity(v, self.storage.units["momentum_velocities"])
             T = storage.variables['momentum_kinetic'][idx]
-            kinetic_energy = Quantity(T, self.storage.unit["momentum_kinetic"])
+            kinetic_energy = Quantity(T, self.storage.units["momentum_kinetic"])
 
         else:
             velocities = None
@@ -260,7 +260,7 @@ class MomentumStorage(ObjectStorage):
 
         idx = obj.idx[self.storage]
         v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
-        velocities = Quantity(v, self.storage.unit["momentum_velocities"])
+        velocities = Quantity(v, self.storage.units["momentum_velocities"])
 
         obj.velocities = velocities
 
@@ -269,7 +269,7 @@ class MomentumStorage(ObjectStorage):
 
         idx = obj.idx[self.storage]
         T = storage.variables['momentum_kinetic'][idx]
-        kinetic_energy = Quantity(T, self.storage.unit["momentum_kinetic"])
+        kinetic_energy = Quantity(T, self.storage.units["momentum_kinetic"])
 
         obj.kinetic_energy = kinetic_energy
 
@@ -355,12 +355,12 @@ class ConfigurationStorage(ObjectStorage):
         storage = self.storage
 
         # Store configuration.
-        storage.variables['configuration_coordinates'][idx,:,:] = (configuration.coordinates / self.storage.unit["configuration_coordinates"]).astype(np.float32)
+        storage.variables['configuration_coordinates'][idx,:,:] = (configuration.coordinates / self.storage.units["configuration_coordinates"]).astype(np.float32)
 
         if configuration.potential_energy is not None:
-            storage.variables['configuration_potential'][idx] = configuration.potential_energy / self.storage.unit["configuration_potential"]
+            storage.variables['configuration_potential'][idx] = configuration.potential_energy / self.storage.units["configuration_potential"]
 
-#        storage.variables['configuration_box_vectors'][idx,:] = (configuration.box_vectors / self.storage.unit["configuration_box_vectors"]).astype(np.float32)
+#        storage.variables['configuration_box_vectors'][idx,:] = (configuration.box_vectors / self.storage.units["configuration_box_vectors"]).astype(np.float32)
 
         # Force sync to disk to avoid data loss.
         storage.sync()
@@ -392,11 +392,11 @@ class ConfigurationStorage(ObjectStorage):
 
         if not (Configuration.load_lazy and lazy):
             x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
-            coordinates = Quantity(x, self.storage.unit["configuration_coordinates"])
+            coordinates = Quantity(x, self.storage.units["configuration_coordinates"])
             b = storage.variables['configuration_box_vectors'][idx]
-            box_vectors = Quantity(b, self.storage.unit["configuration_box_vectors"])
+            box_vectors = Quantity(b, self.storage.units["configuration_box_vectors"])
             V = storage.variables['configuration_potential'][idx]
-            potential_energy = Quantity(V, self.storage.unit["configuration_potential"])
+            potential_energy = Quantity(V, self.storage.units["configuration_potential"])
         else:
             coordinates = None
             box_vectors = None
@@ -415,7 +415,7 @@ class ConfigurationStorage(ObjectStorage):
         idx = obj.idx[self.storage]
 
         x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
-        coordinates = Quantity(x, self.storage.unit["configuration_coordinates"])
+        coordinates = Quantity(x, self.storage.units["configuration_coordinates"])
 
         obj.coordinates = coordinates
 
@@ -425,7 +425,7 @@ class ConfigurationStorage(ObjectStorage):
         idx = obj.idx[self.storage]
 
         b = storage.variables['configuration_box_vectors'][idx]
-        box_vectors = Quantity(b, self.storage.unit["configuration_box_vectors"])
+        box_vectors = Quantity(b, self.storage.units["configuration_box_vectors"])
 
         obj.box_vectors = box_vectors
 
@@ -435,7 +435,7 @@ class ConfigurationStorage(ObjectStorage):
         idx = obj.idx[self.storage]
 
         V = storage.variables['configuration_potential'][idx]
-        potential_energy = Quantity(V, self.storage.unit["configuration_potential"])
+        potential_energy = Quantity(V, self.storage.units["configuration_potential"])
 
         obj.potential_energy = potential_energy
 

@@ -35,7 +35,7 @@ class DynamicsEngine(object):
     instantiated.
     '''
 
-    def __init__(self, filename=None, options=None, mode='auto'):
+    def __init__(self, filename=None, options=None, mode='auto', storage=None):
         '''
         Create an empty DynamicsEngine object
         
@@ -50,32 +50,14 @@ class DynamicsEngine(object):
         '''
 
         self.op = None
-        self.storage = None
         self.initialized = False
         self.running = dict()
 
-        if mode == 'auto':
-            if filename is not None:
-                if os.path.isfile(filename):
-                    mode = 'restore'
-                else:
-                    mode = 'create'
-
-
-        self.topology = None
-        if 'topology' in options:
-            self.topology = options['topology']
-
-        self.initial_configuration = None
-        if 'configuration' in options:
-            self.initial_configuration = options['configuration']
+        self.storage = storage
 
         self.n_atoms = None
         if 'n_atoms' in options:
             self.n_atoms = options['n_atoms']
-
-        # storage file name
-        self.fn_storage = filename 
 
         # Trajectories need to know the engine as a hack to get the topology.
         # Better would be a link to the topology directly. This is needed to create
@@ -88,38 +70,6 @@ class DynamicsEngine(object):
 
             self.options = options
             options = self.options
-
-
-            if filename is not None:
-                self.storage = Storage(
-                    topology_file=self.topology,
-                    n_atoms=self.n_atoms,
-                    filename=self.fn_storage,
-                    mode='w'
-                )
-
-                # save simulator options
-                self.storage.init_str('simulation_options')
-                self.storage.write_as_json('simulation_options', self.options)
-
-
-        elif mode == 'restore':
-            # open storage
-            self.storage = Storage(
-                filename=self.fn_storage,
-                mode='a'
-            )
-
-            self.options = self.storage.restore_object('simulation_options')
-
-        if self.n_atoms == None:
-            self.n_atoms = self.storage.atoms
-
-        self.topology = self.storage.topology
-
-        # set up the max_length_stopper (if n_frames_max is given)
-        self.nframes_per_iteration = self.options['nsteps_per_frame']
-        self.solute_indices = self.options['solute_indices']
 
         # set up the max_length_stopper (if n_frames_max is given)
         # TODO: switch this not needing slice; use can_append

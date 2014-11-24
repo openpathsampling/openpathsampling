@@ -43,8 +43,8 @@ class Storage(netcdf.Dataset):
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
     simulation. This allows effective storage of shooting trajectories '''
 
-    def __init__(self, filename='trajectory.nc', mode=None, n_atoms=None, 
-                 topology_file=None, unit_system=None):
+    def __init__(self, filename='trajectory.nc', mode=None,
+                 configuration_template=None, n_atoms=None):
         '''
         Create a storage for complex objects in a netCDF file
         
@@ -70,12 +70,9 @@ class Storage(netcdf.Dataset):
 
         self.simplifier = ObjectJSON()
 
-        if unit_system is not None:
-            self.unit_system = unit_system
-        else:
-            self.unit_system = units.md_unit_system
-
         self.units = dict()
+
+        print 'OpenStorage ', filename
 
         super(Storage, self).__init__(filename, mode)
 
@@ -96,40 +93,31 @@ class Storage(netcdf.Dataset):
         if mode == 'w':
             self._init()
 
-            if isinstance(topology_file, md.Topology):
-                self.topology = topology_file
-
-            elif isinstance(topology_file, simtk.openmm.app.Topology):
-                self.topology = md.Topology.from_openmm(topology_file)
-
-            elif type(topology_file) is str:
-                self.pdb = md.load(topology_file)
-                self.topology = self.pdb.topology
-                self.pdb
-
-            # create a json from the mdtraj.Topology() and store it
-            self.write_str('topology', self.simplifier.to_json(self.simplifier.topology_to_dict(self.topology)))
-
-            self.initial_configuration = Configuration(
-                coordinates=self.pdb.xyz[0],
-                box_vectors=self.pdb.unitcell_vectors,
-                potential_energy=0.0
-            )
-
-            # Save the initial configuration
-            self.configuration.save(self.initial_configuration)
-
-            self.createVariable('initial_configuration_idx', 'i4', 'scalar')
-            self.variables['initial_configuration_idx'][:] = self.initial_configuration.idx[self]
+            if configuration_template.topology is not None:
+                self.topology = configuration_template.topology
 
             if n_atoms is not None:
                 self.atoms = n_atoms
             elif self.topology is not None:
                 self.atoms = self.topology.n_atoms
+            elif configuration_template.coordinates is not None:
+                self.atoms = configuration_template.coordinates.shape[0]
             else:
                 raise RuntimeError("Storage given neither n_atoms nor topology")
 
+            print self.topology
+
             self._init_classes()
+
+            # create a json from the mdtraj.Topology() and store it
+            self.write_str('topology', self.simplifier.to_json(self.simplifier.topology_to_dict(self.topology)))
+
+            # Save the initial configuration
+            self.configuration.save(configuration_template)
+
+            self.createVariable('initial_configuration_idx', 'i4', 'scalar')
+            self.variables['initial_configuration_idx'][:] = configuration_template.idx[self]
+
             self.sync()
 
         elif mode == 'a':

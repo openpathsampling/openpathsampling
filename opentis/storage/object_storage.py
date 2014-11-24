@@ -356,10 +356,14 @@ class ObjectStorage(object):
             elif type(units) is str and units is not None:
                 symbol = units
 
+            print name, units, repr(unit_instance)
+
             json_unit = self.simplifier.unit_to_json(unit_instance)
 
+            print json_unit
+
             # store the unit in the dict inside the Storage object for fast access
-            self.storage.unit[name] = unit_instance
+            self.storage.units[name] = unit_instance
 
             # Define units for a float variable
             setattr(ncvar,      'unit_simtk', json_unit)
