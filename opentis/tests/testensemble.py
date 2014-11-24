@@ -62,6 +62,14 @@ def build_trajdict(trajtypes, lower, upper):
 def tstr(ttraj):
     return list(ttraj).__str__()
 
+def results_upper_lower(adict):
+    res_dict = {}
+    for test in adict.keys():
+        res_dict['upper_'+test] = adict[test]
+        res_dict['lower_'+test] = adict[test]
+    return res_dict
+
+
 def setUp():
     ''' Setup for tests of classes in ensemble.py. '''
     #random.seed
@@ -79,7 +87,7 @@ def setUp():
     #
     # deltas of each letter from state edge:
     # a < 0 ; 0 < b < 0.2 ; c > 0.2; o = 0
-    trajtypes = ["a", "o", "ab", "aob", "bob", "aba", "aaa", "abcba",
+    trajtypes = ["a", "o", "aa", "ab", "aob", "bob", "aba", "aaa", "abcba",
                  "abaa", "abba", "abaab", "ababa", "abbab",
                  "abaaba", "aobab", "abab", "abcbababcba", "aca", 
                  "acaca", "acac", "caca", "aaca", "baca", "aaba", "aab"
@@ -803,14 +811,29 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
 
     def test_slice_outside_trajectory_range(self):
         ens = SlicedTrajectoryEnsemble(InXEnsemble(vol1), slice(5,9))
-        # TODO asserts
-        raise SkipTest
+        test = 'upper_in'
+        # the slice should return the empty trajectory, and therefore should
+        # return false
+        assert_equal(ens(ttraj[test]), False)
 
     def test_even_sliced_trajectory(self):
         even_slice = slice(None, None, 2)
         ens = SlicedTrajectoryEnsemble(InXEnsemble(vol1), even_slice)
-        # TODO asserts
-        raise SkipTest
+        bare_results = {'in' : True,
+                        'in_in' : True,
+                        'in_in_in' : True,
+                        'in_out_in' : True,
+                        'in_in_out' : False,
+                        'in_out_in_in' : True,
+                        'in_out_in_out_in' : True,
+                        'out' : False,
+                        'in_in_out_in' : False,
+                        'in_cross_in_cross' : True
+                       }
+        results = results_upper_lower(bare_results)
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(ens, ttraj[test], results[test], failmsg)
 
     def test_sliced_sequential_global_whole(self):
         even_slice = slice(None, None, 2)
