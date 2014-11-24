@@ -1028,7 +1028,10 @@ class SlicedTrajectoryEnsemble(AlteredEnsemble):
     def __init__(self, ensemble, aslice):
         self.ensemble = ensemble
         if type(aslice) == int:
-            self.slice = slice(aslice, aslice+1)
+            if aslice == -1:
+                self.slice = slice(aslice,None)
+            else:
+                self.slice = slice(aslice, aslice+1)
         else:
             self.slice = aslice
 
@@ -1068,15 +1071,15 @@ class ReversedTrajectoryEnsemble(AlteredEnsemble):
 
 class OptionalEnsemble(AlteredEnsemble):
     '''
-    Makes satisfying a given ensemble optional (primarily useful in
+    Makes it optional to satisfy a given ensemble (primarily useful in
     SequentialEnsembles)
     '''
     def __init__(self, ensemble):
-        len0 = LengthEnsemble(0)
-        self.ensemble = ensemble | len0
+        self.orig_ens = ensemble
+        self.ensemble = ensemble | LengthEnsemble(0)
 
     def __str__(self):
-        return "{"+self.ensemble.__str__()+"} (OPTIONAL)"
+        return "{"+self.orig_ens.__str__()+"} (OPTIONAL)"
     
 class EnsembleFactory():
     '''

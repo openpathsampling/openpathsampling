@@ -59,6 +59,9 @@ def build_trajdict(trajtypes, lower, upper):
         mydict[lowersubkey] = map(lower.__sub__, delta)
     return mydict 
 
+def tstr(ttraj):
+    return list(ttraj).__str__()
+
 def setUp():
     ''' Setup for tests of classes in ensemble.py. '''
     #random.seed
@@ -772,7 +775,7 @@ and
 )
 ]""")
 
-class testSlicedTrajectoryEnsemble(object):
+class testSlicedTrajectoryEnsemble(EnsembleTest):
     def test_sliced_ensemble_init(self):
         init_as_int = SlicedTrajectoryEnsemble(InXEnsemble(vol1), 3)
         init_as_slice = SlicedTrajectoryEnsemble(InXEnsemble(vol1),
@@ -793,8 +796,10 @@ class testSlicedTrajectoryEnsemble(object):
             OutXEnsemble(vol1 | vol3) & LeaveXEnsemble(vol2),
             InXEnsemble(vol1 | vol3) & LengthEnsemble(1)
         ])
-        # TODO asserts
-        raise SkipTest
+        for test in ttraj.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(sliced_tis, ttraj[test], 
+                              sequential_tis(ttraj[test]), failmsg)
 
     def test_slice_outside_trajectory_range(self):
         ens = SlicedTrajectoryEnsemble(InXEnsemble(vol1), slice(5,9))
