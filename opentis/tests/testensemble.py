@@ -878,16 +878,14 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
             self._single_test(ens, ttraj[test], results[test], failmsg)
 
 
-class testOptionalEnsemble(object):
+class testOptionalEnsemble(EnsembleTest):
     def setUp(self):
         self.start_opt = SequentialEnsemble([
             OptionalEnsemble(OutXEnsemble(vol1)),
             InXEnsemble(vol1),
             OutXEnsemble(vol1),
-            InXEnsemble(vol1)
         ])
         self.end_opt = SequentialEnsemble([
-            InXEnsemble(vol1),
             OutXEnsemble(vol1),
             InXEnsemble(vol1),
             OptionalEnsemble(OutXEnsemble(vol1))
@@ -899,13 +897,51 @@ class testOptionalEnsemble(object):
         ])
 
     def test_optional_start(self):
-        raise SkipTest
+        bare_results = {'in_out' : True,
+                        'in_in_out' : True,
+                        'out_in_out' : True,
+                        'out_out' : False,
+                        'out_in_in_out' : True,
+                        'in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.start_opt
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
 
     def test_optional_start_can_append(self):
-        raise SkipTest
+        bare_results = {'in' : True,
+                        'out' : True,
+                        'in_out' : True,
+                        'out_in' : True,
+                        'out_out_in' : True,
+                        'in_out_in' : False,
+                        'out_in_out' : True
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.start_opt.can_append
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
 
     def test_optional_start_can_preprend(self):
-        raise SkipTest
+        bare_results = {'in' : True,
+                        'out' : True,
+                        'out_in_out' : True,
+                        'out_out_in_out' : True,
+                        'in_out' : True,
+                        'out_in_out' : True,
+                        'in_out_in_out' : False,
+                        'out_in' : True,
+                        'out_in_out_in' : False,
+                        'in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.start_opt.can_prepend
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
 
     def test_optional_middle(self):
         raise SkipTest
