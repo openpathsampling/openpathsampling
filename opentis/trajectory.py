@@ -57,7 +57,7 @@ class Trajectory(list):
             else:
                 for snapshot in trajectory:
                     snapshot_copy = copy.deepcopy(snapshot)
-                    self.append(snapshot_copy)
+                    self.forward(snapshot_copy)
         else:
             self.atom_indices = None
 
