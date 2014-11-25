@@ -784,8 +784,6 @@ class SequentialEnsemble(Ensemble):
         sequence_str = ",\n".join([str(ens) for ens in self.ensembles])
         return head+sequence_str+tail
 
-
-
 class LengthEnsemble(Ensemble):
     '''
     Represents an ensemble the contains trajectories of a specific length
@@ -843,6 +841,7 @@ class VolumeEnsemble(Ensemble):
         super(VolumeEnsemble, self).__init__()
         self._stored_volume = volume
         self.lazy = lazy
+        pass
 
     @property
     def _volume(self):
@@ -996,7 +995,7 @@ class EntersXEnsemble(ExitsXEnsemble):
         return False
 
 
-class AlteredEnsemble(Ensemble):
+class AlteredTrajectoryEnsemble(Ensemble):
     '''
     Represents an ensemble where an altered version of a trajectory (extended, reversed, cropped) is part of a given ensemble
     '''
@@ -1005,7 +1004,7 @@ class AlteredEnsemble(Ensemble):
         Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
         '''
         
-        super(AlteredEnsemble, self).__init__()
+        super(AlteredTrajectoryEnsemble, self).__init__()
         self.ensemble = ensemble
                 
     def _alter(self, trajectory):
@@ -1020,26 +1019,7 @@ class AlteredEnsemble(Ensemble):
     def can_prepend(self, trajectory):
         return self.ensemble.can_prepend(self._alter(trajectory))
 
-class SlicedTrajectoryEnsemble(AlteredEnsemble):
-    '''
-    An ensemble which alters the trajectory by looking at a given Python
-    slice of the list of frames.
-    '''
-    def __init__(self, ensemble, aslice):
-        self.ensemble = ensemble
-        if type(aslice) == int:
-            if aslice == -1:
-                self.slice = slice(aslice,None)
-            else:
-                self.slice = slice(aslice, aslice+1)
-        else:
-            self.slice = aslice
-
-    def _alter(self, trajectory):
-        return trajectory[self.slice]
-
-
-class BackwardPrependedTrajectoryEnsemble(AlteredEnsemble):
+class BackwardPrependedTrajectoryEnsemble(AlteredTrajectoryEnsemble):
     '''
     Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
     '''
@@ -1051,7 +1031,7 @@ class BackwardPrependedTrajectoryEnsemble(AlteredEnsemble):
 #        print [ s.idx for s in trajectory.reversed + self.add_traj]
         return trajectory.reversed + self.add_traj
 
-class ForwardAppendedTrajectoryEnsemble(AlteredEnsemble):
+class ForwardAppendedTrajectoryEnsemble(AlteredTrajectoryEnsemble):
     '''
     Represents an ensemble which is the given ensemble but for trajectories where some trajectory is appended
     '''
@@ -1062,24 +1042,12 @@ class ForwardAppendedTrajectoryEnsemble(AlteredEnsemble):
     def _alter(self, trajectory):
         return self.add_traj + trajectory
     
-class ReversedTrajectoryEnsemble(AlteredEnsemble):
+class ReversedTrajectoryEnsemble(AlteredTrajectoryEnsemble):
     '''
     Represents an ensemble 
     '''
     def _alter(self, trajectory):
         return trajectory.reverse()
-
-class OptionalEnsemble(AlteredEnsemble):
-    '''
-    Makes it optional to satisfy a given ensemble (primarily useful in
-    SequentialEnsembles)
-    '''
-    def __init__(self, ensemble):
-        self.orig_ens = ensemble
-        self.ensemble = ensemble | LengthEnsemble(0)
-
-    def __str__(self):
-        return "{"+self.orig_ens.__str__()+"} (OPTIONAL)"
     
 class EnsembleFactory():
     '''
