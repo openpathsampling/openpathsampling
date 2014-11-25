@@ -88,8 +88,8 @@ def setUp():
     # deltas of each letter from state edge:
     # a < 0 ; 0 < b < 0.2 ; c > 0.2; o = 0
     trajtypes = ["a", "o", "aa", "ab", "aob", "bob", "aba", "aaa", "abcba",
-                 "abaa", "abba", "abaab", "ababa", "abbab",
-                 "abaaba", "aobab", "abab", "abcbababcba", "aca", 
+                 "abaa", "abba", "abaab", "ababa", "abbab", "ac", "bc",
+                 "abaaba", "aobab", "abab", "abcbababcba", "aca", "abc",
                  "acaca", "acac", "caca", "aaca", "baca", "aaba", "aab"
                 ]
     ttraj = build_trajdict(trajtypes, lower, upper)
@@ -944,13 +944,48 @@ class testOptionalEnsemble(EnsembleTest):
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
     def test_optional_middle(self):
-        raise SkipTest
+        bare_results = {'in_out_cross' : True,
+                        'in_cross' :  True,
+                        'in_out' : False,
+                        'out_cross' : False,
+                        'cross_in_cross_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.mid_opt
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
 
     def test_optional_middle_can_append(self):
-        raise SkipTest
+        bare_results = {'in' : True,
+                        'out' : True,
+                        'in_out' : True,
+                        'out_in' : False,
+                        'in_cross' : True,
+                        'in_out_cross' : True,
+                        'out_cross' : True,
+                        'in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.mid_opt.can_append
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
 
-    def test_optional_midle_can_preprend(self):
-        raise SkipTest
+    def test_optional_middle_can_preprend(self):
+        bare_results = {'in' : True,
+                        'out' : True,
+                        'in_out' : True,
+                        'out_in' : False,
+                        'in_cross' : True,
+                        'out_cross' : True,
+                        'in_cross_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.mid_opt.can_prepend
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
 
     def test_optional_end(self):
         raise SkipTest
@@ -959,4 +994,7 @@ class testOptionalEnsemble(EnsembleTest):
         raise SkipTest
 
     def test_optional_middle_can_prepend(self):
+        raise SkipTest
+
+    def test_optional_str(self):
         raise SkipTest
