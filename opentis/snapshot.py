@@ -139,6 +139,19 @@ class Configuration(object):
         else:
             return None
 
+    @staticmethod
+    def from_pdb(pdb_file):
+        pdb = md.load(pdb_file)
+
+        initial_configuration = Configuration(
+            coordinates=units.Quantity(pdb.xyz[0], units.nanometer),
+            box_vectors=units.Quantity(pdb.unitcell_vectors, units.nanometer),
+            potential_energy=units.Quantity(0.0, units.kilojoules_per_mole),
+            topology=pdb.topology
+        )
+
+        return initial_configuration
+
     def forget(self):
         """
         Will remove the stored coordinates from memory if they are stored in

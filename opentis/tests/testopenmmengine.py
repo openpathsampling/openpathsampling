@@ -34,12 +34,12 @@ class testOpenMMEngine(object):
         self.engine = OpenMMEngine(
             filename=data_filename("openmmengine_test.nc"), 
             topology_file=data_filename("ala_small_traj.pdb"), 
-            options=options,
-            mode='create'
+            options=options
         )
+
         context = self.engine.simulation.context
         zero_array = np.zeros((self.engine.n_atoms, 3))
-        context.setPositions(self.engine.pdb.positions)
+        context.setPositions(self.engine.initial_configuration.coordinates)
         context.setVelocities(Quantity(zero_array, nanometers / picoseconds))
 
     def teardown(self):
@@ -85,7 +85,7 @@ class testOpenMMEngine(object):
                                  vel)
 
     def test_snapshot_set(self):
-        pdb_pos = (self.engine.pdb.positions / nanometers)
+        pdb_pos = (self.engine.initial_configuration.coordinates / nanometers)
         testvel = []
         testpos = []
         for i in range(len(pdb_pos)):
@@ -102,10 +102,9 @@ class testOpenMMEngine(object):
                                                         getVelocities=True)
         sim_coords = state.getPositions(asNumpy=True) / nanometers
         sim_vels = state.getVelocities(asNumpy=True) / (nanometers/picoseconds)
-        for truth_x, beauty_x in zip(testpos, sim_coords):
-            assert_items_equal(truth_x, beauty_x)
-        for truth_v, beauty_v in zip(testvel, sim_vels):
-            assert_items_equal(truth_v, beauty_v)
+
+        np.testing.assert_almost_equal(testpos, sim_coords, decimal=5)
+        np.testing.assert_almost_equal(testvel, sim_vels, decimal=5)
 
     def test_generate_next_frame(self):
         snap0 = Snapshot(
@@ -133,8 +132,8 @@ class testOpenMMEngine(object):
             testvel.append([0.1*i, 0.1*i, 0.1*i])
         self.engine.momentum = Momentum(velocities=testvel,
                                         kinetic_energy=None)
-        assert_equal_array_array(self.engine.current_snapshot.velocities /
-                                 (nanometers / picoseconds), testvel)
+        np.testing.assert_almost_equal(self.engine.current_snapshot.velocities /
+                                       (nanometers / picoseconds), testvel, decimal=5)
 
     def test_momentum_getter(self):
         momentum = self.engine.momentum
@@ -146,15 +145,15 @@ class testOpenMMEngine(object):
         )
 
     def test_configuration_setter(self):
-        pdb_pos = (self.engine.pdb.positions / nanometers)
+        pdb_pos = (self.engine.initial_configuration.coordinates / nanometers)
         testpos = []
         for i in range(len(pdb_pos)):
             testpos.append(list(np.array(pdb_pos[i]) + 
                                 np.array([1.0, 1.0, 1.0]))
                           )
         self.engine.configuration = Configuration(coordinates=testpos)
-        assert_equal_array_array(self.engine.current_snapshot.coordinates /
-                                 nanometers, testpos)
+        np.testing.assert_almost_equal(self.engine.current_snapshot.coordinates /
+                                 nanometers, testpos, decimal=5)
 
     def test_configuration_getter(self):
         config = self.engine.configuration

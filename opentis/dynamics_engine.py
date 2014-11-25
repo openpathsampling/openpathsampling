@@ -35,7 +35,7 @@ class DynamicsEngine(object):
     instantiated.
     '''
 
-    def __init__(self, filename=None, options=None, mode='auto', storage=None):
+    def __init__(self, filename=None, options=None, storage=None):
         '''
         Create an empty DynamicsEngine object
         
@@ -53,9 +53,16 @@ class DynamicsEngine(object):
         self.initialized = False
         self.running = dict()
 
-        self.storage = storage
+        if storage is not None:
+            self.storage = storage
+
+        # if there has not been created a storage but the init of a derived
+        # class make sure there is at least a member variable
+        if not hasattr(self, 'storage'):
+            self.storage = None
 
         self.n_atoms = None
+
         if 'n_atoms' in options:
             self.n_atoms = options['n_atoms']
 
@@ -65,11 +72,12 @@ class DynamicsEngine(object):
 
         Trajectory.engine = self
 
-        if mode == 'create':
-            # storage
+        if not hasattr(self, 'options'):
+            self.options = {}
 
-            self.options = options
-            options = self.options
+        if options is not None:
+            for key, value in options.iteritems():
+                self.options[key] = value
 
         # set up the max_length_stopper (if n_frames_max is given)
         # TODO: switch this not needing slice; use can_append

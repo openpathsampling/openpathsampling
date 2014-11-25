@@ -360,7 +360,8 @@ class ConfigurationStorage(ObjectStorage):
         if configuration.potential_energy is not None:
             storage.variables['configuration_potential'][idx] = configuration.potential_energy / self.storage.units["configuration_potential"]
 
-#        storage.variables['configuration_box_vectors'][idx,:] = (configuration.box_vectors / self.storage.units["configuration_box_vectors"]).astype(np.float32)
+        if configuration.box_vectors is not None:
+            storage.variables['configuration_box_vectors'][idx,:,:] = (configuration.box_vectors / self.storage.units["configuration_box_vectors"]).astype(np.float32)
 
         # Force sync to disk to avoid data loss.
         storage.sync()
@@ -509,6 +510,6 @@ class ConfigurationStorage(ObjectStorage):
                 description="coordinates[configuration][atom][coordinate] are coordinate of atom 'atom' " +
                             "in dimension 'coordinate' of configuration 'configuration'.")
 
-        self.init_variable('configuration_box_vectors', 'float', (self.db, 'spatial'), 'nanometers')
+        self.init_variable('configuration_box_vectors', 'float', (self.db, 'spatial', 'spatial'), 'nanometers')
 
         self.init_variable('configuration_potential', 'float', self.db, 'kilojoules_per_mole')

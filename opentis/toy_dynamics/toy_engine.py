@@ -36,7 +36,13 @@ class ToyEngine(DynamicsEngine):
         if 'ndim' not in options:
             options['ndim'] = 2
         options['n_atoms'] = count_atoms(options['ndim'])
-        super(ToyEngine, self).__init__(filename=filename, mode=mode,
+
+        self.ndim = options['ndim']
+        self.pes = options['pes']
+        self.integ = options['integ']
+        if 'n_frames_max' in options:
+            self.n_frames_max = options['n_frames_max']
+        super(ToyEngine, self).__init__(filename=filename,
                                         options=options)
 
     @property

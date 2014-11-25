@@ -72,8 +72,7 @@ class Storage(netcdf.Dataset):
 
         self.units = dict()
 
-        print 'OpenStorage ', filename
-
+        print filename, 'exits:', os.path.isfile(filename), '/ mode', mode
         super(Storage, self).__init__(filename, mode)
 
         self.trajectory = TrajectoryStorage(self).register()
@@ -105,8 +104,6 @@ class Storage(netcdf.Dataset):
             else:
                 raise RuntimeError("Storage given neither n_atoms nor topology")
 
-            print self.topology
-
             self._init_classes()
 
             # create a json from the mdtraj.Topology() and store it
@@ -123,24 +120,27 @@ class Storage(netcdf.Dataset):
         elif mode == 'a':
             self._restore_classes()
 
-            self.topology = self.simplifier.topology_from_dict(self.simplifier.from_json(self.variables['topology'][0]))
-            self.atoms = self.topology.n_atoms
-
-            # restore initial configuration
-            self.initial_configuration = self.configuration.load(int(self.variables['initial_configuration_idx'][0]))
-
             # Create a dict of simtk.Unit() instances for all netCDF.Variable()
             for variable_name in self.variables:
                 unit = None
                 variable = self.variables[variable_name]
+                print variable_name,
                 if hasattr(variable, 'unit_simtk'):
-
                     unit_dict = self.simplifier.from_json(getattr(variable, 'unit_simtk'))
+                    print unit_dict
                     if unit_dict is not None:
                         unit = self.simplifier.unit_from_dict(unit_dict)
 
                 self.units[str(variable_name)] = unit
 
+            # After we have restore the units we can load objects from the storage
+
+            self.topology = self.simplifier.topology_from_dict(self.simplifier.from_json(self.variables['topology'][0]))
+            self.atoms = self.topology.n_atoms
+
+    @property
+    def initial_configuration(self):
+        return self.configuration.load(int(self.variables['initial_configuration_idx'][0]))
 
     def get_unit(self, dimension):
         """
