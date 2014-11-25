@@ -244,13 +244,19 @@ class XYZTranslator(object):
         '''
         topol = self.trajfile_topology(self.trajfile)
         system = AtomCounter(self.trajfile.frames[0].natoms)
+
+
         self.simulation = SimulationDuckPunch(topol, system)
-        self.storage = Storage( topology_file=topol,
+
+        pos = Quantity(np.array(frame.pos),nanometers)
+        vel = Quantity(np.array(frame.vel),nanometers/picoseconds)
+        mysnap = snapshot.Snapshot( coordinates=pos,
+                                    velocities=vel,
+                                    topology=self.storage.topology
+
+        self.storage = Storage(
                                           filename=fname, 
                                           mode=None)
-        snapshot.Snapshot.simulator = self
-        self.storage.simulator = self
-
 
     def trajfile2trajectory(self, trajfile):
         '''Converts TrajFile.TrajFile to trajectory.Trajectory
