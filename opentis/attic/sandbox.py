@@ -6,18 +6,18 @@ Created on 08.07.2014
 
 import numpy as np
 
-from Simulator import Simulator
-from orderparameter import OP_RMSD_To_Lambda, OP_Multi_RMSD
-from volume import LambdaVolume, VoronoiVolume
-from ensemble import EnsembleFactory as ef
+from opentis.Simulator import Simulator
+from opentis.orderparameter import OP_RMSD_To_Lambda, OP_Multi_RMSD
+from opentis.volume import LambdaVolume, VoronoiVolume
+from opentis.ensemble import EnsembleFactory as ef
 import time
-from pathmover import ForwardShootMover, BackwardShootMover, PathMover, MixedMover
-from shooting import UniformSelector
-from ensemble import LengthEnsemble, InXEnsemble, OutXEnsemble
-from trajectory import Trajectory
+from opentis.pathmover import ForwardShootMover, BackwardShootMover, PathMover, MixedMover
+from opentis.shooting import UniformSelector
+from opentis.ensemble import LengthEnsemble, InXEnsemble, OutXEnsemble
+from opentis.trajectory import Trajectory
 from pymbar import MBAR
-from snapshot import Snapshot
-from openmm_simulation import OpenMMSimulation
+from opentis.snapshot import Snapshot
+from opentis.openmm_simulation import OpenMMSimulation
 
 if __name__ == '__main__':
     simulator = Simulator.Alanine_system('auto')
@@ -73,17 +73,17 @@ if __name__ == '__main__':
 #        op.save()
 
         stime = time.time()
-        print tis.locate(dd, lazy=True, overlap=1)
+        print tis.find_valid_slices(dd, lazy=True, overlap=1)
         print time.time() - stime
         stime = time.time()
-        print tis.locate(dd, lazy=False, overlap=1)
+        print tis.find_valid_slices(dd, lazy=False, overlap=1)
         print time.time() - stime
 
         stime = time.time()
-        print enAB.locate(dd, lazy=True, overlap=1)
+        print enAB.find_valid_slices(dd, lazy=True, overlap=1)
         print time.time() - stime
         stime = time.time()
-        print enAB.locate(dd, lazy=False, overlap=1)
+        print enAB.find_valid_slices(dd, lazy=False, overlap=1)
         print time.time() - stime
 
         # This is to cache the values for all snapshots in tt. Makes later access MUCH faster. 
@@ -105,11 +105,11 @@ if __name__ == '__main__':
 
         print "Iteration test"
         for l in range(0,tt.frames + 0):
-            print tis.forward(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
+            print tis.can_append(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
 
         print "Iteration test"
         for l in range(0,tt.frames + 0):
-            print tis.forward(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
+            print tis.can_append(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
 
         print op(tt[0])
         s = Snapshot(coordinates=tt[0].coordinates)

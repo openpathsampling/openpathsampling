@@ -59,15 +59,27 @@ def build_trajdict(trajtypes, lower, upper):
         mydict[lowersubkey] = map(lower.__sub__, delta)
     return mydict 
 
+def tstr(ttraj):
+    return list(ttraj).__str__()
+
+def results_upper_lower(adict):
+    res_dict = {}
+    for test in adict.keys():
+        res_dict['upper_'+test] = adict[test]
+        res_dict['lower_'+test] = adict[test]
+    return res_dict
+
+
 def setUp():
     ''' Setup for tests of classes in ensemble.py. '''
     #random.seed
-    global lower, upper, op, vol1, vol2, ttraj
+    global lower, upper, op, vol1, vol2, vol3, ttraj
     lower = 0.1
     upper = 0.5
     op = CallIdentity()
     vol1 = LambdaVolume(op, lower, upper)
     vol2 = LambdaVolume(op, -0.1, 0.7)
+    vol3 = LambdaVolume(op, 2.0, 2.5)
     # we use the following codes to describe trajectories:
     # in : in the state
     # out : out of the state
@@ -75,7 +87,7 @@ def setUp():
     #
     # deltas of each letter from state edge:
     # a < 0 ; 0 < b < 0.2 ; c > 0.2; o = 0
-    trajtypes = ["a", "o", "ab", "aob", "bob", "aba", "aaa", "abcba",
+    trajtypes = ["a", "o", "aa", "ab", "aob", "bob", "aba", "aaa", "abcba",
                  "abaa", "abba", "abaab", "ababa", "abbab",
                  "abaaba", "aobab", "abab", "abcbababcba", "aca", 
                  "acaca", "acac", "caca", "aaca", "baca", "aaba", "aab"
@@ -164,7 +176,7 @@ class testLeaveXEnsemble(EnsembleTest):
     def test_leaveX_str(self):
         volstr = "{x|Id(x) in [0.1, 0.5]}"
         assert_equal(self.leaveX.__str__(), 
-                     "x[t] in (not "+volstr+") for one t in [1:-1]")
+                     "exists t such that x[t] in (not "+volstr+")")
 
 class testInXEnsemble(EnsembleTest):
     def setUp(self):
@@ -189,7 +201,7 @@ class testInXEnsemble(EnsembleTest):
     def test_inX_str(self):
         volstr = "{x|Id(x) in [0.1, 0.5]}"
         assert_equal(self.inX.__str__(),
-                     "x[t] in "+volstr+" for all t in [1:-1]")
+                     "x[t] in "+volstr+" for all t")
 
 class testOutXEnsemble(EnsembleTest):
     def setUp(self):
@@ -214,7 +226,7 @@ class testOutXEnsemble(EnsembleTest):
     def test_outX_str(self):
         volstr = "{x|Id(x) in [0.1, 0.5]}"
         assert_equal(self.outX.__str__(),
-                     "x[t] in (not "+volstr+") for all t in [1:-1]")
+                     "x[t] in (not "+volstr+") for all t")
 
 class testHitXEnsemble(EnsembleTest):
     def setUp(self):
@@ -239,7 +251,7 @@ class testHitXEnsemble(EnsembleTest):
     def test_hitX_str(self):
         volstr = "{x|Id(x) in [0.1, 0.5]}"
         assert_equal(self.hitX.__str__(),
-                     "x[t] in "+volstr+" for one t in [1:-1]")
+                     "exists t such that x[t] in "+volstr)
 
 class testExitsXEnsemble(EnsembleTest):
     def setUp(self):
@@ -248,18 +260,6 @@ class testExitsXEnsemble(EnsembleTest):
         self.slice_ens = ExitsXEnsemble(vol1, slice(3,9))
         self.wrapstart = 3
         self.wrapend = 12
-
-    @raises(ValueError)
-    def test_single_frame(self):
-        '''ExitsXEnsemble built with single frame raises ValueError'''
-        single_frame_ensemble = ExitsXEnsemble(vol1, 2)
-
-    @raises(ValueError)
-    def test_single_frame_by_modification(self):
-        '''ExitsXEnsemble modified to have single frame raises ValueError'''
-        single_frame_ensemble = ExitsXEnsemble(vol1)
-        single_frame_ensemble.frames = 2
-        single_frame_ensemble(ttraj['upper_in_out'])
 
     def test_noncrossing(self):
         '''ExitsXEnsemble for noncrossing trajectories'''
@@ -307,10 +307,7 @@ class testExitsXEnsemble(EnsembleTest):
 
     def test_str(self):
         assert_equal(self.ensemble.__str__(),
-            'exists x[t], x[t+1] in [None:None] such that x[t] in {0} and x[t+1] not in {0}'.format(vol1))
-        self.ensemble.frames = slice(3,8)
-        assert_equal(self.ensemble.__str__(),
-            'exists x[t], x[t+1] in [3:8] such that x[t] in {0} and x[t+1] not in {0}'.format(vol1))
+            'exists x[t], x[t+1] such that x[t] in {0} and x[t+1] not in {0}'.format(vol1))
 
 class testEntersXEnsemble(testExitsXEnsemble):
     def setUp(self):
@@ -319,18 +316,6 @@ class testEntersXEnsemble(testExitsXEnsemble):
         self.slice_ens = EntersXEnsemble(vol1, slice(3,9))
         self.wrapstart = 3
         self.wrapend = 12
-
-    @raises(ValueError)
-    def test_single_frame(self):
-        '''EntersXEnsemble built with single frame raises ValueError'''
-        single_frame_ensemble = EntersXEnsemble(vol1, 2)
-
-    @raises(ValueError)
-    def test_single_frame_by_modification(self):
-        '''EntersXEnsemble modified to have single frame raises ValueError'''
-        single_frame_ensemble = EntersXEnsemble(vol1)
-        single_frame_ensemble.frames = 2
-        single_frame_ensemble(ttraj['upper_in_out'])
 
     def test_noncrossing(self):
         '''EntersXEnsemble for noncrossing trajectories'''
@@ -378,22 +363,19 @@ class testEntersXEnsemble(testExitsXEnsemble):
 
     def test_str(self):
         assert_equal(self.ensemble.__str__(),
-            'exists x[t], x[t+1] in [None:None] such that x[t] not in {0} and x[t+1] in {0}'.format(vol1))
-        self.ensemble.frames = slice(3,8)
-        assert_equal(self.ensemble.__str__(),
-            'exists x[t], x[t+1] in [3:8] such that x[t] not in {0} and x[t+1] in {0}'.format(vol1))
+            'exists x[t], x[t+1] such that x[t] not in {0} and x[t+1] in {0}'.format(vol1))
 
 class testSequentialEnsemble(EnsembleTest):
     def setUp(self):
-        self.inX = InXEnsemble(vol1, frames=slice(None,None))
-        self.outX = OutXEnsemble(vol1, frames=slice(None,None))
-        self.hitX = HitXEnsemble(vol1, frames=slice(None,None))
-        self.leaveX = LeaveXEnsemble(vol1, frames=slice(None,None))
-        self.enterX = EntersXEnsemble(vol1, frames=slice(None,None))
-        self.exitX = ExitsXEnsemble(vol1, frames=slice(None,None))
-        self.inInterface = InXEnsemble(vol2, frames=slice(None,None))
-        self.leaveX0 = LeaveXEnsemble(vol2, frames=slice(None,None))
-        self.inX0 = InXEnsemble(vol2, frames=slice(None,None))
+        self.inX = InXEnsemble(vol1)
+        self.outX = OutXEnsemble(vol1)
+        self.hitX = HitXEnsemble(vol1)
+        self.leaveX = LeaveXEnsemble(vol1)
+        self.enterX = EntersXEnsemble(vol1)
+        self.exitX = ExitsXEnsemble(vol1)
+        self.inInterface = InXEnsemble(vol2)
+        self.leaveX0 = LeaveXEnsemble(vol2)
+        self.inX0 = InXEnsemble(vol2)
         self.length1 = LengthEnsemble(1)
         # pseudo_tis and pseudo_minus assume that the interface is equal to
         # the state boundary
@@ -491,7 +473,7 @@ class testSequentialEnsemble(EnsembleTest):
                     }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.pseudo_tis.forward, 
+            self._single_test(self.pseudo_tis.can_append, 
                                 ttraj[test], results[test], failmsg)
 
     def test_can_append_pseudominus(self):
@@ -536,7 +518,7 @@ class testSequentialEnsemble(EnsembleTest):
                     }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.pseudo_minus.forward, 
+            self._single_test(self.pseudo_minus.can_append, 
                                 ttraj[test], results[test], failmsg)
 
     def test_can_append_minus(self):
@@ -551,7 +533,7 @@ class testSequentialEnsemble(EnsembleTest):
                   }
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.minus.forward, 
+            self._single_test(self.minus.can_append, 
                                 ttraj[test], results[test], failmsg)
 
     def test_can_prepend_minus(self):
@@ -566,7 +548,7 @@ class testSequentialEnsemble(EnsembleTest):
                   }
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.minus.forward, 
+            self._single_test(self.minus.can_append, 
                                 ttraj[test], results[test], failmsg)
 
     def test_can_prepend_pseudo_tis(self):
@@ -592,7 +574,7 @@ class testSequentialEnsemble(EnsembleTest):
                     }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.pseudo_tis.backward, 
+            self._single_test(self.pseudo_tis.can_prepend, 
                                 ttraj[test], results[test], failmsg)
 
 
@@ -630,7 +612,7 @@ class testSequentialEnsemble(EnsembleTest):
                     }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.pseudo_minus.backward, 
+            self._single_test(self.pseudo_minus.can_prepend, 
                                 ttraj[test], results[test], failmsg)
 
     
@@ -655,10 +637,8 @@ class testSequentialEnsemble(EnsembleTest):
                    'upper_in_out_in' : False,
                    'upper_in_out' : True
                   }
-        print
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            print test,
             self._single_test(ensemble, 
                                 ttraj[test], results[test], failmsg)
 
@@ -775,7 +755,7 @@ class testSequentialEnsemble(EnsembleTest):
         }
         for test in append_results.keys():
             failmsg = "Append failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(ensemble.forward, ttraj[test], 
+            self._single_test(ensemble.can_append, ttraj[test], 
                               append_results[test], failmsg)
 
     def test_sequential_enter_exit(self):
@@ -787,18 +767,160 @@ class testSequentialEnsemble(EnsembleTest):
     def test_str(self):
         assert_equal(self.pseudo_tis.__str__(), """[
 (
-  x[t] in {x|Id(x) in [0.1, 0.5]} for all t in [None:None]
+  x[t] in {x|Id(x) in [0.1, 0.5]} for all t
 )
 and
 (
   len(x) = 1
 ),
-x[t] in (not {x|Id(x) in [0.1, 0.5]}) for all t in [None:None],
+x[t] in (not {x|Id(x) in [0.1, 0.5]}) for all t,
 (
-  x[t] in {x|Id(x) in [0.1, 0.5]} for all t in [None:None]
+  x[t] in {x|Id(x) in [0.1, 0.5]} for all t
 )
 and
 (
   len(x) = 1
 )
 ]""")
+
+class testSlicedTrajectoryEnsemble(EnsembleTest):
+    def test_sliced_ensemble_init(self):
+        init_as_int = SlicedTrajectoryEnsemble(InXEnsemble(vol1), 3)
+        init_as_slice = SlicedTrajectoryEnsemble(InXEnsemble(vol1),
+                                                 slice(3, 4))
+        assert_equal(init_as_int, init_as_slice)
+        assert_equal(init_as_slice.slice, init_as_int.slice)
+
+    def test_sliced_as_TISEnsemble(self):
+        '''SlicedTrajectory and Sequential give same TIS results'''
+        sliced_tis = (
+            SlicedTrajectoryEnsemble(InXEnsemble(vol1), 0) &
+            SlicedTrajectoryEnsemble(OutXEnsemble(vol1 | vol3), slice(1,-1)) & 
+            SlicedTrajectoryEnsemble(LeaveXEnsemble(vol2), slice(1,-1)) &
+            SlicedTrajectoryEnsemble(InXEnsemble(vol1 | vol3), -1)
+        )
+        sequential_tis = SequentialEnsemble([
+            InXEnsemble(vol1) & LengthEnsemble(1),
+            OutXEnsemble(vol1 | vol3) & LeaveXEnsemble(vol2),
+            InXEnsemble(vol1 | vol3) & LengthEnsemble(1)
+        ])
+        for test in ttraj.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(sliced_tis, ttraj[test], 
+                              sequential_tis(ttraj[test]), failmsg)
+
+    def test_slice_outside_trajectory_range(self):
+        ens = SlicedTrajectoryEnsemble(InXEnsemble(vol1), slice(5,9))
+        test = 'upper_in'
+        # the slice should return the empty trajectory, and therefore should
+        # return false
+        assert_equal(ens(ttraj[test]), False)
+
+    def test_even_sliced_trajectory(self):
+        even_slice = slice(None, None, 2)
+        ens = SlicedTrajectoryEnsemble(InXEnsemble(vol1), even_slice)
+        bare_results = {'in' : True,
+                        'in_in' : True,
+                        'in_in_in' : True,
+                        'in_out_in' : True,
+                        'in_in_out' : False,
+                        'in_out_in_in' : True,
+                        'in_out_in_out_in' : True,
+                        'out' : False,
+                        'in_in_out_in' : False,
+                        'in_cross_in_cross' : True
+                       }
+        results = results_upper_lower(bare_results)
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(ens, ttraj[test], results[test], failmsg)
+
+    def test_sliced_sequential_global_whole(self):
+        even_slice = slice(None, None, 2)
+        ens = SlicedTrajectoryEnsemble(SequentialEnsemble([
+            InXEnsemble(vol1),
+            OutXEnsemble(vol1)
+        ]), even_slice)
+
+        bare_results = {'in_in_out' : True,
+                        'in_hit_out' : True,
+                        'in_out_out_in_out' : True,
+                        'in_hit_out_in_out' : True,
+                        'in_out_out_in' : True,
+                        'in_cross_in_cross' : False,
+                        'in_out_out_in' : True,
+                        'in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(ens, ttraj[test], results[test], failmsg)
+
+
+    def test_sliced_sequential_subtraj_member(self):
+        even_slice = slice(None, None, 2)
+        ens = SequentialEnsemble([
+            InXEnsemble(vol1),
+            SlicedTrajectoryEnsemble(OutXEnsemble(vol1), even_slice)
+        ])
+        bare_results = {'in_out_in' : True,
+                        'in_out_out_in' : False,
+                        'in_in_out_in' : True,
+                        'in_in_out' : True,
+                        'in_in_cross_in' : True,
+                        'in_out_in_out' : True,
+                        'in_out_cross_out_in_out_in_out_cross_out_in' : True,
+                        'in_out_in_in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(ens, ttraj[test], results[test], failmsg)
+
+
+class testOptionalEnsemble(object):
+    def setUp(self):
+        self.start_opt = SequentialEnsemble([
+            OptionalEnsemble(OutXEnsemble(vol1)),
+            InXEnsemble(vol1),
+            OutXEnsemble(vol1),
+            InXEnsemble(vol1)
+        ])
+        self.end_opt = SequentialEnsemble([
+            InXEnsemble(vol1),
+            OutXEnsemble(vol1),
+            InXEnsemble(vol1),
+            OptionalEnsemble(OutXEnsemble(vol1))
+        ])
+        self.mid_opt = SequentialEnsemble([
+            InXEnsemble(vol1),
+            OptionalEnsemble(OutXEnsemble(vol1) & InXEnsemble(vol2)),
+            OutXEnsemble(vol2),
+        ])
+
+    def test_optional_start(self):
+        raise SkipTest
+
+    def test_optional_start_can_append(self):
+        raise SkipTest
+
+    def test_optional_start_can_preprend(self):
+        raise SkipTest
+
+    def test_optional_middle(self):
+        raise SkipTest
+
+    def test_optional_middle_can_append(self):
+        raise SkipTest
+
+    def test_optional_midle_can_preprend(self):
+        raise SkipTest
+
+    def test_optional_end(self):
+        raise SkipTest
+
+    def test_optional_end_can_append(self):
+        raise SkipTest
+
+    def test_optional_middle_can_prepend(self):
+        raise SkipTest
