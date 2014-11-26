@@ -175,8 +175,8 @@ class ForwardShootMover(ShootMover):
             details.start_point.snapshot,
             running = [ForwardAppendedTrajectoryEnsemble(
                 self.ensemble, 
-                details.start[0:details.start_point.index]).forward, 
-                self.length_stopper.forward]
+                details.start[0:details.start_point.index]).can_append, 
+                self.length_stopper.can_append]
              )
 
         details.final = details.start[0:shooting_point] + partial_trajectory
@@ -193,12 +193,12 @@ class BackwardShootMover(ShootMover):
 
         # Run until one of the stoppers is triggered
         partial_trajectory = PathMover.engine.generate(
-                                     details.start_point.snapshot.reversed_copy(),
-                                     running = [BackwardPrependedTrajectoryEnsemble(
-                                                     self.ensemble,
-                                                     details.start[details.start_point.index + 1:]
-                                                ).backward, self.length_stopper.backward]
-                                     )
+            details.start_point.snapshot.reversed_copy(), 
+            running = [BackwardPrependedTrajectoryEnsemble( 
+                self.ensemble, 
+                details.start[details.start_point.index + 1:]).can_prepend, 
+                self.length_stopper.can_prepend]
+        )
 
         details.final = partial_trajectory.reversed + details.start[details.start_point.index + 1:]
         details.final_point = ShootingPoint(self.selector, details.final, partial_trajectory.frames - 1)

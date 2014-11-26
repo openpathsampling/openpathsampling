@@ -135,7 +135,8 @@ use LeaveXEnsemble as we typically do with TIS paths.
 
     interface0_ensemble = interface_set[0]
     print "start path generation (should not take more than a few minutes)"
-    total_path = engine.generate(snapshot, [first_traj_ensemble.forward])
+    total_path = engine.generate(snapshot,
+                                    [first_traj_ensemble.can_append])
     print "path generation complete"
     print
     print "Total trajectory length: ", len(total_path)
@@ -156,7 +157,7 @@ use LeaveXEnsemble as we typically do with TIS paths.
     for frame in total_path:
         print phi(frame)[0]*degrees, psi(frame)[0]*degrees, 
         print stateA(frame), interface0(frame), stateB(frame),
-        print first_traj_ensemble.forward(
+        print first_traj_ensemble.can_append(
             total_path[slice(0,total_path.index(frame)+1)]
         )
 
