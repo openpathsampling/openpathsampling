@@ -1034,4 +1034,6 @@ class testOptionalEnsemble(EnsembleTest):
 
 
     def test_optional_str(self):
-        raise SkipTest
+        inX = InXEnsemble(vol1)
+        opt_inX = OptionalEnsemble(inX)
+        assert_equal(opt_inX.__str__(), "{"+inX.__str__()+"} (OPTIONAL)")
