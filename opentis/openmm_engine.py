@@ -21,11 +21,35 @@ class OpenMMEngine(DynamicsEngine):
     units = {
         'length' : u.nanometers,
         'velocity' : u.nanometers / u.picoseconds,
-        'energy' : u.kilojoules_per_mole
+        'energy' : u.joule / u.mole
     }
 
     @staticmethod
-    def auto(filename, template, options, mode='auto'):
+    def auto(filename, template, options, mode='auto', units=None):
+        """
+        Create or Restore a OpenMMEngine
+
+        Parameters
+        ----------
+        filename : str
+            the filename of the storage
+        template : Snapshot
+            the template Snapshot to be used. It contains the necessary units as well as the topology
+        options : dict of { str : str }
+            a dictionary that contains the parameters used in the construction of the OpenMMEngine
+        mode : str ('restore', 'create' or 'auto')
+            a string setting the mode of creation or restoration. The option 'auto' (default) will
+            only create a new storage if the file does not exist yet
+        units : dict of {str : simtk.unit.Unit } or None (default)
+            representing a dict of string representing a dimension ('length', 'velocity', 'energy') pointing the
+            the simtk.unit.Unit to be used. This overrides the units used in the template
+
+        Returns
+        -------
+        OpenMMEngine
+            the created or restored OpenMMEngine instance
+
+        """
         if mode == 'auto':
             if os.path.isfile(filename):
                 mode = 'restore'
@@ -33,21 +57,21 @@ class OpenMMEngine(DynamicsEngine):
                 mode = 'create'
 
         if mode == 'create':
-            return OpenMMEngine.create_with_storage(filename, template, options)
+            return OpenMMEngine._create_with_storage(filename, template, options, units)
         elif mode == 'restore':
-            return OpenMMEngine.restore_from_storage(filename)
+            return OpenMMEngine._restore_from_storage(filename)
         else:
             raise ValueError('Unknown mode: ' + mode)
             return None
 
 
     @staticmethod
-    def create_with_storage(filename, template, options):
+    def _create_with_storage(filename, template, options, units=None):
         # for openmm we will create a suitable for configuration with
         # attached box_vectors and topolgy
 
         if type(template) is str:
-            template = snapshot_from_pdb(template)
+            template = snapshot_from_pdb(template, units=units)
 
         # once we have a template configuration (coordinates to not really matter)
         # we can create a storage. We might move this logic out of the dynamics engine
@@ -69,7 +93,7 @@ class OpenMMEngine(DynamicsEngine):
         return engine
 
     @staticmethod
-    def restore_from_storage(filename):
+    def _restore_from_storage(filename):
         # open storage, which also gets the topology!
         storage = Storage(
             filename=filename,
@@ -120,14 +144,9 @@ class OpenMMEngine(DynamicsEngine):
                                           nonbondedCutoff=1.0 * u.nanometers,
                                           constraints=HBonds )
 
-#        self.system_serial = openmm.XmlSerializer.serialize(system)
-
         integrator = VVVRIntegrator( self.options["temperature"],
                                      self.options["collision_rate"],
                                      self.options["timestep"] )
-
-#        self.integrator_serial = openmm.XmlSerializer.serialize(system)
-#        self.integrator_class = type(integrator).__name__
 
         simulation = openmm.app.Simulation(openmm_topology, system,
                                            integrator)
@@ -175,6 +194,7 @@ class OpenMMEngine(DynamicsEngine):
     # for users who forget to implement that last step.
 
     def _build_current_snapshot(self):
+        # TODO: Add caching for this and mark if changed
         state = self.simulation.context.getState(getPositions=True,
                                                  getVelocities=True,
                                                  getEnergy=True)

@@ -24,6 +24,8 @@ class StoredObject(object):
 
     pass
 
+# TODO: Combine the cache and all_names to be stored in one bis dict
+
 class ObjectStorage(object):
     """
     Base Class for storing complex objects in a netCDF4 file. It holds a reference to the store file.
@@ -31,10 +33,29 @@ class ObjectStorage(object):
 
     def __init__(self, storage, obj, named=False, json=False, identifier=None, dimension_units=None):
         """
+        Attributes
+        ----------
 
-        :param storage: a reference to the netCDF4 file
-        :param obj: a reference to the Class to be stored
-        :return:
+        storage : Storage
+        content_class : class
+            a reference to the class type to be stored using this Storage
+        idx_dimension : str
+            name of the dimension used for major numbering the stored object in the netCDF file.
+            This is usually the lowercase class name
+        cache : dict {int : object}
+            A dictionary pointing to the actual stored object by index. It is filled at saving or loading
+        named : bool
+            Set, if objects can also be loaded by a string identifier/name
+        json : string
+            if already computed a JSON Serialized string of the object
+        all_names : dict
+            same as cache but for names
+        simplifier : util.StorableObjectJSON
+            an instance of a JSON Serializer
+        identifier : str
+            name of the netCDF variable that contains the string to be identified by
+
+
         """
         self.storage = storage
         self.content_class = obj
@@ -45,6 +66,7 @@ class ObjectStorage(object):
         self.json = json
         self.all_names = None
         self.simplifier = StorableObjectJSON(storage)
+        self._names_loaded = False
         if identifier is not None:
             self.identifier = self.idx_dimension + '_' + identifier
         else:
@@ -57,6 +79,16 @@ class ObjectStorage(object):
 
     @property
     def units(self):
+        """
+        Return the units dictionary used in the attached storage
+
+        Returns
+        -------
+        units : dict of {str : simtk.unit.Unit }
+            representing a dict of string representing a dimension ('length', 'velocity', 'energy')
+            pointing to the simtk.unit.Unit to be used
+
+        """
         return self.storage.units
 
     def register(self):
@@ -101,7 +133,14 @@ class ObjectStorage(object):
 
         return None
 
-    def index(self, obj, idx=None, ):
+    def update_name_cache(self):
+        if self.named:
+            for idx, name in enumerate(self.variables[self.db + "_name"][:]):
+                self.cache[name] = idx
+
+            self._names_loaded = True
+
+    def index(self, obj, idx=None):
         """
         Return the appropriate index for saving or None if the object is already stored!
 

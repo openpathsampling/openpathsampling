@@ -256,6 +256,15 @@ class MomentumStorage(ObjectStorage):
         return momentum
 
     def update_velocities(self, obj):
+        """
+        Update/Load the velocities in the given obj from the attached storage
+
+        Parameters
+        ----------
+        obj : Momentum
+            The Momentum object to be updated
+
+        """
         storage = self.storage
 
         idx = obj.idx[self.storage]
@@ -265,6 +274,15 @@ class MomentumStorage(ObjectStorage):
         obj.velocities = velocities
 
     def update_kinetic_energy(self, obj):
+        """
+        Update/Load the kinetic_energy in the given obj from the attached storage
+
+        Parameters
+        ----------
+        obj : Momentum
+            The Momentum object to be updated
+
+        """
         storage = self.storage
 
         idx = obj.idx[self.storage]
@@ -367,9 +385,6 @@ class ConfigurationStorage(ObjectStorage):
         storage.sync()
 
 
-    def coordinates_as_numpy(self, frame_indices=None, atom_indices=None, storage = None):
-        return self.coordinates_as_numpy(self, frame_indices, atom_indices)
-
     def get(self, indices):
         return [ self.load(idx) for idx in indices ]
 
@@ -411,6 +426,15 @@ class ConfigurationStorage(ObjectStorage):
         return configuration
 
     def update_coordinates(self, obj):
+        """
+        Update/Load the coordinates in the given obj from the attached storage
+
+        Parameters
+        ----------
+        obj : Configuration
+            The Configuration object to be updates
+
+        """
         storage = self.storage
 
         idx = obj.idx[self.storage]
@@ -421,6 +445,15 @@ class ConfigurationStorage(ObjectStorage):
         obj.coordinates = coordinates
 
     def update_box_vectors(self, obj):
+        """
+        Update/Load the box_vectors in the given obj from the attached storage
+
+        Parameters
+        ----------
+        obj : Configuration
+            The Configuration object to be updates
+
+        """
         storage = self.storage
 
         idx = obj.idx[self.storage]
@@ -431,6 +464,15 @@ class ConfigurationStorage(ObjectStorage):
         obj.box_vectors = box_vectors
 
     def update_potential_energy(self, obj):
+        """
+        Update/Load the potential_energy in the given obj from the attached storage
+
+        Parameters
+        ----------
+        obj : Configuration
+            The Configuration object to be updates
+
+        """
         storage = self.storage
 
         idx = obj.idx[self.storage]
@@ -441,6 +483,22 @@ class ConfigurationStorage(ObjectStorage):
         obj.potential_energy = potential_energy
 
     def coordinates_as_numpy(self, frame_indices=None, atom_indices=None):
+        """
+        Return the atom coordintes in the storage for given frame indices and atoms
+
+        Parameters
+        ----------
+        frame_indices : list of int or None
+            the frame indices to be included. If None all frames are returned
+        atom_indices : list of int or None
+            the atom indices to be inlcuded. If None all atoms are returned
+
+        Returns
+        -------
+        numpy.array, shape=(n_frames, n_atoms)
+            the array of atom coordinates in a float32 numpy array
+
+        """
         if frame_indices is None:
             frame_indices = slice(None)
 

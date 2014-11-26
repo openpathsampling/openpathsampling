@@ -5,14 +5,13 @@ def storable(super_class):
         super_class._init(self, *args, **kwargs)
 
         if 'idx' in kwargs:
+            print 'IDX'
             self.idx = kwargs['idx']
         else:
             self.idx = dict()
 
         if 'storage' in kwargs:
             self.default_storage = kwargs['storage']
-
-#        self._storable = True
 
     def _save(self, storage=None):
         if storage is None:
