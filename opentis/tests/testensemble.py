@@ -1001,7 +1001,20 @@ class testOptionalEnsemble(EnsembleTest):
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
     def test_optional_end_can_append(self):
-        raise SkipTest
+        bare_results = {'in' : True,
+                        'out' : True,
+                        'out_in' : True,
+                        'in_out' : True,
+                        'out_in_out' : True,
+                        'in_out_in' : False,
+                        'out_in_out_in' : False,
+                        'in_in_out' : True
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.end_opt.can_append
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
 
     def test_optional_middle_can_prepend(self):
         raise SkipTest
