@@ -2,10 +2,11 @@ from calculation import Calculation, BootstrapEnsembleChangeMove, Bootstrapping
 
 from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     EntersXEnsemble, EmptyEnsemble, ExitsXEnsemble, FullEnsemble, \
-    HitXEnsemble, InXEnsemble, OutXEnsemble, AlteredTrajectoryEnsemble, \
+    HitXEnsemble, InXEnsemble, OutXEnsemble, AlteredEnsemble, \
     BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble, \
     LeaveXEnsemble, LengthEnsemble, LoadedEnsemble, NegatedEnsemble, \
-    ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble
+    ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \
+    SequentialEnsemble
 
 from snapshot import Snapshot, Configuration, Momentum
 
