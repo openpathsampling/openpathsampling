@@ -158,7 +158,6 @@ class ShootMover(PathMover):
 
         path = Sample(trajectory=details.result, mover=self, ensemble=self.ensemble, details=details)
 
-        print path
         return path
     
     
