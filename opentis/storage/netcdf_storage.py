@@ -5,14 +5,11 @@ Created on 06.07.2014
 @author: JH Prinz
 '''
 
-import netCDF4 as netcdf # for netcdf interface provided by netCDF4 in enthought python
+import netCDF4 as netcdf
 import os.path
 
 import numpy
 import simtk.unit as u
-import simtk.openmm.app
-from simtk.unit import amu
-import mdtraj as md
 
 from object_storage import ObjectStorage
 from trajectory_store import TrajectoryStorage, SampleStorage
@@ -23,7 +20,7 @@ from opentis.pathmover import PathMover, MoveDetails
 from opentis.globalstate import GlobalState
 from orderparameter_store import ObjectDictStorage
 from opentis.orderparameter import OrderParameter
-from opentis.snapshot import Snapshot, Configuration
+from opentis.snapshot import Snapshot
 
 from opentis.storage.util import ObjectJSON
 from opentis.tools import units_from_snapshot
@@ -126,8 +123,8 @@ class Storage(netcdf.Dataset):
             # Save the initial configuration
             self.configuration.save(template)
 
-            self.createVariable('initial_configuration_idx', 'i4', 'scalar')
-            self.variables['initial_configuration_idx'][:] = template.idx[self]
+            self.createVariable('template_idx', 'i4', 'scalar')
+            self.variables['template_idx'][:] = template.idx[self]
 
             self.sync()
 
@@ -151,8 +148,8 @@ class Storage(netcdf.Dataset):
             self.atoms = self.topology.n_atoms
 
     @property
-    def initial_configuration(self):
-        return self.configuration.load(int(self.variables['initial_configuration_idx'][0]))
+    def template(self):
+        return self.configuration.load(int(self.variables['template_idx'][0]))
 
     def get_unit(self, dimension):
         """

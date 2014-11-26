@@ -1,5 +1,4 @@
 import svgwrite
-import argparse
 import os
 
 

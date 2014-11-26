@@ -4,9 +4,7 @@ import yaml
 import numpy as np
 
 from wrapper import savecache, saveidentifiable, loadcache
-
 from util import StorableObjectJSON
-
 import simtk.unit as u
 
 def add_storage_name(func):

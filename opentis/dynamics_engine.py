@@ -4,15 +4,9 @@ Created on 01.07.2014
 @author JDC Chodera
 @author: JH Prinz
 '''
-import os
 
-from opentis.storage import Storage
 from opentis.trajectory import Trajectory
-from opentis.snapshot import Snapshot
-from opentis.snapshot import Configuration, Momentum
 from opentis.ensemble import LengthEnsemble
-
-
 
 #=============================================================================
 # SOURCE CONTROL

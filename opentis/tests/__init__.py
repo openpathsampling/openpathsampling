@@ -1,11 +1,7 @@
 import os
 
-from opentis.storage import Storage, TrajectoryStorage, SnapshotStorage
+from opentis.storage import Storage
 from opentis.trajectory import Trajectory
-from opentis.dynamics_engine import DynamicsEngine
-from opentis.openmm_engine import OpenMMEngine
-from opentis.snapshot import Configuration
-import simtk.unit as units
 import mdtraj as md
 from opentis.tools import snapshot_from_pdb
 

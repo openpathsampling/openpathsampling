@@ -9,8 +9,6 @@ import copy
 import numpy as np
 import mdtraj as md
 
-import simtk.unit as units
-
 #=============================================================================
 # SIMULATION CONFIGURATION
 #=============================================================================

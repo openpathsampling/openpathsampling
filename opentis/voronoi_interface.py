@@ -4,11 +4,6 @@ Created on 10.07.2014
 @author: jan-hendrikprinz
 '''
 
-#from __future__ import print_function, absolute_import, division
-import numpy as np
-from msmbuilder import clustering
-
-from msmbuilder.metrics import RMSD
 
 class Object(object):
             pass

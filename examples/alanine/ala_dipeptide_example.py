@@ -11,6 +11,7 @@ TIS simulation on alanine dipeptide.
 
 import numpy as np
 import mdtraj as md
+import time
 
 import sys, os
 sys.path.append(os.path.abspath('../'))
@@ -27,24 +28,17 @@ from opentis.pathmover import PathMoverFactory as mf
 from opentis.ensemble import EnsembleFactory as ef
 from opentis.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
                               InXEnsemble)
-from opentis.storage import Storage
-from opentis.trajectory import Trajectory
 from opentis.calculation import Bootstrapping
-from opentis.pathmover import (PathMover, MixedMover, ForwardShootMover, 
-                       BackwardShootMover)
+from opentis.pathmover import PathMover
 from opentis.shooting import UniformSelector
 
-from simtk.unit import femtoseconds, picoseconds, nanometers, kelvin, dalton
-
-import opentis.tools as mdtools
-
-import time
+import simtk.unit as u
 
 
 if __name__=="__main__":
-    options = {'temperature' : 300.0 * kelvin,
-               'collision_rate' : 1.0 / picoseconds,
-               'timestep' : 2.0 * femtoseconds,
+    options = {'temperature' : 300.0 * u.kelvin,
+               'collision_rate' : 1.0 / u.picoseconds,
+               'timestep' : 2.0 * u.femtoseconds,
                'nsteps_per_frame' : 10,
                'n_frames_max' : 5000,
                'start_time' : time.time(),
@@ -55,18 +49,8 @@ if __name__=="__main__":
                'forcefield_solvent' : 'tip3p.xml'
               }
 
-    snapshot = mdtools.snapshot_from_pdb('../data/Alanine_solvated.pdb')
-
-    print snapshot
-
-#    storage = Storage(
-#        filename="trajectory.nc",
-#        template = snapshot,
-#        mode='w'
-#    )
-
-    engine = OpenMMEngine(filename="trajectory.nc",
-                          topology_file='../data/Alanine_solvated.pdb',
+    engine = OpenMMEngine.auto(filename="trajectory.nc",
+                          template='../data/Alanine_solvated.pdb',
                           options=options,
                           mode='create'
                          )

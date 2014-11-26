@@ -39,7 +39,7 @@ class testOpenMMEngine(object):
 
         context = self.engine.simulation.context
         zero_array = np.zeros((self.engine.n_atoms, 3))
-        context.setPositions(self.engine.initial_configuration.coordinates)
+        context.setPositions(self.engine.template.coordinates)
         context.setVelocities(Quantity(zero_array, nanometers / picoseconds))
 
     def teardown(self):
@@ -85,7 +85,7 @@ class testOpenMMEngine(object):
                                  vel)
 
     def test_snapshot_set(self):
-        pdb_pos = (self.engine.initial_configuration.coordinates / nanometers)
+        pdb_pos = (self.engine.template.coordinates / nanometers)
         testvel = []
         testpos = []
         for i in range(len(pdb_pos)):
@@ -145,7 +145,7 @@ class testOpenMMEngine(object):
         )
 
     def test_configuration_setter(self):
-        pdb_pos = (self.engine.initial_configuration.coordinates / nanometers)
+        pdb_pos = (self.engine.template.coordinates / nanometers)
         testpos = []
         for i in range(len(pdb_pos)):
             testpos.append(list(np.array(pdb_pos[i]) + 

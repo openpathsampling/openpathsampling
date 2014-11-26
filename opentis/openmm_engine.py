@@ -1,101 +1,101 @@
+import os
 import numpy as np
-from snapshot import Snapshot, Configuration, Momentum
-from dynamics_engine import DynamicsEngine
 from integrators import VVVRIntegrator
 
-from simtk.unit import femtoseconds, picoseconds, nanometers, kelvin, dalton
-from simtk.unit import Quantity
-
-import simtk.unit as units
-
-import simtk.openmm.app
-
+import simtk.unit as u
 import simtk.openmm as openmm
 from simtk.openmm.app import ForceField, PME, HBonds, PDBFile
-import mdtraj as md
 
 from opentis.storage import Storage
-
 from opentis.tools import snapshot_from_pdb, to_openmm_topology
+from opentis.wrapper import storable
+from opentis.dynamics_engine import DynamicsEngine
+from opentis.snapshot import Snapshot, Configuration, Momentum
 
-import os
-
+@storable
 class OpenMMEngine(DynamicsEngine):
     """We only need a few things from the simulation. This object duck-types
     an OpenMM simulation object so that it quacks the methods we need to
     use."""
 
-    def __init__(self, filename, topology_file, options, mode='auto'):
+    units = {
+        'length' : u.nanometers,
+        'velocity' : u.nanometers / u.picoseconds,
+        'energy' : u.kilojoules_per_mole
+    }
 
+    @staticmethod
+    def auto(filename, template, options, mode):
         if mode == 'auto':
             if os.path.isfile(filename):
                 mode = 'restore'
             else:
                 mode = 'create'
 
-        self.fn_storage = filename
-
         if mode == 'create':
-
-            self.options = options
-
-            # for openmm we will create a suitable for configuration with
-            # attached box_vectors and topolgy
-
-            self.initial_configuration = None
-
-            if isinstance(topology_file, md.Topology):
-                self.topology = topology_file
-                # This also needs box_dimensions
-                # Right now this is not supported
-
-            elif isinstance(topology_file, simtk.openmm.app.Topology):
-                # In case of an openmm toppology we use the box size in the topologgy and create empty coordinates
-                n_atoms = self.topology_file.n_atoms
-
-                self.initial_configuration = Configuration(
-                    coordinates=units.Quantity(np.zeros((n_atoms, 3)), units.nanometer),
-                    box_vectors=units.Quantity(self.topology.setUnitCellDimensions(), units.nanometer),
-                    potential_energy=units.Quantity(0.0, units.kilojoules_per_mole),
-                    topology=md.Topology.from_openmm(topology_file)
-                )
-
-            elif type(topology_file) is str:
-                self.initial_configuration = snapshot_from_pdb(topology_file)
-
-            # once we have a template configuration (coordinates to not really matter)
-            # we can create a storage. We might move this logic out of the dynamics engine
-            # and keep sotrage and engine generation completely separate!
-
-            storage = Storage(
-                filename=self.fn_storage,
-                template=self.initial_configuration,
-                mode='w'
-            )
-
-            # save simulator options, should be replaced by just saving the simulator object
-            storage.init_str('simulation_options')
-            storage.write_as_json('simulation_options', self.options)
-
-            self.storage = storage
-
+            return OpenMMEngine.create_with_storage(filename, template, options)
         elif mode == 'restore':
-            # open storage, which also gets the topology!
-            self.storage = Storage(
-                filename=self.fn_storage,
-                mode='a'
-            )
+            return OpenMMEngine.restore_from_storage(filename)
+        else:
+            raise ValueError('Unknown mode: ' + mode)
+            return None
 
-            self.options = self.storage.restore_object('simulation_options')
 
-        # finally restored storage, topology and the options to lets build the actual engine
+    @staticmethod
+    def create_with_storage(filename, template, options):
+        # for openmm we will create a suitable for configuration with
+        # attached box_vectors and topolgy
 
-        self.topology = self.storage.topology
-        self.initial_configuration = self.storage.initial_configuration
+        if type(template) is str:
+            template = snapshot_from_pdb(template)
 
-        super(OpenMMEngine, self).__init__(
-            options=options
+        # once we have a template configuration (coordinates to not really matter)
+        # we can create a storage. We might move this logic out of the dynamics engine
+        # and keep storage and engine generation completely separate!
+
+        storage = Storage(
+            filename=filename,
+            template=template,
+            mode='w'
         )
+
+        # save simulator options, should be replaced by just saving the simulator object
+        storage.init_str('simulation_options')
+        storage.write_as_json('simulation_options', options)
+
+        engine = OpenMMEngine(template, options)
+        engine.storage = storage
+
+        return engine
+
+    @staticmethod
+    def restore_from_storage(filename):
+        # open storage, which also gets the topology!
+        storage = Storage(
+            filename=filename,
+            mode='a'
+        )
+
+        options = storage.restore_object('simulation_options')
+        engine = OpenMMEngine(storage.template, options)
+
+        engine.storage = storage
+
+        return engine
+
+
+    def __init__(self, template, options=None):
+
+        if options is not None:
+            self.options = options
+        else:
+            self.options = {}
+        super(OpenMMEngine, self).__init__(
+            options=self.options
+        )
+
+        self.template = template
+        self.topology = template.topology
 
         # set up the max_length_stopper (if n_frames_max is given)
         if 'nsteps_per_frame' in self.options:
@@ -110,21 +110,21 @@ class OpenMMEngine(DynamicsEngine):
         self.n_atoms = self.topology.n_atoms
 
         # set up the OpenMM simulation
-        forcefield = ForceField( options["forcefield_solute"],
-                                 options["forcefield_solvent"] )
+        forcefield = ForceField( self.options["forcefield_solute"],
+                                 self.options["forcefield_solvent"] )
 
-        openmm_topology = to_openmm_topology(self.initial_configuration)
+        openmm_topology = to_openmm_topology(self.template)
 
         system = forcefield.createSystem( openmm_topology,
                                           nonbondedMethod=PME,
-                                          nonbondedCutoff=1.0 * nanometers,
+                                          nonbondedCutoff=1.0 * u.nanometers,
                                           constraints=HBonds )
 
 #        self.system_serial = openmm.XmlSerializer.serialize(system)
 
-        integrator = VVVRIntegrator( options["temperature"],
-                                     options["collision_rate"],
-                                     options["timestep"] )
+        integrator = VVVRIntegrator( self.options["temperature"],
+                                     self.options["collision_rate"],
+                                     self.options["timestep"] )
 
 #        self.integrator_serial = openmm.XmlSerializer.serialize(system)
 #        self.integrator_class = type(integrator).__name__
@@ -135,8 +135,6 @@ class OpenMMEngine(DynamicsEngine):
         # claim the OpenMM simulation as our own
         self.simulation = simulation
 
-        return
-
 
     def equilibrate(self, nsteps):
         # TODO: rename... this is position restrained equil, right?
@@ -144,7 +142,7 @@ class OpenMMEngine(DynamicsEngine):
         system = self.simulation.system
         n_solute = len(self.solute_indices)
 
-        solute_masses = Quantity(np.zeros(n_solute, np.double), dalton)
+        solute_masses = u.Quantity(np.zeros(n_solute, np.double), u.dalton)
         for i in self.solute_indices:
             solute_masses[i] = system.getParticleMass(i)
             system.setParticleMass(i,0.0)
@@ -152,7 +150,7 @@ class OpenMMEngine(DynamicsEngine):
         self.simulation.step(nsteps)
 
         for i in self.solute_indices:
-            system.setParticleMass(i, solute_masses[i].value_in_unit(dalton))
+            system.setParticleMass(i, solute_masses[i].value_in_unit(u.dalton))
 
 
 
