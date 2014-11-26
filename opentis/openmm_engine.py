@@ -25,7 +25,7 @@ class OpenMMEngine(DynamicsEngine):
     }
 
     @staticmethod
-    def auto(filename, template, options, mode):
+    def auto(filename, template, options, mode='auto'):
         if mode == 'auto':
             if os.path.isfile(filename):
                 mode = 'restore'

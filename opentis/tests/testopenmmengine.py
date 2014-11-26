@@ -31,9 +31,9 @@ class testOpenMMEngine(object):
                    'forcefield_solute' : 'amber96.xml',
                    'forcefield_solvent' : 'tip3p.xml'
                   }
-        self.engine = OpenMMEngine(
+        self.engine = OpenMMEngine.auto(
             filename=data_filename("openmmengine_test.nc"), 
-            topology_file=data_filename("ala_small_traj.pdb"), 
+            template=data_filename("ala_small_traj.pdb"),
             options=options
         )
 
