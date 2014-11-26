@@ -7,6 +7,7 @@ from opentis.openmm_engine import OpenMMEngine
 from opentis.snapshot import Configuration
 import simtk.unit as units
 import mdtraj as md
+from opentis.tools import snapshot_from_pdb
 
 from test_helpers import data_filename
 
@@ -15,7 +16,7 @@ def setup_package():
     # everything else
     mdtrajectory = md.load(data_filename("ala_small_traj.pdb"))
 
-    initial_configuration = Configuration.from_pdb(data_filename("ala_small_traj.pdb"))
+    snapshot = snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
 
     # once we have a template configuration (coordinates to not really matter)
     # we can create a storage. We might move this logic out of the dynamics engine
@@ -23,7 +24,7 @@ def setup_package():
 
     storage = Storage(
         filename=data_filename("ala_small_traj.nc"),
-        template=initial_configuration,
+        template=snapshot,
         mode='w'
     )
 
