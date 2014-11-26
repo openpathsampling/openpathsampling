@@ -90,7 +90,8 @@ def setUp():
     trajtypes = ["a", "o", "aa", "ab", "aob", "bob", "aba", "aaa", "abcba",
                  "abaa", "abba", "abaab", "ababa", "abbab", "ac", "bc",
                  "abaaba", "aobab", "abab", "abcbababcba", "aca", "abc",
-                 "acaca", "acac", "caca", "aaca", "baca", "aaba", "aab"
+                 "acaca", "acac", "caca", "aaca", "baca", "aaba", "aab",
+                 "aabbaa"
                 ]
     ttraj = build_trajdict(trajtypes, lower, upper)
 
@@ -875,6 +876,21 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
         for test in results.keys():
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(ens, ttraj[test], results[test], failmsg)
+
+    def test_sliced_sequential_subtraj_middle(self):
+        even_slice = slice(None, None, 2)
+        ens = SequentialEnsemble([
+            InXEnsemble(vol1),
+            SlicedTrajectoryEnsemble(OutXEnsemble(vol1), even_slice),
+            InXEnsemble(vol1) & LengthEnsemble(1)
+        ])
+        bare_results = {'in_in_out_out_in_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(ens, ttraj[test], results[test], failmsg)
+
 
     def test_sliced_str(self):
         even_slice = slice(None,None, 2)
