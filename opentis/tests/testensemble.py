@@ -856,7 +856,6 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(ens, ttraj[test], results[test], failmsg)
 
-
     def test_sliced_sequential_subtraj_member(self):
         even_slice = slice(None, None, 2)
         ens = SequentialEnsemble([
@@ -877,6 +876,21 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(ens, ttraj[test], results[test], failmsg)
 
+    def test_sliced_str(self):
+        even_slice = slice(None,None, 2)
+        slice_1_10 = slice(1, 10)
+        slice_1_end = slice(1,None)
+        slice_no_ends = slice(1, -1)
+        inX = InXEnsemble(vol1)
+        inXstr = "x[t] in {x|Id(x) in [0.1, 0.5]} for all t"
+        assert_equal(SlicedTrajectoryEnsemble(inX, even_slice).__str__(),
+                     "("+inXstr+" in {:} every 2)")
+        assert_equal(SlicedTrajectoryEnsemble(inX, slice_1_10).__str__(),
+                     "("+inXstr+" in {1:10})")
+        assert_equal(SlicedTrajectoryEnsemble(inX, slice_1_end).__str__(),
+                     "("+inXstr+" in {1:})")
+        assert_equal(SlicedTrajectoryEnsemble(inX, slice_no_ends).__str__(),
+                     "("+inXstr+" in {1:-1})")
 
 class testOptionalEnsemble(EnsembleTest):
     def setUp(self):

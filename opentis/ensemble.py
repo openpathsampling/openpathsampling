@@ -1041,6 +1041,16 @@ class SlicedTrajectoryEnsemble(AlteredEnsemble):
     def _alter(self, trajectory):
         return trajectory[self.slice]
 
+    def __str__(self):
+        # TODO: someday may add different string support for slices with
+        # only one frame
+        start = "" if self.slice.start is None else str(self.slice.start)
+        stop = "" if self.slice.stop is None else str(self.slice.stop)
+        step = "" if self.slice.step is None else " every "+str(self.slice.step)
+        return ("(" + self.ensemble.__str__() +
+                " in {" + start + ":" + stop + "}" + step + ")")
+
+
 
 class BackwardPrependedTrajectoryEnsemble(AlteredEnsemble):
     '''
