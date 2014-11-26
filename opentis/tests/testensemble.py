@@ -59,15 +59,27 @@ def build_trajdict(trajtypes, lower, upper):
         mydict[lowersubkey] = map(lower.__sub__, delta)
     return mydict 
 
+def tstr(ttraj):
+    return list(ttraj).__str__()
+
+def results_upper_lower(adict):
+    res_dict = {}
+    for test in adict.keys():
+        res_dict['upper_'+test] = adict[test]
+        res_dict['lower_'+test] = adict[test]
+    return res_dict
+
+
 def setUp():
     ''' Setup for tests of classes in ensemble.py. '''
     #random.seed
-    global lower, upper, op, vol1, vol2, ttraj
+    global lower, upper, op, vol1, vol2, vol3, ttraj
     lower = 0.1
     upper = 0.5
     op = CallIdentity()
     vol1 = LambdaVolume(op, lower, upper)
     vol2 = LambdaVolume(op, -0.1, 0.7)
+    vol3 = LambdaVolume(op, 2.0, 2.5)
     # we use the following codes to describe trajectories:
     # in : in the state
     # out : out of the state
@@ -75,10 +87,11 @@ def setUp():
     #
     # deltas of each letter from state edge:
     # a < 0 ; 0 < b < 0.2 ; c > 0.2; o = 0
-    trajtypes = ["a", "o", "ab", "aob", "bob", "aba", "aaa", "abcba",
-                 "abaa", "abba", "abaab", "ababa", "abbab",
-                 "abaaba", "aobab", "abab", "abcbababcba", "aca", 
-                 "acaca", "acac", "caca", "aaca", "baca", "aaba", "aab"
+    trajtypes = ["a", "o", "aa", "ab", "aob", "bob", "aba", "aaa", "abcba",
+                 "abaa", "abba", "abaab", "ababa", "abbab", "ac", "bc",
+                 "abaaba", "aobab", "abab", "abcbababcba", "aca", "abc",
+                 "acaca", "acac", "caca", "aaca", "baca", "aaba", "aab",
+                 "aabbaa"
                 ]
     ttraj = build_trajdict(trajtypes, lower, upper)
 
@@ -770,3 +783,287 @@ and
   len(x) = 1
 )
 ]""")
+
+class testSlicedTrajectoryEnsemble(EnsembleTest):
+    def test_sliced_ensemble_init(self):
+        init_as_int = SlicedTrajectoryEnsemble(InXEnsemble(vol1), 3)
+        init_as_slice = SlicedTrajectoryEnsemble(InXEnsemble(vol1),
+                                                 slice(3, 4))
+        assert_equal(init_as_int, init_as_slice)
+        assert_equal(init_as_slice.slice, init_as_int.slice)
+
+    def test_sliced_as_TISEnsemble(self):
+        '''SlicedTrajectory and Sequential give same TIS results'''
+        sliced_tis = (
+            SlicedTrajectoryEnsemble(InXEnsemble(vol1), 0) &
+            SlicedTrajectoryEnsemble(OutXEnsemble(vol1 | vol3), slice(1,-1)) & 
+            SlicedTrajectoryEnsemble(LeaveXEnsemble(vol2), slice(1,-1)) &
+            SlicedTrajectoryEnsemble(InXEnsemble(vol1 | vol3), -1)
+        )
+        sequential_tis = SequentialEnsemble([
+            InXEnsemble(vol1) & LengthEnsemble(1),
+            OutXEnsemble(vol1 | vol3) & LeaveXEnsemble(vol2),
+            InXEnsemble(vol1 | vol3) & LengthEnsemble(1)
+        ])
+        for test in ttraj.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(sliced_tis, ttraj[test], 
+                              sequential_tis(ttraj[test]), failmsg)
+
+    def test_slice_outside_trajectory_range(self):
+        ens = SlicedTrajectoryEnsemble(InXEnsemble(vol1), slice(5,9))
+        test = 'upper_in'
+        # the slice should return the empty trajectory, and therefore should
+        # return false
+        assert_equal(ens(ttraj[test]), False)
+
+    def test_even_sliced_trajectory(self):
+        even_slice = slice(None, None, 2)
+        ens = SlicedTrajectoryEnsemble(InXEnsemble(vol1), even_slice)
+        bare_results = {'in' : True,
+                        'in_in' : True,
+                        'in_in_in' : True,
+                        'in_out_in' : True,
+                        'in_in_out' : False,
+                        'in_out_in_in' : True,
+                        'in_out_in_out_in' : True,
+                        'out' : False,
+                        'in_in_out_in' : False,
+                        'in_cross_in_cross' : True
+                       }
+        results = results_upper_lower(bare_results)
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(ens, ttraj[test], results[test], failmsg)
+
+    def test_sliced_sequential_global_whole(self):
+        even_slice = slice(None, None, 2)
+        ens = SlicedTrajectoryEnsemble(SequentialEnsemble([
+            InXEnsemble(vol1),
+            OutXEnsemble(vol1)
+        ]), even_slice)
+
+        bare_results = {'in_in_out' : True,
+                        'in_hit_out' : True,
+                        'in_out_out_in_out' : True,
+                        'in_hit_out_in_out' : True,
+                        'in_out_out_in' : True,
+                        'in_cross_in_cross' : False,
+                        'in_out_out_in' : True,
+                        'in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(ens, ttraj[test], results[test], failmsg)
+
+    def test_sliced_sequential_subtraj_member(self):
+        even_slice = slice(None, None, 2)
+        ens = SequentialEnsemble([
+            InXEnsemble(vol1),
+            SlicedTrajectoryEnsemble(OutXEnsemble(vol1), even_slice)
+        ])
+        bare_results = {'in_out_in' : True,
+                        'in_out_out_in' : False,
+                        'in_in_out_in' : True,
+                        'in_in_out' : True,
+                        'in_in_cross_in' : True,
+                        'in_out_in_out' : True,
+                        'in_out_cross_out_in_out_in_out_cross_out_in' : True,
+                        'in_out_in_in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(ens, ttraj[test], results[test], failmsg)
+
+    def test_sliced_sequential_subtraj_middle(self):
+        even_slice = slice(None, None, 2)
+        ens = SequentialEnsemble([
+            InXEnsemble(vol1),
+            SlicedTrajectoryEnsemble(OutXEnsemble(vol1), even_slice),
+            InXEnsemble(vol1) & LengthEnsemble(1)
+        ])
+        bare_results = {'in_in_out_out_in_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(ens, ttraj[test], results[test], failmsg)
+
+
+    def test_sliced_str(self):
+        even_slice = slice(None,None, 2)
+        slice_1_10 = slice(1, 10)
+        slice_1_end = slice(1,None)
+        slice_no_ends = slice(1, -1)
+        inX = InXEnsemble(vol1)
+        inXstr = "x[t] in {x|Id(x) in [0.1, 0.5]} for all t"
+        assert_equal(SlicedTrajectoryEnsemble(inX, even_slice).__str__(),
+                     "("+inXstr+" in {:} every 2)")
+        assert_equal(SlicedTrajectoryEnsemble(inX, slice_1_10).__str__(),
+                     "("+inXstr+" in {1:10})")
+        assert_equal(SlicedTrajectoryEnsemble(inX, slice_1_end).__str__(),
+                     "("+inXstr+" in {1:})")
+        assert_equal(SlicedTrajectoryEnsemble(inX, slice_no_ends).__str__(),
+                     "("+inXstr+" in {1:-1})")
+
+class testOptionalEnsemble(EnsembleTest):
+    def setUp(self):
+        self.start_opt = SequentialEnsemble([
+            OptionalEnsemble(OutXEnsemble(vol1)),
+            InXEnsemble(vol1),
+            OutXEnsemble(vol1),
+        ])
+        self.end_opt = SequentialEnsemble([
+            OutXEnsemble(vol1),
+            InXEnsemble(vol1),
+            OptionalEnsemble(OutXEnsemble(vol1))
+        ])
+        self.mid_opt = SequentialEnsemble([
+            InXEnsemble(vol1),
+            OptionalEnsemble(OutXEnsemble(vol1) & InXEnsemble(vol2)),
+            OutXEnsemble(vol2),
+        ])
+
+    def test_optional_start(self):
+        bare_results = {'in_out' : True,
+                        'in_in_out' : True,
+                        'out_in_out' : True,
+                        'out_out' : False,
+                        'out_in_in_out' : True,
+                        'in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.start_opt
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_start_can_append(self):
+        bare_results = {'in' : True,
+                        'out' : True,
+                        'in_out' : True,
+                        'out_in' : True,
+                        'out_out_in' : True,
+                        'in_out_in' : False,
+                        'out_in_out' : True
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.start_opt.can_append
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_start_can_preprend(self):
+        bare_results = {'in' : True,
+                        'out' : True,
+                        'out_in_out' : True,
+                        'out_out_in_out' : True,
+                        'in_out' : True,
+                        'out_in_out' : True,
+                        'in_out_in_out' : False,
+                        'out_in' : True,
+                        'out_in_out_in' : False,
+                        'in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.start_opt.can_prepend
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_middle(self):
+        bare_results = {'in_out_cross' : True,
+                        'in_cross' :  True,
+                        'in_out' : False,
+                        'out_cross' : False,
+                        'cross_in_cross_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.mid_opt
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_middle_can_append(self):
+        bare_results = {'in' : True,
+                        'out' : True,
+                        'in_out' : True,
+                        'out_in' : False,
+                        'in_cross' : True,
+                        'in_out_cross' : True,
+                        'out_cross' : True,
+                        'in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.mid_opt.can_append
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_middle_can_preprend(self):
+        bare_results = {'in' : True,
+                        'out' : True,
+                        'in_out' : True,
+                        'out_in' : False,
+                        'in_cross' : True,
+                        'out_cross' : True,
+                        'in_cross_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.mid_opt.can_prepend
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_end(self):
+        bare_results = {'out_in' : True,
+                        'out_in_out' : True,
+                        'in_out' : False,
+                        'out_out_in_out' : True,
+                        'out_in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.end_opt
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_end_can_append(self):
+        bare_results = {'in' : True,
+                        'out' : True,
+                        'out_in' : True,
+                        'in_out' : True,
+                        'out_in_out' : True,
+                        'in_out_in' : False,
+                        'out_in_out_in' : False,
+                        'in_in_out' : True
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.end_opt.can_append
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_middle_can_prepend(self):
+        bare_results = {'in' : True,
+                        'out' : True,
+                        'out_in' : True,
+                        'in_out' : True,
+                        'out_in_out' : True,
+                        'in_out_in_out' : False,
+                        'in_out_in' : False,
+                        'out_in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.end_opt.can_prepend
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+
+    def test_optional_str(self):
+        inX = InXEnsemble(vol1)
+        opt_inX = OptionalEnsemble(inX)
+        assert_equal(opt_inX.__str__(), "{"+inX.__str__()+"} (OPTIONAL)")
