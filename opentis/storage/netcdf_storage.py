@@ -232,7 +232,11 @@ class Storage(netcdf.Dataset):
         self.createVariable(name, 'str', 'scalar')
 
     def save(self, obj, *args, **kwargs):
-        if type(obj) in self._storages:
+        if type(obj) is list:
+            return [ self.save(part, *args, **kwargs) for part in obj]
+        elif type(obj) is tuple:
+            return tuple([self.save(part, *args, **kwargs) for part in obj])
+        elif type(obj) in self._storages:
             store = self._storages[type(obj)]
             store.save(obj, *args, **kwargs)
             return obj.__class__.__name__
