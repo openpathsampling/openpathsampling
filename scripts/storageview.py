@@ -151,7 +151,6 @@ if __name__ == '__main__':
 
 
     for o_idx in range(0, storage.sample.count()):
-        print o_idx
         sample = storage.sample.load(o_idx)
 #        nline(o_idx, '', sample.details.json)
         nline(o_idx, str(sample.mover.name) + "/" + str(sample.details.mover.name), str([t.idx[storage] for t in sample.details.inputs]) +" -> " + str(sample.details.final.idx[storage]) + " in " + sample.ensemble.name + " [" + str(sample.ensemble.idx[storage]) + "]")

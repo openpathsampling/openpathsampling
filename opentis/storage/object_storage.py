@@ -31,7 +31,7 @@ class ObjectStorage(object):
     Base Class for storing complex objects in a netCDF4 file. It holds a reference to the store file.
     """
 
-    def __init__(self, storage, obj, named=False, json=False, identifier=None):
+    def __init__(self, storage, obj, named=False, json=False, identifier=None, dimension_units=None):
         """
 
         :param storage: a reference to the netCDF4 file
@@ -52,13 +52,20 @@ class ObjectStorage(object):
         else:
             self.identifier = None
 
-        self._units = dict()
+        if dimension_units is not None:
+            self.dimension_units = dimension_units
+        else:
+            self.dimension_units = {}
 
     @property
-    def unit(self):
-        return self.storage.unit
+    def units(self):
+        return self.storage.units
 
     def register(self):
+        self.storage._storages[self.content_class] = self
+        self.storage._storages[self.content_class.__name__] = self
+        self.storage._storages[self.content_class.__name__.lower()] = self
+
         self.storage.links.append(self)
         return self
 
@@ -244,7 +251,7 @@ class ObjectStorage(object):
         '''
         return self.count()
 
-    def _init(self):
+    def _init(self, units=None):
         """
         Initialize the associated storage to allow for object storage. Mainly creates an index dimension with the name of the object.
 
@@ -415,7 +422,7 @@ class ObjectStorage(object):
         for key, value in data.iteritems():
             setattr(obj, key, value)
 
-        setattr(obj, 'cls', simplified[1])
+        setattr(obj, 'cls', simplified[0])
 
         return obj
 
@@ -432,7 +439,8 @@ class ObjectStorage(object):
     def object_to_json(self, obj):
         data = obj.__dict__
         cls = obj.__class__.__name__
-        store = obj.cls
+#        store = obj.cls
+        store = ""
 
         json_string = self.simplifier.to_json([cls, store, data])
 

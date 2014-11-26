@@ -23,7 +23,7 @@ def setup_package():
 
     storage = Storage(
         filename=data_filename("ala_small_traj.nc"),
-        configuration_template=initial_configuration,
+        template=initial_configuration,
         mode='w'
     )
 

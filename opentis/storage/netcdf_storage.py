@@ -9,7 +9,7 @@ import netCDF4 as netcdf # for netcdf interface provided by netCDF4 in enthought
 import os.path
 
 import numpy
-import simtk.unit as units
+import simtk.unit as u
 import simtk.openmm.app
 from simtk.unit import amu
 import mdtraj as md
@@ -26,6 +26,7 @@ from opentis.orderparameter import OrderParameter
 from opentis.snapshot import Snapshot, Configuration
 
 from opentis.storage.util import ObjectJSON
+from opentis.tools import units_from_snapshot
 
 
 #=============================================================================================
@@ -44,7 +45,7 @@ class Storage(netcdf.Dataset):
     simulation. This allows effective storage of shooting trajectories '''
 
     def __init__(self, filename='trajectory.nc', mode=None,
-                 configuration_template=None, n_atoms=None):
+                 template=None, n_atoms=None, units=None):
         '''
         Create a storage for complex objects in a netCDF file
         
@@ -65,6 +66,8 @@ class Storage(netcdf.Dataset):
             else:
                 mode = 'w'
 
+        self._storages = {}
+
         self.filename = filename
         self.links = []
 
@@ -72,7 +75,15 @@ class Storage(netcdf.Dataset):
 
         self.units = dict()
 
-        print filename, 'exits:', os.path.isfile(filename), '/ mode', mode
+        self.dimension_units = {
+            'length' : u.nanometers,
+            'velocity' : u.nanometers / u.picoseconds,
+            'energy' : u.kilojoules_per_mole
+        }
+
+        if units is not None:
+            self.dimension_units.update(units)
+
         super(Storage, self).__init__(filename, mode)
 
         self.trajectory = TrajectoryStorage(self).register()
@@ -86,34 +97,37 @@ class Storage(netcdf.Dataset):
         self.shootingpoint = ObjectStorage(self, ShootingPoint, named=True, json=True).register()
         self.shootingpointselector = ObjectStorage(self, ShootingPointSelector, named=True, json=True, identifier='json').register()
         self.globalstate = ObjectStorage(self, GlobalState, named=True, json=True, identifier='json').register()
+        # self.engine = ObjectStorage(self, Engine, named=True, json=True, identifier='json').register()
         self.collectivevariable = ObjectDictStorage(self, OrderParameter, Snapshot).register()
         self.cv = self.collectivevariable
 
         if mode == 'w':
             self._init()
 
-            if configuration_template.topology is not None:
-                self.topology = configuration_template.topology
+            if template.topology is not None:
+                self.topology = template.topology
 
             if n_atoms is not None:
                 self.atoms = n_atoms
             elif self.topology is not None:
                 self.atoms = self.topology.n_atoms
-            elif configuration_template.coordinates is not None:
-                self.atoms = configuration_template.coordinates.shape[0]
+            elif template.coordinates is not None:
+                self.atoms = template.coordinates.shape[0]
             else:
                 raise RuntimeError("Storage given neither n_atoms nor topology")
 
-            self._init_classes()
+            # update the units for dimensions from the template
+            self.dimension_units.update(units_from_snapshot(template))
+            self._init_classes(units=self.dimension_units)
 
             # create a json from the mdtraj.Topology() and store it
             self.write_str('topology', self.simplifier.to_json(self.simplifier.topology_to_dict(self.topology)))
 
             # Save the initial configuration
-            self.configuration.save(configuration_template)
+            self.configuration.save(template)
 
             self.createVariable('initial_configuration_idx', 'i4', 'scalar')
-            self.variables['initial_configuration_idx'][:] = configuration_template.idx[self]
+            self.variables['initial_configuration_idx'][:] = template.idx[self]
 
             self.sync()
 
@@ -124,10 +138,8 @@ class Storage(netcdf.Dataset):
             for variable_name in self.variables:
                 unit = None
                 variable = self.variables[variable_name]
-                print variable_name,
                 if hasattr(variable, 'unit_simtk'):
                     unit_dict = self.simplifier.from_json(getattr(variable, 'unit_simtk'))
-                    print unit_dict
                     if unit_dict is not None:
                         unit = self.simplifier.unit_from_dict(unit_dict)
 
@@ -146,7 +158,7 @@ class Storage(netcdf.Dataset):
         """
         Return a simtk.Unit instance from the unit_system the is of the specified dimension, e.g. length, time
         """
-        return units.Unit({self.unit_system.base_units[units.BaseDimension(dimension)] : 1.0})
+        return u.Unit({self.unit_system.base_units[u.BaseDimension(dimension)] : 1.0})
 
     def __getattr__(self, item):
         return self.__dict__[item]
@@ -154,7 +166,7 @@ class Storage(netcdf.Dataset):
     def __setattr__(self, key, value):
         self.__dict__[key] = value
 
-    def _init_classes(self):
+    def _init_classes(self, units=None):
         '''
         Run the initialization on all added classes, when the storage is created only!
 
@@ -165,6 +177,7 @@ class Storage(netcdf.Dataset):
 
         for storage in self.links:
             # create a member variable which is the associated Class itself
+            storage.dimension_units.update(units)
             storage._init()
 
     def _restore_classes(self):
@@ -221,4 +234,22 @@ class Storage(netcdf.Dataset):
     def init_str(self, name):
         self.createVariable(name, 'str', 'scalar')
 
+    def save(self, obj, *args, **kwargs):
+        if type(obj) in self._storages:
+            store = self._storages[type(obj)]
+            store.save(obj, *args, **kwargs)
+            return obj.__class__.__name__
+        else:
+            # Make sure subclassed objects will also be stored
+            # Might come in handy someday
+            for ty in self._storages:
+                if type(ty) is not str and issubclass(type(obj), ty):
+                    store = self._storages[ty]
+                    store.save(obj, *args, **kwargs)
+                    return ty.__name__
 
+        return ''
+
+    def load(self, obj, *args, **kwargs):
+        store = self._storages[obj]
+        return store.load(*args, **kwargs)

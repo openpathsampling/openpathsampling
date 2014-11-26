@@ -128,30 +128,6 @@ class Configuration(object):
         else:
             raise ValueError("Cannot change potential_energy once they are set")
 
-    def to_openmm_topology(self):
-        if self.topology is not None:
-            openmm_topology = self.topology.to_openmm()
-            box_size_dimension = np.linalg.norm(self.box_vectors.value_in_unit(units.nanometer), axis=1)[0]
-            print box_size_dimension
-            openmm_topology.setUnitCellDimensions(box_size_dimension)
-
-            return openmm_topology
-        else:
-            return None
-
-    @staticmethod
-    def from_pdb(pdb_file):
-        pdb = md.load(pdb_file)
-
-        initial_configuration = Configuration(
-            coordinates=units.Quantity(pdb.xyz[0], units.nanometer),
-            box_vectors=units.Quantity(pdb.unitcell_vectors, units.nanometer),
-            potential_energy=units.Quantity(0.0, units.kilojoules_per_mole),
-            topology=pdb.topology
-        )
-
-        return initial_configuration
-
     def forget(self):
         """
         Will remove the stored coordinates from memory if they are stored in

@@ -330,11 +330,11 @@ class MomentumStorage(ObjectStorage):
         if 'spatial' not in self.storage.dimensions:
             self.init_dimension('spatial', 3)  # number of spatial dimensions
 
-        self.init_variable('momentum_velocities', 'float', (self.db, 'atom','spatial'), u.nanometers / u.picoseconds,
+        self.init_variable('momentum_velocities', 'float', (self.db, 'atom','spatial'), self.dimension_units['velocity'],
                 description="velocities[momentum][atom][coordinate] are velocities of atom 'atom' in" +
                             " dimension 'coordinate' of momentum 'momentum'.")
 
-        self.init_variable('momentum_kinetic', 'float', self.db, 'kilojoule_per_mole')
+        self.init_variable('momentum_kinetic', 'float', self.db, self.dimension_units['energy'])
 
 
     
@@ -441,7 +441,6 @@ class ConfigurationStorage(ObjectStorage):
         obj.potential_energy = potential_energy
 
     def coordinates_as_numpy(self, frame_indices=None, atom_indices=None):
-
         if frame_indices is None:
             frame_indices = slice(None)
 
@@ -506,10 +505,10 @@ class ConfigurationStorage(ObjectStorage):
         if 'spatial' not in self.storage.dimensions:
             self.init_dimension('spatial', 3)  # number of spatial dimensions
 
-        self.init_variable('configuration_coordinates', 'float', (self.db, 'atom','spatial'), 'nanometers',
+        self.init_variable('configuration_coordinates', 'float', (self.db, 'atom','spatial'), self.dimension_units['length'],
                 description="coordinates[configuration][atom][coordinate] are coordinate of atom 'atom' " +
                             "in dimension 'coordinate' of configuration 'configuration'.")
 
-        self.init_variable('configuration_box_vectors', 'float', (self.db, 'spatial', 'spatial'), 'nanometers')
+        self.init_variable('configuration_box_vectors', 'float', (self.db, 'spatial', 'spatial'), self.dimension_units['length'])
 
-        self.init_variable('configuration_potential', 'float', self.db, 'kilojoules_per_mole')
+        self.init_variable('configuration_potential', 'float', self.db, self.dimension_units['energy'])

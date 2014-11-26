@@ -1,5 +1,5 @@
 def storable(super_class):
-    super_class.cls = super_class.__name__.lower()
+#    super_class.cls = super_class.__name__.lower()
     super_class.default_storage = None
 
     def _init(self, *args, **kwargs):
@@ -12,6 +12,8 @@ def storable(super_class):
 
         if 'storage' in kwargs:
             self.default_storage = kwargs['storage']
+
+#        self._storable = True
 
     def _save(self, storage=None):
         if storage is None:

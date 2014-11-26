@@ -36,6 +36,8 @@ from opentis.shooting import UniformSelector
 
 from simtk.unit import femtoseconds, picoseconds, nanometers, kelvin, dalton
 
+import opentis.tools as mdtools
+
 import time
 
 
@@ -53,8 +55,18 @@ if __name__=="__main__":
                'forcefield_solvent' : 'tip3p.xml'
               }
 
+    snapshot = mdtools.snapshot_from_pdb('../data/Alanine_solvated.pdb')
+
+    print snapshot
+
+#    storage = Storage(
+#        filename="trajectory.nc",
+#        template = snapshot,
+#        mode='w'
+#    )
+
     engine = OpenMMEngine(filename="trajectory.nc",
-                          topology_file="../data/Alanine_solvated.pdb",
+                          topology_file='../data/Alanine_solvated.pdb',
                           options=options,
                           mode='create'
                          )

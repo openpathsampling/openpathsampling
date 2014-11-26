@@ -59,13 +59,13 @@ class ObjectJSON(object):
         '''
         Create a simtk.UnitSystem() from a serialialized list of strings representing the unitsystem
         '''
-        return units.UnitSystem([ getattr(units, unit_name).iter_all_base_units().next()[0] for unit_name in unit_system_list])
+        return units.UnitSystem([ getattr(units, unit_name).iter_base_or_scaled_units().next()[0] for unit_name in unit_system_list])
 
     def unit_to_symbol(self, unit):
         return str(1.0 * unit).split()[1]
 
     def unit_to_dict(self, unit):
-        unit_dict = {p.name : int(fac) for p, fac in unit.iter_all_base_units()}
+        unit_dict = {p.name : int(fac) for p, fac in unit.iter_base_or_scaled_units()}
         return unit_dict
 
     def unit_from_dict(self, unit_dict):
@@ -155,16 +155,26 @@ class StorableObjectJSON(ObjectJSON):
         self.storage = storage
 
     def simplify(self,obj):
+
         if type(obj).__module__ != '__builtin__':
-            if hasattr(obj, 'cls'):
-                getattr(self.storage, obj.cls).save(obj)
-                return { '_idx' : obj.idx[self.storage], '_cls' : obj.cls}
+            if hasattr(obj, 'idx'):
+#                getattr(self.storage, obj.cls).save(obj)
+                # this also return the base class name used for storage
+                base_cls = self.storage.save(obj)
+#                return { '_idx' : obj.idx[self.storage], '_cls' : obj.cls}
+                return { '_idx' : obj.idx[self.storage], '_base' : base_cls, '_cls' : obj.__class__.__name__ }
+
 
         return super(StorableObjectJSON, self).simplify(obj)
 
     def build(self,obj):
         if type(obj) is dict:
-            if '_cls' in obj and '_idx' in obj:
-                return getattr(self.storage, obj['_cls']).load(obj['_idx'])
+            if '_base' in obj and '_idx' in obj:
+                result = self.storage.load(obj['_base'], obj['_idx'])
+                # restore also the actual class name
+
+                result.cls = obj['_cls']
+                return result
+#                return getattr(self.storage, obj['_cls']).load(obj['_idx'])
 
         return super(StorableObjectJSON, self).build(obj)

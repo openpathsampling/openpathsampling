@@ -16,6 +16,8 @@ import mdtraj as md
 
 from opentis.storage import Storage
 
+from opentis.tools import snapshot_from_pdb, to_openmm_topology
+
 import os
 
 class OpenMMEngine(DynamicsEngine):
@@ -59,7 +61,7 @@ class OpenMMEngine(DynamicsEngine):
                 )
 
             elif type(topology_file) is str:
-                self.initial_configuration = Configuration.from_pdb(topology_file)
+                self.initial_configuration = snapshot_from_pdb(topology_file)
 
             # once we have a template configuration (coordinates to not really matter)
             # we can create a storage. We might move this logic out of the dynamics engine
@@ -67,7 +69,7 @@ class OpenMMEngine(DynamicsEngine):
 
             storage = Storage(
                 filename=self.fn_storage,
-                configuration_template=self.initial_configuration,
+                template=self.initial_configuration,
                 mode='w'
             )
 
@@ -111,7 +113,7 @@ class OpenMMEngine(DynamicsEngine):
         forcefield = ForceField( options["forcefield_solute"],
                                  options["forcefield_solvent"] )
 
-        openmm_topology = self.initial_configuration.to_openmm_topology()
+        openmm_topology = to_openmm_topology(self.initial_configuration)
 
         system = forcefield.createSystem( openmm_topology,
                                           nonbondedMethod=PME,
