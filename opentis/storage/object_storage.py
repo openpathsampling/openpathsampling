@@ -225,6 +225,9 @@ class ObjectStorage(object):
         Returns an object from the storage. Needs to be implented from the specific storage class.
         '''
 
+        if self.named and hasattr(obj, 'name'):
+            self.variables[self.db + '_name'][idx] = obj.name
+
         self.save_json(self.idx_dimension + '_json', idx, obj)
 
     def get(self, indices):

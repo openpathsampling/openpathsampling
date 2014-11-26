@@ -17,7 +17,6 @@ import sys, os
 sys.path.append(os.path.abspath('../'))
 sys.path.append(os.path.abspath('../../'))
 
- 
 # in principle, all of these imports should be simplified once this is a
 # package
 from opentis.orderparameter import OP_Function, OP_Volume
@@ -33,7 +32,6 @@ from opentis.pathmover import PathMover
 from opentis.shooting import UniformSelector
 
 import simtk.unit as u
-
 
 if __name__=="__main__":
     options = {'temperature' : 300.0 * u.kelvin,
