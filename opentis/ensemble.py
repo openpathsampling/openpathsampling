@@ -592,8 +592,11 @@ class SequentialEnsemble(Ensemble):
         final_ens = len(self.ensembles)-1
         transitions = []
         while True:
-            subtraj_final = self._find_subtraj_final(trajectory, 
-                                                     subtraj_first, ens_num)
+            if ens_num <= final_ens:
+                subtraj_final = self._find_subtraj_final(trajectory, 
+                                                         subtraj_first, ens_num)
+            else:
+                return transitions
             if subtraj_final - subtraj_first > 0:
                 subtraj = trajectory[slice(subtraj_first, subtraj_final)]
                 if ens_num == final_ens:
@@ -610,7 +613,7 @@ class SequentialEnsemble(Ensemble):
                     transitions.append(subtraj_final)
                     subtraj_first = subtraj_final
             else:
-                if self.ensembles[ens_num](Trajectory([])):
+                if ens_num <= final_ens and self.ensembles[ens_num](Trajectory([])):
                     ens_num += 1
                     transitions.append(subtraj_final)
                     subtraj_first = subtraj_final
