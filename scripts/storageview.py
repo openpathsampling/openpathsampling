@@ -3,8 +3,6 @@ import argparse
 import os
 
 from opentis.storage import Storage
-from opentis.orderparameter import StorableObjectDict
-from opentis.snapshot import Configuration
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Analyze a file.')
