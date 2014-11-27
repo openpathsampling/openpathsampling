@@ -47,12 +47,13 @@ if __name__=="__main__":
                'forcefield_solvent' : 'tip3p.xml'
               }
 
-    engine = OpenMMEngine.auto(filename="trajectory.nc",
-                          template='../data/Alanine_solvated.pdb',
-                          options=options,
-                          mode='create'
-                         )
-    
+    engine = OpenMMEngine.auto(
+        filename="trajectory.nc",
+        template='../data/Alanine_solvated.pdb',
+        options=options,
+        mode='create'
+    )
+
     # set up the initial conditions
     init_pdb = md.load(options['fn_initial_pdb'], frame=0)
     init_pos = init_pdb.xyz[0]

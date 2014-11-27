@@ -226,7 +226,7 @@ class ObjectStorage(object):
         '''
 
         if self.named and hasattr(obj, 'name'):
-            self.variables[self.db + '_name'][idx] = obj.name
+            self.storage.variables[self.db + '_name'][idx] = obj.name
 
         self.save_json(self.idx_dimension + '_json', idx, obj)
 
