@@ -25,13 +25,6 @@ from opentis.snapshot import Snapshot
 from opentis.storage.util import ObjectJSON
 from opentis.tools import units_from_snapshot
 
-
-#=============================================================================================
-# SOURCE CONTROL
-#=============================================================================================
-
-__version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
-
 #=============================================================================================
 # NetCDF Storage for multiple forked trajectories
 #=============================================================================================
@@ -48,13 +41,19 @@ class Storage(netcdf.Dataset):
         
         Parameters
         ----------        
-        topology : openmm.app.Topology
-            the topology of the system to be stored. Needed for 
         filename : string
-            filename of the netcdf file
+            filename of the netcdf file to be used or created
         mode : string, default: None
             the mode of file creation, one of 'w' (write), 'a' (append) or
             None, which will append any existing files.
+        template : opentis.Snapshot
+            a Snapshot instance that contains a reference to a Topology, the
+            number of atoms and used units
+        n_atoms : int or None
+            If not None overrides the number of atoms in the storage
+        units : dict of {str : simtk.unit.Unit } or None
+            representing a dict of string representing a dimension ('length', 'velocity', 'energy') pointing to
+            the simtk.unit.Unit to be used. If not None overrides the standard units used
         '''
 
         if mode == None:
@@ -72,6 +71,14 @@ class Storage(netcdf.Dataset):
 
         self.units = dict()
 
+        # use no units
+        self.dimension_units = {
+            'length' : u.Unit({}),
+            'velocity' : u.Unit({}),
+            'energy' : u.Unit({})
+        }
+
+        # use MD units
         self.dimension_units = {
             'length' : u.nanometers,
             'velocity' : u.nanometers / u.picoseconds,
@@ -149,7 +156,15 @@ class Storage(netcdf.Dataset):
 
     @property
     def template(self):
-        return self.configuration.load(int(self.variables['template_idx'][0]))
+        """
+        Return the template snapshot from the storage
+
+        Returns
+        -------
+        Snapshot
+            the initial snapshot
+        """
+        return self.snapshot.load(int(self.variables['template_idx'][0]))
 
     def get_unit(self, dimension):
         """
@@ -214,24 +229,86 @@ class Storage(netcdf.Dataset):
         self.sync()
 
     def init_object(self, name):
+        '''
+        Initialize a netCDF Variable to store a JSON object
+
+        Parameters
+        ----------
+        name : str
+            the name of the variable
+        '''
         self.init_str(name)
 
     def write_as_json(self, name, obj):
+        '''
+        Write an object as json into a netCDF Variable
+
+        Parameters
+        ----------
+        name : str
+            the name of the variable
+        obj : object
+            the object to store
+        '''
         self.write_str(name, self.simplifier.to_json(obj))
 
     def restore_object(self, name):
+        """
+        Restore an object from a netCDF variable
+
+        Parameters
+        ----------
+        name : str
+            the name of the variable
+
+        Returns
+        -------
+        object
+            the restored object
+        """
         json_string = self.variables[name][0]
         return self.simplifier.from_json(json_string)
 
     def write_str(self, name, string):
+        '''
+        Write a string into a netCDF Variable
+
+        Parameters
+        ----------
+        name : str
+            the name of the variable
+        string : str
+            the string to store
+        '''
         packed_data = numpy.empty(1, 'O')
         packed_data[0] = string
         self.variables[name][:] = packed_data
 
     def init_str(self, name):
+        '''
+        Initialize a netCDF Variable to store a single string
+
+        Parameters
+        ----------
+        name : str
+            the name of the variable
+        '''
         self.createVariable(name, 'str', 'scalar')
 
     def save(self, obj, *args, **kwargs):
+        """
+        Save a storable object into the correct Storage in the netCDF file
+
+        Parameters
+        ----------
+        obj : the object to store
+
+        Returns
+        -------
+        str
+            the class name of the BaseClass of the stored object, which is needed when loading the object
+            to identify the correct storage
+        """
         if type(obj) is list:
             return [ self.save(part, *args, **kwargs) for part in obj]
         elif type(obj) is tuple:
@@ -246,11 +323,33 @@ class Storage(netcdf.Dataset):
             for ty in self._storages:
                 if type(ty) is not str and issubclass(type(obj), ty):
                     store = self._storages[ty]
+                    # store the subclass in the _storages member for
+                    # faster access next time
+                    self._storages[type(obj)] = store
                     store.save(obj, *args, **kwargs)
                     return ty.__name__
 
+        # Could not save this object. Might raise an exception, but return an empty string as type
         return ''
 
-    def load(self, obj, *args, **kwargs):
-        store = self._storages[obj]
+    def load(self, obj_type, *args, **kwargs):
+        """
+        Load an object of the specified type from the storage
+
+        Parameters
+        ----------
+        obj_type : str or class
+            the string or class of the base object to be loaded.
+
+        Returns
+        -------
+        object
+            the object loaded from the storage
+
+        Notes
+        -----
+        If you want to load a subclassed Ensemble you need to load using `Ensemble` or `"Ensemble"`
+        and not use the subclass
+        """
+        store = self._storages[obj_type]
         return store.load(*args, **kwargs)
