@@ -47,12 +47,12 @@ class PathMover(object):
     
     Attributes
     ----------
-    simulator : Simulator
-        the attached simulator used to generate new trajectories
+    engine : DynamicsEngine
+        the attached engine used to generate new trajectories
     """
 
     cls = 'pathmover'
-    simulator = None
+    engine = None
 
     @property
     def identifier(self):
@@ -124,7 +124,7 @@ class ShootMover(PathMover):
         super(ShootMover, self).__init__()
         self.selector = selector
         self.ensemble = ensemble
-        self.length_stopper = PathMover.simulator.max_length_stopper
+        self.length_stopper = PathMover.engine.max_length_stopper
 
     def selection_probability_ratio(self, details):
         '''
@@ -173,12 +173,12 @@ class ForwardShootMover(ShootMover):
         print "Shooting forward from frame %d" % shooting_point
         
         # Run until one of the stoppers is triggered
-        partial_trajectory = PathMover.simulator.generate(
+        partial_trajectory = PathMover.engine.generate(
             details.start_point.snapshot,
             running = [ForwardAppendedTrajectoryEnsemble(
                 self.ensemble, 
-                details.start[0:details.start_point.index]).forward, 
-                self.length_stopper.forward]
+                details.start[0:details.start_point.index]).can_append, 
+                self.length_stopper.can_append]
              )
 
         details.final = details.start[0:shooting_point] + partial_trajectory
@@ -194,13 +194,13 @@ class BackwardShootMover(ShootMover):
         print "Shooting backward from frame %d" % details.start_point.index
 
         # Run until one of the stoppers is triggered
-        partial_trajectory = PathMover.simulator.generate(
-                                     details.start_point.snapshot.reversed_copy(),
-                                     running = [BackwardPrependedTrajectoryEnsemble(
-                                                     self.ensemble,
-                                                     details.start[details.start_point.index + 1:]
-                                                ).backward, self.length_stopper.backward]
-                                     )
+        partial_trajectory = PathMover.engine.generate(
+            details.start_point.snapshot.reversed_copy(), 
+            running = [BackwardPrependedTrajectoryEnsemble( 
+                self.ensemble, 
+                details.start[details.start_point.index + 1:]).can_prepend, 
+                self.length_stopper.can_prepend]
+        )
 
         details.final = partial_trajectory.reversed + details.start[details.start_point.index + 1:]
         details.final_point = ShootingPoint(self.selector, details.final, partial_trajectory.frames - 1)

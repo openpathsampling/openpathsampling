@@ -25,7 +25,7 @@ class Trajectory(list):
 
     """
     
-    simulator = None
+    engine = None
     use_lazy = True    # We assume that snapshots are immutable. That should safe a lot of time to copy trajectories
 
 
@@ -57,7 +57,7 @@ class Trajectory(list):
             else:
                 for snapshot in trajectory:
                     snapshot_copy = copy.deepcopy(snapshot)
-                    self.forward(snapshot_copy)
+                    self.append(snapshot_copy)
         else:
             self.atom_indices = None
 
@@ -366,7 +366,8 @@ class Trajectory(list):
     @property
     def solute(self):
         """
-        Reduce the view of the trajectory to a subset of solute atoms specified in the associated Simulator
+        Reduce the view of the trajectory to a subset of solute atoms
+        specified in the associated DynamicsEngine
         
         Returns
         -------        
@@ -374,7 +375,7 @@ class Trajectory(list):
             the trajectory showing the subsets of solute atoms
         """        
 
-        return self.subset(Trajectory.simulator.solute_indices)
+        return self.subset(Trajectory.engine.solute_indices)
 
     def full(self):
         """
@@ -459,7 +460,7 @@ class Trajectory(list):
         -----
         This is taken from the configuration of the first frame. Otherwise
         there is still un ugly fall-back to look for an openmm.Simulation
-        object in Trajectory.simulator. and construct an mdtraj.Topology
+        object in Trajectory.engine. and construct an mdtraj.Topology
         from this.
         """        
 
@@ -468,7 +469,7 @@ class Trajectory(list):
             topology = self[0].topology
         else:
             # TODO: kind of ugly fall-back, but helps for now
-            topology = md.Topology.from_openmm(Trajectory.simulator.simulation.topology)
+            topology = md.Topology.from_openmm(Trajectory.engine.topology)
         
         if self.atom_indices is not None:
             topology = topology.subset(self.atom_indices)       
