@@ -89,7 +89,7 @@ class GlobalState(dict):
         """
         return [ self[ensemble] for ensemble in self._ensembles]
 
-    def move(self, samples):
+    def apply_samples(self, samples):
         """
         Returns a new GlobalState object that takes the current instance and
         applies the samples in the given order as updates.  The samples will

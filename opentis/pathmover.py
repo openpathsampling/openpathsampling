@@ -37,13 +37,14 @@ class PathMover(object):
     Basically this describes the proposal step for a MC in path space.
     
     We might detach this from the acceptance step?!?!?
-    This would mean that a PathMover needs only an old trajectory and gives a new one.
-    
-    For example a ForwardShoot then uses a shooting point selector and runs a new trajectory and combine them to get
+    This would mean that a PathMover needs only an old trajectory and gives
     a new one.
     
-    After the move has been made, we can retrieve information about the move, as well as the new trajectory from the
-    PathMover object
+    For example a ForwardShoot then uses a shooting point selector and runs
+    a new trajectory and combine them to get a new one.
+    
+    After the move has been made, we can retrieve information about the
+    move, as well as the new trajectory from the PathMover object
     
     Attributes
     ----------
@@ -63,10 +64,12 @@ class PathMover(object):
 
     def __init__(self):
         
-        # An ensemble that is at the same time triggering the stopping criterion and the final acceptance and the end.
-        # This is because the goal is to sample trajectories in a specific ensemble. So we want to generate and stop
-        # as soon as this cannot be fulfilled anymore. Some of the conditions cannot be checked during runtime, so we
-        # have to do that at the end to make sure.
+        # An ensemble that is at the same time triggering the stopping
+        # criterion and the final acceptance and the end.  This is because
+        # the goal is to sample trajectories in a specific ensemble. So we
+        # want to generate and stop as soon as this cannot be fulfilled
+        # anymore. Some of the conditions cannot be checked during runtime,
+        # so we have to do that at the end to make sure.
 
         self.ensemble = FullEnsemble()
         self.name = self.__class__.__name__
@@ -99,16 +102,19 @@ class PathMover(object):
 
     def selection_probability_ratio(self, details=None):
         '''
-        Return the proposal probability necessary to correct for an asymmetric proposal.
+        Return the proposal probability necessary to correct for an
+        asymmetric proposal.
         
         Notes
         -----
-        This is effectively the ratio of proposal probabilities for a mover. For symmetric proposal
-        this is one. In the case of e.g. Shooters this depends on the used ShootingPointSelector and
-        the start and final trajectory.
+        This is effectively the ratio of proposal probabilities for a mover.
+        For symmetric proposal this is one. In the case of e.g. Shooters
+        this depends on the used ShootingPointSelector and the start and
+        final trajectory.
         
-        I am not sure if it makes sense that to define it this way, but for Shooters this is,
-        what we need for the acceptance step in addition to the check if we have a trajectory of
+        I am not sure if it makes sense that to define it this way, but for
+        Shooters this is, what we need for the acceptance step in addition
+        to the check if we have a trajectory of
         the target ensemble.
 
         What about Minus Move and PathReversalMove?
@@ -117,7 +123,8 @@ class PathMover(object):
 
 class ShootMover(PathMover):
     '''
-    A pathmover that implements a general shooting algorithm that generates a sample from a specified ensemble
+    A pathmover that implements a general shooting algorithm that generates
+    a sample from a specified ensemble 
     '''
 
     def __init__(self, selector, ensemble):
@@ -128,7 +135,8 @@ class ShootMover(PathMover):
 
     def selection_probability_ratio(self, details):
         '''
-        Return the proposal probability for Shooting Moves. These are given by the ratio of partition functions
+        Return the proposal probability for Shooting Moves. These are given
+        by the ratio of partition functions
         '''
         return details.start_point.sum_bias / details.final_point.sum_bias
     

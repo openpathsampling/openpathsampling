@@ -1,7 +1,7 @@
 
 import os
 import sys
-from globalstate import GlobalState
+from globalstate import GlobalState, GlobalStateMover
 from pathmover import PathMover, MoveDetails, ReplicaExchange
 from trajectory import Sample
 
@@ -47,6 +47,15 @@ class BootstrapEnsembleChangeMove(PathMover):
 
         return sample
 
+class BootstrapGlobalMover(GlobalStateMover):
+    def __init__(self, ensembles):
+        self.ensembles = ensembles
+        self.ens_idx = 0
+
+    def move(self, trajectory):
+        pass
+
+
 class Bootstrapping(Calculation):
     """The ensembles for the Bootstrapping calculation must be one ensemble
     set, in increasing order."""
@@ -69,7 +78,7 @@ class Bootstrapping(Calculation):
                        for ens_idx in range(ens_num, ens_num + 1)]
 
             # Generate new globalstate using only the one sample
-            globalstate = self.globalstate.move(samples)
+            globalstate = self.globalstate.apply_samples(samples)
 
             # Now save all samples
             self.globalstate.save_samples(self.storage)
@@ -85,7 +94,7 @@ class Bootstrapping(Calculation):
                 if self.globalstate.ensembles[ens_num + 1](self.globalstate[ens_num]):
                     # Yes, so apply the BootStrapMove and generate a new sample in the next ensemble
                     sample = bootstrapmove.move(self.globalstate[ens_num], self.globalstate.ensembles[ens_num + 1])
-                    globalstate = self.globalstate.move([sample])
+                    globalstate = self.globalstate.apply_samples([sample])
 
                     # Now save all samples
                     self.globalstate.save_samples(self.storage)
