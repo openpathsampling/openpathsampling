@@ -65,12 +65,8 @@ class Bootstrapping(Calculation):
         while ens_num < self.globalstate.size - 1 and failsteps < nsteps:
             print "Trying move in ensemble", ens_num
             # Generate Samples
-
-            samples = [ self.movers[ens_idx].move(self.globalstate[ens_idx]) for ens_idx in range(ens_num, ens_num + 1) ]
-
-#            if ens_num > 1:
-#                ex_samples = swapmove.move(self.globalstate[ens_num - 1], self.globalstate[ens_num - 2], self.globalstate.ensembles[ens_num - 1], self.globalstate.ensembles[ens_num - 2])
-#                samples = samples + ex_samples
+            samples = [self.movers[ens_idx].move(self.globalstate[ens_idx]) 
+                       for ens_idx in range(ens_num, ens_num + 1)]
 
             # Generate new globalstate using only the one sample
             globalstate = self.globalstate.move(samples)

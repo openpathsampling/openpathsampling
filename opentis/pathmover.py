@@ -209,11 +209,13 @@ class BackwardShootMover(ShootMover):
 
 class MixedMover(PathMover):
     '''
-    Defines a mover that picks a over from a set of movers with specific weights.
+    Defines a mover that picks a over from a set of movers with specific
+    weights.
     
     Notes
     -----
-    Channel functions from self.mover to self. Does NOT work yet. Think about a good way to implement this...
+    Channel functions from self.mover to self. Does NOT work yet. Think
+    about a good way to implement this...
     '''
     def __init__(self, movers, weights = None):
         super(MixedMover, self).__init__()

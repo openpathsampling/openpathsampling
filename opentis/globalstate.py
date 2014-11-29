@@ -5,9 +5,10 @@ class GlobalState(dict):
     """
     Notes
     =====
-    I would suggest to add the timestamp to the GlobalState object and store it separately and not include
-    the timestamp in the samples since these might be saved before a timestamp is set and thus we have
-    mutable objects the might screw up the storage
+    I would suggest to add the timestamp to the GlobalState object and store
+    it separately and not include the timestamp in the samples since these
+    might be saved before a timestamp is set and thus we have mutable
+    objects the might screw up the storage
     """
 
     current = None       # global current state
@@ -90,8 +91,9 @@ class GlobalState(dict):
 
     def move(self, samples):
         """
-        Returns a new GlobalState object that takes the current instance and applies the samples in the given order as updates.
-        The samples will get the actual timestamp for later analysis.
+        Returns a new GlobalState object that takes the current instance and
+        applies the samples in the given order as updates.  The samples will
+        get the actual timestamp for later analysis.
 
         Parameters
         ==========
@@ -120,8 +122,9 @@ class GlobalState(dict):
 
     def save_samples(self, storage):
         """
-        Save all samples in the current GlobalState object. This should be called after a move has generated a new object since then
-        all samples will get a timestamp that is associated with this
+        Save all samples in the current GlobalState object. This should be
+        called after a move has generated a new object since then all
+        samples will get a timestamp that is associated with this
 
         Parameters
         ==========
@@ -133,6 +136,28 @@ class GlobalState(dict):
 
 class GlobalStateMover(object):
     """
-    A GlobalStateMover will take a GlobalState object and create in a specific way a new GlobalState by generating
-    the necessary samples, applying them and saving everything correctly.
+    A GlobalStateMover will take a GlobalState object and create in a
+    specific way a new GlobalState by generating the necessary samples,
+    applying them and saving everything correctly.
     """
+    def __init__(self, movers)
+        pass
+
+    def move(self, globalstate):
+        pass
+    
+
+class GlobalMixedMover(GlobalStateMover):
+    def __init__(self, movers, probabilities):
+        pass
+
+    def move(self, globalstate):
+        pass
+
+
+class GeneralPathMover(GlobalStateMover):
+    # TODO: takes a list of list of moves; default is that each individual
+    # move has the same probability ... 
+    # list of moves becomes GlobalMover, list of GlobalMovers becomes
+    # GlobalMixedMover
+    pass
