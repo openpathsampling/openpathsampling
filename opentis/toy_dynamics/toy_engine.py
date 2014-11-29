@@ -40,6 +40,8 @@ class ToyEngine(DynamicsEngine):
         self.ndim = options['ndim']
         self.pes = options['pes']
         self.integ = options['integ']
+        if 'nsteps_per_frame' in options:
+            self.nsteps_per_frame = options['nsteps_per_frame']
         if 'n_frames_max' in options:
             self.n_frames_max = options['n_frames_max']
         super(ToyEngine, self).__init__(filename=filename,
