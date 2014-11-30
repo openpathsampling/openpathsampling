@@ -78,7 +78,7 @@ class DynamicsEngine(object):
         # TODO: switch this not needing slice; use can_append
         # this and n_atoms are the only general options we need and register
         if hasattr(self, 'n_frames_max'):
-            self.max_length_stopper = LengthEnsemble(slice(0, self.n_frames_max))
+            self.max_length_stopper = LengthEnsemble(slice(0, self.n_frames_max + 1))
 
     def _register_options(self, options = None):
         """
