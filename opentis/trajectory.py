@@ -9,7 +9,7 @@ import numpy as np
 import mdtraj as md
 from simtk.unit import nanometers, Quantity
 
-from snapshot import Snapshot, Configuration, Momentum
+from opentis.snapshot import Snapshot, Configuration, Momentum
 
 
 #=============================================================================================
@@ -373,7 +373,7 @@ class Trajectory(list):
         -------        
         trajectory : Trajectory
             the trajectory showing the subsets of solute atoms
-        """        
+        """
 
         return self.subset(Trajectory.engine.solute_indices)
 
@@ -444,8 +444,6 @@ class Trajectory(list):
 
         return trajectory
 
-                
-    
     def md_topology(self):
         """
         Return a mdtraj.Topology object representing the topology of the
@@ -467,10 +465,7 @@ class Trajectory(list):
         if len(self) > 0 and self[0].topology is not None:
             # if no topology is defined
             topology = self[0].topology
-        else:
-            # TODO: kind of ugly fall-back, but helps for now
-            topology = md.Topology.from_openmm(Trajectory.engine.topology)
-        
+
         if self.atom_indices is not None:
             topology = topology.subset(self.atom_indices)       
         
