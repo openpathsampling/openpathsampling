@@ -24,6 +24,18 @@ class OpenMMEngine(DynamicsEngine):
         'energy' : u.joule / u.mole
     }
 
+    _default_options = {
+        'nsteps_per_frame' : 10,
+        'solute_indices' : [0],
+        'n_frames_max' : 5000,
+        "temperature" : 300.0 *  u.kelvin,
+        'collision_rate' : 1.0 / u.picoseconds,
+        'timestep' : 2.0 * u.femtoseconds,
+        'platform' : 'fastest',
+        'forcefield_solute' : 'amber96.xml',
+        'forcefield_solvent' : 'tip3p.xml'
+    }
+
     @staticmethod
     def auto(filename, template, options, mode='auto', units=None):
         """
@@ -108,30 +120,15 @@ class OpenMMEngine(DynamicsEngine):
         return engine
 
 
-    def __init__(self, template, options=None):
-
-        if options is not None:
-            self.options = options
-        else:
-            self.options = {}
-        super(OpenMMEngine, self).__init__(
-            options=self.options
-        )
+    def __init__(self, template, options):
 
         self.template = template
         self.topology = template.topology
+        self.options = {'n_atoms' : self.topology.n_atoms}
 
-        # set up the max_length_stopper (if n_frames_max is given)
-        if 'nsteps_per_frame' in self.options:
-            self.nsteps_per_frame = self.options['nsteps_per_frame']
-
-        if 'solute_indices' in self.options:
-            self.solute_indices = self.options['solute_indices']
-
-        if 'n_frames_max' in self.options:
-            self.n_frames_max = self.options['n_frames_max']
-
-        self.n_atoms = self.topology.n_atoms
+        super(OpenMMEngine, self).__init__(
+            options=options
+        )
 
         # set up the OpenMM simulation
         forcefield = ForceField( self.options["forcefield_solute"],

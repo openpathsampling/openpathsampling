@@ -7,6 +7,7 @@ Created on 01.07.2014
 
 from opentis.trajectory import Trajectory
 from opentis.ensemble import LengthEnsemble
+import simtk.unit as u
 
 #=============================================================================
 # SOURCE CONTROL
@@ -21,13 +22,24 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 class DynamicsEngine(object):
     '''
     Class to wrap a simulation tool to store the context and rerun, needed
-    parameters, storage, etc. 
+    parameters, storage, etc.
     
     Notes
     -----
     Should be considered an abstract class: only its subclasses can be
     instantiated.
     '''
+
+    _default_options = {
+        'n_atoms' : 0,
+        'n_frames_max' : 0,
+    }
+
+    units = {
+        'length' : u.Unit({}),
+        'velocity' : u.Unit({}),
+        'energy' : u.Unit({})
+    }
 
     def __init__(self, filename=None, options=None, storage=None):
         '''
@@ -43,40 +55,116 @@ class DynamicsEngine(object):
         initialized.
         '''
 
-        self.op = None
         self.initialized = False
         self.running = dict()
-
-        if storage is not None:
-            self.storage = storage
 
         # if there has not been created a storage but the init of a derived
         # class make sure there is at least a member variable
         if not hasattr(self, 'storage'):
             self.storage = None
 
-        self.n_atoms = None
-
-        if 'n_atoms' in options:
-            self.n_atoms = options['n_atoms']
+        if storage is not None:
+            self.storage = storage
 
         # Trajectories need to know the engine as a hack to get the topology.
         # Better would be a link to the topology directly. This is needed to create
         # mdtraj.Trajectory() objects
 
+        # TODO: Remove this and put the logic outside of the engine
         Trajectory.engine = self
 
-        if not hasattr(self, 'options'):
-            self.options = {}
+        self._register_options(options)
+
+        # TODO: switch this not needing slice; use can_append
+        # this and n_atoms are the only general options we need and register
+        if hasattr(self, 'n_frames_max'):
+            self.max_length_stopper = LengthEnsemble(slice(0, self.n_frames_max))
+
+    def _register_options(self, options = None):
+        """
+        This will register all variables in the options dict as a member variable if
+        they are present in either ther DynamicsEngine.default_options or this
+        classes default_options, no multiple inheritance is supported!
+        It will use values with the priority in the following order
+        - DynamicsEngine.default_options
+        - self.default_options
+        - self.options (usually not used)
+        - options (function parameter)
+        Parameters are only registered if
+        1. the variable name is present in the defaults
+        2. the type matches the one in the defaults
+        3. for variables with units also the units need to be compatible
+
+        Parameters
+        ----------
+        options : dict of { str : value }
+            A dictionary
+
+        Notes
+        -----
+        Options are what is necessary to recreate the engine, but not runtime variables or independent
+        variables like the actual initialization status, the runners or an attached storage.
+        If there are non-default options present they will be ignored (no error thrown)
+        """
+        # start with default options from a dynamics engine
+        my_options = {}
+        okay_options = {}
+
+        # self.default_options overrides default ones from DynamicsEngine
+        for variable, value in self.default_options.iteritems():
+            my_options[variable] = value
+
+        if hasattr(self, 'options') and self.options is not None:
+            # self.options overrides default ones
+            for variable, value in self.options.iteritems():
+                my_options[variable] = value
 
         if options is not None:
-            for key, value in options.iteritems():
-                self.options[key] = value
+            # given options override even default and already stored ones
+            for variable, value in options.iteritems():
+                my_options[variable] = value
 
-        # set up the max_length_stopper (if n_frames_max is given)
-        # TODO: switch this not needing slice; use can_append
-        if 'n_frames_max' in self.options:
-            self.max_length_stopper = LengthEnsemble(slice(0, self.options['n_frames_max']))
+        if my_options is not None:
+            for variable, default_value in self.default_options.iteritems():
+                # create an empty member variable if not yet present
+                if not hasattr(self, variable):
+                    okay_options[variable] = None
+
+                if variable in my_options:
+                    if type(my_options[variable]) is type(default_value):
+                        if type(my_options[variable]) is u.Unit:
+                            if my_options[variable].unit.is_compatible(default_value):
+                                okay_options[variable] = my_options[variable]
+                            else:
+                                raise ValueError('Unit of option "' + variable + '" (' + str(my_options[variable].unit) + ') not compatible to "' + str(default_value.unit) + '"')
+
+                        elif type(my_options[variable]) is list:
+                            if type(my_options[variable][0]) is type(default_value[0]):
+                                okay_options[variable] = my_options[variable]
+                            else:
+                                raise ValueError('List elements for option "' + variable + '" must be of type "' + type(default_value[0]) + '"')
+                        else:
+                            okay_options[variable] = my_options[variable]
+                    elif isinstance(type(my_options[variable]), type(default_value)):
+                        okay_options[variable] = my_options[variable]
+                    elif default_value is None:
+                        okay_options[variable] = my_options[variable]
+                    else:
+                        raise ValueError('Type of option "' + variable + '" (' + type(my_options[variable]) + ') is not "' + type(default_value) + '"')
+
+            self.options = okay_options
+
+            for variable, value in okay_options.iteritems():
+                setattr(self, variable, value)
+        else:
+            self.options = {}
+
+    @property
+    def default_options(self):
+        default_options = {}
+        default_options.update(DynamicsEngine._default_options)
+        default_options.update(self._default_options)
+        return default_options
 
     def start(self, snapshot=None):
         if snapshot is not None:
@@ -86,6 +174,22 @@ class DynamicsEngine(object):
         """Nothing special needs to be done for direct-control simulations
         when you hit a stop condition."""
         pass
+
+    def stoppers(self):
+        """
+        Return a set of runners that were set to stop in the last generation.
+
+        Returns
+        -------
+        set
+            a set of runners that caused the simulation to stop
+
+        Example
+        -------
+        >>> if engine.max_length_stopper in engine.stoppers:
+        >>>     print 'Max length was triggered'
+        """
+        return set([ runner for runner, result in self.running.iteritems() if not result])
 
     def generate(self, snapshot, running = None):
         r"""
@@ -142,13 +246,13 @@ class DynamicsEngine(object):
                 # Check if we should stop. If not, continue simulation
                 if running is not None:
                     for runner in running:
-                        #print str(runner), runner(trajectory)
+                        # note that even if one runner signals stop we evaluate
+                        # all of them to access their results later
                         keep_running = runner(trajectory)
                         self.running[runner] = keep_running
                         stop = stop or not keep_running
 
-                # TODO: switch to self.max_length_stopper.can_append()
-                stop = stop or not self.max_length_stopper(trajectory)
+                stop = stop or not self.max_length_stopper.can_append(trajectory)
                 
             self.stop(trajectory)
             return trajectory
