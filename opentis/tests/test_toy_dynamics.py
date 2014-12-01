@@ -140,7 +140,7 @@ class testToyEngine(object):
     def setUp(self):
         pes = linear
         integ = LeapfrogVerletIntegrator(dt=0.002)
-        sim = ToyEngine(opts={'pes' : pes, 'integ' : integ, 
+        sim = ToyEngine(options={'pes' : pes, 'integ' : integ, 
                               'n_frames_max' : 5},
                         #filename='toy_tmp.nc', mode='create'
                         filename=None, mode='auto'
@@ -244,7 +244,7 @@ class testLeapfrogVerletIntegrator(object):
     def setUp(self):
         pes = linear
         integ = LeapfrogVerletIntegrator(dt=0.002)
-        sim = ToyEngine(opts={'pes' : pes, 'integ' : integ})
+        sim = ToyEngine(options={'pes' : pes, 'integ' : integ})
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
         sim.mass = sys_mass
@@ -281,7 +281,7 @@ class testLangevinBAOABIntegrator(object):
         pes = linear
         integ = LangevinBAOABIntegrator(dt=0.002, temperature=0.5,
                                         gamma=1.0)
-        sim = ToyEngine(opts={'pes' : pes, 'integ' : integ})
+        sim = ToyEngine(options={'pes' : pes, 'integ' : integ})
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
         sim.mass = sys_mass

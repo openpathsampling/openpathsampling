@@ -5,6 +5,7 @@ from opentis.snapshot import Snapshot, Configuration, Momentum
 from object_storage import ObjectStorage
 from wrapper import savecache, loadcache
 from opentis.trajectory import Trajectory
+import simtk.unit as u
 
 class SnapshotStorage(ObjectStorage):
     """
@@ -203,11 +204,16 @@ class MomentumStorage(ObjectStorage):
 
         # Store momentum.
         if momentum._velocities is not None:
-            storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / (nanometers / picoseconds)).astype(np.float32)
+            if hasattr(momentum.velocities, 'unit'):
+                storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / self.storage.units["momentum_velocities"]).astype(np.float32)
+            else:
+                # in this case we blindly assume that the units are correct
+                storage.variables['momentum_velocities'][idx,:,:] = momentum.velocities.astype(np.float32)
         else:
             print 'ERROR : Momentum should not be empty'
+
         if momentum._kinetic_energy is not None:
-            storage.variables['momentum_kinetic'][idx] = momentum.kinetic_energy / kilojoules_per_mole
+            storage.variables['momentum_kinetic'][idx] = momentum.kinetic_energy / self.storage.units["momentum_kinetic"]
         else:
             # TODO: No kinetic energy is not yet supported
             print 'Think about how to handle this. It should only be None if loaded lazy and in this case it will never be saved.'
@@ -236,9 +242,9 @@ class MomentumStorage(ObjectStorage):
 
         if not (Momentum.load_lazy and lazy):
             v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
-            velocities = Quantity(v, nanometers / picoseconds)
+            velocities = Quantity(v, self.storage.units["momentum_velocities"])
             T = storage.variables['momentum_kinetic'][idx]
-            kinetic_energy = Quantity(T, kilojoules_per_mole)
+            kinetic_energy = Quantity(T, self.storage.units["momentum_kinetic"])
 
         else:
             velocities = None
@@ -250,20 +256,38 @@ class MomentumStorage(ObjectStorage):
         return momentum
 
     def update_velocities(self, obj):
+        """
+        Update/Load the velocities in the given obj from the attached storage
+
+        Parameters
+        ----------
+        obj : Momentum
+            The Momentum object to be updated
+
+        """
         storage = self.storage
 
         idx = obj.idx[self.storage]
         v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
-        velocities = Quantity(v, nanometers / picoseconds)
+        velocities = Quantity(v, self.storage.units["momentum_velocities"])
 
         obj.velocities = velocities
 
     def update_kinetic_energy(self, obj):
+        """
+        Update/Load the kinetic_energy in the given obj from the attached storage
+
+        Parameters
+        ----------
+        obj : Momentum
+            The Momentum object to be updated
+
+        """
         storage = self.storage
 
         idx = obj.idx[self.storage]
         T = storage.variables['momentum_kinetic'][idx]
-        kinetic_energy = Quantity(T, kilojoules_per_mole)
+        kinetic_energy = Quantity(T, self.storage.units["momentum_kinetic"])
 
         obj.kinetic_energy = kinetic_energy
 
@@ -324,11 +348,11 @@ class MomentumStorage(ObjectStorage):
         if 'spatial' not in self.storage.dimensions:
             self.init_dimension('spatial', 3)  # number of spatial dimensions
 
-        self.init_variable('momentum_velocities', 'float', (self.db, 'atom','spatial'), 'nm',
+        self.init_variable('momentum_velocities', 'float', (self.db, 'atom','spatial'), self.dimension_units['velocity'],
                 description="velocities[momentum][atom][coordinate] are velocities of atom 'atom' in" +
                             " dimension 'coordinate' of momentum 'momentum'.")
 
-        self.init_variable('momentum_kinetic', 'float', self.db)
+        self.init_variable('momentum_kinetic', 'float', self.db, self.dimension_units['energy'])
 
 
     
@@ -349,18 +373,17 @@ class ConfigurationStorage(ObjectStorage):
         storage = self.storage
 
         # Store configuration.
-        storage.variables['configuration_coordinates'][idx,:,:] = (configuration.coordinates / nanometers).astype(np.float32)
+        storage.variables['configuration_coordinates'][idx,:,:] = (configuration.coordinates / self.storage.units["configuration_coordinates"]).astype(np.float32)
 
         if configuration.potential_energy is not None:
-            storage.variables['configuration_potential'][idx] = configuration.potential_energy / kilojoules_per_mole
-#            storage.variables['configuration_box_vectors'][idx,:] = (self.box_vectors / nanometers).astype(np.float32)
+            storage.variables['configuration_potential'][idx] = configuration.potential_energy / self.storage.units["configuration_potential"]
+
+        if configuration.box_vectors is not None:
+            storage.variables['configuration_box_vectors'][idx,:,:] = (configuration.box_vectors / self.storage.units["configuration_box_vectors"]).astype(np.float32)
 
         # Force sync to disk to avoid data loss.
         storage.sync()
 
-
-    def coordinates_as_numpy(self, frame_indices=None, atom_indices=None, storage = None):
-        return self.coordinates_as_numpy(self, frame_indices, atom_indices)
 
     def get(self, indices):
         return [ self.load(idx) for idx in indices ]
@@ -385,11 +408,11 @@ class ConfigurationStorage(ObjectStorage):
 
         if not (Configuration.load_lazy and lazy):
             x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
-            coordinates = Quantity(x, nanometers)
+            coordinates = Quantity(x, self.storage.units["configuration_coordinates"])
             b = storage.variables['configuration_box_vectors'][idx]
-            box_vectors = Quantity(b, nanometers)
+            box_vectors = Quantity(b, self.storage.units["configuration_box_vectors"])
             V = storage.variables['configuration_potential'][idx]
-            potential_energy = Quantity(V, kilojoules_per_mole)
+            potential_energy = Quantity(V, self.storage.units["configuration_potential"])
         else:
             coordinates = None
             box_vectors = None
@@ -403,37 +426,79 @@ class ConfigurationStorage(ObjectStorage):
         return configuration
 
     def update_coordinates(self, obj):
+        """
+        Update/Load the coordinates in the given obj from the attached storage
+
+        Parameters
+        ----------
+        obj : Configuration
+            The Configuration object to be updates
+
+        """
         storage = self.storage
 
         idx = obj.idx[self.storage]
 
         x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
-        coordinates = Quantity(x, nanometers)
+        coordinates = Quantity(x, self.storage.units["configuration_coordinates"])
 
         obj.coordinates = coordinates
 
     def update_box_vectors(self, obj):
+        """
+        Update/Load the box_vectors in the given obj from the attached storage
+
+        Parameters
+        ----------
+        obj : Configuration
+            The Configuration object to be updates
+
+        """
         storage = self.storage
 
         idx = obj.idx[self.storage]
 
         b = storage.variables['configuration_box_vectors'][idx]
-        box_vectors = Quantity(b, nanometers)
+        box_vectors = Quantity(b, self.storage.units["configuration_box_vectors"])
 
         obj.box_vectors = box_vectors
 
     def update_potential_energy(self, obj):
+        """
+        Update/Load the potential_energy in the given obj from the attached storage
+
+        Parameters
+        ----------
+        obj : Configuration
+            The Configuration object to be updates
+
+        """
         storage = self.storage
 
         idx = obj.idx[self.storage]
 
         V = storage.variables['configuration_potential'][idx]
-        potential_energy = Quantity(V, kilojoules_per_mole)
+        potential_energy = Quantity(V, self.storage.units["configuration_potential"])
 
         obj.potential_energy = potential_energy
 
     def coordinates_as_numpy(self, frame_indices=None, atom_indices=None):
+        """
+        Return the atom coordintes in the storage for given frame indices and atoms
 
+        Parameters
+        ----------
+        frame_indices : list of int or None
+            the frame indices to be included. If None all frames are returned
+        atom_indices : list of int or None
+            the atom indices to be inlcuded. If None all atoms are returned
+
+        Returns
+        -------
+        numpy.array, shape=(n_frames, n_atoms)
+            the array of atom coordinates in a float32 numpy array
+
+        """
         if frame_indices is None:
             frame_indices = slice(None)
 
@@ -489,7 +554,6 @@ class ConfigurationStorage(ObjectStorage):
         # index associated storage in class variable for all configuration instances to access
 
         super(ConfigurationStorage, self)._init()
-
         atoms = self.storage.atoms
 
         # define dimensions used in configuration_indices
@@ -499,10 +563,10 @@ class ConfigurationStorage(ObjectStorage):
         if 'spatial' not in self.storage.dimensions:
             self.init_dimension('spatial', 3)  # number of spatial dimensions
 
-        self.init_variable('configuration_coordinates', 'float', (self.db, 'atom','spatial'), 'nm',
+        self.init_variable('configuration_coordinates', 'float', (self.db, 'atom','spatial'), self.dimension_units['length'],
                 description="coordinates[configuration][atom][coordinate] are coordinate of atom 'atom' " +
                             "in dimension 'coordinate' of configuration 'configuration'.")
 
-        self.init_variable('configuration_box_vectors', 'float', (self.db, 'spatial'))
+        self.init_variable('configuration_box_vectors', 'float', (self.db, 'spatial', 'spatial'), self.dimension_units['length'])
 
-        self.init_variable('configuration_potential', 'float', self.db)
+        self.init_variable('configuration_potential', 'float', self.db, self.dimension_units['energy'])

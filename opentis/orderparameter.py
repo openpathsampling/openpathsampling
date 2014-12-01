@@ -5,7 +5,6 @@
 from msmbuilder.metrics import RMSD
 from trajectory import Trajectory
 from snapshot import Configuration, Snapshot
-import numpy as np
 from wrapper import storable
 class ObjectDict(dict):
     """

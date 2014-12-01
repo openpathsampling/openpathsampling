@@ -31,13 +31,20 @@ class ToyEngine(DynamicsEngine):
     simulation objects as in OpenMM), but they all quack the same when it
     comes to things the DynamicsEngine calls on them for'''
 
-    def __init__(self, filename=None, opts=None, mode='auto'):
-        unit_dict = { 'length' : 1.0, 'time' : 1.0 }
-        if 'ndim' not in opts:
-            opts['ndim'] = 2
-        opts['n_atoms'] = count_atoms(opts['ndim'])
-        super(ToyEngine, self).__init__(filename=filename, mode=mode,
-                                        opts=opts)
+    default_options = { 'pes' : None,
+                      'integ' : None,
+                      'ndim' : 2,
+                      'n_frames_max' : 5000,
+                      'nsteps_per_frame' : 10
+    }
+
+    def __init__(self, filename=None, options=None, mode='auto'):
+        if 'ndim' not in options:
+            options['ndim'] = 2
+        options['n_atoms'] = count_atoms(options['ndim'])
+
+        super(ToyEngine, self).__init__(filename=filename,
+                                        options=options)
 
     @property
     def nsteps_per_frame(self):

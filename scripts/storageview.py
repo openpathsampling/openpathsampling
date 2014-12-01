@@ -3,8 +3,6 @@ import argparse
 import os
 
 from opentis.storage import Storage
-from opentis.orderparameter import StorableObjectDict
-from opentis.snapshot import Configuration
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Analyze a file.')
@@ -18,9 +16,9 @@ if __name__ == '__main__':
         exit()
 
     storage = Storage(
-                                                     filename = file,
-                                                     mode = 'a'
-                                                     )
+        filename = file,
+        mode = 'a'
+    )
 
     def headline(s):
         print
@@ -87,8 +85,8 @@ if __name__ == '__main__':
 
     headline("ShootingPoints (" + str(storage.shootingpoint.count()) + ")")
 
-    for p_idx in range(0, storage.shootingpoint.count()):
-        obj = storage.shootingpoint.load(p_idx)
+#    for p_idx in range(0, storage.shootingpoint.count()):
+#        obj = storage.shootingpoint.load(p_idx)
 #        nline(p_idx,obj.json, obj.cls)
 
     headline("Orderparameters (" + str(storage.collectivevariable.count()) + ")")
@@ -97,10 +95,6 @@ if __name__ == '__main__':
         obj = storage.collectivevariable.load(p_idx)
         nline(p_idx,obj.name, str(obj.storage_caches[storage]))
 
-
-    for p_idx in range(0, storage.shootingpoint.count()):
-        obj = storage.shootingpoint.load(p_idx)
-#        nline(p_idx,obj.json, obj.cls)
 
     headline("Samples")
 
@@ -151,7 +145,6 @@ if __name__ == '__main__':
 
 
     for o_idx in range(0, storage.sample.count()):
-        print o_idx
         sample = storage.sample.load(o_idx)
 #        nline(o_idx, '', sample.details.json)
         nline(o_idx, str(sample.mover.name) + "/" + str(sample.details.mover.name), str([t.idx[storage] for t in sample.details.inputs]) +" -> " + str(sample.details.final.idx[storage]) + " in " + sample.ensemble.name + " [" + str(sample.ensemble.idx[storage]) + "]")
@@ -188,5 +181,3 @@ if __name__ == '__main__':
 
 
         sys.stdout.write("\n")
-
-
