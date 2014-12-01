@@ -24,9 +24,9 @@ script:
   - # Run tests
   - cd opentis/tests
   - nosetests --nocapture -vv
-  - cd ..
-  - cd xyz_files
-  - nosetests --nocapture -vv
+#  - cd ..
+#  - cd xyz_files
+#  - nosetests --nocapture -vv
   - cd ../..
   - cd examples/alanine
   - python ala_dipeptide_example.py

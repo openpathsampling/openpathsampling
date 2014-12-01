@@ -1,11 +1,11 @@
 def storable(super_class):
-    super_class.cls = super_class.__name__.lower()
     super_class.default_storage = None
 
     def _init(self, *args, **kwargs):
         super_class._init(self, *args, **kwargs)
 
         if 'idx' in kwargs:
+            print 'IDX'
             self.idx = kwargs['idx']
         else:
             self.idx = dict()

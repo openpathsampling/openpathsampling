@@ -1,5 +1,4 @@
 import svgwrite
-import argparse
 import os
 
 
@@ -286,7 +285,7 @@ class TreeRenderer(object):
 
 class PathTreeBuilder(object):
 
-    def __init__(self, storage, op=None, states = {}):
+    def __init__(self, storage, op=None, states = None):
         self.rejected = False
         self.p_x = dict()
         self.p_y = dict()
@@ -294,6 +293,8 @@ class PathTreeBuilder(object):
         self.storage = storage
         self.renderer = TreeRenderer()
         self.op = op
+        if states is None:
+            states = {}
         self.states = states
 
     def from_samples(self, samples, clear=True):

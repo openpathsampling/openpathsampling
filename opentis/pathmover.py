@@ -12,10 +12,8 @@ from ensemble import FullEnsemble
 from trajectory import Sample
 from wrapper import storable
 
-
 @storable
 class MoveDetails(object):
-
     def __init__(self, **kwargs):
         self.inputs=None
         self.final=None
@@ -168,7 +166,6 @@ class ShootMover(PathMover):
 
         path = Sample(trajectory=details.result, mover=self, ensemble=self.ensemble, details=details)
 
-        print path
         return path
     
     

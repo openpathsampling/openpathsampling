@@ -9,7 +9,6 @@ import copy
 import numpy as np
 import mdtraj as md
 
-
 #=============================================================================
 # SIMULATION CONFIGURATION
 #=============================================================================
@@ -30,7 +29,7 @@ class Configuration(object):
     load_lazy = True
 
     def __init__(self, coordinates=None, box_vectors=None,
-                 potential_energy=None, topology=None, idx=None):
+                 potential_energy=None, topology=None):
         """
         Create a simulation configuration from either an OpenMM context or
         individually-specified components.
@@ -217,7 +216,7 @@ class Momentum(object):
     engine = None
     load_lazy = True
 
-    def __init__(self, velocities=None, kinetic_energy=None, idx=None):
+    def __init__(self, velocities=None, kinetic_energy=None):
         """
         Create a simulation momentum from either an OpenMM context or
         individually-specified components.
@@ -355,8 +354,6 @@ class Momentum(object):
 #=============================================================================
 # SIMULATION SNAPSHOT (COMPLETE FRAME WITH COORDINATES AND VELOCITIES)
 #=============================================================================
-
-
 
 def has(attr):
     def _has(func):

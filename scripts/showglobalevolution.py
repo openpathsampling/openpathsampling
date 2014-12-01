@@ -4,7 +4,7 @@ import argparse
 import os
 from opentis.storage import Storage
 
-from orderparameter import OP_Function
+from opentis.orderparameter import OP_Function
 import mdtraj as md
 if __name__ == '__main__':
 
