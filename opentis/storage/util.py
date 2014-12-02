@@ -160,6 +160,7 @@ class StorableObjectJSON(ObjectJSON):
             if hasattr(obj, 'idx'):
 #                getattr(self.storage, obj.cls).save(obj)
                 # this also return the base class name used for storage
+
                 base_cls = self.storage.save(obj)
 #                return { '_idx' : obj.idx[self.storage], '_cls' : obj.cls}
                 return { '_idx' : obj.idx[self.storage], '_base' : base_cls, '_cls' : obj.__class__.__name__ }
