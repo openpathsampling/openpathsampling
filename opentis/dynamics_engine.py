@@ -138,13 +138,13 @@ class DynamicsEngine(object):
                             if my_options[variable].unit.is_compatible(default_value):
                                 okay_options[variable] = my_options[variable]
                             else:
-                                raise ValueError('Unit of option "' + variable + '" (' + str(my_options[variable].unit) + ') not compatible to "' + str(default_value.unit) + '"')
+                                raise ValueError('Unit of option "' + str(variable) + '" (' + str(my_options[variable].unit) + ') not compatible to "' + str(default_value.unit) + '"')
 
                         elif type(my_options[variable]) is list:
                             if type(my_options[variable][0]) is type(default_value[0]):
                                 okay_options[variable] = my_options[variable]
                             else:
-                                raise ValueError('List elements for option "' + variable + '" must be of type "' + type(default_value[0]) + '"')
+                                raise ValueError('List elements for option "' + str(variable) + '" must be of type "' + str(type(default_value[0])) + '"')
                         else:
                             okay_options[variable] = my_options[variable]
                     elif isinstance(type(my_options[variable]), type(default_value)):
@@ -152,7 +152,7 @@ class DynamicsEngine(object):
                     elif default_value is None:
                         okay_options[variable] = my_options[variable]
                     else:
-                        raise ValueError('Type of option "' + variable + '" (' + type(my_options[variable]) + ') is not "' + type(default_value) + '"')
+                        raise ValueError('Type of option "' + str(variable) + '" (' + str(type(my_options[variable])) + ') is not "' + str(type(default_value)) + '"')
 
             self.options = okay_options
 

@@ -101,7 +101,9 @@ class OpenMMEngine(DynamicsEngine):
         storage.init_str('simulation_options')
         storage.write_as_json('simulation_options', options)
 
-        engine = OpenMMEngine(options)
+        engine = OpenMMEngine(
+            options=options
+        )
         engine.storage = storage
 
         return engine
@@ -115,10 +117,14 @@ class OpenMMEngine(DynamicsEngine):
         )
 
         options = storage.restore_object('simulation_options')
-        engine = OpenMMEngine(storage.template, options)
+
+        options['template'] = storage.template
+
+        engine = OpenMMEngine(
+            options=options
+        )
 
         engine.storage = storage
-
         return engine
 
 
@@ -177,6 +183,9 @@ class OpenMMEngine(DynamicsEngine):
             system.setParticleMass(i,0.0)
 
         self.simulation.step(nsteps)
+
+        # empty cache
+        self._current_snapshot = None
 
         for i in self.solute_indices:
             system.setParticleMass(i, solute_masses[i].value_in_unit(u.dalton))
@@ -256,7 +265,7 @@ class OpenMMEngine(DynamicsEngine):
     # (possibly temporary) shortcuts for momentum and configuration
     @property
     def momentum(self):
-        return self.current_snapshot
+        return self.current_snapshot.momentum
 
     # remove setters here, because it might lead to wrong velocities
     # because of incorrect treatment of reversed, it will also violate the
@@ -269,7 +278,7 @@ class OpenMMEngine(DynamicsEngine):
 
     @property
     def configuration(self):
-        return self._current_configuration
+        return self.current_snapshot.configuration
 
 #    @configuration.setter
 #    def configuration(self, config):
