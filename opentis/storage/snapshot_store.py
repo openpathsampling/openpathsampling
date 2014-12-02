@@ -1,6 +1,4 @@
-import simtk.unit as u
 import numpy as np
-
 from opentis.snapshot import Snapshot, Configuration, Momentum
 from object_storage import ObjectStorage
 from wrapper import savecache, loadcache
