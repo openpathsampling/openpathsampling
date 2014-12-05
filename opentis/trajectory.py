@@ -475,15 +475,29 @@ class Trajectory(list):
 @storable
 class Sample(object):
     """
-    A Sample is the return object from a PathMover and contains all information about the move, initial trajectories,
-    new trajectories (both as references). IF a Mover does several moves at a time (e.g. a swap) then
-    a separate move object for each resulting trajectory is returned
+    A Sample is the return object from a PathMover and contains all
+    information about the move, initial trajectories, new trajectories (both
+    as references). IF a Mover does several moves at a time (e.g. a swap)
+    then a separate Sample object is returned for each 
+
+    Attributes
+    ----------
+    replica : integer
+        The replica ID to which this Sample applies
+    ensemble : Ensemble
+        The Ensemble this sample is drawn from
+    trajectory : Trajectory
+        The trajectory (path) for this sample
+    details : MoveDetails
+        Object 
+    step : integer
+        the Monte Carlo step number associated with this Sample
     """
 
-    def __init__(self, trajectory=None,  mover=None, ensemble=None, details=None, step=-1):
+    def __init__(self, trajectory=None, replica=None, ensemble=None, details=None, step=-1):
         self.idx = dict()
 
-        self.mover = mover
+        self.replica = replica
         self.ensemble = ensemble
         self.trajectory = trajectory
         self.details = details

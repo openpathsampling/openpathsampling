@@ -5,6 +5,7 @@ Created on 19.07.2014
 '''
 
 import numpy as np
+import random
 
 from shooting import ShootingPoint
 from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble
@@ -12,8 +13,37 @@ from ensemble import FullEnsemble
 from trajectory import Sample
 from wrapper import storable
 
+
 @storable
 class MoveDetails(object):
+    '''Details of the move as applied to a given replica
+
+    RENAME: inputs=>initial
+            final=>trial
+
+    Attributes
+    ----------
+    replica : integer
+        replica ID to which this trial move would apply
+    inputs : list of Sample
+        the Samples which were used as inputs to the move
+    final : tuple(Tractory, Ensemble)
+        the Trajectory and Ensemble which 
+    accepted : bool
+        whether the attempted move was accepted
+    mover : PathMover
+        the PathMover which generated this trial
+
+    TODO (or at least to put somewhere):
+    rejection_reason : String
+        explanation of reasons the path was rejected
+
+    Specific move types may have add several other attributes for each
+    MoveDetails object. For example, shooting moves will also include
+    information about the shooting point selection, etc.
+
+    '''
+
     def __init__(self, **kwargs):
         self.inputs=None
         self.final=None
@@ -24,6 +54,23 @@ class MoveDetails(object):
         self.mover=None
         for key, value in kwargs:
             setattr(self, key, value)
+
+class ReplicaSelector(object):
+    def __call__(self, globalstate, ensemble, replicas):
+        print "Calling ReplicaSelector; maybe try a subclass?"
+
+class UniformReplicaSelector(ReplicaSelector):
+    def __call__(self, globalstate, ensemble, replicas):
+        if replicas == 'all':
+            replicas = globalstate.keys()
+
+        possible_replicas = []
+        for repid in replicas:
+            if globalstate[repid].ensemble == ensemble:
+                possible_replicas.append(repid)
+
+        return random.choice(possible_replicas)
+
 
 class PathMover(object):
     """
@@ -60,43 +107,39 @@ class PathMover(object):
         else:
             return None
 
-    def __init__(self):
+    def __init__(self, replica_selector=None, replicas='all'):
         
-        # An ensemble that is at the same time triggering the stopping
-        # criterion and the final acceptance and the end.  This is because
-        # the goal is to sample trajectories in a specific ensemble. So we
-        # want to generate and stop as soon as this cannot be fulfilled
-        # anymore. Some of the conditions cannot be checked during runtime,
-        # so we have to do that at the end to make sure.
-
-        self.ensemble = FullEnsemble()
         self.name = self.__class__.__name__
+
+        if replica_selector is None:
+            self.replica_selector = UniformReplicaSelector()
+        else:
+            self.replica_selector = replica_selector
+        self.replicas = replicas
 
         self.idx = dict()
 
-    def move(self, trajectory):
+    def move(self, globalstate):
         '''
         Run the generation starting with the initial trajectory specified.
 
         Parameters
         ----------
-        trajectory : Trajectory
-            the initial trajectory
+        globalstate : GlobalState
+            the initial global state
         
         Returns
         -------        
-        final : Trajectory()
-            the final new proposed trajectory
+        samples : list of Sample()
+            the new samples
         
         Notes
         -----
-        After this command additional information can be accessed from this object
+        After this command additional information can be accessed from this
+        object (??? can you explain this, JHP?)
         '''
 
-        details = MoveDetails(inputs = [trajectory], result = trajectory, success=True)
-        path = Sample(trajectory=trajectory, mover=self, ensemble=self.ensemble, details=details)
-
-        return path
+        return []
 
     def selection_probability_ratio(self, details=None):
         '''
@@ -125,8 +168,9 @@ class ShootMover(PathMover):
     a sample from a specified ensemble 
     '''
 
-    def __init__(self, selector, ensemble):
-        super(ShootMover, self).__init__()
+    def __init__(self, selector, replica_selector=None, 
+                 ensemble=None, replicas='all'):
+        super(ShootMover, self, replica_selector, replicas).__init__()
         self.selector = selector
         self.ensemble = ensemble
         self.length_stopper = PathMover.engine.max_length_stopper
@@ -141,7 +185,11 @@ class ShootMover(PathMover):
     def _generate(self):
         self.final = self.start
     
-    def move(self, trajectory):
+    def move(self, globalstate):
+        replica = self.replica_selector(globalstate,self.ensemble,self.replicas)
+        trajectory = globalstate[replica].trajectory
+        dynamics_ensemble = globalstate[replica].ensemble
+
         details = MoveDetails()
         details.success = False
         details.inputs = [trajectory]
@@ -154,7 +202,7 @@ class ShootMover(PathMover):
         self._generate(details)
 
 
-        details.accepted = self.ensemble(details.final)
+        details.accepted = dynamics_ensemble(details.final)
         details.result = details.start
 
         if details.accepted:
@@ -164,7 +212,8 @@ class ShootMover(PathMover):
                 details.success = True
                 details.result = details.final
 
-        path = Sample(trajectory=details.result, mover=self, ensemble=self.ensemble, details=details)
+        path = Sample(trajectory=details.result, mover=self,
+                      ensemble=dynamics_ensemble, details=details)
 
         return path
     
@@ -173,7 +222,7 @@ class ForwardShootMover(ShootMover):
     '''
     A pathmover that implements the forward shooting algorithm
     '''
-    def _generate(self, details):
+    def _generate(self, details, ensemble):
         shooting_point = details.start_point.index
         print "Shooting forward from frame %d" % shooting_point
         
@@ -181,7 +230,7 @@ class ForwardShootMover(ShootMover):
         partial_trajectory = PathMover.engine.generate(
             details.start_point.snapshot,
             running = [ForwardAppendedTrajectoryEnsemble(
-                self.ensemble, 
+                ensemble, 
                 details.start[0:details.start_point.index]).can_append, 
                 self.length_stopper.can_append]
              )
@@ -195,14 +244,14 @@ class BackwardShootMover(ShootMover):
     '''
     A pathmover that implements the backward shooting algorithm
     '''
-    def _generate(self, details):
+    def _generate(self, details, ensemble):
         print "Shooting backward from frame %d" % details.start_point.index
 
         # Run until one of the stoppers is triggered
         partial_trajectory = PathMover.engine.generate(
             details.start_point.snapshot.reversed_copy(), 
             running = [BackwardPrependedTrajectoryEnsemble( 
-                self.ensemble, 
+                ensemble, 
                 details.start[details.start_point.index + 1:]).can_prepend, 
                 self.length_stopper.can_prepend]
         )
@@ -231,7 +280,6 @@ class MixedMover(PathMover):
             self.weights = [1.0] * len(movers)
         else:
             self.weights = weights
-        pass
     
     def move(self, trajectory):
         rand = np.random.random() * sum(self.weights)
