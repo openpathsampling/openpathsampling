@@ -114,17 +114,17 @@ class SampleSet(object):
             nsamps_rep += len(self.replica_dict[rep])
         nsamps = len(self.samples)
         assert nsamps==nsamps_ens, \
-                "nsamps != nsamps_ens : %d != %d" % nsamps, nsamps_ens
+                "nsamps != nsamps_ens : %d != %d" % (nsamps, nsamps_ens)
         assert nsamps==nsamps_rep, \
-                "nsamps != nsamps_rep : %d != %d" % nsamps, nsamps_rep
+                "nsamps != nsamps_rep : %d != %d" % (nsamps, nsamps_rep)
 
         # if we have the same number of samples, then we check that each
         # sample in samples is in each of the dictionaries
         for samp in self.samples:
             assert samp in self.ensemble_dict[samp.ensemble], \
-                    "Sample not in ensemble_dict! %r %r" % samp, self.ensemble_dict
+                    "Sample not in ensemble_dict! %r %r" % (samp, self.ensemble_dict)
             assert samp in self.replica_dict[samp.replica], \
-                    "Sample not in replica_dict! %r %r" % samp, self.replica_dict
+                    "Sample not in replica_dict! %r %r" % (samp, self.replica_dict)
 
         # finally, check to be sure that thre are no duplicates in
         # self.samples; this completes the consistency check
