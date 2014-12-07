@@ -73,7 +73,8 @@ class Bootstrapping(Calculation):
             globalstate = self.globalstate.move(samples)
 
             # Now save all samples
-            self.globalstate.save_samples(self.storage)
+            if self.storage is not None:
+                self.globalstate.save_samples(self.storage)
 
             # update to new globalstate
             self.globalstate = globalstate
@@ -89,7 +90,8 @@ class Bootstrapping(Calculation):
                     globalstate = self.globalstate.move([sample])
 
                     # Now save all samples
-                    self.globalstate.save_samples(self.storage)
+                    if self.storage is not None:
+                        self.globalstate.save_samples(self.storage)
 
                     # update to new globalstate
                     self.globalstate = globalstate
