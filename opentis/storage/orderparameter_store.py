@@ -58,8 +58,11 @@ class ObjectDictStorage(ObjectStorage):
         self.storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
         self.save_variable(self.idx_dimension + '_length', idx, length)
 
-        obj_shift = self.storage._storages[self.content_class]._min_idx
-        keys = map(lambda x: x - obj_shift, store.keys())
+        # MULTIFILE
+#        obj_shift = self.storage._storages[self.content_class]._min_idx
+#        keys = map(lambda x: x - obj_shift, store.keys())
+
+        keys = store.keys()
 
         self.storage.variables[var_name + '_value'][keys] = self.list_to_numpy(store.values(), 'float')
         self.storage.variables[var_name + '_set'][0:length] = store.keys()
@@ -107,9 +110,11 @@ class ObjectDictStorage(ObjectStorage):
         stored_idx = self.storage.variables[var_name + '_set'][0:length]
         data_all = self.storage.variables[var_name + '_value'][:]
 
-        obj_shift = self.storage._storages[self.content_class]._min_idx
-        keys = map(lambda x: x - obj_shift, self.list_from_numpy(stored_idx, 'index'))
+        # MULTIFILE
+#        obj_shift = self.storage._storages[self.content_class]._min_idx
+#        keys = map(lambda x: x - obj_shift, self.list_from_numpy(stored_idx, 'index'))
 
+        keys = self.list_from_numpy(stored_idx, 'index')
         data = self.list_from_numpy(data_all[keys], 'float')
 
         return dict(zip(stored_idx, data))

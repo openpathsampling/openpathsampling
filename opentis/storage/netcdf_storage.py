@@ -77,8 +77,6 @@ class Storage(netcdf.Dataset):
         self.simplifier = ObjectJSON()
 
         self.units = dict()
-        self._next = None
-        self._previous = None
 
         # use no units
         self.dimension_units = {
@@ -162,17 +160,6 @@ class Storage(netcdf.Dataset):
 
             self.topology = self.simplifier.topology_from_dict(self.simplifier.from_json(self.variables['topology'][0]))
             self.atoms = self.topology.n_atoms
-
-    def freeze_and_split(self):
-        """
-        In multi file support this will (almost) close the current file and start writing all new
-        object to a new file with the ending .[xx].nc.
-
-        :return:
-        """
-
-        filename = self.filename
-        next_storage = Storage(filename)
 
     @property
     def template(self):
@@ -376,6 +363,19 @@ class Storage(netcdf.Dataset):
         store = self._storages[obj_type]
         return store.load(*args, **kwargs)
 
+
+class MultiFileStorage(Storage):
+
+    def _init_classes(self, filename='trajectory.nc', mode=None,
+                 template=None, n_atoms=None, units=None):
+
+        super(MultiFileStorage, self)._init_classes(
+            filename=filename, mode=mode, template=template, n_atoms=n_atoms,
+            units=units)
+        self._next = None
+        self._previous = None
+        self._all_storages
+
     def iter_stores(self):
         def stores():
             store = self
@@ -387,3 +387,27 @@ class Storage(netcdf.Dataset):
                 store = store._next
 
         return stores()
+
+    def freeze_and_split(self):
+        """
+        In multi file support this will (almost) close the current file and start writing all following
+        objects to a new file with the ending .[xx].nc.
+
+        NOTES
+        -----
+        We need to close the file to not have too many files open at a time. This means that
+        if for snapshots in the closed part are missing orderparameter computations, we cannot add them
+        later (I have this actually implemented, but this would require to put some data to all
+        closed files and this does not seem wise). I would say to keep this simple that we will only
+        allow one open file at a time. This also means that we cannot (or should not) add more
+        orderparameters after the first file is closed. Although in the current implementation this
+        works. It just means that the specific orderparameter is not present in all files.
+        Afterwards we need to reconstruct the full arrays by comparing the actual orderparameter name.
+        All of this has to do with the specific way orderparameters are saved. It seemed wise to
+        save them as a variable that is attached to the snapshot number so that it will be easy
+        to read for other programs!
+
+        """
+
+        filename = self.filename
+        next_storage = Storage(filename)
