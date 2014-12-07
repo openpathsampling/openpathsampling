@@ -34,7 +34,19 @@ class ObjectDictStorage(ObjectStorage):
             self.cache[idx] = objectdict
 
         self._update_store(objectdict)
-        store = objectdict.storage_caches[storage]
+
+        self._write_to_storage(objectdict, idx)
+
+        # MULTIFILE
+#        for store in self.iter_stores():
+#            self._write_to_storage(objectdict, idx)
+
+
+
+        self.tidy_cache(objectdict)
+
+    def _write_to_storage(self, objectdict, idx):
+        store = objectdict.storage_caches[self.storage]
         length = len(store)
 
         var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
@@ -45,10 +57,15 @@ class ObjectDictStorage(ObjectStorage):
 
         self.storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
         self.save_variable(self.idx_dimension + '_length', idx, length)
-        self.storage.variables[var_name + '_value'][store.keys()] = self.list_to_numpy(store.values(), 'float')
+
+        obj_shift = self.storage._storages[self.content_class]._min_idx
+        keys = map(lambda x: x - obj_shift, store.keys())
+
+        self.storage.variables[var_name + '_value'][keys] = self.list_to_numpy(store.values(), 'float')
         self.storage.variables[var_name + '_set'][0:length] = store.keys()
 
         self.tidy_cache(objectdict)
+
 
     @loadidentifiable
     @loadcache
@@ -71,18 +88,31 @@ class ObjectDictStorage(ObjectStorage):
 
         name = storage.variables[self.idx_dimension + '_name'][idx]
         var_name = self.idx_dimension + '_' + str(idx) + '_' + name
-        length = self.load_variable(self.idx_dimension + '_length', idx)
-        stored_idx = self.storage.variables[var_name + '_set'][0:length]
-        data_all = storage.variables[var_name + '_value'][:]
-        data = self.list_from_numpy(data_all[self.list_from_numpy(stored_idx, 'index')], 'float')
 
         if op is None:
             op = OrderParameter(name)
 
-        op.storage_caches[storage] = dict(zip(stored_idx, data))
-        op.idx[storage] = idx
+        op.storage_caches[storage] = dict()
+        op.storage_caches[storage].update(self._update_from_storage(var_name, idx))
+
+        # MULTIFILE
+#        for store in self.iter_stores():
+#            op.storage_caches[storage].update(store._update_from_storage(var_name, idx))
+
 
         return op
+
+    def _update_from_storage(self, var_name, idx):
+        length = self.load_variable(self.idx_dimension + '_length', idx)
+        stored_idx = self.storage.variables[var_name + '_set'][0:length]
+        data_all = self.storage.variables[var_name + '_value'][:]
+
+        obj_shift = self.storage._storages[self.content_class]._min_idx
+        keys = map(lambda x: x - obj_shift, self.list_from_numpy(stored_idx, 'index'))
+
+        data = self.list_from_numpy(data_all[keys], 'float')
+
+        return dict(zip(stored_idx, data))
 
     def restore(self, obj):
         idx = self.find_by_identifier(obj.identifier)

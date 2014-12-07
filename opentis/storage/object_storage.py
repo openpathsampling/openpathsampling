@@ -57,7 +57,7 @@ class ObjectStorage(object):
 
 
         """
-        self.storage = storage
+        self._storage = storage
         self.content_class = obj
         self.idx_dimension = obj.__name__.lower()
         self.db = obj.__name__.lower()
@@ -67,6 +67,8 @@ class ObjectStorage(object):
         self.all_names = None
         self.simplifier = StorableObjectJSON(storage)
         self._names_loaded = False
+        self._idx_min = 0
+        self._idx_max = None
         if identifier is not None:
             self.identifier = self.idx_dimension + '_' + identifier
         else:
@@ -76,6 +78,10 @@ class ObjectStorage(object):
             self.dimension_units = dimension_units
         else:
             self.dimension_units = {}
+
+    @property
+    def storage(self):
+        return self._storage
 
     @property
     def units(self):
@@ -92,6 +98,7 @@ class ObjectStorage(object):
         return self.storage.units
 
     def register(self):
+        self.storage._storages[self.__class__.__name__] = self
         self.storage._storages[self.content_class] = self
         self.storage._storages[self.content_class.__name__] = self
         self.storage._storages[self.content_class.__name__.lower()] = self
@@ -230,22 +237,13 @@ class ObjectStorage(object):
 
         self.save_json(self.idx_dimension + '_json', idx, obj)
 
-    def get(self, indices):
+    def get(self, var_name, index):
         """
-        Returns a list of objects from the given list of indices
-
-        Arguments
-        ---------
-        indices : list of int
-            the list of integers specifying the object to be returned
-
-        Returns
-        -------
-        list of objects
-            a list of objects stored under the given indices
-
         """
-        return [self.load(idx) for idx in range(0, self.count())[indices] ]
+
+    def put(self, var_name, index, value):
+        """
+        """
 
     def last(self):
         '''
@@ -551,6 +549,29 @@ class ObjectStorage(object):
         values = self.list_to_numpy(data, value_type)
         self.storage.variables[name][idx, begin:begin+len(data)] = values
 
+    def get_slice_as_type(self, name, dimension, idx, value_type):
+        storage = self.storage
+        values = storage.variables[name][self.get_slice(dimension, idx)]
+
+        data = self.list_from_numpy(values, value_type)
+        return data
+
+    def set_slice_as_type(self, name, dimension, idx, begin, data, value_type):
+        values = self.list_to_numpy(data, value_type)
+
+        length = len(values)
+        self.set_slice(dimension, idx, begin, length)
+        self.storage.variables[name][idx, begin:begin+len(data)] = values
+
+    def set_new_slice_as_type(self, name, dimension, idx, data, value_type):
+#        begin = self.free_begin(self.storage.variables[name].dimensions[0])
+        values = self.list_to_numpy(data, value_type)
+
+        begin = self.get_slice(dimension, int(len(self.storage.dimensions[dimension])) - 1).start
+        length = len(values)
+        self.set_slice(dimension, idx, begin, length)
+        self.storage.variables[name][idx, begin:begin+len(data)] = values
+
 #=============================================================================================
 # ORDERPARAMETER UTILITY FUNCTIONS
 #=============================================================================================
@@ -564,3 +585,6 @@ class ObjectStorage(object):
             return obj.idx[self.storage]
 
         return idx
+
+    def iter_stores(self):
+        return (store._storages[self.__class__.__name__] for store in self.storage.iter_stores())

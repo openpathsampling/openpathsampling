@@ -1,5 +1,20 @@
+MULTIFILE = False
+
 def savecache(func):
     def inner(self, obj, idx = None, *args, **kwargs):
+
+        if MULTIFILE:
+            # Check, if in multifile this is the right storage, otherwise skip to the next or previous one.
+
+            if self._min_idx > idx:
+                # use the previous storage
+                store = self.storage._previous._storages[self.__class__.__name__]
+                store.save(obj, idx, *args, **kwargs)
+            elif self._max_idx is not None and self._max_idx < idx:
+                store = self.storage._next._storages[self.__class__.__name__]
+                store.save(obj, idx, *args, **kwargs)
+
+
         idx = self.index(obj, idx)
         if idx is not None:
             func(self, obj, idx, *args, **kwargs)
@@ -41,6 +56,18 @@ def loadcache(func):
         if type(idx) is not str and idx < 0:
             return None
 
+
+        if MULTIFILE:
+            # Check, if in multifile this is the right storage, otherwise skip to the next or previous one.
+
+            if self._min_idx > idx:
+                # use the previous storage
+                store = self.storage._previous._storages[self.__class__.__name__]
+                return store.load(idx, *args, **kwargs)
+            elif self._max_idx is not None and self._max_idx < idx:
+                store = self.storage._next._storages[self.__class__.__name__]
+                store.load(idx, *args, **kwargs)
+
         n_idx = idx
 
         if idx in self.cache:
@@ -65,7 +92,13 @@ def loadcache(func):
 
             n_idx = self.idx_from_name(idx)
 
-        obj = func(self, n_idx, *args, **kwargs)
+        if MULTIFILE:
+            obj = func(self, n_idx - self._min_idx, *args, **kwargs)
+        else:
+            obj = func(self, n_idx, *args, **kwargs)
+
+        obj.idx[self.storage] = n_idx
+
         self.cache[obj.idx[self.storage]] = obj
 
 

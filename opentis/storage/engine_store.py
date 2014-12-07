@@ -14,16 +14,13 @@ class DynamicsEngineStorage(ObjectStorage):
         '''
 
         # Create object first to break any unwanted recursion in loading
-        engine_type = self.storage.variables['dynamicsengine_type'][int(idx)]
+        engine_type = self.load_variable('dynamicsengine_type', idx)
 
         # try to create an object of the same type as the original
-
         engine_class_dict = DynamicsEngine.__descendents__()
 
-        options = self.simplifier.from_json(self.storage.variables['dynamicsengine_options'][int(idx)])
+        options = self.simplifier.from_json(self.load_variable('dynamicsengine_options', idx))
         engine = engine_class_dict[engine_type](options=options)
-
-        engine.idx[self.storage] = idx
 
         return engine
 
@@ -34,12 +31,13 @@ class DynamicsEngineStorage(ObjectStorage):
         Returns an object from the storage. Needs to be implented from the specific storage class.
         '''
 
-        self.storage.variables['dynamicsengine_type'][int(idx)] = engine.__class__.__name__
+        self.save_variable('dynamicsengine_type', idx, engine.__class__.__name__)
 
         if self.named and hasattr(engine, 'name'):
-            self.storage.variables[self.db + '_name'][idx] = engine.name
+            self.save_variable(self.db + '_name', idx, engine.name)
 
-        self.storage.variables['dynamicsengine_options'][int(idx)] = self.simplifier.to_json(engine.options)
+
+        self.save_variable('dynamicsengine_options', idx, self.simplifier.to_json(engine.options))
 
         engine.idx[self.storage] = idx
 

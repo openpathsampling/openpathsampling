@@ -50,13 +50,15 @@ class TrajectoryStorage(ObjectStorage):
         map(self.storage.snapshot.save, trajectory)
 
         # Find a free position to save snapshot ids
-        begin = self.free_begin('trajectory_snapshot')
-        length = len(trajectory)
+#        begin = self.free_begin('trajectory_snapshot')
+#        length = len(trajectory)
 
-        self.set_slice('trajectory', idx, begin, length)
+#        self.set_slice('trajectory', idx, begin, length)
 
-        values = self.list_to_numpy(trajectory, 'snapshot')
-        self.storage.variables['trajectory_snapshot_idx'][begin:begin+length] = values
+#        values = self.list_to_numpy(trajectory, 'snapshot')
+#        self.storage.variables['trajectory_snapshot_idx'][begin:begin+length] = values
+
+        self.set_new_slice_as_type('trajectory_snapshot_idx', 'trajectory', idx, trajectory, 'snapshot')
 
     def snapshot_indices(self, idx):
         '''
@@ -72,10 +74,12 @@ class TrajectoryStorage(ObjectStorage):
         '''
 
         # get the values
-        values = self.storage.variables['trajectory_snapshot_idx'][self.get_slice('trajectory', idx)]
+#        values = self.storage.variables['trajectory_snapshot_idx'][self.get_slice('trajectory', idx)]
 
         # typecast to integer
-        return self.list_from_numpy(values, 'index')
+#        return self.list_from_numpy(values, 'index')
+
+        return self.get_slice_as_type('trajectory_snapshot_idx', 'trajectory', idx, 'index')
 
     @loadcache
     def load(self, idx, lazy = None):
@@ -93,13 +97,14 @@ class TrajectoryStorage(ObjectStorage):
             the trajectory
         '''
 
-        values = self.storage.variables['trajectory_snapshot_idx'][self.get_slice('trajectory', idx)]
+#        values = self.storage.variables['trajectory_snapshot_idx'][self.get_slice('trajectory', idx)]
+
+        values = self.snapshot_indices(idx)
 
         # typecast to snapshot
         snapshots = self.list_from_numpy(values, 'snapshot')
 
         trajectory = Trajectory(snapshots)
-        trajectory.idx[self.storage] = idx
 
         return trajectory
 

@@ -38,8 +38,6 @@ class SnapshotStorage(ObjectStorage):
 
         snapshot.reversed = momentum_reversed
 
-        snapshot.idx[self.storage] = idx
-
         return snapshot
 
     def all(self):
@@ -249,7 +247,6 @@ class MomentumStorage(ObjectStorage):
             kinetic_energy = None
 
         momentum = Momentum(velocities=velocities, kinetic_energy=kinetic_energy)
-        momentum.idx[storage] = idx
 
         return momentum
 
@@ -417,7 +414,6 @@ class ConfigurationStorage(ObjectStorage):
             potential_energy = None
 
         configuration = Configuration(coordinates=coordinates, box_vectors = box_vectors, potential_energy=potential_energy)
-        configuration.idx[storage] = idx
 
         configuration.topology = self.storage.topology
 

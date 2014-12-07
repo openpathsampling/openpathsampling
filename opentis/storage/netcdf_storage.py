@@ -77,6 +77,8 @@ class Storage(netcdf.Dataset):
         self.simplifier = ObjectJSON()
 
         self.units = dict()
+        self._next = None
+        self._previous = None
 
         # use no units
         self.dimension_units = {
@@ -160,6 +162,17 @@ class Storage(netcdf.Dataset):
 
             self.topology = self.simplifier.topology_from_dict(self.simplifier.from_json(self.variables['topology'][0]))
             self.atoms = self.topology.n_atoms
+
+    def freeze_and_split(self):
+        """
+        In multi file support this will (almost) close the current file and start writing all new
+        object to a new file with the ending .[xx].nc.
+
+        :return:
+        """
+
+        filename = self.filename
+        next_storage = Storage(filename)
 
     @property
     def template(self):
@@ -362,3 +375,15 @@ class Storage(netcdf.Dataset):
         """
         store = self._storages[obj_type]
         return store.load(*args, **kwargs)
+
+    def iter_stores(self):
+        def stores():
+            store = self
+            while store._previous is not None:
+                store = store._previous
+
+            while store is not None:
+                yield store
+                store = store._next
+
+        return stores()
