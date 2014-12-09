@@ -193,8 +193,8 @@ class ForwardShootMover(ShootMover):
              )
 
         # DEBUG
-        setattr(details, 'repeated_partial', details.start[0:shooting_point])
-        setattr(details, 'new_partial', partial_trajectory)
+        #setattr(details, 'repeated_partial', details.start[0:shooting_point])
+        #setattr(details, 'new_partial', partial_trajectory)
 
         details.final = details.start[0:shooting_point] + partial_trajectory
         details.final_point = ShootingPoint(self.selector, details.final,
@@ -218,9 +218,9 @@ class BackwardShootMover(ShootMover):
         )
 
         # DEBUG
-        setattr(details, 'repeated_partial',
-                details.start[details.start_point.index+1:])
-        setattr(details, 'new_partial', partial_trajectory.reversed)
+        #setattr(details, 'repeated_partial',
+                #details.start[details.start_point.index+1:])
+        #setattr(details, 'new_partial', partial_trajectory.reversed)
 
         details.final = partial_trajectory.reversed + details.start[details.start_point.index + 1:]
         details.final_point = ShootingPoint(self.selector, details.final, partial_trajectory.frames - 1)
