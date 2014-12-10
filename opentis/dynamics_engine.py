@@ -249,13 +249,12 @@ class DynamicsEngine(object):
         # Are we ready to rumble ?
         if self.initialized:
             
-            self.current_snapshot = snapshot
+            self.current_snapshot = snapshot.copy()
             self.start()
 
             # Store initial state for each trajectory segment in trajectory.
             trajectory = Trajectory()
-            trajectory.append(snapshot)
-            print trajectory, snapshot.coordinates[0], hex(id(snapshot))
+            trajectory.append(snapshot.copy())
             
             frame = 0
             # maybe we should stop before we even begin?
@@ -265,19 +264,19 @@ class DynamicsEngine(object):
             while stop == False:
                                 
                 # Do integrator x steps
-                snapshot = self.generate_next_frame()
+                new_snapshot = self.generate_next_frame()
                 frame += 1
                 
                 # Store snapshot and add it to the trajectory. Stores also
                 # final frame the last time
                 if self.storage is not None:
-                    self.storage.snapshot.save(snapshot)
-                trajectory.append(snapshot)
-                print trajectory, snapshot.coordinates[0], hex(id(snapshot))
-                
+                    self.storage.snapshot.save(new_snapshot)
+                trajectory.append(new_snapshot)
+
                 # Check if we should stop. If not, continue simulation
                 stop = self.stop_conditions(trajectory=trajectory,
                                             continue_conditions=running)
+
 
             # exit the while loop once we must stop, so we call the engine's
             # stop function (which should manage any end-of-trajectory
