@@ -186,15 +186,18 @@ class ForwardShootMover(ShootMover):
         # Run until one of the stoppers is triggered
         partial_trajectory = PathMover.engine.generate(
             details.start_point.snapshot.copy(),
-            running = [ForwardAppendedTrajectoryEnsemble(
-                self.ensemble, 
-                details.start[0:details.start_point.index]).can_append, 
-                self.length_stopper.can_append]
-             )
+            running = [
+                ForwardAppendedTrajectoryEnsemble(
+                    self.ensemble, 
+                    details.start[0:details.start_point.index]
+                ).can_append, 
+                self.length_stopper.can_append
+            ]
+        )
 
         # DEBUG
-        #setattr(details, 'repeated_partial', details.start[0:shooting_point])
-        #setattr(details, 'new_partial', partial_trajectory)
+        setattr(details, 'repeated_partial', details.start[0:shooting_point])
+        setattr(details, 'new_partial', partial_trajectory)
 
         details.final = details.start[0:shooting_point] + partial_trajectory
         details.final_point = ShootingPoint(self.selector, details.final,
@@ -211,16 +214,18 @@ class BackwardShootMover(ShootMover):
         # Run until one of the stoppers is triggered
         partial_trajectory = PathMover.engine.generate(
             details.start_point.snapshot.reversed_copy(), 
-            running = [BackwardPrependedTrajectoryEnsemble( 
-                self.ensemble, 
-                details.start[details.start_point.index + 1:]).can_prepend, 
-                self.length_stopper.can_prepend]
+            running = [
+                BackwardPrependedTrajectoryEnsemble( 
+                    self.ensemble, 
+                    details.start[details.start_point.index + 1:]
+                ).can_prepend, 
+                self.length_stopper.can_prepend
+            ]
         )
 
         # DEBUG
-        #setattr(details, 'repeated_partial',
-                #details.start[details.start_point.index+1:])
-        #setattr(details, 'new_partial', partial_trajectory.reversed)
+        setattr(details, 'repeated_partial', details.start[details.start_point.index+1:])
+        setattr(details, 'new_partial', partial_trajectory.reversed)
 
         details.final = partial_trajectory.reversed + details.start[details.start_point.index + 1:]
         details.final_point = ShootingPoint(self.selector, details.final, partial_trajectory.frames - 1)
