@@ -94,18 +94,53 @@ class testSampleSet(object):
         # if the key doesn't match the sample
         raise SkipTest
 
-    def test_setitem_itemexists(self):
+    def test_setitem_itemexists_ensemble(self):
         # exact sample is already there
-        raise SkipTest
+        testset2 = SampleSet([self.s0A, self.s1A, self.s2B])
+        # if we accidentally hit the statistical code, repeating 100 times
+        # reduces odds of getting the same replacement each time
+        for i in range(100): 
+            self.testset[self.ensA] = self.s0A
+            self.testset.consistency_check()
+            assert_equal(len(self.testset), 3)
+            assert_items_equal(self.testset, testset2)
+
+    def test_setitem_itemexists_replica(self):
+        testset = SampleSet([self.s0A, self.s1A, self.s2B, self.s2B_])
+        testset2 = SampleSet([self.s0A, self.s1A, self.s2B, self.s2B_])
+        testset[2] = self.s2B
+        testset.consistency_check()
+        assert_equal(len(testset), 4)
+        assert_items_equal(testset, testset2)
 
     def test_additem(self):
-        raise SkipTest
+        testset2 = SampleSet([self.s0A, self.s1A, self.s2B, self.s2B_])
+        self.testset.append(self.s2B_)
+        assert_equal(self.s2B_ in self.testset, True)
+        assert_equal(len(self.testset), 4)
+        self.testset.consistency_check()
+        assert_items_equal(self.testset, testset2)
 
     def test_additem_itemexists(self):
         # exact sample is already there
+        testset2 = SampleSet([self.s0A, self.s1A, self.s2B])
+        self.testset.append(self.s2B)
+        self.testset.consistency_check()
+        assert_equal(len(self.testset), 3)
+        assert_items_equal(self.testset, testset2)
+
+    def test_del_sample(self):
+        del self.testset[self.s2B]
+        assert_equal(len(self.testset), 2)
+        assert_equal(self.ensB in self.testset.ensemble_dict.keys(), False)
+        assert_equal(self.ensA in self.testset.ensemble_dict.keys(), True)
+        assert_equal(2 in self.testset.replica_dict.keys(), False)
+        assert_equal(0 in self.testset.replica_dict.keys(), True)
+
+    def test_del_ensemble(self):
         raise SkipTest
 
-    def test_deleteitem(self):
+    def test_del_replica(self):
         raise SkipTest
 
     def test_apply_samples(self):

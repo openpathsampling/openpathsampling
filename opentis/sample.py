@@ -4,6 +4,10 @@ from opentis.ensemble import Ensemble
 
 class SampleSet(object):
     ''' SampleSet is essentially a list of samples, with a few conveniences.
+    It can be treated as a list of samples (using, e.g., .append), or as a
+    dictionary of ensembles mapping to a list of samples, or as a dictionary
+    of replica IDs to samples. Any type is allowed as a replica ID except
+    Sample or Ensemble.
 
     The dictionaries ensemble_dict and replica_dict are conveniences which
     should be kept consistent by any method which modifies the container.
@@ -64,6 +68,8 @@ class SampleSet(object):
         if len(self.replica_dict[sample.replica]) == 0:
             del self.replica_dict[sample.replica]
         self.samples.remove(sample)
+
+    # TODO: add support for remove and pop
 
     def __iter__(self):
         for sample in self.samples:
