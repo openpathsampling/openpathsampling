@@ -57,11 +57,13 @@ class SampleSet(object):
         self.append(value)
 
     def __delitem__(self, sample):
-        # question: is this the right way to do this? just want to remove
-        # the item from the collection, don't want to actually dealloc it
-        del self.ensemble_dict[sample]
-        del self.replica_dict[sample]
-        del self.samples[sample]
+        self.ensemble_dict[sample.ensemble].remove(sample)
+        self.replica_dict[sample.replica].remove(sample)
+        if len(self.ensemble_dict[sample.ensemble]) == 0:
+            del self.ensemble_dict[sample.ensemble]
+        if len(self.replica_dict[sample.replica]) == 0:
+            del self.replica_dict[sample.replica]
+        self.samples.remove(sample)
 
     def __iter__(self):
         for sample in self.samples:

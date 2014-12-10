@@ -37,6 +37,11 @@ class testSampleSet(object):
         for samp in self.testset:
             assert_equal(samp in samps, True)
 
+    def test_contains(self):
+        samps = [self.s0A, self.s1A, self.s2B]
+        for samp in samps:
+            assert_equal(samp in self.testset, True)
+
     def test_len(self):
         assert_equal(len(self.testset), 3)
 
@@ -51,18 +56,53 @@ class testSampleSet(object):
         # TODO: add test that we pick at random
 
     def test_setitem_ensemble(self):
-        raise SkipTest
+        ensC = LengthEnsemble(3)
+        traj3C = Trajectory([-0.5, -0.25, 0.1])
+        s3C = Sample(replica=3, trajectory=traj3C, ensemble=ensC)
+        self.testset[ensC] = s3C
+        self.testset.consistency_check()
+        assert_equal(len(self.testset), 4)
+
+    def test_setitem_replace_ensemble(self):
+        self.testset[self.ensB] = self.s2B_
+        assert_equal(self.s2B in self.testset, False)
+        assert_equal(self.s2B_ in self.testset, True)
+        assert_equal(self.testset[2], self.s2B_)
+        assert_equal(self.testset[self.ensB], self.s2B_)
+        # TODO add test that we replace at random
 
     def test_setitem_replica(self):
+        ensC = LengthEnsemble(3)
+        traj3C = Trajectory([-0.5, -0.25, 0.1])
+        s3C = Sample(replica=3, trajectory=traj3C, ensemble=ensC)
+        self.testset[3] = s3C
+        self.testset.consistency_check()
+        assert_equal(len(self.testset), 4)
+
+    def test_setitem_replace_replica(self):
+        self.testset[2] = self.s2B_
+        assert_equal(self.s2B in self.testset, False)
+        assert_equal(self.s2B_ in self.testset, True)
+        assert_equal(self.testset[2], self.s2B_)
+        # TODO add test that we replace at random
+
+    def test_illegal_assign_ensemble(self):
+        # if the key doesn't match the sample
+        raise SkipTest
+
+    def test_illegal_assign_replica(self):
+        # if the key doesn't match the sample
         raise SkipTest
 
     def test_setitem_itemexists(self):
+        # exact sample is already there
         raise SkipTest
 
     def test_additem(self):
         raise SkipTest
 
     def test_additem_itemexists(self):
+        # exact sample is already there
         raise SkipTest
 
     def test_deleteitem(self):
@@ -71,4 +111,14 @@ class testSampleSet(object):
     def test_apply_samples(self):
         raise SkipTest
 
+    def test_consistency_fail_size_ensdict(self):
+        raise SkipTest
 
+    def test_consistency_fail_size_repdict(self):
+        raise SkipTest
+
+    def test_consistency_fail_sample_in_ensdict(self):
+        raise SkipTest
+
+    def test_consistency_fail_sample_in_repdict(self):
+        raise SkipTest
