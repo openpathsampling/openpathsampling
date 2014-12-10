@@ -1,5 +1,6 @@
 
 import random
+from opentis.ensemble import Ensemble
 
 class SampleSet(object):
     ''' SampleSet is essentially a list of samples, with a few conveniences.
@@ -35,9 +36,9 @@ class SampleSet(object):
 
     def __getitem__(self, key):
         if isinstance(key, Ensemble):
-            return random.choice(self.ensemble_dict[ensemble])
+            return random.choice(self.ensemble_dict[key])
         else:
-            return random.choice(self.replica_dict[replica])
+            return random.choice(self.replica_dict[key])
 
     def __setitem__(self, key, value):
         if value in self.samples:

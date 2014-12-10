@@ -480,9 +480,10 @@ class Sample(object):
     a separate move object for each resulting trajectory is returned
     """
 
-    def __init__(self, trajectory=None,  mover=None, ensemble=None, details=None, step=-1):
+    def __init__(self, replica=None, trajectory=None,  mover=None, ensemble=None, details=None, step=-1):
         self.idx = dict()
 
+        self.replica = replica
         self.mover = mover
         self.ensemble = ensemble
         self.trajectory = trajectory

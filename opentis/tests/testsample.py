@@ -11,26 +11,44 @@ from nose.plugins.skip import Skip, SkipTest
 from test_helpers import true_func, assert_equal_array_array
 
 from opentis.sample import *
-from opentis.trajectory import Sample
+from opentis.trajectory import Trajectory, Sample
+
+from opentis.ensemble import LengthEnsemble
 
 class testSampleSet(object):
     def setup(self):
-        pass
+        self.ensA = LengthEnsemble(1)
+        self.ensB = LengthEnsemble(2)
+        traj0A = Trajectory([0.5])
+        traj1A = Trajectory([1.0])
+        traj2B = Trajectory([0.5, 0.75])
+        traj2B_ = Trajectory([0.8, 0.9])
+        self.s0A = Sample(replica=0, trajectory=traj0A, ensemble=self.ensA)
+        self.s1A = Sample(replica=1, trajectory=traj1A, ensemble=self.ensA)
+        self.s2B = Sample(replica=2, trajectory=traj2B, ensemble=self.ensB)
+        self.s2B_ = Sample(replica=2, trajectory=traj2B_, ensemble=self.ensB)
+        self.testset = SampleSet([self.s0A, self.s1A, self.s2B])
 
     def test_initialization(self):
-        raise SkipTest
+        self.testset.consistency_check()
 
     def test_iter(self):
-        raise SkipTest
+        samps = [self.s0A, self.s1A, self.s2B]
+        for samp in self.testset:
+            assert_equal(samp in samps, True)
 
     def test_len(self):
-        raise SkipTest
+        assert_equal(len(self.testset), 3)
 
     def test_getitem_ensemble(self):
-        raise SkipTest
+        assert_equal(self.testset[self.ensB], self.s2B)
+        # TODO: add test that we pick at random for ensA
 
     def test_getitem_replica(self):
-        raise SkipTest
+        assert_equal(self.testset[0], self.s0A)
+        assert_equal(self.testset[1], self.s1A)
+        assert_equal(self.testset[2], self.s2B)
+        # TODO: add test that we pick at random
 
     def test_setitem_ensemble(self):
         raise SkipTest
