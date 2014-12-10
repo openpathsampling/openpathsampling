@@ -111,9 +111,8 @@ class GlobalState(dict):
             globalstate[ensemble] = self[ensemble]
 
         for sample in samples:
-            #print sample.trajectory, sample.ensemble
             sample.time = self.step
-            #globalstate[sample.ensemble] = sample.trajectory
+
             dict.__setitem__(globalstate, sample.ensemble, sample.trajectory)
 
         GlobalState.current = globalstate
