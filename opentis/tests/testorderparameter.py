@@ -21,7 +21,7 @@ class testOP_Function(object):
     def setUp(self):
         # setUp is just reading in some alanine dipeptide frames: this is an
         # ugly hack
-        self.storage = Storage(topology_file=None,
+        self.storage = Storage(
                                filename=data_filename("ala_small_traj.nc"),
                                mode="a"
                               )

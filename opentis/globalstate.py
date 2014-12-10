@@ -1,4 +1,4 @@
-from wrapper import storable
+from opentis.wrapper import storable
 
 @storable
 class GlobalState(dict):

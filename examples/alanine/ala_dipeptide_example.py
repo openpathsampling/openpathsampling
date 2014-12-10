@@ -9,47 +9,34 @@ TIS simulation on alanine dipeptide.
 # that more of what the user will need to do will be in the __main__ of this
 # script
 
-# hack until this is a proper package
-#import sys
-#import os
-#sys.path.append(os.path.abspath('../'))
-
 import numpy as np
 import mdtraj as md
+import time
 
 import sys, os
 sys.path.append(os.path.abspath('../'))
 sys.path.append(os.path.abspath('../../'))
 
- 
 # in principle, all of these imports should be simplified once this is a
 # package
 from opentis.orderparameter import OP_Function, OP_Volume
 from opentis.openmm_engine import OpenMMEngine
-from opentis.snapshot import Snapshot, Momentum
-from opentis.snapshot import Configuration
+from opentis.snapshot import Snapshot
 from opentis.volume import LambdaVolumePeriodic, VolumeFactory as vf
 from opentis.pathmover import PathMoverFactory as mf
 from opentis.ensemble import EnsembleFactory as ef
 from opentis.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
                               InXEnsemble)
-from opentis.storage import Storage
-from opentis.trajectory import Trajectory
 from opentis.calculation import Bootstrapping
-from opentis.pathmover import (PathMover, MixedMover, ForwardShootMover, 
-                       BackwardShootMover)
+from opentis.pathmover import PathMover
 from opentis.shooting import UniformSelector
 
-from simtk.unit import femtoseconds, picoseconds, nanometers, kelvin, dalton
-from simtk.unit import Quantity
-
-import time
-
+import simtk.unit as u
 
 if __name__=="__main__":
-    options = {'temperature' : 300.0 * kelvin,
-               'collision_rate' : 1.0 / picoseconds,
-               'timestep' : 2.0 * femtoseconds,
+    options = {'temperature' : 300.0 * u.kelvin,
+               'collision_rate' : 1.0 / u.picoseconds,
+               'timestep' : 2.0 * u.femtoseconds,
                'nsteps_per_frame' : 10,
                'n_frames_max' : 5000,
                'start_time' : time.time(),
@@ -59,12 +46,14 @@ if __name__=="__main__":
                'forcefield_solute' : 'amber96.xml',
                'forcefield_solvent' : 'tip3p.xml'
               }
-    engine = OpenMMEngine(filename="trajectory.nc",
-                          topology_file="../data/Alanine_solvated.pdb",
-                          opts=options, 
-                          mode='create'
-                         )
-    
+
+    engine = OpenMMEngine.auto(
+        filename="trajectory.nc",
+        template='../data/Alanine_solvated.pdb',
+        options=options,
+        mode='create'
+    )
+
     # set up the initial conditions
     init_pdb = md.load(options['fn_initial_pdb'], frame=0)
     init_pos = init_pdb.xyz[0]
@@ -192,7 +181,6 @@ the bootstrapping calculation, then we run it.
                               movers=mover_set)
 
     bootstrap.set_replicas([segments[0]])
-
     bootstrap.run(50)
 
     print """

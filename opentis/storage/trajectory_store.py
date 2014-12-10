@@ -121,7 +121,7 @@ class TrajectoryStorage(ObjectStorage):
 
         return [ frames[idx[i]:idx[i] + length[i] ] for i in range(1, n_traj + 1) ]
 
-    def _init(self):
+    def _init(self, units=None):
         """
         Initialize the associated storage to allow for trajectory storage
 

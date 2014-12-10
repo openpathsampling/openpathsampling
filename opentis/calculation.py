@@ -1,6 +1,3 @@
-
-import os
-import sys
 from globalstate import GlobalState
 from pathmover import PathMover, MoveDetails, ReplicaExchange
 from trajectory import Sample
@@ -63,7 +60,7 @@ class Bootstrapping(Calculation):
         failsteps = 0
         # if we fail nsteps times in a row, kill the job
         while ens_num < self.globalstate.size - 1 and failsteps < nsteps:
-            print "Trying move in ensemble", ens_num
+#            print "Trying move in ensemble", ens_num
             # Generate Samples
 
             samples = [ self.movers[ens_idx].move(self.globalstate[ens_idx]) for ens_idx in range(ens_num, ens_num + 1) ]

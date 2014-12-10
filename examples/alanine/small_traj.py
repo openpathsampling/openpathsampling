@@ -28,7 +28,7 @@ if __name__ == "__main__":
     simulator = AlanineDipeptideTrajectorySimulator(
                     filename="smalltraj.nc",
                     topology_file="../data/Alanine_solvated.pdb",
-                    opts=options,
+                    options=options,
                     mode='create'
                     )
 
