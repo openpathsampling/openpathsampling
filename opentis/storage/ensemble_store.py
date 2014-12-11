@@ -1,6 +1,6 @@
 from object_storage import ObjectStorage
 from opentis.ensemble import Ensemble, LoadedEnsemble
-from wrapper import loadcache, savecache, saveidentifiable
+from wrapper import loadcache, savecache, savenamed
 
 class EnsembleStorage(ObjectStorage):
 
@@ -30,7 +30,7 @@ class EnsembleStorage(ObjectStorage):
         return obj
 
 
-    @saveidentifiable
+    @savenamed
     @savecache
     def save(self, ensemble, idx):
         '''

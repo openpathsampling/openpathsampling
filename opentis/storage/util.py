@@ -20,8 +20,11 @@ class ObjectJSON(object):
                 # This is number with a unit so turn it into a list
                 if self.unit_system is not None:
                     return { '_value' : obj.value_in_unit_system(self.unit_system), '_units' : self.unit_to_dict(obj.unit.in_unit_system(self.unit_system)) }
+
                 else:
                     return { '_value' : obj / obj.unit, '_units' : self.unit_to_dict(obj.unit) }
+            elif hasattr(obj, 'to_dict'):
+                return {'_content' : obj.to_dict(), '_cls' : obj.__class__.__name__  }
             else:
                 return None
         elif type(obj) is list:
@@ -40,6 +43,16 @@ class ObjectJSON(object):
         if type(obj) is dict:
             if '_units' in obj and '_value' in obj:
                 return obj['_value'] * self.unit_from_dict(obj['_units'])
+            elif '_cls' in obj and '_content' in obj:
+                # Try to build an object from the contents
+                # This is a little clumsy and unsafe. Maybe create a dict with
+                # all obj that can be reconstructed in this way
+                # It would be good to use a class_wrapper for objects that have this
+                # feature
+                if hasattr(globals(), '_cls'):
+                    cls = getattr(globals(), '_cls')
+                    if hasattr(cls, 'from_dict'):
+                        return cls.from_dict()
             else:
                 return {key : self.build(o) for key, o in obj.iteritems()}
         elif type(obj) is tuple:
@@ -165,7 +178,6 @@ class StorableObjectJSON(ObjectJSON):
 #                return { '_idx' : obj.idx[self.storage], '_cls' : obj.cls}
                 return { '_idx' : obj.idx[self.storage], '_base' : base_cls, '_cls' : obj.__class__.__name__ }
 
-
         return super(StorableObjectJSON, self).simplify(obj)
 
     def build(self,obj):
@@ -173,9 +185,7 @@ class StorableObjectJSON(ObjectJSON):
             if '_base' in obj and '_idx' in obj:
                 result = self.storage.load(obj['_base'], obj['_idx'])
                 # restore also the actual class name
-
                 result.cls = obj['_cls']
                 return result
-#                return getattr(self.storage, obj['_cls']).load(obj['_idx'])
 
         return super(StorableObjectJSON, self).build(obj)

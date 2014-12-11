@@ -223,7 +223,8 @@ class Trajectory(list):
             n_atoms = self[0].coordinates.shape[0]
         else:
             n_atoms = len(self.atom_indices)
-        return n_atoms    
+        return n_atoms
+
         
     #=============================================================================================
     # LIST INHERITANCE FUNCTIONS

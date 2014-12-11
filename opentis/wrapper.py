@@ -2,7 +2,7 @@ def storable(super_class):
     super_class.default_storage = None
 
     def _init(self, *args, **kwargs):
-        super_class._init(self, *args, **kwargs)
+        super_class._initialize_netCDF(self, *args, **kwargs)
 
         if 'idx' in kwargs:
             self.idx = kwargs['idx']
@@ -17,7 +17,7 @@ def storable(super_class):
             storage = self.default_storage
         storage.save(self)
 
-    super_class._init = super_class.__init__
+    super_class._initialize_netCDF = super_class.__init__
     super_class.__init__ = _init
 
     super_class.save = _save
@@ -44,5 +44,28 @@ def storable(super_class):
         return d
 
     super_class.__descendents__ = classmethod(__descendents__)
+
+    return super_class
+
+def jsonserializable(super_class):
+    if not hasattr(super_class, 'to_dict'):
+        def _to_dict(self):
+            return { '_cls' : self.__class__.__name__, '_args' : self.__dict__ }
+
+        super_class.to_dict = _to_dict
+
+    if not hasattr(super_class, 'from_dict'):
+
+        class Object(object):
+            pass
+
+        def _from_dict(self, d):
+            obj = super_class.__new__()
+            for key, value in d.args.iteritems:
+                setattr(obj, key, value)
+
+            return obj
+
+        super_class.from_dict = _from_dict
 
     return super_class

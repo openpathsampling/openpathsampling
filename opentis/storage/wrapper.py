@@ -26,11 +26,34 @@ def savecache(func):
 
     return inner
 
+def savenamed(func):
+    def inner(self, obj, idx=None, *args, **kwargs):
+        if idx is None and self.named:
+            find_idx = self.find_by_identifier()
+            if find_idx is not None:
+                # found and does not need to be saved, but we will let this ensemble point to the storage
+                # in case we want to save and need the idx
+                obj.idx[self.storage] = find_idx
+                self.cache[find_idx] = obj
+                self.all_names[obj.identifier] = find_idx
+            else:
+                func(self, obj, idx, *args, **kwargs)
+                # Finally register with the new idx in the identifier cache dict.
+                new_idx = obj.idx[self.storage]
+                self.all_names[obj.identifier] = new_idx
+        else:
+            func(self, obj, idx, *args, **kwargs)
+
+    return inner
+
+# Legacy and should be removed
 def saveidentifiable(func):
     def inner(self, obj, idx=None, *args, **kwargs):
         if idx is None and hasattr(obj, 'identifier'):
             if not hasattr(obj,'json'):
                 setattr(obj,'json',self.object_to_json(obj))
+
+            print 'Looking for', obj, type(obj), obj.identifier
 
             find_idx = self.find_by_identifier(obj.identifier)
             if find_idx is not None:
@@ -48,6 +71,7 @@ def saveidentifiable(func):
             func(self, obj, idx, *args, **kwargs)
 
     return inner
+
 
 def loadcache(func):
     def inner(self, idx, *args, **kwargs):
@@ -108,6 +132,22 @@ def loadcache(func):
         return obj
     return inner
 
+def loadnamed(func):
+    def inner(self, idx=None, *args, **kwargs):
+        if idx is not None and type(idx) is str:
+            find_idx = self.find_by_identifier(idx)
+            if find_idx is not None:
+                # names id is found so load with normal id
+                return func(self, find_idx, *args, **kwargs)
+            else:
+                # named id does not exist
+                return None
+        else:
+            return func(self, idx, *args, **kwargs)
+
+    return inner
+
+#Legacy and should be removed
 def loadidentifiable(func):
     def inner(self, idx=None, *args, **kwargs):
         if idx is not None and type(idx) is str:

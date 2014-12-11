@@ -41,7 +41,43 @@ class Storage(netcdf.Dataset):
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
     simulation. This allows effective storage of shooting trajectories '''
 
-    def __init__(self, filename='trajectory.nc', mode=None,
+    def _register_storages(self, store = None):
+        if store is None:
+            store = self
+        self.trajectory = TrajectoryStorage(store).register()
+        self.snapshot = SnapshotStorage(store).register()
+        self.configuration = ConfigurationStorage(store).register()
+        self.momentum = MomentumStorage(store).register()
+        self.ensemble = EnsembleStorage(store).register()
+        self.sample = SampleStorage(store).register()
+        self.pathmover = ObjectStorage(store, PathMover, named=True, json=True, identifier='json').register()
+        self.movedetails = ObjectStorage(store, MoveDetails, named=False, json=True, identifier='json').register()
+        self.shootingpoint = ObjectStorage(store, ShootingPoint, named=False, json=True).register()
+        self.shootingpointselector = ObjectStorage(store, ShootingPointSelector, named=False, json=True, identifier='json').register()
+        self.globalstate = ObjectStorage(store, GlobalState, named=True, json=True, identifier='json').register()
+        self.engine = DynamicsEngineStorage(store).register()
+        self.collectivevariable = ObjectDictStorage(store, OrderParameter, Snapshot).register()
+        self.cv = self.collectivevariable
+
+    def _setup_class(self):
+        self._storages = {}
+        self.links = []
+        self.simplifier = ObjectJSON()
+        self.units = dict()
+        # use no units
+        self.dimension_units = {
+            'length': u.Unit({}),
+            'velocity': u.Unit({}),
+            'energy': u.Unit({})
+        }
+        # use MD units
+        self.dimension_units = {
+            'length': u.nanometers,
+            'velocity': u.nanometers / u.picoseconds,
+            'energy': u.kilojoules_per_mole
+        }
+
+    def __init__(self, filename, mode=None,
                  template=None, n_atoms=None, units=None):
         '''
         Create a storage for complex objects in a netCDF file
@@ -69,51 +105,18 @@ class Storage(netcdf.Dataset):
             else:
                 mode = 'w'
 
-        self._storages = {}
-
         self.filename = filename
-        self.links = []
-
-        self.simplifier = ObjectJSON()
-
-        self.units = dict()
-
-        # use no units
-        self.dimension_units = {
-            'length' : u.Unit({}),
-            'velocity' : u.Unit({}),
-            'energy' : u.Unit({})
-        }
-
-        # use MD units
-        self.dimension_units = {
-            'length' : u.nanometers,
-            'velocity' : u.nanometers / u.picoseconds,
-            'energy' : u.kilojoules_per_mole
-        }
-
-        if units is not None:
-            self.dimension_units.update(units)
 
         super(Storage, self).__init__(filename, mode)
 
-        self.trajectory = TrajectoryStorage(self).register()
-        self.snapshot = SnapshotStorage(self).register()
-        self.configuration = ConfigurationStorage(self).register()
-        self.momentum = MomentumStorage(self).register()
-        self.ensemble = EnsembleStorage(self).register()
-        self.sample = SampleStorage(self).register()
-        self.pathmover = ObjectStorage(self, PathMover, named=True, json=True, identifier='json').register()
-        self.movedetails = ObjectStorage(self, MoveDetails, named=False, json=True, identifier='json').register()
-        self.shootingpoint = ObjectStorage(self, ShootingPoint, named=False, json=True).register()
-        self.shootingpointselector = ObjectStorage(self, ShootingPointSelector, named=False, json=True, identifier='json').register()
-        self.globalstate = ObjectStorage(self, GlobalState, named=True, json=True, identifier='json').register()
-        self.engine = DynamicsEngineStorage(self).register()
-        self.collectivevariable = ObjectDictStorage(self, OrderParameter, Snapshot).register()
-        self.cv = self.collectivevariable
+        self._setup_class()
+
+        if units is not None:
+            self.dimension_units.update(units)
+        self._register_storages()
 
         if mode == 'w':
-            self._init()
+            self._initialize_netCDF()
 
             if template.topology is not None:
                 self.topology = template.topology
@@ -129,7 +132,7 @@ class Storage(netcdf.Dataset):
 
             # update the units for dimensions from the template
             self.dimension_units.update(units_from_snapshot(template))
-            self._init_classes(units=self.dimension_units)
+            self._init_storages(units=self.dimension_units)
 
             # create a json from the mdtraj.Topology() and store it
             self.write_str('topology', self.simplifier.to_json(self.simplifier.topology_to_dict(self.topology)))
@@ -142,8 +145,8 @@ class Storage(netcdf.Dataset):
 
             self.sync()
 
-        elif mode == 'a':
-            self._restore_classes()
+        elif mode == 'a' or mode == 'r+' or mode == 'r':
+            self._restore_storages()
 
             # Create a dict of simtk.Unit() instances for all netCDF.Variable()
             for variable_name in self.variables:
@@ -185,7 +188,7 @@ class Storage(netcdf.Dataset):
     def __setattr__(self, key, value):
         self.__dict__[key] = value
 
-    def _init_classes(self, units=None):
+    def _init_storages(self, units=None):
         '''
         Run the initialization on all added classes, when the storage is created only!
 
@@ -199,7 +202,7 @@ class Storage(netcdf.Dataset):
             storage.dimension_units.update(units)
             storage._init()
 
-    def _restore_classes(self):
+    def _restore_storages(self):
         '''
         Run restore on all added classes. Usually there is nothing to do.
         '''
@@ -208,7 +211,7 @@ class Storage(netcdf.Dataset):
         pass
 
 
-    def _init(self):
+    def _initialize_netCDF(self):
         """
         Initialize the netCDF file for storage itself.
         """
@@ -302,6 +305,11 @@ class Storage(netcdf.Dataset):
         '''
         self.createVariable(name, 'str', 'scalar')
 
+
+    def idx_dict(self, name):
+        print name
+        return { s : idx for idx,s in enumerate(self.variables[name][:]) }
+
     def save(self, obj, *args, **kwargs):
         """
         Save a storable object into the correct Storage in the netCDF file
@@ -366,27 +374,88 @@ class Storage(netcdf.Dataset):
 
 class MultiFileStorage(Storage):
 
-    def _init_classes(self, filename='trajectory.nc', mode=None,
+    def __init__(self, filename='trajectory.nc', mode=None,
                  template=None, n_atoms=None, units=None):
 
-        super(MultiFileStorage, self)._init_classes(
-            filename=filename, mode=mode, template=template, n_atoms=n_atoms,
-            units=units)
-        self._next = None
-        self._previous = None
-        self._all_storages
+        store = Storage(
+            filename=filename + '.000',
+            mode=mode,
+            template=template,
+            n_atoms=n_atoms,
+            units=units
+        )
 
-    def iter_stores(self):
-        def stores():
-            store = self
-            while store._previous is not None:
-                store = store._previous
+        self._store = store
+        self._current = store
+        self._all = [store]
+        self._variables = dict()
+        self._dimensions = dict()
 
-            while store is not None:
-                yield store
-                store = store._next
+        for variable in store.variables:
+            self._variables[variable] = ScatteredVariable(self._all, variable, [0])
 
-        return stores()
+        for dimension in store.dimensions:
+            self._dimensions[dimension] = ScatteredDimension(self._all, dimension, [0])
+
+        if mode == None:
+            if os.path.isfile(filename):
+                mode = 'a'
+            else:
+                mode = 'w'
+
+        self.filename = filename
+        self._setup_class()
+
+        if units is not None:
+            self.dimension_units.update(units)
+
+        self._register_storages()
+
+        if mode == 'w':
+            self.topology = self._store.topology
+            self.atoms = self._store.atoms
+
+            # update the units for dimensions from the template
+            self.dimension_units.update(units_from_snapshot(template))
+#            self._init_storages(units=self.dimension_units)
+
+        elif mode == 'a' or mode == 'r+' or mode == 'r':
+            self._restore_storages()
+
+            # Create a dict of simtk.Unit() instances for all netCDF.Variable()
+            for variable_name in self.variables:
+                unit = None
+                variable = self.variables[variable_name]
+                if hasattr(variable, 'unit_simtk'):
+                    unit_dict = self.simplifier.from_json(getattr(variable, 'unit_simtk'))
+                    if unit_dict is not None:
+                        unit = self.simplifier.unit_from_dict(unit_dict)
+
+                self.units[str(variable_name)] = unit
+
+            # After we have restore the units we can load objects from the storage
+            self.topology = self.simplifier.topology_from_dict(self.simplifier.from_json(self.variables['topology'][0]))
+            self.atoms = self.topology.n_atoms
+
+    @property
+    def variables(self):
+        return self._variables
+
+    @property
+    def dimensions(self):
+        return self._dimensions
+
+    def idx_dict(self, name):
+        # lets load from all storages. Since we mimic a big scattered store
+        # the user needs to purge stuff from memory (or we help with this)
+
+        d = dict()
+
+        for store_idx, storage in enumerate(self._all):
+            shift = self.variables[name]._min[store_idx]
+            d.update({ s : idx + shift for idx,s in enumerate(storage.variables[name][:]) })
+
+        return d
 
     def freeze_and_split(self):
         """
@@ -406,8 +475,64 @@ class MultiFileStorage(Storage):
         All of this has to do with the specific way orderparameters are saved. It seemed wise to
         save them as a variable that is attached to the snapshot number so that it will be easy
         to read for other programs!
-
         """
 
         filename = self.filename
         next_storage = Storage(filename)
+
+
+
+class ScatteredVariable(netcdf.Variable):
+    def __init__(self, storages, name, min_dict):
+        self._min = min_dict
+        self._name = name
+        self.storages = storages
+
+    def __getattr__(self, item):
+        return self.__dict__[item]
+
+    def __setattr__(self, key, value):
+        self.__dict__[key] = value
+
+    def __getitem__(self, pos):
+
+        print pos
+
+        idx = pos[0]
+        store_idx = self.store(idx)
+
+        lst = list(pos)
+        lst[0] -= self.min[store_idx]
+
+        var = self.storages[store_idx].variables[self._name]
+        return var.__getitem__(tuple(lst))
+
+    def __setitem__(self, pos, value):
+
+        idx = pos[0]
+        store_idx = self.store(idx)
+
+        lst = list(pos)
+        lst[0] -= self.min[store_idx]
+
+        var = self.storages[store_idx].variables[self._name]
+        var.__setitem__(tuple(lst), value)
+
+    def store(self, idx):
+        store_idx = 0
+        while self._min[store_idx] < idx:
+            store_idx += 1
+
+        return store_idx
+
+    def min(self, idx):
+        return self.storage.all[idx]
+
+class ScatteredDimension(netcdf.Dimension):
+    def __init__(self, storages, name, min_dict):
+        self._min = min_dict
+        self._name = name
+        self.storages = storages
+
+    def __len__(self):
+        return super(ScatteredDimension, self).__len__() + self._min[0]

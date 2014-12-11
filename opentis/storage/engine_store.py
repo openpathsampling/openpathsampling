@@ -1,5 +1,5 @@
 from object_storage import ObjectStorage
-from wrapper import loadcache, savecache, saveidentifiable
+from wrapper import loadcache, savecache, savenamed
 from opentis.dynamics_engine import DynamicsEngine
 
 class DynamicsEngineStorage(ObjectStorage):
@@ -24,7 +24,7 @@ class DynamicsEngineStorage(ObjectStorage):
 
         return engine
 
-    @saveidentifiable
+    @savenamed
     @savecache
     def save(self, engine, idx=None):
         '''
