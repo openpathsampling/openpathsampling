@@ -1,12 +1,13 @@
 from object_storage import ObjectStorage
 from opentis.ensemble import Ensemble, LoadedEnsemble
-from wrapper import loadcache
+from wrapper import loadcache, savecache
 
 class EnsembleStorage(ObjectStorage):
 
     def __init__(self, storage):
         super(EnsembleStorage, self).__init__(storage, Ensemble, named=True)
 
+    @savecache
     def save(self, ensemble, idx=None):
         """
         Add the current state of the ensemble in the database. If nothing has changed then the ensemble gets stored using the same snapshots as before. Saving lots of diskspace
@@ -24,34 +25,9 @@ class EnsembleStorage(ObjectStorage):
         A single Ensemble object can only be saved once!
         """
 
-        if idx is None:
-            find_idx = self.find_by_name(str(ensemble))
-            if find_idx is not None:
-                # found and does not need to be saved, but we will let this ensemble point to the storage
-                # in case we want to save and need the idx
-                ensemble.idx[self.storage] = find_idx
-                self.cache[find_idx] = ensemble
-                # TODO: We might check if the string representation agrees and throw an exception otherwise
-                return
-
-        idx = super(EnsembleStorage, self).index(ensemble, idx)
-
-        if idx is not None:
-            storage = self.storage
-            storage.variables['ensemble_name'][idx] = ensemble.name
-            storage.variables['ensemble_str'][idx] = str(ensemble)
-
-            ensemble.idx[storage] = idx
-
-        return
-
-    def find_by_name(self, needle):
-        all_names = self.storage.variables['ensemble_str'][:]
-        for idx, name in enumerate(all_names):
-            if name == needle:
-                return idx
-
-        return None
+        storage = self.storage
+        storage.variables['ensemble_name'][idx] = ensemble.name
+        storage.variables['ensemble_str'][idx] = str(ensemble)
 
     @loadcache
     def load(self, idx):

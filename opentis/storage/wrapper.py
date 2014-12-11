@@ -11,6 +11,29 @@ def savecache(func):
 
     return inner
 
+def savenamed(func):
+    def inner(self, obj, idx=None, *args, **kwargs):
+        if idx is None and self.named:
+            if not hasattr(obj,'json'):
+                setattr(obj,'json',self.object_to_json(obj))
+
+            find_idx = self.find_by_identifier(obj.identifier)
+            if find_idx is not None:
+                # found and does not need to be saved, but we will let this ensemble point to the storage
+                # in case we want to save and need the idx
+                obj.idx[self.storage] = find_idx
+                self.cache[find_idx] = obj
+                self.all_names[obj.identifier] = find_idx
+            else:
+                func(self, obj, idx, *args, **kwargs)
+                # Finally register with the new idx in the identifier cache dict.
+                new_idx = obj.idx[self.storage]
+                self.all_names[obj.identifier] = new_idx
+        else:
+            func(self, obj, idx, *args, **kwargs)
+
+    return inner
+
 def saveidentifiable(func):
     def inner(self, obj, idx=None, *args, **kwargs):
         if idx is None and hasattr(obj, 'identifier'):

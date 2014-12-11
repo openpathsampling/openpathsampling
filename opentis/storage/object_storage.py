@@ -135,9 +135,7 @@ class ObjectStorage(object):
 
     def update_name_cache(self):
         if self.named:
-            for idx, name in enumerate(self.variables[self.db + "_name"][:]):
-                self.cache[name] = idx
-
+            self.cache.update(self.storage.idx_list(self.db + "_name"))
             self._names_loaded = True
 
     def index(self, obj, idx=None):
