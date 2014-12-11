@@ -1,11 +1,33 @@
 from object_storage import ObjectStorage
 from opentis.ensemble import Ensemble, LoadedEnsemble
-from wrapper import loadcache, savecache, savenamed
+from wrapper import loadcache, savecache
 
 class EnsembleStorage(ObjectStorage):
 
     def __init__(self, storage):
         super(EnsembleStorage, self).__init__(storage, Ensemble, named=True)
+
+    @savecache
+    def save(self, ensemble, idx=None):
+        """
+        Add the current state of the ensemble in the database. If nothing has changed then the ensemble gets stored using the same snapshots as before. Saving lots of diskspace
+
+        Parameters
+        ----------
+        ensemble : Ensemble()
+            the ensemble to be saved
+        idx : int or None
+            if idx is not None the index will be used for saving in the storage. This might overwrite already existing trajectories!
+
+        Notes
+        -----
+        This also saves all contained frames in the ensemble if not done yet.
+        A single Ensemble object can only be saved once!
+        """
+
+        storage = self.storage
+        storage.variables['ensemble_name'][idx] = ensemble.name
+        storage.variables['ensemble_str'][idx] = str(ensemble)
 
     @loadcache
     def load(self, idx):
@@ -23,24 +45,13 @@ class EnsembleStorage(ObjectStorage):
             the ensemble
         '''
 
-        name = self.load_variable('ensemble_name', idx)
-        description = self.load_variable('ensemble_str', idx)
+        name = self.storage.variables['ensemble_name'][int(idx)]
+        description = self.storage.variables['ensemble_str'][int(idx)]
 
         obj = LoadedEnsemble(name=name, description=description)
+        obj.idx[self.storage] = idx
+
         return obj
-
-
-    @savenamed
-    @savecache
-    def save(self, ensemble, idx):
-        '''
-        Returns an object from the storage. Needs to be implemented from the specific storage class.
-        '''
-
-        if self.named and hasattr(ensemble, 'name'):
-            self.save_variable(self.db + '_name', idx, ensemble.name)
-
-        self.save_variable('ensemble_str', idx, str(ensemble))
 
 
     def _init(self):

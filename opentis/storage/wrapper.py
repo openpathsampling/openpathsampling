@@ -1,20 +1,5 @@
-MULTIFILE = False
-
 def savecache(func):
     def inner(self, obj, idx = None, *args, **kwargs):
-
-        if MULTIFILE:
-            # Check, if in multifile this is the right storage, otherwise skip to the next or previous one.
-
-            if self._min_idx > idx:
-                # use the previous storage
-                store = self.storage._previous._storages[self.__class__.__name__]
-                store.save(obj, idx, *args, **kwargs)
-            elif self._max_idx is not None and self._max_idx < idx:
-                store = self.storage._next._storages[self.__class__.__name__]
-                store.save(obj, idx, *args, **kwargs)
-
-
         idx = self.index(obj, idx)
         if idx is not None:
             func(self, obj, idx, *args, **kwargs)
@@ -29,31 +14,8 @@ def savecache(func):
 def savenamed(func):
     def inner(self, obj, idx=None, *args, **kwargs):
         if idx is None and self.named:
-            find_idx = self.find_by_identifier()
-            if find_idx is not None:
-                # found and does not need to be saved, but we will let this ensemble point to the storage
-                # in case we want to save and need the idx
-                obj.idx[self.storage] = find_idx
-                self.cache[find_idx] = obj
-                self.all_names[obj.identifier] = find_idx
-            else:
-                func(self, obj, idx, *args, **kwargs)
-                # Finally register with the new idx in the identifier cache dict.
-                new_idx = obj.idx[self.storage]
-                self.all_names[obj.identifier] = new_idx
-        else:
-            func(self, obj, idx, *args, **kwargs)
-
-    return inner
-
-# Legacy and should be removed
-def saveidentifiable(func):
-    def inner(self, obj, idx=None, *args, **kwargs):
-        if idx is None and hasattr(obj, 'identifier'):
             if not hasattr(obj,'json'):
                 setattr(obj,'json',self.object_to_json(obj))
-
-            print 'Looking for', obj, type(obj), obj.identifier
 
             find_idx = self.find_by_identifier(obj.identifier)
             if find_idx is not None:
@@ -72,6 +34,28 @@ def saveidentifiable(func):
 
     return inner
 
+def saveidentifiable(func):
+    def inner(self, obj, idx=None, *args, **kwargs):
+        if idx is None and hasattr(obj, 'identifier'):
+            if not hasattr(obj,'json'):
+                setattr(obj,'json',self.object_to_json(obj))
+
+            find_idx = self.find_by_identifier(obj.identifier)
+            if find_idx is not None:
+                # found and does not need to be saved, but we will let this ensemble point to the storage
+                # in case we want to save and need the idx
+                obj.idx[self.storage] = find_idx
+                self.cache[find_idx] = obj
+                self.all_names[obj.identifier] = find_idx
+            else:
+                func(self, obj, idx, *args, **kwargs)
+                # Finally register with the new idx in the identifier cache dict.
+                new_idx = obj.idx[self.storage]
+                self.all_names[obj.identifier] = new_idx
+        else:
+            func(self, obj, idx, *args, **kwargs)
+
+    return inner
 
 def loadcache(func):
     def inner(self, idx, *args, **kwargs):
@@ -79,18 +63,6 @@ def loadcache(func):
 
         if type(idx) is not str and idx < 0:
             return None
-
-
-        if MULTIFILE:
-            # Check, if in multifile this is the right storage, otherwise skip to the next or previous one.
-
-            if self._min_idx > idx:
-                # use the previous storage
-                store = self.storage._previous._storages[self.__class__.__name__]
-                return store.load(idx, *args, **kwargs)
-            elif self._max_idx is not None and self._max_idx < idx:
-                store = self.storage._next._storages[self.__class__.__name__]
-                store.load(idx, *args, **kwargs)
 
         n_idx = idx
 
@@ -116,13 +88,7 @@ def loadcache(func):
 
             n_idx = self.idx_from_name(idx)
 
-        if MULTIFILE:
-            obj = func(self, n_idx - self._min_idx, *args, **kwargs)
-        else:
-            obj = func(self, n_idx, *args, **kwargs)
-
-        obj.idx[self.storage] = n_idx
-
+        obj = func(self, n_idx, *args, **kwargs)
         self.cache[obj.idx[self.storage]] = obj
 
 
@@ -132,22 +98,6 @@ def loadcache(func):
         return obj
     return inner
 
-def loadnamed(func):
-    def inner(self, idx=None, *args, **kwargs):
-        if idx is not None and type(idx) is str:
-            find_idx = self.find_by_identifier(idx)
-            if find_idx is not None:
-                # names id is found so load with normal id
-                return func(self, find_idx, *args, **kwargs)
-            else:
-                # named id does not exist
-                return None
-        else:
-            return func(self, idx, *args, **kwargs)
-
-    return inner
-
-#Legacy and should be removed
 def loadidentifiable(func):
     def inner(self, idx=None, *args, **kwargs):
         if idx is not None and type(idx) is str:

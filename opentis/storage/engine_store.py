@@ -24,7 +24,6 @@ class DynamicsEngineStorage(ObjectStorage):
 
         return engine
 
-    @savenamed
     @savecache
     def save(self, engine, idx=None):
         '''
