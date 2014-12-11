@@ -2,6 +2,14 @@
 import random
 from opentis.ensemble import Ensemble
 
+class SampleKeyError(Exception):
+    def __init__(self, key, sample, sample_key):
+        self.key = key
+        self.sample = sample
+        self.sample_key = sample_key
+        self.msg = (str(self.key) + " does not match " + str(self.sample_key)
+                    + " from " + str(self.sample))
+
 class SampleSet(object):
     ''' SampleSet is essentially a list of samples, with a few conveniences.
     It can be treated as a list of samples (using, e.g., .append), or as a
@@ -45,6 +53,14 @@ class SampleSet(object):
             return random.choice(self.replica_dict[key])
 
     def __setitem__(self, key, value):
+        # first, we check whether the key matches the sample: if no, KeyError
+        if isinstance(key, Ensemble):
+            if key != value.ensemble:
+                raise SampleKeyError(key, value, value.ensemble)
+        else:
+            if key != value.replica:
+                raise SampleKeyError(key, value, value.replica)
+
         if value in self.samples:
             # if value is already in this, we don't need to do anything
             return

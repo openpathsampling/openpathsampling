@@ -86,13 +86,13 @@ class testSampleSet(object):
         assert_equal(self.testset[2], self.s2B_)
         # TODO add test that we replace at random
 
+    @raises(SampleKeyError)
     def test_illegal_assign_ensemble(self):
-        # if the key doesn't match the sample
-        raise SkipTest
+        self.testset[self.ensA] = self.s2B_
 
+    @raises(SampleKeyError)
     def test_illegal_assign_replica(self):
-        # if the key doesn't match the sample
-        raise SkipTest
+        self.testset[0] = self.s2B_
 
     def test_setitem_itemexists_ensemble(self):
         # exact sample is already there
@@ -146,14 +146,21 @@ class testSampleSet(object):
     def test_apply_samples(self):
         raise SkipTest
 
+    @raises(AssertionError)
     def test_consistency_fail_size_ensdict(self):
-        raise SkipTest
+        del self.testset.ensemble_dict[self.ensB]
+        self.testset.consistency_check()
 
+    @raises(AssertionError)
     def test_consistency_fail_size_repdict(self):
-        raise SkipTest
+        del self.testset.replica_dict[0]
+        self.testset.consistency_check()
 
     def test_consistency_fail_sample_in_ensdict(self):
         raise SkipTest
 
     def test_consistency_fail_sample_in_repdict(self):
+        raise SkipTest
+
+    def test_consistency_fail_duplicate_samples(self):
         raise SkipTest
