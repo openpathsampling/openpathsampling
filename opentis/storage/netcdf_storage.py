@@ -61,6 +61,7 @@ class Storage(netcdf.Dataset):
 
     def _setup_class(self):
         self._storages = {}
+        self._storages_base_cls = {}
         self.links = []
         self.simplifier = ObjectJSON()
         self.units = dict()
@@ -325,7 +326,6 @@ class Storage(netcdf.Dataset):
             to identify the correct storage
         """
 
-
         if type(obj) is list:
             return [ self.save(part, *args, **kwargs) for part in obj]
         elif type(obj) is tuple:
@@ -333,7 +333,9 @@ class Storage(netcdf.Dataset):
         elif type(obj) in self._storages:
             store = self._storages[type(obj)]
             store.save(obj, *args, **kwargs)
-            return obj.__class__.__name__
+            if type(obj) not in self._storages_base_cls:
+                self._storages_base_cls[type(obj)] = obj.__class__.__name__
+            return self._storages_base_cls[type(obj)]
         else:
             # Make sure subclassed objects will also be stored
             # Might come in handy someday
@@ -343,8 +345,13 @@ class Storage(netcdf.Dataset):
                     # store the subclass in the _storages member for
                     # faster access next time
                     self._storages[type(obj)] = store
+                    if type(ty) not in self._storages_base_cls:
+                        self._storages_base_cls[type(ty)] = ty.__name__
+                    self._storages_base_cls[type(obj)] = self._storages_base_cls[type(ty)]
                     store.save(obj, *args, **kwargs)
-                    return ty.__name__
+
+                    # this return the base_cls.__name__ to make sure on loading the right function is called
+                    return self._storages_base_cls[type(ty)]
 
         # Could not save this object. Might raise an exception, but return an empty string as type
         return ''
@@ -368,16 +375,38 @@ class Storage(netcdf.Dataset):
         If you want to load a subclassed Ensemble you need to load using `Ensemble` or `"Ensemble"`
         and not use the subclass
         """
-        store = self._storages[obj_type]
-        return store.load(*args, **kwargs)
+
+        if obj_type in self._storages:
+            store = self._storages[obj_type]
+            return store.load(*args, **kwargs)
+        elif type(obj_type) is type:
+            # If we give a class we might be lucky and find the base class and
+            # register is. If we try to load a type given by a string which is
+            # not the base_class name originally registered there is no way to
+            # tell.
+            for ty in self._storages:
+                if type(ty) is not str and issubclass(obj_type, ty):
+                    store = self._storages[ty]
+                    # store the subclass in the _storages member for
+                    # faster access next time
+                    self._storages[obj_type] = store
+                    self._storages[obj_type.__name__] = store
+
+                    if type(ty) not in self._storages_base_cls:
+                        self._storages_base_cls[type(ty)] = ty.__name__
+                        self._storages_base_cls[type(ty).__name__] = ty.__name__
+
+                    self._storages_base_cls[obj_type] = self._storages_base_cls[type(ty)]
+                    self._storages_base_cls[obj_type.__name__] = ty.__name__
+
+                    store = self._storages[obj_type]
+                    return store.load(*args, **kwargs)
 
     def idx_list(self, name):
          return { name : idx for idx, name in enumerate(self.variables[name][:]) }
-        return store.load(*args, **kwargs)
 
 
 class MultiFileStorage(Storage):
-
     def __init__(self, filename='trajectory.nc', mode=None,
                  template=None, n_atoms=None, units=None):
 

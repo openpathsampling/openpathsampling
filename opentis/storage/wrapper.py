@@ -89,8 +89,12 @@ def loadcache(func):
             n_idx = self.idx_from_name(idx)
 
         obj = func(self, n_idx, *args, **kwargs)
-        self.cache[obj.idx[self.storage]] = obj
 
+        # tell the obj its own idx in the storage loaded from
+        # or update
+        obj.idx[self.storage] = n_idx
+
+        self.cache[obj.idx[self.storage]] = obj
 
         if self.named and hasattr(obj, 'name') and obj.name != '':
             self.cache[obj.name] = obj

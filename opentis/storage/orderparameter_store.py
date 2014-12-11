@@ -1,5 +1,5 @@
 from object_storage import ObjectStorage
-from wrapper import loadcache, loadnamed
+from wrapper import loadcache
 from opentis.orderparameter import OrderParameter
 
 class ObjectDictStorage(ObjectStorage):
@@ -69,8 +69,6 @@ class ObjectDictStorage(ObjectStorage):
 
         self.tidy_cache(objectdict)
 
-
-    @loadnamed
     @loadcache
     def load(self, idx, op=None):
         """
