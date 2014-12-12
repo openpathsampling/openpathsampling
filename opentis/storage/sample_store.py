@@ -1,6 +1,7 @@
 from opentis.storage import ObjectStorage
 from wrapper import savecache, loadcache
 from opentis.sample import Sample
+from opentis.sample import SampleSet
 
 
 class SampleStorage(ObjectStorage):
@@ -90,3 +91,88 @@ class SampleStorage(ObjectStorage):
         self.init_variable('sample_mover_idx', 'index')
         self.init_variable('sample_details_idx', 'index')
         self.init_variable('sample_step', 'index')
+        
+class SampleSetStorage(ObjectStorage):
+
+    def __init__(self, storage):
+        super(SampleSetStorage, self).__init__(storage, SampleSet)
+
+    @savecache
+    def save(self, sampleset, idx=None):
+        """
+        Add the current state of the sampleset in the database. If nothing has changed then the sampleset gets stored using the same samples as before. Saving lots of diskspace
+
+        Parameters
+        ----------
+        sampleset : Trajectory()
+            the sampleset to be saved
+        idx : int or None
+            if idx is not None the index will be used for saving in the storage. This might overwrite already existing trajectories!
+
+        Notes
+        -----
+        This also saves all contained frames in the sampleset if not done yet.
+        A single Trajectory object can only be saved once!
+        """
+
+        # Check if all samples are saved
+        map(self.storage.sample.save, sampleset)
+
+        values = self.list_to_numpy(sampleset, 'sample')
+        self.storage.variables['sampleset_sample_idx'][idx] = values
+
+
+    def sample_indices(self, idx):
+        '''
+        Load sample indices for sampleset with ID 'idx' from the storage
+
+        ARGUMENTS
+
+        idx (int) - ID of the sampleset
+
+        Returns
+        -------
+        list of int - sampleset indices
+        '''
+
+        # get the values
+        values = self.storage.variables['sampleset_sample_idx'][idx]
+
+        # typecast to integer
+        return self.list_from_numpy(values, 'index')
+
+    @loadcache
+    def load(self, idx, lazy = None):
+        '''
+        Return a sampleset from the storage
+
+        Parameters
+        ----------
+        idx : int
+            index of the sampleset (counts from 0)
+
+        Returns
+        -------
+        sampleset : Trajectory
+            the sampleset
+        '''
+
+        values = self.storage.variables['sampleset_sample_idx'][idx]
+
+        # typecast to sample
+        samples = self.list_from_numpy(values, 'sample')
+        sampleset = SampleSet(samples)
+
+        return sampleset
+
+    def _init(self, units=None):
+        """
+        Initialize the associated storage to allow for sampleset storage
+
+        """
+        super(SampleSetStorage, self)._init()
+
+        self.init_variable('sampleset_sample_idx', 'index', 'sampleset',
+            description="sampleset[sampleset][frame] is the sample index (0..nspanshots-1) of frame 'frame' of sampleset 'sampleset'.",
+            variable_length = True
+        )
