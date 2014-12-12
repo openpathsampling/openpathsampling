@@ -22,7 +22,7 @@ from opentis.pathmover import PathMover, MoveDetails
 from opentis.globalstate import GlobalState
 from orderparameter_store import ObjectDictStorage
 from opentis.orderparameter import OrderParameter
-from opentis.snapshot import Snapshot
+from opentis.snapshot import Configuration
 
 from opentis.storage.util import ObjectJSON
 from opentis.tools import units_from_snapshot
