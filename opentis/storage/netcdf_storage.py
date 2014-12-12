@@ -308,7 +308,6 @@ class Storage(netcdf.Dataset):
 
 
     def idx_dict(self, name):
-        print name
         return { s : idx for idx,s in enumerate(self.variables[name][:]) }
 
     def save(self, obj, *args, **kwargs):
@@ -341,13 +340,14 @@ class Storage(netcdf.Dataset):
             # Might come in handy someday
             for ty in self._storages:
                 if type(ty) is not str and issubclass(type(obj), ty):
+                    print 'sub', ty, type(obj)
                     store = self._storages[ty]
                     # store the subclass in the _storages member for
                     # faster access next time
                     self._storages[type(obj)] = store
                     if type(ty) not in self._storages_base_cls:
-                        self._storages_base_cls[type(ty)] = ty.__name__
-                    self._storages_base_cls[type(obj)] = self._storages_base_cls[type(ty)]
+                        self._storages_base_cls[ty] = ty.__name__
+                    self._storages_base_cls[type(obj)] = self._storages_base_cls[ty]
                     store.save(obj, *args, **kwargs)
 
                     # this return the base_cls.__name__ to make sure on loading the right function is called
@@ -393,10 +393,10 @@ class Storage(netcdf.Dataset):
                     self._storages[obj_type.__name__] = store
 
                     if type(ty) not in self._storages_base_cls:
-                        self._storages_base_cls[type(ty)] = ty.__name__
-                        self._storages_base_cls[type(ty).__name__] = ty.__name__
+                        self._storages_base_cls[ty] = ty.__name__
+                        self._storages_base_cls[ty.__name__] = ty.__name__
 
-                    self._storages_base_cls[obj_type] = self._storages_base_cls[type(ty)]
+                    self._storages_base_cls[obj_type] = self._storages_base_cls[ty]
                     self._storages_base_cls[obj_type.__name__] = ty.__name__
 
                     store = self._storages[obj_type]
@@ -406,8 +406,12 @@ class Storage(netcdf.Dataset):
          return { name : idx for idx, name in enumerate(self.variables[name][:]) }
 
 
+#=============================================================================================
+# Multifile Support (WIP) do not use!
+#=============================================================================================
+
 class MultiFileStorage(Storage):
-    def __init__(self, filename='trajectory.nc', mode=None,
+    def __init__(self, filename, mode=None,
                  template=None, n_atoms=None, units=None):
 
         store = Storage(
@@ -424,11 +428,11 @@ class MultiFileStorage(Storage):
         self._variables = dict()
         self._dimensions = dict()
 
-        for variable in store.variables:
-            self._variables[variable] = ScatteredVariable(self._all, variable, [0])
-
         for dimension in store.dimensions:
-            self._dimensions[dimension] = ScatteredDimension(self._all, dimension, [0])
+            self._dimensions[dimension] = ScatteredDimension(self, dimension)
+
+        for variable in store.variables:
+            self._variables[variable] = ScatteredVariable(self, variable)
 
         if mode == None:
             if os.path.isfile(filename):
@@ -452,6 +456,8 @@ class MultiFileStorage(Storage):
             self.dimension_units.update(units_from_snapshot(template))
 #            self._init_storages(units=self.dimension_units)
 
+            self.units = self._store.units
+
         elif mode == 'a' or mode == 'r+' or mode == 'r':
             self._restore_storages()
 
@@ -470,6 +476,7 @@ class MultiFileStorage(Storage):
             self.topology = self.simplifier.topology_from_dict(self.simplifier.from_json(self.variables['topology'][0]))
             self.atoms = self.topology.n_atoms
 
+
     @property
     def variables(self):
         return self._variables
@@ -477,6 +484,9 @@ class MultiFileStorage(Storage):
     @property
     def dimensions(self):
         return self._dimensions
+
+    def sync(self):
+        self._current.sync()
 
     def idx_dict(self, name):
         # lets load from all storages. Since we mimic a big scattered store
@@ -513,13 +523,36 @@ class MultiFileStorage(Storage):
         filename = self.filename
         next_storage = Storage(filename)
 
+    def createVariable(self, varname, *args, **kwargs):
+        # only if we are still in the first store to stay consistant
+        # forward to first store
+        if len(self._all) == 1:
+            ncvar = self._all[0].createVariable(varname, *args, **kwargs)
+            self._variables[varname] = ScatteredVariable(self, varname)
+            return ncvar
+        else:
+            raise ValueError("Only possible if not yet splitted !")
 
+    def createDimension(self, dimname, *args, **kwargs):
+        # only if we are still in the first store to stay consistant
+        # forward to first store
+        if len(self._all) == 1:
+            ncdim = self._all[0].createVariable(dimname, *args, **kwargs)
+            self._dimensions[dimname] = ScatteredDimension(self, dimname)
+            return ncdim
+        else:
+            raise ValueError("Only possible if not yet splitted !")
 
 class ScatteredVariable(netcdf.Variable):
-    def __init__(self, storages, name, min_dict):
-        self._min = min_dict
-        self._name = name
-        self.storages = storages
+    def __init__(self, storage, name):
+        self._var_name = name
+        self.storage = storage
+
+        # so far this only supports scattered dimensions in the first dimension
+        var = self.storage._all[0].variables[self._var_name]
+        dim = self.storage.dimensions[var.dimensions[0]]
+
+        self.scatter_dim = dim
 
     def __getattr__(self, item):
         return self.__dict__[item]
@@ -528,44 +561,67 @@ class ScatteredVariable(netcdf.Variable):
         self.__dict__[key] = value
 
     def __getitem__(self, pos):
+        if type(pos) is int:
+            store, idx = self.scatter_dim.store(pos)
+            var = store.variables[self._var_name]
+            return var.__getitem__(idx)
+        else:
+            store, idx = self.scatter_dim.store(pos[0])
 
-        print pos
+            lst = list(pos)
+            lst[0] = idx
 
-        idx = pos[0]
-        store_idx = self.store(idx)
-
-        lst = list(pos)
-        lst[0] -= self.min[store_idx]
-
-        var = self.storages[store_idx].variables[self._name]
-        return var.__getitem__(tuple(lst))
+            var = store.variables[self._var_name]
+            return var.__getitem__(tuple(lst))
 
     def __setitem__(self, pos, value):
+        if type(pos) is int:
+            store, idx = self.scatter_dim.store(pos)
 
-        idx = pos[0]
-        store_idx = self.store(idx)
+            var = store.variables[self._var_name]
+            var.__setitem__(idx, value)
+        else:
+            store, idx = self.scatter_dim.store(pos[0])
 
-        lst = list(pos)
-        lst[0] -= self.min[store_idx]
+            lst = list(pos)
+            lst[0] = idx
 
-        var = self.storages[store_idx].variables[self._name]
-        var.__setitem__(tuple(lst), value)
+            var = store.variables[self._var_name]
+            var.__setitem__(tuple(lst), value)
+
+    @property
+    def _min(self):
+        return self.scatter_dim._min
+
+class ScatteredDimension(netcdf.Dimension):
+    def __init__(self, storage, name):
+        self._min = [0] * len(storage._all)
+        self._dim_name = name
+        self.storage = storage
+        self._local = False
+
+        self.store_num = 0;
+        self.update_min()
+
+    def update_min(self):
+        if len(self.storage._all) != self.store_num:
+            p = 0
+            for store_idx, store in enumerate(self.storage._all):
+                var = store.dimensions[self._dim_name]
+                self._min[store_idx] = p
+                p += len(var)
+
+            self.store_num = len(self.storage._all)
 
     def store(self, idx):
         store_idx = 0
-        while self._min[store_idx] < idx:
+        while self._min[store_idx] > idx:
             store_idx += 1
 
-        return store_idx
+        return self.storage._all[store_idx], idx - self._min[store_idx]
 
-    def min(self, idx):
-        return self.storage.all[idx]
 
-class ScatteredDimension(netcdf.Dimension):
-    def __init__(self, storages, name, min_dict):
-        self._min = min_dict
-        self._name = name
-        self.storages = storages
 
     def __len__(self):
-        return super(ScatteredDimension, self).__len__() + self._min[0]
+        self.update_min()
+        return len(self.storage._all[-1].dimensions[self._dim_name]) + self._min[-1]

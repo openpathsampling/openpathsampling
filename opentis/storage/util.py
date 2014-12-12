@@ -168,14 +168,12 @@ class StorableObjectJSON(ObjectJSON):
         self.storage = storage
 
     def simplify(self,obj):
-
         if type(obj).__module__ != '__builtin__':
             if hasattr(obj, 'idx'):
 #                getattr(self.storage, obj.cls).save(obj)
                 # this also return the base class name used for storage
 
                 base_cls = self.storage.save(obj)
-                print base_cls
 #                return { '_idx' : obj.idx[self.storage], '_cls' : obj.cls}
                 return { '_idx' : obj.idx[self.storage], '_base' : base_cls, '_cls' : obj.__class__.__name__ }
 
@@ -184,7 +182,6 @@ class StorableObjectJSON(ObjectJSON):
     def build(self,obj):
         if type(obj) is dict:
             if '_base' in obj and '_idx' in obj:
-                print obj
                 result = self.storage.load(obj['_base'], obj['_idx'])
                 # restore also the actual class name
                 result.cls = obj['_cls']

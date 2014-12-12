@@ -34,14 +34,7 @@ class ObjectDictStorage(ObjectStorage):
             self.cache[idx] = objectdict
 
         self._update_store(objectdict)
-
         self._write_to_storage(objectdict, idx)
-
-        # MULTIFILE
-#        for store in self.iter_stores():
-#            self._write_to_storage(objectdict, idx)
-
-
 
         self.tidy_cache(objectdict)
 
@@ -51,21 +44,21 @@ class ObjectDictStorage(ObjectStorage):
 
         var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
 
+#        print var_name, objectdict, idx, self.key_class
+
         if var_name + '_value' not in self.storage.variables:
             self.init_variable(var_name + '_value', 'float', (self.key_class.__name__.lower()))
-            self.init_variable(var_name + '_set', 'index', (self.key_class.__name__.lower()))
+            self.init_variable(var_name + '_set', 'bool', (self.key_class.__name__.lower()))
 
         self.storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
-        self.save_variable(self.idx_dimension + '_length', idx, length)
+#        self.save_variable(self.idx_dimension + '_length', idx, length)
 
-        # MULTIFILE
-#        obj_shift = self.storage._storages[self.content_class]._min_idx
-#        keys = map(lambda x: x - obj_shift, store.keys())
+        for key, value in zip(store.keys(), self.list_to_numpy(store.values(), 'float')):
+            self.storage.variables[var_name + '_value'][key] = value
+            self.storage.variables[var_name + '_set'][key] = True
 
-        keys = store.keys()
-
-        self.storage.variables[var_name + '_value'][keys] = self.list_to_numpy(store.values(), 'float')
-        self.storage.variables[var_name + '_set'][0:length] = store.keys()
+#        self.storage.variables[var_name + '_value'][keys] = self.list_to_numpy(store.values(), 'float')
+#        self.storage.variables[var_name + '_set'][0:length] = store.keys()
 
         self.tidy_cache(objectdict)
 
@@ -87,6 +80,7 @@ class ObjectDictStorage(ObjectStorage):
         storage = self.storage
 #        data = self.load_objectdict(self.idx_dimension,int(idx), self.content_class.__name__.lower(), float)
 
+        print idx, self.idx_dimension, storage.variables[self.idx_dimension + '_name']
         name = storage.variables[self.idx_dimension + '_name'][idx]
         var_name = self.idx_dimension + '_' + str(idx) + '_' + name
 
@@ -96,26 +90,23 @@ class ObjectDictStorage(ObjectStorage):
         op.storage_caches[storage] = dict()
         op.storage_caches[storage].update(self._update_from_storage(var_name, idx))
 
-        # MULTIFILE
-#        for store in self.iter_stores():
-#            op.storage_caches[storage].update(store._update_from_storage(var_name, idx))
-
-
         return op
 
     def _update_from_storage(self, var_name, idx):
-        length = self.load_variable(self.idx_dimension + '_length', idx)
-        stored_idx = self.storage.variables[var_name + '_set'][0:length]
-        data_all = self.storage.variables[var_name + '_value'][:]
+ #       length = self.load_variable(self.idx_dimension + '_length', idx)
+ #       stored_idx = self.storage.variables[var_name + '_set'][0:length]
+ #       data_all = self.storage.variables[var_name + '_value'][:]
 
-        # MULTIFILE
-#        obj_shift = self.storage._storages[self.content_class]._min_idx
-#        keys = map(lambda x: x - obj_shift, self.list_from_numpy(stored_idx, 'index'))
+        d = {}
+        for key in range(len(self.storage.dimensions['snapshot'])):
+            if self.storage.variables[var_name + '_set']:
+                d[key] = self.storage.variables[var_name + '_value']
 
-        keys = self.list_from_numpy(stored_idx, 'index')
-        data = self.list_from_numpy(data_all[keys], 'float')
+        return d
 
-        return dict(zip(stored_idx, data))
+#        keys = self.list_from_numpy(stored_idx, 'index')
+#        data = self.list_from_numpy(data_all[keys], 'float')
+#        return dict(zip(stored_idx, data))
 
     def restore(self, obj):
         idx = self.find_by_identifier(obj.identifier)

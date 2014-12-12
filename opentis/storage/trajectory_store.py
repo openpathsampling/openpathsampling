@@ -1,10 +1,8 @@
 import numpy as np
-import mdtraj as md
 
 from object_storage import ObjectStorage
 from wrapper import savecache, loadcache
 from opentis.trajectory import Trajectory, Sample
-from opentis.snapshot import Configuration, Momentum, Snapshot
 
 
 class TrajectoryStorage(ObjectStorage):
@@ -55,10 +53,11 @@ class TrajectoryStorage(ObjectStorage):
 
 #        self.set_slice('trajectory', idx, begin, length)
 
-#        values = self.list_to_numpy(trajectory, 'snapshot')
-#        self.storage.variables['trajectory_snapshot_idx'][begin:begin+length] = values
+        values = self.list_to_numpy(trajectory, 'snapshot')
+        self.storage.variables['trajectory_snapshot_idx'][idx] = values
 
-        self.set_new_slice_as_type('trajectory_snapshot_idx', 'trajectory', idx, trajectory, 'snapshot')
+
+#        self.set_new_slice_as_type('trajectory_snapshot_idx', 'trajectory', idx, trajectory, 'snapshot')
 
     def snapshot_indices(self, idx):
         '''
@@ -74,12 +73,14 @@ class TrajectoryStorage(ObjectStorage):
         '''
 
         # get the values
-#        values = self.storage.variables['trajectory_snapshot_idx'][self.get_slice('trajectory', idx)]
+        values = self.storage.variables['trajectory_snapshot_idx'][idx]
 
         # typecast to integer
-#        return self.list_from_numpy(values, 'index')
+        return self.list_from_numpy(values, 'index')
 
-        return self.get_slice_as_type('trajectory_snapshot_idx', 'trajectory', idx, 'index')
+#        return self.list_to_numpy(self.storage.variables['trajectory_snapshot_idx'][idx], 'index')
+
+#        return self.get_slice_as_type('trajectory_snapshot_idx', 'trajectory', idx, 'index')
 
     @loadcache
     def load(self, idx, lazy = None):
@@ -136,10 +137,12 @@ class TrajectoryStorage(ObjectStorage):
         # index associated storage in class variable for all Trajectory instances to access
         ncfile = self.storage
 
-        self.init_dimension('trajectory_snapshot')
-        self.init_mixed('trajectory')
-        self.init_variable('trajectory_snapshot_idx', 'index', 'trajectory_snapshot',
-            description="trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'."
+#        self.init_dimension('trajectory_snapshot')
+#        self.init_mixed('trajectory')
+
+        self.init_variable('trajectory_snapshot_idx', 'index', 'trajectory',
+            description="trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.",
+            variable_length = True
         )
 
 class SampleStorage(ObjectStorage):

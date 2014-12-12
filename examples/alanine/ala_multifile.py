@@ -71,9 +71,9 @@ if __name__=="__main__":
     engine.initialized = True
     PathMover.engine = engine
 
-    print engine.storage.template.topology
-
     multi = MultiFileStorage('multi.nc', template=engine.storage.template, mode='w')
+
+    engine.storage = multi
 
     # this generates an order parameter (callable) object named psi (so if
     # we call `psi(trajectory)` we get a list of the values of psi for each
@@ -91,9 +91,9 @@ if __name__=="__main__":
                       indices=[phi_atoms])
 
     # save the orderparameters in the storage
-    # since they have no data cache this will only contain their name
-    psi.save(storage=engine.storage.cv)
-    phi.save(storage=engine.storage.cv)
+    # since they have no data cache this will only contain their
+    engine.storage.save(psi)
+    engine.storage.save(phi)
 
     # now we define our states and our interfaces
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
