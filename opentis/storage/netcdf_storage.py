@@ -402,8 +402,8 @@ class Storage(netcdf.Dataset):
                     store = self._storages[obj_type]
                     return store.load(*args, **kwargs)
 
-    def idx_list(self, name):
-         return { name : idx for idx, name in enumerate(self.variables[name][:]) }
+    def idx_list(self, var_name):
+         return { name : idx for idx, name in enumerate(self.variables[var_name][:]) }
 
 
 #=============================================================================================
