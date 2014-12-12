@@ -1,8 +1,6 @@
-from opentis.storage import ObjectStorage
+from object_storage import ObjectStorage
 from wrapper import savecache, loadcache
-from opentis.sample import Sample
-from opentis.sample import SampleSet
-
+from opentis.sample import Sample, SampleSet
 
 class SampleStorage(ObjectStorage):
     def __init__(self, storage):

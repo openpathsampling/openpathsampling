@@ -10,22 +10,6 @@ class TrajectoryStorage(ObjectStorage):
     def __init__(self, storage):
         super(TrajectoryStorage, self).__init__(storage, Trajectory)
 
-    def length(self, idx):
-        '''
-        Return the length of a trajectory from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the trajectory
-
-        Returns
-        -------
-        length : int
-            Number of frames in the trajectory
-        '''
-        return super(TrajectoryStorage, self).length('trajectory_snapshot', idx)
-
     @savecache
     def save(self, trajectory, idx=None):
         """
@@ -47,17 +31,8 @@ class TrajectoryStorage(ObjectStorage):
         # Check if all snapshots are saved
         map(self.storage.snapshot.save, trajectory)
 
-        # Find a free position to save snapshot ids
-#        begin = self.free_begin('trajectory_snapshot')
-#        length = len(trajectory)
-
-#        self.set_slice('trajectory', idx, begin, length)
-
         values = self.list_to_numpy(trajectory, 'snapshot')
         self.storage.variables['trajectory_snapshot_idx'][idx] = values
-
-
-#        self.set_new_slice_as_type('trajectory_snapshot_idx', 'trajectory', idx, trajectory, 'snapshot')
 
     def snapshot_indices(self, idx):
         '''
@@ -78,10 +53,6 @@ class TrajectoryStorage(ObjectStorage):
         # typecast to integer
         return self.list_from_numpy(values, 'index')
 
-#        return self.list_to_numpy(self.storage.variables['trajectory_snapshot_idx'][idx], 'index')
-
-#        return self.get_slice_as_type('trajectory_snapshot_idx', 'trajectory', idx, 'index')
-
     @loadcache
     def load(self, idx, lazy = None):
         '''
@@ -97,8 +68,6 @@ class TrajectoryStorage(ObjectStorage):
         trajectory : Trajectory
             the trajectory
         '''
-
-#        values = self.storage.variables['trajectory_snapshot_idx'][self.get_slice('trajectory', idx)]
 
         values = self.snapshot_indices(idx)
 
