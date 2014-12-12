@@ -93,20 +93,15 @@ class ObjectDictStorage(ObjectStorage):
         return op
 
     def _update_from_storage(self, var_name, idx):
- #       length = self.load_variable(self.idx_dimension + '_length', idx)
- #       stored_idx = self.storage.variables[var_name + '_set'][0:length]
- #       data_all = self.storage.variables[var_name + '_value'][:]
+        stored_idx = self.storage.variables[var_name + '_set'][:]
+        data_all = self.storage.variables[var_name + '_value'][:]
 
-        d = {}
-        for key in range(len(self.storage.dimensions['snapshot'])):
-            if self.storage.variables[var_name + '_set']:
-                d[key] = self.storage.variables[var_name + '_value']
+        d = { key : value for
+              key, value in zip(range(len(self.storage.dimensions['configuration'])), data_all )
+                if stored_idx[key]
+        }
 
         return d
-
-#        keys = self.list_from_numpy(stored_idx, 'index')
-#        data = self.list_from_numpy(data_all[keys], 'float')
-#        return dict(zip(stored_idx, data))
 
     def restore(self, obj):
         idx = self.find_by_identifier(obj.identifier)

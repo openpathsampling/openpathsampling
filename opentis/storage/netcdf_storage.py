@@ -8,7 +8,7 @@ Created on 06.07.2014
 import netCDF4 as netcdf
 import os.path
 
-import numpy
+import numpy as np
 import simtk.unit as u
 
 from object_storage import ObjectStorage
@@ -21,7 +21,7 @@ from opentis.pathmover import PathMover, MoveDetails
 from opentis.globalstate import GlobalState
 from orderparameter_store import ObjectDictStorage
 from opentis.orderparameter import OrderParameter
-from opentis.snapshot import Snapshot
+from opentis.snapshot import Snapshot, Configuration
 
 from opentis.storage.util import ObjectJSON
 from opentis.tools import units_from_snapshot
@@ -56,7 +56,7 @@ class Storage(netcdf.Dataset):
         self.shootingpointselector = ObjectStorage(store, ShootingPointSelector, named=False, json=True, identifier='json').register()
         self.globalstate = ObjectStorage(store, GlobalState, named=True, json=True, identifier='json').register()
         self.engine = DynamicsEngineStorage(store).register()
-        self.collectivevariable = ObjectDictStorage(store, OrderParameter, Snapshot).register()
+        self.collectivevariable = ObjectDictStorage(store, OrderParameter, Configuration).register()
         self.cv = self.collectivevariable
 
     def _setup_class(self):
@@ -291,7 +291,7 @@ class Storage(netcdf.Dataset):
         string : str
             the string to store
         '''
-        packed_data = numpy.empty(1, 'O')
+        packed_data = np.empty(1, 'O')
         packed_data[0] = string
         self.variables[name][:] = packed_data
 
@@ -340,7 +340,7 @@ class Storage(netcdf.Dataset):
             # Might come in handy someday
             for ty in self._storages:
                 if type(ty) is not str and issubclass(type(obj), ty):
-                    print 'sub', ty, type(obj)
+#                    print 'sub', ty, type(obj)
                     store = self._storages[ty]
                     # store the subclass in the _storages member for
                     # faster access next time
@@ -351,7 +351,7 @@ class Storage(netcdf.Dataset):
                     store.save(obj, *args, **kwargs)
 
                     # this return the base_cls.__name__ to make sure on loading the right function is called
-                    return self._storages_base_cls[type(ty)]
+                    return self._storages_base_cls[ty]
 
         # Could not save this object. Might raise an exception, but return an empty string as type
         return ''
@@ -521,7 +521,16 @@ class MultiFileStorage(Storage):
         """
 
         filename = self.filename
-        next_storage = Storage(filename)
+        store = Storage(
+            filename=filename + '.000',
+            mode='w',
+            template=self._store.template,
+            units=self._store.units
+        )
+
+        self._all.append(store)
+        self._current = store
+
 
     def createVariable(self, varname, *args, **kwargs):
         # only if we are still in the first store to stay consistant
@@ -561,33 +570,48 @@ class ScatteredVariable(netcdf.Variable):
         self.__dict__[key] = value
 
     def __getitem__(self, pos):
-        if type(pos) is int:
-            store, idx = self.scatter_dim.store(pos)
-            var = store.variables[self._var_name]
-            return var.__getitem__(idx)
+        if type(pos) is tuple:
+            pp = list(pos)
         else:
-            store, idx = self.scatter_dim.store(pos[0])
+            pp = [pos]
 
-            lst = list(pos)
-            lst[0] = idx
 
-            var = store.variables[self._var_name]
-            return var.__getitem__(tuple(lst))
+        if type(pos) is int:
+            store, min_idx = self.scatter_dim.store(pos)
+
+            pp[0] -= min_idx
+            var = self.storage._all[store].variables[self._var_name]
+            return var.__getitem__(tuple(pp))
+        else:
+
+            pp_list = self.scatter_dim.idx_parts(pp[0])
+            rr = pp[1:]
+
+            # this combines the part and makes one big numpy array from it
+            return np.concatenate(
+                tuple(
+                    [ self.storage._all[st].variables[self._var_name].__getitem__(tuple([vv] + rr)) for st,vv,ww in pp_list ]
+                )
+            )
 
     def __setitem__(self, pos, value):
-        if type(pos) is int:
-            store, idx = self.scatter_dim.store(pos)
-
-            var = store.variables[self._var_name]
-            var.__setitem__(idx, value)
+        if type(pos) is tuple:
+            pp = list(pos)
         else:
-            store, idx = self.scatter_dim.store(pos[0])
+            pp = [pos]
 
-            lst = list(pos)
-            lst[0] = idx
+        if type(pos) is int:
+            store, min_idx = self.scatter_dim.store(pos)
 
-            var = store.variables[self._var_name]
-            var.__setitem__(tuple(lst), value)
+            pp[0] -= min_idx
+            var = self.storage._all[store].variables[self._var_name]
+            var.__setitem__(tuple(pp), value)
+        else:
+            pp_list = self.scatter_dim.idx_parts(pp[0])
+            rr = pp[1:]
+
+            # this combines the part and makes one big numpy array from it
+            [ self.storage._all[st].variables[self._var_name].__setitem__(tuple([vv] + rr), value[ww]) for st,vv,ww in pp_list ]
 
     @property
     def _min(self):
@@ -614,13 +638,86 @@ class ScatteredDimension(netcdf.Dimension):
             self.store_num = len(self.storage._all)
 
     def store(self, idx):
-        store_idx = 0
+        store_idx = len(self._min) - 1
         while self._min[store_idx] > idx:
-            store_idx += 1
+            store_idx -= 1
 
-        return self.storage._all[store_idx], idx - self._min[store_idx]
+        return store_idx, self._min[store_idx]
 
+    def idx_parts(self, idx):
+        if type(idx) is int:
+            store, min_idx = self.store(idx)
+            return [tuple(store, idx - min_idx, 0)]
 
+        elif type(idx) is slice:
+            if idx.start is not None:
+                start_idx = 0
+            else:
+                start_idx = idx.start
+
+            if idx.stop is not None:
+                end_idx = len(self)
+            else:
+                end_idx = idx.stop
+
+            store_min, min_min = self.store(start_idx)
+            store_max, max_min = self.store(end_idx)
+
+            step = idx.step
+
+            ll = []
+            mi = 0
+            ma = 0
+
+            mi_p = 0
+            ma_p = 0
+
+            for st_idx in range(store_min, store_max+1):
+                if st_idx == store_min:
+                    mi = start_idx
+                else:
+                    mi = ma
+
+                if st_idx == store_max:
+                    ma = end_idx
+                else:
+                    ma = len(self.storage._all[st_idx].dimensions[self._dim_name]) + self._min[st_idx]
+
+                ma = ((ma - mi) / step + 1) * step
+
+                mi_p = ma_p
+                ma_p = mi_p + (ma - mi) / step
+
+                sh = self._min[st_idx]
+
+                ll.append( tuple(st_idx, slice(mi - sh, ma - sh, step), slice(mi_p, ma_p)) )
+
+            return ll
+        elif type(idx) is list:
+            ll = []
+
+            st_idx = 0
+            mi = 0
+            ma = -1
+            part = []
+            part_p = []
+            for no, i in enumerate(idx):
+                if i > ma or i < mi:
+                    # finish part and open new one
+                    if len(part) > 0:
+                        ll.append(tuple( st_idx, part, part_p ))
+
+                    part = []
+                    st_idx, mi = self.store(i)
+                    ma = mi + len(self.storage._all[0].dimensions[self._dim_name])
+
+                part.append(i - mi)
+                part_p.append(no)
+
+            return ll
+
+        else:
+            return []
 
     def __len__(self):
         self.update_min()
