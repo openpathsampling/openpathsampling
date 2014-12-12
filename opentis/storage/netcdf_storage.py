@@ -42,13 +42,51 @@ class Storage(netcdf.Dataset):
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
     simulation. This allows effective storage of shooting trajectories '''
 
-    def __init__(self, filename='trajectory.nc', mode=None,
+
+    def _register_storages(self, store = None):
+        if store is None:
+            store = self
+        self.trajectory = TrajectoryStorage(store).register()
+        self.snapshot = SnapshotStorage(store).register()
+        self.configuration = ConfigurationStorage(store).register()
+        self.momentum = MomentumStorage(store).register()
+        self.ensemble = EnsembleStorage(store).register()
+        self.sample = SampleStorage(store).register()
+        self.pathmover = ObjectStorage(store, PathMover, named=True, json=True, identifier='json').register()
+        self.movedetails = ObjectStorage(store, MoveDetails, named=False, json=True, identifier='json').register()
+        self.shootingpoint = ObjectStorage(store, ShootingPoint, named=False, json=True).register()
+        self.shootingpointselector = ObjectStorage(store, ShootingPointSelector, named=False, json=True, identifier='json').register()
+        self.globalstate = ObjectStorage(store, GlobalState, named=True, json=True, identifier='json').register()
+        self.engine = DynamicsEngineStorage(store).register()
+        self.collectivevariable = ObjectDictStorage(store, OrderParameter, Configuration).register()
+        self.cv = self.collectivevariable
+
+    def _setup_class(self):
+        self._storages = {}
+        self._storages_base_cls = {}
+        self.links = []
+        self.simplifier = ObjectJSON()
+        self.units = dict()
+        # use no units
+        self.dimension_units = {
+            'length': u.Unit({}),
+            'velocity': u.Unit({}),
+            'energy': u.Unit({})
+        }
+        # use MD units
+        self.dimension_units = {
+            'length': u.nanometers,
+            'velocity': u.nanometers / u.picoseconds,
+            'energy': u.kilojoules_per_mole
+        }
+
+    def __init__(self, filename, mode=None,
                  template=None, n_atoms=None, units=None):
         '''
         Create a storage for complex objects in a netCDF file
-        
+
         Parameters
-        ----------        
+        ----------
         filename : string
             filename of the netcdf file to be used or created
         mode : string, default: None
@@ -70,52 +108,18 @@ class Storage(netcdf.Dataset):
             else:
                 mode = 'w'
 
-        self._storages = {}
-        self._storages_base_cls = {}
-
         self.filename = filename
-        self.links = []
-
-        self.simplifier = ObjectJSON()
-
-        self.units = dict()
-
-        # use no units
-        self.dimension_units = {
-            'length' : u.Unit({}),
-            'velocity' : u.Unit({}),
-            'energy' : u.Unit({})
-        }
-
-        # use MD units
-        self.dimension_units = {
-            'length' : u.nanometers,
-            'velocity' : u.nanometers / u.picoseconds,
-            'energy' : u.kilojoules_per_mole
-        }
-
-        if units is not None:
-            self.dimension_units.update(units)
 
         super(Storage, self).__init__(filename, mode)
 
-        self.trajectory = TrajectoryStorage(self).register()
-        self.snapshot = SnapshotStorage(self).register()
-        self.configuration = ConfigurationStorage(self).register()
-        self.momentum = MomentumStorage(self).register()
-        self.ensemble = EnsembleStorage(self).register()
-        self.sample = SampleStorage(self).register()
-        self.pathmover = ObjectStorage(self, PathMover, named=True, json=True, identifier='json').register()
-        self.movedetails = ObjectStorage(self, MoveDetails, named=False, json=True, identifier='json').register()
-        self.shootingpoint = ObjectStorage(self, ShootingPoint, named=False, json=True).register()
-        self.shootingpointselector = ObjectStorage(self, ShootingPointSelector, named=False, json=True, identifier='json').register()
-        self.globalstate = ObjectStorage(self, GlobalState, named=True, json=True, identifier='json').register()
-        self.engine = DynamicsEngineStorage(self).register()
-        self.collectivevariable = ObjectDictStorage(self, OrderParameter, Snapshot).register()
-        self.cv = self.collectivevariable
+        self._setup_class()
+
+        if units is not None:
+            self.dimension_units.update(units)
+        self._register_storages()
 
         if mode == 'w':
-            self._init()
+            self._initialize_netCDF()
 
             if template.topology is not None:
                 self.topology = template.topology
@@ -131,7 +135,7 @@ class Storage(netcdf.Dataset):
 
             # update the units for dimensions from the template
             self.dimension_units.update(units_from_snapshot(template))
-            self._init_classes(units=self.dimension_units)
+            self._init_storages(units=self.dimension_units)
 
             # create a json from the mdtraj.Topology() and store it
             self.write_str('topology', self.simplifier.to_json(self.simplifier.topology_to_dict(self.topology)))
@@ -144,8 +148,8 @@ class Storage(netcdf.Dataset):
 
             self.sync()
 
-        elif mode == 'a':
-            self._restore_classes()
+        elif mode == 'a' or mode == 'r+' or mode == 'r':
+            self._restore_storages()
 
             # Create a dict of simtk.Unit() instances for all netCDF.Variable()
             for variable_name in self.variables:
