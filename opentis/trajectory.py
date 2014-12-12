@@ -484,17 +484,17 @@ class Sample(object):
     ----------
     replica : integer
         The replica ID to which this Sample applies
-    ensemble : Ensemble
-        The Ensemble this sample is drawn from
     trajectory : Trajectory
         The trajectory (path) for this sample
+    ensemble : Ensemble
+        The Ensemble this sample is drawn from
     details : MoveDetails
         Object 
     step : integer
         the Monte Carlo step number associated with this Sample
     """
 
-    def __init__(self, trajectory=None, replica=None, ensemble=None, details=None, step=-1):
+    def __init__(self, replica=None, trajectory=None, ensemble=None, details=None, step=-1):
         self.idx = dict()
 
         self.replica = replica
