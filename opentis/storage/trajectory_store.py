@@ -48,13 +48,16 @@ class TrajectoryStorage(ObjectStorage):
         map(self.storage.snapshot.save, trajectory)
 
         # Find a free position to save snapshot ids
-        begin = self.free_begin('trajectory_snapshot')
-        length = len(trajectory)
+#        begin = self.free_begin('trajectory_snapshot')
+#        length = len(trajectory)
 
-        self.set_slice('trajectory', idx, begin, length)
+#        self.set_slice('trajectory', idx, begin, length)
 
         values = self.list_to_numpy(trajectory, 'snapshot')
-        self.storage.variables['trajectory_snapshot_idx'][begin:begin+length] = values
+        self.storage.variables['trajectory_snapshot_idx'][idx] = values
+
+
+#        self.set_new_slice_as_type('trajectory_snapshot_idx', 'trajectory', idx, trajectory, 'snapshot')
 
     def snapshot_indices(self, idx):
         '''
@@ -70,10 +73,14 @@ class TrajectoryStorage(ObjectStorage):
         '''
 
         # get the values
-        values = self.storage.variables['trajectory_snapshot_idx'][self.get_slice('trajectory', idx)]
+        values = self.storage.variables['trajectory_snapshot_idx'][idx]
 
         # typecast to integer
         return self.list_from_numpy(values, 'index')
+
+#        return self.list_to_numpy(self.storage.variables['trajectory_snapshot_idx'][idx], 'index')
+
+#        return self.get_slice_as_type('trajectory_snapshot_idx', 'trajectory', idx, 'index')
 
     @loadcache
     def load(self, idx, lazy = None):
@@ -91,13 +98,14 @@ class TrajectoryStorage(ObjectStorage):
             the trajectory
         '''
 
-        values = self.storage.variables['trajectory_snapshot_idx'][self.get_slice('trajectory', idx)]
+#        values = self.storage.variables['trajectory_snapshot_idx'][self.get_slice('trajectory', idx)]
+
+        values = self.snapshot_indices(idx)
 
         # typecast to snapshot
         snapshots = self.list_from_numpy(values, 'snapshot')
 
         trajectory = Trajectory(snapshots)
-        trajectory.idx[self.storage] = idx
 
         return trajectory
 
@@ -129,8 +137,10 @@ class TrajectoryStorage(ObjectStorage):
         # index associated storage in class variable for all Trajectory instances to access
         ncfile = self.storage
 
-        self.init_dimension('trajectory_snapshot')
-        self.init_mixed('trajectory')
-        self.init_variable('trajectory_snapshot_idx', 'index', 'trajectory_snapshot',
-            description="trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'."
+#        self.init_dimension('trajectory_snapshot')
+#        self.init_mixed('trajectory')
+
+        self.init_variable('trajectory_snapshot_idx', 'index', 'trajectory',
+            description="trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.",
+            variable_length = True
         )
