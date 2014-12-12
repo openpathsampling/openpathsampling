@@ -12,7 +12,8 @@ import numpy
 import simtk.unit as u
 
 from object_storage import ObjectStorage
-from trajectory_store import TrajectoryStorage, SampleStorage
+from trajectory_store import TrajectoryStorage
+from opentis.storage.sample_store import SampleStorage
 from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
 from engine_store import DynamicsEngineStorage
 from ensemble_store import EnsembleStorage

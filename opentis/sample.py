@@ -1,6 +1,8 @@
 
 import random
 from opentis.ensemble import Ensemble
+from opentis.wrapper import storable
+
 
 class SampleKeyError(Exception):
     def __init__(self, key, sample, sample_key):
@@ -156,6 +158,30 @@ class SampleSet(object):
         for samp in self.samples:
             assert self.samples.count(samp) == 1, \
                     "More than one instance of %r!" % samp
-        
 
 
+@storable
+class Sample(object):
+    """
+    A Sample is the return object from a PathMover and contains all information about the move, initial trajectories,
+    new trajectories (both as references). IF a Mover does several moves at a time (e.g. a swap) then
+    a separate move object for each resulting trajectory is returned
+    """
+
+    def __init__(self, replica=None, trajectory=None,  mover=None, ensemble=None, details=None, step=-1):
+        self.idx = dict()
+
+        self.replica = replica
+        self.mover = mover
+        self.ensemble = ensemble
+        self.trajectory = trajectory
+        self.details = details
+        self.step=step
+
+    def __call__(self):
+        return self.trajectory
+
+    @staticmethod
+    def set_time(step, samples):
+        for sample in samples:
+            sample.step = step
