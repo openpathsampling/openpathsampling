@@ -71,6 +71,7 @@ class Storage(netcdf.Dataset):
                 mode = 'w'
 
         self._storages = {}
+        self._storages_base_cls = {}
 
         self.filename = filename
         self.links = []
