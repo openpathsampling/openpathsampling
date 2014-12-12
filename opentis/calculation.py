@@ -1,4 +1,4 @@
-from globalstate import GlobalState, GlobalStateMover
+from globalstate import GlobalState
 from pathmover import PathMover, MoveDetails, ReplicaExchange
 from trajectory import Sample
 
@@ -43,14 +43,6 @@ class BootstrapEnsembleChangeMove(PathMover):
         )
 
         return sample
-
-class BootstrapGlobalMover(GlobalStateMover):
-    def __init__(self, ensembles):
-        self.ensembles = ensembles
-        self.ens_idx = 0
-
-    def move(self, trajectory):
-        pass
 
 
 class Bootstrapping(Calculation):

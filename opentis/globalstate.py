@@ -133,31 +133,3 @@ class GlobalState(dict):
         """
         map(storage.sample.save, self.samples)
 
-
-class GlobalStateMover(object):
-    """
-    A GlobalStateMover will take a GlobalState object and create in a
-    specific way a new GlobalState by generating the necessary samples,
-    applying them and saving everything correctly.
-    """
-    def __init__(self, movers)
-        pass
-
-    def move(self, globalstate):
-        pass
-    
-
-class GlobalMixedMover(GlobalStateMover):
-    def __init__(self, movers, probabilities):
-        pass
-
-    def move(self, globalstate):
-        pass
-
-
-class GeneralPathMover(GlobalStateMover):
-    # TODO: takes a list of list of moves; default is that each individual
-    # move has the same probability ... 
-    # list of moves becomes GlobalMover, list of GlobalMovers becomes
-    # GlobalMixedMover
-    pass
