@@ -549,8 +549,6 @@ class MultiFileStorage(Storage):
                 if hasattr(ncvar, attr):
                     setattr(ncnew, attr, getattr(ncvar, attr))
 
-
-
     def createVariable(self, varname, *args, **kwargs):
         # only if we are still in the first store to stay consistant
         # forward to first store
