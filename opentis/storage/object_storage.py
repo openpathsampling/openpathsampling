@@ -137,8 +137,8 @@ class ObjectStorage(object):
 
     def find_by_identifier(self, needle):
         if self.all_names is None:
-            self.all_names = self.storage.idx_dict(self.identifier)
-#            self.all_names = { s : idx for idx,s in enumerate(self.storage.variables[self.identifier][:]) }
+#            self.all_names = self.storage.idx_dict(self.identifier)
+            self.all_names = { s : idx for idx,s in enumerate(self.storage.variables[self.identifier][:]) }
 
         if needle in self.all_names:
                 return self.all_names[needle]

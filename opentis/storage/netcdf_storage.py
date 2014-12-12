@@ -520,9 +520,8 @@ class MultiFileStorage(Storage):
         to read for other programs!
         """
 
-        filename = self.filename
         store = Storage(
-            filename=filename + '.000',
+            filename=self.filename + '.%03d' % len(self._all),
             mode='w',
             template=self._store.template,
             units=self._store.units
@@ -531,16 +530,33 @@ class MultiFileStorage(Storage):
         self._all.append(store)
         self._current = store
 
+        # copy missing variables
+
+        for variable in self._store.variables:
+            self.copy_variable(variable, store)
+
+        for dimension in self._dimensions:
+            self._dimensions[dimension].update_min()
+
+        store.sync()
+
+    def copy_variable(self, variable, store):
+        if variable not in store.variables:
+            ncvar = self._store.variables[variable]
+            ncnew = store.createVariable(variable, ncvar.datatype, ncvar.dimensions)
+
+            for attr in ['unit_simtk', 'unit', 'long_str']:
+                if hasattr(ncvar, attr):
+                    setattr(ncnew, attr, getattr(ncvar, attr))
+
+
 
     def createVariable(self, varname, *args, **kwargs):
         # only if we are still in the first store to stay consistant
         # forward to first store
-        if len(self._all) == 1:
-            ncvar = self._all[0].createVariable(varname, *args, **kwargs)
-            self._variables[varname] = ScatteredVariable(self, varname)
-            return ncvar
-        else:
-            raise ValueError("Only possible if not yet splitted !")
+        ncvar = self._all[0].createVariable(varname, *args, **kwargs)
+        self._variables[varname] = ScatteredVariable(self, varname, update=True)
+        return ncvar
 
     def createDimension(self, dimname, *args, **kwargs):
         # only if we are still in the first store to stay consistant
@@ -553,9 +569,10 @@ class MultiFileStorage(Storage):
             raise ValueError("Only possible if not yet splitted !")
 
 class ScatteredVariable(netcdf.Variable):
-    def __init__(self, storage, name):
+    def __init__(self, storage, name, update=False):
         self._var_name = name
         self.storage = storage
+        self.update = update
 
         # so far this only supports scattered dimensions in the first dimension
         var = self.storage._all[0].variables[self._var_name]
@@ -570,20 +587,19 @@ class ScatteredVariable(netcdf.Variable):
         self.__dict__[key] = value
 
     def __getitem__(self, pos):
+        self.update_stores()
         if type(pos) is tuple:
             pp = list(pos)
         else:
             pp = [pos]
 
-
-        if type(pos) is int:
-            store, min_idx = self.scatter_dim.store(pos)
+        if type(pp[0]) is int:
+            store, min_idx = self.scatter_dim.store(pp[0])
 
             pp[0] -= min_idx
             var = self.storage._all[store].variables[self._var_name]
             return var.__getitem__(tuple(pp))
         else:
-
             pp_list = self.scatter_dim.idx_parts(pp[0])
             rr = pp[1:]
 
@@ -595,13 +611,14 @@ class ScatteredVariable(netcdf.Variable):
             )
 
     def __setitem__(self, pos, value):
+        self.update_stores()
         if type(pos) is tuple:
             pp = list(pos)
         else:
             pp = [pos]
 
-        if type(pos) is int:
-            store, min_idx = self.scatter_dim.store(pos)
+        if type(pp[0]) is int:
+            store, min_idx = self.scatter_dim.store(pp[0])
 
             pp[0] -= min_idx
             var = self.storage._all[store].variables[self._var_name]
@@ -611,11 +628,21 @@ class ScatteredVariable(netcdf.Variable):
             rr = pp[1:]
 
             # this combines the part and makes one big numpy array from it
-            [ self.storage._all[st].variables[self._var_name].__setitem__(tuple([vv] + rr), value[ww]) for st,vv,ww in pp_list ]
+            for st, vv, ww in pp_list:
+                print st, vv, ww
+                self.storage._all[st].variables[self._var_name].__setitem__(tuple([vv] + rr), value[ww])
 
     @property
     def _min(self):
         return self.scatter_dim._min
+
+    def update_stores(self):
+        # Copy to all
+        if self.update:
+            for store in self.storage._all[1:]:
+                self.storage.copy_variable(self._var_name, store)
+
+            self.update = False
 
 class ScatteredDimension(netcdf.Dimension):
     def __init__(self, storage, name):
@@ -624,12 +651,13 @@ class ScatteredDimension(netcdf.Dimension):
         self.storage = storage
         self._local = False
 
-        self.store_num = 0;
+        self.store_num = 0
         self.update_min()
 
     def update_min(self):
         if len(self.storage._all) != self.store_num:
             p = 0
+            self._min = [0] * len(self.storage._all)
             for store_idx, store in enumerate(self.storage._all):
                 var = store.dimensions[self._dim_name]
                 self._min[store_idx] = p
@@ -639,23 +667,26 @@ class ScatteredDimension(netcdf.Dimension):
 
     def store(self, idx):
         store_idx = len(self._min) - 1
+        print idx, store_idx, self._min, self._dim_name
         while self._min[store_idx] > idx:
             store_idx -= 1
+
+        print store_idx
 
         return store_idx, self._min[store_idx]
 
     def idx_parts(self, idx):
         if type(idx) is int:
             store, min_idx = self.store(idx)
-            return [tuple(store, idx - min_idx, 0)]
+            return [tuple([store, idx - min_idx, 0])]
 
         elif type(idx) is slice:
-            if idx.start is not None:
+            if idx.start is None:
                 start_idx = 0
             else:
                 start_idx = idx.start
 
-            if idx.stop is not None:
+            if idx.stop is None:
                 end_idx = len(self)
             else:
                 end_idx = idx.stop
@@ -663,7 +694,10 @@ class ScatteredDimension(netcdf.Dimension):
             store_min, min_min = self.store(start_idx)
             store_max, max_min = self.store(end_idx)
 
-            step = idx.step
+            if idx.step is None:
+                step = 1
+            else:
+                step = idx.step
 
             ll = []
             mi = 0
@@ -690,7 +724,7 @@ class ScatteredDimension(netcdf.Dimension):
 
                 sh = self._min[st_idx]
 
-                ll.append( tuple(st_idx, slice(mi - sh, ma - sh, step), slice(mi_p, ma_p)) )
+                ll.append(tuple([st_idx, slice(mi - sh, ma - sh, step), slice(mi_p, ma_p)]))
 
             return ll
         elif type(idx) is list:

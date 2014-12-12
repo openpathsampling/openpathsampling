@@ -181,13 +181,16 @@ Starting the bootstrapping procedure to obtain initial paths. First we
 define our shooting movers (randomly pick fwd or bkwd shooting), then build
 the bootstrapping calculation, then we run it. 
     """
+
+    multi.freeze_and_split()
+
     bootstrap = Bootstrapping(storage=engine.storage,
                               engine=engine,
                               ensembles=interface_set,
                               movers=mover_set)
 
     bootstrap.set_replicas([segments[0]])
-    bootstrap.run(50)
+    bootstrap.run(5)
 
     print """
     Saving all cached computations of orderparameters.
