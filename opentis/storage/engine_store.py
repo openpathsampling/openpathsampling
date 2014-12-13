@@ -19,7 +19,6 @@ class DynamicsEngineStorage(ObjectStorage):
         # try to create an object of the same type as the original
 
         engine_class_dict = DynamicsEngine.__descendents__()
-
         options = self.simplifier.from_json(self.storage.variables['dynamicsengine_options'][int(idx)])
         engine = engine_class_dict[engine_type](options=options)
 

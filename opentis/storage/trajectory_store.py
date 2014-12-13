@@ -70,7 +70,6 @@ class TrajectoryStorage(ObjectStorage):
         '''
 
         values = self.storage.variables['trajectory_snapshot_idx'][idx]
-        print values
 
         # typecast to snapshot
         snapshots = self.list_from_numpy(values, 'snapshot')
