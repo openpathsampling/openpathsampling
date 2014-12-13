@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from integrators import VVVRIntegrator
+from openmmtools.integrators import VVVRIntegrator
 
 import simtk.unit as u
 import simtk.openmm as openmm
@@ -9,7 +9,7 @@ from simtk.openmm.app import ForceField, PME, HBonds, PDBFile
 from opentis.storage import Storage
 from opentis.tools import snapshot_from_pdb, to_openmm_topology
 from opentis.dynamics_engine import DynamicsEngine
-from opentis.snapshot import Snapshot, Configuration, Momentum
+from opentis.snapshot import Snapshot
 
 class OpenMMEngine(DynamicsEngine):
     """We only need a few things from the simulation. This object duck-types
