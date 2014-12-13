@@ -55,22 +55,6 @@ class MoveDetails(object):
         for key, value in kwargs:
             setattr(self, key, value)
 
-class ReplicaSelector(object):
-    def __call__(self, globalstate, ensemble, replicas):
-        print "Calling ReplicaSelector; maybe try a subclass?"
-
-class UniformReplicaSelector(ReplicaSelector):
-    def __call__(self, globalstate, ensemble, replicas):
-        if replicas == 'all':
-            replicas = globalstate.keys()
-
-        possible_replicas = []
-        for repid in replicas:
-            if globalstate[repid].ensemble == ensemble:
-                possible_replicas.append(repid)
-
-        return random.choice(possible_replicas)
-
 
 class PathMover(object):
     """
@@ -107,17 +91,25 @@ class PathMover(object):
         else:
             return None
 
-    def __init__(self, replica_selector=None, replicas='all'):
+    def __init__(self, replicas='all', ensemble=None):
         
         self.name = self.__class__.__name__
 
-        if replica_selector is None:
-            self.replica_selector = UniformReplicaSelector()
+        if type(replicas) is int:
+            self.replicas = [replicas]
         else:
-            self.replica_selector = replica_selector
-        self.replicas = replicas
+            self.replicas = replicas
+
+        self.ensemble = ensemble
 
         self.idx = dict()
+
+    def legal_replica(self, globalstate):
+        if self.replicas == 'all':
+            reps = globalstate.replica_list()
+        else:
+            reps = self.replicas
+        return random.choice(reps)
 
     def move(self, globalstate):
         '''
@@ -168,9 +160,8 @@ class ShootMover(PathMover):
     a sample from a specified ensemble 
     '''
 
-    def __init__(self, selector, replica_selector=None, 
-                 ensemble=None, replicas='all'):
-        super(ShootMover, self, replica_selector, replicas).__init__()
+    def __init__(self, selector, ensemble=None, replicas='all'):
+        super(ShootMover, self, replicas).__init__()
         self.selector = selector
         self.ensemble = ensemble
         self.length_stopper = PathMover.engine.max_length_stopper
@@ -186,9 +177,10 @@ class ShootMover(PathMover):
         self.final = self.start
     
     def move(self, globalstate):
-        replica = self.replica_selector(globalstate,self.ensemble,self.replicas)
-        trajectory = globalstate[replica].trajectory
-        dynamics_ensemble = globalstate[replica].ensemble
+        rep = self.legal_replica(globalstate) # select a legal replica
+        rep_sample = globalstate[rep] # select sample with allowed replica
+        trajectory = rep_sample.trajectory
+        dynamics_ensemble = rep_sample.ensemble
 
         details = MoveDetails()
         details.success = False
