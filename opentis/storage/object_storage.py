@@ -379,13 +379,13 @@ class ObjectStorage(object):
         if var_type == 'float':
             nc_type = 'f4'   # 32-bit float
         elif var_type == 'int':
-            nc_type = np.uint32   # 32-bit signed integer
+            nc_type = np.int32   # 32-bit signed integer
         elif var_type == 'index':
-            nc_type = np.uint32   # 32-bit signed integer / for indices / -1 indicates no index (None)
+            nc_type = np.int32   # 32-bit signed integer / for indices / -1 indicates no index (None)
         elif var_type == 'length':
-            nc_type = np.uint32   # 32-bit signed integer / for indices / -1 indicated no length specified (None)
+            nc_type = np.int32   # 32-bit signed integer / for indices / -1 indicated no length specified (None)
         elif var_type == 'bool':
-            nc_type = np.int8   # 8-bit signed integer for boolean
+            nc_type = np.uint8   # 8-bit signed integer for boolean
         elif var_type == 'str':
             nc_type = 'str'
 
@@ -501,15 +501,15 @@ class ObjectStorage(object):
         elif value_type == 'float':
             values = np.array(data).astype(np.float32)
         elif value_type == 'bool':
-            values = np.array(data).astype(np.int8)
+            values = np.array(data).astype(np.uint8)
         elif value_type == 'index':
-            values = np.array(data).astype(np.uint32)
+            values = np.array(data).astype(np.int32)
         elif value_type == 'length':
-            values = np.array(data).astype(np.uint32)
+            values = np.array(data).astype(np.int32)
         else:
             # an object
             values = [-1 if value is None and allow_empty is True else value.idx[self.storage] for value in data]
-            values = np.array(values).astype(np.uint32)
+            values = np.array(values).astype(np.int32)
 
         return values.copy()
 

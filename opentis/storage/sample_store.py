@@ -69,8 +69,6 @@ class SampleStorage(ObjectStorage):
             step=step
         )
 
-        obj.idx[self.storage] = idx
-
         return obj
 
     def by_ensemble(self, ensemble):

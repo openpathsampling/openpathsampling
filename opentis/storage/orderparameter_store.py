@@ -80,7 +80,6 @@ class ObjectDictStorage(ObjectStorage):
             op = OrderParameter(name)
 
         op.storage_caches[storage] = dict(zip(stored_idx, data))
-        op.idx[storage] = idx
 
         return op
 

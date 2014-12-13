@@ -191,7 +191,7 @@ class Storage(netcdf.Dataset):
     def __setattr__(self, key, value):
         self.__dict__[key] = value
 
-    def _init_classes(self, units=None):
+    def _init_storages(self, units=None):
         '''
         Run the initialization on all added classes, when the storage is created only!
 
@@ -205,7 +205,7 @@ class Storage(netcdf.Dataset):
             storage.dimension_units.update(units)
             storage._init()
 
-    def _restore_classes(self):
+    def _restore_storages(self):
         '''
         Run restore on all added classes. Usually there is nothing to do.
         '''
@@ -214,7 +214,7 @@ class Storage(netcdf.Dataset):
         pass
 
 
-    def _init(self):
+    def _initialize_netCDF(self):
         """
         Initialize the netCDF file for storage itself.
         """
