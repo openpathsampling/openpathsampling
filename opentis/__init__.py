@@ -11,7 +11,7 @@ from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
 from snapshot import Snapshot, Configuration, Momentum
 
 from trajectory import Trajectory
-from opentis.sample import Sample
+from sample import Sample, SampleSet
 
 from globalstate import GlobalState, GlobalStateMover
 
