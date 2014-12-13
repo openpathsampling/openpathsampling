@@ -367,17 +367,36 @@ class MixedMover(PathMover):
         path = Sample(trajectory=sample.trajectory, mover=self, ensemble=mover.ensemble, details=sample.details)
         return path
 
-class EnsembleHop(PathMover):
+class EnsembleHopMover(PathMover):
     def __init__(self, bias=None, ensembles=None, replicas='all'):
         ensembles = make_list_of_pairs(ensembles)
         super(EnsembleHop, self).__init__(ensembles, replicas)
         # TODO: add support for bias: could be fcn, could be file
 
     def move(self, globalstate):
+        # ensemble hops are in the order [from, to]
+        ens_pair = random.choice(ensembles)
+        ens_from = ens_pair[0]
+        ens_to = ens_pair[1]
+
+        rep_sample = self.select_sample(globalstate, ens_from)
+        trajectory = rep_sample.trajectory
+
         details = MoveDetails()
-        ens_choice = random.choice(ensembles)
+        details.success = False
+        details.inputs = [trajectory]
+        details.mover = self
+        setattr(details, 'initial_ensemble', ens_from)
+        setattr(details, 'trial_ensemble', ens_to)
+        details.success = ens_to(trajectory)
+        if details.success == True:
+            setattr(details, 'result_ensemble', ens_to)
+        else: 
+            setattr(details, 'result_ensemble', ens_from)
 
-
+        path = Sample(trajectory=trajectory, mover=self,
+                      ensemble=details.result_ensemble, details=details)
+        return path
 
 
 
