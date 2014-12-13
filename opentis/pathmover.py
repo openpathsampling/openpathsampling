@@ -75,10 +75,23 @@ class PathMover(object):
     After the move has been made, we can retrieve information about the
     move, as well as the new trajectory from the PathMover object
     
+    Potential future change: `engine` is not needed for all PathMovers
+    (replica exchange, ensemble hopping, path reversal, and moves which
+    combine these [state swap] have no need for the engine). Maybe that
+    should be moved into only the ensembles that need it? ~~~DWHS
+
+    Also, I agree with the separating trial and acceptance. We might choose
+    to use a different acceptance criterion than Metropolis. For example,
+    the "waste recycling" approach recently re-discovered by Frenkel (see
+    also work by Athenes, Jourdain, and old work by Kalos) might be
+    interesting. ~~~DWHS
+
+
     Attributes
     ----------
     engine : DynamicsEngine
         the attached engine used to generate new trajectories
+
     """
 
     cls = 'pathmover'
@@ -91,7 +104,7 @@ class PathMover(object):
         else:
             return None
 
-    def __init__(self, replicas='all', ensemble=None):
+    def __init__(self, replicas='all', ensembles=None):
         
         self.name = self.__class__.__name__
 
@@ -100,16 +113,36 @@ class PathMover(object):
         else:
             self.replicas = replicas
 
-        self.ensemble = ensemble
+        if type(ensemble) is not list:
+            ensembles = [ensembles]
+        self.ensembles = ensembles
 
         self.idx = dict()
 
-    def legal_replica(self, globalstate):
+    def legal_sample_set(self, globalstate, ensembles=None):
         if self.replicas == 'all':
             reps = globalstate.replica_list()
         else:
             reps = self.replicas
-        return random.choice(reps)
+        rep_samples = []
+        for rep in reps:
+            rep_samples.extend(globalstate.all_from_replica(rep))
+
+        if ensembles is not None:
+            ens_samples = []
+            if type(ensembles) is not list:
+                ensembles = [ensembles]
+            for ens in ensembles:
+                ens_samples.extend(globalstate.all_from_ensemble(ens))
+            legal_samples = list(set(rep_samples) & set(ens_samples))
+        else:
+            legal_samples = rep_samples
+
+        return legal_samples
+
+    def select_sample(self, globalstate, ensembles=None):
+        legal = self.legal_sample_set(globalstate, ensembles)
+        return random.choice(legal)
 
     def move(self, globalstate):
         '''
@@ -160,10 +193,9 @@ class ShootMover(PathMover):
     a sample from a specified ensemble 
     '''
 
-    def __init__(self, selector, ensemble=None, replicas='all'):
-        super(ShootMover, self, replicas).__init__()
+    def __init__(self, selector, ensembles=None, replicas='all'):
+        super(ShootMover, self, ensembles, replicas).__init__()
         self.selector = selector
-        self.ensemble = ensemble
         self.length_stopper = PathMover.engine.max_length_stopper
 
     def selection_probability_ratio(self, details):
@@ -177,8 +209,9 @@ class ShootMover(PathMover):
         self.final = self.start
     
     def move(self, globalstate):
-        rep = self.legal_replica(globalstate) # select a legal replica
-        rep_sample = globalstate[rep] # select sample with allowed replica
+        # select a legal sample, use it to determine the trajectory and the
+        # ensemble needed for the dynamics
+        rep_sample = self.select_sample(globalstate, self.ensembles) 
         trajectory = rep_sample.trajectory
         dynamics_ensemble = rep_sample.ensemble
 
