@@ -13,6 +13,40 @@ from ensemble import FullEnsemble
 from trajectory import Sample
 from wrapper import storable
 
+def make_list_of_pairs(l):
+    '''
+    Converts input from several possible formats into a list of pairs: used
+    to clean input for swap-like moves.
+
+    Allowed input formats: 
+    * flat list of length 2N
+    * list of pairs
+
+    Anything else will lead to a ValueError or AssertionError
+    '''
+    try:
+        len_l = len(l)
+    except TypeError:
+        raise ValueError("Input list is not iterable: not a list!")
+    # based on first element, decide whether this should be a list of lists
+    # or a flat list
+    try:
+        len_l0 = len(l[0])
+        list_of_lists = True
+    except TypeError:
+        list_of_lists = False
+
+    if list_of_lists == True:
+        for elem in l:
+            assert len(elem)==2, "List of lists: inner list length != 2"
+        outlist = l
+    else:
+        assert len(l) % 2 == 0, "Flattened list: length not divisible by 2"
+        outlist = [ [a, b] 
+                   for (a, b) in zip(l[slice(0,None,2)], l[slice(1,None,2)])
+                  ]
+    return outlist
+
 
 @storable
 class MoveDetails(object):
@@ -113,13 +147,17 @@ class PathMover(object):
         else:
             self.replicas = replicas
 
-        if type(ensemble) is not list:
+        if ensembles is not None and type(ensembles) is not list:
             ensembles = [ensembles]
         self.ensembles = ensembles
 
         self.idx = dict()
 
     def legal_sample_set(self, globalstate, ensembles=None):
+        '''
+        This returns all the samples from globalstate which are in both
+        self.replicas and the parameter ensembles.
+        '''
         if self.replicas == 'all':
             reps = globalstate.replica_list()
         else:
@@ -141,6 +179,10 @@ class PathMover(object):
         return legal_samples
 
     def select_sample(self, globalstate, ensembles=None):
+        '''
+        Returns one of the legal samples given self.replica and the ensemble
+        set in ensembles.
+        '''
         legal = self.legal_sample_set(globalstate, ensembles)
         return random.choice(legal)
 
@@ -194,7 +236,7 @@ class ShootMover(PathMover):
     '''
 
     def __init__(self, selector, ensembles=None, replicas='all'):
-        super(ShootMover, self, ensembles, replicas).__init__()
+        super(ShootMover, self).__init__(ensembles, replicas)
         self.selector = selector
         self.length_stopper = PathMover.engine.max_length_stopper
 
@@ -263,7 +305,6 @@ class ForwardShootMover(ShootMover):
         details.final = details.start[0:shooting_point] + partial_trajectory
         details.final_point = ShootingPoint(self.selector, details.final,
                                             shooting_point)
-        pass
     
 class BackwardShootMover(ShootMover):    
     '''
@@ -296,8 +337,8 @@ class MixedMover(PathMover):
     Channel functions from self.mover to self. Does NOT work yet. Think
     about a good way to implement this...
     '''
-    def __init__(self, movers, weights = None):
-        super(MixedMover, self).__init__()
+    def __init__(self, movers, ensembles=None, replicas='all', weights = None):
+        super(MixedMover, self).__init__(ensembles, replicas)
 
         self.movers = movers
 
@@ -321,6 +362,20 @@ class MixedMover(PathMover):
 
         path = Sample(trajectory=sample.trajectory, mover=self, ensemble=mover.ensemble, details=sample.details)
         return path
+
+class EnsembleHop(PathMover):
+    def __init__(self, bias=None, ensembles=None, replicas='all'):
+        super(EnsembleHop, self).__init__(ensembles, replicas)
+        # TODO: add support for bias: could be fcn, could be file
+
+    def move(self, globalstate):
+        details = MoveDetails()
+        ens_choice = random.choice(ensembles)
+        if 
+
+
+
+
 
 #############################################################
 # The following moves still need to be implemented. Check what excactly they do
@@ -406,9 +461,10 @@ class PathMoverFactory(object):
             selector_set = [selector_set]*len(interface_set)
         mover_set = [
             MixedMover([
-                ForwardShootMover(sel, iface), 
-                BackwardShootMover(sel, iface)
-            ])
+                ForwardShootMover(sel, ensembles=[iface]), 
+                BackwardShootMover(sel, ensembles=[iface])
+            ],
+            ensembles=[iface])
             for (sel, iface) in zip(selector_set, interface_set)
         ]
         return mover_set

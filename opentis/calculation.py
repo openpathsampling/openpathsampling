@@ -1,6 +1,7 @@
 from globalstate import GlobalState
 from pathmover import PathMover, MoveDetails, ReplicaExchange
 from trajectory import Sample
+from sample import SampleSet
 
 class Calculation(object):
 
@@ -10,17 +11,9 @@ class Calculation(object):
         self.storage = storage
         self.engine = engine
         self.movers = movers
-        self.globalstate = GlobalState(ensembles)
 
-    # TODO: this should be a property
     def set_replicas(self, replicas):
-        if type(replicas) is dict:
-            for ensemble, trajectory in dict.iteritems():
-                self.globalstate[ensemble] = trajectory
-        elif type(replicas) is list:
-            ensembles = self.globalstate.ensembles
-            for idx, trajectory in enumerate(replicas):
-                self.globalstate[ensembles[idx]] = trajectory
+        self.globalstate = SampleSet(samples)
 
     def run(self, nsteps):
         print "Running an empty calculation? Try a subclass, maybe!"
