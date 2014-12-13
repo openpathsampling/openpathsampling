@@ -21,9 +21,13 @@ def make_list_of_pairs(l):
     Allowed input formats: 
     * flat list of length 2N
     * list of pairs
+    * None (returns None)
 
     Anything else will lead to a ValueError or AssertionError
     '''
+    if l is None:
+        return None
+
     try:
         len_l = len(l)
     except TypeError:
@@ -365,13 +369,13 @@ class MixedMover(PathMover):
 
 class EnsembleHop(PathMover):
     def __init__(self, bias=None, ensembles=None, replicas='all'):
+        ensembles = make_list_of_pairs(ensembles)
         super(EnsembleHop, self).__init__(ensembles, replicas)
         # TODO: add support for bias: could be fcn, could be file
 
     def move(self, globalstate):
         details = MoveDetails()
         ens_choice = random.choice(ensembles)
-        if 
 
 
 
