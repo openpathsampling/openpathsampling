@@ -30,6 +30,7 @@ from opentis.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
 from opentis.calculation import Bootstrapping
 from opentis.pathmover import PathMover
 from opentis.shooting import UniformSelector
+from opentis.trajectory import Sample
 
 import simtk.unit as u
 
@@ -180,7 +181,9 @@ the bootstrapping calculation, then we run it.
                               ensembles=interface_set,
                               movers=mover_set)
 
-    bootstrap.set_replicas([segments[0]])
+    sample_0 = Sample(replica=0, trajectory=segments[0],
+                      ensemble=interface_set[0])
+    bootstrap.set_replicas([sample_0])
     bootstrap.run(50)
 
     print """

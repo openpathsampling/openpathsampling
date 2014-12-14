@@ -7,12 +7,11 @@ class Calculation(object):
 
     calc_name = "Calculation"
 
-    def __init__(self, storage, engine=None, ensembles=None, movers=None):
+    def __init__(self, storage, engine=None):
         self.storage = storage
         self.engine = engine
-        self.movers = movers
 
-    def set_replicas(self, replicas):
+    def set_replicas(self, samples):
         self.globalstate = SampleSet(samples)
 
     def run(self, nsteps):
@@ -44,6 +43,9 @@ class Bootstrapping(Calculation):
 
     calc_name = "Bootstrapping"
 
+    def __init__(self, storage, engine=None, trajectory=None, ensembles=None):
+        super(Bootstrapping, self).__init__(storage, engine)
+        self.ensembles = ensembles
 
     def run(self, nsteps):
 
@@ -53,7 +55,7 @@ class Bootstrapping(Calculation):
         ens_num = 0
         failsteps = 0
         # if we fail nsteps times in a row, kill the job
-        while ens_num < self.globalstate.size - 1 and failsteps < nsteps:
+        while ens_num < len(self.globalstate) - 1 and failsteps < nsteps:
 #            print "Trying move in ensemble", ens_num
             # Generate Samples
             samples = [self.movers[ens_idx].move(self.globalstate[ens_idx]) 
@@ -63,7 +65,8 @@ class Bootstrapping(Calculation):
             globalstate = self.globalstate.apply_samples(samples)
 
             # Now save all samples
-            self.globalstate.save_samples(self.storage)
+            if self.storage is not None:
+                self.globalstate.save_samples(self.storage)
 
             # update to new globalstate
             self.globalstate = globalstate
@@ -75,7 +78,8 @@ class Bootstrapping(Calculation):
                 # fir in the next ensemble
                 if self.globalstate.ensembles[ens_num + 1](self.globalstate[ens_num]):
                     # Yes, so apply the BootStrapMove and generate a new sample in the next ensemble
-                    sample = bootstrapmove.move(self.globalstate[ens_num], self.globalstate.ensembles[ens_num + 1])
+                    sample = bootstrapmove.move(self.globalstate[ens_num], 
+                                                self.globalstate.ensembles[ens_num + 1])
                     globalstate = self.globalstate.apply_samples([sample])
 
                     # Now save all samples

@@ -371,7 +371,9 @@ class EnsembleHopMover(PathMover):
     def __init__(self, bias=None, ensembles=None, replicas='all'):
         ensembles = make_list_of_pairs(ensembles)
         super(EnsembleHop, self).__init__(ensembles, replicas)
-        # TODO: add support for bias: could be fcn, could be file
+        # TODO: add support for bias: should be a list, one per pair of
+        # ensembles
+        self.bias = bias
 
     def move(self, globalstate):
         # ensemble hops are in the order [from, to]
