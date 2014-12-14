@@ -65,8 +65,8 @@ class MoveDetails(object):
         replica ID to which this trial move would apply
     inputs : list of Sample
         the Samples which were used as inputs to the move
-    final : tuple(Tractory, Ensemble)
-        the Trajectory and Ensemble which 
+    final : Tractory
+        the Trajectory 
     accepted : bool
         whether the attempted move was accepted
     mover : PathMover
@@ -92,6 +92,11 @@ class MoveDetails(object):
         self.mover=None
         for key, value in kwargs:
             setattr(self, key, value)
+
+    def take_attributes_from(self, other):
+        for attr in other.__dict__.keys():
+            if not hasattr(self, attr):
+                setattr(self, attr, other.__dict__[attr])
 
 
 class PathMover(object):
@@ -164,8 +169,10 @@ class PathMover(object):
         '''
         if self.replicas == 'all':
             reps = globalstate.replica_list()
+            print "all = ", reps
         else:
             reps = self.replicas
+            print reps
         rep_samples = []
         for rep in reps:
             rep_samples.extend(globalstate.all_from_replica(rep))
@@ -243,6 +250,8 @@ class ShootMover(PathMover):
         super(ShootMover, self).__init__(ensembles, replicas)
         self.selector = selector
         self.length_stopper = PathMover.engine.max_length_stopper
+        self.extra_details = ['start', 'start_point', 'final',
+                              'final_point']
 
     def selection_probability_ratio(self, details):
         '''
@@ -366,6 +375,33 @@ class MixedMover(PathMover):
 
         path = Sample(trajectory=sample.trajectory, mover=self, ensemble=mover.ensemble, details=sample.details)
         return path
+
+class ReplicaIDChange(PathMover):
+    def __init__(self, new_replicas=None, old_samples=None, 
+                 ensembles=None, replicas='all'):
+        super(ReplicaIDChange, self).__init__(ensembles, replicas)
+        self.new_replicas = new_replicas
+        self.old_samples = old_samples
+
+    def move(self, globalstate):
+        rep_sample = self.select_sample(globalstate, self.ensembles)
+        new_rep = self.new_replicas[rep_sample.replica]
+        old_sample = self.old_samples[rep_sample.replica]
+        trajectory = rep_sample.trajectory
+        
+        details = MoveDetails()
+        details.inputs = rep_sample.trajectory
+        # TODO: details
+        dead_sample = Sample(replica=rep_sample.replica,
+                             ensemble=old_sample.ensemble,
+                             trajectory=old_sample.trajectory
+                            )
+        new_sample = Sample(replica=new_rep,
+                            ensemble=rep_sample.ensemble,
+                            trajectory=rep_sample.trajectory
+                           )
+        return [dead_sample, new_sample]
+
 
 class EnsembleHopMover(PathMover):
     def __init__(self, bias=None, ensembles=None, replicas='all'):
