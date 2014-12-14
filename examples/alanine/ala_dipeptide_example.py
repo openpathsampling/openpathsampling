@@ -179,11 +179,10 @@ the bootstrapping calculation, then we run it.
     bootstrap = Bootstrapping(storage=engine.storage,
                               engine=engine,
                               ensembles=interface_set,
-                              movers=mover_set)
+                              movers=mover_set,
+                              trajectory=segments[0]
+                             )
 
-    sample_0 = Sample(replica=0, trajectory=segments[0],
-                      ensemble=interface_set[0])
-    bootstrap.set_replicas([sample_0])
     bootstrap.run(50)
 
     print """

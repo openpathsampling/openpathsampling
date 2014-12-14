@@ -1,5 +1,6 @@
 from globalstate import GlobalState
-from pathmover import PathMover, MoveDetails, ReplicaExchange
+from pathmover import (PathMover, MoveDetails, ReplicaExchange,
+                       EnsembleHopMover)
 from trajectory import Sample
 from sample import SampleSet
 
@@ -17,8 +18,22 @@ class Calculation(object):
     def run(self, nsteps):
         print "Running an empty calculation? Try a subclass, maybe!"
 
-class BootstrapEnsembleChangeMove(PathMover):
-    def move(self, trajectory, ensemble):
+class BootstrapPromotionMove(PathMover):
+    '''
+    Bootstrap promotion is the combination of an EnsembleHop (to the next
+    ensemble up) with incrementing the replica ID.
+    '''
+    def __init__(self, bias=None, ensembles=None, replicas='all'):
+        super(BootstrapPromotionMove, self).__init__(ensembles, replicas)
+        ens_neighbors = [ [a, b] for (a, b) in zip(ensembles, ensembles[1:]) ]
+        self.hopper = EnsembleHopMover(bias, ens_neighbors, replicas)
+        self.rep_id_dict = {}
+        for ens in self.ensembles:
+            self.rep_id_dict[ens] = self.ensembles.index(ens)
+
+    def move(self, globalstate):
+        intermed_samp = self.hopper.move(globalstate)
+
         details = MoveDetails()
         details.inputs = [trajectory]
         details.mover = self
@@ -43,9 +58,17 @@ class Bootstrapping(Calculation):
 
     calc_name = "Bootstrapping"
 
-    def __init__(self, storage, engine=None, trajectory=None, ensembles=None):
+    def __init__(self, storage, engine=None, movers=None, trajectory=None,
+                 ensembles=None):
         super(Bootstrapping, self).__init__(storage, engine)
         self.ensembles = ensembles
+        sample = Sample(replica=0, trajectory=trajectory, 
+                        ensemble=self.ensembles[0])
+        self.globalstate = SampleSet([sample])
+        if movers is None:
+            pass # TODO: implement defaults
+        else:
+            self.movers = movers
 
     def run(self, nsteps):
 

@@ -372,7 +372,8 @@ class EnsembleHopMover(PathMover):
         ensembles = make_list_of_pairs(ensembles)
         super(EnsembleHop, self).__init__(ensembles, replicas)
         # TODO: add support for bias: should be a list, one per pair of
-        # ensembles
+        # ensembles -- another version might take a value for each ensemble,
+        # and use the ratio; this latter is better for CITIS
         self.bias = bias
 
     def move(self, globalstate):
