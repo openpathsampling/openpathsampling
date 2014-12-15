@@ -1,5 +1,5 @@
 from object_storage import ObjectStorage
-from wrapper import loadcache, loadidentifiable
+from wrapper import loadcache
 from opentis.orderparameter import OrderParameter
 
 class ObjectDictStorage(ObjectStorage):
@@ -34,23 +34,34 @@ class ObjectDictStorage(ObjectStorage):
             self.cache[idx] = objectdict
 
         self._update_store(objectdict)
-        store = objectdict.storage_caches[storage]
+        self._write_to_storage(objectdict, idx)
+
+        self.tidy_cache(objectdict)
+
+    def _write_to_storage(self, objectdict, idx):
+        store = objectdict.storage_caches[self.storage]
         length = len(store)
 
         var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
 
+#        print var_name, objectdict, idx, self.key_class
+
         if var_name + '_value' not in self.storage.variables:
             self.init_variable(var_name + '_value', 'float', (self.key_class.__name__.lower()))
-            self.init_variable(var_name + '_set', 'index', (self.key_class.__name__.lower()))
+            self.init_variable(var_name + '_set', 'bool', (self.key_class.__name__.lower()))
 
         self.storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
-        self.save_variable(self.idx_dimension + '_length', idx, length)
-        self.storage.variables[var_name + '_value'][store.keys()] = self.list_to_numpy(store.values(), 'float')
-        self.storage.variables[var_name + '_set'][0:length] = store.keys()
+#        self.save_variable(self.idx_dimension + '_length', idx, length)
+
+        for key, value in zip(store.keys(), self.list_to_numpy(store.values(), 'float')):
+            self.storage.variables[var_name + '_value'][key] = value
+            self.storage.variables[var_name + '_set'][key] = True
+
+#        self.storage.variables[var_name + '_value'][keys] = self.list_to_numpy(store.values(), 'float')
+#        self.storage.variables[var_name + '_set'][0:length] = store.keys()
 
         self.tidy_cache(objectdict)
 
-    @loadidentifiable
     @loadcache
     def load(self, idx, op=None):
         """
@@ -69,20 +80,28 @@ class ObjectDictStorage(ObjectStorage):
         storage = self.storage
 #        data = self.load_objectdict(self.idx_dimension,int(idx), self.content_class.__name__.lower(), float)
 
+        print idx, self.idx_dimension, storage.variables[self.idx_dimension + '_name']
         name = storage.variables[self.idx_dimension + '_name'][idx]
         var_name = self.idx_dimension + '_' + str(idx) + '_' + name
-        length = self.load_variable(self.idx_dimension + '_length', idx)
-        stored_idx = self.storage.variables[var_name + '_set'][0:length]
-        data_all = storage.variables[var_name + '_value'][:]
-        data = self.list_from_numpy(data_all[self.list_from_numpy(stored_idx, 'index')], 'float')
 
         if op is None:
             op = OrderParameter(name)
 
-        op.storage_caches[storage] = dict(zip(stored_idx, data))
-        op.idx[storage] = idx
+        op.storage_caches[storage] = dict()
+        op.storage_caches[storage].update(self._update_from_storage(var_name, idx))
 
         return op
+
+    def _update_from_storage(self, var_name, idx):
+        stored_idx = self.storage.variables[var_name + '_set'][:]
+        data_all = self.storage.variables[var_name + '_value'][:]
+
+        d = { key : value for
+              key, value in zip(range(len(self.storage.dimensions['configuration'])), data_all )
+                if stored_idx[key]
+        }
+
+        return d
 
     def restore(self, obj):
         idx = self.find_by_identifier(obj.identifier)

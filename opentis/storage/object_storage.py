@@ -3,7 +3,7 @@ import copy
 import yaml
 import numpy as np
 
-from wrapper import savecache, saveidentifiable, loadcache
+from wrapper import savecache, savenamed, loadcache
 from util import StorableObjectJSON
 import simtk.unit as u
 
@@ -57,7 +57,7 @@ class ObjectStorage(object):
 
 
         """
-        self.storage = storage
+        self._storage = storage
         self.content_class = obj
         self.idx_dimension = obj.__name__.lower()
         self.db = obj.__name__.lower()
@@ -67,6 +67,9 @@ class ObjectStorage(object):
         self.all_names = None
         self.simplifier = StorableObjectJSON(storage)
         self._names_loaded = False
+        self._idx_min = 0
+        self._min_idx = [0]
+        self._idx_max = None
         if identifier is not None:
             self.identifier = self.idx_dimension + '_' + identifier
         else:
@@ -76,6 +79,13 @@ class ObjectStorage(object):
             self.dimension_units = dimension_units
         else:
             self.dimension_units = {}
+
+    @property
+    def storage(self):
+        return self._storage
+
+    def shift(self, idx):
+        return idx
 
     @property
     def units(self):
@@ -92,6 +102,7 @@ class ObjectStorage(object):
         return self.storage.units
 
     def register(self):
+        self.storage._storages[self.__class__.__name__] = self
         self.storage._storages[self.content_class] = self
         self.storage._storages[self.content_class.__name__] = self
         self.storage._storages[self.content_class.__name__.lower()] = self
@@ -126,6 +137,7 @@ class ObjectStorage(object):
 
     def find_by_identifier(self, needle):
         if self.all_names is None:
+#            self.all_names = self.storage.idx_dict(self.identifier)
             self.all_names = { s : idx for idx,s in enumerate(self.storage.variables[self.identifier][:]) }
 
         if needle in self.all_names:
@@ -135,9 +147,7 @@ class ObjectStorage(object):
 
     def update_name_cache(self):
         if self.named:
-            for idx, name in enumerate(self.variables[self.db + "_name"][:]):
-                self.cache[name] = idx
-
+            self.cache.update(self.storage.idx_list(self.db + "_name"))
             self._names_loaded = True
 
     def index(self, obj, idx=None):
@@ -218,7 +228,7 @@ class ObjectStorage(object):
         else:
             return self.load_json(self.idx_dimension + '_json', idx, obj)
 
-    @saveidentifiable
+    @savenamed
     @savecache
     def save(self, obj, idx=None):
         '''
@@ -230,22 +240,13 @@ class ObjectStorage(object):
 
         self.save_json(self.idx_dimension + '_json', idx, obj)
 
-    def get(self, indices):
+    def get(self, var_name, index):
         """
-        Returns a list of objects from the given list of indices
-
-        Arguments
-        ---------
-        indices : list of int
-            the list of integers specifying the object to be returned
-
-        Returns
-        -------
-        list of objects
-            a list of objects stored under the given indices
-
         """
-        return [self.load(idx) for idx in range(0, self.count())[indices] ]
+
+    def put(self, var_name, index, value):
+        """
+        """
 
     def last(self):
         '''
@@ -299,7 +300,7 @@ class ObjectStorage(object):
         # define dimensions used for the specific object
         self.storage.createDimension(self.idx_dimension, 0)
         if self.named:
-            self.init_variable(self.db + "_name", 'str', description='A short descriptive name for convenience')
+            self.init_variable(self.db + "_name", 'str', description='A short descriptive and unique name for convenience and loading')
         if self.json:
             self.init_variable(self.db + "_json", 'str', description='A json serialized version of the object')
 
@@ -327,6 +328,13 @@ class ObjectStorage(object):
         length = int(len(self.storage.dimensions[name]))
         return length
 
+    def flush_cache(self):
+        """
+        Removes all object from the cache
+        """
+        self.cache = dict()
+
+
 #=============================================================================================
 # INITIALISATION UTILITY FUNCTIONS
 #=============================================================================================
@@ -344,8 +352,7 @@ class ObjectStorage(object):
 
         self.storage.sync()
 
-
-    def init_variable(self, name, var_type, dimensions = None, units=None, description=None):
+    def init_variable(self, name, var_type, dimensions = None, units=None, description=None, variable_length=False):
         '''
         Create a new variable in the netcdf storage. This is just a helper function to structure the code better.
 
@@ -354,10 +361,12 @@ class ObjectStorage(object):
         name : str
             The name of the variable to be created
         var_type : str
-            The string representing the type of the data stored in the variable. Either the netcdf types can be used directly and
+            The string representing the type of the data stored in the variable.
+            Either the netcdf types can be used directly and
             strings representing the python native types are translated to appropriate netcdf types.
         dimensions : str or tuple of str
-            A tuple representing the dimensions used for the netcdf variable. If not specified then the default dimension of the storage is used.
+            A tuple representing the dimensions used for the netcdf variable.
+            If not specified then the default dimension of the storage is used.
         units : str
             A string representing the units used if the var_type is `float` the units is set to `none`
         description : str
@@ -374,17 +383,21 @@ class ObjectStorage(object):
         if var_type == 'float':
             nc_type = 'f4'   # 32-bit float
         elif var_type == 'int':
-            nc_type = 'i4'   # 32-bit signed integer
+            nc_type = np.uint32   # 32-bit signed integer
         elif var_type == 'index':
-            nc_type = 'i4'   # 32-bit signd integer / for indices / -1 indicates no index (None)
+            nc_type = np.uint32   # 32-bit signed integer / for indices / -1 indicates no index (None)
         elif var_type == 'length':
-            nc_type = 'i4'   # 32-bit signed integer / for indices / -1 indicated no length specified (None)
+            nc_type = np.uint32   # 32-bit signed integer / for indices / -1 indicated no length specified (None)
         elif var_type == 'bool':
-            nc_type = 'i1'   # 8-bit signed integer for boolean
+            nc_type = np.int8   # 8-bit signed integer for boolean
         elif var_type == 'str':
             nc_type = 'str'
 
-        ncvar = ncfile.createVariable(name, nc_type, dimensions)
+        if variable_length:
+            vlen_t = self.storage.createVLType(nc_type, name + '_vlen')
+            ncvar = ncfile.createVariable(name, vlen_t, dimensions)
+        else:
+            ncvar = ncfile.createVariable(name, nc_type, dimensions)
 
         if var_type == 'float' or units is not None:
 
@@ -517,8 +530,11 @@ class ObjectStorage(object):
             data = values.tolist()
         else:
             # an object
-            key_store = getattr(self.storage, value_type)
-            data = [key_store.load(obj_idx) if allow_empty is False or obj_idx >= 0 else None for obj_idx in values.tolist()]
+            key_store = self.storage._storages[value_type]
+            if type(values) is list:
+                data = [key_store.load(obj_idx) if allow_empty is False or obj_idx >= 0 else None for obj_idx in values]
+            else:
+                data = [key_store.load(obj_idx) if allow_empty is False or obj_idx >= 0 else None for obj_idx in values.tolist()]
 
         return data
 
@@ -552,6 +568,33 @@ class ObjectStorage(object):
         values = self.list_to_numpy(data, value_type)
         self.storage.variables[name][idx, begin:begin+len(data)] = values
 
+    def get_slice_as_type(self, name, dimension, idx, value_type):
+        storage = self.storage
+        values = storage.variables[name][self.get_slice(dimension, idx)]
+
+        data = self.list_from_numpy(values, value_type)
+        return data
+
+    def set_slice_as_type(self, name, dimension, idx, begin, data, value_type):
+        values = self.list_to_numpy(data, value_type)
+
+        length = len(values)
+        self.set_slice(dimension, idx, begin, length)
+        self.storage.variables[name][idx, begin:begin+len(data)] = values
+
+    def set_new_slice_as_type(self, name, dimension, idx, data, value_type):
+        values = self.list_to_numpy(data, value_type)
+
+        num = int(len(self.storage.dimensions[dimension]))
+        if num > 0:
+            begin = self.get_slice(dimension, num - 1).stop
+        else:
+            begin = 0
+
+        length = len(values)
+        self.set_slice(dimension, idx, begin, length)
+        self.storage.variables[name][begin:begin+len(data)] = values
+
 #=============================================================================================
 # ORDERPARAMETER UTILITY FUNCTIONS
 #=============================================================================================
@@ -565,3 +608,6 @@ class ObjectStorage(object):
             return obj.idx[self.storage]
 
         return idx
+
+    def iter_stores(self):
+        return (store._storages[self.__class__.__name__] for store in self.storage.iter_stores())

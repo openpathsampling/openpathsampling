@@ -1,7 +1,8 @@
 import numpy as np
 from math import exp
+from opentis.wrapper import jsonserializable
 
-
+@jsonserializable
 class Toy_PES(object):
     # For now, we only support additive combinations; maybe someday that can
     # include multiplication, too
