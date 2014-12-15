@@ -1,6 +1,7 @@
 
 import random
 from opentis.ensemble import Ensemble
+from opentis.trajectory import Sample
 
 class SampleKeyError(Exception):
     def __init__(self, key, sample, sample_key):
@@ -123,6 +124,8 @@ class SampleSet(object):
     def apply_samples(self, samples):
         '''Updates the SampleSet based on a list of samples, by setting them
         by replica in the order given in the argument list.'''
+        if type(samples) is Sample:
+            samples = [samples]
         for sample in samples:
             self[sample.replica] = sample
 

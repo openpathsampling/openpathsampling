@@ -37,8 +37,6 @@ class BootstrapPromotionMove(PathMover):
         # always starts with a shooting move and a replica hop, and then, if
         # the hop was successful, a replica ID change move
         top_rep = max(globalstate.replica_list())
-        print top_rep
-        print self.ensembles
         ensemble_from = self.ensembles[top_rep]
         ensemble_to = self.ensembles[top_rep+1]
         old_sample = globalstate[top_rep]
@@ -54,31 +52,39 @@ class BootstrapPromotionMove(PathMover):
         hopper = EnsembleHopMover(bias=self.bias,
                                   ensembles=[ensemble_from, ensemble_to],
                                   replicas=top_rep)
-        #repchanger = ReplicaIDChange(new_replicas={top_rep : top_rep + 1}
-                                     #old_samples={top_rep : old_sample},
-                                     #ensembles=ensemble_from,
-                                     #replcias=top_rep
-                                    #)
 
         shoot_samp = shooter.move(init_sample_set)
-        init_sample_set = init_sample_set.apply_samples(shoot_samp)
+        init_sample_set.apply_samples(shoot_samp)
+        print init_sample_set.samples[0]
         hop_samp = hopper.move(init_sample_set)
-        init_sample_set = init_sample_set.apply_samples(hop_samp)
-        # TODO: this should be made into a function somewhere
-        details.take_attributes_from(shoot_samp)
-        details.take_attributes_from(hop_samp)
+        init_sample_set.apply_samples(hop_samp)
 
-        details.success = shoot_samp.success
-        details.accepted = hop_samp.accepted
-        details.acceptance = shoot_samp.acceptance*hop_samp.acceptance
-        details.result = hop_samp.result
+        details.take_attributes_from(shoot_samp.details)
+        details.take_attributes_from(hop_samp.details)
 
-        setattr(details, 'start_replica', sample.replica)
+        # the move will be accepted if the shooting move is accepted, no
+        # matter what
+        details.success = shoot_samp.details.success
+        # the move is acceptable if the hopping is acceptable?
+        details.accepted = hop_samp.details.accepted
+        # acceptance probability assumes no correlation
+        #details.acceptance = shoot_samp.details.acceptance*hop_samp.details.acceptance
+        # result trajectory is whatever came out of hop_samp
+        details.result = hop_samp.details.result
+
+        setattr(details, 'start_replica', details.replica)
         if hop_samp.details.success == True:
-            setattr(details, 'result_replica', sample.replica+1)
+            setattr(details, 'result_replica', details.replica+1)
         else:
-            setattr(details, 'result_replica', sample.replica)
-        sample.replica = sample.details.result_replica
+            setattr(details, 'result_replica', details.replica)
+        sample = Sample(replica=details.result_replica,
+                        ensemble=details.result_ensemble,
+                        trajectory=details.result,
+                        details=details)
+
+        print "Success:", sample.details.success
+        print sample.trajectory
+
         return sample
 
 
@@ -96,12 +102,11 @@ class Bootstrapping(Calculation):
                         ensemble=self.ensembles[0])
         self.globalstate = SampleSet([sample])
         if movers is None:
-            pass # TODO: implement defaults
+            pass # TODO: implement defaults: one per ensemble, uniform sel
         else:
             self.movers = movers
 
     def run(self, nsteps):
-
         bootstrapmove = BootstrapPromotionMove(bias=None,
                                                shooters=self.movers,
                                                ensembles=self.ensembles,
@@ -113,14 +118,23 @@ class Bootstrapping(Calculation):
         # if we fail nsteps times in a row, kill the job
 
         while ens_num < len(self.ensembles) - 1 and failsteps < nsteps:
-            # do a shooting move
-            print self.globalstate.ensemble_dict
-            print self.globalstate.replica_dict
+            print "Ensemble:", ens_num, "  failsteps=", failsteps
+            old_rep = max(self.globalstate.replica_list())
             sample = bootstrapmove.move(self.globalstate)
-            self.globalstate = self.globalstate.apply_samples(sample)
+            self.globalstate.apply_samples(sample)
 
-            if self.storage is not None:
-                self.globalstate.save_samples(self.storage)
+            if sample.replica == old_rep:
+                failsteps += 1
+            else:
+                failsteps = 0
+                ens_num += 1
+
+            # TODO: storage
+            #if self.storage is not None:
+                #self.globalstate.save_samples(self.storage)
+
+
+
 
         print "Done with new version"
         while ens_num < len(self.ensembles) - 1 and failsteps < nsteps:

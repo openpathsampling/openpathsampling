@@ -169,10 +169,8 @@ class PathMover(object):
         '''
         if self.replicas == 'all':
             reps = globalstate.replica_list()
-            print "all = ", reps
         else:
             reps = self.replicas
-            print reps
         rep_samples = []
         for rep in reps:
             rep_samples.extend(globalstate.all_from_replica(rep))
@@ -260,7 +258,7 @@ class ShootMover(PathMover):
         '''
         return details.start_point.sum_bias / details.final_point.sum_bias
     
-    def _generate(self):
+    def _generate(self, ensemble):
         self.final = self.start
     
     def move(self, globalstate):
@@ -279,7 +277,7 @@ class ShootMover(PathMover):
         setattr(details, 'final', None)
         setattr(details, 'final_point', None)
 
-        self._generate(details)
+        self._generate(details, dynamics_ensemble)
 
 
         details.accepted = dynamics_ensemble(details.final)
@@ -292,8 +290,8 @@ class ShootMover(PathMover):
                 details.success = True
                 details.result = details.final
 
-        path = Sample(trajectory=details.result, mover=self,
-                      ensemble=dynamics_ensemble, details=details)
+        path = Sample(trajectory=details.result, ensemble=dynamics_ensemble,
+                      details=details)
 
         return path
     
@@ -373,7 +371,10 @@ class MixedMover(PathMover):
         sample = mover.move(trajectory)
         setattr(sample.details, 'mover_idx', idx)
 
-        path = Sample(trajectory=sample.trajectory, mover=self, ensemble=mover.ensemble, details=sample.details)
+        # why do we make a new sample here?
+        path = Sample(trajectory=sample.trajectory,
+                      ensemble=sample.ensemble, 
+                      details=sample.details)
         return path
 
 class ReplicaIDChange(PathMover):
@@ -415,7 +416,7 @@ class EnsembleHopMover(PathMover):
 
     def move(self, globalstate):
         # ensemble hops are in the order [from, to]
-        ens_pair = random.choice(ensembles)
+        ens_pair = random.choice(self.ensembles)
         ens_from = ens_pair[0]
         ens_to = ens_pair[1]
 
@@ -426,6 +427,7 @@ class EnsembleHopMover(PathMover):
         details.success = False
         details.inputs = [trajectory]
         details.mover = self
+        details.result = trajectory
         setattr(details, 'initial_ensemble', ens_from)
         setattr(details, 'trial_ensemble', ens_to)
         details.success = ens_to(trajectory)
@@ -434,8 +436,9 @@ class EnsembleHopMover(PathMover):
         else: 
             setattr(details, 'result_ensemble', ens_from)
 
-        path = Sample(trajectory=trajectory, mover=self,
-                      ensemble=details.result_ensemble, details=details)
+        path = Sample(trajectory=trajectory,
+                      ensemble=details.result_ensemble, 
+                      details=details)
         return path
 
 

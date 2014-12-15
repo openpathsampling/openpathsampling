@@ -506,6 +506,13 @@ class Sample(object):
     def __call__(self):
         return self.trajectory
 
+    def __str__(self):
+        mystr = "Replica: "+str(self.replica)+"\n"
+        mystr += "Trajectory: "+str(self.trajectory)+"\n"
+        mystr += "Ensemble: "+str(self.ensemble)+"\n"
+        mystr += "Details: "+str(self.details)+"\n"
+        return mystr
+
     @staticmethod
     def set_time(step, samples):
         for sample in samples:
