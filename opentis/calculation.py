@@ -25,7 +25,8 @@ class BootstrapPromotionMove(PathMover):
     '''
     def __init__(self, bias=None, shooters=None, 
                  ensembles=None, replicas='all'):
-        super(BootstrapPromotionMove, self).__init__(ensembles, replicas)
+        super(BootstrapPromotionMove, self).__init__(ensembles=ensembles, 
+                                                     replicas=replicas)
         self.shooters = shooters
         self.bias = bias
 
@@ -36,6 +37,8 @@ class BootstrapPromotionMove(PathMover):
         # always starts with a shooting move and a replica hop, and then, if
         # the hop was successful, a replica ID change move
         top_rep = max(globalstate.replica_list())
+        print top_rep
+        print self.ensembles
         ensemble_from = self.ensembles[top_rep]
         ensemble_to = self.ensembles[top_rep+1]
         old_sample = globalstate[top_rep]
@@ -99,7 +102,11 @@ class Bootstrapping(Calculation):
 
     def run(self, nsteps):
 
-        bootstrapmove = BootstrapPromotionMove()
+        bootstrapmove = BootstrapPromotionMove(bias=None,
+                                               shooters=self.movers,
+                                               ensembles=self.ensembles,
+                                               replicas='all'
+                                              )
 
         ens_num = 0
         failsteps = 0
@@ -109,17 +116,8 @@ class Bootstrapping(Calculation):
             # do a shooting move
             print self.globalstate.ensemble_dict
             print self.globalstate.replica_dict
-            shoot_sample = self.movers[ens_num].move(self.globalstate)
-            # bootstrap: if we crossed the next interface, promote
-            hop_sample = bootstrapmove.move(SampleSet([tmp_sample]))
-
-            if hop_sample.details.success == False:
-                failsteps += 1
-                to_apply = [shoot_sample, hop_sample]
-            else:
-                to_apply = [hop_sample]
-            # apply the result to our current status
-            self.globalstate = self.globalstate.apply_samples(to_apply)
+            sample = bootstrapmove.move(self.globalstate)
+            self.globalstate = self.globalstate.apply_samples(sample)
 
             if self.storage is not None:
                 self.globalstate.save_samples(self.storage)

@@ -247,7 +247,7 @@ class ShootMover(PathMover):
     '''
 
     def __init__(self, selector, ensembles=None, replicas='all'):
-        super(ShootMover, self).__init__(ensembles, replicas)
+        super(ShootMover, self).__init__(ensembles=ensembles, replicas=replicas)
         self.selector = selector
         self.length_stopper = PathMover.engine.max_length_stopper
         self.extra_details = ['start', 'start_point', 'final',
@@ -351,7 +351,7 @@ class MixedMover(PathMover):
     about a good way to implement this...
     '''
     def __init__(self, movers, ensembles=None, replicas='all', weights = None):
-        super(MixedMover, self).__init__(ensembles, replicas)
+        super(MixedMover, self).__init__(ensembles=ensembles, replicas=replicas)
 
         self.movers = movers
 
@@ -406,7 +406,8 @@ class ReplicaIDChange(PathMover):
 class EnsembleHopMover(PathMover):
     def __init__(self, bias=None, ensembles=None, replicas='all'):
         ensembles = make_list_of_pairs(ensembles)
-        super(EnsembleHop, self).__init__(ensembles, replicas)
+        super(EnsembleHopMover, self).__init__(ensembles=ensembles, 
+                                               replicas=replicas)
         # TODO: add support for bias: should be a list, one per pair of
         # ensembles -- another version might take a value for each ensemble,
         # and use the ratio; this latter is better for CITIS
