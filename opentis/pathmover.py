@@ -267,6 +267,7 @@ class ShootMover(PathMover):
         rep_sample = self.select_sample(globalstate, self.ensembles) 
         trajectory = rep_sample.trajectory
         dynamics_ensemble = rep_sample.ensemble
+        replica = rep_sample.replica
 
         details = MoveDetails()
         details.success = False
@@ -290,7 +291,9 @@ class ShootMover(PathMover):
                 details.success = True
                 details.result = details.final
 
-        path = Sample(trajectory=details.result, ensemble=dynamics_ensemble,
+        path = Sample(replica=replica,
+                      trajectory=details.result, 
+                      ensemble=dynamics_ensemble,
                       details=details)
 
         return path
@@ -374,7 +377,8 @@ class MixedMover(PathMover):
         # why do we make a new sample here?
         path = Sample(trajectory=sample.trajectory,
                       ensemble=sample.ensemble, 
-                      details=sample.details)
+                      details=sample.details,
+                     replica=sample.replica)
         return path
 
 class ReplicaIDChange(PathMover):
@@ -421,6 +425,7 @@ class EnsembleHopMover(PathMover):
         ens_to = ens_pair[1]
 
         rep_sample = self.select_sample(globalstate, ens_from)
+        replica = rep_sample.replica
         trajectory = rep_sample.trajectory
 
         details = MoveDetails()
@@ -438,7 +443,9 @@ class EnsembleHopMover(PathMover):
 
         path = Sample(trajectory=trajectory,
                       ensemble=details.result_ensemble, 
-                      details=details)
+                      details=details,
+                      replica=replica
+                     )
         return path
 
 

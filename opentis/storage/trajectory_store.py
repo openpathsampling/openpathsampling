@@ -166,9 +166,6 @@ class SampleStorage(ObjectStorage):
             self.storage.ensemble.save(sample.ensemble)
             self.set_object('sample_ensemble', idx, sample.ensemble)
 
-            self.storage.pathmover.save(sample.mover)
-            self.set_object('sample_mover', idx, sample.mover)
-
             self.storage.movedetails.save(sample.details)
             self.set_object('sample_details', idx, sample.details)
 

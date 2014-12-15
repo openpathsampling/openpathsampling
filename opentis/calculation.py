@@ -55,7 +55,6 @@ class BootstrapPromotionMove(PathMover):
 
         shoot_samp = shooter.move(init_sample_set)
         init_sample_set.apply_samples(shoot_samp)
-        print init_sample_set.samples[0]
         hop_samp = hopper.move(init_sample_set)
         init_sample_set.apply_samples(hop_samp)
 
@@ -67,8 +66,7 @@ class BootstrapPromotionMove(PathMover):
         details.success = shoot_samp.details.success
         # the move is acceptable if the hopping is acceptable?
         details.accepted = hop_samp.details.accepted
-        # acceptance probability assumes no correlation
-        #details.acceptance = shoot_samp.details.acceptance*hop_samp.details.acceptance
+
         # result trajectory is whatever came out of hop_samp
         details.result = hop_samp.details.result
 
@@ -83,7 +81,7 @@ class BootstrapPromotionMove(PathMover):
                         details=details)
 
         print "Success:", sample.details.success
-        print sample.trajectory
+        print sample.trajectory, sample.details.result
 
         return sample
 
@@ -130,47 +128,9 @@ class Bootstrapping(Calculation):
                 ens_num += 1
 
             # TODO: storage
-            #if self.storage is not None:
-                #self.globalstate.save_samples(self.storage)
-
-
-
-
-        print "Done with new version"
-        while ens_num < len(self.ensembles) - 1 and failsteps < nsteps:
-#            print "Trying move in ensemble", ens_num
-            # Generate Samples
-            samples = [self.movers[ens_idx].move(self.globalstate[ens_idx]) 
-                       for ens_idx in range(ens_num, ens_num + 1)]
-
-            # Generate new globalstate using only the one sample
-            globalstate = self.globalstate.apply_samples(samples)
-
-            # Now save all samples
             if self.storage is not None:
                 self.globalstate.save_samples(self.storage)
 
-            # update to new globalstate
-            self.globalstate = globalstate
+        for sample in self.globalstate:
+            assert sample.ensemble(sample.trajectory) == True, "WTF?"
 
-            if ens_num < self.globalstate.size:
-                # We can try to switch to the next ensemble
-
-                # Check if the new trajectory (still in the old ensemble) would
-                # fir in the next ensemble
-                if self.globalstate.ensembles[ens_num + 1](self.globalstate[ens_num]):
-                    # Yes, so apply the BootStrapMove and generate a new sample in the next ensemble
-                    sample = bootstrapmove.move(self.globalstate[ens_num], 
-                                                self.globalstate.ensembles[ens_num + 1])
-                    globalstate = self.globalstate.apply_samples([sample])
-
-                    # Now save all samples
-                    self.globalstate.save_samples(self.storage)
-
-                    # update to new globalstate
-                    self.globalstate = globalstate
-
-                    failsteps = 0
-                    ens_num += 1
-
-            failsteps += 1

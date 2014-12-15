@@ -135,6 +135,19 @@ class SampleSet(object):
     def ensemble_list(self):
         return self.ensemble_dict.keys()
             
+    def save_samples(self, storage):
+        """
+        Save all samples in the current GlobalState object. This should be
+        called after a move has generated a new object since then all
+        samples will get a timestamp that is associated with this
+
+        Parameters
+        ==========
+        storage : Storage()
+            the underlying netcdf file to be used for storage
+        """
+        map(storage.sample.save, self.samples)
+
     def consistency_check(self):
         '''This is mainly a sanity check for use in testing, but might be
         good to run (rarely) in the code until we're sure the tests cover
