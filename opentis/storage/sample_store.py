@@ -31,8 +31,7 @@ class SampleStorage(ObjectStorage):
             self.storage.ensemble.save(sample.ensemble)
             self.set_object('sample_ensemble', idx, sample.ensemble)
 
-            self.storage.pathmover.save(sample.mover)
-            self.set_object('sample_mover', idx, sample.mover)
+            self.save_variable('sample_replica', idx, sample.replica)
 
             self.storage.movedetails.save(sample.details)
             self.set_object('sample_details', idx, sample.details)
@@ -56,14 +55,14 @@ class SampleStorage(ObjectStorage):
         '''
         trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
         ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
-        mover_idx = int(self.storage.variables['sample_mover_idx'][idx])
+        replica_idx = int(self.storage.variables['sample_replica'][idx])
         details_idx = int(self.storage.variables['sample_details_idx'][idx])
         step=self.load_variable('sample_step', idx)
 
 
         obj = Sample(
             trajectory=self.storage.trajectory.load(trajectory_idx, lazy=True),
-            mover=self.storage.pathmover.load(mover_idx, lazy=True),
+            replica=replica_idx,
             ensemble=self.storage.ensemble.load(ensemble_idx),
             details=self.storage.movedetails.load(details_idx),
             step=step
@@ -84,10 +83,10 @@ class SampleStorage(ObjectStorage):
         # New short-hand definition
         self.init_variable('sample_trajectory_idx', 'index')
         self.init_variable('sample_ensemble_idx', 'index')
-        self.init_variable('sample_mover_idx', 'index')
+        self.init_variable('sample_replica', 'index')
         self.init_variable('sample_details_idx', 'index')
         self.init_variable('sample_step', 'index')
-        
+
 class SampleSetStorage(ObjectStorage):
 
     def __init__(self, storage):
