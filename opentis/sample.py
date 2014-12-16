@@ -125,6 +125,12 @@ class SampleSet(object):
         by replica in the order given in the argument list.'''
         for sample in samples:
             self[sample.replica] = sample
+
+    def replica_list(self):
+        return self.replica_dict.keys()
+
+    def ensemble_list(self):
+        return self.ensemble_dict.keys()
             
     def consistency_check(self):
         '''This is mainly a sanity check for use in testing, but might be
