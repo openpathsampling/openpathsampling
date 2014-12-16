@@ -89,8 +89,8 @@ class BootstrapPromotionMove(PathMover):
                         trajectory=details.result,
                         details=details)
 
-        print "Success:", sample.details.success
-        print sample.trajectory, sample.details.result
+        #print "Success:", sample.details.success
+        #print sample.trajectory, sample.details.result
 
         return sample
 
@@ -137,7 +137,6 @@ class Bootstrapping(Calculation):
                 failsteps = 0
                 ens_num += 1
 
-            # TODO: storage
             if self.storage is not None:
                 self.globalstate.save_samples(self.storage)
             step_num += 1
