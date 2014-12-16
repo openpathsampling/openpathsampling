@@ -36,15 +36,18 @@ class BootstrapPromotionMove(PathMover):
         # treating each bootstrap move as a combination of 3 moves: it
         # always starts with a shooting move and a replica hop, and then, if
         # the hop was successful, a replica ID change move
+
+        # We make extra variables here so that we can easily refactor. The
+        # speed cost the negligible, and it makes it easy to change things.
         top_rep = max(globalstate.replica_list())
         ensemble_from = self.ensembles[top_rep]
         ensemble_to = self.ensembles[top_rep+1]
         old_sample = globalstate[top_rep]
 
         details = MoveDetails()
-        details.inputs = [old_sample.trajectory]
-        details.mover = self
-        details.replica = top_rep
+        details_inputs = [old_sample.trajectory]
+        details_mover = self
+        details_replica = top_rep
 
         init_sample_set = SampleSet([old_sample])
 
@@ -58,8 +61,14 @@ class BootstrapPromotionMove(PathMover):
         hop_samp = hopper.move(init_sample_set)
         init_sample_set.apply_samples(hop_samp)
 
-        details.take_attributes_from(shoot_samp.details)
-        details.take_attributes_from(hop_samp.details)
+        # bring all the metadata from the submoves into our details
+        details.__dict__.update(shoot_samp.details.__dict__)
+        details.__dict__.update(hop_samp.details.__dict__)
+
+        # set the rest of the details to their correct values
+        details.inputs = details_inputs
+        details.mover = details_mover
+        details.replica = details_replica
 
         # the move will be accepted if the shooting move is accepted, no
         # matter what
@@ -113,13 +122,14 @@ class Bootstrapping(Calculation):
 
         ens_num = 0
         failsteps = 0
+        step_num = 0
         # if we fail nsteps times in a row, kill the job
 
         while ens_num < len(self.ensembles) - 1 and failsteps < nsteps:
-            print "Ensemble:", ens_num, "  failsteps=", failsteps
+            print step_num, "Ensemble:", ens_num, "  failsteps=", failsteps
             old_rep = max(self.globalstate.replica_list())
             sample = bootstrapmove.move(self.globalstate)
-            self.globalstate.apply_samples(sample)
+            self.globalstate.apply_samples(sample, time=step_num)
 
             if sample.replica == old_rep:
                 failsteps += 1
@@ -130,6 +140,7 @@ class Bootstrapping(Calculation):
             # TODO: storage
             if self.storage is not None:
                 self.globalstate.save_samples(self.storage)
+            step_num += 1
 
         for sample in self.globalstate:
             assert sample.ensemble(sample.trajectory) == True, "WTF?"

@@ -121,12 +121,14 @@ class SampleSet(object):
         except KeyError:
             self.replica_dict[sample.replica] = [sample]
 
-    def apply_samples(self, samples):
+    def apply_samples(self, samples, time=None):
         '''Updates the SampleSet based on a list of samples, by setting them
         by replica in the order given in the argument list.'''
         if type(samples) is Sample:
             samples = [samples]
         for sample in samples:
+            # TODO: should time be a property of Sample or SampleSet?
+            sample.time = time
             self[sample.replica] = sample
 
     def replica_list(self):

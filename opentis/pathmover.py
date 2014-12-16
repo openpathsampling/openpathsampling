@@ -49,6 +49,9 @@ def make_list_of_pairs(l):
         outlist = [ [a, b] 
                    for (a, b) in zip(l[slice(0,None,2)], l[slice(1,None,2)])
                   ]
+    # Note that one thing we don't check is whether the items are of the
+    # same type. That might be worth doing someday; for now, we trust that
+    # part to work.
     return outlist
 
 
@@ -56,14 +59,11 @@ def make_list_of_pairs(l):
 class MoveDetails(object):
     '''Details of the move as applied to a given replica
 
-    RENAME: inputs=>initial
-            final=>trial
-
     Attributes
     ----------
     replica : integer
         replica ID to which this trial move would apply
-    inputs : list of Sample
+    inputs : list of Trajectry
         the Samples which were used as inputs to the move
     final : Tractory
         the Trajectory 
@@ -72,14 +72,22 @@ class MoveDetails(object):
     mover : PathMover
         the PathMover which generated this trial
 
-    TODO (or at least to put somewhere):
-    rejection_reason : String
-        explanation of reasons the path was rejected
-
     Specific move types may have add several other attributes for each
     MoveDetails object. For example, shooting moves will also include
     information about the shooting point selection, etc.
 
+    TODO (or at least to put somewhere):
+    rejection_reason : String
+        explanation of reasons the path was rejected
+
+    RENAME: inputs=>initial
+            final=>trial
+            success=>accepted
+            accepted=>trial_in_ensemble
+
+    TODO:
+    Currently inputs/final/accepted are in terms of Trajectory objects. I
+    think it makes more sense for them to be Samples.
     '''
 
     def __init__(self, **kwargs):
@@ -92,11 +100,6 @@ class MoveDetails(object):
         self.mover=None
         for key, value in kwargs:
             setattr(self, key, value)
-
-    def take_attributes_from(self, other):
-        for attr in other.__dict__.keys():
-            if not hasattr(self, attr):
-                setattr(self, attr, other.__dict__[attr])
 
 
 class PathMover(object):

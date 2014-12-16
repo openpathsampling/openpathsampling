@@ -46,15 +46,20 @@ class OpenMMEngine(DynamicsEngine):
         filename : str
             the filename of the storage
         template : Snapshot
-            the template Snapshot to be used. It contains the necessary units as well as the topology
+            the template Snapshot to be used. It contains the necessary
+            units as well as the topology
         options : dict of { str : str }
-            a dictionary that contains the parameters used in the construction of the OpenMMEngine
+            a dictionary that contains the parameters used in the
+            construction of the OpenMMEngine
         mode : str ('restore', 'create' or 'auto')
-            a string setting the mode of creation or restoration. The option 'auto' (default) will
-            only create a new storage if the file does not exist yet
+            a string setting the mode of creation or restoration. The option
+            'auto' (default) will only create a new storage if the file does
+            not exist yet
         units : dict of {str : simtk.unit.Unit } or None (default)
-            representing a dict of string representing a dimension ('length', 'velocity', 'energy') pointing the
-            the simtk.unit.Unit to be used. This overrides the units used in the template
+            representing a dict of string representing a dimension
+            ('length', 'velocity', 'energy') pointing the the
+            simtk.unit.Unit to be used. This overrides the units used in the
+            template
 
         Returns
         -------
@@ -85,9 +90,10 @@ class OpenMMEngine(DynamicsEngine):
         if type(template) is str:
             template = snapshot_from_pdb(template, units=units)
 
-        # once we have a template configuration (coordinates to not really matter)
-        # we can create a storage. We might move this logic out of the dynamics engine
-        # and keep storage and engine generation completely separate!
+        # once we have a template configuration (coordinates to not really
+        # matter) we can create a storage. We might move this logic out of
+        # the dynamics engine and keep storage and engine generation
+        # completely separate!
 
         storage = Storage(
             filename=filename,
@@ -95,7 +101,8 @@ class OpenMMEngine(DynamicsEngine):
             mode='w'
         )
 
-        # save simulator options, should be replaced by just saving the simulator object
+        # save simulator options, should be replaced by just saving the
+        # simulator object
         storage.init_str('simulation_options')
         storage.write_as_json('simulation_options', options)
 
