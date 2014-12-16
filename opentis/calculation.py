@@ -37,6 +37,8 @@ class BootstrapPromotionMove(PathMover):
         # always starts with a shooting move and a replica hop, and then, if
         # the hop was successful, a replica ID change move
 
+        #print "Starting BootstrapPromotionMove"
+        
         # We make extra variables here so that we can easily refactor. The
         # speed cost the negligible, and it makes it easy to change things.
         top_rep = max(globalstate.replica_list())
@@ -106,7 +108,7 @@ class Bootstrapping(Calculation):
         super(Bootstrapping, self).__init__(storage, engine)
         self.ensembles = ensembles
         sample = Sample(replica=0, trajectory=trajectory, 
-                        ensemble=self.ensembles[0])
+                        ensemble=self.ensembles[0], details=MoveDetails())
         self.globalstate = SampleSet([sample])
         if movers is None:
             pass # TODO: implement defaults: one per ensemble, uniform sel
@@ -129,7 +131,7 @@ class Bootstrapping(Calculation):
             print step_num, "Ensemble:", ens_num, "  failsteps=", failsteps
             old_rep = max(self.globalstate.replica_list())
             sample = bootstrapmove.move(self.globalstate)
-            self.globalstate.apply_samples(sample, time=step_num)
+            self.globalstate.apply_samples(sample, step=step_num)
 
             if sample.replica == old_rep:
                 failsteps += 1

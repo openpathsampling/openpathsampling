@@ -28,10 +28,8 @@ def make_list_of_pairs(l):
     if l is None:
         return None
 
-    try:
-        len_l = len(l)
-    except TypeError:
-        raise ValueError("Input list is not iterable: not a list!")
+    len_l = len(l) # raises TypeError, avoids everything else
+
     # based on first element, decide whether this should be a list of lists
     # or a flat list
     try:
@@ -130,7 +128,8 @@ class PathMover(object):
     to use a different acceptance criterion than Metropolis. For example,
     the "waste recycling" approach recently re-discovered by Frenkel (see
     also work by Athenes, Jourdain, and old work by Kalos) might be
-    interesting. ~~~DWHS
+    interesting. I think the best way to do this is to keep the acceptance
+    in the PathMover, but have it be a ~~~DWHS
 
 
     Attributes
