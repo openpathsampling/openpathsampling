@@ -82,10 +82,11 @@ class testPathMover(object):
 
     def test_select_sample(self):
         assert_equal(self.reps1_ens2.select_sample(self.sset), self.s1)
+        selected = self.repsAll_ens1.select_sample(self.sset)
         try:
-            assert_equal(self.repsAll_ens1.select_sample(self.sset), self.s2)
+            assert_equal(selected, self.s2)
         except AssertionError:
-            assert_equal(self.repsAll_ens1.select_sample(self.sset), self.s3)
+            assert_equal(selected, self.s3)
 
 class testForwardShootMover(object):
     def setup(self):
