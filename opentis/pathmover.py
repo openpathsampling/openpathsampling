@@ -81,7 +81,7 @@ class MoveDetails(object):
     RENAME: inputs=>initial
             final=>trial
             success=>accepted
-            accepted=>trial_in_ensemble
+            accepted=>trial_in_ensemble (probably only in shooting)
 
     TODO:
     Currently inputs/final/accepted are in terms of Trajectory objects. I
@@ -139,6 +139,7 @@ class PathMover(object):
 
     """
 
+    # TODO: JHP, does this cls variable do anything? ~~~DWHS
     cls = 'pathmover'
     engine = None
 
