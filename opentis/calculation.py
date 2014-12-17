@@ -1,6 +1,7 @@
 from globalstate import GlobalState
 from pathmover import PathMover, MoveDetails, ReplicaExchange
-from trajectory import Sample
+from opentis.sample import Sample
+
 
 class Calculation(object):
 

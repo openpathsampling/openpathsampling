@@ -9,7 +9,7 @@ import numpy as np
 from shooting import ShootingPoint
 from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble
 from ensemble import FullEnsemble
-from trajectory import Sample
+from opentis.sample import Sample
 from wrapper import storable
 
 @storable
