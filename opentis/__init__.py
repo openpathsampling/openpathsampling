@@ -10,7 +10,8 @@ from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
 
 from snapshot import Snapshot, Configuration, Momentum
 
-from trajectory import Trajectory, Sample
+from trajectory import Trajectory
+from opentis.sample import Sample
 
 from globalstate import GlobalState
 

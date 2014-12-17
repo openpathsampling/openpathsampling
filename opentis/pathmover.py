@@ -10,7 +10,7 @@ import random
 from shooting import ShootingPoint
 from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble
 from ensemble import FullEnsemble
-from trajectory import Sample
+from sample import Sample
 from wrapper import storable
 
 def make_list_of_pairs(l):

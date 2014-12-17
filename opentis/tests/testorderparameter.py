@@ -42,6 +42,7 @@ class testOP_Function(object):
         dihedral_op = op.OP_Function("psi", md.compute_dihedrals,
                                     trajdatafmt="mdtraj",
                                     indices=[psi_atoms])
+
         mdtraj_version = self.storage.trajectory.load(0).md()
         md_dihed = md.compute_dihedrals(mdtraj_version, indices=[psi_atoms])
         traj = self.storage.trajectory.load(0)

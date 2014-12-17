@@ -11,7 +11,8 @@ from nose.plugins.skip import Skip, SkipTest
 from test_helpers import true_func, assert_equal_array_array
 
 from opentis.sample import *
-from opentis.trajectory import Trajectory, Sample
+from opentis.trajectory import Trajectory
+from opentis.sample import Sample
 
 from opentis.ensemble import LengthEnsemble
 

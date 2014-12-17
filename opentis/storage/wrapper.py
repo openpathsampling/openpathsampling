@@ -66,6 +66,8 @@ def loadcache(func):
             n_idx = self.idx_from_name(idx)
 
         obj = func(self, n_idx, *args, **kwargs)
+
+        obj.idx[self.storage] = n_idx
         self.cache[obj.idx[self.storage]] = obj
 
 

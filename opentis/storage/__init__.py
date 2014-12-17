@@ -1,5 +1,6 @@
 from netcdf_storage import Storage
 from ensemble_store import EnsembleStorage
 from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
-from trajectory_store import SampleStorage, TrajectoryStorage
+from trajectory_store import TrajectoryStorage
+from opentis.storage.sample_store import SampleStorage
 from object_storage import ObjectStorage

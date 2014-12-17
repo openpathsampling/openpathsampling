@@ -12,15 +12,17 @@ import numpy
 import simtk.unit as u
 
 from object_storage import ObjectStorage
-from trajectory_store import TrajectoryStorage, SampleStorage
+from trajectory_store import TrajectoryStorage
+from opentis.storage.sample_store import SampleStorage
 from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
+from engine_store import DynamicsEngineStorage
 from ensemble_store import EnsembleStorage
 from opentis.shooting import ShootingPointSelector, ShootingPoint
 from opentis.pathmover import PathMover, MoveDetails
 from opentis.globalstate import GlobalState
 from orderparameter_store import ObjectDictStorage
 from opentis.orderparameter import OrderParameter
-from opentis.snapshot import Snapshot
+from opentis.snapshot import Configuration
 
 from opentis.storage.util import ObjectJSON
 from opentis.tools import units_from_snapshot
@@ -40,13 +42,51 @@ class Storage(netcdf.Dataset):
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
     simulation. This allows effective storage of shooting trajectories '''
 
-    def __init__(self, filename='trajectory.nc', mode=None,
+
+    def _register_storages(self, store = None):
+        if store is None:
+            store = self
+        self.trajectory = TrajectoryStorage(store).register()
+        self.snapshot = SnapshotStorage(store).register()
+        self.configuration = ConfigurationStorage(store).register()
+        self.momentum = MomentumStorage(store).register()
+        self.ensemble = EnsembleStorage(store).register()
+        self.sample = SampleStorage(store).register()
+        self.pathmover = ObjectStorage(store, PathMover, named=True, json=True, identifier='json').register()
+        self.movedetails = ObjectStorage(store, MoveDetails, named=False, json=True, identifier='json').register()
+        self.shootingpoint = ObjectStorage(store, ShootingPoint, named=False, json=True).register()
+        self.shootingpointselector = ObjectStorage(store, ShootingPointSelector, named=False, json=True, identifier='json').register()
+        self.globalstate = ObjectStorage(store, GlobalState, named=True, json=True, identifier='json').register()
+        self.engine = DynamicsEngineStorage(store).register()
+        self.collectivevariable = ObjectDictStorage(store, OrderParameter, Configuration).register()
+        self.cv = self.collectivevariable
+
+    def _setup_class(self):
+        self._storages = {}
+        self._storages_base_cls = {}
+        self.links = []
+        self.simplifier = ObjectJSON()
+        self.units = dict()
+        # use no units
+        self.dimension_units = {
+            'length': u.Unit({}),
+            'velocity': u.Unit({}),
+            'energy': u.Unit({})
+        }
+        # use MD units
+        self.dimension_units = {
+            'length': u.nanometers,
+            'velocity': u.nanometers / u.picoseconds,
+            'energy': u.kilojoules_per_mole
+        }
+
+    def __init__(self, filename, mode=None,
                  template=None, n_atoms=None, units=None):
         '''
         Create a storage for complex objects in a netCDF file
-        
+
         Parameters
-        ----------        
+        ----------
         filename : string
             filename of the netcdf file to be used or created
         mode : string, default: None
@@ -68,51 +108,18 @@ class Storage(netcdf.Dataset):
             else:
                 mode = 'w'
 
-        self._storages = {}
-
         self.filename = filename
-        self.links = []
-
-        self.simplifier = ObjectJSON()
-
-        self.units = dict()
-
-        # use no units
-        self.dimension_units = {
-            'length' : u.Unit({}),
-            'velocity' : u.Unit({}),
-            'energy' : u.Unit({})
-        }
-
-        # use MD units
-        self.dimension_units = {
-            'length' : u.nanometers,
-            'velocity' : u.nanometers / u.picoseconds,
-            'energy' : u.kilojoules_per_mole
-        }
-
-        if units is not None:
-            self.dimension_units.update(units)
 
         super(Storage, self).__init__(filename, mode)
 
-        self.trajectory = TrajectoryStorage(self).register()
-        self.snapshot = SnapshotStorage(self).register()
-        self.configuration = ConfigurationStorage(self).register()
-        self.momentum = MomentumStorage(self).register()
-        self.ensemble = EnsembleStorage(self).register()
-        self.sample = SampleStorage(self).register()
-        self.pathmover = ObjectStorage(self, PathMover, named=True, json=True, identifier='json').register()
-        self.movedetails = ObjectStorage(self, MoveDetails, named=False, json=True, identifier='json').register()
-        self.shootingpoint = ObjectStorage(self, ShootingPoint, named=False, json=True).register()
-        self.shootingpointselector = ObjectStorage(self, ShootingPointSelector, named=False, json=True, identifier='json').register()
-        self.globalstate = ObjectStorage(self, GlobalState, named=True, json=True, identifier='json').register()
-        # self.engine = ObjectStorage(self, Engine, named=True, json=True, identifier='json').register()
-        self.collectivevariable = ObjectDictStorage(self, OrderParameter, Snapshot).register()
-        self.cv = self.collectivevariable
+        self._setup_class()
+
+        if units is not None:
+            self.dimension_units.update(units)
+        self._register_storages()
 
         if mode == 'w':
-            self._init()
+            self._initialize_netCDF()
 
             if template.topology is not None:
                 self.topology = template.topology
@@ -128,21 +135,21 @@ class Storage(netcdf.Dataset):
 
             # update the units for dimensions from the template
             self.dimension_units.update(units_from_snapshot(template))
-            self._init_classes(units=self.dimension_units)
+            self._init_storages(units=self.dimension_units)
 
             # create a json from the mdtraj.Topology() and store it
             self.write_str('topology', self.simplifier.to_json(self.simplifier.topology_to_dict(self.topology)))
 
             # Save the initial configuration
-            self.configuration.save(template)
+            self.snapshot.save(template)
 
             self.createVariable('template_idx', 'i4', 'scalar')
             self.variables['template_idx'][:] = template.idx[self]
 
             self.sync()
 
-        elif mode == 'a':
-            self._restore_classes()
+        elif mode == 'a' or mode == 'r+' or mode == 'r':
+            self._restore_storages()
 
             # Create a dict of simtk.Unit() instances for all netCDF.Variable()
             for variable_name in self.variables:
@@ -184,7 +191,7 @@ class Storage(netcdf.Dataset):
     def __setattr__(self, key, value):
         self.__dict__[key] = value
 
-    def _init_classes(self, units=None):
+    def _init_storages(self, units=None):
         '''
         Run the initialization on all added classes, when the storage is created only!
 
@@ -198,7 +205,7 @@ class Storage(netcdf.Dataset):
             storage.dimension_units.update(units)
             storage._init()
 
-    def _restore_classes(self):
+    def _restore_storages(self):
         '''
         Run restore on all added classes. Usually there is nothing to do.
         '''
@@ -207,7 +214,7 @@ class Storage(netcdf.Dataset):
         pass
 
 
-    def _init(self):
+    def _initialize_netCDF(self):
         """
         Initialize the netCDF file for storage itself.
         """
@@ -315,6 +322,7 @@ class Storage(netcdf.Dataset):
             the class name of the BaseClass of the stored object, which is needed when loading the object
             to identify the correct storage
         """
+
         if type(obj) is list:
             return [ self.save(part, *args, **kwargs) for part in obj]
         elif type(obj) is tuple:
@@ -322,18 +330,26 @@ class Storage(netcdf.Dataset):
         elif type(obj) in self._storages:
             store = self._storages[type(obj)]
             store.save(obj, *args, **kwargs)
-            return obj.__class__.__name__
+            if type(obj) not in self._storages_base_cls:
+                self._storages_base_cls[type(obj)] = obj.__class__.__name__
+            return self._storages_base_cls[type(obj)]
         else:
             # Make sure subclassed objects will also be stored
             # Might come in handy someday
             for ty in self._storages:
                 if type(ty) is not str and issubclass(type(obj), ty):
+#                    print 'sub', ty, type(obj)
                     store = self._storages[ty]
                     # store the subclass in the _storages member for
                     # faster access next time
                     self._storages[type(obj)] = store
+                    if type(ty) not in self._storages_base_cls:
+                        self._storages_base_cls[ty] = ty.__name__
+                    self._storages_base_cls[type(obj)] = self._storages_base_cls[ty]
                     store.save(obj, *args, **kwargs)
-                    return ty.__name__
+
+                    # this return the base_cls.__name__ to make sure on loading the right function is called
+                    return self._storages_base_cls[ty]
 
         # Could not save this object. Might raise an exception, but return an empty string as type
         return ''
@@ -357,5 +373,29 @@ class Storage(netcdf.Dataset):
         If you want to load a subclassed Ensemble you need to load using `Ensemble` or `"Ensemble"`
         and not use the subclass
         """
-        store = self._storages[obj_type]
-        return store.load(*args, **kwargs)
+
+        if obj_type in self._storages:
+            store = self._storages[obj_type]
+            return store.load(*args, **kwargs)
+        elif type(obj_type) is type:
+            # If we give a class we might be lucky and find the base class and
+            # register is. If we try to load a type given by a string which is
+            # not the base_class name originally registered there is no way to
+            # tell.
+            for ty in self._storages:
+                if type(ty) is not str and issubclass(obj_type, ty):
+                    store = self._storages[ty]
+                    # store the subclass in the _storages member for
+                    # faster access next time
+                    self._storages[obj_type] = store
+                    self._storages[obj_type.__name__] = store
+
+                    if type(ty) not in self._storages_base_cls:
+                        self._storages_base_cls[ty] = ty.__name__
+                        self._storages_base_cls[ty.__name__] = ty.__name__
+
+                    self._storages_base_cls[obj_type] = self._storages_base_cls[ty]
+                    self._storages_base_cls[obj_type.__name__] = ty.__name__
+
+                    store = self._storages[obj_type]
+                    return store.load(*args, **kwargs)

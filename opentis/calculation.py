@@ -1,8 +1,7 @@
 from globalstate import GlobalState
 from pathmover import (PathMover, MoveDetails, ReplicaExchange,
                        EnsembleHopMover)
-from trajectory import Sample
-from sample import SampleSet
+from sample import SampleSet, Sample
 
 class Calculation(object):
 
