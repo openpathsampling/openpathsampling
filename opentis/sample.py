@@ -11,8 +11,9 @@ class SampleKeyError(Exception):
                     + " from " + str(self.sample))
 
 class SampleSet(object):
-    ''' SampleSet is essentially a list of samples, with a few conveniences.
-    It can be treated as a list of samples (using, e.g., .append), or as a
+    '''
+    SampleSet is essentially a list of samples, with a few conveniences.  It
+    can be treated as a list of samples (using, e.g., .append), or as a
     dictionary of ensembles mapping to a list of samples, or as a dictionary
     of replica IDs to samples. Any type is allowed as a replica ID except
     Sample or Ensemble.
@@ -43,8 +44,7 @@ class SampleSet(object):
         self.samples = []
         self.ensemble_dict = {}
         self.replica_dict = {}
-        for sample in samples:
-            self.append(sample)
+        self.extend(samples)
 
     def __getitem__(self, key):
         if isinstance(key, Ensemble):
@@ -120,6 +120,16 @@ class SampleSet(object):
         except KeyError:
             self.replica_dict[sample.replica] = [sample]
 
+    def extend(self, samples):
+        # note that this works whether the parameter samples is a list of
+        # samples or a SampleSet!
+        try:
+            for sample in samples:
+                self.append(sample)
+        except TypeError:
+            # also acts as .append() if given a single sample
+            self.append(samples)
+
     def apply_samples(self, samples):
         '''Updates the SampleSet based on a list of samples, by setting them
         by replica in the order given in the argument list.'''
@@ -127,9 +137,11 @@ class SampleSet(object):
             self[sample.replica] = sample
 
     def replica_list(self):
+        '''Returns the list of replicas IDs in this SampleSet'''
         return self.replica_dict.keys()
 
     def ensemble_list(self):
+        '''Returns the list of ensembles in this SampleSet'''
         return self.ensemble_dict.keys()
             
     def consistency_check(self):
@@ -167,9 +179,28 @@ class SampleSet(object):
 @storable
 class Sample(object):
     """
-    A Sample is the return object from a PathMover and contains all information about the move, initial trajectories,
-    new trajectories (both as references). IF a Mover does several moves at a time (e.g. a swap) then
-    a separate move object for each resulting trajectory is returned
+    A Sample represents a given "draw" from its ensemble, and is the return
+    object from a PathMover. It and contains all information about the move,
+    initial trajectories, new trajectories (both as references). 
+    
+    Since each Sample is a single representative of a single ensemble, each
+    Sample consists of one replica ID, one trajectory, and one ensemble.
+    This means that movers which generate more than one "draw" (often from
+    different ensembles, e.g. replica exchange) will generate more than one
+    Sample object.
+
+    Attributes
+    ----------
+    replica : integer
+        The replica ID to which this Sample applies
+    trajectory : Trajectory
+        The trajectory (path) for this sample
+    ensemble : Ensemble
+        The Ensemble this sample is drawn from
+    details : MoveDetails
+        Object 
+    step : integer
+        the Monte Carlo step number associated with this Sample
     """
 
     def __init__(self, replica=None, trajectory=None, ensemble=None, details=None, step=-1):
