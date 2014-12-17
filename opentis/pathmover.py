@@ -167,7 +167,9 @@ class PathMover(object):
     def legal_sample_set(self, globalstate, ensembles=None):
         '''
         This returns all the samples from globalstate which are in both
-        self.replicas and the parameter ensembles.
+        self.replicas and the parameter ensembles. If ensembles is None, we
+        use self.ensembles. If you want all ensembles allowed, pass
+        ensembles='all'.
         '''
         if self.replicas == 'all':
             reps = globalstate.replica_list()
@@ -177,15 +179,21 @@ class PathMover(object):
         for rep in reps:
             rep_samples.extend(globalstate.all_from_replica(rep))
 
-        if ensembles is not None:
+        if ensembles is None:
+            if self.ensembles is None:
+                ensembles = 'all'
+            else:
+                ensembles = self.ensembles
+
+        if ensembles == 'all':
+            legal_samples = rep_samples
+        else:
             ens_samples = []
             if type(ensembles) is not list:
                 ensembles = [ensembles]
             for ens in ensembles:
                 ens_samples.extend(globalstate.all_from_ensemble(ens))
             legal_samples = list(set(rep_samples) & set(ens_samples))
-        else:
-            legal_samples = rep_samples
 
         return legal_samples
 
@@ -217,7 +225,7 @@ class PathMover(object):
         object (??? can you explain this, JHP?)
         '''
 
-        return []
+        return [] # pragma: no cover
 
     def selection_probability_ratio(self, details=None):
         '''
@@ -238,7 +246,7 @@ class PathMover(object):
 
         What about Minus Move and PathReversalMove?
         '''
-        return 1.0
+        return 1.0 # pragma: no cover
 
 class ShootMover(PathMover):
     '''
