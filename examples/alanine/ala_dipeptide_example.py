@@ -30,7 +30,7 @@ from opentis.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
 from opentis.calculation import Bootstrapping
 from opentis.pathmover import PathMover
 from opentis.shooting import UniformSelector
-from opentis.trajectory import Sample
+from opentis.sample import Sample, SampleSet
 
 import simtk.unit as u
 

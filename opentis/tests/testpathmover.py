@@ -12,8 +12,7 @@ from test_helpers import (assert_equal_array_array,
                           assert_not_equal_array_array)
 
 from opentis.ensemble import LengthEnsemble
-from opentis.trajectory import Sample
-from opentis.sample import SampleSet
+from opentis.sample import SampleSet, Sample
 from opentis.pathmover import *
 
 class testMakeListOfPairs(object):
