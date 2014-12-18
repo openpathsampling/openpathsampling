@@ -35,7 +35,7 @@ from opentis.shooting import UniformSelector
 import simtk.unit as u
 
 if __name__=="__main__":
-    logging.config.fileConfig('../../opentis/default_logger.conf',
+    logging.config.fileConfig('../../opentis/logging.conf',
                               disable_existing_loggers=False)
     options = {'temperature' : 300.0 * u.kelvin,
                'collision_rate' : 1.0 / u.picoseconds,
