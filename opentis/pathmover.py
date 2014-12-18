@@ -329,7 +329,7 @@ class ForwardShootMover(ShootMover):
             details.start_point.snapshot.copy(),
             running = [
                 ForwardAppendedTrajectoryEnsemble(
-                    self.ensemble, 
+                    ensemble, 
                     details.start[0:details.start_point.index]
                 ).can_append, 
                 self.length_stopper.can_append
@@ -356,7 +356,7 @@ class BackwardShootMover(ShootMover):
             details.start_point.snapshot.reversed_copy(), 
             running = [
                 BackwardPrependedTrajectoryEnsemble( 
-                    self.ensemble, 
+                    ensemble, 
                     details.start[details.start_point.index + 1:]
                 ).can_prepend, 
                 self.length_stopper.can_prepend
