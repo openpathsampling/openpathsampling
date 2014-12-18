@@ -10,8 +10,6 @@ from opentis.ensemble import LengthEnsemble
 import simtk.unit as u
 
 import logging
-import sys
-
 logger = logging.getLogger(__name__)
 
 #=============================================================================

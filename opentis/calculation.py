@@ -2,6 +2,11 @@ from globalstate import GlobalState
 from pathmover import PathMover, MoveDetails, ReplicaExchange
 from trajectory import Sample
 
+import logging
+from ops_logging import initialization_logging
+logger = logging.getLogger(__name__)
+init_log = logging.getLogger('opentis.initialization')
+
 class Calculation(object):
 
     calc_name = "Calculation"
@@ -10,7 +15,13 @@ class Calculation(object):
         self.storage = storage
         self.engine = engine
         self.movers = movers
+        self.ensembles = ensembles
         self.globalstate = GlobalState(ensembles)
+        initialization_logging(
+            logger=init_log, obj=self,
+            entries=['storage', 'engine', 'ensembles', 'movers']
+        )
+
 
     # TODO: this should be a property
     def set_replicas(self, replicas):
