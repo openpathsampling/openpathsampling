@@ -9,6 +9,11 @@ from opentis.trajectory import Trajectory
 from opentis.ensemble import LengthEnsemble
 import simtk.unit as u
 
+import logging
+import sys
+
+logger = logging.getLogger(__name__)
+
 #=============================================================================
 # SOURCE CONTROL
 #=============================================================================
@@ -231,11 +236,14 @@ class DynamicsEngine(object):
             frame = 0
             stop = False
 
+            logger.info("Starting trajectory")
             while stop == False:
                                 
                 # Do integrator x steps
                 snapshot = self.generate_next_frame()
                 frame += 1
+                if frame % 10 == 0:
+                    logger.info("Through frame: %d", frame)
                 
                 # Store snapshot and add it to the trajectory. Stores also
                 # final frame the last time
@@ -255,6 +263,7 @@ class DynamicsEngine(object):
                 stop = stop or not self.max_length_stopper.can_append(trajectory)
                 
             self.stop(trajectory)
+            logger.info("Finished trajectory, length: %d", frame)
             return trajectory
         else:
             raise RuntimeWarning("Can't generate from an uninitialized system!")

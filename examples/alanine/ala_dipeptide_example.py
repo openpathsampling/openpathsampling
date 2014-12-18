@@ -9,6 +9,7 @@ TIS simulation on alanine dipeptide.
 # that more of what the user will need to do will be in the __main__ of this
 # script
 
+import logging.config
 import numpy as np
 import mdtraj as md
 import time
@@ -34,6 +35,8 @@ from opentis.shooting import UniformSelector
 import simtk.unit as u
 
 if __name__=="__main__":
+    logging.config.fileConfig('../../opentis/default_logger.conf',
+                              disable_existing_loggers=False)
     options = {'temperature' : 300.0 * u.kelvin,
                'collision_rate' : 1.0 / u.picoseconds,
                'timestep' : 2.0 * u.femtoseconds,
