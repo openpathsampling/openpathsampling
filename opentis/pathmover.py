@@ -92,7 +92,7 @@ class MoveDetails(object):
         self.inputs=None
         self.trial=None
         self.result=None
-        self.acceptance=None
+        self.acceptance_probability=None
         self.success=None
         self.accepted=None
         self.mover=None
@@ -497,7 +497,7 @@ class PathReversal(PathMover):
         details.mover = self
         details.trial = reversed_trajectory
         details.success = True
-        details.acceptance = 1.0
+        details.acceptance_probability = 1.0
         details.result = reversed_trajectory
 
         sample = Sample(
@@ -530,16 +530,16 @@ class ReplicaExchange(PathMover):
             # Swap
             details1.success = True
             details2.success = True
-            details1.acceptance = 1.0
-            details2.acceptance = 1.0
+            details1.acceptance_probability = 1.0
+            details2.acceptance_probability = 1.0
             details1.result = trajectory2
             details2.result = trajectory1
         else:
             # No swap
             details1.success = False
             details2.success = False
-            details1.acceptance = 0.0
-            details2.acceptance = 0.0
+            details1.acceptance_probability = 0.0
+            details2.acceptance_probability = 0.0
             details1.result = trajectory1
             details2.result = trajectory2
 
