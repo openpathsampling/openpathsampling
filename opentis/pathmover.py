@@ -63,7 +63,7 @@ class MoveDetails(object):
         replica ID to which this trial move would apply
     inputs : list of Trajectry
         the Samples which were used as inputs to the move
-    final : Tractory
+    trial : Tractory
         the Trajectory 
     accepted : bool
         whether the attempted move was accepted
@@ -84,13 +84,13 @@ class MoveDetails(object):
             accepted=>trial_in_ensemble (probably only in shooting)
 
     TODO:
-    Currently inputs/final/accepted are in terms of Trajectory objects. I
+    Currently inputs/trial/accepted are in terms of Trajectory objects. I
     think it makes more sense for them to be Samples.
     '''
 
     def __init__(self, **kwargs):
         self.inputs=None
-        self.final=None
+        self.trial=None
         self.result=None
         self.acceptance=None
         self.success=None
@@ -244,7 +244,7 @@ class PathMover(object):
         This is effectively the ratio of proposal probabilities for a mover.
         For symmetric proposal this is one. In the case of e.g. Shooters
         this depends on the used ShootingPointSelector and the start and
-        final trajectory.
+        trial trajectory.
         
         I am not sure if it makes sense that to define it this way, but for
         Shooters this is, what we need for the acceptance step in addition
@@ -265,7 +265,7 @@ class ShootMover(PathMover):
         super(ShootMover, self).__init__(ensembles=ensembles, replicas=replicas)
         self.selector = selector
         self.length_stopper = PathMover.engine.max_length_stopper
-        self.extra_details = ['start', 'start_point', 'final',
+        self.extra_details = ['start', 'start_point', 'trial',
                               'final_point']
 
     def selection_probability_ratio(self, details):
@@ -276,7 +276,7 @@ class ShootMover(PathMover):
         return details.start_point.sum_bias / details.final_point.sum_bias
     
     def _generate(self, ensemble):
-        self.final = self.start
+        self.trial = self.start
     
     def move(self, globalstate):
         # select a legal sample, use it to determine the trajectory and the
@@ -292,13 +292,13 @@ class ShootMover(PathMover):
         details.mover = self
         setattr(details, 'start', trajectory)
         setattr(details, 'start_point', self.selector.pick(details.start) )
-        setattr(details, 'final', None)
+        setattr(details, 'trial', None)
         setattr(details, 'final_point', None)
 
         self._generate(details, dynamics_ensemble)
 
 
-        details.accepted = dynamics_ensemble(details.final)
+        details.accepted = dynamics_ensemble(details.trial)
         details.result = details.start
 
         if details.accepted:
@@ -306,7 +306,7 @@ class ShootMover(PathMover):
             print 'Proposal probability', self.selection_probability_ratio(details), '/ random :', rand
             if (rand < self.selection_probability_ratio(details)):
                 details.success = True
-                details.result = details.final
+                details.result = details.trial
 
         path = Sample(replica=replica,
                       trajectory=details.result, 
@@ -340,8 +340,8 @@ class ForwardShootMover(ShootMover):
         #setattr(details, 'repeated_partial', details.start[0:shooting_point])
         #setattr(details, 'new_partial', partial_trajectory)
 
-        details.final = details.start[0:shooting_point] + partial_trajectory
-        details.final_point = ShootingPoint(self.selector, details.final,
+        details.trial = details.start[0:shooting_point] + partial_trajectory
+        details.final_point = ShootingPoint(self.selector, details.trial,
                                             shooting_point)
     
 class BackwardShootMover(ShootMover):    
@@ -367,8 +367,8 @@ class BackwardShootMover(ShootMover):
         #setattr(details, 'repeated_partial', details.start[details.start_point.index+1:])
         #setattr(details, 'new_partial', partial_trajectory.reversed)
 
-        details.final = partial_trajectory.reversed + details.start[details.start_point.index + 1:]
-        details.final_point = ShootingPoint(self.selector, details.final, partial_trajectory.frames - 1)
+        details.trial = partial_trajectory.reversed + details.start[details.start_point.index + 1:]
+        details.final_point = ShootingPoint(self.selector, details.trial, partial_trajectory.frames - 1)
         
         pass
 
@@ -495,7 +495,7 @@ class PathReversal(PathMover):
         reversed_trajectory = trajectory.reversed()
         details.inputs = [trajectory]
         details.mover = self
-        details.final = reversed_trajectory
+        details.trial = reversed_trajectory
         details.success = True
         details.acceptance = 1.0
         details.result = reversed_trajectory
@@ -524,8 +524,8 @@ class ReplicaExchange(PathMover):
         setattr(details2, 'ensembles', [ensemble1, ensemble2])
         details1.mover = self
         details2.mover = self
-        details2.final = trajectory1
-        details1.final = trajectory2
+        details2.trial = trajectory1
+        details1.trial = trajectory2
         if success:
             # Swap
             details1.success = True
