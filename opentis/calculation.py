@@ -73,13 +73,13 @@ class BootstrapPromotionMove(PathMover):
 
         # the move will be accepted if the shooting move is accepted, no
         # matter what
-        details.success = shoot_samp.details.success
+        details.accepted = shoot_samp.details.accepted
 
         # result trajectory is whatever came out of hop_samp
         details.result = hop_samp.details.result
 
         setattr(details, 'start_replica', details.replica)
-        if hop_samp.details.success == True:
+        if hop_samp.details.accepted == True:
             setattr(details, 'result_replica', details.replica+1)
         else:
             setattr(details, 'result_replica', details.replica)
@@ -88,7 +88,7 @@ class BootstrapPromotionMove(PathMover):
                         trajectory=details.result,
                         details=details)
 
-        #print "Success:", sample.details.success
+        #print "Success:", sample.details.accepted
         #print sample.trajectory, sample.details.result
 
         return sample

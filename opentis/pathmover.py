@@ -94,7 +94,7 @@ class MoveDetails(object):
         self.trial=None
         self.result=None
         self.acceptance_probability=None
-        self.success=None
+        self.accepted=None
         self.mover=None
         for key, value in kwargs:
             setattr(self, key, value)
@@ -287,7 +287,7 @@ class ShootMover(PathMover):
         replica = rep_sample.replica
 
         details = MoveDetails()
-        details.success = False
+        details.accepted = False
         details.inputs = [trajectory]
         details.mover = self
         setattr(details, 'start', trajectory)
@@ -307,7 +307,7 @@ class ShootMover(PathMover):
             rand = np.random.random()
             print 'Proposal probability', self.selection_probability_ratio(details), '/ random :', rand
             if (rand < self.selection_probability_ratio(details)):
-                details.success = True
+                details.accepted = True
                 details.result = details.trial
 
         path = Sample(replica=replica,
@@ -462,14 +462,14 @@ class EnsembleHopMover(PathMover):
         trajectory = rep_sample.trajectory
 
         details = MoveDetails()
-        details.success = False
+        details.accepted = False
         details.inputs = [trajectory]
         details.mover = self
         details.result = trajectory
         setattr(details, 'initial_ensemble', ens_from)
         setattr(details, 'trial_ensemble', ens_to)
-        details.success = ens_to(trajectory)
-        if details.success == True:
+        details.accepted = ens_to(trajectory)
+        if details.accepted == True:
             setattr(details, 'result_ensemble', ens_to)
         else: 
             setattr(details, 'result_ensemble', ens_from)
@@ -498,7 +498,7 @@ class PathReversal(PathMover):
         details.inputs = [trajectory]
         details.mover = self
         details.trial = reversed_trajectory
-        details.success = True
+        details.accepted = True
         details.acceptance_probability = 1.0
         details.result = reversed_trajectory
 
@@ -517,7 +517,7 @@ class PathReversal(PathMover):
 class ReplicaExchange(PathMover):
     # TODO: Might put the target ensembles into the Mover instance, which means we need lots of mover instances for all ensemble switches
     def move(self, trajectory1, trajectory2, ensemble1, ensemble2):
-        success = True # Change to actual check for swapping
+        accepted = True # Change to actual check for swapping
         details1 = MoveDetails()
         details2 = MoveDetails()
         details1.inputs = [trajectory1, trajectory2]
@@ -528,18 +528,18 @@ class ReplicaExchange(PathMover):
         details2.mover = self
         details2.trial = trajectory1
         details1.trial = trajectory2
-        if success:
+        if accepted:
             # Swap
-            details1.success = True
-            details2.success = True
+            details1.accepted = True
+            details2.accepted = True
             details1.acceptance_probability = 1.0
             details2.acceptance_probability = 1.0
             details1.result = trajectory2
             details2.result = trajectory1
         else:
             # No swap
-            details1.success = False
-            details2.success = False
+            details1.accepted = False
+            details2.accepted = False
             details1.acceptance_probability = 0.0
             details2.acceptance_probability = 0.0
             details1.result = trajectory1
