@@ -65,8 +65,9 @@ class MoveDetails(object):
         the Samples which were used as inputs to the move
     trial : Tractory
         the Trajectory 
-    accepted : bool
-        whether the attempted move was accepted
+    trial_is_in_ensemble : bool
+        whether the attempted move created a trajectory in the right
+        ensemble
     mover : PathMover
         the PathMover which generated this trial
 
@@ -94,7 +95,6 @@ class MoveDetails(object):
         self.result=None
         self.acceptance_probability=None
         self.success=None
-        self.accepted=None
         self.mover=None
         for key, value in kwargs:
             setattr(self, key, value)
@@ -298,10 +298,12 @@ class ShootMover(PathMover):
         self._generate(details, dynamics_ensemble)
 
 
-        details.accepted = dynamics_ensemble(details.trial)
+        setattr(details, 'trial_is_in_ensemble',
+                dynamics_ensemble(details.trial))
+
         details.result = details.start
 
-        if details.accepted:
+        if details.trial_is_in_ensemble:
             rand = np.random.random()
             print 'Proposal probability', self.selection_probability_ratio(details), '/ random :', rand
             if (rand < self.selection_probability_ratio(details)):

@@ -74,8 +74,6 @@ class BootstrapPromotionMove(PathMover):
         # the move will be accepted if the shooting move is accepted, no
         # matter what
         details.success = shoot_samp.details.success
-        # the move is acceptable if the hopping is acceptable?
-        details.accepted = hop_samp.details.accepted
 
         # result trajectory is whatever came out of hop_samp
         details.result = hop_samp.details.result
