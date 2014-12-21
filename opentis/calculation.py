@@ -17,6 +17,7 @@ class Calculation(object):
     def run(self, nsteps):
         print "Running an empty calculation? Try a subclass, maybe!"
 
+
 class BootstrapPromotionMove(PathMover):
     '''
     Bootstrap promotion is the combination of an EnsembleHop (to the next
@@ -70,6 +71,9 @@ class BootstrapPromotionMove(PathMover):
         details.inputs = details_inputs
         details.mover = details_mover
         details.replica = details_replica
+        details.trial = shoot_samp.details.trial # TODO: is it, though?
+        # what about hop trial when that happens? may be cleanest if we make
+        # this truly sequential
 
         # the move will be accepted if the shooting move is accepted, no
         # matter what
@@ -78,6 +82,7 @@ class BootstrapPromotionMove(PathMover):
 
         # result trajectory is whatever came out of hop_samp
         details.result = hop_samp.details.result
+        #details.result_ensemble = hop_samp.details.result_ensemble
 
         setattr(details, 'start_replica', details.replica)
         if hop_samp.details.accepted == True:
@@ -88,9 +93,9 @@ class BootstrapPromotionMove(PathMover):
                         ensemble=details.result_ensemble,
                         trajectory=details.result,
                         details=details)
-        print "BootstrapMover: accepted =", details.accepted
-        print " Shooting part: accepted =", shoot_samp.details.accepted
-        print "  Hopping part: accepted =", hop_samp.details.accepted
+        #print "BootstrapMover: accepted =", details.accepted
+        #print " Shooting part: accepted =", shoot_samp.details.accepted
+        #print "  Hopping part: accepted =", hop_samp.details.accepted
 
         #print sample.trajectory, sample.details.result
 
@@ -107,9 +112,22 @@ class Bootstrapping(Calculation):
                  ensembles=None):
         super(Bootstrapping, self).__init__(storage, engine)
         self.ensembles = ensembles
+
+        # this is stupid; must be a better way
+        init_details = MoveDetails()
+        init_details.accepted = True
+        init_details.acceptance_probability = 1.0
+        init_details.mover = PathMover()
+        init_details.mover.name = "Initialization (trajectory)"
+        init_details.inputs = [trajectory]
+        init_details.trial = trajectory
+        init_details.ensemble = self.ensembles[0]
         sample = Sample(replica=0, trajectory=trajectory, 
-                        ensemble=self.ensembles[0], details=MoveDetails())
+                        ensemble=self.ensembles[0], details=init_details)
+
         self.globalstate = SampleSet([sample])
+        if self.storage is not None:
+            self.globalstate.save_samples(self.storage)
         if movers is None:
             pass # TODO: implement defaults: one per ensemble, uniform sel
         else:

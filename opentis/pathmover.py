@@ -103,7 +103,8 @@ class MoveDetails(object):
         # primarily for debugging/interactive use
         mystr = ""
         for key in self.__dict__.keys():
-            mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
+            if key is not "ensemble":
+                mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
         return mystr
 
 class PathMover(object):
@@ -292,7 +293,7 @@ class ShootMover(PathMover):
         details.mover = self
         setattr(details, 'start', trajectory)
         setattr(details, 'start_point', self.selector.pick(details.start) )
-        setattr(details, 'trial', None)
+        #setattr(details, 'trial', None)
         setattr(details, 'final_point', None)
 
         self._generate(details, dynamics_ensemble)

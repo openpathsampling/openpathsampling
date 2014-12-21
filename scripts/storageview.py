@@ -58,7 +58,7 @@ if __name__ == '__main__':
     line("Number of waters", len(solvent_indices) / 3)
     line("Number of protein atoms", len(protein_indices))
 
-    headline("Shapshot Zero")
+    headline("Snapshot Zero")
     # load initial equilibrate snapshot given by ID #0
     snapshot = storage.snapshot.load(0)
 
@@ -147,12 +147,18 @@ if __name__ == '__main__':
     for o_idx in range(0, storage.sample.count()):
         sample = storage.sample.load(o_idx)
 #        nline(o_idx, '', sample.details.json)
-        nline(o_idx, str(sample.details.mover.name), str([t.idx[storage] for t in sample.details.inputs]) +" -> " + str(sample.details.final.idx[storage]) + " in " + sample.ensemble.name + " [" + str(sample.ensemble.idx[storage]) + "]")
+        nline(o_idx, str(sample.details.mover.name),
+              (str([t.idx[storage] for t in sample.details.inputs])
+               + " -> " + str(sample.details.trial.idx[storage]) 
+               + " in " + sample.ensemble.name 
+               + " [" + str(sample.ensemble.idx[storage]) + "]"
+              )
+             )
 #        nline(o_idx, '', str(sample.details.start_point.index) + " -> " + str(sample.details.final_point.index))
         if hasattr(sample.details, 'start'):
             print_traj('start', sample.details.start)
-        if hasattr(sample.details, 'final'):
-            print_traj('final', sample.details.final)
+        if hasattr(sample.details, 'trial') and sample.details.trial is not None:
+            print_traj('trial', sample.details.trial)
         print_traj('chosen', sample.trajectory)
 
     headline("Trajectories")
