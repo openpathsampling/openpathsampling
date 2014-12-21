@@ -5,9 +5,10 @@ class GlobalState(dict):
     """
     Notes
     =====
-    I would suggest to add the timestamp to the GlobalState object and store it separately and not include
-    the timestamp in the samples since these might be saved before a timestamp is set and thus we have
-    mutable objects the might screw up the storage
+    I would suggest to add the timestamp to the GlobalState object and store
+    it separately and not include the timestamp in the samples since these
+    might be saved before a timestamp is set and thus we have mutable
+    objects the might screw up the storage
     """
 
     current = None       # global current state
@@ -88,10 +89,11 @@ class GlobalState(dict):
         """
         return [ self[ensemble] for ensemble in self._ensembles]
 
-    def move(self, samples):
+    def apply_samples(self, samples):
         """
-        Returns a new GlobalState object that takes the current instance and applies the samples in the given order as updates.
-        The samples will get the actual timestamp for later analysis.
+        Returns a new GlobalState object that takes the current instance and
+        applies the samples in the given order as updates.  The samples will
+        get the actual timestamp for later analysis.
 
         Parameters
         ==========
@@ -120,8 +122,9 @@ class GlobalState(dict):
 
     def save_samples(self, storage):
         """
-        Save all samples in the current GlobalState object. This should be called after a move has generated a new object since then
-        all samples will get a timestamp that is associated with this
+        Save all samples in the current GlobalState object. This should be
+        called after a move has generated a new object since then all
+        samples will get a timestamp that is associated with this
 
         Parameters
         ==========
@@ -130,9 +133,3 @@ class GlobalState(dict):
         """
         map(storage.sample.save, self.samples)
 
-
-class GlobalStateMover(object):
-    """
-    A GlobalStateMover will take a GlobalState object and create in a specific way a new GlobalState by generating
-    the necessary samples, applying them and saving everything correctly.
-    """

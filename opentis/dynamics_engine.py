@@ -8,6 +8,7 @@ Created on 01.07.2014
 from opentis.trajectory import Trajectory
 from opentis.ensemble import LengthEnsemble
 import simtk.unit as u
+from wrapper import storable
 
 import logging
 logger = logging.getLogger(__name__)
@@ -22,6 +23,7 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 # Multi-State Transition Interface Sampling
 #=============================================================================
 
+@storable
 class DynamicsEngine(object):
     '''
     Class to wrap a simulation tool to store the context and rerun, needed
@@ -139,13 +141,13 @@ class DynamicsEngine(object):
                             if my_options[variable].unit.is_compatible(default_value):
                                 okay_options[variable] = my_options[variable]
                             else:
-                                raise ValueError('Unit of option "' + variable + '" (' + str(my_options[variable].unit) + ') not compatible to "' + str(default_value.unit) + '"')
+                                raise ValueError('Unit of option "' + str(variable) + '" (' + str(my_options[variable].unit) + ') not compatible to "' + str(default_value.unit) + '"')
 
                         elif type(my_options[variable]) is list:
                             if type(my_options[variable][0]) is type(default_value[0]):
                                 okay_options[variable] = my_options[variable]
                             else:
-                                raise ValueError('List elements for option "' + variable + '" must be of type "' + type(default_value[0]) + '"')
+                                raise ValueError('List elements for option "' + str(variable) + '" must be of type "' + str(type(default_value[0])) + '"')
                         else:
                             okay_options[variable] = my_options[variable]
                     elif isinstance(type(my_options[variable]), type(default_value)):
@@ -153,7 +155,7 @@ class DynamicsEngine(object):
                     elif default_value is None:
                         okay_options[variable] = my_options[variable]
                     else:
-                        raise ValueError('Type of option "' + variable + '" (' + type(my_options[variable]) + ') is not "' + type(default_value) + '"')
+                        raise ValueError('Type of option "' + str(variable) + '" (' + str(type(my_options[variable])) + ') is not "' + str(type(default_value)) + '"')
 
             self.options = okay_options
 
@@ -192,21 +194,49 @@ class DynamicsEngine(object):
         >>> if engine.max_length_stopper in engine.stoppers:
         >>>     print 'Max length was triggered'
         """
-        return set([ runner for runner, result in self.running.iteritems() if not result])
+        return set([ runner for runner, result in self.running.iteritems()
+                    if not result])
+
+    def stop_conditions(self, trajectory, continue_conditions=None):
+        """
+        Test whether we can continue; called by generate a couple of times,
+        so the logic is separated here.
+
+        Parameters
+        ----------
+        trajectory : Trajectory
+            the trajectory we've generated so far
+        continue_conditions : list of function(Trajectory)
+            callable function of a 'Trajectory' that returns True or False.
+            If one of these returns False the simulation is stopped.
+
+        Returns
+        -------
+        boolean:
+            true if the dynamics should be stopped; false otherwise
+        """
+        stop = False
+        if continue_conditions is not None:
+            for condition in continue_conditions:
+                can_continue = condition(trajectory)
+                self.running[condition] = can_continue # JHP: is this needed?
+                stop = stop or not can_continue
+        stop = stop or not self.max_length_stopper.can_append(trajectory)
+        return stop
+
 
     def generate(self, snapshot, running = None):
         r"""
-        Generate a velocity Verlet trajectory consisting of ntau segments of
-        tau_steps in between storage of Snapshots and randomization of
-        velocities.
+        Generate a trajectory consisting of ntau segments of tau_steps in
+        between storage of Snapshots.
 
         Parameters
         ----------
         snapshot : Snapshot 
             initial coordinates; velocities will be assigned from
             Maxwell-Boltzmann distribution            
-        running : list of function(Snapshot)
-            callable function of a 'Snapshot' that returns True or False.
+        running : list of function(Trajectory)
+            callable function of a 'Trajectory' that returns True or False.
             If one of these returns False the simulation is stopped.
 
         Returns
@@ -232,7 +262,9 @@ class DynamicsEngine(object):
             trajectory.append(snapshot)
             
             frame = 0
-            stop = False
+            # maybe we should stop before we even begin?
+            stop = self.stop_conditions(trajectory=trajectory,
+                                        continue_conditions=running)
 
             logger.info("Starting trajectory")
             while stop == False:
@@ -250,16 +282,13 @@ class DynamicsEngine(object):
                 trajectory.append(snapshot)
                 
                 # Check if we should stop. If not, continue simulation
-                if running is not None:
-                    for runner in running:
-                        # note that even if one runner signals stop we evaluate
-                        # all of them to access their results later
-                        keep_running = runner(trajectory)
-                        self.running[runner] = keep_running
-                        stop = stop or not keep_running
+                stop = self.stop_conditions(trajectory=trajectory,
+                                            continue_conditions=running)
 
-                stop = stop or not self.max_length_stopper.can_append(trajectory)
-                
+
+            # exit the while loop once we must stop, so we call the engine's
+            # stop function (which should manage any end-of-trajectory
+            # cleanup)
             self.stop(trajectory)
             logger.info("Finished trajectory, length: %d", frame)
             return trajectory

@@ -8,11 +8,9 @@ from simtk.openmm.app import ForceField, PME, HBonds, PDBFile
 
 from opentis.storage import Storage
 from opentis.tools import snapshot_from_pdb, to_openmm_topology
-from opentis.wrapper import storable
 from opentis.dynamics_engine import DynamicsEngine
 from opentis.snapshot import Snapshot, Configuration, Momentum
 
-@storable
 class OpenMMEngine(DynamicsEngine):
     """We only need a few things from the simulation. This object duck-types
     an OpenMM simulation object so that it quacks the methods we need to
@@ -33,7 +31,8 @@ class OpenMMEngine(DynamicsEngine):
         'timestep' : 2.0 * u.femtoseconds,
         'platform' : 'fastest',
         'forcefield_solute' : 'amber96.xml',
-        'forcefield_solvent' : 'tip3p.xml'
+        'forcefield_solvent' : 'tip3p.xml',
+        'template' : Snapshot()
     }
 
     @staticmethod
@@ -46,15 +45,20 @@ class OpenMMEngine(DynamicsEngine):
         filename : str
             the filename of the storage
         template : Snapshot
-            the template Snapshot to be used. It contains the necessary units as well as the topology
+            the template Snapshot to be used. It contains the necessary
+            units as well as the topology
         options : dict of { str : str }
-            a dictionary that contains the parameters used in the construction of the OpenMMEngine
+            a dictionary that contains the parameters used in the
+            construction of the OpenMMEngine
         mode : str ('restore', 'create' or 'auto')
-            a string setting the mode of creation or restoration. The option 'auto' (default) will
-            only create a new storage if the file does not exist yet
+            a string setting the mode of creation or restoration. The option
+            'auto' (default) will only create a new storage if the file does
+            not exist yet
         units : dict of {str : simtk.unit.Unit } or None (default)
-            representing a dict of string representing a dimension ('length', 'velocity', 'energy') pointing the
-            the simtk.unit.Unit to be used. This overrides the units used in the template
+            representing a dict of string representing a dimension
+            ('length', 'velocity', 'energy') pointing the the
+            simtk.unit.Unit to be used. This overrides the units used in the
+            template
 
         Returns
         -------
@@ -85,9 +89,10 @@ class OpenMMEngine(DynamicsEngine):
         if type(template) is str:
             template = snapshot_from_pdb(template, units=units)
 
-        # once we have a template configuration (coordinates to not really matter)
-        # we can create a storage. We might move this logic out of the dynamics engine
-        # and keep storage and engine generation completely separate!
+        # once we have a template configuration (coordinates to not really
+        # matter) we can create a storage. We might move this logic out of
+        # the dynamics engine and keep storage and engine generation
+        # completely separate!
 
         storage = Storage(
             filename=filename,
@@ -96,10 +101,15 @@ class OpenMMEngine(DynamicsEngine):
         )
 
         # save simulator options, should be replaced by just saving the simulator object
+
+        options['template'] = template
+
         storage.init_str('simulation_options')
         storage.write_as_json('simulation_options', options)
 
-        engine = OpenMMEngine(template, options)
+        engine = OpenMMEngine(
+            options=options
+        )
         engine.storage = storage
 
         return engine
@@ -113,18 +123,28 @@ class OpenMMEngine(DynamicsEngine):
         )
 
         options = storage.restore_object('simulation_options')
-        engine = OpenMMEngine(storage.template, options)
+
+        options['template'] = storage.template
+
+        engine = OpenMMEngine(
+            options=options
+        )
 
         engine.storage = storage
-
         return engine
 
 
-    def __init__(self, template, options):
+    def __init__(self, options, template=None):
+
+        if template is None:
+            template = options['template']
 
         self.template = template
         self.topology = template.topology
-        self.options = {'n_atoms' : self.topology.n_atoms}
+        self.options = {
+            'n_atoms' : self.topology.n_atoms,
+            'template' : template
+        }
 
         super(OpenMMEngine, self).__init__(
             options=options
@@ -151,6 +171,11 @@ class OpenMMEngine(DynamicsEngine):
         # claim the OpenMM simulation as our own
         self.simulation = simulation
 
+        # set no cached snapshot, menas it will be constructed from the openmm context
+        self._current_snapshot = None
+        self._current_momentum = None
+        self._current_configuration = None
+        self._current_box_vectors = None
 
     def equilibrate(self, nsteps):
         # TODO: rename... this is position restrained equil, right?
@@ -165,9 +190,11 @@ class OpenMMEngine(DynamicsEngine):
 
         self.simulation.step(nsteps)
 
+        # empty cache
+        self._current_snapshot = None
+
         for i in self.solute_indices:
             system.setParticleMass(i, solute_masses[i].value_in_unit(u.dalton))
-
 
 
     # this property is specific to direct control simulations: other
@@ -192,6 +219,7 @@ class OpenMMEngine(DynamicsEngine):
 
     def _build_current_snapshot(self):
         # TODO: Add caching for this and mark if changed
+
         state = self.simulation.context.getState(getPositions=True,
                                                  getVelocities=True,
                                                  getEnergy=True)
@@ -205,44 +233,67 @@ class OpenMMEngine(DynamicsEngine):
 
     @property
     def current_snapshot(self):
-        return self._build_current_snapshot()
+        if self._current_snapshot is None:
+            self._current_snapshot = self._build_current_snapshot()
+
+        return self._current_snapshot
+
+    def _changed(self):
+        self._current_snapshot = None
 
     @current_snapshot.setter
     def current_snapshot(self, snapshot):
-        self.configuration = snapshot.configuration
-        self.momentum = snapshot.momentum
+        if snapshot is not self._current_snapshot:
+            if snapshot.configuration is not None:
+                if self._current_snapshot is None or snapshot.configuration is not self._current_snapshot.configuration:
+                    # new snapshot has a different configuration so update
+                    self.simulation.context.setPositions(snapshot.coordinates)
+
+                    # TODO: Check if this is the right way to make sure the box is right!
+#                    if self._current_snapshot is None or snapshot.box_vectors != self._current_snapshot.box_vectors:
+#                        self.simulation.context.getPeriodicBoxVectors(snapshot.box_vectors)
+
+            if snapshot.momentum is not None:
+                if self._current_snapshot is None or snapshot.momentum is not self._current_snapshot.momentum or snapshot.reversed != self._current_snapshot.reversed:
+                    # new snapshot has a different momenta (different coordinates and reverse setting)
+                    # so update. Note snapshot.velocities is different from snapshot.momenta.velocities!!!
+                    # The first includes the reversal setting in the snapshot the second does not.
+                    self.simulation.context.setVelocities(snapshot.velocities)
+
+            # After the updates cache the new snapshot
+            self._current_snapshot = snapshot
 
     def generate_next_frame(self):
         self.simulation.step(self.nsteps_per_frame)
+        self._current_snapshot = None
         return self.current_snapshot
-
 
     # (possibly temporary) shortcuts for momentum and configuration
     @property
     def momentum(self):
-        state = self.simulation.context.getState(getVelocities=True,
-                                                 getEnergy=True)
-        return Momentum(velocities = state.getVelocities(asNumpy=True),
-                        kinetic_energy = state.getKineticEnergy()
-                       )
+        return self.current_snapshot.momentum
 
-    @momentum.setter
-    def momentum(self, momentum):
-        self.simulation.context.setVelocities(momentum.velocities)
+    # remove setters here, because it might lead to wrong velocities
+    # because of incorrect treatment of reversed, it will also violate the
+    # immutable character of the cached snapshot!
+#    @momentum.setter
+#    def momentum(self, momentum):
+#        if momentum is not self._current_momentum:
+#            self._current_momentum = momentum
+#            self.simulation.context.setVelocities(momentum.velocities)
 
     @property
     def configuration(self):
-        state = self.simulation.context.getState(getPositions=True,
-                                                 getVelocities=True,
-                                                 getEnergy=True)
-        return Configuration(coordinates = state.getPositions(asNumpy=True),
-                             box_vectors = state.getPeriodicBoxVectors(asNumpy=True),
-                             potential_energy = state.getPotentialEnergy(),
-                             topology = self.topology
-                            )
+        return self.current_snapshot.configuration
 
-    @configuration.setter
-    def configuration(self, config):
-        self.simulation.context.setPositions(config.coordinates)
-        # TODO: Check if this is the right way to make sure the box is right!
-        # self.simulation.context.getPeriodicBoxVectors(config.box_vectors)
+#    @configuration.setter
+#    def configuration(self, config):
+#        if config is not self._current_configuration:
+#            self._current_configuration = config
+#            self.simulation.context.setPositions(config.coordinates)
+#
+#            # TODO: Check if this is the right way to make sure the box is right!
+#            if False and config.box_vectors != self._current_box_vectors:
+#                self.simulation.context.getPeriodicBoxVectors(config.box_vectors)
+#                self._current_box_vectors = config.box_vectors
+

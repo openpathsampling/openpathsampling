@@ -73,7 +73,6 @@ class EnsembleStorage(ObjectStorage):
         description = self.storage.variables['ensemble_str'][int(idx)]
 
         obj = LoadedEnsemble(name=name, description=description)
-        obj.idx[self.storage] = idx
 
         return obj
 

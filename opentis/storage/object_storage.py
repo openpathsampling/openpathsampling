@@ -344,8 +344,7 @@ class ObjectStorage(object):
 
         self.storage.sync()
 
-
-    def init_variable(self, name, var_type, dimensions = None, units=None, description=None):
+    def init_variable(self, name, var_type, dimensions = None, units=None, description=None, variable_length=False):
         '''
         Create a new variable in the netcdf storage. This is just a helper function to structure the code better.
 
@@ -354,14 +353,20 @@ class ObjectStorage(object):
         name : str
             The name of the variable to be created
         var_type : str
-            The string representing the type of the data stored in the variable. Either the netcdf types can be used directly and
+            The string representing the type of the data stored in the variable.
+            Either the netcdf types can be used directly and
             strings representing the python native types are translated to appropriate netcdf types.
         dimensions : str or tuple of str
-            A tuple representing the dimensions used for the netcdf variable. If not specified then the default dimension of the storage is used.
+            A tuple representing the dimensions used for the netcdf variable.
+            If not specified then the default dimension of the storage is used.
         units : str
             A string representing the units used if the var_type is `float` the units is set to `none`
         description : str
             A string describing the variable in a readable form.
+        variable_length : bool
+            If true the variable is treated as a variable length (list) of the given type. A built-in example
+            for this type is a string which is a variable length of char. This make using all the
+            mixed stuff superfluous
         '''
 
         ncfile = self.storage
@@ -374,17 +379,21 @@ class ObjectStorage(object):
         if var_type == 'float':
             nc_type = 'f4'   # 32-bit float
         elif var_type == 'int':
-            nc_type = 'i4'   # 32-bit signed integer
+            nc_type = np.int32   # 32-bit signed integer
         elif var_type == 'index':
-            nc_type = 'i4'   # 32-bit signd integer / for indices / -1 indicates no index (None)
+            nc_type = np.int32   # 32-bit signed integer / for indices / -1 indicates no index (None)
         elif var_type == 'length':
-            nc_type = 'i4'   # 32-bit signed integer / for indices / -1 indicated no length specified (None)
+            nc_type = np.int32   # 32-bit signed integer / for indices / -1 indicated no length specified (None)
         elif var_type == 'bool':
-            nc_type = 'i1'   # 8-bit signed integer for boolean
+            nc_type = np.uint8   # 8-bit signed integer for boolean
         elif var_type == 'str':
             nc_type = 'str'
 
-        ncvar = ncfile.createVariable(name, nc_type, dimensions)
+        if variable_length:
+            vlen_t = self.storage.createVLType(nc_type, name + '_vlen')
+            ncvar = ncfile.createVariable(name, vlen_t, dimensions)
+        else:
+            ncvar = ncfile.createVariable(name, nc_type, dimensions)
 
         if var_type == 'float' or units is not None:
 
@@ -492,15 +501,15 @@ class ObjectStorage(object):
         elif value_type == 'float':
             values = np.array(data).astype(np.float32)
         elif value_type == 'bool':
-            values = np.array(data).astype(np.int8)
+            values = np.array(data).astype(np.uint8)
         elif value_type == 'index':
-            values = np.array(data).astype(np.uint32)
+            values = np.array(data).astype(np.int32)
         elif value_type == 'length':
-            values = np.array(data).astype(np.uint32)
+            values = np.array(data).astype(np.int32)
         else:
             # an object
             values = [-1 if value is None and allow_empty is True else value.idx[self.storage] for value in data]
-            values = np.array(values).astype(np.uint32)
+            values = np.array(values).astype(np.int32)
 
         return values.copy()
 

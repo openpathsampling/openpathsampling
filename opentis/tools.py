@@ -48,7 +48,7 @@ def snapshot_from_pdb(pdb_file, units = None):
     snapshot = Snapshot(
         coordinates=u.Quantity(pdb.xyz[0], units['length']),
         velocities=u.Quantity(velocities, units['velocity']),
-        box_vectors=u.Quantity(pdb.unitcell_vectors, units['length']),
+        box_vectors=u.Quantity(pdb.unitcell_vectors[0], units['length']),
         potential_energy=u.Quantity(0.0, units['energy']),
         kinetic_energy=u.Quantity(0.0, units['energy']),
         topology=pdb.topology
@@ -157,7 +157,7 @@ def to_openmm_topology(obj):
     """
     if obj.topology is not None:
         openmm_topology = obj.topology.to_openmm()
-        box_size_dimension = np.linalg.norm(obj.box_vectors.value_in_unit(u.nanometer), axis=1)[0]
+        box_size_dimension = np.linalg.norm(obj.box_vectors.value_in_unit(u.nanometer), axis=1)
         openmm_topology.setUnitCellDimensions(box_size_dimension)
 
         return openmm_topology
