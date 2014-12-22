@@ -60,6 +60,16 @@ class Ensemble(object):
 
     def check(self, trajectory):
         return self(trajectory, lazy = False)
+
+    def oom_matrix(self, oom):
+        """
+        Return the oom representation where the OOM is based on a set of volumes
+
+        """
+
+        # Needs to be implemented by the actual class
+
+        return None
     
     def can_append(self, trajectory):
         '''
@@ -376,6 +386,10 @@ class EmptyEnsemble(Ensemble):
     def __str__(self):
         return 'empty'
 
+    def oom_matrix(self, oom):
+        # Zero matrix
+        return None
+
 class FullEnsemble(Ensemble):
     '''
     The full path ensemble of all possible trajectories.
@@ -419,6 +433,10 @@ class FullEnsemble(Ensemble):
 
     def __str__(self):
         return 'all'
+
+    def oom_matrix(self, oom):
+        # Full matrix
+        return None
     
 class NegatedEnsemble(Ensemble):
     '''
