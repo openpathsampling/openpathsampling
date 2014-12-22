@@ -101,3 +101,12 @@ class testBackwardShootMover(object):
     def test_move(self):
         raise SkipTest
 
+class testPathReversalMover(object):
+    def setup(self):
+        pass
+
+    def test_AA_path(self):
+        pass
+
+    def test_AB_path(self):
+        pass

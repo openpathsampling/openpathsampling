@@ -515,28 +515,36 @@ class MinusMove(PathMover):
     def move(self, allpaths, state):
         pass
 
-class PathReversal(PathMover):
-    def move(self, trajectory, ensemble):
+class PathReversalMover(PathMover):
+    def move(self, globalstate):
+        rep_sample = self.select_sample(globalstate, self.ensembles)
+        trajectory = rep_sample.trajectory
+        ensemble = rep_sample.ensemble
+        replica = rep_sample.replica
+
         details = MoveDetails()
-        reversed_trajectory = trajectory.reversed()
         details.inputs = [trajectory]
         details.mover = self
+
+        reversed_trajectory = trajectory.reversed()
         details.trial = reversed_trajectory
-        details.accepted = True
-        details.acceptance_probability = 1.0
-        details.result = reversed_trajectory
+
+        details.accepted = ensemble(reversed_trajectory)
+        if details.accepted == True:
+            details.acceptance_probability = 1.0
+            details.result = reversed_trajectory
+        else:
+            details.acceptance_probability = 0.0
+            details.result = trajectory
 
         sample = Sample(
+            replica=replica
             trajectory=details.result,
-            mover=self,
             ensemble=ensemble,
             details=details
         )
+        return sample
 
-
-#############################################################
-# The following move should be moved to RETIS and just uses moves. It is not a move itself
-#############################################################
 
 class ReplicaExchange(PathMover):
     # TODO: Might put the target ensembles into the Mover instance, which means we need lots of mover instances for all ensemble switches
