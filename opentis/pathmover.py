@@ -9,7 +9,7 @@ import numpy as np
 from shooting import ShootingPoint
 from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble
 from ensemble import FullEnsemble
-from trajectory import Sample
+from opentis.sample import Sample
 from wrapper import storable
 
 @storable
@@ -170,7 +170,7 @@ class ShootMover(PathMover):
                 details.success = True
                 details.result = details.final
 
-        path = Sample(trajectory=details.result, mover=self, ensemble=self.ensemble, details=details)
+        path = Sample(trajectory=details.result, ensemble=self.ensemble, details=details)
 
         return path
     
@@ -266,7 +266,7 @@ class MixedMover(PathMover):
         sample = mover.move(trajectory)
         setattr(sample.details, 'mover_idx', idx)
 
-        path = Sample(trajectory=sample.trajectory, mover=self, ensemble=mover.ensemble, details=sample.details)
+        path = Sample(trajectory=sample.trajectory, ensemble=mover.ensemble, details=sample.details)
         return path
 
 #############################################################

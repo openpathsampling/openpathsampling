@@ -38,8 +38,6 @@ class SnapshotStorage(ObjectStorage):
 
         snapshot.reversed = momentum_reversed
 
-        snapshot.idx[self.storage] = idx
-
         return snapshot
 
     def all(self):
@@ -113,6 +111,7 @@ class SnapshotStorage(ObjectStorage):
         -------
         snapshot (list of int) - snapshot indices
         '''
+        print idx, self.load_variable('snapshot_momentum_idx', idx)
         return int(self.load_variable('snapshot_momentum_idx', idx))
 
 
@@ -249,7 +248,6 @@ class MomentumStorage(ObjectStorage):
             kinetic_energy = None
 
         momentum = Momentum(velocities=velocities, kinetic_energy=kinetic_energy)
-        momentum.idx[storage] = idx
 
         return momentum
 

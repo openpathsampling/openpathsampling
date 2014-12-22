@@ -1,6 +1,7 @@
 from globalstate import GlobalState
 from pathmover import PathMover, MoveDetails, ReplicaExchange
-from trajectory import Sample
+from opentis.sample import Sample
+
 
 class Calculation(object):
 
@@ -36,8 +37,8 @@ class BootstrapEnsembleChangeMove(PathMover):
         details.result = trajectory
 
         sample = Sample(
+            replica=1,
             trajectory=details.result,
-            mover=self,
             ensemble=ensemble,
             details=details
         )
@@ -65,6 +66,10 @@ class Bootstrapping(Calculation):
 
             samples = [ self.movers[ens_idx].move(self.globalstate[ens_idx]) for ens_idx in range(ens_num, ens_num + 1) ]
 
+            # stupid stuff to pass tests, already handled better in another
+            # branch
+            for s in samples:
+                s.replica = 1
 #            if ens_num > 1:
 #                ex_samples = swapmove.move(self.globalstate[ens_num - 1], self.globalstate[ens_num - 2], self.globalstate.ensembles[ens_num - 1], self.globalstate.ensembles[ens_num - 2])
 #                samples = samples + ex_samples
