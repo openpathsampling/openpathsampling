@@ -177,6 +177,9 @@ class PathMover(object):
 
         self.idx = dict()
 
+        initialization_logging(logger=init_log, obj=self,
+                               entries=['replicas', 'ensembles'])
+
     def legal_sample_set(self, globalstate, ensembles=None):
         '''
         This returns all the samples from globalstate which are in both
@@ -273,6 +276,8 @@ class ShootMover(PathMover):
         self.length_stopper = PathMover.engine.max_length_stopper
         self.extra_details = ['start', 'start_point', 'trial',
                               'final_point']
+        initialization_logging(logger=init_log, obj=self,
+                               entries=['selector'])
 
     def selection_probability_ratio(self, details):
         '''
@@ -467,6 +472,8 @@ class EnsembleHopMover(PathMover):
         # ensembles -- another version might take a value for each ensemble,
         # and use the ratio; this latter is better for CITIS
         self.bias = bias
+        initialization_logging(logger=init_log, obj=self,
+                               entries=['bias'])
 
     def move(self, globalstate):
         # ensemble hops are in the order [from, to]
@@ -599,3 +606,4 @@ class PathMoverFactory(object):
     @staticmethod
     def NearestNeighborRepExSet():
         pass
+
