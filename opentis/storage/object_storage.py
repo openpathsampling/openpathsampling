@@ -344,7 +344,6 @@ class ObjectStorage(object):
 
         self.storage.sync()
 
-
     def init_variable(self, name, var_type, dimensions = None, units=None, description=None):
         '''
         Create a new variable in the netcdf storage. This is just a helper function to structure the code better.

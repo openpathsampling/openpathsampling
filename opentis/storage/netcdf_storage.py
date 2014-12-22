@@ -14,6 +14,7 @@ import simtk.unit as u
 from object_storage import ObjectStorage
 from trajectory_store import TrajectoryStorage, SampleStorage
 from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
+from engine_store import DynamicsEngineStorage
 from ensemble_store import EnsembleStorage
 from opentis.shooting import ShootingPointSelector, ShootingPoint
 from opentis.pathmover import PathMover, MoveDetails
@@ -107,7 +108,7 @@ class Storage(netcdf.Dataset):
         self.shootingpoint = ObjectStorage(self, ShootingPoint, named=False, json=True).register()
         self.shootingpointselector = ObjectStorage(self, ShootingPointSelector, named=False, json=True, identifier='json').register()
         self.globalstate = ObjectStorage(self, GlobalState, named=True, json=True, identifier='json').register()
-        # self.engine = ObjectStorage(self, Engine, named=True, json=True, identifier='json').register()
+        self.engine = DynamicsEngineStorage(self).register()
         self.collectivevariable = ObjectDictStorage(self, OrderParameter, Snapshot).register()
         self.cv = self.collectivevariable
 
@@ -134,7 +135,7 @@ class Storage(netcdf.Dataset):
             self.write_str('topology', self.simplifier.to_json(self.simplifier.topology_to_dict(self.topology)))
 
             # Save the initial configuration
-            self.configuration.save(template)
+            self.snapshot.save(template)
 
             self.createVariable('template_idx', 'i4', 'scalar')
             self.variables['template_idx'][:] = template.idx[self]
@@ -315,6 +316,8 @@ class Storage(netcdf.Dataset):
             the class name of the BaseClass of the stored object, which is needed when loading the object
             to identify the correct storage
         """
+
+
         if type(obj) is list:
             return [ self.save(part, *args, **kwargs) for part in obj]
         elif type(obj) is tuple:

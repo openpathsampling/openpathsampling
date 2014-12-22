@@ -8,6 +8,7 @@ Created on 01.07.2014
 from opentis.trajectory import Trajectory
 from opentis.ensemble import LengthEnsemble
 import simtk.unit as u
+from wrapper import storable
 
 #=============================================================================
 # SOURCE CONTROL
@@ -19,6 +20,7 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 # Multi-State Transition Interface Sampling
 #=============================================================================
 
+@storable
 class DynamicsEngine(object):
     '''
     Class to wrap a simulation tool to store the context and rerun, needed
@@ -136,13 +138,13 @@ class DynamicsEngine(object):
                             if my_options[variable].unit.is_compatible(default_value):
                                 okay_options[variable] = my_options[variable]
                             else:
-                                raise ValueError('Unit of option "' + variable + '" (' + str(my_options[variable].unit) + ') not compatible to "' + str(default_value.unit) + '"')
+                                raise ValueError('Unit of option "' + str(variable) + '" (' + str(my_options[variable].unit) + ') not compatible to "' + str(default_value.unit) + '"')
 
                         elif type(my_options[variable]) is list:
                             if type(my_options[variable][0]) is type(default_value[0]):
                                 okay_options[variable] = my_options[variable]
                             else:
-                                raise ValueError('List elements for option "' + variable + '" must be of type "' + type(default_value[0]) + '"')
+                                raise ValueError('List elements for option "' + str(variable) + '" must be of type "' + str(type(default_value[0])) + '"')
                         else:
                             okay_options[variable] = my_options[variable]
                     elif isinstance(type(my_options[variable]), type(default_value)):
@@ -150,7 +152,7 @@ class DynamicsEngine(object):
                     elif default_value is None:
                         okay_options[variable] = my_options[variable]
                     else:
-                        raise ValueError('Type of option "' + variable + '" (' + type(my_options[variable]) + ') is not "' + type(default_value) + '"')
+                        raise ValueError('Type of option "' + str(variable) + '" (' + str(type(my_options[variable])) + ') is not "' + str(type(default_value)) + '"')
 
             self.options = okay_options
 
