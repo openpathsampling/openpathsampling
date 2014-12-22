@@ -1,32 +1,14 @@
 import numpy as np
-import mdtraj as md
 
 from object_storage import ObjectStorage
 from wrapper import savecache, loadcache
-from trajectory import Trajectory, Sample
-from snapshot import Configuration, Momentum, Snapshot
+from opentis.trajectory import Trajectory
 
 
 class TrajectoryStorage(ObjectStorage):
 
     def __init__(self, storage):
         super(TrajectoryStorage, self).__init__(storage, Trajectory)
-
-    def length(self, idx):
-        '''
-        Return the length of a trajectory from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the trajectory
-
-        Returns
-        -------
-        length : int
-            Number of frames in the trajectory
-        '''
-        return super(TrajectoryStorage, self).length('trajectory_snapshot', idx)
 
     @savecache
     def save(self, trajectory, idx=None):
@@ -49,15 +31,8 @@ class TrajectoryStorage(ObjectStorage):
         # Check if all snapshots are saved
         map(self.storage.snapshot.save, trajectory)
 
-        # Find a free position to save snapshot ids
-        begin = self.free_begin('trajectory_snapshot')
-        length = len(trajectory)
-
-        print 'IDX:', idx
-        self.set_slice('trajectory', idx, begin, length)
-
         values = self.list_to_numpy(trajectory, 'snapshot')
-        self.storage.variables['trajectory_snapshot_idx'][begin:begin+length] = values
+        self.storage.variables['trajectory_snapshot_idx'][idx] = values
 
     def snapshot_indices(self, idx):
         '''
@@ -73,7 +48,7 @@ class TrajectoryStorage(ObjectStorage):
         '''
 
         # get the values
-        values = self.storage.variables['trajectory_snapshot_idx'][self.get_slice('trajectory', idx)]
+        values = self.storage.variables['trajectory_snapshot_idx'][idx]
 
         # typecast to integer
         return self.list_from_numpy(values, 'index')
@@ -94,13 +69,12 @@ class TrajectoryStorage(ObjectStorage):
             the trajectory
         '''
 
-        values = self.storage.variables['trajectory_snapshot_idx'][self.get_slice('trajectory', idx)]
+        values = self.storage.variables['trajectory_snapshot_idx'][idx]
 
         # typecast to snapshot
         snapshots = self.list_from_numpy(values, 'snapshot')
 
         trajectory = Trajectory(snapshots)
-        trajectory.idx[self.storage] = idx
 
         return trajectory
 
@@ -122,7 +96,7 @@ class TrajectoryStorage(ObjectStorage):
 
         return [ frames[idx[i]:idx[i] + length[i] ] for i in range(1, n_traj + 1) ]
 
-    def _init(self):
+    def _init(self, units=None):
         """
         Initialize the associated storage to allow for trajectory storage
 
@@ -132,91 +106,10 @@ class TrajectoryStorage(ObjectStorage):
         # index associated storage in class variable for all Trajectory instances to access
         ncfile = self.storage
 
-        self.init_dimension('trajectory_snapshot')
-        self.init_mixed('trajectory')
-        self.init_variable('trajectory_snapshot_idx', 'index', 'trajectory_snapshot',
-            description="trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'."
+#        self.init_dimension('trajectory_snapshot')
+#        self.init_mixed('trajectory')
+
+        self.init_variable('trajectory_snapshot_idx', 'index', 'trajectory',
+            description="trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.",
+            variable_length = True
         )
-
-class SampleStorage(ObjectStorage):
-    def __init__(self, storage):
-        super(SampleStorage, self).__init__(storage, Sample)
-
-    @savecache
-    def save(self, sample, idx=None):
-        """
-        Add the current state of the sample in the database. If nothing has changed then the sample gets stored using the same snapshots as before. Saving lots of diskspace
-
-        Parameters
-        ----------
-        sample : Sample()
-            the sample to be saved
-        idx : int or None
-            if idx is not None the index will be used for saving in the storage. This might overwrite already existing trajectories!
-
-        Notes
-        -----
-        This also saves all contained frames in the sample if not done yet.
-        A single Sample object can only be saved once!
-        """
-
-        if idx is not None:
-            self.storage.trajectory.save(sample.trajectory)
-            self.set_object('sample_trajectory', idx, sample.trajectory)
-
-            self.storage.ensemble.save(sample.ensemble)
-            self.set_object('sample_ensemble', idx, sample.ensemble)
-
-            self.storage.pathmover.save(sample.mover)
-            self.set_object('sample_mover', idx, sample.mover)
-
-            self.storage.movedetails.save(sample.details)
-            self.set_object('sample_details', idx, sample.details)
-
-            self.save_variable('sample_step', idx, sample.time)
-
-    @loadcache
-    def load(self, idx, momentum = True):
-        '''
-        Return a sample from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the sample (counts from 1)
-
-        Returns
-        -------
-        sample : Sample
-            the sample
-        '''
-        trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
-        ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
-        mover_idx = int(self.storage.variables['sample_mover_idx'][idx])
-        details_idx = int(self.storage.variables['sample_details_idx'][idx])
-        step=self.load_variable('sample_step', idx)
-
-
-        obj = Sample(
-            trajectory=self.storage.trajectory.load(trajectory_idx, lazy=True),
-            mover=self.storage.pathmover.load(mover_idx, lazy=True),
-            ensemble=self.storage.ensemble.load(ensemble_idx),
-            details=self.storage.movedetails.load(details_idx),
-            step=step
-        )
-
-        return obj
-
-    def _init(self):
-        """
-        Initialize the associated storage to allow for sample storage
-
-        """
-        super(SampleStorage, self)._init()
-
-        # New short-hand definition
-        self.init_variable('sample_trajectory_idx', 'index')
-        self.init_variable('sample_ensemble_idx', 'index')
-        self.init_variable('sample_mover_idx', 'index')
-        self.init_variable('sample_details_idx', 'index')
-        self.init_variable('sample_step', 'index')

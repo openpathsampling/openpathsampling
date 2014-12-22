@@ -1,13 +1,14 @@
-from wrapper import storable
+from opentis.wrapper import storable
 
 @storable
 class GlobalState(dict):
     """
     Notes
     =====
-    I would suggest to add the timestamp to the GlobalState object and store it separately and not include
-    the timestamp in the samples since these might be saved before a timestamp is set and thus we have
-    mutable objects the might screw up the storage
+    I would suggest to add the timestamp to the GlobalState object and store
+    it separately and not include the timestamp in the samples since these
+    might be saved before a timestamp is set and thus we have mutable
+    objects the might screw up the storage
     """
 
     current = None       # global current state
@@ -48,6 +49,10 @@ class GlobalState(dict):
         else:
             return dict.__getitem__(self, item)
 
+    def __repr__(self):
+        return repr([ self[ens] for ens in self._ensembles ])
+
+
     @property
     def size(self):
         """
@@ -84,10 +89,11 @@ class GlobalState(dict):
         """
         return [ self[ensemble] for ensemble in self._ensembles]
 
-    def move(self, samples):
+    def apply_samples(self, samples):
         """
-        Returns a new GlobalState object that takes the current instance and applies the samples in the given order as updates.
-        The samples will get the actual timestamp for later analysis.
+        Returns a new GlobalState object that takes the current instance and
+        applies the samples in the given order as updates.  The samples will
+        get the actual timestamp for later analysis.
 
         Parameters
         ==========
@@ -103,6 +109,9 @@ class GlobalState(dict):
         globalstate.now = self.step + 1
         globalstate.old = self
         self.samples = samples
+        for ensemble in self.ensembles:
+            globalstate[ensemble] = self[ensemble]
+
         for sample in samples:
             sample.time = self.step
 
@@ -113,8 +122,9 @@ class GlobalState(dict):
 
     def save_samples(self, storage):
         """
-        Save all samples in the current GlobalState object. This should be called after a move has generated a new object since then
-        all samples will get a timestamp that is associated with this
+        Save all samples in the current GlobalState object. This should be
+        called after a move has generated a new object since then all
+        samples will get a timestamp that is associated with this
 
         Parameters
         ==========
@@ -122,3 +132,4 @@ class GlobalState(dict):
             the underlying netcdf file to be used for storage
         """
         map(storage.sample.save, self.samples)
+

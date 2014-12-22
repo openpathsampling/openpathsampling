@@ -1,10 +1,11 @@
 import copy
-import json
 
 import yaml
 import numpy as np
 
 from wrapper import savecache, saveidentifiable, loadcache
+from util import StorableObjectJSON
+import simtk.unit as u
 
 def add_storage_name(func):
     def inner(self, name, *args, **kwargs):
@@ -23,17 +24,38 @@ class StoredObject(object):
 
     pass
 
+# TODO: Combine the cache and all_names to be stored in one bis dict
+
 class ObjectStorage(object):
     """
     Base Class for storing complex objects in a netCDF4 file. It holds a reference to the store file.
     """
 
-    def __init__(self, storage, obj, named=False, json=False, identifier=None):
+    def __init__(self, storage, obj, named=False, json=False, identifier=None, dimension_units=None):
         """
+        Attributes
+        ----------
 
-        :param storage: a reference to the netCDF4 file
-        :param obj: a reference to the Class to be stored
-        :return:
+        storage : Storage
+        content_class : class
+            a reference to the class type to be stored using this Storage
+        idx_dimension : str
+            name of the dimension used for major numbering the stored object in the netCDF file.
+            This is usually the lowercase class name
+        cache : dict {int : object}
+            A dictionary pointing to the actual stored object by index. It is filled at saving or loading
+        named : bool
+            Set, if objects can also be loaded by a string identifier/name
+        json : string
+            if already computed a JSON Serialized string of the object
+        all_names : dict
+            same as cache but for names
+        simplifier : util.StorableObjectJSON
+            an instance of a JSON Serializer
+        identifier : str
+            name of the netCDF variable that contains the string to be identified by
+
+
         """
         self.storage = storage
         self.content_class = obj
@@ -43,12 +65,37 @@ class ObjectStorage(object):
         self.named = named
         self.json = json
         self.all_names = None
+        self.simplifier = StorableObjectJSON(storage)
+        self._names_loaded = False
         if identifier is not None:
             self.identifier = self.idx_dimension + '_' + identifier
         else:
             self.identifier = None
 
+        if dimension_units is not None:
+            self.dimension_units = dimension_units
+        else:
+            self.dimension_units = {}
+
+    @property
+    def units(self):
+        """
+        Return the units dictionary used in the attached storage
+
+        Returns
+        -------
+        units : dict of {str : simtk.unit.Unit }
+            representing a dict of string representing a dimension ('length', 'velocity', 'energy')
+            pointing to the simtk.unit.Unit to be used
+
+        """
+        return self.storage.units
+
     def register(self):
+        self.storage._storages[self.content_class] = self
+        self.storage._storages[self.content_class.__name__] = self
+        self.storage._storages[self.content_class.__name__.lower()] = self
+
         self.storage.links.append(self)
         return self
 
@@ -86,7 +133,14 @@ class ObjectStorage(object):
 
         return None
 
-    def index(self, obj, idx=None, ):
+    def update_name_cache(self):
+        if self.named:
+            for idx, name in enumerate(self.variables[self.db + "_name"][:]):
+                self.cache[name] = idx
+
+            self._names_loaded = True
+
+    def index(self, obj, idx=None):
         """
         Return the appropriate index for saving or None if the object is already stored!
 
@@ -121,6 +175,30 @@ class ObjectStorage(object):
     def to_cache(self, obj):
         self.cache[obj.idx[self.storage]] = obj
 
+    def iterator(this, iter_range = None):
+        class ObjectIterator:
+            def __init__(self):
+                self.storage = this
+                if iter_range is None:
+                    self.idx = 0
+                    self.end = self.storage.count()
+                else:
+                    self.idx = iter_range.start
+                    self.end = iter_range.stop
+
+            def __iter__(self):
+                return self
+
+            def next(self):
+                if self.idx < self.storage.count():
+                    obj = self.storage.load(self.idx)
+                    self.idx += 1
+                    return obj
+                else:
+                    raise StopIteration()
+
+        return ObjectIterator()
+
     @loadcache
     def load(self, idx, lazy=True):
         '''
@@ -146,6 +224,9 @@ class ObjectStorage(object):
         '''
         Returns an object from the storage. Needs to be implented from the specific storage class.
         '''
+
+        if self.named and hasattr(obj, 'name'):
+            self.storage.variables[self.db + '_name'][idx] = obj.name
 
         self.save_json(self.idx_dimension + '_json', idx, obj)
 
@@ -210,7 +291,7 @@ class ObjectStorage(object):
         '''
         return self.count()
 
-    def _init(self):
+    def _init(self, units=None):
         """
         Initialize the associated storage to allow for object storage. Mainly creates an index dimension with the name of the object.
 
@@ -263,8 +344,7 @@ class ObjectStorage(object):
 
         self.storage.sync()
 
-
-    def init_variable(self, name, var_type, dimensions = None, units=None, description=None):
+    def init_variable(self, name, var_type, dimensions = None, units=None, description=None, variable_length=False):
         '''
         Create a new variable in the netcdf storage. This is just a helper function to structure the code better.
 
@@ -273,17 +353,24 @@ class ObjectStorage(object):
         name : str
             The name of the variable to be created
         var_type : str
-            The string representing the type of the data stored in the variable. Either the netcdf types can be used directly and
+            The string representing the type of the data stored in the variable.
+            Either the netcdf types can be used directly and
             strings representing the python native types are translated to appropriate netcdf types.
         dimensions : str or tuple of str
-            A tuple representing the dimensions used for the netcdf variable. If not specified then the default dimension of the storage is used.
+            A tuple representing the dimensions used for the netcdf variable.
+            If not specified then the default dimension of the storage is used.
         units : str
             A string representing the units used if the var_type is `float` the units is set to `none`
         description : str
             A string describing the variable in a readable form.
+        variable_length : bool
+            If true the variable is treated as a variable length (list) of the given type. A built-in example
+            for this type is a string which is a variable length of char. This make using all the
+            mixed stuff superfluous
         '''
 
         ncfile = self.storage
+
 
         if dimensions is None:
             dimensions = self.db
@@ -292,25 +379,47 @@ class ObjectStorage(object):
         if var_type == 'float':
             nc_type = 'f4'   # 32-bit float
         elif var_type == 'int':
-            nc_type = 'i4'   # 32-bit signed integer
+            nc_type = np.int32   # 32-bit signed integer
         elif var_type == 'index':
-            nc_type = 'i4'   # 32-bit signd integer / for indices / -1 indicates no index (None)
+            nc_type = np.int32   # 32-bit signed integer / for indices / -1 indicates no index (None)
         elif var_type == 'length':
-            nc_type = 'i4'   # 32-bit signed integer / for indices / -1 indicated no length specified (None)
+            nc_type = np.int32   # 32-bit signed integer / for indices / -1 indicated no length specified (None)
         elif var_type == 'bool':
-            nc_type = 'i1'   # 8-bit signed integer for boolean
+            nc_type = np.uint8   # 8-bit signed integer for boolean
         elif var_type == 'str':
             nc_type = 'str'
 
-        ncvar = ncfile.createVariable(name, nc_type, dimensions)
+        if variable_length:
+            vlen_t = self.storage.createVLType(nc_type, name + '_vlen')
+            ncvar = ncfile.createVariable(name, vlen_t, dimensions)
+        else:
+            ncvar = ncfile.createVariable(name, nc_type, dimensions)
 
         if var_type == 'float' or units is not None:
 
-            if units is None:
-                units = 'none'
+            unit_instance = u.Unit({})
+            symbol = 'none'
+
+            if isinstance(units, u.Unit):
+                unit_instance = units
+                symbol = unit_instance.get_symbol()
+            elif isinstance(units, u.BaseUnit):
+                unit_instance = u.Unit({units : 1.0})
+                symbol = unit_instance.get_symbol()
+            elif type(units) is str and hasattr(u, units):
+                unit_instance = getattr(u, units)
+                symbol = unit_instance.get_symbol()
+            elif type(units) is str and units is not None:
+                symbol = units
+
+            json_unit = self.simplifier.unit_to_json(unit_instance)
+
+            # store the unit in the dict inside the Storage object for fast access
+            self.storage.units[name] = unit_instance
 
             # Define units for a float variable
-            setattr(ncvar,      'units', units)
+            setattr(ncvar,      'unit_simtk', json_unit)
+            setattr(ncvar,      'unit', symbol)
 
         if description is not None:
             # Define long (human-readable) names for variables.
@@ -351,24 +460,24 @@ class ObjectStorage(object):
 
     def load_json(self, name, idx, obj = None):
         idx = int(idx)
-        json_string = self.storage.variables[name][idx]
-        simplified = yaml.load(json_string)
         if obj is None:
             obj = StoredObject()
 
+        json_string = self.storage.variables[name][idx]
         setattr(obj, 'json', json_string)
 
-        data = self._build_var(simplified[2])
+        simplified = yaml.load(json_string)
+        data = self.simplifier.build(simplified[2])
         for key, value in data.iteritems():
             setattr(obj, key, value)
 
-        setattr(obj, 'cls', simplified[1])
+        setattr(obj, 'cls', simplified[0])
 
         return obj
 
     def save_json(self, name, idx, obj):
         if not hasattr(obj,'json'):
-            setattr(obj,'json',self.object_to_json(obj))
+            setattr(obj, 'json', self.object_to_json(obj))
 
         self.storage.variables[name][idx] = obj.json
 
@@ -379,37 +488,12 @@ class ObjectStorage(object):
     def object_to_json(self, obj):
         data = obj.__dict__
         cls = obj.__class__.__name__
-        store = obj.cls
+#        store = obj.cls
+        store = ""
 
-        simplified = self._simplify_var([cls, store, data])
-        json_string = json.dumps(simplified)
+        json_string = self.simplifier.to_json([cls, store, data])
 
         return json_string
-
-    def _simplify_var(self,obj):
-        if type(obj).__module__ != '__builtin__':
-            if hasattr(obj, 'cls'):
-                getattr(self.storage, obj.cls).save(obj)
-                return { 'idx' : obj.idx[self.storage], 'cls' : obj.cls}
-            else:
-                return None
-        elif type(obj) is list:
-            return [self._simplify_var(o) for o in obj]
-        elif type(obj) is dict:
-            return {key : self._simplify_var(o) for key, o in obj.iteritems() if type(key) is str and key != 'idx' and key != 'json' and key != 'identifier'}
-        else:
-            return obj
-
-    def _build_var(self,obj):
-        if type(obj) is dict:
-            if 'cls' in obj:
-                return getattr(self.storage, obj['cls']).load(obj['idx'])
-            else:
-                return {key : self._build_var(o) for key, o in obj.iteritems()}
-        elif type(obj) is list:
-            return [self._build_var(o) for o in obj]
-        else:
-            return obj
 
     def list_to_numpy(self, data, value_type, allow_empty = True):
         if value_type == 'int':
@@ -417,15 +501,15 @@ class ObjectStorage(object):
         elif value_type == 'float':
             values = np.array(data).astype(np.float32)
         elif value_type == 'bool':
-            values = np.array(data).astype(np.int8)
+            values = np.array(data).astype(np.uint8)
         elif value_type == 'index':
-            values = np.array(data).astype(np.uint32)
+            values = np.array(data).astype(np.int32)
         elif value_type == 'length':
-            values = np.array(data).astype(np.uint32)
+            values = np.array(data).astype(np.int32)
         else:
             # an object
-            values = [ -1  if value is None and allow_empty is True else value.idx[self.storage] for value in data]
-            values = np.array(values).astype(np.uint32)
+            values = [-1 if value is None and allow_empty is True else value.idx[self.storage] for value in data]
+            values = np.array(values).astype(np.int32)
 
         return values.copy()
 
@@ -443,7 +527,7 @@ class ObjectStorage(object):
         else:
             # an object
             key_store = getattr(self.storage, value_type)
-            data = [ key_store.load(obj_idx) if allow_empty is False or obj_idx>=0 else None for obj_idx in values.tolist() ]
+            data = [key_store.load(obj_idx) if allow_empty is False or obj_idx >= 0 else None for obj_idx in values.tolist()]
 
         return data
 
@@ -476,3 +560,17 @@ class ObjectStorage(object):
     def set_list_as_type(self, name, idx, begin, data, value_type):
         values = self.list_to_numpy(data, value_type)
         self.storage.variables[name][idx, begin:begin+len(data)] = values
+
+#=============================================================================================
+# ORDERPARAMETER UTILITY FUNCTIONS
+#=============================================================================================
+
+    @property
+    def op_idx(self):
+        """
+        Returns aa function that returns for an object of this storage the idx
+        """
+        def idx(obj):
+            return obj.idx[self.storage]
+
+        return idx

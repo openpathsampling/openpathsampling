@@ -7,7 +7,9 @@ import copy
 
 import numpy as np
 import mdtraj as md
-from simtk.unit import nanometers
+import simtk.unit as u
+
+from opentis.snapshot import Snapshot, Configuration, Momentum
 
 
 #=============================================================================================
@@ -23,7 +25,7 @@ class Trajectory(list):
 
     """
     
-    simulator = None
+    engine = None
     use_lazy = True    # We assume that snapshots are immutable. That should safe a lot of time to copy trajectories
 
 
@@ -55,10 +57,15 @@ class Trajectory(list):
             else:
                 for snapshot in trajectory:
                     snapshot_copy = copy.deepcopy(snapshot)
-                    self.forward(snapshot_copy)
+                    self.append(snapshot_copy)
         else:
             self.atom_indices = None
 
+    def __str__(self):
+        return 'Trajectory[' + str(len(self)) + ']'
+
+    def __repr__(self):
+        return 'Trajectory[' + str(len(self)) + ']'
 
     @property
     def reversed(self):
@@ -303,12 +310,12 @@ class Trajectory(list):
         nframes = len(self)
 
         # Compute activity of component A.
-        K = 0.0 * nanometers**2
+        K = 0.0 * u.nanometers**2
         for frame_index in range(nframes-1):
             # Compute displacement of all atoms.
             delta_r = self[frame_index+1].coordinates - self[frame_index].coordinates
             # Compute contribution to activity K.
-            K += ((delta_r[0:self.N,:] / nanometers)**2).sum() * (nanometers**2)
+            K += ((delta_r[0:self.N,:] / u.nanometers)**2).sum() * (u.nanometers**2)
 
         return K 
     
@@ -359,15 +366,16 @@ class Trajectory(list):
     @property
     def solute(self):
         """
-        Reduce the view of the trajectory to a subset of solute atoms specified in the associated Simulator
+        Reduce the view of the trajectory to a subset of solute atoms
+        specified in the associated DynamicsEngine
         
         Returns
         -------        
         trajectory : Trajectory
             the trajectory showing the subsets of solute atoms
-        """        
+        """
 
-        return self.subset(Trajectory.simulator.solute_indices)
+        return self.subset(Trajectory.engine.solute_indices)
 
     def full(self):
         """
@@ -387,8 +395,9 @@ class Trajectory(list):
         Parameters
         ----------
         topology : mdtraj.Topology()
-            If not None this topology will be used to construct the mdtraj objects otherwise
-            the topology object will be taken from the configurations in the trajectory snapshots.
+            If not None this topology will be used to construct the mdtraj
+            objects otherwise the topology object will be taken from the
+            configurations in the trajectory snapshots.
         
         Returns
         -------        
@@ -402,11 +411,43 @@ class Trajectory(list):
         output = self.coordinates()
 
         return md.Trajectory(output, topology)
-                
-    
+
+    @staticmethod
+    def from_mdtraj(mdtrajectory):
+        """
+        Construct a Trajectory object from an mdtraj.Trajectory object
+
+        Parameters
+        ----------
+        mdtrajectory : mdtraj.Trajectory
+            Input mdtraj.Trajectory
+
+        Returns
+        -------
+        Trajectory
+        """
+        trajectory = Trajectory()
+        empty_momentum = Momentum()
+        empty_momentum.velocities = None
+        for frame_num in range(mdtrajectory.n_frames):
+            # mdtraj trajectories only have coordinates and box_vectors
+            coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
+            if mdtrajectory.unitcell_vectors is not None:
+                box_v = u.Quantity(mdtrajectory.unitcell_vectors[frame_num],
+                                 u.nanometers)
+            else:
+                box_v = None
+            config = Configuration(coordinates=coord, box_vectors=box_v)
+
+            snap = Snapshot(configuration=config, momentum=empty_momentum)
+            trajectory.append(snap)
+
+        return trajectory
+
     def md_topology(self):
         """
-        Return a mdtraj.Topology object representing the topology of the current view of the trajectory
+        Return a mdtraj.Topology object representing the topology of the
+        current view of the trajectory
         
         Returns
         -------        
@@ -415,44 +456,17 @@ class Trajectory(list):
 
         Notes
         -----
-        This is taken from the configuration of the first frame. Otherwise there is still un ugly fall-back to look
-        for an openmm.Simulation object in Trajectory.simulator. and construct an mdtraj.Topology from this.
+        This is taken from the configuration of the first frame. Otherwise
+        there is still un ugly fall-back to look for an openmm.Simulation
+        object in Trajectory.engine. and construct an mdtraj.Topology
+        from this.
         """        
 
         if len(self) > 0 and self[0].topology is not None:
             # if no topology is defined
             topology = self[0].topology
-        else:
-            # TODO: kind of ugly fall-back, but helps for now
-            topology = md.Topology.from_openmm(Trajectory.simulator.simulation.topology)
-        
+
         if self.atom_indices is not None:
             topology = topology.subset(self.atom_indices)       
         
         return topology
-
-
-@storable
-class Sample(object):
-    """
-    A Sample is the return object from a PathMover and contains all information about the move, initial trajectories,
-    new trajectories (both as references). IF a Mover does several moves at a time (e.g. a swap) then
-    a separate move object for each resulting trajectory is returned
-    """
-
-    def __init__(self, trajectory=None,  mover=None, ensemble=None, details=None, step=-1):
-        self.idx = dict()
-
-        self.mover = mover
-        self.ensemble = ensemble
-        self.trajectory = trajectory
-        self.details = details
-        self.step=step
-
-    def __call__(self):
-        return self.trajectory
-
-    @staticmethod
-    def set_time(step, samples):
-        for sample in samples:
-            sample.step = step

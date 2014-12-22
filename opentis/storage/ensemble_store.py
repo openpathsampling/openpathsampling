@@ -1,5 +1,5 @@
 from object_storage import ObjectStorage
-from ensemble import Ensemble, LoadedEnsemble
+from opentis.ensemble import Ensemble, LoadedEnsemble
 from wrapper import loadcache
 
 class EnsembleStorage(ObjectStorage):
@@ -54,7 +54,7 @@ class EnsembleStorage(ObjectStorage):
         return None
 
     @loadcache
-    def load(self, idx, momentum = True):
+    def load(self, idx):
         '''
         Return a ensemble from the storage
 
@@ -73,7 +73,6 @@ class EnsembleStorage(ObjectStorage):
         description = self.storage.variables['ensemble_str'][int(idx)]
 
         obj = LoadedEnsemble(name=name, description=description)
-        obj.idx[self.storage] = idx
 
         return obj
 

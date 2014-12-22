@@ -1,0 +1,20 @@
+package:
+  name: opentis
+  version: !!str dev
+
+requirements:
+  build:
+    - python
+    - numpy
+#    - mdtraj
+#    - openmm
+    - setuptools
+
+  run:
+    - python
+#    - openmm
+#    - mdtraj
+
+about:
+  home: https://github.com/choderalab/opentis
+  license: GNU Lesser General Public License v2 or later (LGPLv2+)

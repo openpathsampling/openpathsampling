@@ -5,7 +5,6 @@
 from msmbuilder.metrics import RMSD
 from trajectory import Trajectory
 from snapshot import Configuration, Snapshot
-import numpy as np
 from wrapper import storable
 class ObjectDict(dict):
     """
@@ -158,7 +157,6 @@ class StorableObjectDict(ObjectDict):
         return "{ 'memory' : " + dict.__str__(self) + ", 'storages' : " + str(self.storage_caches) + " }"
 
 
-
 class FunctionalStorableObjectDict(StorableObjectDict):
     """
     A simple dict implementation that will call a function for unknown values
@@ -224,6 +222,12 @@ class FunctionalStorableObjectDict(StorableObjectDict):
         else:
             return []
 
+    def get_transformed_view(self, transform):
+        def fnc(obj):
+            return transform(self(obj))
+
+        return fnc
+
 
 class OrderParameter(FunctionalStorableObjectDict):
     """
@@ -247,7 +251,16 @@ class OrderParameter(FunctionalStorableObjectDict):
 
     """
 
+    _instances = dict()
+
     def __init__(self, name, dimensions = 1):
+        if type(name) is str and len(name) == 0:
+            raise ValueError('name must be a non-empty string')
+
+        if name in OrderParameter._instances:
+            raise ValueError(name + ' already exists as an orderparameter. To load an existing one use get_existin(\'' + name + '\')')
+
+        OrderParameter._instances[name] = self
         super(OrderParameter, self).__init__(
             name=name,
             fnc=None,
@@ -255,9 +268,27 @@ class OrderParameter(FunctionalStorableObjectDict):
             key_class=Configuration
         )
 
+    def get_existing(self, name):
+        if name in OrderParameter._instances:
+            return OrderParameter._instances[name]
+        else:
+            raise ValueError(name + ' does not exist as an orderparameter')
+            return None
+
     @property
     def identifier(self):
         return self.name
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+
+        if type(other) is type(self):
+            if hasattr(self, 'name') and hasattr(other, 'name'):
+                if self.name is not None and other.name is not None:
+                    return self.name == other.name
+
+        return False
 
     def __call__(self, items):
         if isinstance(items, Snapshot):
@@ -420,6 +451,26 @@ class OP_MD_Function(OrderParameter):
 
         t = trajectory.md(self.topology)
         return self.fcn(t, *args, **self.kwargs)
+
+class OP_Volume(OrderParameter):
+    """
+    Wrapper that turns a Volume, which can be considered a boolean order parameter into an
+    actual OrderParamter()
+    """
+
+    def __init__(self, name, volume):
+        """
+        Parameters
+        ----------
+
+        """
+
+        super(OP_Volume, self).__init__(name)
+        self.volume = volume
+
+    def _eval(self, items):
+        result = [ float(self.volume(item)) for item in items ]
+        return result
 
 
 class OP_Function(OrderParameter):

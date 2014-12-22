@@ -3,8 +3,13 @@ def savecache(func):
         idx = self.index(obj, idx)
         if idx is not None:
             func(self, obj, idx, *args, **kwargs)
-    return inner
 
+        # store the ID in the cache
+        self.cache[idx] = obj
+        if self.named and hasattr(obj, 'name') and obj.name != '':
+            self.cache[obj.name] = obj
+
+    return inner
 
 def saveidentifiable(func):
     def inner(self, obj, idx=None, *args, **kwargs):
@@ -18,6 +23,7 @@ def saveidentifiable(func):
                 # in case we want to save and need the idx
                 obj.idx[self.storage] = find_idx
                 self.cache[find_idx] = obj
+                self.all_names[obj.identifier] = find_idx
             else:
                 func(self, obj, idx, *args, **kwargs)
                 # Finally register with the new idx in the identifier cache dict.
@@ -28,18 +34,46 @@ def saveidentifiable(func):
 
     return inner
 
-
 def loadcache(func):
     def inner(self, idx, *args, **kwargs):
         # TODO: Maybe this functionality should be in a separate function
-        if idx < 0:
+
+        if type(idx) is not str and idx < 0:
             return None
 
-        if idx in self.cache:
-            return self.cache[idx]
+        n_idx = idx
 
-        obj = func(self, idx, *args, **kwargs)
-        self.cache[idx] = obj
+        if idx in self.cache:
+            cc = self.cache[idx]
+            if type(cc) is int:
+                # this happens when we want to load by name (str)
+                # and we need to actually load it
+                n_idx = cc
+            else:
+
+                return self.cache[idx]
+        elif type(idx) is str:
+            if self.named:
+                if not self._names_loaded:
+                    self.update_name_cache()
+                if idx in self.cache:
+                    n_idx = self.cache[idx]
+                else:
+                    raise ValueError('str "' + idx + '" not found in storage')
+            else:
+                raise ValueError('str "' + idx + '" as indices are only allowed in named storage')
+
+            n_idx = self.idx_from_name(idx)
+
+        obj = func(self, n_idx, *args, **kwargs)
+
+        obj.idx[self.storage] = n_idx
+        self.cache[obj.idx[self.storage]] = obj
+
+
+        if self.named and hasattr(obj, 'name') and obj.name != '':
+            self.cache[obj.name] = obj
+
         return obj
     return inner
 
