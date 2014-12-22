@@ -24,7 +24,7 @@ class Calculation(object):
         self.globalstate = SampleSet(samples)
 
     def run(self, nsteps):
-        print "Running an empty calculation? Try a subclass, maybe!"
+        logger.warning("Running an empty calculation? Try a subclass, maybe!")
 
 
 class BootstrapPromotionMove(PathMover):
@@ -38,6 +38,8 @@ class BootstrapPromotionMove(PathMover):
                                                      replicas=replicas)
         self.shooters = shooters
         self.bias = bias
+        initialization_logging(logger=init_log, obj=self,
+                               entries=['bias', 'shooters'])
 
     def move(self, globalstate):
         # the tricky part here is that, if the hop is allowed, we only want
@@ -102,11 +104,10 @@ class BootstrapPromotionMove(PathMover):
                         ensemble=details.result_ensemble,
                         trajectory=details.result,
                         details=details)
-        #print "BootstrapMover: accepted =", details.accepted
-        #print " Shooting part: accepted =", shoot_samp.details.accepted
-        #print "  Hopping part: accepted =", hop_samp.details.accepted
 
-        #print sample.trajectory, sample.details.result
+        logger.debug("BootstrapMover: accepted = " + str(details.accepted))
+        logger.debug(" Shooting part: accepted = " + str(shoot_samp.details.accepted))
+        logger.debug("  Hopping part: accepted = " + str(hop_samp.details.accepted))
 
         return sample
 
@@ -155,7 +156,10 @@ class Bootstrapping(Calculation):
         # if we fail nsteps times in a row, kill the job
 
         while ens_num < len(self.ensembles) - 1 and failsteps < nsteps:
-            print step_num, "Ensemble:", ens_num, "  failsteps=", failsteps
+            logger.info("Step: " + str(step_num) 
+                        + "   Ensemble: " + str(ens_num)
+                        + "  failsteps = " + str(failsteps)
+                       )
             old_rep = max(self.globalstate.replica_list())
             sample = bootstrapmove.move(self.globalstate)
             self.globalstate.apply_samples(sample, step=step_num)

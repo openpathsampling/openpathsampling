@@ -13,6 +13,11 @@ from ensemble import FullEnsemble
 from sample import Sample
 from wrapper import storable
 
+import logging
+from ops_logging import initialization_logging
+logger = logging.getLogger(__name__)
+init_log = logging.getLogger('opentis.initialization')
+
 def make_list_of_pairs(l):
     '''
     Converts input from several possible formats into a list of pairs: used
@@ -306,7 +311,10 @@ class ShootMover(PathMover):
 
         if details.trial_is_in_ensemble:
             rand = np.random.random()
-            print 'Proposal probability', self.selection_probability_ratio(details), '/ random :', rand
+            sel_prob = self.selection_probability_ratio(details)
+            logger.info('Proposal probability ' + str(sel_prob)
+                        + ' / random : ' + str(rand)
+                       )
             if (rand < self.selection_probability_ratio(details)):
                 details.accepted = True
                 details.result = details.trial
@@ -325,7 +333,11 @@ class ForwardShootMover(ShootMover):
     '''
     def _generate(self, details, ensemble):
         shooting_point = details.start_point.index
-        print "Shooting forward from frame %d" % shooting_point
+        shoot_str = "Shooting {sh_dir} from frame {fnum} in [0:{maxt}]"
+        logger.info(shoot_str.format(fnum=details.start_point.index,
+                                     maxt=len(details.start)-1,
+                                     sh_dir="forward"
+                                    ))
         
         # Run until one of the stoppers is triggered
         partial_trajectory = PathMover.engine.generate(
@@ -352,7 +364,11 @@ class BackwardShootMover(ShootMover):
     A pathmover that implements the backward shooting algorithm
     '''
     def _generate(self, details, ensemble):
-        print "Shooting backward from frame %d" % details.start_point.index
+        shoot_str = "Shooting {sh_dir} from frame {fnum} in [0:{maxt}]"
+        logger.info(shoot_str.format(fnum=details.start_point.index,
+                                     maxt=len(details.start)-1,
+                                     sh_dir="backward"
+                                    ))
 
         # Run until one of the stoppers is triggered
         partial_trajectory = PathMover.engine.generate(
