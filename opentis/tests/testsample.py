@@ -147,6 +147,42 @@ class testSampleSet(object):
     def test_apply_samples(self):
         raise SkipTest
 
+    def test_extend(self):
+        testset = SampleSet([self.s0A])
+        testset.extend([self.s1A])
+        assert_equal(len(testset), 2)
+        assert_equal(self.s1A in testset, True)
+        testset.consistency_check()
+
+        testset.extend(SampleSet([self.s2B]))
+        assert_equal(len(testset), 3)
+        assert_equal(self.s2B in testset, True)
+        testset.consistency_check()
+
+        testset.extend(self.s2B_)
+        assert_equal(len(testset), 4)
+        assert_equal(self.s2B_ in testset, True)
+        testset.consistency_check()
+
+    def test_replica_list(self):
+        assert_items_equal(self.testset.replica_list(), [0, 1, 2])
+        self.testset.append(self.s2B_)
+        assert_items_equal(self.testset.replica_list(), [0, 1, 2])
+
+    def test_ensemble_list(self):
+        assert_items_equal(self.testset.ensemble_list(), [self.ensA, self.ensB])
+
+    def test_all_from_ensemble(self):
+        assert_items_equal(self.testset.all_from_ensemble(self.ensA),
+                           [self.s0A, self.s1A])
+        assert_items_equal(self.testset.all_from_ensemble(self.ensB),
+                           [self.s2B])
+
+    def test_all_from_replica(self):
+        assert_items_equal(self.testset.all_from_replica(2), [self.s2B])
+        self.testset.append(self.s2B_)
+        assert_items_equal(self.testset.all_from_replica(2), [self.s2B, self.s2B_])
+
     @raises(AssertionError)
     def test_consistency_fail_size_ensdict(self):
         del self.testset.ensemble_dict[self.ensB]
