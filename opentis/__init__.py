@@ -13,8 +13,6 @@ from snapshot import Snapshot, Configuration, Momentum
 from trajectory import Trajectory
 from opentis.sample import Sample
 
-from globalstate import GlobalState
-
 from orderparameter import OP_Function, OP_MD_Function, OP_Multi_RMSD, \
     OP_RMSD_To_Lambda, OP_Volume, OrderParameter
 
