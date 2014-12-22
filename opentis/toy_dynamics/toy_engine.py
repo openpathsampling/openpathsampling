@@ -78,8 +78,10 @@ class ToyEngine(DynamicsEngine):
 
     @current_snapshot.setter
     def current_snapshot(self, snap):
-        self.positions = np.ravel(snap.configuration.coordinates)[:self.ndim]
-        self.velocities = np.ravel(snap.momentum.velocities)[:self.ndim]
+        coords = np.copy(snap.coordinates)
+        vels = np.copy(snap.velocities)
+        self.positions = np.ravel(coords)[:self.ndim]
+        self.velocities = np.ravel(vels)[:self.ndim]
 
     def generate_next_frame(self):
         self.integ.step(self, self.nsteps_per_frame)
