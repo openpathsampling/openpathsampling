@@ -10,6 +10,7 @@ class SampleKeyError(Exception):
         self.msg = (str(self.key) + " does not match " + str(self.sample_key)
                     + " from " + str(self.sample))
 
+@storable
 class SampleSet(object):
     '''
     SampleSet is essentially a list of samples, with a few conveniences.  It
