@@ -20,7 +20,7 @@ from orderparameter import OP_Function, OP_MD_Function, OP_Multi_RMSD, \
 
 from pathmover import (
     BackwardShootMover, MinusMove, MixedMover, MoveDetails,
-    ForwardShootMover, PathMover, PathMoverFactory, PathReversal,
+    ForwardShootMover, PathMover, PathMoverFactory, PathReversalMover,
     ReplicaExchange#, BootstrapPromotionMove
 )
 

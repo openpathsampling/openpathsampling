@@ -398,13 +398,12 @@ class BackwardShootMover(ShootMover):
 
 class MixedMover(PathMover):
     '''
-    Defines a mover that picks a over from a set of movers with specific
-    weights.
-    
-    Notes
-    -----
-    Channel functions from self.mover to self. Does NOT work yet. Think
-    about a good way to implement this...
+    Chooses a random mover from its movers list, and runs that move. Returns
+    the number of samples the submove return.
+
+    For example, this would be used to select a specific replica exchange
+    such that each replica exchange is its own move, and which swap is
+    selected at random.
     '''
     def __init__(self, movers, ensembles=None, replicas='all', weights = None):
         super(MixedMover, self).__init__(ensembles=ensembles, replicas=replicas)
@@ -415,6 +414,9 @@ class MixedMover(PathMover):
             self.weights = [1.0] * len(movers)
         else:
             self.weights = weights
+
+        initialization_logging(init_log, self,
+                               entries=['movers', 'weights'])
     
     def move(self, trajectory):
         rand = np.random.random() * sum(self.weights)
@@ -435,6 +437,82 @@ class MixedMover(PathMover):
                       details=sample.details,
                      replica=sample.replica)
         return path
+
+class IndependentSequentialMover(PathMover):
+    '''
+    Performs each of the moves in its movers list. Returns all samples
+    generated, in the order of the mover list.
+
+    For example, this would be used to create a move that does a sequence of
+    replica exchanges in a given order, regardless of whether the moves
+    succeed or fail.
+    '''
+    def __init__(self, movers, ensembles=None, replicas='all'):
+        super(IndependentSequentialMover, self).__init__(ensembles=ensembles,
+                                                         replicas=replicas)
+        self.movers = movers
+        initialization_logging(init_log, self, ['movers'])
+
+    def move(self, globalstate):
+        subglobal = SampleSet(self.legal_sample_set(globalstate))
+        mysamples = []
+        for mover in self.movers:
+            newsamples = mover.move(subglobal)
+            subglobal.apply_samples(newsamples)
+            mysamples.extend(mover.move(subglobal))
+        # TODO: add info to all samples for this move
+        return mysamples
+
+class PartialAcceptanceSequentialMover(PathMover):
+    '''
+    Performs eachmove in its movers list until complete of until one is not
+    accepted. If any move is not accepted, further moves are not attempted,
+    but the previous accepted samples remain accepted.
+
+    For example, this would be used to create a bootstrap promotion move,
+    which starts with a shooting move, followed by an EnsembleHop/Replica
+    promotion ConditionalSequentialMover. Even if the EnsembleHop fails, the
+    accepted shooting move should be accepted.
+    '''
+    def __init__(self, movers, ensembles=None, replicas='all'):
+        super(PartialAccpetanceSequentialMover, self).__init__(
+            ensembles=ensembles, replicas=replicas
+        )
+        self.movers = movers
+
+    def move(self, globalstate):
+        subglobal = SampleSet(self.legal_sample_set(globalstate))
+        mysamples = []
+        last_accepted = True
+        for mover in self.movers:
+            newsamples = mover.move(subglobal)
+            # all samples made by the submove; pick the ones up to the first
+            # rejection
+            for sample in newsamples:
+                mysamples.extend(sample)
+                if sample.details.accepted == False:
+                    last_accepted = False
+                    break
+            if last_accepted == False:
+                break
+        # TODO: add info for this mover
+        return mysamples
+
+
+class ConditionalSequentialMover(PartialAcceptanceSequentialMover):
+    '''
+    Performs each move in its movers list until complete or until one is not
+    accepted. If any move in not accepted, all previous samples are updated
+    to have set their acceptance to False.
+
+    For example, this would be used to create a minus move, which consists
+    of first a replica exchange and then a shooting (extension) move. If the
+    replica exchange fails, the move is aborted before doing the dynamics.
+    '''
+    def move(self, globalstate):
+        pass
+
+
 
 class ReplicaIDChange(PathMover):
     def __init__(self, new_replicas=None, old_samples=None, 
@@ -538,7 +616,7 @@ class PathReversalMover(PathMover):
             details.result = trajectory
 
         sample = Sample(
-            replica=replica
+            replica=replica,
             trajectory=details.result,
             ensemble=ensemble,
             details=details
