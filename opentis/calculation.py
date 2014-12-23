@@ -144,6 +144,7 @@ class Bootstrapping(Calculation):
             self.movers = movers
 
     def run(self, nsteps):
+        # TODO: turn off init_log during run loop
         bootstrapmove = BootstrapPromotionMove(bias=None,
                                                shooters=self.movers,
                                                ensembles=self.ensembles,

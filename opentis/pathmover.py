@@ -426,6 +426,9 @@ class MixedMover(PathMover):
             idx += 1
             prob += self.weights[idx]
 
+        logger.info("MixedMover selecting mover index {idx} ({mtype})".format(
+                idx=idx, mtype=self.movers[idx].__class__.__name__))
+
         mover = self.movers[idx]
 
         sample = mover.move(trajectory)
