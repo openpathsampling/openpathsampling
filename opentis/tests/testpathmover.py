@@ -110,3 +110,77 @@ class testPathReversalMover(object):
 
     def test_AB_path(self):
         pass
+
+class testMixedMover(object):
+    def setup(self):
+        pass
+
+    def test_both_get_selected(self):
+        pass
+
+    def test_only_one_gets_run(self):
+        pass
+
+    def test_restricted_by_replica(self):
+        pass
+
+    def test_restricted_by_ensemble(self):
+        pass
+
+class testIndependentSequentialMover(object):
+    def setup(self):
+        pass
+
+    def test_everything_accepted(self):
+        pass
+
+    def test_first_rejected(self):
+        pass
+
+    def test_last_rejected(self):
+        pass
+
+    def test_restricted_by_replica(self):
+        pass
+
+    def test_restricted_by_ensemble(self):
+        pass
+
+class testPartialAcceptanceSequentialMover(object):
+    def setup(self):
+        pass
+
+    def test_everything_accepted(self):
+        pass
+
+    def test_first_rejected(self):
+        pass
+
+    def test_last_rejected(self):
+        pass
+
+    def test_restricted_by_replica(self):
+        pass
+
+    def test_restricted_by_ensemble(self):
+        pass
+
+class testConditionalSequentialMover(object):
+    def setup(self):
+        pass
+
+    def test_everything_accepted(self):
+        pass
+
+    def test_first_rejected(self):
+        pass
+
+    def test_last_rejected(self):
+        pass
+
+    def test_restricted_by_replica(self):
+        pass
+
+    def test_restricted_by_ensemble(self):
+        pass
+
