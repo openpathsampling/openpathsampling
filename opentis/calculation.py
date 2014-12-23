@@ -177,3 +177,30 @@ class Bootstrapping(Calculation):
         for sample in self.globalstate:
             assert sample.ensemble(sample.trajectory) == True, "WTF?"
 
+class PathSampling(Calculation):
+    """
+    General path sampling code. Takes a single root_mover and generates
+    samples from that, keeping one per replica after each move. 
+
+    TODO
+    ----
+        Add a nice syntax for the root_mover, at least allowing us to
+        implicitly combine simultaneous multimovers with mixed movers.
+    """
+
+    calc_name = "PathSampling"
+    def __init__(self, storage, engine=None, root_mover=None,
+                 globalstate=None):
+        super(PathSampling, self).__init__(storage, engine)
+        self.root_mover = root_mover
+        self.globalstate = globalstate
+        initialization_logging(init_log, self, 
+                               ['root_mover', 'globalstate'])
+
+
+    def run(self, nsteps):
+        for step in range(nsteps):
+            samples = self.root_mover.move(self.globalstate)
+            self.globalstate.apply_samples(samples)
+            # TODO: add storage of globalstate
+
