@@ -15,6 +15,10 @@ from opentis.ensemble import LengthEnsemble
 from opentis.sample import SampleSet, Sample
 from opentis.pathmover import *
 
+from opentis.volume import LambdaVolume
+from test_helpers import CallIdentity
+from opentis.ensemble import EnsembleFactory as ef
+
 class testMakeListOfPairs(object):
     def setup(self):
         self.correct = [ [0, 1], [2, 3], [4, 5] ]
@@ -127,10 +131,68 @@ class testMixedMover(object):
     def test_restricted_by_ensemble(self):
         pass
 
-class testIndependentSequentialMover(object):
+class testSequentialMover(object):
     def setup(self):
+        traj = [-0.5, 0.7, 1.1]
+        op = CallIdentity()
+        volA = LambdaVolume(op, -100, 0.0)
+        volB = LambdaVolume(op, 1.0, 100)
+        volX = LambdaVolume(op, -100, 0.25)
+        tis = ef.TISEnsemble(volA, volB, volX)
+        tps = ef.A2BEnsemble(volA, volB)
+        len3 = LengthEnsemble(3)
+        len2 = LengthEnsemble(2)
+        self.hop_to_tis = EnsembleHopMover(ensembles=[[tis, tis],
+                                                      [tps, tis],
+                                                      [len3, tis],
+                                                      [len2, tis]])
+        self.hop_to_tps = EnsembleHopMover(ensembles=[[tis, tps],
+                                                      [tps, tps],
+                                                      [len3, tps],
+                                                      [len2, tps]])
+        self.hop_to_len3 = EnsembleHopMover(ensembles=[[tis, len3],
+                                                       [tps, len3],
+                                                       [len3, len3],
+                                                       [len2, len3]]) 
+        self.hop_to_len2 = EnsembleHopMover(ensembles=[[tis, len2],
+                                                      [tps, len2],
+                                                      [len3, len2],
+                                                      [len2, len2]])
+        self.init_sample = Sample(trajectory=traj,
+                                  ensemble=len3,
+                                  replica=0,
+                                  details=MoveDetails())
+        self.tis = tis
+        self.tps = tps
+        self.len3 = len3
+        self.len2 = len2
+
+
+    def test_everything_accepted(self):
+        move = SequentialMover(movers=[self.hop_to_tis,
+                                       self.hop_to_len3,
+                                       self.hop_to_tps])
+        gs = GlobalState(self.init_sample)
+        samples = move.move(gs)
+        assert_equal(len(samples), 3)
+        for sample in samples:
+            assert_equal(sample.details.accepted, True)
+
+        
+
+    def test_first_rejected(self):
         pass
 
+    def test_last_rejected(self):
+        pass
+
+    def test_restricted_by_replica(self):
+        pass
+
+    def test_restricted_by_ensemble(self):
+        pass
+
+class testPartialAcceptanceSequentialMover(testSequentialMover):
     def test_everything_accepted(self):
         pass
 
@@ -146,26 +208,7 @@ class testIndependentSequentialMover(object):
     def test_restricted_by_ensemble(self):
         pass
 
-class testPartialAcceptanceSequentialMover(object):
-    def setup(self):
-        pass
-
-    def test_everything_accepted(self):
-        pass
-
-    def test_first_rejected(self):
-        pass
-
-    def test_last_rejected(self):
-        pass
-
-    def test_restricted_by_replica(self):
-        pass
-
-    def test_restricted_by_ensemble(self):
-        pass
-
-class testConditionalSequentialMover(object):
+class testConditionalSequentialMover(testSequentialMover):
     def setup(self):
         pass
 

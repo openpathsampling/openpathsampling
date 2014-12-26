@@ -1149,7 +1149,15 @@ class EnsembleFactory():
         ensemble : Ensemble
             The constructed Ensemble
         '''        
-        return (LengthEnsemble(slice(3,None)) & InXEnsemble(volume_a, 0) & InXEnsemble(volume_b, -1)) & OutXEnsemble(volume_a | volume_b, slice(1,-1), lazy)
+        # TODO: this is actually only for flexible path length TPS now
+        length1 = LengthEnsemble(1)
+        return SequentialEnsemble([
+            InXEnsemble(volume_a) & length1,
+            OutXEnsemble(volume_a | volume_b),
+            InXEnsemble(volume_b) & length1
+        ])
+
+
 
     @staticmethod
     def TISEnsemble(volume_a, volume_b, volume_x, lazy = True):

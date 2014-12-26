@@ -441,7 +441,7 @@ class MixedMover(PathMover):
                      replica=sample.replica)
         return path
 
-class IndependentSequentialMover(PathMover):
+class SequentialMover(PathMover):
     '''
     Performs each of the moves in its movers list. Returns all samples
     generated, in the order of the mover list.
@@ -466,7 +466,7 @@ class IndependentSequentialMover(PathMover):
         # TODO: add info to all samples for this move
         return mysamples
 
-class PartialAcceptanceSequentialMover(PathMover):
+class PartialAcceptanceSequentialMover(SequentialMover):
     '''
     Performs eachmove in its movers list until complete of until one is not
     accepted. If any move is not accepted, further moves are not attempted,
@@ -477,12 +477,6 @@ class PartialAcceptanceSequentialMover(PathMover):
     promotion ConditionalSequentialMover. Even if the EnsembleHop fails, the
     accepted shooting move should be accepted.
     '''
-    def __init__(self, movers, ensembles=None, replicas='all'):
-        super(PartialAccpetanceSequentialMover, self).__init__(
-            ensembles=ensembles, replicas=replicas
-        )
-        self.movers = movers
-
     def move(self, globalstate):
         subglobal = SampleSet(self.legal_sample_set(globalstate))
         mysamples = []
@@ -546,6 +540,9 @@ class ReplicaIDChange(PathMover):
 
 class EnsembleHopMover(PathMover):
     def __init__(self, bias=None, ensembles=None, replicas='all'):
+        # TODO: maybe allow a version of this with a single ensemble and ANY
+        # ensemble can hop to that? messy to code; maybe same idea under
+        # another name
         ensembles = make_list_of_pairs(ensembles)
         super(EnsembleHopMover, self).__init__(ensembles=ensembles, 
                                                replicas=replicas)
