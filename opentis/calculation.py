@@ -1,4 +1,3 @@
-from globalstate import GlobalState
 from pathmover import (PathMover, MoveDetails, ReplicaExchange,
                        EnsembleHopMover)
 from sample import SampleSet, Sample
