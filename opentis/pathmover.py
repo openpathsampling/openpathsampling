@@ -10,7 +10,7 @@ import random
 from shooting import ShootingPoint
 from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble
 from ensemble import FullEnsemble
-from sample import Sample
+from sample import Sample, SampleSet
 from wrapper import storable
 
 import logging
@@ -195,6 +195,8 @@ class PathMover(object):
         for rep in reps:
             rep_samples.extend(globalstate.all_from_replica(rep))
 
+        #logger.debug("ensembles = " + str([ensembles]))
+        #logger.debug("self.ensembles = " + str(self.ensembles))
         if ensembles is None:
             if self.ensembles is None:
                 ensembles = 'all'
@@ -208,6 +210,9 @@ class PathMover(object):
             if type(ensembles) is not list:
                 ensembles = [ensembles]
             for ens in ensembles:
+                #try:
+                    #ens_samples.extend(globalstate.all_from_ensemble(ens[0]))
+                #except TypeError:
                 ens_samples.extend(globalstate.all_from_ensemble(ens))
             legal_samples = list(set(rep_samples) & set(ens_samples))
 
@@ -451,18 +456,20 @@ class SequentialMover(PathMover):
     succeed or fail.
     '''
     def __init__(self, movers, ensembles=None, replicas='all'):
-        super(IndependentSequentialMover, self).__init__(ensembles=ensembles,
-                                                         replicas=replicas)
+        super(SequentialMover, self).__init__(ensembles=ensembles,
+                                              replicas=replicas)
         self.movers = movers
         initialization_logging(init_log, self, ['movers'])
 
     def move(self, globalstate):
+        logger.debug("Starting sequential move")
         subglobal = SampleSet(self.legal_sample_set(globalstate))
         mysamples = []
         for mover in self.movers:
+            logger.debug("Starting sequential move step "+str(mover))
             newsamples = mover.move(subglobal)
             subglobal.apply_samples(newsamples)
-            mysamples.extend(mover.move(subglobal))
+            mysamples.extend(newsamples)
         # TODO: add info to all samples for this move
         return mysamples
 
@@ -555,13 +562,32 @@ class EnsembleHopMover(PathMover):
 
     def move(self, globalstate):
         # ensemble hops are in the order [from, to]
-        ens_pair = random.choice(self.ensembles)
+        initial_ensembles = [pair[0] for pair in self.ensembles]
+        logger.debug("initial_ensembles: " + str(initial_ensembles))
+        legal_ensembles = [
+            s.ensemble 
+            for s in self.legal_sample_set(globalstate, initial_ensembles)
+        ]
+        logger.debug("globalstate ensembles" + 
+                     str([s.ensemble for s in globalstate]))
+        logger.debug("self.ensembles: " + str(self.ensembles))
+        logger.debug("Legal Ensembles: " + str(legal_ensembles))
+        legal_pairs = [pair for pair in self.ensembles 
+                       if pair[0] in legal_ensembles]
+        logger.debug("Legal pairs: " + str(legal_pairs))
+        ens_pair = random.choice(legal_pairs)
         ens_from = ens_pair[0]
         ens_to = ens_pair[1]
 
+        logger.info("Attempting ensemble hop from {e1} to {e2}".format(
+            e1=repr(ens_from), e2=repr(ens_to)))
+
         rep_sample = self.select_sample(globalstate, ens_from)
+        logger.debug("Selected sample: " + repr(rep_sample))
         replica = rep_sample.replica
         trajectory = rep_sample.trajectory
+        logger.debug("  selected replica: " + str(replica))
+        logger.debug("  initial ensemble: " + repr(rep_sample.ensemble))
 
         details = MoveDetails()
         details.accepted = False
@@ -581,7 +607,7 @@ class EnsembleHopMover(PathMover):
                       details=details,
                       replica=replica
                      )
-        return path
+        return [path]
 
 
 

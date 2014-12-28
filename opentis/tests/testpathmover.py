@@ -17,7 +17,12 @@ from opentis.pathmover import *
 
 from opentis.volume import LambdaVolume
 from test_helpers import CallIdentity
+from opentis.trajectory import Trajectory
 from opentis.ensemble import EnsembleFactory as ef
+
+import logging
+logging.getLogger('opentis.pathmover').setLevel(logging.DEBUG)
+logging.getLogger('opentis.initialization').setLevel(logging.CRITICAL)
 
 class testMakeListOfPairs(object):
     def setup(self):
@@ -133,7 +138,7 @@ class testMixedMover(object):
 
 class testSequentialMover(object):
     def setup(self):
-        traj = [-0.5, 0.7, 1.1]
+        traj = Trajectory([-0.5, 0.7, 1.1])
         op = CallIdentity()
         volA = LambdaVolume(op, -100, 0.0)
         volB = LambdaVolume(op, 1.0, 100)
@@ -172,16 +177,24 @@ class testSequentialMover(object):
         move = SequentialMover(movers=[self.hop_to_tis,
                                        self.hop_to_len3,
                                        self.hop_to_tps])
-        gs = GlobalState(self.init_sample)
+        gs = SampleSet(self.init_sample)
         samples = move.move(gs)
         assert_equal(len(samples), 3)
         for sample in samples:
             assert_equal(sample.details.accepted, True)
-
-        
+        gs.apply_samples(samples)
+        assert_equal(gs[0].ensemble, self.tps)
 
     def test_first_rejected(self):
-        pass
+        move = SequentialMover(movers=[self.hop_to_len2,
+                                       self.hop_to_len3,
+                                       self.hop_to_tps])
+        gs = SampleSet(self.init_sample)
+        samples = move.move(gs)
+        assert_equal(len(samples), 3)
+        assert_equal(samples[0].details.accepted, False)
+        assert_equal(samples[1].details.accepted, True)
+        assert_equal(samples[2].details.accepted, True)
 
     def test_last_rejected(self):
         pass
