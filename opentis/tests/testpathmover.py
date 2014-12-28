@@ -195,9 +195,21 @@ class testSequentialMover(object):
         assert_equal(samples[0].details.accepted, False)
         assert_equal(samples[1].details.accepted, True)
         assert_equal(samples[2].details.accepted, True)
+        gs.apply_samples(samples)
+        assert_equal(gs[0].ensemble, self.tps)
 
     def test_last_rejected(self):
-        pass
+        move = SequentialMover(movers=[self.hop_to_tis,
+                                       self.hop_to_tps,
+                                       self.hop_to_len2])
+        gs = SampleSet(self.init_sample)
+        samples = move.move(gs)
+        assert_equal(len(samples), 3)
+        assert_equal(samples[0].details.accepted, True)
+        assert_equal(samples[1].details.accepted, True)
+        assert_equal(samples[2].details.accepted, False)
+        gs.apply_samples(samples)
+        assert_equal(gs[0].ensemble, self.tps)
 
     def test_restricted_by_replica(self):
         pass
