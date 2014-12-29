@@ -489,11 +489,18 @@ class PartialAcceptanceSequentialMover(SequentialMover):
         mysamples = []
         last_accepted = True
         for mover in self.movers:
+            # NOTE: right now, this doesn't quite work correctly if the
+            # submovers are also multimovers (e.g., SequentialMovers). We
+            # need a way to see whether the move below considered itself
+            # accepted; that could mean that submoves of the submove were
+            # rejected but the whole submove was accepted, as with
+            # SequentialMovers
             newsamples = mover.move(subglobal)
+            subglobal.apply_samples(newsamples)
             # all samples made by the submove; pick the ones up to the first
             # rejection
+            mysamples.extend(newsamples)
             for sample in newsamples:
-                mysamples.extend(sample)
                 if sample.details.accepted == False:
                     last_accepted = False
                     break
