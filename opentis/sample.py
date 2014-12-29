@@ -131,15 +131,20 @@ class SampleSet(object):
             # also acts as .append() if given a single sample
             self.append(samples)
 
-    def apply_samples(self, samples, step=None):
+    def apply_samples(self, samples, step=None, copy=True):
         '''Updates the SampleSet based on a list of samples, by setting them
         by replica in the order given in the argument list.'''
         if type(samples) is Sample:
             samples = [samples]
+        if copy==True:
+            newset = SampleSet(self)
+        else:
+            newset = self
         for sample in samples:
             # TODO: should time be a property of Sample or SampleSet?
             sample.step = step
-            self[sample.replica] = sample
+            newset[sample.replica] = sample
+        return newset
 
     def replica_list(self):
         '''Returns the list of replicas IDs in this SampleSet'''
@@ -234,9 +239,10 @@ class Sample(object):
         return self.trajectory
 
     def __str__(self):
-        mystr = "Replica: "+str(self.replica)+"\n"
+        mystr = "Step: "+str(self.step)+"\n"
+        mystr += "Replica: "+str(self.replica)+"\n"
         mystr += "Trajectory: "+str(self.trajectory)+"\n"
-        mystr += "Ensemble: "+str(self.ensemble)+"\n"
+        mystr += "Ensemble: "+repr(self.ensemble)+"\n"
         mystr += "Details: "+str(self.details)+"\n"
         return mystr
 
