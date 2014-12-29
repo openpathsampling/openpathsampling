@@ -65,6 +65,8 @@ class BootstrapPromotionMove(PathMover):
         init_sample_set = SampleSet([old_sample])
 
         shooter = self.shooters[top_rep]
+        # TODO: should move this to normal initialization so we don't init
+        # it every time
         hopper = EnsembleHopMover(bias=self.bias,
                                   ensembles=[ensemble_from, ensemble_to],
                                   replicas=top_rep)
@@ -142,6 +144,9 @@ class Bootstrapping(Calculation):
             pass # TODO: implement defaults: one per ensemble, uniform sel
         else:
             self.movers = movers
+        initialization_logging(init_log, self,
+                               ['movers', 'ensembles'])
+        init_log.info("Parameter: %s : %s", 'trajectory', str(trajectory))
 
     def run(self, nsteps):
         bootstrapmove = BootstrapPromotionMove(bias=None,
