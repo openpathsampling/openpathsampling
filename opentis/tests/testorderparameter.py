@@ -2,19 +2,16 @@
 @author David W.H. Swenson
 """
 
-import os
-import sys
-from nose.tools import assert_equal, assert_not_equal, raises
-from nose.plugins.skip import Skip, SkipTest
-from test_helpers import AtomCounter, SimulationDuckPunch, data_filename
+from test_helpers import SimulationDuckPunch, data_filename
 
-from nose.tools import assert_equal
 import mdtraj as md
+import numpy as np
 
 import opentis.trajectory as trajectory
 from opentis.storage import Storage
 import opentis.orderparameter as op
 
+from msmbuilder.featurizer import AtomPairsFeaturizer
 
 class testOP_Function(object):
 
@@ -48,5 +45,21 @@ class testOP_Function(object):
         traj = self.storage.trajectory.load(0)
 
         my_dihed =  dihedral_op( traj )
-        for (truth, beauty) in zip(md_dihed, my_dihed):
-            assert_equal(truth, beauty)
+
+        np.testing.assert_allclose(md_dihed, my_dihed)
+
+    def test_atom_pair_featurizer(self):
+        """ Create an atom pair orderparameter using MSMSBuilder3 """
+
+        atom_pairs = [[0,1], [10,14]]
+
+        atom_pair_featurizer = AtomPairsFeaturizer(atom_pairs)
+        atom_pair_op = op.OP_Featurizer("atom_pairs", atom_pair_featurizer)
+
+        mdtraj_version = self.storage.trajectory.load(0).md()
+        md_distances = md.compute_distances(mdtraj_version, atom_pairs)
+        traj = self.storage.trajectory.load(0)
+
+        my_distances = atom_pair_op( traj )
+
+        np.testing.assert_allclose(md_distances, my_distances)
