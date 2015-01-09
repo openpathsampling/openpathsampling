@@ -15,7 +15,7 @@ from sample import Sample, SampleSet
 
 from globalstate import GlobalState, GlobalStateMover
 
-from orderparameter import OP_Function, OP_MD_Function, OP_Multi_RMSD, \
+from orderparameter import OP_Function, OP_MD_Function, OP_Featurizer, \
     OP_RMSD_To_Lambda, OP_Volume, OrderParameter
 
 from pathmover import BackwardShootMover, MinusMove, MixedMover, MoveDetails, \

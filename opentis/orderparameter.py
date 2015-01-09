@@ -2,10 +2,11 @@
 #| CLASS Order Parameter
 ###############################################################
 
-from msmbuilder.metrics import RMSD
+import mdtraj as md
 from trajectory import Trajectory
 from snapshot import Configuration, Snapshot
 from wrapper import storable
+
 class ObjectDict(dict):
     """
     A cache that is attached to Configuration indices store in the Configuration storage
@@ -342,9 +343,7 @@ class OP_RMSD_To_Lambda(OrderParameter):
         self.min_lambda = lambda_min
         self.max_lambda = max_lambda
 
-        # Generate RMSD metric using only the needed indices. To index memory we crop the read snapshots from the database and do not use a cropping RMSD on the full snapshots
-        self.metric = RMSD(None)
-        self._generator = self.metric.prepare_trajectory(Trajectory([center]).subset(self.atom_indices).md())
+        self._generator = Trajectory([center]).subset(self.atom_indices).md()
         return
 
     ################################################################################
@@ -365,15 +364,16 @@ class OP_RMSD_To_Lambda(OrderParameter):
 
     def _eval(self, items):
         trajectory = Trajectory([Snapshot(configuration=c) for c in items])
-        ptraj = self.metric.prepare_trajectory(trajectory.subset(self.atom_indices).md())
-        results = self.metric.one_to_all(self._generator, ptraj, 0)
+        ptraj = trajectory.subset(self.atom_indices).md()
+
+        results = md.rmsd(ptraj, self._generator)
 
         return map(self._scale_fnc(self.min_lambda, self.max_lambda), results)
 
 
-class OP_Multi_RMSD(OrderParameter):
+class OP_Featurizer(OrderParameter):
     """
-    An OrderParameter that transforms the RMSD to a set of centers.
+    An OrderParameter that uses an MSMBuilder3 featurizer as the logic
 
     Parameters
     ----------
@@ -394,25 +394,24 @@ class OP_Multi_RMSD(OrderParameter):
         the RMSD metric object used to compute the RMSD
     """
 
-    def __init__(self, name, centers, atom_indices=None, metric=None):
-        super(OP_Multi_RMSD, self).__init__(name, dimensions=len(centers))
+    def __init__(self, name, featurizer, atom_indices=None):
+        super(OP_Featurizer, self).__init__(name, dimensions=featurizer.n_features)
 
         self.atom_indices = atom_indices
-        self.center = centers
+        self.featurizer = featurizer
 
-        # Generate RMSD metric using only the needed indices. To index memory we crop the read snapshots from the database and do not use a cropping RMSD on the full snapshots
-        if metric is None:
-            self.metric = RMSD(None)
-        else:
-            self.metric = metric
-        self._generator = self.metric.prepare_trajectory(centers.subset(self.atom_indices).md())
         return
 
     def _eval(self, items):
         trajectory = Trajectory([Snapshot(configuration=c) for c in items])
 
-        ptraj = self.metric.prepare_trajectory(trajectory.subset(self.atom_indices).md())
-        return [self.metric.one_to_all(ptraj, self._generator, idx) for idx in range(0, len(ptraj))]
+        # create an MDtraj trajectory out of it
+        ptraj = trajectory.subset(self.atom_indices).md()
+
+        # run the featurizer
+        result = self.featurizer.partial_transform(ptraj)
+
+        return result
 
 class OP_MD_Function(OrderParameter):
     """ Wrapper to decorate any appropriate function as an OrderParameter with a function that need an mdtraj object as input.
