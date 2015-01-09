@@ -191,21 +191,49 @@ class DynamicsEngine(object):
         >>> if engine.max_length_stopper in engine.stoppers:
         >>>     print 'Max length was triggered'
         """
-        return set([ runner for runner, result in self.running.iteritems() if not result])
+        return set([ runner for runner, result in self.running.iteritems()
+                    if not result])
+
+    def stop_conditions(self, trajectory, continue_conditions=None):
+        """
+        Test whether we can continue; called by generate a couple of times,
+        so the logic is separated here.
+
+        Parameters
+        ----------
+        trajectory : Trajectory
+            the trajectory we've generated so far
+        continue_conditions : list of function(Trajectory)
+            callable function of a 'Trajectory' that returns True or False.
+            If one of these returns False the simulation is stopped.
+
+        Returns
+        -------
+        boolean:
+            true if the dynamics should be stopped; false otherwise
+        """
+        stop = False
+        if continue_conditions is not None:
+            for condition in continue_conditions:
+                can_continue = condition(trajectory)
+                self.running[condition] = can_continue # JHP: is this needed?
+                stop = stop or not can_continue
+        stop = stop or not self.max_length_stopper.can_append(trajectory)
+        return stop
+
 
     def generate(self, snapshot, running = None):
         r"""
-        Generate a velocity Verlet trajectory consisting of ntau segments of
-        tau_steps in between storage of Snapshots and randomization of
-        velocities.
+        Generate a trajectory consisting of ntau segments of tau_steps in
+        between storage of Snapshots.
 
         Parameters
         ----------
         snapshot : Snapshot 
             initial coordinates; velocities will be assigned from
             Maxwell-Boltzmann distribution            
-        running : list of function(Snapshot)
-            callable function of a 'Snapshot' that returns True or False.
+        running : list of function(Trajectory)
+            callable function of a 'Trajectory' that returns True or False.
             If one of these returns False the simulation is stopped.
 
         Returns
@@ -231,7 +259,9 @@ class DynamicsEngine(object):
             trajectory.append(snapshot)
             
             frame = 0
-            stop = False
+            # maybe we should stop before we even begin?
+            stop = self.stop_conditions(trajectory=trajectory,
+                                        continue_conditions=running)
 
             while stop == False:
                                 
@@ -246,16 +276,13 @@ class DynamicsEngine(object):
                 trajectory.append(snapshot)
                 
                 # Check if we should stop. If not, continue simulation
-                if running is not None:
-                    for runner in running:
-                        # note that even if one runner signals stop we evaluate
-                        # all of them to access their results later
-                        keep_running = runner(trajectory)
-                        self.running[runner] = keep_running
-                        stop = stop or not keep_running
+                stop = self.stop_conditions(trajectory=trajectory,
+                                            continue_conditions=running)
 
-                stop = stop or not self.max_length_stopper.can_append(trajectory)
-                
+
+            # exit the while loop once we must stop, so we call the engine's
+            # stop function (which should manage any end-of-trajectory
+            # cleanup)
             self.stop(trajectory)
             return trajectory
         else:
