@@ -111,7 +111,6 @@ class SnapshotStorage(ObjectStorage):
         -------
         snapshot (list of int) - snapshot indices
         '''
-        print idx, self.load_variable('snapshot_momentum_idx', idx)
         return int(self.load_variable('snapshot_momentum_idx', idx))
 
 
