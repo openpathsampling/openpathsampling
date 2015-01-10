@@ -141,7 +141,7 @@ class PathMover(object):
     the "waste recycling" approach recently re-discovered by Frenkel (see
     also work by Athenes, Jourdain, and old work by Kalos) might be
     interesting. I think the best way to do this is to keep the acceptance
-    in the PathMover, but have it be a ~~~DWHS
+    in the PathMover, but have it be a separate class ~~~DWHS
 
 
     Attributes
@@ -637,7 +637,7 @@ class PathReversalMover(PathMover):
         details.inputs = [trajectory]
         details.mover = self
 
-        reversed_trajectory = trajectory.reversed()
+        reversed_trajectory = trajectory.reversed
         details.trial = reversed_trajectory
 
         details.accepted = ensemble(reversed_trajectory)

@@ -47,7 +47,7 @@ class SimulationDuckPunch(object):
     def __init__(self, topology, system):
         self.system = system
         self.topology = topology
-        
+
 def prepend_exception_message(e, failmsg):
     """Modifies an exception by prepending failmsg"""
     if not e.args:

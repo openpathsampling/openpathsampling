@@ -18,7 +18,9 @@ from opentis.pathmover import *
 from opentis.volume import LambdaVolume
 from test_helpers import CallIdentity
 from opentis.trajectory import Trajectory
+from opentis.snapshot import Snapshot
 from opentis.ensemble import EnsembleFactory as ef
+from opentis.orderparameter import OP_Function, OrderParameter
 
 import logging
 logging.getLogger('opentis.pathmover').setLevel(logging.DEBUG)
@@ -112,10 +114,41 @@ class testBackwardShootMover(object):
 
 class testPathReversalMover(object):
     def setup(self):
-        pass
+        try:
+            op = OP_Function("myid", fcn=lambda snap : 
+                             Trajectory([snap])[0].coordinates()[0])
+        except ValueError:
+            op = OrderParameter('someop')
+            op = op.get_existing('myid')
+        volA = LambdaVolume(op, -100, 0.0)
+        volB = LambdaVolume(op, 1.0, 100)
+        volX = LambdaVolume(op, -100, 0.25)
+        self.tis = ef.TISEnsemble(volA, volB, volX)
+        self.move = PathReversalMover()
+        self.op = op
 
-    def test_AA_path(self):
-        pass
+    def test_AXA_path(self):
+        snap1 = Snapshot(coordinates=[[-0.1, 0,0]], velocities=[[0.1, 0,0]])
+        snap2 = Snapshot(coordinates=[[0.75, 0,0]], velocities=[[0.05, 0,0]])
+        snap3 = Snapshot(coordinates=[[-0.2, 0,0]], velocities=[[-0.06, 0,0]])
+        trajAXA = Trajectory([snap1, snap2, snap3])
+        print self.op(trajAXA[0])
+        print self.tis(trajAXA)
+        sampAXA = Sample(trajectory=trajAXA,
+                         ensemble=self.tis,
+                         replica=0,
+                         details=MoveDetails())
+        gs_AXA = SampleSet([sampAXA])
+        samp = self.move.move(gs_AXA)
+        #print samp
+
+    def test_A_A_path(self):
+        trajA_A = Trajectory([-0.3, 0.1, -0.4])
+        sampA_A = Sample(trajectory=trajA_A,
+                         ensemble=self.tis,
+                         replica=0,
+                         details=MoveDetails())
+
 
     def test_AB_path(self):
         pass
