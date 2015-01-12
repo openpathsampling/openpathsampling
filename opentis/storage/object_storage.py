@@ -391,7 +391,7 @@ class ObjectStorage(object):
             nc_type = 'str'
 
         if variable_length:
-            vlen_t = self.storage.createVLType(nc_type, name + '_vlen')
+            vlen_t = ncfile.createVLType(nc_type, name + '_vlen')
             ncvar = ncfile.createVariable(name, vlen_t, dimensions)
         else:
             ncvar = ncfile.createVariable(name, nc_type, dimensions)
