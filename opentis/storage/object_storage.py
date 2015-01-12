@@ -221,9 +221,10 @@ class ObjectStorage(object):
     @saveidentifiable
     @savecache
     def save(self, obj, idx=None):
-        '''
-        Returns an object from the storage. Needs to be implented from the specific storage class.
-        '''
+        """
+        Saves an object the storage using a JSON string.
+        Needs to be implemented from the specific storage class.
+        """
 
         if self.named and hasattr(obj, 'name'):
             self.storage.variables[self.db + '_name'][idx] = obj.name

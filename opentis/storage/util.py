@@ -22,6 +22,9 @@ class ObjectJSON(object):
                     return { '_value' : obj.value_in_unit_system(self.unit_system), '_units' : self.unit_to_dict(obj.unit.in_unit_system(self.unit_system)) }
                 else:
                     return { '_value' : obj / obj.unit, '_units' : self.unit_to_dict(obj.unit) }
+            elif hasattr(obj, 'to_dict'):
+                # the object knows how to dismantle itself into a json string so use this
+                return { '_cls' : obj.__class__.__name__, '_dict' : self.simplify(obj.to_dict()) }
             else:
                 return None
         elif type(obj) is list:
@@ -35,11 +38,17 @@ class ObjectJSON(object):
             oo = obj
             return oo
 
-
     def build(self,obj):
+        global class_list
         if type(obj) is dict:
             if '_units' in obj and '_value' in obj:
                 return obj['_value'] * self.unit_from_dict(obj['_units'])
+            elif '_cls' in obj and '_dict' in obj:
+                if obj['_cls'] in class_list:
+                    attributes = self.build(obj['_dict'])
+                    return class_list[obj['_cls']](**attributes)
+                else:
+                    raise ValueError('Cannot create obj of class "' + obj['_cls']+ '". Class is not registered as creatable!')
             else:
                 return {key : self.build(o) for key, o in obj.iteritems()}
         elif type(obj) is tuple:

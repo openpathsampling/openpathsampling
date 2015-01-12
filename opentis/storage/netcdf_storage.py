@@ -46,6 +46,7 @@ class Storage(netcdf.Dataset):
     def _register_storages(self, store = None):
         if store is None:
             store = self
+
         self.trajectory = TrajectoryStorage(store).register()
         self.snapshot = SnapshotStorage(store).register()
         self.configuration = ConfigurationStorage(store).register()

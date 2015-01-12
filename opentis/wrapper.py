@@ -46,3 +46,55 @@ def storable(super_class):
     super_class.__descendents__ = classmethod(__descendents__)
 
     return super_class
+
+
+# Tree support
+def treebase(super_class):
+    def _init(self, *args, **kwargs):
+        super_class._init(self, *args, **kwargs)
+
+        if 'idx' in kwargs:
+            self.idx = kwargs['idx']
+        else:
+            self.idx = dict()
+
+        if 'storage' in kwargs:
+            self.default_storage = kwargs['storage']
+
+    def _save(self, storage=None):
+        if storage is None:
+            storage = self.default_storage
+        storage.save(self)
+
+    super_class._init = super_class.__init__
+    super_class.__init__ = _init
+
+    super_class.save = _save
+
+    def _example_cls_function(clazz, cls=None):
+        if cls is None:
+            cls = super_class
+
+        return
+
+    super_class.__descendents__ = classmethod(_example_cls_function)
+
+    return super_class
+
+# Register a class to be creatable. Basically just a dict to match a classname to the actual class
+# This is mainly for security so that we do not have to use globals to find classes
+
+class_list = dict()
+
+def creatable(super_class):
+    class_list[super_class.__name__] = super_class
+
+    if not hasattr(super_class, 'to_dict'):
+        def _to_dict(self):
+            excluded_keys = ['idx']
+            return {key: value for key, value in self.__dict__.iteritems() if key not in excluded_keys}
+
+        super_class.to_dict = _to_dict
+
+
+    return super_class
