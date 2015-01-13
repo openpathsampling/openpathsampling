@@ -48,7 +48,7 @@ class ObjectJSON(object):
             elif '_cls' in obj and '_dict' in obj:
                 if obj['_cls'] in self.class_list:
                     attributes = self.build(obj['_dict'])
-                    return self.class_list[obj['_cls']](**attributes)
+                    return self.class_list[obj['_cls']].from_dict(attributes)
                 else:
                     raise ValueError('Cannot create obj of class "' + obj['_cls']+ '". Class is not registered as creatable!')
             else:
@@ -166,16 +166,12 @@ class StorableObjectJSON(ObjectJSON):
         self.storage = storage
 
     def simplify(self,obj, base_type = ''):
-
         if type(obj).__module__ != '__builtin__':
-#            print hasattr(obj, 'creatable'), obj.base_cls_name, ",", base_type
             if hasattr(obj, 'idx') and (not hasattr(obj, 'creatable') or obj.base_cls_name != base_type):
-#                getattr(self.storage, obj.cls).save(obj)
                 # this also returns the base class name used for storage
                 # store objects only if they are not creatable. If so they will only be created in their
                 # top instance and we use the simplify from the super class ObjectJSON
                 base_cls = self.storage.save(obj)
-#                return { '_idx' : obj.idx[self.storage], '_cls' : obj.cls}
                 return { '_idx' : obj.idx[self.storage], '_base' : base_cls, '_cls' : obj.__class__.__name__ }
 
         return super(StorableObjectJSON, self).simplify(obj, base_type)
@@ -188,6 +184,5 @@ class StorableObjectJSON(ObjectJSON):
 
                 result.cls = obj['_cls']
                 return result
-#                return getattr(self.storage, obj['_cls']).load(obj['_idx'])
 
         return super(StorableObjectJSON, self).build(obj)

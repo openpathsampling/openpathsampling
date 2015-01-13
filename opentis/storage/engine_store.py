@@ -7,6 +7,8 @@ class DynamicsEngineStorage(ObjectStorage):
     def __init__(self, storage):
         super(DynamicsEngineStorage, self).__init__(storage, DynamicsEngine, named=True)
 
+    #TODO: Simplify to use new object storage. Might want to add a from_dict function that does just that
+
     @loadcache
     def load(self, idx, lazy=True):
         '''
@@ -28,7 +30,7 @@ class DynamicsEngineStorage(ObjectStorage):
     @savecache
     def save(self, engine, idx=None):
         '''
-        Returns an object from the storage. Needs to be implented from the specific storage class.
+        Returns an object from the storage. Needs to be implemented from the specific storage class.
         '''
 
         self.storage.variables['dynamicsengine_type'][int(idx)] = engine.__class__.__name__

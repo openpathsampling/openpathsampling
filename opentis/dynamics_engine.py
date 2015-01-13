@@ -161,6 +161,13 @@ class DynamicsEngine(object):
         else:
             self.options = {}
 
+    def to_dict(self):
+        return self.options
+
+    @classmethod
+    def from_dict(cls, my_dict):
+        return cls(options=my_dict)
+
     @property
     def default_options(self):
         default_options = {}

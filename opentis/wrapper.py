@@ -101,5 +101,13 @@ def creatable(super_class):
 
         super_class.to_dict = _to_dict
 
+    if not hasattr(super_class, 'from_dict'):
+        def _from_dict(cls, my_dict = None):
+            if my_dict is None:
+                my_dict={}
+            return cls(**my_dict)
+
+        super_class.from_dict = classmethod(_from_dict)
+
 
     return super_class
