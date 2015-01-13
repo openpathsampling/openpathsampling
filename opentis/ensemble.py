@@ -6,6 +6,8 @@ Created on 03.09.2014
 from opentis.trajectory import Trajectory
 from opentis.wrapper import storable, creatable
 
+# TODO: Make Full and Empty be Singletons to avoid storing them several times!
+
 @creatable
 @storable
 class Ensemble(object):

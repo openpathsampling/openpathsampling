@@ -53,7 +53,9 @@ class Storage(netcdf.Dataset):
         self.snapshot = SnapshotStorage(store).register()
         self.configuration = ConfigurationStorage(store).register()
         self.momentum = MomentumStorage(store).register()
-#        self.ensemble = EnsembleStorage(store).register()
+
+        # TODO: Remove ensemble_store.py. It is obsolete
+        # self.ensemble = EnsembleStorage(store).register()
         self.sample = SampleStorage(store).register()
         self.pathmover = ObjectStorage(store, PathMover, named=True, json=True, identifier='json').register()
         self.movedetails = ObjectStorage(store, MoveDetails, named=False, json=True, identifier='json').register()

@@ -257,10 +257,9 @@ class LambdaVolume(Volume):
         elif len(lrange) == 1:
             return self._copy_with_new_range(lrange[0][0], lrange[0][1])
         elif len(lrange) == 2:
-            return VolumeCombination(
+            return OrVolume(
                 self._copy_with_new_range(lrange[0][0], lrange[0][1]),
-                self._copy_with_new_range(lrange[1][0], lrange[1][1]),
-                lambda a, b : a or b, '{0} or {1}'
+                self._copy_with_new_range(lrange[1][0], lrange[1][1])
             )
         else:
             raise ValueError(
