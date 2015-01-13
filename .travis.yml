@@ -32,7 +32,7 @@ script:
 #  - python ala_dipeptide_example.py
 # Run the Alanine Example ipnb as a test
   - cd examples/ipython
-  python ipnbdoctest.py Alanine\ Example.ipynb
+  - python ipnbdoctest.py "Alanine Example.ipynb"
   - cd ../..
   # Push to binstar anyway.
 #  - bash -x devtools/ci/after_sucess.sh
