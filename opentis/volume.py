@@ -4,10 +4,12 @@ Created on 03.09.2014
 @author: Jan-Hendrik Prinz, David W.H. Swenson
 '''
 import range_logic
-import wrapper
-from wrapper import creatable
+from wrapper import creatable, storable
+
+# TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
 @creatable
+@storable
 class Volume(object):
     def __init__(self):
         '''
@@ -64,7 +66,7 @@ class Volume(object):
         elif type(other) is EmptyVolume:
             return self
         elif type(other) is FullVolume:
-            return EmptyVolume()        
+            return EmptyVolume()
         else:
             return SubVolume(self, other)
         
@@ -147,7 +149,7 @@ class EmptyVolume(Volume):
 
     def __invert__(self):
         return FullVolume()
-    
+
     def __str__(self):
         return 'empty'
 

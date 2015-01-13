@@ -468,7 +468,7 @@ class ObjectStorage(object):
         setattr(obj, 'json', json_string)
 
         simplified = yaml.load(json_string)
-        data = self.simplifier.build(simplified[2])
+        data = self.simplifier.build(simplified[1])
         for key, value in data.iteritems():
             setattr(obj, key, value)
 
@@ -487,12 +487,13 @@ class ObjectStorage(object):
 #=============================================================================================
 
     def object_to_json(self, obj):
-        data = obj.__dict__
-        cls = obj.__class__.__name__
-#        store = obj.cls
-        store = ""
+        if hasattr(obj, 'to_dict'):
+            data = obj.to_dict()
+        else:
+            data = obj.__dict__
 
-        json_string = self.simplifier.to_json([cls, store, data])
+        cls = obj.__class__.__name__
+        json_string = self.simplifier.to_json([cls, data], obj.base_cls_name)
 
         return json_string
 

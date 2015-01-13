@@ -1,5 +1,6 @@
 def storable(super_class):
     super_class.default_storage = None
+    _base_cls_name = super_class.__name__
 
     def _init(self, *args, **kwargs):
         super_class._init(self, *args, **kwargs)
@@ -11,6 +12,8 @@ def storable(super_class):
 
         if 'storage' in kwargs:
             self.default_storage = kwargs['storage']
+
+        super_class.base_cls_name = _base_cls_name
 
     def _save(self, storage=None):
         if storage is None:
@@ -88,6 +91,8 @@ class_list = dict()
 
 def creatable(super_class):
     class_list[super_class.__name__] = super_class
+
+    super_class.creatable = True
 
     if not hasattr(super_class, 'to_dict'):
         def _to_dict(self):

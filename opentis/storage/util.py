@@ -10,11 +10,13 @@ class ObjectJSON(object):
     """
     A simple implementation of a pickle algorithm to create object that can be converted to json and back
     """
-    def __init__(self, unit_system = None):
-        self.excluded_keys = []
-        self.unit_system = unit_system
 
-    def simplify(self, obj):
+    def __init__(self, unit_system = None, class_list = None):
+        self.excluded_keys = ['name']
+        self.unit_system = unit_system
+        self.class_list = class_list
+
+    def simplify(self, obj, base_type = ''):
         if type(obj).__module__ != '__builtin__':
             if type(obj) is units.Quantity:
                 # This is number with a unit so turn it into a list
@@ -24,15 +26,15 @@ class ObjectJSON(object):
                     return { '_value' : obj / obj.unit, '_units' : self.unit_to_dict(obj.unit) }
             elif hasattr(obj, 'to_dict'):
                 # the object knows how to dismantle itself into a json string so use this
-                return { '_cls' : obj.__class__.__name__, '_dict' : self.simplify(obj.to_dict()) }
+                return { '_cls' : obj.__class__.__name__, '_dict' : self.simplify(obj.to_dict(), obj.base_cls_name) }
             else:
                 return None
         elif type(obj) is list:
-            return [self.simplify(o) for o in obj]
+            return [self.simplify(o, base_type) for o in obj]
         elif type(obj) is tuple:
-            return tuple([self.simplify(o) for o in obj])
+            return tuple([self.simplify(o, base_type) for o in obj])
         elif type(obj) is dict:
-            result = {key : self.simplify(o) for key, o in obj.iteritems() if type(key) is str and key not in self.excluded_keys }
+            result = {key : self.simplify(o, base_type) for key, o in obj.iteritems() if type(key) is str and key not in self.excluded_keys }
             return result
         else:
             oo = obj
@@ -44,9 +46,9 @@ class ObjectJSON(object):
             if '_units' in obj and '_value' in obj:
                 return obj['_value'] * self.unit_from_dict(obj['_units'])
             elif '_cls' in obj and '_dict' in obj:
-                if obj['_cls'] in class_list:
+                if obj['_cls'] in self.class_list:
                     attributes = self.build(obj['_dict'])
-                    return class_list[obj['_cls']](**attributes)
+                    return self.class_list[obj['_cls']](**attributes)
                 else:
                     raise ValueError('Cannot create obj of class "' + obj['_cls']+ '". Class is not registered as creatable!')
             else:
@@ -135,8 +137,8 @@ class ObjectJSON(object):
 
         return md.Topology.from_dataframe(atoms, bonds)
 
-    def to_json(self, obj):
-        simplified = self.simplify(obj)
+    def to_json(self, obj, base_type = ''):
+        simplified = self.simplify(obj, base_type)
         return json.dumps(simplified)
 
     def from_json(self, json_string):
@@ -158,24 +160,25 @@ class ObjectJSON(object):
 
 
 class StorableObjectJSON(ObjectJSON):
-    def __init__(self, storage, unit_system = None):
-        super(StorableObjectJSON, self).__init__(unit_system)
-        self.excluded_keys = ['idx', 'json', 'identifier']
+    def __init__(self, storage, unit_system = None, class_list = None):
+        super(StorableObjectJSON, self).__init__(unit_system, class_list)
+        self.excluded_keys = ['name', 'idx', 'json', 'identifier']
         self.storage = storage
 
-    def simplify(self,obj):
+    def simplify(self,obj, base_type = ''):
 
         if type(obj).__module__ != '__builtin__':
-            if hasattr(obj, 'idx'):
+#            print hasattr(obj, 'creatable'), obj.base_cls_name, ",", base_type
+            if hasattr(obj, 'idx') and (not hasattr(obj, 'creatable') or obj.base_cls_name != base_type):
 #                getattr(self.storage, obj.cls).save(obj)
-                # this also return the base class name used for storage
-
+                # this also returns the base class name used for storage
+                # store objects only if they are not creatable. If so they will only be created in their
+                # top instance and we use the simplify from the super class ObjectJSON
                 base_cls = self.storage.save(obj)
 #                return { '_idx' : obj.idx[self.storage], '_cls' : obj.cls}
                 return { '_idx' : obj.idx[self.storage], '_base' : base_cls, '_cls' : obj.__class__.__name__ }
 
-
-        return super(StorableObjectJSON, self).simplify(obj)
+        return super(StorableObjectJSON, self).simplify(obj, base_type)
 
     def build(self,obj):
         if type(obj) is dict:

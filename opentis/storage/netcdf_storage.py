@@ -23,6 +23,8 @@ from opentis.globalstate import GlobalState
 from orderparameter_store import ObjectDictStorage
 from opentis.orderparameter import OrderParameter
 from opentis.snapshot import Configuration
+from opentis.volume import Volume
+from opentis.ensemble import Ensemble
 
 from opentis.storage.util import ObjectJSON
 from opentis.tools import units_from_snapshot
@@ -51,7 +53,7 @@ class Storage(netcdf.Dataset):
         self.snapshot = SnapshotStorage(store).register()
         self.configuration = ConfigurationStorage(store).register()
         self.momentum = MomentumStorage(store).register()
-        self.ensemble = EnsembleStorage(store).register()
+#        self.ensemble = EnsembleStorage(store).register()
         self.sample = SampleStorage(store).register()
         self.pathmover = ObjectStorage(store, PathMover, named=True, json=True, identifier='json').register()
         self.movedetails = ObjectStorage(store, MoveDetails, named=False, json=True, identifier='json').register()
@@ -61,6 +63,8 @@ class Storage(netcdf.Dataset):
         self.engine = DynamicsEngineStorage(store).register()
         self.collectivevariable = ObjectDictStorage(store, OrderParameter, Configuration).register()
         self.sampleset = SampleSetStorage(store).register()
+        self.volume = ObjectStorage(store, Volume, named=True, json=True, identifier='json').register()
+        self.ensemble = ObjectStorage(store, Ensemble, named=True, json=True, identifier='json').register()
         self.cv = self.collectivevariable
 
     def _setup_class(self):
