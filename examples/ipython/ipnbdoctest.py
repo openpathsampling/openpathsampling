@@ -95,10 +95,6 @@ def compare_outputs(test, ref, skip_compare=('png', 'traceback', 'latex', 'promp
                 diff=difflib.unified_diff(expected, actual)
 
 #                print ''.join(diff)
-
-#                print test[key]
-#                print '  !=  '
-#                print ref[key]
                 return False
     return True
  
