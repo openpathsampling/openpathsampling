@@ -185,19 +185,9 @@ def test_notebook(nb):
             if cell.cell_type == 'markdown':
                 if cell.source.startswith('#'):
                     print cell.source
-#                    last_md = ''
-                else:
-#                    if show_md:
-#                        print cell.source[:45] + (cell.source[45:] and ' [..]')
-#                    last_md = cell.source
-                    show_md = False
-
-#                print cell.source[:45] + (cell.source[45:] and ' [..]')
 
             if cell.cell_type != 'code':
                 continue
-
-            show_md = True
 
             print '   --> ' + 'In [' + str(cell.prompt_number) + ']', ': ',
 
@@ -206,12 +196,9 @@ def test_notebook(nb):
                 first_line = cell.input.splitlines()[0]
                 if first_line.startswith('#!'):
                     command = first_line[2:].strip()
-#                    print 'Command :', command
                 outs = run_cell(shell, iopub, cell)
             except Exception as e:
                 print 'failed !'
-#                print "failed to run cell:", repr(e)
-#                print cell.input
                 errors += 1
                 continue
 
@@ -230,10 +217,6 @@ def test_notebook(nb):
                 successes += 1
                 print 'success !'
 
-
-
-#            sys.stdout.write('.')
- 
     print
     print "tested notebook %s" % nb.metadata.name
     print "    %3i cells successfully replicated" % successes
