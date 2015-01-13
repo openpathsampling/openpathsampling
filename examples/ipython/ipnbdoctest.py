@@ -185,7 +185,7 @@ def test_notebook(nb):
             if cell.cell_type != 'code':
                 continue
 
-            print '   --> ' + 'In [' + str(cell.prompt_number) + ']', ': ',
+            print '   --> ' + 'In [' + str(cell.prompt_number) + ']', ' .. ',
 
             command = None
             try:
@@ -194,12 +194,12 @@ def test_notebook(nb):
                     command = first_line[2:].strip()
                 outs = run_cell(shell, iopub, cell)
             except Exception as e:
-                print 'failed !'
+                print 'FAIL'
                 errors += 1
                 continue
 
             if command == 'skip':
-                print 'passed !'
+                print 'PASS'
                 continue
             
             failed = False
@@ -208,10 +208,10 @@ def test_notebook(nb):
                     failed = True
             if failed:
                 failures += 1
-                print 'different !'
+                print 'DIFF'
             else:
                 successes += 1
-                print 'success !'
+                print 'ok'
 
     print
     print "tested notebook %s" % nb.metadata.name
