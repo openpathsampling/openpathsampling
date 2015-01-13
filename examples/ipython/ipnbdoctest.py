@@ -15,15 +15,19 @@ import re
  
 from collections import defaultdict
 from Queue import Empty
- 
+
+import difflib
+
 try:
     from IPython.kernel import KernelManager
 except ImportError:
     from IPython.zmq.blockingkernelmanager import BlockingKernelManager as KernelManager
  
 from IPython.nbformat.current import reads, NotebookNode
- 
- 
+
+def fold(name, block):
+  return "travis_fold:start:#" + name + "\r'" + block + "echo -en 'travis_fold:end:#" + name + "\r'"
+
 def compare_png(a64, b64):
     """compare two b64 PNGs (incomplete)"""
     try:
@@ -66,6 +70,7 @@ def consolidate_outputs(outputs):
         if out.type == 'stream':
             data[out.stream] += out.text
         elif out.type == 'pyerr':
+            print 'ERROR'
             data['pyerr'] = dict(ename=out.ename, evalue=out.evalue)
         else:
             for key in ('png', 'svg', 'latex', 'html', 'javascript', 'text', 'jpeg',):
@@ -74,17 +79,27 @@ def consolidate_outputs(outputs):
     return data
  
  
-def compare_outputs(test, ref, skip_compare=('png', 'traceback', 'latex', 'prompt_number')):
+def compare_outputs(test, ref, skip_compare=('png', 'traceback', 'latex', 'prompt_number', 'svg', 'html')):
     for key in ref:
         if key not in test:
-            print "missing key: %s != %s" % (test.keys(), ref.keys())
+#            print "missing key: %s != %s" % (test.keys(), ref.keys())
             return False
-        elif key not in skip_compare and sanitize(test[key]) != sanitize(ref[key]):
-            print "mismatch %s:" % key
-            print test[key]
-            print '  !=  '
-            print ref[key]
-            return False
+        elif key not in skip_compare:
+            s1 = sanitize(test[key])
+            s2 = sanitize(ref[key])
+            if s1 != s2:
+
+#                print "mismatch %s:" % key
+                expected=s1.splitlines(1)
+                actual=s2.splitlines(1)
+                diff=difflib.unified_diff(expected, actual)
+
+#                print ''.join(diff)
+
+#                print test[key]
+#                print '  !=  '
+#                print ref[key]
+                return False
     return True
  
 
@@ -161,16 +176,47 @@ def test_notebook(nb):
     successes = 0
     failures = 0
     errors = 0
+
+    show_md = True
+
     for ws in nb.worksheets:
         for cell in ws.cells:
+
+            if cell.cell_type == 'markdown':
+                if cell.source.startswith('#'):
+                    print cell.source
+#                    last_md = ''
+                else:
+#                    if show_md:
+#                        print cell.source[:45] + (cell.source[45:] and ' [..]')
+#                    last_md = cell.source
+                    show_md = False
+
+#                print cell.source[:45] + (cell.source[45:] and ' [..]')
+
             if cell.cell_type != 'code':
                 continue
+
+            show_md = True
+
+            print '   --> ' + 'In [' + str(cell.prompt_number) + ']', ': ',
+
+            command = None
             try:
+                first_line = cell.input.splitlines()[0]
+                if first_line.startswith('#!'):
+                    command = first_line[2:].strip()
+#                    print 'Command :', command
                 outs = run_cell(shell, iopub, cell)
             except Exception as e:
-                print "failed to run cell:", repr(e)
-                print cell.input
+                print 'failed !'
+#                print "failed to run cell:", repr(e)
+#                print cell.input
                 errors += 1
+                continue
+
+            if command == 'skip':
+                print 'passed !'
                 continue
             
             failed = False
@@ -179,20 +225,30 @@ def test_notebook(nb):
                     failed = True
             if failed:
                 failures += 1
+                print 'different !'
             else:
                 successes += 1
-            sys.stdout.write('.')
+                print 'success !'
+
+
+
+#            sys.stdout.write('.')
  
     print
     print "tested notebook %s" % nb.metadata.name
     print "    %3i cells successfully replicated" % successes
-    if failures:
-        print "    %3i cells mismatched output" % failures
-    if errors:
-        print "    %3i cells failed to complete" % errors
+#    if failures:
+    print "    %3i cells mismatched output" % failures
+#    if errors:
+    print "    %3i cells failed to complete" % errors
     kc.stop_channels()
     km.shutdown_kernel()
     del km
+
+    if errors == 0:
+        exit(0)
+    else:
+        exit(1)
  
 if __name__ == '__main__':
     for ipynb in sys.argv[1:]:
