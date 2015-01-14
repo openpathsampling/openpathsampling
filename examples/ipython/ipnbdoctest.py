@@ -27,6 +27,9 @@ except ImportError:
 from IPython.nbformat.current import reads, NotebookNode
 
 class TravisConsole(object):
+    """
+    A wrapper class to allow easier output to the console especially for travis
+    """
     def __init__(self):
         self.stream = sys.stdout
         self.linebreak = '\n'
@@ -60,6 +63,9 @@ class TravisConsole(object):
             self.br()
 
     def br(self):
+        """
+        Write a linebreak
+        """
         self.stream.write(self.linebreak)
 
     def write(self, s, indent = 0):
@@ -79,8 +85,25 @@ class TravisConsole(object):
         bdata = base64.decodestring(b64)
         return True
 
+    def red(self, s):
+        RED = '\033[31m'
+        DEFAULT = '\033[39m'
+        return RED + s + DEFAULT
+
+    def green(self, s):
+        GREEN = '\033[32m'
+        DEFAULT = '\033[39m'
+        return GREEN + s + DEFAULT
+
+    def blue(self, s):
+        BLUE = '\033[36m'
+        DEFAULT = '\033[39m'
+        return BLUE + s + DEFAULT
 
 class IPyTestConsole(TravisConsole):
+    """
+    Add support for different output results
+    """
     def __init__(self):
         super(IPyTestConsole, self).__init__()
 
@@ -98,21 +121,6 @@ class IPyTestConsole(TravisConsole):
         self.fail_count = 0
 
         self.result_count = { key : 0 for key in self.default_results.keys() }
-
-    def red(self, s):
-        RED = '\033[31m'
-        DEFAULT = '\033[39m'
-        return RED + s + DEFAULT
-
-    def green(self, s):
-        GREEN = '\033[32m'
-        DEFAULT = '\033[39m'
-        return GREEN + s + DEFAULT
-
-    def blue(self, s):
-        BLUE = '\033[36m'
-        DEFAULT = '\033[39m'
-        return BLUE + s + DEFAULT
 
     def write_result(self, result, okay_list = None):
 
@@ -132,6 +140,14 @@ class IPyTestConsole(TravisConsole):
 
 
 class IPyKernel(object):
+    """
+    A simple wrapper class to run cells in an IPython Notebook.
+
+    Notes
+    -----
+    Use `with` construct to properly instantiate
+    """
+
     def __init__(self, console = None):
         # default timeout time is 60 seconds
         self.default_timeout = 60
