@@ -6,7 +6,9 @@ Usage: `ipnbdoctest.py foo.ipynb [bar.ipynb [...]]`
 
 Each cell is submitted to the kernel, and the outputs are compared with those stored in the notebook.
 
-This is found in a gist under https://gist.github.com/minrk/2620735
+The original is found in a gist under https://gist.github.com/minrk/2620735
+
+TODO: It would be nice to add some more output about failed diffs. So far I leave it this way
 """
  
 import os,sys
