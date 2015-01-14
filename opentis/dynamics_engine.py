@@ -86,7 +86,7 @@ class DynamicsEngine(object):
     def _register_options(self, options = None):
         """
         This will register all variables in the options dict as a member variable if
-        they are present in either ther DynamicsEngine.default_options or this
+        they are present in either the DynamicsEngine.default_options or this
         classes default_options, no multiple inheritance is supported!
         It will use values with the priority in the following order
         - DynamicsEngine.default_options
