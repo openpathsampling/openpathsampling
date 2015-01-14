@@ -25,14 +25,25 @@ except ImportError:
  
 from IPython.nbformat.current import reads, NotebookNode
 
-def fold(name, block):
-  return "travis_fold:start:" + name + "\r" + block + "travis_fold:end:" + name + "\r"
+fold_count = dict()
+fold_stack = dict()
+
+timeout_secs = 2
 
 def fold_open(name):
-    print "travis_fold:start:" + name
+    if name not in fold_count:
+        fold_count[name] = 0
+        fold_stack[name] = []
+
+    fold_count[name] += 1
+    fold_name = name.lower() + '.' + str(fold_count[name])
+    fold_stack[name].append(fold_name)
+
+    print "travis_fold:start:" + fold_name
 
 def fold_close(name):
-    print "travis_fold:end:" + name
+    fold_name = fold_stack[name].pop()
+    print "travis_fold:end:" + name.lower() + '.' + str(fold_count[name])
 
 def indent(s, num = 4):
     lines = s.splitlines(True)
@@ -111,15 +122,14 @@ def compare_outputs(test, ref, skip_compare=('png', 'traceback', 'latex', 'promp
  
 
 def run_cell(shell, iopub, cell):
-    # print cell.input
     shell.execute(cell.input)
-    # wait for finish, maximum 20s
-    shell.get_msg(timeout=100)
+    # wait for finish, maximum 60s
+    shell.get_msg(timeout=timeout_secs)
     outs = []
     
     while True:
         try:
-            msg = iopub.get_msg(timeout=0.2)
+            msg = iopub.get_msg(timeout=0.5)
         except Empty:
             break
         msg_type = msg['msg_type']
@@ -188,8 +198,10 @@ def test_notebook(nb, nbname = ''):
     failures = 0 # not passed, but executed with Python error
     errors = 0 # IPython errors (not even executed)
     differences = 0 # passed but with differences
+    time_outs = 0 # time out occurred during execution
 
-    nbname = nbname.replace(" ", "_").lower()
+    nbs = nbname.split('.')
+    nb_class_name = nbs[1] + '.' + nbs[0].replace(" ", "_")
 
     show_md = True
 
@@ -210,9 +222,9 @@ def test_notebook(nb, nbname = ''):
             # If code cell then continue with checking it
 
             if hasattr(cell, 'prompt_number'):
-                print nbname + '.' + 'In [%3i]' % cell.prompt_number, '...',
+                print nb_class_name + '.' + 'In [%3i]' % cell.prompt_number, '...',
             else:
-                print nbname + '.' + 'In [???]', '...',
+                print nb_class_name + '.' + 'In [???]', '...',
             command = None
             try:
                 first_line = cell.input.splitlines()[0]
@@ -221,9 +233,19 @@ def test_notebook(nb, nbname = ''):
                 outs = run_cell(shell, iopub, cell)
             except Exception as e:
                 # Internal IPython error occurred (might still be that the cell did not execute correctly)
-                print 'ERROR'
-                print repr(e)
-                errors += 1
+                if repr(e) == 'Empty()':
+                    # Assume it has been timed out!
+                    print 'TIME'
+                    print '>>> TimeOut (%is)' % timeout_secs
+                    time_outs += 1
+                else:
+                    print 'ERROR'
+                    fold_open('ipynb.error')
+                    print '>>> ' + out.ename + ' ("' + out.evalue + '")'
+                    print indent(repr(e))
+                    fold_close('ipynb.error')
+
+                    errors += 1
                 continue
 
 #            print outs
@@ -238,11 +260,11 @@ def test_notebook(nb, nbname = ''):
                 if out.output_type == 'pyerr':
                     # An python error occurred. Cell is not completed correctly
                     print "FAIL"
-                    fold_open('FAIL')
+                    fold_open('ipynb.fail')
                     print '>>> ' + out.ename + ' ("' + out.evalue + '")'
                     for idx, trace in enumerate(out.traceback):
                         print indent(trace, 4)
-                    fold_close('FAIL')
+                    fold_close('ipynb.fail')
                     failed = True
                 else:
                     if not compare_outputs(out, ref):
@@ -263,6 +285,7 @@ def test_notebook(nb, nbname = ''):
     print "tested notebook %s" % nb.metadata.name
     print "    %3i cells successfully replicated [ok]" % successes
     print "    %3i cells mismatched output [DIFF]" % differences
+    print "    %3i cells timed out during execution [TIME]" % time_outs
     print "    %3i cells ran with python errors [FAIL]" % failures
     print "    %3i cells failed to even execute (IPython error) [ERROR]" % errors
     print
@@ -272,7 +295,7 @@ def test_notebook(nb, nbname = ''):
     print "ok"
     del km
 
-    if errors != 0:
+    if errors != 0 or failures != 0:
         # There is an error. Stop testing the next files and quit with an error
         print 'errors occurred - exiting.'
         exit(1)
