@@ -26,7 +26,18 @@ except ImportError:
 from IPython.nbformat.current import reads, NotebookNode
 
 def fold(name, block):
-  return "travis_fold:start:#" + name + "\r'" + block + "echo -en 'travis_fold:end:#" + name + "\r'"
+  return "travis_fold:start:" + name + "\r" + block + "travis_fold:end:" + name + "\r"
+
+def fold_open(name):
+    print "travis_fold:start:" + name
+
+def fold_close(name):
+    print "travis_fold:end:" + name
+
+def indent(s, num = 4):
+    lines = s.splitlines(True)
+    lines = map(lambda s: ' ' * num + s, lines)
+    return ''.join(lines)
 
 def compare_png(a64, b64):
     """compare two b64 PNGs (incomplete)"""
@@ -103,7 +114,7 @@ def run_cell(shell, iopub, cell):
     # print cell.input
     shell.execute(cell.input)
     # wait for finish, maximum 20s
-    shell.get_msg(timeout=20)
+    shell.get_msg(timeout=100)
     outs = []
     
     while True:
@@ -145,9 +156,13 @@ def run_cell(shell, iopub, cell):
     return outs
     
  
-def test_notebook(nb):
+def test_notebook(nb, nbname = ''):
+
+    print "starting kernel ...",
     km = KernelManager()
     km.start_kernel(extra_arguments=['--pylab=inline'], stderr=open(os.devnull, 'w'))
+    print "ok"
+
     try:
         kc = km.client()
         kc.start_channels()
@@ -169,24 +184,35 @@ def test_notebook(nb):
         except Empty:
             break
     
-    successes = 0
-    failures = 0
-    errors = 0
+    successes = 0 # passed without differences
+    failures = 0 # not passed, but executed with Python error
+    errors = 0 # IPython errors (not even executed)
+    differences = 0 # passed but with differences
+
+    nbname = nbname.replace(" ", "_").lower()
 
     show_md = True
 
     for ws in nb.worksheets:
         for cell in ws.cells:
-
             if cell.cell_type == 'markdown':
-                if cell.source.startswith('#'):
-                    print cell.source
+                for line in cell.source.splitlines():
+                    # only print headlines in markdown
+                    if line.startswith('#'):
+                        print line
+
+            if cell.cell_type == 'heading':
+                print '#' * cell.level, cell.source
 
             if cell.cell_type != 'code':
                 continue
 
-            print '   --> ' + 'In [' + str(cell.prompt_number) + ']', ' .. ',
+            # If code cell then continue with checking it
 
+            if hasattr(cell, 'prompt_number'):
+                print nbname + '.' + 'In [%3i]' % cell.prompt_number, '...',
+            else:
+                print nbname + '.' + 'In [???]', '...',
             command = None
             try:
                 first_line = cell.input.splitlines()[0]
@@ -194,44 +220,70 @@ def test_notebook(nb):
                     command = first_line[2:].strip()
                 outs = run_cell(shell, iopub, cell)
             except Exception as e:
-                print 'FAIL'
+                # Internal IPython error occurred (might still be that the cell did not execute correctly)
+                print 'ERROR'
+                print repr(e)
                 errors += 1
                 continue
 
+#            print outs
+
             if command == 'skip':
-                print 'PASS'
+                print 'pass'
                 continue
             
             failed = False
+            diff = False
             for out, ref in zip(outs, cell.outputs):
-                if not compare_outputs(out, ref):
+                if out.output_type == 'pyerr':
+                    # An python error occurred. Cell is not completed correctly
+                    print "FAIL"
+                    fold_open('FAIL')
+                    print '>>> ' + out.ename + ' ("' + out.evalue + '")'
+                    for idx, trace in enumerate(out.traceback):
+                        print indent(trace, 4)
+                    fold_close('FAIL')
                     failed = True
+                else:
+                    if not compare_outputs(out, ref):
+                        # Output is different than the one in the notebook. This might be okay.
+                        diff = True
             if failed:
                 failures += 1
+
+            if diff:
+                differences += 1
                 print 'DIFF'
-            else:
+
+            if not failed and not diff:
                 successes += 1
                 print 'ok'
 
     print
     print "tested notebook %s" % nb.metadata.name
-    print "    %3i cells successfully replicated" % successes
-#    if failures:
-    print "    %3i cells mismatched output" % failures
-#    if errors:
-    print "    %3i cells failed to complete" % errors
+    print "    %3i cells successfully replicated [ok]" % successes
+    print "    %3i cells mismatched output [DIFF]" % differences
+    print "    %3i cells ran with python errors [FAIL]" % failures
+    print "    %3i cells failed to even execute (IPython error) [ERROR]" % errors
+    print
+    print "shutting down kernel ...",
     kc.stop_channels()
     km.shutdown_kernel()
+    print "ok"
     del km
 
-    if errors == 0:
-        exit(0)
-    else:
+    if errors != 0:
+        # There is an error. Stop testing the next files and quit with an error
+        print 'errors occurred - exiting.'
         exit(1)
  
 if __name__ == '__main__':
     for ipynb in sys.argv[1:]:
-        print "testing %s" % ipynb
+        print 'testing ipython notebook : "%s"' % ipynb
         with open(ipynb) as f:
             nb = reads(f.read(), 'json')
-        test_notebook(nb)
+        test_notebook(nb, nbname = ipynb)
+
+    print 'done.'
+
+    exit(0)
