@@ -137,7 +137,7 @@ class testPathReversalMover(object):
                          replica=0,
                          details=MoveDetails())
         gs_AXA = SampleSet([sampAXA])
-        samp = self.move.move(gs_AXA)
+        samp = self.move.move(gs_AXA)[0]
         assert_equal(samp.details.accepted, True)
 
     def test_A_A_path(self):
@@ -147,7 +147,7 @@ class testPathReversalMover(object):
                          replica=0,
                          details=MoveDetails())
         gs_A_A = SampleSet([sampA_A])
-        samp = self.move.move(gs_A_A)
+        samp = self.move.move(gs_A_A)[0]
         assert_equal(samp.details.accepted, False)
 
 
@@ -158,7 +158,7 @@ class testPathReversalMover(object):
                          replica=0,
                          details=MoveDetails())
         gs_AXB = SampleSet([sampAXB])
-        samp = self.move.move(gs_AXB)
+        samp = self.move.move(gs_AXB)[0]
         assert_equal(samp.details.accepted, False)
 
     def test_BA_path(self):
@@ -168,7 +168,7 @@ class testPathReversalMover(object):
                          replica=0,
                          details=MoveDetails())
         gs_BXA = SampleSet([sampBXA])
-        samp = self.move.move(gs_BXA)
+        samp = self.move.move(gs_BXA)[0]
         assert_equal(samp.details.accepted, True)
 
 

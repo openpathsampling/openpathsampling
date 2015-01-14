@@ -68,9 +68,9 @@ class BootstrapPromotionMove(PathMover):
                                   ensembles=[ensemble_from, ensemble_to],
                                   replicas=top_rep)
 
-        shoot_samp = shooter.move(init_sample_set)
+        shoot_samp = shooter.move(init_sample_set)[0]
         init_sample_set.apply_samples(shoot_samp)
-        hop_samp = hopper.move(init_sample_set)
+        hop_samp = hopper.move(init_sample_set)[0]
         init_sample_set.apply_samples(hop_samp)
 
         # bring all the metadata from the submoves into our details
@@ -108,7 +108,7 @@ class BootstrapPromotionMove(PathMover):
         logger.debug(" Shooting part: accepted = " + str(shoot_samp.details.accepted))
         logger.debug("  Hopping part: accepted = " + str(hop_samp.details.accepted))
 
-        return sample
+        return [sample]
 
 
 class Bootstrapping(Calculation):
@@ -161,10 +161,10 @@ class Bootstrapping(Calculation):
                         + "  failsteps = " + str(failsteps)
                        )
             old_rep = max(self.globalstate.replica_list())
-            sample = bootstrapmove.move(self.globalstate)
-            self.globalstate.apply_samples(sample, step=step_num)
+            samples = bootstrapmove.move(self.globalstate)
+            self.globalstate.apply_samples(samples, step=step_num)
 
-            if sample.replica == old_rep:
+            if samples[0].replica == old_rep:
                 failsteps += 1
             else:
                 failsteps = 0

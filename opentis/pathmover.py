@@ -334,7 +334,7 @@ class ShootMover(PathMover):
                       ensemble=dynamics_ensemble,
                       details=details)
 
-        return path
+        return [path]
     
     
 class ForwardShootMover(ShootMover):    
@@ -436,15 +436,11 @@ class MixedMover(PathMover):
 
         mover = self.movers[idx]
 
-        sample = mover.move(trajectory)
-        setattr(sample.details, 'mover_idx', idx)
+        samples = mover.move(trajectory)
+        for sample in samples:
+            setattr(sample.details, 'mover_idx', idx)
 
-        # why do we make a new sample here?
-        path = Sample(trajectory=sample.trajectory,
-                      ensemble=sample.ensemble, 
-                      details=sample.details,
-                     replica=sample.replica)
-        return path
+        return samples
 
 class SequentialMover(PathMover):
     '''
@@ -654,7 +650,7 @@ class PathReversalMover(PathMover):
             ensemble=ensemble,
             details=details
         )
-        return sample
+        return [sample]
 
 
 class ReplicaExchange(PathMover):
