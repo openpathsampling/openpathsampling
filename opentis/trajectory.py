@@ -375,6 +375,12 @@ class Trajectory(list):
             the trajectory showing the subsets of solute atoms
         """
 
+        #TODO: To remove the dependency of the dynamics engine we need to get the information
+        #TODO: about the solute_indices from somewhere else, preferrably the topology?
+
+        if Trajectory.engine is None:
+            raise ValueError("No engine specified to get solute_indices from !")
+
         return self.subset(Trajectory.engine.solute_indices)
 
     def full(self):
