@@ -299,6 +299,11 @@ class PathTreeBuilder(object):
 
     def from_samples(self, samples, clear=True):
 
+        if len(samples) == 0:
+            # no samples, nothing to do
+            # TODO: Raise an exception or just ignore and don't output anything?
+            return
+
         p_x = dict()
         p_y = dict()
 
