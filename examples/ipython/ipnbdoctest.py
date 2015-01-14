@@ -298,8 +298,8 @@ if __name__ == '__main__':
     parser.add_argument('file', metavar='file.ipynb', help='the notebook to be checked', type=str)
 
     parser.add_argument('--timeout', dest='timeout',
-                   type=int, default=60,
-                   help='the default timeout time in seconds for a cell evaluation')
+                   type=int, default=300,
+                   help='the default timeout time in seconds for a cell evaluation. Default is 300s.')
 
     parser.add_argument('--strict', dest='strict', action='store_true',
                    default=False,
@@ -425,11 +425,11 @@ if __name__ == '__main__':
 
         tv.br()
         tv.writeln("    %3i cells successfully replicated [success]" % tv.result_count['success'])
-        tv.writeln("    %3i cells mismatched output [diff]" % tv.result_count['diff'])
+        tv.writeln("    %3i cells had mismatched outputs [diff]" % tv.result_count['diff'])
         tv.writeln("    %3i cells timed out during execution [time]" % tv.result_count['timeout'])
         tv.writeln("    %3i cells ran with python errors [fail]" % tv.result_count['error'])
+        tv.writeln("    %3i cells have been executed without comparison [ignore]" % tv.result_count['ignore'])
         tv.writeln("    %3i cells failed to even execute (IPython error) [kernel]" % tv.result_count['kernel'])
-        tv.writeln("    %3i cells have been execute without comparison [ignore]" % tv.result_count['ignore'])
         tv.writeln("    %3i cells have been skipped [skip]" % tv.result_count['skip'])
 
         tv.br()
