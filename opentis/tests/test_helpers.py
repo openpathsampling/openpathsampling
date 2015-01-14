@@ -10,6 +10,21 @@ from pkg_resources import resource_filename
 
 from nose.tools import assert_items_equal
 
+from opentis.trajectory import Trajectory
+from opentis.snapshot import Snapshot
+import numpy as np
+
+def make_1d_traj(coordinates, velocities=None):
+    if velocities is None:
+        velocities = [0.0]*len(coordinates)
+    traj = []
+    for (pos, vel) in zip(coordinates, velocities):
+        snap = Snapshot(coordinates=np.array([[pos, 0, 0]]),
+                        velocities=np.array([[vel, 0, 0]]))
+        traj.append(snap)
+    return Trajectory(traj)
+
+
 def assert_equal_array_array(truth, beauty):
     for (t_atom, b_atom) in zip(truth, beauty):
         assert_items_equal(t_atom, b_atom)

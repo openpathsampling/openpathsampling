@@ -9,7 +9,9 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, raises)
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import (assert_equal_array_array, 
-                          assert_not_equal_array_array)
+                          assert_not_equal_array_array,
+                          make_1d_traj
+                         )
 
 from opentis.ensemble import LengthEnsemble
 from opentis.sample import SampleSet, Sample
@@ -114,12 +116,12 @@ class testBackwardShootMover(object):
 
 class testPathReversalMover(object):
     def setup(self):
+        #op = OrderParameter()
         try:
             op = OP_Function("myid", fcn=lambda snap : 
-                             Trajectory([snap])[0].coordinates()[0])
+                             Trajectory([snap])[0].coordinates()[0][0])
         except ValueError:
-            op = OrderParameter('someop')
-            op = op.get_existing('myid')
+            op = OrderParameter.get_existing('myid')
         volA = LambdaVolume(op, -100, 0.0)
         volB = LambdaVolume(op, 1.0, 100)
         volX = LambdaVolume(op, -100, 0.25)
@@ -128,30 +130,47 @@ class testPathReversalMover(object):
         self.op = op
 
     def test_AXA_path(self):
-        snap1 = Snapshot(coordinates=[[-0.1, 0,0]], velocities=[[0.1, 0,0]])
-        snap2 = Snapshot(coordinates=[[0.75, 0,0]], velocities=[[0.05, 0,0]])
-        snap3 = Snapshot(coordinates=[[-0.2, 0,0]], velocities=[[-0.06, 0,0]])
-        trajAXA = Trajectory([snap1, snap2, snap3])
-        print self.op(trajAXA[0])
-        print self.tis(trajAXA)
+        trajAXA = make_1d_traj(coordinates=[-0.1, 0.75, -0.6],
+                               velocities=[0.1, 0.05, -0.05])
         sampAXA = Sample(trajectory=trajAXA,
                          ensemble=self.tis,
                          replica=0,
                          details=MoveDetails())
         gs_AXA = SampleSet([sampAXA])
         samp = self.move.move(gs_AXA)
-        #print samp
+        assert_equal(samp.details.accepted, True)
 
     def test_A_A_path(self):
-        trajA_A = Trajectory([-0.3, 0.1, -0.4])
+        trajA_A = make_1d_traj(coordinates=[-0.3, 0.1, -0.4])
         sampA_A = Sample(trajectory=trajA_A,
                          ensemble=self.tis,
                          replica=0,
                          details=MoveDetails())
+        gs_A_A = SampleSet([sampA_A])
+        samp = self.move.move(gs_A_A)
+        assert_equal(samp.details.accepted, False)
 
 
     def test_AB_path(self):
-        pass
+        trajAXB = make_1d_traj(coordinates=[-0.2, 0.75, 1.8])
+        sampAXB = Sample(trajectory=trajAXB,
+                         ensemble=self.tis,
+                         replica=0,
+                         details=MoveDetails())
+        gs_AXB = SampleSet([sampAXB])
+        samp = self.move.move(gs_AXB)
+        assert_equal(samp.details.accepted, False)
+
+    def test_BA_path(self):
+        trajBXA = make_1d_traj(coordinates=[1.2, 0.7, -0.25])
+        sampBXA = Sample(trajectory=trajBXA,
+                         ensemble=self.tis,
+                         replica=0,
+                         details=MoveDetails())
+        gs_BXA = SampleSet([sampBXA])
+        samp = self.move.move(gs_BXA)
+        assert_equal(samp.details.accepted, True)
+
 
 class testMixedMover(object):
     def setup(self):
