@@ -33,6 +33,9 @@ script:
 # Run the Alanine Example ipnb as a test
   - cd examples/ipython
   - python ipnbdoctest.py "Alanine Example.ipynb"
+  - python ipnbdoctest.py "sliced_sequential_ensembles.ipynb"
+  - python ipnbdoctest.py "Visualization Example.ipynb"
+
   - cd ../..
   # Push to binstar anyway.
 #  - bash -x devtools/ci/after_sucess.sh
