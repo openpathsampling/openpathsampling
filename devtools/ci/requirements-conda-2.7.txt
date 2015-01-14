@@ -11,3 +11,4 @@ msmbuilder
 openmmtools
 ipython
 ipython-notebook
+matplotlib

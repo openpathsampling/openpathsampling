@@ -9,7 +9,7 @@ Each cell is submitted to the kernel, and the outputs are compared with those st
 This is found in a gist under https://gist.github.com/minrk/2620735
 """
  
-import os,sys,time
+import os,sys
 import base64
 import re
  
@@ -28,7 +28,7 @@ from IPython.nbformat.current import reads, NotebookNode
 fold_count = dict()
 fold_stack = dict()
 
-timeout_secs = 60
+timeout_secs = 540 # 9 minutes since travis stops after 600s
 
 def fold_open(name):
     if name not in fold_count:
