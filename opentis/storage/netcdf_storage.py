@@ -13,7 +13,7 @@ import simtk.unit as u
 
 from object_storage import ObjectStorage
 from trajectory_store import TrajectoryStorage
-from opentis.storage.sample_store import SampleStorage
+from opentis.storage.sample_store import SampleStorage, SampleSetStorage
 from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
 from engine_store import DynamicsEngineStorage
 from ensemble_store import EnsembleStorage
@@ -57,6 +57,7 @@ class Storage(netcdf.Dataset):
         self.shootingpointselector = ObjectStorage(store, ShootingPointSelector, named=False, json=True, identifier='json').register()
         self.engine = DynamicsEngineStorage(store).register()
         self.collectivevariable = ObjectDictStorage(store, OrderParameter, Configuration).register()
+        self.sampleset = SampleSetStorage(store).register()
         self.cv = self.collectivevariable
 
     def _setup_class(self):

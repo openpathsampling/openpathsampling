@@ -7,4 +7,5 @@ mdtraj
 openmm
 ambermini
 netcdf4
-msmbuilder==2.8.2
+msmbuilder
+openmmtools
