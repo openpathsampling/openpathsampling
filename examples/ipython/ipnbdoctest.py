@@ -274,17 +274,19 @@ class IPyKernel(object):
     def get_commands(self, cell):
         commands = {}
         if hasattr(cell, 'input'):
-            first_line = cell.input.splitlines()[0]
-            if first_line.startswith('#!'):
-                txt = first_line[2:].strip()
+            lines = cell.input.splitlines()
+            if len(lines) > 0:
+                first_line = lines[0]
+                if first_line.startswith('#!'):
+                    txt = first_line[2:].strip()
 
-                parts = txt.split(',')
-                for part in parts:
-                    subparts = part.split(':')
-                    if len(subparts) == 1:
-                        commands[subparts[0].strip().lower()] = True
-                    elif len(subparts) == 2:
-                        commands[subparts[0].strip().lower()] = subparts[1]
+                    parts = txt.split(',')
+                    for part in parts:
+                        subparts = part.split(':')
+                        if len(subparts) == 1:
+                            commands[subparts[0].strip().lower()] = True
+                        elif len(subparts) == 2:
+                            commands[subparts[0].strip().lower()] = subparts[1]
 
         return commands
 
