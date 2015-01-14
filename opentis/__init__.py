@@ -13,8 +13,6 @@ from snapshot import Snapshot, Configuration, Momentum
 from trajectory import Trajectory
 from sample import Sample, SampleSet
 
-from globalstate import GlobalState, GlobalStateMover
-
 from orderparameter import OP_Function, OP_MD_Function, OP_Featurizer, \
     OP_RMSD_To_Lambda, OP_Volume, OrderParameter
 
