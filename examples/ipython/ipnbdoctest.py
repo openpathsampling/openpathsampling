@@ -28,7 +28,7 @@ from IPython.nbformat.current import reads, NotebookNode
 fold_count = dict()
 fold_stack = dict()
 
-timeout_secs = 2
+timeout_secs = 60
 
 def fold_open(name):
     if name not in fold_count:
