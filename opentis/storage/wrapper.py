@@ -74,8 +74,15 @@ def loadcache(func):
 
         obj = func(self, n_idx, *args, **kwargs)
 
+        if not hasattr(obj, 'idx'):
+            obj.idx = {}
+
         obj.idx[self.storage] = n_idx
         self.cache[obj.idx[self.storage]] = obj
+
+        if self.named and not hasattr(obj, 'name'):
+            # get the name of the object
+            setattr(obj, 'name', self.get_name(idx))
 
         if self.named and hasattr(obj, 'name') and obj.name != '':
             self.cache[obj.name] = obj

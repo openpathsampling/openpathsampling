@@ -69,7 +69,9 @@ if __name__ == '__main__':
 
     for e_idx in range(0, storage.ensemble.count()):
         ensemble = storage.ensemble.load(e_idx)
-        nline(e_idx,ensemble.name, ensemble.description.replace('\n', ''))
+#        print ensemble._loader()
+        print ensemble.name
+        nline(e_idx,ensemble.name, str(ensemble).replace('\n', ''))
 
     headline("PathMovers")
 

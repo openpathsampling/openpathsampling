@@ -4,10 +4,11 @@ Created on 03.09.2014
 @author: Jan-Hendrik Prinz, David W.H. Swenson
 '''
 import range_logic
-from wrapper import creatable, storable
+from wrapper import creatable, storable, nestable
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
+@nestable
 @creatable
 @storable
 class Volume(object):
@@ -322,6 +323,8 @@ class LambdaVolumePeriodic(LambdaVolume):
     period_max : float (optional)
         maximum of the periodic domain
     """
+
+    _excluded_attr = ['wrap']
     def __init__(self, orderparameter, lambda_min = 0.0, lambda_max = 1.0,
                                        period_min = None, period_max = None):
         super(LambdaVolumePeriodic, self).__init__(orderparameter,

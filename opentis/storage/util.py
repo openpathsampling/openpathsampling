@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import simtk.openmm.app
 
+import opentis.wrapper as wp
+
 class ObjectJSON(object):
     """
     A simple implementation of a pickle algorithm to create object that can be converted to json and back
@@ -14,7 +16,13 @@ class ObjectJSON(object):
     def __init__(self, unit_system = None, class_list = None):
         self.excluded_keys = ['name']
         self.unit_system = unit_system
-        self.class_list = class_list
+        if class_list is not None:
+            self.class_list = class_list
+        else:
+            self.class_list = wp.class_list
+
+    def simplify_object(self, obj, base_type = ''):
+        return { '_cls' : obj.__class__.__name__, '_dict' : self.simplify(obj.to_dict(), obj.base_cls_name) }
 
     def simplify(self, obj, base_type = ''):
         if type(obj).__module__ != '__builtin__':
@@ -36,6 +44,8 @@ class ObjectJSON(object):
         elif type(obj) is dict:
             result = {key : self.simplify(o, base_type) for key, o in obj.iteritems() if type(key) is str and key not in self.excluded_keys }
             return result
+        elif type(obj) is slice:
+            return { '_slice' : [obj.start, obj.stop, obj.step]}
         else:
             oo = obj
             return oo
@@ -45,6 +55,8 @@ class ObjectJSON(object):
         if type(obj) is dict:
             if '_units' in obj and '_value' in obj:
                 return obj['_value'] * self.unit_from_dict(obj['_units'])
+            elif '_slice' in obj:
+                return slice(*obj['_slice'])
             elif '_cls' in obj and '_dict' in obj:
                 if obj['_cls'] in self.class_list:
                     attributes = self.build(obj['_dict'])
@@ -141,6 +153,10 @@ class ObjectJSON(object):
         simplified = self.simplify(obj, base_type)
         return json.dumps(simplified)
 
+    def to_json_object(self, obj, base_type = ''):
+        simplified = self.simplify_object(obj, base_type)
+        return json.dumps(simplified)
+
     def from_json(self, json_string):
         simplified = yaml.load(json_string)
         return self.build(simplified)
@@ -167,7 +183,8 @@ class StorableObjectJSON(ObjectJSON):
 
     def simplify(self,obj, base_type = ''):
         if type(obj).__module__ != '__builtin__':
-            if hasattr(obj, 'idx') and (not hasattr(obj, 'creatable') or obj.base_cls_name != base_type):
+            print obj.__dict__, hasattr(obj, 'creatable')
+            if hasattr(obj, 'idx') and (not hasattr(obj, 'nestable') or (obj.base_cls_name != base_type)):
                 # this also returns the base class name used for storage
                 # store objects only if they are not creatable. If so they will only be created in their
                 # top instance and we use the simplify from the super class ObjectJSON

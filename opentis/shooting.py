@@ -14,9 +14,9 @@ import numpy as np
 #
 #  
 #############################################################################
-from wrapper import storable
+from wrapper import storable, creatable
 
-
+@creatable
 @storable
 class ShootingPoint(object):
 
@@ -82,6 +82,7 @@ class ShootingPoint(object):
     def bias(self):
         return self.f
 
+@creatable
 @storable
 class ShootingPointSelector(object):
 
@@ -151,6 +152,7 @@ class ShootingPointSelector(object):
 
         return point
 
+@creatable
 class GaussianBiasSelector(ShootingPointSelector):
     def __init__(self, orderparameter, alpha = 1.0, l0 = 0.5):
         '''
@@ -164,6 +166,7 @@ class GaussianBiasSelector(ShootingPointSelector):
     def f(self, snapshot):
         return math.exp(-self.alpha*(self.orderparameter(snapshot) - self.l0)**2)
 
+@creatable
 class UniformSelector(ShootingPointSelector):
     def __init__(self, pad_start = 1, pad_end = 1):
         '''

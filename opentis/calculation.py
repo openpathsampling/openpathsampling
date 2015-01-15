@@ -2,6 +2,8 @@ from globalstate import GlobalState
 from pathmover import PathMover, MoveDetails, ReplicaExchange
 from opentis.sample import Sample
 
+from wrapper import dictable
+
 
 class Calculation(object):
 
@@ -26,6 +28,7 @@ class Calculation(object):
     def run(self, nsteps):
         print "Running an empty calculation? Try a subclass, maybe!"
 
+@dictable
 class BootstrapEnsembleChangeMove(PathMover):
     def move(self, trajectory, ensemble):
         details = MoveDetails()

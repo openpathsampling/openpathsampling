@@ -10,8 +10,9 @@ from shooting import ShootingPoint
 from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble
 from ensemble import FullEnsemble
 from opentis.sample import Sample
-from wrapper import storable
+from wrapper import storable, dictable
 
+@dictable
 @storable
 class MoveDetails(object):
     def __init__(self, **kwargs):
@@ -22,7 +23,7 @@ class MoveDetails(object):
         self.success=None
         self.accepted=None
         self.mover=None
-        for key, value in kwargs:
+        for key, value in kwargs.iteritems():
             setattr(self, key, value)
 
     def __str__(self):
@@ -32,6 +33,9 @@ class MoveDetails(object):
             mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
         return mystr
 
+
+@dictable
+@storable
 class PathMover(object):
     """
     A PathMover is the description of how to generate a new path from an old one.
@@ -57,7 +61,6 @@ class PathMover(object):
         the attached engine used to generate new trajectories
     """
 
-    cls = 'pathmover'
     engine = None
 
     @property
@@ -125,6 +128,7 @@ class PathMover(object):
         '''
         return 1.0
 
+@dictable
 class ShootMover(PathMover):
     '''
     A pathmover that implements a general shooting algorithm that generates
@@ -135,7 +139,12 @@ class ShootMover(PathMover):
         super(ShootMover, self).__init__()
         self.selector = selector
         self.ensemble = ensemble
-        self.length_stopper = PathMover.engine.max_length_stopper
+        if PathMover.engine is not None:
+            # ask the engine. But when loading this might not exist, so until we store a pointer to the used engine
+            # we will create our own stopper or (we say Movers are not creatable but will be stored as stubs
+            # so called loaded objects that have the same class name, the same dict, but no functions to call!
+            # this will be indicated by removing the @creatable
+            self._length_stopper = PathMover.engine.max_length_stopper
 
     def selection_probability_ratio(self, details):
         '''
@@ -175,7 +184,8 @@ class ShootMover(PathMover):
         return path
     
     
-class ForwardShootMover(ShootMover):    
+@dictable
+class ForwardShootMover(ShootMover):
     '''
     A pathmover that implements the forward shooting algorithm
     '''
@@ -191,7 +201,7 @@ class ForwardShootMover(ShootMover):
                     self.ensemble, 
                     details.start[0:details.start_point.index]
                 ).can_append, 
-                self.length_stopper.can_append
+                self._length_stopper.can_append
             ]
         )
 
@@ -204,7 +214,8 @@ class ForwardShootMover(ShootMover):
                                             shooting_point)
         pass
     
-class BackwardShootMover(ShootMover):    
+@dictable
+class BackwardShootMover(ShootMover):
     '''
     A pathmover that implements the backward shooting algorithm
     '''
@@ -219,7 +230,7 @@ class BackwardShootMover(ShootMover):
                     self.ensemble, 
                     details.start[details.start_point.index + 1:]
                 ).can_prepend, 
-                self.length_stopper.can_prepend
+                self._length_stopper.can_prepend
             ]
         )
 
@@ -232,6 +243,7 @@ class BackwardShootMover(ShootMover):
         
         pass
 
+@dictable
 class MixedMover(PathMover):
     '''
     Defines a mover that picks a over from a set of movers with specific weights.
@@ -273,10 +285,12 @@ class MixedMover(PathMover):
 # The following moves still need to be implemented. Check what excactly they do
 #############################################################
 
+@dictable
 class MinusMove(PathMover):
     def move(self, allpaths, state):
         pass
 
+@dictable
 class PathReversal(PathMover):
     def move(self, trajectory, ensemble):
         details = MoveDetails()
@@ -300,6 +314,7 @@ class PathReversal(PathMover):
 # The following move should be moved to RETIS and just uses moves. It is not a move itself
 #############################################################
 
+@dictable
 class ReplicaExchange(PathMover):
     # TODO: Might put the target ensembles into the Mover instance, which means we need lots of mover instances for all ensemble switches
     def move(self, trajectory1, trajectory2, ensemble1, ensemble2):

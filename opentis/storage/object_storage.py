@@ -77,6 +77,13 @@ class ObjectStorage(object):
         else:
             self.dimension_units = {}
 
+    def __str__(self):
+        """
+        Make a nice output of the store
+        """
+
+        return "Store '" + self.db + "'"
+
     @property
     def units(self):
         """
@@ -200,23 +207,24 @@ class ObjectStorage(object):
         return ObjectIterator()
 
     @loadcache
-    def load(self, idx, lazy=True):
+    def load(self, idx, lazy=False):
         '''
         Returns an object from the storage. Needs to be implented from the specific storage class.
         '''
 
         # Create object first to break any unwanted recursion in loading
-        obj = StoredObject()
-        setattr(obj, 'idx', {self.storage : idx})
         if lazy:
+
+            obj = StoredObject()
             # if lazy construct a function that will update the content. This will be loaded, once the object is accessed
             def loader():
-                return self.load_json(self.idx_dimension + '_json', idx, obj)
+                obj = self.load_object(self.idx_dimension + '_json', idx)
+                return obj
 
             setattr(obj, '_loader', loader)
             return obj
         else:
-            return self.load_json(self.idx_dimension + '_json', idx, obj)
+            return self.load_object(self.idx_dimension + '_json', idx)
 
     @saveidentifiable
     @savecache
@@ -229,7 +237,13 @@ class ObjectStorage(object):
         if self.named and hasattr(obj, 'name'):
             self.storage.variables[self.db + '_name'][idx] = obj.name
 
-        self.save_json(self.idx_dimension + '_json', idx, obj)
+        self.save_object(self.idx_dimension + '_json', idx, obj)
+
+    def get_name(self, idx):
+        if self.named:
+            return self.storage.variables[self.db + '_name'][idx]
+        else:
+            return None
 
     def get(self, indices):
         """
@@ -459,24 +473,25 @@ class ObjectStorage(object):
         self.set_list_as_type(name + '_value', idx, 0, data.items(), value_type)
         self.save_variable(name + '_length', idx, len(data))
 
-    def load_json(self, name, idx, obj = None):
+    def load_object(self, name, idx):
+        print 'Load',name,idx
         idx = int(idx)
-        if obj is None:
-            obj = StoredObject()
+#        if obj is None:
+#            obj = StoredObject()
 
         json_string = self.storage.variables[name][idx]
-        setattr(obj, 'json', json_string)
 
         simplified = yaml.load(json_string)
-        data = self.simplifier.build(simplified[1])
-        for key, value in data.iteritems():
-            setattr(obj, key, value)
+        obj = self.simplifier.build(simplified)
+#        for key, value in data.iteritems():
+#            setattr(obj, key, value)
 
-        setattr(obj, 'cls', simplified[0])
+#        setattr(obj, 'cls', simplified[0])
+        setattr(obj, 'json', json_string)
 
         return obj
 
-    def save_json(self, name, idx, obj):
+    def save_object(self, name, idx, obj):
         if not hasattr(obj,'json'):
             setattr(obj, 'json', self.object_to_json(obj))
 
@@ -487,13 +502,13 @@ class ObjectStorage(object):
 #=============================================================================================
 
     def object_to_json(self, obj):
-        if hasattr(obj, 'to_dict'):
-            data = obj.to_dict()
-        else:
-            data = obj.__dict__
-
-        cls = obj.__class__.__name__
-        json_string = self.simplifier.to_json([cls, data], obj.base_cls_name)
+#        if hasattr(obj, 'to_dict'):
+#            data = obj.to_dict()
+#        else:
+#            data = obj.__dict__
+#
+#        cls = obj.__class__.__name__
+        json_string = self.simplifier.to_json_object(obj, obj.base_cls_name)
 
         return json_string
 

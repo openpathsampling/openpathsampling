@@ -4,10 +4,11 @@ Created on 03.09.2014
 @author: jan-hendrikprinz, David W.H. Swenson
 '''
 from opentis.trajectory import Trajectory
-from opentis.wrapper import storable, creatable
+from opentis.wrapper import storable, creatable, nestable
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
+@nestable
 @creatable
 @storable
 class Ensemble(object):
@@ -553,18 +554,22 @@ class EnsembleCombination(Ensemble):
 #        print self.sfnc, self.ensemble1, self.ensemble2, self.sfnc.format('(' + str(self.ensemble1) + ')' , '(' + str(self.ensemble1) + ')')
         return self.sfnc.format('(\n' + Ensemble._indent(str(self.ensemble1)) + '\n)' , '(\n' + Ensemble._indent(str(self.ensemble2)) + '\n)')
 
+@creatable
 class OrEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
         super(OrEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a or b, str_fnc = '{0}\nor\n{1}')
 
+@creatable
 class AndEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
         super(AndEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and b, str_fnc = '{0}\nand\n{1}')
 
+@creatable
 class XorEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
         super(XorEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a ^ b, str_fnc = '{0}\nxor\n{1}')
 
+@creatable
 class SubEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
         super(SubEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and not b, str_fnc = '{0}\nand not\n{1}')
@@ -890,7 +895,7 @@ class VolumeEnsemble(Ensemble):
     '''    
     def __init__(self, volume, lazy = True):
         super(VolumeEnsemble, self).__init__()
-        self._stored_volume = volume
+        self.volume = volume
         self.lazy = lazy
 
     @property
@@ -898,7 +903,7 @@ class VolumeEnsemble(Ensemble):
         '''
         The volume that is used in the specification.
         '''
-        return self._stored_volume
+        return self.volume
 
 @creatable
 class InXEnsemble(VolumeEnsemble):
@@ -929,7 +934,7 @@ class InXEnsemble(VolumeEnsemble):
         return True
 
     def __invert__(self):
-        return LeaveXEnsemble(self._stored_volume, self.frames, self.lazy)
+        return LeaveXEnsemble(self.volume, self.frames, self.lazy)
 
     def __str__(self):
         return 'x[t] in {0} for all t'.format(self._volume)
@@ -943,13 +948,13 @@ class OutXEnsemble(InXEnsemble):
     '''    
     @property
     def _volume(self):
-        return ~ self._stored_volume
+        return ~ self.volume
     
     def __str__(self):
         return 'x[t] in {0} for all t'.format(self._volume)
 
     def __invert__(self):
-        return HitXEnsemble(self._stored_volume, self.frames, self.lazy)
+        return HitXEnsemble(self.volume, self.frames, self.lazy)
 
 @creatable
 class HitXEnsemble(VolumeEnsemble):
@@ -976,7 +981,7 @@ class HitXEnsemble(VolumeEnsemble):
         return False
 
     def __invert__(self):
-        return OutXEnsemble(self._stored_volume, self.frames, self.lazy)
+        return OutXEnsemble(self.volume, self.frames, self.lazy)
 
 @creatable
 class LeaveXEnsemble(HitXEnsemble):
@@ -990,10 +995,10 @@ class LeaveXEnsemble(HitXEnsemble):
     @property
     def _volume(self):
         # effectively use HitXEnsemble but with inverted volume
-        return ~ self._stored_volume
+        return ~ self.volume
 
     def __invert__(self):
-        return InXEnsemble(self._stored_volume, self.frames, self.lazy)
+        return InXEnsemble(self.volume, self.frames, self.lazy)
 
     def __call__(self, trajectory, lazy=None):
         for frame in trajectory:

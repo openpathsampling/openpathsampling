@@ -22,7 +22,6 @@ if __name__ == '__main__':
                    const=True, default=False,
                    help='create a svg embedded in a html')
 
-
     parser.add_argument('--state', nargs=2, action='append',
                         help='add a background coloring to s snapshot using the given orderparameter.',
                         metavar=('orderparameter', 'color'))
