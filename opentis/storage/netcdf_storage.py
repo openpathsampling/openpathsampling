@@ -175,6 +175,9 @@ class Storage(netcdf.Dataset):
             self.topology = self.simplifier.topology_from_dict(self.simplifier.from_json(self.variables['topology'][0]))
             self.atoms = self.topology.n_atoms
 
+    def __str__(self):
+        return "OpenPathSampling netCDF Storage @ '" + self.filename + "'"
+
     @property
     def template(self):
         """
