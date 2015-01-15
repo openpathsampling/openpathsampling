@@ -10,7 +10,9 @@ from opentis.storage import Storage
 from opentis.tools import snapshot_from_pdb, to_openmm_topology
 from opentis.dynamics_engine import DynamicsEngine
 from opentis.snapshot import Snapshot
+from opentis.wrapper import creatable
 
+@creatable
 class OpenMMEngine(DynamicsEngine):
     """We only need a few things from the simulation. This object duck-types
     an OpenMM simulation object so that it quacks the methods we need to
@@ -98,13 +100,15 @@ class OpenMMEngine(DynamicsEngine):
 
         options['template'] = template
 
-        storage.init_str('simulation_options')
-        storage.write_as_json('simulation_options', options)
+#        storage.init_str('simulation_options')
+#        storage.write_as_json('simulation_options', options)
+
 
         engine = OpenMMEngine(
             options=options
         )
         engine.storage = storage
+        storage.engine.save(engine)
 
         return engine
 
@@ -116,13 +120,15 @@ class OpenMMEngine(DynamicsEngine):
             mode='a'
         )
 
-        options = storage.restore_object('simulation_options')
+#        options = storage.restore_object('simulation_options')
 
-        options['template'] = storage.template
+#        options['template'] = storage.template
 
-        engine = OpenMMEngine(
-            options=options
-        )
+#        engine = OpenMMEngine(
+#            options=options
+#        )
+
+        engine = storage.engine.load(0)
 
         engine.storage = storage
         return engine

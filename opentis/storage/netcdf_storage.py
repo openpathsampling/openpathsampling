@@ -15,8 +15,6 @@ from object_storage import ObjectStorage
 from trajectory_store import TrajectoryStorage
 from opentis.storage.sample_store import SampleStorage, SampleSetStorage
 from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
-from engine_store import DynamicsEngineStorage
-from ensemble_store import EnsembleStorage
 from opentis.shooting import ShootingPointSelector, ShootingPoint
 from opentis.pathmover import PathMover, MoveDetails
 from opentis.globalstate import GlobalState
@@ -25,6 +23,7 @@ from opentis.orderparameter import OrderParameter
 from opentis.snapshot import Configuration
 from opentis.volume import Volume
 from opentis.ensemble import Ensemble
+from opentis.dynamics_engine import DynamicsEngine
 
 from opentis.storage.util import ObjectJSON
 from opentis.tools import units_from_snapshot
@@ -62,7 +61,7 @@ class Storage(netcdf.Dataset):
         self.shootingpoint = ObjectStorage(store, ShootingPoint, named=False, json=True).register()
         self.shootingpointselector = ObjectStorage(store, ShootingPointSelector, named=False, json=True, identifier='json').register()
         self.globalstate = ObjectStorage(store, GlobalState, named=True, json=True, identifier='json').register()
-        self.engine = DynamicsEngineStorage(store).register()
+        self.engine = ObjectStorage(store, DynamicsEngine, named=True, json=True, identifier='json').register()
         self.collectivevariable = ObjectDictStorage(store, OrderParameter, Configuration).register()
         self.sampleset = SampleSetStorage(store).register()
         self.volume = ObjectStorage(store, Volume, named=True, json=True, identifier='json').register()

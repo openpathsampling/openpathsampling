@@ -51,7 +51,7 @@ if __name__=="__main__":
         filename="test_simple.nc",
         template='../data/Alanine_solvated.pdb',
         options=options,
-        mode='create'
+        mode='auto'
     )
 
     # set up the initial conditions
