@@ -139,12 +139,16 @@ class SnapshotStorage(ObjectStorage):
         super(SnapshotStorage, self)._init()
 
         self.init_variable('snapshot_configuration_idx', 'index', self.db,
-                description="snapshot[snapshot] is the snapshot index (0..n_configuration-1) of snapshot 'snapshot'.")
+                description="snapshot[snapshot] is the snapshot index (0..n_configuration-1) of snapshot 'snapshot'.",
+                chunksizes=(1, )
+        )
 
         self.init_variable('snapshot_momentum_idx', 'index', self.db,
-                description="snapshot[snapshot] is the snapshot index (0..n_momentum-1) 'frame' of snapshot 'snapshot'.")
+                description="snapshot[snapshot] is the snapshot index (0..n_momentum-1) 'frame' of snapshot 'snapshot'.",
+                chunksizes=(1, )
+                )
 
-        self.init_variable('snapshot_momentum_reversed', 'bool', self.db)
+        self.init_variable('snapshot_momentum_reversed', 'bool', self.db, chunksizes=(1, ))
 
 #=============================================================================================
 # ORDERPARAMETER UTILITY FUNCTIONS
@@ -345,9 +349,9 @@ class MomentumStorage(ObjectStorage):
 
         self.init_variable('momentum_velocities', 'float', (self.db, 'atom','spatial'), self.dimension_units['velocity'],
                 description="velocities[momentum][atom][coordinate] are velocities of atom 'atom' in" +
-                            " dimension 'coordinate' of momentum 'momentum'.")
+                            " dimension 'coordinate' of momentum 'momentum'.", chunksizes=(1,atoms,3))
 
-        self.init_variable('momentum_kinetic', 'float', self.db, self.dimension_units['energy'])
+        self.init_variable('momentum_kinetic', 'float', self.db, self.dimension_units['energy'], chunksizes=(1, ))
 
 
     
@@ -560,8 +564,8 @@ class ConfigurationStorage(ObjectStorage):
 
         self.init_variable('configuration_coordinates', 'float', (self.db, 'atom','spatial'), self.dimension_units['length'],
                 description="coordinates[configuration][atom][coordinate] are coordinate of atom 'atom' " +
-                            "in dimension 'coordinate' of configuration 'configuration'.")
+                            "in dimension 'coordinate' of configuration 'configuration'.", chunksizes=(1,atoms,3))
 
-        self.init_variable('configuration_box_vectors', 'float', (self.db, 'spatial', 'spatial'), self.dimension_units['length'])
+        self.init_variable('configuration_box_vectors', 'float', (self.db, 'spatial', 'spatial'), self.dimension_units['length'], chunksizes=(1,3,3))
 
-        self.init_variable('configuration_potential', 'float', self.db, self.dimension_units['energy'])
+        self.init_variable('configuration_potential', 'float', self.db, self.dimension_units['energy'], chunksizes=(1, ))

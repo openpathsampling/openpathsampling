@@ -81,11 +81,11 @@ class SampleStorage(ObjectStorage):
         super(SampleStorage, self)._init()
 
         # New short-hand definition
-        self.init_variable('sample_trajectory_idx', 'index')
-        self.init_variable('sample_ensemble_idx', 'index')
-        self.init_variable('sample_replica', 'index')
-        self.init_variable('sample_details_idx', 'index')
-        self.init_variable('sample_step', 'index')
+        self.init_variable('sample_trajectory_idx', 'index', chunksizes=(1, ))
+        self.init_variable('sample_ensemble_idx', 'index', chunksizes=(1, ))
+        self.init_variable('sample_replica', 'index', chunksizes=(1, ))
+        self.init_variable('sample_details_idx', 'index', chunksizes=(1, ))
+        self.init_variable('sample_step', 'index', chunksizes=(1, ))
 
 class SampleSetStorage(ObjectStorage):
 
@@ -169,5 +169,6 @@ class SampleSetStorage(ObjectStorage):
 
         self.init_variable('sampleset_sample_idx', 'index', 'sampleset',
             description="sampleset[sampleset][frame] is the sample index (0..nspanshots-1) of frame 'frame' of sampleset 'sampleset'.",
-            variable_length = True
+            variable_length = True,
+            chunksizes=(1024, )
         )

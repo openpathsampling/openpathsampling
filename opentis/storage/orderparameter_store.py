@@ -100,7 +100,7 @@ class ObjectDictStorage(ObjectStorage):
 
 #        self.init_objectdict(self.idx_dimension, self.content_class.__name__.lower())
 #        self.init_variable(self.idx_dimension + '_name', 'index', (self.idx_dimension)
-        self.init_variable(self.idx_dimension + '_length', 'index', self.idx_dimension)
+        self.init_variable(self.idx_dimension + '_length', 'index', self.idx_dimension, chunksizes=(1, ))
 
     def _update_store(self, obj):
         """

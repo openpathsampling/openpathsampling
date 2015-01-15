@@ -187,7 +187,7 @@ the bootstrapping calculation, then we run it.
     Saving all cached computations of orderparameters.
     """
 
-    psi.save(storage=engine.storage.cv)
+    psi.save(storage=engine.storage.collectivevariable)
     phi.save(storage=engine.storage.collectivevariable)
     # Alternatively one could write
     # engine.storage.collectivevariable.save(psi)

@@ -111,5 +111,6 @@ class TrajectoryStorage(ObjectStorage):
 
         self.init_variable('trajectory_snapshot_idx', 'index', 'trajectory',
             description="trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.",
-            variable_length = True
+            variable_length = True,
+            chunksizes=(10240, )
         )

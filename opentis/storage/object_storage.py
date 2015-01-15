@@ -314,9 +314,9 @@ class ObjectStorage(object):
         # define dimensions used for the specific object
         self.storage.createDimension(self.idx_dimension, 0)
         if self.named:
-            self.init_variable(self.db + "_name", 'str', description='A short descriptive name for convenience')
+            self.init_variable(self.db + "_name", 'str', description='A short descriptive name for convenience', chunksizes=tuple([10240]))
         if self.json:
-            self.init_variable(self.db + "_json", 'str', description='A json serialized version of the object')
+            self.init_variable(self.db + "_json", 'str', description='A json serialized version of the object', chunksizes=tuple([10240]))
 
     def var(self, name):
         return '_'.join([self.db, name])
@@ -359,7 +359,7 @@ class ObjectStorage(object):
 
         self.storage.sync()
 
-    def init_variable(self, name, var_type, dimensions = None, units=None, description=None, variable_length=False):
+    def init_variable(self, name, var_type, dimensions = None, units=None, description=None, variable_length=False, chunksizes=None):
         '''
         Create a new variable in the netcdf storage. This is just a helper function to structure the code better.
 
@@ -392,7 +392,7 @@ class ObjectStorage(object):
 
         nc_type = var_type
         if var_type == 'float':
-            nc_type = 'f4'   # 32-bit float
+            nc_type = np.float32   # 32-bit float
         elif var_type == 'int':
             nc_type = np.int32   # 32-bit signed integer
         elif var_type == 'index':
@@ -406,12 +406,9 @@ class ObjectStorage(object):
 
         if variable_length:
             vlen_t = ncfile.createVLType(nc_type, name + '_vlen')
-            ncvar = ncfile.createVariable(name, vlen_t, dimensions, zlib=True)
+            ncvar = ncfile.createVariable(name, vlen_t, dimensions, zlib=False, chunksizes=chunksizes)
         else:
-            if var_type != 'str':
-                ncvar = ncfile.createVariable(name, nc_type, dimensions, zlib=True)
-            else:
-                ncvar = ncfile.createVariable(name, nc_type, dimensions, zlib=False)
+            ncvar = ncfile.createVariable(name, nc_type, dimensions, zlib=False, chunksizes=chunksizes)
 
         if var_type == 'float' or units is not None:
 
