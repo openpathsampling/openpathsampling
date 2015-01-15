@@ -52,21 +52,21 @@ class Storage(netcdf.Dataset):
         self.snapshot = SnapshotStorage(store).register()
         self.configuration = ConfigurationStorage(store).register()
         self.momentum = MomentumStorage(store).register()
-
-        # TODO: Remove ensemble_store.py. It is obsolete
-        # self.ensemble = EnsembleStorage(store).register()
         self.sample = SampleStorage(store).register()
+        self.sampleset = SampleSetStorage(store).register()
+
+        self.collectivevariable = ObjectDictStorage(store, OrderParameter, Configuration).register()
+
         self.pathmover = ObjectStorage(store, PathMover, named=True, json=True, identifier='json').register()
         self.movedetails = ObjectStorage(store, MoveDetails, named=False, json=True, identifier='json').register()
         self.shootingpoint = ObjectStorage(store, ShootingPoint, named=False, json=True).register()
         self.shootingpointselector = ObjectStorage(store, ShootingPointSelector, named=False, json=True, identifier='json').register()
         self.globalstate = ObjectStorage(store, GlobalState, named=True, json=True, identifier='json').register()
         self.engine = ObjectStorage(store, DynamicsEngine, named=True, json=True, identifier='json').register()
-        self.collectivevariable = ObjectDictStorage(store, OrderParameter, Configuration).register()
-        self.sampleset = SampleSetStorage(store).register()
         self.volume = ObjectStorage(store, Volume, named=True, json=True, identifier='json').register()
         self.ensemble = ObjectStorage(store, Ensemble, named=True, json=True, identifier='json').register()
-        self.cv = self.collectivevariable
+
+#        self.cv = self.collectivevariable
 
     def _setup_class(self):
         self._storages = {}
