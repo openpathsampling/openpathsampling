@@ -406,9 +406,12 @@ class ObjectStorage(object):
 
         if variable_length:
             vlen_t = ncfile.createVLType(nc_type, name + '_vlen')
-            ncvar = ncfile.createVariable(name, vlen_t, dimensions)
+            ncvar = ncfile.createVariable(name, vlen_t, dimensions, zlib=True)
         else:
-            ncvar = ncfile.createVariable(name, nc_type, dimensions)
+            if var_type != 'str':
+                ncvar = ncfile.createVariable(name, nc_type, dimensions, zlib=True)
+            else:
+                ncvar = ncfile.createVariable(name, nc_type, dimensions, zlib=False)
 
         if var_type == 'float' or units is not None:
 

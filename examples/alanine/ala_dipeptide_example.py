@@ -86,8 +86,8 @@ if __name__=="__main__":
 
     # save the orderparameters in the storage
     # since they have no data cache this will only contain their name
-    psi.save(storage=engine.storage.cv)
-    phi.save(storage=engine.storage.cv)
+    psi.save(storage=engine.storage.collectivevariable)
+    phi.save(storage=engine.storage.collectivevariable)
 
     # now we define our states and our interfaces
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
@@ -188,17 +188,17 @@ the bootstrapping calculation, then we run it.
     """
 
     psi.save(storage=engine.storage.cv)
-    phi.save(storage=engine.storage.cv)
+    phi.save(storage=engine.storage.collectivevariable)
     # Alternatively one could write
-    # engine.storage.cv.save(psi)
-    # engine.storage.cv.save(phi)
+    # engine.storage.collectivevariable.save(psi)
+    # engine.storage.collectivevariable.save(phi)
 
     # Save all interface volumes as orderparameters
     op_vol_set = [OP_Volume('OP' + str(idx), vol) for idx, vol in enumerate(volume_set)]
 
     for op in op_vol_set:
         op(engine.storage.snapshot.all())
-        engine.storage.cv.save(op)
+        engine.storage.collectivevariable.save(op)
 
     # Create an orderparameter from a volume
     op_inA = OP_Volume('StateA', stateA)
@@ -210,7 +210,7 @@ the bootstrapping calculation, then we run it.
     op_inB(engine.storage.snapshot.all())
     op_notinAorB(engine.storage.snapshot.all())
 
-    engine.storage.cv.save(op_inA)
-    engine.storage.cv.save(op_inB)
-    engine.storage.cv.save(op_notinAorB)
+    engine.storage.collectivevariable.save(op_inA)
+    engine.storage.collectivevariable.save(op_inB)
+    engine.storage.collectivevariable.save(op_notinAorB)
 

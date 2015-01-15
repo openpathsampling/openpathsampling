@@ -51,7 +51,7 @@ if __name__=="__main__":
         filename="test_simple.nc",
         template='../data/Alanine_solvated.pdb',
         options=options,
-        mode='auto'
+        mode='create'
     )
 
     # set up the initial conditions
@@ -86,8 +86,8 @@ if __name__=="__main__":
 
     # save the orderparameters in the storage
     # since they have no data cache this will only contain their name
-    psi.save(storage=engine.storage.cv)
-    phi.save(storage=engine.storage.cv)
+    psi.save(storage=engine.storage.collectivevariable)
+    phi.save(storage=engine.storage.collectivevariable)
 
     # now we define our states and our interfaces
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
