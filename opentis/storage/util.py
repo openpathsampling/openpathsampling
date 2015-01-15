@@ -1,5 +1,6 @@
 import json
 import yaml
+import base64
 import simtk.unit as units
 import mdtraj as md
 import numpy as np
@@ -32,6 +33,9 @@ class ObjectJSON(object):
                     return { '_value' : obj.value_in_unit_system(self.unit_system), '_units' : self.unit_to_dict(obj.unit.in_unit_system(self.unit_system)) }
                 else:
                     return { '_value' : obj / obj.unit, '_units' : self.unit_to_dict(obj.unit) }
+            elif type(obj) is np.ndarray:
+                # this is maybe not the best way to store large numpy arrays!
+                return { '_numpy' : self.simplify(obj.shape), '_dtype' : str(obj.dtype), '_data' : base64.b64encode(obj) }
             elif hasattr(obj, 'to_dict'):
                 # the object knows how to dismantle itself into a json string so use this
                 return { '_cls' : obj.__class__.__name__, '_dict' : self.simplify(obj.to_dict(), obj.base_cls_name) }
@@ -57,6 +61,8 @@ class ObjectJSON(object):
                 return obj['_value'] * self.unit_from_dict(obj['_units'])
             elif '_slice' in obj:
                 return slice(*obj['_slice'])
+            elif '_numpy' in obj:
+                return np.frombuffer(base64.decodestring(obj['_data']), dtype=np.dtype(obj['_dtype'])).reshape(tuple(obj['_numpy']))
             elif '_cls' in obj and '_dict' in obj:
                 if obj['_cls'] in self.class_list:
                     attributes = self.build(obj['_dict'])
