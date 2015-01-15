@@ -1,6 +1,5 @@
 import numpy as np
-from opentis.snapshot import Snapshot
-from opentis.snapshot import Momentum, Configuration
+from opentis.snapshot import Snapshot, Momentum, Configuration
 from opentis.dynamics_engine import DynamicsEngine
 
 def convert_to_3Ndim(v):

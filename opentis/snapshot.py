@@ -163,7 +163,7 @@ class Configuration(object):
     # Utility functions
     #=========================================================================
 
-    def copy(self):
+    def copy(self, subset=None):
         """
         Returns a deep copy of the instance itself. If this object is saved
         it will not be stored as a separate object and consume additional
@@ -175,7 +175,14 @@ class Configuration(object):
             the deep copy
         """
 
-        this = Configuration(coordinates=self.coordinates, box_vectors=self._box_vectors, potential_energy=self._potential_energy, topology=self.topology)
+        if subset is None:
+            this = Configuration(coordinates=self.coordinates, box_vectors=self._box_vectors, potential_energy=self._potential_energy, topology=self.topology)
+        else:
+            new_coordinates = self.coordinates[subset,:]
+            new_topology = self.topology.subset(subset)
+            # TODO: Keep old potential_energy? Is not correct but might be useful. Boxvectors are fine!
+            this = Configuration(coordinates=new_coordinates, box_vectors=self._box_vectors, potential_energy=self._potential_energy, topology=new_topology)
+
         return this
 
     def md(self):
@@ -198,8 +205,6 @@ class Configuration(object):
         output[0,:,:] = self.coordinates
 
         return md.Trajectory(output, self.topology)
-
-
 
 #=============================================================================
 # SIMULATION MOMENTUM / VELOCITY
@@ -300,7 +305,7 @@ class Momentum(object):
     # Utility functions
     #=========================================================================
 
-    def copy(self):
+    def copy(self, subset=None):
         """
         Returns a deep copy of the instance itself. If this object will not
         be saved as a separate object and consumes additional memory. It is
@@ -313,8 +318,16 @@ class Momentum(object):
         Momentum()
             the deep copy
         """
-        this = Momentum(velocities=self._velocities, kinetic_energy=self._kinetic_energy)
-        this.idx = self.idx
+
+
+        if subset is None:
+            this = Momentum(velocities=self._velocities, kinetic_energy=self._kinetic_energy)
+        else:
+            new_velocities = self.velocities[subset,:]
+            new_topology = self.topology.subset(subset)
+            # TODO: Keep old kinetic_energy? Is not correct but might be useful.
+            this = Momentum(velocities=new_velocities, kinetic_energy=self._kinetic_energy)
+
         return this
 
     def reverse(self):
@@ -595,3 +608,17 @@ class Snapshot(object):
         Rather slow since the topology has to be made each time. Try to avoid it
         '''        
         return self.configuration.md()
+
+    def subset(self, subset):
+        """
+        Return a deep copy of the snapshot with reduced set of coordinates. Takes also care
+        of adjusting the topology.
+
+        Notes
+        -----
+        So far the potential and kinetic energies are copied and are thus false but still useful!?!
+        """
+
+        this = Snapshot(configuration=self.configuration.copy(subset), momentum=self.momentum.copy(subset), reversed=self.reversed)
+
+        return this
