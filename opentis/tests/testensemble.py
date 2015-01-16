@@ -2,7 +2,7 @@ from nose.tools import assert_equal, assert_not_equal, raises
 from nose.plugins.skip import SkipTest
 from test_helpers import CallIdentity, prepend_exception_message
 
-from opentis.volume import LambdaVolume
+import opentis as ops
 from opentis.ensemble import *
 
 import re
@@ -77,9 +77,9 @@ def setUp():
     lower = 0.1
     upper = 0.5
     op = CallIdentity()
-    vol1 = LambdaVolume(op, lower, upper)
-    vol2 = LambdaVolume(op, -0.1, 0.7)
-    vol3 = LambdaVolume(op, 2.0, 2.5)
+    vol1 = ops.LambdaVolume(op, lower, upper)
+    vol2 = ops.LambdaVolume(op, -0.1, 0.7)
+    vol3 = ops.LambdaVolume(op, 2.0, 2.5)
     # we use the following codes to describe trajectories:
     # in : in the state
     # out : out of the state
@@ -97,7 +97,7 @@ def setUp():
 
     # make the tests from lists into trajectories
     for test in ttraj.keys():
-        ttraj[test] = Trajectory(ttraj[test])
+        ttraj[test] = ops.Trajectory(ttraj[test])
 
 def in_out_parser(testname):
     allowed_parts = ['in', 'out']
@@ -170,9 +170,9 @@ class testLeaveXEnsemble(EnsembleTest):
 
     def test_leaveX_0(self):
         """LeaveXEnsemble treatment of zero-length trajectory"""
-        assert_equal(self.leaveX(Trajectory([])), False)
-        assert_equal(self.leaveX.can_append(Trajectory([])), True)
-        assert_equal(self.leaveX.can_prepend(Trajectory([])), True)
+        assert_equal(self.leaveX(ops.Trajectory([])), False)
+        assert_equal(self.leaveX.can_append(ops.Trajectory([])), True)
+        assert_equal(self.leaveX.can_prepend(ops.Trajectory([])), True)
 
     def test_leaveX_str(self):
         volstr = "{x|Id(x) in [0.1, 0.5]}"
@@ -195,9 +195,9 @@ class testInXEnsemble(EnsembleTest):
 
     def test_inX_0(self):
         """InXEnsemble treatment of zero-length trajectory"""
-        assert_equal(self.inX(Trajectory([])), False)
-        assert_equal(self.inX.can_append(Trajectory([])), True)
-        assert_equal(self.inX.can_prepend(Trajectory([])), True)
+        assert_equal(self.inX(ops.Trajectory([])), False)
+        assert_equal(self.inX.can_append(ops.Trajectory([])), True)
+        assert_equal(self.inX.can_prepend(ops.Trajectory([])), True)
 
     def test_inX_str(self):
         volstr = "{x|Id(x) in [0.1, 0.5]}"
@@ -220,9 +220,9 @@ class testOutXEnsemble(EnsembleTest):
 
     def test_outX_0(self):
         """OutXEnsemble treatment of zero-length trajectory"""
-        assert_equal(self.outX(Trajectory([])), False)
-        assert_equal(self.outX.can_append(Trajectory([])), True)
-        assert_equal(self.outX.can_prepend(Trajectory([])), True)
+        assert_equal(self.outX(ops.Trajectory([])), False)
+        assert_equal(self.outX.can_append(ops.Trajectory([])), True)
+        assert_equal(self.outX.can_prepend(ops.Trajectory([])), True)
 
     def test_outX_str(self):
         volstr = "{x|Id(x) in [0.1, 0.5]}"
@@ -245,9 +245,9 @@ class testHitXEnsemble(EnsembleTest):
 
     def test_hitX_0(self):
         """HitXEnsemble treatment of zero-length trajectory"""
-        assert_equal(self.hitX(Trajectory([])), False)
-        assert_equal(self.hitX.can_append(Trajectory([])), True)
-        assert_equal(self.hitX.can_prepend(Trajectory([])), True)
+        assert_equal(self.hitX(ops.Trajectory([])), False)
+        assert_equal(self.hitX.can_append(ops.Trajectory([])), True)
+        assert_equal(self.hitX.can_prepend(ops.Trajectory([])), True)
 
     def test_hitX_str(self):
         volstr = "{x|Id(x) in [0.1, 0.5]}"

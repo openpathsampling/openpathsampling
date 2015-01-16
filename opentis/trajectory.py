@@ -436,7 +436,7 @@ class Trajectory(list):
                                  u.nanometers)
             else:
                 box_v = None
-            config = ops.ops.Configuration(coordinates=coord, box_vectors=box_v)
+            config = ops.Configuration(coordinates=coord, box_vectors=box_v)
 
             snap = ops.Snapshot(configuration=config, momentum=empty_momentum)
             trajectory.append(snap)
