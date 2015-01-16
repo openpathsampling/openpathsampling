@@ -1,7 +1,7 @@
 import numpy as np
 from opentis.snapshot import Snapshot, Configuration, Momentum
 from object_storage import ObjectStorage
-from wrapper import savecache, loadcache
+from decorators import savecache, loadcache
 from opentis.trajectory import Trajectory
 import simtk.unit as u
 

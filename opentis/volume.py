@@ -5,7 +5,7 @@ Created on 03.09.2014
 '''
 import range_logic
 
-from opentis.storage.wrapper import storable, nestable
+from opentis.storage.decorators import storable, nestable
 from opentis.todict import creatable
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!

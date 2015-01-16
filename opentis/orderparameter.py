@@ -5,7 +5,7 @@
 import mdtraj as md
 
 import opentis as ops
-from opentis.storage.wrapper import storable
+from opentis.storage.decorators import storable
 
 class ObjectDict(dict):
     """

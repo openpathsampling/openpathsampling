@@ -10,7 +10,7 @@ import mdtraj as md
 import simtk.unit as u
 
 import opentis as ops
-from opentis.storage.wrapper import storable
+from opentis.storage.decorators import storable
 
 #=============================================================================================
 # SIMULATION TRAJECTORY

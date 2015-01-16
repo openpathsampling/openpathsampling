@@ -1,5 +1,5 @@
 from object_storage import ObjectStorage
-from wrapper import loadcache, loadidentifiable
+from decorators import loadcache, loadidentifiable
 from opentis.orderparameter import OrderParameter
 
 class ObjectDictStorage(ObjectStorage):

@@ -5,7 +5,7 @@ Created on 03.09.2014
 '''
 
 from opentis.todict import creatable
-from opentis.storage.wrapper import storable, nestable
+from opentis.storage.decorators import storable, nestable
 
 import opentis as ops
 

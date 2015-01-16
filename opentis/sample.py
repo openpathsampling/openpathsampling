@@ -1,7 +1,7 @@
 import random
 
 import opentis as ops
-from opentis.storage.wrapper import storable
+from opentis.storage.decorators import storable
 
 class SampleKeyError(Exception):
     def __init__(self, key, sample, sample_key):

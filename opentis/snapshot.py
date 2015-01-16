@@ -9,7 +9,7 @@ import copy
 import numpy as np
 import mdtraj as md
 
-from opentis.storage.wrapper import storable
+from opentis.storage.decorators import storable
 
 #=============================================================================
 # SIMULATION CONFIGURATION

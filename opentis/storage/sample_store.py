@@ -1,5 +1,5 @@
 from object_storage import ObjectStorage
-from wrapper import savecache, loadcache
+from decorators import savecache, loadcache
 from opentis.sample import Sample, SampleSet
 
 class SampleStorage(ObjectStorage):

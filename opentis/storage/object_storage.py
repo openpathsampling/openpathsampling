@@ -3,7 +3,7 @@ import copy
 import yaml
 import numpy as np
 
-from wrapper import savecache, saveidentifiable, loadcache
+from decorators import savecache, saveidentifiable, loadcache
 import opentis as ops
 import simtk.unit as u
 

@@ -5,10 +5,10 @@ Created on 01.07.2014
 @author: JH Prinz
 '''
 
-from opentis.trajectory import Trajectory
-from opentis.ensemble import LengthEnsemble
 import simtk.unit as u
 import opentis as ops
+
+from opentis.storage.decorators import storable
 
 #=============================================================================
 # SOURCE CONTROL
@@ -20,7 +20,7 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 # Multi-State Transition Interface Sampling
 #=============================================================================
 
-@ops.storage.wrapper.storable
+@storable
 class DynamicsEngine(object):
     '''
     Class to wrap a simulation tool to store the context and rerun, needed
@@ -73,14 +73,14 @@ class DynamicsEngine(object):
         # mdtraj.Trajectory() objects
 
         # TODO: Remove this and put the logic outside of the engine
-        Trajectory.engine = self
+        ops.Trajectory.engine = self
 
         self._register_options(options)
 
         # TODO: switch this not needing slice; use can_append
         # this and n_atoms are the only general options we need and register
         if hasattr(self, 'n_frames_max'):
-            self.max_length_stopper = LengthEnsemble(slice(0, self.n_frames_max + 1))
+            self.max_length_stopper = ops.LengthEnsemble(slice(0, self.n_frames_max + 1))
 
     def _register_options(self, options = None):
         """
@@ -262,7 +262,7 @@ class DynamicsEngine(object):
             self.start()
 
             # Store initial state for each trajectory segment in trajectory.
-            trajectory = Trajectory()
+            trajectory = ops.Trajectory()
             trajectory.append(snapshot)
             
             frame = 0

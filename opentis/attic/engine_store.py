@@ -1,5 +1,5 @@
 from object_storage import ObjectStorage
-from wrapper import loadcache, savecache, saveidentifiable
+from decorators import loadcache, savecache, saveidentifiable
 from opentis.dynamics_engine import DynamicsEngine
 
 class DynamicsEngineStorage(ObjectStorage):

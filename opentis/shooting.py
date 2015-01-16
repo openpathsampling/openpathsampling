@@ -1,7 +1,7 @@
 import math
 import numpy as np
 
-from opentis.storage.wrapper import storable
+from opentis.storage.decorators import storable
 from opentis.todict import creatable
 
 

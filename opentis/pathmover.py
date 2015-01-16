@@ -8,7 +8,7 @@ import numpy as np
 
 import opentis as ops
 from opentis.todict import dictable
-from opentis.storage.wrapper import storable
+from opentis.storage.decorators import storable
 
 
 @dictable
