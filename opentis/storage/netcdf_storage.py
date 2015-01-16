@@ -123,6 +123,7 @@ class Storage(netcdf.Dataset):
 
         if units is not None:
             self.dimension_units.update(units)
+
         self._register_storages()
 
         if mode == 'w':
@@ -409,3 +410,35 @@ class Storage(netcdf.Dataset):
 
                     store = self._storages[obj_type]
                     return store.load(*args, **kwargs)
+
+    def clone(self, filename, subset):
+        """
+        Creates a copy of the netCDF file and allows to reduce the used atoms.
+
+        Notes
+        -----
+        This is mostly used to remove water but keep the data intact.
+        """
+        storage2 = Storage(filename=filename, template=self.template.subset(subset), mode='w')
+
+        # Copy all configurations and momenta to new file in reduced form
+
+        for obj in self.configuration.iterator():
+            storage2.configuration.save(obj.copy(subset), idx=obj.idx[self])
+        for obj in self.momentum.iterator():
+            storage2.momentum.save(obj.copy(subset), idx=obj.idx[self])
+
+        # All other should be copied one to one
+
+        for variable in self.variables.keys():
+            if not variable.startswith('configuration') and not variable.startswith('momentum') and not variable.startswith('topology'):
+                if variable not in storage2.variables:
+                    # orderparameters have additional variables in the storage that need to be copied
+                    storage2.createVariable(variable, str(self.variables[variable].dtype), self.variables[variable].dimensions)
+                    for attr in self.variables[variable].ncattrs():
+                        setattr(storage2.variables[variable], attr, getattr(self.variables[variable], attr))
+
+                    storage2.variables[variable][:] = self.variables[variable][:]
+                else:
+                    for idx in range(0, len(self.variables[variable])):
+                        storage2.variables[variable][idx] = self.variables[variable][idx]

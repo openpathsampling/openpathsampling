@@ -123,8 +123,8 @@ class ObjectJSON(object):
             else:
                 element_symbol = atom.element.symbol
 
-            atom_data.append((atom.serial, atom.name, element_symbol,
-                         atom.residue.resSeq, atom.residue.name,
+            atom_data.append((int(atom.serial), atom.name, element_symbol,
+                         int(atom.residue.resSeq), atom.residue.name,
                          atom.residue.chain.index))
 
             used_elements.add(atom.element)
@@ -189,7 +189,7 @@ class StorableObjectJSON(ObjectJSON):
 
     def simplify(self,obj, base_type = ''):
         if type(obj).__module__ != '__builtin__':
-            print obj.__dict__, hasattr(obj, 'creatable')
+#            print obj.__dict__, hasattr(obj, 'creatable')
             if hasattr(obj, 'idx') and (not hasattr(obj, 'nestable') or (obj.base_cls_name != base_type)):
                 # this also returns the base class name used for storage
                 # store objects only if they are not creatable. If so they will only be created in their

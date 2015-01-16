@@ -474,7 +474,8 @@ class ObjectStorage(object):
         self.save_variable(name + '_length', idx, len(data))
 
     def load_object(self, name, idx):
-        print 'Load',name,idx
+        # TODO: Add logging here
+#        print 'Load',name,idx
         idx = int(idx)
 #        if obj is None:
 #            obj = StoredObject()

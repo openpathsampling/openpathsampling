@@ -255,7 +255,7 @@ class Momentum(object):
 
     @property
     def velocities(self):
-        if Momentum.load_lazy is True and self._velocities is None and len(self.idx) > 0:
+        if Momentum.load_lazy and self._velocities is None and len(self.idx) > 0:
             # this uses the first storage and loads the velocities from there
             self.idx.iterkeys().next().momentum.update_velocities(self)
 
@@ -270,8 +270,7 @@ class Momentum(object):
 
     @property
     def kinetic_energy(self):
-        if Momentum.load_lazy is True and self._velocities is None and len(self.idx) > 0:
-            # this uses the first storage and loads the velocities from there
+        if Momentum.load_lazy and self._velocities is None and len(self.idx) > 0:
             self.idx.iterkeys().next().momentum.update_kinetic_energy(self)
 
         return self._kinetic_energy
@@ -321,12 +320,11 @@ class Momentum(object):
 
 
         if subset is None:
-            this = Momentum(velocities=self._velocities, kinetic_energy=self._kinetic_energy)
+            this = Momentum(velocities=self.velocities, kinetic_energy=self.kinetic_energy)
         else:
             new_velocities = self.velocities[subset,:]
-            new_topology = self.topology.subset(subset)
             # TODO: Keep old kinetic_energy? Is not correct but might be useful.
-            this = Momentum(velocities=new_velocities, kinetic_energy=self._kinetic_energy)
+            this = Momentum(velocities=new_velocities, kinetic_energy=self.kinetic_energy)
 
         return this
 
@@ -620,5 +618,4 @@ class Snapshot(object):
         """
 
         this = Snapshot(configuration=self.configuration.copy(subset), momentum=self.momentum.copy(subset), reversed=self.reversed)
-
         return this
