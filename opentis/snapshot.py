@@ -176,12 +176,12 @@ class Configuration(object):
         """
 
         if subset is None:
-            this = Configuration(coordinates=self.coordinates, box_vectors=self._box_vectors, potential_energy=self._potential_energy, topology=self.topology)
+            this = Configuration(coordinates=self.coordinates, box_vectors=self.box_vectors, potential_energy=self.potential_energy, topology=self.topology)
         else:
             new_coordinates = self.coordinates[subset,:]
             new_topology = self.topology.subset(subset)
             # TODO: Keep old potential_energy? Is not correct but might be useful. Boxvectors are fine!
-            this = Configuration(coordinates=new_coordinates, box_vectors=self._box_vectors, potential_energy=self._potential_energy, topology=new_topology)
+            this = Configuration(coordinates=new_coordinates, box_vectors=self.box_vectors, potential_energy=self.potential_energy, topology=new_topology)
 
         return this
 
@@ -270,7 +270,7 @@ class Momentum(object):
 
     @property
     def kinetic_energy(self):
-        if Momentum.load_lazy and self._velocities is None and len(self.idx) > 0:
+        if Momentum.load_lazy and self._kinetic_energy is None and len(self.idx) > 0:
             self.idx.iterkeys().next().momentum.update_kinetic_energy(self)
 
         return self._kinetic_energy
@@ -458,10 +458,10 @@ class Snapshot(object):
         # TODO: consider whether it is cleaner to move this logic into the
         # main allocation process instead of fixing things after the fact
         config = self.configuration
-        if config.coordinates is None and config.box_vectors is None and config.potential_energy is None:
+        if config._coordinates is None and config._box_vectors is None and config._potential_energy is None:
             self.configuration = None
         moment = self.momentum
-        if moment.velocities is None and moment.kinetic_energy is None:
+        if moment._velocities is None and moment._kinetic_energy is None:
             self.momentum = None
 
 

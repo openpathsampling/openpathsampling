@@ -202,6 +202,7 @@ class MomentumStorage(ObjectStorage):
         # TODO: If it was load lazy then it should be registered as already saved and if a snapshot does not
         # TODO: have velocities then it does not have a Momentum object
 
+
         # Store momentum.
         if momentum._velocities is not None:
             if hasattr(momentum.velocities, 'unit'):
