@@ -236,47 +236,6 @@ class Storage(netcdf.Dataset):
         # Force sync to disk to avoid data loss.
         self.sync()
 
-    def init_object(self, name):
-        '''
-        Initialize a netCDF Variable to store a JSON object
-
-        Parameters
-        ----------
-        name : str
-            the name of the variable
-        '''
-        self.init_str(name)
-
-    def write_as_json(self, name, obj):
-        '''
-        Write an object as json into a netCDF Variable
-
-        Parameters
-        ----------
-        name : str
-            the name of the variable
-        obj : object
-            the object to store
-        '''
-        self.write_str(name, self.simplifier.to_json(obj))
-
-    def restore_object(self, name):
-        """
-        Restore an object from a netCDF variable
-
-        Parameters
-        ----------
-        name : str
-            the name of the variable
-
-        Returns
-        -------
-        object
-            the restored object
-        """
-        json_string = self.variables[name][0]
-        return self.simplifier.from_json(json_string)
-
     def write_str(self, name, string):
         '''
         Write a string into a netCDF Variable
@@ -435,7 +394,7 @@ class Storage(netcdf.Dataset):
         storage2 = Storage(filename=filename, template=self.template, mode='w')
 
         for storage_name in [
-                'pathmover', 'engine', 'shootingpointselector', 'volume', 'ensemble':
+                'pathmover', 'engine', 'shootingpointselector', 'volume', 'ensemble']:
 
             self.clone_storage(storage_name, storage2)
 
