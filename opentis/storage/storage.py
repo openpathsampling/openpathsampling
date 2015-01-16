@@ -426,7 +426,7 @@ class Storage(netcdf.Dataset):
         Creates a copy of the netCDF file and replicates only the static parts which I consider
             ensembles, volumes, engines, pathmovers, shootingpointselectors. We do not need to
             reconstruct orderparameters since these need to be created again completely and then
-            the necessary arrays in the file will be created anyway.
+            the necessary arrays in the file will be created automatically anyway.
 
         Notes
         -----
