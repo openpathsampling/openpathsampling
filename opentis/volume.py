@@ -4,7 +4,8 @@ Created on 03.09.2014
 @author: Jan-Hendrik Prinz, David W.H. Swenson
 '''
 import range_logic
-from wrapper import creatable, storable, nestable
+from wrapper import storable, nestable
+from opentis.todict import creatable
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 

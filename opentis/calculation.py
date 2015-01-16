@@ -2,7 +2,7 @@ from globalstate import GlobalState
 from pathmover import PathMover, MoveDetails, ReplicaExchange
 from opentis.sample import Sample
 
-from wrapper import dictable
+from opentis.todict import dictable
 
 
 class Calculation(object):

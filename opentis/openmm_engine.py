@@ -10,7 +10,8 @@ from opentis.storage import Storage
 from opentis.tools import snapshot_from_pdb, to_openmm_topology
 from opentis.dynamics_engine import DynamicsEngine
 from opentis.snapshot import Snapshot
-from opentis.wrapper import creatable
+from opentis.todict import creatable
+
 
 @creatable
 class OpenMMEngine(DynamicsEngine):

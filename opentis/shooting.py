@@ -14,7 +14,9 @@ import numpy as np
 #
 #  
 #############################################################################
-from wrapper import storable, creatable
+from wrapper import storable
+from opentis.todict import creatable
+
 
 @creatable
 @storable

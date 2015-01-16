@@ -11,22 +11,7 @@ import os.path
 import numpy
 import simtk.unit as u
 
-from object_storage import ObjectStorage
-from trajectory_store import TrajectoryStorage
-from opentis.storage.sample_store import SampleStorage, SampleSetStorage
-from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
-from opentis.shooting import ShootingPointSelector, ShootingPoint
-from opentis.pathmover import PathMover, MoveDetails
-from opentis.globalstate import GlobalState
-from orderparameter_store import ObjectDictStorage
-from opentis.orderparameter import OrderParameter
-from opentis.snapshot import Configuration
-from opentis.volume import Volume
-from opentis.ensemble import Ensemble
-from opentis.dynamics_engine import DynamicsEngine
-
-from opentis.storage.util import ObjectJSON
-from opentis.tools import units_from_snapshot
+import opentis as ops
 
 #=============================================================================================
 # SOURCE CONTROL
@@ -48,31 +33,29 @@ class Storage(netcdf.Dataset):
         if store is None:
             store = self
 
-        self.trajectory = TrajectoryStorage(store).register()
-        self.snapshot = SnapshotStorage(store).register()
-        self.configuration = ConfigurationStorage(store).register()
-        self.momentum = MomentumStorage(store).register()
-        self.sample = SampleStorage(store).register()
-        self.sampleset = SampleSetStorage(store).register()
+        self.trajectory = ops.storage.TrajectoryStorage(store).register()
+        self.snapshot = ops.storage.SnapshotStorage(store).register()
+        self.configuration = ops.storage.ConfigurationStorage(store).register()
+        self.momentum = ops.storage.MomentumStorage(store).register()
+        self.sample = ops.storage.SampleStorage(store).register()
+        self.sampleset = ops.storage.SampleSetStorage(store).register()
 
-        self.collectivevariable = ObjectDictStorage(store, OrderParameter, Configuration).register()
+        self.collectivevariable = ops.storage.ObjectDictStorage(store, ops.OrderParameter, ops.Configuration).register()
 
-        self.pathmover = ObjectStorage(store, PathMover, named=True, json=True, identifier='json').register()
-        self.movedetails = ObjectStorage(store, MoveDetails, named=False, json=True, identifier='json').register()
-        self.shootingpoint = ObjectStorage(store, ShootingPoint, named=False, json=True).register()
-        self.shootingpointselector = ObjectStorage(store, ShootingPointSelector, named=False, json=True, identifier='json').register()
-        self.globalstate = ObjectStorage(store, GlobalState, named=True, json=True, identifier='json').register()
-        self.engine = ObjectStorage(store, DynamicsEngine, named=True, json=True, identifier='json').register()
-        self.volume = ObjectStorage(store, Volume, named=True, json=True, identifier='json').register()
-        self.ensemble = ObjectStorage(store, Ensemble, named=True, json=True, identifier='json').register()
-
-#        self.cv = self.collectivevariable
+        self.pathmover = ops.storage.ObjectStorage(store, ops.PathMover, named=True, json=True, identifier='json').register()
+        self.movedetails = ops.storage.ObjectStorage(store, ops.MoveDetails, named=False, json=True, identifier='json').register()
+        self.shootingpoint = ops.storage.ObjectStorage(store, ops.ShootingPoint, named=False, json=True).register()
+        self.shootingpointselector = ops.storage.ObjectStorage(store, ops.ShootingPointSelector, named=False, json=True, identifier='json').register()
+        self.globalstate = ops.storage.ObjectStorage(store, ops.GlobalState, named=True, json=True, identifier='json').register()
+        self.engine = ops.storage.ObjectStorage(store, ops.DynamicsEngine, named=True, json=True, identifier='json').register()
+        self.volume = ops.storage.ObjectStorage(store, ops.Volume, named=True, json=True, identifier='json').register()
+        self.ensemble = ops.storage.ObjectStorage(store, ops.Ensemble, named=True, json=True, identifier='json').register()
 
     def _setup_class(self):
         self._storages = {}
         self._storages_base_cls = {}
         self.links = []
-        self.simplifier = ObjectJSON()
+        self.simplifier = ops.ObjectJSON()
         self.units = dict()
         # use no units
         self.dimension_units = {
@@ -142,7 +125,7 @@ class Storage(netcdf.Dataset):
                 raise RuntimeError("Storage given neither n_atoms nor topology")
 
             # update the units for dimensions from the template
-            self.dimension_units.update(units_from_snapshot(template))
+            self.dimension_units.update(ops.tools.units_from_snapshot(template))
             self._init_storages(units=self.dimension_units)
 
             # create a json from the mdtraj.Topology() and store it
@@ -442,3 +425,33 @@ class Storage(netcdf.Dataset):
                 else:
                     for idx in range(0, len(self.variables[variable])):
                         storage2.variables[variable][idx] = self.variables[variable][idx]
+
+
+class StorableObjectJSON(ops.todict.ObjectJSON):
+    def __init__(self, storage, unit_system = None, class_list = None):
+        super(StorableObjectJSON, self).__init__(unit_system, class_list)
+        self.excluded_keys = ['name', 'idx', 'json', 'identifier']
+        self.storage = storage
+
+    def simplify(self,obj, base_type = ''):
+        if type(obj).__module__ != '__builtin__':
+#            print obj.__dict__, hasattr(obj, 'creatable')
+            if hasattr(obj, 'idx') and (not hasattr(obj, 'nestable') or (obj.base_cls_name != base_type)):
+                # this also returns the base class name used for storage
+                # store objects only if they are not creatable. If so they will only be created in their
+                # top instance and we use the simplify from the super class ObjectJSON
+                base_cls = self.storage.save(obj)
+                return { '_idx' : obj.idx[self.storage], '_base' : base_cls, '_cls' : obj.__class__.__name__ }
+
+        return super(StorableObjectJSON, self).simplify(obj, base_type)
+
+    def build(self,obj):
+        if type(obj) is dict:
+            if '_base' in obj and '_idx' in obj:
+                result = self.storage.load(obj['_base'], obj['_idx'])
+                # restore also the actual class name
+
+                result.cls = obj['_cls']
+                return result
+
+        return super(StorableObjectJSON, self).build(obj)

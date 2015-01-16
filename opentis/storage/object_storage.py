@@ -4,7 +4,7 @@ import yaml
 import numpy as np
 
 from wrapper import savecache, saveidentifiable, loadcache
-from util import StorableObjectJSON
+import opentis as ops
 import simtk.unit as u
 
 def add_storage_name(func):
@@ -65,7 +65,7 @@ class ObjectStorage(object):
         self.named = named
         self.json = json
         self.all_names = None
-        self.simplifier = StorableObjectJSON(storage)
+        self.simplifier = ops.storage.StorableObjectJSON(storage)
         self._names_loaded = False
         if identifier is not None:
             self.identifier = self.idx_dimension + '_' + identifier

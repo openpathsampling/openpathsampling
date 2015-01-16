@@ -4,7 +4,8 @@ Created on 03.09.2014
 @author: jan-hendrikprinz, David W.H. Swenson
 '''
 from opentis.trajectory import Trajectory
-from opentis.wrapper import storable, creatable, nestable
+from opentis.wrapper import storable, nestable
+from opentis.todict import creatable
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 

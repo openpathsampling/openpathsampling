@@ -10,7 +10,9 @@ from shooting import ShootingPoint
 from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble
 from ensemble import FullEnsemble
 from opentis.sample import Sample
-from wrapper import storable, dictable
+from wrapper import storable
+from opentis.todict import dictable
+
 
 @dictable
 @storable
