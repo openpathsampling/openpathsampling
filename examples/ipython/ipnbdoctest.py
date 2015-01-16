@@ -305,7 +305,7 @@ if __name__ == '__main__':
                    default=False,
                    help='if set to true then the default test is that cell have to match otherwise a diff will not be considered a failed test')
 
-    parser.add_argument('--no-timeout', dest='no_timeout', action='store_true',
+    parser.add_argument('--fail-if-timeout', dest='no_timeout', action='store_true',
                    default=False,
                    help='if set to true then a timeout is considered a failed test')
 
@@ -420,8 +420,10 @@ if __name__ == '__main__':
         tv.br()
         tv.writeln("testing results")
         tv.writeln("===============")
-        tv.writeln("    %3i cells passed [" % tv.pass_count + tv.green('ok') + "]" )
-        tv.writeln("    %3i cells failed [" % tv.fail_count + tv.red('fail') + "]" )
+        if tv.pass_count > 0:
+            tv.writeln("    %3i cells passed [" % tv.pass_count + tv.green('ok') + "]" )
+        if tv.fail_count > 0:
+            tv.writeln("    %3i cells failed [" % tv.fail_count + tv.red('fail') + "]" )
 
         tv.br()
         tv.writeln("    %3i cells successfully replicated [success]" % tv.result_count['success'])
