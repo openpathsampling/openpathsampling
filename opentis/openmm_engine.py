@@ -6,15 +6,12 @@ import simtk.unit as u
 import simtk.openmm as openmm
 from simtk.openmm.app import ForceField, PME, HBonds, PDBFile
 
+import opentis as ops
 from opentis.storage import Storage
-from opentis.tools import snapshot_from_pdb, to_openmm_topology
-from opentis.dynamics_engine import DynamicsEngine
-from opentis.snapshot import Snapshot
 from opentis.todict import creatable
 
-
 @creatable
-class OpenMMEngine(DynamicsEngine):
+class OpenMMEngine(ops.DynamicsEngine):
     """We only need a few things from the simulation. This object duck-types
     an OpenMM simulation object so that it quacks the methods we need to
     use."""
@@ -35,7 +32,7 @@ class OpenMMEngine(DynamicsEngine):
         'platform' : 'fastest',
         'forcefield_solute' : 'amber96.xml',
         'forcefield_solvent' : 'tip3p.xml',
-        'template' : Snapshot()
+        'template' : ops.Snapshot()
     }
 
     @staticmethod
@@ -85,7 +82,7 @@ class OpenMMEngine(DynamicsEngine):
         # attached box_vectors and topolgy
 
         if type(template) is str:
-            template = snapshot_from_pdb(template, units=units)
+            template = ops.snapshot_from_pdb(template, units=units)
 
         # once we have a template configuration (coordinates to not really matter)
         # we can create a storage. We might move this logic out of the dynamics engine
@@ -155,7 +152,7 @@ class OpenMMEngine(DynamicsEngine):
         forcefield = ForceField( self.options["forcefield_solute"],
                                  self.options["forcefield_solvent"] )
 
-        openmm_topology = to_openmm_topology(self.template)
+        openmm_topology = ops.to_openmm_topology(self.template)
 
         system = forcefield.createSystem( openmm_topology,
                                           nonbondedMethod=PME,
@@ -224,7 +221,7 @@ class OpenMMEngine(DynamicsEngine):
         state = self.simulation.context.getState(getPositions=True,
                                                  getVelocities=True,
                                                  getEnergy=True)
-        return Snapshot(coordinates = state.getPositions(asNumpy=True),
+        return ops.Snapshot(coordinates = state.getPositions(asNumpy=True),
                         box_vectors = state.getPeriodicBoxVectors(asNumpy=True),
                         potential_energy = state.getPotentialEnergy(),
                         velocities = state.getVelocities(asNumpy=True),

@@ -9,13 +9,12 @@ import numpy as np
 import mdtraj as md
 import simtk.unit as u
 
-from opentis.snapshot import Snapshot, Configuration, Momentum
-
+import opentis as ops
+from opentis.storage.wrapper import storable
 
 #=============================================================================================
 # SIMULATION TRAJECTORY
 #=============================================================================================
-from wrapper import storable
 
 
 @storable
@@ -427,7 +426,7 @@ class Trajectory(list):
         Trajectory
         """
         trajectory = Trajectory()
-        empty_momentum = Momentum()
+        empty_momentum = ops.Momentum()
         empty_momentum.velocities = None
         for frame_num in range(mdtrajectory.n_frames):
             # mdtraj trajectories only have coordinates and box_vectors
@@ -437,9 +436,9 @@ class Trajectory(list):
                                  u.nanometers)
             else:
                 box_v = None
-            config = Configuration(coordinates=coord, box_vectors=box_v)
+            config = ops.ops.Configuration(coordinates=coord, box_vectors=box_v)
 
-            snap = Snapshot(configuration=config, momentum=empty_momentum)
+            snap = ops.Snapshot(configuration=config, momentum=empty_momentum)
             trajectory.append(snap)
 
         return trajectory

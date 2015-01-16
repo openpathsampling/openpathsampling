@@ -1,9 +1,7 @@
-from globalstate import GlobalState
-from pathmover import PathMover, MoveDetails, ReplicaExchange
-from opentis.sample import Sample
+import opentis as ops
 
 from opentis.todict import dictable
-
+from opentis.pathmover import PathMover
 
 class Calculation(object):
 
@@ -13,7 +11,7 @@ class Calculation(object):
         self.storage = storage
         self.engine = engine
         self.movers = movers
-        self.globalstate = GlobalState(ensembles)
+        self.globalstate = ops.GlobalState(ensembles)
 
     # TODO: this should be a property
     def set_replicas(self, replicas):
@@ -31,7 +29,7 @@ class Calculation(object):
 @dictable
 class BootstrapEnsembleChangeMove(PathMover):
     def move(self, trajectory, ensemble):
-        details = MoveDetails()
+        details = ops.MoveDetails()
         details.inputs = [trajectory]
         details.mover = self
         details.final = trajectory
@@ -39,7 +37,7 @@ class BootstrapEnsembleChangeMove(PathMover):
         details.acceptance = 1.0
         details.result = trajectory
 
-        sample = Sample(
+        sample = ops.Sample(
             replica=1,
             trajectory=details.result,
             ensemble=ensemble,
@@ -57,7 +55,7 @@ class Bootstrapping(Calculation):
 
     def run(self, nsteps):
 
-        swapmove = ReplicaExchange()
+        swapmove = ops.ReplicaExchange()
         bootstrapmove = BootstrapEnsembleChangeMove()
 
         ens_num = 0

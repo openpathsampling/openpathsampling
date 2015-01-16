@@ -1,7 +1,6 @@
 import svgwrite
 import os
 
-
 class TreeRenderer(object):
 
     def __init__(self):

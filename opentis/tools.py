@@ -1,10 +1,9 @@
 __author__ = 'jan-hendrikprinz'
 
 import mdtraj as md
-from opentis.snapshot import Configuration, Snapshot, Momentum
-from opentis.trajectory import Trajectory
 import simtk.unit as u
 import numpy as np
+import opentis as ops
 
 
 def updateunits(func):
@@ -45,7 +44,7 @@ def snapshot_from_pdb(pdb_file, units = None):
 
     velocities = np.zeros(pdb.xyz[0].shape)
 
-    snapshot = Snapshot(
+    snapshot = ops.Snapshot(
         coordinates=u.Quantity(pdb.xyz[0], units['length']),
         velocities=u.Quantity(velocities, units['velocity']),
         box_vectors=u.Quantity(pdb.unitcell_vectors[0], units['length']),
@@ -70,8 +69,8 @@ def trajectory_from_mdtraj(mdtrajectory):
     Trajectory
         the constructed Trajectory instance
     """
-    trajectory = Trajectory()
-    empty_momentum = Momentum()
+    trajectory = ops.Trajectory()
+    empty_momentum = ops.Momentum()
     for frame_num in range(mdtrajectory.n_frames):
         # mdtraj trajectories only have coordinates and box_vectors
         coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
@@ -80,9 +79,9 @@ def trajectory_from_mdtraj(mdtrajectory):
                              u.nanometers)
         else:
             box_v = None
-        config = Configuration(coordinates=coord, box_vectors=box_v)
+        config = ops.Configuration(coordinates=coord, box_vectors=box_v)
 
-        snap = Snapshot(configuration=config, momentum=empty_momentum, topology=mdtrajectory.topology)
+        snap = ops.Snapshot(configuration=config, momentum=empty_momentum, topology=mdtrajectory.topology)
         trajectory.append(snap)
 
     return trajectory
@@ -108,7 +107,7 @@ def empty_snapshot_from_openmm_topology(topology, units):
     """
     n_atoms = topology.n_atoms
 
-    snapshot = Snapshot(
+    snapshot = ops.Snapshot(
         coordinates=u.Quantity(np.zeros((n_atoms, 3)), units['length']),
         velocities=u.Quantity(np.zeros((n_atoms, 3)), units['velocity']),
         box_vectors=u.Quantity(topology.setUnitCellDimensions(), units['length']),

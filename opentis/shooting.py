@@ -1,6 +1,8 @@
 import math
-
 import numpy as np
+
+from opentis.storage.wrapper import storable
+from opentis.todict import creatable
 
 
 #############################################################################
@@ -14,9 +16,6 @@ import numpy as np
 #
 #  
 #############################################################################
-from wrapper import storable
-from opentis.todict import creatable
-
 
 @creatable
 @storable

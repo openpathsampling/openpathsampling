@@ -8,7 +8,7 @@ Created on 01.07.2014
 from opentis.trajectory import Trajectory
 from opentis.ensemble import LengthEnsemble
 import simtk.unit as u
-from wrapper import storable
+import opentis as ops
 
 #=============================================================================
 # SOURCE CONTROL
@@ -20,7 +20,7 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 # Multi-State Transition Interface Sampling
 #=============================================================================
 
-@storable
+@ops.storage.wrapper.storable
 class DynamicsEngine(object):
     '''
     Class to wrap a simulation tool to store the context and rerun, needed

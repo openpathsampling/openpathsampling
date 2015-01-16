@@ -12,6 +12,7 @@ import numpy
 import simtk.unit as u
 
 import opentis as ops
+import opentis.todict
 
 #=============================================================================================
 # SOURCE CONTROL

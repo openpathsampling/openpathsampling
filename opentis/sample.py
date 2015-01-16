@@ -1,6 +1,7 @@
 import random
-from opentis.ensemble import Ensemble
-from opentis.wrapper import storable
+
+import opentis as ops
+from opentis.storage.wrapper import storable
 
 class SampleKeyError(Exception):
     def __init__(self, key, sample, sample_key):
@@ -48,14 +49,14 @@ class SampleSet(object):
         self.extend(samples)
 
     def __getitem__(self, key):
-        if isinstance(key, Ensemble):
+        if isinstance(key, ops.Ensemble):
             return random.choice(self.ensemble_dict[key])
         else:
             return random.choice(self.replica_dict[key])
 
     def __setitem__(self, key, value):
         # first, we check whether the key matches the sample: if no, KeyError
-        if isinstance(key, Ensemble):
+        if isinstance(key, ops.Ensemble):
             if key != value.ensemble:
                 raise SampleKeyError(key, value, value.ensemble)
         else:
