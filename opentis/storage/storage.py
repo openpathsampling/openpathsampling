@@ -154,7 +154,7 @@ class Storage(netcdf.Dataset):
 
                 self.units[str(variable_name)] = unit
 
-            # After we have restore the units we can load objects from the storage
+            # After we have restored the units we can load objects from the storage
 
             self.topology = self.simplifier.topology_from_dict(self.simplifier.from_json(self.variables['topology'][0]))
             self.atoms = self.topology.n_atoms
@@ -412,20 +412,53 @@ class Storage(netcdf.Dataset):
         for obj in self.momentum.iterator():
             storage2.momentum.save(obj.copy(subset), idx=obj.idx[self])
 
-        # All other should be copied one to one
+        # All other should be copied one to one. We do this explicitely although we could just copy all
+        # and exclude configurations and momenta, but this seems cleaner
+
+        for storage_name in [
+                'trajectory', 'snapshot', 'sample', 'sampleset', 'orderparameter',
+                'pathmover', 'engine', 'movedetails', 'shootingpoint', 'shootingpointselector',
+                'globalstate', 'volume', 'ensemble' ]:
+            self.clone_storage(storage_name, storage2)
+
+    def clone_empty(self, filename):
+        """
+        Creates a copy of the netCDF file and replicates only the static parts which I consider
+            ensembles, volumes, engines, pathmovers, shootingpointselectors. We do not need to
+            reconstruct orderparameters since these need to be created again completely and then
+            the necessary arrays in the file will be created anyway.
+
+        Notes
+        -----
+        This is mostly used to restart with a fresh file. Same setup, no results.
+        """
+        storage2 = Storage(filename=filename, template=self.template, mode='w')
+
+        for storage_name in [
+                'pathmover', 'engine', 'shootingpointselector', 'volume', 'ensemble':
+
+            self.clone_storage(storage_name, storage2)
+
+
+    def clone_storage(self, storage_to_copy, new_storage):
+        if type(storage_to_copy) is str:
+            storage_name = storage_to_copy
+        else:
+            storage_name = storage_to_copy.db
 
         for variable in self.variables.keys():
-            if not variable.startswith('configuration') and not variable.startswith('momentum') and not variable.startswith('topology'):
-                if variable not in storage2.variables:
+            if variable.startswith(storage_name + '_'):
+                if variable not in new_storage.variables:
                     # orderparameters have additional variables in the storage that need to be copied
-                    storage2.createVariable(variable, str(self.variables[variable].dtype), self.variables[variable].dimensions)
+                    new_storage.createVariable(variable, str(self.variables[variable].dtype), self.variables[variable].dimensions)
                     for attr in self.variables[variable].ncattrs():
-                        setattr(storage2.variables[variable], attr, getattr(self.variables[variable], attr))
+                        setattr(new_storage.variables[variable], attr, getattr(self.variables[variable], attr))
 
-                    storage2.variables[variable][:] = self.variables[variable][:]
+                    new_storage.variables[variable][:] = self.variables[variable][:]
                 else:
                     for idx in range(0, len(self.variables[variable])):
-                        storage2.variables[variable][idx] = self.variables[variable][idx]
+                        new_storage.variables[variable][idx] = self.variables[variable][idx]
+
 
 
 class StorableObjectJSON(ops.todict.ObjectJSON):
