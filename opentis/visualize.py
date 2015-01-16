@@ -1,9 +1,7 @@
 import svgwrite
 import os
 
-
 class TreeRenderer(object):
-
     def __init__(self):
         self.start_x = 0
         self.start_y = 0
@@ -404,7 +402,7 @@ class PathTreeBuilder(object):
         self.renderer.width = max_x - min_x + 3.0
 
         op_names = { arg[0] : arg[1] for arg in self.states }
-        ops = {op : self.storage.cv.load(op) for op in op_names.keys() }
+        ops = {op : self.storage.collectivevariable.load(op) for op in op_names.keys() }
 
         matrix = self._to_matrix()
 
