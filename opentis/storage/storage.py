@@ -29,10 +29,11 @@ class Storage(netcdf.Dataset):
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
     simulation. This allows effective storage of shooting trajectories '''
 
-
     def _register_storages(self, store = None):
         if store is None:
             store = self
+
+        # objects with special storages
 
         self.trajectory = ops.storage.TrajectoryStorage(store).register()
         self.snapshot = ops.storage.SnapshotStorage(store).register()
@@ -43,14 +44,19 @@ class Storage(netcdf.Dataset):
 
         self.collectivevariable = ops.storage.ObjectDictStorage(store, ops.OrderParameter, ops.Configuration).register()
 
+        # normal objects
+
         self.pathmover = ops.storage.ObjectStorage(store, ops.PathMover, named=True, json=True, identifier='json').register()
         self.movedetails = ops.storage.ObjectStorage(store, ops.MoveDetails, named=False, json=True, identifier='json').register()
         self.shootingpoint = ops.storage.ObjectStorage(store, ops.ShootingPoint, named=False, json=True).register()
         self.shootingpointselector = ops.storage.ObjectStorage(store, ops.ShootingPointSelector, named=False, json=True, identifier='json').register()
         self.globalstate = ops.storage.ObjectStorage(store, ops.GlobalState, named=True, json=True, identifier='json').register()
         self.engine = ops.storage.ObjectStorage(store, ops.DynamicsEngine, named=True, json=True, identifier='json').register()
-        self.volume = ops.storage.ObjectStorage(store, ops.Volume, named=True, json=True, identifier='json').register()
-        self.ensemble = ops.storage.ObjectStorage(store, ops.Ensemble, named=True, json=True, identifier='json').register()
+
+        # nestable objects
+
+        self.volume = ops.storage.ObjectStorage(store, ops.Volume, named=True, json=True, identifier='json').register(nestable=True)
+        self.ensemble = ops.storage.ObjectStorage(store, ops.Ensemble, named=True, json=True, identifier='json').register(nestable=True)
 
     def _setup_class(self):
         self._storages = {}
@@ -208,7 +214,6 @@ class Storage(netcdf.Dataset):
 #            storage._restore()
         pass
 
-
     def _initialize_netCDF(self):
         """
         Initialize the netCDF file for storage itself.
@@ -278,35 +283,23 @@ class Storage(netcdf.Dataset):
         """
 
         if type(obj) is list:
+            # a list of objects will be stored one by one
             return [ self.save(part, *args, **kwargs) for part in obj]
         elif type(obj) is tuple:
+            # a tuple will store all parts
             return tuple([self.save(part, *args, **kwargs) for part in obj])
-        elif type(obj) in self._storages:
-            store = self._storages[type(obj)]
-            store.save(obj, *args, **kwargs)
-            if type(obj) not in self._storages_base_cls:
-                self._storages_base_cls[type(obj)] = obj.__class__.__name__
-            return self._storages_base_cls[type(obj)]
-        else:
-            # Make sure subclassed objects will also be stored
-            # Might come in handy someday
-            for ty in self._storages:
-                if type(ty) is not str and issubclass(type(obj), ty):
-#                    print 'sub', ty, type(obj)
-                    store = self._storages[ty]
-                    # store the subclass in the _storages member for
-                    # faster access next time
-                    self._storages[type(obj)] = store
-                    if type(ty) not in self._storages_base_cls:
-                        self._storages_base_cls[ty] = ty.__name__
-                    self._storages_base_cls[type(obj)] = self._storages_base_cls[ty]
-                    store.save(obj, *args, **kwargs)
+        elif hasattr(obj, 'base_cls'):
+            # to store we just check if the base_class is present in the storages
+            # also we assume that if a class has no base_cls
+            if obj.base_cls in self._storages:
+                store = self._storages[obj.base_cls]
+                store.save(obj, *args, **kwargs)
 
-                    # this return the base_cls.__name__ to make sure on loading the right function is called
-                    return self._storages_base_cls[ty]
+                # save has been called, all is good
+                return True
 
         # Could not save this object. Might raise an exception, but return an empty string as type
-        return ''
+        return False
 
     def load(self, obj_type, *args, **kwargs):
         """
@@ -331,28 +324,28 @@ class Storage(netcdf.Dataset):
         if obj_type in self._storages:
             store = self._storages[obj_type]
             return store.load(*args, **kwargs)
-        elif type(obj_type) is type:
-            # If we give a class we might be lucky and find the base class and
-            # register is. If we try to load a type given by a string which is
-            # not the base_class name originally registered there is no way to
-            # tell.
-            for ty in self._storages:
-                if type(ty) is not str and issubclass(obj_type, ty):
-                    store = self._storages[ty]
-                    # store the subclass in the _storages member for
-                    # faster access next time
-                    self._storages[obj_type] = store
-                    self._storages[obj_type.__name__] = store
+        elif hasattr(obj_type, 'base_cls'):
+            # check if a store for the base_cls exists and use this one
+            if obj_type.base_cls in self._storages:
+                store = self._storages[obj_type.base_cls]
+                return store.load(*args, **kwargs)
 
-                    if type(ty) not in self._storages_base_cls:
-                        self._storages_base_cls[ty] = ty.__name__
-                        self._storages_base_cls[ty.__name__] = ty.__name__
+        # no store found. This is bad and should be logged and raise an exception
+        return None
 
-                    self._storages_base_cls[obj_type] = self._storages_base_cls[ty]
-                    self._storages_base_cls[obj_type.__name__] = ty.__name__
+    def idx(self, obj):
+        """
+        Return the index used to store the given object in this storage
 
-                    store = self._storages[obj_type]
-                    return store.load(*args, **kwargs)
+        Parameters
+        ----------
+        obj : object
+            The stored object from which the index is to be returned
+        """
+        if hasattr(obj, 'base_cls'):
+            store = self._storages[obj.base_cls]
+            return store.idx(self)
+
 
     def clone(self, filename, subset):
         """

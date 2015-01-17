@@ -5,15 +5,12 @@ Created on 03.09.2014
 '''
 
 from opentis.todict import creatable
-from opentis.storage.decorators import storable, nestable
 
 import opentis as ops
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
-@nestable
 @creatable
-@storable
 class Ensemble(object):
     '''    
     An Ensemble represents a path ensemble, effectively a set of trajectories.

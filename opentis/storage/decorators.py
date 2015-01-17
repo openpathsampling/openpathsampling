@@ -114,7 +114,7 @@ def nestable(super_class):
 
 
 def storable(super_class):
-    super_class.default_storage = None
+#    super_class.default_storage = None
     _base_cls_name = super_class.__name__
 
     def _init(self, *args, **kwargs):

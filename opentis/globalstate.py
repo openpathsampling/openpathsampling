@@ -1,6 +1,6 @@
 from opentis.storage.decorators import storable
 
-@storable
+
 class GlobalState(dict):
     """
     Notes

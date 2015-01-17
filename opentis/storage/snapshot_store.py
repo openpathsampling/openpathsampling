@@ -246,12 +246,14 @@ class MomentumStorage(ObjectStorage):
             velocities = u.Quantity(v, self.storage.units["momentum_velocities"])
             T = storage.variables['momentum_kinetic'][idx]
             kinetic_energy = u.Quantity(T, self.storage.units["momentum_kinetic"])
+            momentum = Momentum(velocities=velocities, kinetic_energy=kinetic_energy)
 
         else:
             velocities = None
             kinetic_energy = None
+            momentum = Momentum()
+            momentum._loaded_store = self
 
-        momentum = Momentum(velocities=velocities, kinetic_energy=kinetic_energy)
 
         return momentum
 

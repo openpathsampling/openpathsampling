@@ -8,7 +8,6 @@ Created on 01.07.2014
 import simtk.unit as u
 import opentis as ops
 
-from opentis.storage.decorators import storable
 
 #=============================================================================
 # SOURCE CONTROL
@@ -20,7 +19,7 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 # Multi-State Transition Interface Sampling
 #=============================================================================
 
-@storable
+
 class DynamicsEngine(object):
     '''
     Class to wrap a simulation tool to store the context and rerun, needed

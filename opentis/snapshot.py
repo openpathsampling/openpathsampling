@@ -9,14 +9,13 @@ import copy
 import numpy as np
 import mdtraj as md
 
-from opentis.storage.decorators import storable
 
 #=============================================================================
 # SIMULATION CONFIGURATION
 #=============================================================================
 
 
-@storable
+
 class Configuration(object):
 
     """
@@ -84,9 +83,9 @@ class Configuration(object):
 
     @property
     def coordinates(self):
-        if Configuration.load_lazy is True and self._coordinates is None and len(self.idx) > 0:
+        if Configuration.load_lazy is True and self._coordinates is None and hasattr(self, '_loaded_from'):
             # this uses the first storage and loads the velocities from there
-            self.idx.iterkeys().next().configuration.update_coordinates(self)
+            self._loaded_from.update_coordinates(self)
 
         return self._coordinates
 
@@ -99,9 +98,9 @@ class Configuration(object):
 
     @property
     def box_vectors(self):
-        if Configuration.load_lazy is True and self._box_vectors is None and len(self.idx) > 0:
+        if Configuration.load_lazy is True and self._box_vectors is None and hasattr(self, '_loaded_from'):
             # this uses the first storage and loads the velocities from there
-            self.idx.iterkeys().next().configuration.update_box_vectors(self)
+            self._loaded_from.update_box_vectors(self)
 
         return self._box_vectors
 
@@ -114,9 +113,9 @@ class Configuration(object):
 
     @property
     def potential_energy(self):
-        if Configuration.load_lazy is True and self._potential_energy is None and len(self.idx) > 0:
+        if Configuration.load_lazy is True and self._potential_energy is None and hasattr(self, '_loaded_from'):
             # this uses the first storage and loads the velocities from there
-            self.idx.iterkeys().next().configuration.update_potential_energy(self)
+            self._loaded_from.update_potential_energy(self)
 
         return self._potential_energy
 
@@ -134,7 +133,7 @@ class Configuration(object):
         reloaded automatically
         """
 
-        if Configuration.load_lazy and len(self.idx) > 0:
+        if Configuration.load_lazy and hasattr(self, '_loaded_from'):
             self._coordinates = None
             self._box_vectors = None
             self._potential_energy = None
@@ -146,9 +145,15 @@ class Configuration(object):
     def __eq__(self, other):
         if self is other:
             return True
-        for storage in self.idx:
-            if storage in other.idx and other.idx[storage] == self.idx[storage]:
-                return True
+
+        # This is not good since this code requires knowledge about storage
+        # I remove it since it is not used yet anyway
+        # If we want to figure out if two Snapshots are loaded from two different
+        # instances of the storage we should put this logic into storages
+
+#        for storage in self.idx:
+#            if storage in other.idx and other.idx[storage] == self.idx[storage]:
+#                return True
 
         return False
 
@@ -210,7 +215,7 @@ class Configuration(object):
 #=============================================================================
 # SIMULATION MOMENTUM / VELOCITY
 #=============================================================================
-@storable
+
 class Momentum(object):
     """
     Simulation momentum. Contains only velocities of all atoms and
@@ -256,9 +261,9 @@ class Momentum(object):
 
     @property
     def velocities(self):
-        if Momentum.load_lazy and self._velocities is None and len(self.idx) > 0:
+        if Momentum.load_lazy and self._velocities is None and hasattr(self, '_loaded_from'):
             # this uses the first storage and loads the velocities from there
-            self.idx.iterkeys().next().momentum.update_velocities(self)
+            self._loaded_from.update_velocities(self)
 
         return self._velocities
 
@@ -271,8 +276,8 @@ class Momentum(object):
 
     @property
     def kinetic_energy(self):
-        if Momentum.load_lazy and self._kinetic_energy is None and len(self.idx) > 0:
-            self.idx.iterkeys().next().momentum.update_kinetic_energy(self)
+        if Momentum.load_lazy and self._kinetic_energy is None and hasattr(self, '_loaded_from'):
+            self._loaded_from.update_kinetic_energy(self)
 
         return self._kinetic_energy
 
@@ -290,7 +295,7 @@ class Momentum(object):
         are reloaded automatically
         """
 
-        if Momentum.load_lazy and len(self.idx) > 0:
+        if Momentum.load_lazy and hasattr(self, '_loaded_store') > 0:
             self._velocities = None
             self._kinetic_energy = None
 
@@ -378,7 +383,7 @@ def has(attr):
     return _has
 
 
-@storable
+
 class Snapshot(object):
     """
     Simulation snapshot. Contains references to a configuration and momentum

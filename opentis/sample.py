@@ -1,7 +1,6 @@
 import random
 
 import opentis as ops
-from opentis.storage.decorators import storable
 
 class SampleKeyError(Exception):
     def __init__(self, key, sample, sample_key):
@@ -11,7 +10,7 @@ class SampleKeyError(Exception):
         self.msg = (str(self.key) + " does not match " + str(self.sample_key)
                     + " from " + str(self.sample))
 
-@storable
+
 class SampleSet(object):
     '''
     SampleSet is essentially a list of samples, with a few conveniences.  It
@@ -178,7 +177,7 @@ class SampleSet(object):
                     "More than one instance of %r!" % samp
 
 
-@storable
+
 class Sample(object):
     """
     A Sample represents a given "draw" from its ensemble, and is the return
@@ -206,8 +205,6 @@ class Sample(object):
     """
 
     def __init__(self, replica=None, trajectory=None, ensemble=None, details=None, step=-1):
-        self.idx = dict()
-
         self.replica = replica
         self.ensemble = ensemble
         self.trajectory = trajectory

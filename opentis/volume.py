@@ -3,16 +3,13 @@ Created on 03.09.2014
 
 @author: Jan-Hendrik Prinz, David W.H. Swenson
 '''
-import range_logic
 
-from opentis.storage.decorators import storable, nestable
+import range_logic
 from opentis.todict import creatable
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
-@nestable
 @creatable
-@storable
 class Volume(object):
     def __init__(self):
         '''

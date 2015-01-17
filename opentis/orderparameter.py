@@ -3,9 +3,7 @@
 ###############################################################
 
 import mdtraj as md
-
 import opentis as ops
-from opentis.storage.decorators import storable
 
 class ObjectDict(dict):
     """
@@ -77,7 +75,7 @@ class ObjectDict(dict):
         """
         return [obj for obj in objs if obj not in self]
 
-@storable
+
 class StorableObjectDict(ObjectDict):
     """
     A cache that is attached to Configuration indices store in the Configuration storage

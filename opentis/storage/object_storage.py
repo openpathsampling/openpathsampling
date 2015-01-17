@@ -84,6 +84,13 @@ class ObjectStorage(object):
 
         return "Store '" + self.db + "'"
 
+    def idx(self, obj):
+        if hasattr(obj, 'idx'):
+            if self in obj.idx:
+                return obj.idx[self]
+
+        return None
+
     @property
     def units(self):
         """
@@ -98,12 +105,37 @@ class ObjectStorage(object):
         """
         return self.storage.units
 
-    def register(self):
+    def register(self, nestable = False):
         self.storage._storages[self.content_class] = self
         self.storage._storages[self.content_class.__name__] = self
         self.storage._storages[self.content_class.__name__.lower()] = self
 
+        # Add here the logic to change the actual class and add the decorator
+        # this is the same as add the  decorator (without default_storage,
+        # I removed this since it is not used anyway)
+        # all it does is make sure that there is a .idx property and the base_cls is known
+
+        self.content_class.base_cls_name = self.content_class.__name__
+        self.content_class.base_cls = self.content_class
+
+        # add a property idx that keeps the storage reference
+
+#        print 'REGISTER ', self.content_class.__name__
+
+        def _idx(this):
+            if not hasattr(this, '_idx'):
+                this._idx = dict()
+
+            return this._idx
+
+        if nestable:
+            self.content_class.nestable = True
+
+        self.content_class.idx = property(_idx)
+
+        # register as a base_class for storable objects
         self.storage.links.append(self)
+
         return self
 
     def copy(self):
@@ -282,7 +314,7 @@ class ObjectStorage(object):
         Object
             the actual last stored object
         '''
-        return self.load(1)
+        return self.load(0)
 
     def count(self):
         '''
@@ -477,17 +509,11 @@ class ObjectStorage(object):
         # TODO: Add logging here
 #        print 'Load',name,idx
         idx = int(idx)
-#        if obj is None:
-#            obj = StoredObject()
 
         json_string = self.storage.variables[name][idx]
 
         simplified = yaml.load(json_string)
         obj = self.simplifier.build(simplified)
-#        for key, value in data.iteritems():
-#            setattr(obj, key, value)
-
-#        setattr(obj, 'cls', simplified[0])
         setattr(obj, 'json', json_string)
 
         return obj
@@ -503,12 +529,6 @@ class ObjectStorage(object):
 #=============================================================================================
 
     def object_to_json(self, obj):
-#        if hasattr(obj, 'to_dict'):
-#            data = obj.to_dict()
-#        else:
-#            data = obj.__dict__
-#
-#        cls = obj.__class__.__name__
         json_string = self.simplifier.to_json_object(obj, obj.base_cls_name)
 
         return json_string

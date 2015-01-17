@@ -10,14 +10,13 @@ import mdtraj as md
 import simtk.unit as u
 
 import opentis as ops
-from opentis.storage.decorators import storable
 
 #=============================================================================================
 # SIMULATION TRAJECTORY
 #=============================================================================================
 
 
-@storable
+
 class Trajectory(list):
     """
     Simulation trajectory. Essentially a python list of snapshots
@@ -173,15 +172,12 @@ class Trajectory(list):
 
     def configurations(self):
         """
-        Return a list of the snapshot IDs in the trajectory
+        Return a list of the snapshots in the trajectory
 
         Returns
         -------
-        indices (list of int) - the list of indices
-
-        Notes
-        -----
-        The IDs are only non-zero if the snapshots have been saved before!
+        list of Configuration
+            the list of Configuration objects
 
         """
         return [f.configuration for f in self]
@@ -189,18 +185,14 @@ class Trajectory(list):
 
     def momenta(self):
         """
-        Return a list of the snapshot IDs in the trajectory
-        
+        Return a list of the Momentum objects in the trajectory
+
         Returns
-        -------        
-        indices (list of int) - the list of indices
-        
-        Notes
-        -----        
-        The IDs are only non-zero if the snapshots have been saved before!
-        
+        -------
+        list of Momentum()
+            the list of Momentum objects
         """
-        return [f.momenta.idx for f in self]
+        return [f.momenta for f in self]
 
     
     @property

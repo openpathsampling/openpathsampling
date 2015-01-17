@@ -8,11 +8,10 @@ import numpy as np
 
 import opentis as ops
 from opentis.todict import dictable
-from opentis.storage.decorators import storable
 
 
 @dictable
-@storable
+
 class MoveDetails(object):
     def __init__(self, **kwargs):
         self.inputs=None
@@ -34,7 +33,7 @@ class MoveDetails(object):
 
 
 @dictable
-@storable
+
 class PathMover(object):
     """
     A PathMover is the description of how to generate a new path from an old one.
@@ -80,8 +79,6 @@ class PathMover(object):
 
         self.ensemble = ops.FullEnsemble()
         self.name = self.__class__.__name__
-
-        self.idx = dict()
 
     def move(self, trajectory):
         '''

@@ -1,7 +1,6 @@
 import math
 import numpy as np
 
-from opentis.storage.decorators import storable
 from opentis.todict import creatable
 
 
@@ -18,7 +17,7 @@ from opentis.todict import creatable
 #############################################################################
 
 @creatable
-@storable
+
 class ShootingPoint(object):
 
     def __init__(self, selector, trajectory, index, f = None, sum_bias = None):
@@ -84,7 +83,7 @@ class ShootingPoint(object):
         return self.f
 
 @creatable
-@storable
+
 class ShootingPointSelector(object):
 
     @property
