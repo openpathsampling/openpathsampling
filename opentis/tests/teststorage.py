@@ -9,12 +9,23 @@ from test_helpers import (true_func, data_filename,
                           assert_equal_array_array,
                           assert_not_equal_array_array)
 
+import numpy.testing as npt
+
 from opentis.openmm_engine import *
 from opentis.snapshot import Snapshot
 from opentis.snapshot import Momentum, Configuration
 
 import simtk.unit as u
 import time
+
+def compare_snapshot(snapshot1, snapshot2):
+    npt.assert_allclose(snapshot1.box_vectors, snapshot2.box_vectors, rtol=1e-7, atol=0)
+    npt.assert_allclose(snapshot1.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
+    npt.assert_allclose(snapshot1.velocities, snapshot2.velocities, rtol=1e-7, atol=0)
+
+    assert_equal(snapshot1.potential_energy, snapshot2.potential_energy)
+    assert_equal(snapshot1.kinetic_energy, snapshot2.kinetic_energy)
+
 
 
 
@@ -43,32 +54,74 @@ class testStorage(object):
         self.engine.initialized = True
 
         # run a small trajectory of a few steps that can be used to save, etc...
-        self.traj = self.engine.generate(self.template_snapshot, running=[ops.LengthEnsemble(10).can_append])
+        self.traj = self.engine.generate(self.template_snapshot, running=[ops.LengthEnsemble(2).can_append])
+
+        self.filename = data_filename("storage_test.nc")
 
     def teardown(self):
         if os.path.isfile(data_filename("storage_test.nc")):
             os.remove(data_filename("storage_test.nc"))
 
     def test_create_template(self):
-        pass
+        Storage(filename=self.filename, template=self.template_snapshot, mode='w')
+        assert(os.path.isfile(data_filename("storage_test.nc")))
 
     def test_create_atoms(self):
-        pass
+        Storage(filename=self.filename, n_atoms=10, mode='w')
+        assert(os.path.isfile(data_filename("storage_test.nc")))
 
     def test_stored_topology(self):
-        pass
+        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
+        assert(os.path.isfile(self.filename))
+        store.close()
 
-    def test_stored_template(self):
+        store = Storage(filename=self.filename, mode='a')
+        loaded_topology = store.template.topology
+
+        # check if poth topologies have the same JSON string (this also tests the simplifier for topologies
+
+        assert_equal(
+            store.simplifier.topology_to_json(self.template_snapshot.topology),
+            store.simplifier.topology_to_json(loaded_topology)
+        )
+
         pass
 
     def test_write_str(self):
         pass
 
+    def test_stored_template(self):
+        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
+        assert(os.path.isfile(self.filename))
+        store.close()
+
+        store = Storage(filename=self.filename, mode='a')
+        loaded_template = store.template
+
+        compare_snapshot(loaded_template, self.template_snapshot)
+        pass
+
+    def test_load_save(self):
+        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
+        assert(os.path.isfile(self.filename))
+
+        copy = self.template_snapshot.copy()
+        store.save(copy)
+
+        store.close()
+
+        store = Storage(filename=self.filename, mode='a')
+        loaded_template = store.template
+
+        compare_snapshot(loaded_template, self.template_snapshot)
+        loaded_copy = store.load(Snapshot, 1)
+
+        compare_snapshot(loaded_template, loaded_copy)
+        pass
+
     def test_init_str(self):
         pass
 
-    def test_save(self):
-        pass
 
     def test_load(self):
         pass
