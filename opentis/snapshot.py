@@ -310,7 +310,7 @@ class Momentum(object):
     # Utility functions
     #=========================================================================
 
-    def copy(self, subset=None):
+    def copy(self, subset=None, reversed=False):
         """
         Returns a deep copy of the instance itself. If this object will not
         be saved as a separate object and consumes additional memory. It is
@@ -326,28 +326,20 @@ class Momentum(object):
 
 
         if subset is None:
-            this = Momentum(velocities=self.velocities, kinetic_energy=self.kinetic_energy)
+            new_velocities = self.velocities
         else:
             new_velocities = self.velocities[subset,:]
             # TODO: Keep old kinetic_energy? Is not correct but might be useful.
-            this = Momentum(velocities=new_velocities, kinetic_energy=self.kinetic_energy)
+
+        if reversed:
+            # Note the v *= -1.0 would be in place for numpy arrays. This here makes a copy!
+            new_velocities = -1.0 * new_velocities
+
+        this = Momentum(velocities=new_velocities, kinetic_energy=self.kinetic_energy)
 
         return this
 
-    def reverse(self):
-        """
-        Flips the velocities and erases the stored indices. If stores is
-        will be treated as a new Momentum instance.  Should be avoided.
-        """
-
-        # This trick loads both, velocities and the kinetic energy.
-        # Otherwise we might run into trouble when removing the index
-        self._velocities = -1.0 * self.velocities
-        self.kinetic_energy
-        self.idx = dict()
-
-    
-    def reversed_copy(self):
+    def reversed_copy(self, subset=None):
         """
         Create a copy and flips the velocities and erases the stored indices.
         If stores is will be treated as a new Momentum instance.
@@ -358,10 +350,7 @@ class Momentum(object):
         Momentum()
             the deep copy with reversed velocities.
         """
-        # TODO: is this should be avoided, why do we keep it?
-        this = self.copy()
-        this.reverse()
-        return this
+        return self.copy(subset=subset, reversed=reversed)
 
 
 
