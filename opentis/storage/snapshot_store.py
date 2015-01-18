@@ -418,11 +418,16 @@ class ConfigurationStorage(ObjectStorage):
             potential_energy = None
 
         configuration = Configuration(coordinates=coordinates, box_vectors = box_vectors, potential_energy=potential_energy)
-        configuration.idx[storage] = idx
 
         configuration.topology = self.storage.topology
 
         return configuration
+
+    def load_coordinates(self, obj, idx):
+        x = self.storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
+        coordinates = u.Quantity(x, self.storage.units["configuration_coordinates"])
+
+        obj.coordinates = coordinates
 
     def update_coordinates(self, obj):
         """
@@ -435,7 +440,6 @@ class ConfigurationStorage(ObjectStorage):
 
         """
         storage = self.storage
-
         idx = obj.idx[self.storage]
 
         x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()

@@ -156,6 +156,27 @@ class ObjectStorage(object):
 
         return self
 
+    def attach_partial_loading(self):
+        # fix the object class to allow partial loading
+
+        cls = self.content_class
+
+        def _getattr(self, item):
+            if hasattr(cls, '_delayed_loading'):
+                if item in cls._delayed_loading:
+                    if self.__dict__[item] is None:
+                        # apparently the part has not yet been loaded so get it
+                        _loader = cls._delayed_loading['item']
+                        setattr(self, item, _loader(self))
+
+            return self.__dict__[item]
+
+        setattr(cls, '__getattr__', _getattr)
+
+    def set_variable_partial_loading(self, variable, loader):
+        cls = self.content_class
+        cls._delayed_loading[variable] = loader
+
     def copy(self):
         """
         Create a deep copy of the ObjectStorage instance
@@ -619,7 +640,7 @@ class ObjectStorage(object):
         return idx
 
 
-class StubObject(object):
+class LazyLoadedObject(object):
     def __getattr__(self, item):
         if hasattr(self, '_loader'):
             self._loader()
@@ -627,12 +648,11 @@ class StubObject(object):
 
         return self.__dict__[item]
 
-    pass
 
 def loadlazy(func):
     def inner(self, idx, *args, **kwargs):
         # Create object first to break any unwanted recursion in loading
-        obj = StubObject()
+        obj = LazyLoadedObject()
         # if lazy construct a function that will update the content. This will be loaded, once the object is accessed
         def loader():
             obj = func(idx, *args, **kwargs)
@@ -641,24 +661,6 @@ def loadlazy(func):
 
         setattr(obj, '_loader', loader)
         return obj
-
-    return inner
-
-
-# the default decorator for save functions to enable caching
-def savecache(func):
-    def inner(self, obj, idx = None, *args, **kwargs):
-        idx = self.index(obj, idx)
-        # add logging here
-        # print 'SAVE in', self.db, ':', idx
-        if idx is not None:
-            # ATTENTION HERE. See comment at loadcache below
-            func(obj, idx, *args, **kwargs)
-
-        # store the ID in the cache
-        self.cache[idx] = obj
-        if self.named and hasattr(obj, 'name') and obj.name != '':
-            self.cache[obj.name] = obj
 
     return inner
 
@@ -724,3 +726,41 @@ def loadcache(func):
 
         return obj
     return inner
+
+# the default decorator for save functions to enable caching
+def savecache(func):
+    def inner(self, obj, idx = None, *args, **kwargs):
+        idx = self.index(obj, idx)
+        # add logging here
+        # print 'SAVE in', self.db, ':', idx
+        if idx is not None:
+            # ATTENTION HERE. See comment at loadcache below
+            func(obj, idx, *args, **kwargs)
+
+        # store the ID in the cache
+        self.cache[idx] = obj
+        if self.named and hasattr(obj, 'name') and obj.name != '':
+            self.cache[obj.name] = obj
+
+    return inner
+
+
+def create_lazy_property(cls, variable, loader_fnc):
+
+    hidden_variable = '_' + variable + '_'
+    cls.load_lazy = True
+
+    def _getter(self):
+        if cls.load_lazy and getattr(self, hidden_variable) is None:
+            # this uses the first storage and loads the velocities from there
+            setattr(self, hidden_variable, loader_fnc(self))
+
+        return getattr(self, hidden_variable)
+
+    def _setter(self, value):
+        if getattr(self, hidden_variable) is None:
+            setattr(self, hidden_variable, value)
+        else:
+            raise ValueError("Cannot change variable '" + variable + "' once it is set")
+
+    setattr(cls, variable, property(_getter, _setter))

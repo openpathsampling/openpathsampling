@@ -14,8 +14,6 @@ import mdtraj as md
 # SIMULATION CONFIGURATION
 #=============================================================================
 
-def create_lazy_property()
-
 class Configuration(object):
 
     """
