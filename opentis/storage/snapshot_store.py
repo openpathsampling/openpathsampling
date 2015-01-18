@@ -1,7 +1,6 @@
 import numpy as np
 from opentis.snapshot import Snapshot, Configuration, Momentum
 from object_storage import ObjectStorage
-from decorators import savecache, loadcache
 from opentis.trajectory import Trajectory
 import simtk.unit as u
 
@@ -13,7 +12,6 @@ class SnapshotStorage(ObjectStorage):
     def __init__(self, storage = None):
         super(SnapshotStorage, self).__init__(storage, Snapshot)
 
-    @loadcache
     def load(self, idx=None):
         '''
         Load a snapshot from the storage.
@@ -51,7 +49,6 @@ class SnapshotStorage(ObjectStorage):
 
         return t
 
-    @savecache
     def save(self, snapshot, idx=None):
         """
         Add the current state of the snapshot in the database. If nothing has changed then the snapshot gets stored using the same snapshots as before. Saving lots of diskspace
@@ -183,7 +180,6 @@ class MomentumStorage(ObjectStorage):
     def __init__(self, storage = None):
         super(MomentumStorage, self).__init__(storage, Momentum)
 
-    @savecache
     def save(self, momentum, idx = None):
         """
         Save velocities and kinetic energies of current iteration to NetCDF file.
@@ -222,7 +218,6 @@ class MomentumStorage(ObjectStorage):
         # Force sync to disk to avoid data loss.
         storage.sync()
 
-    @loadcache
     def load(self, idx, lazy=True):
         '''
         Load a momentum from the storage
@@ -362,7 +357,6 @@ class ConfigurationStorage(ObjectStorage):
     def __init__(self, storage = None):
         super(ConfigurationStorage, self).__init__(storage, Configuration)
 
-    @savecache
     def save(self, configuration, idx = None):
         """
         Save positions, velocities, boxvectors and energies of current iteration to NetCDF file.
@@ -383,6 +377,10 @@ class ConfigurationStorage(ObjectStorage):
         if configuration.box_vectors is not None:
             storage.variables['configuration_box_vectors'][idx,:,:] = (configuration.box_vectors / self.storage.units["configuration_box_vectors"]).astype(np.float32)
 
+        # TODO: Add simple test if topologies match
+        # if configuration.topology is not storage.topology:
+        # log that topologies were different
+
         # Force sync to disk to avoid data loss.
         storage.sync()
 
@@ -390,7 +388,6 @@ class ConfigurationStorage(ObjectStorage):
     def get(self, indices):
         return [ self.load(idx) for idx in indices ]
 
-    @loadcache
     def load(self, idx, lazy=False):
         '''
         Load a configuration from the storage

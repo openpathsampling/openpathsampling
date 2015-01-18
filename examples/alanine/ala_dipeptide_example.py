@@ -121,7 +121,7 @@ the path we generate is in the ensemble we desire: this means that we can't
 use LeaveXEnsemble as we typically do with TIS paths.
     """
     snapshot = engine.storage.snapshot.load(0)
-    
+
     first_traj_ensemble = SequentialEnsemble([
         OutXEnsemble(stateA) | LengthEnsemble(0),
         InXEnsemble(stateA),

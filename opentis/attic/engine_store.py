@@ -1,5 +1,4 @@
 from object_storage import ObjectStorage
-from decorators import loadcache, savecache, saveidentifiable
 from opentis.dynamics_engine import DynamicsEngine
 
 class DynamicsEngineStorage(ObjectStorage):
@@ -9,7 +8,6 @@ class DynamicsEngineStorage(ObjectStorage):
 
     #TODO: Simplify to use new object storage. Might want to add a from_dict function that does just that
 
-    @loadcache
     def load(self, idx, lazy=True):
         '''
         Returns an object from the storage. Needs to be implented from the specific storage class.
@@ -26,8 +24,6 @@ class DynamicsEngineStorage(ObjectStorage):
 
         return engine
 
-    @saveidentifiable
-    @savecache
     def save(self, engine, idx=None):
         '''
         Returns an object from the storage. Needs to be implemented from the specific storage class.

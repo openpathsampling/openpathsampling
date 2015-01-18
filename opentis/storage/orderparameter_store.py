@@ -1,13 +1,10 @@
 from object_storage import ObjectStorage
-from decorators import loadcache, loadidentifiable
 from opentis.orderparameter import OrderParameter
 
 class ObjectDictStorage(ObjectStorage):
 
     def __init__(self, storage, cls, key_class):
         super(ObjectDictStorage, self).__init__(storage, cls, named=True, identifier='name')
-#        self.idx_dimension = 'dict_' + self.idx_dimension
-#        self.db = 'dict_' + self.db
         self.key_class = key_class
 
     def save(self, objectdict, idx=None):
@@ -16,22 +13,8 @@ class ObjectDictStorage(ObjectStorage):
 
         Parameters
         ----------
-        storage : Storage() on None
-            The storage (not ObjectStorage) to store in. If None then all associated storages will be saved in.
-
         """
         storage = self.storage
-        if idx is None:
-            if storage in objectdict.idx:
-                self.cache[idx] = objectdict
-                idx = objectdict.idx[storage]
-            else:
-                idx = self.free()
-                objectdict.idx[storage] = idx
-                self.cache[idx] = objectdict
-        else:
-            idx = int(idx)
-            self.cache[idx] = objectdict
 
         self._update_store(objectdict)
         store = objectdict.storage_caches[storage]
@@ -50,8 +33,6 @@ class ObjectDictStorage(ObjectStorage):
 
         self.tidy_cache(objectdict)
 
-    @loadidentifiable
-    @loadcache
     def load(self, idx, op=None):
         """
         Restores the cache from the storage using the name of the orderparameter.
@@ -98,8 +79,6 @@ class ObjectDictStorage(ObjectStorage):
         """
         super(ObjectDictStorage, self)._init()
 
-#        self.init_objectdict(self.idx_dimension, self.content_class.__name__.lower())
-#        self.init_variable(self.idx_dimension + '_name', 'index', (self.idx_dimension)
         self.init_variable(self.idx_dimension + '_length', 'index', self.idx_dimension, chunksizes=(1, ))
 
     def _update_store(self, obj):

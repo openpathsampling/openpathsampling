@@ -14,7 +14,7 @@ import mdtraj as md
 # SIMULATION CONFIGURATION
 #=============================================================================
 
-
+def create_lazy_property()
 
 class Configuration(object):
 
@@ -491,7 +491,7 @@ class Snapshot(object):
         returned
         """
         if self.reversed:
-            return self.momentum.reversed_copy().velocities
+            return -1.0 * self.momentum.velocities
         else:
             return self.momentum.velocities
     

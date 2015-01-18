@@ -1,28 +1,10 @@
 import copy
-
 import yaml
-import numpy as np
+import types
 
-from decorators import savecache, saveidentifiable, loadcache
+import numpy as np
 import opentis as ops
 import simtk.unit as u
-
-def add_storage_name(func):
-    def inner(self, name, *args, **kwargs):
-        var_name = '_'.join([self.db, name])
-        func(self, var_name, *args, **kwargs)
-
-    return inner
-
-class StoredObject(object):
-    def __getattr__(self, item):
-        if hasattr(self, '_loader'):
-            self._loader()
-            delattr(self, '_loader')
-
-        return self.__dict__[item]
-
-    pass
 
 # TODO: Combine the cache and all_names to be stored in one bis dict
 
@@ -31,7 +13,7 @@ class ObjectStorage(object):
     Base Class for storing complex objects in a netCDF4 file. It holds a reference to the store file.
     """
 
-    def __init__(self, storage, obj, named=False, json=False, identifier=None, dimension_units=None):
+    def __init__(self, storage, obj, named=False, json=False, identifier=None, dimension_units=None, enable_caching=True, load_lazy=False):
         """
         Attributes
         ----------
@@ -54,6 +36,9 @@ class ObjectStorage(object):
             an instance of a JSON Serializer
         identifier : str
             name of the netCDF variable that contains the string to be identified by
+        enable_caching : bool
+            if True (default) this will add caching to this storage which keeps once loaded
+            or saved objects in memory for faster later access
 
 
         """
@@ -76,6 +61,35 @@ class ObjectStorage(object):
             self.dimension_units = dimension_units
         else:
             self.dimension_units = {}
+
+        if load_lazy:
+            # wrap load to load lazy. Can now be used with all load functions.
+            # I effectively creates a Stub that is replaced by the real object
+            # once an attribute is accessed
+            # This should be called first so that the cache superseeds loading
+
+            _load = self.load
+            self.load = types.MethodType(loadlazy(_load), self)
+
+
+        if enable_caching:
+            # wrap load/save to make this work. I use MethodType here to bind the
+            # wrapped function to this instance. An alternative would be to
+            # add the wrapper to the class itself, which would mean that all
+            # instances have the same setting and a change would be present in all
+            # instances. E.g., first instance has caching and the second not
+            # when the second instance is created the change in the class would
+            # also disable caching in the first instance. The present way with
+            # bound methods is more flexible
+            # Should be not really important, since there will be mostly only one
+            # storage, but this way it is cleaner
+
+            _save = self.save
+            self.save = types.MethodType(savecache(_save), self)
+
+            _load = self.load
+            self.load = types.MethodType(loadcache(_load), self)
+
 
     def __str__(self):
         """
@@ -193,6 +207,8 @@ class ObjectStorage(object):
             the index that should be used or None if no saving is required.
         """
 
+#        print self, obj, idx
+
         storage = self.storage
         if idx is None:
             if storage in obj.idx:
@@ -242,28 +258,13 @@ class ObjectStorage(object):
 
         return ObjectIterator()
 
-    @loadcache
     def load(self, idx, lazy=False):
         '''
         Returns an object from the storage. Needs to be implented from the specific storage class.
         '''
 
-        # Create object first to break any unwanted recursion in loading
-        if lazy:
+        return self.load_object(self.idx_dimension + '_json', idx)
 
-            obj = StoredObject()
-            # if lazy construct a function that will update the content. This will be loaded, once the object is accessed
-            def loader():
-                obj = self.load_object(self.idx_dimension + '_json', idx)
-                return obj
-
-            setattr(obj, '_loader', loader)
-            return obj
-        else:
-            return self.load_object(self.idx_dimension + '_json', idx)
-
-    @saveidentifiable
-    @savecache
     def save(self, obj, idx=None):
         """
         Saves an object the storage using a JSON string.
@@ -616,3 +617,110 @@ class ObjectStorage(object):
             return obj.idx[self.storage]
 
         return idx
+
+
+class StubObject(object):
+    def __getattr__(self, item):
+        if hasattr(self, '_loader'):
+            self._loader()
+            delattr(self, '_loader')
+
+        return self.__dict__[item]
+
+    pass
+
+def loadlazy(func):
+    def inner(self, idx, *args, **kwargs):
+        # Create object first to break any unwanted recursion in loading
+        obj = StubObject()
+        # if lazy construct a function that will update the content. This will be loaded, once the object is accessed
+        def loader():
+            obj = func(idx, *args, **kwargs)
+
+            return obj
+
+        setattr(obj, '_loader', loader)
+        return obj
+
+    return inner
+
+
+# the default decorator for save functions to enable caching
+def savecache(func):
+    def inner(self, obj, idx = None, *args, **kwargs):
+        idx = self.index(obj, idx)
+        # add logging here
+        # print 'SAVE in', self.db, ':', idx
+        if idx is not None:
+            # ATTENTION HERE. See comment at loadcache below
+            func(obj, idx, *args, **kwargs)
+
+        # store the ID in the cache
+        self.cache[idx] = obj
+        if self.named and hasattr(obj, 'name') and obj.name != '':
+            self.cache[obj.name] = obj
+
+    return inner
+
+# the default decorator for load functions to enable caching
+def loadcache(func):
+    def inner(self, idx, *args, **kwargs):
+        # TODO: Maybe this functionality should be in a separate function
+        if type(idx) is not str and idx < 0:
+            return None
+
+        n_idx = idx
+
+        if idx in self.cache:
+            cc = self.cache[idx]
+            if type(cc) is int:
+                # here the cached value is actually only the index
+                # so it still needs to be loaded with the given index
+                # this happens when we want to load by name (str)
+                # and we need to actually load it
+                n_idx = cc
+            else:
+                # we have a real object (hopefully) and just return from cache
+                return self.cache[idx]
+
+        elif type(idx) is str:
+            # we want to load by name and it was not in cache
+            if self.named:
+                # only do it, if we allow named objects
+                if not self._names_loaded:
+                    # this only has to happen once, since afterwards we keep track of the name_cache
+                    # this name cache shares just the normal cache but stores indices instead of objects
+                    self.update_name_cache()
+                if idx in self.cache:
+                    n_idx = self.cache[idx]
+                else:
+                    raise ValueError('str "' + idx + '" not found in storage')
+            else:
+                raise ValueError('str "' + idx + '" as indices are only allowed in named storage')
+
+            n_idx = self.idx_from_name(idx)
+
+        # ATTENTION HERE!
+        # Note that the wrapped function ho self as first parameter. This is because we are wrapping a bound
+        # method in an instance and this one is still bound - luckily - to the same 'self'. In a class decorator when wrapping
+        # the class method directly it is not bound yet and so we need to include the self! Took me some time to
+        # understand and figure that out
+        obj = func(n_idx, *args, **kwargs)
+
+        if not hasattr(obj, 'idx'):
+            obj.idx = {}
+
+        obj.idx[self.storage] = n_idx
+        self.cache[obj.idx[self.storage]] = obj
+
+        if self.named and not hasattr(obj, 'name'):
+            # get the name of the object
+            setattr(obj, 'name', self.get_name(idx))
+
+        if self.named and hasattr(obj, 'name') and obj.name != '':
+            self.cache[obj.name] = obj
+
+#        print 'LOADED ', self.__class__.__name__, idx, n_idx, obj.idx
+
+        return obj
+    return inner

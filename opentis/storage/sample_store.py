@@ -1,12 +1,10 @@
 from object_storage import ObjectStorage
-from decorators import savecache, loadcache
 from opentis.sample import Sample, SampleSet
 
 class SampleStorage(ObjectStorage):
     def __init__(self, storage):
         super(SampleStorage, self).__init__(storage, Sample)
 
-    @savecache
     def save(self, sample, idx=None):
         """
         Add the current state of the sample in the database. If nothing has changed then the sample gets stored using the same snapshots as before. Saving lots of diskspace
@@ -38,7 +36,6 @@ class SampleStorage(ObjectStorage):
 
             self.save_variable('sample_step', idx, sample.time)
 
-    @loadcache
     def load(self, idx, momentum = True):
         '''
         Return a sample from the storage
@@ -92,7 +89,6 @@ class SampleSetStorage(ObjectStorage):
     def __init__(self, storage):
         super(SampleSetStorage, self).__init__(storage, SampleSet)
 
-    @savecache
     def save(self, sampleset, idx=None):
         """
         Add the current state of the sampleset in the database. If nothing has changed then the sampleset gets stored using the same samples as before. Saving lots of diskspace
@@ -136,7 +132,6 @@ class SampleSetStorage(ObjectStorage):
         # typecast to integer
         return self.list_from_numpy(values, 'index')
 
-    @loadcache
     def load(self, idx, lazy = None):
         '''
         Return a sampleset from the storage

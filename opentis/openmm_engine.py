@@ -256,6 +256,7 @@ class OpenMMEngine(ops.DynamicsEngine):
                     # new snapshot has a different momenta (different coordinates and reverse setting)
                     # so update. Note snapshot.velocities is different from snapshot.momenta.velocities!!!
                     # The first includes the reversal setting in the snapshot the second does not.
+#                    print snapshot.momentum.velocities
                     self.simulation.context.setVelocities(snapshot.velocities)
 
             # After the updates cache the new snapshot

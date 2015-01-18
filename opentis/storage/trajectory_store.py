@@ -1,7 +1,6 @@
 import numpy as np
 
 from object_storage import ObjectStorage
-from decorators import savecache, loadcache
 from opentis.trajectory import Trajectory
 
 
@@ -10,7 +9,6 @@ class TrajectoryStorage(ObjectStorage):
     def __init__(self, storage):
         super(TrajectoryStorage, self).__init__(storage, Trajectory)
 
-    @savecache
     def save(self, trajectory, idx=None):
         """
         Add the current state of the trajectory in the database. If nothing has changed then the trajectory gets stored using the same snapshots as before. Saving lots of diskspace
@@ -53,7 +51,6 @@ class TrajectoryStorage(ObjectStorage):
         # typecast to integer
         return self.list_from_numpy(values, 'index')
 
-    @loadcache
     def load(self, idx, lazy = None):
         '''
         Return a trajectory from the storage
