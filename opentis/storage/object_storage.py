@@ -167,7 +167,7 @@ class ObjectStorage(object):
                     if self.__dict__[item] is None:
                         # apparently the part has not yet been loaded so get it
                         _loader = cls._delayed_loading['item']
-                        setattr(self, item, _loader(self))
+                        _loader(self)
 
             return self.__dict__[item]
 
