@@ -84,7 +84,7 @@ if __name__ == '__main__':
 
     for p_idx in range(0, storage.shootingpointselector.count()):
         obj = storage.shootingpointselector.load(p_idx)
-        nline(p_idx,obj.json, obj.cls)
+        nline(p_idx,obj.json, obj.__class__.__name__)
 
     headline("ShootingPoints (" + str(storage.shootingpoint.count()) + ")")
 

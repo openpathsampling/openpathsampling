@@ -128,9 +128,13 @@ class ObjectStorage(object):
 
             return this._idx
 
+        def _save(this, storage):
+            storage.save(this)
+
         if nestable:
             self.content_class.nestable = True
 
+        self.content_class.save = _save
         self.content_class.idx = property(_idx)
 
         # register as a base_class for storable objects

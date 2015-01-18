@@ -355,8 +355,6 @@ class Momentum(object):
 
 
 
-
-
 #=============================================================================
 # SIMULATION SNAPSHOT (COMPLETE FRAME WITH COORDINATES AND VELOCITIES)
 #=============================================================================

@@ -32,7 +32,6 @@ class Ensemble(object):
 
     use_shortcircuit = True
 
-
     def __init__(self):
         '''
         A path volume defines a set of paths.

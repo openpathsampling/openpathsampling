@@ -421,23 +421,24 @@ class StorableObjectJSON(ops.todict.ObjectJSON):
 
     def simplify(self,obj, base_type = ''):
         if type(obj).__module__ != '__builtin__':
-#            print obj.__dict__, hasattr(obj, 'creatable')
             if hasattr(obj, 'idx') and (not hasattr(obj, 'nestable') or (obj.base_cls_name != base_type)):
                 # this also returns the base class name used for storage
                 # store objects only if they are not creatable. If so they will only be created in their
                 # top instance and we use the simplify from the super class ObjectJSON
-                base_cls = self.storage.save(obj)
-                return { '_idx' : obj.idx[self.storage], '_base' : base_cls, '_cls' : obj.__class__.__name__ }
+                self.storage.save(obj)
+                return { '_idx' : obj.idx[self.storage], '_cls' : obj.__class__.__name__ }
 
         return super(StorableObjectJSON, self).simplify(obj, base_type)
 
     def build(self,obj):
         if type(obj) is dict:
-            if '_base' in obj and '_idx' in obj:
-                result = self.storage.load(obj['_base'], obj['_idx'])
-                # restore also the actual class name
+            if '_cls' in obj and '_idx' in obj:
+                if obj['_cls'] in ops.todict.class_list:
+                    base_cls = ops.todict.class_list[obj['_cls']]
+                    result = self.storage.load(base_cls, obj['_idx'])
+                else:
+                    result = self.storage.load(obj['_cls'], obj['_idx'])
 
-                result.cls = obj['_cls']
                 return result
 
         return super(StorableObjectJSON, self).build(obj)
