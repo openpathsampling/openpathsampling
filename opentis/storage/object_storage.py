@@ -13,7 +13,9 @@ class ObjectStorage(object):
     Base Class for storing complex objects in a netCDF4 file. It holds a reference to the store file.
     """
 
-    def __init__(self, storage, obj, named=False, json=False, identifier=None, dimension_units=None, enable_caching=True, load_lazy=False):
+    def __init__(self, storage, obj, named=False, json=False, identifier=None,
+                 dimension_units=None, enable_caching=True, load_lazy=True,
+                 load_partial=False):
         """
         Attributes
         ----------
@@ -62,15 +64,66 @@ class ObjectStorage(object):
         else:
             self.dimension_units = {}
 
+        # First, apply standard decorator for loading and saving
+        # this handles all the setting and getting of .idx and is
+        # always necessary!
+
         if load_lazy:
             # wrap load to load lazy. Can now be used with all load functions.
             # I effectively creates a Stub that is replaced by the real object
             # once an attribute is accessed
             # This should be called first so that the cache superseeds loading
 
-            _load = self.load
-            self.load = types.MethodType(loadlazy(_load), self)
+            def _inner(this, idx, *args, **kwargs):
+                # Create object first to break any unwanted recursion in loading
+                obj = LazyLoadedObject()
+                # if lazy construct a function that will update the content. This will be loaded, once the object is accessed
+                def loader():
+                    obj = self.load(idx, *args, **kwargs)
 
+                setattr(obj, '_loader', loader)
+                return obj
+
+            self.load = types.MethodType(_inner, self)
+
+        _save = self.save
+        self.save = types.MethodType(saveidx(_save), self)
+
+        _load = self.load
+        self.load = types.MethodType(loadidx(_load), self)
+
+        if load_partial:
+            # this allows the class to load members only if needed
+            # adds a different __getattr__ to the content class
+            # makes only sense if not already lazy loading
+            # it uses load_constructor instead to create an empty object
+            # and then each class can attach delayed loaders to load
+            # when necessary, fall back is of course the normal load function
+
+            if  hasattr(self, 'load_empty'):
+                cls = self.content_class
+
+                def _getattr(self, item):
+                    if item == '_idx':
+                        return self.__dict__['idx']
+
+                    print 'called getter for', "'" + item + "'"
+                    if hasattr(cls, '_delayed_loading'):
+                        if item in cls._delayed_loading:
+                            if self.__dict__[item] is None:
+                                # apparently the part has not yet been loaded so get it
+                                _loader = cls._delayed_loading['item']
+                                print 'Loaded', "'" + item + "'", 'delayed'
+                                _loader(self)
+                            else:
+                                print 'Already loaded'
+
+                    return self.__dict__[item]
+
+                setattr(cls, '__getattr__', _getattr)
+
+                _load = self.load
+                self.load = types.MethodType(loadpartial(_load), self)
 
         if enable_caching:
             # wrap load/save to make this work. I use MethodType here to bind the
@@ -89,7 +142,6 @@ class ObjectStorage(object):
 
             _load = self.load
             self.load = types.MethodType(loadcache(_load), self)
-
 
     def __str__(self):
         """
@@ -156,25 +208,11 @@ class ObjectStorage(object):
 
         return self
 
-    def attach_partial_loading(self):
-        # fix the object class to allow partial loading
-
-        cls = self.content_class
-
-        def _getattr(self, item):
-            if hasattr(cls, '_delayed_loading'):
-                if item in cls._delayed_loading:
-                    if self.__dict__[item] is None:
-                        # apparently the part has not yet been loaded so get it
-                        _loader = cls._delayed_loading['item']
-                        _loader(self)
-
-            return self.__dict__[item]
-
-        setattr(cls, '__getattr__', _getattr)
-
     def set_variable_partial_loading(self, variable, loader):
         cls = self.content_class
+        if not hasattr(cls, '_delayed_loading'):
+            cls._delayed_loading = dict()
+
         cls._delayed_loading[variable] = loader
 
     def copy(self):
@@ -641,38 +679,60 @@ class ObjectStorage(object):
 
 
 class LazyLoadedObject(object):
+    def __init__(self):
+        self.idx = dict()
+
     def __getattr__(self, item):
+#        print 'Try get lazy', item
+        if item == 'idx':
+            return self.__dict__[item]
         if hasattr(self, '_loader'):
-            self._loader()
+#            print 'loader', self._loader
+#            _idx = self.__dict__['idx']
+            _loader = self.__dict__['_loader']
+            _loader(self)
+
+            print 'New self', self.__dict__
+
             delattr(self, '_loader')
+            print 'done'
+
+        else:
+            print 'no loader, should not happen'
+            print self.__dict__
+            print '2'
+            print self.__class__.__name__
+            print '3'
+            raise ValueError('No LOADER')
+
+        if item not in self.__dict__:
+            print item, 'not found!!'
+
 
         return self.__dict__[item]
 
-
-def loadlazy(func):
+def loadpartial(func, constructor=None):
     def inner(self, idx, *args, **kwargs):
-        # Create object first to break any unwanted recursion in loading
-        obj = LazyLoadedObject()
-        # if lazy construct a function that will update the content. This will be loaded, once the object is accessed
-        def loader():
+        if hasattr(self, '_delayed_loading'):
+            if constructor is None:
+                obj = self.load_constructor
+            else:
+                obj = getattr(self, 'load_empty')
+        else:
             obj = func(idx, *args, **kwargs)
-
-            return obj
-
-        setattr(obj, '_loader', loader)
         return obj
 
     return inner
 
-# the default decorator for load functions to enable caching
+#=============================================================================
+# LOAD/SAVE DECORATORS FOR CACHE HANDLING
+#=============================================================================
+
 def loadcache(func):
     def inner(self, idx, *args, **kwargs):
-        # TODO: Maybe this functionality should be in a separate function
-        if type(idx) is not str and idx < 0:
-            return None
-
         n_idx = idx
 
+        # if it is in the cache, return it, otherwise not :)
         if idx in self.cache:
             cc = self.cache[idx]
             if type(cc) is int:
@@ -693,6 +753,8 @@ def loadcache(func):
                     # this only has to happen once, since afterwards we keep track of the name_cache
                     # this name cache shares just the normal cache but stores indices instead of objects
                     self.update_name_cache()
+
+                # after updating give it another shot
                 if idx in self.cache:
                     n_idx = self.cache[idx]
                 else:
@@ -703,22 +765,17 @@ def loadcache(func):
             n_idx = self.idx_from_name(idx)
 
         # ATTENTION HERE!
-        # Note that the wrapped function ho self as first parameter. This is because we are wrapping a bound
+        # Note that the wrapped function no self as first parameter. This is because we are wrapping a bound
         # method in an instance and this one is still bound - luckily - to the same 'self'. In a class decorator when wrapping
         # the class method directly it is not bound yet and so we need to include the self! Took me some time to
         # understand and figure that out
         obj = func(n_idx, *args, **kwargs)
 
-        if not hasattr(obj, 'idx'):
-            obj.idx = {}
-
-        obj.idx[self.storage] = n_idx
+        # update cache there might have been a change due to naming
+        print n_idx, obj, obj.idx, obj.__dict__
         self.cache[obj.idx[self.storage]] = obj
 
-        if self.named and not hasattr(obj, 'name'):
-            # get the name of the object
-            setattr(obj, 'name', self.get_name(idx))
-
+        # finally store the name of a named object in cache
         if self.named and hasattr(obj, 'name') and obj.name != '':
             self.cache[obj.name] = obj
 
@@ -730,37 +787,76 @@ def loadcache(func):
 # the default decorator for save functions to enable caching
 def savecache(func):
     def inner(self, obj, idx = None, *args, **kwargs):
-        idx = self.index(obj, idx)
-        # add logging here
-        # print 'SAVE in', self.db, ':', idx
-        if idx is not None:
-            # ATTENTION HERE. See comment at loadcache below
-            func(obj, idx, *args, **kwargs)
+        # call the normal storage
+        func(obj, idx, *args, **kwargs)
 
         # store the ID in the cache
         self.cache[idx] = obj
         if self.named and hasattr(obj, 'name') and obj.name != '':
+            # and also the name, if it has one so we can load by
+            # name afterwards from cache
             self.cache[obj.name] = obj
 
     return inner
 
+#=============================================================================
+# LOAD/SAVE DECORATORS FOR .idx HANDLING
+#=============================================================================
 
-def create_lazy_property(cls, variable, loader_fnc):
+def loadidx(func):
+    def inner(self, idx, *args, **kwargs):
+        # TODO: Maybe this functionality should be in a separate function
+        if type(idx) is not str and idx < 0:
+            return None
 
-    hidden_variable = '_' + variable + '_'
-    cls.load_lazy = True
+        n_idx = idx
 
-    def _getter(self):
-        if cls.load_lazy and getattr(self, hidden_variable) is None:
-            # this uses the first storage and loads the velocities from there
-            setattr(self, hidden_variable, loader_fnc(self))
+        if type(idx) is str:
+            # we want to load by name and it was not in cache
+            if self.named:
+                n_idx = self.idx_from_name(idx)
+            else:
+                # load by name only in named storages
+                raise ValueError('Load by name (str) is only supported in named storages')
+                pass
 
-        return getattr(self, hidden_variable)
+        # ATTENTION HERE!
+        # Note that the wrapped function ho self as first parameter. This is because we are wrapping a bound
+        # method in an instance and this one is still bound - luckily - to the same 'self'. In a class decorator when wrapping
+        # the class method directly it is not bound yet and so we need to include the self! Took me some time to
+        # understand and figure that out
+        obj = func(n_idx, *args, **kwargs)
 
-    def _setter(self, value):
-        if getattr(self, hidden_variable) is None:
-            setattr(self, hidden_variable, value)
+        if not hasattr(obj, 'idx'):
+            obj.idx = dict()
+
+        obj.idx[self.storage] = n_idx
+
+        if self.named and not hasattr(obj, 'name'):
+            # get the name of the object
+            setattr(obj, 'name', self.get_name(idx))
+
+        return obj
+    return inner
+
+def saveidx(func):
+    def inner(self, obj, idx = None, *args, **kwargs):
+
+        storage = self.storage
+        if idx is None:
+            if storage in obj.idx:
+                # has been saved so quit and do nothing
+                return None
+            else:
+                idx = self.free()
+                obj.idx[storage] = idx
         else:
-            raise ValueError("Cannot change variable '" + variable + "' once it is set")
+            if type(idx) is str:
+                # Not yet supported
+                raise ValueError('Savinf by name not yet supported')
+            else:
+                idx = int(idx)
 
-    setattr(cls, variable, property(_getter, _setter))
+        func(obj, idx, *args, **kwargs)
+
+    return inner

@@ -63,6 +63,8 @@ if __name__ == '__main__':
     # load initial equilibrate snapshot given by ID #0
     snapshot = storage.snapshot.load(0)
 
+    print snapshot.__dict__
+
     line("Potential Energy",str(snapshot.potential_energy))
     line("Kinetic Energy",str(snapshot.kinetic_energy))
 

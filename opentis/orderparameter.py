@@ -257,8 +257,8 @@ class OrderParameter(FunctionalStorableObjectDict):
         if type(name) is str and len(name) == 0:
             raise ValueError('name must be a non-empty string')
 
-        if name in OrderParameter._instances:
-            raise ValueError(name + ' already exists as an orderparameter. To load an existing one use get_existing(\'' + name + '\')')
+#        if name in OrderParameter._instances:
+#            raise ValueError(name + ' already exists as an orderparameter. To load an existing one use get_existing(\'' + name + '\')')
 
         OrderParameter._instances[name] = self
         super(OrderParameter, self).__init__(

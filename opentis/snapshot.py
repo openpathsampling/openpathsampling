@@ -56,73 +56,28 @@ class Configuration(object):
             export to mdtraj objects
         """
 
-        self._coordinates = None
-        self._box_vectors = None
-        self._potential_energy = None
+        self.coordinates = None
+        self.box_vectors = None
+        self.potential_energy = None
         self.topology = None
 
         if topology is not None:
             self.topology = topology
 
         if coordinates is not None: 
-            self._coordinates = copy.deepcopy(coordinates)
+            self.coordinates = copy.deepcopy(coordinates)
         if box_vectors is not None: 
-            self._box_vectors = copy.deepcopy(box_vectors)
+            self.box_vectors = copy.deepcopy(box_vectors)
         if potential_energy is not None: 
-            self._potential_energy = copy.deepcopy(potential_energy)
+            self.potential_energy = copy.deepcopy(potential_energy)
 
-        if self._coordinates is not None:
+        if self.coordinates is not None:
             # Check for nans in coordinates, and raise an exception if
             # something is wrong.
-            if np.any(np.isnan(self._coordinates)):
+            if np.any(np.isnan(self.coordinates)):
                 raise ValueError("Some coordinates became 'nan'; simulation is unstable or buggy.")
 
         return
-
-    @property
-    def coordinates(self):
-        if Configuration.load_lazy is True and self._coordinates is None and hasattr(self, '_loaded_from'):
-            # this uses the first storage and loads the velocities from there
-            self._loaded_from.update_coordinates(self)
-
-        return self._coordinates
-
-    @coordinates.setter
-    def coordinates(self, value):
-        if self._coordinates is None:
-            self._coordinates = value
-        else:
-            raise ValueError("Cannot change coordinates once they are set")
-
-    @property
-    def box_vectors(self):
-        if Configuration.load_lazy is True and self._box_vectors is None and hasattr(self, '_loaded_from'):
-            # this uses the first storage and loads the velocities from there
-            self._loaded_from.update_box_vectors(self)
-
-        return self._box_vectors
-
-    @box_vectors.setter
-    def box_vectors(self, value):
-        if self._box_vectors is None:
-            self._box_vectors = value
-        else:
-            raise ValueError("Cannot change box_vector once they are set")
-
-    @property
-    def potential_energy(self):
-        if Configuration.load_lazy is True and self._potential_energy is None and hasattr(self, '_loaded_from'):
-            # this uses the first storage and loads the velocities from there
-            self._loaded_from.update_potential_energy(self)
-
-        return self._potential_energy
-
-    @potential_energy.setter
-    def potential_energy(self, value):
-        if self._potential_energy is None:
-            self._potential_energy = value
-        else:
-            raise ValueError("Cannot change potential_energy once they are set")
 
     def forget(self):
         """
@@ -132,9 +87,9 @@ class Configuration(object):
         """
 
         if Configuration.load_lazy and hasattr(self, '_loaded_from'):
-            self._coordinates = None
-            self._box_vectors = None
-            self._potential_energy = None
+            self.coordinates = None
+            self.box_vectors = None
+            self.potential_energy = None
 
     #=========================================================================
     # Comparison functions
@@ -247,44 +202,15 @@ class Momentum(object):
             dict for storing the used index per storage
         """
         
-        self._velocities = None
-        self._kinetic_energy = None
+        self.velocities = None
+        self.kinetic_energy = None
 
         if velocities is not None: 
-            self._velocities = copy.deepcopy(velocities)
+            self.velocities = copy.deepcopy(velocities)
         if kinetic_energy is not None: 
-            self._kinetic_energy = copy.deepcopy(kinetic_energy)
+            self.kinetic_energy = copy.deepcopy(kinetic_energy)
 
         return
-
-    @property
-    def velocities(self):
-        if Momentum.load_lazy and self._velocities is None and hasattr(self, '_loaded_from'):
-            # this uses the first storage and loads the velocities from there
-            self._loaded_from.update_velocities(self)
-
-        return self._velocities
-
-    @velocities.setter
-    def velocities(self, value):
-        if self._velocities is None:
-            self._velocities = value
-        else:
-            raise ValueError()
-
-    @property
-    def kinetic_energy(self):
-        if Momentum.load_lazy and self._kinetic_energy is None and hasattr(self, '_loaded_from'):
-            self._loaded_from.update_kinetic_energy(self)
-
-        return self._kinetic_energy
-
-    @kinetic_energy.setter
-    def kinetic_energy(self, value):
-        if self._kinetic_energy is None:
-            self._kinetic_energy = value
-        else:
-            raise ValueError()
 
     def forget(self):
         """
@@ -294,8 +220,8 @@ class Momentum(object):
         """
 
         if Momentum.load_lazy and hasattr(self, '_loaded_store') > 0:
-            self._velocities = None
-            self._kinetic_energy = None
+            self.velocities = None
+            self.kinetic_energy = None
 
     @property
     def atoms(self):
@@ -436,30 +362,30 @@ class Snapshot(object):
         self.reversed = reversed
 
         if coordinates is not None: 
-            self.configuration._coordinates = copy.deepcopy(coordinates)
+            self.configuration.coordinates = copy.deepcopy(coordinates)
         if velocities is not None: 
-            self.momentum._velocities = copy.deepcopy(velocities)
+            self.momentum.velocities = copy.deepcopy(velocities)
         if box_vectors is not None: 
-            self.configuration._box_vectors = copy.deepcopy(box_vectors)
+            self.configuration.box_vectors = copy.deepcopy(box_vectors)
         if potential_energy is not None: 
-            self.configuration._potential_energy = copy.deepcopy(potential_energy)
+            self.configuration.potential_energy = copy.deepcopy(potential_energy)
         if kinetic_energy is not None: 
-            self.momentum._kinetic_energy = copy.deepcopy(kinetic_energy)
+            self.momentum.kinetic_energy = copy.deepcopy(kinetic_energy)
 
         # TODO: consider whether it is cleaner to move this logic into the
         # main allocation process instead of fixing things after the fact
         config = self.configuration
-        if config._coordinates is None and config._box_vectors is None and config._potential_energy is None:
+        if config.coordinates is None and config.box_vectors is None and config.potential_energy is None:
             self.configuration = None
         moment = self.momentum
-        if moment._velocities is None and moment._kinetic_energy is None:
+        if moment.velocities is None and moment.kinetic_energy is None:
             self.momentum = None
 
 
-        if self.configuration is not None and self.configuration._coordinates is not None:
+        if self.configuration is not None and self.configuration.coordinates is not None:
             # Check for nans in coordinates, and raise an exception if
             # something is wrong.
-            if np.any(np.isnan(self.configuration._coordinates)):
+            if np.any(np.isnan(self.configuration.coordinates)):
                 raise ValueError("Some coordinates became 'nan'; simulation is unstable or buggy.")
                 
         pass
