@@ -6,6 +6,8 @@ import numpy as np
 import opentis as ops
 import simtk.unit as u
 
+# TODO: Combine the cache and all_names to be stored in one bis dict
+
 class ObjectStorage(object):
     """
     Base Class for storing complex objects in a netCDF4 file. It holds a reference to the store file.
@@ -49,7 +51,9 @@ class ObjectStorage(object):
         self.cache = dict()
         self.named = named
         self.json = json
+        self.all_names = None
         self.simplifier = ops.storage.StorableObjectJSON(storage)
+        self._names_loaded = False
         if identifier is not None:
             self.identifier = self.idx_dimension + '_' + identifier
         else:
@@ -59,6 +63,17 @@ class ObjectStorage(object):
             self.dimension_units = dimension_units
         else:
             self.dimension_units = {}
+
+
+#        if load_lazy:
+            # wrap load to load lazy. Can now be used with all load functions.
+            # this
+            # It effectively creates a Stub that is replaced by the real object
+            # once an attribute is accessed
+            # This should be called first so that the cache superseeds loading
+
+#            _load = self.load
+#            self.load = types.MethodType(loadlazy(_load), self)
 
         # First, apply standard decorator for loading and saving
         # this handles all the setting and getting of .idx and is
@@ -85,12 +100,16 @@ class ObjectStorage(object):
                     if item == '_idx':
                         return self.__dict__['idx']
 
+#                    print 'called getter for', "'" + item + "'"
                     if hasattr(cls, '_delayed_loading'):
                         if item in cls._delayed_loading:
                             if self.__dict__[item] is None:
                                 # apparently the part has not yet been loaded so get it
                                 _loader = cls._delayed_loading['item']
+#                                print 'Loaded', "'" + item + "'", 'delayed'
                                 _loader(self)
+#                            else:
+#                                print 'Already loaded'
 
                     return self.__dict__[item]
 
@@ -160,6 +179,8 @@ class ObjectStorage(object):
 
         # add a property idx that keeps the storage reference
 
+#        print 'REGISTER ', self.content_class.__name__
+
         def _idx(this):
             if not hasattr(this, '_idx'):
                 this._idx = dict()
@@ -212,46 +233,58 @@ class ObjectStorage(object):
         store.storage = storage
         return store
 
-    def idx_by_name(self, needle):
-        """
-        Return the index for the (first) object with a given name from the store
+    def find_by_identifier(self, needle):
+        if self.all_names is None:
+            self.all_names = { s : idx for idx,s in enumerate(self.storage.variables[self.identifier][:]) }
 
-        Parameters
-        ----------
-        needle : str
-            The name of the object to be found in the storage
+        if needle in self.all_names:
+                return self.all_names[needle]
 
-        Returns
-        -------
-        int or None
-            The index of the first found object. If the name is not present, None is returned
-
-        Notes
-        -----
-        Can only be applied to named storages.
-        """
-        if self.named:
-            # if we need a cache we might find the index in there
-            if needle in self.cache:
-                if type(self.cache[needle]) is int:
-                    return self.cache[needle]
-                else:
-                    return self.cache[needle].idx[self.storage]
-
-            # otherwise search the storage for the name
-            found_idx = [ idx for idx,s in enumerate(self.storage.variables[self.identifier][:]) if s == needle ]
-
-            if len(found_idx) > 0:
-                    return found_idx[0]
-
-            return None
-        else:
-            raise ValueError('Cannot search for name (str) in non-named objects')
+        return None
 
     def update_name_cache(self):
         if self.named:
             for idx, name in enumerate(self.variables[self.db + "_name"][:]):
                 self.cache[name] = idx
+
+            self._names_loaded = True
+
+    def index(self, obj, idx=None):
+        """
+        Return the appropriate index for saving or None if the object is already stored!
+
+        Returns
+        -------
+        int
+            the index that should be used or None if no saving is required.
+        """
+
+#        print self, obj, idx
+
+        storage = self.storage
+        if idx is None:
+            if storage in obj.idx:
+                # has been saved so quit and do nothing
+                self.cache[idx] = obj
+                return None
+            else:
+                idx = self.free()
+                obj.idx[storage] = idx
+                self.cache[idx] = obj
+                return idx
+        else:
+            idx = int(idx)
+            self.cache[idx] = obj
+            return idx
+
+    def from_cache(self, idx):
+        if idx in self.cache:
+            return self.cache[idx]
+        else:
+            return None
+
+    def to_cache(self, obj):
+        self.cache[obj.idx[self.storage]] = obj
 
     def iterator(this, iter_range = None):
         class ObjectIterator:
@@ -531,6 +564,7 @@ class ObjectStorage(object):
 
     def load_object(self, name, idx):
         # TODO: Add logging here
+#        print 'Load',name,idx
         idx = int(idx)
 
         json_string = self.storage.variables[name][idx]
@@ -636,10 +670,6 @@ class ObjectStorage(object):
 
         return idx
 
-#=============================================================================
-# LOAD/SAVE DECORATORS FOR PARTIAL LOADING OF ATTRIBUTES
-#=============================================================================
-
 def loadpartial(func, constructor=None):
     def inner(self, idx, *args, **kwargs):
         if hasattr(self, '_delayed_loading'):
@@ -649,6 +679,86 @@ def loadpartial(func, constructor=None):
                 obj = getattr(self, 'load_empty')
         else:
             obj = func(idx, *args, **kwargs)
+        return obj
+
+    return inner
+
+#=============================================================================
+# LOAD/SAVE DECORATORS FOR LAZY LOADING OF WHOLE OBJECTS
+#=============================================================================
+
+# This is kind of experimental. It works, but I have not really seen a gain in
+# IO speed compared to partial loading. So maybe we should just leave it and
+# not use it at all
+
+# lazyloading is the works always scheme, but need to trick by creating a
+# wrapper object that refers all requests from the underlying loaded object.
+# This is because python does not (nicely) allow to change an object at a
+# memory address. The idea would have been to create a stub that replaces itself
+# when it is accessed. This wrapper workaround works but makes access slow and
+# thus defeats the purpose
+
+class LazyLoadedObject(object):
+    def __init__(self):
+        self.idx = dict()
+        self._reference = None
+        self._loader_fnc = None
+
+    def _loader(self):
+        self._reference = self._loader_fnc()
+#        print self._reference
+
+    def __getattr__(self, item):
+        if item is 'idx':
+            return self.idx
+        else:
+            if self._loader_fnc is not None:
+                self._loader()
+            return getattr(self._reference, item)
+
+def loadlazy(func):
+    def inner(self, idx, *args, **kwargs):
+        # Create object first to break any unwanted recursion in loading
+        obj = LazyLoadedObject()
+
+        # if lazy construct a function that will update the content. This will be loaded, once the object is accessed
+        def loader():
+            return func(idx, *args, **kwargs)
+
+        setattr(obj, '_loader_fnc', loader)
+        return obj
+
+    return inner
+
+# This is a special lazy loading for objects that are only loaded as a LoadedObject
+# anyway. Here we just add all the attributes from the loaded object. This seems
+# okay and it the way it was implemented first
+
+class LazyLoadedObjectDict(object):
+    def __init__(self):
+        self.idx = dict()
+
+    def __getattr__(self, item):
+        if item is 'idx':
+            return self.idx
+        else:
+            if hasattr(self, '_loader'):
+                self._loader(self)
+                delattr(self, '_loader')
+
+            return getattr(self._reference, item)
+
+
+def loadlazy_dictable(func):
+    def inner(self, idx, *args, **kwargs):
+        obj = LazyLoadedObjectDict()
+
+        def loader(this):
+            obj = func(self.idx_dimension + '_json', idx)
+            for key, value in obj.__dict__.iteritems():
+                setattr(this, key, value)
+
+        setattr(obj, '_loader', loader)
         return obj
 
     return inner
@@ -673,21 +783,27 @@ def loadcache(func):
                 n_idx = cc
             else:
                 # we have a real object (hopefully) and just return from cache
+#                print 'From Cache'
                 return self.cache[idx]
 
         elif type(idx) is str:
-            # we want to load by name and it was not in cache.
+            # we want to load by name and it was not in cache
             if self.named:
-                # since it is not found in the cache before. Refresh the cache
-                self.update_name_cache()
+                # only do it, if we allow named objects
+                if not self._names_loaded:
+                    # this only has to happen once, since afterwards we keep track of the name_cache
+                    # this name cache shares just the normal cache but stores indices instead of objects
+                    self.update_name_cache()
 
-                # and give it another shot
+                # after updating give it another shot
                 if idx in self.cache:
                     n_idx = self.cache[idx]
                 else:
                     raise ValueError('str "' + idx + '" not found in storage')
             else:
                 raise ValueError('str "' + idx + '" as indices are only allowed in named storage')
+
+            n_idx = self.idx_from_name(idx)
 
         # ATTENTION HERE!
         # Note that the wrapped function no self as first parameter. This is because we are wrapping a bound
@@ -697,11 +813,14 @@ def loadcache(func):
         obj = func(n_idx, *args, **kwargs)
 
         # update cache there might have been a change due to naming
+#        print n_idx, obj, obj.idx, obj.__dict__
         self.cache[obj.idx[self.storage]] = obj
 
         # finally store the name of a named object in cache
         if self.named and hasattr(obj, 'name') and obj.name != '':
             self.cache[obj.name] = obj
+
+#        print 'LOADED ', self.__class__.__name__, idx, n_idx, obj.idx
 
         return obj
     return inner
@@ -736,7 +855,7 @@ def loadidx(func):
         if type(idx) is str:
             # we want to load by name and it was not in cache
             if self.named:
-                n_idx = self.load_by_name(idx)
+                n_idx = self.idx_from_name(idx)
             else:
                 # load by name only in named storages
                 raise ValueError('Load by name (str) is only supported in named storages')
@@ -775,7 +894,7 @@ def saveidx(func):
         else:
             if type(idx) is str:
                 # Not yet supported
-                raise ValueError('Saving by name not yet supported')
+                raise ValueError('Savinf by name not yet supported')
             else:
                 idx = int(idx)
 

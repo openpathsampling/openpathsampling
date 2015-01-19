@@ -19,7 +19,7 @@ def saveidentifiable(func):
             if not hasattr(obj,'json'):
                 setattr(obj,'json',self.object_to_json(obj))
 
-            find_idx = self.find_by_identifier(obj.identifier)
+            find_idx = self.idx_by_name(obj.identifier)
             if find_idx is not None:
                 # found and does not need to be saved, but we will let this ensemble point to the storage
                 # in case we want to save and need the idx
@@ -95,7 +95,7 @@ def loadcache(func):
 def loadidentifiable(func):
     def inner(self, idx=None, *args, **kwargs):
         if idx is not None and type(idx) is str:
-            find_idx = self.find_by_identifier(idx)
+            find_idx = self.idx_by_name(idx)
             if find_idx is not None:
                 # names id is found so load with normal id
                 return func(self, find_idx, *args, **kwargs)

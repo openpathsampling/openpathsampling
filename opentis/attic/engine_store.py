@@ -1,4 +1,4 @@
-from object_storage import ObjectStorage
+from object_storage_with_lazyloading import ObjectStorage
 from opentis.dynamics_engine import DynamicsEngine
 
 class DynamicsEngineStorage(ObjectStorage):
