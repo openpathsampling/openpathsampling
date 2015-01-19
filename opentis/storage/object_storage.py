@@ -3,7 +3,7 @@ import yaml
 import types
 
 import numpy as np
-import opentis as ops
+import opentis as paths
 import simtk.unit as u
 
 class ObjectStorage(object):
@@ -49,7 +49,7 @@ class ObjectStorage(object):
         self.cache = dict()
         self.named = named
         self.json = json
-        self.simplifier = ops.storage.StorableObjectJSON(storage)
+        self.simplifier = paths.storage.StorableObjectJSON(storage)
         if identifier is not None:
             self.identifier = self.idx_dimension + '_' + identifier
         else:

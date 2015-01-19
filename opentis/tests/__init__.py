@@ -1,6 +1,6 @@
 import os
 
-import opentis as ops
+import opentis as paths
 from opentis.storage import Storage
 
 import mdtraj as md
@@ -12,7 +12,7 @@ def setup_package():
     # everything else
     mdtrajectory = md.load(data_filename("ala_small_traj.pdb"))
 
-    snapshot = ops.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
+    snapshot = paths.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
 
     # once we have a template configuration (coordinates to not really matter)
     # we can create a storage. We might move this logic out of the dynamics engine
@@ -24,7 +24,7 @@ def setup_package():
         mode='w'
     )
 
-    mytraj = ops.Trajectory.from_mdtraj(mdtrajectory)
+    mytraj = paths.Trajectory.from_mdtraj(mdtrajectory)
     storage.trajectory.save(mytraj)
 
     storage.close()

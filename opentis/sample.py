@@ -1,6 +1,6 @@
 import random
 
-import opentis as ops
+import opentis as paths
 
 class SampleKeyError(Exception):
     def __init__(self, key, sample, sample_key):
@@ -48,14 +48,14 @@ class SampleSet(object):
         self.extend(samples)
 
     def __getitem__(self, key):
-        if isinstance(key, ops.Ensemble):
+        if isinstance(key, paths.Ensemble):
             return random.choice(self.ensemble_dict[key])
         else:
             return random.choice(self.replica_dict[key])
 
     def __setitem__(self, key, value):
         # first, we check whether the key matches the sample: if no, KeyError
-        if isinstance(key, ops.Ensemble):
+        if isinstance(key, paths.Ensemble):
             if key != value.ensemble:
                 raise SampleKeyError(key, value, value.ensemble)
         else:

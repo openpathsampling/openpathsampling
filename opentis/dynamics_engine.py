@@ -6,7 +6,7 @@ Created on 01.07.2014
 '''
 
 import simtk.unit as u
-import opentis as ops
+import opentis as paths
 
 
 import logging
@@ -75,14 +75,14 @@ class DynamicsEngine(object):
         # mdtraj.Trajectory() objects
 
         # TODO: Remove this and put the logic outside of the engine
-        ops.Trajectory.engine = self
+        paths.Trajectory.engine = self
 
         self._register_options(options)
 
         # TODO: switch this not needing slice; use can_append
         # this and n_atoms are the only general options we need and register
         if hasattr(self, 'n_frames_max'):
-            self.max_length_stopper = ops.LengthEnsemble(slice(0, self.n_frames_max + 1))
+            self.max_length_stopper = paths.LengthEnsemble(slice(0, self.n_frames_max + 1))
 
     def _register_options(self, options = None):
         """
@@ -264,7 +264,7 @@ class DynamicsEngine(object):
             self.start()
 
             # Store initial state for each trajectory segment in trajectory.
-            trajectory = ops.Trajectory()
+            trajectory = paths.Trajectory()
             trajectory.append(snapshot)
             
             frame = 0

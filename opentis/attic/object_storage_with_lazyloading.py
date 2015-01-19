@@ -3,7 +3,7 @@ import yaml
 import types
 
 import numpy as np
-import opentis as ops
+import opentis as paths
 import simtk.unit as u
 
 # TODO: Combine the cache and all_names to be stored in one bis dict
@@ -52,7 +52,7 @@ class ObjectStorage(object):
         self.named = named
         self.json = json
         self.all_names = None
-        self.simplifier = ops.storage.StorableObjectJSON(storage)
+        self.simplifier = paths.storage.StorableObjectJSON(storage)
         self._names_loaded = False
         if identifier is not None:
             self.identifier = self.idx_dimension + '_' + identifier

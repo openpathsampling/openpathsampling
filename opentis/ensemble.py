@@ -6,7 +6,7 @@ Created on 03.09.2014
 
 from opentis.todict import creatable
 
-import opentis as ops
+import opentis as paths
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
@@ -662,7 +662,7 @@ class SequentialEnsemble(Ensemble):
                     transitions.append(subtraj_final)
                     subtraj_first = subtraj_final
             else:
-                if ens_num <= final_ens and self.ensembles[ens_num](ops.Trajectory([])):
+                if ens_num <= final_ens and self.ensembles[ens_num](paths.Trajectory([])):
                     ens_num += 1
                     transitions.append(subtraj_final)
                     subtraj_first = subtraj_final
@@ -776,7 +776,7 @@ class SequentialEnsemble(Ensemble):
                     # all frames assigned, but not all ensembles finished;
                     # next frame might satisfy next ensemble
                     return True
-                elif self.ensembles[ens_num](ops.Trajectory([])):
+                elif self.ensembles[ens_num](paths.Trajectory([])):
                     #print "Moving on because of allowed zero-length ensemble"
                     ens_num += 1
                     subtraj_first = subtraj_final
@@ -819,7 +819,7 @@ class SequentialEnsemble(Ensemble):
             else:
                 if subtraj_first == traj_first:
                     return True
-                elif self.ensembles[ens_num](ops.Trajectory([])):
+                elif self.ensembles[ens_num](paths.Trajectory([])):
                     ens_num -= 1
                     subtraj_final = subtraj_first
                 else:

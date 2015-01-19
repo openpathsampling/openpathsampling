@@ -15,7 +15,7 @@ init_log = logging.getLogger('opentis.initialization')
 import numpy
 import simtk.unit as u
 
-import opentis as ops
+import opentis as paths
 import opentis.todict
 
 #=============================================================================================
@@ -39,33 +39,33 @@ class Storage(netcdf.Dataset):
 
         # objects with special storages
 
-        self.trajectory = ops.storage.TrajectoryStorage(store).register()
-        self.snapshot = ops.storage.SnapshotStorage(store).register()
-        self.configuration = ops.storage.ConfigurationStorage(store).register()
-        self.momentum = ops.storage.MomentumStorage(store).register()
-        self.sample = ops.storage.SampleStorage(store).register()
-        self.sampleset = ops.storage.SampleSetStorage(store).register()
+        self.trajectory = paths.storage.TrajectoryStorage(store).register()
+        self.snapshot = paths.storage.SnapshotStorage(store).register()
+        self.configuration = paths.storage.ConfigurationStorage(store).register()
+        self.momentum = paths.storage.MomentumStorage(store).register()
+        self.sample = paths.storage.SampleStorage(store).register()
+        self.sampleset = paths.storage.SampleSetStorage(store).register()
 
-        self.collectivevariable = ops.storage.ObjectDictStorage(store, ops.OrderParameter, ops.Configuration).register()
+        self.collectivevariable = paths.storage.ObjectDictStorage(store, paths.OrderParameter, paths.Configuration).register()
 
         # normal objects
 
-        self.pathmover = ops.storage.ObjectStorage(store, ops.PathMover, named=True, json=True, identifier='json').register()
-        self.movedetails = ops.storage.ObjectStorage(store, ops.MoveDetails, named=False, json=True, identifier='json').register()
-        self.shootingpoint = ops.storage.ObjectStorage(store, ops.ShootingPoint, named=False, json=True).register()
-        self.shootingpointselector = ops.storage.ObjectStorage(store, ops.ShootingPointSelector, named=False, json=True, identifier='json').register()
-        self.engine = ops.storage.ObjectStorage(store, ops.DynamicsEngine, named=True, json=True, identifier='json').register()
+        self.pathmover = paths.storage.ObjectStorage(store, paths.PathMover, named=True, json=True, identifier='json').register()
+        self.movedetails = paths.storage.ObjectStorage(store, paths.MoveDetails, named=False, json=True, identifier='json').register()
+        self.shootingpoint = paths.storage.ObjectStorage(store, paths.ShootingPoint, named=False, json=True).register()
+        self.shootingpointselector = paths.storage.ObjectStorage(store, paths.ShootingPointSelector, named=False, json=True, identifier='json').register()
+        self.engine = paths.storage.ObjectStorage(store, paths.DynamicsEngine, named=True, json=True, identifier='json').register()
 
         # nestable objects
 
-        self.volume = ops.storage.ObjectStorage(store, ops.Volume, named=True, json=True, identifier='json').register(nestable=True)
-        self.ensemble = ops.storage.ObjectStorage(store, ops.Ensemble, named=True, json=True, identifier='json').register(nestable=True)
+        self.volume = paths.storage.ObjectStorage(store, paths.Volume, named=True, json=True, identifier='json').register(nestable=True)
+        self.ensemble = paths.storage.ObjectStorage(store, paths.Ensemble, named=True, json=True, identifier='json').register(nestable=True)
 
     def _setup_class(self):
         self._storages = {}
         self._storages_base_cls = {}
         self.links = []
-        self.simplifier = ops.ObjectJSON()
+        self.simplifier = paths.ObjectJSON()
         self.units = dict()
         # use no units
         self.dimension_units = {
@@ -139,7 +139,7 @@ class Storage(netcdf.Dataset):
                 raise RuntimeError("Storage given neither n_atoms nor topology")
 
             # update the units for dimensions from the template
-            self.dimension_units.update(ops.tools.units_from_snapshot(template))
+            self.dimension_units.update(paths.tools.units_from_snapshot(template))
             self._init_storages(units=self.dimension_units)
 
             logger.info("Saving topology")
@@ -427,7 +427,7 @@ class Storage(netcdf.Dataset):
 
 
 
-class StorableObjectJSON(ops.todict.ObjectJSON):
+class StorableObjectJSON(paths.todict.ObjectJSON):
     def __init__(self, storage, unit_system = None, class_list = None):
         super(StorableObjectJSON, self).__init__(unit_system, class_list)
         self.excluded_keys = ['name', 'idx', 'json', 'identifier']
@@ -447,8 +447,8 @@ class StorableObjectJSON(ops.todict.ObjectJSON):
     def build(self,obj):
         if type(obj) is dict:
             if '_cls' in obj and '_idx' in obj:
-                if obj['_cls'] in ops.todict.class_list:
-                    base_cls = ops.todict.class_list[obj['_cls']]
+                if obj['_cls'] in paths.todict.class_list:
+                    base_cls = paths.todict.class_list[obj['_cls']]
                     result = self.storage.load(base_cls, obj['_idx'])
                 else:
                     result = self.storage.load(obj['_cls'], obj['_idx'])

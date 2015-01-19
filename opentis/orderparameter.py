@@ -3,7 +3,7 @@
 ###############################################################
 
 import mdtraj as md
-import opentis as ops
+import opentis as paths
 from opentis.todict import dictable
 
 class ObjectDict(dict):
@@ -265,7 +265,7 @@ class OrderParameter(FunctionalStorableObjectDict):
             name=name,
             fnc=None,
             dimensions=dimensions,
-            key_class=ops.Configuration
+            key_class=paths.Configuration
         )
 
     def get_existing(self, name):
@@ -291,14 +291,14 @@ class OrderParameter(FunctionalStorableObjectDict):
         return False
 
     def __call__(self, items):
-        if isinstance(items,  ops.Snapshot):
+        if isinstance(items,  paths.Snapshot):
             return self._update(items.configuration)
-        elif isinstance(items, ops.Configuration):
+        elif isinstance(items, paths.Configuration):
             return self._update(items)
-        elif isinstance(items, ops.Trajectory):
+        elif isinstance(items, paths.Trajectory):
             return self._update([snapshot.configuration for snapshot in items])
         elif isinstance(items, list):
-            if isinstance(items[0], ops.Configuration):
+            if isinstance(items[0], paths.Configuration):
                 return self._update(items)
         else:
             return None
@@ -343,7 +343,7 @@ class OP_RMSD_To_Lambda(OrderParameter):
         self.min_lambda = lambda_min
         self.max_lambda = max_lambda
 
-        self._generator = ops.Trajectory([center]).subset(self.atom_indices).md()
+        self._generator = paths.Trajectory([center]).subset(self.atom_indices).md()
         return
 
     ################################################################################
@@ -363,7 +363,7 @@ class OP_RMSD_To_Lambda(OrderParameter):
         return scale
 
     def _eval(self, items):
-        trajectory = ops.Trajectory([ops.Snapshot(configuration=c) for c in items])
+        trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
         ptraj = trajectory.subset(self.atom_indices).md()
 
         results = md.rmsd(ptraj, self._generator)
@@ -403,7 +403,7 @@ class OP_Featurizer(OrderParameter):
         return
 
     def _eval(self, items):
-        trajectory = ops.Trajectory([ops.Snapshot(configuration=c) for c in items])
+        trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
 
         # create an MDtraj trajectory out of it
         ptraj = trajectory.subset(self.atom_indices).md()
@@ -516,7 +516,7 @@ class OP_Function(OrderParameter):
 
     def _eval(self, items, *args):
 
-        trajectory = ops.Trajectory([ops.Snapshot(configuration=c) for c in items])
+        trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
 
         if self.trajdatafmt=='mdtraj':
             t = trajectory.md()

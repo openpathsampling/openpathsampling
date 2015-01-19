@@ -47,16 +47,17 @@ class testStorage(object):
                   }
 
         # create a template snapshot
-        self.template_snapshot = ops.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
+        self.template_snapshot = paths.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
 
         # and an openmm engine
-        self.engine = ops.OpenMMEngine(options=self.options, template=self.template_snapshot)
+        self.engine = paths.OpenMMEngine(options=self.options, template=self.template_snapshot)
         self.engine.initialized = True
 
         # run a small trajectory of a few steps that can be used to save, etc...
-        self.traj = self.engine.generate(self.template_snapshot, running=[ops.LengthEnsemble(2).can_append])
+        self.traj = self.engine.generate(self.template_snapshot, running=[paths.LengthEnsemble(2).can_append])
 
         self.filename = data_filename("storage_test.nc")
+        self.filename_clone = data_filename("storage_test_clone.nc")
 
     def teardown(self):
         if os.path.isfile(data_filename("storage_test.nc")):
@@ -121,11 +122,26 @@ class testStorage(object):
     def test_init_str(self):
         pass
 
-
     def test_load(self):
         pass
 
     def test_clone(self):
+        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
+        assert(os.path.isfile(self.filename))
+
+        copy = self.template_snapshot.copy()
+        store.save(copy)
+
+        store.save(self.traj)
+        store.clone(filename=self.filename_clone, subset = self.options['solute_indices'])
+
+        # clone the storage and reduce the number of atoms to only solute
+
+        store2 = Storage(filename=self.filename_clone, mode='a')
+
+        # do some tests, if this is still the same data
+
+
         pass
 
     def test_clone_empty(self):

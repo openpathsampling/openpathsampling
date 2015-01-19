@@ -7,7 +7,7 @@ Created on 19.07.2014
 import numpy as np
 import random
 
-import opentis as ops
+import opentis as paths
 from opentis.todict import dictable
 
 import logging
@@ -104,7 +104,7 @@ class MoveDetails(object):
         # primarily for debugging/interactive use
         mystr = ""
         for key in self.__dict__.keys():
-            if not isinstance(self.__dict__[key], ops.Ensemble):
+            if not isinstance(self.__dict__[key], paths.Ensemble):
                 mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
         return mystr
 
@@ -318,7 +318,7 @@ class ShootMover(PathMover):
                 details.accepted = True
                 details.result = details.trial
 
-        path = ops.Sample(replica=replica,
+        path = paths.Sample(replica=replica,
                       trajectory=details.result, 
                       ensemble=dynamics_ensemble,
                       details=details)
@@ -343,7 +343,7 @@ class ForwardShootMover(ShootMover):
         partial_trajectory = PathMover.engine.generate(
             details.start_point.snapshot.copy(),
             running = [
-                ops.ForwardAppendedTrajectoryEnsemble(
+                paths.ForwardAppendedTrajectoryEnsemble(
                     ensemble, 
                     details.start[0:details.start_point.index]
                 ).can_append, 
@@ -356,7 +356,7 @@ class ForwardShootMover(ShootMover):
         #setattr(details, 'new_partial', partial_trajectory)
 
         details.trial = details.start[0:shooting_point] + partial_trajectory
-        details.final_point = ops.ShootingPoint(self.selector, details.trial,
+        details.final_point = paths.ShootingPoint(self.selector, details.trial,
                                             shooting_point)
     
 @dictable
@@ -375,7 +375,7 @@ class BackwardShootMover(ShootMover):
         partial_trajectory = PathMover.engine.generate(
             details.start_point.snapshot.reversed_copy(), 
             running = [
-                ops.BackwardPrependedTrajectoryEnsemble(
+                paths.BackwardPrependedTrajectoryEnsemble(
                     ensemble, 
                     details.start[details.start_point.index + 1:]
                 ).can_prepend, 
@@ -388,7 +388,7 @@ class BackwardShootMover(ShootMover):
         #setattr(details, 'new_partial', partial_trajectory.reversed)
 
         details.trial = partial_trajectory.reversed + details.start[details.start_point.index + 1:]
-        details.final_point = ops.ShootingPoint(self.selector, details.trial, partial_trajectory.frames - 1)
+        details.final_point = paths.ShootingPoint(self.selector, details.trial, partial_trajectory.frames - 1)
         
         pass
 
@@ -427,7 +427,7 @@ class MixedMover(PathMover):
         setattr(sample.details, 'mover_idx', idx)
 
         # why do we make a new sample here?
-        path = ops.Sample(trajectory=sample.trajectory,
+        path = paths.Sample(trajectory=sample.trajectory,
                       ensemble=sample.ensemble, 
                       details=sample.details,
                      replica=sample.replica)
@@ -449,11 +449,11 @@ class ReplicaIDChange(PathMover):
         details = MoveDetails()
         details.inputs = rep_sample.trajectory
         # TODO: details
-        dead_sample = ops.Sample(replica=rep_sample.replica,
+        dead_sample = paths.Sample(replica=rep_sample.replica,
                              ensemble=old_sample.ensemble,
                              trajectory=old_sample.trajectory
                             )
-        new_sample = ops.Sample(replica=new_rep,
+        new_sample = paths.Sample(replica=new_rep,
                             ensemble=rep_sample.ensemble,
                             trajectory=rep_sample.trajectory
                            )
@@ -495,7 +495,7 @@ class EnsembleHopMover(PathMover):
         else: 
             setattr(details, 'result_ensemble', ens_from)
 
-        path = ops.Sample(trajectory=trajectory,
+        path = paths.Sample(trajectory=trajectory,
                       ensemble=details.result_ensemble, 
                       details=details,
                       replica=replica
@@ -525,7 +525,7 @@ class PathReversal(PathMover):
         details.acceptance_probability = 1.0
         details.result = reversed_trajectory
 
-        sample = ops.Sample(
+        sample = paths.Sample(
             trajectory=details.result,
             mover=self,
             ensemble=ensemble,
@@ -569,13 +569,13 @@ class ReplicaExchange(PathMover):
             details1.result = trajectory1
             details2.result = trajectory2
 
-        sample1 = ops.Sample(
+        sample1 = paths.Sample(
             trajectory=details1.result,
             mover=self,
             ensemble=ensemble1,
             details=details1
         )
-        sample2 = ops.Sample(
+        sample2 = paths.Sample(
             trajectory=details2.result,
             mover=self,
             ensemble=ensemble2,
