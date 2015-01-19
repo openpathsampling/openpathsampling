@@ -170,8 +170,6 @@ class PathMover(object):
             ensembles = [ensembles]
         self.ensembles = ensembles
 
-        self.idx = dict()
-
         initialization_logging(logger=init_log, obj=self,
                                entries=['replicas', 'ensembles'])
 
