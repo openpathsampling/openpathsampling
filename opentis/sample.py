@@ -131,11 +131,20 @@ class SampleSet(object):
             # also acts as .append() if given a single sample
             self.append(samples)
 
-    def apply_samples(self, samples):
+    def apply_samples(self, samples, step=None, copy=True):
         '''Updates the SampleSet based on a list of samples, by setting them
         by replica in the order given in the argument list.'''
+        if type(samples) is Sample:
+            samples = [samples]
+        if copy==True:
+            newset = SampleSet(self)
+        else:
+            newset = self
         for sample in samples:
-            self[sample.replica] = sample
+            # TODO: should time be a property of Sample or SampleSet?
+            sample.step = step
+            newset[sample.replica] = sample
+        return newset
 
     def replica_list(self):
         '''Returns the list of replicas IDs in this SampleSet'''
@@ -145,6 +154,19 @@ class SampleSet(object):
         '''Returns the list of ensembles in this SampleSet'''
         return self.ensemble_dict.keys()
             
+    def save_samples(self, storage):
+        """
+        Save all samples in the current GlobalState object. This should be
+        called after a move has generated a new object since then all
+        samples will get a timestamp that is associated with this
+
+        Parameters
+        ==========
+        storage : Storage()
+            the underlying netcdf file to be used for storage
+        """
+        map(storage.sample.save, self.samples)
+
     def consistency_check(self):
         '''This is mainly a sanity check for use in testing, but might be
         good to run (rarely) in the code until we're sure the tests cover
@@ -209,10 +231,18 @@ class Sample(object):
         self.ensemble = ensemble
         self.trajectory = trajectory
         self.details = details
-        self.step=step
+        self.step = step
 
     def __call__(self):
         return self.trajectory
+
+    def __str__(self):
+        mystr = "Step: "+str(self.step)+"\n"
+        mystr += "Replica: "+str(self.replica)+"\n"
+        mystr += "Trajectory: "+str(self.trajectory)+"\n"
+        mystr += "Ensemble: "+repr(self.ensemble)+"\n"
+        mystr += "Details: "+str(self.details)+"\n"
+        return mystr
 
     @staticmethod
     def set_time(step, samples):

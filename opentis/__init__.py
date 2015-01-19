@@ -1,4 +1,4 @@
-from calculation import Calculation, BootstrapEnsembleChangeMove, Bootstrapping
+from calculation import Calculation, Bootstrapping
 
 from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     EntersXEnsemble, EmptyEnsemble, ExitsXEnsemble, FullEnsemble, \
@@ -13,13 +13,14 @@ from snapshot import Snapshot, Configuration, Momentum
 from trajectory import Trajectory
 from sample import Sample, SampleSet
 
-from globalstate import GlobalState, GlobalStateMover
-
 from orderparameter import OP_Function, OP_MD_Function, OP_Featurizer, \
     OP_RMSD_To_Lambda, OP_Volume, OrderParameter
 
-from pathmover import BackwardShootMover, MinusMove, MixedMover, MoveDetails, \
-    ForwardShootMover, PathMover, PathMoverFactory, PathReversal, ReplicaExchange
+from pathmover import (
+    BackwardShootMover, MinusMove, MixedMover, MoveDetails,
+    ForwardShootMover, PathMover, PathMoverFactory, PathReversal,
+    ReplicaExchange#, BootstrapPromotionMove
+)
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
     GaussianBiasSelector
