@@ -246,7 +246,6 @@ def dictable(super_class):
                 setattr(obj, key, value)
 
             setattr(obj, 'cls', cls.__name__)
-
             return obj
 
         super_class.from_dict = classmethod(_from_dict)

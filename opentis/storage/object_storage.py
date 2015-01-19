@@ -64,18 +64,20 @@ class ObjectStorage(object):
         else:
             self.dimension_units = {}
 
-        # First, apply standard decorator for loading and saving
-        # this handles all the setting and getting of .idx and is
-        # always necessary!
 
-        if load_lazy:
+#        if load_lazy:
             # wrap load to load lazy. Can now be used with all load functions.
-            # I effectively creates a Stub that is replaced by the real object
+            # this
+            # It effectively creates a Stub that is replaced by the real object
             # once an attribute is accessed
             # This should be called first so that the cache superseeds loading
 
-            _load = self.load
-            self.load = types.MethodType(loadlazy(_load), self)
+#            _load = self.load
+#            self.load = types.MethodType(loadlazy(_load), self)
+
+        # First, apply standard decorator for loading and saving
+        # this handles all the setting and getting of .idx and is
+        # always necessary!
 
         _save = self.save
         self.save = types.MethodType(saveidx(_save), self)
@@ -307,21 +309,6 @@ class ObjectStorage(object):
                     raise StopIteration()
 
         return ObjectIterator()
-
-    def load_lazy(self, idx, lazy=False):
-        '''
-        Returns an object from the storage. Needs to be implented from the specific storage class.
-        '''
-
-        obj = LazyLoadedObject()
-
-        # if lazy construct a function that will update the content. This will be loaded, once the object is accessed
-        def loader():
-            self.load_object(self.idx_dimension + '_json', idx, obj)
-
-        setattr(obj, '_loader', loader)
-        return obj
-
 
     def load(self, idx, lazy=False):
         '''
@@ -683,6 +670,33 @@ class ObjectStorage(object):
 
         return idx
 
+def loadpartial(func, constructor=None):
+    def inner(self, idx, *args, **kwargs):
+        if hasattr(self, '_delayed_loading'):
+            if constructor is None:
+                obj = self.load_constructor
+            else:
+                obj = getattr(self, 'load_empty')
+        else:
+            obj = func(idx, *args, **kwargs)
+        return obj
+
+    return inner
+
+#=============================================================================
+# LOAD/SAVE DECORATORS FOR LAZY LOADING OF WHOLE OBJECTS
+#=============================================================================
+
+# This is kind of experimental. It works, but I have not really seen a gain in
+# IO speed compared to partial loading. So maybe we should just leave it and
+# not use it at all
+
+# lazyloading is the works always scheme, but need to trick by creating a
+# wrapper object that refers all requests from the underlying loaded object.
+# This is because python does not (nicely) allow to change an object at a
+# memory address. The idea would have been to create a stub that replaces itself
+# when it is accessed. This wrapper workaround works but makes access slow and
+# thus defeats the purpose
 
 class LazyLoadedObject(object):
     def __init__(self):
@@ -702,19 +716,6 @@ class LazyLoadedObject(object):
                 self._loader()
             return getattr(self._reference, item)
 
-def loadpartial(func, constructor=None):
-    def inner(self, idx, *args, **kwargs):
-        if hasattr(self, '_delayed_loading'):
-            if constructor is None:
-                obj = self.load_constructor
-            else:
-                obj = getattr(self, 'load_empty')
-        else:
-            obj = func(idx, *args, **kwargs)
-        return obj
-
-    return inner
-
 def loadlazy(func):
     def inner(self, idx, *args, **kwargs):
         # Create object first to break any unwanted recursion in loading
@@ -725,6 +726,39 @@ def loadlazy(func):
             return func(idx, *args, **kwargs)
 
         setattr(obj, '_loader_fnc', loader)
+        return obj
+
+    return inner
+
+# This is a special lazy loading for objects that are only loaded as a LoadedObject
+# anyway. Here we just add all the attributes from the loaded object. This seems
+# okay and it the way it was implemented first
+
+class LazyLoadedObjectDict(object):
+    def __init__(self):
+        self.idx = dict()
+
+    def __getattr__(self, item):
+        if item is 'idx':
+            return self.idx
+        else:
+            if hasattr(self, '_loader'):
+                self._loader(self)
+                delattr(self, '_loader')
+
+            return getattr(self._reference, item)
+
+
+def loadlazy_dictable(func):
+    def inner(self, idx, *args, **kwargs):
+        obj = LazyLoadedObjectDict()
+
+        def loader(this):
+            obj = func(self.idx_dimension + '_json', idx)
+            for key, value in obj.__dict__.iteritems():
+                setattr(this, key, value)
+
+        setattr(obj, '_loader', loader)
         return obj
 
     return inner
