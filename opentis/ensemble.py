@@ -4,13 +4,13 @@ Created on 03.09.2014
 @author: jan-hendrikprinz, David W.H. Swenson
 '''
 
-from opentis.todict import creatable
+from opentis.todict import restores_as_full_object
 
 import opentis as paths
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
-@creatable
+@restores_as_full_object
 class Ensemble(object):
     '''    
     An Ensemble represents a path ensemble, effectively a set of trajectories.
@@ -355,7 +355,7 @@ class LoadedEnsemble(Ensemble):
     def __str__(self):
         return self.description
 
-@creatable
+@restores_as_full_object
 class EmptyEnsemble(Ensemble):
     '''
     The empty path ensemble of no trajectories.
@@ -394,7 +394,7 @@ class EmptyEnsemble(Ensemble):
         # Zero matrix
         return None
 
-@creatable
+@restores_as_full_object
 class FullEnsemble(Ensemble):
     '''
     The full path ensemble of all possible trajectories.
@@ -443,7 +443,7 @@ class FullEnsemble(Ensemble):
         # Full matrix
         return None
 
-@creatable
+@restores_as_full_object
 class NegatedEnsemble(Ensemble):
     '''
     Negates an Ensemble and simulates a `not` statement
@@ -466,7 +466,7 @@ class NegatedEnsemble(Ensemble):
     def __str__(self):
         return 'not ' + str(self.ensemble2)
 
-@creatable
+@restores_as_full_object
 class EnsembleCombination(Ensemble):
     '''
     Represent the boolean concatenation of two ensembles
@@ -553,27 +553,27 @@ class EnsembleCombination(Ensemble):
 #        print self.sfnc, self.ensemble1, self.ensemble2, self.sfnc.format('(' + str(self.ensemble1) + ')' , '(' + str(self.ensemble1) + ')')
         return self.sfnc.format('(\n' + Ensemble._indent(str(self.ensemble1)) + '\n)' , '(\n' + Ensemble._indent(str(self.ensemble2)) + '\n)')
 
-@creatable
+@restores_as_full_object
 class OrEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
         super(OrEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a or b, str_fnc = '{0}\nor\n{1}')
 
-@creatable
+@restores_as_full_object
 class AndEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
         super(AndEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and b, str_fnc = '{0}\nand\n{1}')
 
-@creatable
+@restores_as_full_object
 class XorEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
         super(XorEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a ^ b, str_fnc = '{0}\nxor\n{1}')
 
-@creatable
+@restores_as_full_object
 class SubEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
         super(SubEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and not b, str_fnc = '{0}\nand not\n{1}')
 
-@creatable
+@restores_as_full_object
 class SequentialEnsemble(Ensemble):
     """
     An ensemble that consists of several ensembles which are satisfied by
@@ -837,7 +837,7 @@ class SequentialEnsemble(Ensemble):
         return head+sequence_str+tail
 
 
-@creatable
+@restores_as_full_object
 class LengthEnsemble(Ensemble):
     '''
     Represents an ensemble the contains trajectories of a specific length
@@ -887,7 +887,7 @@ class LengthEnsemble(Ensemble):
                 stop = str(self.length.stop - 1)
             return 'len(x) in [{0}, {1}]'.format(start, stop)
 
-@creatable
+@restores_as_full_object
 class VolumeEnsemble(Ensemble):
     '''
     Describes an path ensemble using a volume object
@@ -904,7 +904,7 @@ class VolumeEnsemble(Ensemble):
         '''
         return self.volume
 
-@creatable
+@restores_as_full_object
 class InXEnsemble(VolumeEnsemble):
     '''
     Represents an ensemble where all the selected frames of the trajectory
@@ -939,7 +939,7 @@ class InXEnsemble(VolumeEnsemble):
         return 'x[t] in {0} for all t'.format(self._volume)
 
 
-@creatable
+@restores_as_full_object
 class OutXEnsemble(InXEnsemble):
     '''
     Represents an ensemble where all the selected frames from the trajectory
@@ -955,7 +955,7 @@ class OutXEnsemble(InXEnsemble):
     def __invert__(self):
         return HitXEnsemble(self.volume, self.frames, self.lazy)
 
-@creatable
+@restores_as_full_object
 class HitXEnsemble(VolumeEnsemble):
     '''
     Represents an ensemble where at least one of the selected frames from
@@ -982,7 +982,7 @@ class HitXEnsemble(VolumeEnsemble):
     def __invert__(self):
         return OutXEnsemble(self.volume, self.frames, self.lazy)
 
-@creatable
+@restores_as_full_object
 class LeaveXEnsemble(HitXEnsemble):
     '''
     Represents an ensemble where at least one frame of the trajectory is
@@ -1005,7 +1005,7 @@ class LeaveXEnsemble(HitXEnsemble):
                 return True
         return False
 
-@creatable
+@restores_as_full_object
 class ExitsXEnsemble(VolumeEnsemble):
     """
     Represents an ensemble where two successive frames from the selected
@@ -1030,7 +1030,7 @@ class ExitsXEnsemble(VolumeEnsemble):
                 return True
         return False
 
-@creatable
+@restores_as_full_object
 class EntersXEnsemble(ExitsXEnsemble):
     """
     Represents an ensemble where two successive frames from the selected
@@ -1051,7 +1051,7 @@ class EntersXEnsemble(ExitsXEnsemble):
                 return True
         return False
 
-@creatable
+@restores_as_full_object
 class AlteredEnsemble(Ensemble):
     '''
     Represents an ensemble where an altered version of a trajectory (extended, reversed, cropped) is part of a given ensemble
@@ -1076,7 +1076,7 @@ class AlteredEnsemble(Ensemble):
     def can_prepend(self, trajectory):
         return self.ensemble.can_prepend(self._alter(trajectory))
 
-@creatable
+@restores_as_full_object
 class SlicedTrajectoryEnsemble(AlteredEnsemble):
     '''
     An ensemble which alters the trajectory by looking at a given Python
@@ -1105,7 +1105,7 @@ class SlicedTrajectoryEnsemble(AlteredEnsemble):
                 " in {" + start + ":" + stop + "}" + step + ")")
 
 
-@creatable
+@restores_as_full_object
 class BackwardPrependedTrajectoryEnsemble(AlteredEnsemble):
     '''
     Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
@@ -1118,7 +1118,7 @@ class BackwardPrependedTrajectoryEnsemble(AlteredEnsemble):
 #        print [ s.idx for s in trajectory.reversed + self.add_traj]
         return trajectory.reversed + self.add_traj
 
-@creatable
+@restores_as_full_object
 class ForwardAppendedTrajectoryEnsemble(AlteredEnsemble):
     '''
     Represents an ensemble which is the given ensemble but for trajectories where some trajectory is appended
@@ -1130,7 +1130,7 @@ class ForwardAppendedTrajectoryEnsemble(AlteredEnsemble):
     def _alter(self, trajectory):
         return self.add_traj + trajectory
 
-@creatable
+@restores_as_full_object
 class ReversedTrajectoryEnsemble(AlteredEnsemble):
     '''
     Represents an ensemble 
@@ -1138,7 +1138,7 @@ class ReversedTrajectoryEnsemble(AlteredEnsemble):
     def _alter(self, trajectory):
         return trajectory.reverse()
 
-@creatable
+@restores_as_full_object
 class OptionalEnsemble(AlteredEnsemble):
     '''
     Makes it optional to satisfy a given ensemble (primarily useful in

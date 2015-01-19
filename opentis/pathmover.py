@@ -8,7 +8,7 @@ import numpy as np
 import random
 
 import opentis as paths
-from opentis.todict import dictable
+from opentis.todict import restores_as_stub_object
 
 import logging
 from ops_logging import initialization_logging
@@ -54,7 +54,7 @@ def make_list_of_pairs(l):
     # part to work.
     return outlist
 
-@dictable
+@restores_as_stub_object
 class MoveDetails(object):
     '''Details of the move as applied to a given replica
 
@@ -109,7 +109,7 @@ class MoveDetails(object):
         return mystr
 
 
-@dictable
+@restores_as_stub_object
 class PathMover(object):
     """
     A PathMover is the description of how to generate a new path from an old one.
@@ -257,7 +257,7 @@ class PathMover(object):
         '''
         return 1.0 # pragma: no cover
 
-@dictable
+@restores_as_stub_object
 class ShootMover(PathMover):
     '''
     A pathmover that implements a general shooting algorithm that generates
@@ -326,7 +326,7 @@ class ShootMover(PathMover):
         return path
     
     
-@dictable
+@restores_as_stub_object
 class ForwardShootMover(ShootMover):
     '''
     A pathmover that implements the forward shooting algorithm
@@ -359,7 +359,7 @@ class ForwardShootMover(ShootMover):
         details.final_point = paths.ShootingPoint(self.selector, details.trial,
                                             shooting_point)
     
-@dictable
+@restores_as_stub_object
 class BackwardShootMover(ShootMover):
     '''
     A pathmover that implements the backward shooting algorithm
@@ -392,7 +392,7 @@ class BackwardShootMover(ShootMover):
         
         pass
 
-@dictable
+@restores_as_stub_object
 class MixedMover(PathMover):
     '''
     Defines a mover that picks a over from a set of movers with specific
@@ -508,12 +508,12 @@ class EnsembleHopMover(PathMover):
 # The following moves still need to be implemented. Check what excactly they do
 #############################################################
 
-@dictable
+@restores_as_stub_object
 class MinusMove(PathMover):
     def move(self, allpaths, state):
         pass
 
-@dictable
+@restores_as_stub_object
 class PathReversal(PathMover):
     def move(self, trajectory, ensemble):
         details = MoveDetails()
@@ -537,7 +537,7 @@ class PathReversal(PathMover):
 # The following move should be moved to RETIS and just uses moves. It is not a move itself
 #############################################################
 
-@dictable
+@restores_as_stub_object
 class ReplicaExchange(PathMover):
     # TODO: Might put the target ensembles into the Mover instance, which means we need lots of mover instances for all ensemble switches
     def move(self, trajectory1, trajectory2, ensemble1, ensemble2):

@@ -4,7 +4,7 @@
 
 import mdtraj as md
 import opentis as paths
-from opentis.todict import dictable
+from opentis.todict import restores_as_stub_object
 
 class ObjectDict(dict):
     """
@@ -228,7 +228,7 @@ class FunctionalStorableObjectDict(StorableObjectDict):
 
         return fnc
 
-@dictable
+@restores_as_stub_object
 class OrderParameter(FunctionalStorableObjectDict):
     """
     Initializes an OrderParameter object that is essentially a function that maps a frame (Configuration) within a trajectory (Trajectory) to a number.
@@ -303,7 +303,7 @@ class OrderParameter(FunctionalStorableObjectDict):
         else:
             return None
 
-@dictable
+@restores_as_stub_object
 class OP_RMSD_To_Lambda(OrderParameter):
     """
     An OrderParameter that transforms the RMSD to a specific center to a lambda value between zero and one.
@@ -370,7 +370,7 @@ class OP_RMSD_To_Lambda(OrderParameter):
 
         return map(self._scale_fnc(self.min_lambda, self.max_lambda), results)
 
-@dictable
+@restores_as_stub_object
 class OP_Featurizer(OrderParameter):
     """
     An OrderParameter that uses an MSMBuilder3 featurizer as the logic
@@ -413,7 +413,7 @@ class OP_Featurizer(OrderParameter):
 
         return result
 
-@dictable
+@restores_as_stub_object
 class OP_MD_Function(OrderParameter):
     """ Wrapper to decorate any appropriate function as an OrderParameter with a function that need an mdtraj object as input.
 
@@ -452,7 +452,7 @@ class OP_MD_Function(OrderParameter):
         t = trajectory.md(self.topology)
         return self.fcn(t, *args, **self.kwargs)
 
-@dictable
+@restores_as_stub_object
 class OP_Volume(OrderParameter):
     """
     Wrapper that turns a Volume, which can be considered a boolean order parameter into an
@@ -473,7 +473,7 @@ class OP_Volume(OrderParameter):
         result = [ float(self.volume(item)) for item in items ]
         return result
 
-@dictable
+@restores_as_stub_object
 class OP_Function(OrderParameter):
     """ Wrapper to decorate any appropriate function as an OrderParameter.
 

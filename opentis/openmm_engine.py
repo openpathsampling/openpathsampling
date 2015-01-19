@@ -8,9 +8,9 @@ from simtk.openmm.app import ForceField, PME, HBonds, PDBFile
 
 import opentis as paths
 from opentis.storage import Storage
-from opentis.todict import creatable
+from opentis.todict import restores_as_full_object
 
-@creatable
+@restores_as_full_object
 class OpenMMEngine(paths.DynamicsEngine):
     """We only need a few things from the simulation. This object duck-types
     an OpenMM simulation object so that it quacks the methods we need to

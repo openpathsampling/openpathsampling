@@ -5,11 +5,11 @@ Created on 03.09.2014
 '''
 
 import range_logic
-from opentis.todict import creatable
+from opentis.todict import restores_as_full_object
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
-@creatable
+@restores_as_full_object
 class Volume(object):
     def __init__(self):
         '''
@@ -76,7 +76,7 @@ class Volume(object):
     def __eq__(self, other):
         return str(self) == str(other)
 
-@creatable
+@restores_as_full_object
 class VolumeCombination(Volume):
     def __init__(self, volume1, volume2, fnc, str_fnc):
         super(VolumeCombination, self).__init__()
@@ -94,28 +94,28 @@ class VolumeCombination(Volume):
     def to_dict(self):
         return { 'volume1' : self.volume1, 'volume2' : self.volume2 }
 
-@creatable
+@restores_as_full_object
 class OrVolume(VolumeCombination):
     def __init__(self, volume1, volume2):
         super(OrVolume, self).__init__(volume1, volume2, lambda a,b : a or b, str_fnc = '{0} or {1}')
 
-@creatable
+@restores_as_full_object
 class AndVolume(VolumeCombination):
     def __init__(self, volume1, volume2):
         super(AndVolume, self).__init__(volume1, volume2, lambda a,b : a and b, str_fnc = '{0} and {1}')
 
-@creatable
+@restores_as_full_object
 class XorVolume(VolumeCombination):
     def __init__(self, volume1, volume2):
         super(XorVolume, self).__init__(volume1, volume2, lambda a,b : a ^ b, str_fnc = '{0} xor {1}')
 
-@creatable
+@restores_as_full_object
 class SubVolume(VolumeCombination):
     def __init__(self, volume1, volume2):
         super(SubVolume, self).__init__(volume1, volume2, lambda a,b : a and not b, str_fnc = '{0} and not {1}')
 
 
-@creatable
+@restores_as_full_object
 class NegatedVolume(Volume):
     def __init__(self, volume):
         super(NegatedVolume, self).__init__()
@@ -127,7 +127,7 @@ class NegatedVolume(Volume):
     def __str__(self):
         return '(not ' + str(self.volume) + ')'
     
-@creatable
+@restores_as_full_object
 class EmptyVolume(Volume):
     def __init__(self):
         super(EmptyVolume, self).__init__()
@@ -153,7 +153,7 @@ class EmptyVolume(Volume):
     def __str__(self):
         return 'empty'
 
-@creatable
+@restores_as_full_object
 class FullVolume(Volume):
     def __init__(self):
         super(FullVolume, self).__init__()
@@ -179,7 +179,7 @@ class FullVolume(Volume):
     def __str__(self):
         return 'all'
 
-@creatable
+@restores_as_full_object
 class LambdaVolume(Volume):
     '''
     Defines a Volume containing all states where orderparameter is in a
@@ -308,7 +308,7 @@ class LambdaVolume(Volume):
     def __str__(self):
         return '{{x|{2}(x) in [{0}, {1}]}}'.format( self.lambda_min, self.lambda_max, self.orderparameter.name)
 
-@creatable
+@restores_as_full_object
 class LambdaVolumePeriodic(LambdaVolume):
     """
     Defines a Volume containing all states where orderparameter, a periodic
@@ -399,7 +399,7 @@ class LambdaVolumePeriodic(LambdaVolume):
                         self.lambda_min, self.lambda_max, 
                         self.orderparameter.name)
 
-@creatable
+@restores_as_full_object
 class VoronoiVolume(Volume):
     '''
     Defines a Volume that is given by a Voronoi cell specified by a set of centers

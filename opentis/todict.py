@@ -184,7 +184,7 @@ class ObjectJSON(object):
 
 class_list = dict()
 
-def creatable(super_class):
+def restores_as_full_object(super_class):
     class_list[super_class.__name__] = super_class
 
     super_class.creatable = True
@@ -214,7 +214,7 @@ class LoadedObject(object):
     pass
 
 
-def dictable(super_class):
+def restores_as_stub_object(super_class):
     """
     A class decorator that marks a class to be storable in the storage using a LoadedObject class.
     This object will have the same class name, the same dict, but none of the functions and will not have

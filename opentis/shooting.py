@@ -1,7 +1,7 @@
 import math
 import numpy as np
 
-from opentis.todict import creatable
+from opentis.todict import restores_as_full_object
 import logging
 from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ init_log = logging.getLogger('opentis.initialization')
 #  
 #############################################################################
 
-@creatable
+@restores_as_full_object
 
 class ShootingPoint(object):
 
@@ -86,7 +86,7 @@ class ShootingPoint(object):
     def bias(self):
         return self.f
 
-@creatable
+@restores_as_full_object
 
 class ShootingPointSelector(object):
 
@@ -156,7 +156,7 @@ class ShootingPointSelector(object):
 
         return point
 
-@creatable
+@restores_as_full_object
 class GaussianBiasSelector(ShootingPointSelector):
     def __init__(self, orderparameter, alpha = 1.0, l0 = 0.5):
         '''
@@ -170,7 +170,7 @@ class GaussianBiasSelector(ShootingPointSelector):
     def f(self, snapshot):
         return math.exp(-self.alpha*(self.orderparameter(snapshot) - self.l0)**2)
 
-@creatable
+@restores_as_full_object
 class UniformSelector(ShootingPointSelector):
     def __init__(self, pad_start = 1, pad_end = 1):
         '''

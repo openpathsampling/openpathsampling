@@ -2,7 +2,7 @@ from pathmover import (PathMover, MoveDetails, ReplicaExchange,
                        EnsembleHopMover)
 from sample import SampleSet, Sample
 
-from opentis.todict import dictable
+from opentis.todict import restores_as_stub_object
 from opentis.pathmover import PathMover
 
 import logging
