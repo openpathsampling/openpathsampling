@@ -177,16 +177,16 @@ class testMixedMover(object):
         pass
 
     def test_both_get_selected(self):
-        pass
+        raise SkipTest
 
     def test_only_one_gets_run(self):
-        pass
+        raise SkipTest
 
     def test_restricted_by_replica(self):
-        pass
+        raise SkipTest
 
     def test_restricted_by_ensemble(self):
-        pass
+        raise SkipTest
 
 class testSequentialMover(object):
     def setup(self):
@@ -309,17 +309,35 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
         raise SkipTest
 
 class testConditionalSequentialMover(testSequentialMover):
-    def setup(self):
-        pass
-
     def test_everything_accepted(self):
-        pass
+        move = ConditionalSequentialMover(movers=self.everything_accepted_movers)
+        gs = SampleSet(self.init_sample)
+        samples = move.move(gs)
+        assert_equal(len(samples), 3)
+        for sample in samples:
+            assert_equal(sample.details.accepted, True)
+        gs.apply_samples(samples)
+        assert_equal(gs[0].ensemble, self.tps)
 
     def test_first_rejected(self):
-        pass
+        move = ConditionalSequentialMover(movers=self.first_rejected_movers)
+        gs = SampleSet(self.init_sample)
+        samples = move.move(gs)
+        assert_equal(len(samples), 1)
+        assert_equal(samples[0].details.accepted, False)
+        gs.apply_samples(samples)
+        assert_equal(gs[0].ensemble, self.len3)
 
     def test_last_rejected(self):
-        pass
+        move = ConditionalSequentialMover(movers=self.last_rejected_movers)
+        gs = SampleSet(self.init_sample)
+        samples = move.move(gs)
+        assert_equal(len(samples), 3)
+        assert_equal(samples[0].details.accepted, False)
+        assert_equal(samples[1].details.accepted, False)
+        assert_equal(samples[2].details.accepted, False)
+        gs.apply_samples(samples)
+        assert_equal(gs[0].ensemble, self.len3)
 
     def test_restricted_by_replica(self):
         raise SkipTest

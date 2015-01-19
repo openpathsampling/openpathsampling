@@ -515,9 +515,28 @@ class ConditionalSequentialMover(PartialAcceptanceSequentialMover):
     For example, this would be used to create a minus move, which consists
     of first a replica exchange and then a shooting (extension) move. If the
     replica exchange fails, the move is aborted before doing the dynamics.
+
+    ConditionalSequentialMover only works if there is a *single* active
+    sample per replica.
     '''
     def move(self, globalstate):
-        pass
+        mysamples = super(ConditionalSequentialMover, self).move(globalstate)
+        # if any sample was rejected, then everything is rejected. Note that
+        # technically, there's a faster way to do this
+        # (mysample.samples[-1].details.accepted, instead of looping) but
+        # that shouldn't matter for speed, and it may be safer not to assume
+        # the order of the list.
+        all_accepted = True
+        for sample in mysamples:
+            if sample.details.accepted == False:
+                all_accepted = False
+                break
+        if all_accepted == False:
+            for sample in mysamples:
+                sample.details.accepted = False
+                sample.trajectory = globalstate[sample.replica].trajectory
+                sample.ensemble = globalstate[sample.replica].ensemble
+        return mysamples
 
 
 
