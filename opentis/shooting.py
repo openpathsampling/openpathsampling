@@ -2,6 +2,10 @@ import math
 
 import numpy as np
 
+import logging
+from ops_logging import initialization_logging
+logger = logging.getLogger(__name__)
+init_log = logging.getLogger('opentis.initialization')
 
 #############################################################################
 #
