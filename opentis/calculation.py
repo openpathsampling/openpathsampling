@@ -1,10 +1,14 @@
-import opentis as ops
 from pathmover import (PathMover, MoveDetails, ReplicaExchange,
                        EnsembleHopMover)
 from sample import SampleSet, Sample
 
 from opentis.todict import dictable
 from opentis.pathmover import PathMover
+
+import logging
+from ops_logging import initialization_logging
+logger = logging.getLogger(__name__)
+init_log = logging.getLogger('opentis.initialization')
 
 class Calculation(object):
 
@@ -13,12 +17,16 @@ class Calculation(object):
     def __init__(self, storage, engine=None):
         self.storage = storage
         self.engine = engine
+        initialization_logging(
+            logger=init_log, obj=self,
+            entries=['storage', 'engine']
+        )
 
     def set_replicas(self, samples):
         self.globalstate = SampleSet(samples)
 
     def run(self, nsteps):
-        print "Running an empty calculation? Try a subclass, maybe!"
+        logger.warning("Running an empty calculation? Try a subclass, maybe!")
 
 
 class BootstrapPromotionMove(PathMover):
@@ -32,6 +40,8 @@ class BootstrapPromotionMove(PathMover):
                                                      replicas=replicas)
         self.shooters = shooters
         self.bias = bias
+        initialization_logging(logger=init_log, obj=self,
+                               entries=['bias', 'shooters'])
 
     def move(self, globalstate):
         # the tricky part here is that, if the hop is allowed, we only want
@@ -57,6 +67,8 @@ class BootstrapPromotionMove(PathMover):
         init_sample_set = SampleSet([old_sample])
 
         shooter = self.shooters[top_rep]
+        # TODO: should move this to normal initialization so we don't init
+        # it every time
         hopper = EnsembleHopMover(bias=self.bias,
                                   ensembles=[ensemble_from, ensemble_to],
                                   replicas=top_rep)
@@ -96,11 +108,10 @@ class BootstrapPromotionMove(PathMover):
                         ensemble=details.result_ensemble,
                         trajectory=details.result,
                         details=details)
-        #print "BootstrapMover: accepted =", details.accepted
-        #print " Shooting part: accepted =", shoot_samp.details.accepted
-        #print "  Hopping part: accepted =", hop_samp.details.accepted
 
-        #print sample.trajectory, sample.details.trial, sample.details.result
+        logger.debug("BootstrapMover: accepted = " + str(details.accepted))
+        logger.debug(" Shooting part: accepted = " + str(shoot_samp.details.accepted))
+        logger.debug("  Hopping part: accepted = " + str(hop_samp.details.accepted))
 
         return sample
 
@@ -135,6 +146,9 @@ class Bootstrapping(Calculation):
             pass # TODO: implement defaults: one per ensemble, uniform sel
         else:
             self.movers = movers
+        initialization_logging(init_log, self,
+                               ['movers', 'ensembles'])
+        init_log.info("Parameter: %s : %s", 'trajectory', str(trajectory))
 
     def run(self, nsteps):
         bootstrapmove = BootstrapPromotionMove(bias=None,
@@ -149,7 +163,10 @@ class Bootstrapping(Calculation):
         # if we fail nsteps times in a row, kill the job
 
         while ens_num < len(self.ensembles) - 1 and failsteps < nsteps:
-            print step_num, "Ensemble:", ens_num, "  failsteps=", failsteps
+            logger.info("Step: " + str(step_num) 
+                        + "   Ensemble: " + str(ens_num)
+                        + "  failsteps = " + str(failsteps)
+                       )
             old_rep = max(self.globalstate.replica_list())
             sample = bootstrapmove.move(self.globalstate)
             self.globalstate = self.globalstate.apply_samples(sample, step=step_num)
