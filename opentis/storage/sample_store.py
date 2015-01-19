@@ -36,7 +36,7 @@ class SampleStorage(ObjectStorage):
             self.storage.movedetails.save(sample.details)
             self.set_object('sample_details', idx, sample.details)
 
-            self.save_variable('sample_step', idx, sample.time)
+            self.save_variable('sample_step', idx, sample.step)
 
     @loadcache
     def load(self, idx, momentum = True):
