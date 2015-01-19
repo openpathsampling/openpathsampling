@@ -54,7 +54,6 @@ class Storage(netcdf.Dataset):
         self.movedetails = ops.storage.ObjectStorage(store, ops.MoveDetails, named=False, json=True, identifier='json').register()
         self.shootingpoint = ops.storage.ObjectStorage(store, ops.ShootingPoint, named=False, json=True).register()
         self.shootingpointselector = ops.storage.ObjectStorage(store, ops.ShootingPointSelector, named=False, json=True, identifier='json').register()
-        self.globalstate = ops.storage.ObjectStorage(store, ops.GlobalState, named=True, json=True, identifier='json').register()
         self.engine = ops.storage.ObjectStorage(store, ops.DynamicsEngine, named=True, json=True, identifier='json').register()
 
         # nestable objects

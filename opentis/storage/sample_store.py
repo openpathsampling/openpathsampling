@@ -1,5 +1,5 @@
 from object_storage import ObjectStorage
-from opentis.sample import Sample, SampleSet
+from opentis.sample import SampleSet, Sample
 
 class SampleStorage(ObjectStorage):
     def __init__(self, storage):

@@ -49,8 +49,7 @@ def make_list_of_pairs(l):
     # part to work.
     return outlist
 
-
-@storable
+@dictable
 class MoveDetails(object):
     '''Details of the move as applied to a given replica
 
@@ -100,13 +99,12 @@ class MoveDetails(object):
         # primarily for debugging/interactive use
         mystr = ""
         for key in self.__dict__.keys():
-            if not isinstance(self.__dict__[key], Ensemble):
+            if not isinstance(self.__dict__[key], ops.Ensemble):
                 mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
         return mystr
 
 
 @dictable
-
 class PathMover(object):
     """
     A PathMover is the description of how to generate a new path from an old one.
@@ -145,9 +143,6 @@ class PathMover(object):
         the attached engine used to generate new trajectories
 
     """
-
-    # TODO: JHP, does this cls variable do anything? ~~~DWHS
-    cls = 'pathmover'
     engine = None
 
     @property
@@ -169,8 +164,6 @@ class PathMover(object):
         if ensembles is not None and type(ensembles) is not list:
             ensembles = [ensembles]
         self.ensembles = ensembles
-
-        self.idx = dict()
 
     def legal_sample_set(self, globalstate, ensembles=None):
         '''
@@ -266,7 +259,7 @@ class ShootMover(PathMover):
     def __init__(self, selector, ensembles=None, replicas='all'):
         super(ShootMover, self).__init__(ensembles=ensembles, replicas=replicas)
         self.selector = selector
-        self.length_stopper = PathMover.engine.max_length_stopper
+        self._length_stopper = PathMover.engine.max_length_stopper
         self.extra_details = ['start', 'start_point', 'trial',
                               'final_point']
 
@@ -312,7 +305,7 @@ class ShootMover(PathMover):
                 details.accepted = True
                 details.result = details.trial
 
-        path = Sample(replica=replica,
+        path = ops.Sample(replica=replica,
                       trajectory=details.result, 
                       ensemble=dynamics_ensemble,
                       details=details)
@@ -333,7 +326,7 @@ class ForwardShootMover(ShootMover):
         partial_trajectory = PathMover.engine.generate(
             details.start_point.snapshot.copy(),
             running = [
-                ForwardAppendedTrajectoryEnsemble(
+                ops.ForwardAppendedTrajectoryEnsemble(
                     ensemble, 
                     details.start[0:details.start_point.index]
                 ).can_append, 
@@ -346,7 +339,7 @@ class ForwardShootMover(ShootMover):
         #setattr(details, 'new_partial', partial_trajectory)
 
         details.trial = details.start[0:shooting_point] + partial_trajectory
-        details.final_point = ShootingPoint(self.selector, details.trial,
+        details.final_point = ops.ShootingPoint(self.selector, details.trial,
                                             shooting_point)
     
 @dictable
@@ -361,7 +354,7 @@ class BackwardShootMover(ShootMover):
         partial_trajectory = PathMover.engine.generate(
             details.start_point.snapshot.reversed_copy(), 
             running = [
-                BackwardPrependedTrajectoryEnsemble( 
+                ops.BackwardPrependedTrajectoryEnsemble(
                     ensemble, 
                     details.start[details.start_point.index + 1:]
                 ).can_prepend, 
@@ -374,7 +367,7 @@ class BackwardShootMover(ShootMover):
         #setattr(details, 'new_partial', partial_trajectory.reversed)
 
         details.trial = partial_trajectory.reversed + details.start[details.start_point.index + 1:]
-        details.final_point = ShootingPoint(self.selector, details.trial, partial_trajectory.frames - 1)
+        details.final_point = ops.ShootingPoint(self.selector, details.trial, partial_trajectory.frames - 1)
         
         pass
 
@@ -413,7 +406,7 @@ class MixedMover(PathMover):
         setattr(sample.details, 'mover_idx', idx)
 
         # why do we make a new sample here?
-        path = Sample(trajectory=sample.trajectory,
+        path = ops.Sample(trajectory=sample.trajectory,
                       ensemble=sample.ensemble, 
                       details=sample.details,
                      replica=sample.replica)
@@ -435,11 +428,11 @@ class ReplicaIDChange(PathMover):
         details = MoveDetails()
         details.inputs = rep_sample.trajectory
         # TODO: details
-        dead_sample = Sample(replica=rep_sample.replica,
+        dead_sample = ops.Sample(replica=rep_sample.replica,
                              ensemble=old_sample.ensemble,
                              trajectory=old_sample.trajectory
                             )
-        new_sample = Sample(replica=new_rep,
+        new_sample = ops.Sample(replica=new_rep,
                             ensemble=rep_sample.ensemble,
                             trajectory=rep_sample.trajectory
                            )
@@ -479,7 +472,7 @@ class EnsembleHopMover(PathMover):
         else: 
             setattr(details, 'result_ensemble', ens_from)
 
-        path = Sample(trajectory=trajectory,
+        path = ops.Sample(trajectory=trajectory,
                       ensemble=details.result_ensemble, 
                       details=details,
                       replica=replica
