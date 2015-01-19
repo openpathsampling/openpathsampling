@@ -660,6 +660,9 @@ def loadpartial(func, constructor=None):
 
 def loadcache(func):
     def inner(self, idx, *args, **kwargs):
+        if type(idx) is not str and idx < 0:
+            return None
+
         n_idx = idx
 
         # if it is in the cache, return it, otherwise not :)
@@ -695,13 +698,13 @@ def loadcache(func):
         # the class method directly it is not bound yet and so we need to include the self! Took me some time to
         # understand and figure that out
         obj = func(n_idx, *args, **kwargs)
+        if obj is not None:
+            # update cache there might have been a change due to naming
+            self.cache[obj.idx[self.storage]] = obj
 
-        # update cache there might have been a change due to naming
-        self.cache[obj.idx[self.storage]] = obj
-
-        # finally store the name of a named object in cache
-        if self.named and hasattr(obj, 'name') and obj.name != '':
-            self.cache[obj.name] = obj
+            # finally store the name of a named object in cache
+            if self.named and hasattr(obj, 'name') and obj.name != '':
+                self.cache[obj.name] = obj
 
         return obj
     return inner
@@ -727,7 +730,6 @@ def savecache(func):
 
 def loadidx(func):
     def inner(self, idx, *args, **kwargs):
-        # TODO: Maybe this functionality should be in a separate function
         if type(idx) is not str and idx < 0:
             return None
 
