@@ -9,7 +9,7 @@ import random
 
 from shooting import ShootingPoint
 from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble
-from ensemble import FullEnsemble
+from ensemble import FullEnsemble, Ensemble
 from sample import Sample
 from wrapper import storable
 
@@ -108,7 +108,7 @@ class MoveDetails(object):
         # primarily for debugging/interactive use
         mystr = ""
         for key in self.__dict__.keys():
-            if key is not "ensemble":
+            if not isinstance(self.__dict__[key], Ensemble):
                 mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
         return mystr
 

@@ -4,8 +4,8 @@
 @author: JH Prinz
 '''
 
-import numpy
 from simtk.unit import nanosecond, picosecond, nanometers, nanometer, picoseconds, femtoseconds, femtosecond
+
 
 from simtk.openmm.app import *
 from simtk.openmm import *
@@ -14,7 +14,7 @@ from simtk.unit import *
 from trajectory import Trajectory
 from snapshot import Snapshot
 
-from integrators import VVVRIntegrator
+from openmmtools.integrators import VVVRIntegrator
 
 
 #=============================================================================================

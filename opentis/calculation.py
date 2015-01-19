@@ -1,4 +1,3 @@
-from globalstate import GlobalState
 from pathmover import (PathMover, MoveDetails, ReplicaExchange,
                        EnsembleHopMover)
 from sample import SampleSet, Sample
@@ -72,9 +71,9 @@ class BootstrapPromotionMove(PathMover):
                                   replicas=top_rep)
 
         shoot_samp = shooter.move(init_sample_set)
-        init_sample_set.apply_samples(shoot_samp)
+        init_sample_set = init_sample_set.apply_samples(shoot_samp)
         hop_samp = hopper.move(init_sample_set)
-        init_sample_set.apply_samples(hop_samp)
+        init_sample_set = init_sample_set.apply_samples(hop_samp)
 
         # bring all the metadata from the submoves into our details
         details.__dict__.update(shoot_samp.details.__dict__)
@@ -167,7 +166,8 @@ class Bootstrapping(Calculation):
                        )
             old_rep = max(self.globalstate.replica_list())
             sample = bootstrapmove.move(self.globalstate)
-            self.globalstate.apply_samples(sample, step=step_num)
+            self.globalstate = self.globalstate.apply_samples(sample, step=step_num)
+            #print self.globalstate.samples[0]
 
             if sample.replica == old_rep:
                 failsteps += 1
@@ -177,6 +177,8 @@ class Bootstrapping(Calculation):
 
             if self.storage is not None:
                 self.globalstate.save_samples(self.storage)
+                self.globalstate.save(self.storage)
+                # TODO NEXT: store self.globalstate itself
             step_num += 1
 
         for sample in self.globalstate:
