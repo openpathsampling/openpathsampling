@@ -8,6 +8,10 @@ Created on 06.07.2014
 import netCDF4 as netcdf
 import os.path
 
+import logging
+logger = logging.getLogger(__name__)
+init_log = logging.getLogger('opentis.initialization')
+
 import numpy
 import simtk.unit as u
 
@@ -101,9 +105,12 @@ class Storage(netcdf.Dataset):
 
         if mode == None:
             if os.path.isfile(filename):
+                logger.info("Open existing netCDF file '%s' for storage", filename)
                 mode = 'a'
             else:
+                logger.info("Create new netCDF file '%s' for storage", filename)
                 mode = 'w'
+
 
         self.filename = filename
 
@@ -117,6 +124,7 @@ class Storage(netcdf.Dataset):
         self._register_storages()
 
         if mode == 'w':
+            logger.info("Setup netCDF file and create variables")
             self._initialize_netCDF()
 
             if template.topology is not None:
@@ -135,8 +143,12 @@ class Storage(netcdf.Dataset):
             self.dimension_units.update(ops.tools.units_from_snapshot(template))
             self._init_storages(units=self.dimension_units)
 
+            logger.info("Saving topology")
+
             # create a json from the mdtraj.Topology() and store it
             self.write_str('topology', self.simplifier.to_json(self.simplifier.topology_to_dict(self.topology)))
+
+            logger.info("Create initial template snapshot")
 
             # Save the initial configuration
             self.snapshot.save(template)
@@ -146,9 +158,12 @@ class Storage(netcdf.Dataset):
 
             self.sync()
 
+            logger.info("Finished setting up netCDF file")
+
         elif mode == 'a' or mode == 'r+' or mode == 'r':
             self._restore_storages()
 
+            logger.debug("Restore the dict of units from the storage")
             # Create a dict of simtk.Unit() instances for all netCDF.Variable()
             for variable_name in self.variables:
                 unit = None
@@ -165,7 +180,7 @@ class Storage(netcdf.Dataset):
             self.topology = self.simplifier.topology_from_dict(self.simplifier.from_json(self.variables['topology'][0]))
             self.atoms = self.topology.n_atoms
 
-    def __str__(self):
+    def __repr__(self):
         return "OpenPathSampling netCDF Storage @ '" + self.filename + "'"
 
     @property
