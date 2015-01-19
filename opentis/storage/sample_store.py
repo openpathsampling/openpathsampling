@@ -3,7 +3,9 @@ from opentis.sample import Sample, SampleSet
 
 class SampleStorage(ObjectStorage):
     def __init__(self, storage):
-        super(SampleStorage, self).__init__(storage, Sample)
+        super(SampleStorage, self).__init__(storage, Sample, load_lazy=False, load_partial=True)
+
+        self.set_variable_partial_loading('details', self.update_details)
 
     def save(self, sample, idx=None):
         """
@@ -36,7 +38,46 @@ class SampleStorage(ObjectStorage):
 
             self.save_variable('sample_step', idx, sample.time)
 
-    def load(self, idx, momentum = True):
+    def load_empty(self, idx):
+        '''
+        Return a sample from the storage
+
+        Parameters
+        ----------
+        idx : int
+            index of the sample (counts from 1)
+
+        Returns
+        -------
+        sample : Sample
+            the sample
+        '''
+        trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
+        ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
+        replica_idx = int(self.storage.variables['sample_replica'][idx])
+#        details_idx = int(self.storage.variables['sample_details_idx'][idx])
+        step=self.load_variable('sample_step', idx)
+
+
+        obj = Sample(
+            trajectory=self.storage.trajectory.load(trajectory_idx, lazy=True),
+            replica=replica_idx,
+            ensemble=self.storage.ensemble.load(ensemble_idx),
+            step=step
+        )
+
+        return obj
+
+    def update_details(self, obj):
+        storage = self.storage
+
+        idx = obj.idx[self.storage]
+        details_idx = int(self.storage.variables['sample_details_idx'][idx])
+        details=self.storage.movedetails.load(details_idx)
+
+        obj.details = details
+
+    def load(self, idx):
         '''
         Return a sample from the storage
 
@@ -87,7 +128,7 @@ class SampleStorage(ObjectStorage):
 class SampleSetStorage(ObjectStorage):
 
     def __init__(self, storage):
-        super(SampleSetStorage, self).__init__(storage, SampleSet)
+        super(SampleSetStorage, self).__init__(storage, SampleSet, load_lazy=False)
 
     def save(self, sampleset, idx=None):
         """

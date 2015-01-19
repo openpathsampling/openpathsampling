@@ -178,7 +178,7 @@ class MomentumStorage(ObjectStorage):
     """
 
     def __init__(self, storage = None):
-        super(MomentumStorage, self).__init__(storage, Momentum, load_partial=False)
+        super(MomentumStorage, self).__init__(storage, Momentum, load_lazy=False, load_partial=True)
 
         # attach delayed loaders
         self.set_variable_partial_loading('velocities', self.update_velocities)
@@ -355,7 +355,7 @@ class MomentumStorage(ObjectStorage):
     
 class ConfigurationStorage(ObjectStorage):
     def __init__(self, storage = None):
-        super(ConfigurationStorage, self).__init__(storage, Configuration, load_partial=False)
+        super(ConfigurationStorage, self).__init__(storage, Configuration, load_lazy=False, load_partial=True)
 
         # attach delayed loaders
 #        self.set_variable_partial_loading('coordinates', self.update_coordinates)

@@ -14,7 +14,7 @@ class ObjectStorage(object):
     """
 
     def __init__(self, storage, obj, named=False, json=False, identifier=None,
-                 dimension_units=None, enable_caching=True, load_lazy=True,
+                 dimension_units=None, enable_caching=True, load_lazy=False,
                  load_partial=False):
         """
         Attributes
@@ -74,18 +74,8 @@ class ObjectStorage(object):
             # once an attribute is accessed
             # This should be called first so that the cache superseeds loading
 
-            def _inner(this, idx, *args, **kwargs):
-                # Create object first to break any unwanted recursion in loading
-                obj = LazyLoadedObject()
-
-                # if lazy construct a function that will update the content. This will be loaded, once the object is accessed
-                def loader():
-                    setattr(obj,)this.load(idx, *args, **kwargs)
-
-                setattr(obj, '_loader', loader)
-                return obj
-
-            self.load = types.MethodType(_inner, self)
+            _load = self.load
+            self.load = types.MethodType(loadlazy(_load), self)
 
         _save = self.save
         self.save = types.MethodType(saveidx(_save), self)
@@ -108,16 +98,16 @@ class ObjectStorage(object):
                     if item == '_idx':
                         return self.__dict__['idx']
 
-                    print 'called getter for', "'" + item + "'"
+#                    print 'called getter for', "'" + item + "'"
                     if hasattr(cls, '_delayed_loading'):
                         if item in cls._delayed_loading:
                             if self.__dict__[item] is None:
                                 # apparently the part has not yet been loaded so get it
                                 _loader = cls._delayed_loading['item']
-                                print 'Loaded', "'" + item + "'", 'delayed'
+#                                print 'Loaded', "'" + item + "'", 'delayed'
                                 _loader(self)
-                            else:
-                                print 'Already loaded'
+#                            else:
+#                                print 'Already loaded'
 
                     return self.__dict__[item]
 
@@ -585,7 +575,7 @@ class ObjectStorage(object):
         self.set_list_as_type(name + '_value', idx, 0, data.items(), value_type)
         self.save_variable(name + '_length', idx, len(data))
 
-    def load_object(self, name, idx, obj = None):
+    def load_object(self, name, idx):
         # TODO: Add logging here
 #        print 'Load',name,idx
         idx = int(idx)
@@ -697,35 +687,20 @@ class ObjectStorage(object):
 class LazyLoadedObject(object):
     def __init__(self):
         self.idx = dict()
+        self._reference = None
+        self._loader_fnc = None
+
+    def _loader(self):
+        self._reference = self._loader_fnc()
+#        print self._reference
 
     def __getattr__(self, item):
-#        print 'Try get lazy', item
-        if item == 'idx':
-            return self.__dict__[item]
-        if hasattr(self, '_loader'):
-#            print 'loader', self._loader
-#            _idx = self.__dict__['idx']
-            _loader = self.__dict__['_loader']
-            _loader(self)
-
-            print 'New self', self.__dict__
-
-            delattr(self, '_loader')
-            print 'done'
-
+        if item is 'idx':
+            return self.idx
         else:
-            print 'no loader, should not happen'
-            print self.__dict__
-            print '2'
-            print self.__class__.__name__
-            print '3'
-            raise ValueError('No LOADER')
-
-        if item not in self.__dict__:
-            print item, 'not found!!'
-
-
-        return self.__dict__[item]
+            if self._loader_fnc is not None:
+                self._loader()
+            return getattr(self._reference, item)
 
 def loadpartial(func, constructor=None):
     def inner(self, idx, *args, **kwargs):
@@ -739,6 +714,21 @@ def loadpartial(func, constructor=None):
         return obj
 
     return inner
+
+def loadlazy(func):
+    def inner(self, idx, *args, **kwargs):
+        # Create object first to break any unwanted recursion in loading
+        obj = LazyLoadedObject()
+
+        # if lazy construct a function that will update the content. This will be loaded, once the object is accessed
+        def loader():
+            return func(idx, *args, **kwargs)
+
+        setattr(obj, '_loader_fnc', loader)
+        return obj
+
+    return inner
+
 
 #=============================================================================
 # LOAD/SAVE DECORATORS FOR CACHE HANDLING
@@ -759,6 +749,7 @@ def loadcache(func):
                 n_idx = cc
             else:
                 # we have a real object (hopefully) and just return from cache
+#                print 'From Cache'
                 return self.cache[idx]
 
         elif type(idx) is str:
@@ -788,7 +779,7 @@ def loadcache(func):
         obj = func(n_idx, *args, **kwargs)
 
         # update cache there might have been a change due to naming
-        print n_idx, obj, obj.idx, obj.__dict__
+#        print n_idx, obj, obj.idx, obj.__dict__
         self.cache[obj.idx[self.storage]] = obj
 
         # finally store the name of a named object in cache

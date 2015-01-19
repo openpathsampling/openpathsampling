@@ -7,7 +7,7 @@ from opentis.trajectory import Trajectory
 class TrajectoryStorage(ObjectStorage):
 
     def __init__(self, storage):
-        super(TrajectoryStorage, self).__init__(storage, Trajectory)
+        super(TrajectoryStorage, self).__init__(storage, Trajectory, load_lazy=False)
 
     def save(self, trajectory, idx=None):
         """

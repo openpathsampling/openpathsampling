@@ -4,7 +4,7 @@ from opentis.orderparameter import OrderParameter
 class ObjectDictStorage(ObjectStorage):
 
     def __init__(self, storage, cls, key_class):
-        super(ObjectDictStorage, self).__init__(storage, cls, named=True, identifier='name')
+        super(ObjectDictStorage, self).__init__(storage, cls, named=True, identifier='name', load_lazy=False)
         self.key_class = key_class
 
     def save(self, objectdict, idx=None):
