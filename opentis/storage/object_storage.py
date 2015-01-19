@@ -77,9 +77,10 @@ class ObjectStorage(object):
             def _inner(this, idx, *args, **kwargs):
                 # Create object first to break any unwanted recursion in loading
                 obj = LazyLoadedObject()
+
                 # if lazy construct a function that will update the content. This will be loaded, once the object is accessed
                 def loader():
-                    obj = self.load(idx, *args, **kwargs)
+                    setattr(obj,)this.load(idx, *args, **kwargs)
 
                 setattr(obj, '_loader', loader)
                 return obj
@@ -316,6 +317,21 @@ class ObjectStorage(object):
                     raise StopIteration()
 
         return ObjectIterator()
+
+    def load_lazy(self, idx, lazy=False):
+        '''
+        Returns an object from the storage. Needs to be implented from the specific storage class.
+        '''
+
+        obj = LazyLoadedObject()
+
+        # if lazy construct a function that will update the content. This will be loaded, once the object is accessed
+        def loader():
+            self.load_object(self.idx_dimension + '_json', idx, obj)
+
+        setattr(obj, '_loader', loader)
+        return obj
+
 
     def load(self, idx, lazy=False):
         '''
@@ -569,7 +585,7 @@ class ObjectStorage(object):
         self.set_list_as_type(name + '_value', idx, 0, data.items(), value_type)
         self.save_variable(name + '_length', idx, len(data))
 
-    def load_object(self, name, idx):
+    def load_object(self, name, idx, obj = None):
         # TODO: Add logging here
 #        print 'Load',name,idx
         idx = int(idx)
