@@ -64,14 +64,16 @@ class BootstrapPromotionMove(PathMover):
         init_sample_set = SampleSet([old_sample])
 
         shooter = self.shooters[top_rep]
+        # TODO: should move this to normal initialization so we don't init
+        # it every time
         hopper = EnsembleHopMover(bias=self.bias,
                                   ensembles=[ensemble_from, ensemble_to],
                                   replicas=top_rep)
 
-        shoot_samp = shooter.move(init_sample_set)[0]
-        init_sample_set.apply_samples(shoot_samp)
-        hop_samp = hopper.move(init_sample_set)[0]
-        init_sample_set.apply_samples(hop_samp)
+        shoot_samp = shooter.move(init_sample_set)
+        init_sample_set = init_sample_set.apply_samples(shoot_samp)
+        hop_samp = hopper.move(init_sample_set)
+        init_sample_set = init_sample_set.apply_samples(hop_samp)
 
         # bring all the metadata from the submoves into our details
         details.__dict__.update(shoot_samp.details.__dict__)
@@ -141,6 +143,9 @@ class Bootstrapping(Calculation):
             pass # TODO: implement defaults: one per ensemble, uniform sel
         else:
             self.movers = movers
+        initialization_logging(init_log, self,
+                               ['movers', 'ensembles'])
+        init_log.info("Parameter: %s : %s", 'trajectory', str(trajectory))
 
     def run(self, nsteps):
         # TODO: turn off init_log during run loop
@@ -162,7 +167,8 @@ class Bootstrapping(Calculation):
                        )
             old_rep = max(self.globalstate.replica_list())
             samples = bootstrapmove.move(self.globalstate)
-            self.globalstate.apply_samples(samples, step=step_num)
+            self.globalstate = self.globalstate.apply_samples(sample, step=step_num)
+            #print self.globalstate.samples[0]
 
             if samples[0].replica == old_rep:
                 failsteps += 1
@@ -172,6 +178,8 @@ class Bootstrapping(Calculation):
 
             if self.storage is not None:
                 self.globalstate.save_samples(self.storage)
+                self.globalstate.save(self.storage)
+                # TODO NEXT: store self.globalstate itself
             step_num += 1
 
         for sample in self.globalstate:
