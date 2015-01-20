@@ -70,9 +70,9 @@ class BootstrapPromotionMove(PathMover):
                                   ensembles=[ensemble_from, ensemble_to],
                                   replicas=top_rep)
 
-        shoot_samp = shooter.move(init_sample_set)
+        shoot_samp = shooter.move(init_sample_set)[0]
         init_sample_set = init_sample_set.apply_samples(shoot_samp)
-        hop_samp = hopper.move(init_sample_set)
+        hop_samp = hopper.move(init_sample_set)[0]
         init_sample_set = init_sample_set.apply_samples(hop_samp)
 
         # bring all the metadata from the submoves into our details
