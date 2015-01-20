@@ -464,7 +464,7 @@ class SequentialMover(PathMover):
         for mover in self.movers:
             logger.debug("Starting sequential move step "+str(mover))
             newsamples = mover.move(subglobal)
-            subglobal.apply_samples(newsamples)
+            subglobal = subglobal.apply_samples(newsamples)
             mysamples.extend(newsamples)
         # TODO: add info to all samples for this move
         return mysamples
@@ -492,7 +492,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
             # rejected but the whole submove was accepted, as with
             # SequentialMovers
             newsamples = mover.move(subglobal)
-            subglobal.apply_samples(newsamples)
+            subglobal = subglobal.apply_samples(newsamples)
             # all samples made by the submove; pick the ones up to the first
             # rejection
             mysamples.extend(newsamples)
