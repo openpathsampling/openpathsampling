@@ -167,7 +167,7 @@ class Bootstrapping(Calculation):
                        )
             old_rep = max(self.globalstate.replica_list())
             samples = bootstrapmove.move(self.globalstate)
-            self.globalstate = self.globalstate.apply_samples(sample, step=step_num)
+            self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
             #print self.globalstate.samples[0]
 
             if samples[0].replica == old_rep:
