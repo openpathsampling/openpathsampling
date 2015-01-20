@@ -257,7 +257,7 @@ class Storage(netcdf.Dataset):
 
     def write_str(self, name, string):
         '''
-        Write a string into a netCDF Variable
+        Write a string into a netCDF variable
 
         Parameters
         ----------
@@ -269,6 +269,24 @@ class Storage(netcdf.Dataset):
         packed_data = numpy.empty(1, 'O')
         packed_data[0] = string
         self.variables[name][:] = packed_data
+
+    def load_str(self, name):
+        '''
+        Load a string from a netCDF variable
+
+        Parameters
+        ----------
+        name : str
+            the name of the variable
+
+        Returns
+        -------
+        str
+            the loaded str
+
+        '''
+        return self.variables[name][0]
+
 
     def init_str(self, name):
         '''

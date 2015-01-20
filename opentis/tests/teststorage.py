@@ -87,7 +87,19 @@ class testStorage(object):
 
         pass
 
-    def test_write_str(self):
+    def test_write_load_str(self):
+        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
+        assert(os.path.isfile(self.filename))
+
+        test_str = 'test_string'
+        store.init_str('test_variable')
+        store.write_str('test_variable', test_str)
+        store.close()
+
+        store2 = Storage(filename=self.filename, mode='a')
+        loaded_str = store2.load_str('test_variable')
+
+        assert(loaded_str == test_str)
         pass
 
     def test_stored_template(self):
@@ -119,11 +131,6 @@ class testStorage(object):
         compare_snapshot(loaded_template, loaded_copy)
         pass
 
-    def test_init_str(self):
-        pass
-
-    def test_load(self):
-        pass
 
     def test_clone(self):
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
