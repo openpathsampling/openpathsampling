@@ -45,7 +45,7 @@ class DynamicsEngine(object):
         'energy' : u.Unit({})
     }
 
-    def __init__(self, filename=None, options=None, storage=None):
+    def __init__(self, options=None, storage=None):
         '''
         Create an empty DynamicsEngine object
         
@@ -62,20 +62,21 @@ class DynamicsEngine(object):
         self.initialized = False
         self.running = dict()
 
-        # if there has not been created a storage but the init of a derived
+        # if there has not been created a storage by the init of a derived
         # class make sure there is at least a member variable
-        if not hasattr(self, 'storage'):
-            self.storage = None
+#        if not hasattr(self, 'storage'):
+#            self.storage = None
 
-        if storage is not None:
-            self.storage = storage
+#        if storage is not None:
+#            self.storage = storage
 
         # Trajectories need to know the engine as a hack to get the topology.
         # Better would be a link to the topology directly. This is needed to create
         # mdtraj.Trajectory() objects
 
-        # TODO: Remove this and put the logic outside of the engine
-        paths.Trajectory.engine = self
+        # TODO: Remove this and put the logic outside of the engine. The engine in trajectory is only
+        # used to get the solute indices which should depend on the topology anyway
+        # Trajectory.engine = self
 
         self._register_options(options)
 
@@ -87,7 +88,7 @@ class DynamicsEngine(object):
     def _register_options(self, options = None):
         """
         This will register all variables in the options dict as a member variable if
-        they are present in either ther DynamicsEngine.default_options or this
+        they are present in either the DynamicsEngine.default_options or this
         classes default_options, no multiple inheritance is supported!
         It will use values with the priority in the following order
         - DynamicsEngine.default_options
@@ -283,8 +284,8 @@ class DynamicsEngine(object):
                 
                 # Store snapshot and add it to the trajectory. Stores also
                 # final frame the last time
-                if self.storage is not None:
-                    self.storage.snapshot.save(snapshot)
+#                if self.storage is not None:
+#                    self.storage.snapshot.save(snapshot)
                 trajectory.append(snapshot)
                 
                 # Check if we should stop. If not, continue simulation

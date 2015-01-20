@@ -142,8 +142,7 @@ class testToyEngine(object):
         integ = LeapfrogVerletIntegrator(dt=0.002)
         sim = ToyEngine(options={'pes' : pes, 'integ' : integ, 
                               'n_frames_max' : 5},
-                        #filename='toy_tmp.nc', mode='create'
-                        filename=None, mode='auto'
+                        mode='auto'
                        )
 
         sim.positions = init_pos.copy()
