@@ -45,7 +45,7 @@ class DynamicsEngine(object):
         'energy' : u.Unit({})
     }
 
-    def __init__(self, options=None, storage=None):
+    def __init__(self, options=None):
         '''
         Create an empty DynamicsEngine object
         
