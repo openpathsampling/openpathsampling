@@ -387,6 +387,8 @@ class Storage(netcdf.Dataset):
                 'globalstate', 'volume', 'ensemble' ]:
             self.clone_storage(storage_name, storage2)
 
+        storage2.close()
+
     def clone_empty(self, filename):
         """
         Creates a copy of the netCDF file and replicates only the static parts which I consider
@@ -404,6 +406,8 @@ class Storage(netcdf.Dataset):
                 'pathmover', 'engine', 'shootingpointselector', 'volume', 'ensemble']:
 
             self.clone_storage(storage_name, storage2)
+
+        storage2.close()
 
 
     def clone_storage(self, storage_to_copy, new_storage):

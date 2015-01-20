@@ -141,11 +141,42 @@ class testStorage(object):
 
         # do some tests, if this is still the same data
 
+        compare_snapshot(
+            store2.snapshot.load(0),
+            store.snapshot.load(0).subset(self.options['solute_indices'])
+        )
+
+        compare_snapshot(
+            store2.snapshot.load(1),
+            store.snapshot.load(1).subset(self.options['solute_indices'])
+        )
+        store.close()
+        store2.close()
 
         pass
 
     def test_clone_empty(self):
-        pass
+        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
+        assert(os.path.isfile(self.filename))
 
-    def test_clone_storage(self):
+        copy = self.template_snapshot.copy()
+        store.save(copy)
+
+        store.save(self.traj)
+        store.clone_empty(filename=self.filename_clone)
+
+        # clone the storage and reduce the number of atoms to only solute
+
+        store2 = Storage(filename=self.filename_clone, mode='a')
+
+        # do some tests, if this is still the same data
+
+        compare_snapshot(
+            store2.snapshot.load(0),
+            store.snapshot.load(0)
+        )
+
+        assert_equal(store2.snapshot.count(), 1)
+        assert_equal(store2.trajectory.count(), 0)
+
         pass
