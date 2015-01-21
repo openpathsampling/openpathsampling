@@ -25,8 +25,8 @@ class ObjectStore(object):
         json
         dimension_units
         enable_caching : bool
-            if this is set to `True` caching is used to quickly access previously
-            loaded objects (default)
+            if this is set to `True` caching is used to quickly access
+            previously loaded objects (default)
         load_partial : bool
             if this is set to `True` the storage allows support for partial
             delayed loading of member variables. This is useful for larger
@@ -487,13 +487,15 @@ class ObjectStore(object):
         Returns
         -------
         index : int
-            the number of the next free index in the storage. Used to store a new object.
+            the number of the next free index in the storage.
+            Used to store a new object.
         '''
         return self.count()
 
     def _init(self, units=None):
         """
-        Initialize the associated storage to allow for object storage. Mainly creates an index dimension with the name of the object.
+        Initialize the associated storage to allow for object storage. Mainly
+        creates an index dimension with the name of the object.
 
         Parameters
         ----------
@@ -506,16 +508,30 @@ class ObjectStore(object):
         # define dimensions used for the specific object
         self.storage.createDimension(self.idx_dimension, 0)
         if self.is_named:
-            self.init_variable(self.db + "_name", 'str', description='A short descriptive name for convenience', chunksizes=tuple([10240]))
+            self.init_variable(self.db + "_name", 'str',
+                description='A short descriptive name for convenience',
+                chunksizes=tuple([10240]))
         if self.json:
-            self.init_variable(self.db + "_json", 'str', description='A json serialized version of the object', chunksizes=tuple([10240]))
+            self.init_variable(self.db + "_json", 'str',
+                description='A json serialized version of the object',
+                chunksizes=tuple([10240]))
 
-#=============================================================================================
+#==============================================================================
 # INITIALISATION UTILITY FUNCTIONS
-#=============================================================================================
+#==============================================================================
 
     def init_dimension(self, name, length = 0):
         """
+        Initialize a new dimension in the storage.
+        Wraps the netCDF createDimension
+
+        Parameters
+        ----------
+        name : str
+            the name for the new dimension
+        length : int
+            the number of elements in this dimension. Zero (0) (default) means
+            an infinite dimension that extends when more objects are stored
 
         """
         if name not in self.storage.dimensions:
@@ -523,16 +539,11 @@ class ObjectStore(object):
 
         self.storage.sync()
 
-    def init_mixed(self, name):
-        # entry position is given by a start and a length
-        self.init_variable(name + '_dim_begin', 'index', name)
-        self.init_variable(name + '_dim_length', 'length', name)
-
-        self.storage.sync()
-
-    def init_variable(self, name, var_type, dimensions = None, units=None, description=None, variable_length=False, chunksizes=None):
+    def init_variable(self, name, var_type, dimensions = None, units=None,
+                      description=None, variable_length=False, chunksizes=None):
         '''
-        Create a new variable in the netcdf storage. This is just a helper function to structure the code better.
+        Create a new variable in the netCDF storage. This is just a helper
+        function to structure the code better.
 
         Paramters
         =========
@@ -540,23 +551,30 @@ class ObjectStore(object):
             The name of the variable to be created
         var_type : str
             The string representing the type of the data stored in the variable.
-            Either the netcdf types can be used directly and
-            strings representing the python native types are translated to appropriate netcdf types.
+            Either the netCDF types can be used directly and
+            strings representing the python native types are translated to
+            appropriate netCDF types.
         dimensions : str or tuple of str
             A tuple representing the dimensions used for the netcdf variable.
             If not specified then the default dimension of the storage is used.
         units : str
-            A string representing the units used if the var_type is `float` the units is set to `none`
+            A string representing the units used if the var_type is `float`
+            the units is set to `none`
         description : str
             A string describing the variable in a readable form.
         variable_length : bool
-            If true the variable is treated as a variable length (list) of the given type. A built-in example
-            for this type is a string which is a variable length of char. This make using all the
-            mixed stuff superfluous
+            If true the variable is treated as a variable length (list) of the
+            given type. A built-in example for this type is a string which is
+            a variable length of char. This make using all the mixed
+            stuff superfluous
+        chunksizes : tuple of int
+            A tuple of ints per number of dimensions. This specifies in what
+            block sizes a variable is stored. Usually for object related stuff
+            we want to store everything of one object at once so this is often
+            (1, ..., ...)
         '''
 
         ncfile = self.storage
-
 
         if dimensions is None:
             dimensions = self.db
@@ -567,9 +585,11 @@ class ObjectStore(object):
         elif var_type == 'int':
             nc_type = np.int32   # 32-bit signed integer
         elif var_type == 'index':
-            nc_type = np.int32   # 32-bit signed integer / for indices / -1 indicates no index (None)
+            nc_type = np.int32
+            # 32-bit signed integer / for indices / -1 : no index (None)
         elif var_type == 'length':
-            nc_type = np.int32   # 32-bit signed integer / for indices / -1 indicated no length specified (None)
+            nc_type = np.int32
+            # 32-bit signed integer / for indices / -1 : no length specified (None)
         elif var_type == 'bool':
             nc_type = np.uint8   # 8-bit signed integer for boolean
         elif var_type == 'str':
@@ -577,9 +597,11 @@ class ObjectStore(object):
 
         if variable_length:
             vlen_t = ncfile.createVLType(nc_type, name + '_vlen')
-            ncvar = ncfile.createVariable(name, vlen_t, dimensions, zlib=False, chunksizes=chunksizes)
+            ncvar = ncfile.createVariable(name, vlen_t, dimensions,
+                                          zlib=False, chunksizes=chunksizes)
         else:
-            ncvar = ncfile.createVariable(name, nc_type, dimensions, zlib=False, chunksizes=chunksizes)
+            ncvar = ncfile.createVariable(name, nc_type, dimensions,
+                                          zlib=False, chunksizes=chunksizes)
 
         if var_type == 'float' or units is not None:
 
@@ -600,7 +622,7 @@ class ObjectStore(object):
 
             json_unit = self.simplifier.unit_to_json(unit_instance)
 
-            # store the unit in the dict inside the Storage object for fast access
+            # store the unit in the dict inside the Storage object
             self.storage.units[name] = unit_instance
 
             # Define units for a float variable
@@ -613,38 +635,62 @@ class ObjectStore(object):
 
         self.storage.sync()
 
-
-    def init_objectdict(self, name, obj_cls, value_type):
-        self.init_dimension(name)
-
-        self.init_variable(name + '_value', value_type, (name, obj_cls))
-        self.init_variable(name + '_idx', 'index', (name, obj_cls))
-        self.init_variable(name + '_length', 'length', (name))
-
-#=============================================================================================
+#==============================================================================
 # LOAD / SAVE UTILITY FUNCTIONS
-#=============================================================================================
+#==============================================================================
 
     def load_variable(self, name, idx):
+        """
+        Wrapper for netCDF storage.variables[name][idx] property
+
+        Parameters
+        ----------
+        name : str
+            The name of the variable
+        idx : int, slice, list of int, etc...
+            An index specification as in netCDF4
+
+        Returns
+        -------
+        numpy.ndarray
+            The data stored in the netCDF variable
+
+        """
         return self.storage.variables[name][idx]
 
     def save_variable(self, name, idx, value):
+        """
+        Wrapper for netCDF storage.variables[name][idx] property
+
+        Parameters
+        ----------
+        name : str
+            The name of the variable
+        idx : int, slice, list of int, etc...
+            An index specification as in netCDF4
+        value : numpy.ndarray
+            The array to be stored in the variable
+
+        """
         self.storage.variables[name][idx] = value
 
-    def load_objectdict(self, name, idx, key_type, value_type):
-        length = self.storage.variables[name + '_length'][idx]
-        values = self.get_list_as_type(name + '_value', idx, 0, length, value_type)
-        keys = self.get_list_as_type(name + '_idx', idx, 0, length, key_type)
-
-        data = dict(zip(keys, values))
-        return data
-
-    def save_objectdict(self, name, idx, data, key_type, value_type):
-        self.set_list_as_type(name + '_idx', idx, 0, data.keys(), key_type)
-        self.set_list_as_type(name + '_value', idx, 0, data.items(), value_type)
-        self.save_variable(name + '_length', idx, len(data))
-
     def load_object(self, name, idx):
+        """
+        Load an object from the associated storage
+
+        Parameters
+        ----------
+        name : str
+            the name of the variable in the netCDF storage
+        idx : int
+            the integer index in the variable
+
+        Returns
+        -------
+        object
+            the loaded object
+
+        """
         # TODO: Add logging here
         idx = int(idx)
 
@@ -657,21 +703,65 @@ class ObjectStore(object):
         return obj
 
     def save_object(self, name, idx, obj):
+        """
+        Save an object as a json string in a variable in the referenced storage
+
+        Parameters
+        ----------
+        name : str
+            the name of the variable in the netCDF storage
+        idx : int
+            the integer index in the variable
+        obj : object
+            the object to be stored as JSON
+
+        """
         if not hasattr(obj,'json'):
             setattr(obj, 'json', self.object_to_json(obj))
 
         self.storage.variables[name][idx] = obj.json
 
-#=============================================================================================
+#==============================================================================
 # CONVERSION UTILITIES
-#=============================================================================================
+#==============================================================================
 
     def object_to_json(self, obj):
+        """
+        Convert a given object to a json string using the simplifier
+
+        Parameters
+        ----------
+        obj : the object to be converted
+
+        Returns
+        -------
+        str
+            the JSON string
+        """
         json_string = self.simplifier.to_json_object(obj, obj.base_cls_name)
 
         return json_string
 
     def list_to_numpy(self, data, value_type, allow_empty = True):
+        """
+        Return a numpy list from a python list in a given format
+
+        Parameters
+        ----------
+        data : list
+            the list to be converted
+        value_type : str
+            the type of the input list elements. If this is an object type it
+            will be saved and the returned index is stored in an numpy
+            integer array
+        allow_empty : bool
+            if set to `True` None will be stored as the integer -1
+
+        Returns
+        -------
+        numpy.ndarray
+            the converted numpy array
+        """
         if value_type == 'int':
             values = np.array(data).astype(np.float32)
         elif value_type == 'float':
@@ -684,12 +774,33 @@ class ObjectStore(object):
             values = np.array(data).astype(np.int32)
         else:
             # an object
-            values = [-1 if value is None and allow_empty is True else value.idx[self.storage] for value in data]
+            values = [-1 if value is None and allow_empty is True
+                      else value.idx[self.storage] for value in data]
             values = np.array(values).astype(np.int32)
 
         return values.copy()
 
     def list_from_numpy(self, values, value_type, allow_empty = True):
+        """
+        Return a python list from a numpy array in a given format
+
+        Parameters
+        ----------
+        values : numpy.ndarray
+            the numpy array to be converted
+        value_type : str
+            the type of the output list elements. If this is a object type it
+            will be loaded using the numpy array content as the index
+        allow_empty : bool
+            if set to `True` then loaded objects will only be loaded if the
+            index is not negative. Otherwise the load function will always
+            be called
+
+        Returns
+        -------
+        list
+            the converted list
+        """
         if value_type == 'int':
             data = values.tolist()
         elif value_type == 'float':
@@ -703,15 +814,34 @@ class ObjectStore(object):
         else:
             # an object
             key_store = getattr(self.storage, value_type)
-            data = [key_store.load(obj_idx) if allow_empty is False or obj_idx >= 0 else None for obj_idx in values.tolist()]
+            data = [key_store.load(obj_idx) if allow_empty is False
+                    or obj_idx >= 0 else None for obj_idx in values.tolist()]
 
         return data
 
-#=============================================================================================
+#==============================================================================
 # SETTER / GETTER UTILITY FUNCTIONS
-#=============================================================================================
+#==============================================================================
 
+    # TODO: This might go tho storage.py
     def get_object(self, name, idx, cls):
+        """
+        Load an object from the storage
+
+        Parameters
+        ----------
+        name : str
+            name of the variable to be used
+        index : int
+            index in the storage
+        cls : cls
+            type of the object to be loaded. Determines the store to be used
+
+        Returns
+        -------
+        object
+            the loaded object
+        """
         index = self.load_variable(name + '_idx', idx)
         if index < 0:
             return None
@@ -721,30 +851,39 @@ class ObjectStore(object):
         return obj
 
     def set_object(self, name, idx, obj):
+        """
+        Store an object in the storage
+
+        Parameters
+        ----------
+        name : str
+            name of the variable to be used
+        index : int
+            index in the storage
+        obj : object
+            the object to be stored
+
+        """
         if obj is not None:
             self.storage.variables[name + '_idx'][idx] = obj.idx[self.storage]
         else:
             self.storage.variables[name + '_idx'][idx] = -1
 
-    def get_list_as_type(self, name, idx, begin, length, value_type):
-        storage = self.storage
-        values = storage.variables[name][idx, begin:begin+length]
-
-        data = self.list_from_numpy(values, value_type)
-        return data
-
-    def set_list_as_type(self, name, idx, begin, data, value_type):
-        values = self.list_to_numpy(data, value_type)
-        self.storage.variables[name][idx, begin:begin+len(data)] = values
-
-#=============================================================================================
+#==============================================================================
 # ORDERPARAMETER UTILITY FUNCTIONS
-#=============================================================================================
+#==============================================================================
 
     @property
     def op_idx(self):
         """
-        Returns aa function that returns for an object of this storage the idx
+        Returns a function that returns for an object of this storage the idx.
+        This can be used to construct order parameters the return the index
+        in this storage. Useful for visualization
+
+        Returns
+        -------
+        function
+            the function that reports the index in this store
         """
         def idx(obj):
             return obj.idx[self.storage]
@@ -756,6 +895,10 @@ class ObjectStore(object):
 #=============================================================================
 
 def loadpartial(func, constructor=None):
+    """
+    Decorator for load functions that add the basic handling for partial loading
+    """
+
     def inner(self, idx, *args, **kwargs):
         if hasattr(self, '_delayed_loading'):
             if constructor is None:
@@ -774,6 +917,9 @@ def loadpartial(func, constructor=None):
 #=============================================================================
 
 def loadcache(func):
+    """
+    Decorator for load functions that add the basic cache handling
+    """
     def inner(self, idx, *args, **kwargs):
         if type(idx) is not str and idx < 0:
             return None
@@ -826,6 +972,9 @@ def loadcache(func):
 
 # the default decorator for save functions to enable caching
 def savecache(func):
+    """
+    Decorator for save functions that add the basic cache handling
+    """
     def inner(self, obj, idx = None, *args, **kwargs):
         # call the normal storage
         func(obj, idx, *args, **kwargs)
@@ -844,6 +993,9 @@ def savecache(func):
 #=============================================================================
 
 def loadidx(func):
+    """
+    Decorator for load functions that add the basic indexing handling
+    """
     def inner(self, idx, *args, **kwargs):
         if type(idx) is not str and idx < 0:
             return None
@@ -879,6 +1031,9 @@ def loadidx(func):
     return inner
 
 def saveidx(func):
+    """
+    Decorator for save functions that add the basic indexing handling
+    """
     def inner(self, obj, idx = None, *args, **kwargs):
 
         storage = self.storage
