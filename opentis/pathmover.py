@@ -73,8 +73,8 @@ class MoveDetails(object):
     trial_is_in_ensemble : bool
         whether the attempted move created a trajectory in the right
         ensemble
-    mover : PathMover
-        the PathMover which generated this trial
+    mover_path : list of PathMover
+        the sequence of calls to the PathMover which generated this trial
 
     Specific move types may have add several other attributes for each
     MoveDetails object. For example, shooting moves will also include
@@ -100,7 +100,7 @@ class MoveDetails(object):
         self.result=None
         self.acceptance_probability=None
         self.accepted=None
-        self.mover=None
+        self.mover_path=[]
         for key, value in kwargs:
             setattr(self, key, value)
 
@@ -305,7 +305,7 @@ class ShootMover(PathMover):
         details = MoveDetails()
         details.accepted = False
         details.inputs = [trajectory]
-        details.mover = self
+        details.mover_path.append(self)
         setattr(details, 'start', trajectory)
         setattr(details, 'start_point', self.selector.pick(details.start) )
         #setattr(details, 'trial', None)
@@ -438,7 +438,8 @@ class MixedMover(PathMover):
 
         samples = mover.move(trajectory)
         for sample in samples:
-            setattr(sample.details, 'mover_idx', idx)
+            sample.details.mover_path.append(self)
+            #setattr(sample.details, 'mover_idx', idx)
 
         return samples
 
@@ -466,7 +467,8 @@ class SequentialMover(PathMover):
             newsamples = mover.move(subglobal)
             subglobal = subglobal.apply_samples(newsamples)
             mysamples.extend(newsamples)
-        # TODO: add info to all samples for this move
+        for sample in mysamples:
+            sample.details.mover_path.append(self)
         return mysamples
 
 class PartialAcceptanceSequentialMover(SequentialMover):
@@ -502,7 +504,8 @@ class PartialAcceptanceSequentialMover(SequentialMover):
                     break
             if last_accepted == False:
                 break
-        # TODO: add info for this mover
+        for sample in mysamples:
+            sample.details.mover_path.append(self)
         return mysamples
 
 
@@ -614,7 +617,7 @@ class EnsembleHopMover(PathMover):
         details = MoveDetails()
         details.accepted = False
         details.inputs = [trajectory]
-        details.mover = self
+        details.mover_path.append(self)
         details.result = trajectory
         setattr(details, 'initial_ensemble', ens_from)
         setattr(details, 'trial_ensemble', ens_to)
@@ -650,7 +653,7 @@ class PathReversalMover(PathMover):
 
         details = MoveDetails()
         details.inputs = [trajectory]
-        details.mover = self
+        details.mover_path.append(self)
 
         reversed_trajectory = trajectory.reversed
         details.trial = reversed_trajectory
@@ -682,8 +685,8 @@ class ReplicaExchange(PathMover):
         details2.inputs = [trajectory1, trajectory2]
         setattr(details1, 'ensembles', [ensemble1, ensemble2])
         setattr(details2, 'ensembles', [ensemble1, ensemble2])
-        details1.mover = self
-        details2.mover = self
+        details1.mover_path.append(self)
+        details2.mover_path.append(self)
         details2.trial = trajectory1
         details1.trial = trajectory2
         if accepted:
