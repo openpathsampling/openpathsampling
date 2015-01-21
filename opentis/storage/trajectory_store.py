@@ -1,13 +1,13 @@
 import numpy as np
 
-from object_storage import ObjectStorage
+from object_storage import ObjectStore
 from opentis.trajectory import Trajectory
 
 
-class TrajectoryStorage(ObjectStorage):
+class TrajectoryStore(ObjectStore):
 
     def __init__(self, storage):
-        super(TrajectoryStorage, self).__init__(storage, Trajectory, load_lazy=False)
+        super(TrajectoryStore, self).__init__(storage, Trajectory, load_lazy=False)
 
     def save(self, trajectory, idx=None):
         """
@@ -98,7 +98,7 @@ class TrajectoryStorage(ObjectStorage):
         Initialize the associated storage to allow for trajectory storage
 
         """
-        super(TrajectoryStorage, self)._init()
+        super(TrajectoryStore, self)._init()
 
         # index associated storage in class variable for all Trajectory instances to access
         ncfile = self.storage

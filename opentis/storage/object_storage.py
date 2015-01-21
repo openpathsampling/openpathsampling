@@ -6,7 +6,7 @@ import numpy as np
 import opentis as paths
 import simtk.unit as u
 
-class ObjectStorage(object):
+class ObjectStore(object):
     """
     Base Class for storing complex objects in a netCDF4 file. It holds a reference to the store file.
     """
@@ -19,6 +19,7 @@ class ObjectStorage(object):
         ----------
 
         storage : Storage
+            the reference the Storage object where all data is stored
         content_class : class
             a reference to the class type to be stored using this Storage
         idx_dimension : str
@@ -189,11 +190,11 @@ class ObjectStorage(object):
 
     def copy(self):
         """
-        Create a deep copy of the ObjectStorage instance
+        Create a deep copy of the ObjectStore instance
 
         Returns
         -------
-        ObjectStorage()
+        ObjectStore()
             the copied instance
         """
         store = copy.deepcopy(self)
@@ -201,11 +202,11 @@ class ObjectStorage(object):
 
     def __call__(self, storage):
         """
-        Create a deep copy of the ObjectStorage instance using the new store provided as function argument
+        Create a deep copy of the ObjectStore instance using the new store provided as function argument
 
         Returns
         -------
-        ObjectStorage()
+        ObjectStore()
             the copied instance
         """
         store = self.copy()

@@ -1,6 +1,6 @@
 from storage import Storage, StorableObjectJSON
-from object_storage import ObjectStorage
-from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
-from trajectory_store import TrajectoryStorage
-from sample_store import SampleStorage, SampleSetStorage
-from orderparameter_store import ObjectDictStorage
+from object_storage import ObjectStore
+from snapshot_store import SnapshotStore, ConfigurationStore, MomentumStore
+from trajectory_store import TrajectoryStore
+from sample_store import SampleStore, SampleSetStore
+from orderparameter_store import ObjectDictStore

@@ -1,9 +1,9 @@
-from object_storage import ObjectStorage
+from object_storage import ObjectStore
 from opentis.sample import SampleSet, Sample
 
-class SampleStorage(ObjectStorage):
+class SampleStore(ObjectStore):
     def __init__(self, storage):
-        super(SampleStorage, self).__init__(storage, Sample, load_lazy=False, load_partial=True)
+        super(SampleStore, self).__init__(storage, Sample, load_lazy=False, load_partial=True)
 
         self.set_variable_partial_loading('details', self.update_details)
 
@@ -116,7 +116,7 @@ class SampleStorage(ObjectStorage):
         Initialize the associated storage to allow for sample storage
 
         """
-        super(SampleStorage, self)._init()
+        super(SampleStore, self)._init()
 
         # New short-hand definition
         self.init_variable('sample_trajectory_idx', 'index', chunksizes=(1, ))
@@ -125,10 +125,10 @@ class SampleStorage(ObjectStorage):
         self.init_variable('sample_details_idx', 'index', chunksizes=(1, ))
         self.init_variable('sample_step', 'index', chunksizes=(1, ))
 
-class SampleSetStorage(ObjectStorage):
+class SampleSetStore(ObjectStore):
 
     def __init__(self, storage):
-        super(SampleSetStorage, self).__init__(storage, SampleSet, load_lazy=False)
+        super(SampleSetStore, self).__init__(storage, SampleSet, load_lazy=False)
 
     def save(self, sampleset, idx=None):
         """
@@ -201,7 +201,7 @@ class SampleSetStorage(ObjectStorage):
         Initialize the associated storage to allow for sampleset storage
 
         """
-        super(SampleSetStorage, self)._init()
+        super(SampleSetStore, self)._init()
 
         self.init_variable('sampleset_sample_idx', 'index', 'sampleset',
             description="sampleset[sampleset][frame] is the sample index (0..nspanshots-1) of frame 'frame' of sampleset 'sampleset'.",

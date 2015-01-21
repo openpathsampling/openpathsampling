@@ -1,10 +1,10 @@
-from object_storage import ObjectStorage
+from object_storage import ObjectStore
 from opentis.orderparameter import OrderParameter
 
-class ObjectDictStorage(ObjectStorage):
+class ObjectDictStore(ObjectStore):
 
     def __init__(self, storage, cls, key_class):
-        super(ObjectDictStorage, self).__init__(storage, cls, named=True, identifier='name', load_lazy=False)
+        super(ObjectDictStore, self).__init__(storage, cls, named=True, identifier='name', load_lazy=False)
         self.key_class = key_class
 
     def save(self, objectdict, idx=None):
@@ -40,7 +40,7 @@ class ObjectDictStorage(ObjectStorage):
         Parameters
         ----------
         storage : Storage() on None
-            The storage (not ObjectStorage) to store in. If None then all associated storages will be loaded from.
+            The storage (not ObjectStore) to store in. If None then all associated storages will be loaded from.
 
         Notes
         -----
@@ -77,7 +77,7 @@ class ObjectDictStorage(ObjectStorage):
         Initialize the associated storage to allow for ensemble storage
 
         """
-        super(ObjectDictStorage, self)._init()
+        super(ObjectDictStore, self)._init()
 
         self.init_variable(self.idx_dimension + '_length', 'index', self.idx_dimension, chunksizes=(1, ))
 
@@ -89,7 +89,7 @@ class ObjectDictStorage(ObjectStorage):
         Parameters
         ----------
         storage : Storage() on None
-            The storage (not ObjectStorage) to store in. If None then all associated storages will be updated up.
+            The storage (not ObjectStore) to store in. If None then all associated storages will be updated up.
 
         """
 
@@ -112,7 +112,7 @@ class ObjectDictStorage(ObjectStorage):
         Parameters
         ----------
         storage : Storage() on None
-            The storage (not ObjectStorage) to store in. If None then all associated storages will be cleaned up.
+            The storage (not ObjectStore) to store in. If None then all associated storages will be cleaned up.
 
         """
 

@@ -1,16 +1,16 @@
 import numpy as np
 from opentis.snapshot import Snapshot, Configuration, Momentum
-from object_storage import ObjectStorage
+from object_storage import ObjectStore
 from opentis.trajectory import Trajectory
 import simtk.unit as u
 
-class SnapshotStorage(ObjectStorage):
+class SnapshotStore(ObjectStore):
     """
-    An ObjectStorage for Snapshots. Allow to store Snapshots instances in a netcdf file.
+    An ObjectStore for Snapshots. Allow to store Snapshots instances in a netcdf file.
     """
 
     def __init__(self, storage = None):
-        super(SnapshotStorage, self).__init__(storage, Snapshot, load_lazy=False)
+        super(SnapshotStore, self).__init__(storage, Snapshot, load_lazy=False)
 
     def load(self, idx=None):
         '''
@@ -133,7 +133,7 @@ class SnapshotStorage(ObjectStorage):
         '''
         Initializes the associated storage to index configuration_indices in it
         '''
-        super(SnapshotStorage, self)._init()
+        super(SnapshotStore, self)._init()
 
         self.init_variable('snapshot_configuration_idx', 'index', self.db,
                 description="snapshot[snapshot] is the snapshot index (0..n_configuration-1) of snapshot 'snapshot'.",
@@ -172,13 +172,13 @@ class SnapshotStorage(ObjectStorage):
         return idx
 
 
-class MomentumStorage(ObjectStorage):
+class MomentumStore(ObjectStore):
     """
-    An ObjectStorage for Momenta. Allows to store Momentum() instances in a netcdf file.
+    An ObjectStore for Momenta. Allows to store Momentum() instances in a netcdf file.
     """
 
     def __init__(self, storage = None):
-        super(MomentumStorage, self).__init__(storage, Momentum, load_lazy=False, load_partial=True)
+        super(MomentumStore, self).__init__(storage, Momentum, load_lazy=False, load_partial=True)
 
         # attach delayed loaders
         self.set_variable_partial_loading('velocities', self.update_velocities)
@@ -334,7 +334,7 @@ class MomentumStorage(ObjectStorage):
         Initializes the associated storage to index momentums in it
         '''
 
-        super(MomentumStorage, self)._init()
+        super(MomentumStore, self)._init()
 
         atoms = self.storage.atoms
 
@@ -353,9 +353,9 @@ class MomentumStorage(ObjectStorage):
 
 
     
-class ConfigurationStorage(ObjectStorage):
+class ConfigurationStore(ObjectStore):
     def __init__(self, storage = None):
-        super(ConfigurationStorage, self).__init__(storage, Configuration, load_lazy=False, load_partial=True)
+        super(ConfigurationStore, self).__init__(storage, Configuration, load_lazy=False, load_partial=True)
 
         # attach delayed loaders
 #        self.set_variable_partial_loading('coordinates', self.update_coordinates)
@@ -555,7 +555,7 @@ class ConfigurationStorage(ObjectStorage):
         '''
         # index associated storage in class variable for all configuration instances to access
 
-        super(ConfigurationStorage, self)._init()
+        super(ConfigurationStore, self)._init()
         atoms = self.storage.atoms
 
         # define dimensions used in configuration_indices

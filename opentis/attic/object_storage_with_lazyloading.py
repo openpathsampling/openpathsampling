@@ -210,11 +210,11 @@ class ObjectStorage(object):
 
     def copy(self):
         """
-        Create a deep copy of the ObjectStorage instance
+        Create a deep copy of the ObjectStore instance
 
         Returns
         -------
-        ObjectStorage()
+        ObjectStore()
             the copied instance
         """
         store = copy.deepcopy(self)
@@ -222,11 +222,11 @@ class ObjectStorage(object):
 
     def __call__(self, storage):
         """
-        Create a deep copy of the ObjectStorage instance using the new store provided as function argument
+        Create a deep copy of the ObjectStore instance using the new store provided as function argument
 
         Returns
         -------
-        ObjectStorage()
+        ObjectStore()
             the copied instance
         """
         store = self.copy()
