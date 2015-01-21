@@ -369,7 +369,7 @@ class ObjectStore(object):
         except KeyError:
             return None
 
-    def load(self, idx, lazy=False):
+    def load(self, idx):
         '''
         Returns an object from the storage. Needs to be implemented from
         the specific storage class.

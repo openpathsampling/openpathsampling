@@ -33,6 +33,12 @@ class Storage(netcdf.Dataset):
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
     simulation. This allows effective storage of shooting trajectories '''
 
+    # I was wondering if it makes sense to just treat the stores as a
+    # variable with one index, since their basic behaviour is the same.
+    # For now I would leave it this way to make clear, that means a normal
+    # netCDF variable is accessed by storage.variables[name][idx] and the
+    # `special` variable is accessed by storage.store[idx]
+
     def _register_storages(self, storage = None):
         """
         Register all Stores used in the OpenPathSampling Storage
@@ -57,6 +63,7 @@ class Storage(netcdf.Dataset):
         self.sampleset = paths.storage.SampleSetStore(storage)
 
         self.collectivevariable = paths.storage.ObjectDictStore(storage, paths.OrderParameter, paths.Configuration)
+        self.cv = self.collectivevariable
 
         # normal objects
 

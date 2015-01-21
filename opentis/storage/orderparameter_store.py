@@ -13,6 +13,8 @@ class ObjectDictStore(ObjectStore):
 
         Parameters
         ----------
+        idx : int
+            the index
         """
         storage = self.storage
 
@@ -35,20 +37,22 @@ class ObjectDictStore(ObjectStore):
 
     def load(self, idx, op=None):
         """
-        Restores the cache from the storage using the name of the orderparameter.
+        Restores the cache from the storage using the name of the
+        orderparameter.
 
         Parameters
         ----------
         storage : Storage() on None
-            The storage (not ObjectStore) to store in. If None then all associated storages will be loaded from.
+            The storage (not ObjectStore) to store in. If None then all
+            associated storages will be loaded from.
 
         Notes
         -----
-        Make sure that you use unique names otherwise you might load the wrong parameters!
+        Make sure that you use unique names otherwise you might load the
+        wrong parameters!
         """
 
         storage = self.storage
-#        data = self.load_objectdict(self.idx_dimension,int(idx), self.content_class.__name__.lower(), float)
 
         name = storage.variables[self.idx_dimension + '_name'][idx]
         var_name = self.idx_dimension + '_' + str(idx) + '_' + name
@@ -83,13 +87,14 @@ class ObjectDictStore(ObjectStore):
 
     def _update_store(self, obj):
         """
-        This will transfer everything from the memory cache into the storage copy in memory which is used to interact with
-        the file storage.
+        This will transfer everything from the memory cache into the storage
+        copy in memory which is used to interact with the file storage.
 
         Parameters
         ----------
         storage : Storage() on None
-            The storage (not ObjectStore) to store in. If None then all associated storages will be updated up.
+            The storage (not ObjectStore) to store in. If None then all
+            associated storages will be updated up.
 
         """
 

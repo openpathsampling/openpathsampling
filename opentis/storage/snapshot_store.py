@@ -6,7 +6,7 @@ import simtk.unit as u
 
 class SnapshotStore(ObjectStore):
     """
-    An ObjectStore for Snapshots. Allow to store Snapshots instances in a netcdf file.
+    An ObjectStore for Snapshots in netCDF files.
     """
 
     def __init__(self, storage = None):
@@ -18,6 +18,8 @@ class SnapshotStore(ObjectStore):
 
         Parameters
         ----------
+        idx : int
+            the integer index of the snapshot to be loaded
 
         Returns
         -------
@@ -40,7 +42,12 @@ class SnapshotStore(ObjectStore):
 
     def all(self):
         """
-        Return a trajectory consisting of all (unordered) frames in the storage
+        Return a trajectory consisting of all (unordered) frames in the storage.
+
+        Notes
+        -----
+        Usually you want to use storage.snapshot.iterator() to get an
+        iterator over all snapshots
         """
         t = Trajectory()
         count = self.count()
@@ -51,14 +58,15 @@ class SnapshotStore(ObjectStore):
 
     def save(self, snapshot, idx=None):
         """
-        Add the current state of the snapshot in the database. If nothing has changed then the snapshot gets stored using the same snapshots as before. Saving lots of diskspace
+        Add the current state of the snapshot in the database.
 
         Parameters
         ----------
         snapshot : Snapshot()
             the snapshot to be saved
         idx : int or None
-            if idx is not None the index will be used for saving in the storage. This might overwrite already existing trajectories!
+            if idx is not None the index will be used for saving in the storage.
+            This might overwrite already existing trajectories!
 
         Notes
         -----
@@ -84,47 +92,50 @@ class SnapshotStore(ObjectStore):
 
     def configuration_idx(self, idx):
         '''
-        Load snapshot indices for snapshot with ID 'idx' from the storage
+        Load snapshot index for snapshot with ID 'idx' from the storage
 
-        ARGUMENTS
-
-        idx (int) - ID of the snapshot
+        Parameters
+        ----------
+        idx : int
+            index of the snapshot
 
         Returns
         -------
-        snapshot (list of int) - snapshot indices
+        list of int
+            configuration indices
         '''
         return int(self.load_variable('snapshot_configuration_idx', idx))
 
     def momentum_idx(self, idx):
         '''
-        Load snapshot indices for snapshot with ID 'idx' from the storage
+        Load momentum index for snapshot with ID 'idx' from the storage
 
-        ARGUMENTS
-
-        idx (int) - ID of the snapshot
+        Parameters
+        ----------
+        idx : int
+            index of the snapshot
 
         Returns
         -------
-        snapshot (list of int) - snapshot indices
+        int
+            momentum indices
         '''
         return int(self.load_variable('snapshot_momentum_idx', idx))
 
 
     def momentum_reversed(self, idx):
         '''
-        Load snapshot with ID 'idx' from the storage and return a list of reversed indicators for the momenta
+        Load reversed boolean for snapshot with ID 'idx' from the storage
 
         Parameters
         ----------
-
         idx : int
             index of the snapshot
 
         Returns
         -------
-        list of boolean
-            list of boolean which frames in the snapshot are reversed
+        boolean
+            boolean if the momentum of the snapshot is reversed
         '''
         return bool(self.load_variable('snapshot_momentum_reversed', idx))
 
@@ -155,6 +166,11 @@ class SnapshotStore(ObjectStore):
     def op_configuration_idx(self):
         """
         Returns aa function that returns for an object of this storage the idx
+
+        Returns
+        -------
+        function
+            the function that returns the idx of the configuration
         """
         def idx(obj):
             return obj.configuration.idx[self.storage]
@@ -165,6 +181,12 @@ class SnapshotStore(ObjectStore):
     def op_momentum_idx(self):
         """
         Returns aa function that returns for an object of this storage the idx
+
+        Returns
+        -------
+        function
+            the function that returns the idx of the configuration
+
         """
         def idx(obj):
             return obj.momentum.idx[self.storage]
@@ -187,24 +209,19 @@ class MomentumStore(ObjectStore):
 
     def save(self, momentum, idx = None):
         """
-        Save velocities and kinetic energies of current iteration to NetCDF file.
+        Save velocities and kinetic energies.
 
         Parameters
         ----------
         momentum : Momentum()
             the actual Momentum() instance to be saved.
         idx : int or None
-            if not None `idx`is used as the index to index the Momentum() instance. Might overwrite existing Momentum in the database.
+            if not None `idx`is used as the index to index the Momentum()
+            instance. Might overwrite existing Momentum in the database.
         """
 
         storage = self.storage
 
-        # TODO: This should never be empty when it is called. Since a Momentum() instance has velocities
-        # TODO: If it was load lazy then it should be registered as already saved and if a snapshot does not
-        # TODO: have velocities then it does not have a Momentum object
-
-
-        # Store momentum.
         if momentum.velocities is not None:
             if hasattr(momentum.velocities, 'unit'):
                 storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / self.storage.units["momentum_velocities"]).astype(np.float32)
@@ -223,7 +240,7 @@ class MomentumStore(ObjectStore):
         # Force sync to disk to avoid data loss.
         storage.sync()
 
-    def load(self, idx, lazy=True):
+    def load(self, idx):
         '''
         Load a momentum from the storage
 
@@ -296,9 +313,11 @@ class MomentumStore(ObjectStore):
         Parameters
         ----------
         frame_indices : list of int or None
-            the indices of Momentum objects to be retrieved from the database. If `None` is specified then all indices are returned!
+            the indices of Momentum objects to be retrieved from the database.
+            If `None` is specified then all indices are returned!
         atom_indices : list of int of None
-            if not None only the specified atom_indices are returned. Might speed up reading a lot.
+            if not None only the specified atom_indices are returned. Might
+            speed up reading a lot.
         """
 
         if frame_indices is None:
@@ -318,13 +337,15 @@ class MomentumStore(ObjectStore):
         frame_indices : list of int
             momenta indices to be loaded
         atom_indices : list of int
-            selects only the atoms to be returned. If None (Default) all atoms will be selected
+            selects only the atoms to be returned. If None (Default) all atoms
+            will be selected
 
 
         Returns
         -------
         numpy.ndarray, shape = (l,n)
-            returns an array with `l` the number of frames and `n` the number of atoms
+            returns an array with `l` the number of frames and `n` the number
+            of atoms
         '''
 
         return self.velocities_as_numpy(frame_indices, atom_indices)
@@ -345,11 +366,17 @@ class MomentumStore(ObjectStore):
         if 'spatial' not in self.storage.dimensions:
             self.init_dimension('spatial', 3)  # number of spatial dimensions
 
-        self.init_variable('momentum_velocities', 'float', (self.db, 'atom','spatial'), self.dimension_units['velocity'],
-                description="velocities[momentum][atom][coordinate] are velocities of atom 'atom' in" +
-                            " dimension 'coordinate' of momentum 'momentum'.", chunksizes=(1,atoms,3))
+        self.init_variable('momentum_velocities', 'float',
+                (self.db, 'atom','spatial'),
+                self.dimension_units['velocity'],
+                description="velocities[momentum][atom][coordinate] are " +
+                            "velocities of atom 'atom' in dimension " +
+                            "'coordinate' of momentum 'momentum'.",
+                chunksizes=(1,atoms,3))
 
-        self.init_variable('momentum_kinetic', 'float', self.db, self.dimension_units['energy'], chunksizes=(1, ))
+        self.init_variable('momentum_kinetic', 'float', self.db,
+                self.dimension_units['energy'],
+                chunksizes=(1, ))
 
 
     
@@ -363,14 +390,6 @@ class ConfigurationStore(ObjectStore):
         self.set_variable_partial_loading('potential_energy', self.update_potential_energy)
 
     def save(self, configuration, idx = None):
-        """
-        Save positions, velocities, boxvectors and energies of current iteration to NetCDF file.
-
-        Notes
-        -----
-        We need to allow for reversed configuration_indices to index memory. Would be nice
-        """
-
         storage = self.storage
 
         # Store configuration.
@@ -394,20 +413,6 @@ class ConfigurationStore(ObjectStore):
         return [ self.load(idx) for idx in indices ]
 
     def load(self, idx):
-        '''
-        Load a configuration from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the configuration in the database 'idx' > 0
-
-        Returns
-        -------
-        configuration : configuration
-            the configuration
-        '''
-
         storage = self.storage
 
         x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
@@ -425,6 +430,20 @@ class ConfigurationStore(ObjectStore):
         return configuration
 
     def load_empty(self, idx):
+        """
+        Loading function for partial loading. Constructs an empty Configuration
+        object.
+
+        Parameters
+        ----------
+        idx : int
+            the integer index of the configuration to be loaded
+
+        Returns
+        -------
+        Configuration
+            an empty configuration object
+        """
         configuration = Configuration()
         configuration.topology = self.storage.topology
 
@@ -437,7 +456,7 @@ class ConfigurationStore(ObjectStore):
         Parameters
         ----------
         obj : Configuration
-            The Configuration object to be updates
+            the Configuration object to be updated
 
         """
         storage = self.storage
@@ -455,7 +474,7 @@ class ConfigurationStore(ObjectStore):
         Parameters
         ----------
         obj : Configuration
-            The Configuration object to be updates
+            the Configuration object to be updated
 
         """
         storage = self.storage
@@ -473,7 +492,7 @@ class ConfigurationStore(ObjectStore):
         Parameters
         ----------
         obj : Configuration
-            The Configuration object to be updates
+            the Configuration object to be updated
 
         """
         storage = self.storage
@@ -486,7 +505,8 @@ class ConfigurationStore(ObjectStore):
 
     def coordinates_as_numpy(self, frame_indices=None, atom_indices=None):
         """
-        Return the atom coordinates in the storage for given frame indices and atoms
+        Return the atom coordinates in the storage for given frame indices
+        and atoms
 
         Parameters
         ----------
@@ -518,12 +538,14 @@ class ConfigurationStore(ObjectStore):
         frame_indices : list of int
             configuration indices to be loaded
         atom_indices : list of int
-            selects only the atoms to be returned. If None (Default) all atoms will be selected
+            selects only the atoms to be returned. If None (Default) all atoms
+            will be selected
 
         Returns
         -------
         numpy.ndarray, shape = (l,n)
-            returns an array with `l` the number of frames and `n` the number of atoms
+            returns an array with `l` the number of frames and `n` the number
+            of atoms
         '''
 
         return self.coordinates_as_numpy(frame_indices, atom_indices)
@@ -537,38 +559,44 @@ class ConfigurationStore(ObjectStore):
         idx : int
             index of the snapshot to be loaded
         atom_indices : list of int
-            selects only the atoms to be returned. If None (Default) all atoms will be selected
+            selects only the atoms to be returned. If None (Default) all atoms
+            will be selected
 
 
         Returns
         -------
         numpy.ndarray, shape = (l,n)
-            returns an array with `l` the number of frames and `n` the number of atoms
+            returns an array with `l` the number of frames and `n` the number
+            of atoms
         '''
 
         frame_indices = self.configuration_indices(idx)
         return self.coordinates_as_array(frame_indices, atom_indices)
 
     def _init(self):
-        '''
-        Initializes the associated storage to index configuration_indices in it
-        '''
-        # index associated storage in class variable for all configuration instances to access
-
         super(ConfigurationStore, self)._init()
         atoms = self.storage.atoms
 
         # define dimensions used in configuration_indices
         if 'atom' not in self.storage.dimensions:
-            self.init_dimension('atom', atoms) # number of atoms in the simulated system
+            self.init_dimension('atom', atoms)
 
         if 'spatial' not in self.storage.dimensions:
-            self.init_dimension('spatial', 3)  # number of spatial dimensions
+            self.init_dimension('spatial', 3)
 
-        self.init_variable('configuration_coordinates', 'float', (self.db, 'atom','spatial'), self.dimension_units['length'],
-                description="coordinates[configuration][atom][coordinate] are coordinate of atom 'atom' " +
-                            "in dimension 'coordinate' of configuration 'configuration'.", chunksizes=(1,atoms,3))
+        self.init_variable('configuration_coordinates', 'float',
+                (self.db, 'atom','spatial'), self.dimension_units['length'],
+                description="coordinates[configuration][atom][coordinate] " +
+                            "are coordinate of atom 'atom' in dimension " +
+                            "'coordinate' of configuration 'configuration'.",
+                chunksizes=(1,atoms,3))
 
-        self.init_variable('configuration_box_vectors', 'float', (self.db, 'spatial', 'spatial'), self.dimension_units['length'], chunksizes=(1,3,3))
+        self.init_variable('configuration_box_vectors', 'float',
+                (self.db, 'spatial', 'spatial'),
+                self.dimension_units['length'],
+                chunksizes=(1,3,3))
 
-        self.init_variable('configuration_potential', 'float', self.db, self.dimension_units['energy'], chunksizes=(1, ))
+        self.init_variable('configuration_potential', 'float',
+                self.db,
+                self.dimension_units['energy'],
+                chunksizes=(1, ))
