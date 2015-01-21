@@ -170,8 +170,8 @@ class ObjectStore(object):
             The integer index of the given object or None if it is not stored yet
         """
         if hasattr(obj, 'idx'):
-            if self in obj.idx:
-                return obj.idx[self]
+            if self.storage in obj.idx:
+                return obj.idx[self.storage]
 
         return None
 
@@ -978,6 +978,7 @@ def savecache(func):
     def inner(self, obj, idx = None, *args, **kwargs):
         # call the normal storage
         func(obj, idx, *args, **kwargs)
+        idx = obj.idx[self.storage]
 
         # store the ID in the cache
         self.cache[idx] = obj

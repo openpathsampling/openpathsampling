@@ -7,33 +7,56 @@ class ObjectDictStore(ObjectStore):
         super(ObjectDictStore, self).__init__(storage, cls, is_named=True, json=False)
         self.key_class = key_class
 
-    def save(self, objectdict, idx=None):
+    def save(self, objectdict, idx):
         """
         Save the current state of the cache to the storage.
 
         Parameters
         ----------
+        objectdict : object
+            the objectdict to store
         idx : int
             the index
         """
-        storage = self.storage
-
-        self._update_store(objectdict)
-        store = objectdict.storage_caches[storage]
-        length = len(store)
-
         var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
 
         if var_name + '_value' not in self.storage.variables:
             self.init_variable(var_name + '_value', 'float', (self.key_class.__name__.lower()))
             self.init_variable(var_name + '_set', 'index', (self.key_class.__name__.lower()))
 
-        self.storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
-        self.save_variable(self.idx_dimension + '_length', idx, length)
-        self.storage.variables[var_name + '_value'][store.keys()] = self.list_to_numpy(store.values(), 'float')
-        self.storage.variables[var_name + '_set'][0:length] = store.keys()
+        self.sync(objectdict, idx)
 
-        self.tidy_cache(objectdict)
+
+    def sync(self, objectdict, idx=None):
+        """
+        This will update the stored cache of the orderparameter. It is
+        different from saving in that the object is only created if it
+        saved (and the object caching will prevent additional creation)
+
+        Parameters
+        ----------
+        objectdict : object
+            the objectdict to store
+
+        """
+        storage = self.storage
+        if idx is None:
+            idx = self.idx(objectdict)
+
+        if idx is not None and idx >=0:
+            self._update_store(objectdict)
+            store = objectdict.storage_caches[storage]
+            length = len(store)
+
+            var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
+
+            storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
+            self.save_variable(self.idx_dimension + '_length', idx, length)
+            storage.variables[var_name + '_value'][store.keys()] = self.list_to_numpy(store.values(), 'float')
+            storage.variables[var_name + '_set'][0:length] = store.keys()
+
+            self.tidy_cache(objectdict)
+
 
     def load(self, idx, op=None):
         """
@@ -57,7 +80,7 @@ class ObjectDictStore(ObjectStore):
         name = storage.variables[self.idx_dimension + '_name'][idx]
         var_name = self.idx_dimension + '_' + str(idx) + '_' + name
         length = self.load_variable(self.idx_dimension + '_length', idx)
-        stored_idx = self.storage.variables[var_name + '_set'][0:length]
+        stored_idx = storage.variables[var_name + '_set'][0:length]
         data_all = storage.variables[var_name + '_value'][:]
         data = self.list_from_numpy(data_all[self.list_from_numpy(stored_idx, 'index')], 'float')
 

@@ -164,7 +164,7 @@ class testLambdaVolumePeriodic(object):
         vol = volume.LambdaVolumePeriodic(op_id,
                                           lambda_min, lambda_max, -180,180)
         assert_equal(vol._period_len, 360)
-        assert_equal(vol.period_shift, -180)
+        assert_equal(vol._period_shift, -180)
         assert_equal(vol.__str__(), 
             "{x|(Id(x) - -180) % 360 + -180 in [-150, 70]}")
         for periodic_image in [-1, 0, 1]:

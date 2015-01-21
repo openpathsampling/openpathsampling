@@ -401,7 +401,7 @@ class Storage(netcdf.Dataset):
         """
         if hasattr(obj, 'base_cls'):
             store = self._storages[obj.base_cls]
-            return store.idx(self)
+            return store.idx(obj)
 
 
     def clone(self, filename, subset):

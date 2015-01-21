@@ -192,11 +192,8 @@ the bootstrapping calculation, then we run it.
     Saving all cached computations of orderparameters.
     """
 
-    psi.save(storage=engine.storage.collectivevariable)
-    phi.save(storage=engine.storage.collectivevariable)
-    # Alternatively one could write
-    # engine.storage.collectivevariable.save(psi)
-    # engine.storage.collectivevariable.save(phi)
+    engine.storage.collectivevariable.sync(psi)
+    engine.storage.collectivevariable.sync(phi)
 
     # Save all interface volumes as orderparameters
     op_vol_set = [OP_Volume('OP' + str(idx), vol) for idx, vol in enumerate(volume_set)]
@@ -218,4 +215,3 @@ the bootstrapping calculation, then we run it.
     engine.storage.collectivevariable.save(op_inA)
     engine.storage.collectivevariable.save(op_inB)
     engine.storage.collectivevariable.save(op_notinAorB)
-

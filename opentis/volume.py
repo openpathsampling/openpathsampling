@@ -331,7 +331,7 @@ class LambdaVolumePeriodic(LambdaVolume):
         self.period_min = period_min
         self.period_max = period_max
         if (period_min is not None) and (period_max is not None):
-            self.period_shift = period_min
+            self._period_shift = period_min
             self._period_len = period_max - period_min
             if self.lambda_max - self.lambda_min > self._period_len:
                 raise Exception("Range of volume larger than periodic bounds.")
@@ -347,7 +347,7 @@ class LambdaVolumePeriodic(LambdaVolume):
 
     def do_wrap(self, value):
         """Wraps `value` into the periodic domain."""
-        return ((value-self.period_shift) % self._period_len) + self.period_shift
+        return ((value-self._period_shift) % self._period_len) + self._period_shift
 
     # next few functions add support for range logic
     def _copy_with_new_range(self, lmin, lmax):
@@ -385,14 +385,14 @@ class LambdaVolumePeriodic(LambdaVolume):
         if self.wrap:
             fcn = 'x|({0}(x) - {2}) % {1} + {2}'.format(
                         self.orderparameter.name,
-                        self._period_len, self.period_shift)
+                        self._period_len, self._period_shift)
             if self.lambda_min < self.lambda_max:
                 domain = '[{0}, {1}]'.format(
                         self.lambda_min, self.lambda_max)
             else:
                 domain = '[{0}, {1}] union [{2}, {3}]'.format(
-                        self.period_shift, self.lambda_max,
-                        self.lambda_min, self.period_shift+self._period_len)
+                        self._period_shift, self.lambda_max,
+                        self.lambda_min, self._period_shift+self._period_len)
             return '{'+fcn+' in '+domain+'}'
         else:
             return '{{x|{2}(x) [periodic] in [{0}, {1}]}}'.format( 
