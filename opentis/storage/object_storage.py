@@ -1044,7 +1044,6 @@ def saveidx(func):
                 return None
             else:
                 idx = self.free()
-                obj.idx[storage] = idx
         else:
             if type(idx) is str:
                 # Not yet supported
@@ -1052,6 +1051,7 @@ def saveidx(func):
             else:
                 idx = int(idx)
 
+        obj.idx[storage] = idx
         func(obj, idx, *args, **kwargs)
 
     return inner
