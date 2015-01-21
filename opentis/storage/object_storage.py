@@ -353,7 +353,7 @@ class ObjectStore(object):
             def next(self):
                 if self.idx < self.storage.count():
                     obj = self.storage.load(self.idx)
-                    if self.iter_range.step is not None:
+                    if self.iter_range is not None and self.iter_range.step is not None:
                         self.idx += self.iter_range.step
                     else:
                         self.idx += 1
@@ -515,6 +515,9 @@ class ObjectStore(object):
 #=============================================================================================
 
     def init_dimension(self, name, length = 0):
+        """
+
+        """
         if name not in self.storage.dimensions:
             self.storage.createDimension(name, length)
 
