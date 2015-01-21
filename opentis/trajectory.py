@@ -154,21 +154,6 @@ class Trajectory(list):
         """
 
         return len(self)
-        
-    def configuration_indices(self):
-        """
-        Return a list of the snapshot IDs in the trajectory
-        
-        Returns
-        -------        
-        indices (list of int) - the list of indices
-        
-        Notes
-        -----        
-        The IDs are only non-zero if the snapshots have been saved before!
-        
-        """
-        return [f.configuration.begin for f in self]
 
     def configurations(self):
         """

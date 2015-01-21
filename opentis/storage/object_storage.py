@@ -8,12 +8,37 @@ import simtk.unit as u
 
 class ObjectStore(object):
     """
-    Base Class for storing complex objects in a netCDF4 file. It holds a reference to the store file.
+    Base Class for storing complex objects in a netCDF4 file. It holds a
+    reference to the store file.
     """
 
     def __init__(self, storage, content_class, is_named=False, json=True,
-                 dimension_units=None, enable_caching=True, load_partial=False):
+                 dimension_units=None, enable_caching=True, load_partial=False,
+                 nestable=False):
         """
+
+        Parameters
+        ----------
+        storage
+        content_class
+        is_named
+        json
+        dimension_units
+        enable_caching : bool
+            if this is set to `True` caching is used to quickly access previously
+            loaded objects (default)
+        load_partial : bool
+            if this is set to `True` the storage allows support for partial
+            delayed loading of member variables. This is useful for larger
+            objects that might only be required in particular circumstances.
+            (default is `False`)
+        nestable : bool
+            if true this marks the content_class to be saved as nested dict
+            objects and not a pointing to saved objects. So the saved complex
+            object is only stored once and not split into several objects that
+            are referenced by each other in a tree-like fashion
+
+
         Attributes
         ----------
 
@@ -25,21 +50,27 @@ class ObjectStore(object):
             if `True` objects can also be loaded by a string identifier/name
         json : string
             if already computed a JSON Serialized string of the object
-        all_names : dict
-            same as cache but for names
+        dimension_units : dict of {str : simtk.unit.Unit } or None
+            representing a dict of string representing a dimension
+            ('length', 'velocity', 'energy') pointing to
+            the simtk.unit.Unit to be used. If not None overrides the standard
+            units used in the storage
         simplifier : util.StorableObjectJSON
             an instance of a JSON Serializer
         identifier : str
-            name of the netCDF variable that contains the string to be identified by
-        enable_caching : bool
-            if True (default) this will add caching to this storage which keeps once loaded
-            or saved objects in memory for faster later access
+            name of the netCDF variable that contains the string to be
+            identified by. So far this is `name`
+        cache : dict (int or str : object)
+            a dictionary that holds references to all stored elements by index
+            or string for named objects. This is only used for cached access
+            is enable_caching is True (default)
 
         Notes
         -----
-        The class that takes care of storing data in a file is called a Storage, so the netCDF subclassed Storage
-        is a storage. The classes that know how to load and save an object from the storage are called
-        stores, like ObjectStore, SampleStore, etc...
+        The class that takes care of storing data in a file is called a Storage,
+        so the netCDF subclassed Storage is a storage. The classes that know how
+        to load and save an object from the storage are called stores,
+        like ObjectStore, SampleStore, etc...
 
         """
         self.storage = storage
@@ -85,7 +116,6 @@ class ObjectStore(object):
                     if hasattr(cls, '_delayed_loading'):
                         if item in cls._delayed_loading:
                             if self.__dict__[item] is None:
-                                # apparently the part has not yet been loaded so get it
                                 _loader = cls._delayed_loading['item']
                                 _loader(self)
 
@@ -114,11 +144,14 @@ class ObjectStore(object):
             _load = self.load
             self.load = types.MethodType(loadcache(_load), self)
 
+        self._register_with_storage(nestable=nestable)
+
     def __str__(self):
         return repr(self)
 
     def __repr__(self):
-        return "%s(content_class=%s, variable_prefix=%s)" % (self.__class__.__name__, self.content_class, self.db)
+        return "%s(content_class=%s, variable_prefix=%s)" % (
+            self.__class__.__name__, self.content_class, self.db)
 
 
     def idx(self, obj):
@@ -128,7 +161,8 @@ class ObjectStore(object):
         Parameters
         ----------
         obj : object
-            the object that can be stored in this store for which its index is to be returned
+            the object that can be stored in this store for which its index is
+            to be returned
 
         Returns
         -------
@@ -149,13 +183,29 @@ class ObjectStore(object):
         Returns
         -------
         units : dict of {str : simtk.unit.Unit }
-            representing a dict of string representing a dimension ('length', 'velocity', 'energy')
+            representing a dict of string representing a dimension
+            ('length', 'velocity', 'energy')
             pointing to the simtk.unit.Unit to be used
 
         """
         return self.storage.units
 
-    def register(self, nestable = False):
+    def _register_with_storage(self, nestable = False):
+        """
+        Register the store with the associated storage. This means the
+
+        Parameters
+        ----------
+        nestable : bool
+            if true this marks the content_class to be saved as nested dict
+            objects and not a pointing to saved objects. So the saved complex
+            object is only stored once and not split into several objects that
+            are referenced by each other in a tree-like fashion
+
+        Notes
+        -----
+        """
+
         self.storage._storages[self.content_class] = self
         self.storage._storages[self.content_class.__name__] = self
         self.storage._storages[self.content_class.__name__.lower()] = self
@@ -163,8 +213,8 @@ class ObjectStore(object):
         # Add here the logic to change the actual class and add the decorator
         # this is the same as add the  decorator (without default_storage,
         # I removed this since it is not used anyway)
-        # all it does is make sure that there is a .idx property and the base_cls is known
-
+        # all it does is make sure that there is a .idx property and the base_
+        # cls is known
         self.content_class.base_cls_name = self.content_class.__name__
         self.content_class.base_cls = self.content_class
 
@@ -188,7 +238,6 @@ class ObjectStore(object):
         # register as a base_class for storable objects
         self.storage.links.append(self)
 
-        return self
 
     def set_variable_partial_loading(self, variable, loader):
         cls = self.content_class
@@ -211,7 +260,8 @@ class ObjectStore(object):
 
     def __call__(self, storage):
         """
-        Create a deep copy of the ObjectStore instance using the new store provided as function argument
+        Create a deep copy of the ObjectStore instance using the new store
+        provided as function argument
 
         Returns
         -------
@@ -234,7 +284,8 @@ class ObjectStore(object):
         Returns
         -------
         int or None
-            The index of the first found object. If the name is not present, None is returned
+            The index of the first found object. If the name is not present,
+            None is returned
 
         Notes
         -----
@@ -249,7 +300,9 @@ class ObjectStore(object):
                     return self.cache[needle].idx[self.storage]
 
             # otherwise search the storage for the name
-            found_idx = [ idx for idx,s in enumerate(self.storage.variables[self.identifier][:]) if s == needle ]
+            found_idx = [ idx for idx,s in enumerate(self.storage.variables[
+                self.identifier][:]) if s == needle
+            ]
 
             if len(found_idx) > 0:
                     return found_idx[0]
@@ -259,14 +312,34 @@ class ObjectStore(object):
             raise ValueError('Cannot search for name (str) in non-named objects')
 
     def update_name_cache(self):
+        """
+        Update the internal cache with all stored names in the store.
+        This allows to load by name for named objects
+        """
         if self.is_named:
             for idx, name in enumerate(self.variables[self.db + "_name"][:]):
                 self.cache[name] = idx
 
     def iterator(this, iter_range = None):
+        """
+        Return an iterator over all objects in the storage
+
+        Parameters
+        ----------
+        iter_range : slice or None
+            if this is not `None` it confines the iterator to objects specified
+            in the slice
+
+        Returns
+        -------
+        Iterator()
+            The iterator that iterates the objects in the store
+
+        """
         class ObjectIterator:
             def __init__(self):
                 self.storage = this
+                self.iter_range = iter_range
                 if iter_range is None:
                     self.idx = 0
                     self.end = self.storage.count()
@@ -280,24 +353,56 @@ class ObjectStore(object):
             def next(self):
                 if self.idx < self.storage.count():
                     obj = self.storage.load(self.idx)
-                    self.idx += 1
+                    if self.iter_range.step is not None:
+                        self.idx += self.iter_range.step
+                    else:
+                        self.idx += 1
                     return obj
                 else:
                     raise StopIteration()
 
         return ObjectIterator()
 
+    def __getitem__(self, item):
+        try:
+            return self.load(item)
+        except KeyError:
+            return None
+
     def load(self, idx, lazy=False):
         '''
-        Returns an object from the storage. Needs to be implented from the specific storage class.
+        Returns an object from the storage. Needs to be implemented from
+        the specific storage class.
+
+        Parameter
+        ---------
+        idx : int or str
+            either the integer index of the object to be loaded or a string
+            (name) for named objects. This will always return the first object
+            found with the specified name.
+
+        Returns
+        -------
+        object
+            the loaded object
         '''
 
         return self.load_object(self.idx_dimension + '_json', idx)
 
     def save(self, obj, idx=None):
         """
-        Saves an object the storage using a JSON string.
-        Needs to be implemented from the specific storage class.
+        Saves an object the storage.
+
+        Parameters
+        ----------
+        obj : object
+            the object to be stored
+        idx : int or string or `None`
+            the index to be used for storing. This is highly discouraged since
+            it changes an immutable object (at least in the storage). It is
+            better to store also the new object and just ignore the
+            previously stored one.
+
         """
 
         if self.is_named and hasattr(obj, 'name'):
@@ -306,6 +411,20 @@ class ObjectStore(object):
         self.save_object(self.idx_dimension + '_json', idx, obj)
 
     def get_name(self, idx):
+        """
+        Return the name of and object with given integer index
+
+        Parameters
+        ----------
+        idx : int
+            the integer index of the object whose name is to be returned
+
+        Returns
+        -------
+        str or None
+            Returns the name of the object for named objects. None otherwise.
+
+        """
         if self.is_named:
             return self.storage.variables[self.identifier][idx]
         else:
@@ -326,7 +445,7 @@ class ObjectStore(object):
             a list of objects stored under the given indices
 
         """
-        return [self.load(idx) for idx in range(0, self.count())[indices] ]
+        return [self.load(idx) for idx in range(0, self.count())[indices]]
 
     def last(self):
         '''
@@ -376,6 +495,13 @@ class ObjectStore(object):
         """
         Initialize the associated storage to allow for object storage. Mainly creates an index dimension with the name of the object.
 
+        Parameters
+        ----------
+        units : dict of {str : simtk.unit.Unit} or None
+            representing a dict of string representing a dimension
+            ('length', 'velocity', 'energy') pointing to
+            the simtk.unit.Unit to be used. If not None overrides the standard
+            units used in the storage
         """
         # define dimensions used for the specific object
         self.storage.createDimension(self.idx_dimension, 0)
@@ -383,30 +509,6 @@ class ObjectStore(object):
             self.init_variable(self.db + "_name", 'str', description='A short descriptive name for convenience', chunksizes=tuple([10240]))
         if self.json:
             self.init_variable(self.db + "_json", 'str', description='A json serialized version of the object', chunksizes=tuple([10240]))
-
-    def var(self, name):
-        return '_'.join([self.db, name])
-
-    def begin(self, dimension, idx):
-        return int(self.storage.variables[dimension + '_dim_begin'][int(idx)])
-
-    def length(self, dimension, idx):
-        return int(self.storage.variables[dimension + '_dim_length'][int(idx)])
-
-    def set_slice(self, dimension, idx, begin, length):
-        self.storage.variables[dimension + '_dim_begin'][idx] = begin
-        self.storage.variables[dimension + '_dim_length'][idx] = length
-
-    def get_slice(self, dimension, idx):
-        begin = int(self.storage.variables[dimension + '_dim_begin'][int(idx)])
-        length = int(self.storage.variables[dimension + '_dim_length'][int(idx)])
-        return slice(begin, begin+length)
-
-    slice = get_slice
-
-    def free_begin(self, name):
-        length = int(len(self.storage.dimensions[name]))
-        return length
 
 #=============================================================================================
 # INITIALISATION UTILITY FUNCTIONS

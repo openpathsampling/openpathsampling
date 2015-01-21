@@ -39,27 +39,27 @@ class Storage(netcdf.Dataset):
 
         # objects with special storages
 
-        self.trajectory = paths.storage.TrajectoryStore(store).register()
-        self.snapshot = paths.storage.SnapshotStore(store).register()
-        self.configuration = paths.storage.ConfigurationStore(store).register()
-        self.momentum = paths.storage.MomentumStore(store).register()
-        self.sample = paths.storage.SampleStore(store).register()
-        self.sampleset = paths.storage.SampleSetStore(store).register()
+        self.trajectory = paths.storage.TrajectoryStore(store)
+        self.snapshot = paths.storage.SnapshotStore(store)
+        self.configuration = paths.storage.ConfigurationStore(store)
+        self.momentum = paths.storage.MomentumStore(store)
+        self.sample = paths.storage.SampleStore(store)
+        self.sampleset = paths.storage.SampleSetStore(store)
 
-        self.collectivevariable = paths.storage.ObjectDictStore(store, paths.OrderParameter, paths.Configuration).register()
+        self.collectivevariable = paths.storage.ObjectDictStore(store, paths.OrderParameter, paths.Configuration)
 
         # normal objects
 
-        self.pathmover = paths.storage.ObjectStore(store, paths.PathMover, is_named=True).register()
-        self.movedetails = paths.storage.ObjectStore(store, paths.MoveDetails, is_named=False).register()
-        self.shootingpoint = paths.storage.ObjectStore(store, paths.ShootingPoint, is_named=False).register()
-        self.shootingpointselector = paths.storage.ObjectStore(store, paths.ShootingPointSelector, is_named=False).register()
-        self.engine = paths.storage.ObjectStore(store, paths.DynamicsEngine, is_named=True).register()
+        self.pathmover = paths.storage.ObjectStore(store, paths.PathMover, is_named=True)
+        self.movedetails = paths.storage.ObjectStore(store, paths.MoveDetails, is_named=False)
+        self.shootingpoint = paths.storage.ObjectStore(store, paths.ShootingPoint, is_named=False)
+        self.shootingpointselector = paths.storage.ObjectStore(store, paths.ShootingPointSelector, is_named=False)
+        self.engine = paths.storage.ObjectStore(store, paths.DynamicsEngine, is_named=True)
 
         # nestable objects
 
-        self.volume = paths.storage.ObjectStore(store, paths.Volume, is_named=True).register(nestable=True)
-        self.ensemble = paths.storage.ObjectStore(store, paths.Ensemble, is_named=True).register(nestable=True)
+        self.volume = paths.storage.ObjectStore(store, paths.Volume, is_named=True, nestable=True)
+        self.ensemble = paths.storage.ObjectStore(store, paths.Ensemble, is_named=True, nestable=True)
 
     def _setup_class(self):
         self._storages = {}
