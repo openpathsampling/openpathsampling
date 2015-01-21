@@ -33,35 +33,48 @@ class Storage(netcdf.Dataset):
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
     simulation. This allows effective storage of shooting trajectories '''
 
-    def _register_storages(self, store = None):
-        if store is None:
-            store = self
+    def _register_storages(self, storage = None):
+        """
+        Register all Stores used in the OpenPathSampling Storage
+
+        Parameters
+        ----------
+        storage : Storage
+            the Storage object the store should use. Usually (default) the
+            storage itself
+
+        """
+        if storage is None:
+            storage = self
 
         # objects with special storages
 
-        self.trajectory = paths.storage.TrajectoryStore(store)
-        self.snapshot = paths.storage.SnapshotStore(store)
-        self.configuration = paths.storage.ConfigurationStore(store)
-        self.momentum = paths.storage.MomentumStore(store)
-        self.sample = paths.storage.SampleStore(store)
-        self.sampleset = paths.storage.SampleSetStore(store)
+        self.trajectory = paths.storage.TrajectoryStore(storage)
+        self.snapshot = paths.storage.SnapshotStore(storage)
+        self.configuration = paths.storage.ConfigurationStore(storage)
+        self.momentum = paths.storage.MomentumStore(storage)
+        self.sample = paths.storage.SampleStore(storage)
+        self.sampleset = paths.storage.SampleSetStore(storage)
 
-        self.collectivevariable = paths.storage.ObjectDictStore(store, paths.OrderParameter, paths.Configuration)
+        self.collectivevariable = paths.storage.ObjectDictStore(storage, paths.OrderParameter, paths.Configuration)
 
         # normal objects
 
-        self.pathmover = paths.storage.ObjectStore(store, paths.PathMover, is_named=True)
-        self.movedetails = paths.storage.ObjectStore(store, paths.MoveDetails, is_named=False)
-        self.shootingpoint = paths.storage.ObjectStore(store, paths.ShootingPoint, is_named=False)
-        self.shootingpointselector = paths.storage.ObjectStore(store, paths.ShootingPointSelector, is_named=False)
-        self.engine = paths.storage.ObjectStore(store, paths.DynamicsEngine, is_named=True)
+        self.pathmover = paths.storage.ObjectStore(storage, paths.PathMover, is_named=True)
+        self.movedetails = paths.storage.ObjectStore(storage, paths.MoveDetails, is_named=False)
+        self.shootingpoint = paths.storage.ObjectStore(storage, paths.ShootingPoint, is_named=False)
+        self.shootingpointselector = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, is_named=False)
+        self.engine = paths.storage.ObjectStore(storage, paths.DynamicsEngine, is_named=True)
 
         # nestable objects
 
-        self.volume = paths.storage.ObjectStore(store, paths.Volume, is_named=True, nestable=True)
-        self.ensemble = paths.storage.ObjectStore(store, paths.Ensemble, is_named=True, nestable=True)
+        self.volume = paths.storage.ObjectStore(storage, paths.Volume, is_named=True, nestable=True)
+        self.ensemble = paths.storage.ObjectStore(storage, paths.Ensemble, is_named=True, nestable=True)
 
     def _setup_class(self):
+        """
+        Sets the basic properties for the storage
+        """
         self._storages = {}
         self._storages_base_cls = {}
         self.links = []
@@ -98,8 +111,10 @@ class Storage(netcdf.Dataset):
         n_atoms : int or None
             If not None overrides the number of atoms in the storage
         units : dict of {str : simtk.unit.Unit } or None
-            representing a dict of string representing a dimension ('length', 'velocity', 'energy') pointing to
-            the simtk.unit.Unit to be used. If not None overrides the standard units used
+            representing a dict of string representing a dimension
+            ('length', 'velocity', 'energy') pointing to
+            the simtk.unit.Unit to be used. If not None overrides the
+            standard units used
         '''
 
         if mode == None:
@@ -140,7 +155,7 @@ class Storage(netcdf.Dataset):
 
             # update the units for dimensions from the template
             self.dimension_units.update(paths.tools.units_from_snapshot(template))
-            self._init_storages(units=self.dimension_units)
+            self._init_storages()
 
             logger.info("Saving topology")
 
@@ -206,9 +221,10 @@ class Storage(netcdf.Dataset):
     def __setattr__(self, key, value):
         self.__dict__[key] = value
 
-    def _init_storages(self, units=None):
+    def _init_storages(self):
         '''
-        Run the initialization on all added classes, when the storage is created only!
+        Run the initialization on all added classes, when the storage is
+        created only!
 
         Notes
         -----
@@ -217,7 +233,7 @@ class Storage(netcdf.Dataset):
 
         for storage in self.links:
             # create a member variable which is the associated Class itself
-            storage.dimension_units.update(units)
+            storage.dimension_units.update(units=self.dimension_units)
             storage._init()
 
     def _restore_storages(self):
@@ -310,8 +326,8 @@ class Storage(netcdf.Dataset):
         Returns
         -------
         str
-            the class name of the BaseClass of the stored object, which is needed when loading the object
-            to identify the correct storage
+            the class name of the BaseClass of the stored object, which is
+            needed when loading the object to identify the correct storage
         """
 
         if type(obj) is list:
@@ -330,7 +346,8 @@ class Storage(netcdf.Dataset):
                 # save has been called, all is good
                 return True
 
-        # Could not save this object. Might raise an exception, but return an empty string as type
+        # Could not save this object. Might raise an exception, but
+        # return an empty string as type
         return False
 
     def load(self, obj_type, *args, **kwargs):
@@ -349,8 +366,8 @@ class Storage(netcdf.Dataset):
 
         Notes
         -----
-        If you want to load a subclassed Ensemble you need to load using `Ensemble` or `"Ensemble"`
-        and not use the subclass
+        If you want to load a sub-classed Ensemble you need to load using
+        `Ensemble` or `"Ensemble"` and not use the subclass
         """
 
         if obj_type in self._storages:
@@ -362,7 +379,8 @@ class Storage(netcdf.Dataset):
                 store = self._storages[obj_type.base_cls]
                 return store.load(*args, **kwargs)
 
-        # no store found. This is bad and should be logged and raise an exception
+        # no store found. This is bad and should be logged and raise
+        # an exception
         return None
 
     def idx(self, obj):
@@ -429,6 +447,18 @@ class Storage(netcdf.Dataset):
 
 
     def clone_storage(self, storage_to_copy, new_storage):
+        """
+        Clone a store from one storage to another. Mainly used as a helper
+        for the cloning of a store
+
+        Parameters
+        ----------
+        store_to_copy : [..]Store
+            the store to be copied
+        new_storage : Storage
+            the new Storage object
+
+        """
         if type(storage_to_copy) is str:
             storage_name = storage_to_copy
         else:
