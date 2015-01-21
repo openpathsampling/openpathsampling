@@ -86,7 +86,7 @@ class ObjectStore(object):
         if dimension_units is not None:
             self.dimension_units = dimension_units
         else:
-            self.dimension_units = {}
+            self.dimension_units = self.storage.dimension_units
 
         # First, apply standard decorator for loading and saving
         # this handles all the setting and getting of .idx and is
