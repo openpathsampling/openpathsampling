@@ -11,9 +11,8 @@ class ObjectStore(object):
     Base Class for storing complex objects in a netCDF4 file. It holds a reference to the store file.
     """
 
-    def __init__(self, storage, obj, named=False, json=False, identifier=None,
-                 dimension_units=None, enable_caching=True, load_lazy=False,
-                 load_partial=False):
+    def __init__(self, storage, content_class, is_named=False, json=True,
+                 dimension_units=None, enable_caching=True, load_partial=False):
         """
         Attributes
         ----------
@@ -22,13 +21,8 @@ class ObjectStore(object):
             the reference the Storage object where all data is stored
         content_class : class
             a reference to the class type to be stored using this Storage
-        idx_dimension : str
-            name of the dimension used for major numbering the stored object in the netCDF file.
-            This is usually the lowercase class name
-        cache : dict {int : object}
-            A dictionary pointing to the actual stored object by index. It is filled at saving or loading
-        named : bool
-            Set, if objects can also be loaded by a string identifier/name
+        is_named : bool
+            if `True` objects can also be loaded by a string identifier/name
         json : string
             if already computed a JSON Serialized string of the object
         all_names : dict
@@ -41,20 +35,22 @@ class ObjectStore(object):
             if True (default) this will add caching to this storage which keeps once loaded
             or saved objects in memory for faster later access
 
+        Notes
+        -----
+        The class that takes care of storing data in a file is called a Storage, so the netCDF subclassed Storage
+        is a storage. The classes that know how to load and save an object from the storage are called
+        stores, like ObjectStore, SampleStore, etc...
 
         """
         self.storage = storage
-        self.content_class = obj
-        self.idx_dimension = obj.__name__.lower()
-        self.db = obj.__name__.lower()
+        self.content_class = content_class
+        self.idx_dimension = content_class.__name__.lower()
+        self.db = content_class.__name__.lower()
         self.cache = dict()
-        self.named = named
+        self.is_named = is_named
         self.json = json
         self.simplifier = paths.storage.StorableObjectJSON(storage)
-        if identifier is not None:
-            self.identifier = self.idx_dimension + '_' + identifier
-        else:
-            self.identifier = None
+        self.identifier = self.db + '_name'
 
         if dimension_units is not None:
             self.dimension_units = dimension_units
@@ -119,13 +115,26 @@ class ObjectStore(object):
             self.load = types.MethodType(loadcache(_load), self)
 
     def __str__(self):
-        """
-        Make a nice output of the store
-        """
+        return repr(self)
 
-        return "Store '" + self.db + "'"
+    def __repr__(self):
+        return "%s(content_class=%s, variable_prefix=%s)" % (self.__class__.__name__, self.content_class, self.db)
+
 
     def idx(self, obj):
+        """
+        Return the index in this store for a given object
+
+        Parameters
+        ----------
+        obj : object
+            the object that can be stored in this store for which its index is to be returned
+
+        Returns
+        -------
+        int or None
+            The integer index of the given object or None if it is not stored yet
+        """
         if hasattr(obj, 'idx'):
             if self in obj.idx:
                 return obj.idx[self]
@@ -231,7 +240,7 @@ class ObjectStore(object):
         -----
         Can only be applied to named storages.
         """
-        if self.named:
+        if self.is_named:
             # if we need a cache we might find the index in there
             if needle in self.cache:
                 if type(self.cache[needle]) is int:
@@ -250,7 +259,7 @@ class ObjectStore(object):
             raise ValueError('Cannot search for name (str) in non-named objects')
 
     def update_name_cache(self):
-        if self.named:
+        if self.is_named:
             for idx, name in enumerate(self.variables[self.db + "_name"][:]):
                 self.cache[name] = idx
 
@@ -291,14 +300,14 @@ class ObjectStore(object):
         Needs to be implemented from the specific storage class.
         """
 
-        if self.named and hasattr(obj, 'name'):
-            self.storage.variables[self.db + '_name'][idx] = obj.name
+        if self.is_named and hasattr(obj, 'name'):
+            self.storage.variables[self.identifier][idx] = obj.name
 
         self.save_object(self.idx_dimension + '_json', idx, obj)
 
     def get_name(self, idx):
-        if self.named:
-            return self.storage.variables[self.db + '_name'][idx]
+        if self.is_named:
+            return self.storage.variables[self.identifier][idx]
         else:
             return None
 
@@ -370,7 +379,7 @@ class ObjectStore(object):
         """
         # define dimensions used for the specific object
         self.storage.createDimension(self.idx_dimension, 0)
-        if self.named:
+        if self.is_named:
             self.init_variable(self.db + "_name", 'str', description='A short descriptive name for convenience', chunksizes=tuple([10240]))
         if self.json:
             self.init_variable(self.db + "_json", 'str', description='A json serialized version of the object', chunksizes=tuple([10240]))
@@ -681,7 +690,7 @@ def loadcache(func):
 
         elif type(idx) is str:
             # we want to load by name and it was not in cache.
-            if self.named:
+            if self.is_named:
                 # since it is not found in the cache before. Refresh the cache
                 self.update_name_cache()
 
@@ -704,7 +713,7 @@ def loadcache(func):
             self.cache[obj.idx[self.storage]] = obj
 
             # finally store the name of a named object in cache
-            if self.named and hasattr(obj, 'name') and obj.name != '':
+            if self.is_named and hasattr(obj, 'name') and obj.name != '':
                 self.cache[obj.name] = obj
 
         return obj
@@ -718,7 +727,7 @@ def savecache(func):
 
         # store the ID in the cache
         self.cache[idx] = obj
-        if self.named and hasattr(obj, 'name') and obj.name != '':
+        if self.is_named and hasattr(obj, 'name') and obj.name != '':
             # and also the name, if it has one so we can load by
             # name afterwards from cache
             self.cache[obj.name] = obj
@@ -738,7 +747,7 @@ def loadidx(func):
 
         if type(idx) is str:
             # we want to load by name and it was not in cache
-            if self.named:
+            if self.is_named:
                 n_idx = self.load_by_name(idx)
             else:
                 # load by name only in named storages
@@ -757,7 +766,7 @@ def loadidx(func):
 
         obj.idx[self.storage] = n_idx
 
-        if self.named and not hasattr(obj, 'name'):
+        if self.is_named and not hasattr(obj, 'name'):
             # get the name of the object
             setattr(obj, 'name', self.get_name(idx))
 

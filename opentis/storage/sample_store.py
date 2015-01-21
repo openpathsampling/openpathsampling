@@ -3,7 +3,7 @@ from opentis.sample import SampleSet, Sample
 
 class SampleStore(ObjectStore):
     def __init__(self, storage):
-        super(SampleStore, self).__init__(storage, Sample, load_lazy=False, load_partial=True)
+        super(SampleStore, self).__init__(storage, Sample, json=False, load_partial=True)
 
         self.set_variable_partial_loading('details', self.update_details)
 
@@ -128,7 +128,7 @@ class SampleStore(ObjectStore):
 class SampleSetStore(ObjectStore):
 
     def __init__(self, storage):
-        super(SampleSetStore, self).__init__(storage, SampleSet, load_lazy=False)
+        super(SampleSetStore, self).__init__(storage, SampleSet, json=False)
 
     def save(self, sampleset, idx=None):
         """

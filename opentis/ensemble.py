@@ -46,10 +46,6 @@ class Ensemble(object):
             return True
         return str(self) == str(other)
 
-    @property
-    def identifier(self):
-        return str(self)
-    
     def __call__(self, trajectory, lazy=None):
         '''
         Returns `True` if the trajectory is part of the path ensemble.

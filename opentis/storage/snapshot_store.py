@@ -10,7 +10,7 @@ class SnapshotStore(ObjectStore):
     """
 
     def __init__(self, storage = None):
-        super(SnapshotStore, self).__init__(storage, Snapshot, load_lazy=False)
+        super(SnapshotStore, self).__init__(storage, Snapshot, json=False)
 
     def load(self, idx=None):
         '''
@@ -178,7 +178,7 @@ class MomentumStore(ObjectStore):
     """
 
     def __init__(self, storage = None):
-        super(MomentumStore, self).__init__(storage, Momentum, load_lazy=False, load_partial=True)
+        super(MomentumStore, self).__init__(storage, Momentum, json=False, load_partial=True)
 
         # attach delayed loaders
         self.set_variable_partial_loading('velocities', self.update_velocities)
@@ -355,12 +355,12 @@ class MomentumStore(ObjectStore):
     
 class ConfigurationStore(ObjectStore):
     def __init__(self, storage = None):
-        super(ConfigurationStore, self).__init__(storage, Configuration, load_lazy=False, load_partial=True)
+        super(ConfigurationStore, self).__init__(storage, Configuration, json=False, load_partial=True)
 
         # attach delayed loaders
-#        self.set_variable_partial_loading('coordinates', self.update_coordinates)
-#        self.set_variable_partial_loading('box_vectors', self.update_box_vectors)
-#        self.set_variable_partial_loading('potential_energy', self.update_potential_energy)
+        self.set_variable_partial_loading('coordinates', self.update_coordinates)
+        self.set_variable_partial_loading('box_vectors', self.update_box_vectors)
+        self.set_variable_partial_loading('potential_energy', self.update_potential_energy)
 
     def save(self, configuration, idx = None):
         """

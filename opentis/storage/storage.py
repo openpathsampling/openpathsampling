@@ -50,16 +50,16 @@ class Storage(netcdf.Dataset):
 
         # normal objects
 
-        self.pathmover = paths.storage.ObjectStore(store, paths.PathMover, named=True, json=True, identifier='json').register()
-        self.movedetails = paths.storage.ObjectStore(store, paths.MoveDetails, named=False, json=True, identifier='json').register()
-        self.shootingpoint = paths.storage.ObjectStore(store, paths.ShootingPoint, named=False, json=True).register()
-        self.shootingpointselector = paths.storage.ObjectStore(store, paths.ShootingPointSelector, named=False, json=True, identifier='json').register()
-        self.engine = paths.storage.ObjectStore(store, paths.DynamicsEngine, named=True, json=True, identifier='json').register()
+        self.pathmover = paths.storage.ObjectStore(store, paths.PathMover, is_named=True).register()
+        self.movedetails = paths.storage.ObjectStore(store, paths.MoveDetails, is_named=False).register()
+        self.shootingpoint = paths.storage.ObjectStore(store, paths.ShootingPoint, is_named=False).register()
+        self.shootingpointselector = paths.storage.ObjectStore(store, paths.ShootingPointSelector, is_named=False).register()
+        self.engine = paths.storage.ObjectStore(store, paths.DynamicsEngine, is_named=True).register()
 
         # nestable objects
 
-        self.volume = paths.storage.ObjectStore(store, paths.Volume, named=True, json=True, identifier='json').register(nestable=True)
-        self.ensemble = paths.storage.ObjectStore(store, paths.Ensemble, named=True, json=True, identifier='json').register(nestable=True)
+        self.volume = paths.storage.ObjectStore(store, paths.Volume, is_named=True).register(nestable=True)
+        self.ensemble = paths.storage.ObjectStore(store, paths.Ensemble, is_named=True).register(nestable=True)
 
     def _setup_class(self):
         self._storages = {}

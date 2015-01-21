@@ -150,15 +150,7 @@ class PathMover(object):
     """
     engine = None
 
-    @property
-    def identifier(self):
-        if hasattr(self, 'json'):
-            return self.json
-        else:
-            return None
-
     def __init__(self, replicas='all', ensembles=None):
-        
         self.name = self.__class__.__name__
 
         if type(replicas) is int:

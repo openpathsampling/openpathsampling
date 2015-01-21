@@ -275,10 +275,6 @@ class OrderParameter(FunctionalStorableObjectDict):
             raise ValueError(name + ' does not exist as an orderparameter')
             return None
 
-    @property
-    def identifier(self):
-        return self.name
-
     def __eq__(self, other):
         if self is other:
             return True
