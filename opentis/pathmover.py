@@ -10,7 +10,7 @@ import random
 from shooting import ShootingPoint
 from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble
 from ensemble import FullEnsemble, Ensemble
-from sample import Sample
+from sample import Sample, SampleSet
 from wrapper import storable
 
 import logging
@@ -73,8 +73,8 @@ class MoveDetails(object):
     trial_is_in_ensemble : bool
         whether the attempted move created a trajectory in the right
         ensemble
-    mover : PathMover
-        the PathMover which generated this trial
+    mover_path : list of PathMover
+        the sequence of calls to the PathMover which generated this trial
 
     Specific move types may have add several other attributes for each
     MoveDetails object. For example, shooting moves will also include
@@ -100,7 +100,7 @@ class MoveDetails(object):
         self.result=None
         self.acceptance_probability=None
         self.accepted=None
-        self.mover=None
+        self.mover_path=[]
         for key, value in kwargs:
             setattr(self, key, value)
 
@@ -141,7 +141,7 @@ class PathMover(object):
     the "waste recycling" approach recently re-discovered by Frenkel (see
     also work by Athenes, Jourdain, and old work by Kalos) might be
     interesting. I think the best way to do this is to keep the acceptance
-    in the PathMover, but have it be a ~~~DWHS
+    in the PathMover, but have it be a separate class ~~~DWHS
 
 
     Attributes
@@ -195,6 +195,8 @@ class PathMover(object):
         for rep in reps:
             rep_samples.extend(globalstate.all_from_replica(rep))
 
+        #logger.debug("ensembles = " + str([ensembles]))
+        #logger.debug("self.ensembles = " + str(self.ensembles))
         if ensembles is None:
             if self.ensembles is None:
                 ensembles = 'all'
@@ -208,6 +210,9 @@ class PathMover(object):
             if type(ensembles) is not list:
                 ensembles = [ensembles]
             for ens in ensembles:
+                #try:
+                    #ens_samples.extend(globalstate.all_from_ensemble(ens[0]))
+                #except TypeError:
                 ens_samples.extend(globalstate.all_from_ensemble(ens))
             legal_samples = list(set(rep_samples) & set(ens_samples))
 
@@ -300,7 +305,7 @@ class ShootMover(PathMover):
         details = MoveDetails()
         details.accepted = False
         details.inputs = [trajectory]
-        details.mover = self
+        details.mover_path.append(self)
         setattr(details, 'start', trajectory)
         setattr(details, 'start_point', self.selector.pick(details.start) )
         #setattr(details, 'trial', None)
@@ -329,7 +334,7 @@ class ShootMover(PathMover):
                       ensemble=dynamics_ensemble,
                       details=details)
 
-        return path
+        return [path]
     
     
 class ForwardShootMover(ShootMover):    
@@ -398,13 +403,12 @@ class BackwardShootMover(ShootMover):
 
 class MixedMover(PathMover):
     '''
-    Defines a mover that picks a over from a set of movers with specific
-    weights.
-    
-    Notes
-    -----
-    Channel functions from self.mover to self. Does NOT work yet. Think
-    about a good way to implement this...
+    Chooses a random mover from its movers list, and runs that move. Returns
+    the number of samples the submove return.
+
+    For example, this would be used to select a specific replica exchange
+    such that each replica exchange is its own move, and which swap is
+    selected at random.
     '''
     def __init__(self, movers, ensembles=None, replicas='all', weights = None):
         super(MixedMover, self).__init__(ensembles=ensembles, replicas=replicas)
@@ -415,6 +419,9 @@ class MixedMover(PathMover):
             self.weights = [1.0] * len(movers)
         else:
             self.weights = weights
+
+        initialization_logging(init_log, self,
+                               entries=['movers', 'weights'])
     
     def move(self, trajectory):
         rand = np.random.random() * sum(self.weights)
@@ -424,17 +431,117 @@ class MixedMover(PathMover):
             idx += 1
             prob += self.weights[idx]
 
+        logger.info("MixedMover selecting mover index {idx} ({mtype})".format(
+                idx=idx, mtype=self.movers[idx].__class__.__name__))
+
         mover = self.movers[idx]
 
-        sample = mover.move(trajectory)
-        setattr(sample.details, 'mover_idx', idx)
+        samples = mover.move(trajectory)
+        for sample in samples:
+            sample.details.mover_path.append(self)
+            #setattr(sample.details, 'mover_idx', idx)
 
-        # why do we make a new sample here?
-        path = Sample(trajectory=sample.trajectory,
-                      ensemble=sample.ensemble, 
-                      details=sample.details,
-                     replica=sample.replica)
-        return path
+        return samples
+
+class SequentialMover(PathMover):
+    '''
+    Performs each of the moves in its movers list. Returns all samples
+    generated, in the order of the mover list.
+
+    For example, this would be used to create a move that does a sequence of
+    replica exchanges in a given order, regardless of whether the moves
+    succeed or fail.
+    '''
+    def __init__(self, movers, ensembles=None, replicas='all'):
+        super(SequentialMover, self).__init__(ensembles=ensembles,
+                                              replicas=replicas)
+        self.movers = movers
+        initialization_logging(init_log, self, ['movers'])
+
+    def move(self, globalstate):
+        logger.debug("Starting sequential move")
+        subglobal = SampleSet(self.legal_sample_set(globalstate))
+        mysamples = []
+        for mover in self.movers:
+            logger.debug("Starting sequential move step "+str(mover))
+            newsamples = mover.move(subglobal)
+            subglobal = subglobal.apply_samples(newsamples)
+            mysamples.extend(newsamples)
+        for sample in mysamples:
+            sample.details.mover_path.append(self)
+        return mysamples
+
+class PartialAcceptanceSequentialMover(SequentialMover):
+    '''
+    Performs eachmove in its movers list until complete of until one is not
+    accepted. If any move is not accepted, further moves are not attempted,
+    but the previous accepted samples remain accepted.
+
+    For example, this would be used to create a bootstrap promotion move,
+    which starts with a shooting move, followed by an EnsembleHop/Replica
+    promotion ConditionalSequentialMover. Even if the EnsembleHop fails, the
+    accepted shooting move should be accepted.
+    '''
+    def move(self, globalstate):
+        subglobal = SampleSet(self.legal_sample_set(globalstate))
+        mysamples = []
+        last_accepted = True
+        for mover in self.movers:
+            # NOTE: right now, this doesn't quite work correctly if the
+            # submovers are also multimovers (e.g., SequentialMovers). We
+            # need a way to see whether the move below considered itself
+            # accepted; that could mean that submoves of the submove were
+            # rejected but the whole submove was accepted, as with
+            # SequentialMovers
+            newsamples = mover.move(subglobal)
+            subglobal = subglobal.apply_samples(newsamples)
+            # all samples made by the submove; pick the ones up to the first
+            # rejection
+            mysamples.extend(newsamples)
+            for sample in newsamples:
+                if sample.details.accepted == False:
+                    last_accepted = False
+                    break
+            if last_accepted == False:
+                break
+        for sample in mysamples:
+            sample.details.mover_path.append(self)
+        return mysamples
+
+
+class ConditionalSequentialMover(PartialAcceptanceSequentialMover):
+    '''
+    Performs each move in its movers list until complete or until one is not
+    accepted. If any move in not accepted, all previous samples are updated
+    to have set their acceptance to False.
+
+    For example, this would be used to create a minus move, which consists
+    of first a replica exchange and then a shooting (extension) move. If the
+    replica exchange fails, the move is aborted before doing the dynamics.
+
+    ConditionalSequentialMover only works if there is a *single* active
+    sample per replica.
+    '''
+    def move(self, globalstate):
+        mysamples = super(ConditionalSequentialMover, self).move(globalstate)
+        # if any sample was rejected, then everything is rejected. Note that
+        # technically, there's a faster way to do this
+        # (mysample.samples[-1].details.accepted, instead of looping) but
+        # that shouldn't matter for speed, and it may be safer not to assume
+        # the order of the list.
+        all_accepted = True
+        for sample in mysamples:
+            if sample.details.accepted == False:
+                all_accepted = False
+                break
+        if all_accepted == False:
+            for sample in mysamples:
+                sample.details.accepted = False
+                sample.trajectory = globalstate[sample.replica].trajectory
+                sample.ensemble = globalstate[sample.replica].ensemble
+        return mysamples
+
+
 
 class ReplicaIDChange(PathMover):
     def __init__(self, new_replicas=None, old_samples=None, 
@@ -465,6 +572,9 @@ class ReplicaIDChange(PathMover):
 
 class EnsembleHopMover(PathMover):
     def __init__(self, bias=None, ensembles=None, replicas='all'):
+        # TODO: maybe allow a version of this with a single ensemble and ANY
+        # ensemble can hop to that? messy to code; maybe same idea under
+        # another name
         ensembles = make_list_of_pairs(ensembles)
         super(EnsembleHopMover, self).__init__(ensembles=ensembles, 
                                                replicas=replicas)
@@ -477,18 +587,37 @@ class EnsembleHopMover(PathMover):
 
     def move(self, globalstate):
         # ensemble hops are in the order [from, to]
-        ens_pair = random.choice(self.ensembles)
+        initial_ensembles = [pair[0] for pair in self.ensembles]
+        logger.debug("initial_ensembles: " + str(initial_ensembles))
+        legal_ensembles = [
+            s.ensemble 
+            for s in self.legal_sample_set(globalstate, initial_ensembles)
+        ]
+        logger.debug("globalstate ensembles" + 
+                     str([s.ensemble for s in globalstate]))
+        logger.debug("self.ensembles: " + str(self.ensembles))
+        logger.debug("Legal Ensembles: " + str(legal_ensembles))
+        legal_pairs = [pair for pair in self.ensembles 
+                       if pair[0] in legal_ensembles]
+        logger.debug("Legal pairs: " + str(legal_pairs))
+        ens_pair = random.choice(legal_pairs)
         ens_from = ens_pair[0]
         ens_to = ens_pair[1]
 
+        logger.info("Attempting ensemble hop from {e1} to {e2}".format(
+            e1=repr(ens_from), e2=repr(ens_to)))
+
         rep_sample = self.select_sample(globalstate, ens_from)
+        logger.debug("Selected sample: " + repr(rep_sample))
         replica = rep_sample.replica
         trajectory = rep_sample.trajectory
+        logger.debug("  selected replica: " + str(replica))
+        logger.debug("  initial ensemble: " + repr(rep_sample.ensemble))
 
         details = MoveDetails()
         details.accepted = False
         details.inputs = [trajectory]
-        details.mover = self
+        details.mover_path.append(self)
         details.result = trajectory
         setattr(details, 'initial_ensemble', ens_from)
         setattr(details, 'trial_ensemble', ens_to)
@@ -503,7 +632,7 @@ class EnsembleHopMover(PathMover):
                       details=details,
                       replica=replica
                      )
-        return path
+        return [path]
 
 
 
@@ -515,28 +644,36 @@ class MinusMove(PathMover):
     def move(self, allpaths, state):
         pass
 
-class PathReversal(PathMover):
-    def move(self, trajectory, ensemble):
+class PathReversalMover(PathMover):
+    def move(self, globalstate):
+        rep_sample = self.select_sample(globalstate, self.ensembles)
+        trajectory = rep_sample.trajectory
+        ensemble = rep_sample.ensemble
+        replica = rep_sample.replica
+
         details = MoveDetails()
-        reversed_trajectory = trajectory.reversed()
         details.inputs = [trajectory]
-        details.mover = self
+        details.mover_path.append(self)
+
+        reversed_trajectory = trajectory.reversed
         details.trial = reversed_trajectory
-        details.accepted = True
-        details.acceptance_probability = 1.0
-        details.result = reversed_trajectory
+
+        details.accepted = ensemble(reversed_trajectory)
+        if details.accepted == True:
+            details.acceptance_probability = 1.0
+            details.result = reversed_trajectory
+        else:
+            details.acceptance_probability = 0.0
+            details.result = trajectory
 
         sample = Sample(
+            replica=replica,
             trajectory=details.result,
-            mover=self,
             ensemble=ensemble,
             details=details
         )
+        return [sample]
 
-
-#############################################################
-# The following move should be moved to RETIS and just uses moves. It is not a move itself
-#############################################################
 
 class ReplicaExchange(PathMover):
     # TODO: Might put the target ensembles into the Mover instance, which means we need lots of mover instances for all ensemble switches
@@ -548,8 +685,8 @@ class ReplicaExchange(PathMover):
         details2.inputs = [trajectory1, trajectory2]
         setattr(details1, 'ensembles', [ensemble1, ensemble2])
         setattr(details2, 'ensembles', [ensemble1, ensemble2])
-        details1.mover = self
-        details2.mover = self
+        details1.mover_path.append(self)
+        details2.mover_path.append(self)
         details2.trial = trajectory1
         details1.trial = trajectory2
         if accepted:

@@ -259,7 +259,7 @@ class OrderParameter(FunctionalStorableObjectDict):
             raise ValueError('name must be a non-empty string')
 
         if name in OrderParameter._instances:
-            raise ValueError(name + ' already exists as an orderparameter. To load an existing one use get_existin(\'' + name + '\')')
+            raise ValueError(name + ' already exists as an orderparameter.  To load an existing one use OrderParameter.get_existing(\'' + name + '\')')
 
         OrderParameter._instances[name] = self
         super(OrderParameter, self).__init__(
@@ -269,7 +269,8 @@ class OrderParameter(FunctionalStorableObjectDict):
             key_class=Configuration
         )
 
-    def get_existing(self, name):
+    @staticmethod
+    def get_existing(name):
         if name in OrderParameter._instances:
             return OrderParameter._instances[name]
         else:

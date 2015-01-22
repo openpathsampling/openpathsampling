@@ -18,7 +18,7 @@ from orderparameter import OP_Function, OP_MD_Function, OP_Featurizer, \
 
 from pathmover import (
     BackwardShootMover, MinusMove, MixedMover, MoveDetails,
-    ForwardShootMover, PathMover, PathMoverFactory, PathReversal,
+    ForwardShootMover, PathMover, PathMoverFactory, PathReversalMover,
     ReplicaExchange#, BootstrapPromotionMove
 )
 
