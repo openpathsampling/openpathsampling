@@ -73,9 +73,9 @@ class BootstrapPromotionMove(PathMover):
                                   ensembles=[ensemble_from, ensemble_to],
                                   replicas=top_rep)
 
-        shoot_samp = shooter.move(init_sample_set)
+        shoot_samp = shooter.move(init_sample_set)[0]
         init_sample_set = init_sample_set.apply_samples(shoot_samp)
-        hop_samp = hopper.move(init_sample_set)
+        hop_samp = hopper.move(init_sample_set)[0]
         init_sample_set = init_sample_set.apply_samples(hop_samp)
 
         # bring all the metadata from the submoves into our details
@@ -113,7 +113,7 @@ class BootstrapPromotionMove(PathMover):
         logger.debug(" Shooting part: accepted = " + str(shoot_samp.details.accepted))
         logger.debug("  Hopping part: accepted = " + str(hop_samp.details.accepted))
 
-        return sample
+        return [sample]
 
 
 class Bootstrapping(Calculation):
@@ -151,6 +151,7 @@ class Bootstrapping(Calculation):
         init_log.info("Parameter: %s : %s", 'trajectory', str(trajectory))
 
     def run(self, nsteps):
+        # TODO: turn off init_log during run loop
         bootstrapmove = BootstrapPromotionMove(bias=None,
                                                shooters=self.movers,
                                                ensembles=self.ensembles,
@@ -168,11 +169,11 @@ class Bootstrapping(Calculation):
                         + "  failsteps = " + str(failsteps)
                        )
             old_rep = max(self.globalstate.replica_list())
-            sample = bootstrapmove.move(self.globalstate)
-            self.globalstate = self.globalstate.apply_samples(sample, step=step_num)
+            samples = bootstrapmove.move(self.globalstate)
+            self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
             #print self.globalstate.samples[0]
 
-            if sample.replica == old_rep:
+            if samples[0].replica == old_rep:
                 failsteps += 1
             else:
                 failsteps = 0
@@ -186,4 +187,34 @@ class Bootstrapping(Calculation):
 
         for sample in self.globalstate:
             assert sample.ensemble(sample.trajectory) == True, "WTF?"
+
+class PathSampling(Calculation):
+    """
+    General path sampling code. Takes a single root_mover and generates
+    samples from that, keeping one per replica after each move. 
+
+    TODO
+    ----
+        Add a nice syntax for the root_mover, at least allowing us to
+        implicitly combine simultaneous multimovers with mixed movers.
+    """
+
+    calc_name = "PathSampling"
+    def __init__(self, storage, engine=None, root_mover=None,
+                 globalstate=None):
+        super(PathSampling, self).__init__(storage, engine)
+        self.root_mover = root_mover
+        self.globalstate = globalstate
+        initialization_logging(init_log, self, 
+                               ['root_mover', 'globalstate'])
+
+
+    def run(self, nsteps):
+        for step in range(nsteps):
+            samples = self.root_mover.move(self.globalstate)
+            self.globalstate = self.globalstate.apply_samples(samples,
+                                                              step=step)
+            if self.storage is not None:
+                self.globalstate.save_samples(self.storage)
+                self.globalstate.save(self.storage)
 

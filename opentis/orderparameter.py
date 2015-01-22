@@ -268,7 +268,8 @@ class OrderParameter(FunctionalStorableObjectDict):
             key_class=paths.Configuration
         )
 
-    def get_existing(self, name):
+    @staticmethod
+    def get_existing(name):
         if name in OrderParameter._instances:
             return OrderParameter._instances[name]
         else:
