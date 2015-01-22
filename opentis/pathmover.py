@@ -401,7 +401,7 @@ class BackwardShootMover(ShootMover):
         
         pass
 
-class MixedMover(PathMover):
+class RandomChoiceMover(PathMover):
     '''
     Chooses a random mover from its movers list, and runs that move. Returns
     the number of samples the submove return.
@@ -411,7 +411,7 @@ class MixedMover(PathMover):
     selected at random.
     '''
     def __init__(self, movers, ensembles=None, replicas='all', weights = None):
-        super(MixedMover, self).__init__(ensembles=ensembles, replicas=replicas)
+        super(RandomChoiceMover, self).__init__(ensembles=ensembles, replicas=replicas)
 
         self.movers = movers
 
@@ -431,7 +431,7 @@ class MixedMover(PathMover):
             idx += 1
             prob += self.weights[idx]
 
-        logger.info("MixedMover selecting mover index {idx} ({mtype})".format(
+        logger.info("RandomChoiceMover selecting mover index {idx} ({mtype})".format(
                 idx=idx, mtype=self.movers[idx].__class__.__name__))
 
         mover = self.movers[idx]
@@ -727,7 +727,7 @@ class PathMoverFactory(object):
         if type(selector_set) is not list:
             selector_set = [selector_set]*len(interface_set)
         mover_set = [
-            MixedMover([
+            RandomChoiceMover([
                 ForwardShootMover(sel, ensembles=[iface]), 
                 BackwardShootMover(sel, ensembles=[iface])
             ],

@@ -172,7 +172,7 @@ class testPathReversalMover(object):
         assert_equal(samp.details.accepted, True)
 
 
-class testMixedMover(object):
+class testRandomChoiceMover(object):
     def setup(self):
         pass
 
