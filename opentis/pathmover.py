@@ -636,13 +636,16 @@ class EnsembleHopMover(PathMover):
 
 
 
-#############################################################
-# The following moves still need to be implemented. Check what excactly they do
-#############################################################
+class MinusMove(ConditionalSequentialMover):
+    def __init__(self, minus_ensemble, innermost_ensembles, 
+                 ensembles=None, replicas='all'):
+        super(SequentialMover, self).__init__(ensembles=ensembles,
+                                              replicas=replicas)
+        #self.movers = movers
+        # TODO
+        initialization_logging(init_log, self, ['minus_ensemble',
+                                                'innermost_ensemble'])
 
-class MinusMove(PathMover):
-    def move(self, allpaths, state):
-        pass
 
 class PathReversalMover(PathMover):
     def move(self, globalstate):
