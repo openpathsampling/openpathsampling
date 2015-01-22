@@ -1111,6 +1111,14 @@ class OptionalEnsemble(AlteredEnsemble):
 
     def __str__(self):
         return "{"+self.orig_ens.__str__()+"} (OPTIONAL)"
+
+class SingleFrameEnsemble(AlteredEnsemble):
+    def __init__(self, ensemble):
+        self.orig_ens = ensemble
+        self.ensemble = ensemble & LengthEnsemble(1)
+
+    def __str__(self):
+        return "{"+self.orig_ens.__str__()+"} (SINGLE FRAME)"
     
 class EnsembleFactory():
     '''
