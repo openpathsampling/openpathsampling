@@ -8,6 +8,7 @@ from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \
     SequentialEnsemble
 
+
 from snapshot import Snapshot, Configuration, Momentum
 
 from trajectory import Trajectory
@@ -31,4 +32,5 @@ from openmm_engine import OpenMMEngine
 from visualize import PathTreeBuilder
 
 from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
-    EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic
+    EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic\
+#from volume import AndVolume, OrVolume, XorVolume, SubVolume

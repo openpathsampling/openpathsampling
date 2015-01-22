@@ -18,10 +18,13 @@ import os
 import opentis
 
 import sphinx_rtd_theme
+import sphinx_bootstrap_theme
+import alabaster
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
+
 #sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0,os.path.abspath('../opentis/'))
 sys.path.append(os.path.abspath('_themes'))
@@ -46,8 +49,20 @@ extensions = [
     'IPython.sphinxext.ipython_console_highlighting',
     'IPython.sphinxext.ipython_directive',
     'matplotlib.sphinxext.plot_directive',
-    'numpydoc'
+    'sphinxcontrib.napoleon'
 ]
+
+# Napoleon settings
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_include_private_with_doc = False
+napoleon_include_special_with_doc = False
+napoleon_use_admonition_for_examples = False
+napoleon_use_admonition_for_notes = True
+napoleon_use_admonition_for_references = False
+napoleon_use_ivar = False
+napoleon_use_param = True
+napoleon_use_rtype = True
 
 autosummary_generate = True
 autodoc_default_flags = ['members', 'inherited-members']
@@ -128,12 +143,25 @@ pygments_style = 'sphinx'
 # a list of builtin themes.
 
 html_theme = "sphinx_rtd_theme"
+html_theme_path = ['_themes']
+#html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+# Activate the theme.
+#html_theme = 'bootstrap'
+#html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 
 #html_theme = 'haiku'
 #html_theme_path = ['_themes']
 #html_theme = 'kr'
+
+#html_theme_path = [alabaster.get_path()]
+#extensions = ['alabaster']
+#html_theme = 'alabaster'
+#html_sidebars = {
+#    '**': [
+#        'about.html', 'navigation.html', 'searchbox.html', 'donate.html',
+#    ]
+#}
 
 
 # Theme options are theme-specific and customize the look and feel of a theme
