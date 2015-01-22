@@ -99,10 +99,16 @@ class SampleSet(object):
         return (item in self.samples)
 
     def all_from_ensemble(self, ensemble):
-        return self.ensemble_dict[ensemble]
+        try:
+            return self.ensemble_dict[ensemble]
+        except KeyError:
+            return []
 
     def all_from_replica(self, replica):
-        return self.replica_dict[replica]
+        try:
+            return self.replica_dict[replica]
+        except KeyError:
+            return []
 
     def append(self, sample):
         if sample in self.samples:
