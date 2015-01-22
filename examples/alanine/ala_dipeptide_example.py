@@ -9,6 +9,7 @@ TIS simulation on alanine dipeptide.
 # that more of what the user will need to do will be in the __main__ of this
 # script
 
+import logging.config
 import numpy as np
 import mdtraj as md
 import time
@@ -30,10 +31,13 @@ from opentis.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
 from opentis.calculation import Bootstrapping
 from opentis.pathmover import PathMover
 from opentis.shooting import UniformSelector
+from opentis.sample import Sample, SampleSet
 
 import simtk.unit as u
 
 if __name__=="__main__":
+    logging.config.fileConfig('../../opentis/logging.conf',
+                              disable_existing_loggers=False)
     options = {'temperature' : 300.0 * u.kelvin,
                'collision_rate' : 1.0 / u.picoseconds,
                'timestep' : 2.0 * u.femtoseconds,
@@ -178,9 +182,10 @@ the bootstrapping calculation, then we run it.
     bootstrap = Bootstrapping(storage=engine.storage,
                               engine=engine,
                               ensembles=interface_set,
-                              movers=mover_set)
+                              movers=mover_set,
+                              trajectory=segments[0]
+                             )
 
-    bootstrap.set_replicas([segments[0]])
     bootstrap.run(50)
 
     print """

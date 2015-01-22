@@ -1,49 +1,117 @@
-from globalstate import GlobalState
-from pathmover import PathMover, MoveDetails, ReplicaExchange
-from opentis.sample import Sample
+from pathmover import (PathMover, MoveDetails, ReplicaExchange,
+                       EnsembleHopMover)
+from sample import SampleSet, Sample
 
+import logging
+from ops_logging import initialization_logging
+logger = logging.getLogger(__name__)
+init_log = logging.getLogger('opentis.initialization')
 
 class Calculation(object):
 
     calc_name = "Calculation"
 
-    def __init__(self, storage, engine=None, ensembles=None, movers=None):
+    def __init__(self, storage, engine=None):
         self.storage = storage
         self.engine = engine
-        self.movers = movers
-        self.globalstate = GlobalState(ensembles)
-
-    # TODO: this should be a property
-    def set_replicas(self, replicas):
-        if type(replicas) is dict:
-            for ensemble, trajectory in dict.iteritems():
-                self.globalstate[ensemble] = trajectory
-        elif type(replicas) is list:
-            ensembles = self.globalstate.ensembles
-            for idx, trajectory in enumerate(replicas):
-                self.globalstate[ensembles[idx]] = trajectory
-
-    def run(self, nsteps):
-        print "Running an empty calculation? Try a subclass, maybe!"
-
-class BootstrapEnsembleChangeMove(PathMover):
-    def move(self, trajectory, ensemble):
-        details = MoveDetails()
-        details.inputs = [trajectory]
-        details.mover = self
-        details.final = trajectory
-        details.success = True
-        details.acceptance = 1.0
-        details.result = trajectory
-
-        sample = Sample(
-            replica=1,
-            trajectory=details.result,
-            ensemble=ensemble,
-            details=details
+        initialization_logging(
+            logger=init_log, obj=self,
+            entries=['storage', 'engine']
         )
 
+    def set_replicas(self, samples):
+        self.globalstate = SampleSet(samples)
+
+    def run(self, nsteps):
+        logger.warning("Running an empty calculation? Try a subclass, maybe!")
+
+
+class BootstrapPromotionMove(PathMover):
+    '''
+    Bootstrap promotion is the combination of an EnsembleHop (to the next
+    ensemble up) with incrementing the replica ID.
+    '''
+    def __init__(self, bias=None, shooters=None, 
+                 ensembles=None, replicas='all'):
+        super(BootstrapPromotionMove, self).__init__(ensembles=ensembles, 
+                                                     replicas=replicas)
+        self.shooters = shooters
+        self.bias = bias
+        initialization_logging(logger=init_log, obj=self,
+                               entries=['bias', 'shooters'])
+
+    def move(self, globalstate):
+        # the tricky part here is that, if the hop is allowed, we only want
+        # to report the sample in the new ensemble. The way we do this is by
+        # treating each bootstrap move as a combination of 3 moves: it
+        # always starts with a shooting move and a replica hop, and then, if
+        # the hop was successful, a replica ID change move
+
+        #print "Starting BootstrapPromotionMove"
+        
+        # We make extra variables here so that we can easily refactor. The
+        # speed cost the negligible, and it makes it easy to change things.
+        top_rep = max(globalstate.replica_list())
+        ensemble_from = self.ensembles[top_rep]
+        ensemble_to = self.ensembles[top_rep+1]
+        old_sample = globalstate[top_rep]
+
+        details = MoveDetails()
+        details_inputs = [old_sample.trajectory]
+        details_mover = self
+        details_replica = top_rep
+
+        init_sample_set = SampleSet([old_sample])
+
+        shooter = self.shooters[top_rep]
+        # TODO: should move this to normal initialization so we don't init
+        # it every time
+        hopper = EnsembleHopMover(bias=self.bias,
+                                  ensembles=[ensemble_from, ensemble_to],
+                                  replicas=top_rep)
+
+        shoot_samp = shooter.move(init_sample_set)
+        init_sample_set = init_sample_set.apply_samples(shoot_samp)
+        hop_samp = hopper.move(init_sample_set)
+        init_sample_set = init_sample_set.apply_samples(hop_samp)
+
+        # bring all the metadata from the submoves into our details
+        details.__dict__.update(shoot_samp.details.__dict__)
+        details.__dict__.update(hop_samp.details.__dict__)
+
+        # set the rest of the details to their correct values
+        details.inputs = details_inputs
+        details.mover = details_mover
+        details.replica = details_replica
+        details.trial = shoot_samp.details.trial # TODO: is it, though?
+        # what about hop trial when that happens? may be cleanest if we make
+        # this truly sequential
+
+        # the move will be accepted if the shooting move is accepted, no
+        # matter what
+        details.accepted = (shoot_samp.details.accepted or 
+                            hop_samp.details.accepted)
+
+        # result trajectory is whatever came out of hop_samp
+        details.result = hop_samp.details.result
+        #details.result_ensemble = hop_samp.details.result_ensemble
+
+        setattr(details, 'start_replica', details.replica)
+        if hop_samp.details.accepted == True:
+            setattr(details, 'result_replica', details.replica+1)
+        else:
+            setattr(details, 'result_replica', details.replica)
+        sample = Sample(replica=details.result_replica,
+                        ensemble=details.result_ensemble,
+                        trajectory=details.result,
+                        details=details)
+
+        logger.debug("BootstrapMover: accepted = " + str(details.accepted))
+        logger.debug(" Shooting part: accepted = " + str(shoot_samp.details.accepted))
+        logger.debug("  Hopping part: accepted = " + str(hop_samp.details.accepted))
+
         return sample
+
 
 class Bootstrapping(Calculation):
     """The ensembles for the Bootstrapping calculation must be one ensemble
@@ -51,55 +119,68 @@ class Bootstrapping(Calculation):
 
     calc_name = "Bootstrapping"
 
+    def __init__(self, storage, engine=None, movers=None, trajectory=None,
+                 ensembles=None):
+        super(Bootstrapping, self).__init__(storage, engine)
+        self.ensembles = ensembles
+
+        # this is stupid; must be a better way
+        init_details = MoveDetails()
+        init_details.accepted = True
+        init_details.acceptance_probability = 1.0
+        init_details.mover = PathMover()
+        init_details.mover.name = "Initialization (trajectory)"
+        init_details.inputs = [trajectory]
+        init_details.trial = trajectory
+        init_details.ensemble = self.ensembles[0]
+        sample = Sample(replica=0, trajectory=trajectory, 
+                        ensemble=self.ensembles[0], details=init_details)
+
+        self.globalstate = SampleSet([sample])
+        if self.storage is not None:
+            self.globalstate.save_samples(self.storage)
+        if movers is None:
+            pass # TODO: implement defaults: one per ensemble, uniform sel
+        else:
+            self.movers = movers
+        initialization_logging(init_log, self,
+                               ['movers', 'ensembles'])
+        init_log.info("Parameter: %s : %s", 'trajectory', str(trajectory))
 
     def run(self, nsteps):
-
-        swapmove = ReplicaExchange()
-        bootstrapmove = BootstrapEnsembleChangeMove()
+        bootstrapmove = BootstrapPromotionMove(bias=None,
+                                               shooters=self.movers,
+                                               ensembles=self.ensembles,
+                                               replicas='all'
+                                              )
 
         ens_num = 0
         failsteps = 0
+        step_num = 0
         # if we fail nsteps times in a row, kill the job
-        while ens_num < self.globalstate.size - 1 and failsteps < nsteps:
-#            print "Trying move in ensemble", ens_num
-            # Generate Samples
 
-            samples = [ self.movers[ens_idx].move(self.globalstate[ens_idx]) for ens_idx in range(ens_num, ens_num + 1) ]
+        while ens_num < len(self.ensembles) - 1 and failsteps < nsteps:
+            logger.info("Step: " + str(step_num) 
+                        + "   Ensemble: " + str(ens_num)
+                        + "  failsteps = " + str(failsteps)
+                       )
+            old_rep = max(self.globalstate.replica_list())
+            sample = bootstrapmove.move(self.globalstate)
+            self.globalstate = self.globalstate.apply_samples(sample, step=step_num)
+            #print self.globalstate.samples[0]
 
-            # stupid stuff to pass tests, already handled better in another
-            # branch
-            for s in samples:
-                s.replica = 1
-#            if ens_num > 1:
-#                ex_samples = swapmove.move(self.globalstate[ens_num - 1], self.globalstate[ens_num - 2], self.globalstate.ensembles[ens_num - 1], self.globalstate.ensembles[ens_num - 2])
-#                samples = samples + ex_samples
+            if sample.replica == old_rep:
+                failsteps += 1
+            else:
+                failsteps = 0
+                ens_num += 1
 
-            # Generate new globalstate using only the one sample
-            globalstate = self.globalstate.move(samples)
+            if self.storage is not None:
+                self.globalstate.save_samples(self.storage)
+                self.globalstate.save(self.storage)
+                # TODO NEXT: store self.globalstate itself
+            step_num += 1
 
-            # Now save all samples
-            self.globalstate.save_samples(self.storage)
+        for sample in self.globalstate:
+            assert sample.ensemble(sample.trajectory) == True, "WTF?"
 
-            # update to new globalstate
-            self.globalstate = globalstate
-
-            if ens_num < self.globalstate.size:
-                # We can try to switch to the next ensemble
-
-                # Check if the new trajectory (still in the old ensemble) would
-                # fir in the next ensemble
-                if self.globalstate.ensembles[ens_num + 1](self.globalstate[ens_num]):
-                    # Yes, so apply the BootStrapMove and generate a new sample in the next ensemble
-                    sample = bootstrapmove.move(self.globalstate[ens_num], self.globalstate.ensembles[ens_num + 1])
-                    globalstate = self.globalstate.move([sample])
-
-                    # Now save all samples
-                    self.globalstate.save_samples(self.storage)
-
-                    # update to new globalstate
-                    self.globalstate = globalstate
-
-                    failsteps = 0
-                    ens_num += 1
-
-            failsteps += 1
