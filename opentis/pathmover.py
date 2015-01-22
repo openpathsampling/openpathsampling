@@ -720,6 +720,16 @@ class ReplicaExchange(PathMover):
             )
         return [sample1, sample2]
 
+class OneWayShootingMover(MixedMover):
+    def __init__(self, sel, ensembles=None, replicas='all'):
+        movers = [
+            ForwardShootMover(sel, ensembles),
+            BackwardShootMover(sel, ensembles)
+        ]
+        super(OneWayShootingSet, self).__init__(
+            movers=movers, ensembles=ensembles, replicas=replicas
+        )
+
 
 class PathMoverFactory(object):
     @staticmethod
@@ -727,11 +737,7 @@ class PathMoverFactory(object):
         if type(selector_set) is not list:
             selector_set = [selector_set]*len(interface_set)
         mover_set = [
-            MixedMover([
-                ForwardShootMover(sel, ensembles=[iface]), 
-                BackwardShootMover(sel, ensembles=[iface])
-            ],
-            ensembles=[iface])
+            OneWayShootingMover(self, sel=sel, ensembles=[iface])
             for (sel, iface) in zip(selector_set, interface_set)
         ]
         return mover_set
