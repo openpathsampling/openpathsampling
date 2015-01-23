@@ -174,12 +174,26 @@ class testPathReversalMover(object):
 
 class testRandomChoiceMover(object):
     def setup(self):
-        pass
+        traj = Trajectory([-0.5, 0.7, 1.1])
+        op = CallIdentity()
+        volA = LambdaVolume(op, -100, 0.0)
+        volB = LambdaVolume(op, 1.0, 100)
+        volX = LambdaVolume(op, -100, 0.25)
+        self.tis = ef.TISEnsemble(volA, volB, volX)
+        self.tps = ef.A2BEnsemble(volA, volB)
+        self.len3 = LengthEnsemble(3)
+        self.init_samp = SampleSet([Sample(trajectory=traj,
+                                           ensemble=self.len3, 
+                                           replica=0, 
+                                           details=MoveDetails())])
+        self.hop_to_tis = EnsembleHopMover(ensembles=[[self.len3, self.tis]])
+        self.hop_to_tps = EnsembleHopMover(ensembles=[[self.len3, self.tps]])
+        self.mover = RandomChoiceMover([self.hop_to_tis, self.hop_to_tps])
 
-    def test_both_get_selected(self):
-        raise SkipTest
-
-    def test_only_one_gets_run(self):
+    def test_random_choice(self):
+        # test that both get selected, but that we always return only one
+        # sample
+        count = {}
         raise SkipTest
 
     def test_restricted_by_replica(self):
