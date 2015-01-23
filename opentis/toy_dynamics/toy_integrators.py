@@ -1,6 +1,8 @@
 import math
 import numpy as np
+from opentis.todict import restores_as_full_object
 
+@restores_as_full_object
 class LeapfrogVerletIntegrator(object):
     """Leapfrog Integrator. Not for actual use; but the momentum and
     position update functions are used in other integrators, so we inherit
@@ -23,7 +25,7 @@ class LeapfrogVerletIntegrator(object):
         self._momentum_update(sys, self.dt)
         self._position_update(sys, 0.5*self.dt)
 
-
+@restores_as_full_object
 class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
     """ Langevin integrator for simple toy models
 
@@ -40,16 +42,20 @@ class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
     """
 
     def __init__(self, dt, temperature, gamma):
-        self.beta = 1.0 / temperature
-        self.c1 = math.exp(-gamma*dt)
-        self.c2 = (1.0-self.c1)/gamma
-        self.c3 = math.sqrt((1.0 - self.c1*self.c1) / self.beta)
+        self._beta = 1.0 / temperature
+        self._c1 = math.exp(-gamma*dt)
+        self._c2 = (1.0-self._c1)/gamma
+        self._c3 = math.sqrt((1.0 - self._c1*self._c1) / self._beta)
+
         self.dt = dt
+        self.temperature = temperature
+        self.gamma = gamma
+
 
     def _OU_update(self, sys, mydt):
         R = np.random.normal(size=len(sys.velocities))
-        sys.velocities = (self.c1 * sys.velocities + 
-                          self.c3 * np.sqrt(sys.minv) * R)
+        sys.velocities = (self._c1 * sys.velocities +
+                          self._c3 * np.sqrt(sys.minv) * R)
 
     def step(self, sys, nsteps):
         self._momentum_update(sys, 0.5*self.dt)
