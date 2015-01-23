@@ -1,8 +1,6 @@
-from netcdf_storage import Storage
-from object_storage import ObjectStorage
-from ensemble_store import EnsembleStorage
-from snapshot_store import SnapshotStorage, ConfigurationStorage, MomentumStorage
-from trajectory_store import TrajectoryStorage
-from sample_store import SampleStorage, SampleSetStorage
-from engine_store import DynamicsEngineStorage
-from orderparameter_store import ObjectDictStorage
+from storage import Storage, StorableObjectJSON
+from object_storage import ObjectStore
+from snapshot_store import SnapshotStore, ConfigurationStore, MomentumStore
+from trajectory_store import TrajectoryStore
+from sample_store import SampleStore, SampleSetStore
+from orderparameter_store import ObjectDictStore
