@@ -6,7 +6,7 @@ from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble, \
     LeaveXEnsemble, LengthEnsemble, LoadedEnsemble, NegatedEnsemble, \
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \
-    SequentialEnsemble
+    SequentialEnsemble, AndEnsemble, OrEnsemble, XorEnsemble, SubEnsemble
 
 from snapshot import Snapshot, Configuration, Momentum
 
@@ -32,7 +32,8 @@ from openmm_engine import OpenMMEngine
 from visualize import PathTreeBuilder
 
 from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
-    EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic
+    EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, AndVolume, \
+    OrVolume, XorVolume, SubVolume
 
 from todict import ObjectJSON, restores_as_full_object, restores_as_stub_object, class_list
 
