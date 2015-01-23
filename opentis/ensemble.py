@@ -1176,11 +1176,10 @@ class EnsembleFactory():
             The constructed Ensemble
         '''        
         # TODO: this is actually only for flexible path length TPS now
-        length1 = LengthEnsemble(1)
         return SequentialEnsemble([
-            InXEnsemble(volume_a) & length1,
+            SingleFrameEnsemble(InXEnsemble(volume_a)),
             OutXEnsemble(volume_a | volume_b),
-            InXEnsemble(volume_b) & length1
+            SingleFrameEnsemble(InXEnsemble(volume_b))
         ])
 
 
@@ -1205,11 +1204,10 @@ class EnsembleFactory():
         ensemble : Ensemble
             The constructed Ensemble
         '''
-        length1 = LengthEnsemble(1)
         ens = SequentialEnsemble([
-            InXEnsemble(volume_a) & length1,
+            SingleFrameEnsemble(InXEnsemble(volume_a)),
             OutXEnsemble(volume_a | volume_b) & LeaveXEnsemble(volume_x),
-            InXEnsemble(volume_a | volume_b) & length1
+            SingleFrameEnsemble(InXEnsemble(volume_a | volume_b))
         ])
         return ens
         #return (LengthEnsemble(slice(3,None)) & InXEnsemble(volume_a, 0) & InXEnsemble(volume_b, -1)) & (LeaveXEnsemble(volume_x) & OutXEnsemble(volume_a | volume_b, slice(1,-1), lazy))
