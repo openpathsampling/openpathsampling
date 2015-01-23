@@ -726,7 +726,7 @@ class OneWayShootingMover(MixedMover):
             ForwardShootMover(sel, ensembles),
             BackwardShootMover(sel, ensembles)
         ]
-        super(OneWayShootingSet, self).__init__(
+        super(OneWayShootingMover, self).__init__(
             movers=movers, ensembles=ensembles, replicas=replicas
         )
 
@@ -737,7 +737,7 @@ class PathMoverFactory(object):
         if type(selector_set) is not list:
             selector_set = [selector_set]*len(interface_set)
         mover_set = [
-            OneWayShootingMover(self, sel=sel, ensembles=[iface])
+            OneWayShootingMover(sel=sel, ensembles=[iface])
             for (sel, iface) in zip(selector_set, interface_set)
         ]
         return mover_set
