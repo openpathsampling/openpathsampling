@@ -1152,6 +1152,20 @@ class SingleFrameEnsemble(AlteredEnsemble):
     '''
     Convenience ensemble to `and` a LengthEnsemble(1) with a given ensemble.
     Frequently used for SequentialEnsembles.
+
+    Attributes
+    ----------
+    ensemble : Ensemble
+        the ensemble which should be represented in the single frame
+
+    Note
+    ----
+    We allow the user to choose to be stupid: if, for example, the user
+    tries to make a SingleFrameEnsemble from an ensemble which requires
+    more than one frame to be satisfied (e.g., a SequentialEnsemble with
+    more than one subensemble), it can be created, but no path will ever
+    satisfy it. Since we can't stop all possible mistakes, we don't bother
+    here.
     '''
     def __init__(self, ensemble):
         self.orig_ens = ensemble
