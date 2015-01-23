@@ -721,6 +721,22 @@ class ReplicaExchange(PathMover):
         return [sample1, sample2]
 
 class OneWayShootingMover(MixedMover):
+    '''
+    OneWayShootingMover is a special case of a RandomChoiceMover which
+    combines gives a 50/50 chance of selecting either a ForwardShootMover or
+    a BackwardShootMover. Both submovers use the same shooting point
+    selector, and both apply to the same ensembles and replicas.
+
+    Attributes
+    ----------
+    sel : ShootingPointSelector
+        The shooting point selection scheme
+    ensembles : list of Ensemble or None
+        valid ensembles; None implies all ensembles are allowed (no
+        restriction)
+    replicas : list or 'all'
+        valid replicas
+    '''
     def __init__(self, sel, ensembles=None, replicas='all'):
         movers = [
             ForwardShootMover(sel, ensembles),
