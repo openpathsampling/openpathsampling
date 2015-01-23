@@ -51,6 +51,22 @@ class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
         self.temperature = temperature
         self.gamma = gamma
 
+    @property
+    def beta(self):
+        return self._beta
+
+    @property
+    def c1(self):
+        return self._c1
+
+    @property
+    def c2(self):
+        return self._c2
+
+    @property
+    def c3(self):
+        return self._c3
+
 
     def _OU_update(self, sys, mydt):
         R = np.random.normal(size=len(sys.velocities))
