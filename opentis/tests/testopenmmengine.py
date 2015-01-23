@@ -33,7 +33,8 @@ class testOpenMMEngine(object):
         self.engine = OpenMMEngine.auto(
             filename=data_filename("openmmengine_test.nc"), 
             template=data_filename("ala_small_traj.pdb"),
-            options=options
+            options=options,
+            mode='create'
         )
 
         context = self.engine.simulation.context

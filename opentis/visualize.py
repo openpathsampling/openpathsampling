@@ -341,7 +341,7 @@ class PathTreeBuilder(object):
                                 self.renderer.add(self.renderer.block(pos_x, pos_y, "black", ""))
 
                         self.renderer.add(
-                            self.renderer.label(0, t_count, 1, str(old_traj.idx[self.storage]) + 'b', align='end',color='black')
+                            self.renderer.label(0, t_count, 1, str(self.storage.idx(new_traj)) + 'b', align='end',color='black')
                         )
 
                         t_count += 1
@@ -360,7 +360,7 @@ class PathTreeBuilder(object):
                             self.renderer.v_connection(shift + new_index, p_y[old_conf], t_count, color)
                         )
                         self.renderer.add(
-                            self.renderer.label(shift, t_count, 1, str(new_traj.idx[self.storage]) + 'b', align='end',color=fontcolor)
+                            self.renderer.label(shift, t_count, 1, str(self.storage.idx(new_traj)) + 'b', align='end',color=fontcolor)
                         )
                     else:
                         color = "red"
@@ -371,7 +371,7 @@ class PathTreeBuilder(object):
                             self.renderer.v_connection(shift + new_index + 1, p_y[old_conf], t_count, color)
                         )
                         self.renderer.add(
-                            self.renderer.label(shift + len(new_traj) - 1, t_count, 1, str(new_traj.idx[self.storage]) + 'f', align='start',color=fontcolor)
+                            self.renderer.label(shift + len(new_traj) - 1, t_count, 1, str(self.storage.idx(new_traj)) + 'f', align='start',color=fontcolor)
                         )
 
                     if not accepted:

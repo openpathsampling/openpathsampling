@@ -1,6 +1,6 @@
 import random
-from opentis.ensemble import Ensemble
-from opentis.wrapper import storable
+
+import opentis as paths
 
 class SampleKeyError(Exception):
     def __init__(self, key, sample, sample_key):
@@ -10,7 +10,7 @@ class SampleKeyError(Exception):
         self.msg = (str(self.key) + " does not match " + str(self.sample_key)
                     + " from " + str(self.sample))
 
-@storable
+
 class SampleSet(object):
     '''
     SampleSet is essentially a list of samples, with a few conveniences.  It
@@ -48,14 +48,14 @@ class SampleSet(object):
         self.extend(samples)
 
     def __getitem__(self, key):
-        if isinstance(key, Ensemble):
+        if isinstance(key, paths.Ensemble):
             return random.choice(self.ensemble_dict[key])
         else:
             return random.choice(self.replica_dict[key])
 
     def __setitem__(self, key, value):
         # first, we check whether the key matches the sample: if no, KeyError
-        if isinstance(key, Ensemble):
+        if isinstance(key, paths.Ensemble):
             if key != value.ensemble:
                 raise SampleKeyError(key, value, value.ensemble)
         else:
@@ -205,7 +205,7 @@ class SampleSet(object):
                     "More than one instance of %r!" % samp
 
 
-@storable
+
 class Sample(object):
     """
     A Sample represents a given "draw" from its ensemble, and is the return
@@ -233,8 +233,6 @@ class Sample(object):
     """
 
     def __init__(self, replica=None, trajectory=None, ensemble=None, details=None, step=-1):
-        self.idx = dict()
-
         self.replica = replica
         self.ensemble = ensemble
         self.trajectory = trajectory
