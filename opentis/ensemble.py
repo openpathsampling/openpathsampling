@@ -1149,6 +1149,10 @@ class OptionalEnsemble(AlteredEnsemble):
 
 @restores_as_full_object
 class SingleFrameEnsemble(AlteredEnsemble):
+    '''
+    Convenience ensemble to `and` a LengthEnsemble(1) with a given ensemble.
+    Frequently used for SequentialEnsembles.
+    '''
     def __init__(self, ensemble):
         self.orig_ens = ensemble
         self.ensemble = ensemble & LengthEnsemble(1)
