@@ -194,7 +194,17 @@ class testRandomChoiceMover(object):
         # test that both get selected, but that we always return only one
         # sample
         count = {}
-        raise SkipTest
+        for t in range(100):
+            samples = self.mover.move(self.init_samp)
+            assert_equal(len(samples), 1)
+            try:
+                # Since self is the root mover, mover_path[-1] is self.
+                # That means that mover_path[-2] is the mover that this
+                # mover chose.
+                count[samples[0].details.mover_path[-2]] += 1
+            except KeyError:
+                count[samples[0].details.mover_path[-2]] = 1
+        assert_equal(len(count.keys()), 2)
 
     def test_restricted_by_replica(self):
         raise SkipTest
