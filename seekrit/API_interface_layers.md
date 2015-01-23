@@ -1,7 +1,7 @@
 # API Layers in OpenPathSampling
 
 
-## Simulation Layer API
+## Dynamics Engine API
 
 Many tools already exist to generate the trajectories that our path sampling
 methods are based on, and we see no reason to reimplement what has already
@@ -12,7 +12,7 @@ Because of these to points, we interact with the simulation layer, which
 generates trajectories, using a very simple API.
 
 To add support for a new dynamics engine, you must create a subclass of our
-`Simulator` object. This subclass must implement the following features:
+`DynamicsEngine` object. This subclass must implement the following features:
 
 * `@property` called `Subclass.snapshot`: getting this returns the current
   state of the simulation in the form of an `openpathsampling.Snapshot`
@@ -35,17 +35,16 @@ To add support for a new dynamics engine, you must create a subclass of our
 The most obvious way to combine OPS with another engine is if that engine
 has a convenient API such that you can, in one function call, obtain the
 next frame. This is what we mean by "direct control." For a very simple
-example of direct control, see our `ToySimulation` engine. The
-`OpenMMSimualtion` engine provides a much more powerful (and more
-complicated) interface with direct control.
+example of direct control, see our `ToyDynamicsEngine`. The `OpenMMEngine`
+provides a much more powerful (and more complicated)
+interface with direct control.
 
 However, in some situations you can't exercise direct control over the
 simulation: it's quite possible that your dynamics engine doesn't provide a
-Python API. But even then, it may be possible to use your dynamics engine
-in OPS: to see an example of how that is done, see our `GromacsSimulation`
-engine.
+Python API. Such situations are more complicated; examples will be developed
+in the next version of OPS.
 
-## Ensemble Layer API
+## Ensemble API
 
 Path sampling approaches are fundamentally based on sampling path ensembles.
 Before trying to create your own `Ensemble` subclass, we strongly recommend
@@ -68,11 +67,12 @@ following methods:
 * `__not__()`: return the set-logical "not" of the ensemble subclass. That
   is to say, all trajectories (except the zero-length trajectory) should
   either be in `ensemble_subclass(trajectory)` or
-  `ensemble_subclass.__not__(trajectory)`.
+  `ensemble_subclass.__not__(trajectory)`. (While not strictly necessary in
+  version 1.0, implementation of `__not__()` is highly recommended for
+  future compatibility.)
+
+## PathMover Layer API
 
 ## Calculation Layer API
 
-### PathMovers
-
-### GlobalMoves
 
