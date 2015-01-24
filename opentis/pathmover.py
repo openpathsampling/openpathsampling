@@ -717,7 +717,7 @@ class ReplicaExchange(PathMover):
             )
         return [sample1, sample2]
 
-class OneWayShootingMover(MixedMover):
+class OneWayShootingMover(RandomChoiceMover):
     '''
     OneWayShootingMover is a special case of a RandomChoiceMover which
     combines gives a 50/50 chance of selecting either a ForwardShootMover or
