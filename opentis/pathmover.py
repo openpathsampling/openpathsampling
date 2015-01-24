@@ -65,7 +65,7 @@ class MoveDetails(object):
         replica ID to which this trial move would apply
     inputs : list of Trajectry
         the Samples which were used as inputs to the move
-    trial : Tractory
+    trial : Trajectory
         the Trajectory 
     trial_is_in_ensemble : bool
         whether the attempted move created a trajectory in the right
@@ -82,8 +82,6 @@ class MoveDetails(object):
         explanation of reasons the path was rejected
 
     RENAME: inputs=>initial
-            final=>trial
-            success=>accepted
             accepted=>trial_in_ensemble (probably only in shooting)
 
     TODO:
@@ -113,7 +111,8 @@ class MoveDetails(object):
 @restores_as_stub_object
 class PathMover(object):
     """
-    A PathMover is the description of how to generate a new path from an old one.
+    A PathMover is the description of how to generate a new path from an old
+    one.
     
     Notes
     -----
@@ -391,7 +390,7 @@ class BackwardShootMover(ShootMover):
         pass
 
 @restores_as_stub_object
-class MixedMover(PathMover):
+class RandomChoiceMover(PathMover):
     '''
     Chooses a random mover from its movers list, and runs that move. Returns
     the number of samples the submove return.
@@ -399,9 +398,16 @@ class MixedMover(PathMover):
     For example, this would be used to select a specific replica exchange
     such that each replica exchange is its own move, and which swap is
     selected at random.
+
+    Attributes
+    ----------
+    movers : list of PathMover
+        the PathMovers to choose from
+    weights : list of floats
+        the relative weight of each PathMover (does not need to be normalized)
     '''
     def __init__(self, movers, ensembles=None, replicas='all', weights = None):
-        super(MixedMover, self).__init__(ensembles=ensembles, replicas=replicas)
+        super(RandomChoiceMover, self).__init__(ensembles=ensembles, replicas=replicas)
 
         self.movers = movers
 
@@ -421,7 +427,7 @@ class MixedMover(PathMover):
             idx += 1
             prob += self.weights[idx]
 
-        logger.info("MixedMover selecting mover index {idx} ({mtype})".format(
+        logger.info("RandomChoiceMover selecting mover index {idx} ({mtype})".format(
                 idx=idx, mtype=self.movers[idx].__class__.__name__))
 
         mover = self.movers[idx]
@@ -718,7 +724,7 @@ class PathMoverFactory(object):
         if type(selector_set) is not list:
             selector_set = [selector_set]*len(interface_set)
         mover_set = [
-            MixedMover([
+            RandomChoiceMover([
                 ForwardShootMover(sel, ensembles=[iface]), 
                 BackwardShootMover(sel, ensembles=[iface])
             ],
