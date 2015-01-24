@@ -8,6 +8,7 @@ from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \
     SequentialEnsemble, AndEnsemble, OrEnsemble, XorEnsemble, SubEnsemble
 
+
 from snapshot import Snapshot, Configuration, Momentum
 
 from trajectory import Trajectory

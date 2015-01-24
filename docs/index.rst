@@ -1,22 +1,43 @@
-.. OpenTIS documentation master file, created by
-   sphinx-quickstart on Tue Sep  9 12:08:24 2014.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+OpenPathSampling
+================
 
-Welcome to OpenTIS's documentation!
-===================================
+A toolkit to run PathSampling Algorithms in python with OpenMM
 
-Contents:
+--------------------------------------------------------------------------------
+
+Documentation
+-------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   api
+   getting_started
+   examples/index
+   whatsnew
+   faq
+   Discussion Forums <http://discourse.openpathsampling.org>
 
-Indices and tables
-==================
+API Reference
+-------------
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. toctree::
+   :maxdepth: 1
 
+   ensemble
+   volume
+
+
+Developing
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   netcdf_format
+
+--------------------------------------------------------------------------------
+
+
+License
+-------
+OpenPathSampling is licensed under ???
