@@ -681,7 +681,15 @@ class PathReversalMover(PathMover):
 class ReplicaExchange(PathMover):
     # TODO: Might put the target ensembles into the Mover instance, which means we need lots of mover instances for all ensemble switches
     def move(self, trajectory1, trajectory2, ensemble1, ensemble2):
-        accepted = True # Change to actual check for swapping
+        from1to2 = ensemble2(trajectory1)
+        logger.debug("trajectory " + trajectory1 +
+                     " into ensemble " + repr(ensemble2) +
+                     " : " + from1to2)
+        from2to1 = ensemble1(trajectory2)
+        logger.debug("trajectory " + trajectory2 +
+                     " into ensemble " + repr(ensemble1) +
+                     " : " + from2to1)
+        accepted = from1to2 and from2to1
         details1 = MoveDetails()
         details2 = MoveDetails()
         details1.inputs = [trajectory1, trajectory2]
