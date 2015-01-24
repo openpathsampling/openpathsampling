@@ -2,10 +2,10 @@
 #| CLASS Order Parameter
 ###############################################################
 
-from msmbuilder.metrics import RMSD
-from trajectory import Trajectory
-from snapshot import Configuration, Snapshot
-from wrapper import storable
+import mdtraj as md
+import opentis as paths
+from opentis.todict import restores_as_stub_object
+
 class ObjectDict(dict):
     """
     A cache that is attached to Configuration indices store in the Configuration storage
@@ -76,7 +76,7 @@ class ObjectDict(dict):
         """
         return [obj for obj in objs if obj not in self]
 
-@storable
+
 class StorableObjectDict(ObjectDict):
     """
     A cache that is attached to Configuration indices store in the Configuration storage
@@ -228,7 +228,7 @@ class FunctionalStorableObjectDict(StorableObjectDict):
 
         return fnc
 
-
+@restores_as_stub_object
 class OrderParameter(FunctionalStorableObjectDict):
     """
     Initializes an OrderParameter object that is essentially a function that maps a frame (Configuration) within a trajectory (Trajectory) to a number.
@@ -257,27 +257,24 @@ class OrderParameter(FunctionalStorableObjectDict):
         if type(name) is str and len(name) == 0:
             raise ValueError('name must be a non-empty string')
 
-        if name in OrderParameter._instances:
-            raise ValueError(name + ' already exists as an orderparameter. To load an existing one use get_existin(\'' + name + '\')')
+#        if name in OrderParameter._instances:
+#            raise ValueError(name + ' already exists as an orderparameter. To load an existing one use get_existing(\'' + name + '\')')
 
         OrderParameter._instances[name] = self
         super(OrderParameter, self).__init__(
             name=name,
             fnc=None,
             dimensions=dimensions,
-            key_class=Configuration
+            key_class=paths.Configuration
         )
 
-    def get_existing(self, name):
+    @staticmethod
+    def get_existing(name):
         if name in OrderParameter._instances:
             return OrderParameter._instances[name]
         else:
             raise ValueError(name + ' does not exist as an orderparameter')
             return None
-
-    @property
-    def identifier(self):
-        return self.name
 
     def __eq__(self, other):
         if self is other:
@@ -291,18 +288,19 @@ class OrderParameter(FunctionalStorableObjectDict):
         return False
 
     def __call__(self, items):
-        if isinstance(items, Snapshot):
+        if isinstance(items,  paths.Snapshot):
             return self._update(items.configuration)
-        elif isinstance(items, Configuration):
+        elif isinstance(items, paths.Configuration):
             return self._update(items)
-        elif isinstance(items, Trajectory):
+        elif isinstance(items, paths.Trajectory):
             return self._update([snapshot.configuration for snapshot in items])
         elif isinstance(items, list):
-            if isinstance(items[0], Configuration):
+            if isinstance(items[0], paths.Configuration):
                 return self._update(items)
         else:
             return None
 
+@restores_as_stub_object
 class OP_RMSD_To_Lambda(OrderParameter):
     """
     An OrderParameter that transforms the RMSD to a specific center to a lambda value between zero and one.
@@ -342,9 +340,7 @@ class OP_RMSD_To_Lambda(OrderParameter):
         self.min_lambda = lambda_min
         self.max_lambda = max_lambda
 
-        # Generate RMSD metric using only the needed indices. To index memory we crop the read snapshots from the database and do not use a cropping RMSD on the full snapshots
-        self.metric = RMSD(None)
-        self._generator = self.metric.prepare_trajectory(Trajectory([center]).subset(self.atom_indices).md())
+        self._generator = paths.Trajectory([center]).subset(self.atom_indices).md()
         return
 
     ################################################################################
@@ -364,16 +360,17 @@ class OP_RMSD_To_Lambda(OrderParameter):
         return scale
 
     def _eval(self, items):
-        trajectory = Trajectory([Snapshot(configuration=c) for c in items])
-        ptraj = self.metric.prepare_trajectory(trajectory.subset(self.atom_indices).md())
-        results = self.metric.one_to_all(self._generator, ptraj, 0)
+        trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
+        ptraj = trajectory.subset(self.atom_indices).md()
+
+        results = md.rmsd(ptraj, self._generator)
 
         return map(self._scale_fnc(self.min_lambda, self.max_lambda), results)
 
-
-class OP_Multi_RMSD(OrderParameter):
+@restores_as_stub_object
+class OP_Featurizer(OrderParameter):
     """
-    An OrderParameter that transforms the RMSD to a set of centers.
+    An OrderParameter that uses an MSMBuilder3 featurizer as the logic
 
     Parameters
     ----------
@@ -394,26 +391,26 @@ class OP_Multi_RMSD(OrderParameter):
         the RMSD metric object used to compute the RMSD
     """
 
-    def __init__(self, name, centers, atom_indices=None, metric=None):
-        super(OP_Multi_RMSD, self).__init__(name, dimensions=len(centers))
+    def __init__(self, name, featurizer, atom_indices=None):
+        super(OP_Featurizer, self).__init__(name, dimensions=featurizer.n_features)
 
         self.atom_indices = atom_indices
-        self.center = centers
+        self.featurizer = featurizer
 
-        # Generate RMSD metric using only the needed indices. To index memory we crop the read snapshots from the database and do not use a cropping RMSD on the full snapshots
-        if metric is None:
-            self.metric = RMSD(None)
-        else:
-            self.metric = metric
-        self._generator = self.metric.prepare_trajectory(centers.subset(self.atom_indices).md())
         return
 
     def _eval(self, items):
-        trajectory = Trajectory([Snapshot(configuration=c) for c in items])
+        trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
 
-        ptraj = self.metric.prepare_trajectory(trajectory.subset(self.atom_indices).md())
-        return [self.metric.one_to_all(ptraj, self._generator, idx) for idx in range(0, len(ptraj))]
+        # create an MDtraj trajectory out of it
+        ptraj = trajectory.subset(self.atom_indices).md()
 
+        # run the featurizer
+        result = self.featurizer.partial_transform(ptraj)
+
+        return result
+
+@restores_as_stub_object
 class OP_MD_Function(OrderParameter):
     """ Wrapper to decorate any appropriate function as an OrderParameter with a function that need an mdtraj object as input.
 
@@ -452,6 +449,7 @@ class OP_MD_Function(OrderParameter):
         t = trajectory.md(self.topology)
         return self.fcn(t, *args, **self.kwargs)
 
+@restores_as_stub_object
 class OP_Volume(OrderParameter):
     """
     Wrapper that turns a Volume, which can be considered a boolean order parameter into an
@@ -472,7 +470,7 @@ class OP_Volume(OrderParameter):
         result = [ float(self.volume(item)) for item in items ]
         return result
 
-
+@restores_as_stub_object
 class OP_Function(OrderParameter):
     """ Wrapper to decorate any appropriate function as an OrderParameter.
 
@@ -515,7 +513,7 @@ class OP_Function(OrderParameter):
 
     def _eval(self, items, *args):
 
-        trajectory = Trajectory([Snapshot(configuration=c) for c in items])
+        trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
 
         if self.trajdatafmt=='mdtraj':
             t = trajectory.md()

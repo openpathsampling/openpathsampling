@@ -1,27 +1,25 @@
-from simtk.unit import Quantity, nanometers, kilojoules_per_mole, picoseconds
 import numpy as np
-
 from opentis.snapshot import Snapshot, Configuration, Momentum
-from object_storage import ObjectStorage
-from wrapper import savecache, loadcache
+from object_storage import ObjectStore
 from opentis.trajectory import Trajectory
 import simtk.unit as u
 
-class SnapshotStorage(ObjectStorage):
+class SnapshotStore(ObjectStore):
     """
-    An ObjectStorage for Snapshots. Allow to store Snapshots instances in a netcdf file.
+    An ObjectStore for Snapshots in netCDF files.
     """
 
     def __init__(self, storage = None):
-        super(SnapshotStorage, self).__init__(storage, Snapshot)
+        super(SnapshotStore, self).__init__(storage, Snapshot, json=False)
 
-    @loadcache
     def load(self, idx=None):
         '''
         Load a snapshot from the storage.
 
         Parameters
         ----------
+        idx : int
+            the integer index of the snapshot to be loaded
 
         Returns
         -------
@@ -40,13 +38,16 @@ class SnapshotStorage(ObjectStorage):
 
         snapshot.reversed = momentum_reversed
 
-        snapshot.idx[self.storage] = idx
-
         return snapshot
 
     def all(self):
         """
-        Return a trajectory consisting of all (unordered) frames in the storage
+        Return a trajectory consisting of all (unordered) frames in the storage.
+
+        Notes
+        -----
+        Usually you want to use storage.snapshot.iterator() to get an
+        iterator over all snapshots
         """
         t = Trajectory()
         count = self.count()
@@ -55,17 +56,17 @@ class SnapshotStorage(ObjectStorage):
 
         return t
 
-    @savecache
     def save(self, snapshot, idx=None):
         """
-        Add the current state of the snapshot in the database. If nothing has changed then the snapshot gets stored using the same snapshots as before. Saving lots of diskspace
+        Add the current state of the snapshot in the database.
 
         Parameters
         ----------
         snapshot : Snapshot()
             the snapshot to be saved
         idx : int or None
-            if idx is not None the index will be used for saving in the storage. This might overwrite already existing trajectories!
+            if idx is not None the index will be used for saving in the storage.
+            This might overwrite already existing trajectories!
 
         Notes
         -----
@@ -91,47 +92,50 @@ class SnapshotStorage(ObjectStorage):
 
     def configuration_idx(self, idx):
         '''
-        Load snapshot indices for snapshot with ID 'idx' from the storage
+        Load snapshot index for snapshot with ID 'idx' from the storage
 
-        ARGUMENTS
-
-        idx (int) - ID of the snapshot
+        Parameters
+        ----------
+        idx : int
+            index of the snapshot
 
         Returns
         -------
-        snapshot (list of int) - snapshot indices
+        list of int
+            configuration indices
         '''
         return int(self.load_variable('snapshot_configuration_idx', idx))
 
     def momentum_idx(self, idx):
         '''
-        Load snapshot indices for snapshot with ID 'idx' from the storage
+        Load momentum index for snapshot with ID 'idx' from the storage
 
-        ARGUMENTS
-
-        idx (int) - ID of the snapshot
+        Parameters
+        ----------
+        idx : int
+            index of the snapshot
 
         Returns
         -------
-        snapshot (list of int) - snapshot indices
+        int
+            momentum indices
         '''
         return int(self.load_variable('snapshot_momentum_idx', idx))
 
 
     def momentum_reversed(self, idx):
         '''
-        Load snapshot with ID 'idx' from the storage and return a list of reversed indicators for the momenta
+        Load reversed boolean for snapshot with ID 'idx' from the storage
 
         Parameters
         ----------
-
         idx : int
             index of the snapshot
 
         Returns
         -------
-        list of boolean
-            list of boolean which frames in the snapshot are reversed
+        boolean
+            boolean if the momentum of the snapshot is reversed
         '''
         return bool(self.load_variable('snapshot_momentum_reversed', idx))
 
@@ -140,15 +144,19 @@ class SnapshotStorage(ObjectStorage):
         '''
         Initializes the associated storage to index configuration_indices in it
         '''
-        super(SnapshotStorage, self)._init()
+        super(SnapshotStore, self)._init()
 
         self.init_variable('snapshot_configuration_idx', 'index', self.db,
-                description="snapshot[snapshot] is the snapshot index (0..n_configuration-1) of snapshot 'snapshot'.")
+                description="snapshot[snapshot] is the snapshot index (0..n_configuration-1) of snapshot 'snapshot'.",
+                chunksizes=(1, )
+        )
 
         self.init_variable('snapshot_momentum_idx', 'index', self.db,
-                description="snapshot[snapshot] is the snapshot index (0..n_momentum-1) 'frame' of snapshot 'snapshot'.")
+                description="snapshot[snapshot] is the snapshot index (0..n_momentum-1) 'frame' of snapshot 'snapshot'.",
+                chunksizes=(1, )
+                )
 
-        self.init_variable('snapshot_momentum_reversed', 'bool', self.db)
+        self.init_variable('snapshot_momentum_reversed', 'bool', self.db, chunksizes=(1, ))
 
 #=============================================================================================
 # ORDERPARAMETER UTILITY FUNCTIONS
@@ -158,6 +166,11 @@ class SnapshotStorage(ObjectStorage):
     def op_configuration_idx(self):
         """
         Returns aa function that returns for an object of this storage the idx
+
+        Returns
+        -------
+        function
+            the function that returns the idx of the configuration
         """
         def idx(obj):
             return obj.configuration.idx[self.storage]
@@ -168,6 +181,12 @@ class SnapshotStorage(ObjectStorage):
     def op_momentum_idx(self):
         """
         Returns aa function that returns for an object of this storage the idx
+
+        Returns
+        -------
+        function
+            the function that returns the idx of the configuration
+
         """
         def idx(obj):
             return obj.momentum.idx[self.storage]
@@ -175,35 +194,35 @@ class SnapshotStorage(ObjectStorage):
         return idx
 
 
-class MomentumStorage(ObjectStorage):
+class MomentumStore(ObjectStore):
     """
-    An ObjectStorage for Momenta. Allows to store Momentum() instances in a netcdf file.
+    An ObjectStore for Momenta. Allows to store Momentum() instances in a netcdf file.
     """
 
     def __init__(self, storage = None):
-        super(MomentumStorage, self).__init__(storage, Momentum)
+        super(MomentumStore, self).__init__(storage, Momentum, json=False, load_partial=True)
 
-    @savecache
+        # attach delayed loaders
+        self.set_variable_partial_loading('velocities', self.update_velocities)
+        self.set_variable_partial_loading('kinetic_energy', self.update_kinetic_energy)
+
+
     def save(self, momentum, idx = None):
         """
-        Save velocities and kinetic energies of current iteration to NetCDF file.
+        Save velocities and kinetic energies.
 
         Parameters
         ----------
         momentum : Momentum()
             the actual Momentum() instance to be saved.
         idx : int or None
-            if not None `idx`is used as the index to index the Momentum() instance. Might overwrite existing Momentum in the database.
+            if not None `idx`is used as the index to index the Momentum()
+            instance. Might overwrite existing Momentum in the database.
         """
 
         storage = self.storage
 
-        # TODO: This should never be empty when it is called. Since a Momentum() instance has velocities
-        # TODO: If it was load lazy then it should be registered as already saved and if a snapshot does not
-        # TODO: have velocities then it does not have a Momentum object
-
-        # Store momentum.
-        if momentum._velocities is not None:
+        if momentum.velocities is not None:
             if hasattr(momentum.velocities, 'unit'):
                 storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / self.storage.units["momentum_velocities"]).astype(np.float32)
             else:
@@ -212,7 +231,7 @@ class MomentumStorage(ObjectStorage):
         else:
             print 'ERROR : Momentum should not be empty'
 
-        if momentum._kinetic_energy is not None:
+        if momentum.kinetic_energy is not None:
             storage.variables['momentum_kinetic'][idx] = momentum.kinetic_energy / self.storage.units["momentum_kinetic"]
         else:
             # TODO: No kinetic energy is not yet supported
@@ -221,8 +240,7 @@ class MomentumStorage(ObjectStorage):
         # Force sync to disk to avoid data loss.
         storage.sync()
 
-    @loadcache
-    def load(self, idx, lazy=True):
+    def load(self, idx):
         '''
         Load a momentum from the storage
 
@@ -237,22 +255,18 @@ class MomentumStorage(ObjectStorage):
             the loaded momentum instance
         '''
 
-
         storage = self.storage
 
-        if not (Momentum.load_lazy and lazy):
-            v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
-            velocities = Quantity(v, self.storage.units["momentum_velocities"])
-            T = storage.variables['momentum_kinetic'][idx]
-            kinetic_energy = Quantity(T, self.storage.units["momentum_kinetic"])
-
-        else:
-            velocities = None
-            kinetic_energy = None
-
+        v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
+        velocities = u.Quantity(v, self.storage.units["momentum_velocities"])
+        T = storage.variables['momentum_kinetic'][idx]
+        kinetic_energy = u.Quantity(T, self.storage.units["momentum_kinetic"])
         momentum = Momentum(velocities=velocities, kinetic_energy=kinetic_energy)
-        momentum.idx[storage] = idx
 
+        return momentum
+
+    def load_empty(self, idx):
+        momentum = Momentum()
         return momentum
 
     def update_velocities(self, obj):
@@ -269,7 +283,7 @@ class MomentumStorage(ObjectStorage):
 
         idx = obj.idx[self.storage]
         v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
-        velocities = Quantity(v, self.storage.units["momentum_velocities"])
+        velocities = u.Quantity(v, self.storage.units["momentum_velocities"])
 
         obj.velocities = velocities
 
@@ -287,7 +301,7 @@ class MomentumStorage(ObjectStorage):
 
         idx = obj.idx[self.storage]
         T = storage.variables['momentum_kinetic'][idx]
-        kinetic_energy = Quantity(T, self.storage.units["momentum_kinetic"])
+        kinetic_energy = u.Quantity(T, self.storage.units["momentum_kinetic"])
 
         obj.kinetic_energy = kinetic_energy
 
@@ -299,9 +313,11 @@ class MomentumStorage(ObjectStorage):
         Parameters
         ----------
         frame_indices : list of int or None
-            the indices of Momentum objects to be retrieved from the database. If `None` is specified then all indices are returned!
+            the indices of Momentum objects to be retrieved from the database.
+            If `None` is specified then all indices are returned!
         atom_indices : list of int of None
-            if not None only the specified atom_indices are returned. Might speed up reading a lot.
+            if not None only the specified atom_indices are returned. Might
+            speed up reading a lot.
         """
 
         if frame_indices is None:
@@ -321,13 +337,15 @@ class MomentumStorage(ObjectStorage):
         frame_indices : list of int
             momenta indices to be loaded
         atom_indices : list of int
-            selects only the atoms to be returned. If None (Default) all atoms will be selected
+            selects only the atoms to be returned. If None (Default) all atoms
+            will be selected
 
 
         Returns
         -------
         numpy.ndarray, shape = (l,n)
-            returns an array with `l` the number of frames and `n` the number of atoms
+            returns an array with `l` the number of frames and `n` the number
+            of atoms
         '''
 
         return self.velocities_as_numpy(frame_indices, atom_indices)
@@ -337,7 +355,7 @@ class MomentumStorage(ObjectStorage):
         Initializes the associated storage to index momentums in it
         '''
 
-        super(MomentumStorage, self)._init()
+        super(MomentumStore, self)._init()
 
         atoms = self.storage.atoms
 
@@ -348,28 +366,30 @@ class MomentumStorage(ObjectStorage):
         if 'spatial' not in self.storage.dimensions:
             self.init_dimension('spatial', 3)  # number of spatial dimensions
 
-        self.init_variable('momentum_velocities', 'float', (self.db, 'atom','spatial'), self.dimension_units['velocity'],
-                description="velocities[momentum][atom][coordinate] are velocities of atom 'atom' in" +
-                            " dimension 'coordinate' of momentum 'momentum'.")
+        self.init_variable('momentum_velocities', 'float',
+                (self.db, 'atom','spatial'),
+                self.dimension_units['velocity'],
+                description="velocities[momentum][atom][coordinate] are " +
+                            "velocities of atom 'atom' in dimension " +
+                            "'coordinate' of momentum 'momentum'.",
+                chunksizes=(1,atoms,3))
 
-        self.init_variable('momentum_kinetic', 'float', self.db, self.dimension_units['energy'])
+        self.init_variable('momentum_kinetic', 'float', self.db,
+                self.dimension_units['energy'],
+                chunksizes=(1, ))
 
 
     
-class ConfigurationStorage(ObjectStorage):
+class ConfigurationStore(ObjectStore):
     def __init__(self, storage = None):
-        super(ConfigurationStorage, self).__init__(storage, Configuration)
+        super(ConfigurationStore, self).__init__(storage, Configuration, json=False, load_partial=True)
 
-    @savecache
+        # attach delayed loaders
+        self.set_variable_partial_loading('coordinates', self.update_coordinates)
+        self.set_variable_partial_loading('box_vectors', self.update_box_vectors)
+        self.set_variable_partial_loading('potential_energy', self.update_potential_energy)
+
     def save(self, configuration, idx = None):
-        """
-        Save positions, velocities, boxvectors and energies of current iteration to NetCDF file.
-
-        Notes
-        -----
-        We need to allow for reversed configuration_indices to index memory. Would be nice
-        """
-
         storage = self.storage
 
         # Store configuration.
@@ -381,6 +401,10 @@ class ConfigurationStorage(ObjectStorage):
         if configuration.box_vectors is not None:
             storage.variables['configuration_box_vectors'][idx,:,:] = (configuration.box_vectors / self.storage.units["configuration_box_vectors"]).astype(np.float32)
 
+        # TODO: Add simple test if topologies match
+        # if configuration.topology is not storage.topology:
+        # log that topologies were different
+
         # Force sync to disk to avoid data loss.
         storage.sync()
 
@@ -388,39 +412,39 @@ class ConfigurationStorage(ObjectStorage):
     def get(self, indices):
         return [ self.load(idx) for idx in indices ]
 
-    @loadcache
-    def load(self, idx, lazy=False):
-        '''
-        Load a configuration from the storage
+    def load(self, idx):
+        storage = self.storage
+
+        x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
+        coordinates = u.Quantity(x, self.storage.units["configuration_coordinates"])
+        b = storage.variables['configuration_box_vectors'][idx]
+        box_vectors = u.Quantity(b, self.storage.units["configuration_box_vectors"])
+        V = storage.variables['configuration_potential'][idx]
+        potential_energy = u.Quantity(V, self.storage.units["configuration_potential"])
+
+        configuration = Configuration(coordinates=coordinates, box_vectors = box_vectors, potential_energy=potential_energy)
+        configuration.topology = self.storage.topology
+
+#        print 'loaded normally'
+
+        return configuration
+
+    def load_empty(self, idx):
+        """
+        Loading function for partial loading. Constructs an empty Configuration
+        object.
 
         Parameters
         ----------
         idx : int
-            index of the configuration in the database 'idx' > 0
+            the integer index of the configuration to be loaded
 
         Returns
         -------
-        configuration : configuration
-            the configuration
-        '''
-
-        storage = self.storage
-
-        if not (Configuration.load_lazy and lazy):
-            x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
-            coordinates = Quantity(x, self.storage.units["configuration_coordinates"])
-            b = storage.variables['configuration_box_vectors'][idx]
-            box_vectors = Quantity(b, self.storage.units["configuration_box_vectors"])
-            V = storage.variables['configuration_potential'][idx]
-            potential_energy = Quantity(V, self.storage.units["configuration_potential"])
-        else:
-            coordinates = None
-            box_vectors = None
-            potential_energy = None
-
-        configuration = Configuration(coordinates=coordinates, box_vectors = box_vectors, potential_energy=potential_energy)
-        configuration.idx[storage] = idx
-
+        Configuration
+            an empty configuration object
+        """
+        configuration = Configuration()
         configuration.topology = self.storage.topology
 
         return configuration
@@ -432,15 +456,14 @@ class ConfigurationStorage(ObjectStorage):
         Parameters
         ----------
         obj : Configuration
-            The Configuration object to be updates
+            the Configuration object to be updated
 
         """
         storage = self.storage
-
-        idx = obj.idx[self.storage]
+        idx = obj.idx[storage]
 
         x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
-        coordinates = Quantity(x, self.storage.units["configuration_coordinates"])
+        coordinates = u.Quantity(x, storage.units["configuration_coordinates"])
 
         obj.coordinates = coordinates
 
@@ -451,15 +474,14 @@ class ConfigurationStorage(ObjectStorage):
         Parameters
         ----------
         obj : Configuration
-            The Configuration object to be updates
+            the Configuration object to be updated
 
         """
         storage = self.storage
-
-        idx = obj.idx[self.storage]
+        idx = obj.idx[storage]
 
         b = storage.variables['configuration_box_vectors'][idx]
-        box_vectors = Quantity(b, self.storage.units["configuration_box_vectors"])
+        box_vectors = u.Quantity(b, storage.units["configuration_box_vectors"])
 
         obj.box_vectors = box_vectors
 
@@ -470,28 +492,28 @@ class ConfigurationStorage(ObjectStorage):
         Parameters
         ----------
         obj : Configuration
-            The Configuration object to be updates
+            the Configuration object to be updated
 
         """
         storage = self.storage
-
-        idx = obj.idx[self.storage]
+        idx = obj.idx[storage]
 
         V = storage.variables['configuration_potential'][idx]
-        potential_energy = Quantity(V, self.storage.units["configuration_potential"])
+        potential_energy = u.Quantity(V, storage.units["configuration_potential"])
 
         obj.potential_energy = potential_energy
 
     def coordinates_as_numpy(self, frame_indices=None, atom_indices=None):
         """
-        Return the atom coordintes in the storage for given frame indices and atoms
+        Return the atom coordinates in the storage for given frame indices
+        and atoms
 
         Parameters
         ----------
         frame_indices : list of int or None
             the frame indices to be included. If None all frames are returned
         atom_indices : list of int or None
-            the atom indices to be inlcuded. If None all atoms are returned
+            the atom indices to be included. If None all atoms are returned
 
         Returns
         -------
@@ -516,12 +538,14 @@ class ConfigurationStorage(ObjectStorage):
         frame_indices : list of int
             configuration indices to be loaded
         atom_indices : list of int
-            selects only the atoms to be returned. If None (Default) all atoms will be selected
+            selects only the atoms to be returned. If None (Default) all atoms
+            will be selected
 
         Returns
         -------
         numpy.ndarray, shape = (l,n)
-            returns an array with `l` the number of frames and `n` the number of atoms
+            returns an array with `l` the number of frames and `n` the number
+            of atoms
         '''
 
         return self.coordinates_as_numpy(frame_indices, atom_indices)
@@ -535,38 +559,44 @@ class ConfigurationStorage(ObjectStorage):
         idx : int
             index of the snapshot to be loaded
         atom_indices : list of int
-            selects only the atoms to be returned. If None (Default) all atoms will be selected
+            selects only the atoms to be returned. If None (Default) all atoms
+            will be selected
 
 
         Returns
         -------
         numpy.ndarray, shape = (l,n)
-            returns an array with `l` the number of frames and `n` the number of atoms
+            returns an array with `l` the number of frames and `n` the number
+            of atoms
         '''
 
         frame_indices = self.configuration_indices(idx)
         return self.coordinates_as_array(frame_indices, atom_indices)
 
     def _init(self):
-        '''
-        Initializes the associated storage to index configuration_indices in it
-        '''
-        # index associated storage in class variable for all configuration instances to access
-
-        super(ConfigurationStorage, self)._init()
+        super(ConfigurationStore, self)._init()
         atoms = self.storage.atoms
 
         # define dimensions used in configuration_indices
         if 'atom' not in self.storage.dimensions:
-            self.init_dimension('atom', atoms) # number of atoms in the simulated system
+            self.init_dimension('atom', atoms)
 
         if 'spatial' not in self.storage.dimensions:
-            self.init_dimension('spatial', 3)  # number of spatial dimensions
+            self.init_dimension('spatial', 3)
 
-        self.init_variable('configuration_coordinates', 'float', (self.db, 'atom','spatial'), self.dimension_units['length'],
-                description="coordinates[configuration][atom][coordinate] are coordinate of atom 'atom' " +
-                            "in dimension 'coordinate' of configuration 'configuration'.")
+        self.init_variable('configuration_coordinates', 'float',
+                (self.db, 'atom','spatial'), self.dimension_units['length'],
+                description="coordinates[configuration][atom][coordinate] " +
+                            "are coordinate of atom 'atom' in dimension " +
+                            "'coordinate' of configuration 'configuration'.",
+                chunksizes=(1,atoms,3))
 
-        self.init_variable('configuration_box_vectors', 'float', (self.db, 'spatial', 'spatial'), self.dimension_units['length'])
+        self.init_variable('configuration_box_vectors', 'float',
+                (self.db, 'spatial', 'spatial'),
+                self.dimension_units['length'],
+                chunksizes=(1,3,3))
 
-        self.init_variable('configuration_potential', 'float', self.db, self.dimension_units['energy'])
+        self.init_variable('configuration_potential', 'float',
+                self.db,
+                self.dimension_units['energy'],
+                chunksizes=(1, ))

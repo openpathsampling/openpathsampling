@@ -8,3 +8,7 @@ openmm
 ambermini
 netcdf4
 msmbuilder
+openmmtools
+ipython
+ipython-notebook
+matplotlib

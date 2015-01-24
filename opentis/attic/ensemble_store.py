@@ -1,6 +1,5 @@
-from object_storage import ObjectStorage
+from object_storage_with_lazyloading import ObjectStorage
 from opentis.ensemble import Ensemble, LoadedEnsemble
-from wrapper import loadcache
 
 class EnsembleStorage(ObjectStorage):
 
@@ -73,7 +72,6 @@ class EnsembleStorage(ObjectStorage):
         description = self.storage.variables['ensemble_str'][int(idx)]
 
         obj = LoadedEnsemble(name=name, description=description)
-        obj.idx[self.storage] = idx
 
         return obj
 

@@ -9,6 +9,7 @@ TIS simulation on alanine dipeptide.
 # that more of what the user will need to do will be in the __main__ of this
 # script
 
+import logging.config
 import numpy as np
 import mdtraj as md
 import time
@@ -30,10 +31,13 @@ from opentis.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
 from opentis.calculation import Bootstrapping
 from opentis.pathmover import PathMover
 from opentis.shooting import UniformSelector
+from opentis.sample import Sample, SampleSet
 
 import simtk.unit as u
 
 if __name__=="__main__":
+    logging.config.fileConfig('../../opentis/logging.conf',
+                              disable_existing_loggers=False)
     options = {'temperature' : 300.0 * u.kelvin,
                'collision_rate' : 1.0 / u.picoseconds,
                'timestep' : 2.0 * u.femtoseconds,
@@ -86,8 +90,8 @@ if __name__=="__main__":
 
     # save the orderparameters in the storage
     # since they have no data cache this will only contain their name
-    psi.save(storage=engine.storage.cv)
-    phi.save(storage=engine.storage.cv)
+    psi.save(storage=engine.storage.collectivevariable)
+    phi.save(storage=engine.storage.collectivevariable)
 
     # now we define our states and our interfaces
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
@@ -121,7 +125,7 @@ the path we generate is in the ensemble we desire: this means that we can't
 use LeaveXEnsemble as we typically do with TIS paths.
     """
     snapshot = engine.storage.snapshot.load(0)
-    
+
     first_traj_ensemble = SequentialEnsemble([
         OutXEnsemble(stateA) | LengthEnsemble(0),
         InXEnsemble(stateA),
@@ -178,27 +182,25 @@ the bootstrapping calculation, then we run it.
     bootstrap = Bootstrapping(storage=engine.storage,
                               engine=engine,
                               ensembles=interface_set,
-                              movers=mover_set)
+                              movers=mover_set,
+                              trajectory=segments[0]
+                             )
 
-    bootstrap.set_replicas([segments[0]])
     bootstrap.run(50)
 
     print """
     Saving all cached computations of orderparameters.
     """
 
-    psi.save(storage=engine.storage.cv)
-    phi.save(storage=engine.storage.cv)
-    # Alternatively one could write
-    # engine.storage.cv.save(psi)
-    # engine.storage.cv.save(phi)
+    engine.storage.collectivevariable.sync(psi)
+    engine.storage.collectivevariable.sync(phi)
 
     # Save all interface volumes as orderparameters
     op_vol_set = [OP_Volume('OP' + str(idx), vol) for idx, vol in enumerate(volume_set)]
 
     for op in op_vol_set:
         op(engine.storage.snapshot.all())
-        engine.storage.cv.save(op)
+        engine.storage.collectivevariable.save(op)
 
     # Create an orderparameter from a volume
     op_inA = OP_Volume('StateA', stateA)
@@ -210,7 +212,6 @@ the bootstrapping calculation, then we run it.
     op_inB(engine.storage.snapshot.all())
     op_notinAorB(engine.storage.snapshot.all())
 
-    engine.storage.cv.save(op_inA)
-    engine.storage.cv.save(op_inB)
-    engine.storage.cv.save(op_notinAorB)
-
+    engine.storage.collectivevariable.save(op_inA)
+    engine.storage.collectivevariable.save(op_inB)
+    engine.storage.collectivevariable.save(op_notinAorB)

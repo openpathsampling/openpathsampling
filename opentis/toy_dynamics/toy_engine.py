@@ -1,6 +1,5 @@
 import numpy as np
-from opentis.snapshot import Snapshot
-from opentis.snapshot import Momentum, Configuration
+from opentis.snapshot import Snapshot, Momentum, Configuration
 from opentis.dynamics_engine import DynamicsEngine
 
 def convert_to_3Ndim(v):
@@ -38,12 +37,12 @@ class ToyEngine(DynamicsEngine):
                       'nsteps_per_frame' : 10
     }
 
-    def __init__(self, filename=None, options=None, mode='auto'):
+    def __init__(self, options=None, mode='auto'):
         if 'ndim' not in options:
             options['ndim'] = 2
         options['n_atoms'] = count_atoms(options['ndim'])
 
-        super(ToyEngine, self).__init__(filename=filename,
+        super(ToyEngine, self).__init__(
                                         options=options)
 
     @property
@@ -78,8 +77,10 @@ class ToyEngine(DynamicsEngine):
 
     @current_snapshot.setter
     def current_snapshot(self, snap):
-        self.positions = np.ravel(snap.configuration.coordinates)[:self.ndim]
-        self.velocities = np.ravel(snap.momentum.velocities)[:self.ndim]
+        coords = np.copy(snap.coordinates)
+        vels = np.copy(snap.velocities)
+        self.positions = np.ravel(coords)[:self.ndim]
+        self.velocities = np.ravel(vels)[:self.ndim]
 
     def generate_next_frame(self):
         self.integ.step(self, self.nsteps_per_frame)

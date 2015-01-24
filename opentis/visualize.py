@@ -1,9 +1,7 @@
 import svgwrite
 import os
 
-
 class TreeRenderer(object):
-
     def __init__(self):
         self.start_x = 0
         self.start_y = 0
@@ -284,7 +282,6 @@ class TreeRenderer(object):
 
 
 class PathTreeBuilder(object):
-
     def __init__(self, storage, op=None, states = None):
         self.rejected = False
         self.p_x = dict()
@@ -298,6 +295,11 @@ class PathTreeBuilder(object):
         self.states = states
 
     def from_samples(self, samples, clear=True):
+
+        if len(samples) == 0:
+            # no samples, nothing to do
+            # TODO: Raise an exception or just ignore and don't output anything?
+            return
 
         p_x = dict()
         p_y = dict()
@@ -338,7 +340,7 @@ class PathTreeBuilder(object):
                                 self.renderer.add(self.renderer.block(pos_x, pos_y, "black", ""))
 
                         self.renderer.add(
-                            self.renderer.label(0, t_count, 1, str(old_traj.idx[self.storage]) + 'b', align='end',color='black')
+                            self.renderer.label(0, t_count, 1, str(self.storage.idx(new_traj)) + 'b', align='end',color='black')
                         )
 
                         t_count += 1
@@ -357,7 +359,7 @@ class PathTreeBuilder(object):
                             self.renderer.v_connection(shift + new_index, p_y[old_conf], t_count, color)
                         )
                         self.renderer.add(
-                            self.renderer.label(shift, t_count, 1, str(new_traj.idx[self.storage]) + 'b', align='end',color=fontcolor)
+                            self.renderer.label(shift, t_count, 1, str(self.storage.idx(new_traj)) + 'b', align='end',color=fontcolor)
                         )
                     else:
                         color = "red"
@@ -368,7 +370,7 @@ class PathTreeBuilder(object):
                             self.renderer.v_connection(shift + new_index + 1, p_y[old_conf], t_count, color)
                         )
                         self.renderer.add(
-                            self.renderer.label(shift + len(new_traj) - 1, t_count, 1, str(new_traj.idx[self.storage]) + 'f', align='start',color=fontcolor)
+                            self.renderer.label(shift + len(new_traj) - 1, t_count, 1, str(self.storage.idx(new_traj)) + 'f', align='start',color=fontcolor)
                         )
 
                     if not accepted:
@@ -399,7 +401,7 @@ class PathTreeBuilder(object):
         self.renderer.width = max_x - min_x + 3.0
 
         op_names = { arg[0] : arg[1] for arg in self.states }
-        ops = {op : self.storage.cv.load(op) for op in op_names.keys() }
+        ops = {op : self.storage.collectivevariable.load(op) for op in op_names.keys() }
 
         matrix = self._to_matrix()
 
