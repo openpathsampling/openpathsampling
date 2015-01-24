@@ -1147,6 +1147,33 @@ class OptionalEnsemble(AlteredEnsemble):
     def __str__(self):
         return "{"+self.orig_ens.__str__()+"} (OPTIONAL)"
 
+@restores_as_full_object
+class SingleFrameEnsemble(AlteredEnsemble):
+    '''
+    Convenience ensemble to `and` a LengthEnsemble(1) with a given ensemble.
+    Frequently used for SequentialEnsembles.
+
+    Attributes
+    ----------
+    ensemble : Ensemble
+        the ensemble which should be represented in the single frame
+
+    Note
+    ----
+    We allow the user to choose to be stupid: if, for example, the user
+    tries to make a SingleFrameEnsemble from an ensemble which requires
+    more than one frame to be satisfied (e.g., a SequentialEnsemble with
+    more than one subensemble), it can be created, but no path will ever
+    satisfy it. Since we can't stop all possible mistakes, we don't bother
+    here.
+    '''
+    def __init__(self, ensemble):
+        self.orig_ens = ensemble
+        self.ensemble = ensemble & LengthEnsemble(1)
+
+    def __str__(self):
+        return "{"+self.orig_ens.__str__()+"} (SINGLE FRAME)"
+    
 class EnsembleFactory():
     '''
     Convenience class to construct Ensembles
@@ -1203,11 +1230,10 @@ class EnsembleFactory():
             The constructed Ensemble
         '''        
         # TODO: this is actually only for flexible path length TPS now
-        length1 = LengthEnsemble(1)
         return SequentialEnsemble([
-            InXEnsemble(volume_a) & length1,
+            SingleFrameEnsemble(InXEnsemble(volume_a)),
             OutXEnsemble(volume_a | volume_b),
-            InXEnsemble(volume_b) & length1
+            SingleFrameEnsemble(InXEnsemble(volume_b))
         ])
 
 
@@ -1232,11 +1258,10 @@ class EnsembleFactory():
         ensemble : Ensemble
             The constructed Ensemble
         '''
-        length1 = LengthEnsemble(1)
         ens = SequentialEnsemble([
-            InXEnsemble(volume_a) & length1,
+            SingleFrameEnsemble(InXEnsemble(volume_a)),
             OutXEnsemble(volume_a | volume_b) & LeaveXEnsemble(volume_x),
-            InXEnsemble(volume_a | volume_b) & length1
+            SingleFrameEnsemble(InXEnsemble(volume_a | volume_b))
         ])
         return ens
         #return (LengthEnsemble(slice(3,None)) & InXEnsemble(volume_a, 0) & InXEnsemble(volume_b, -1)) & (LeaveXEnsemble(volume_x) & OutXEnsemble(volume_a | volume_b, slice(1,-1), lazy))
