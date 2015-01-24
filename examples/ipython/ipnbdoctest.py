@@ -10,14 +10,14 @@ The original is found in a gist under https://gist.github.com/minrk/2620735
 
 TODO: It would be nice to add some more output about failed diffs. So far I leave it this way
 """
- 
+
 import os,sys
 import base64
 import re
 import argparse
  
 from Queue import Empty
-import difflib
+#import difflib
 
 try:
     from IPython.kernel import KernelManager
@@ -265,7 +265,7 @@ class IPyKernel(object):
     #                print "mismatch %s:" % key
                     expected=s1.splitlines(1)
                     actual=s2.splitlines(1)
-                    diff=difflib.unified_diff(expected, actual)
+    #                diff=difflib.unified_diff(expected, actual)
 
     #                print ''.join(diff)
                     return False

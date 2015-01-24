@@ -1,10 +1,15 @@
 '''
 Created on 03.09.2014
 
-@author: jan-hendrikprinz, David W.H. Swenson
+@author: Jan-Hendrik Prinz, David W.H. Swenson
 '''
-import range_logic
 
+import range_logic
+from opentis.todict import restores_as_full_object
+
+# TODO: Make Full and Empty be Singletons to avoid storing them several times!
+
+@restores_as_full_object
 class Volume(object):
     def __init__(self):
         '''
@@ -33,7 +38,7 @@ class Volume(object):
         elif type(other) is FullVolume:
             return other
         else:
-            return VolumeCombination(self, other, fnc = lambda a,b : a or b, str_fnc = '{0} or {1}')
+            return OrVolume(self, other)
 
     def __xor__(self, other):
         if self is other:
@@ -43,7 +48,7 @@ class Volume(object):
         elif type(other) is FullVolume:
             return ~ self
         else:
-            return VolumeCombination(self, other, fnc = lambda a,b : a ^ b, str_fnc = '{0} xor {1}')
+            return XorVolume(self, other)
 
     def __and__(self, other):
         if self is other:
@@ -53,7 +58,7 @@ class Volume(object):
         elif type(other) is FullVolume:
             return self
         else:
-            return VolumeCombination(self, other, fnc = lambda a,b : a and b, str_fnc = '{0} and {1}')
+            return AndVolume(self, other)
 
     def __sub__(self, other):
         if self is other:
@@ -61,9 +66,9 @@ class Volume(object):
         elif type(other) is EmptyVolume:
             return self
         elif type(other) is FullVolume:
-            return EmptyVolume()        
+            return EmptyVolume()
         else:
-            return VolumeCombination(self, other, fnc = lambda a,b : a and not b, str_fnc = '{0} and not {1}')
+            return SubVolume(self, other)
         
     def __invert__(self):
         return NegatedVolume(self)
@@ -71,7 +76,7 @@ class Volume(object):
     def __eq__(self, other):
         return str(self) == str(other)
 
-    
+@restores_as_full_object
 class VolumeCombination(Volume):
     def __init__(self, volume1, volume2, fnc, str_fnc):
         super(VolumeCombination, self).__init__()
@@ -85,7 +90,32 @@ class VolumeCombination(Volume):
     
     def __str__(self):
         return '(' + self.sfnc.format(str(self.volume1), str(self.volume2)) + ')'
-    
+
+    def to_dict(self):
+        return { 'volume1' : self.volume1, 'volume2' : self.volume2 }
+
+@restores_as_full_object
+class OrVolume(VolumeCombination):
+    def __init__(self, volume1, volume2):
+        super(OrVolume, self).__init__(volume1, volume2, lambda a,b : a or b, str_fnc = '{0} or {1}')
+
+@restores_as_full_object
+class AndVolume(VolumeCombination):
+    def __init__(self, volume1, volume2):
+        super(AndVolume, self).__init__(volume1, volume2, lambda a,b : a and b, str_fnc = '{0} and {1}')
+
+@restores_as_full_object
+class XorVolume(VolumeCombination):
+    def __init__(self, volume1, volume2):
+        super(XorVolume, self).__init__(volume1, volume2, lambda a,b : a ^ b, str_fnc = '{0} xor {1}')
+
+@restores_as_full_object
+class SubVolume(VolumeCombination):
+    def __init__(self, volume1, volume2):
+        super(SubVolume, self).__init__(volume1, volume2, lambda a,b : a and not b, str_fnc = '{0} and not {1}')
+
+
+@restores_as_full_object
 class NegatedVolume(Volume):
     def __init__(self, volume):
         super(NegatedVolume, self).__init__()
@@ -97,7 +127,7 @@ class NegatedVolume(Volume):
     def __str__(self):
         return '(not ' + str(self.volume) + ')'
     
-    
+@restores_as_full_object
 class EmptyVolume(Volume):
     def __init__(self):
         super(EmptyVolume, self).__init__()
@@ -119,10 +149,11 @@ class EmptyVolume(Volume):
 
     def __invert__(self):
         return FullVolume()
-    
+
     def __str__(self):
         return 'empty'
-    
+
+@restores_as_full_object
 class FullVolume(Volume):
     def __init__(self):
         super(FullVolume, self).__init__()
@@ -148,6 +179,7 @@ class FullVolume(Volume):
     def __str__(self):
         return 'all'
 
+@restores_as_full_object
 class LambdaVolume(Volume):
     '''
     Defines a Volume containing all states where orderparameter is in a
@@ -225,10 +257,9 @@ class LambdaVolume(Volume):
         elif len(lrange) == 1:
             return self._copy_with_new_range(lrange[0][0], lrange[0][1])
         elif len(lrange) == 2:
-            return VolumeCombination(
+            return OrVolume(
                 self._copy_with_new_range(lrange[0][0], lrange[0][1]),
-                self._copy_with_new_range(lrange[1][0], lrange[1][1]),
-                lambda a, b : a or b, '{0} or {1}'
+                self._copy_with_new_range(lrange[1][0], lrange[1][1])
             )
         else:
             raise ValueError(
@@ -277,6 +308,7 @@ class LambdaVolume(Volume):
     def __str__(self):
         return '{{x|{2}(x) in [{0}, {1}]}}'.format( self.lambda_min, self.lambda_max, self.orderparameter.name)
 
+@restores_as_full_object
 class LambdaVolumePeriodic(LambdaVolume):
     """
     Defines a Volume containing all states where orderparameter, a periodic
@@ -290,6 +322,8 @@ class LambdaVolumePeriodic(LambdaVolume):
     period_max : float (optional)
         maximum of the periodic domain
     """
+
+    _excluded_attr = ['wrap']
     def __init__(self, orderparameter, lambda_min = 0.0, lambda_max = 1.0,
                                        period_min = None, period_max = None):
         super(LambdaVolumePeriodic, self).__init__(orderparameter,
@@ -297,11 +331,11 @@ class LambdaVolumePeriodic(LambdaVolume):
         self.period_min = period_min
         self.period_max = period_max
         if (period_min is not None) and (period_max is not None):
-            self.period_shift = period_min
-            self.period_len = period_max - period_min
-            if self.lambda_max - self.lambda_min > self.period_len:
+            self._period_shift = period_min
+            self._period_len = period_max - period_min
+            if self.lambda_max - self.lambda_min > self._period_len:
                 raise Exception("Range of volume larger than periodic bounds.")
-            elif self.lambda_max-self.lambda_min == self.period_len:
+            elif self.lambda_max-self.lambda_min == self._period_len:
                 self.lambda_min = period_min
                 self.lambda_max = period_max
             else:
@@ -313,7 +347,7 @@ class LambdaVolumePeriodic(LambdaVolume):
 
     def do_wrap(self, value):
         """Wraps `value` into the periodic domain."""
-        return ((value-self.period_shift) % self.period_len) + self.period_shift
+        return ((value-self._period_shift) % self._period_len) + self._period_shift
 
     # next few functions add support for range logic
     def _copy_with_new_range(self, lmin, lmax):
@@ -351,21 +385,21 @@ class LambdaVolumePeriodic(LambdaVolume):
         if self.wrap:
             fcn = 'x|({0}(x) - {2}) % {1} + {2}'.format(
                         self.orderparameter.name,
-                        self.period_len, self.period_shift)
+                        self._period_len, self._period_shift)
             if self.lambda_min < self.lambda_max:
                 domain = '[{0}, {1}]'.format(
                         self.lambda_min, self.lambda_max)
             else:
                 domain = '[{0}, {1}] union [{2}, {3}]'.format(
-                        self.period_shift, self.lambda_max,
-                        self.lambda_min, self.period_shift+self.period_len)
+                        self._period_shift, self.lambda_max,
+                        self.lambda_min, self._period_shift+self._period_len)
             return '{'+fcn+' in '+domain+'}'
         else:
             return '{{x|{2}(x) [periodic] in [{0}, {1}]}}'.format( 
                         self.lambda_min, self.lambda_max, 
                         self.orderparameter.name)
 
-    
+@restores_as_full_object
 class VoronoiVolume(Volume):
     '''
     Defines a Volume that is given by a Voronoi cell specified by a set of centers

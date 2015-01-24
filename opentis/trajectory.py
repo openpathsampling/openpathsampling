@@ -9,16 +9,14 @@ import numpy as np
 import mdtraj as md
 import simtk.unit as u
 
-from opentis.snapshot import Snapshot, Configuration, Momentum
-
+import opentis as paths
 
 #=============================================================================================
 # SIMULATION TRAJECTORY
 #=============================================================================================
-from wrapper import storable
 
 
-@storable
+
 class Trajectory(list):
     """
     Simulation trajectory. Essentially a python list of snapshots
@@ -156,33 +154,15 @@ class Trajectory(list):
         """
 
         return len(self)
-        
-    def configuration_indices(self):
-        """
-        Return a list of the snapshot IDs in the trajectory
-        
-        Returns
-        -------        
-        indices (list of int) - the list of indices
-        
-        Notes
-        -----        
-        The IDs are only non-zero if the snapshots have been saved before!
-        
-        """
-        return [f.configuration.begin for f in self]
 
     def configurations(self):
         """
-        Return a list of the snapshot IDs in the trajectory
+        Return a list of the snapshots in the trajectory
 
         Returns
         -------
-        indices (list of int) - the list of indices
-
-        Notes
-        -----
-        The IDs are only non-zero if the snapshots have been saved before!
+        list of Configuration
+            the list of Configuration objects
 
         """
         return [f.configuration for f in self]
@@ -190,18 +170,14 @@ class Trajectory(list):
 
     def momenta(self):
         """
-        Return a list of the snapshot IDs in the trajectory
-        
+        Return a list of the Momentum objects in the trajectory
+
         Returns
-        -------        
-        indices (list of int) - the list of indices
-        
-        Notes
-        -----        
-        The IDs are only non-zero if the snapshots have been saved before!
-        
+        -------
+        list of Momentum()
+            the list of Momentum objects
         """
-        return [f.momenta.idx for f in self]
+        return [f.momenta for f in self]
 
     
     @property
@@ -433,7 +409,7 @@ class Trajectory(list):
         Trajectory
         """
         trajectory = Trajectory()
-        empty_momentum = Momentum()
+        empty_momentum = paths.Momentum()
         empty_momentum.velocities = None
         for frame_num in range(mdtrajectory.n_frames):
             # mdtraj trajectories only have coordinates and box_vectors
@@ -443,9 +419,9 @@ class Trajectory(list):
                                  u.nanometers)
             else:
                 box_v = None
-            config = Configuration(coordinates=coord, box_vectors=box_v)
+            config = paths.Configuration(coordinates=coord, box_vectors=box_v)
 
-            snap = Snapshot(configuration=config, momentum=empty_momentum)
+            snap = paths.Snapshot(configuration=config, momentum=empty_momentum)
             trajectory.append(snap)
 
         return trajectory

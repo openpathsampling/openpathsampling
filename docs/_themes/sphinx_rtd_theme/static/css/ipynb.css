@@ -1,0 +1,88 @@
+.code_cell .prompt.input_prompt {
+border-left: 5px solid #e1e4e5;
+/* padding: 0px 16px 0px 10px; */
+overflow-x: auto;
+background: #fff;
+margin: 0;
+margin-left: 12px;
+margin-top:-12px;
+margin-bottom: 4px;
+padding: 6px 0px 2px 12px;
+font-family: Consolas,"Andale Mono WT","Andale Mono","Lucida Console","Lucida Sans Typewriter","DejaVu Sans Mono","Bitstream Vera Sans Mono","Liberation Mono","Nimbus Mono L",Monaco,"Courier New",Courier,monospace;
+font-size: 12px;
+line-height: 1.0;
+display: block;
+overflow: auto;
+color: #404040;
+}
+
+.code_cell .prompt.output_prompt {
+border-left: 5px solid #e1e4e5;
+/* padding: 0px 16px 0px 10px; */
+overflow-x: auto;
+background: #fff;
+margin: 0;
+margin-left: 12px;
+margin-top: -20px;
+margin-bottom: 4px;
+padding: 6px 0px 2px 12px;
+font-family: Consolas,"Andale Mono WT","Andale Mono","Lucida Console","Lucida Sans Typewriter","DejaVu Sans Mono","Bitstream Vera Sans Mono","Liberation Mono","Nimbus Mono L",Monaco,"Courier New",Courier,monospace;
+font-size: 12px;
+line-height: 1.0;
+display: block;
+overflow: auto;
+color: #404040;
+}
+
+pre, code {
+white-space: nowrap;
+max-width: 100%;
+padding: 12px 12px;
+background: #f6f6f6;
+border-bottom: solid 1px #e1e4e5;
+font-size: 75%;
+font-family: Consolas,"Andale Mono WT","Andale Mono","Lucida Console","Lucida Sans Typewriter","DejaVu Sans Mono","Bitstream Vera Sans Mono","Liberation Mono","Nimbus Mono L",Monaco,"Courier New",Courier,monospace;
+color:#404040;
+overflow-x: auto;
+font-weight: normal;
+}
+
+div[class^='highlight'] {
+border: 0 solid #e1e4e5;
+padding: 0px;
+overflow-x: auto;
+background: #fff;
+margin: 0px 0 20x 0;
+}
+
+code {
+white-space: nowrap;
+max-width: 100%;
+background: #f6f6f6;
+border-bottom: solid 1px #e1e4e5;
+font-size: 85%;
+padding: 2px 4px 2px 4px;
+margin: 2px;
+/* font-family: Consolas,"Andale Mono WT","Andale Mono","Lucida Console","Lucida Sans Typewriter","DejaVu Sans Mono","Bitstream Vera Sans Mono","Liberation Mono","Nimbus Mono L",Monaco,"Courier New",Courier,monospace; */
+
+
+
+/* font-family: Courier; */
+font-weight: normal;
+font-variant: small-caps;
+color:#404040;
+overflow-x: auto;
+/* font-weight: bold; */
+}
+
+.output_subarea {
+margin : 8px 0px 24px 0px;
+}
+
+.output_pyout {
+font-size: 12px;
+}
+
+.dataframe td, .dataframe th {
+padding: 4px
+}

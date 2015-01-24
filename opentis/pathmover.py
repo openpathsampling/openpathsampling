@@ -7,11 +7,9 @@ Created on 19.07.2014
 import numpy as np
 import random
 
-from shooting import ShootingPoint
-from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble
-from ensemble import FullEnsemble, Ensemble
+import opentis as paths
+from opentis.todict import restores_as_stub_object
 from sample import Sample, SampleSet
-from wrapper import storable
 
 import logging
 from ops_logging import initialization_logging
@@ -57,8 +55,7 @@ def make_list_of_pairs(l):
     # part to work.
     return outlist
 
-
-@storable
+@restores_as_stub_object
 class MoveDetails(object):
     '''Details of the move as applied to a given replica
 
@@ -68,7 +65,7 @@ class MoveDetails(object):
         replica ID to which this trial move would apply
     inputs : list of Trajectry
         the Samples which were used as inputs to the move
-    trial : Tractory
+    trial : Trajectory
         the Trajectory 
     trial_is_in_ensemble : bool
         whether the attempted move created a trajectory in the right
@@ -85,8 +82,6 @@ class MoveDetails(object):
         explanation of reasons the path was rejected
 
     RENAME: inputs=>initial
-            final=>trial
-            success=>accepted
             accepted=>trial_in_ensemble (probably only in shooting)
 
     TODO:
@@ -108,13 +103,16 @@ class MoveDetails(object):
         # primarily for debugging/interactive use
         mystr = ""
         for key in self.__dict__.keys():
-            if not isinstance(self.__dict__[key], Ensemble):
+            if not isinstance(self.__dict__[key], paths.Ensemble):
                 mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
         return mystr
 
+
+@restores_as_stub_object
 class PathMover(object):
     """
-    A PathMover is the description of how to generate a new path from an old one.
+    A PathMover is the description of how to generate a new path from an old
+    one.
     
     Notes
     -----
@@ -150,20 +148,9 @@ class PathMover(object):
         the attached engine used to generate new trajectories
 
     """
-
-    # TODO: JHP, does this cls variable do anything? ~~~DWHS
-    cls = 'pathmover'
     engine = None
 
-    @property
-    def identifier(self):
-        if hasattr(self, 'json'):
-            return self.json
-        else:
-            return None
-
     def __init__(self, replicas='all', ensembles=None):
-        
         self.name = self.__class__.__name__
 
         if type(replicas) is int:
@@ -174,8 +161,6 @@ class PathMover(object):
         if ensembles is not None and type(ensembles) is not list:
             ensembles = [ensembles]
         self.ensembles = ensembles
-
-        self.idx = dict()
 
         initialization_logging(logger=init_log, obj=self,
                                entries=['replicas', 'ensembles'])
@@ -269,6 +254,7 @@ class PathMover(object):
         '''
         return 1.0 # pragma: no cover
 
+@restores_as_stub_object
 class ShootMover(PathMover):
     '''
     A pathmover that implements a general shooting algorithm that generates
@@ -278,7 +264,7 @@ class ShootMover(PathMover):
     def __init__(self, selector, ensembles=None, replicas='all'):
         super(ShootMover, self).__init__(ensembles=ensembles, replicas=replicas)
         self.selector = selector
-        self.length_stopper = PathMover.engine.max_length_stopper
+        self._length_stopper = PathMover.engine.max_length_stopper
         self.extra_details = ['start', 'start_point', 'trial',
                               'final_point']
         initialization_logging(logger=init_log, obj=self,
@@ -329,7 +315,7 @@ class ShootMover(PathMover):
                 details.accepted = True
                 details.result = details.trial
 
-        path = Sample(replica=replica,
+        path = paths.Sample(replica=replica,
                       trajectory=details.result, 
                       ensemble=dynamics_ensemble,
                       details=details)
@@ -337,7 +323,8 @@ class ShootMover(PathMover):
         return [path]
     
     
-class ForwardShootMover(ShootMover):    
+@restores_as_stub_object
+class ForwardShootMover(ShootMover):
     '''
     A pathmover that implements the forward shooting algorithm
     '''
@@ -353,11 +340,11 @@ class ForwardShootMover(ShootMover):
         partial_trajectory = PathMover.engine.generate(
             details.start_point.snapshot.copy(),
             running = [
-                ForwardAppendedTrajectoryEnsemble(
+                paths.ForwardAppendedTrajectoryEnsemble(
                     ensemble, 
                     details.start[0:details.start_point.index]
                 ).can_append, 
-                self.length_stopper.can_append
+                self._length_stopper.can_append
             ]
         )
 
@@ -366,10 +353,11 @@ class ForwardShootMover(ShootMover):
         #setattr(details, 'new_partial', partial_trajectory)
 
         details.trial = details.start[0:shooting_point] + partial_trajectory
-        details.final_point = ShootingPoint(self.selector, details.trial,
+        details.final_point = paths.ShootingPoint(self.selector, details.trial,
                                             shooting_point)
     
-class BackwardShootMover(ShootMover):    
+@restores_as_stub_object
+class BackwardShootMover(ShootMover):
     '''
     A pathmover that implements the backward shooting algorithm
     '''
@@ -384,11 +372,11 @@ class BackwardShootMover(ShootMover):
         partial_trajectory = PathMover.engine.generate(
             details.start_point.snapshot.reversed_copy(), 
             running = [
-                BackwardPrependedTrajectoryEnsemble( 
+                paths.BackwardPrependedTrajectoryEnsemble(
                     ensemble, 
                     details.start[details.start_point.index + 1:]
                 ).can_prepend, 
-                self.length_stopper.can_prepend
+                self._length_stopper.can_prepend
             ]
         )
 
@@ -397,11 +385,12 @@ class BackwardShootMover(ShootMover):
         #setattr(details, 'new_partial', partial_trajectory.reversed)
 
         details.trial = partial_trajectory.reversed + details.start[details.start_point.index + 1:]
-        details.final_point = ShootingPoint(self.selector, details.trial, partial_trajectory.frames - 1)
+        details.final_point = paths.ShootingPoint(self.selector, details.trial, partial_trajectory.frames - 1)
         
         pass
 
-class MixedMover(PathMover):
+@restores_as_stub_object
+class RandomChoiceMover(PathMover):
     '''
     Chooses a random mover from its movers list, and runs that move. Returns
     the number of samples the submove return.
@@ -409,9 +398,16 @@ class MixedMover(PathMover):
     For example, this would be used to select a specific replica exchange
     such that each replica exchange is its own move, and which swap is
     selected at random.
+
+    Attributes
+    ----------
+    movers : list of PathMover
+        the PathMovers to choose from
+    weights : list of floats
+        the relative weight of each PathMover (does not need to be normalized)
     '''
     def __init__(self, movers, ensembles=None, replicas='all', weights = None):
-        super(MixedMover, self).__init__(ensembles=ensembles, replicas=replicas)
+        super(RandomChoiceMover, self).__init__(ensembles=ensembles, replicas=replicas)
 
         self.movers = movers
 
@@ -431,7 +427,7 @@ class MixedMover(PathMover):
             idx += 1
             prob += self.weights[idx]
 
-        logger.info("MixedMover selecting mover index {idx} ({mtype})".format(
+        logger.info("RandomChoiceMover selecting mover index {idx} ({mtype})".format(
                 idx=idx, mtype=self.movers[idx].__class__.__name__))
 
         mover = self.movers[idx]
@@ -559,11 +555,11 @@ class ReplicaIDChange(PathMover):
         details = MoveDetails()
         details.inputs = rep_sample.trajectory
         # TODO: details
-        dead_sample = Sample(replica=rep_sample.replica,
+        dead_sample = paths.Sample(replica=rep_sample.replica,
                              ensemble=old_sample.ensemble,
                              trajectory=old_sample.trajectory
                             )
-        new_sample = Sample(replica=new_rep,
+        new_sample = paths.Sample(replica=new_rep,
                             ensemble=rep_sample.ensemble,
                             trajectory=rep_sample.trajectory
                            )
@@ -627,7 +623,7 @@ class EnsembleHopMover(PathMover):
         else: 
             setattr(details, 'result_ensemble', ens_from)
 
-        path = Sample(trajectory=trajectory,
+        path = paths.Sample(trajectory=trajectory,
                       ensemble=details.result_ensemble, 
                       details=details,
                       replica=replica
@@ -640,6 +636,7 @@ class EnsembleHopMover(PathMover):
 # The following moves still need to be implemented. Check what excactly they do
 #############################################################
 
+@restores_as_stub_object
 class MinusMove(PathMover):
     def move(self, allpaths, state):
         pass
@@ -706,13 +703,13 @@ class ReplicaExchange(PathMover):
             details1.result = trajectory1
             details2.result = trajectory2
 
-        sample1 = Sample(
+        sample1 = paths.Sample(
             trajectory=details1.result,
             mover=self,
             ensemble=ensemble1,
             details=details1
         )
-        sample2 = Sample(
+        sample2 = paths.Sample(
             trajectory=details2.result,
             mover=self,
             ensemble=ensemble2,
