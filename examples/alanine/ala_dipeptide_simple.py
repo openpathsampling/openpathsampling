@@ -9,7 +9,6 @@ TIS simulation on alanine dipeptide.
 # that more of what the user will need to do will be in the __main__ of this
 # script
 
-import logging.config
 import numpy as np
 import mdtraj as md
 import time
@@ -31,13 +30,10 @@ from opentis.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
 from opentis.calculation import Bootstrapping
 from opentis.pathmover import PathMover
 from opentis.shooting import UniformSelector
-from opentis.sample import Sample, SampleSet
 
 import simtk.unit as u
 
 if __name__=="__main__":
-    logging.config.fileConfig('../../opentis/logging.conf',
-                              disable_existing_loggers=False)
     options = {'temperature' : 300.0 * u.kelvin,
                'collision_rate' : 1.0 / u.picoseconds,
                'timestep' : 2.0 * u.femtoseconds,
@@ -52,7 +48,7 @@ if __name__=="__main__":
               }
 
     engine = OpenMMEngine.auto(
-        filename="trajectory.nc",
+        filename="test_simple.nc",
         template='../data/Alanine_solvated.pdb',
         options=options,
         mode='create'
@@ -96,7 +92,9 @@ if __name__=="__main__":
     # now we define our states and our interfaces
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
     stateA = LambdaVolumePeriodic(psi, -120.0/degrees, -30.0/degrees)
-    stateB = LambdaVolumePeriodic(psi, 100/degrees, 180/degrees) 
+    stateB = LambdaVolumePeriodic(psi, 100/degrees, 180/degrees)
+
+    engine.storage.volume.save(stateA)
 
     # set up minima and maxima for this transition's interface set
     minima = map((1.0 / degrees).__mul__,
@@ -115,17 +113,8 @@ if __name__=="__main__":
 
     mover_set = mf.OneWayShootingSet(UniformSelector(), interface_set)
 
-    print """
-PART ONE: Generate an initial trajectory which satisfies the path ensemble
-for the innermost interface.
-
-We do this by using a special sequential ensemble for the sequence.
-This path ensemble is particularly complex because we want to be sure that
-the path we generate is in the ensemble we desire: this means that we can't
-use LeaveXEnsemble as we typically do with TIS paths.
-    """
     snapshot = engine.storage.snapshot.load(0)
-
+    
     first_traj_ensemble = SequentialEnsemble([
         OutXEnsemble(stateA) | LengthEnsemble(0),
         InXEnsemble(stateA),
@@ -173,45 +162,3 @@ use LeaveXEnsemble as we typically do with TIS paths.
         print "Segment trajectory: phi psi stateA interface0 stateB"
         for frame in segments[0]:
             print phi(frame)[0]*degrees, psi(frame)[0]*degrees, stateA(frame), interface0(frame), stateB(frame)
-
-    print """
-Starting the bootstrapping procedure to obtain initial paths. First we
-define our shooting movers (randomly pick fwd or bkwd shooting), then build
-the bootstrapping calculation, then we run it. 
-    """
-    bootstrap = Bootstrapping(storage=engine.storage,
-                              engine=engine,
-                              ensembles=interface_set,
-                              movers=mover_set,
-                              trajectory=segments[0]
-                             )
-
-    bootstrap.run(50)
-
-    print """
-    Saving all cached computations of orderparameters.
-    """
-
-    engine.storage.collectivevariable.sync(psi)
-    engine.storage.collectivevariable.sync(phi)
-
-    # Save all interface volumes as orderparameters
-    op_vol_set = [OP_Volume('OP' + str(idx), vol) for idx, vol in enumerate(volume_set)]
-
-    for op in op_vol_set:
-        op(engine.storage.snapshot.all())
-        engine.storage.collectivevariable.save(op)
-
-    # Create an orderparameter from a volume
-    op_inA = OP_Volume('StateA', stateA)
-    op_inB = OP_Volume('StateB', stateB)
-    op_notinAorB = OP_Volume('StateX', ~ (stateA | stateB))
-
-    # compute the orderparameter for all snapshots
-    op_inA(engine.storage.snapshot.all())
-    op_inB(engine.storage.snapshot.all())
-    op_notinAorB(engine.storage.snapshot.all())
-
-    engine.storage.collectivevariable.save(op_inA)
-    engine.storage.collectivevariable.save(op_inB)
-    engine.storage.collectivevariable.save(op_notinAorB)
