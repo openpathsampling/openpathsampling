@@ -39,7 +39,7 @@ class ToyEngine(DynamicsEngine):
                       'nsteps_per_frame' : 10
     }
 
-    def __init__(self, options=None, mode='auto'):
+    def __init__(self, options=None):
         if 'ndim' not in options:
             options['ndim'] = 2
         options['n_atoms'] = count_atoms(options['ndim'])
