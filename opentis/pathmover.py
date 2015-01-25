@@ -586,7 +586,7 @@ class EnsembleHopMover(PathMover):
         initial_ensembles = [pair[0] for pair in self.ensembles]
         logger.debug("initial_ensembles: " + str(initial_ensembles))
         legal_ensembles = [
-            s.ensemble 
+            s.ensemble
             for s in self.legal_sample_set(globalstate, initial_ensembles)
         ]
         logger.debug("globalstate ensembles" + 
