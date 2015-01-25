@@ -1,6 +1,7 @@
 import sys
 import argparse
 import os
+import time
 
 from opentis.storage import Storage
 
@@ -150,12 +151,18 @@ if __name__ == '__main__':
 
 
     for o_idx in range(0, storage.sample.count()):
+
+#        t0 = time.time()
         sample = storage.sample.load(o_idx)
-#        nline(o_idx, '', sample.details.json)
+#        print time.time() - t0, 'seconds for sample'
+
+#        sample.details
+
+        nline(o_idx, '', sample.details.json)
         nline(o_idx, str(sample.details.mover.name),
               (str([t.idx[storage] for t in sample.details.inputs])
-               + " -> " + str(sample.details.trial.idx[storage]) 
-               + " in " + sample.ensemble.name 
+               + " -> " + str(sample.details.trial.idx[storage])
+               + " in " + sample.ensemble.name
                + " [" + str(sample.ensemble.idx[storage]) + "]"
               )
              )

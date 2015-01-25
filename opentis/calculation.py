@@ -28,7 +28,7 @@ class Calculation(object):
     def run(self, nsteps):
         logger.warning("Running an empty calculation? Try a subclass, maybe!")
 
-
+@restores_as_stub_object
 class BootstrapPromotionMove(PathMover):
     '''
     Bootstrap promotion is the combination of an EnsembleHop (to the next

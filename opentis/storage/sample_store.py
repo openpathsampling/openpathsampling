@@ -1,6 +1,8 @@
 from object_storage import ObjectStore
 from opentis.sample import SampleSet, Sample
 
+import time
+
 class SampleStore(ObjectStore):
     def __init__(self, storage):
         super(SampleStore, self).__init__(storage, Sample, json=False, load_partial=True)
@@ -37,6 +39,8 @@ class SampleStore(ObjectStore):
             step=step
         )
 
+        del obj.details
+
         return obj
 
     def update_details(self, obj):
@@ -44,7 +48,10 @@ class SampleStore(ObjectStore):
 
         idx = obj.idx[self.storage]
         details_idx = int(self.storage.variables['sample_details_idx'][idx])
+        t0 = time.time()
         details=self.storage.movedetails.load(details_idx)
+
+        print time.time() - t0, 'seconds'
 
         obj.details = details
 
