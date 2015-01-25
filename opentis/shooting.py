@@ -192,3 +192,9 @@ class UniformSelector(ShootingPointSelector):
         point = ShootingPoint(self, trajectory, idx, f = 1.0, sum_bias= self.sum_bias(trajectory))
         
         return point
+
+class FinalFrameSelector(ShootingPointSelector):
+    pass
+
+class FirstFrameSelector(ShootingPointSelector):
+    pass
