@@ -3,6 +3,11 @@ OpenPathSampling
 
 A toolkit to run PathSampling Algorithms in python with OpenMM
 
+.. toctree::
+   :maxdepth: 1
+
+   README
+
 --------------------------------------------------------------------------------
 
 Documentation
@@ -35,11 +40,6 @@ Developing
 
    netcdf_format
 
-
-README
-------
-
-.. markdown:: opentis/README.md
 
 --------------------------------------------------------------------------------
 

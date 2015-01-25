@@ -27,9 +27,12 @@ fi
 
 # Install stuff for running the example IPython notebooks
 
-# sudo apt-get install -qq pandoc         # notebook -> rst
-# conda install --yes matplotlib scikit-learn sphinx==1.2.3 boto ipython-notebook jinja2
-# pip install numpydoc runipy==0.0.4                      # example notebooks
+sudo apt-get install -qq pandoc         # notebook -> rst
+conda install --yes matplotlib scikit-learn sphinx==1.2.3 boto ipython-notebook jinja2
+pip install numpydoc runipy==0.0.4                      # example notebooks
+
+cd docs/
+make html
 
 # Install OpenMM for a couple of the the examples
 # conda config --add channels http://conda.binstar.org/omnia

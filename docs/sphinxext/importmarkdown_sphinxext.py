@@ -44,11 +44,15 @@ class NotebookDirective(Directive):
         md_dir = os.path.join(setup.confdir, '..')
         md_abs_path = os.path.abspath(os.path.join(md_dir, md_filename))
 
-        p = subprocess.Popen(['pandoc', '--from=markdown', '--to=rst', md_abs_path],
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
+        p = subprocess.Popen(['pandoc',
+                                '--from=markdown', '--to=rst', md_abs_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
 
         out, err = p.communicate()
+
+        print(err)
 
         settings = OptionParser(components=(Parser,)).get_default_values()
         parser = Parser()
