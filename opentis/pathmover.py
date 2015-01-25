@@ -678,9 +678,32 @@ class PathReversalMover(PathMover):
         return [sample]
 
 
-class ReplicaExchange(PathMover):
-    # TODO: Might put the target ensembles into the Mover instance, which means we need lots of mover instances for all ensemble switches
-    def move(self, trajectory1, trajectory2, ensemble1, ensemble2):
+class ReplicaExchangeMover(PathMover):
+    def __init__(self, bias=None, ensembles=None, replicas='all'):
+        if replicas=='all' or replicas is None:
+            # replicas MUST be a non-empty list of pairs
+            raise ValueError("Specify replicas for ReplicaExchangeMover")
+        replicas = make_list_of_pairs(replicas)
+        super(ReplicaExchangeMover, self).__init__(ensembles=ensembles, 
+                                                   replicas=replicas)
+        # TODO: add support for bias; cf EnsembleHopMover
+        self.bias = bias
+        initialization_logging(logger=init_log, obj=self,
+                               entries=['bias'])
+
+
+    def move(self, globalstate):
+        # figure out which pair of replicas we will be swapping
+        (rep1, rep2) = random.choice(self.replicas)
+        rep1_sample = self.select_sample(globalstate, rep1)
+        rep2_sample = self.select_sample(globalstate, rep2)
+        
+        # convert sample to the language used here before
+        trajectory1 = rep1_sample.trajectory
+        trajectory2 = rep2_sample.trajectory
+        ensemble1 = rep1_sample.ensemble
+        ensemble2 = rep2_sample.ensemble
+
         from1to2 = ensemble2(trajectory1)
         logger.debug("trajectory " + trajectory1 +
                      " into ensemble " + repr(ensemble2) +
@@ -689,7 +712,7 @@ class ReplicaExchange(PathMover):
         logger.debug("trajectory " + trajectory2 +
                      " into ensemble " + repr(ensemble1) +
                      " : " + from2to1)
-        accepted = from1to2 and from2to1
+        allowed = from1to2 and from2to1
         details1 = MoveDetails()
         details2 = MoveDetails()
         details1.inputs = [trajectory1, trajectory2]
@@ -700,7 +723,7 @@ class ReplicaExchange(PathMover):
         details2.mover_path.append(self)
         details2.trial = trajectory1
         details1.trial = trajectory2
-        if accepted:
+        if allowed:
             # Swap
             details1.accepted = True
             details2.accepted = True
@@ -719,13 +742,11 @@ class ReplicaExchange(PathMover):
 
         sample1 = Sample(
             trajectory=details1.result,
-            mover=self,
             ensemble=ensemble1,
             details=details1
         )
         sample2 = Sample(
             trajectory=details2.result,
-            mover=self,
             ensemble=ensemble2,
             details=details2
             )

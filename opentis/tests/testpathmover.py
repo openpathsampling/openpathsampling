@@ -171,6 +171,14 @@ class testPathReversalMover(object):
         samp = self.move.move(gs_BXA)[0]
         assert_equal(samp.details.accepted, True)
 
+class testReplicaExchangeMover(object):
+    def setup(self):
+        pass
+
+    def test_repex(self):
+        # includes both success and failure of swap move
+        pass
+
 
 class testMixedMover(object):
     def setup(self):
