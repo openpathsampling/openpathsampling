@@ -35,6 +35,12 @@ Developing
 
    netcdf_format
 
+
+README
+------
+
+.. markdown:: opentis/README.md
+
 --------------------------------------------------------------------------------
 
 
