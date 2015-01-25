@@ -38,7 +38,7 @@ script:
 
   - cd ../..
   # Push to binstar anyway.
-#  - bash -x devtools/ci/after_sucess.sh
+  - bash -x devtools/ci/after_sucess.sh
 
 env:
   matrix:
