@@ -1,4 +1,4 @@
-.. _snapshot:
+.. _core:
 
 .. currentmodule:: opentis
 
@@ -10,8 +10,6 @@ Snapshot Functions
     >>> import openpathsampling as paths
     >>> mover = paths.PathMover()
 
-atomic movers
--------------
 
 These are the leaves of a path tree. The atomic moved that can be made
 
@@ -19,3 +17,34 @@ These are the leaves of a path tree. The atomic moved that can be made
     :toctree: api/generated/
 
     Snapshot
+
+Configuration Functions
+=======================
+
+:class:`opentis.Configuration`
+
+
+.. autosummary::
+    :toctree: api/generated/
+
+    Configuration
+
+Momentum Functions
+==================
+
+:class:`opentis.Momentum`
+
+.. autosummary::
+    :toctree: api/generated/
+
+    Momentum
+
+Trajectory Functions
+====================
+
+:class:`opentis.Trajectory`
+
+.. autosummary::
+    :toctree: api/generated/
+
+    Trajectory
