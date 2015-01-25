@@ -30,6 +30,7 @@ API Reference
    shooting
    pathmover
    calculation
+   engine
    storage
 
 Developing
