@@ -51,8 +51,6 @@ class SampleStore(ObjectStore):
         t0 = time.time()
         details=self.storage.movedetails.load(details_idx)
 
-        print time.time() - t0, 'seconds'
-
         obj.details = details
 
     def load(self, idx):
