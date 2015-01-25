@@ -44,21 +44,21 @@ extensions = [
     'sphinx.ext.ifconfig',
     'IPython.sphinxext.ipython_console_highlighting',
     'IPython.sphinxext.ipython_directive',
-    'matplotlib.sphinxext.plot_directive',
-    'sphinxcontrib.napoleon'
+    'matplotlib.sphinxext.plot_directive'
+#    ,'sphinxcontrib.napoleon'
 ]
 
 # Napoleon settings
-napoleon_google_docstring = False
-napoleon_numpy_docstring = True
-napoleon_include_private_with_doc = False
-napoleon_include_special_with_doc = False
-napoleon_use_admonition_for_examples = False
-napoleon_use_admonition_for_notes = True
-napoleon_use_admonition_for_references = False
-napoleon_use_ivar = False
-napoleon_use_param = True
-napoleon_use_rtype = True
+#napoleon_google_docstring = False
+#napoleon_numpy_docstring = True
+#napoleon_include_private_with_doc = False
+#napoleon_include_special_with_doc = False
+#napoleon_use_admonition_for_examples = False
+#napoleon_use_admonition_for_notes = True
+#napoleon_use_admonition_for_references = False
+#napoleon_use_ivar = False
+#napoleon_use_param = True
+#napoleon_use_rtype = True
 
 autosummary_generate = True
 autodoc_default_flags = ['members', 'inherited-members']
