@@ -3,11 +3,6 @@ OpenPathSampling
 
 A toolkit to run PathSampling Algorithms in python with OpenMM
 
-.. toctree::
-   :maxdepth: 1
-
-   README
-
 --------------------------------------------------------------------------------
 
 Documentation
@@ -30,6 +25,11 @@ API Reference
 
    ensemble
    volume
+   pathmover
+   snapshot
+   storage
+   orderparameter
+   api
 
 
 Developing
@@ -40,6 +40,13 @@ Developing
 
    netcdf_format
 
+README
+------
+
+.. toctree::
+   :maxdepth: 1
+
+   readme
 
 --------------------------------------------------------------------------------
 

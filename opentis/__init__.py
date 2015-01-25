@@ -18,9 +18,11 @@ from orderparameter import OP_Function, OP_MD_Function, OP_Featurizer, \
     OP_RMSD_To_Lambda, OP_Volume, OrderParameter
 
 from pathmover import (
-    BackwardShootMover, MinusMove, RandomChoiceMover, MoveDetails,
-    ForwardShootMover, PathMover, PathMoverFactory, PathReversalMover,
-    ReplicaExchange#, BootstrapPromotionMove
+    BackwardShootMover, MinusMove, RandomChoiceMover, MoveDetails, \
+    ForwardShootMover, PathMover, PathMoverFactory, PathReversalMover, \
+    ReplicaExchange, ConditionalSequentialMover, EnsembleHopMover, \
+    PartialAcceptanceSequentialMover, ReplicaIDChange, SequentialMover
+    #, BootstrapPromotionMove
 )
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
