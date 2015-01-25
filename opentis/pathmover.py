@@ -7,9 +7,16 @@ Created on 19.07.2014
 import numpy as np
 import random
 
+<<<<<<< HEAD
 import opentis as paths
 from opentis.todict import restores_as_stub_object
+=======
+from shooting import ShootingPoint
+from ensemble import ForwardAppendedTrajectoryEnsemble, BackwardPrependedTrajectoryEnsemble
+from ensemble import FullEnsemble, Ensemble
 from sample import Sample, SampleSet
+from wrapper import storable
+>>>>>>> c62ea78db4a4b5238c3325b42198db618f073019
 
 import logging
 from ops_logging import initialization_logging
@@ -65,7 +72,7 @@ class MoveDetails(object):
         replica ID to which this trial move would apply
     inputs : list of Trajectry
         the Samples which were used as inputs to the move
-    trial : Trajectory
+    trial : Tractory
         the Trajectory 
     trial_is_in_ensemble : bool
         whether the attempted move created a trajectory in the right
@@ -82,6 +89,8 @@ class MoveDetails(object):
         explanation of reasons the path was rejected
 
     RENAME: inputs=>initial
+            final=>trial
+            success=>accepted
             accepted=>trial_in_ensemble (probably only in shooting)
 
     TODO:
@@ -95,8 +104,13 @@ class MoveDetails(object):
         self.result=None
         self.acceptance_probability=None
         self.accepted=None
+<<<<<<< HEAD
+        self.mover=None
+        for key, value in kwargs.iteritems():
+=======
         self.mover_path=[]
         for key, value in kwargs:
+>>>>>>> c62ea78db4a4b5238c3325b42198db618f073019
             setattr(self, key, value)
 
     def __str__(self):
@@ -111,8 +125,7 @@ class MoveDetails(object):
 @restores_as_stub_object
 class PathMover(object):
     """
-    A PathMover is the description of how to generate a new path from an old
-    one.
+    A PathMover is the description of how to generate a new path from an old one.
     
     Notes
     -----
@@ -390,7 +403,7 @@ class BackwardShootMover(ShootMover):
         pass
 
 @restores_as_stub_object
-class RandomChoiceMover(PathMover):
+class MixedMover(PathMover):
     '''
     Chooses a random mover from its movers list, and runs that move. Returns
     the number of samples the submove return.
@@ -398,16 +411,9 @@ class RandomChoiceMover(PathMover):
     For example, this would be used to select a specific replica exchange
     such that each replica exchange is its own move, and which swap is
     selected at random.
-
-    Attributes
-    ----------
-    movers : list of PathMover
-        the PathMovers to choose from
-    weights : list of floats
-        the relative weight of each PathMover (does not need to be normalized)
     '''
     def __init__(self, movers, ensembles=None, replicas='all', weights = None):
-        super(RandomChoiceMover, self).__init__(ensembles=ensembles, replicas=replicas)
+        super(MixedMover, self).__init__(ensembles=ensembles, replicas=replicas)
 
         self.movers = movers
 
@@ -427,7 +433,7 @@ class RandomChoiceMover(PathMover):
             idx += 1
             prob += self.weights[idx]
 
-        logger.info("RandomChoiceMover selecting mover index {idx} ({mtype})".format(
+        logger.info("MixedMover selecting mover index {idx} ({mtype})".format(
                 idx=idx, mtype=self.movers[idx].__class__.__name__))
 
         mover = self.movers[idx]
@@ -538,6 +544,15 @@ class ConditionalSequentialMover(PartialAcceptanceSequentialMover):
         return mysamples
 
 
+<<<<<<< HEAD
+        # why do we make a new sample here?
+        path = paths.Sample(trajectory=sample.trajectory,
+                      ensemble=sample.ensemble, 
+                      details=sample.details,
+                     replica=sample.replica)
+        return path
+=======
+>>>>>>> c62ea78db4a4b5238c3325b42198db618f073019
 
 class ReplicaIDChange(PathMover):
     def __init__(self, new_replicas=None, old_samples=None, 
@@ -641,6 +656,11 @@ class MinusMove(PathMover):
     def move(self, allpaths, state):
         pass
 
+<<<<<<< HEAD
+@restores_as_stub_object
+class PathReversal(PathMover):
+    def move(self, trajectory, ensemble):
+=======
 class PathReversalMover(PathMover):
     def move(self, globalstate):
         rep_sample = self.select_sample(globalstate, self.ensembles)
@@ -648,6 +668,7 @@ class PathReversalMover(PathMover):
         ensemble = rep_sample.ensemble
         replica = rep_sample.replica
 
+>>>>>>> c62ea78db4a4b5238c3325b42198db618f073019
         details = MoveDetails()
         details.inputs = [trajectory]
         details.mover_path.append(self)
@@ -663,8 +684,12 @@ class PathReversalMover(PathMover):
             details.acceptance_probability = 0.0
             details.result = trajectory
 
+<<<<<<< HEAD
+        sample = paths.Sample(
+=======
         sample = Sample(
             replica=replica,
+>>>>>>> c62ea78db4a4b5238c3325b42198db618f073019
             trajectory=details.result,
             ensemble=ensemble,
             details=details
@@ -672,6 +697,14 @@ class PathReversalMover(PathMover):
         return [sample]
 
 
+<<<<<<< HEAD
+#############################################################
+# The following move should be moved to RETIS and just uses moves. It is not a move itself
+#############################################################
+
+@restores_as_stub_object
+=======
+>>>>>>> c62ea78db4a4b5238c3325b42198db618f073019
 class ReplicaExchange(PathMover):
     # TODO: Might put the target ensembles into the Mover instance, which means we need lots of mover instances for all ensemble switches
     def move(self, trajectory1, trajectory2, ensemble1, ensemble2):
@@ -724,7 +757,7 @@ class PathMoverFactory(object):
         if type(selector_set) is not list:
             selector_set = [selector_set]*len(interface_set)
         mover_set = [
-            RandomChoiceMover([
+            MixedMover([
                 ForwardShootMover(sel, ensembles=[iface]), 
                 BackwardShootMover(sel, ensembles=[iface])
             ],

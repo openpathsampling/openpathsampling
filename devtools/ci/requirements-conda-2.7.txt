@@ -12,4 +12,3 @@ openmmtools
 ipython
 ipython-notebook
 matplotlib
-pandoc
