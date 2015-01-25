@@ -1134,8 +1134,6 @@ class ReversedTrajectoryEnsemble(AlteredEnsemble):
     def _alter(self, trajectory):
         return trajectory.reverse()
 
-
-
 @restores_as_full_object
 class OptionalEnsemble(Ensemble):
     '''
@@ -1181,7 +1179,7 @@ class SingleFrameEnsemble(AlteredEnsemble):
         return self._new_ensemble(trajectory)
 
     def __str__(self):
-        return "{"+self.orig_ens.__str__()+"} (SINGLE FRAME)"
+        return "{"+self.ensemble.__str__()+"} (SINGLE FRAME)"
 
 class EnsembleFactory():
     '''

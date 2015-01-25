@@ -565,7 +565,7 @@ class ReplicaIDChange(PathMover):
                            )
         return [dead_sample, new_sample]
 
-
+@restores_as_stub_object
 class EnsembleHopMover(PathMover):
     def __init__(self, bias=None, ensembles=None, replicas='all'):
         # TODO: maybe allow a version of this with a single ensemble and ANY
