@@ -3,6 +3,7 @@ import argparse
 import os
 
 from opentis.storage import Storage
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Analyze a file.')
@@ -62,6 +63,8 @@ if __name__ == '__main__':
     # load initial equilibrate snapshot given by ID #0
     snapshot = storage.snapshot.load(0)
 
+    print snapshot.__dict__
+
     line("Potential Energy",str(snapshot.potential_energy))
     line("Kinetic Energy",str(snapshot.kinetic_energy))
 
@@ -69,7 +72,9 @@ if __name__ == '__main__':
 
     for e_idx in range(0, storage.ensemble.count()):
         ensemble = storage.ensemble.load(e_idx)
-        nline(e_idx,ensemble.name, ensemble.description.replace('\n', ''))
+#        print ensemble._loader()
+        print ensemble.name
+        nline(e_idx,ensemble.name, str(ensemble).replace('\n', ''))
 
     headline("PathMovers")
 
@@ -81,7 +86,7 @@ if __name__ == '__main__':
 
     for p_idx in range(0, storage.shootingpointselector.count()):
         obj = storage.shootingpointselector.load(p_idx)
-        nline(p_idx,obj.json, obj.cls)
+        nline(p_idx,obj.json, obj.__class__.__name__)
 
     headline("ShootingPoints (" + str(storage.shootingpoint.count()) + ")")
 

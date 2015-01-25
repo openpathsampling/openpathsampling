@@ -32,9 +32,9 @@ script:
 #  - python ala_dipeptide_example.py
 # Run the Alanine Example ipnb as a test
   - cd examples/ipython
-  - python ipnbdoctest.py "Alanine Example.ipynb"
+  - python ipnbdoctest.py "alanine.ipynb"
   - python ipnbdoctest.py "sliced_sequential_ensembles.ipynb"
-#  - python ipnbdoctest.py "Visualization Example.ipynb"
+#  - python ipnbdoctest.py "visualization.ipynb"
 
   - cd ../..
   # Push to binstar anyway.

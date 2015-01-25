@@ -180,15 +180,39 @@ class testReplicaExchangeMover(object):
         pass
 
 
-class testMixedMover(object):
+class testRandomChoiceMover(object):
     def setup(self):
-        pass
+        traj = Trajectory([-0.5, 0.7, 1.1])
+        op = CallIdentity()
+        volA = LambdaVolume(op, -100, 0.0)
+        volB = LambdaVolume(op, 1.0, 100)
+        volX = LambdaVolume(op, -100, 0.25)
+        self.tis = ef.TISEnsemble(volA, volB, volX)
+        self.tps = ef.A2BEnsemble(volA, volB)
+        self.len3 = LengthEnsemble(3)
+        self.init_samp = SampleSet([Sample(trajectory=traj,
+                                           ensemble=self.len3, 
+                                           replica=0, 
+                                           details=MoveDetails())])
+        self.hop_to_tis = EnsembleHopMover(ensembles=[[self.len3, self.tis]])
+        self.hop_to_tps = EnsembleHopMover(ensembles=[[self.len3, self.tps]])
+        self.mover = RandomChoiceMover([self.hop_to_tis, self.hop_to_tps])
 
-    def test_both_get_selected(self):
-        raise SkipTest
-
-    def test_only_one_gets_run(self):
-        raise SkipTest
+    def test_random_choice(self):
+        # test that both get selected, but that we always return only one
+        # sample
+        count = {}
+        for t in range(100):
+            samples = self.mover.move(self.init_samp)
+            assert_equal(len(samples), 1)
+            try:
+                # Since self is the root mover, mover_path[-1] is self.
+                # That means that mover_path[-2] is the mover that this
+                # mover chose.
+                count[samples[0].details.mover_path[-2]] += 1
+            except KeyError:
+                count[samples[0].details.mover_path[-2]] = 1
+        assert_equal(len(count.keys()), 2)
 
     def test_restricted_by_replica(self):
         raise SkipTest
