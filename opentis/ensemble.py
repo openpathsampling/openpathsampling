@@ -1134,18 +1134,24 @@ class ReversedTrajectoryEnsemble(AlteredEnsemble):
     def _alter(self, trajectory):
         return trajectory.reverse()
 
+
+
 @restores_as_full_object
-class OptionalEnsemble(AlteredEnsemble):
+class OptionalEnsemble(Ensemble):
     '''
     Makes it optional to satisfy a given ensemble (primarily useful in
     SequentialEnsembles)
     '''
+
     def __init__(self, ensemble):
-        self.orig_ens = ensemble
-        self.ensemble = ensemble | LengthEnsemble(0)
+        self.ensemble = ensemble
+        self._new_ensemble = LengthEnsemble(0) | self.ensemble
+
+    def __call__(self, trajectory):
+        return self._new_ensemble(trajectory)
 
     def __str__(self):
-        return "{"+self.orig_ens.__str__()+"} (OPTIONAL)"
+        return "{"+self.ensemble.__str__()+"} (OPTIONAL)"
 
 @restores_as_full_object
 class SingleFrameEnsemble(AlteredEnsemble):
@@ -1168,12 +1174,15 @@ class SingleFrameEnsemble(AlteredEnsemble):
     here.
     '''
     def __init__(self, ensemble):
-        self.orig_ens = ensemble
-        self.ensemble = ensemble & LengthEnsemble(1)
+        self.ensemble = ensemble
+        self._new_ensemble = LengthEnsemble(1) & self.ensemble
+
+    def __call__(self, trajectory):
+        return self._new_ensemble(trajectory)
 
     def __str__(self):
         return "{"+self.orig_ens.__str__()+"} (SINGLE FRAME)"
-    
+
 class EnsembleFactory():
     '''
     Convenience class to construct Ensembles
