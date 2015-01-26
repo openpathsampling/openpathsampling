@@ -290,13 +290,14 @@ class ShootMover(PathMover):
         dynamics_ensemble = rep_sample.ensemble
         replica = rep_sample.replica
 
+        old_move_path = globalstate.move_path
+
         details = MoveDetails()
         details.accepted = False
         details.inputs = [trajectory]
         details.mover_path.append(self)
         setattr(details, 'start', trajectory)
         setattr(details, 'start_point', self.selector.pick(details.start) )
-        #setattr(details, 'trial', None)
         setattr(details, 'final_point', None)
 
         self._generate(details, dynamics_ensemble)
@@ -322,7 +323,12 @@ class ShootMover(PathMover):
                       ensemble=dynamics_ensemble,
                       details=details)
 
-        return [path]
+
+
+        new_set = SampleSet(globalstate, accepted=details.accepted, move_path=old_move_path + [self])
+        new_set.apply_samples([path])
+
+        return new_set
     
     
 @restores_as_stub_object
