@@ -115,6 +115,27 @@ class BootstrapPromotionMove(PathMover):
 
         return [sample]
 
+class InitializeSingleTrajectoryMover(PathMover):
+    def __init__(self, bias=None, shooters=None,
+                 ensembles=None, replicas='all'):
+        super(InitializeSingleTrajectoryMover, self).__init__(ensembles=ensembles,
+                                                     replicas=replicas)
+        self.shooters = shooters
+        self.bias = bias
+        initialization_logging(logger=init_log, obj=self,
+                               entries=['bias', 'shooters'])
+
+    def move(self, globalstate=None):
+        init_details = MoveDetails()
+        init_details.accepted = True
+        init_details.acceptance_probability = 1.0
+        init_details.mover = self
+        init_details.inputs = []
+        init_details.trial = trajectory
+        init_details.ensemble = ensemble
+        sample = Sample(replica=0, trajectory=trajectory,
+                        ensemble=self.ensembles[0], details=init_details)
+
 
 class Bootstrapping(Calculation):
     """The ensembles for the Bootstrapping calculation must be one ensemble
@@ -217,4 +238,3 @@ class PathSampling(Calculation):
             if self.storage is not None:
                 self.globalstate.save_samples(self.storage)
                 self.globalstate.save(self.storage)
-
