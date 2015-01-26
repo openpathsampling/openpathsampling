@@ -171,6 +171,8 @@ class PathMover(object):
         self.replicas and the parameter ensembles. If ensembles is None, we
         use self.ensembles. If you want all ensembles allowed, pass
         ensembles='all'.
+
+        TODO: Turn into a filter decorator or
         '''
         if self.replicas == 'all':
             reps = globalstate.replica_list()

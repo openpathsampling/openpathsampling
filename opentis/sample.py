@@ -46,6 +46,9 @@ class SampleSet(object):
         self.ensemble_dict = {}
         self.replica_dict = {}
         self.extend(samples)
+        self.move_path = []
+        self.accepted = None
+
 
     def __getitem__(self, key):
         if isinstance(key, paths.Ensemble):
