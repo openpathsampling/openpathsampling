@@ -12,6 +12,7 @@ from nose.tools import assert_items_equal
 
 from opentis.trajectory import Trajectory
 from opentis.snapshot import Snapshot
+from opentis.dynamics_engine import DynamicsEngine
 import numpy as np
 
 def make_1d_traj(coordinates, velocities=None):
@@ -38,6 +39,28 @@ def assert_not_equal_array_array(list_a, list_b):
     return exist_diff
 
 
+class CalvinDynamics(DynamicsEngine):
+    def __init__(self, predestination):
+        super(CalvinDynamics, self).__init__(options={'ndim' : 1,
+                                                      'n_frames_max' : 10})
+        self.predestination = make_1d_traj(predestination)
+
+    @property
+    def current_snapshot(self):
+        return self._current_snap
+
+    @current_snapshot.setter
+    def current_snapshot(self, snap):
+        self._current_snap = snap.copy()
+
+    def generate_next_frame(self):
+        # find the frame in self.predestination that matches this frame
+        idx = self.predestination.index(self._current_snap)
+        if idx is not None:
+            self._current_snap = self.predestination[idx+1]
+        else:
+            self._current_snap = None
+        return self._current_snap
 
 class CallIdentity(object):
     '''Stub for a callable that returns itself'''

@@ -114,6 +114,13 @@ class testBackwardShootMover(object):
     def test_move(self):
         raise SkipTest
 
+class testOneWayShootingMover(object):
+    def setup(self):
+        pass
+
+    def test_move(self):
+        raise SkipTest
+
 class testPathReversalMover(object):
     def setup(self):
         #op = OrderParameter()
