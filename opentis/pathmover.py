@@ -13,6 +13,7 @@ from sample import Sample, SampleSet
 
 import logging
 from ops_logging import initialization_logging
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('opentis.initialization')
 
@@ -302,7 +303,6 @@ class ShootMover(PathMover):
 
         self._generate(details, dynamics_ensemble)
 
-
         setattr(details, 'trial_is_in_ensemble',
                 dynamics_ensemble(details.trial))
 
@@ -318,15 +318,12 @@ class ShootMover(PathMover):
                 details.accepted = True
                 details.result = details.trial
 
-        path = paths.Sample(replica=replica,
+        sample = paths.Sample(replica=replica,
                       trajectory=details.result, 
                       ensemble=dynamics_ensemble,
                       details=details)
 
-
-
-        new_set = SampleSet(globalstate, accepted=details.accepted, move_path=old_move_path + [self])
-        new_set.apply_samples([path])
+        new_set = globalstate.apply_samples([sample], accepted = details.accepted, move=self)
 
         return new_set
     
@@ -427,7 +424,7 @@ class RandomChoiceMover(PathMover):
         initialization_logging(init_log, self,
                                entries=['movers', 'weights'])
     
-    def move(self, trajectory):
+    def move(self, sample_set):
         rand = np.random.random() * sum(self.weights)
         idx = 0
         prob = self.weights[0]
@@ -440,13 +437,15 @@ class RandomChoiceMover(PathMover):
 
         mover = self.movers[idx]
 
-        samples = mover.move(trajectory)
-        for sample in samples:
-            sample.details.mover_path.append(self)
-            #setattr(sample.details, 'mover_idx', idx)
+        # Add self to mover_path
+        new_set = SampleSet(sample_set, accepted=True, move_path=sample_set.move_path + [self])
 
-        return samples
+        # Run the chosen mover
+        sample_set = mover.move(new_set)
 
+        return sample_set
+
+@restores_as_stub_object
 class SequentialMover(PathMover):
     '''
     Performs each of the moves in its movers list. Returns all samples
@@ -464,20 +463,22 @@ class SequentialMover(PathMover):
 
     def move(self, globalstate):
         logger.debug("Starting sequential move")
+
         subglobal = SampleSet(self.legal_sample_set(globalstate))
-        mysamples = []
+
         for mover in self.movers:
             logger.debug("Starting sequential move step "+str(mover))
-            newsamples = mover.move(subglobal)
-            subglobal = subglobal.apply_samples(newsamples)
-            mysamples.extend(newsamples)
-        for sample in mysamples:
-            sample.details.mover_path.append(self)
-        return mysamples
 
+            # Run the sub mover
+            subglobal = mover.move(subglobal)
+
+
+        return subglobal
+
+@restores_as_stub_object
 class PartialAcceptanceSequentialMover(SequentialMover):
     '''
-    Performs eachmove in its movers list until complete of until one is not
+    Performs each move in its movers list until complete or until one is not
     accepted. If any move is not accepted, further moves are not attempted,
     but the previous accepted samples remain accepted.
 
@@ -487,33 +488,31 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     accepted shooting move should be accepted.
     '''
     def move(self, globalstate):
-        subglobal = SampleSet(self.legal_sample_set(globalstate))
-        mysamples = []
-        last_accepted = True
+
+        # add this mover to the move_path
+        subglobal = SampleSet(
+            self.legal_sample_set(globalstate),
+            accepted=True,
+            move_path=globalstate.move_path + [self]
+        )
+
+        false_state = SampleSet(
+            self.legal_sample_set(globalstate),
+            accepted=False,
+            move_path=globalstate.move_path + [self]
+        )
+
         for mover in self.movers:
-            # NOTE: right now, this doesn't quite work correctly if the
-            # submovers are also multimovers (e.g., SequentialMovers). We
-            # need a way to see whether the move below considered itself
-            # accepted; that could mean that submoves of the submove were
-            # rejected but the whole submove was accepted, as with
-            # SequentialMovers
-            newsamples = mover.move(subglobal)
-            subglobal = subglobal.apply_samples(newsamples)
+            subglobal = mover.move(subglobal)
             # all samples made by the submove; pick the ones up to the first
             # rejection
-            mysamples.extend(newsamples)
-            for sample in newsamples:
-                if sample.details.accepted == False:
-                    last_accepted = False
-                    break
-            if last_accepted == False:
+            if not subglobal.accepted:
                 break
-        for sample in mysamples:
-            sample.details.mover_path.append(self)
-        return mysamples
 
+        return subglobal
 
-class ConditionalSequentialMover(PartialAcceptanceSequentialMover):
+@restores_as_stub_object
+class ConditionalSequentialMover(SequentialMover):
     '''
     Performs each move in its movers list until complete or until one is not
     accepted. If any move in not accepted, all previous samples are updated
@@ -527,26 +526,33 @@ class ConditionalSequentialMover(PartialAcceptanceSequentialMover):
     sample per replica.
     '''
     def move(self, globalstate):
-        mysamples = super(ConditionalSequentialMover, self).move(globalstate)
-        # if any sample was rejected, then everything is rejected. Note that
-        # technically, there's a faster way to do this
-        # (mysample.samples[-1].details.accepted, instead of looping) but
-        # that shouldn't matter for speed, and it may be safer not to assume
-        # the order of the list.
-        all_accepted = True
-        for sample in mysamples:
-            if sample.details.accepted == False:
-                all_accepted = False
-                break
-        if all_accepted == False:
-            for sample in mysamples:
-                sample.details.accepted = False
-                sample.trajectory = globalstate[sample.replica].trajectory
-                sample.ensemble = globalstate[sample.replica].ensemble
-        return mysamples
+
+        # add this mover to the move_path
+        subglobal = SampleSet(
+            self.legal_sample_set(globalstate),
+            accepted=True,
+            move_path=globalstate.move_path + [self]
+        )
+
+        false_state = SampleSet(
+            self.legal_sample_set(globalstate),
+            accepted=False,
+            move_path=globalstate.move_path + [self]
+        )
+
+        for mover in self.movers:
+            subglobal = mover.move(subglobal)
+            # all samples made by the submove; pick the ones up to the first
+            # rejection
+            if not subglobal.accepted:
+                return false_state
+
+        return subglobal
 
 
 
+
+# TODO: @DWHS : I am not sure what this is doing.
 class ReplicaIDChange(PathMover):
     def __init__(self, new_replicas=None, old_samples=None, 
                  ensembles=None, replicas='all'):
@@ -631,12 +637,15 @@ class EnsembleHopMover(PathMover):
         else: 
             setattr(details, 'result_ensemble', ens_from)
 
-        path = paths.Sample(trajectory=trajectory,
+        sample = paths.Sample(trajectory=trajectory,
                       ensemble=details.result_ensemble, 
                       details=details,
                       replica=replica
                      )
-        return [path]
+
+        new_set = globalstate.apply_samples([sample], accepted = details.accepted, move=self)
+
+        return new_set
 
 
 
@@ -677,7 +686,9 @@ class PathReversalMover(PathMover):
             ensemble=ensemble,
             details=details
         )
-        return [sample]
+        new_set = globalstate.apply_samples([sample], accepted = details.accepted, move=self)
+
+        return new_set
 
 
 class ReplicaExchange(PathMover):
@@ -723,7 +734,10 @@ class ReplicaExchange(PathMover):
             ensemble=ensemble2,
             details=details2
             )
-        return [sample1, sample2]
+
+        new_set = globalstate.apply_samples([sample1, sample2], accepted = accepted, move=self)
+
+        return new_set
 
 
 class PathMoverFactory(object):

@@ -44,16 +44,30 @@ class SampleSet(object):
         A dictionary with replica IDs as keys and lists of Samples as values
     '''
 
+    # TODO: Can a sample be several times in an SampleSet? Why not?
+
     def __init__(self, samples, accepted=True, move_path=None):
         self._samples = []
         self._ensemble_dict = {}
         self._replica_dict = {}
-        self.extend(samples)
         if move_path is None:
             self.move_path = []
         else:
             self.move_path = move_path
         self.accepted = accepted
+
+        for sample in samples:
+            if sample not in self._samples:
+                self._samples.append(sample)
+                try:
+                    self._ensemble_dict[sample.ensemble].append(sample)
+                except KeyError:
+                    self._ensemble_dict[sample.ensemble] = [sample]
+                try:
+                    self._replica_dict[sample.replica].append(sample)
+                except KeyError:
+                    self._replica_dict[sample.replica] = [sample]
+
 
     @property
     def samples(self):
@@ -158,7 +172,7 @@ class SampleSet(object):
     def append(self, sample):
         #  This works and will actually return a new object
 
-        if sample in self.samples:
+        if sample in self._samples:
             # question: would it make sense to raise an error here? can't
             # have more than one copy of the same sample, but should we
             # ignore it silently or complain?
@@ -168,13 +182,13 @@ class SampleSet(object):
 
         this._samples.append(sample)
         try:
-            this.ensemble_dict[sample.ensemble].append(sample)
+            this._ensemble_dict[sample.ensemble].append(sample)
         except KeyError:
-            this.ensemble_dict[sample.ensemble] = [sample]
+            this._ensemble_dict[sample.ensemble] = [sample]
         try:
-            this.replica_dict[sample.replica].append(sample)
+            this._replica_dict[sample.replica].append(sample)
         except KeyError:
-            this.replica_dict[sample.replica] = [sample]
+            this._replica_dict[sample.replica] = [sample]
 
         return this
 
