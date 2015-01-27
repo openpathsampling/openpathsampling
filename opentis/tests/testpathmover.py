@@ -116,7 +116,6 @@ class testBackwardShootMover(object):
 
 class testPathReversalMover(object):
     def setup(self):
-        #op = OrderParameter()
         try:
             op = OP_Function("myid", fcn=lambda snap : 
                              Trajectory([snap])[0].coordinates()[0][0])
@@ -173,7 +172,17 @@ class testPathReversalMover(object):
 
 class testReplicaExchangeMover(object):
     def setup(self):
-        pass
+        try:
+            op = OP_Function("myid", fcn=lambda snap : 
+                             Trajectory([snap])[0].coordinates()[0][0])
+        except ValueError:
+            op = OrderParameter.get_existing('myid')
+        state1 = LambdaVolume(op, -100, 0.0)
+        state2 = LambdaVolume(op, 1, 100)
+        volA = LambdaVolume(op, -100, 0.25)
+        volB = LambdaVolume(op, -100, 0.50)
+        self.tisA = ef.TISEnsemble(state1, state2, volA)
+        self.tisB = ef.TISEnsemble(state1, state2, volB)
 
     def test_repex(self):
         # includes both success and failure of swap move
