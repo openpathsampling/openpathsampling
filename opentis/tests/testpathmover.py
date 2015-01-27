@@ -192,7 +192,15 @@ class testReplicaExchangeMover(object):
         sampB1 = Sample(replica=1, trajectory=traj1, ensemble=self.tisB)
         sampA2 = Sample(replica=2, trajectory=traj2, ensemble=self.tisA)
         repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
-        repex_01 = ReplicaExchangeMover(replicas=[[0,1]])
+        repex_12 = ReplicaExchangeMover(replicas=[[1,2]])
+        gs_B1A2 = SampleSet([sampB1, sampA2])
+        gs_A0B1 = SampleSet([sampA0, sampB1])
+
+        samples_B2A1_ens = repex_AB.move(gs_B1A2)
+        samples_A0B1_ens = repex_AB.move(gs_A0B1)
+        samples_B2A1_rep = repex_12.move(gs_B1A2)
+
+        raise SkipTest
         # includes both success and failure of swap move
 
 
