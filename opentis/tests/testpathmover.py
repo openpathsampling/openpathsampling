@@ -103,7 +103,7 @@ class testPathMover(object):
         except AssertionError:
             assert_equal(selected, self.s3)
 
-class testForwardShootMover(object):
+class testShootingMover(object):
     def setup(self):
         self.dyn = CalvinDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
                                    -0.1, 0.2, 0.4, 0.6, 0.8,
@@ -122,21 +122,22 @@ class testForwardShootMover(object):
             replica=0,
             ensemble=self.tps
         ))
-        self.mover = ForwardShootMover(UniformSelector(), replicas=[0])
 
+class testForwardShootMover(testShootingMover):
     def test_move(self):
+        self.mover = ForwardShootMover(UniformSelector(), replicas=[0])
         self.dyn.initialized = True
         newsamp = self.mover.move(self.init_samp)
-        raise SkipTest
+        assert_equal(len(newsamp), 1)
+        assert_equal(newsamp[0].details.accepted, True)
+        assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
+        assert_equal(newsamp[0].trajectory, newsamp[0].details.trial)
 
-class testBackwardShootMover(object):
-    def setup(self):
-        pass
-
+class testBackwardShootMover(testShootingMover):
     def test_move(self):
         raise SkipTest
 
-class testOneWayShootingMover(object):
+class testOneWayShootingMover(testShootingMover):
     def setup(self):
         pass
 
