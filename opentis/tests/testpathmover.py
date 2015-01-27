@@ -10,12 +10,15 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import (assert_equal_array_array, 
                           assert_not_equal_array_array,
-                          make_1d_traj
+                          make_1d_traj,
+                          CalvinDynamics
                          )
 
 from opentis.ensemble import LengthEnsemble
 from opentis.sample import SampleSet, Sample
 from opentis.pathmover import *
+
+from opentis.shooting import UniformSelector
 
 from opentis.volume import LambdaVolume
 from test_helpers import CallIdentity
@@ -102,9 +105,28 @@ class testPathMover(object):
 
 class testForwardShootMover(object):
     def setup(self):
-        pass
+        self.dyn = CalvinDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
+                                   -0.1, 0.2, 0.4, 0.6, 0.8,
+                                  ])
+        PathMover.engine = self.dyn
+        try:
+            op = OP_Function("myid", fcn=lambda snap : 
+                             Trajectory([snap])[0].coordinates()[0][0])
+        except ValueError:
+            op = OrderParameter.get_existing('myid')
+        stateA = LambdaVolume(op, -100, 0.0)
+        stateB = LambdaVolume(op, 0.65, 100)
+        self.tps = ef.A2BEnsemble(stateA, stateB)
+        self.init_samp = SampleSet(Sample(
+            trajectory=make_1d_traj([-0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]),
+            replica=0,
+            ensemble=self.tps
+        ))
+        self.mover = ForwardShootMover(UniformSelector(), replicas=[0])
 
     def test_move(self):
+        self.dyn.initialized = True
+        newsamp = self.mover.move(self.init_samp)
         raise SkipTest
 
 class testBackwardShootMover(object):

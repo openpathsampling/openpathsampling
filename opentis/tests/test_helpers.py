@@ -44,6 +44,7 @@ class CalvinDynamics(DynamicsEngine):
         super(CalvinDynamics, self).__init__(options={'ndim' : 1,
                                                       'n_frames_max' : 10})
         self.predestination = make_1d_traj(predestination)
+        self.frame_index = None
 
     @property
     def current_snapshot(self):
@@ -55,11 +56,15 @@ class CalvinDynamics(DynamicsEngine):
 
     def generate_next_frame(self):
         # find the frame in self.predestination that matches this frame
-        idx = self.predestination.index(self._current_snap)
-        if idx is not None:
-            self._current_snap = self.predestination[idx+1]
-        else:
-            self._current_snap = None
+        if self.frame_index is None:
+            for frame in self.predestination:
+                frame_val = frame.coordinates[0][0]
+                snap_val = self._current_snap.coordinates[0][0]
+                if frame_val == snap_val:
+                    self.frame_index = self.predestination.index(frame)
+
+        self._current_snap = self.predestination[self.frame_index+1]
+        self.frame_index += 1
         return self._current_snap
 
 class CallIdentity(object):
