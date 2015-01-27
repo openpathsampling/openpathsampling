@@ -117,8 +117,12 @@ class testShootingMover(object):
         stateA = LambdaVolume(op, -100, 0.0)
         stateB = LambdaVolume(op, 0.65, 100)
         self.tps = ef.A2BEnsemble(stateA, stateB)
+        init_traj = make_1d_traj(
+            coordinates=[-0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+            velocities=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        )
         self.init_samp = SampleSet(Sample(
-            trajectory=make_1d_traj([-0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]),
+            trajectory=init_traj,
             replica=0,
             ensemble=self.tps
         ))
@@ -135,7 +139,13 @@ class testForwardShootMover(testShootingMover):
 
 class testBackwardShootMover(testShootingMover):
     def test_move(self):
-        raise SkipTest
+        self.mover = BackwardShootMover(UniformSelector(), replicas=[0])
+        self.dyn.initialized = True
+        newsamp = self.mover.move(self.init_samp)
+        assert_equal(len(newsamp), 1)
+        assert_equal(newsamp[0].details.accepted, True)
+        assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
+        assert_equal(newsamp[0].trajectory, newsamp[0].details.trial)
 
 class testOneWayShootingMover(testShootingMover):
     def setup(self):

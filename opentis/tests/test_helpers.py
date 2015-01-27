@@ -6,8 +6,7 @@ a duck.
 """
 
 import os
-from pkg_resources import resource_filename
-
+from pkg_resources import resource_filename 
 from nose.tools import assert_items_equal
 
 from opentis.trajectory import Trajectory
@@ -43,7 +42,9 @@ class CalvinDynamics(DynamicsEngine):
     def __init__(self, predestination):
         super(CalvinDynamics, self).__init__(options={'ndim' : 1,
                                                       'n_frames_max' : 10})
-        self.predestination = make_1d_traj(predestination)
+        self.predestination = make_1d_traj(coordinates=predestination,
+                                           velocities=[1.0]*len(predestination)
+                                          )
         self.frame_index = None
 
     @property
@@ -63,8 +64,12 @@ class CalvinDynamics(DynamicsEngine):
                 if frame_val == snap_val:
                     self.frame_index = self.predestination.index(frame)
 
-        self._current_snap = self.predestination[self.frame_index+1]
-        self.frame_index += 1
+        if self._current_snap.velocities[0][0] >= 0:
+            self._current_snap = self.predestination[self.frame_index+1].copy()
+            self.frame_index += 1
+        else:
+            self._current_snap = self.predestination[self.frame_index-1].copy()
+            self.frame_index -= 1
         return self._current_snap
 
 class CallIdentity(object):
