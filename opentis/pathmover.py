@@ -676,10 +676,14 @@ class PathReversalMover(PathMover):
 
 class ReplicaExchangeMover(PathMover):
     def __init__(self, bias=None, ensembles=None, replicas='all'):
-        if replicas=='all' or replicas is None:
+        if replicas=='all' and ensembles is None:
             # replicas MUST be a non-empty list of pairs
             raise ValueError("Specify replicas for ReplicaExchangeMover")
-        replicas = make_list_of_pairs(replicas)
+        if replicas != 'all':
+            replicas = make_list_of_pairs(replicas)
+        ensembles = make_list_of_pairs(ensembles)
+        # either replicas or ensembles must be a list of pairs; more
+        # complicated filtering can be done with a wrapper class
         super(ReplicaExchangeMover, self).__init__(ensembles=ensembles, 
                                                    replicas=replicas)
         # TODO: add support for bias; cf EnsembleHopMover
@@ -689,16 +693,20 @@ class ReplicaExchangeMover(PathMover):
 
 
     def move(self, globalstate):
-        # figure out which pair of replicas we will be swapping
-        (rep1, rep2) = random.choice(self.replicas)
-        rep1_sample = self.select_sample(globalstate, rep1)
-        rep2_sample = self.select_sample(globalstate, rep2)
+        if self.ensemble is not None:
+            [ens1, ens2] = random.choice(self.ensembles)
+            sample1 = select_sample(globalstate, ens1)
+            sample2 = select_sample(globalstate, ens2)
+        else:
+            [rep1, rep2] = random.choice(self.replicas)
+            sample1 = globalstate[rep1]
+            sample2 = globalstate[rep2]
         
         # convert sample to the language used here before
-        trajectory1 = rep1_sample.trajectory
-        trajectory2 = rep2_sample.trajectory
-        ensemble1 = rep1_sample.ensemble
-        ensemble2 = rep2_sample.ensemble
+        trajectory1 = sample1.trajectory
+        trajectory2 = sample2.trajectory
+        ensemble1 = sample1.ensemble
+        ensemble2 = sample2.ensemble
 
         from1to2 = ensemble2(trajectory1)
         logger.debug("trajectory " + trajectory1 +

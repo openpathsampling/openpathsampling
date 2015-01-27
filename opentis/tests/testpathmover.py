@@ -185,8 +185,15 @@ class testReplicaExchangeMover(object):
         self.tisB = ef.TISEnsemble(state1, state2, volB)
 
     def test_repex(self):
+        traj0 = make_1d_traj([-0.1, 0.2, 0.3, 0.1, -0.2])
+        traj1 = make_1d_traj([-0.1, 0.1, 0.4, 0.6, 0.3, 0.2, -0.15]) 
+        traj2 = make_1d_traj([-0.1, 0.2, 0.3, 0.7, 0.6, 0.4, 0.1, -0.15])
+        sampA0 = Sample(replica=0, trajectory=traj0, ensemble=self.tisA)
+        sampB1 = Sample(replica=1, trajectory=traj1, ensemble=self.tisB)
+        sampA2 = Sample(replica=2, trajectory=traj2, ensemble=self.tisA)
+        repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
+        repex_01 = ReplicaExchangeMover(replicas=[[0,1]])
         # includes both success and failure of swap move
-        pass
 
 
 class testRandomChoiceMover(object):
