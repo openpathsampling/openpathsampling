@@ -129,9 +129,9 @@ class testShootingMover(object):
 
 class testForwardShootMover(testShootingMover):
     def test_move(self):
-        self.mover = ForwardShootMover(UniformSelector(), replicas=[0])
+        mover = ForwardShootMover(UniformSelector(), replicas=[0])
         self.dyn.initialized = True
-        newsamp = self.mover.move(self.init_samp)
+        newsamp = mover.move(self.init_samp)
         assert_equal(len(newsamp), 1)
         assert_equal(newsamp[0].details.accepted, True)
         assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
@@ -139,20 +139,23 @@ class testForwardShootMover(testShootingMover):
 
 class testBackwardShootMover(testShootingMover):
     def test_move(self):
-        self.mover = BackwardShootMover(UniformSelector(), replicas=[0])
+        mover = BackwardShootMover(UniformSelector(), replicas=[0])
         self.dyn.initialized = True
-        newsamp = self.mover.move(self.init_samp)
+        newsamp = mover.move(self.init_samp)
         assert_equal(len(newsamp), 1)
         assert_equal(newsamp[0].details.accepted, True)
         assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
         assert_equal(newsamp[0].trajectory, newsamp[0].details.trial)
 
 class testOneWayShootingMover(testShootingMover):
-    def setup(self):
-        pass
-
-    def test_move(self):
-        raise SkipTest
+    def test_mover_initialization(self):
+        mover = OneWayShootingMover(UniformSelector, replicas=[0])
+        assert_equal(len(mover.movers), 2)
+        assert_equal(isinstance(mover, RandomChoiceMover), True)
+        assert_equal(isinstance(mover, OneWayShootingMover), True)
+        moverclasses = [m.__class__ for m in mover.movers]
+        assert_equal(ForwardShootMover in moverclasses, True)
+        assert_equal(BackwardShootMover in moverclasses, True)
 
 class testPathReversalMover(object):
     def setup(self):
