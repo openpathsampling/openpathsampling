@@ -194,7 +194,11 @@ class UniformSelector(ShootingPointSelector):
         return point
 
 class FinalFrameSelector(ShootingPointSelector):
-    pass
+    def pick(self, trajectory):
+        point = ShootingPoint(self, trajectory, len(trajectory), f=1.0, sum_bias=1.0)
+        return point
 
 class FirstFrameSelector(ShootingPointSelector):
-    pass
+    def pick(self, trajectory):
+        point = ShootingPoint(self, trajectory, 0, f=1.0, sum_bias=1.0)
+        return point
