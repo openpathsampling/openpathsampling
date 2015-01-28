@@ -4,8 +4,6 @@ API Functions
 
 .. toctree::
 	:maxdepth: 2
-	
-Blablabla...
 
 **************
 OrderParameter
@@ -16,20 +14,12 @@ OrderParameter
 	:inherited-members:
 	:show-inheritance:
 
-***********
-MSMAnalysis
-***********
-	
-.. automodule:: msm_analysis
-	:members:
-	:inherited-members:
-	:show-inheritance:
 
-*********
-Simulator
-*********
+***************
+Dynamics Engine
+***************
 	
-.. automodule:: Simulator
+.. automodule:: dynamics_engine
 	:members:
 	:inherited-members:
 	:show-inheritance:
