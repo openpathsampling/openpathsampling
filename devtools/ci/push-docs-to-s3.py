@@ -25,7 +25,7 @@ secret_key = {AWS_SECRET_ACCESS_KEY}
     f.flush()
 
     template = ('s3cmd --config {config} '
-                'sync docs/_build/ s3://{bucket}/')
+                'sync docs/_build/ s3://{bucket}/{prefix}/')
     cmd = template.format(
             config=f.name,
             bucket=BUCKET_NAME
