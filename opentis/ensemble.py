@@ -598,9 +598,9 @@ class SequentialEnsemble(Ensemble):
         transition. If given as an integer, that value will be used for all
         transitions.
 
-    Todo
-    ----
-        Overlap features not implemented because ohmygod this was hard
+    Notes
+    -----
+        TODO: Overlap features not implemented because ohmygod this was hard
         enough already.
     """
 
@@ -1158,8 +1158,8 @@ class SingleFrameEnsemble(AlteredEnsemble):
     ensemble : Ensemble
         the ensemble which should be represented in the single frame
 
-    Note
-    ----
+    Notes
+    -----
     We allow the user to choose to be stupid: if, for example, the user
     tries to make a SingleFrameEnsemble from an ensemble which requires
     more than one frame to be satisfied (e.g., a SequentialEnsemble with

@@ -5,7 +5,7 @@
 from __future__ import print_function
 
 import time
-import os, shutil, string, glob, re
+import os, shutil, glob, re
 from sphinx.util.compat import Directive
 from docutils import nodes
 from docutils.parsers.rst import directives
@@ -75,8 +75,9 @@ class NotebookDirective(Directive):
 
         print('[NotebookDirective] Evaluating %s' % nb_filename)
         start = time.time()
-        evaluated_text = evaluate_notebook(nb_abs_path, dest_path_eval,
-                                           skip_exceptions=skip_exceptions)
+#        evaluated_text = evaluate_notebook(nb_abs_path, dest_path_eval,
+#                                           skip_exceptions=skip_exceptions)
+        evaluated_text = ''
         print('[NotebookDirective] Took %8.3fs seconds' %
               (time.time() - start))
 
