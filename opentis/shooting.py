@@ -202,13 +202,13 @@ class UniformSelector(ShootingPointSelector):
 
 class FinalFrameSelector(ShootingPointSelector):
     def f(self, frame, trajectory):
-        if trajectory.index(frame) == len(trajectory):
+        if trajectory.index(frame) == len(trajectory)-1:
             return 1.0
         else:
             return 0.0
 
     def pick(self, trajectory):
-        point = ShootingPoint(self, trajectory, len(trajectory), f=1.0, sum_bias=1.0)
+        point = ShootingPoint(self, trajectory, len(trajectory)-1, f=1.0, sum_bias=1.0)
         return point
 
 class FirstFrameSelector(ShootingPointSelector):

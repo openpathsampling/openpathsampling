@@ -14,9 +14,11 @@ from opentis.sample import Sample, SampleSet
 
 class SelectorTest(object):
     def setup(self):
-        self.mytraj = make_1d_traj([-0.5, 0.1, 0.2, 0.3, 0.5])
+        self.mytraj = make_1d_traj(coordinates=[-0.5, 0.1, 0.2, 0.3, 0.5],
+                                   velocities=[1.0, 1.0, 1.0, 1.0, 1.0])
         self.dyn = CalvinDynamics([-0.5, -0.4, -0.3, -0.2, -0.1,
-                                   0.5, 0.4, 0.3, 0.2, 0.1])
+                                   0.1, 0.2, 0.3, 0.4, 0.5])
+                                   #0.5, 0.4, 0.3, 0.2, 0.1])
         PathMover.engine = self.dyn
         self.dyn.initialized = True
         self.ens = LengthEnsemble(5)
@@ -48,7 +50,21 @@ class testFirstFrameSelector(SelectorTest):
 
 class testFinalFrameSelector(SelectorTest):
     def test_pick(self):
-        raise SkipTest
+        sel = FinalFrameSelector()
+        sp = sel.pick(self.mytraj)
+        assert_equal(sp.selector, sel)
+        assert_equal(sp.trajectory, self.mytraj)
+        assert_equal(sp.index, 4)
+        assert_equal(sp.f, 1.0)
+        assert_equal(sp.sum_bias, 1.0)
+        snap = sp.snapshot
+        assert_equal(snap.coordinates[0][0], 0.5)
 
     def test_shooting_move(self):
-        raise SkipTest
+        self.shooter = BackwardShootMover(FinalFrameSelector(), replicas=[0])
+        samples = self.shooter.move(self.gs)
+        assert_equal(len(samples), 1)
+        assert_equal(samples[0].details.accepted, True)
+        assert_items_equal([0.1, 0.2, 0.3, 0.4, 0.5],
+                           [s.coordinates[0][0] for s in samples[0].trajectory]
+                          )
