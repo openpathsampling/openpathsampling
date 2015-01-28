@@ -5,10 +5,9 @@ Created on 01.07.2014
 @author: JH Prinz
 '''
 
-from opentis.trajectory import Trajectory
-from opentis.ensemble import LengthEnsemble
 import simtk.unit as u
-from wrapper import storable
+import opentis as paths
+
 
 import logging
 logger = logging.getLogger(__name__)
@@ -23,7 +22,7 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 # Multi-State Transition Interface Sampling
 #=============================================================================
 
-@storable
+
 class DynamicsEngine(object):
     '''
     Class to wrap a simulation tool to store the context and rerun, needed
@@ -46,7 +45,7 @@ class DynamicsEngine(object):
         'energy' : u.Unit({})
     }
 
-    def __init__(self, options=None, storage=None):
+    def __init__(self, options=None):
         '''
         Create an empty DynamicsEngine object
         
@@ -84,7 +83,7 @@ class DynamicsEngine(object):
         # TODO: switch this not needing slice; use can_append
         # this and n_atoms are the only general options we need and register
         if hasattr(self, 'n_frames_max'):
-            self.max_length_stopper = LengthEnsemble(slice(0, self.n_frames_max + 1))
+            self.max_length_stopper = paths.LengthEnsemble(slice(0, self.n_frames_max + 1))
 
     def _register_options(self, options = None):
         """
@@ -164,6 +163,13 @@ class DynamicsEngine(object):
                 setattr(self, variable, value)
         else:
             self.options = {}
+
+    def to_dict(self):
+        return self.options
+
+    @classmethod
+    def from_dict(cls, my_dict):
+        return cls(options=my_dict)
 
     @property
     def default_options(self):
@@ -259,7 +265,7 @@ class DynamicsEngine(object):
             self.start()
 
             # Store initial state for each trajectory segment in trajectory.
-            trajectory = Trajectory()
+            trajectory = paths.Trajectory()
             trajectory.append(snapshot)
             
             frame = 0

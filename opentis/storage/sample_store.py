@@ -1,29 +1,13 @@
-from object_storage import ObjectStorage
-from wrapper import savecache, loadcache
-from opentis.sample import Sample, SampleSet
+from object_storage import ObjectStore
+from opentis.sample import SampleSet, Sample
 
-class SampleStorage(ObjectStorage):
+class SampleStore(ObjectStore):
     def __init__(self, storage):
-        super(SampleStorage, self).__init__(storage, Sample)
+        super(SampleStore, self).__init__(storage, Sample, json=False, load_partial=True)
 
-    @savecache
+        self.set_variable_partial_loading('details', self.update_details)
+
     def save(self, sample, idx=None):
-        """
-        Add the current state of the sample in the database. If nothing has changed then the sample gets stored using the same snapshots as before. Saving lots of diskspace
-
-        Parameters
-        ----------
-        sample : Sample()
-            the sample to be saved
-        idx : int or None
-            if idx is not None the index will be used for saving in the storage. This might overwrite already existing trajectories!
-
-        Notes
-        -----
-        This also saves all contained frames in the sample if not done yet.
-        A single Sample object can only be saved once!
-        """
-
         if idx is not None:
             self.storage.trajectory.save(sample.trajectory)
             self.set_object('sample_trajectory', idx, sample.trajectory)
@@ -38,15 +22,40 @@ class SampleStorage(ObjectStorage):
 
             self.save_variable('sample_step', idx, sample.step)
 
-    @loadcache
-    def load(self, idx, momentum = True):
+    def load_empty(self, idx):
+        trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
+        ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
+        replica_idx = int(self.storage.variables['sample_replica'][idx])
+#        details_idx = int(self.storage.variables['sample_details_idx'][idx])
+        step=self.load_variable('sample_step', idx)
+
+
+        obj = Sample(
+            trajectory=self.storage.trajectory.load(trajectory_idx),
+            replica=replica_idx,
+            ensemble=self.storage.ensemble.load(ensemble_idx),
+            step=step
+        )
+
+        return obj
+
+    def update_details(self, obj):
+        storage = self.storage
+
+        idx = obj.idx[self.storage]
+        details_idx = int(self.storage.variables['sample_details_idx'][idx])
+        details=self.storage.movedetails.load(details_idx)
+
+        obj.details = details
+
+    def load(self, idx):
         '''
         Return a sample from the storage
 
         Parameters
         ----------
         idx : int
-            index of the sample (counts from 1)
+            index of the sample
 
         Returns
         -------
@@ -61,7 +70,7 @@ class SampleStorage(ObjectStorage):
 
 
         obj = Sample(
-            trajectory=self.storage.trajectory.load(trajectory_idx, lazy=True),
+            trajectory=self.storage.trajectory.load(trajectory_idx),
             replica=replica_idx,
             ensemble=self.storage.ensemble.load(ensemble_idx),
             details=self.storage.movedetails.load(details_idx),
@@ -74,42 +83,21 @@ class SampleStorage(ObjectStorage):
         return [ sample for sample in self.iterator() if sample.ensemble == ensemble ]
 
     def _init(self):
-        """
-        Initialize the associated storage to allow for sample storage
-
-        """
-        super(SampleStorage, self)._init()
+        super(SampleStore, self)._init()
 
         # New short-hand definition
-        self.init_variable('sample_trajectory_idx', 'index')
-        self.init_variable('sample_ensemble_idx', 'index')
-        self.init_variable('sample_replica', 'index')
-        self.init_variable('sample_details_idx', 'index')
-        self.init_variable('sample_step', 'index')
+        self.init_variable('sample_trajectory_idx', 'index', chunksizes=(1, ))
+        self.init_variable('sample_ensemble_idx', 'index', chunksizes=(1, ))
+        self.init_variable('sample_replica', 'index', chunksizes=(1, ))
+        self.init_variable('sample_details_idx', 'index', chunksizes=(1, ))
+        self.init_variable('sample_step', 'index', chunksizes=(1, ))
 
-class SampleSetStorage(ObjectStorage):
+class SampleSetStore(ObjectStore):
 
     def __init__(self, storage):
-        super(SampleSetStorage, self).__init__(storage, SampleSet)
+        super(SampleSetStore, self).__init__(storage, SampleSet, json=False)
 
-    @savecache
     def save(self, sampleset, idx=None):
-        """
-        Add the current state of the sampleset in the database. If nothing has changed then the sampleset gets stored using the same samples as before. Saving lots of diskspace
-
-        Parameters
-        ----------
-        sampleset : Trajectory()
-            the sampleset to be saved
-        idx : int or None
-            if idx is not None the index will be used for saving in the storage. This might overwrite already existing trajectories!
-
-        Notes
-        -----
-        This also saves all contained frames in the sampleset if not done yet.
-        A single Trajectory object can only be saved once!
-        """
-
         # Check if all samples are saved
         map(self.storage.sample.save, sampleset)
 
@@ -121,13 +109,15 @@ class SampleSetStorage(ObjectStorage):
         '''
         Load sample indices for sampleset with ID 'idx' from the storage
 
-        ARGUMENTS
-
-        idx (int) - ID of the sampleset
+        Parameters
+        ----------
+        idx : int
+            ID of the sampleset
 
         Returns
         -------
-        list of int - sampleset indices
+        list of int
+            list of sample indices
         '''
 
         # get the values
@@ -136,8 +126,7 @@ class SampleSetStorage(ObjectStorage):
         # typecast to integer
         return self.list_from_numpy(values, 'index')
 
-    @loadcache
-    def load(self, idx, lazy = None):
+    def load(self, idx):
         '''
         Return a sampleset from the storage
 
@@ -148,7 +137,7 @@ class SampleSetStorage(ObjectStorage):
 
         Returns
         -------
-        sampleset : Trajectory
+        sampleset
             the sampleset
         '''
 
@@ -165,9 +154,10 @@ class SampleSetStorage(ObjectStorage):
         Initialize the associated storage to allow for sampleset storage
 
         """
-        super(SampleSetStorage, self)._init()
+        super(SampleSetStore, self)._init()
 
         self.init_variable('sampleset_sample_idx', 'index', 'sampleset',
             description="sampleset[sampleset][frame] is the sample index (0..nspanshots-1) of frame 'frame' of sampleset 'sampleset'.",
-            variable_length = True
+            variable_length = True,
+            chunksizes=(1024, )
         )

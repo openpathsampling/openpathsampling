@@ -10,12 +10,15 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import (assert_equal_array_array, 
                           assert_not_equal_array_array,
-                          make_1d_traj
+                          make_1d_traj,
+                          CalvinDynamics
                          )
 
 from opentis.ensemble import LengthEnsemble
 from opentis.sample import SampleSet, Sample
 from opentis.pathmover import *
+
+from opentis.shooting import UniformSelector
 
 from opentis.volume import LambdaVolume
 from test_helpers import CallIdentity
@@ -100,19 +103,59 @@ class testPathMover(object):
         except AssertionError:
             assert_equal(selected, self.s3)
 
-class testForwardShootMover(object):
+class testShootingMover(object):
     def setup(self):
-        pass
+        self.dyn = CalvinDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
+                                   -0.1, 0.2, 0.4, 0.6, 0.8,
+                                  ])
+        PathMover.engine = self.dyn
+        try:
+            op = OP_Function("myid", fcn=lambda snap : 
+                             Trajectory([snap])[0].coordinates()[0][0])
+        except ValueError:
+            op = OrderParameter.get_existing('myid')
+        stateA = LambdaVolume(op, -100, 0.0)
+        stateB = LambdaVolume(op, 0.65, 100)
+        self.tps = ef.A2BEnsemble(stateA, stateB)
+        init_traj = make_1d_traj(
+            coordinates=[-0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+            velocities=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        )
+        self.init_samp = SampleSet(Sample(
+            trajectory=init_traj,
+            replica=0,
+            ensemble=self.tps
+        ))
 
+class testForwardShootMover(testShootingMover):
     def test_move(self):
-        raise SkipTest
+        mover = ForwardShootMover(UniformSelector(), replicas=[0])
+        self.dyn.initialized = True
+        newsamp = mover.move(self.init_samp)
+        assert_equal(len(newsamp), 1)
+        assert_equal(newsamp[0].details.accepted, True)
+        assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
+        assert_equal(newsamp[0].trajectory, newsamp[0].details.trial)
 
-class testBackwardShootMover(object):
-    def setup(self):
-        pass
-
+class testBackwardShootMover(testShootingMover):
     def test_move(self):
-        raise SkipTest
+        mover = BackwardShootMover(UniformSelector(), replicas=[0])
+        self.dyn.initialized = True
+        newsamp = mover.move(self.init_samp)
+        assert_equal(len(newsamp), 1)
+        assert_equal(newsamp[0].details.accepted, True)
+        assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
+        assert_equal(newsamp[0].trajectory, newsamp[0].details.trial)
+
+class testOneWayShootingMover(testShootingMover):
+    def test_mover_initialization(self):
+        mover = OneWayShootingMover(UniformSelector, replicas=[0])
+        assert_equal(len(mover.movers), 2)
+        assert_equal(isinstance(mover, RandomChoiceMover), True)
+        assert_equal(isinstance(mover, OneWayShootingMover), True)
+        moverclasses = [m.__class__ for m in mover.movers]
+        assert_equal(ForwardShootMover in moverclasses, True)
+        assert_equal(BackwardShootMover in moverclasses, True)
 
 class testPathReversalMover(object):
     def setup(self):
@@ -172,15 +215,39 @@ class testPathReversalMover(object):
         assert_equal(samp.details.accepted, True)
 
 
-class testMixedMover(object):
+class testRandomChoiceMover(object):
     def setup(self):
-        pass
+        traj = Trajectory([-0.5, 0.7, 1.1])
+        op = CallIdentity()
+        volA = LambdaVolume(op, -100, 0.0)
+        volB = LambdaVolume(op, 1.0, 100)
+        volX = LambdaVolume(op, -100, 0.25)
+        self.tis = ef.TISEnsemble(volA, volB, volX)
+        self.tps = ef.A2BEnsemble(volA, volB)
+        self.len3 = LengthEnsemble(3)
+        self.init_samp = SampleSet([Sample(trajectory=traj,
+                                           ensemble=self.len3, 
+                                           replica=0, 
+                                           details=MoveDetails())])
+        self.hop_to_tis = EnsembleHopMover(ensembles=[[self.len3, self.tis]])
+        self.hop_to_tps = EnsembleHopMover(ensembles=[[self.len3, self.tps]])
+        self.mover = RandomChoiceMover([self.hop_to_tis, self.hop_to_tps])
 
-    def test_both_get_selected(self):
-        raise SkipTest
-
-    def test_only_one_gets_run(self):
-        raise SkipTest
+    def test_random_choice(self):
+        # test that both get selected, but that we always return only one
+        # sample
+        count = {}
+        for t in range(100):
+            samples = self.mover.move(self.init_samp)
+            assert_equal(len(samples), 1)
+            try:
+                # Since self is the root mover, mover_path[-1] is self.
+                # That means that mover_path[-2] is the mover that this
+                # mover chose.
+                count[samples[0].details.mover_path[-2]] += 1
+            except KeyError:
+                count[samples[0].details.mover_path[-2]] = 1
+        assert_equal(len(count.keys()), 2)
 
     def test_restricted_by_replica(self):
         raise SkipTest
