@@ -4,3 +4,6 @@
 
 An open source Python framework for transition interface and path sampling calculations.
 
+See documentation here:
+
+http://openpathsampling.org
