@@ -11,8 +11,6 @@ if not opentis.version.release:
 else:
     PREFIX = opentis.version.short_version
 
-PREFIX = ''
-
 if not any(d.project_name == 's3cmd' for d in pip.get_installed_distributions()):
     raise ImportError('The s3cmd pacakge is required. try $ pip install s3cmd')
 # The secret key is available as a secure environment variable
@@ -25,11 +23,11 @@ secret_key = {AWS_SECRET_ACCESS_KEY}
     f.flush()
 
     template = ('s3cmd --config {config} '
-                'sync docs/_build/ s3://{bucket}/')
+                'sync docs/_build/html/ s3://{bucket}/{prefix}/')
     cmd = template.format(
             config=f.name,
-            bucket=BUCKET_NAME
-    )
+            bucket=BUCKET_NAME,
+            prefix=PREFIX)
     return_val = subprocess.call(cmd.split())
 
     # Sync index file.
@@ -37,7 +35,6 @@ secret_key = {AWS_SECRET_ACCESS_KEY}
                 'sync devtools/ci/index.html s3://{bucket}/')
     cmd = template.format(
             config=f.name,
-            bucket=BUCKET_NAME
-    )
+            bucket=BUCKET_NAME)
     return_val = subprocess.call(cmd.split())
 
