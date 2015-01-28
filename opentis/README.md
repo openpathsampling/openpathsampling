@@ -1,11 +1,3 @@
-### Python package to run TIS with MSM state definitions
+# Python package to run all sorts of path sampling algorithms
 
 This is a basic outline of the structure.
-
-### Classes
-
-#### `Ensemble`
-
-#### Volume
-
-####
