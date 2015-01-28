@@ -120,8 +120,10 @@ class SampleSet(object):
         except KeyError:
             dead_to_me = None
         if dead_to_me is not None:
-            del self._samples[dead_to_me]
-        return self.append(value)
+            self = self.delete(dead_to_me)
+
+        self = self.append(value)
+        return self
 
     def __delitem__(self, sample):
         # Same here. No delete for immutable lists
@@ -206,17 +208,28 @@ class SampleSet(object):
 
         return self
 
-    def apply_samples(self, samples, accepted, move):
+    def apply(self, samples=None, accepted=None, move=None):
         '''Updates the SampleSet based on a list of samples, by setting them
         by replica in the order given in the argument list.'''
         if type(samples) is Sample:
             samples = [samples]
 
-        newset = SampleSet(self, accepted=accepted, move_path=self.move_path + [move])
+        if accepted is None:
+            accepted = self.accepted
+
+        if move is None:
+            new_move_path = self.move_path
+        else:
+            new_move_path = self.move_path + [move]
+
+        if samples is None:
+            samples = []
+
+        newset = SampleSet(self, accepted=accepted, move_path=new_move_path)
 
         for sample in samples:
             # TODO: should time be a property of Sample or SampleSet?
-            newset.replace(sample.replica, sample)
+            newset = newset.replace(sample.replica, sample)
 
         return newset
 

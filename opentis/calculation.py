@@ -74,9 +74,9 @@ class BootstrapPromotionMove(PathMover):
                                   replicas=top_rep)
 
         shoot_samp = shooter.move(init_sample_set)[0]
-        init_sample_set = init_sample_set.apply_samples(shoot_samp)
+        init_sample_set = init_sample_set.apply(shoot_samp)
         hop_samp = hopper.move(init_sample_set)[0]
-        init_sample_set = init_sample_set.apply_samples(hop_samp)
+        init_sample_set = init_sample_set.apply(hop_samp)
 
         # bring all the metadata from the submoves into our details
         details.__dict__.update(shoot_samp.details.__dict__)
@@ -191,7 +191,7 @@ class Bootstrapping(Calculation):
                        )
             old_rep = max(self.globalstate.replica_list())
             samples = bootstrapmove.move(self.globalstate)
-            self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
+            self.globalstate = self.globalstate.apply(samples, step=step_num)
             #print self.globalstate.samples[0]
 
             if samples[0].replica == old_rep:
@@ -233,7 +233,7 @@ class PathSampling(Calculation):
     def run(self, nsteps):
         for step in range(nsteps):
             samples = self.root_mover.move(self.globalstate)
-            self.globalstate = self.globalstate.apply_samples(samples,
+            self.globalstate = self.globalstate.apply(samples,
                                                               step=step)
             if self.storage is not None:
                 self.globalstate.save_samples(self.storage)

@@ -166,6 +166,10 @@ class PathMover(object):
         initialization_logging(logger=init_log, obj=self,
                                entries=['replicas', 'ensembles'])
 
+    def __call__(self, sample_set):
+
+        return sample_set
+
     def legal_sample_set(self, globalstate, ensembles=None):
         '''
         This returns all the samples from globalstate which are in both
@@ -268,7 +272,7 @@ class ShootMover(PathMover):
         super(ShootMover, self).__init__(ensembles=ensembles, replicas=replicas)
         self.selector = selector
         self._length_stopper = PathMover.engine.max_length_stopper
-        self.extra_details = ['start', 'start_point', 'trial',
+        self._extra_details = ['start', 'start_point', 'trial',
                               'final_point']
         initialization_logging(logger=init_log, obj=self,
                                entries=['selector'])
@@ -323,7 +327,7 @@ class ShootMover(PathMover):
                       ensemble=dynamics_ensemble,
                       details=details)
 
-        new_set = globalstate.apply_samples([sample], accepted = details.accepted, move=self)
+        new_set = globalstate.apply([sample], accepted = details.accepted, move=self)
 
         return new_set
     
@@ -643,7 +647,7 @@ class EnsembleHopMover(PathMover):
                       replica=replica
                      )
 
-        new_set = globalstate.apply_samples([sample], accepted = details.accepted, move=self)
+        new_set = globalstate.apply([sample], accepted = details.accepted, move=self)
 
         return new_set
 
@@ -686,7 +690,7 @@ class PathReversalMover(PathMover):
             ensemble=ensemble,
             details=details
         )
-        new_set = globalstate.apply_samples([sample], accepted = details.accepted, move=self)
+        new_set = globalstate.apply([sample], accepted = details.accepted, move=self)
 
         return new_set
 
@@ -735,7 +739,8 @@ class ReplicaExchange(PathMover):
             details=details2
             )
 
-        new_set = globalstate.apply_samples([sample1, sample2], accepted = accepted, move=self)
+#        new_set = globalstate.apply([sample1, sample2], accepted = accepted, move=self)
+        new_set = SampleSet([])
 
         return new_set
 

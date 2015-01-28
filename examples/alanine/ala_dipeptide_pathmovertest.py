@@ -29,7 +29,7 @@ from opentis.ensemble import EnsembleFactory as ef
 from opentis.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
                               InXEnsemble)
 from opentis.calculation import Bootstrapping
-from opentis.pathmover import PathMover, MoveDetails, ForwardShootMover
+from opentis.pathmover import PathMover, MoveDetails, SequentialMover
 from opentis.shooting import UniformSelector
 from opentis.sample import Sample, SampleSet
 
@@ -96,7 +96,7 @@ if __name__=="__main__":
     # now we define our states and our interfaces
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
     stateA = LambdaVolumePeriodic(psi, -120.0/degrees, -30.0/degrees)
-    stateB = LambdaVolumePeriodic(psi, 100/degrees, 180/degrees) 
+    stateB = LambdaVolumePeriodic(psi, 100/degrees, 180/degrees)
 
     # set up minima and maxima for this transition's interface set
     minima = map((1.0 / degrees).__mul__,
@@ -144,6 +144,7 @@ use LeaveXEnsemble as we typically do with TIS paths.
     segments = interface0_ensemble.split(total_path)
 
     first_sample = Sample(
+        replica=0,
         trajectory=segments[0],
         ensemble=interface0_ensemble,
         details=MoveDetails()
@@ -151,11 +152,28 @@ use LeaveXEnsemble as we typically do with TIS paths.
 
     first_set = SampleSet([first_sample], accepted=True, move_path=['Initialization'])
 
-    mover = ForwardShootMover(UniformSelector(), ensembles=interface0_ensemble)
+    print first_set[0].__dict__
+    print first_set.__dict__
+
+#    mover = ForwardShootMover(UniformSelector(), ensembles=interface0_ensemble)
 
     second_set = mover_set[0].move(first_set)
 
-    print second_set
+    print second_set[0].details.__dict__
+    print second_set[0].__dict__
+    print second_set.__dict__
+
+    seq_mover = SequentialMover([mover_set[0]] * 10)
+
+    third_set = seq_mover.move(second_set)
+
+    print interface0_ensemble(third_set[0].trajectory)
+
+    print third_set[0].details.__dict__
+    print third_set[0].__dict__
+    print third_set.__dict__
+
+    print third_set.move_path
 
     exit()
 
