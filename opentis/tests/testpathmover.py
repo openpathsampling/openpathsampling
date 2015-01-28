@@ -11,7 +11,7 @@ from nose.plugins.skip import Skip, SkipTest
 from test_helpers import (assert_equal_array_array, 
                           assert_not_equal_array_array,
                           make_1d_traj,
-                          CalvinDynamics
+                          CalvinistDynamics
                          )
 
 from opentis.ensemble import LengthEnsemble
@@ -105,9 +105,9 @@ class testPathMover(object):
 
 class testShootingMover(object):
     def setup(self):
-        self.dyn = CalvinDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
-                                   -0.1, 0.2, 0.4, 0.6, 0.8,
-                                  ])
+        self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
+                                      -0.1, 0.2, 0.4, 0.6, 0.8,
+                                     ])
         PathMover.engine = self.dyn
         try:
             op = OP_Function("myid", fcn=lambda snap : 
