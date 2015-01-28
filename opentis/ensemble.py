@@ -1175,11 +1175,31 @@ class SingleFrameEnsemble(AlteredEnsemble):
         return "{"+self.orig_ens.__str__()+"} (SINGLE FRAME)"
     
 class MinusInterfaceEnsemble(SequentialEnsemble):
-    def __init__(self, state_vol, innermost_vol, n_l, greedy=False):
+    def __init__(self, state_vol, innermost_vol, n_l=2, greedy=False):
+        if (n_l < 2):
+            raise ValueError("The number of exits n_l must be at least 2")
         inA = InXEnsemble(state_vol)
         outA = OutXEnsemble(state_vol)
         outX = OutXEnsemble(innermost_vol)
-        # TODO
+        inX = InXEnsemble(innermost_vol)
+        interstitial = outA & inX
+        start = [
+            SingleFrameEnsemble(inA),
+            OptionalEnsemble(interstitial)
+            outX,
+            OptionalEnsemble(interstitial)
+        ]
+        loop = [
+            inA,
+            OptionalEnsemble(inX),
+            outX,
+            OptionalEnsemble(interstitial)
+        ]
+        end = [SingleFrameEnsemble(inA)]
+
+        ensembles = start + loop*(n_l-1) + end
+
+        super(MinusInterfaceEnsemble, self).__init__(ensembles, greedy=greedy)
 
 class EnsembleFactory():
     '''
