@@ -695,18 +695,20 @@ class ReplicaExchangeMover(PathMover):
     def move(self, globalstate):
         if self.ensembles is not None:
             [ens1, ens2] = random.choice(self.ensembles)
-            sample1 = self.select_sample(globalstate, ens1)
-            sample2 = self.select_sample(globalstate, ens2)
+            s1 = self.select_sample(globalstate, ens1)
+            s2 = self.select_sample(globalstate, ens2)
         else:
             [rep1, rep2] = random.choice(self.replicas)
-            sample1 = globalstate[rep1]
-            sample2 = globalstate[rep2]
+            s1 = globalstate[rep1]
+            s2 = globalstate[rep2]
         
         # convert sample to the language used here before
-        trajectory1 = sample1.trajectory
-        trajectory2 = sample2.trajectory
-        ensemble1 = sample1.ensemble
-        ensemble2 = sample2.ensemble
+        trajectory1 = s1.trajectory
+        trajectory2 = s2.trajectory
+        ensemble1 = s1.ensemble
+        ensemble2 = s2.ensemble
+        replica1 = s1.replica
+        replica2 = s2.replica
 
         from1to2 = ensemble2(trajectory1)
         logger.debug("trajectory " + repr(trajectory1) +
@@ -745,11 +747,13 @@ class ReplicaExchangeMover(PathMover):
             details2.result = trajectory2
 
         sample1 = paths.Sample(
+            replica=replica1,
             trajectory=details1.result,
             ensemble=ensemble1,
             details=details1
         )
         sample2 = paths.Sample(
+            replica=replica2,
             trajectory=details2.result,
             ensemble=ensemble2,
             details=details2
