@@ -24,12 +24,18 @@ script:
   - # Run tests
   - cd opentis/tests
   - nosetests --nocapture -vv
-  - cd ..
-  - cd xyz_files
-  - nosetests --nocapture -vv
-  - cd ..
-  - cd examples
-  - python ala_dipeptide_example.py
+#  - cd ..
+#  - cd xyz_files
+#  - nosetests --nocapture -vv
+  - cd ../..
+#  - cd examples/alanine
+#  - python ala_dipeptide_example.py
+# Run the Alanine Example ipnb as a test
+  - cd examples/ipython
+  - python ipnbdoctest.py "alanine.ipynb"
+  - python ipnbdoctest.py "sliced_sequential_ensembles.ipynb"
+#  - python ipnbdoctest.py "visualization.ipynb"
+
   - cd ../..
   # Push to binstar anyway.
 #  - bash -x devtools/ci/after_sucess.sh

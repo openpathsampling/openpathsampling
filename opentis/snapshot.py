@@ -13,10 +13,7 @@ import mdtraj as md
 #=============================================================================
 # SIMULATION CONFIGURATION
 #=============================================================================
-from wrapper import storable
 
-
-@storable
 class Configuration(object):
 
     """
@@ -24,27 +21,19 @@ class Configuration(object):
     and the potential_energy
     """
 
-    # Class variables to store the global storage and the system context describing the system to be safed as configuration_indices
-    simulator = None
+    # Class variables to store the global storage and the system context
+    # describing the system to be safed as configuration_indices
+    engine = None
     load_lazy = True
 
-    def __init__(self, simulation=None, simulator=None, coordinates=None, 
-                 box_vectors=None, potential_energy=None, topology=None,
-                 idx=None):
+    def __init__(self, coordinates=None, box_vectors=None,
+                 potential_energy=None, topology=None):
         """
         Create a simulation configuration from either an OpenMM context or
         individually-specified components.
 
         Parameters
         ----------
-        context : simtk.chem.openContext
-            if not None, the current state will be queried to populate
-            simulation configuration; otherwise, can specify individual
-            components (default: None)
-        simulator : Simulator()
-            if not None, the context and the topology is taken from the
-            simulator object. This should be the preferred way when using
-            simulations
         coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
             atomic coordinates (default: None)
         box_vectors : periodic box vectors (default: None)
@@ -67,92 +56,28 @@ class Configuration(object):
             export to mdtraj objects
         """
 
-        self._coordinates = None
-        self._box_vectors = None
-        self._potential_energy = None
+        self.coordinates = None
+        self.box_vectors = None
+        self.potential_energy = None
         self.topology = None
-
-        if simulator is not None:
-            #context = simulator.simulation.context
-            simulation = simulator.simulation
-            self.topology = simulator.storage.topology
 
         if topology is not None:
             self.topology = topology
 
-        #if context is not None:
-        if simulation is not None:
-            simulation.load_configuration(self)
-            # Get current state from OpenMM Context object.
-            #state = context.getState(getPositions=True, getEnergy=True)
+        if coordinates is not None: 
+            self.coordinates = copy.deepcopy(coordinates)
+        if box_vectors is not None: 
+            self.box_vectors = copy.deepcopy(box_vectors)
+        if potential_energy is not None: 
+            self.potential_energy = copy.deepcopy(potential_energy)
 
-            # Store the associated context
-            #self.context = context
-
-            # Populate current configuration data.
-            #self._coordinates = state.getPositions(asNumpy=True)
-            #self._box_vectors = state.getPeriodicBoxVectors()
-            #self._potential_energy = state.getPotentialEnergy()
-        else:
-            if coordinates is not None: 
-                self._coordinates = copy.deepcopy(coordinates)
-            if box_vectors is not None: 
-                self._box_vectors = copy.deepcopy(box_vectors)
-            if potential_energy is not None: 
-                self._potential_energy = copy.deepcopy(potential_energy)
-
-        if self._coordinates is not None:
+        if self.coordinates is not None:
             # Check for nans in coordinates, and raise an exception if
             # something is wrong.
-            if np.any(np.isnan(self._coordinates)):
-                raise Exception("Some coordinates became 'nan'; simulation is unstable or buggy.")
+            if np.any(np.isnan(self.coordinates)):
+                raise ValueError("Some coordinates became 'nan'; simulation is unstable or buggy.")
 
         return
-
-    @property
-    def coordinates(self):
-        if Configuration.load_lazy is True and self._coordinates is None and len(self.idx) > 0:
-            # this uses the first storage and loads the velocities from there
-            self.idx.iterkeys().next().configuration.update_coordinates(self)
-
-        return self._coordinates
-
-    @coordinates.setter
-    def coordinates(self, value):
-        if self._coordinates is None:
-            self._coordinates = value
-        else:
-            raise ValueError("Cannot change coordinates once they are set")
-
-    @property
-    def box_vectors(self):
-        if Configuration.load_lazy is True and self._box_vectors is None and len(self.idx) > 0:
-            # this uses the first storage and loads the velocities from there
-            self.idx.iterkeys().next().configuration.update_box_vectors(self)
-
-        return self._box_vectors
-
-    @box_vectors.setter
-    def box_vectors(self, value):
-        if self._box_vectors is None:
-            self._box_vectors = value
-        else:
-            raise ValueError("Cannot change box_vector once they are set")
-
-    @property
-    def potential_energy(self):
-        if Configuration.load_lazy is True and self._potential_energy is None and len(self.idx) > 0:
-            # this uses the first storage and loads the velocities from there
-            self.idx.iterkeys().next().configuration.update_potential_energy(self)
-
-        return self._potential_energy
-
-    @potential_energy.setter
-    def potential_energy(self, value):
-        if self._potential_energy is None:
-            self._potential_energy = value
-        else:
-            raise ValueError("Cannot change potential_energy once they are set")
 
     def forget(self):
         """
@@ -161,10 +86,10 @@ class Configuration(object):
         reloaded automatically
         """
 
-        if Configuration.load_lazy and len(self.idx) > 0:
-            self._coordinates = None
-            self._box_vectors = None
-            self._potential_energy = None
+        if Configuration.load_lazy and hasattr(self, '_loaded_from'):
+            self.coordinates = None
+            self.box_vectors = None
+            self.potential_energy = None
 
     #=========================================================================
     # Comparison functions
@@ -173,23 +98,18 @@ class Configuration(object):
     def __eq__(self, other):
         if self is other:
             return True
-        for storage in self.idx:
-            if storage in other.idx and other.idx[storage] == self.idx[storage]:
-                return True
+
+        # This is not good since this code requires knowledge about storage
+        # I remove it since it is not used yet anyway
+        # If we want to figure out if two Snapshots are loaded from two different
+        # instances of the storage we should put this logic into storages
+
+#        for storage in self.idx:
+#            if storage in other.idx and other.idx[storage] == self.idx[storage]:
+#                return True
 
         return False
 
-#        return self is other
-
-#    def __hash__(self):
-        # We need to make sure that a configuration from storage can be
-        # found. So just take the numpy array of coordinates call a tostring
-        # and use this. That should be reasonably fast and should only avoid
-        # checking all coordinates. The final check is really, if the
-        # elements were loaded from the same idx in the same file (see
-        # __eq__)
-
-#        return hash(self.coordinates.tostring())
 
     @property
     def atoms(self):
@@ -202,7 +122,7 @@ class Configuration(object):
     # Utility functions
     #=========================================================================
 
-    def copy(self):
+    def copy(self, subset=None):
         """
         Returns a deep copy of the instance itself. If this object is saved
         it will not be stored as a separate object and consume additional
@@ -214,7 +134,14 @@ class Configuration(object):
             the deep copy
         """
 
-        this = Configuration(coordinates=self.coordinates, box_vectors=self._box_vectors, potential_energy=self._potential_energy, topology=self.topology)
+        if subset is None:
+            this = Configuration(coordinates=self.coordinates, box_vectors=self.box_vectors, potential_energy=self.potential_energy, topology=self.topology)
+        else:
+            new_coordinates = self.coordinates[subset,:]
+            new_topology = self.topology.subset(subset)
+            # TODO: Keep old potential_energy? Is not correct but might be useful. Boxvectors are fine!
+            this = Configuration(coordinates=new_coordinates, box_vectors=self.box_vectors, potential_energy=self.potential_energy, topology=new_topology)
+
         return this
 
     def md(self):
@@ -238,36 +165,28 @@ class Configuration(object):
 
         return md.Trajectory(output, self.topology)
 
-
-
-#=============================================================================================
+#=============================================================================
 # SIMULATION MOMENTUM / VELOCITY
 #=============================================================================
-@storable
+
 class Momentum(object):
     """
-    Simulation momentum. Contains only velocities of all atoms and associated kinetic energies
+    Simulation momentum. Contains only velocities of all atoms and
+    associated kinetic energies
     """
     
-    # Class variables to store the global storage and the system context describing the system to be safed as momentums
-    simulator = None
+    # Class variables to store the global storage and the system context
+    # describing the system to be safed as momentums
+    engine = None
     load_lazy = True
 
-    def __init__(self, simulation=None, simulator=None, velocities=None, 
-                 kinetic_energy=None, idx=None):
+    def __init__(self, velocities=None, kinetic_energy=None):
         """
-        Create a simulation momentum from either an OpenMM context or individually-specified components.
+        Create a simulation momentum from either an OpenMM context or
+        individually-specified components.
 
         Parameters
         ----------
-        context : simtk.chem.openContext
-            if not None, the current state will be queried to populate
-            simulation momentum; otherwise, can specify individual
-            components (default: None)
-        simulator : Simulator()
-            if not None, the context and the topology is taken from the
-            simulator object. This should be the preferred way when using
-            simulations
         velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
             atomic velocities (default: None)
         kinetic_energy : simtk.unit.Quantity of units energy/mole
@@ -283,66 +202,15 @@ class Momentum(object):
             dict for storing the used index per storage
         """
         
-        self._velocities = None
-        self._kinetic_energy = None
+        self.velocities = None
+        self.kinetic_energy = None
 
-        if simulator is not None:
-            simulation = simulator.simulation
-            #context = simulator.simulation.context
-
-        #if context is not None:
-        if simulation is not None:
-            simulation.load_momentum(self)
-            # Get current state from OpenMM Context object.
-            #state = context.getState(getVelocities=True, getEnergy=True)
-            
-            # Store the associated context
-            #self.context = context
-            
-            # Populate current momentum data.
-            #self._velocities = state.getVelocities(asNumpy=True)
-            #self._kinetic_energy = state.getKineticEnergy()
-        else:
-            if velocities is not None: 
-                self._velocities = copy.deepcopy(velocities)
-            if kinetic_energy is not None: 
-                self._kinetic_energy = copy.deepcopy(kinetic_energy)
-
-        # Check for nans in coordinates, and raise an exception if something is wrong.
-#        if np.any(np.isnan(self.coordinates)):
-#            raise Exception("Some coordinates became 'nan'; simulation is unstable or buggy.")
+        if velocities is not None: 
+            self.velocities = copy.deepcopy(velocities)
+        if kinetic_energy is not None: 
+            self.kinetic_energy = copy.deepcopy(kinetic_energy)
 
         return
-
-    @property
-    def velocities(self):
-        if Momentum.load_lazy is True and self._velocities is None and len(self.idx) > 0:
-            # this uses the first storage and loads the velocities from there
-            self.idx.iterkeys().next().momentum.update_velocities(self)
-
-        return self._velocities
-
-    @velocities.setter
-    def velocities(self, value):
-        if self._velocities is None:
-            self._velocities = value
-        else:
-            raise ValueError()
-
-    @property
-    def kinetic_energy(self):
-        if Momentum.load_lazy is True and self._velocities is None and len(self.idx) > 0:
-            # this uses the first storage and loads the velocities from there
-            self.idx.iterkeys().next().momentum.update_kinetic_energy(self)
-
-        return self._kinetic_energy
-
-    @kinetic_energy.setter
-    def kinetic_energy(self, value):
-        if self._kinetic_energy is None:
-            self._kinetic_energy = value
-        else:
-            raise ValueError()
 
     def forget(self):
         """
@@ -351,9 +219,9 @@ class Momentum(object):
         are reloaded automatically
         """
 
-        if Momentum.load_lazy and len(self.idx) > 0:
-            self._velocities = None
-            self._kinetic_energy = None
+        if Momentum.load_lazy and hasattr(self, '_loaded_store') > 0:
+            self.velocities = None
+            self.kinetic_energy = None
 
     @property
     def atoms(self):
@@ -362,11 +230,11 @@ class Momentum(object):
         '''   
         return self.velocities.shape[0]
 
-    #=============================================================================================
+    #=========================================================================
     # Utility functions
-    #=============================================================================================
+    #=========================================================================
 
-    def copy(self):
+    def copy(self, subset=None, reversed=False):
         """
         Returns a deep copy of the instance itself. If this object will not
         be saved as a separate object and consumes additional memory. It is
@@ -379,23 +247,23 @@ class Momentum(object):
         Momentum()
             the deep copy
         """
-        this = Momentum(velocities=self._velocities, kinetic_energy=self._kinetic_energy)
-        this.idx = self.idx
+
+
+        if subset is None:
+            new_velocities = self.velocities
+        else:
+            new_velocities = self.velocities[subset,:]
+            # TODO: Keep old kinetic_energy? Is not correct but might be useful.
+
+        if reversed:
+            # Note the v *= -1.0 would be in place for numpy arrays. This here makes a copy!
+            new_velocities = -1.0 * new_velocities
+
+        this = Momentum(velocities=new_velocities, kinetic_energy=self.kinetic_energy)
+
         return this
 
-    def reverse(self):
-        """
-        Flips the velocities and erases the stored indices. If stores is
-        will be treated as a new Momentum instance.  Should be avoided.
-        """
-
-        # This trick loads both, velocities and the kinetic energy. Otherwise we might run into trouble when removing the index
-        self._velocities = -1.0 * self.velocities
-        self.kinetic_energy
-        self.idx = dict()
-
-    
-    def reversed_copy(self):
+    def reversed_copy(self, subset=None):
         """
         Create a copy and flips the velocities and erases the stored indices.
         If stores is will be treated as a new Momentum instance.
@@ -406,11 +274,7 @@ class Momentum(object):
         Momentum()
             the deep copy with reversed velocities.
         """
-        this = self.copy()
-        this.reverse()
-        return this
-
-
+        return self.copy(subset=subset, reversed=reversed)
 
 
 
@@ -418,8 +282,6 @@ class Momentum(object):
 #=============================================================================
 # SIMULATION SNAPSHOT (COMPLETE FRAME WITH COORDINATES AND VELOCITIES)
 #=============================================================================
-
-
 
 def has(attr):
     def _has(func):
@@ -432,7 +294,7 @@ def has(attr):
     return _has
 
 
-@storable
+
 class Snapshot(object):
     """
     Simulation snapshot. Contains references to a configuration and momentum
@@ -441,26 +303,23 @@ class Snapshot(object):
     # Class variables to store the global storage and the system context
     # describing the system to be saved as snapshots
     # Hopefully these class member variables will not be needed any longer
-    simulator = None
+    engine = None
 
-    def __init__(self, simulation=None, simulator=None, coordinates=None,
-                 velocities=None, box_vectors=None, potential_energy=None,
-                 kinetic_energy=None, configuration=None, momentum=None,
-                 reversed=False, topology=None):
+    def __init__(self, coordinates=None, velocities=None, box_vectors=None,
+                 potential_energy=None, kinetic_energy=None, topology=None,
+                 configuration=None, momentum=None, reversed=False):
         """
-        Create a simulation snapshot from either an OpenMM context or
-        individually-specified components.
+        Create a simulation snapshot. Initialization happens primarily in
+        one of two ways:
+            1. Specify `Configuration` and `Momentum` objects
+            2. Specify the things which make up `Configuration` and
+               `Momentum` objects, i.e., coordinates, velocities, box
+               vectors, etc.
+        If you want to obtain a snapshot from a currently-running MD engine,
+        use that engine's .current_snapshot property.
 
         Parameters
         ----------
-        context : simtk.chem.openContext
-            if not None, the current state will be queried to populate
-            simulation snapshot; otherwise, can specify individual
-            components (default: None)
-        simulator : Simulator()
-            if not None, the context and the topology is taken from the
-            simulator object. This should be the preferred way when using
-            simulations
         coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
             atomic coordinates (default: None)
         velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
@@ -497,48 +356,37 @@ class Snapshot(object):
         else:
             self.momentum = momentum
 
-        if simulator is not None:
-            simulation  = simulator.simulation
-            #context = simulator.simulation.context
-            self.configuration.topology = simulator.storage.topology
-
         if topology is not None:
             self.configuration.topology = topology
 
         self.reversed = reversed
 
-        #if context is not None:
-        if simulation is not None:
-            simulation.load_snapshot(self)
-            # Get current state from OpenMM Context object.
-            #state = context.getState(getPositions=True, getVelocities=True, 
-                                     #getEnergy=True)
-            
-            # Store the associated context
-            #self.context = context
-            
-            # Populate current snapshot data.
-            #self.configuration._coordinates = state.getPositions(asNumpy=True)
-            #self.momentum._velocities = state.getVelocities(asNumpy=True)
-            #self.configuration._box_vectors = state.getPeriodicBoxVectors(asNumpy=True)
-            #self.configuration._potential_energy = state.getPotentialEnergy()
-            #self.momentum._kinetic_energy = state.getKineticEnergy()
-        else:
-            if coordinates is not None: 
-                self.configuration._coordinates = copy.deepcopy(coordinates)
-            if velocities is not None: 
-                self.momentum._velocities = copy.deepcopy(velocities)
-            if box_vectors is not None: 
-                self.configuration._box_vectors = copy.deepcopy(box_vectors)
-            if potential_energy is not None: 
-                self.configuration._potential_energy = copy.deepcopy(potential_energy)
-            if kinetic_energy is not None: 
-                self.momentum._kinetic_energy = copy.deepcopy(kinetic_energy)
-            
-        if self.configuration._coordinates is not None:
-            # Check for nans in coordinates, and raise an exception if something is wrong.
-            if np.any(np.isnan(self.configuration._coordinates)):
-                raise Exception("Some coordinates became 'nan'; simulation is unstable or buggy.")
+        if coordinates is not None: 
+            self.configuration.coordinates = copy.deepcopy(coordinates)
+        if velocities is not None: 
+            self.momentum.velocities = copy.deepcopy(velocities)
+        if box_vectors is not None: 
+            self.configuration.box_vectors = copy.deepcopy(box_vectors)
+        if potential_energy is not None: 
+            self.configuration.potential_energy = copy.deepcopy(potential_energy)
+        if kinetic_energy is not None: 
+            self.momentum.kinetic_energy = copy.deepcopy(kinetic_energy)
+
+        # TODO: consider whether it is cleaner to move this logic into the
+        # main allocation process instead of fixing things after the fact
+        config = self.configuration
+        if config.coordinates is None and config.box_vectors is None and config.potential_energy is None:
+            self.configuration = None
+        moment = self.momentum
+        if moment.velocities is None and moment.kinetic_energy is None:
+            self.momentum = None
+
+
+        if self.configuration is not None and self.configuration.coordinates is not None:
+            # Check for nans in coordinates, and raise an exception if
+            # something is wrong.
+            if np.any(np.isnan(self.configuration.coordinates)):
+                raise ValueError("Some coordinates became 'nan'; simulation is unstable or buggy.")
                 
         pass
 
@@ -562,11 +410,12 @@ class Snapshot(object):
     @has('momentum')
     def velocities(self):
         """
-        The velocities in the configuration. If the snapshot is reversed a copy of the original
-        (unreversed) velocities is made which is then returned
+        The velocities in the configuration. If the snapshot is reversed a
+        copy of the original (unreversed) velocities is made which is then
+        returned
         """
         if self.reversed:
-            return self.momentum.reversed_copy().velocities
+            return -1.0 * self.momentum.velocities
         else:
             return self.momentum.velocities
     
@@ -623,14 +472,15 @@ class Snapshot(object):
         '''   
         return self.kinetic_energy + self.potential_energy
     
-    #=============================================================================================
+    #==========================================================================
     # Utility functions
-    #=============================================================================================
+    #==========================================================================
 
     def copy(self):
         """
-        Returns a shallow copy of the instance itself. The contained configuration and momenta are not
-        copied.
+        Returns a shallow copy of the instance itself. The contained
+        configuration and momenta are not copied.
+
         Returns
         -------
         Snapshot()
@@ -641,8 +491,10 @@ class Snapshot(object):
     
     def reversed_copy(self):
         """
-        Returns a shallow reversed copy of the instance itself. The contained configuration and momenta are not
-        copied and the momenta are marked reversed.
+        Returns a shallow reversed copy of the instance itself. The
+        contained configuration and momenta are not copied and the momenta
+        are marked reversed.
+
         Returns
         -------
         Snapshot()
@@ -653,10 +505,11 @@ class Snapshot(object):
 
     def reverse(self):
         """
-        Reversed the momenta. This only flips a boolean and marks the given snapshot are reversed. This is fast and
-        should be used instead of read velocity inversion.
+        Reversed the momenta. This only flips a boolean and marks the given
+        snapshot are reversed. This is fast and should be used instead of
+        read velocity inversion.
         """
-
+        # TODO: reversed=>is_reversed to avoid confusion w/ built-in reversed
         self.reversed = not self.reversed
         return self
     
@@ -670,3 +523,16 @@ class Snapshot(object):
         Rather slow since the topology has to be made each time. Try to avoid it
         '''        
         return self.configuration.md()
+
+    def subset(self, subset):
+        """
+        Return a deep copy of the snapshot with reduced set of coordinates. Takes also care
+        of adjusting the topology.
+
+        Notes
+        -----
+        So far the potential and kinetic energies are copied and are thus false but still useful!?!
+        """
+
+        this = Snapshot(configuration=self.configuration.copy(subset), momentum=self.momentum.copy(subset), reversed=self.reversed)
+        return this

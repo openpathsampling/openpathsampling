@@ -2,9 +2,9 @@ import svgwrite
 import sys
 import argparse
 import os
-from storage import Storage
+from opentis.storage import Storage
 
-from orderparameter import OP_Function
+from opentis.orderparameter import OP_Function
 import mdtraj as md
 if __name__ == '__main__':
 
@@ -159,7 +159,7 @@ if __name__ == '__main__':
         pos_x = p_x[sample]
         pos_y = p_y[sample]
 
-        if sample.mover.name == 'BootstrapEnsembleChangeMove':
+        if sample.details.mover.name == 'BootstrapEnsembleChangeMove':
             svg_document.add(svg_document.line(
                     start = (start_x + (pos_x) * scale_x + 0,start_y + (pos_y - 1 + 0.05) * scale_y),
                     end = (start_x  + (pos_x) * scale_x + 0,start_y + (pos_y - 0.05) * scale_y),
@@ -180,7 +180,7 @@ if __name__ == '__main__':
                     stroke = "black",
                 ))
 
-        if sample.mover.name == 'ReplicaExchange':
+        if sample.details.mover.name == 'ReplicaExchange':
             middle_y = 0.5 * (ensembles_y[sample.details.ensembles[0]] + ensembles_y[sample.details.ensembles[1]])
             svg_document.add(svg_document.line(
                     start = (start_x + (pos_x) * scale_x + 0,start_y + (middle_y - 0.5 + 0.05) * scale_y),

@@ -3,10 +3,14 @@ Created on 03.09.2014
 
 @author: jan-hendrikprinz, David W.H. Swenson
 '''
-from trajectory import Trajectory
-from wrapper import storable
 
-@storable
+from opentis.todict import restores_as_full_object
+
+import opentis as paths
+
+# TODO: Make Full and Empty be Singletons to avoid storing them several times!
+
+@restores_as_full_object
 class Ensemble(object):
     '''    
     An Ensemble represents a path ensemble, effectively a set of trajectories.
@@ -23,19 +27,18 @@ class Ensemble(object):
 
     Notes
     -----
-    Maybe replace - by / to get better notation. So war its not been used
+    Maybe replace - by / to get better notation. So far it has not been used
     '''
 
     use_shortcircuit = True
-
 
     def __init__(self):
         '''
         A path volume defines a set of paths.
         '''
 
-        self._traj = dict()
-        self.last = None
+#        self._traj = dict()
+#        self.last = None
         self.name = ''
 
     def __eq__(self, other):
@@ -43,10 +46,6 @@ class Ensemble(object):
             return True
         return str(self) == str(other)
 
-    @property
-    def identifier(self):
-        return str(self)
-    
     def __call__(self, trajectory, lazy=None):
         '''
         Returns `True` if the trajectory is part of the path ensemble.
@@ -60,11 +59,23 @@ class Ensemble(object):
 
     def check(self, trajectory):
         return self(trajectory, lazy = False)
+
+    def oom_matrix(self, oom):
+        """
+        Return the oom representation where the OOM is based on a set of volumes
+
+        """
+
+        # Needs to be implemented by the actual class
+
+        return None
     
-    def forward(self, trajectory):
+    def can_append(self, trajectory):
         '''
-        Returns true, if the trajectory so far can still be in the ensemble if it is appended by a frame. To check, it assumes that the
-        trajectory to length L-1 is okay. This is mainly for interactive usage, when a trajectory is generated.
+        Returns true, if the trajectory so far can still be in the ensemble
+        if it is appended by a frame. To check, it assumes that the
+        trajectory to length L-1 is okay. This is mainly for interactive
+        usage, when a trajectory is generated.
         
         Parameters
         ----------
@@ -73,25 +84,28 @@ class Ensemble(object):
         
         Returns
         -------
-        forward : bool
-            Returns true or false if using a forward step (extending the trajectory forward in time at its end) `trajectory` could  
-            still be in the ensemble and thus makes sense to continue a simulation
+        can_append : bool
+            Returns true or false if using a forward step (extending the
+            trajectory forward in time at its end) `trajectory` could  still
+            be in the ensemble and thus makes sense to continue a simulation
         
 
         Notes
         -----
-        This is only tricky for this that depend on the history like HitXEnsemble or LeaveXEnsembles. In theory these can only
-        be checked if the full range of frames has been generated. This could be triggered, when the last frame is reached.
-        This is even more difficult if this depends on the length.
+        This is only tricky for this that depend on the history like
+        HitXEnsemble or LeaveXEnsembles. In theory these can only be checked
+        if the full range of frames has been generated. This could be
+        triggered, when the last frame is reached.  This is even more
+        difficult if this depends on the length.
         '''
-
         return True        
-        pass
     
-    def backward(self, trajectory):
+    def can_prepend(self, trajectory):
         '''
-        Returns true, if the trajectory so far can still be in the ensemble if it is prepended by a frame. To check, it assumes that the
-        trajectory from index 1 is okay. This is mainly for interactive usage, when a trajectory is generated using a backward move.
+        Returns true, if the trajectory so far can still be in the ensemble
+        if it is prepended by a frame. To check, it assumes that the
+        trajectory from index 1 is okay. This is mainly for interactive
+        usage, when a trajectory is generated using a backward move.
         
         Parameters
         ----------
@@ -100,48 +114,54 @@ class Ensemble(object):
         
         Returns
         -------
-        backward : bool
-            Returns true or false if using a backward step (extending the trajectory backwards in time at its beginning) `trajectory` could  
-            still be in the ensemble and thus makes sense to continue a simulation
+        can_prepend : bool
+            Returns true or false if using a backward step (extending the
+            trajectory backwards in time at its beginning) `trajectory`
+            could  still be in the ensemble and thus makes sense to continue
+            a simulation
         
         Notes
         
-        This is only tricky for this that depend on the history like HitXEnsemble or LeaveXEnsembles. In theory these can only
-        be checked if the full range of frames has been generated. This could be triggered, when the last frame is reached.
-        This is even more difficult if this depends on the length.
+        This is only tricky for this that depend on the history like
+        HitXEnsemble or LeaveXEnsembles. In theory these can only be checked
+        if the full range of frames has been generated. This could be
+        triggered, when the last frame is reached.  This is even more
+        difficult if this depends on the length.
         '''
-
         return True        
-        pass
-
-    can_append = forward
-    can_prepend = backward
 
 
-    def locate(self, trajectory, lazy=True, max_length=None, min_length=1, overlap=1):
+
+    def find_valid_slices(self, trajectory, lazy=True, 
+                          max_length=None, min_length=1, overlap=1):
         '''
-        Returns a list of trajectories that contain sub-trajectories which are in the given ensemble.
+        Returns a list of trajectories that contain sub-trajectories which
+        are in the given ensemble.
 
         Parameters
         ----------
         trajectory : Trajectory
             the actual trajectory to be splitted into ensemble parts
         lazy : boolean
-            if True will use a faster almost linear algorithm, while False will run through all possibilities starting with the
-            largest ones
+            if True will use a faster almost linear algorithm, while False
+            will run through all possibilities starting with the largest
+            ones
         max_length : int > 0
-            if set this determines the maximal size to be tested (is mainly used in the recursion)
+            if set this determines the maximal size to be tested (is mainly
+            used in the recursion)
         min_length : int > 0
-            if set this determines the minimal size to be tested (in lazy mode might no
+            if set this determines the minimal size to be tested (in lazy
+            mode might no
         overlap : int >= 0
-            determines the allowed overlap of all trajectories to be found. A value of x means that
-            two sub-trajectorie can share up to x frames at the beginning and x frames at the end.
-            Default is 1
+            determines the allowed overlap of all trajectories to be found.
+            A value of x means that two sub-trajectorie can share up to x
+            frames at the beginning and x frames at the end.  Default is 1
 
         Returns
         -------
         list of slices
-            Returns a list of index-slices for sub-trajectories in trajectory that are in the ensemble.
+            Returns a list of index-slices for sub-trajectories in
+            trajectory that are in the ensemble.
         '''
         ensemble_list = []
 
@@ -154,7 +174,8 @@ class Ensemble(object):
         min_length = max(1, min_length)
 
         if not lazy:
-            # this tries all possible sub-trajectories starting with the longest ones and uses recursion
+            # this tries all possible sub-trajectories starting with the
+            # longest ones and uses recursion
             for l in range(max_length,min_length - 1,-1):
                 for start in range(0,length-l+1):
                     tt = trajectory[start:start+l]
@@ -166,10 +187,12 @@ class Ensemble(object):
                         if l > min_length:
                             pad = min(overlap, l - 1)
                             tt_left = trajectory[0:start + pad]
-                            list_left = self.locate(tt_left, max_length=l)
+                            list_left = self.find_valid_slices(tt_left, 
+                                                               max_length=l)
 
                             tt_right = trajectory[start + l - pad:length]
-                            list_right = self.locate(tt_right, max_length=l)
+                            list_right = self.find_valid_slices(tt_right, 
+                                                                max_length=l)
 
 #                        ensemble_list = list_left + [tt] + list_right
                         ensemble_list = list_left + [slice(start,start+l)] + list_right
@@ -188,7 +211,7 @@ class Ensemble(object):
             while start <= length - min_length and end <= length:
                 tt = trajectory[start:end]
 #                print start,end
-                if self.forward(tt) and end<length:
+                if self.can_append(tt) and end<length:
                     end += 1
                 else:
                     if self(tt, lazy=False):
@@ -210,28 +233,33 @@ class Ensemble(object):
         trajectory : Trajectory
             the actual trajectory to be splitted into ensemble parts
         lazy : boolean
-            if True will use a faster almost linear algorithm, while False will run through all possibilities starting with the
-            largest ones
+            if True will use a faster almost linear algorithm, while False
+            will run through all possibilities starting with the largest
+            ones
         max_length : int > 0
-            if set this determines the maximal size to be tested (is mainly used in the recursion)
+            if set this determines the maximal size to be tested (is mainly
+            used in the recursion)
         min_length : int > 0
-            if set this determines the minimal size to be tested (in lazy mode might no
+            if set this determines the minimal size to be tested (in lazy
+            mode might no
         overlap : int >= 0
-            determines the allowed overlap of all trajectories to be found. A value of x means that
-            two sub-trajectory can share up to x frames at the beginning and x frames at the end.
-            Default is 1
+            determines the allowed overlap of all trajectories to be found.
+            A value of x means that two sub-trajectory can share up to x
+            frames at the beginning and x frames at the end.  Default is 1
 
         Returns
         -------
         list of Trajectory
-            Returns a list of sub-trajectories in trajectory that are in the ensemble.
+            Returns a list of sub-trajectories in trajectory that are in the
+            ensemble.
 
         Notes
         -----
-        This uses self.locate and returns the actual sub-trajectories
+        This uses self.find_valid_slices and returns the actual sub-trajectories
         '''
 
-        indices = self.locate(trajectory, lazy, max_length, min_length, overlap)
+        indices = self.find_valid_slices(trajectory, lazy, max_length, 
+                                         min_length, overlap)
 
         return [trajectory[part] for part in indices]
 
@@ -254,7 +282,7 @@ class Ensemble(object):
         elif type(other) is FullEnsemble:
             return other
         else:
-            return EnsembleCombination(self, other, fnc = lambda a,b : a or b, str_fnc = '{0}\nor\n{1}')
+            return OrEnsemble(self, other)
 
     def __xor__(self, other):
         if self is other:
@@ -264,7 +292,7 @@ class Ensemble(object):
         elif type(other) is FullEnsemble:
             return NegatedEnsemble(self)        
         else:
-            return EnsembleCombination(self, other, fnc = lambda a,b : a ^ b, str_fnc = '{0}\nxor\n{1}')
+            return XorEnsemble(self, other)
 
     def __and__(self, other):
         if self is other:
@@ -274,7 +302,7 @@ class Ensemble(object):
         elif type(other) is FullEnsemble:
             return self
         else:
-            return EnsembleCombination(self, other, fnc = lambda a,b : a and b, str_fnc = '{0}\nand\n{1}')
+            return AndEnsemble(self, other)
 
     def __sub__(self, other):
         if self is other:
@@ -284,7 +312,7 @@ class Ensemble(object):
         elif type(other) is FullEnsemble:
             return EmptyEnsemble()
         else:
-            return EnsembleCombination(self, other, fnc = lambda a,b : a and not b, str_fnc = '{0}\nand not\n{1}')
+            return SubEnsemble(self, other)
         
     def __invert__(self):
         return NegatedEnsemble(self)
@@ -323,6 +351,7 @@ class LoadedEnsemble(Ensemble):
     def __str__(self):
         return self.description
 
+@restores_as_full_object
 class EmptyEnsemble(Ensemble):
     '''
     The empty path ensemble of no trajectories.
@@ -333,10 +362,10 @@ class EmptyEnsemble(Ensemble):
     def __call__(self, trajectory, lazy=None):
         return False
 
-    def forward(self, trajectory):
+    def can_append(self, trajectory):
         return False
 
-    def backward(self, trajectory):
+    def can_prepend(self, trajectory):
         return False
 
     def __invert__(self):
@@ -357,6 +386,11 @@ class EmptyEnsemble(Ensemble):
     def __str__(self):
         return 'empty'
 
+    def oom_matrix(self, oom):
+        # Zero matrix
+        return None
+
+@restores_as_full_object
 class FullEnsemble(Ensemble):
     '''
     The full path ensemble of all possible trajectories.
@@ -367,10 +401,10 @@ class FullEnsemble(Ensemble):
     def __call__(self, trajectory, lazy=None):
         return True
     
-    def forward(self, trajectory):
+    def can_append(self, trajectory):
         return True
 
-    def backward(self, trajectory):
+    def can_prepend(self, trajectory):
         return True
 
     def __invert__(self):
@@ -400,7 +434,12 @@ class FullEnsemble(Ensemble):
 
     def __str__(self):
         return 'all'
-    
+
+    def oom_matrix(self, oom):
+        # Full matrix
+        return None
+
+@restores_as_full_object
 class NegatedEnsemble(Ensemble):
     '''
     Negates an Ensemble and simulates a `not` statement
@@ -412,18 +451,18 @@ class NegatedEnsemble(Ensemble):
     def __call__(self, trajectory, lazy=None):
         return not self.ensemble(trajectory, lazy)
 
-    def forward(self, trajectory):
+    def can_append(self, trajectory):
         # We cannot guess the result here so keep on running forever
         return True
 
-    def backward(self, trajectory):
+    def can_prepend(self, trajectory):
         # We cannot guess the result here so keep on running forever
         return True
 
     def __str__(self):
         return 'not ' + str(self.ensemble2)
 
-    
+@restores_as_full_object
 class EnsembleCombination(Ensemble):
     '''
     Represent the boolean concatenation of two ensembles
@@ -434,6 +473,9 @@ class EnsembleCombination(Ensemble):
         self.ensemble2 = ensemble2
         self.fnc = fnc
         self.sfnc = str_fnc
+
+    def to_dict(self):
+        return { 'ensemble1' : self.ensemble1, 'ensemble2' : self.ensemble2 }
 
     def __call__(self, trajectory, lazy=None):
         # Shortcircuit will automatically skip the second part of the combination if the result does not depend on it!
@@ -469,7 +511,7 @@ class EnsembleCombination(Ensemble):
 
         return res
 
-    def forward(self, trajectory):
+    def can_append(self, trajectory):
         if Ensemble.use_shortcircuit:
             a = self.ensemble1.can_append(trajectory)
             res_true = self._continue_fnc(a, True)
@@ -478,7 +520,7 @@ class EnsembleCombination(Ensemble):
                 # result is independent of ensemble_b so ignore it
                 return res_true
             else:
-                b = self.ensemble2.forward(trajectory)
+                b = self.ensemble2.can_append(trajectory)
                 if b is True:
                     return res_true
                 else:
@@ -486,30 +528,48 @@ class EnsembleCombination(Ensemble):
         else:
             return self.fnc(self.ensemble1.can_append(trajectory), self.ensemble2.can_append(trajectory))
 
-    def backward(self, trajectory):
+    def can_prepend(self, trajectory):
         if Ensemble.use_shortcircuit:
-            a = self.ensemble1.backward(trajectory)
+            a = self.ensemble1.can_prepend(trajectory)
             res_true = self._continue_fnc(a, True)
             res_false = self._continue_fnc(a, False)
             if res_false == res_true:
                 # result is independent of ensemble_b so ignore it
                 return res_true
             else:
-                b = self.ensemble2.backward(trajectory)
+                b = self.ensemble2.can_prepend(trajectory)
                 if b is True:
                     return res_true
                 else:
                     return res_false
         else:
-            return self.fnc(self.ensemble1.backward(trajectory), self.ensemble2.backward(trajectory))
-
-    can_append = forward
-    can_prepend = backward
+            return self.fnc(self.ensemble1.can_prepend(trajectory), self.ensemble2.can_prepend(trajectory))
 
     def __str__(self):
 #        print self.sfnc, self.ensemble1, self.ensemble2, self.sfnc.format('(' + str(self.ensemble1) + ')' , '(' + str(self.ensemble1) + ')')
         return self.sfnc.format('(\n' + Ensemble._indent(str(self.ensemble1)) + '\n)' , '(\n' + Ensemble._indent(str(self.ensemble2)) + '\n)')
 
+@restores_as_full_object
+class OrEnsemble(EnsembleCombination):
+    def __init__(self, ensemble1, ensemble2):
+        super(OrEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a or b, str_fnc = '{0}\nor\n{1}')
+
+@restores_as_full_object
+class AndEnsemble(EnsembleCombination):
+    def __init__(self, ensemble1, ensemble2):
+        super(AndEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and b, str_fnc = '{0}\nand\n{1}')
+
+@restores_as_full_object
+class XorEnsemble(EnsembleCombination):
+    def __init__(self, ensemble1, ensemble2):
+        super(XorEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a ^ b, str_fnc = '{0}\nxor\n{1}')
+
+@restores_as_full_object
+class SubEnsemble(EnsembleCombination):
+    def __init__(self, ensemble1, ensemble2):
+        super(SubEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and not b, str_fnc = '{0}\nand not\n{1}')
+
+@restores_as_full_object
 class SequentialEnsemble(Ensemble):
     """
     An ensemble that consists of several ensembles which are satisfied by
@@ -552,6 +612,7 @@ class SequentialEnsemble(Ensemble):
         if type(max_overlap) is int:
             max_overlap = (max_overlap, )*(len(ensembles)-1)
 
+        # TODO: Explain why these are tuples here and not lists
         self.ensembles = tuple(ensembles)
         self.min_overlap = tuple(min_overlap)
         self.max_overlap = tuple(max_overlap)
@@ -576,8 +637,11 @@ class SequentialEnsemble(Ensemble):
         final_ens = len(self.ensembles)-1
         transitions = []
         while True:
-            subtraj_final = self._find_subtraj_final(trajectory, 
-                                                     subtraj_first, ens_num)
+            if ens_num <= final_ens:
+                subtraj_final = self._find_subtraj_final(trajectory, 
+                                                         subtraj_first, ens_num)
+            else:
+                return transitions
             if subtraj_final - subtraj_first > 0:
                 subtraj = trajectory[slice(subtraj_first, subtraj_final)]
                 if ens_num == final_ens:
@@ -594,7 +658,7 @@ class SequentialEnsemble(Ensemble):
                     transitions.append(subtraj_final)
                     subtraj_first = subtraj_final
             else:
-                if self.ensembles[ens_num](Trajectory([])):
+                if ens_num <= final_ens and self.ensembles[ens_num](paths.Trajectory([])):
                     ens_num += 1
                     transitions.append(subtraj_final)
                     subtraj_first = subtraj_final
@@ -661,7 +725,7 @@ class SequentialEnsemble(Ensemble):
         return subtraj_first+1
 
 
-    def forward(self, trajectory):
+    def can_append(self, trajectory):
         # treat this like we're implementing a regular expression parser ...
         # .*ensemble.+ ; but we have to do this for all possible matches
         # There are three tests we consider:
@@ -708,7 +772,7 @@ class SequentialEnsemble(Ensemble):
                     # all frames assigned, but not all ensembles finished;
                     # next frame might satisfy next ensemble
                     return True
-                elif self.ensembles[ens_num](Trajectory([])):
+                elif self.ensembles[ens_num](paths.Trajectory([])):
                     #print "Moving on because of allowed zero-length ensemble"
                     ens_num += 1
                     subtraj_first = subtraj_final
@@ -725,8 +789,8 @@ class SequentialEnsemble(Ensemble):
                         subtraj_first = 0
 
 
-    def backward(self, trajectory):
-        # based on .forward(); see notes there for algorithm details
+    def can_prepend(self, trajectory):
+        # based on .can_append(); see notes there for algorithm details
         traj_first = 0
         first_ens = 0
         subtraj_final = len(trajectory)
@@ -751,7 +815,7 @@ class SequentialEnsemble(Ensemble):
             else:
                 if subtraj_first == traj_first:
                     return True
-                elif self.ensembles[ens_num](Trajectory([])):
+                elif self.ensembles[ens_num](paths.Trajectory([])):
                     ens_num -= 1
                     subtraj_final = subtraj_first
                 else:
@@ -768,6 +832,8 @@ class SequentialEnsemble(Ensemble):
         sequence_str = ",\n".join([str(ens) for ens in self.ensembles])
         return head+sequence_str+tail
 
+
+@restores_as_full_object
 class LengthEnsemble(Ensemble):
     '''
     Represents an ensemble the contains trajectories of a specific length
@@ -793,18 +859,15 @@ class LengthEnsemble(Ensemble):
         else:
             return length >= self.length.start and (self.length.stop is None or length < self.length.stop)
         
-    def forward(self, trajectory):
+    def can_append(self, trajectory):
         length = trajectory.frames
         if type(self.length) is int:
             return length < self.length
         else:
             return self.length.stop is None or length < self.length.stop - 1
 
-    def backward(self, trajectory):
-        return self.forward(trajectory)
-
-    can_append = forward
-    can_prepend = backward
+    def can_prepend(self, trajectory):
+        return self.can_append(trajectory)
 
     def __str__(self):
         if type(self.length) is int:
@@ -819,25 +882,25 @@ class LengthEnsemble(Ensemble):
             else:
                 stop = str(self.length.stop - 1)
             return 'len(x) in [{0}, {1}]'.format(start, stop)
-        
+
+@restores_as_full_object
 class VolumeEnsemble(Ensemble):
     '''
     Describes an path ensemble using a volume object
     '''    
-    def __init__(self, volume, frames = slice(1,-1), lazy = True):
+    def __init__(self, volume, lazy = True):
         super(VolumeEnsemble, self).__init__()
-        self._stored_volume = volume
-        self.frames = frames
+        self.volume = volume
         self.lazy = lazy
-        pass
 
     @property
     def _volume(self):
         '''
         The volume that is used in the specification.
         '''
-        return self._stored_volume
-    
+        return self.volume
+
+@restores_as_full_object
 class InXEnsemble(VolumeEnsemble):
     '''
     Represents an ensemble where all the selected frames of the trajectory
@@ -857,50 +920,6 @@ class InXEnsemble(VolumeEnsemble):
             return self(trajectory[slice(0,1)])
         
     
-    def forward(self, trajectory):
-        pos = trajectory.frames - 1
-        checkpoint = -1 
-        if type(self.frames) is int:
-            if self.frames >= 0:
-                if self.frames == pos:
-                    checkpoint = pos
-        else:
-            if self.frames.start >= 0:
-                if self.frames.stop >=0:
-                    if self.frames.start <= pos and self.frames.stop >= pos:
-                        checkpoint = pos
-                else:
-                    if 1 + pos + self.frames.stop >= self.frames.start:
-                        checkpoint = 1 + pos + self.frames.stop
-                                        
-        if checkpoint >= 0:
-#            print 'Out:',checkpoint          
-            return self._volume(trajectory[checkpoint])
-        
-        return True    
-    
-    def backward(self, trajectory):
-        pos = - trajectory.frames
-        checkpoint = -1
-        if type(self.frames) is int:
-            if self.frames < 0:
-                if self.frames == pos:
-                    checkpoint = pos
-        else:
-            if self.frames.stop < 0:
-                if self.frames.start < 0:
-                    if self.frames.start <= pos and self.frames.stop >= pos:
-                        checkpoint = pos
-                else:
-                    if pos + self.frames.start - 1 <= self.frames.stop:
-                        checkpoint = self.frames.start - 1
-                                        
-        if checkpoint >= 0:
-#            print 'Out:',checkpoint            
-            return self._volume(trajectory[checkpoint])
-        
-        return True    
-    
     def __call__(self, trajectory, lazy=None):
         if len(trajectory) == 0:
             return False
@@ -909,35 +928,14 @@ class InXEnsemble(VolumeEnsemble):
                 return False
         return True
 
-        #if type(self.frames) is int:
-        #    if trajectory.frames > self.frames and trajectory.frames >= -self.frames:
-        #        return self._volume(trajectory[self.frames])
-        #    else:
-        #        return True
-        #else:
-        #    if (self.lazy and lazy is None) or (lazy and lazy is not None):
-        #        for s in trajectory[self.frames][0::max(1,trajectory.frames - 1)]:
-        #            if not self._volume(s):
-        #                return False
-        #    else:
-        #        for s in trajectory[self.frames]:
-        #            if not self._volume(s):
-        #                return False
-        #                
-        #    return True
-
     def __invert__(self):
-        return LeaveXEnsemble(self._stored_volume, self.frames, self.lazy)
+        return LeaveXEnsemble(self.volume, self.frames, self.lazy)
 
     def __str__(self):
-        if type(self.frames) is int:
-            return 'x[{0}] in {1}'.format(self.frames, self._volume)
-        else:
-            return 'x[t] in {2} for all t in [{0}:{1}]'.format(
-                self.frames.start, self.frames.stop, self._volume)
+        return 'x[t] in {0} for all t'.format(self._volume)
 
 
-
+@restores_as_full_object
 class OutXEnsemble(InXEnsemble):
     '''
     Represents an ensemble where all the selected frames from the trajectory
@@ -945,19 +943,15 @@ class OutXEnsemble(InXEnsemble):
     '''    
     @property
     def _volume(self):
-        return ~ self._stored_volume
+        return ~ self.volume
     
     def __str__(self):
-        if type(self.frames) is int:
-            return 'x[{0}] in {1}'.format(self.frames, self._volume)
-        else:
-            return 'x[t] in {2} for all t in [{0}:{1}]'.format(
-                self.frames.start, self.frames.stop, self._volume)
+        return 'x[t] in {0} for all t'.format(self._volume)
 
     def __invert__(self):
-        return HitXEnsemble(self._stored_volume, self.frames, self.lazy)
+        return HitXEnsemble(self.volume, self.frames, self.lazy)
 
-        
+@restores_as_full_object
 class HitXEnsemble(VolumeEnsemble):
     '''
     Represents an ensemble where at least one of the selected frames from
@@ -965,53 +959,8 @@ class HitXEnsemble(VolumeEnsemble):
     '''
 
     def __str__(self):
-        if type(self.frames) is int:
-            return 'x[{0}] in {1}'.format(self.frames, self._volume)
-        else:
-            return 'x[t] in {2} for one t in [{0}:{1}]'.format(
-                self.frames.start, self.frames.stop, self._volume)
+        return 'exists t such that x[t] in {0}'.format(self._volume)
 
-    def forward(self, trajectory):
-        pos = trajectory.frames - 1
-        if type(self.frames) is int:
-            if self.frames >= 0:
-                if self.frames == pos:
-                    return self._volume(trajectory[pos])
-        else:
-            if self.lazy:
-                # There is no way to test in a lazy way without storing the result from previous frames. So keep on running
-                return True
-            else:
-                if self.frames.stop >= 0:
-                    if self.frames.start >= 0:
-                        if 1 + self.frames.stop <= pos:
-                            return self(trajectory)
-                    else:
-                        return True
-                                        
-        return True    
-
-    def backward(self, trajectory):
-        pos = - trajectory.frames
-        if type(self.frames) is int:
-            if self.frames < 0:
-                if self.frames == pos:
-                    return self._volume(trajectory[pos])
-        else:
-            if self.lazy:
-                # There is no way to test in a lazy way without storing the result from previous frames
-                return True
-            else:
-                if self.frames.stop < 0:
-                    if self.frames.start < 0:
-                        if self.frames.start >= pos:
-                            return self(trajectory)
-                    else:
-                        return True
-                                                
-        return True    
-
-    
     def __call__(self, trajectory, lazy=None):
         '''
         Returns True if the trajectory is part of the PathEnsemble
@@ -1026,40 +975,25 @@ class HitXEnsemble(VolumeEnsemble):
                 return True
         return False
 
-        #if type(self.frames) is int:
-        #    if trajectory.frames > self.frames and trajectory.frames >= -self.frames:
-        #        return self._volume(trajectory[self.frames])
-        #    else:
-        #        return False          
-        #else:
-        #    for s in trajectory[self.frames]:
-        #        if self._volume(s):
-        #            return True    
-#
-#            return False
-
     def __invert__(self):
-        return OutXEnsemble(self._stored_volume, self.frames, self.lazy)
+        return OutXEnsemble(self.volume, self.frames, self.lazy)
 
-
+@restores_as_full_object
 class LeaveXEnsemble(HitXEnsemble):
     '''
     Represents an ensemble where at least one frame of the trajectory is
     outside the specified volume
     '''
     def __str__(self):
-        if type(self.frames) is int:
-            return 'x[{0}] not in {1}'.format(str(self.frames), self._volume)
-        else:
-            return 'x[t] in {2} for one t in [{0}:{1}]'.format(self.frames.start, self.frames.stop, self._volume)
+        return 'exists t such that x[t] in {0}'.format(self._volume)
       
     @property
     def _volume(self):
         # effectively use HitXEnsemble but with inverted volume
-        return ~ self._stored_volume
+        return ~ self.volume
 
     def __invert__(self):
-        return InXEnsemble(self._stored_volume, self.frames, self.lazy)
+        return InXEnsemble(self.volume, self.frames, self.lazy)
 
     def __call__(self, trajectory, lazy=None):
         for frame in trajectory:
@@ -1067,65 +1001,54 @@ class LeaveXEnsemble(HitXEnsemble):
                 return True
         return False
 
+@restores_as_full_object
 class ExitsXEnsemble(VolumeEnsemble):
     """
     Represents an ensemble where two successive frames from the selected
     frames of the trajectory crossing from inside to outside the given volume.
     """
-    def __init__(self, volume, frames = slice(None), lazy=False):
+    def __init__(self, volume, lazy=False):
         # changing the defaults for frames and lazy; prevent single frame
-        if type(frames) is int:
-            raise ValueError(
-                'Exits/EntersXEnsemble require more than one frame')
-        super(ExitsXEnsemble, self).__init__(volume, frames, lazy)
+        super(ExitsXEnsemble, self).__init__(volume, lazy)
 
     def __str__(self):
-        domain = 'exists x[t], x[t+1] in [{0}:{1}] '.format(
-                            self.frames.start, self.frames.stop )
+        domain = 'exists x[t], x[t+1] '
         result = 'such that x[t] in {0} and x[t+1] not in {0}'.format(
                             self._volume)
         return domain+result
 
     def __call__(self, trajectory, lazy=None):
-        if type(self.frames) is int:
-            # in case you changed self.frames after intialization
-            raise ValueError('ExitsXEnsemble requires more than one frame')
-        else:
-            subtraj = trajectory[self.frames]
-            for i in range(len(subtraj)-1):
-                frame_i = subtraj[i]
-                frame_iplus = subtraj[i+1]
-                if self._volume(frame_i) and not self._volume(frame_iplus):
-                    return True
+        subtraj = trajectory
+        for i in range(len(subtraj)-1):
+            frame_i = subtraj[i]
+            frame_iplus = subtraj[i+1]
+            if self._volume(frame_i) and not self._volume(frame_iplus):
+                return True
         return False
 
+@restores_as_full_object
 class EntersXEnsemble(ExitsXEnsemble):
     """
     Represents an ensemble where two successive frames from the selected
     frames of the trajectory crossing from outside to inside the given volume.
     """
     def __str__(self):
-        domain = 'exists x[t], x[t+1] in [{0}:{1}] '.format(
-                            self.frames.start, self.frames.stop )
+        domain = 'exists x[t], x[t+1] '
         result = 'such that x[t] not in {0} and x[t+1] in {0}'.format(
                             self._volume)
         return domain+result
 
     def __call__(self, trajectory, lazy=None):
-        if type(self.frames) is int:
-            # in case you changed self.frames after intialization
-            raise ValueError('EntersXEnsemble requires more than one frame')
-        else:
-            subtraj = trajectory[self.frames]
-            for i in range(len(subtraj)-1):
-                frame_i = subtraj[i]
-                frame_iplus = subtraj[i+1]
-                if not self._volume(frame_i) and self._volume(frame_iplus):
-                    return True
+        subtraj = trajectory
+        for i in range(len(subtraj)-1):
+            frame_i = subtraj[i]
+            frame_iplus = subtraj[i+1]
+            if not self._volume(frame_i) and self._volume(frame_iplus):
+                return True
         return False
 
-
-class AlteredTrajectoryEnsemble(Ensemble):
+@restores_as_full_object
+class AlteredEnsemble(Ensemble):
     '''
     Represents an ensemble where an altered version of a trajectory (extended, reversed, cropped) is part of a given ensemble
     '''
@@ -1134,7 +1057,7 @@ class AlteredTrajectoryEnsemble(Ensemble):
         Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
         '''
         
-        super(AlteredTrajectoryEnsemble, self).__init__()
+        super(AlteredEnsemble, self).__init__()
         self.ensemble = ensemble
                 
     def _alter(self, trajectory):
@@ -1143,13 +1066,43 @@ class AlteredTrajectoryEnsemble(Ensemble):
     def __call__(self, trajectory, lazy=None):
         return self.ensemble(self._alter(trajectory), lazy)
 
-    def forward(self, trajectory):
-        return self.ensemble.forward(self._alter(trajectory))
+    def can_append(self, trajectory):
+        return self.ensemble.can_append(self._alter(trajectory))
 
-    def backward(self, trajectory):
-        return self.ensemble.backward(self._alter(trajectory))
+    def can_prepend(self, trajectory):
+        return self.ensemble.can_prepend(self._alter(trajectory))
 
-class BackwardPrependedTrajectoryEnsemble(AlteredTrajectoryEnsemble):
+@restores_as_full_object
+class SlicedTrajectoryEnsemble(AlteredEnsemble):
+    '''
+    An ensemble which alters the trajectory by looking at a given Python
+    slice of the list of frames.
+    '''
+    def __init__(self, ensemble, aslice):
+        self.ensemble = ensemble
+        if type(aslice) == int:
+            if aslice == -1:
+                self.slice = slice(aslice,None)
+            else:
+                self.slice = slice(aslice, aslice+1)
+        else:
+            self.slice = aslice
+
+    def _alter(self, trajectory):
+        return trajectory[self.slice]
+
+    def __str__(self):
+        # TODO: someday may add different string support for slices with
+        # only one frame
+        start = "" if self.slice.start is None else str(self.slice.start)
+        stop = "" if self.slice.stop is None else str(self.slice.stop)
+        step = "" if self.slice.step is None else " every "+str(self.slice.step)
+        return ("(" + self.ensemble.__str__() +
+                " in {" + start + ":" + stop + "}" + step + ")")
+
+
+@restores_as_full_object
+class BackwardPrependedTrajectoryEnsemble(AlteredEnsemble):
     '''
     Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
     '''
@@ -1161,7 +1114,8 @@ class BackwardPrependedTrajectoryEnsemble(AlteredTrajectoryEnsemble):
 #        print [ s.idx for s in trajectory.reversed + self.add_traj]
         return trajectory.reversed + self.add_traj
 
-class ForwardAppendedTrajectoryEnsemble(AlteredTrajectoryEnsemble):
+@restores_as_full_object
+class ForwardAppendedTrajectoryEnsemble(AlteredEnsemble):
     '''
     Represents an ensemble which is the given ensemble but for trajectories where some trajectory is appended
     '''
@@ -1171,13 +1125,54 @@ class ForwardAppendedTrajectoryEnsemble(AlteredTrajectoryEnsemble):
 
     def _alter(self, trajectory):
         return self.add_traj + trajectory
-    
-class ReversedTrajectoryEnsemble(AlteredTrajectoryEnsemble):
+
+@restores_as_full_object
+class ReversedTrajectoryEnsemble(AlteredEnsemble):
     '''
     Represents an ensemble 
     '''
     def _alter(self, trajectory):
         return trajectory.reverse()
+
+@restores_as_full_object
+class OptionalEnsemble(AlteredEnsemble):
+    '''
+    Makes it optional to satisfy a given ensemble (primarily useful in
+    SequentialEnsembles)
+    '''
+    def __init__(self, ensemble):
+        self.orig_ens = ensemble
+        self.ensemble = ensemble | LengthEnsemble(0)
+
+    def __str__(self):
+        return "{"+self.orig_ens.__str__()+"} (OPTIONAL)"
+
+@restores_as_full_object
+class SingleFrameEnsemble(AlteredEnsemble):
+    '''
+    Convenience ensemble to `and` a LengthEnsemble(1) with a given ensemble.
+    Frequently used for SequentialEnsembles.
+
+    Attributes
+    ----------
+    ensemble : Ensemble
+        the ensemble which should be represented in the single frame
+
+    Note
+    ----
+    We allow the user to choose to be stupid: if, for example, the user
+    tries to make a SingleFrameEnsemble from an ensemble which requires
+    more than one frame to be satisfied (e.g., a SequentialEnsemble with
+    more than one subensemble), it can be created, but no path will ever
+    satisfy it. Since we can't stop all possible mistakes, we don't bother
+    here.
+    '''
+    def __init__(self, ensemble):
+        self.orig_ens = ensemble
+        self.ensemble = ensemble & LengthEnsemble(1)
+
+    def __str__(self):
+        return "{"+self.orig_ens.__str__()+"} (SINGLE FRAME)"
     
 class EnsembleFactory():
     '''
@@ -1234,7 +1229,14 @@ class EnsembleFactory():
         ensemble : Ensemble
             The constructed Ensemble
         '''        
-        return (LengthEnsemble(slice(3,None)) & InXEnsemble(volume_a, 0) & InXEnsemble(volume_b, -1)) & OutXEnsemble(volume_a | volume_b, slice(1,-1), lazy)
+        # TODO: this is actually only for flexible path length TPS now
+        return SequentialEnsemble([
+            SingleFrameEnsemble(InXEnsemble(volume_a)),
+            OutXEnsemble(volume_a | volume_b),
+            SingleFrameEnsemble(InXEnsemble(volume_b))
+        ])
+
+
 
     @staticmethod
     def TISEnsemble(volume_a, volume_b, volume_x, lazy = True):
@@ -1256,11 +1258,10 @@ class EnsembleFactory():
         ensemble : Ensemble
             The constructed Ensemble
         '''
-        length1 = LengthEnsemble(1)
         ens = SequentialEnsemble([
-            InXEnsemble(volume_a) & length1,
+            SingleFrameEnsemble(InXEnsemble(volume_a)),
             OutXEnsemble(volume_a | volume_b) & LeaveXEnsemble(volume_x),
-            InXEnsemble(volume_a | volume_b) & length1
+            SingleFrameEnsemble(InXEnsemble(volume_a | volume_b))
         ])
         return ens
         #return (LengthEnsemble(slice(3,None)) & InXEnsemble(volume_a, 0) & InXEnsemble(volume_b, -1)) & (LeaveXEnsemble(volume_x) & OutXEnsemble(volume_a | volume_b, slice(1,-1), lazy))

@@ -7,25 +7,23 @@ import copy
 
 import numpy as np
 import mdtraj as md
-from simtk.unit import nanometers, Quantity
+import simtk.unit as u
 
-from snapshot import Snapshot, Configuration, Momentum
-
+import opentis as paths
 
 #=============================================================================================
 # SIMULATION TRAJECTORY
 #=============================================================================================
-from wrapper import storable
 
 
-@storable
+
 class Trajectory(list):
     """
     Simulation trajectory. Essentially a python list of snapshots
 
     """
     
-    simulator = None
+    engine = None
     use_lazy = True    # We assume that snapshots are immutable. That should safe a lot of time to copy trajectories
 
 
@@ -57,7 +55,7 @@ class Trajectory(list):
             else:
                 for snapshot in trajectory:
                     snapshot_copy = copy.deepcopy(snapshot)
-                    self.forward(snapshot_copy)
+                    self.append(snapshot_copy)
         else:
             self.atom_indices = None
 
@@ -156,33 +154,15 @@ class Trajectory(list):
         """
 
         return len(self)
-        
-    def configuration_indices(self):
-        """
-        Return a list of the snapshot IDs in the trajectory
-        
-        Returns
-        -------        
-        indices (list of int) - the list of indices
-        
-        Notes
-        -----        
-        The IDs are only non-zero if the snapshots have been saved before!
-        
-        """
-        return [f.configuration.begin for f in self]
 
     def configurations(self):
         """
-        Return a list of the snapshot IDs in the trajectory
+        Return a list of the snapshots in the trajectory
 
         Returns
         -------
-        indices (list of int) - the list of indices
-
-        Notes
-        -----
-        The IDs are only non-zero if the snapshots have been saved before!
+        list of Configuration
+            the list of Configuration objects
 
         """
         return [f.configuration for f in self]
@@ -190,18 +170,14 @@ class Trajectory(list):
 
     def momenta(self):
         """
-        Return a list of the snapshot IDs in the trajectory
-        
+        Return a list of the Momentum objects in the trajectory
+
         Returns
-        -------        
-        indices (list of int) - the list of indices
-        
-        Notes
-        -----        
-        The IDs are only non-zero if the snapshots have been saved before!
-        
+        -------
+        list of Momentum()
+            the list of Momentum objects
         """
-        return [f.momenta.idx for f in self]
+        return [f.momenta for f in self]
 
     
     @property
@@ -310,12 +286,12 @@ class Trajectory(list):
         nframes = len(self)
 
         # Compute activity of component A.
-        K = 0.0 * nanometers**2
+        K = 0.0 * u.nanometers**2
         for frame_index in range(nframes-1):
             # Compute displacement of all atoms.
             delta_r = self[frame_index+1].coordinates - self[frame_index].coordinates
             # Compute contribution to activity K.
-            K += ((delta_r[0:self.N,:] / nanometers)**2).sum() * (nanometers**2)
+            K += ((delta_r[0:self.N,:] / u.nanometers)**2).sum() * (u.nanometers**2)
 
         return K 
     
@@ -366,15 +342,22 @@ class Trajectory(list):
     @property
     def solute(self):
         """
-        Reduce the view of the trajectory to a subset of solute atoms specified in the associated Simulator
+        Reduce the view of the trajectory to a subset of solute atoms
+        specified in the associated DynamicsEngine
         
         Returns
         -------        
         trajectory : Trajectory
             the trajectory showing the subsets of solute atoms
-        """        
+        """
 
-        return self.subset(Trajectory.simulator.solute_indices)
+        #TODO: To remove the dependency of the dynamics engine we need to get the information
+        #TODO: about the solute_indices from somewhere else, preferrably the topology?
+
+        if Trajectory.engine is None:
+            raise ValueError("No engine specified to get solute_indices from !")
+
+        return self.subset(Trajectory.engine.solute_indices)
 
     def full(self):
         """
@@ -426,25 +409,23 @@ class Trajectory(list):
         Trajectory
         """
         trajectory = Trajectory()
-        empty_momentum = Momentum()
+        empty_momentum = paths.Momentum()
         empty_momentum.velocities = None
         for frame_num in range(mdtrajectory.n_frames):
             # mdtraj trajectories only have coordinates and box_vectors
-            coord = Quantity(mdtrajectory.xyz[frame_num], nanometers)
+            coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
             if mdtrajectory.unitcell_vectors is not None:
-                box_v = Quantity(mdtrajectory.unitcell_vectors[frame_num],
-                                 nanometers)
+                box_v = u.Quantity(mdtrajectory.unitcell_vectors[frame_num],
+                                 u.nanometers)
             else:
                 box_v = None
-            config = Configuration(coordinates=coord, box_vectors=box_v)
+            config = paths.Configuration(coordinates=coord, box_vectors=box_v)
 
-            snap = Snapshot(configuration=config, momentum=empty_momentum)
+            snap = paths.Snapshot(configuration=config, momentum=empty_momentum)
             trajectory.append(snap)
 
         return trajectory
 
-                
-    
     def md_topology(self):
         """
         Return a mdtraj.Topology object representing the topology of the
@@ -459,44 +440,15 @@ class Trajectory(list):
         -----
         This is taken from the configuration of the first frame. Otherwise
         there is still un ugly fall-back to look for an openmm.Simulation
-        object in Trajectory.simulator. and construct an mdtraj.Topology
+        object in Trajectory.engine. and construct an mdtraj.Topology
         from this.
         """        
 
         if len(self) > 0 and self[0].topology is not None:
             # if no topology is defined
             topology = self[0].topology
-        else:
-            # TODO: kind of ugly fall-back, but helps for now
-            topology = md.Topology.from_openmm(Trajectory.simulator.simulation.topology)
-        
+
         if self.atom_indices is not None:
             topology = topology.subset(self.atom_indices)       
         
         return topology
-
-
-@storable
-class Sample(object):
-    """
-    A Sample is the return object from a PathMover and contains all information about the move, initial trajectories,
-    new trajectories (both as references). IF a Mover does several moves at a time (e.g. a swap) then
-    a separate move object for each resulting trajectory is returned
-    """
-
-    def __init__(self, trajectory=None,  mover=None, ensemble=None, details=None, step=-1):
-        self.idx = dict()
-
-        self.mover = mover
-        self.ensemble = ensemble
-        self.trajectory = trajectory
-        self.details = details
-        self.step=step
-
-    def __call__(self):
-        return self.trajectory
-
-    @staticmethod
-    def set_time(step, samples):
-        for sample in samples:
-            sample.step = step
