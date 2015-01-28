@@ -1185,7 +1185,7 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         interstitial = outA & inX
         start = [
             SingleFrameEnsemble(inA),
-            OptionalEnsemble(interstitial)
+            OptionalEnsemble(interstitial),
             outX,
             OptionalEnsemble(interstitial)
         ]

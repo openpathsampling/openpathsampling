@@ -1067,3 +1067,165 @@ class testOptionalEnsemble(EnsembleTest):
         inX = InXEnsemble(vol1)
         opt_inX = OptionalEnsemble(inX)
         assert_equal(opt_inX.__str__(), "{"+inX.__str__()+"} (OPTIONAL)")
+
+class testMinusInterfaceEnsemble(EnsembleTest):
+    def setUp(self):
+        self.minus_nl2 = MinusInterfaceEnsemble(
+            state_vol=vol1,
+            innermost_vol=vol2,
+            n_l=2
+        )
+        self.minus_nointerstitial_nl2 = MinusInterfaceEnsemble(
+            state_vol=vol1,
+            innermost_vol=vol2,
+            n_l=2
+        )
+        self.minus_nl3 = MinusInterfaceEnsemble(
+            state_vol=vol1,
+            innermost_vol=vol2,
+            n_l=3
+        )
+        self.minus_nl4 = MinusInterfaceEnsemble(
+            state_vol=vol1,
+            innermost_vol=vol2,
+            n_l=4
+        )
+
+    @raises(ValueError)
+    def test_minus_nl1_fail(self):
+        minus_nl1 = MinusInterfaceEnsemble(state_vol=vol1,
+                                           innermost_vol=vol2,
+                                           n_l=1)
+
+
+    def test_minus_nl2_ensemble(self):
+        raise SkipTest
+
+    def test_minus_nl2_can_append(self):
+        raise SkipTest
+
+    def test_minus_nl2_can_prepend(self):
+        raise SkipTest
+
+    def test_minus_nointerstitial_nl2_ensemble(self):
+        raise SkipTest
+
+    def test_minus_nointerstitial_nl2_can_append(self):
+        raise SkipTest
+
+    def test_minus_nointerstitial_nl2_can_prepend(self):
+        raise SkipTest
+
+    def test_minus_nl3_ensemble(self):
+        raise SkipTest
+
+    def test_minus_nl3_can_append(self):
+        raise SkipTest
+
+    def test_minus_nl3_can_prepend(self):
+        raise SkipTest
+
+    def test_minus_nl4_ensemble(self):
+        raise SkipTest
+
+    def test_minus_nl4_can_append(self):
+        raise SkipTest
+
+    def test_minus_nl4_can_prepend(self):
+        raise SkipTest
+
+
+        self.minus_nl2 = MinusInterfaceEnsemble(
+            state_vol=vol1,
+            innermost_vol=vol2,
+            n_l=2
+        )
+        self.minus_nointerstitial_nl2 = MinusInterfaceEnsemble(
+            state_vol=vol1,
+            innermost_vol=vol2,
+            n_l=2
+        )
+        pass
+
+    def test_minus_nl1_fail(self):
+        raise SkipTest
+
+    def test_minus_nl2_ensemble(self):
+        raise SkipTest
+
+    def test_minus_nl2_can_append(self):
+        raise SkipTest
+
+    def test_minus_nl2_can_prepend(self):
+        raise SkipTest
+
+    def test_minus_nointerstitial_nl2_ensemble(self):
+        raise SkipTest
+
+    def test_minus_nointerstitial_nl2_can_append(self):
+        raise SkipTest
+
+    def test_minus_nointerstitial_nl2_can_prepend(self):
+        raise SkipTest
+
+    def test_minus_nl3_ensemble(self):
+        raise SkipTest
+
+    def test_minus_nl3_can_append(self):
+        raise SkipTest
+
+    def test_minus_nl3_can_prepend(self):
+        raise SkipTest
+
+    def test_minus_nl4_ensemble(self):
+        raise SkipTest
+
+    def test_minus_nl4_can_append(self):
+        raise SkipTest
+
+    def test_minus_nl4_can_prepend(self):
+        raise SkipTest
+
+
+        pass
+
+    def test_minus_nl1_fail(self):
+        raise SkipTest
+
+    def test_minus_nl2_ensemble(self):
+        raise SkipTest
+
+    def test_minus_nl2_can_append(self):
+        raise SkipTest
+
+    def test_minus_nl2_can_prepend(self):
+        raise SkipTest
+
+    def test_minus_nointerstitial_nl2_ensemble(self):
+        raise SkipTest
+
+    def test_minus_nointerstitial_nl2_can_append(self):
+        raise SkipTest
+
+    def test_minus_nointerstitial_nl2_can_prepend(self):
+        raise SkipTest
+
+    def test_minus_nl3_ensemble(self):
+        raise SkipTest
+
+    def test_minus_nl3_can_append(self):
+        raise SkipTest
+
+    def test_minus_nl3_can_prepend(self):
+        raise SkipTest
+
+    def test_minus_nl4_ensemble(self):
+        raise SkipTest
+
+    def test_minus_nl4_can_append(self):
+        raise SkipTest
+
+    def test_minus_nl4_can_prepend(self):
+        raise SkipTest
+
+
