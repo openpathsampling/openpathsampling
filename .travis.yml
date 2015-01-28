@@ -38,7 +38,7 @@ script:
 
   - cd ../..
   # Push to binstar anyway.
-#  - bash -x devtools/ci/after_sucess.sh
+  - bash -x devtools/ci/after_sucess.sh
 
 env:
   matrix:
@@ -46,3 +46,7 @@ env:
     - python=2.7  CONDA_PY=27  CONDA_NPY=19
 # - python=3.3  CONDA_PY=33  CONDA_NPY=17
 # - python=3.4  CONDA_PY=34  CONDA_NPY=18
+
+  global:
+    # encrypted BINSTAR_TOKEN for push of dev package to binstar
+    - secure: "Ou9KukGxCOdNWvEpr+9YrWTlB0xezu1mNV1gXtFjJ0RDIvzPRGUkpU7AUAdKwn6fUcbzq5E1y6rU9aG/QQe9YZkRHhPo585ZzieTNa0UxsyINk7XuwxL7MpRZijHCHFBvRVNrXkIh3CtmXvZS2ksAa8+FuYiO/lBbOMZ0nNAJac="
