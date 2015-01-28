@@ -23,9 +23,15 @@ API Reference
 .. toctree::
    :maxdepth: 1
 
-   ensemble
+   core
+   orderparameter
    volume
-
+   ensemble
+   shooting
+   pathmover
+   calculation
+   engine
+   storage
 
 Developing
 ----------
@@ -34,6 +40,15 @@ Developing
    :maxdepth: 1
 
    netcdf_format
+   api
+
+README
+------
+
+.. toctree::
+   :maxdepth: 1
+
+   readme
 
 --------------------------------------------------------------------------------
 
