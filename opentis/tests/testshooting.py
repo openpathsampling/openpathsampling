@@ -8,21 +8,31 @@ from test_helpers import (assert_equal_array_array,
                          )
 from opentis.shooting import *
 
+from opentis.pathmover import PathMover, OneWayShootingMover
 
-class testFirstFrameSelector(object):
+class SelectorTest(object):
     def setup(self):
-        pass
-    
+        self.mytraj = make_1d_traj([-0.5, 0.1, 0.3, 0.5])
+        #self.shooter = OneWayShootingMover(FirstFrameSelector())
+
+
+class testFirstFrameSelector(SelectorTest):
     def test_pick(self):
-        raise SkipTest
+        sel = FirstFrameSelector()
+        sp = sel.pick(self.mytraj)
+        assert_equal(sp.selector, sel)
+        assert_equal(sp.trajectory, self.mytraj)
+        assert_equal(sp.index, 0)
+        assert_equal(sp.f, 1.0)
+        assert_equal(sp.sum_bias, 1.0)
+        snap = sp.snapshot
+        assert_equal(snap.coordinates[0][0], -0.5)
 
     def test_shooting_move(self):
+        # this just tests whether the shooting move runs, not correctness
         raise SkipTest
 
-class testFinalFrameSelector(object):
-    def setup(self):
-        pass
-
+class testFinalFrameSelector(SelectorTest):
     def test_pick(self):
         raise SkipTest
 
