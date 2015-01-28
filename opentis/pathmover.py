@@ -10,6 +10,7 @@ import random
 import opentis as paths
 from opentis.todict import restores_as_stub_object
 from sample import Sample, SampleSet
+from ensemble import Ensemble
 
 import logging
 from ops_logging import initialization_logging
@@ -785,6 +786,20 @@ class OneWayShootingMover(RandomChoiceMover):
         super(OneWayShootingMover, self).__init__(
             movers=movers, ensembles=ensembles, replicas=replicas
         )
+
+
+def NeighborEnsembleReplicaExchange(ensemble_list):
+    movers = [
+        ReplicaExchangeMover(ensembles=[[ensemble_list[i], ensemble_list[i+1]]])
+        for i in range(len(ensemble_list)-1)
+    ]
+    return movers
+
+def PathReversalSet(l):
+    if isinstance(l[0], Ensemble):
+        return [PathReversalMover(ensembles=[item]) for item in l]
+    else:
+        return [PathReversalMover(replicas=[item]) for item in l]
 
 
 class PathMoverFactory(object):
