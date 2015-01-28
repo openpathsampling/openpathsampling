@@ -28,8 +28,8 @@ secret_key = {AWS_SECRET_ACCESS_KEY}
                 'sync docs/_build/ s3://{bucket}/{prefix}/')
     cmd = template.format(
             config=f.name,
-            bucket=BUCKET_NAME
-    )
+            bucket=BUCKET_NAME,
+            prefix=PREFIX)
     return_val = subprocess.call(cmd.split())
 
     # Sync index file.
@@ -37,7 +37,6 @@ secret_key = {AWS_SECRET_ACCESS_KEY}
                 'sync devtools/ci/index.html s3://{bucket}/')
     cmd = template.format(
             config=f.name,
-            bucket=BUCKET_NAME
-    )
+            bucket=BUCKET_NAME)
     return_val = subprocess.call(cmd.split())
 
