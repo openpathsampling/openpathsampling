@@ -2,7 +2,7 @@ import os
 import pip
 import tempfile
 import subprocess
-import yank.version
+import opentis.version
 
 
 BUCKET_NAME = 'openpathsampling'
