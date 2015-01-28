@@ -6,10 +6,10 @@ import opentis.version
 
 
 BUCKET_NAME = 'openpathsampling'
-if not yank.version.release:
+if not opentis.version.release:
     PREFIX = 'latest'
 else:
-    PREFIX = yank.version.short_version
+    PREFIX = opentis.version.short_version
 
 PREFIX = ''
 
