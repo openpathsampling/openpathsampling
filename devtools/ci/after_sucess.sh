@@ -18,9 +18,6 @@ if [[ "2.7" =~ "$python" ]]; then
     binstar -t ${BINSTAR_TOKEN}  upload  --force --u omnia -p openpathsampling-dev $HOME/miniconda/conda-bld/linux-64/opentis-dev-*
 fi
 
-echo "Not yet uploading to s3."
-
-exit 0
 
 if [[ "$python" != "2.7" ]]; then
     echo "No deploy on PYTHON_VERSION=${python}"; exit 0
