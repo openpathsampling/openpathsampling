@@ -226,25 +226,32 @@ class testReplicaExchangeMover(object):
         volB = LambdaVolume(op, -100, 0.50)
         self.tisA = ef.TISEnsemble(state1, state2, volA)
         self.tisB = ef.TISEnsemble(state1, state2, volB)
-
-    def test_repex(self):
         traj0 = make_1d_traj([-0.1, 0.2, 0.3, 0.1, -0.2])
         traj1 = make_1d_traj([-0.1, 0.1, 0.4, 0.6, 0.3, 0.2, -0.15]) 
         traj2 = make_1d_traj([-0.1, 0.2, 0.3, 0.7, 0.6, 0.4, 0.1, -0.15])
-        sampA0 = Sample(replica=0, trajectory=traj0, ensemble=self.tisA)
-        sampB1 = Sample(replica=1, trajectory=traj1, ensemble=self.tisB)
-        sampA2 = Sample(replica=2, trajectory=traj2, ensemble=self.tisA)
+        self.sampA0 = Sample(replica=0, trajectory=traj0, ensemble=self.tisA)
+        self.sampB1 = Sample(replica=1, trajectory=traj1, ensemble=self.tisB)
+        self.sampA2 = Sample(replica=2, trajectory=traj2, ensemble=self.tisA)
+        self.gs_B1A2 = SampleSet([self.sampB1, self.sampA2])
+        self.gs_A0B1 = SampleSet([self.sampA0, self.sampB1])
+
+    def test_repex_ens_acc(self):
         repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
-        repex_12 = ReplicaExchangeMover(replicas=[[1,2]])
-        gs_B1A2 = SampleSet([sampB1, sampA2])
-        gs_A0B1 = SampleSet([sampA0, sampB1])
 
-        samples_B2A1_ens = repex_AB.move(gs_B1A2)
-        samples_A0B1_ens = repex_AB.move(gs_A0B1)
-        samples_B2A1_rep = repex_12.move(gs_B1A2)
-
+        samples_B2A1_ens = repex_AB.move(self.gs_B1A2)
+        assert_equal(len(samples_B2A1_ens), 2)
         raise SkipTest
-        # includes both success and failure of swap move
+
+    def test_repex_ens_rej(self):
+        repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
+        samples_A0B1_ens = repex_AB.move(self.gs_A0B1)
+        raise SkipTest
+
+
+    def test_repex_rep_acc(self):
+        repex_12 = ReplicaExchangeMover(replicas=[[1,2]])
+        samples_B2A1_rep = repex_12.move(self.gs_B1A2)
+        raise SkipTest
 
 
 class testRandomChoiceMover(object):
