@@ -29,17 +29,15 @@ fi
 
 # Create the docs and push them to S3
 # -----------------------------------
+conda install --yes pip
+conda config --add channels http://conda.binstar.org/omnia
+conda install --yes `conda build devtools/conda-recipe --output`
+pip install numpydoc s3cmd
+conda install --yes `cat docs/requirements.txt | xargs`
 
-# Install stuff for running the example IPython notebooks
+conda list -e
 
-# sudo apt-get install -qq pandoc         # notebook -> rst
-# conda install --yes matplotlib scikit-learn sphinx==1.2.3 boto ipython-notebook jinja2
-# pip install numpydoc runipy==0.0.4                      # example notebooks
-
-# Install OpenMM for a couple of the the examples
-# conda config --add channels http://conda.binstar.org/omnia
-# conda install --yes openmm
-# conda list -e
-
-cd docs && make html && cd -
-# python devtools/ci/push-docs-to-s3.py
+(cd docs && make html && cd -)
+ls -lt docs/_build
+pwd
+python devtools/ci/push-docs-to-s3.py
