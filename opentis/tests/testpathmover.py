@@ -269,7 +269,17 @@ class testReplicaExchangeMover(object):
     def test_repex_rep_acc(self):
         repex_12 = ReplicaExchangeMover(replicas=[[1,2]])
         samples_B2A1_rep = repex_12.move(self.gs_B1A2)
-        raise SkipTest
+        assert_equal(len(samples_B2A1_rep), 2)
+        for sample in samples_B2A1_rep:
+            assert_equal(sample.details.accepted, True)
+            assert_equal(sample.trajectory, sample.details.result)
+            assert_equal(sample.details.trial, sample.details.result)
+        B2 = [s for s in samples_B2A1_rep if s.ensemble==self.tisB]
+        assert_equal(len(B2), 1)
+        assert_equal(B2[0].trajectory, self.traj2)
+        A1 = [s for s in samples_B2A1_rep if s.ensemble==self.tisA]
+        assert_equal(len(A1), 1)
+        assert_equal(A1[0].trajectory, self.traj1)
 
 
 class testRandomChoiceMover(object):
