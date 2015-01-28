@@ -11,9 +11,11 @@ echo $TRAVIS_PULL_REQUEST $TRAVIS_BRANCH
 #    echo "No deployment on BRANCH='$TRAVIS_BRANCH'"; exit 0
 #fi
 
+echo $BINSTAR_TOKEN
+
 if [[ "2.7" =~ "$python" ]]; then
     conda install --yes binstar jinja2
-    binstar -t $BINSTAR_TOKEN  upload --force --username omnia -p openpathsampling-dev $HOME/miniconda/conda-bld/linux-64/opentis-dev-*
+    binstar upload -t $BINSTAR_TOKEN  --force --u omnia -p openpathsampling-dev $HOME/miniconda/conda-bld/linux-64/opentis-dev-*
 fi
 
 echo "Not yet uploading to s3."
