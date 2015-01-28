@@ -5,7 +5,7 @@ import subprocess
 import opentis.version
 
 
-BUCKET_NAME = 'openpathsampling'
+BUCKET_NAME = 'openpathsampling.org'
 if not opentis.version.release:
     PREFIX = 'latest'
 else:
