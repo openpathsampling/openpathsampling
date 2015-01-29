@@ -1127,9 +1127,34 @@ class testMinusInterfaceEnsemble(EnsembleTest):
 
 
     def test_minus_nl2_ensemble(self):
-        raise SkipTest
+        non_default = [
+            'in_cross_in_cross_in',
+            'in_out_in_in_out_in',
+            'in_out_in_out_in'
+        ]
+        self._test_everything(self.minus_nl2, non_default, False)
 
     def test_minus_nl2_can_append(self):
+        non_default = [
+            'in_cross_in_cross_in',
+            'in_out_in_in_out_in',
+            'in_out_in_out_in',
+            'cross_in_cross_in',
+            'in_in_cross_in',
+            'in_in_out_in',
+            'in_in_out_in_out',
+            'in_in_out_out_in_in',
+            'in_out_cross_out_in_out_in_out_cross_out_in',
+            'out_in_cross_in',
+            'out_in_in_in_out_in_out_in_in_in_out',
+            'out_in_in_out_in',
+            'out_in_out_in',
+            'out_in_out_in_out',
+            'out_in_out_out_in',
+            'in_hit_out_in_out',
+            'out_hit_in_out_in'
+        ]
+        #self._test_everything(self.minus_nl2.can_append, non_default, True)
         raise SkipTest
 
     def test_minus_nl2_can_prepend(self):
@@ -1143,9 +1168,24 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         self._test_everything(self.minus_interstitial_nl2, non_default, False)
 
     def test_minus_interstitial_nl2_can_append(self):
-        raise SkipTest
+        non_default = [
+            'in_cross_in_cross_in',
+            'in_out_cross_out_in_out_in_out_cross_out_in',
+            'cross_in_cross_in',
+            'in_in_cross_in',
+            'out_in_cross_in'
+        ]
+        self._test_everything(self.minus_interstitial_nl2.can_append,
+                              non_default, True)
 
     def test_minus_interstitial_nl2_can_prepend(self):
+        non_default = [
+            'in_cross_in_cross_in',
+            'in_out_cross_out_in_out_in_out_cross_out_in',
+            'in_cross_in_cross',
+        ]
+        #self._test_everything(self.minus_interstitial_nl2.can_prepend,
+                              #non_default, True)
         raise SkipTest
 
     def test_minus_nl3_ensemble(self):
