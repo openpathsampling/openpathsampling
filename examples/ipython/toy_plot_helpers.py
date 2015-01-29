@@ -30,6 +30,9 @@ class ToyPlot(object):
         self.extent = [range_x[0], range_x[-1], range_y[0], range_y[-1]]
         self.X, self.Y = np.meshgrid(range_x, range_y)
         pylab.rcParams['figure.figsize'] = 9, 6
+        self.repcolordict = {0 : 'k-', 1 : 'r-', 2 : 'g-', 3 : 'b-', 
+                             4 : 'r-', 5 : 'k-'}
+
         self._states = None
         self._pes = None
         self._interfaces = None
@@ -60,28 +63,27 @@ class ToyPlot(object):
     def plot(self, trajectories=[], bold=[]):
         fig, ax = plt.subplots()
         if self._states is not None:
-            states_sum = sum(states)
-            plt.imshow(states_sum, extent=self.extent, cmap="Blues",
+            plt.imshow(self._states, extent=self.extent, cmap="Blues",
                        interpolation='nearest', vmin=0.0, vmax=2.0,
                        aspect='auto')
         if self._pes is not None:
             plt.contour(self.X, self.Y, self._pes, 
                         levels=np.arange(0.0, 1.5, 0.1), colors='k')
-        if self._states is not None:
-            #TODO: add states
-            pass
         if self._interfaces is not None:
             for iface in self._interfaces:
                 plt.contour(self.X, self.Y, iface, 
                             colors='r', interpolation='none', levels=[0.5])
         if self._initcond is not None:
             ax.plot(self._initcond.coordinates[0,0], self._initcond.coordinates[0,1], 
-                    'ro', zorder=1)
+                    'ro', zorder=3)
         for traj in bold:
-            pass
+            plt.plot(traj.coordinates()[:,0,0], traj.coordinates()[:,0,1],
+                     self.repcolordict[bold.index(traj)], linewidth=2,
+                    zorder=1)
         for traj in trajectories:
-            pass
-        # TODO: plot trajectories, too
+            plt.plot(traj.coordinates()[:,0,0], traj.coordinates()[:,0,1],
+                     self.repcolordict[trajectories.index(traj)],
+                     zorder=2)
 
     def reset(self):
         self._pes = None
