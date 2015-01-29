@@ -3,3 +3,4 @@
 cd openpathsampling
 cd tests
 nosetests .
+cd ../..
