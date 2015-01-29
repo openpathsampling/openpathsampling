@@ -8,6 +8,11 @@ from opentis.todict import restores_as_full_object
 
 import opentis as paths
 
+import logging
+from ops_logging import initialization_logging
+logger = logging.getLogger(__name__)
+init_log = logging.getLogger('opentis.initialization')
+
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
 @restores_as_full_object
@@ -743,37 +748,54 @@ class SequentialEnsemble(Ensemble):
         subtraj_first = 0
         ens_num = 0
         ens_first = 0
+        # logging startup
+        logger.debug("Beginning can_append")
+        for ens in self.ensembles:
+            logger.debug(
+                "Ensemble " + str(self.ensembles.index(ens)) + 
+                " : " + ens.__class__.__name__
+            )
+
         while True: #  main loop, with various 
             subtraj_final = self._find_subtraj_final(trajectory, 
                                                      subtraj_first, ens_num)
-            #print (ens_num,
-                    #"("+str(subtraj_first)+","+str(subtraj_final)+")"
-                  #)
+            logger.debug(
+                str(ens_num) + " : " +
+                "("+str(subtraj_first)+","+str(subtraj_final)+")"
+            )
             if subtraj_final - subtraj_first > 0:
                 subtraj = trajectory[slice(subtraj_first, subtraj_final)]
                 if ens_num == final_ens:
                     if subtraj_final == traj_final:
                         # we're in the last ensemble and the whole
                         # trajectory is assigned: can we append?
-                        #print "Returning can_append"
+                        logger.debug("Returning can_append")
                         return self.ensembles[ens_num].can_append(subtraj)
                     else:
-                        #print "Returning false due to incomplete assigns:",
-                        #print subtraj_final, "!=", traj_final
+                        logger.debug(
+                            "Returning false due to incomplete assigns: " + 
+                            str(subtraj_final) + "!=" + str(traj_final)
+                        )
                         return False # in final ensemble, not all assigned
                 else:
                     # subtraj existed, but not yet final ensemble
                     # so we start with the next ensemble
+                    logger.debug(
+                        "Assigning frames " + str(subtraj_first) +
+                        " through " + str(subtraj_final) + 
+                        " to ensemble " + str(ens_num)
+                    )
                     ens_num += 1
                     subtraj_first = subtraj_final
-                    #print "Moving to the next ensemble", ens_num
+                    logger.debug("Moving to the next ensemble " + str(ens_num))
             else:
                 if subtraj_final == traj_final:
                     # all frames assigned, but not all ensembles finished;
                     # next frame might satisfy next ensemble
+                    logger.debug("All frames assigned, more ensembles to go: returning True")
                     return True
                 elif self.ensembles[ens_num](paths.Trajectory([])):
-                    #print "Moving on because of allowed zero-length ensemble"
+                    logger.debug("Moving on because of allowed zero-length ensemble")
                     ens_num += 1
                     subtraj_first = subtraj_final
                 else:
@@ -781,9 +803,14 @@ class SequentialEnsemble(Ensemble):
                     # start over with sequences that begin with the next
                     # ensemble
                     if ens_first == final_ens:
-                        #print "Started with the last ensemble, got nothin'"
+                        logger.debug("Started with the last ensemble, got nothin'")
                         return False
                     else:
+                        logger.debug(
+                            "Assigning frames " + str(subtraj_first) +
+                            " through " + str(subtraj_final) + 
+                            " to ensemble " + str(ens_num)
+                        )
                         ens_first += 1
                         ens_num = ens_first
                         subtraj_first = 0

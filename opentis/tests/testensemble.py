@@ -5,6 +5,10 @@ from test_helpers import CallIdentity, prepend_exception_message
 import opentis as paths
 from opentis.ensemble import *
 
+import logging
+logging.getLogger('opentis.ensemble').setLevel(logging.DEBUG)
+logging.getLogger('opentis.initialization').setLevel(logging.CRITICAL)
+
 import re
 import random
 
@@ -1151,10 +1155,11 @@ class testMinusInterfaceEnsemble(EnsembleTest):
             'out_in_out_in',
             'out_in_out_in_out',
             'out_in_out_out_in',
+            'out_in_out_out_in_out',
             'in_hit_out_in_out',
             'out_hit_in_out_in'
         ]
-        #self._test_everything(self.minus_nl2.can_append, non_default, True)
+        self._test_everything(self.minus_nl2.can_append, non_default, True)
         raise SkipTest
 
     def test_minus_nl2_can_prepend(self):
