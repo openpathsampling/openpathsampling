@@ -1,0 +1,84 @@
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.pylab as pylab
+from matplotlib.legend_handler import HandlerLine2D
+import numpy as np
+
+from opentis.snapshot import Snapshot
+
+# A little class we use for visualizing these 2D PESs
+class CallablePES(object):
+    def __init__(self, pes):
+        self.pes = pes
+    
+    def __call__(self, x, y):
+        self.positions = [x, y]
+        return self.pes.V(self)
+
+class CallableVolume(object):
+    def __init__(self, vol):
+        self.vol = vol
+    
+    def __call__(self, x, y):
+        snapshot = Snapshot(coordinates=np.array([[x,y,0.0]]))
+        return 1.0 if self.vol(snapshot) else 0.0
+
+class ToyPlot(object):
+    def __init__(self):
+        range_x = np.arange(-1.1, 1.1, 0.01)
+        range_y = np.arange(-1.1, 0.9, 0.01)
+        self.extent = [range_x[0], range_x[-1], range_y[0], range_y[-1]]
+        self.X, self.Y = np.meshgrid(range_x, range_y)
+        pylab.rcParams['figure.figsize'] = 9, 6
+        self._states = None
+        self._pes = None
+        self._interfaces = None
+        self._initcond = None
+
+
+    def add_pes(self, pes):
+        if self._pes is None:
+            self._pes = np.vectorize(CallablePES(pes))(self.X, self.Y)
+
+    def add_states(self, states):
+        if self._states is None:
+            state = states[0]
+            self._states = np.vectorize(CallableVolume(state))(self.X, self.Y))
+            for state in states[1:]:
+                self._states += np.vectorize(CallableVolume(state))(self.X, self.Y))
+
+    def add_interfaces(self, ifaces):
+        self._interfaces = []
+        for iface in ifaces:
+            self._interfaces.append(
+                np.vectorize(CallableVolume(iface))(self.X,self.Y)
+            )
+
+    def add_initial_condition(self, initcond):
+        self._initcond = initcond
+
+    def plot(self, trajectories=None, bold=None):
+        if self._states is not None:
+            states_sum = sum(states)
+            plt.imshow(states_sum, extent=self.extent, cmap="Blues",
+                       interpolation='nearest', vmin=0.0, vmax=2.0,
+                       aspect='auto')
+        if self._pes is not None:
+            plt.contour(X, Y, self_pes, levels=np.arange(0.0, 1.5, 0.1),
+                        colors='k')
+        if self._states is not NOne:
+            pass
+        if self._interfaces is not None:
+            for iface in self._interfaces:
+                plt.contour(X,Y, iface, colors='r', interpolation='none',
+                            levels=[0.5])
+        # TODO: plot trajectories, too
+
+        pass
+
+    def reset(self):
+        self._pes = None
+        self._interfaces = None
+        self._initcond = None
+
+
