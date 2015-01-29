@@ -487,6 +487,11 @@ class EnsembleCombination(Ensemble):
         # This makes sense since the expensive part is the ensemble testing not computing two logic operations
         if Ensemble.use_shortcircuit:
             a = self.ensemble1(trajectory, lazy)
+            logger.debug("Combination: ensemble 1 is "+str(a))
+            logger.debug("Combination: ensemble 2 is "
+                         +str(self.ensemble2(trajectory, lazy)))
+            logger.debug("Combination: returning " + 
+                         str(self.fnc(a,self.ensemble2(trajectory,lazy))))
             res_true = self.fnc(a, True)
             res_false = self.fnc(a, False)
             if res_false == res_true:
@@ -748,6 +753,7 @@ class SequentialEnsemble(Ensemble):
         subtraj_first = 0
         ens_num = 0
         ens_first = 0
+
         # logging startup
         logger.debug("Beginning can_append")
         for ens in self.ensembles:
@@ -823,32 +829,61 @@ class SequentialEnsemble(Ensemble):
         subtraj_final = len(trajectory)
         ens_final = len(self.ensembles)-1
         ens_num = ens_final
+
+        # logging startup
+        logger.debug("Beginning can_prepend")
+        for i in range(len(self.ensembles)):
+            logger.debug(
+                "Ensemble " + str(i) + 
+                " : " + self.ensembles[i].__class__.__name__
+            )
+
         while True:
             subtraj_first = self._find_subtraj_first(trajectory,
                                                      subtraj_final, ens_num)
-            #print (ens_num,
-                    #"("+str(subtraj_first)+","+str(subtraj_final)+")"
-                  #)
+            logger.debug(
+                str(ens_num) + " : " +
+                "("+str(subtraj_first)+","+str(subtraj_final)+")"
+            )
             if subtraj_final - subtraj_first > 0:
                 subtraj = trajectory[slice(subtraj_first, subtraj_final)]
                 if ens_num == first_ens:
                     if subtraj_first == traj_first:
+                        logger.debug("Returning can_prepend")
                         return self.ensembles[ens_num].can_prepend(subtraj)
                     else:
+                        logger.debug(
+                            "Returning false due to incomplete assigns: " + 
+                            str(subtraj_first) + "!=" + str(traj_first)
+                        )
                         return False
                 else:
+                    logger.debug(
+                        "Assigning frames " + str(subtraj_first) +
+                        " through " + str(subtraj_final) + 
+                        " to ensemble " + str(ens_num)
+                    )
                     ens_num -= 1
                     subtraj_final = subtraj_first
+                    logger.debug("Moving to the next ensemble " + str(ens_num))
             else:
                 if subtraj_first == traj_first:
+                    logger.debug("All frames assigned, more ensembles to go: returning True")
                     return True
                 elif self.ensembles[ens_num](paths.Trajectory([])):
+                    logger.debug("Moving on because of allowed zero-length ensemble")
                     ens_num -= 1
                     subtraj_final = subtraj_first
                 else:
                     if ens_final == first_ens:
+                        logger.debug("Started with the last ensemble, got nothin'")
                         return False
                     else:
+                        logger.debug(
+                            "Assigning frames " + str(subtraj_first) +
+                            " through " + str(subtraj_final) + 
+                            " to ensemble " + str(ens_num)
+                        )
                         ens_final -= 1
                         ens_num = ens_final
                         subtraj_final = len(trajectory)
@@ -1210,6 +1245,7 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         outX = OutXEnsemble(innermost_vol)
         inX = InXEnsemble(innermost_vol)
         interstitial = outA & inX
+        #interstitial = InXEnsemble(innermost_vol - state_vol)
         start = [
             SingleFrameEnsemble(inA),
             OptionalEnsemble(interstitial),
@@ -1218,7 +1254,7 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         ]
         loop = [
             inA,
-            OptionalEnsemble(inX),
+            OptionalEnsemble(interstitial | InA),
             outX,
             OptionalEnsemble(interstitial)
         ]
@@ -1318,7 +1354,6 @@ class EnsembleFactory():
             SingleFrameEnsemble(InXEnsemble(volume_a | volume_b))
         ])
         return ens
-        #return (LengthEnsemble(slice(3,None)) & InXEnsemble(volume_a, 0) & InXEnsemble(volume_b, -1)) & (LeaveXEnsemble(volume_x) & OutXEnsemble(volume_a | volume_b, slice(1,-1), lazy))
 
 
     @staticmethod
