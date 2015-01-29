@@ -43,9 +43,9 @@ class ToyPlot(object):
     def add_states(self, states):
         if self._states is None:
             state = states[0]
-            self._states = np.vectorize(CallableVolume(state))(self.X, self.Y))
+            self._states = np.vectorize(CallableVolume(state))(self.X, self.Y)
             for state in states[1:]:
-                self._states += np.vectorize(CallableVolume(state))(self.X, self.Y))
+                self._states += np.vectorize(CallableVolume(state))(self.X, self.Y)
 
     def add_interfaces(self, ifaces):
         self._interfaces = []
@@ -57,28 +57,36 @@ class ToyPlot(object):
     def add_initial_condition(self, initcond):
         self._initcond = initcond
 
-    def plot(self, trajectories=None, bold=None):
+    def plot(self, trajectories=[], bold=[]):
+        fig, ax = plt.subplots()
         if self._states is not None:
             states_sum = sum(states)
             plt.imshow(states_sum, extent=self.extent, cmap="Blues",
                        interpolation='nearest', vmin=0.0, vmax=2.0,
                        aspect='auto')
         if self._pes is not None:
-            plt.contour(X, Y, self_pes, levels=np.arange(0.0, 1.5, 0.1),
-                        colors='k')
-        if self._states is not NOne:
+            plt.contour(self.X, self.Y, self._pes, 
+                        levels=np.arange(0.0, 1.5, 0.1), colors='k')
+        if self._states is not None:
+            #TODO: add states
             pass
         if self._interfaces is not None:
             for iface in self._interfaces:
-                plt.contour(X,Y, iface, colors='r', interpolation='none',
-                            levels=[0.5])
+                plt.contour(self.X, self.Y, iface, 
+                            colors='r', interpolation='none', levels=[0.5])
+        if self._initcond is not None:
+            ax.plot(self._initcond.coordinates[0,0], self._initcond.coordinates[0,1], 
+                    'ro', zorder=1)
+        for traj in bold:
+            pass
+        for traj in trajectories:
+            pass
         # TODO: plot trajectories, too
-
-        pass
 
     def reset(self):
         self._pes = None
         self._interfaces = None
         self._initcond = None
+        self._states = None
 
 
