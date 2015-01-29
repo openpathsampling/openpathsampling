@@ -196,8 +196,8 @@ class DynamicsEngine(object):
         set
             a set of runners that caused the simulation to stop
 
-        Example
-        -------
+        Examples
+        --------
         >>> if engine.max_length_stopper in engine.stoppers:
         >>>     print 'Max length was triggered'
         """

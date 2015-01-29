@@ -744,6 +744,32 @@ class ReplicaExchange(PathMover):
 
         return new_set
 
+class OneWayShootingMover(RandomChoiceMover):
+    '''
+    OneWayShootingMover is a special case of a RandomChoiceMover which
+    combines gives a 50/50 chance of selecting either a ForwardShootMover or
+    a BackwardShootMover. Both submovers use the same shooting point
+    selector, and both apply to the same ensembles and replicas.
+
+    Attributes
+    ----------
+    sel : ShootingPointSelector
+        The shooting point selection scheme
+    ensembles : list of Ensemble or None
+        valid ensembles; None implies all ensembles are allowed (no
+        restriction)
+    replicas : list or 'all'
+        valid replicas
+    '''
+    def __init__(self, sel, ensembles=None, replicas='all'):
+        movers = [
+            ForwardShootMover(sel, ensembles),
+            BackwardShootMover(sel, ensembles)
+        ]
+        super(OneWayShootingMover, self).__init__(
+            movers=movers, ensembles=ensembles, replicas=replicas
+        )
+
 
 class PathMoverFactory(object):
     @staticmethod
@@ -751,11 +777,7 @@ class PathMoverFactory(object):
         if type(selector_set) is not list:
             selector_set = [selector_set]*len(interface_set)
         mover_set = [
-            RandomChoiceMover([
-                ForwardShootMover(sel, ensembles=[iface]), 
-                BackwardShootMover(sel, ensembles=[iface])
-            ],
-            ensembles=[iface])
+            OneWayShootingMover(sel=sel, ensembles=[iface])
             for (sel, iface) in zip(selector_set, interface_set)
         ]
         return mover_set
