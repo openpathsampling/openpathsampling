@@ -1,2 +1,2 @@
-graft opentis
-recursive-include opentis *.py
+graft openpathsampling
+recursive-include openpathsampling *.py

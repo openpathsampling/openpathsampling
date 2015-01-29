@@ -1,5 +1,6 @@
 # This should run the nosetests in the right folder
 
-cd opentis
+cd openpathsampling
 cd tests
 nosetests .
+cd ../..

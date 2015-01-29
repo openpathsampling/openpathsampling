@@ -1,6 +1,6 @@
 .. _shooting:
 
-.. currentmodule:: opentis.shooting
+.. currentmodule:: openpathsampling.shooting
 
 ShootingPoint Functions
 =======================

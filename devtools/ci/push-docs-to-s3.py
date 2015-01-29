@@ -2,14 +2,14 @@ import os
 import pip
 import tempfile
 import subprocess
-import opentis.version
+import openpathsampling.version
 
 
 BUCKET_NAME = 'openpathsampling.org'
-if not opentis.version.release:
+if not openpathsampling.version.release:
     PREFIX = 'latest'
 else:
-    PREFIX = opentis.version.short_version
+    PREFIX = openpathsampling.version.short_version
 
 if not any(d.project_name == 's3cmd' for d in pip.get_installed_distributions()):
     raise ImportError('The s3cmd pacakge is required. try $ pip install s3cmd')

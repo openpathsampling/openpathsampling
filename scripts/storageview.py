@@ -3,7 +3,7 @@ import argparse
 import os
 import time
 
-from opentis.storage import Storage
+from openpathsampling.storage import Storage
 
 if __name__ == '__main__':
 
