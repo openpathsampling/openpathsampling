@@ -56,6 +56,9 @@ class SampleSet(object):
             self.move_path = move_path
         self.accepted = accepted
 
+        if type(samples) is Sample:
+            samples = [samples]
+
         for sample in samples:
             if sample not in self._samples:
                 self._samples.append(sample)
