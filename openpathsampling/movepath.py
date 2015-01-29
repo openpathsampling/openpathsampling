@@ -29,25 +29,113 @@ class MovePath(object):
     >>> movepath = bucket2.movepath
     >>> print movepath
 
-    [moveA1:y, moveB1:y, moveB2:y, moveC1:y, moveC2:y, moveA2:y]
-    [moveA1:y, moveB1:y, moveB2:y, moveC1:y, moveC2:n, moveA2:y]
-    [moveA1:y, moveB1:y, moveB2:y, moveC1:n,           moveA2:y]
-    [moveA1:y, moveB1:y, moveB2:n, moveC1:y, moveC2:y, moveA2:y]
-    [moveA1:y, moveB1:y, moveB2:n, moveC1:y, moveC2:n, moveA2:y]
-    [moveA1:y, moveB1:y, moveB2:n, moveC1:n,           moveA2:y]
-    [moveA1:y, moveB1:n,           moveC1:y, moveC2:y, moveA2:y]
-    [moveA1:y, moveB1:n,           moveC1:y, moveC2:n, moveA2:y]
-    [moveA1:y, moveB1:n,           moveC1:n,           moveA2:y]
+    # All attempted move possibilities
 
-    S([moveA1:y, P([moveB1:y, moveB2:y]):y, E([moveC1:y, moveC2:y]):y, moveA2:y]):y
-    S([moveA1:y, P([moveB1:y, moveB2:y]):y, E([moveC1:y, moveC2:n]):n, moveA2:y]):y
-    S([moveA1:y, P([moveB1:y, moveB2:y]):y, E([moveC1:n]):n,           moveA2:y]):y
-    S([moveA1:y, P([moveB1:y, moveB2:n]):y, E([moveC1:y, moveC2:y]):y, moveA2:y]):y
-    S([moveA1:y, P([moveB1:y, moveB2:n]):y, E([moveC1:y, moveC2:n]):n, moveA2:y]):y
-    S([moveA1:y, P([moveB1:y, moveB2:n]):y, E([moveC1:n]):n,           moveA2:y]):y
-    S([moveA1:y, P([moveB1:n]):y,           E([moveC1:y, moveC2:y]):y, moveA2:y]):y
-    S([moveA1:y, P([moveB1:n]):y,           E([moveC1:y, moveC2:n]):n, moveA2:y]):y
-    S([moveA1:y, P([moveB1:n]):y,           E([moveC1:n]):n,           moveA2:y]):y
+    1: [moveA1:y, moveB1:y, moveB2:y, moveC1:y, moveC2:y, moveA2:y]
+    2: [moveA1:y, moveB1:y, moveB2:y, moveC1:y, moveC2:n, moveA2:y]
+    3: [moveA1:y, moveB1:y, moveB2:y, moveC1:n,           moveA2:y]
+    4: [moveA1:y, moveB1:y, moveB2:n, moveC1:y, moveC2:y, moveA2:y]
+    5: [moveA1:y, moveB1:y, moveB2:n, moveC1:y, moveC2:n, moveA2:y]
+    6: [moveA1:y, moveB1:y, moveB2:n, moveC1:n,           moveA2:y]
+    7: [moveA1:y, moveB1:n,           moveC1:y, moveC2:y, moveA2:y]
+    8: [moveA1:y, moveB1:n,           moveC1:y, moveC2:n, moveA2:y]
+    9: [moveA1:y, moveB1:n,           moveC1:n,           moveA2:y]
+
+    # Accepted Move possibilities
+    1: [moveA1:y, moveB1:y, moveB2:y, moveC1:y, moveC2:y, moveA2:y]
+    2: [moveA1:y, moveB1:y, moveB2:y, moveC1:y,           moveA2:y]
+    3: [moveA1:y, moveB1:y, moveB2:y,                     moveA2:y]
+    4: [moveA1:y, moveB1:y,           moveC1:y, moveC2:y, moveA2:y]
+    5: [moveA1:y, moveB1:y,           moveC1:y,           moveA2:y]
+    6: [moveA1:y, moveB1:y,                               moveA2:y]
+    7: [moveA1:y,                     moveC1:y, moveC2:y, moveA2:y]
+    8: [moveA1:y,                     moveC1:y,           moveA2:y]
+    9: [moveA1:y,                                         moveA2:y]
+
+    # All possible move paths
+    1: S([moveA1:y, P([moveB1:y, moveB2:y]):y, E([moveC1:y, moveC2:y]):y, moveA2:y]):y
+    2: S([moveA1:y, P([moveB1:y, moveB2:y]):y, E([moveC1:y, moveC2:n]):n, moveA2:y]):y
+    3: S([moveA1:y, P([moveB1:y, moveB2:y]):y, E([moveC1:n]):n,           moveA2:y]):y
+    4: S([moveA1:y, P([moveB1:y, moveB2:n]):y, E([moveC1:y, moveC2:y]):y, moveA2:y]):y
+    5: S([moveA1:y, P([moveB1:y, moveB2:n]):y, E([moveC1:y, moveC2:n]):n, moveA2:y]):y
+    6: S([moveA1:y, P([moveB1:y, moveB2:n]):y, E([moveC1:n]):n,           moveA2:y]):y
+    7: S([moveA1:y, P([moveB1:n]):y,           E([moveC1:y, moveC2:y]):y, moveA2:y]):y
+    8: S([moveA1:y, P([moveB1:n]):y,           E([moveC1:y, moveC2:n]):n, moveA2:y]):y
+    9: S([moveA1:y, P([moveB1:n]):y,           E([moveC1:n]):n,           moveA2:y]):y
+
+    # Number of all moves
+    1: 6
+    2: 6
+    3: 5
+    4: 6
+    5: 6
+    6: 5
+    7: 5
+    8: 5
+    9: 4
+
+    # Number of accepted moves
+    1: 6
+    2: 5
+    3: 4
+    4: 5
+    5: 4
+    6: 3
+    7: 4
+    8: 3
+    9: 2
+
+    # Examples for no #8
+
+    S([
+        moveA1:y:[sample1, sample2],
+        P([
+            moveB1:y:[sample3, sample4],
+            moveB2:n:[sample5, sample6]
+        ]):y:[sample3, sample4],
+        E([
+            moveC1:y:[sample7, sample8, sample9],
+            moveC2:n:[sample10, sample11]
+        ]):n:[],
+        moveA2:y:[sample12]
+    ]):y:[sample1, sample2, sample3, sample4, sample12]
+
+    SampleSets form a group like structure with our known concatenation of
+    applying all samples in a row. But this requires that application of
+    Samples is unique. Can we assure that? This requires to set an initial
+    sample that is to be replaced by another or nothing. Adding just means to
+    start from an emtpy sample. The randomness need to be stored in the sample.
+    The we can really do
+
+    setA * setB = setC
+
+    setA * setB * setC = setA * (setB * setC) = (setA * setB) * setC
+
+    setA * setB = []
+
+    We need SampleSet to know the original SampleSet and a SampleSet
+    that contain the moves, which can be nested. So A Move takes the full
+    MoveSample and Returns the object with added Moves which are itself
+    a SampleSet.
+
+
+    SeqentialSampleSet(
+        initial_set, [
+        SampleSet(
+            moveA1:y:initial_set + [sample1, sample2]
+        ),
+        PartialSampleSet(
+        [
+            moveB1:y:initial_set + [sample1, sample2] + [sample3, sample4],
+            moveB2:n:initial_set + [sample1, sample2] + [sample3, sample4] + [sample5, sample6]
+        ]):y:initial_set + [sample1, sample2] + [sample3, sample4],
+        ExcluiveSampleSet([
+            moveC1:y:initial_set + [sample1, sample2] + [sample3, sample4] + [sample7, sample8, sample9],
+            moveC2:n:initial_set + [sample1, sample2] + [sample3, sample4] + [sample7, sample8, sample9] + [sample10, sample11]
+        ]):n:[],
+        moveA2:y:initial_set + [sample1, sample2] + [sample3, sample4] + [sample12]
+    ]):y:initial_set + [sample1, sample2] + [sample3, sample4] + [sample12]
+
 
     Attributes
     ----------

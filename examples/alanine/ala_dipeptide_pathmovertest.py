@@ -20,23 +20,23 @@ sys.path.append(os.path.abspath('../../'))
 
 # in principle, all of these imports should be simplified once this is a
 # package
-from opentis.orderparameter import OP_Function, OP_Volume
-from opentis.openmm_engine import OpenMMEngine
-from opentis.snapshot import Snapshot
-from opentis.volume import LambdaVolumePeriodic, VolumeFactory as vf
-from opentis.pathmover import PathMoverFactory as mf
-from opentis.ensemble import EnsembleFactory as ef
-from opentis.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
+from openpathsampling.orderparameter import OP_Function, OP_Volume
+from openpathsampling.openmm_engine import OpenMMEngine
+from openpathsampling.snapshot import Snapshot
+from openpathsampling.volume import LambdaVolumePeriodic, VolumeFactory as vf
+from openpathsampling.pathmover import PathMoverFactory as mf
+from openpathsampling.ensemble import EnsembleFactory as ef
+from openpathsampling.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
                               InXEnsemble)
-from opentis.calculation import Bootstrapping
-from opentis.pathmover import PathMover, MoveDetails, SequentialMover
-from opentis.shooting import UniformSelector
-from opentis.sample import Sample, SampleSet
+from openpathsampling.calculation import Bootstrapping
+from openpathsampling.pathmover import PathMover, MoveDetails, SequentialMover
+from openpathsampling.shooting import UniformSelector
+from openpathsampling.sample import Sample, SampleSet
 
 import simtk.unit as u
 
 if __name__=="__main__":
-    logging.config.fileConfig('../../opentis/logging.conf',
+    logging.config.fileConfig('../../openpathsampling/logging.conf',
                               disable_existing_loggers=False)
     options = {'temperature' : 300.0 * u.kelvin,
                'collision_rate' : 1.0 / u.picoseconds,
@@ -153,7 +153,8 @@ use LeaveXEnsemble as we typically do with TIS paths.
     first_set = SampleSet([first_sample], accepted=True, move_path=['Initialization'])
 
     print first_set[0].__dict__
-    print first_set.__dict__
+    print 'Set #1', first_set.__dict__
+    print
 
 #    mover = ForwardShootMover(UniformSelector(), ensembles=interface0_ensemble)
 
@@ -163,8 +164,7 @@ use LeaveXEnsemble as we typically do with TIS paths.
     print second_set[0].__dict__
     print second_set.__dict__
 
-    seq_mover = SequentialMover([mover_set[0]] * 10)
-
+    seq_mover = SequentialMover([mover_set[0]] * 2)
     third_set = seq_mover.move(second_set)
 
     print interface0_ensemble(third_set[0].trajectory)

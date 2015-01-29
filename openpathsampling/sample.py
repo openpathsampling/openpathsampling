@@ -46,35 +46,42 @@ class SampleSet(object):
 
     # TODO: Can a sample be several times in an SampleSet? Why not?
 
-    def __init__(self, samples, accepted=True, move_path=None):
+    def __init__(self, samples = None, predecessor = None, accepted=True):
+        self.predecessor = predecessor
+        self.accepted = accepted
         self._samples = []
+        self._final = None
         self._ensemble_dict = {}
         self._replica_dict = {}
-        if move_path is None:
-            self.move_path = []
-        else:
-            self.move_path = move_path
-        self.accepted = accepted
-
+        if samples is None:
+            samples = []
         if type(samples) is Sample:
             samples = [samples]
 
         for sample in samples:
             if sample not in self._samples:
-                self._samples.append(sample)
-                try:
-                    self._ensemble_dict[sample.ensemble].append(sample)
-                except KeyError:
-                    self._ensemble_dict[sample.ensemble] = [sample]
-                try:
-                    self._replica_dict[sample.replica].append(sample)
-                except KeyError:
-                    self._replica_dict[sample.replica] = [sample]
+                self._append(sample)
 
+
+    def _append(self, sample):
+        self._samples.append(sample)
+        try:
+            self._ensemble_dict[sample.ensemble].append(sample)
+        except KeyError:
+            self._ensemble_dict[sample.ensemble] = [sample]
+        try:
+            self._replica_dict[sample.replica].append(sample)
+        except KeyError:
+            self._replica_dict[sample.replica] = [sample]
 
     @property
     def samples(self):
         return self._samples
+
+    @property
+    def final(self):
+        if self._final is None:
+            self._final = self + SampleSet(self._samples, self)
 
     @property
     def ensemble_dict(self):
@@ -83,9 +90,19 @@ class SampleSet(object):
     def replica_dict(self):
         return self._replica_dict
 
+    def __plus__(self, other):
+        if other.predecessor is self:
+            newset = self.copy()
+            for sample in other._samples:
+                if sample not in self._samples:
+                    self._append(sample)
+
+            return newset
+        else:
+            raise ValueError('Incompatible SampleSets')
 
     def copy(self):
-        new_set = SampleSet(self, accepted=self.accepted, move_path=self.move_path)
+        new_set = SampleSet(self, accepted=self.accepted)
 
         return new_set
 
@@ -96,8 +113,7 @@ class SampleSet(object):
             return random.choice(self._replica_dict[key])
 
     def __setitem__(self, key, value):
-        # In place substitution is not possible for immutable items
-
+        # In place substitution is not allowed for immutable items
         raise ValueError('no setitem for immutable lists!')
 
     def replace(this, key, value):
@@ -197,6 +213,23 @@ class SampleSet(object):
 
         return this
 
+    def get_ensemble_dict(self):
+        """
+        Returns the dictionary of ensembles and their samples but not cached
+        :return:
+        """
+        ensembles = set([sample.ensemble for sample in self._samples])
+        return { sample.ensemble : [sample for sample in self._samples if sample.ensemble is ensemble] for ensemble in ensembles}
+
+    def get_replica_dict(self):
+        """
+        Returns the dictionary of replica and their samples but not cached
+        :return:
+        """
+        replicas = set([sample.replica for sample in self._samples])
+        return { sample.ensemble : [sample for sample in self._samples if sample.replica is replica] for replica in replicas}
+
+
     def extend(this, samples):
         # note that this works whether the parameter samples is a list of
         # samples or a SampleSet!
@@ -220,15 +253,10 @@ class SampleSet(object):
         if accepted is None:
             accepted = self.accepted
 
-        if move is None:
-            new_move_path = self.move_path
-        else:
-            new_move_path = self.move_path + [move]
-
         if samples is None:
             samples = []
 
-        newset = SampleSet(self, accepted=accepted, move_path=new_move_path)
+        newset = SampleSet(self, predecessor=self.predecessor, accepted=accepted)
 
         for sample in samples:
             # TODO: should time be a property of Sample or SampleSet?
@@ -291,6 +319,19 @@ class SampleSet(object):
             assert self.samples.count(samp) == 1, \
                     "More than one instance of %r!" % samp
 
+class EmptySampleSet(SampleSet):
+    def __init__(self):
+
+class InitialSampleSet(SampleSet):
+    """
+    A SampleSet with empty initial referenced sampleset
+    """
+    def __init__(self, samples=None, accepted=True):
+        self.predecessor =
+
+
+class SequentialSampleSet(SampleSet):
+    def __init__(self, sets):
 
 
 class Sample(object):

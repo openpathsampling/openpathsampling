@@ -214,6 +214,9 @@ class PathMover(object):
         '''
         Returns one of the legal samples given self.replica and the ensemble
         set in ensembles.
+
+        TODO: This must be saved somehow (it is actually I think), otherwise
+        Samples are not reproducible when applied to a SampleSet!
         '''
         legal = self.legal_sample_set(globalstate, ensembles)
         return random.choice(legal)
