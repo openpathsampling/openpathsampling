@@ -67,5 +67,5 @@ up via ``conda`` if you don't already have it. ::
 
   conda install nose
 
-From the source directory ``opentis/tests``, you can also run the tests with ``nosetests .`` on
+From the source directory ``openpathsampling/tests``, you can also run the tests with ``nosetests .`` on
 the command line

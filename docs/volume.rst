@@ -1,11 +1,11 @@
 .. _volume:
 
-.. currentmodule:: opentis.volume
+.. currentmodule:: openpathsampling.volume
 
 Volume Functions
 ================
 
-:class:`opentis.Volume`
+:class:`openpathsampling.Volume`
 
     >>> import openpathsampling as paths
     >>> volume = paths.Vnsemble()

@@ -22,7 +22,7 @@ script:
   - conda install --yes $HOME/miniconda/conda-bld/linux-64/openpathsampling-*
   - conda list -e
   - # Run tests
-  - cd opentis/tests
+  - cd openpathsampling/tests
 #  - nosetests --nocapture -vv
 #  - cd ..
 #  - cd xyz_files
