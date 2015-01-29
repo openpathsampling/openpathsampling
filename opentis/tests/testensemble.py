@@ -132,6 +132,30 @@ class EnsembleTest(object):
             prepend_exception_message(e, failmsg)
             raise
 
+    def _test_everything(self, test_fcn, non_default=[], default=False):
+        """
+        Runs tests using *all* the trajectory test suite. This is the
+        ultimate in test-running simplicity!!
+        """
+        results = {}
+        for test in ttraj.keys():
+            results[test] = default
+        nondef_dict = {}
+        for test in non_default:
+            if test in ttraj.keys():
+                results[test] = not default
+            if "lower_"+test in ttraj.keys():
+                results["lower_"+test] = not default
+            if "upper_"+test in ttraj.keys():
+                results["upper_"+test] = not default
+
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(test_fcn, ttraj[test], results[test], failmsg)
+
+
+
+
 
     def _run(self, results):
         """Actually run tests on the trajectory and the wrapped trajectory.
@@ -1070,24 +1094,28 @@ class testOptionalEnsemble(EnsembleTest):
 
 class testMinusInterfaceEnsemble(EnsembleTest):
     def setUp(self):
+        # Mostly we use minus ensembles where the state matches the first
+        # interface. We also test the case where that isn't in, in which
+        # case there's an interstitial zone. (Only test it for nl=2 to keep
+        # things easier.)
         self.minus_nl2 = MinusInterfaceEnsemble(
             state_vol=vol1,
-            innermost_vol=vol2,
+            innermost_vol=vol1,
             n_l=2
         )
-        self.minus_nointerstitial_nl2 = MinusInterfaceEnsemble(
+        self.minus_interstitial_nl2 = MinusInterfaceEnsemble(
             state_vol=vol1,
             innermost_vol=vol2,
             n_l=2
         )
         self.minus_nl3 = MinusInterfaceEnsemble(
             state_vol=vol1,
-            innermost_vol=vol2,
+            innermost_vol=vol1,
             n_l=3
         )
         self.minus_nl4 = MinusInterfaceEnsemble(
             state_vol=vol1,
-            innermost_vol=vol2,
+            innermost_vol=vol1,
             n_l=4
         )
 
@@ -1107,13 +1135,17 @@ class testMinusInterfaceEnsemble(EnsembleTest):
     def test_minus_nl2_can_prepend(self):
         raise SkipTest
 
-    def test_minus_nointerstitial_nl2_ensemble(self):
+    def test_minus_interstitial_nl2_ensemble(self):
+        non_default = [
+            'in_cross_in_cross_in',
+            'in_out_cross_out_in_out_in_out_cross_out_in',
+        ]
+        self._test_everything(self.minus_interstitial_nl2, non_default, False)
+
+    def test_minus_interstitial_nl2_can_append(self):
         raise SkipTest
 
-    def test_minus_nointerstitial_nl2_can_append(self):
-        raise SkipTest
-
-    def test_minus_nointerstitial_nl2_can_prepend(self):
+    def test_minus_interstitial_nl2_can_prepend(self):
         raise SkipTest
 
     def test_minus_nl3_ensemble(self):
@@ -1126,6 +1158,14 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         raise SkipTest
 
     def test_minus_nl4_ensemble(self):
+        results = {}
+        for test in ttraj.keys():
+            results[test] = False
+
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.minus_nl4, ttraj[test], results[test],
+                              failmsg)
         raise SkipTest
 
     def test_minus_nl4_can_append(self):
