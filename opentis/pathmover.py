@@ -642,6 +642,54 @@ class MinusMove(ConditionalSequentialMover):
         initialization_logging(init_log, self, ['minus_ensemble',
                                                 'innermost_ensemble'])
 
+@restores_as_stub_object
+class RandomSubtrajectorySelectMover(PathMover):
+    '''
+    Takes a trajectory and returns a random subtrajectory which satisfies
+    the subensemble associated with this PathMover. 
+
+    If there are no subtrajectories which satisfy the ensemble, this returns
+    the zero-length trajectory.
+    '''
+    def __init__(self, subensemble, ensembles=None, replicas='all'):
+        super(RandomSubtrajectorySelectMover, self).__init__(
+            ensembles=ensembles, replicas=replicas
+        )
+        self._subensemble = subensemble
+
+    def _choose(self, trajectory_list):
+        return random.choice(trajectory_list)
+
+    def move(self, globalstate):
+        rep_sample = self.select_sample(globalstate)
+        trajectory = rep_sample.trajectory
+        replica = rep_sample.replica
+
+        detail = MoveDetails()
+        details.inputs = [trajectory]
+        details.mover_path.append(self)
+
+        subtrajs = self._subensemble.split(trajectory)
+        if len(subtrajs) > 0:
+            subtraj = self._choose(subtrajs)
+        else:
+            # return zero-length trajectory otherwise
+            subtraj = Trajectory([])
+
+        details.trial = subtraj
+        details.accepted = True
+        details.result = subtraj
+        details.acceptance_probability = 1.0
+        
+        sample = Sample(
+            replica=replica,
+            trajectory=details.result,
+            ensemble=self._subensemble,
+            details=details
+        )
+        return [sample]
+
+
 
 class PathReversalMover(PathMover):
     def move(self, globalstate):
