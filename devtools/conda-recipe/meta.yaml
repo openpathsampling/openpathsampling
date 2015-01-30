@@ -1,5 +1,5 @@
 package:
-  name: opentis
+  name: openpathsampling
   version: !!str dev
 
 requirements:
