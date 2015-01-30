@@ -22,6 +22,11 @@ if __name__ == '__main__':
         mode = 'a'
     )
 
+    def indent(s, width=4):
+        spl = s.split('\n')
+        spl = [' '*width + p for p in spl]
+        return '\n'.join(spl)
+
     def headline(s):
         print
         print "###############################################################################"
@@ -105,8 +110,8 @@ if __name__ == '__main__':
 
     for p_idx in range(0, storage.sampleset.count()):
         obj = storage.sampleset.load(p_idx)
-        nline(p_idx,obj.name, ':')
-        print str(obj)
+        nline(p_idx, '(' + str(len(obj.samples)), obj.samples )
+        print indent(str(obj.movepath),12)
 
 
     headline("Samples")

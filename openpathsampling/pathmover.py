@@ -330,7 +330,7 @@ class ShootMover(PathMover):
 #        new_set = SampleSet(samples=[sample], predecessor=globalstate, accepted=True)
 #        new_set = globalstate.apply([sample], accepted = details.accepted, move=self)
 
-        path = paths.SampleMovePath(globalstate,
+        path = paths.SampleMovePath(
                 samples=[sample],
                 accepted=details.accepted,
                 mover=self
@@ -451,7 +451,7 @@ class RandomChoiceMover(PathMover):
         # Run the chosen mover
 #        sample_set = RandomMoveSampleSet(mover.move(sample_set))
 
-        path = paths.RandomChoiceMovePath(globalstate, mover.move(globalstate))
+        path = paths.RandomChoiceMovePath( mover.move(globalstate))
 
         return path
 
@@ -487,7 +487,7 @@ class SequentialMover(PathMover):
             subglobal = movepath.apply_to(subglobal)
             movepaths.append(movepath)
 
-        return paths.SequentialMovePath(globalstate, movepaths)
+        return paths.SequentialMovePath( movepaths)
 
 @restores_as_stub_object
 class PartialAcceptanceSequentialMover(SequentialMover):
@@ -519,7 +519,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
             if not movepath.accepted:
                 break
 
-        return paths.PartialMovePath(globalstate, movepaths)
+        return paths.PartialMovePath( movepaths)
 
 
 @restores_as_stub_object
@@ -555,7 +555,7 @@ class ConditionalSequentialMover(SequentialMover):
             if not movepath.accepted:
                 break
 
-        return paths.ExclusiveMovePath(globalstate, movepaths)
+        return paths.ExclusiveMovePath( movepaths)
 
 
 
@@ -568,7 +568,7 @@ class ReplicaIDChange(PathMover):
         self.old_samples = old_samples
 
     def move(self, globalstate):
-        rep_sample = self.select_sample(globalstate, self.ensembles)
+        rep_sample = self.select_sample( self.ensembles)
         new_rep = self.new_replicas[rep_sample.replica]
         old_sample = self.old_samples[rep_sample.replica]
         trajectory = rep_sample.trajectory
@@ -584,7 +584,7 @@ class ReplicaIDChange(PathMover):
                             ensemble=rep_sample.ensemble,
                             trajectory=rep_sample.trajectory
                            )
-        return paths.SampleMovePath(globalstate, [dead_sample, new_sample])
+        return paths.SampleMovePath( [dead_sample, new_sample])
 
 @restores_as_stub_object
 class EnsembleHopMover(PathMover):
@@ -652,7 +652,7 @@ class EnsembleHopMover(PathMover):
 
 #        new_set = SampleSet([sample], accepted = True)
 
-        path = paths.SampleMovePath(globalstate, [sample])
+        path = paths.SampleMovePath( [sample])
 
         return path
 
