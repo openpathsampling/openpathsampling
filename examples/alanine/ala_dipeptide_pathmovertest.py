@@ -150,7 +150,7 @@ use LeaveXEnsemble as we typically do with TIS paths.
         details=MoveDetails()
     )
 
-    first_set = SampleSet([first_sample], accepted=True)
+    first_set = SampleSet([first_sample])
 
     print first_set[0].__dict__
     print 'Set #1', first_set.__dict__

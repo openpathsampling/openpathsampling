@@ -9,8 +9,7 @@ import random
 
 import openpathsampling as paths
 from openpathsampling.todict import restores_as_stub_object
-from sample import Sample, SampleSet, EmptySampleSet, InitialSampleSet, \
-PartialSampleSet, ExclusiveSampleSet, RandomMoveSampleSet, SequentialSampleSet
+from sample import Sample, SampleSet
 
 import logging
 from ops_logging import initialization_logging
@@ -328,12 +327,12 @@ class ShootMover(PathMover):
                       ensemble=dynamics_ensemble,
                       details=details)
 
-        new_set = SampleSet(samples=[sample], predecessor=globalstate, accepted=True)
-
-
+#        new_set = SampleSet(samples=[sample], predecessor=globalstate, accepted=True)
 #        new_set = globalstate.apply([sample], accepted = details.accepted, move=self)
 
-        return new_set
+        path = paths.SampleMovePath(globalstate, samples=[sample], accepted=True)
+
+        return path
     
     
 @restores_as_stub_object
@@ -446,9 +445,11 @@ class RandomChoiceMover(PathMover):
         mover = self.movers[idx]
 
         # Run the chosen mover
-        sample_set = RandomMoveSampleSet(mover.move(sample_set))
+#        sample_set = RandomMoveSampleSet(mover.move(sample_set))
 
-        return sample_set
+        path = paths.RandomChoiceMovePath(sample_set, mover.move(sample_set))
+
+        return path
 
 @restores_as_stub_object
 class SequentialMover(PathMover):
@@ -466,25 +467,22 @@ class SequentialMover(PathMover):
         self.movers = movers
         initialization_logging(init_log, self, ['movers'])
 
-    def _generate_samples(self, globalstate):
+    def move(self, globalstate):
+        logger.debug("Starting sequential move")
+
 #        subglobal = SampleSet(self.legal_sample_set(globalstate))
 
-        results = []
+        subglobal = globalstate
+        movepaths = []
 
         for mover in self.movers:
             logger.debug("Starting sequential move step "+str(mover))
 
             # Run the sub mover
             subglobal = mover.move(subglobal)
-            results.append(subglobal)
+            movepaths.append(subglobal)
 
-        return results
-
-    def move(self, globalstate):
-        logger.debug("Starting sequential move")
-
-        results = self._generate_samples(globalstate)
-        return SequentialSampleSet(results, predecessor=globalstate)
+        return paths.SequentialMovePath(globalstate, movepaths)
 
 @restores_as_stub_object
 class PartialAcceptanceSequentialMover(SequentialMover):
@@ -501,8 +499,21 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     def move(self, globalstate):
         logger.debug("Starting partial acceptance move")
 
-        results = self._generate_samples(globalstate)
-        return PartialSampleSet(results, predecessor=globalstate)
+#        subglobal = SampleSet(self.legal_sample_set(globalstate))
+
+        subglobal = globalstate
+        movepaths = []
+
+        for mover in self.movers:
+            logger.debug("Starting sequential move step "+str(mover))
+
+            # Run the sub mover
+            subglobal = mover.move(subglobal)
+            movepaths.append(subglobal)
+            if not subglobal.accepted:
+                break
+
+        return paths.PartialMovePath(globalstate, movepaths)
 
 
 @restores_as_stub_object
@@ -522,8 +533,22 @@ class ConditionalSequentialMover(SequentialMover):
     def move(self, globalstate):
         logger.debug("Starting conditional sequential move")
 
-        results = self._generate_samples(globalstate)
-        return ExclusiveSampleSet(results, predecessor=globalstate)
+#        subglobal = SampleSet(self.legal_sample_set(globalstate))
+
+        subglobal = globalstate
+        movepaths = []
+
+        for mover in self.movers:
+            logger.debug("Starting sequential move step "+str(mover))
+
+            # Run the sub mover
+            subglobal = mover.move(subglobal)
+            movepaths.append(subglobal)
+            if not subglobal.accepted:
+                break
+
+        return paths.ExclusiveMovePath(globalstate, movepaths)
+
 
 
 # TODO: @DWHS : I am not sure what this is doing.
@@ -551,7 +576,7 @@ class ReplicaIDChange(PathMover):
                             ensemble=rep_sample.ensemble,
                             trajectory=rep_sample.trajectory
                            )
-        return SampleSet([dead_sample, new_sample], globalstate, accepted=True)
+        return paths.SampleMovePath(globalstate, [dead_sample, new_sample])
 
 @restores_as_stub_object
 class EnsembleHopMover(PathMover):
@@ -617,9 +642,11 @@ class EnsembleHopMover(PathMover):
                       replica=replica
                      )
 
-        new_set = SampleSet([sample], accepted = True)
+#        new_set = SampleSet([sample], accepted = True)
 
-        return new_set
+        path = paths.SampleMovePath(globalstate, [sample])
+
+        return path
 
 
 
