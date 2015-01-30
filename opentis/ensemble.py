@@ -488,9 +488,10 @@ class EnsembleCombination(Ensemble):
         # This makes sense since the expensive part is the ensemble testing not computing two logic operations
         if Ensemble.use_shortcircuit:
             a = self.ensemble1(trajectory, lazy)
-            logger.debug("Combination: ensemble 1 is "+str(a))
-            logger.debug("Combination: ensemble 2 is "
-                         +str(self.ensemble2(trajectory, lazy)))
+            logger.debug("Combination: " + self.ensemble1.__class__.__name__ + 
+                         " is "+str(a))
+            logger.debug("Combination: " + self.ensemble2.__class__.__name__ +   
+                         " is " +str(self.ensemble2(trajectory, lazy)))
             logger.debug("Combination: returning " + 
                          str(self.fnc(a,self.ensemble2(trajectory,lazy))))
             res_true = self.fnc(a, True)
@@ -774,13 +775,11 @@ class SequentialEnsemble(Ensemble):
             )
             if subtraj_final - subtraj_first > 0:
                 subtraj = trajectory[slice(subtraj_first, subtraj_final)]
-                #if ens_num != final_ens and not self.ensembles[ens_num](subtraj):
-                    #raise RuntimeError("I don't like it!")
                 if ens_num == final_ens:
                     if subtraj_final == traj_final:
                         # we're in the last ensemble and the whole
                         # trajectory is assigned: can we append?
-                        logger.debug("Returning can_append")
+                        logger.debug("Returning can_append for " + str(self.ensembles[ens_num].__class__.__name__))
                         return self.ensembles[ens_num].can_append(subtraj)
                     else:
                         logger.debug(
@@ -791,6 +790,13 @@ class SequentialEnsemble(Ensemble):
                 else:
                     # subtraj existed, but not yet final ensemble
                     # so we start with the next ensemble
+                    if subtraj_final != traj_final and not self.ensembles[ens_num](subtraj):
+                        logger.debug(
+                            "Couldn't assign frames " + str(subtraj_first) +
+                            " through " + str(subtraj_final) + 
+                            " to ensemble " + str(ens_num) + ": No match"
+                        )
+                        return False
                     logger.debug(
                         "Assigning frames " + str(subtraj_first) +
                         " through " + str(subtraj_final) + 
@@ -798,8 +804,7 @@ class SequentialEnsemble(Ensemble):
                     )
                     ens_num += 1
                     subtraj_first = subtraj_final
-                    #TODO: correctly, we should check that we satisfied THIS
-                    # ensemble before moving to the next one; 
+
                     logger.debug("Moving to the next ensemble " + str(ens_num))
             else:
                 if subtraj_final == traj_final:
@@ -865,6 +870,13 @@ class SequentialEnsemble(Ensemble):
                         )
                         return False
                 else:
+                    if subtraj_first != traj_first and not self.ensembles[ens_num](subtraj):
+                        logger.debug(
+                            "Couldn't assign frames " + str(subtraj_first) +
+                            " through " + str(subtraj_final) + 
+                            " to ensemble " + str(ens_num) + ": No match"
+                        )
+                        return False
                     logger.debug(
                         "Assigning frames " + str(subtraj_first) +
                         " through " + str(subtraj_final) + 
@@ -1251,22 +1263,22 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         outA = OutXEnsemble(state_vol)
         outX = OutXEnsemble(innermost_vol)
         inX = InXEnsemble(innermost_vol)
+        leaveX = LeaveXEnsemble(innermost_vol)
         interstitial = outA & inX
         #interstitial = InXEnsemble(innermost_vol - state_vol)
         start = [
             SingleFrameEnsemble(inA),
             OptionalEnsemble(interstitial),
-            outX,
-            OptionalEnsemble(interstitial)
         ]
         loop = [
-            inA,
-            OptionalEnsemble(interstitial | inA),
-            outX,
-            OptionalEnsemble(interstitial)
+            outA & leaveX,
+            inX # & hitA # redundant due to stop req for previous outA
         ]
-        end = [SingleFrameEnsemble(inA)]
-
+        end = [
+            outA & leaveX,
+            OptionalEnsemble(interstitial),
+            SingleFrameEnsemble(inA)
+        ]
         ensembles = start + loop*(n_l-1) + end
 
         super(MinusInterfaceEnsemble, self).__init__(ensembles, greedy=greedy)
