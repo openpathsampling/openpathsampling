@@ -29,7 +29,7 @@ from openpathsampling.ensemble import EnsembleFactory as ef
 from openpathsampling.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
                               InXEnsemble)
 from openpathsampling.calculation import Bootstrapping
-from openpathsampling.pathmover import PathMover, MoveDetails, SequentialMover
+from openpathsampling.pathmover import PathMover, MoveDetails, SequentialMover, ConditionalSequentialMover, PartialAcceptanceSequentialMover, ForwardShootMover
 from openpathsampling.shooting import UniformSelector
 from openpathsampling.sample import Sample, SampleSet
 
@@ -156,7 +156,7 @@ use LeaveXEnsemble as we typically do with TIS paths.
     print 'Set #1', first_set.__dict__
     print
 
-#    mover = ForwardShootMover(UniformSelector(), ensembles=interface0_ensemble)
+    mover = ForwardShootMover(UniformSelector(), ensembles=interface0_ensemble)
 
     first_path = mover_set[0].move(first_set)
 
@@ -167,8 +167,14 @@ use LeaveXEnsemble as we typically do with TIS paths.
 
     print second_set.__dict__
 
+    print second_set.__class__
+
     seq_mover = SequentialMover([mover_set[0]] * 2)
-    third_set = seq_mover.move(second_set)
+    second_path = seq_mover.move(second_set)
+
+    third_set = second_path._apply(second_set)
+
+    print second_path.accepted
 
     print interface0_ensemble(third_set[0].trajectory)
 
@@ -176,7 +182,27 @@ use LeaveXEnsemble as we typically do with TIS paths.
     print third_set[0].__dict__
     print third_set.__dict__
 
-    print third_set.move_path
+    print second_path.changes
+    print first_path.changes
+
+
+    mover3 = SequentialMover([
+        mover,
+        PartialAcceptanceSequentialMover([mover] * 2),
+        ConditionalSequentialMover([
+            PartialAcceptanceSequentialMover([mover] * 3)] * 2
+        ),
+        mover
+    ] * 3)
+
+    third_path = mover3.move(third_set)
+
+    print third_path.changes
+    print str(third_path)
+    print len(third_path)
+
+    forth_set = third_path._apply(third_set)
+    print interface0_ensemble(forth_set[0].trajectory)
 
     exit()
 

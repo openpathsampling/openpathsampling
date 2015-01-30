@@ -330,7 +330,7 @@ class ShootMover(PathMover):
 #        new_set = SampleSet(samples=[sample], predecessor=globalstate, accepted=True)
 #        new_set = globalstate.apply([sample], accepted = details.accepted, move=self)
 
-        path = paths.SampleMovePath(globalstate, samples=[sample], accepted=True)
+        path = paths.SampleMovePath(globalstate, samples=[sample], accepted=details.accepted)
 
         return path
     
@@ -431,7 +431,7 @@ class RandomChoiceMover(PathMover):
         initialization_logging(init_log, self,
                                entries=['movers', 'weights'])
     
-    def move(self, sample_set):
+    def move(self, globalstate):
         rand = np.random.random() * sum(self.weights)
         idx = 0
         prob = self.weights[0]
@@ -447,7 +447,7 @@ class RandomChoiceMover(PathMover):
         # Run the chosen mover
 #        sample_set = RandomMoveSampleSet(mover.move(sample_set))
 
-        path = paths.RandomChoiceMovePath(sample_set, mover.move(sample_set))
+        path = paths.RandomChoiceMovePath(globalstate, mover.move(globalstate))
 
         return path
 
@@ -479,8 +479,9 @@ class SequentialMover(PathMover):
             logger.debug("Starting sequential move step "+str(mover))
 
             # Run the sub mover
-            subglobal = mover.move(subglobal)
-            movepaths.append(subglobal)
+            movepath = mover.move(subglobal)
+            subglobal = movepath._apply(subglobal)
+            movepaths.append(movepath)
 
         return paths.SequentialMovePath(globalstate, movepaths)
 
@@ -508,9 +509,10 @@ class PartialAcceptanceSequentialMover(SequentialMover):
             logger.debug("Starting sequential move step "+str(mover))
 
             # Run the sub mover
-            subglobal = mover.move(subglobal)
-            movepaths.append(subglobal)
-            if not subglobal.accepted:
+            movepath = mover.move(subglobal)
+            subglobal = movepath._apply(subglobal)
+            movepaths.append(movepath)
+            if not movepath.accepted:
                 break
 
         return paths.PartialMovePath(globalstate, movepaths)
@@ -542,9 +544,11 @@ class ConditionalSequentialMover(SequentialMover):
             logger.debug("Starting sequential move step "+str(mover))
 
             # Run the sub mover
-            subglobal = mover.move(subglobal)
-            movepaths.append(subglobal)
-            if not subglobal.accepted:
+            movepath = mover.move(subglobal)
+            subglobal = movepath._apply(subglobal)
+            movepaths.append(movepath)
+
+            if not movepath.accepted:
                 break
 
         return paths.ExclusiveMovePath(globalstate, movepaths)
