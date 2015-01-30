@@ -434,18 +434,43 @@ class testRandomSubtrajectorySelectMover(object):
         self.subtraj0 = Trajectory([0.0, 1.0, 1.0, 0.0])
         self.subtraj1 = Trajectory([0.0, 1.0, 0.0])
         self.subtraj2 = Trajectory([0.0, 2.0, 0.0])
+        self.gs = SampleSet(Sample(
+            replica=0,
+            ensemble=self.subensemble,
+            trajectory=self.traj_with_3_subtrajs
+        ))
 
     def test_paths_in_ensemble(self):
         # more a test of SequentialEnsemble, but also a test of sanity
         # before the real tests
-        raise SkipTest
+        assert_equal(self.ensemble(self.traj_with_3_subtrajs), True)
+        assert_equal(self.subensemble(self.subtraj0), True)
+        assert_equal(self.subensemble(self.subtraj1), True)
+        assert_equal(self.subensemble(self.subtraj2), True)
 
     def test_accepts_all(self):
         mover = RandomSubtrajectorySelectMover(self.subensemble)
-        raise SkipTest
+        found = {}
+        for t in range(100):
+            samples = mover.move(self.gs)
+            assert_equal(len(samples), 1)
+            assert_equal(self.subensemble, samples[0].ensemble)
+            assert_equal(self.subensemble(samples[0].trajectory), True)
+            assert_equal(self.ensemble(samples[0].trajectory), False)
+            if samples[0].trajectory == self.subtraj0:
+                found[0] = True
+            elif samples[0].trajectory == self.subtraj1:
+                found[1] = True
+            elif samples[0].trajectory == self.subtraj2:
+                found[2] = True
+            else:
+                raise RuntimeError("Subtraj unknown!")
+        assert_equal(found[0] and found[1] and found[2], True)
 
     def test_nothing_allowed(self):
         mover = RandomSubtrajectorySelectMover(self.subensemble)
-        self.traj_with_no_subtrajs = []
-        raise SkipTest
+        traj_with_no_subtrajs = Trajectory([0.0, 0.0, 0.0])
+        self.gs[0].trajectory = traj_with_no_subtrajs
+        samples = mover.move(self.gs)
+        assert_equal(samples[0].trajectory, paths.Trajectory([]))
 

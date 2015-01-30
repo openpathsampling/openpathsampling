@@ -10,6 +10,7 @@ import random
 import opentis as paths
 from opentis.todict import restores_as_stub_object
 from sample import Sample, SampleSet
+from trajectory import Trajectory
 
 import logging
 from ops_logging import initialization_logging
@@ -665,7 +666,7 @@ class RandomSubtrajectorySelectMover(PathMover):
         trajectory = rep_sample.trajectory
         replica = rep_sample.replica
 
-        detail = MoveDetails()
+        details = MoveDetails()
         details.inputs = [trajectory]
         details.mover_path.append(self)
 
