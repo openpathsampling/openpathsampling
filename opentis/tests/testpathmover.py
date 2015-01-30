@@ -11,10 +11,12 @@ from nose.plugins.skip import Skip, SkipTest
 from test_helpers import (assert_equal_array_array, 
                           assert_not_equal_array_array,
                           make_1d_traj,
-                          CalvinDynamics
+                          CalvinDynamics,
+                          CallIdentity
                          )
-
+import opentis as paths
 from opentis.ensemble import LengthEnsemble
+from opentis.volume import LambdaVolume
 from opentis.sample import SampleSet, Sample
 from opentis.pathmover import *
 
@@ -410,5 +412,40 @@ class testConditionalSequentialMover(testSequentialMover):
         raise SkipTest
 
     def test_restricted_by_ensemble(self):
+        raise SkipTest
+
+class testRandomSubtrajectorySelectMover(object):
+    def setup(self):
+        op = CallIdentity()
+        vol = paths.LambdaVolume(op, -0.5, 0.5)
+        inX = paths.InXEnsemble(vol)
+        outX = paths.OutXEnsemble(vol)
+        self.ensemble = paths.SequentialEnsemble([
+            inX, outX, inX, outX, inX, outX, inX
+        ])
+        self.subensemble = paths.SequentialEnsemble([
+            paths.SingleFrameEnsemble(inX),
+            outX,
+            paths.SingleFrameEnsemble(inX)
+        ])
+        self.traj_with_3_subtrajs = Trajectory(
+            [0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 2.0, 0.0]
+        )
+        self.subtraj0 = Trajectory([0.0, 1.0, 1.0, 0.0])
+        self.subtraj1 = Trajectory([0.0, 1.0, 0.0])
+        self.subtraj2 = Trajectory([0.0, 2.0, 0.0])
+
+    def test_paths_in_ensemble(self):
+        # more a test of SequentialEnsemble, but also a test of sanity
+        # before the real tests
+        raise SkipTest
+
+    def test_accepts_all(self):
+        mover = RandomSubtrajectorySelectMover(self.subensemble)
+        raise SkipTest
+
+    def test_nothing_allowed(self):
+        mover = RandomSubtrajectorySelectMover(self.subensemble)
+        self.traj_with_no_subtrajs = []
         raise SkipTest
 

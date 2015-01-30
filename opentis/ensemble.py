@@ -231,7 +231,8 @@ class Ensemble(object):
 
     def split(self, trajectory, lazy=True, max_length=None, min_length=1, overlap=1):
         '''
-        Returns a list of trajectories that contain sub-trajectories which are in the given ensemble.
+        Returns a list of trajectories that contain sub-trajectories which
+        are in the given ensemble.
 
         Parameters
         ----------

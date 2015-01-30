@@ -1,4 +1,4 @@
-from calculation import Calculation, Bootstrapping
+from calculation import Calculation, Bootstrapping, PathSampling
 
 from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     EntersXEnsemble, EmptyEnsemble, ExitsXEnsemble, FullEnsemble, \
@@ -6,7 +6,9 @@ from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble, \
     LeaveXEnsemble, LengthEnsemble, LoadedEnsemble, NegatedEnsemble, \
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \
-    SequentialEnsemble, AndEnsemble, OrEnsemble, XorEnsemble, SubEnsemble
+    SequentialEnsemble, AndEnsemble, OrEnsemble, XorEnsemble, SubEnsemble, \
+    SingleFrameEnsemble
+
 
 
 from snapshot import Snapshot, Configuration, Momentum
