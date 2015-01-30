@@ -796,7 +796,7 @@ class SequentialEnsemble(Ensemble):
                             " through " + str(subtraj_final) + 
                             " to ensemble " + str(ens_num) + ": No match"
                         )
-                        return False
+
                     logger.debug(
                         "Assigning frames " + str(subtraj_first) +
                         " through " + str(subtraj_final) + 
@@ -825,9 +825,8 @@ class SequentialEnsemble(Ensemble):
                         return False
                     else:
                         logger.debug(
-                            "Assigning frames " + str(subtraj_first) +
-                            " through " + str(subtraj_final) + 
-                            " to ensemble " + str(ens_num)
+                            "Reassigning all frames, starting with ensemble " +
+                            str(ens_first)
                         )
                         ens_first += 1
                         ens_num = ens_first
@@ -876,7 +875,6 @@ class SequentialEnsemble(Ensemble):
                             " through " + str(subtraj_final) + 
                             " to ensemble " + str(ens_num) + ": No match"
                         )
-                        return False
                     logger.debug(
                         "Assigning frames " + str(subtraj_first) +
                         " through " + str(subtraj_final) + 
@@ -899,9 +897,8 @@ class SequentialEnsemble(Ensemble):
                         return False
                     else:
                         logger.debug(
-                            "Assigning frames " + str(subtraj_first) +
-                            " through " + str(subtraj_final) + 
-                            " to ensemble " + str(ens_num)
+                            "Reassigning all frames, starting with ensemble " +
+                            str(ens_final)
                         )
                         ens_final -= 1
                         ens_num = ens_final

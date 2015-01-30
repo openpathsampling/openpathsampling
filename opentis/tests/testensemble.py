@@ -1203,8 +1203,8 @@ class testMinusInterfaceEnsemble(EnsembleTest):
             'in_in_cross_in',
             'out_in_cross_in'
         ]
-        #self._test_everything(self.minus_interstitial_nl2.can_append,
-                              #non_default, True)
+        self._test_everything(self.minus_interstitial_nl2.can_append,
+                              non_default, True)
 
     def test_minus_interstitial_nl2_can_prepend(self):
         non_default = [
@@ -1212,9 +1212,8 @@ class testMinusInterfaceEnsemble(EnsembleTest):
             'in_out_cross_out_in_out_in_out_cross_out_in',
             'in_cross_in_cross'
         ]
-        #self._test_everything(self.minus_interstitial_nl2.can_prepend,
-                              #non_default, True)
-        raise SkipTest
+        self._test_everything(self.minus_interstitial_nl2.can_prepend,
+                              non_default, True)
 
     def test_minus_nl3_ensemble(self):
         raise SkipTest
