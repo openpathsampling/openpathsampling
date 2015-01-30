@@ -1124,11 +1124,6 @@ class testMinusInterfaceEnsemble(EnsembleTest):
             innermost_vol=vol1,
             n_l=3
         )
-        self.minus_nl4 = MinusInterfaceEnsemble(
-            state_vol=vol1,
-            innermost_vol=vol1,
-            n_l=4
-        )
 
     @raises(ValueError)
     def test_minus_nl1_fail(self):
@@ -1216,28 +1211,22 @@ class testMinusInterfaceEnsemble(EnsembleTest):
                               non_default, True)
 
     def test_minus_nl3_ensemble(self):
-        raise SkipTest
+        non_default = [
+            'in_out_cross_out_in_out_in_out_cross_out_in',
+        ]
+        self._test_everything(self.minus_nl3, non_default, False)
 
     def test_minus_nl3_can_append(self):
-        raise SkipTest
+        non_default = [
+            'in_out_cross_out_in_out_in_out_cross_out_in',
+            'out_in_in_in_out_in_out_in_in_in_out'
+        ]
+        self._test_everything(self.minus_nl3.can_append, non_default, True)
 
     def test_minus_nl3_can_prepend(self):
-        raise SkipTest
-
-    def test_minus_nl4_ensemble(self):
-        results = {}
-        for test in ttraj.keys():
-            results[test] = False
-
-        for test in results.keys():
-            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.minus_nl4, ttraj[test], results[test],
-                              failmsg)
-        raise SkipTest
-
-    def test_minus_nl4_can_append(self):
-        raise SkipTest
-
-    def test_minus_nl4_can_prepend(self):
-        raise SkipTest
+        non_default = [
+            'in_out_cross_out_in_out_in_out_cross_out_in',
+            'out_in_in_in_out_in_out_in_in_in_out'
+        ]
+        self._test_everything(self.minus_nl3.can_prepend, non_default, True)
 
