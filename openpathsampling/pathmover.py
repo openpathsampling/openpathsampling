@@ -330,7 +330,11 @@ class ShootMover(PathMover):
 #        new_set = SampleSet(samples=[sample], predecessor=globalstate, accepted=True)
 #        new_set = globalstate.apply([sample], accepted = details.accepted, move=self)
 
-        path = paths.SampleMovePath(globalstate, samples=[sample], accepted=details.accepted)
+        path = paths.SampleMovePath(globalstate,
+                samples=[sample],
+                accepted=details.accepted,
+                mover=self
+        )
 
         return path
     
@@ -480,7 +484,7 @@ class SequentialMover(PathMover):
 
             # Run the sub mover
             movepath = mover.move(subglobal)
-            subglobal = movepath._apply(subglobal)
+            subglobal = movepath.apply_to(subglobal)
             movepaths.append(movepath)
 
         return paths.SequentialMovePath(globalstate, movepaths)
@@ -510,7 +514,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
 
             # Run the sub mover
             movepath = mover.move(subglobal)
-            subglobal = movepath._apply(subglobal)
+            subglobal = movepath.apply_to(subglobal)
             movepaths.append(movepath)
             if not movepath.accepted:
                 break
@@ -545,7 +549,7 @@ class ConditionalSequentialMover(SequentialMover):
 
             # Run the sub mover
             movepath = mover.move(subglobal)
-            subglobal = movepath._apply(subglobal)
+            subglobal = movepath.apply_to(subglobal)
             movepaths.append(movepath)
 
             if not movepath.accepted:

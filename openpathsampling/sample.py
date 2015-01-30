@@ -41,11 +41,15 @@ class SampleSet(object):
         A dictionary with replica IDs as keys and lists of Samples as values
     '''
 
-    def __init__(self, samples):
+    def __init__(self, samples, movepath=None):
         self.samples = []
         self.ensemble_dict = {}
         self.replica_dict = {}
         self.extend(samples)
+        if movepath is None:
+            self.movepath = paths.EmptyMovePath
+        else:
+            self.movepath = movepath
 
     def __getitem__(self, key):
         if isinstance(key, paths.Ensemble):
@@ -204,6 +208,16 @@ class SampleSet(object):
             assert self.samples.count(samp) == 1, \
                     "More than one instance of %r!" % samp
 
+    def __add__(self, other):
+        """
+        Add the move path to the Sample and return the new sample set
+        """
+        if other.origin is not self:
+            # Throw marning
+            print 'Might not be compatible'
+        else:
+            new_set = other.apply_to(self)
+            return new_set
 
     # @property
     # def ensemble_dict(self):

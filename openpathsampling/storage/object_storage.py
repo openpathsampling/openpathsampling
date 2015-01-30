@@ -220,7 +220,6 @@ class ObjectStore(object):
         self.content_class.base_cls = self.content_class
 
         # add a property idx that keeps the storage reference
-
         def _idx(this):
             if not hasattr(this, '_idx'):
                 this._idx = dict()

@@ -162,7 +162,7 @@ use LeaveXEnsemble as we typically do with TIS paths.
 
     print first_path.__dict__
 
-    second_set = first_path._apply(first_set)
+    second_set = first_set + first_path
 #    second_set = first_set + first_path
 
     print second_set.__dict__
@@ -172,7 +172,7 @@ use LeaveXEnsemble as we typically do with TIS paths.
     seq_mover = SequentialMover([mover_set[0]] * 2)
     second_path = seq_mover.move(second_set)
 
-    third_set = second_path._apply(second_set)
+    third_set = second_set + second_path
 
     print second_path.accepted
 
@@ -201,8 +201,10 @@ use LeaveXEnsemble as we typically do with TIS paths.
     print str(third_path)
     print len(third_path)
 
-    forth_set = third_path._apply(third_set)
+    forth_set = third_set + third_path
     print interface0_ensemble(forth_set[0].trajectory)
+
+    engine.storage.sampleset.save(forth_set)
 
     exit()
 
