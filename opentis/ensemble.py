@@ -721,6 +721,8 @@ class SequentialEnsemble(Ensemble):
             subtraj_final += 1
             # TODO: replace with append; probably faster
             subtraj = traj[slice(subtraj_first, subtraj_final+1)]
+        #if not ens(subtraj):
+            #raise RuntimeError("I guess this needs to be forced here!")
         return subtraj_final
     
     def _find_subtraj_first(self, traj, subtraj_final, ens_num):
@@ -771,6 +773,8 @@ class SequentialEnsemble(Ensemble):
             )
             if subtraj_final - subtraj_first > 0:
                 subtraj = trajectory[slice(subtraj_first, subtraj_final)]
+                #if ens_num != final_ens and not self.ensembles[ens_num](subtraj):
+                    #raise RuntimeError("I don't like it!")
                 if ens_num == final_ens:
                     if subtraj_final == traj_final:
                         # we're in the last ensemble and the whole
@@ -793,6 +797,8 @@ class SequentialEnsemble(Ensemble):
                     )
                     ens_num += 1
                     subtraj_first = subtraj_final
+                    #TODO: correctly, we should check that we satisfied THIS
+                    # ensemble before moving to the next one; 
                     logger.debug("Moving to the next ensemble " + str(ens_num))
             else:
                 if subtraj_final == traj_final:
@@ -1254,7 +1260,7 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         ]
         loop = [
             inA,
-            OptionalEnsemble(interstitial | InA),
+            OptionalEnsemble(interstitial | inA),
             outX,
             OptionalEnsemble(interstitial)
         ]
