@@ -150,7 +150,7 @@ use LeaveXEnsemble as we typically do with TIS paths.
         details=MoveDetails()
     )
 
-    first_set = SampleSet([first_sample], accepted=True, move_path=['Initialization'])
+    first_set = SampleSet([first_sample], accepted=True)
 
     print first_set[0].__dict__
     print 'Set #1', first_set.__dict__
@@ -160,12 +160,13 @@ use LeaveXEnsemble as we typically do with TIS paths.
 
     second_set = mover_set[0].move(first_set)
 
-    print second_set[0].details.__dict__
-    print second_set[0].__dict__
     print second_set.__dict__
 
+    print second_set[0].details.__dict__
+    print second_set[0].__dict__
+
     seq_mover = SequentialMover([mover_set[0]] * 2)
-    third_set = seq_mover.move(second_set)
+    third_set = seq_mover.move(second_set.destination)
 
     print interface0_ensemble(third_set[0].trajectory)
 
