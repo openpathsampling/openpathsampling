@@ -485,3 +485,14 @@ class testFirstSubtrajectorySelectMover(SubtrajectorySelectTester):
         assert_equal(self.subensemble(samples[0].trajectory), True)
         assert_equal(self.ensemble(samples[0].trajectory), False)
         assert_equal(samples[0].trajectory, self.subtraj0)
+
+class testFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
+    def test_move(self):
+        mover = FinalSubtrajectorySelectMover(self.subensemble)
+        samples = mover.move(self.gs)
+        assert_equal(len(samples), 1)
+        assert_equal(self.subensemble, samples[0].ensemble)
+        assert_equal(self.subensemble(samples[0].trajectory), True)
+        assert_equal(self.ensemble(samples[0].trajectory), False)
+        assert_equal(samples[0].trajectory, self.subtraj2)
+
