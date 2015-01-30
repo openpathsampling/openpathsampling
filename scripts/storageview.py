@@ -101,6 +101,13 @@ if __name__ == '__main__':
         obj = storage.collectivevariable.load(p_idx)
         nline(p_idx,obj.name, str(obj.storage_caches[storage]))
 
+    headline("SampleSets")
+
+    for p_idx in range(0, storage.sampleset.count()):
+        obj = storage.sampleset.load(p_idx)
+        nline(p_idx,obj.name, ':')
+        print str(obj)
+
 
     headline("Samples")
 
@@ -159,13 +166,13 @@ if __name__ == '__main__':
 #        sample.details
 
         nline(o_idx, '', sample.details.json)
-        nline(o_idx, str(sample.details.mover.name),
-              (str([t.idx[storage] for t in sample.details.inputs])
-               + " -> " + str(sample.details.trial.idx[storage])
-               + " in " + sample.ensemble.name
-               + " [" + str(sample.ensemble.idx[storage]) + "]"
-              )
-             )
+#        nline(o_idx, str(sample.details.mover.name),
+#              (str([t.idx[storage] for t in sample.details.inputs])
+#               + " -> " + str(sample.details.trial.idx[storage])
+#               + " in " + sample.ensemble.name
+#               + " [" + str(sample.ensemble.idx[storage]) + "]"
+#              )
+#             )
 #        nline(o_idx, '', str(sample.details.start_point.index) + " -> " + str(sample.details.final_point.index))
         if hasattr(sample.details, 'start'):
             print_traj('start', sample.details.start)

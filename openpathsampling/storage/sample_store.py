@@ -118,7 +118,7 @@ class SampleSetStore(ObjectStore):
         print sampleset.movepath.idx
 
         self.storage.movepaths.save(sampleset.movepath)
-        self.set_object('sampleset_movepath_idx', idx, sampleset.movepath)
+        self.set_object('sampleset_movepath', idx, sampleset.movepath)
 
 
     def sample_indices(self, idx):

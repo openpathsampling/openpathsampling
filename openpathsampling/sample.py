@@ -47,7 +47,7 @@ class SampleSet(object):
         self.replica_dict = {}
         self.extend(samples)
         if movepath is None:
-            self.movepath = paths.EmptyMovePath
+            self.movepath = paths.EmptyMovePath()
         else:
             self.movepath = movepath
 
@@ -212,12 +212,9 @@ class SampleSet(object):
         """
         Add the move path to the Sample and return the new sample set
         """
-        if other.origin is not self:
-            # Throw marning
-            print 'Might not be compatible'
-        else:
-            new_set = other.apply_to(self)
-            return new_set
+        new_set = other.apply_to(self)
+        new_set.movepath = other
+        return new_set
 
     # @property
     # def ensemble_dict(self):

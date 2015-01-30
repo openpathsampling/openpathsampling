@@ -43,17 +43,15 @@ class MovePath(object):
         spl = [' |  ' + p if p[0] == ' ' else ' +- ' + p for p in spl]
         return '\n'.join(spl)
 
-    def __init__(self, origin, accepted=True, mover=None):
+    def __init__(self, accepted=True, mover=None):
         self._accepted = accepted
         self._destination = None
-        self.origin = origin
         self._samples = []
         self._changes = None
         self.mover = mover
 
     def to_dict(self):
         return {
-            'origin' : self.origin,
             'accepted' : self.accepted,
             'mover' : self.mover,
         }
@@ -77,11 +75,7 @@ class MovePath(object):
 
     @property
     def __add__(self, other):
-        if other.destination is not self.origin:
-            # Throw a warningn. If done correctly should not happen
-            print 'Might not be compatible'
-        else:
-            return SequentialMovePath([self, other])
+        return SequentialMovePath([self, other])
 
     def apply_to(self, other):
         """
@@ -127,6 +121,7 @@ class MovePath(object):
         else:
             return 'SampleMove : %s : %s :[]' % (self.mover.__class__.__name__, self.accepted)
 
+
 @restores_as_full_object
 class EmptyMovePath(MovePath):
     def __init__(self):
@@ -149,8 +144,8 @@ class SampleMovePath(MovePath):
 
     Most common
     """
-    def __init__(self, origin, samples, accepted=True, mover=None):
-        super(SampleMovePath, self).__init__(origin=origin, accepted=accepted, mover=mover)
+    def __init__(self, samples, accepted=True, mover=None):
+        super(SampleMovePath, self).__init__(accepted=accepted, mover=mover)
         if samples is None:
             return
 
@@ -165,7 +160,6 @@ class SampleMovePath(MovePath):
 
     def to_dict(self):
         return {
-            'origin' : self.origin,
             'accepted' : self.accepted,
             'mover' : self.mover,
             'samples' : self._samples
@@ -184,15 +178,12 @@ class RandomChoiceMovePath(MovePath):
     RandomMoveMovePath contains only a reference to the underlying used
     MovePath
     """
-    def __init__(self, origin, movepath):
-        super(RandomChoiceMovePath, self).__init__(origin=origin)
+    def __init__(self, movepath):
+        super(RandomChoiceMovePath, self).__init__()
         self.movepath = movepath
 
     def to_dict(self):
         return {
-            'origin' : self.origin,
-            'accepted' : self.accepted,
-            'mover' : self.mover,
             'movepath' : self.movepath
         }
 
@@ -212,15 +203,12 @@ class SequentialMovePath(MovePath):
     SequentialMovePath has no own samples, only inferred Sampled from the
     underlying MovePaths
     """
-    def __init__(self, origin, movepaths):
-        super(SequentialMovePath, self).__init__(origin=origin, accepted=None)
+    def __init__(self, movepaths):
+        super(SequentialMovePath, self).__init__(accepted=None)
         self.movepaths = movepaths
 
     def to_dict(self):
         return {
-            'origin' : self.origin,
-            'accepted' : self.accepted,
-            'mover' : self.mover,
             'movepaths' : self.movepaths
         }
 
