@@ -414,7 +414,8 @@ class testConditionalSequentialMover(testSequentialMover):
     def test_restricted_by_ensemble(self):
         raise SkipTest
 
-class testRandomSubtrajectorySelectMover(object):
+class SubtrajectorySelectTester(object):
+
     def setup(self):
         op = CallIdentity()
         vol = paths.LambdaVolume(op, -0.5, 0.5)
@@ -448,6 +449,7 @@ class testRandomSubtrajectorySelectMover(object):
         assert_equal(self.subensemble(self.subtraj1), True)
         assert_equal(self.subensemble(self.subtraj2), True)
 
+class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
     def test_accepts_all(self):
         mover = RandomSubtrajectorySelectMover(self.subensemble)
         found = {}
@@ -474,3 +476,12 @@ class testRandomSubtrajectorySelectMover(object):
         samples = mover.move(self.gs)
         assert_equal(samples[0].trajectory, paths.Trajectory([]))
 
+class testFirstSubtrajectorySelectMover(SubtrajectorySelectTester):
+    def test_move(self):
+        mover = FirstSubtrajectorySelectMover(self.subensemble)
+        samples = mover.move(self.gs)
+        assert_equal(len(samples), 1)
+        assert_equal(self.subensemble, samples[0].ensemble)
+        assert_equal(self.subensemble(samples[0].trajectory), True)
+        assert_equal(self.ensemble(samples[0].trajectory), False)
+        assert_equal(samples[0].trajectory, self.subtraj0)

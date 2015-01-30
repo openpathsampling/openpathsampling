@@ -690,6 +690,17 @@ class RandomSubtrajectorySelectMover(PathMover):
         )
         return [sample]
 
+@restores_as_stub_object
+class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
+    '''
+    Takes a trajectory and returns the first subtrajectory which satisfies
+    the subensemble associated with this PathMover. 
+
+    If there are no subtrajectories which satisfy the ensemble, this returns
+    the zero-length trajectory.
+    '''
+    def _choose(self, trajectory_list):
+        return trajectory_list[0]
 
 
 class PathReversalMover(PathMover):
