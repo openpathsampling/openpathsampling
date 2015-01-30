@@ -496,3 +496,12 @@ class testFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
         assert_equal(self.ensemble(samples[0].trajectory), False)
         assert_equal(samples[0].trajectory, self.subtraj2)
 
+class testForceEnsembleChangeMover(object):
+    def setup(self):
+        pass
+    
+    def test_in_ensemble(self):
+        raise SkipTest
+
+    def test_not_in_ensemble(self):
+        raise SkipTest

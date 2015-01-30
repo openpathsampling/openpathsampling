@@ -567,6 +567,8 @@ class ReplicaIDChange(PathMover):
         return [dead_sample, new_sample]
 
 
+
+
 class EnsembleHopMover(PathMover):
     def __init__(self, bias=None, ensembles=None, replicas='all'):
         # TODO: maybe allow a version of this with a single ensemble and ANY
@@ -582,7 +584,7 @@ class EnsembleHopMover(PathMover):
         initialization_logging(logger=init_log, obj=self,
                                entries=['bias'])
 
-    def move(self, globalstate):
+    def select_ensemble_pair(self, globalstate):
         # ensemble hops are in the order [from, to]
         initial_ensembles = [pair[0] for pair in self.ensembles]
         logger.debug("initial_ensembles: " + str(initial_ensembles))
@@ -598,6 +600,10 @@ class EnsembleHopMover(PathMover):
                        if pair[0] in legal_ensembles]
         logger.debug("Legal pairs: " + str(legal_pairs))
         ens_pair = random.choice(legal_pairs)
+        return ens_pair
+
+    def move(self, globalstate):
+        ens_pair = self.select_ensemble_pair(globalstate)
         ens_from = ens_pair[0]
         ens_to = ens_pair[1]
 
@@ -625,10 +631,38 @@ class EnsembleHopMover(PathMover):
             setattr(details, 'result_ensemble', ens_from)
 
         path = paths.Sample(trajectory=trajectory,
-                      ensemble=details.result_ensemble, 
-                      details=details,
-                      replica=replica
-                     )
+                            ensemble=details.result_ensemble, 
+                            details=details,
+                            replica=replica
+                           )
+        return [path]
+
+
+class ForceEnsembleChangeMover(EnsembleHopMover):
+    def __init__(self, ensembles=None, replicas='all'):
+        # no bias allowed
+        super(ForceEnsembleChangeMover, self).__init__(ensembles, replicas)
+
+    def __move__(self, globalstate):
+        ens_pair = self.select_ensemble_pair(globalstate)
+        ens_from = ens_pair[0]
+        ens_to = ens_pair[1]
+        rep_sample = self.select_sample(globalstate, ens_from)
+        logger.debug("Selected sample: " + repr(rep_sample))
+        details = MoveDetails()
+        details.accepted = False
+        details.inputs = [trajectory]
+        details.mover_path.append(self)
+        details.result = trajectory
+        setattr(details, 'initial_ensemble', ens_from)
+        setattr(details, 'trial_ensemble', ens_to)
+        setattr(details, 'result_ensemble', ens_to)
+
+        path = paths.Sample(trajectory=trajectory,
+                            ensemble=details.result_ensemble, 
+                            details=details,
+                            replica=replica
+                           )
         return [path]
 
 
