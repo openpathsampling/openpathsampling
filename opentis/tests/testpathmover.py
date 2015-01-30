@@ -498,10 +498,32 @@ class testFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
 
 class testForceEnsembleChangeMover(object):
     def setup(self):
-        pass
-    
+        traj = Trajectory([-0.5, 0.7, 1.1])
+        op = CallIdentity()
+        volA = LambdaVolume(op, -100, 0.0)
+        volB = LambdaVolume(op, 1.0, 100)
+        volX = LambdaVolume(op, -100, 0.25)
+        self.tis = ef.TISEnsemble(volA, volB, volX)
+        self.len3 = LengthEnsemble(3)
+        self.len2 = LengthEnsemble(2)
+        self.gs = SampleSet(Sample(
+            trajectory=traj,
+            ensemble=self.tis,
+            replica=0
+        ))
+
     def test_in_ensemble(self):
-        raise SkipTest
+        mover = ForceEnsembleChangeMover(ensembles=[[self.tis, self.len3]])
+        samples = mover.move(self.gs)
+        assert_equal(samples[0].details.initial_ensemble(samples[0].trajectory),
+                     True)
+        assert_equal(samples[0].ensemble(samples[0].trajectory), True)
+        assert_equal(samples[0].ensemble, self.len3)
 
     def test_not_in_ensemble(self):
-        raise SkipTest
+        mover = ForceEnsembleChangeMover(ensembles=[[self.tis, self.len2]])
+        samples = mover.move(self.gs)
+        assert_equal(samples[0].details.initial_ensemble(samples[0].trajectory),
+                     True)
+        assert_equal(samples[0].ensemble, self.len2)
+        assert_equal(samples[0].ensemble(samples[0].trajectory), False)

@@ -641,14 +641,19 @@ class EnsembleHopMover(PathMover):
 class ForceEnsembleChangeMover(EnsembleHopMover):
     def __init__(self, ensembles=None, replicas='all'):
         # no bias allowed
-        super(ForceEnsembleChangeMover, self).__init__(ensembles, replicas)
+        super(ForceEnsembleChangeMover, self).__init__(ensembles=ensembles,
+                                                       replicas=replicas)
 
-    def __move__(self, globalstate):
+    def move(self, globalstate):
         ens_pair = self.select_ensemble_pair(globalstate)
         ens_from = ens_pair[0]
         ens_to = ens_pair[1]
         rep_sample = self.select_sample(globalstate, ens_from)
         logger.debug("Selected sample: " + repr(rep_sample))
+
+        replica = rep_sample.replica
+        trajectory = rep_sample.trajectory
+
         details = MoveDetails()
         details.accepted = False
         details.inputs = [trajectory]
