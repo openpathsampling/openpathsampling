@@ -1253,9 +1253,33 @@ class SingleFrameEnsemble(AlteredEnsemble):
         return "{"+self.orig_ens.__str__()+"} (SINGLE FRAME)"
     
 class MinusInterfaceEnsemble(SequentialEnsemble):
+    '''
+    This creates an ensemble for the minus interface. 
+
+    Parameters
+    ----------
+    state_vol : Volume
+        The Volume which defines the state for this minus interface
+    innermost_vol : Volume
+        The Volume defining the innermost interface with which this minus
+        interface does its replica exchange.
+    n_l : integer (greater than one)
+        The number of segments crossing innermost_vol for this interface.
+    
+    The specific implementation allows us to use the multiple-segment minus
+    ensemble described by Swenson and Bolhuis. The minus interface was
+    originally developed by van Erp. For more details, see the section
+    "Anatomy of a PathMover: the Minus Move" in the OpenPathSampling
+    Documentation.
+
+    References
+    ----------
+    D.W.H. Swenson and P.G. Bolhuis. J. Chem. Phys. 141, 044101 (2014). 
+    doi:10.1063/1.4890037
+    '''
     def __init__(self, state_vol, innermost_vol, n_l=2, greedy=False):
         if (n_l < 2):
-            raise ValueError("The number of exits n_l must be at least 2")
+            raise ValueError("The number of segments n_l must be at least 2")
         inA = InXEnsemble(state_vol)
         outA = OutXEnsemble(state_vol)
         outX = OutXEnsemble(innermost_vol)
