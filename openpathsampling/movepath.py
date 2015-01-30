@@ -59,7 +59,7 @@ class MovePath(object):
         return True
 
     @property
-    def __radd__(self, other):
+    def __iadd__(self, other):
         if other is self.origin:
             if self._destination is None:
                 self._destination = self._apply(other)

@@ -205,57 +205,48 @@ class SampleSet(object):
                     "More than one instance of %r!" % samp
 
 
-    @property
-    def ensemble_dict(self):
-        if self._ensemble_dict is None:
-            self._ensemble_dict = self._get_ensemble_dict()
-
-        return self._ensemble_dict
-
-    def _get_ensemble_dict(self):
-        """
-        Returns the dictionary of ensembles and their samples but not cached
-        :return:
-        """
-        ensembles = set([sample.ensemble for sample in self.samples])
-        print ensembles
-        return { sample.ensemble : [sample for sample in self.samples if sample.ensemble is ensemble] for ensemble in ensembles}
-
-
-    @property
-    def replica_dict(self):
-        if self._replica_dict is None:
-            self._replica_dict = self._get_replica_dict()
-
-        return self._replica_dict
-
-    def _get_replica_dict(self):
-        """
-        Returns the dictionary of replica and their samples but not cached
-        :return:
-        """
-        replicas = set([sample.replica for sample in self.samples])
-        return { sample.replica : [sample for sample in self.samples if sample.replica is replica] for replica in replicas}
-
-    def __plus__(self, other):
-        if other.predecessor is self:
-            newset = self.copy()
-            for sample in other._samples:
-                if sample not in self._samples:
-                    self._append(sample)
-
-            return newset
-        else:
-            raise ValueError('Incompatible MovePaths')
-
-    def __getitem__(self, key):
-        if isinstance(key, paths.Ensemble):
-            print self.ensemble_dict
-            return random.choice(self.ensemble_dict[key])
-        else:
-            print self.replica_dict
-            return random.choice(self.replica_dict[key])
-
+    # @property
+    # def ensemble_dict(self):
+    #     if self._ensemble_dict is None:
+    #         self._ensemble_dict = self._get_ensemble_dict()
+    #
+    #     return self._ensemble_dict
+    #
+    # def _get_ensemble_dict(self):
+    #     """
+    #     Returns the dictionary of ensembles and their samples but not cached
+    #     :return:
+    #     """
+    #     ensembles = set([sample.ensemble for sample in self.samples])
+    #     print ensembles
+    #     return { sample.ensemble : [sample for sample in self.samples if sample.ensemble is ensemble] for ensemble in ensembles}
+    #
+    #
+    # @property
+    # def replica_dict(self):
+    #     if self._replica_dict is None:
+    #         self._replica_dict = self._get_replica_dict()
+    #
+    #     return self._replica_dict
+    #
+    # def _get_replica_dict(self):
+    #     """
+    #     Returns the dictionary of replica and their samples but not cached
+    #     :return:
+    #     """
+    #     replicas = set([sample.replica for sample in self.samples])
+    #     return { sample.replica : [sample for sample in self.samples if sample.replica is replica] for replica in replicas}
+    #
+    # def __plus__(self, other):
+    #     if other.predecessor is self:
+    #         newset = self.copy()
+    #         for sample in other._samples:
+    #             if sample not in self._samples:
+    #                 self._append(sample)
+    #
+    #         return newset
+    #     else:
+    #         raise ValueError('Incompatible MovePaths')
 
 
 class Sample(object):

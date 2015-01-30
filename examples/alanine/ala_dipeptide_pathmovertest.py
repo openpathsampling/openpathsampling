@@ -158,15 +158,17 @@ use LeaveXEnsemble as we typically do with TIS paths.
 
 #    mover = ForwardShootMover(UniformSelector(), ensembles=interface0_ensemble)
 
-    second_set = mover_set[0].move(first_set)
+    first_path = mover_set[0].move(first_set)
+
+    print first_path.__dict__
+
+    second_set = first_path._apply(first_set)
+#    second_set = first_set + first_path
 
     print second_set.__dict__
 
-    print second_set[0].details.__dict__
-    print second_set[0].__dict__
-
     seq_mover = SequentialMover([mover_set[0]] * 2)
-    third_set = seq_mover.move(second_set.destination)
+    third_set = seq_mover.move(second_set)
 
     print interface0_ensemble(third_set[0].trajectory)
 
