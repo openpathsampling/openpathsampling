@@ -10,7 +10,10 @@ import random
 import opentis as paths
 from opentis.todict import restores_as_stub_object
 from sample import Sample, SampleSet
+# TODO: switch usage of the next paths.*
+from ensemble import Ensemble
 from trajectory import Trajectory
+
 
 import logging
 from ops_logging import initialization_logging
@@ -567,8 +570,6 @@ class ReplicaIDChange(PathMover):
         return [dead_sample, new_sample]
 
 
-
-
 class EnsembleHopMover(PathMover):
     def __init__(self, bias=None, ensembles=None, replicas='all'):
         # TODO: maybe allow a version of this with a single ensemble and ANY
@@ -785,18 +786,51 @@ class PathReversalMover(PathMover):
         return [sample]
 
 
-class ReplicaExchange(PathMover):
-    # TODO: Might put the target ensembles into the Mover instance, which means we need lots of mover instances for all ensemble switches
-    def move(self, trajectory1, trajectory2, ensemble1, ensemble2):
+class ReplicaExchangeMover(PathMover):
+    def __init__(self, bias=None, ensembles=None, replicas='all'):
+        if replicas=='all' and ensembles is None:
+            # replicas MUST be a non-empty list of pairs
+            raise ValueError("Specify replicas for ReplicaExchangeMover")
+        if replicas != 'all':
+            replicas = make_list_of_pairs(replicas)
+        ensembles = make_list_of_pairs(ensembles)
+        # either replicas or ensembles must be a list of pairs; more
+        # complicated filtering can be done with a wrapper class
+        super(ReplicaExchangeMover, self).__init__(ensembles=ensembles, 
+                                                   replicas=replicas)
+        # TODO: add support for bias; cf EnsembleHopMover
+        self.bias = bias
+        initialization_logging(logger=init_log, obj=self,
+                               entries=['bias'])
+
+
+    def move(self, globalstate):
+        if self.ensembles is not None:
+            [ens1, ens2] = random.choice(self.ensembles)
+            s1 = self.select_sample(globalstate, ens1)
+            s2 = self.select_sample(globalstate, ens2)
+        else:
+            [rep1, rep2] = random.choice(self.replicas)
+            s1 = globalstate[rep1]
+            s2 = globalstate[rep2]
+        
+        # convert sample to the language used here before
+        trajectory1 = s1.trajectory
+        trajectory2 = s2.trajectory
+        ensemble1 = s1.ensemble
+        ensemble2 = s2.ensemble
+        replica1 = s1.replica
+        replica2 = s2.replica
+
         from1to2 = ensemble2(trajectory1)
-        logger.debug("trajectory " + trajectory1 +
+        logger.debug("trajectory " + repr(trajectory1) +
                      " into ensemble " + repr(ensemble2) +
-                     " : " + from1to2)
+                     " : " + str(from1to2))
         from2to1 = ensemble1(trajectory2)
-        logger.debug("trajectory " + trajectory2 +
+        logger.debug("trajectory " + repr(trajectory2) +
                      " into ensemble " + repr(ensemble1) +
-                     " : " + from2to1)
-        accepted = from1to2 and from2to1
+                     " : " + str(from2to1))
+        allowed = from1to2 and from2to1
         details1 = MoveDetails()
         details2 = MoveDetails()
         details1.inputs = [trajectory1, trajectory2]
@@ -807,7 +841,7 @@ class ReplicaExchange(PathMover):
         details2.mover_path.append(self)
         details2.trial = trajectory1
         details1.trial = trajectory2
-        if accepted:
+        if allowed:
             # Swap
             details1.accepted = True
             details2.accepted = True
@@ -825,14 +859,14 @@ class ReplicaExchange(PathMover):
             details2.result = trajectory2
 
         sample1 = paths.Sample(
+            replica=replica1,
             trajectory=details1.result,
-            mover=self,
             ensemble=ensemble1,
             details=details1
         )
         sample2 = paths.Sample(
+            replica=replica2,
             trajectory=details2.result,
-            mover=self,
             ensemble=ensemble2,
             details=details2
             )
@@ -863,6 +897,20 @@ class OneWayShootingMover(RandomChoiceMover):
         super(OneWayShootingMover, self).__init__(
             movers=movers, ensembles=ensembles, replicas=replicas
         )
+
+
+def NeighborEnsembleReplicaExchange(ensemble_list):
+    movers = [
+        ReplicaExchangeMover(ensembles=[[ensemble_list[i], ensemble_list[i+1]]])
+        for i in range(len(ensemble_list)-1)
+    ]
+    return movers
+
+def PathReversalSet(l):
+    if isinstance(l[0], Ensemble):
+        return [PathReversalMover(ensembles=[item]) for item in l]
+    else:
+        return [PathReversalMover(replicas=[item]) for item in l]
 
 
 class PathMoverFactory(object):

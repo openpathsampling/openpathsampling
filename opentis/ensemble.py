@@ -1252,6 +1252,7 @@ class SingleFrameEnsemble(AlteredEnsemble):
     def __str__(self):
         return "{"+self.orig_ens.__str__()+"} (SINGLE FRAME)"
     
+@restores_as_full_object
 class MinusInterfaceEnsemble(SequentialEnsemble):
     '''
     This creates an ensemble for the minus interface. 
