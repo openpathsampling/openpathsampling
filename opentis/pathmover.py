@@ -640,6 +640,12 @@ class EnsembleHopMover(PathMover):
 
 
 class ForceEnsembleChangeMover(EnsembleHopMover):
+    '''
+    Force an ensemble change in the sample.
+
+    This should only be used as part of other moves, since this can create
+    samples which are not valid.
+    '''
     def __init__(self, ensembles=None, replicas='all'):
         # no bias allowed
         super(ForceEnsembleChangeMover, self).__init__(ensembles=ensembles,
@@ -686,11 +692,10 @@ class MinusMove(ConditionalSequentialMover):
 @restores_as_stub_object
 class RandomSubtrajectorySelectMover(PathMover):
     '''
-    Takes a trajectory and returns a random subtrajectory which satisfies
-    the subensemble associated with this PathMover. 
+    Samples a random subtrajectory satifying the given subensemble.
 
-    If there are no subtrajectories which satisfy the ensemble, this returns
-    the zero-length trajectory.
+    If there are no subtrajectories which satisfy the subensemble, this
+    returns the zero-length trajectory.
     '''
     def __init__(self, subensemble, ensembles=None, replicas='all'):
         super(RandomSubtrajectorySelectMover, self).__init__(
@@ -733,8 +738,7 @@ class RandomSubtrajectorySelectMover(PathMover):
 @restores_as_stub_object
 class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
     '''
-    Takes a trajectory and returns the first subtrajectory which satisfies
-    the subensemble associated with this PathMover. 
+    Samples the first subtrajectory satifying the given subensemble.
 
     If there are no subtrajectories which satisfy the ensemble, this returns
     the zero-length trajectory.
@@ -745,8 +749,7 @@ class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
 @restores_as_stub_object
 class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
     '''
-    Takes a trajectory and returns the final subtrajectory which satisfies
-    the subensemble associated with this PathMover. 
+    Samples the final subtrajectory satifying the given subensemble.
 
     If there are no subtrajectories which satisfy the ensemble, this returns
     the zero-length trajectory.

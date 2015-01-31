@@ -201,6 +201,11 @@ class UniformSelector(ShootingPointSelector):
         return point
 
 class FinalFrameSelector(ShootingPointSelector):
+    '''
+    Pick final trajectory frame as shooting point.
+
+    This is used for "forward" extension in, e.g., the minus move.
+    '''
     def f(self, frame, trajectory):
         if trajectory.index(frame) == len(trajectory)-1:
             return 1.0
@@ -212,6 +217,11 @@ class FinalFrameSelector(ShootingPointSelector):
         return point
 
 class FirstFrameSelector(ShootingPointSelector):
+    '''
+    Pick first trajectory frame as shooting point.
+
+    This is used for "backward" extension in, e.g., the minus move.
+    '''
     def f(self, frame, trajectory):
         if trajectory.index(frame) == 0:
             return 1.0
