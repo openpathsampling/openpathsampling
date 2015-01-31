@@ -896,16 +896,18 @@ class MinusMover(RandomChoiceMover):
                  ensembles=None, replicas='all'):
         super(SequentialMover, self).__init__(ensembles=ensembles,
                                               replicas=replicas)
-    
+        innermost = AppendedNameEnsemble(innermost_ensemble, "(in minus)")
         subtrajectory_selector = RandomChoiceMover(
-            FirstSubtrajectorySelectMover(),
-            FinalSubtrajectorySelectMover()
+            FirstSubtrajectorySelectMover(innermost),
+            FinalSubtrajectorySelectMover(innermost)
         )
         subtrajectory_selector.name = "MinusSubtrajectoryChooser"
 
-        repex = ReplicaExchangeMover() # TODO
+        repex = ReplicaExchangeMover(ensembles=[[innermost, innermost_ensemble]])
 
-        force_to_minus = ForceEnsembleChangeMover() # TODO
+        force_to_minus = ForceEnsembleChangeMover(
+            ensembles=[[innermost, minus_ensemble]]
+        )
 
         extension_mover = RandomChoiceMover(
             ForwardShootMover(FinalFrameSelector(), minus_ensemble),
