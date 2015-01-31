@@ -1213,6 +1213,19 @@ class ReversedTrajectoryEnsemble(AlteredEnsemble):
         return trajectory.reverse()
 
 @restores_as_full_object
+class AppendedNameEnsemble(AlteredEnsemble):
+    '''
+    Adds string to ensemble name: necessary to have multiple copies of an ensemble.
+    '''
+    def __init__(self, ensemble, label):
+        self._label = label
+        super(AppendedNameEnsemble, self).__init(ensemble)
+
+    def __str__(self):
+        return self.ensemble.__str__() + " " + self.label
+
+
+@restores_as_full_object
 class OptionalEnsemble(AlteredEnsemble):
     '''
     Makes it optional to satisfy a given ensemble (primarily useful in
