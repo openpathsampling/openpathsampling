@@ -359,13 +359,6 @@ class MomentumStore(ObjectStore):
 
         atoms = self.storage.atoms
 
-        # define dimensions used in configuration_indices
-        if 'atom' not in self.storage.dimensions:
-            self.init_dimension('atom', atoms) # number of atoms in the simulated system
-
-        if 'spatial' not in self.storage.dimensions:
-            self.init_dimension('spatial', 3)  # number of spatial dimensions
-
         self.init_variable('momentum_velocities', 'float',
                 (self.db, 'atom','spatial'),
                 self.dimension_units['velocity'],
@@ -576,13 +569,7 @@ class ConfigurationStore(ObjectStore):
     def _init(self):
         super(ConfigurationStore, self)._init()
         atoms = self.storage.atoms
-
-        # define dimensions used in configuration_indices
-        if 'atom' not in self.storage.dimensions:
-            self.init_dimension('atom', atoms)
-
-        if 'spatial' not in self.storage.dimensions:
-            self.init_dimension('spatial', 3)
+        spatial = self.storage.spatial
 
         self.init_variable('configuration_coordinates', 'float',
                 (self.db, 'atom','spatial'), self.dimension_units['length'],
@@ -594,7 +581,7 @@ class ConfigurationStore(ObjectStore):
         self.init_variable('configuration_box_vectors', 'float',
                 (self.db, 'spatial', 'spatial'),
                 self.dimension_units['length'],
-                chunksizes=(1,3,3))
+                chunksizes=(1,spatial,spatial))
 
         self.init_variable('configuration_potential', 'float',
                 self.db,
