@@ -21,7 +21,7 @@ class Toy_PES(object):
         return 0.5*np.dot(m, np.multiply(v,v))
 
 class Toy_PES_Combination(Toy_PES):
-    def _init_(self, pes1, pes2, fcn, dfdx_fcn):
+    def __init__(self, pes1, pes2, fcn, dfdx_fcn):
         self.pes1 = pes1
         self.pes2 = pes2
         self._fcn = fcn
@@ -35,7 +35,7 @@ class Toy_PES_Combination(Toy_PES):
 
 @restores_as_full_object
 class Toy_PES_Sub(Toy_PES_Combination):
-    def _init_(self, pes1, pes2):
+    def __init__(self, pes1, pes2):
         self.pes1 = pes1
         self.pes2 = pes2
         self._fcn = lambda a, b: a - b
@@ -43,7 +43,7 @@ class Toy_PES_Sub(Toy_PES_Combination):
 
 @restores_as_full_object
 class Toy_PES_Add(Toy_PES_Combination):
-    def _init_(self, pes1, pes2):
+    def __init__(self, pes1, pes2):
         self.pes1 = pes1
         self.pes2 = pes2
         self._fcn = lambda a, b: a + b
@@ -51,7 +51,7 @@ class Toy_PES_Add(Toy_PES_Combination):
 
 @restores_as_full_object
 class HarmonicOscillator(Toy_PES):
-    def _init_(self, A, omega, x0):
+    def __init__(self, A, omega, x0):
         self.A = np.array(A)
         self.omega = np.array(omega)
         self.x0 = np.array(x0)
@@ -70,7 +70,7 @@ class HarmonicOscillator(Toy_PES):
 class Gaussian(Toy_PES):
     ''' Returns the Gaussian given by A*exp(-\sum_i alpha[i]*(x[i]-x0[i])^2)
     '''
-    def _init_(self, A, alpha, x0):
+    def __init__(self, A, alpha, x0):
         self.A = A
         self.alpha = np.array(alpha)
         self.x0 = np.array(x0)
@@ -89,7 +89,7 @@ class Gaussian(Toy_PES):
 
 @restores_as_full_object
 class OuterWalls(Toy_PES):
-    def _init_(self, sigma, x0):
+    def __init__(self, sigma, x0):
         self.sigma = np.array(sigma)
         self.x0 = np.array(x0)
         self._local_dVdx = np.zeros(self.x0.size)
@@ -105,11 +105,11 @@ class OuterWalls(Toy_PES):
         dx = sys.positions - self.x0
         for i in range(len(dx)):
             self._local_dVdx[i] = 6.0*self.sigma[i]*dx[i]**5
-        return self.local_dVdx
+        return self._local_dVdx
 
 @restores_as_full_object
 class LinearSlope(Toy_PES):
-    def _init_(self, m, c):
+    def __init__(self, m, c):
         self.m = m
         self.c = c
         self._local_dVdx = self.m
