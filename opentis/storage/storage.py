@@ -259,11 +259,11 @@ class Storage(netcdf.Dataset):
             self.createDimension('scalar', 1) # scalar dimension
 
         if 'atom' not in self.dimensions:
-            self.init_dimension('atom', self.atoms)
+            self.createDimension('atom', self.atoms)
 
-        # satial dimensions
+        # spatial dimensions
         if 'spatial' not in self.dimensions:
-            self.init_dimension('spatial', 3)
+            self.createDimension('spatial', 3)
 
         # Set global attributes.
         setattr(self, 'title', 'Open-Transition-Interface-Sampling')
