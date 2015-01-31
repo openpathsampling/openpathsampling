@@ -717,6 +717,7 @@ class ReplicaExchange(PathMover):
             )
         return [sample1, sample2]
 
+@restores_as_stub_object
 class OneWayShootingMover(RandomChoiceMover):
     '''
     OneWayShootingMover is a special case of a RandomChoiceMover which
