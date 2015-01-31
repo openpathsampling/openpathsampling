@@ -64,6 +64,16 @@ class MovePath(object):
         return self._samples
 
     @property
+    def all_samples(self):
+        """
+        Returns a list of all samples generated during the PathMove.
+
+        This includes all rejected samples
+        """
+
+        return self._samples
+
+    @property
     def accepted(self):
         if self._accepted is None:
             self._accepted = self._get_accepted()
@@ -136,6 +146,11 @@ class EmptyMovePath(MovePath):
     def to_dict(self):
         return {}
 
+    @property
+    def all_samples(self):
+        return []
+
+
 
 @restores_as_full_object
 class SampleMovePath(MovePath):
@@ -192,6 +207,10 @@ class RandomChoiceMovePath(MovePath):
     def __str__(self):
         return MovePath._indent(str(self.movepath))
 
+    @property
+    def all_samples(self):
+        return self.movepath.all_samples
+
 
 @restores_as_full_object
 class SequentialMovePath(MovePath):
@@ -213,6 +232,14 @@ class SequentialMovePath(MovePath):
         for movepath in self.movepaths:
             changes = changes + movepath.changes
         return changes
+
+    @property
+    def all_samples(self):
+        changes = []
+        for movepath in self.movepaths:
+            changes = changes + movepath.all_samples
+        return changes
+
 
     def apply_to(self, other):
         sampleset = other
@@ -237,7 +264,7 @@ class PartialMovePath(SequentialMovePath):
         changes = []
         for movepath in self.movepaths:
             if movepath.accepted:
-                changes.extend(movepath)
+                changes.extend(movepath.changes)
             else:
                 break
 

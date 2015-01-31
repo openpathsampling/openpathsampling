@@ -321,9 +321,11 @@ class testSequentialMover(object):
         # @DWHS: This should have two samples since two are accepted
         # and thus applied
         assert_equal(len(samples), 2)
-        assert_equal(samples[0].details.accepted, True)
-        assert_equal(samples[1].details.accepted, True)
-#        assert_equal(samples[2].details.accepted, True)
+
+        allsamp = movepath.all_samples
+        assert_equal(allsamp[0].details.accepted, False)
+        assert_equal(allsamp[1].details.accepted, True)
+        assert_equal(allsamp[2].details.accepted, True)
         gs = gs + movepath
         assert_equal(gs[0].ensemble, self.tps)
 
@@ -336,10 +338,10 @@ class testSequentialMover(object):
         # @DWHS: I think if the last is rejected then there should only be two
         # samples to be used, since the last one is not accepted and thus
         # discarded (does not mean that it is not stored!!!)
-
-        assert_equal(samples[0].details.accepted, True)
-        assert_equal(samples[1].details.accepted, True)
-#        assert_equal(samples[2].details.accepted, False)
+        allsamp = movepath.all_samples
+        assert_equal(allsamp[0].details.accepted, True)
+        assert_equal(allsamp[1].details.accepted, True)
+        assert_equal(allsamp[2].details.accepted, False)
         gs = gs + movepath
         assert_equal(gs[0].ensemble, self.tps)
 
@@ -358,6 +360,7 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
         assert_equal(len(samples), 3)
         for sample in samples:
             assert_equal(sample.details.accepted, True)
+        assert_equal(len(movepath.all_samples,),3)
         gs = gs + movepath
         assert_equal(gs[0].ensemble, self.tps)
 
@@ -369,7 +372,9 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
         # returns zero sample since even the first is rejected
         # the first one is still stored
         assert_equal(len(samples), 0)
-#        assert_equal(samples[0].details.accepted, False)
+        allsamp = movepath.all_samples
+        assert_equal(len(allsamp), 1)
+        assert_equal(allsamp[0].details.accepted, False)
         gs = gs + movepath
         assert_equal(gs[0].ensemble, self.len3)
 
@@ -381,9 +386,12 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
         # @see above, this should return 2 samples. Important the third is
         # still run!
         assert_equal(len(samples), 2)
-        assert_equal(samples[0].details.accepted, True)
-        assert_equal(samples[1].details.accepted, True)
-#        assert_equal(samples[2].details.accepted, False)
+        allsamp = movepath.all_samples
+        assert_equal(len(allsamp), 3)
+
+        assert_equal(allsamp[0].details.accepted, True)
+        assert_equal(allsamp[1].details.accepted, True)
+        assert_equal(allsamp[2].details.accepted, False)
         gs = gs + movepath
         assert_equal(gs[0].ensemble, self.tps)
 
@@ -412,7 +420,9 @@ class testConditionalSequentialMover(testSequentialMover):
         samples = movepath.changes
         # should be zero since the move is completely rejected
         assert_equal(len(samples), 0)
-#        assert_equal(samples[0].details.accepted, False)
+        allsamp = movepath.all_samples
+        assert_equal(len(allsamp), 1)
+        assert_equal(allsamp[0].details.accepted, False)
         gs = gs + movepath
         assert_equal(gs[0].ensemble, self.len3)
 
@@ -423,12 +433,15 @@ class testConditionalSequentialMover(testSequentialMover):
         samples = movepath.changes
         # number of accepted samples is 0 for this type of mover
         assert_equal(len(samples), 0)
+        allsamp = movepath.all_samples
+        assert_equal(len(allsamp), 3)
+
         # check here if last actual samples was false
         # this actually allows to see later if the single samples were
         # accepted or not, even from the movepath without loading samples
-#        assert_equal(samples[0].details.accepted, False)
-#        assert_equal(samples[1].details.accepted, False)
-#        assert_equal(samples[2].details.accepted, False)
+        assert_equal(allsamp[0].details.accepted, True)
+        assert_equal(allsamp[1].details.accepted, True)
+        assert_equal(allsamp[2].details.accepted, False)
         gs = gs + movepath
         assert_equal(gs[0].ensemble, self.len3)
 
