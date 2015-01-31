@@ -204,6 +204,7 @@ class PathSampling(Calculation):
                  globalstate=None):
         super(PathSampling, self).__init__(storage, engine)
         self.root_mover = root_mover
+        self.root_mover.name = "PathSamplingRoot"
         self.globalstate = globalstate
         initialization_logging(init_log, self, 
                                ['root_mover', 'globalstate'])

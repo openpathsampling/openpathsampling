@@ -431,8 +431,8 @@ class RandomChoiceMover(PathMover):
             idx += 1
             prob += self.weights[idx]
 
-        logger.info("RandomChoiceMover selecting mover index {idx} ({mtype})".format(
-                idx=idx, mtype=self.movers[idx].__class__.__name__))
+        logger_str = "RandomChoiceMover ({name}) selecting mover index {idx} ({mtype})"
+        logger.info(logger_str.format(name=self.name, idx=idx, mtype=self.movers[idx].__class__.__name__))
 
         mover = self.movers[idx]
 
@@ -679,17 +679,6 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
 
 
 @restores_as_stub_object
-class MinusMove(ConditionalSequentialMover):
-    def __init__(self, minus_ensemble, innermost_ensembles, 
-                 ensembles=None, replicas='all'):
-        super(SequentialMover, self).__init__(ensembles=ensembles,
-                                              replicas=replicas)
-        #self.movers = movers
-        # TODO
-        initialization_logging(init_log, self, ['minus_ensemble',
-                                                'innermost_ensemble'])
-
-@restores_as_stub_object
 class RandomSubtrajectorySelectMover(PathMover):
     '''
     Samples a random subtrajectory satifying the given subensemble.
@@ -900,6 +889,43 @@ class OneWayShootingMover(RandomChoiceMover):
         super(OneWayShootingMover, self).__init__(
             movers=movers, ensembles=ensembles, replicas=replicas
         )
+
+@restores_as_stub_object
+class MinusMover(RandomChoiceMover):
+    def __init__(self, minus_ensemble, innermost_ensemble, 
+                 ensembles=None, replicas='all'):
+        super(SequentialMover, self).__init__(ensembles=ensembles,
+                                              replicas=replicas)
+    
+        subtrajectory_selector = RandomChoiceMover(
+            FirstSubtrajectorySelectMover(),
+            FinalSubtrajectorySelectMover()
+        )
+        subtrajectory_selector.name = "MinusSubtrajectoryChooser"
+
+        repex = ReplicaExchangeMover() # TODO
+
+        force_to_minus = ForceEnsembleChangeMover() # TODO
+
+        extension_mover = RandomChoiceMover(
+            ForwardShootMover(FinalFrameSelector(), minus_ensemble),
+            BackwardShootMover(FirstFrameSelector(), minus_ensemble)
+        )
+        extension_mover.name = "MinusExtensionDirectionChooser"
+
+        self.movers = [
+            subtrajectory_selector,
+            repex,
+            force_to_minus,
+            extension_mover
+        ]
+
+        initialization_logging(init_log, self, ['minus_ensemble',
+                                                'innermost_ensemble'])
+
+@restores_as_stub_object
+class MultipleSetMinusMover(RandomChoiceMover):
+    pass
 
 
 def NeighborEnsembleReplicaExchange(ensemble_list):

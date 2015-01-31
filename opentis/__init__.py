@@ -20,7 +20,7 @@ from orderparameter import OP_Function, OP_MD_Function, OP_Featurizer, \
     OP_RMSD_To_Lambda, OP_Volume, OrderParameter
 
 from pathmover import (
-    BackwardShootMover, MinusMove, RandomChoiceMover, MoveDetails, \
+    BackwardShootMover, MinusMover, RandomChoiceMover, MoveDetails, \
     ForwardShootMover, PathMover, PathMoverFactory, PathReversalMover, \
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover, \
     PartialAcceptanceSequentialMover, ReplicaIDChange, SequentialMover
