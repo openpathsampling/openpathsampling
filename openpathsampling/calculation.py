@@ -5,6 +5,8 @@ from sample import SampleSet, Sample
 from openpathsampling.todict import restores_as_stub_object
 from openpathsampling.pathmover import PathMover
 
+import openpathsampling as paths
+
 import logging
 from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
@@ -59,6 +61,18 @@ class BootstrapPromotionMove(PathMover):
         ensemble_to = self.ensembles[top_rep+1]
         old_sample = globalstate[top_rep]
 
+        shooter = self.shooters[top_rep]
+        hopper = EnsembleHopMover(bias=self.bias,
+                                  ensembles=[ensemble_from, ensemble_to],
+                                  replicas=top_rep)
+
+        replicaID = paths.ReplicaIDChange()
+
+        paths.ConditionalSequentialMover([
+            shooter,
+            hopper
+        ])
+
         details = MoveDetails()
         details_inputs = [old_sample.trajectory]
         details_mover = self
@@ -73,8 +87,8 @@ class BootstrapPromotionMove(PathMover):
                                   ensembles=[ensemble_from, ensemble_to],
                                   replicas=top_rep)
 
-        shoot_samp = shooter.move(init_sample_set)[0]
-        init_sample_set = init_sample_set.apply(shoot_samp)
+        init_sample_set = (init_sample_set + shooter.move(init_sample_set))[0]
+        shoot_samp = init_sample_set[0]
         hop_samp = hopper.move(init_sample_set)[0]
         init_sample_set = init_sample_set.apply(hop_samp)
 

@@ -559,7 +559,8 @@ class ConditionalSequentialMover(SequentialMover):
 
 
 
-# TODO: @DWHS : I am not sure what this is doing.
+# TODO: @DWHS : I am not sure what this is doing and how it works?
+# Shouldn't
 class ReplicaIDChange(PathMover):
     def __init__(self, new_replicas=None, old_samples=None, 
                  ensembles=None, replicas='all'):
@@ -571,8 +572,7 @@ class ReplicaIDChange(PathMover):
         rep_sample = self.select_sample( self.ensembles)
         new_rep = self.new_replicas[rep_sample.replica]
         old_sample = self.old_samples[rep_sample.replica]
-        trajectory = rep_sample.trajectory
-        
+
         details = MoveDetails()
         details.inputs = rep_sample.trajectory
         # TODO: details
