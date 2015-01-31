@@ -42,3 +42,5 @@ from todict import ObjectJSON, restores_as_full_object, restores_as_stub_object,
 
 from tools import empty_snapshot_from_openmm_topology, snapshot_from_pdb, \
     to_openmm_topology, trajectory_from_mdtraj, units_from_snapshot
+
+from topology import ToyTopology, MDTrajTopology

@@ -263,7 +263,7 @@ class Storage(netcdf.Dataset):
 
         # spatial dimensions
         if 'spatial' not in self.dimensions:
-            self.createDimension('spatial', 3)
+            self.createDimension('spatial', self.spatial)
 
         # Set global attributes.
         setattr(self, 'title', 'Open-Transition-Interface-Sampling')

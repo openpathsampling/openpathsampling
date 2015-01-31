@@ -22,9 +22,9 @@ class Topology(object):
         number of spatial dimensions, default is 3
     '''
 
-    def __init__(self, atoms, spatial = 3):
-        self.atoms = atoms
-        self.spatial = spatial
+    def __init__(self, n_atoms, n_spatial = 3):
+        self.n_atoms = n_atoms
+        self.n_spatial = n_spatial
 
 @restores_as_full_object
 class ToyTopology(Topology):
@@ -34,16 +34,16 @@ class ToyTopology(Topology):
     masses : numpy.ndarray (n_atoms, dtype=float)
         The masses associated with each atom
     '''
-    def __init__(self, atoms, spatial, masses):
-        super(ToyTopology, self).__init__(atoms, spatial)
+    def __init__(self, n_atoms, n_spatial, masses):
+        super(ToyTopology, self).__init__(n_atoms, n_spatial)
         self.masses = masses
 
 @restores_as_full_object
 class MDTrajTopology(Topology):
     def __init__(self, mdtraj_topology, subsets = None):
         self.md = mdtraj_topology
-        self.atoms = mdtraj_topology.n_atoms
-        self.spatial = 3
+        self.n_atoms = int(mdtraj_topology.n_atoms)
+        self.n_spatial = 3
         if subsets is None:
             self.subsets = {}
         else:
