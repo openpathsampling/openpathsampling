@@ -152,10 +152,6 @@ class SampleMovePath(MovePath):
         if type(samples) is paths.Sample:
             samples = [samples]
 
-        if self.mover is None:
-            # Guess from first sample
-            self.mover = samples[0].details.mover
-
         self._samples.extend(samples)
 
     def to_dict(self):

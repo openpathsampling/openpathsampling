@@ -131,7 +131,8 @@ class testForwardShootMover(testShootingMover):
     def test_move(self):
         mover = ForwardShootMover(UniformSelector(), replicas=[0])
         self.dyn.initialized = True
-        newsamp = mover.move(self.init_samp)
+        movepath = mover.move(self.init_samp)
+        newsamp = self.init_samp + movepath
         assert_equal(len(newsamp), 1)
         assert_equal(newsamp[0].details.accepted, True)
         assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
@@ -141,7 +142,8 @@ class testBackwardShootMover(testShootingMover):
     def test_move(self):
         mover = BackwardShootMover(UniformSelector(), replicas=[0])
         self.dyn.initialized = True
-        newsamp = mover.move(self.init_samp)
+        movepath = mover.move(self.init_samp)
+        newsamp = self.init_samp + movepath
         assert_equal(len(newsamp), 1)
         assert_equal(newsamp[0].details.accepted, True)
         assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
@@ -180,7 +182,7 @@ class testPathReversalMover(object):
                          replica=0,
                          details=MoveDetails())
         gs_AXA = SampleSet([sampAXA])
-        samp = self.move.move(gs_AXA)[0]
+        samp = (gs_AXA + self.move.move(gs_AXA))[0]
         assert_equal(samp.details.accepted, True)
 
     def test_A_A_path(self):
@@ -190,7 +192,7 @@ class testPathReversalMover(object):
                          replica=0,
                          details=MoveDetails())
         gs_A_A = SampleSet([sampA_A])
-        samp = self.move.move(gs_A_A)[0]
+        samp = (gs_A_A + self.move.move(gs_A_A))[0]
         assert_equal(samp.details.accepted, False)
 
 
@@ -201,7 +203,7 @@ class testPathReversalMover(object):
                          replica=0,
                          details=MoveDetails())
         gs_AXB = SampleSet([sampAXB])
-        samp = self.move.move(gs_AXB)[0]
+        samp = (gs_AXB + self.move.move(gs_AXB))[0]
         assert_equal(samp.details.accepted, False)
 
     def test_BA_path(self):
@@ -211,7 +213,7 @@ class testPathReversalMover(object):
                          replica=0,
                          details=MoveDetails())
         gs_BXA = SampleSet([sampBXA])
-        samp = self.move.move(gs_BXA)[0]
+        samp = (gs_BXA + self.move.move(gs_BXA))[0]
         assert_equal(samp.details.accepted, True)
 
 
@@ -303,33 +305,42 @@ class testSequentialMover(object):
     def test_everything_accepted(self):
         move = SequentialMover(movers=self.everything_accepted_movers)
         gs = SampleSet(self.init_sample)
-        samples = move.move(gs)
+        movepath = move.move(gs)
+        samples = movepath.changes
         assert_equal(len(samples), 3)
         for sample in samples:
             assert_equal(sample.details.accepted, True)
-        gs = gs.apply(samples)
+        gs = gs + movepath
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_first_rejected(self):
         move = SequentialMover(movers=self.first_rejected_movers)
         gs = SampleSet(self.init_sample)
-        samples = move.move(gs)
-        assert_equal(len(samples), 3)
-        assert_equal(samples[0].details.accepted, False)
+        movepath = move.move(gs)
+        samples = movepath.changes
+        # @DWHS: This should have two samples since two are accepted
+        # and thus applied
+        assert_equal(len(samples), 2)
+        assert_equal(samples[0].details.accepted, True)
         assert_equal(samples[1].details.accepted, True)
-        assert_equal(samples[2].details.accepted, True)
-        gs = gs.apply(samples)
+#        assert_equal(samples[2].details.accepted, True)
+        gs = gs + movepath
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_last_rejected(self):
         move = SequentialMover(movers=self.last_rejected_movers)
         gs = SampleSet(self.init_sample)
-        samples = move.move(gs)
-        assert_equal(len(samples), 3)
+        movepath = move.move(gs)
+        samples = movepath.changes
+        assert_equal(len(samples), 2)
+        # @DWHS: I think if the last is rejected then there should only be two
+        # samples to be used, since the last one is not accepted and thus
+        # discarded (does not mean that it is not stored!!!)
+
         assert_equal(samples[0].details.accepted, True)
         assert_equal(samples[1].details.accepted, True)
-        assert_equal(samples[2].details.accepted, False)
-        gs = gs.apply(samples)
+#        assert_equal(samples[2].details.accepted, False)
+        gs = gs + movepath
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_restricted_by_replica(self):
@@ -342,31 +353,38 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
     def test_everything_accepted(self):
         move = PartialAcceptanceSequentialMover(movers=self.everything_accepted_movers)
         gs = SampleSet(self.init_sample)
-        samples = move.move(gs)
+        movepath = move.move(gs)
+        samples = movepath.changes
         assert_equal(len(samples), 3)
         for sample in samples:
             assert_equal(sample.details.accepted, True)
-        gs = gs.apply(samples)
+        gs = gs + movepath
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_first_rejected(self):
         move = PartialAcceptanceSequentialMover(movers=self.first_rejected_movers)
         gs = SampleSet(self.init_sample)
-        samples = move.move(gs)
-        assert_equal(len(samples), 1)
-        assert_equal(samples[0].details.accepted, False)
-        gs = gs.apply(samples)
+        movepath = move.move(gs)
+        samples = movepath.changes
+        # returns zero sample since even the first is rejected
+        # the first one is still stored
+        assert_equal(len(samples), 0)
+#        assert_equal(samples[0].details.accepted, False)
+        gs = gs + movepath
         assert_equal(gs[0].ensemble, self.len3)
 
     def test_last_rejected(self):
         move = PartialAcceptanceSequentialMover(movers=self.last_rejected_movers)
         gs = SampleSet(self.init_sample)
-        samples = move.move(gs)
-        assert_equal(len(samples), 3)
+        movepath = move.move(gs)
+        samples = movepath.changes
+        # @see above, this should return 2 samples. Important the third is
+        # still run!
+        assert_equal(len(samples), 2)
         assert_equal(samples[0].details.accepted, True)
         assert_equal(samples[1].details.accepted, True)
-        assert_equal(samples[2].details.accepted, False)
-        gs = gs.apply(samples)
+#        assert_equal(samples[2].details.accepted, False)
+        gs = gs + movepath
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_restricted_by_replica(self):
@@ -379,31 +397,39 @@ class testConditionalSequentialMover(testSequentialMover):
     def test_everything_accepted(self):
         move = ConditionalSequentialMover(movers=self.everything_accepted_movers)
         gs = SampleSet(self.init_sample)
-        samples = move.move(gs)
+        movepath = move.move(gs)
+        samples = movepath.changes
         assert_equal(len(samples), 3)
         for sample in samples:
             assert_equal(sample.details.accepted, True)
-        gs = gs.apply(samples)
+        gs = gs + movepath
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_first_rejected(self):
         move = ConditionalSequentialMover(movers=self.first_rejected_movers)
         gs = SampleSet(self.init_sample)
-        samples = move.move(gs)
-        assert_equal(len(samples), 1)
-        assert_equal(samples[0].details.accepted, False)
-        gs = gs.apply(samples)
+        movepath = move.move(gs)
+        samples = movepath.changes
+        # should be zero since the move is completely rejected
+        assert_equal(len(samples), 0)
+#        assert_equal(samples[0].details.accepted, False)
+        gs = gs + movepath
         assert_equal(gs[0].ensemble, self.len3)
 
     def test_last_rejected(self):
         move = ConditionalSequentialMover(movers=self.last_rejected_movers)
         gs = SampleSet(self.init_sample)
-        samples = move.move(gs)
-        assert_equal(len(samples), 3)
-        assert_equal(samples[0].details.accepted, False)
-        assert_equal(samples[1].details.accepted, False)
-        assert_equal(samples[2].details.accepted, False)
-        gs = gs.apply(samples)
+        movepath = move.move(gs)
+        samples = movepath.changes
+        # number of accepted samples is 0 for this type of mover
+        assert_equal(len(samples), 0)
+        # check here if last actual samples was false
+        # this actually allows to see later if the single samples were
+        # accepted or not, even from the movepath without loading samples
+#        assert_equal(samples[0].details.accepted, False)
+#        assert_equal(samples[1].details.accepted, False)
+#        assert_equal(samples[2].details.accepted, False)
+        gs = gs + movepath
         assert_equal(gs[0].ensemble, self.len3)
 
     def test_restricted_by_replica(self):

@@ -110,8 +110,9 @@ if __name__ == '__main__':
 
     for p_idx in range(0, storage.sampleset.count()):
         obj = storage.sampleset.load(p_idx)
-        nline(p_idx, '(' + str(len(obj.samples)), obj.samples )
-        print indent(str(obj.movepath),12)
+        nline(p_idx, str(len(obj.samples)) + ' sample(s)', [storage.idx(sample) for sample in obj.samples ])
+        print
+        print indent(str(obj.movepath),16)
 
 
     headline("Samples")

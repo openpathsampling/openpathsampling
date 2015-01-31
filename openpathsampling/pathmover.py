@@ -584,7 +584,7 @@ class ReplicaIDChange(PathMover):
                             ensemble=rep_sample.ensemble,
                             trajectory=rep_sample.trajectory
                            )
-        return paths.SampleMovePath( [dead_sample, new_sample])
+        return paths.SampleMovePath( [dead_sample, new_sample], mover=self, accepted=True)
 
 @restores_as_stub_object
 class EnsembleHopMover(PathMover):
@@ -652,7 +652,7 @@ class EnsembleHopMover(PathMover):
 
 #        new_set = SampleSet([sample], accepted = True)
 
-        path = paths.SampleMovePath( [sample])
+        path = paths.SampleMovePath( [sample], mover=self, accepted=details.accepted)
 
         return path
 
@@ -695,9 +695,10 @@ class PathReversalMover(PathMover):
             ensemble=ensemble,
             details=details
         )
-        new_set = globalstate.apply([sample], accepted = details.accepted, move=self)
 
-        return new_set
+        path = paths.SampleMovePath( [sample], mover=self, accepted=details.accepted)
+
+        return path
 
 
 class ReplicaExchange(PathMover):
