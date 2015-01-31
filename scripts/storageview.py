@@ -52,9 +52,11 @@ if __name__ == '__main__':
 
     line("Number of Atoms", topology.n_atoms)
 
-    counterion_indices = [ a.index for a in topology.atoms if a.residue.name[-1] == '+']
-    solvent_indices = [ a.index for a in topology.atoms if a.residue.name == 'HOH']
-    protein_indices = [ a.index for a in topology.atoms if a.residue.name[-1] != '+' and a.residue.name != 'HOH']
+    md_topology = topology.md
+
+    counterion_indices = [ a.index for a in md_topology.atoms if a.residue.name[-1] == '+']
+    solvent_indices = [ a.index for a in md_topology.atoms if a.residue.name == 'HOH']
+    protein_indices = [ a.index for a in md_topology.atoms if a.residue.name[-1] != '+' and a.residue.name != 'HOH']
 
     line("Number of waters", len(solvent_indices) / 3)
     line("Number of protein atoms", len(protein_indices))

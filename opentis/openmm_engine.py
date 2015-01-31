@@ -88,6 +88,7 @@ class OpenMMEngine(paths.DynamicsEngine):
 
         if type(template) is str:
             template = paths.snapshot_from_pdb(template, units=units)
+            print template.configuration.__dict__
 
         # once we have a template configuration (coordinates to not really
         # matter) we can create a storage. We might move this logic out of

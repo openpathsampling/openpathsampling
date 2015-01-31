@@ -37,7 +37,7 @@ class ObjectJSON(object):
                 return { '_numpy' : self.simplify(obj.shape), '_dtype' : str(obj.dtype), '_data' : base64.b64encode(obj) }
             elif hasattr(obj, 'to_dict'):
                 # the object knows how to dismantle itself into a json string so use this
-                return { '_cls' : obj.__class__.__name__, '_dict' : self.simplify(obj.to_dict(), obj.base_cls_name) }
+                return { '_cls' : obj.__class__.__name__, '_dict' : self.simplify(obj.to_dict(), base_type) }
             else:
                 return None
         elif type(obj) is list:

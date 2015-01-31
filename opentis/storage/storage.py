@@ -196,11 +196,13 @@ class Storage(netcdf.Dataset):
     def __repr__(self):
         return "OpenPathSampling netCDF Storage @ '" + self.filename + "'"
 
-    def atoms(self):
-        return self.topology.atoms
+    @property
+    def n_atoms(self):
+        return self.topology.n_atoms
 
-    def spatial(self):
-        return self.topology.spatial
+    @property
+    def n_spatial(self):
+        return self.topology.n_spatial
 
     @property
     def template(self):
@@ -221,7 +223,10 @@ class Storage(netcdf.Dataset):
         return u.Unit({self.unit_system.base_units[u.BaseDimension(dimension)] : 1.0})
 
     def __getattr__(self, item):
-        return self.__dict__[item]
+#        if item in self.__dict__:
+            return self.__dict__[item]
+ #       else:
+  #          return super(Storage, self).__getattr__(item)
 
     def __setattr__(self, key, value):
         self.__dict__[key] = value
@@ -259,11 +264,11 @@ class Storage(netcdf.Dataset):
             self.createDimension('scalar', 1) # scalar dimension
 
         if 'atom' not in self.dimensions:
-            self.createDimension('atom', self.atoms)
+            self.createDimension('atom', self.topology.n_atoms)
 
         # spatial dimensions
         if 'spatial' not in self.dimensions:
-            self.createDimension('spatial', self.spatial)
+            self.createDimension('spatial', self.n_spatial)
 
         # Set global attributes.
         setattr(self, 'title', 'Open-Transition-Interface-Sampling')

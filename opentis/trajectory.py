@@ -446,9 +446,9 @@ class Trajectory(list):
 
         if len(self) > 0 and self[0].topology is not None:
             # if no topology is defined
-            topology = self[0].topology
+            topology = self[0].topology.md
 
         if self.atom_indices is not None:
-            topology = topology.subset(self.atom_indices)       
+            topology = topology.subset(self.atom_indices)
         
         return topology

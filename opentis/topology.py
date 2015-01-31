@@ -73,8 +73,8 @@ class MDTrajTopology(Topology):
 
         return {'md' : out, 'subsets' : self.subsets}
 
-
-    def from_dict(self, dct):
+    @classmethod
+    def from_dict(cls, dct):
         top_dict = dct['md']
         elements = top_dict['elements']
 
@@ -94,4 +94,4 @@ class MDTrajTopology(Topology):
 
         md_topology = md.Topology.from_dataframe(atoms, bonds)
 
-        return MDTrajTopology(md_topology, dct['subsets'])
+        return cls(md_topology, dct['subsets'])
