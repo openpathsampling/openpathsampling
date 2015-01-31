@@ -282,7 +282,6 @@ class TreeRenderer(object):
 
 
 class PathTreeBuilder(object):
-
     def __init__(self, storage, op=None, states = None):
         self.rejected = False
         self.p_x = dict()

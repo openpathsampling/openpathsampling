@@ -6,12 +6,12 @@ a duck.
 """
 
 import os
-from pkg_resources import resource_filename
-
+from pkg_resources import resource_filename 
 from nose.tools import assert_items_equal
 
 from opentis.trajectory import Trajectory
 from opentis.snapshot import Snapshot
+from opentis.dynamics_engine import DynamicsEngine
 import numpy as np
 
 def make_1d_traj(coordinates, velocities=None):
@@ -38,6 +38,39 @@ def assert_not_equal_array_array(list_a, list_b):
     return exist_diff
 
 
+class CalvinDynamics(DynamicsEngine):
+    def __init__(self, predestination):
+        super(CalvinDynamics, self).__init__(options={'ndim' : 1,
+                                                      'n_frames_max' : 10})
+        self.predestination = make_1d_traj(coordinates=predestination,
+                                           velocities=[1.0]*len(predestination)
+                                          )
+        self.frame_index = None
+
+    @property
+    def current_snapshot(self):
+        return self._current_snap
+
+    @current_snapshot.setter
+    def current_snapshot(self, snap):
+        self._current_snap = snap.copy()
+
+    def generate_next_frame(self):
+        # find the frame in self.predestination that matches this frame
+        if self.frame_index is None:
+            for frame in self.predestination:
+                frame_val = frame.coordinates[0][0]
+                snap_val = self._current_snap.coordinates[0][0]
+                if frame_val == snap_val:
+                    self.frame_index = self.predestination.index(frame)
+
+        if self._current_snap.velocities[0][0] >= 0:
+            self._current_snap = self.predestination[self.frame_index+1].copy()
+            self.frame_index += 1
+        else:
+            self._current_snap = self.predestination[self.frame_index-1].copy()
+            self.frame_index -= 1
+        return self._current_snap
 
 class CallIdentity(object):
     '''Stub for a callable that returns itself'''
