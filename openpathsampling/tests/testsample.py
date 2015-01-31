@@ -133,10 +133,10 @@ class testSampleSet(object):
     def test_del_sample(self):
         del self.testset[self.s2B]
         assert_equal(len(self.testset), 2)
-        assert_equal(self.ensB in self.testset._ensemble_dict.keys(), False)
-        assert_equal(self.ensA in self.testset._ensemble_dict.keys(), True)
-        assert_equal(2 in self.testset._replica_dict.keys(), False)
-        assert_equal(0 in self.testset._replica_dict.keys(), True)
+        assert_equal(self.ensB in self.testset.ensemble_dict.keys(), False)
+        assert_equal(self.ensA in self.testset.ensemble_dict.keys(), True)
+        assert_equal(2 in self.testset.replica_dict.keys(), False)
+        assert_equal(0 in self.testset.replica_dict.keys(), True)
 
     def test_del_ensemble(self):
         raise SkipTest
@@ -185,12 +185,12 @@ class testSampleSet(object):
 
     @raises(AssertionError)
     def test_consistency_fail_size_ensdict(self):
-        del self.testset._ensemble_dict[self.ensB]
+        del self.testset.ensemble_dict[self.ensB]
         self.testset.consistency_check()
 
     @raises(AssertionError)
     def test_consistency_fail_size_repdict(self):
-        del self.testset._replica_dict[0]
+        del self.testset.replica_dict[0]
         self.testset.consistency_check()
 
     def test_consistency_fail_sample_in_ensdict(self):

@@ -43,23 +43,20 @@ class SampleSet(object):
 
     def __init__(self, samples, movepath=None):
         self.samples = []
-        self._ensemble_dict = {}
-        self._replica_dict = {}
+        self.ensemble_dict = {}
+        self.replica_dict = {}
         self.extend(samples)
         if movepath is None:
             self.movepath = paths.EmptyMovePath()
         else:
             self.movepath = movepath
 
-    @property
-    def ensemble_dict(self):
-        return self
 
     def __getitem__(self, key):
         if isinstance(key, paths.Ensemble):
-            return random.choice(self._ensemble_dict[key])
+            return random.choice(self.ensemble_dict[key])
         else:
-            return random.choice(self._replica_dict[key])
+            return random.choice(self.replica_dict[key])
 
     def __setitem__(self, key, value):
         # first, we check whether the key matches the sample: if no, KeyError
@@ -86,12 +83,12 @@ class SampleSet(object):
         self.append(value)
 
     def __delitem__(self, sample):
-        self._ensemble_dict[sample.ensemble].remove(sample)
-        self._replica_dict[sample.replica].remove(sample)
-        if len(self._ensemble_dict[sample.ensemble]) == 0:
-            del self._ensemble_dict[sample.ensemble]
-        if len(self._replica_dict[sample.replica]) == 0:
-            del self._replica_dict[sample.replica]
+        self.ensemble_dict[sample.ensemble].remove(sample)
+        self.replica_dict[sample.replica].remove(sample)
+        if len(self.ensemble_dict[sample.ensemble]) == 0:
+            del self.ensemble_dict[sample.ensemble]
+        if len(self.replica_dict[sample.replica]) == 0:
+            del self.replica_dict[sample.replica]
         self.samples.remove(sample)
 
     # TODO: add support for remove and pop
@@ -108,13 +105,13 @@ class SampleSet(object):
 
     def all_from_ensemble(self, ensemble):
         try:
-            return self._ensemble_dict[ensemble]
+            return self.ensemble_dict[ensemble]
         except KeyError:
             return []
 
     def all_from_replica(self, replica):
         try:
-            return self._replica_dict[replica]
+            return self.replica_dict[replica]
         except KeyError:
             return []
 
@@ -127,13 +124,13 @@ class SampleSet(object):
 
         self.samples.append(sample)
         try:
-            self._ensemble_dict[sample.ensemble].append(sample)
+            self.ensemble_dict[sample.ensemble].append(sample)
         except KeyError:
-            self._ensemble_dict[sample.ensemble] = [sample]
+            self.ensemble_dict[sample.ensemble] = [sample]
         try:
-            self._replica_dict[sample.replica].append(sample)
+            self.replica_dict[sample.replica].append(sample)
         except KeyError:
-            self._replica_dict[sample.replica] = [sample]
+            self.replica_dict[sample.replica] = [sample]
 
     def extend(self, samples):
         # note that this works whether the parameter samples is a list of
@@ -162,11 +159,11 @@ class SampleSet(object):
 
     def replica_list(self):
         '''Returns the list of replicas IDs in this SampleSet'''
-        return self._replica_dict.keys()
+        return self.replica_dict.keys()
 
     def ensemble_list(self):
         '''Returns the list of ensembles in this SampleSet'''
-        return self._ensemble_dict.keys()
+        return self.ensemble_dict.keys()
 
     def save_samples(self, storage):
         """
@@ -187,11 +184,11 @@ class SampleSet(object):
         all use cases.'''
         # check that we have the same number of samples in everything
         nsamps_ens = 0
-        for ens in self._ensemble_dict.keys():
-            nsamps_ens += len(self._ensemble_dict[ens])
+        for ens in self.ensemble_dict.keys():
+            nsamps_ens += len(self.ensemble_dict[ens])
         nsamps_rep = 0
-        for rep in self._replica_dict.keys():
-            nsamps_rep += len(self._replica_dict[rep])
+        for rep in self.replica_dict.keys():
+            nsamps_rep += len(self.replica_dict[rep])
         nsamps = len(self.samples)
         assert nsamps==nsamps_ens, \
                 "nsamps != nsamps_ens : %d != %d" % (nsamps, nsamps_ens)
@@ -201,10 +198,10 @@ class SampleSet(object):
         # if we have the same number of samples, then we check that each
         # sample in samples is in each of the dictionaries
         for samp in self.samples:
-            assert samp in self._ensemble_dict[samp.ensemble], \
-                    "Sample not in ensemble_dict! %r %r" % (samp, self._ensemble_dict)
-            assert samp in self._replica_dict[samp.replica], \
-                    "Sample not in replica_dict! %r %r" % (samp, self._replica_dict)
+            assert samp in self.ensemble_dict[samp.ensemble], \
+                    "Sample not in ensemble_dict! %r %r" % (samp, self.ensemble_dict)
+            assert samp in self.replica_dict[samp.replica], \
+                    "Sample not in replica_dict! %r %r" % (samp, self.replica_dict)
 
         # finally, check to be sure that thre are no duplicates in
         # self.samples; this completes the consistency check
