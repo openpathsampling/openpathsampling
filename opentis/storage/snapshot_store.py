@@ -267,6 +267,8 @@ class MomentumStore(ObjectStore):
 
     def load_empty(self, idx):
         momentum = Momentum()
+        del momentum.velocities
+        del momentum.kinetic_energy
         return momentum
 
     def update_velocities(self, obj):
@@ -407,7 +409,6 @@ class ConfigurationStore(ObjectStore):
 
     def load(self, idx):
         storage = self.storage
-
         x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
         coordinates = u.Quantity(x, self.storage.units["configuration_coordinates"])
         b = storage.variables['configuration_box_vectors'][idx]
@@ -439,6 +440,11 @@ class ConfigurationStore(ObjectStore):
         """
         configuration = Configuration()
         configuration.topology = self.storage.topology
+
+        # if these still exist they will not be loaded using __getattr__
+        del configuration.coordinates
+        del configuration.box_vectors
+        del configuration.potential_energy
 
         return configuration
 

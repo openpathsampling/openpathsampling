@@ -1135,20 +1135,47 @@ class ReversedTrajectoryEnsemble(AlteredEnsemble):
         return trajectory.reverse()
 
 @restores_as_full_object
-class OptionalEnsemble(AlteredEnsemble):
+class WrappedEnsemble(Ensemble):
+    '''
+    Represents an ensemble where an altered version of a trajectory (extended, reversed, cropped) is part of a given ensemble
+    '''
+    def __init__(self, ensemble):
+        '''
+        Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
+        '''
+
+        super(WrappedEnsemble, self).__init__()
+        self.ensemble = ensemble
+
+        # you can also build wrapped ensembles with more flexibility when using
+        # a property for _new_ensemble
+        self._new_ensemble = self.ensemble
+
+    def __call__(self, trajectory, lazy=None):
+        return self._new_ensemble(trajectory, lazy)
+
+    def can_append(self, trajectory):
+        return self._new_ensemble.can_append(trajectory)
+
+    def can_prepend(self, trajectory):
+        return self._new_ensemble.can_prepend(trajectory)
+
+@restores_as_full_object
+class OptionalEnsemble(WrappedEnsemble):
     '''
     Makes it optional to satisfy a given ensemble (primarily useful in
     SequentialEnsembles)
     '''
+
     def __init__(self, ensemble):
-        self.orig_ens = ensemble
-        self.ensemble = ensemble | LengthEnsemble(0)
+        super(OptionalEnsemble, self).__init__(ensemble)
+        self._new_ensemble = LengthEnsemble(0) | self.ensemble
 
     def __str__(self):
-        return "{"+self.orig_ens.__str__()+"} (OPTIONAL)"
+        return "{"+self.ensemble.__str__()+"} (OPTIONAL)"
 
 @restores_as_full_object
-class SingleFrameEnsemble(AlteredEnsemble):
+class SingleFrameEnsemble(WrappedEnsemble):
     '''
     Convenience ensemble to `and` a LengthEnsemble(1) with a given ensemble.
     Frequently used for SequentialEnsembles.
@@ -1168,12 +1195,12 @@ class SingleFrameEnsemble(AlteredEnsemble):
     here.
     '''
     def __init__(self, ensemble):
-        self.orig_ens = ensemble
-        self.ensemble = ensemble & LengthEnsemble(1)
+        super(SingleFrameEnsemble, self).__init__(ensemble)
+        self._new_ensemble = LengthEnsemble(1) & self.ensemble
 
     def __str__(self):
-        return "{"+self.orig_ens.__str__()+"} (SINGLE FRAME)"
-    
+        return "{"+self.ensemble.__str__()+"} (SINGLE FRAME)"
+
 class EnsembleFactory():
     '''
     Convenience class to construct Ensembles
