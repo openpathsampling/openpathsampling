@@ -23,7 +23,7 @@ script:
   - conda list -e
   - # Run tests
   - cd opentis/tests
-#  - nosetests --nocapture -vv
+  - nosetests --nocapture -vv
 #  - cd ..
 #  - cd xyz_files
 #  - nosetests --nocapture -vv

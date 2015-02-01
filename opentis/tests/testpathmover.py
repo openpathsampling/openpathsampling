@@ -11,7 +11,7 @@ from nose.plugins.skip import Skip, SkipTest
 from test_helpers import (assert_equal_array_array, 
                           assert_not_equal_array_array,
                           make_1d_traj,
-                          CalvinDynamics
+                          CalvinistDynamics
                          )
 
 from opentis.ensemble import LengthEnsemble
@@ -105,9 +105,9 @@ class testPathMover(object):
 
 class testShootingMover(object):
     def setup(self):
-        self.dyn = CalvinDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
-                                   -0.1, 0.2, 0.4, 0.6, 0.8,
-                                  ])
+        self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
+                                      -0.1, 0.2, 0.4, 0.6, 0.8,
+                                     ])
         PathMover.engine = self.dyn
         try:
             op = OP_Function("myid", fcn=lambda snap : 
@@ -159,7 +159,6 @@ class testOneWayShootingMover(testShootingMover):
 
 class testPathReversalMover(object):
     def setup(self):
-        #op = OrderParameter()
         try:
             op = OP_Function("myid", fcn=lambda snap : 
                              snap.coordinates[0,0])
@@ -213,6 +212,74 @@ class testPathReversalMover(object):
         gs_BXA = SampleSet([sampBXA])
         samp = self.move.move(gs_BXA)[0]
         assert_equal(samp.details.accepted, True)
+
+class testReplicaExchangeMover(object):
+    def setup(self):
+        try:
+            op = OP_Function("myid", fcn=lambda snap : 
+                             Trajectory([snap])[0].coordinates()[0][0])
+        except ValueError:
+            op = OrderParameter.get_existing('myid')
+        state1 = LambdaVolume(op, -100, 0.0)
+        state2 = LambdaVolume(op, 1, 100)
+        volA = LambdaVolume(op, -100, 0.25)
+        volB = LambdaVolume(op, -100, 0.50)
+        self.tisA = ef.TISEnsemble(state1, state2, volA)
+        self.tisB = ef.TISEnsemble(state1, state2, volB)
+        self.traj0 = make_1d_traj([-0.1, 0.2, 0.3, 0.1, -0.2])
+        self.traj1 = make_1d_traj([-0.1, 0.1, 0.4, 0.6, 0.3, 0.2, -0.15]) 
+        self.traj2 = make_1d_traj([-0.1, 0.2, 0.3, 0.7, 0.6, 0.4, 0.1, -0.15])
+        self.sampA0 = Sample(replica=0, trajectory=self.traj0, ensemble=self.tisA)
+        self.sampB1 = Sample(replica=1, trajectory=self.traj1, ensemble=self.tisB)
+        self.sampA2 = Sample(replica=2, trajectory=self.traj2, ensemble=self.tisA)
+        self.gs_B1A2 = SampleSet([self.sampB1, self.sampA2])
+        self.gs_A0B1 = SampleSet([self.sampA0, self.sampB1])
+
+    def test_repex_ens_acc(self):
+        repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
+        samples_B2A1_ens = repex_AB.move(self.gs_B1A2)
+        assert_equal(len(samples_B2A1_ens), 2)
+        for sample in samples_B2A1_ens:
+            assert_equal(sample.details.accepted, True)
+            assert_equal(sample.trajectory, sample.details.result)
+            assert_equal(sample.details.trial, sample.details.result)
+        B2 = [s for s in samples_B2A1_ens if s.ensemble==self.tisB]
+        assert_equal(len(B2), 1)
+        assert_equal(B2[0].trajectory, self.traj2)
+        A1 = [s for s in samples_B2A1_ens if s.ensemble==self.tisA]
+        assert_equal(len(A1), 1)
+        assert_equal(A1[0].trajectory, self.traj1)
+
+    def test_repex_ens_rej(self):
+        repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
+        samples_A0B1_ens = repex_AB.move(self.gs_A0B1)
+        assert_equal(len(samples_A0B1_ens), 2)
+        for sample in samples_A0B1_ens:
+            assert_equal(sample.details.accepted, False)
+            assert_equal(sample.trajectory, sample.details.result)
+            assert_not_equal(sample.details.trial, sample.details.result)
+        A0 = [s for s in samples_A0B1_ens if s.ensemble==self.tisA]
+        assert_equal(len(A0), 1)
+        assert_equal(A0[0].trajectory, self.traj0)
+        B1 = [s for s in samples_A0B1_ens if s.ensemble==self.tisB]
+        assert_equal(len(B1), 1)
+        assert_equal(B1[0].trajectory, self.traj1)
+
+
+    def test_repex_rep_acc(self):
+        repex_12 = ReplicaExchangeMover(replicas=[[1,2]])
+        samples_B2A1_rep = repex_12.move(self.gs_B1A2)
+        assert_equal(len(samples_B2A1_rep), 2)
+        for sample in samples_B2A1_rep:
+            assert_equal(sample.details.accepted, True)
+            assert_equal(sample.trajectory, sample.details.result)
+            assert_equal(sample.details.trial, sample.details.result)
+        B2 = [s for s in samples_B2A1_rep if s.ensemble==self.tisB]
+        assert_equal(len(B2), 1)
+        assert_equal(B2[0].trajectory, self.traj2)
+        A1 = [s for s in samples_B2A1_rep if s.ensemble==self.tisA]
+        assert_equal(len(A1), 1)
+        assert_equal(A1[0].trajectory, self.traj1)
 
 
 class testRandomChoiceMover(object):
