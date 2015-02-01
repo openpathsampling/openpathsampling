@@ -1174,6 +1174,15 @@ class SingleFrameEnsemble(AlteredEnsemble):
     def __str__(self):
         return "{"+self.orig_ens.__str__()+"} (SINGLE FRAME)"
     
+@restores_as_full_object
+class MinusInterfaceEnsemble(SequentialEnsemble):
+    def __init__(self, state_vol, innermost_vol, n_l, greedy=False):
+        inA = InXEnsemble(state_vol)
+        outA = OutXEnsemble(state_vol)
+        outX = OutXEnsemble(innermost_vol)
+        # TODO
+
+
 class EnsembleFactory():
     '''
     Convenience class to construct Ensembles
