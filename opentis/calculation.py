@@ -1,4 +1,4 @@
-from pathmover import (PathMover, MoveDetails, ReplicaExchange,
+from pathmover import (PathMover, MoveDetails, ReplicaExchangeMover,
                        EnsembleHopMover)
 from sample import SampleSet, Sample
 
