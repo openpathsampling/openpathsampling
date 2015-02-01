@@ -493,6 +493,10 @@ class PartialAcceptanceSequentialMover(SequentialMover):
             # accepted; that could mean that submoves of the submove were
             # rejected but the whole submove was accepted, as with
             # SequentialMovers
+            logger.info(str(self.name) 
+                        + " starting mover index " + str(self.movers.index(mover) )
+                        + " (" + mover.name + ")"
+                       )
             newsamples = mover.move(subglobal)
             subglobal = subglobal.apply_samples(newsamples)
             # all samples made by the submove; pick the ones up to the first
@@ -704,12 +708,14 @@ class RandomSubtrajectorySelectMover(PathMover):
         rep_sample = self.select_sample(globalstate)
         trajectory = rep_sample.trajectory
         replica = rep_sample.replica
+        logger.debug("Working with replica " + str(replica) + " (" + str(trajectory) + ")")
 
         details = MoveDetails()
         details.inputs = [trajectory]
         details.mover_path.append(self)
 
         subtrajs = self._subensemble.split(trajectory)
+        logger.debug("Found "+str(len(subtrajs))+" subtrajectories.")
         if self.length_req(len(subtrajs)):
             subtraj = self._choose(subtrajs)
         else:
@@ -902,10 +908,16 @@ class MinusMover(ConditionalSequentialMover):
         super(SequentialMover, self).__init__(ensembles=ensembles,
                                               replicas=replicas)
         segment = minus_ensemble.segment_ensemble
-        subtrajectory_selector = RandomChoiceMover(
-            FirstSubtrajectorySelectMover(segment, n_l=minus_ensemble.n_l),
-            FinalSubtrajectorySelectMover(segment, n_l=minus_ensemble.n_l)
-        )
+        subtrajectory_selector = RandomChoiceMover([
+            FirstSubtrajectorySelectMover(subensemble=segment,
+                                          n_l=minus_ensemble._n_l,
+                                          ensembles=[minus_ensemble]
+                                         ),
+            FinalSubtrajectorySelectMover(subensemble=segment, 
+                                          n_l=minus_ensemble._n_l,
+                                          ensembles=[minus_ensemble]
+                                         ),
+        ])
         subtrajectory_selector.name = "MinusSubtrajectoryChooser"
 
         repex = ReplicaExchangeMover(ensembles=[[segment, innermost_ensemble]])
@@ -914,10 +926,10 @@ class MinusMover(ConditionalSequentialMover):
             ensembles=[[segment, minus_ensemble]]
         )
 
-        extension_mover = RandomChoiceMover(
-            ForwardShootMover(FinalFrameSelector(), minus_ensemble),
-            BackwardShootMover(FirstFrameSelector(), minus_ensemble)
-        )
+        extension_mover = RandomChoiceMover([
+            ForwardShootMover(paths.FinalFrameSelector(), minus_ensemble),
+            BackwardShootMover(paths.FirstFrameSelector(), minus_ensemble)
+        ])
         extension_mover.name = "MinusExtensionDirectionChooser"
 
         self.movers = [
@@ -927,6 +939,8 @@ class MinusMover(ConditionalSequentialMover):
             extension_mover
         ]
 
+        self.minus_ensemble = minus_ensemble
+        self.innermost_ensemble = innermost_ensemble
         initialization_logging(init_log, self, ['minus_ensemble',
                                                 'innermost_ensemble'])
 

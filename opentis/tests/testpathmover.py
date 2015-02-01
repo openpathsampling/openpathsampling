@@ -608,28 +608,80 @@ class testMinusMover(object):
         volA = LambdaVolume(op, -100, 0.0)
         volB = LambdaVolume(op, 1.0, 100)
         volX = LambdaVolume(op, -100, 0.25)
+        self.dyn = CalvinistDynamics([
+            # successful move: (backward extension then forward)
+            -0.13, 0.13, 0.33, -0.11, -0.12, 0.12, 0.32, -0.131,
+            # never leaves state: (creates a loop in CalvinDynamics?)
+            -0.25, -0.15, -0.25, 
+            # goes to other state:
+            1.16, 1.26, 1.16, -0.16, 1.16, 1.26, 1.16
+        ])
+        PathMover.engine = self.dyn
         self.innermost = ef.TISEnsemble(volA, volB, volX)
         self.minus = paths.MinusInterfaceEnsemble(volA, volX)
-        self.dyn = CalvinistDynamics([
-        ])
-        init_minus = make_1d_traj([])
+        self.mover = MinusMover(minus_ensemble=self.minus,
+                                innermost_ensemble=self.innermost)
+        first_segment = [-0.1, 0.1, 0.3, 0.1, -0.15] 
+        second_segment = [-0.25, 0.2, 0.4, 0.2, -0.2]
+        self.first_segment = make_1d_traj(first_segment, [1.0]*5)
+        self.second_segment = make_1d_traj(second_segment, [1.0]*5)
+        init_minus = make_1d_traj(
+            coordinates=first_segment + [-0.35] + second_segment,
+            velocities=[1.0]*11
+        )
         self.minus_sample = Sample(
             replica=-1,
             trajectory=init_minus,
             ensemble=self.minus
         )
-        pass
+
+    def test_setup_sanity(self):
+        # sanity checks to make sure that what we set up makes sense
+        assert_equal(self.minus_sample.ensemble(self.minus_sample.trajectory),
+                    True)
+        first_subtraj = FirstSubtrajectorySelectMover(
+            subensemble=self.minus.segment_ensemble
+        )
+        samples = first_subtraj.move(SampleSet(self.minus_sample))
+        assert_equal(samples[0].ensemble(samples[0].trajectory), True)
+        final_subtraj = FinalSubtrajectorySelectMover(
+            subensemble=self.minus.segment_ensemble
+        )
+        samples = final_subtraj.move(SampleSet(self.minus_sample))
+        assert_equal(samples[0].ensemble(samples[0].trajectory), True)
+        assert_equal(samples[0].ensemble, self.minus.segment_ensemble)
+        
+
+    def test_successful_move(self):
+        list_innermost = [-0.11, 0.11, 0.31, 0.11, -0.12]
+        init_innermost = make_1d_traj(list_innermost, [1.0]*5)
+        init_sample = Sample(
+            replica=0,
+            trajectory=init_innermost,
+            ensemble=self.innermost
+        )
+        gs = SampleSet([init_sample, self.minus_sample])
+
+        extend_forward = make_1d_traj(list_innermost + [0.12, 0.32, -0.131])
+        extend_backward = make_1d_traj([-0.13, 0.13, 0.33] + list_innermost)
+
+        for i in range(100):
+            samples = self.mover.move(gs)
+
+        raise SkipTest
 
     def test_repex_fails(self):
         init_innermost_other_ensemble = make_1d_traj([])
+        samp_other_ensemble = Sample(
+            replica=0,
+            trajectory=init_innermost_other_ensemble,
+            ensemble=self.innermost
+        )
         init_innermost_crosses_to_state = make_1d_traj([])
+        init_minus_crosses_to_state = make_1d_traj([])
         raise SkipTest
 
     def test_extension_fails(self):
         init_innermost_bad_extension = make_1d_traj([])
         # this only happens due to length
-        raise SkipTest
-
-    def test_successful_move(self):
-        init_innermost = make_1d_traj([])
         raise SkipTest

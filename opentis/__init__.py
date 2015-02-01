@@ -28,7 +28,7 @@ from pathmover import (
 )
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
-    GaussianBiasSelector
+    GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
 
 from dynamics_engine import DynamicsEngine
 

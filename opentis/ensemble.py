@@ -178,6 +178,8 @@ class Ensemble(object):
         max_length = min(length, max_length)
         min_length = max(1, min_length)
 
+        logger.debug("Looking for subtrajectories in " + str(trajectory))
+
         if not lazy:
             # this tries all possible sub-trajectories starting with the
             # longest ones and uses recursion
@@ -679,7 +681,9 @@ class SequentialEnsemble(Ensemble):
 
 
     def __call__(self, trajectory, lazy=None):
+        logger.debug("Looking for transitions in trajectory " + str(trajectory))
         transitions = self.transition_frames(trajectory, lazy)
+        logger.debug("Found transitions: " + str(transitions))
         # if we don't have the right number of transitions, or if the last 
         #print transitions
         if len(transitions) != len(self.ensembles):
@@ -1317,6 +1321,8 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
             SingleFrameEnsemble(inA)
         ]
         ensembles = start + loop*(n_l-1) + end
+
+        self._n_l = n_l
 
         super(MinusInterfaceEnsemble, self).__init__(ensembles, greedy=greedy)
 

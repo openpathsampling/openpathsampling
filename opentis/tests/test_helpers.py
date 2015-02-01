@@ -41,7 +41,7 @@ def assert_not_equal_array_array(list_a, list_b):
 class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
         super(CalvinistDynamics, self).__init__(options={'ndim' : 1,
-                                                         'n_frames_max' : 10})
+                                                         'n_frames_max' : 12})
         self.predestination = make_1d_traj(coordinates=predestination,
                                            velocities=[1.0]*len(predestination)
                                           )
