@@ -360,6 +360,7 @@ class MomentumStore(ObjectStore):
         super(MomentumStore, self)._init()
 
         n_atoms = self.storage.n_atoms
+        n_spatial = self.storage.n_spatial
 
         self.init_variable('momentum_velocities', 'float',
                 (self.db, 'atom','spatial'),
@@ -367,7 +368,7 @@ class MomentumStore(ObjectStore):
                 description="velocities[momentum][atom][coordinate] are " +
                             "velocities of atom 'atom' in dimension " +
                             "'coordinate' of momentum 'momentum'.",
-                chunksizes=(1,n_atoms,3))
+                chunksizes=(1,n_atoms,n_spatial))
 
         self.init_variable('momentum_kinetic', 'float', self.db,
                 self.dimension_units['energy'],
@@ -582,7 +583,7 @@ class ConfigurationStore(ObjectStore):
                 description="coordinates[configuration][atom][coordinate] " +
                             "are coordinate of atom 'atom' in dimension " +
                             "'coordinate' of configuration 'configuration'.",
-                chunksizes=(1,n_atoms,3))
+                chunksizes=(1,n_atoms,n_spatial))
 
         self.init_variable('configuration_box_vectors', 'float',
                 (self.db, 'spatial', 'spatial'),

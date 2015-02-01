@@ -147,8 +147,7 @@ class OpenMMEngine(paths.DynamicsEngine):
         self.template = template
         self.topology = template.topology
         self.options = {
-            'n_atoms' : self.topology.n_atoms,
-            'template' : template
+            'n_atoms' : self.topology.n_atoms
         }
 
         super(OpenMMEngine, self).__init__(

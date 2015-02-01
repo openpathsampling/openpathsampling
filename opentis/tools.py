@@ -137,11 +137,27 @@ def units_from_snapshot(snapshot):
         representing a dict of string representing a dimension ('length', 'velocity', 'energy') pointing the
         the simtk.unit.Unit to be used
     """
-    return {
-        'length' : snapshot.coordinates.unit,
-        'velocity' : snapshot.velocities.unit,
-        'energy' : snapshot.potential_energy.unit
-    }
+
+    units = {}
+    if snapshot.coordinates is not None:
+        if hasattr(snapshot.coordinates, 'unit'):
+            units['length'] = snapshot.coordinates.unit
+        else:
+            units['length'] = u.Unit({})
+
+    if snapshot.potential_energy is not None:
+        if hasattr(snapshot.potential_energy, 'unit'):
+            units['energy'] = snapshot.potential_energy.unit
+        else:
+            units['energy'] = u.Unit({})
+
+    if snapshot.velocities is not None:
+        if hasattr(snapshot.velocities, 'unit'):
+            units['velocity'] = snapshot.velocities.unit
+        else:
+            units['velocity'] = u.Unit({})
+
+    return units
 
 def to_openmm_topology(obj):
     """

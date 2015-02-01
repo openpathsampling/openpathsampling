@@ -15,7 +15,7 @@ class LeapfrogVerletIntegrator(object):
         self.dt = dt
 
     def _momentum_update(self, sys, mydt):
-        sys.velocities -= sys.pes.dVdx(sys)*sys.minv*mydt
+        sys.velocities -= sys.pes.dVdx(sys)*sys._minv*mydt
 
     def _position_update(self, sys, mydt):
         sys.positions += sys.velocities * mydt
@@ -71,7 +71,7 @@ class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
     def _OU_update(self, sys, mydt):
         R = np.random.normal(size=len(sys.velocities))
         sys.velocities = (self._c1 * sys.velocities +
-                          self._c3 * np.sqrt(sys.minv) * R)
+                          self._c3 * np.sqrt(sys._minv) * R)
 
     def step(self, sys, nsteps):
         self._momentum_update(sys, 0.5*self.dt)

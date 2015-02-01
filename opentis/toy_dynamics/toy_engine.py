@@ -34,18 +34,21 @@ class ToyEngine(DynamicsEngine):
 
     default_options = { 'pes' : None,
                       'integ' : None,
-                      'ndim' : 2,
                       'n_frames_max' : 5000,
                       'nsteps_per_frame' : 10
     }
 
-    def __init__(self, options=None):
-        if 'ndim' not in options:
-            options['ndim'] = 2
-        options['n_atoms'] = count_atoms(options['ndim'])
+    def __init__(self, options, template):
+        if 'n_spatial' not in options:
+            options['n_spatial'] = template.topology.n_spatial
+
+        options['n_atoms'] = 1
 
         super(ToyEngine, self).__init__(
                                         options=options)
+
+        self.template = template
+        self.mass = template.topology.masses
 
     @property
     def nsteps_per_frame(self):
@@ -62,12 +65,12 @@ class ToyEngine(DynamicsEngine):
     @mass.setter
     def mass(self, value):
         self._mass = value
-        self.minv = np.reciprocal(value)
+        self._minv = np.reciprocal(value)
 
     @property
     def current_snapshot(self):
-        snap_pos = convert_to_3Ndim(self.positions)
-        snap_vel = convert_to_3Ndim(self.velocities)
+        snap_pos = self.positions
+        snap_vel = self.velocities
         snap_pot = self.pes.V(self)
         snap_kin = self.pes.kinetic_energy(self)
         return Snapshot(coordinates=snap_pos,
@@ -81,8 +84,8 @@ class ToyEngine(DynamicsEngine):
     def current_snapshot(self, snap):
         coords = np.copy(snap.coordinates)
         vels = np.copy(snap.velocities)
-        self.positions = np.ravel(coords)[:self.ndim]
-        self.velocities = np.ravel(vels)[:self.ndim]
+        self.positions = coords
+        self.velocities = vels
 
     def generate_next_frame(self):
         self.integ.step(self, self.nsteps_per_frame)
@@ -94,21 +97,21 @@ class ToyEngine(DynamicsEngine):
 
     @property
     def momentum(self):
-        return Momentum(velocities=convert_to_3Ndim(self.velocities),
+        return Momentum(velocities=self.velocities,
                         kinetic_energy=self.pes.kinetic_energy(self)
                        )
 
     @momentum.setter
     def momentum(self, momentum):
-        self.velocities = np.ravel(momentum.velocities)[:self.ndim]
+        self.velocities = momentum.velocities
 
     @property
     def configuration(self):
-        return Configuration(coordinates=convert_to_3Ndim(self.positions),
+        return Configuration(coordinates=self.positions,
                              box_vectors=None,
                              potential_energy=self.pes.V(self)
                             )
 
     @configuration.setter
     def configuration(self, configuration):
-        self.positions = np.ravel(configuration.coordinates)[:self.ndim]
+        self.positions = configuration.coordinates

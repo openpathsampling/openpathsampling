@@ -165,11 +165,10 @@ class DynamicsEngine(object):
             self.options = {}
 
     def to_dict(self):
-        return self.options
-
-    @classmethod
-    def from_dict(cls, my_dict):
-        return cls(options=my_dict)
+        return {
+            'options' : self.options,
+            'template' : self.template
+        }
 
     @property
     def default_options(self):

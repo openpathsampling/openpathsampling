@@ -3,6 +3,8 @@ import argparse
 import os
 import time
 
+import opentis as paths
+
 from opentis.storage import Storage
 
 if __name__ == '__main__':
@@ -52,15 +54,19 @@ if __name__ == '__main__':
     topology = storage.topology
 
     line("Number of Atoms", topology.n_atoms)
+    line("Number of Dimensions", topology.n_spatial)
 
-    md_topology = topology.md
+    if type(topology) is paths.MDTrajTopology:
+        line('MDTraj Topology','')
 
-    counterion_indices = [ a.index for a in md_topology.atoms if a.residue.name[-1] == '+']
-    solvent_indices = [ a.index for a in md_topology.atoms if a.residue.name == 'HOH']
-    protein_indices = [ a.index for a in md_topology.atoms if a.residue.name[-1] != '+' and a.residue.name != 'HOH']
+#    md_topology = topology.md
 
-    line("Number of waters", len(solvent_indices) / 3)
-    line("Number of protein atoms", len(protein_indices))
+#    counterion_indices = [ a.index for a in md_topology.atoms if a.residue.name[-1] == '+']
+#    solvent_indices = [ a.index for a in md_topology.atoms if a.residue.name == 'HOH']
+#    protein_indices = [ a.index for a in md_topology.atoms if a.residue.name[-1] != '+' and a.residue.name != 'HOH']
+
+#    line("Number of waters", len(solvent_indices) / 3)
+#    line("Number of protein atoms", len(protein_indices))
 
     headline("Snapshot Zero")
     # load initial equilibrate snapshot given by ID #0
