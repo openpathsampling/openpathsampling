@@ -26,6 +26,13 @@ class Topology(object):
         self.n_atoms = n_atoms
         self.n_spatial = n_spatial
 
+    def subset(self, list_of_atoms):
+        return Topology(
+            n_atoms=len(list_of_atoms),
+            n_spatial=self.n_spatial
+        )
+
+
 @restores_as_full_object
 class ToyTopology(Topology):
     '''
@@ -38,6 +45,13 @@ class ToyTopology(Topology):
         super(ToyTopology, self).__init__(n_atoms, n_spatial)
         self.masses = masses
 
+    def subset(self, list_of_atoms):
+        return ToyTopology(
+            n_atoms=len(list_of_atoms),
+            n_spatial=self.n_spatial,
+            masses=[self.masses[atom_idx] for atom_idx in list_of_atoms]
+        )
+
 @restores_as_full_object
 class MDTrajTopology(Topology):
     def __init__(self, mdtraj_topology, subsets = None):
@@ -48,6 +62,9 @@ class MDTrajTopology(Topology):
             self.subsets = {}
         else:
             self.subsets = subsets
+
+    def subset(self, list_of_atoms):
+        return MDTrajTopology(self.md.subset(list_of_atoms), self.subsets)
 
     def to_dict(self):
         out = dict()

@@ -435,16 +435,20 @@ class OP_MD_Function(OrderParameter):
             atoms which define a specific distance/angle)
 
         """
-        super(OP_Function, self).__init__(name)
+        super(OP_MD_Function, self).__init__(name)
         self.fcn = fcn
         self.kwargs = kwargs
         self.topology = None
         return
 
-    def _eval(self, trajectory, *args):
+    def _eval(self, items, *args):
+        trajectory = paths.Trajectory(
+            [paths.Snapshot(configuration=c) for c in items]
+        )
+
         if self.topology is None:
             # first time ever compute the used topology for this orderparameter to construct the mdtraj objects
-            self.topology = trajectory.md_topology()
+            self.topology = trajectory.topology.md
 
         t = trajectory.md(self.topology)
         return self.fcn(t, *args, **self.kwargs)

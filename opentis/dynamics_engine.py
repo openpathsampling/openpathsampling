@@ -35,8 +35,7 @@ class DynamicsEngine(object):
     '''
 
     _default_options = {
-        'n_atoms' : 0,
-        'n_frames_max' : 0,
+        'n_frames_max' : 0
     }
 
     units = {
@@ -45,7 +44,7 @@ class DynamicsEngine(object):
         'energy' : u.Unit({})
     }
 
-    def __init__(self, options=None):
+    def __init__(self, options=None, template=None):
         '''
         Create an empty DynamicsEngine object
         
@@ -69,6 +68,8 @@ class DynamicsEngine(object):
 
 #        if storage is not None:
 #            self.storage = storage
+
+        self.template = template
 
         # Trajectories need to know the engine as a hack to get the topology.
         # Better would be a link to the topology directly. This is needed to create
@@ -160,9 +161,18 @@ class DynamicsEngine(object):
             self.options = okay_options
 
             for variable, value in okay_options.iteritems():
+                print variable
                 setattr(self, variable, value)
         else:
             self.options = {}
+
+    @property
+    def n_atoms(self):
+        return self.template.topology.n_atoms
+
+    @property
+    def n_spatial(self):
+        return self.template.topology.n_spatial
 
     def to_dict(self):
         return {

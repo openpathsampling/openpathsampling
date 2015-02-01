@@ -426,6 +426,31 @@ class Trajectory(list):
 
         return trajectory
 
+    @property
+    def topology(self):
+        """
+        Return a Topology object representing the topology of the
+        current view of the trajectory
+
+        Returns
+        -------
+        topology : opentis.Topology
+            the topology object
+
+        Notes
+        -----
+        This is taken from the configuration of the first frame.
+        """
+
+        if len(self) > 0 and self[0].topology is not None:
+            # if no topology is defined
+            topology = self[0].topology
+
+        if self.atom_indices is not None:
+            topology = topology.subset(self.atom_indices)
+
+        return topology
+
     def md_topology(self):
         """
         Return a mdtraj.Topology object representing the topology of the
@@ -438,17 +463,9 @@ class Trajectory(list):
 
         Notes
         -----
-        This is taken from the configuration of the first frame. Otherwise
-        there is still un ugly fall-back to look for an openmm.Simulation
-        object in Trajectory.engine. and construct an mdtraj.Topology
-        from this.
+        This is taken from the configuration of the first frame.
+        Use topology.md instead
+        TODO: Should be removed
         """        
 
-        if len(self) > 0 and self[0].topology is not None:
-            # if no topology is defined
-            topology = self[0].topology.md
-
-        if self.atom_indices is not None:
-            topology = topology.subset(self.atom_indices)
-        
-        return topology
+        return self.topology.md

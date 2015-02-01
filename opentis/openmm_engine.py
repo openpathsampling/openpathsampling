@@ -31,8 +31,7 @@ class OpenMMEngine(paths.DynamicsEngine):
         'timestep' : 2.0 * u.femtoseconds,
         'platform' : 'fastest',
         'forcefield_solute' : 'amber96.xml',
-        'forcefield_solvent' : 'tip3p.xml',
-        'template' : paths.Snapshot()
+        'forcefield_solvent' : 'tip3p.xml'
     }
 
     @staticmethod
@@ -88,7 +87,6 @@ class OpenMMEngine(paths.DynamicsEngine):
 
         if type(template) is str:
             template = paths.snapshot_from_pdb(template, units=units)
-            print template.configuration.__dict__
 
         # once we have a template configuration (coordinates to not really
         # matter) we can create a storage. We might move this logic out of
@@ -141,17 +139,16 @@ class OpenMMEngine(paths.DynamicsEngine):
 
     def __init__(self, options, template=None):
 
-        if template is None:
+        if 'template' in options:
             template = options['template']
 
-        self.template = template
         self.topology = template.topology
         self.options = {
-            'n_atoms' : self.topology.n_atoms
         }
 
         super(OpenMMEngine, self).__init__(
-            options=options
+            options=options,
+            template=template
         )
 
         # set up the OpenMM simulation

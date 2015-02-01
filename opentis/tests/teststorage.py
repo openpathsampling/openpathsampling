@@ -81,8 +81,8 @@ class testStorage(object):
         # check if poth topologies have the same JSON string (this also tests the simplifier for topologies
 
         assert_equal(
-            store.simplifier.topology_to_json(self.template_snapshot.topology),
-            store.simplifier.topology_to_json(loaded_topology)
+            store.simplifier.to_json(self.template_snapshot.topology),
+            store.simplifier.to_json(loaded_topology)
         )
 
         pass
