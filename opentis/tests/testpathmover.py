@@ -617,6 +617,7 @@ class testMinusMover(object):
             1.16, 1.26, 1.16, -0.16, 1.16, 1.26, 1.16
         ])
         PathMover.engine = self.dyn
+        self.dyn.initialized = True
         self.innermost = ef.TISEnsemble(volA, volB, volX)
         self.minus = paths.MinusInterfaceEnsemble(volA, volX)
         self.mover = MinusMover(minus_ensemble=self.minus,
@@ -665,8 +666,13 @@ class testMinusMover(object):
         extend_forward = make_1d_traj(list_innermost + [0.12, 0.32, -0.131])
         extend_backward = make_1d_traj([-0.13, 0.13, 0.33] + list_innermost)
 
+        assert_equal(self.minus(extend_forward), True)
+        assert_equal(self.minus(extend_backward), True)
+
         for i in range(100):
             samples = self.mover.move(gs)
+            #for s in samples:
+                #print s.details
 
         raise SkipTest
 

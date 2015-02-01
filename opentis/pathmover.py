@@ -483,6 +483,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     accepted shooting move should be accepted.
     '''
     def move(self, globalstate):
+        logger.debug("==== BEGINNING " + self.name + " ====")
         subglobal = SampleSet(self.legal_sample_set(globalstate))
         mysamples = []
         last_accepted = True
@@ -510,6 +511,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
                 break
         for sample in mysamples:
             sample.details.mover_path.append(self)
+        logger.debug("==== FINISHING " + self.name + " ====")
         return mysamples
 
 
@@ -666,7 +668,7 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
         trajectory = rep_sample.trajectory
 
         details = MoveDetails()
-        details.accepted = False
+        details.accepted = True
         details.inputs = [trajectory]
         details.mover_path.append(self)
         details.result = trajectory
