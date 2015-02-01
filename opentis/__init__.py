@@ -7,7 +7,7 @@ from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     LeaveXEnsemble, LengthEnsemble, LoadedEnsemble, NegatedEnsemble, \
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \
     SequentialEnsemble, AndEnsemble, OrEnsemble, XorEnsemble, SubEnsemble, \
-    SingleFrameEnsemble
+    SingleFrameEnsemble, MinusInterfaceEnsemble
 
 
 

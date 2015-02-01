@@ -686,11 +686,16 @@ class RandomSubtrajectorySelectMover(PathMover):
     If there are no subtrajectories which satisfy the subensemble, this
     returns the zero-length trajectory.
     '''
-    def __init__(self, subensemble, ensembles=None, replicas='all'):
+    def __init__(self, subensemble, n_l=None, ensembles=None, replicas='all'):
         super(RandomSubtrajectorySelectMover, self).__init__(
             ensembles=ensembles, replicas=replicas
         )
+        self._n_l=n_l
         self._subensemble = subensemble
+        if self._n_l is None:
+            self.length_req = lambda x: x > 0
+        else:
+            self.length_req = lambda x: x==self._n_l
 
     def _choose(self, trajectory_list):
         return random.choice(trajectory_list)
@@ -705,7 +710,7 @@ class RandomSubtrajectorySelectMover(PathMover):
         details.mover_path.append(self)
 
         subtrajs = self._subensemble.split(trajectory)
-        if len(subtrajs) > 0:
+        if self.length_req(len(subtrajs)):
             subtraj = self._choose(subtrajs)
         else:
             # return zero-length trajectory otherwise
@@ -891,22 +896,22 @@ class OneWayShootingMover(RandomChoiceMover):
         )
 
 @restores_as_stub_object
-class MinusMover(RandomChoiceMover):
+class MinusMover(ConditionalSequentialMover):
     def __init__(self, minus_ensemble, innermost_ensemble, 
                  ensembles=None, replicas='all'):
         super(SequentialMover, self).__init__(ensembles=ensembles,
                                               replicas=replicas)
-        innermost = AppendedNameEnsemble(innermost_ensemble, "(in minus)")
+        segment = minus_ensemble.segment_ensemble
         subtrajectory_selector = RandomChoiceMover(
-            FirstSubtrajectorySelectMover(innermost),
-            FinalSubtrajectorySelectMover(innermost)
+            FirstSubtrajectorySelectMover(segment, n_l=minus_ensemble.n_l),
+            FinalSubtrajectorySelectMover(segment, n_l=minus_ensemble.n_l)
         )
         subtrajectory_selector.name = "MinusSubtrajectoryChooser"
 
-        repex = ReplicaExchangeMover(ensembles=[[innermost, innermost_ensemble]])
+        repex = ReplicaExchangeMover(ensembles=[[segment, innermost_ensemble]])
 
         force_to_minus = ForceEnsembleChangeMover(
-            ensembles=[[innermost, minus_ensemble]]
+            ensembles=[[segment, minus_ensemble]]
         )
 
         extension_mover = RandomChoiceMover(

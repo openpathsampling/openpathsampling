@@ -1300,6 +1300,8 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         inX = InXEnsemble(innermost_vol)
         leaveX = LeaveXEnsemble(innermost_vol)
         interstitial = outA & inX
+        self.segment_ensemble = EnsembleFactory.TISEnsemble(
+            state_vol, state_vol, innermost_vol)
         #interstitial = InXEnsemble(innermost_vol - state_vol)
         start = [
             SingleFrameEnsemble(inA),

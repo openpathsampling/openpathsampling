@@ -536,6 +536,9 @@ class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
                 raise RuntimeError("Subtraj unknown!")
         assert_equal(found[0] and found[1] and found[2], True)
 
+    def test_nl_fails(self):
+        raise SkipTest
+
     def test_nothing_allowed(self):
         mover = RandomSubtrajectorySelectMover(self.subensemble)
         traj_with_no_subtrajs = Trajectory([0.0, 0.0, 0.0])
@@ -594,3 +597,39 @@ class testForceEnsembleChangeMover(object):
                      True)
         assert_equal(samples[0].ensemble, self.len2)
         assert_equal(samples[0].ensemble(samples[0].trajectory), False)
+
+class testMinusMover(object):
+    def setup(self):
+        try:
+            op = OP_Function("myid", fcn=lambda snap : 
+                             Trajectory([snap])[0].coordinates()[0][0])
+        except ValueError:
+            op = OrderParameter.get_existing('myid')
+        volA = LambdaVolume(op, -100, 0.0)
+        volB = LambdaVolume(op, 1.0, 100)
+        volX = LambdaVolume(op, -100, 0.25)
+        self.innermost = ef.TISEnsemble(volA, volB, volX)
+        self.minus = paths.MinusInterfaceEnsemble(volA, volX)
+        self.dyn = CalvinistDynamics([
+        ])
+        init_minus = make_1d_traj([])
+        self.minus_sample = Sample(
+            replica=-1,
+            trajectory=init_minus,
+            ensemble=self.minus
+        )
+        pass
+
+    def test_repex_fails(self):
+        init_innermost_other_ensemble = make_1d_traj([])
+        init_innermost_crosses_to_state = make_1d_traj([])
+        raise SkipTest
+
+    def test_extension_fails(self):
+        init_innermost_bad_extension = make_1d_traj([])
+        # this only happens due to length
+        raise SkipTest
+
+    def test_successful_move(self):
+        init_innermost = make_1d_traj([])
+        raise SkipTest
