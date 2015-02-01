@@ -39,12 +39,12 @@ def assert_not_equal_array_array(list_a, list_b):
     return exist_diff
 
 
-class CalvinDynamics(DynamicsEngine):
+class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
         topology = Topology(n_atoms=1, n_spatial=1)
         template = Snapshot(topology=topology)
 
-        super(CalvinDynamics, self).__init__(options={'n_frames_max' : 10},
+        super(CalvinistDynamics, self).__init__(options={'n_frames_max' : 10},
                                              template=template)
         self.predestination = make_1d_traj(coordinates=predestination,
                                            velocities=[1.0]*len(predestination)

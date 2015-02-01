@@ -217,7 +217,7 @@ class testReplicaExchangeMover(object):
     def setup(self):
         try:
             op = OP_Function("myid", fcn=lambda snap : 
-                             Trajectory([snap])[0].coordinates()[0][0])
+                             snap.coordinates[0][0])
         except ValueError:
             op = OrderParameter.get_existing('myid')
         state1 = LambdaVolume(op, -100, 0.0)
