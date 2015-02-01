@@ -318,7 +318,7 @@ class ObjectStore(object):
         This allows to load by name for named objects
         """
         if self.is_named:
-            for idx, name in enumerate(self.variables[self.db + "_name"][:]):
+            for idx, name in enumerate(self.storage.variables[self.db + "_name"][:]):
                 self.cache[name] = idx
 
     def iterator(this, iter_range = None):

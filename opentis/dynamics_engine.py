@@ -161,7 +161,6 @@ class DynamicsEngine(object):
             self.options = okay_options
 
             for variable, value in okay_options.iteritems():
-                print variable
                 setattr(self, variable, value)
         else:
             self.options = {}
