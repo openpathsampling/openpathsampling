@@ -32,7 +32,7 @@ class ToyEngine(DynamicsEngine):
     simulation objects as in OpenMM), but they all quack the same when it
     comes to things the DynamicsEngine calls on them for'''
 
-    default_options = { 'pes' : None,
+    default_options = {
                       'integ' : None,
                       'n_frames_max' : 5000,
                       'nsteps_per_frame' : 10
@@ -49,6 +49,11 @@ class ToyEngine(DynamicsEngine):
 
         self.template = template
         self.mass = template.topology.masses
+        self._pes = template.topology.pes
+
+    @property
+    def pes(self):
+        return self._pes
 
     @property
     def nsteps_per_frame(self):

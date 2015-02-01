@@ -144,7 +144,8 @@ class testToyEngine(object):
         topology=ToyTopology(
             n_atoms = 1,
             n_spatial = 2,
-            masses = sys_mass
+            masses = sys_mass,
+            pes = pes
         )
         template = Snapshot(
             coordinates=init_pos.copy(),
@@ -153,8 +154,9 @@ class testToyEngine(object):
             kinetic_energy = 0.0,
             topology=topology
         )
-        options={'pes' : pes, 'integ' : integ,
-                              'n_frames_max' : 5}
+        options={
+            'integ' : integ,
+            'n_frames_max' : 5}
         sim = ToyEngine(options=options,
                         template=template
                        )
@@ -263,7 +265,8 @@ class testLeapfrogVerletIntegrator(object):
         topology=ToyTopology(
             n_atoms = 1,
             n_spatial = 2,
-            masses = sys_mass
+            masses = sys_mass,
+            pes = pes
         )
         template = Snapshot(
             coordinates=init_pos.copy(),
@@ -272,8 +275,9 @@ class testLeapfrogVerletIntegrator(object):
             kinetic_energy = 0.0,
             topology=topology
         )
-        options={'pes' : pes, 'integ' : integ,
-                              'n_frames_max' : 5}
+        options={
+            'integ' : integ,
+            'n_frames_max' : 5}
         sim = ToyEngine(options=options,
                         template=template
                        )
@@ -317,7 +321,8 @@ class testLangevinBAOABIntegrator(object):
         topology=ToyTopology(
             n_atoms = 1,
             n_spatial = 2,
-            masses = sys_mass
+            masses = sys_mass,
+            pes = pes
         )
         template = Snapshot(
             coordinates=init_pos.copy(),
@@ -326,8 +331,9 @@ class testLangevinBAOABIntegrator(object):
             kinetic_energy = 0.0,
             topology=topology
         )
-        options={'pes' : pes, 'integ' : integ,
-                              'n_frames_max' : 5}
+        options={
+            'integ' : integ,
+            'n_frames_max' : 5}
         sim = ToyEngine(options=options,
                         template=template
                        )

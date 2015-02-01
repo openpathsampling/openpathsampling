@@ -41,15 +41,17 @@ class ToyTopology(Topology):
     masses : numpy.ndarray (n_atoms, dtype=float)
         The masses associated with each atom
     '''
-    def __init__(self, n_atoms, n_spatial, masses):
+    def __init__(self, n_atoms, n_spatial, masses, pes):
         super(ToyTopology, self).__init__(n_atoms, n_spatial)
         self.masses = masses
+        self.pes = pes
 
     def subset(self, list_of_atoms):
         return ToyTopology(
             n_atoms=len(list_of_atoms),
             n_spatial=self.n_spatial,
-            masses=[self.masses[atom_idx] for atom_idx in list_of_atoms]
+            masses=[self.masses[atom_idx] for atom_idx in list_of_atoms],
+            pes=self.pes
         )
 
 @restores_as_full_object
