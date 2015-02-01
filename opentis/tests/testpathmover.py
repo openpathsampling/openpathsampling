@@ -8,7 +8,7 @@ import numpy as np
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, raises)
 from nose.plugins.skip import Skip, SkipTest
-from test_helpers import (assert_equal_array_array, 
+from test_helpers import (assert_equal_array_array, items_equal,
                           assert_not_equal_array_array,
                           make_1d_traj,
                           CalvinistDynamics,
@@ -622,12 +622,10 @@ class testMinusMover(object):
         self.minus = paths.MinusInterfaceEnsemble(volA, volX)
         self.mover = MinusMover(minus_ensemble=self.minus,
                                 innermost_ensemble=self.innermost)
-        first_segment = [-0.1, 0.1, 0.3, 0.1, -0.15] 
-        second_segment = [-0.25, 0.2, 0.4, 0.2, -0.2]
-        self.first_segment = make_1d_traj(first_segment, [1.0]*5)
-        self.second_segment = make_1d_traj(second_segment, [1.0]*5)
+        self.first_segment = [-0.1, 0.1, 0.3, 0.1, -0.15] 
+        self.second_segment = [-0.25, 0.2, 0.4, 0.2, -0.2]
         init_minus = make_1d_traj(
-            coordinates=first_segment + [-0.35] + second_segment,
+            coordinates=self.first_segment + [-0.35] + self.second_segment,
             velocities=[1.0]*11
         )
         self.minus_sample = Sample(
@@ -663,18 +661,51 @@ class testMinusMover(object):
         )
         gs = SampleSet([init_sample, self.minus_sample])
 
-        extend_forward = make_1d_traj(list_innermost + [0.12, 0.32, -0.131])
-        extend_backward = make_1d_traj([-0.13, 0.13, 0.33] + list_innermost)
+        extend_forward = list_innermost + [0.12, 0.32, -0.131]
+        extend_backward = [-0.13, 0.13, 0.33] + list_innermost
 
-        assert_equal(self.minus(extend_forward), True)
-        assert_equal(self.minus(extend_backward), True)
+        assert_equal(self.minus(make_1d_traj(extend_forward)), True)
+        assert_equal(self.minus(make_1d_traj(extend_backward)), True)
 
+        seg_dir = {}
         for i in range(100):
             samples = self.mover.move(gs)
-            #for s in samples:
-                #print s.details
+            assert_equal(len(samples), 5)
+            s_inner = [s for s in samples if s.ensemble==self.innermost]
+            s_minus = [s for s in samples if s.ensemble==self.minus]
+            s_sub = [s for s in samples if s.ensemble==self.minus.segment_ensemble]
+            assert_equal(len(s_inner), 1)
+            assert_equal(len(s_minus), 2)
+            assert_equal(len(s_sub), 2)
 
-        raise SkipTest
+            for s in samples:
+                assert_equal(s.details.accepted, True)
+
+            key = ""
+            s_inner0_xvals = [s.coordinates[0,0] for s in s_inner[0].trajectory]
+            if items_equal(s_inner0_xvals, self.first_segment):
+                key += "1"
+            elif items_equal(s_inner0_xvals, self.second_segment):
+                key += "2"
+            else:
+                print s_inner0_xvals
+                raise RuntimeError("Chosen segment neither first nor last!")
+
+            # final sample s_minus is accepted
+            s_minus_xvals = [s.coordinates[0,0] for s in s_minus[-1].trajectory]
+            if items_equal(s_minus_xvals, extend_forward):
+                key += "f"
+            elif items_equal(s_minus_xvals, extend_backward):
+                key += "b"
+            else:
+                print s_minus_xvals
+                raise RuntimeError("Unexpected minus extension result!")
+
+            try:
+                seg_dir[key] += 1
+            except KeyError:
+                seg_dir[key] = 1
+        assert_equal(len(seg_dir.keys()), 4)
 
     def test_repex_fails(self):
         init_innermost_other_ensemble = make_1d_traj([])

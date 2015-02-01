@@ -7,7 +7,7 @@ a duck.
 
 import os
 from pkg_resources import resource_filename 
-from nose.tools import assert_items_equal
+from nose.tools import assert_items_equal, assert_equal
 
 from opentis.trajectory import Trajectory
 from opentis.snapshot import Snapshot
@@ -23,6 +23,13 @@ def make_1d_traj(coordinates, velocities=None):
                         velocities=np.array([[vel, 0, 0]]))
         traj.append(snap)
     return Trajectory(traj)
+
+def items_equal(truth, beauty):
+    assert_equal(len(truth), len(beauty))
+    for (t, b) in zip(truth, beauty):
+        if t != b:
+            return False
+    return True
 
 
 def assert_equal_array_array(truth, beauty):
