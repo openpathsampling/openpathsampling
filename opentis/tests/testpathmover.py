@@ -611,8 +611,12 @@ class testMinusMover(object):
         self.dyn = CalvinistDynamics([
             # successful move: (backward extension then forward)
             -0.13, 0.13, 0.33, -0.11, -0.12, 0.12, 0.32, -0.131,
-            # never leaves state: (creates a loop in CalvinDynamics?)
-            -0.25, -0.15, -0.25, 
+            # never leaves state: 
+            -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15,
+            -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15,
+            -0.25, 
+            -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15,
+            -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15,
             # goes to other state:
             1.16, 1.26, 1.16, -0.16, 1.16, 1.26, 1.16
         ])
@@ -761,6 +765,21 @@ class testMinusMover(object):
             assert_equal(s.details.accepted, False)
 
     def test_extension_fails(self):
-        init_innermost_bad_extension = make_1d_traj([])
+        innermost_bad_extension = [-0.25, 0.1, 0.5, 0.1, -0.25]
+        traj_bad_extension = make_1d_traj(innermost_bad_extension, [1.0]*5)
+        samp_bad_extension = Sample(
+            replica=0,
+            trajectory=traj_bad_extension,
+            ensemble=self.innermost
+        )
+        
+        assert_equal(self.innermost(traj_bad_extension), True)
+
+        gs = SampleSet([self.minus_sample, samp_bad_extension])
+        samples = self.mover.move(gs)
+        assert_equal(len(samples), 5) # reject the last one
+        for samp in samples:
+            assert_equal(samp.details.accepted, False)
         # this only happens due to length
-        raise SkipTest
+        assert_equal(len(samples[-1].details.trial),
+                     len(traj_bad_extension)+self.dyn.n_frames_max-1)
