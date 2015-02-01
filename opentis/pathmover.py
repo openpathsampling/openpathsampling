@@ -905,10 +905,16 @@ class OneWayShootingMover(RandomChoiceMover):
 
 @restores_as_stub_object
 class MinusMover(ConditionalSequentialMover):
+    '''
+    Instance of a MinusMover.
+
+    The minus move combines a replica exchange with path extension to swap
+    paths between the innermost regular TIS interface ensemble and the minus
+    interface ensemble. This is particularly useful for improving sampling
+    of path space.
+    '''
     def __init__(self, minus_ensemble, innermost_ensemble, 
                  ensembles=None, replicas='all'):
-        super(SequentialMover, self).__init__(ensembles=ensembles,
-                                              replicas=replicas)
         segment = minus_ensemble.segment_ensemble
         subtrajectory_selector = RandomChoiceMover([
             FirstSubtrajectorySelectMover(subensemble=segment,
@@ -934,7 +940,7 @@ class MinusMover(ConditionalSequentialMover):
         ])
         extension_mover.name = "MinusExtensionDirectionChooser"
 
-        self.movers = [
+        movers = [
             subtrajectory_selector,
             repex,
             force_to_minus,
@@ -945,6 +951,9 @@ class MinusMover(ConditionalSequentialMover):
         self.innermost_ensemble = innermost_ensemble
         initialization_logging(init_log, self, ['minus_ensemble',
                                                 'innermost_ensemble'])
+        super(MinusMover, self).__init__(movers=movers,
+                                         ensembles=ensembles,
+                                         replicas=replicas)
 
 @restores_as_stub_object
 class MultipleSetMinusMover(RandomChoiceMover):

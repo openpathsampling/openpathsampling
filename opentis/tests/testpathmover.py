@@ -623,6 +623,7 @@ class testMinusMover(object):
         self.mover = MinusMover(minus_ensemble=self.minus,
                                 innermost_ensemble=self.innermost)
         self.first_segment = [-0.1, 0.1, 0.3, 0.1, -0.15] 
+        self.list_innermost = [-0.11, 0.11, 0.31, 0.11, -0.12]
         self.second_segment = [-0.25, 0.2, 0.4, 0.2, -0.2]
         init_minus = make_1d_traj(
             coordinates=self.first_segment + [-0.35] + self.second_segment,
@@ -652,8 +653,7 @@ class testMinusMover(object):
         
 
     def test_successful_move(self):
-        list_innermost = [-0.11, 0.11, 0.31, 0.11, -0.12]
-        init_innermost = make_1d_traj(list_innermost, [1.0]*5)
+        init_innermost = make_1d_traj(self.list_innermost, [1.0]*5)
         init_sample = Sample(
             replica=0,
             trajectory=init_innermost,
@@ -661,8 +661,8 @@ class testMinusMover(object):
         )
         gs = SampleSet([init_sample, self.minus_sample])
 
-        extend_forward = list_innermost + [0.12, 0.32, -0.131]
-        extend_backward = [-0.13, 0.13, 0.33] + list_innermost
+        extend_forward =  self.list_innermost + [0.12, 0.32, -0.131]
+        extend_backward = [-0.13, 0.13, 0.33] + self.list_innermost
 
         assert_equal(self.minus(make_1d_traj(extend_forward)), True)
         assert_equal(self.minus(make_1d_traj(extend_backward)), True)
@@ -707,16 +707,58 @@ class testMinusMover(object):
                 seg_dir[key] = 1
         assert_equal(len(seg_dir.keys()), 4)
 
-    def test_repex_fails(self):
-        init_innermost_other_ensemble = make_1d_traj([])
+    def test_repex_fails_other_ensemble(self):
+        innermost_other_ensemble = make_1d_traj([-0.11, 0.1, -0.12])
         samp_other_ensemble = Sample(
             replica=0,
-            trajectory=init_innermost_other_ensemble,
+            trajectory=innermost_other_ensemble,
             ensemble=self.innermost
         )
-        init_innermost_crosses_to_state = make_1d_traj([])
-        init_minus_crosses_to_state = make_1d_traj([])
-        raise SkipTest
+        gs = SampleSet([samp_other_ensemble, self.minus_sample])
+        
+        samples = self.mover.move(gs)
+        assert_equal(self.innermost(innermost_other_ensemble), False)
+        assert_equal(len(samples), 3) # stop after failed repex
+        for s in samples:
+            assert_equal(s.details.accepted, False)
+
+    def test_repex_fails_innermost_crosses_state(self):
+        innermost_crosses_to_state = make_1d_traj([-0.11, 0.5, 1.8])
+        samp_crosses_to_state = Sample(
+            replica=0,
+            trajectory=innermost_crosses_to_state,
+            ensemble=self.innermost
+        )
+        gs = SampleSet([samp_crosses_to_state, self.minus_sample])
+        
+        samples = self.mover.move(gs)
+        assert_equal(self.innermost(innermost_crosses_to_state), True)
+        assert_equal(len(samples), 3) # stop after failed repex
+        for s in samples:
+            assert_equal(s.details.accepted, False)
+
+    def test_repex_fails_minus_crosses_to_state(self):
+        minus_crosses_to_state = make_1d_traj(
+            [-0.11, 0.5, 1.8, 0.6, -0.12, 0.7, 1.7, 0.4, -0.13]
+        )
+        badminus_sample = Sample(
+            replica=-1,
+            trajectory=minus_crosses_to_state,
+            ensemble=self.minus
+        )
+        init_sample = Sample(
+            replica=0,
+            trajectory=make_1d_traj(self.list_innermost, [1.0]*5),
+            ensemble=self.innermost
+        )
+        gs = SampleSet([badminus_sample, init_sample])
+
+        assert_equal(self.minus(minus_crosses_to_state), True)
+
+        samples = self.mover.move(gs)
+        assert_equal(len(samples), 3) # stop after failed repex
+        for s in samples:
+            assert_equal(s.details.accepted, False)
 
     def test_extension_fails(self):
         init_innermost_bad_extension = make_1d_traj([])
