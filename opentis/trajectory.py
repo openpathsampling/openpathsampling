@@ -127,8 +127,9 @@ class Trajectory(list):
 
         n_frames = self.frames     
         n_atoms = self.atoms
+        n_spatial = self.spatial
             
-        output = np.zeros([n_frames, n_atoms, 3], np.float32)
+        output = np.zeros([n_frames, n_atoms, n_spatial], np.float32)
         
         for frame_index in range(n_frames):      
             if self.atom_indices is None:
@@ -179,6 +180,10 @@ class Trajectory(list):
         """
         return [f.momenta for f in self]
 
+    @property
+    def spatial(self):
+        n_spatial = self.topology.n_spatial
+        return n_spatial
     
     @property
     def atoms(self):
