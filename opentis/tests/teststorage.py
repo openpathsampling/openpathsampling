@@ -60,8 +60,11 @@ class testStorage(object):
         self.filename_clone = data_filename("storage_test_clone.nc")
 
     def teardown(self):
-        if os.path.isfile(data_filename("storage_test.nc")):
-            os.remove(data_filename("storage_test.nc"))
+        if os.path.isfile(self.filename):
+            os.remove(self.filename)
+
+        if os.path.isfile(self.filename_clone):
+            os.remove(self.filename_clone)
 
     def test_create_template(self):
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
