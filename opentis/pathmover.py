@@ -111,6 +111,17 @@ class MoveDetails(object):
                 mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
         return mystr
 
+    @staticmethod
+    def initialization(trajectory, ensemble):
+        details = MoveDetails()
+        details.accepted = True,
+        details.acceptance_probability = 1.0
+        details.mover = PathMover()
+        details.mover.name = "Initialization (trajectory)"
+        details.inputs = [trajectory]
+        details.trial = trajectory
+        details.ensemble = ensemble
+
 
 @restores_as_stub_object
 class PathMover(object):

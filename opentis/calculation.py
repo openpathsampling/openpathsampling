@@ -240,6 +240,17 @@ class PathSampling(Calculation):
 
 
     def run(self, nsteps):
+        # TODO: change so we can start from some arbitrary step number
+    
+        self.globalstate = self.globalstate.apply_samples(self.globalstate,
+                                                          step=-1)
+
+        if self.storage is not None:
+            self.storage.save(self.globalstate)
+            for sample in self.globalstate:
+                self.storage.save(sample)
+            self.storage.sync()
+
         for step in range(nsteps):
             samples = self.root_mover.move(self.globalstate)
             self.globalstate = self.globalstate.apply_samples(samples,
@@ -247,3 +258,4 @@ class PathSampling(Calculation):
             if self.storage is not None:
                 self.globalstate.save_samples(self.storage)
                 self.globalstate.save(self.storage)
+                self.storage.sync()
