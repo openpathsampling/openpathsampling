@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from opentis.todict import restores_as_full_object
+from openpathsampling.todict import restores_as_full_object
 
 @restores_as_full_object
 class LeapfrogVerletIntegrator(object):

@@ -1,7 +1,7 @@
 import numpy as np
-from opentis.snapshot import Snapshot, Momentum, Configuration
-from opentis.dynamics_engine import DynamicsEngine
-from opentis.todict import restores_as_full_object
+from openpathsampling.snapshot import Snapshot, Momentum, Configuration
+from openpathsampling.dynamics_engine import DynamicsEngine
+from openpathsampling.todict import restores_as_full_object
 
 def convert_to_3Ndim(v):
     ndofs = len(v)

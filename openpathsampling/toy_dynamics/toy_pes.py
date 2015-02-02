@@ -1,5 +1,5 @@
 import numpy as np
-from opentis.todict import restores_as_full_object
+from openpathsampling.todict import restores_as_full_object
 
 # The decorator @restores_ allows us to restore the object from a JSON
 # string completely and can thus be stored automatically
