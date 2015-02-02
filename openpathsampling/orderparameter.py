@@ -435,16 +435,20 @@ class OP_MD_Function(OrderParameter):
             atoms which define a specific distance/angle)
 
         """
-        super(OP_Function, self).__init__(name)
+        super(OP_MD_Function, self).__init__(name)
         self.fcn = fcn
         self.kwargs = kwargs
         self.topology = None
         return
 
-    def _eval(self, trajectory, *args):
+    def _eval(self, items, *args):
+        trajectory = paths.Trajectory(
+            [paths.Snapshot(configuration=c) for c in items]
+        )
+
         if self.topology is None:
             # first time ever compute the used topology for this orderparameter to construct the mdtraj objects
-            self.topology = trajectory.md_topology()
+            self.topology = trajectory.topology.md
 
         t = trajectory.md(self.topology)
         return self.fcn(t, *args, **self.kwargs)
@@ -485,15 +489,12 @@ class OP_Function(OrderParameter):
     >>>                              indices=[psi_atoms])
     >>> print psi_orderparam( traj.md() )
     """
-    def __init__(self, name, fcn, trajdatafmt=None, **kwargs):
+    def __init__(self, name, fcn, **kwargs):
         """
         Parameters
         ----------
         name : str
         fcn : function
-        trajdatafmt : str
-            which format the trajectory data needs to be in for the `fcn`.
-            Currently supports "mdtraj", otherwise defaults to our own
         kwargs :
             named arguments which should be given to `fcn` (for example, the
             atoms which define a specific distance/angle)
@@ -506,7 +507,6 @@ class OP_Function(OrderParameter):
         """
         super(OP_Function, self).__init__(name)
         self.fcn = fcn
-        self.trajdatafmt = trajdatafmt
         self.kwargs = kwargs
         return
 
@@ -515,8 +515,4 @@ class OP_Function(OrderParameter):
 
         trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
 
-        if self.trajdatafmt=='mdtraj':
-            t = trajectory.md()
-        else:
-            t = trajectory
-        return self.fcn(t, *args, **self.kwargs)
+        return [ self.fcn(snap, *args, **self.kwargs) for snap in trajectory]

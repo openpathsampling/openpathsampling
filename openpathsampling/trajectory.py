@@ -127,8 +127,9 @@ class Trajectory(list):
 
         n_frames = self.frames     
         n_atoms = self.atoms
+        n_spatial = self.spatial
             
-        output = np.zeros([n_frames, n_atoms, 3], np.float32)
+        output = np.zeros([n_frames, n_atoms, n_spatial], np.float32)
         
         for frame_index in range(n_frames):      
             if self.atom_indices is None:
@@ -179,7 +180,15 @@ class Trajectory(list):
         """
         return [f.momenta for f in self]
 
-    
+    @property
+    def spatial(self):
+        if self.topology is None:
+            n_spatial = self[0].coordinates.shape[1]
+        else:
+            n_spatial = self.topology.n_spatial
+
+        return n_spatial
+
     @property
     def atoms(self):
         """
@@ -426,6 +435,33 @@ class Trajectory(list):
 
         return trajectory
 
+    @property
+    def topology(self):
+        """
+        Return a Topology object representing the topology of the
+        current view of the trajectory
+
+        Returns
+        -------
+        topology : opentis.Topology
+            the topology object
+
+        Notes
+        -----
+        This is taken from the configuration of the first frame.
+        """
+
+        topology = None
+
+        if len(self) > 0 and self[0].topology is not None:
+            # if no topology is defined
+            topology = self[0].topology
+
+            if self.atom_indices is not None:
+                topology = topology.subset(self.atom_indices)
+
+        return topology
+
     def md_topology(self):
         """
         Return a mdtraj.Topology object representing the topology of the
@@ -438,17 +474,9 @@ class Trajectory(list):
 
         Notes
         -----
-        This is taken from the configuration of the first frame. Otherwise
-        there is still un ugly fall-back to look for an openmm.Simulation
-        object in Trajectory.engine. and construct an mdtraj.Topology
-        from this.
+        This is taken from the configuration of the first frame.
+        Use topology.md instead
+        TODO: Should be removed
         """        
 
-        if len(self) > 0 and self[0].topology is not None:
-            # if no topology is defined
-            topology = self[0].topology
-
-        if self.atom_indices is not None:
-            topology = topology.subset(self.atom_indices)       
-        
-        return topology
+        return self.topology.md

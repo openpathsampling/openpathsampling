@@ -5,6 +5,10 @@ from test_helpers import CallIdentity, prepend_exception_message
 import openpathsampling as paths
 from openpathsampling.ensemble import *
 
+import logging
+logging.getLogger('opentis.ensemble').setLevel(logging.DEBUG)
+logging.getLogger('opentis.initialization').setLevel(logging.CRITICAL)
+
 import re
 import random
 
@@ -131,6 +135,30 @@ class EnsembleTest(object):
         except AssertionError as e:
             prepend_exception_message(e, failmsg)
             raise
+
+    def _test_everything(self, test_fcn, non_default=[], default=False):
+        """
+        Runs tests using *all* the trajectory test suite. This is the
+        ultimate in test-running simplicity!!
+        """
+        results = {}
+        for test in ttraj.keys():
+            results[test] = default
+        nondef_dict = {}
+        for test in non_default:
+            if test in ttraj.keys():
+                results[test] = not default
+            if "lower_"+test in ttraj.keys():
+                results["lower_"+test] = not default
+            if "upper_"+test in ttraj.keys():
+                results["upper_"+test] = not default
+
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(test_fcn, ttraj[test], results[test], failmsg)
+
+
+
 
 
     def _run(self, results):
@@ -739,8 +767,12 @@ class testSequentialEnsemble(EnsembleTest):
             'upper_in_cross_in' : True,
             'lower_in_cross_in' : True
         }
+        logging.getLogger('opentis.ensemble').info("Starting tests....")
         for test in match_results.keys():
             failmsg = "Match failure in "+test+"("+str(ttraj[test])+"): "
+            logging.getLogger('opentis.ensemble').info(
+                "Testing: "+str(test)
+            )
             self._single_test(ensemble, ttraj[test], 
                               match_results[test], failmsg)
 
@@ -756,6 +788,9 @@ class testSequentialEnsemble(EnsembleTest):
         }
         for test in append_results.keys():
             failmsg = "Append failure in "+test+"("+str(ttraj[test])+"): "
+            logging.getLogger('opentis.ensemble').info(
+                "Testing: "+str(test)
+            )
             self._single_test(ensemble.can_append, ttraj[test], 
                               append_results[test], failmsg)
 
@@ -1067,3 +1102,131 @@ class testOptionalEnsemble(EnsembleTest):
         inX = InXEnsemble(vol1)
         opt_inX = OptionalEnsemble(inX)
         assert_equal(opt_inX.__str__(), "{"+inX.__str__()+"} (OPTIONAL)")
+
+class testMinusInterfaceEnsemble(EnsembleTest):
+    def setUp(self):
+        # Mostly we use minus ensembles where the state matches the first
+        # interface. We also test the case where that isn't in, in which
+        # case there's an interstitial zone. (Only test it for nl=2 to keep
+        # things easier.)
+        self.minus_nl2 = MinusInterfaceEnsemble(
+            state_vol=vol1,
+            innermost_vol=vol1,
+            n_l=2
+        )
+        self.minus_interstitial_nl2 = MinusInterfaceEnsemble(
+            state_vol=vol1,
+            innermost_vol=vol2,
+            n_l=2
+        )
+        self.minus_nl3 = MinusInterfaceEnsemble(
+            state_vol=vol1,
+            innermost_vol=vol1,
+            n_l=3
+        )
+
+    @raises(ValueError)
+    def test_minus_nl1_fail(self):
+        minus_nl1 = MinusInterfaceEnsemble(state_vol=vol1,
+                                           innermost_vol=vol2,
+                                           n_l=1)
+
+
+    def test_minus_nl2_ensemble(self):
+        non_default = [
+            'in_cross_in_cross_in',
+            'in_out_in_in_out_in',
+            'in_out_in_out_in'
+        ]
+        self._test_everything(self.minus_nl2, non_default, False)
+
+    def test_minus_nl2_can_append(self):
+        non_default = [
+            'in_cross_in_cross_in',
+            'in_out_in_in_out_in',
+            'in_out_in_out_in',
+            'cross_in_cross_in',
+            'in_in_cross_in',
+            'in_in_out_in',
+            'in_in_out_in_out',
+            'in_in_out_out_in_in',
+            'in_out_cross_out_in_out_in_out_cross_out_in',
+            'out_in_cross_in',
+            'out_in_in_in_out_in_out_in_in_in_out',
+            'out_in_in_out_in',
+            'out_in_out_in',
+            'out_in_out_in_out',
+            'out_in_out_out_in',
+            'out_in_out_out_in_out',
+            'in_hit_out_in_out',
+            'out_hit_in_out_in'
+        ]
+        self._test_everything(self.minus_nl2.can_append, non_default, True)
+
+    def test_minus_nl2_can_prepend(self):
+        non_default = [
+            'in_cross_in_cross',
+            'in_cross_in_cross_in',
+            'in_in_out_in_out',
+            'in_in_out_out_in_in',
+            'in_out_cross_out_in_out_in_out_cross_out_in',
+            'in_out_in_in',
+            'in_out_in_in_out',
+            'in_out_in_in_out_in',
+            'in_out_in_out',
+            'in_out_in_out_in',
+            'in_out_out_in_out',
+            'out_in_in_in_out_in_out_in_in_in_out',
+            'out_in_out_in_out',
+            'out_in_out_out_in_out',
+            'in_hit_out_in_out'
+        ]
+        self._test_everything(self.minus_nl2.can_prepend, non_default, True)
+
+    def test_minus_interstitial_nl2_ensemble(self):
+        non_default = [
+            'in_cross_in_cross_in',
+            'in_out_cross_out_in_out_in_out_cross_out_in',
+        ]
+        self._test_everything(self.minus_interstitial_nl2, non_default, False)
+
+    def test_minus_interstitial_nl2_can_append(self):
+        non_default = [
+            'in_cross_in_cross_in',
+            'in_out_cross_out_in_out_in_out_cross_out_in',
+            'cross_in_cross_in',
+            'in_in_cross_in',
+            'out_in_cross_in'
+        ]
+        self._test_everything(self.minus_interstitial_nl2.can_append,
+                              non_default, True)
+
+    def test_minus_interstitial_nl2_can_prepend(self):
+        non_default = [
+            'in_cross_in_cross_in',
+            'in_out_cross_out_in_out_in_out_cross_out_in',
+            'in_cross_in_cross'
+        ]
+        self._test_everything(self.minus_interstitial_nl2.can_prepend,
+                              non_default, True)
+
+    def test_minus_nl3_ensemble(self):
+        non_default = [
+            'in_out_cross_out_in_out_in_out_cross_out_in',
+        ]
+        self._test_everything(self.minus_nl3, non_default, False)
+
+    def test_minus_nl3_can_append(self):
+        non_default = [
+            'in_out_cross_out_in_out_in_out_cross_out_in',
+            'out_in_in_in_out_in_out_in_in_in_out'
+        ]
+        self._test_everything(self.minus_nl3.can_append, non_default, True)
+
+    def test_minus_nl3_can_prepend(self):
+        non_default = [
+            'in_out_cross_out_in_out_in_out_cross_out_in',
+            'out_in_in_in_out_in_out_in_in_in_out'
+        ]
+        self._test_everything(self.minus_nl3.can_prepend, non_default, True)
+

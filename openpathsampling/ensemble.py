@@ -8,6 +8,11 @@ from openpathsampling.todict import restores_as_full_object
 
 import openpathsampling as paths
 
+import logging
+from ops_logging import initialization_logging
+logger = logging.getLogger(__name__)
+init_log = logging.getLogger('opentis.initialization')
+
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
 @restores_as_full_object
@@ -173,6 +178,8 @@ class Ensemble(object):
         max_length = min(length, max_length)
         min_length = max(1, min_length)
 
+        logger.debug("Looking for subtrajectories in " + str(trajectory))
+
         if not lazy:
             # this tries all possible sub-trajectories starting with the
             # longest ones and uses recursion
@@ -226,7 +233,8 @@ class Ensemble(object):
 
     def split(self, trajectory, lazy=True, max_length=None, min_length=1, overlap=1):
         '''
-        Returns a list of trajectories that contain sub-trajectories which are in the given ensemble.
+        Returns a list of trajectories that contain sub-trajectories which
+        are in the given ensemble.
 
         Parameters
         ----------
@@ -482,6 +490,12 @@ class EnsembleCombination(Ensemble):
         # This makes sense since the expensive part is the ensemble testing not computing two logic operations
         if Ensemble.use_shortcircuit:
             a = self.ensemble1(trajectory, lazy)
+            logger.debug("Combination: " + self.ensemble1.__class__.__name__ + 
+                         " is "+str(a))
+            logger.debug("Combination: " + self.ensemble2.__class__.__name__ +   
+                         " is " +str(self.ensemble2(trajectory, lazy)))
+            logger.debug("Combination: returning " + 
+                         str(self.fnc(a,self.ensemble2(trajectory,lazy))))
             res_true = self.fnc(a, True)
             res_false = self.fnc(a, False)
             if res_false == res_true:
@@ -667,7 +681,9 @@ class SequentialEnsemble(Ensemble):
 
 
     def __call__(self, trajectory, lazy=None):
+        logger.debug("Looking for transitions in trajectory " + str(trajectory))
         transitions = self.transition_frames(trajectory, lazy)
+        logger.debug("Found transitions: " + str(transitions))
         # if we don't have the right number of transitions, or if the last 
         #print transitions
         if len(transitions) != len(self.ensembles):
@@ -743,37 +759,63 @@ class SequentialEnsemble(Ensemble):
         subtraj_first = 0
         ens_num = 0
         ens_first = 0
+
+        # logging startup
+        logger.debug("Beginning can_append")
+        for ens in self.ensembles:
+            logger.debug(
+                "Ensemble " + str(self.ensembles.index(ens)) + 
+                " : " + ens.__class__.__name__
+            )
+
         while True: #  main loop, with various 
             subtraj_final = self._find_subtraj_final(trajectory, 
                                                      subtraj_first, ens_num)
-            #print (ens_num,
-                    #"("+str(subtraj_first)+","+str(subtraj_final)+")"
-                  #)
+            logger.debug(
+                str(ens_num) + " : " +
+                "("+str(subtraj_first)+","+str(subtraj_final)+")"
+            )
             if subtraj_final - subtraj_first > 0:
                 subtraj = trajectory[slice(subtraj_first, subtraj_final)]
                 if ens_num == final_ens:
                     if subtraj_final == traj_final:
                         # we're in the last ensemble and the whole
                         # trajectory is assigned: can we append?
-                        #print "Returning can_append"
+                        logger.debug("Returning can_append for " + str(self.ensembles[ens_num].__class__.__name__))
                         return self.ensembles[ens_num].can_append(subtraj)
                     else:
-                        #print "Returning false due to incomplete assigns:",
-                        #print subtraj_final, "!=", traj_final
+                        logger.debug(
+                            "Returning false due to incomplete assigns: " + 
+                            str(subtraj_final) + "!=" + str(traj_final)
+                        )
                         return False # in final ensemble, not all assigned
                 else:
                     # subtraj existed, but not yet final ensemble
                     # so we start with the next ensemble
+                    if subtraj_final != traj_final and not self.ensembles[ens_num](subtraj):
+                        logger.debug(
+                            "Couldn't assign frames " + str(subtraj_first) +
+                            " through " + str(subtraj_final) + 
+                            " to ensemble " + str(ens_num) + ": No match"
+                        )
+
+                    logger.debug(
+                        "Assigning frames " + str(subtraj_first) +
+                        " through " + str(subtraj_final) + 
+                        " to ensemble " + str(ens_num)
+                    )
                     ens_num += 1
                     subtraj_first = subtraj_final
-                    #print "Moving to the next ensemble", ens_num
+
+                    logger.debug("Moving to the next ensemble " + str(ens_num))
             else:
                 if subtraj_final == traj_final:
                     # all frames assigned, but not all ensembles finished;
                     # next frame might satisfy next ensemble
+                    logger.debug("All frames assigned, more ensembles to go: returning True")
                     return True
                 elif self.ensembles[ens_num](paths.Trajectory([])):
-                    #print "Moving on because of allowed zero-length ensemble"
+                    logger.debug("Moving on because of allowed zero-length ensemble")
                     ens_num += 1
                     subtraj_first = subtraj_final
                 else:
@@ -781,9 +823,13 @@ class SequentialEnsemble(Ensemble):
                     # start over with sequences that begin with the next
                     # ensemble
                     if ens_first == final_ens:
-                        #print "Started with the last ensemble, got nothin'"
+                        logger.debug("Started with the last ensemble, got nothin'")
                         return False
                     else:
+                        logger.debug(
+                            "Reassigning all frames, starting with ensemble " +
+                            str(ens_first)
+                        )
                         ens_first += 1
                         ens_num = ens_first
                         subtraj_first = 0
@@ -796,32 +842,66 @@ class SequentialEnsemble(Ensemble):
         subtraj_final = len(trajectory)
         ens_final = len(self.ensembles)-1
         ens_num = ens_final
+
+        # logging startup
+        logger.debug("Beginning can_prepend")
+        for i in range(len(self.ensembles)):
+            logger.debug(
+                "Ensemble " + str(i) + 
+                " : " + self.ensembles[i].__class__.__name__
+            )
+
         while True:
             subtraj_first = self._find_subtraj_first(trajectory,
                                                      subtraj_final, ens_num)
-            #print (ens_num,
-                    #"("+str(subtraj_first)+","+str(subtraj_final)+")"
-                  #)
+            logger.debug(
+                str(ens_num) + " : " +
+                "("+str(subtraj_first)+","+str(subtraj_final)+")"
+            )
             if subtraj_final - subtraj_first > 0:
                 subtraj = trajectory[slice(subtraj_first, subtraj_final)]
                 if ens_num == first_ens:
                     if subtraj_first == traj_first:
+                        logger.debug("Returning can_prepend")
                         return self.ensembles[ens_num].can_prepend(subtraj)
                     else:
+                        logger.debug(
+                            "Returning false due to incomplete assigns: " + 
+                            str(subtraj_first) + "!=" + str(traj_first)
+                        )
                         return False
                 else:
+                    if subtraj_first != traj_first and not self.ensembles[ens_num](subtraj):
+                        logger.debug(
+                            "Couldn't assign frames " + str(subtraj_first) +
+                            " through " + str(subtraj_final) + 
+                            " to ensemble " + str(ens_num) + ": No match"
+                        )
+                    logger.debug(
+                        "Assigning frames " + str(subtraj_first) +
+                        " through " + str(subtraj_final) + 
+                        " to ensemble " + str(ens_num)
+                    )
                     ens_num -= 1
                     subtraj_final = subtraj_first
+                    logger.debug("Moving to the next ensemble " + str(ens_num))
             else:
                 if subtraj_first == traj_first:
+                    logger.debug("All frames assigned, more ensembles to go: returning True")
                     return True
                 elif self.ensembles[ens_num](paths.Trajectory([])):
+                    logger.debug("Moving on because of allowed zero-length ensemble")
                     ens_num -= 1
                     subtraj_final = subtraj_first
                 else:
                     if ens_final == first_ens:
+                        logger.debug("Started with the last ensemble, got nothin'")
                         return False
                     else:
+                        logger.debug(
+                            "Reassigning all frames, starting with ensemble " +
+                            str(ens_final)
+                        )
                         ens_final -= 1
                         ens_num = ens_final
                         subtraj_final = len(trajectory)
@@ -1048,7 +1128,7 @@ class EntersXEnsemble(ExitsXEnsemble):
         return False
 
 @restores_as_full_object
-class AlteredEnsemble(Ensemble):
+class WrappedEnsemble(Ensemble):
     '''
     Represents an ensemble where an altered version of a trajectory (extended, reversed, cropped) is part of a given ensemble
     '''
@@ -1056,30 +1136,33 @@ class AlteredEnsemble(Ensemble):
         '''
         Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
         '''
-        
-        super(AlteredEnsemble, self).__init__()
+        super(WrappedEnsemble, self).__init__()
         self.ensemble = ensemble
-                
+
+        # you can also build wrapped ensembles with more flexibility when using
+        # a property for _new_ensemble
+        self._new_ensemble = self.ensemble
+
+    def __call__(self, trajectory, lazy=None):
+        return self._new_ensemble(self._alter(trajectory), lazy)
+
     def _alter(self, trajectory):
         return trajectory
         
-    def __call__(self, trajectory, lazy=None):
-        return self.ensemble(self._alter(trajectory), lazy)
-
     def can_append(self, trajectory):
-        return self.ensemble.can_append(self._alter(trajectory))
+        return self._new_ensemble.can_append(self._alter(trajectory))
 
     def can_prepend(self, trajectory):
-        return self.ensemble.can_prepend(self._alter(trajectory))
+        return self._new_ensemble.can_prepend(self._alter(trajectory))
 
 @restores_as_full_object
-class SlicedTrajectoryEnsemble(AlteredEnsemble):
+class SlicedTrajectoryEnsemble(WrappedEnsemble):
     '''
     An ensemble which alters the trajectory by looking at a given Python
     slice of the list of frames.
     '''
     def __init__(self, ensemble, aslice):
-        self.ensemble = ensemble
+        super(SlicedTrajectoryEnsemble, self).__init__(ensemble)
         if type(aslice) == int:
             if aslice == -1:
                 self.slice = slice(aslice,None)
@@ -1102,7 +1185,7 @@ class SlicedTrajectoryEnsemble(AlteredEnsemble):
 
 
 @restores_as_full_object
-class BackwardPrependedTrajectoryEnsemble(AlteredEnsemble):
+class BackwardPrependedTrajectoryEnsemble(WrappedEnsemble):
     '''
     Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
     '''
@@ -1115,7 +1198,7 @@ class BackwardPrependedTrajectoryEnsemble(AlteredEnsemble):
         return trajectory.reversed + self.add_traj
 
 @restores_as_full_object
-class ForwardAppendedTrajectoryEnsemble(AlteredEnsemble):
+class ForwardAppendedTrajectoryEnsemble(WrappedEnsemble):
     '''
     Represents an ensemble which is the given ensemble but for trajectories where some trajectory is appended
     '''
@@ -1127,7 +1210,7 @@ class ForwardAppendedTrajectoryEnsemble(AlteredEnsemble):
         return self.add_traj + trajectory
 
 @restores_as_full_object
-class ReversedTrajectoryEnsemble(AlteredEnsemble):
+class ReversedTrajectoryEnsemble(WrappedEnsemble):
     '''
     Represents an ensemble 
     '''
@@ -1135,30 +1218,18 @@ class ReversedTrajectoryEnsemble(AlteredEnsemble):
         return trajectory.reverse()
 
 @restores_as_full_object
-class WrappedEnsemble(Ensemble):
+class AppendedNameEnsemble(WrappedEnsemble):
     '''
-    Represents an ensemble where an altered version of a trajectory (extended, reversed, cropped) is part of a given ensemble
+    Adds string to ensemble name: necessary to have multiple copies of an ensemble.
     '''
-    def __init__(self, ensemble):
-        '''
-        Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
-        '''
+    def __init__(self, ensemble, label):
+        self._label = label
+        super(AppendedNameEnsemble, self).__init(ensemble)
 
-        super(WrappedEnsemble, self).__init__()
-        self.ensemble = ensemble
+    def __str__(self):
+        return self.ensemble.__str__() + " " + self.label
 
-        # you can also build wrapped ensembles with more flexibility when using
-        # a property for _new_ensemble
-        self._new_ensemble = self.ensemble
 
-    def __call__(self, trajectory, lazy=None):
-        return self._new_ensemble(trajectory, lazy)
-
-    def can_append(self, trajectory):
-        return self._new_ensemble.can_append(trajectory)
-
-    def can_prepend(self, trajectory):
-        return self._new_ensemble.can_prepend(trajectory)
 
 @restores_as_full_object
 class OptionalEnsemble(WrappedEnsemble):
@@ -1201,16 +1272,62 @@ class SingleFrameEnsemble(WrappedEnsemble):
     def __str__(self):
         return "{"+self.ensemble.__str__()+"} (SINGLE FRAME)"
 
-        return "{"+self.orig_ens.__str__()+"} (SINGLE FRAME)"
-    
 @restores_as_full_object
 class MinusInterfaceEnsemble(SequentialEnsemble):
-    def __init__(self, state_vol, innermost_vol, n_l, greedy=False):
+    '''
+    This creates an ensemble for the minus interface. 
+
+    Parameters
+    ----------
+    state_vol : Volume
+        The Volume which defines the state for this minus interface
+    innermost_vol : Volume
+        The Volume defining the innermost interface with which this minus
+        interface does its replica exchange.
+    n_l : integer (greater than one)
+        The number of segments crossing innermost_vol for this interface.
+    
+    The specific implementation allows us to use the multiple-segment minus
+    ensemble described by Swenson and Bolhuis. The minus interface was
+    originally developed by van Erp. For more details, see the section
+    "Anatomy of a PathMover: the Minus Move" in the OpenPathSampling
+    Documentation.
+
+    References
+    ----------
+    D.W.H. Swenson and P.G. Bolhuis. J. Chem. Phys. 141, 044101 (2014). 
+    doi:10.1063/1.4890037
+    '''
+    def __init__(self, state_vol, innermost_vol, n_l=2, greedy=False):
+        if (n_l < 2):
+            raise ValueError("The number of segments n_l must be at least 2")
         inA = InXEnsemble(state_vol)
         outA = OutXEnsemble(state_vol)
         outX = OutXEnsemble(innermost_vol)
-        # TODO
+        inX = InXEnsemble(innermost_vol)
+        leaveX = LeaveXEnsemble(innermost_vol)
+        interstitial = outA & inX
+        self.segment_ensemble = EnsembleFactory.TISEnsemble(
+            state_vol, state_vol, innermost_vol)
+        #interstitial = InXEnsemble(innermost_vol - state_vol)
+        start = [
+            SingleFrameEnsemble(inA),
+            OptionalEnsemble(interstitial),
+        ]
+        loop = [
+            outA & leaveX,
+            inX # & hitA # redundant due to stop req for previous outA
+        ]
+        end = [
+            outA & leaveX,
+            OptionalEnsemble(interstitial),
+            SingleFrameEnsemble(inA)
+        ]
+        ensembles = start + loop*(n_l-1) + end
 
+        self._n_l = n_l
+
+        super(MinusInterfaceEnsemble, self).__init__(ensembles, greedy=greedy)
 
 class EnsembleFactory():
     '''
@@ -1302,7 +1419,6 @@ class EnsembleFactory():
             SingleFrameEnsemble(InXEnsemble(volume_a | volume_b))
         ])
         return ens
-        #return (LengthEnsemble(slice(3,None)) & InXEnsemble(volume_a, 0) & InXEnsemble(volume_b, -1)) & (LeaveXEnsemble(volume_x) & OutXEnsemble(volume_a | volume_b, slice(1,-1), lazy))
 
 
     @staticmethod

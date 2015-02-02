@@ -178,6 +178,12 @@ class SampleSet(object):
         """
         map(storage.sample.save, self.samples)
 
+    def sanity_check(self):
+        '''Checks that the sample trajectories satisfy their ensembles
+        '''
+        for sample in self:
+            assert(sample.ensemble(sample.trajectory))
+
     def consistency_check(self):
         '''This is mainly a sanity check for use in testing, but might be
         good to run (rarely) in the code until we're sure the tests cover

@@ -30,20 +30,34 @@ class Calculation(object):
     def run(self, nsteps):
         logger.warning("Running an empty calculation? Try a subclass, maybe!")
 
+
 @restores_as_stub_object
 class BootstrapPromotionMove(PathMover):
     '''
     Bootstrap promotion is the combination of an EnsembleHop (to the next
     ensemble up) with incrementing the replica ID.
     '''
-    def __init__(self, bias=None, shooters=None, 
+    def __init__(self, bias=None, shooters=None,
                  ensembles=None, replicas='all'):
-        super(BootstrapPromotionMove, self).__init__(ensembles=ensembles, 
+        super(BootstrapPromotionMove, self).__init__(ensembles=ensembles,
                                                      replicas=replicas)
         self.shooters = shooters
         self.bias = bias
         initialization_logging(logger=init_log, obj=self,
                                entries=['bias', 'shooters'])
+
+
+        # Create all possible hoppers so we do not have to recreate these
+        # every time which will result in more efficient storage
+        self._hoppers = list()
+        for rep in range(0,len(self.ensembles) - 1):
+            ensemble_from = self.ensembles[rep]
+            ensemble_to = self.ensembles[rep+1]
+
+            self._hoppers.append(EnsembleHopMover(bias=self.bias,
+                                  ensembles=[ensemble_from, ensemble_to],
+                                  replicas=rep))
+
 
     def move(self, globalstate):
         # the tricky part here is that, if the hop is allowed, we only want
@@ -53,12 +67,10 @@ class BootstrapPromotionMove(PathMover):
         # the hop was successful, a replica ID change move
 
         #print "Starting BootstrapPromotionMove"
-        
+
         # We make extra variables here so that we can easily refactor. The
         # speed cost the negligible, and it makes it easy to change things.
         top_rep = max(globalstate.replica_list())
-        ensemble_from = self.ensembles[top_rep]
-        ensemble_to = self.ensembles[top_rep+1]
         old_sample = globalstate[top_rep]
 
         shooter = self.shooters[top_rep]
@@ -81,11 +93,7 @@ class BootstrapPromotionMove(PathMover):
         init_sample_set = SampleSet([old_sample])
 
         shooter = self.shooters[top_rep]
-        # TODO: should move this to normal initialization so we don't init
-        # it every time
-        hopper = EnsembleHopMover(bias=self.bias,
-                                  ensembles=[ensemble_from, ensemble_to],
-                                  replicas=top_rep)
+        hopper = self._hoppers[top_rep]
 
         init_sample_set = (init_sample_set + shooter.move(init_sample_set))[0]
         shoot_samp = init_sample_set[0]
@@ -239,12 +247,24 @@ class PathSampling(Calculation):
                  globalstate=None):
         super(PathSampling, self).__init__(storage, engine)
         self.root_mover = root_mover
+        self.root_mover.name = "PathSamplingRoot"
         self.globalstate = globalstate
         initialization_logging(init_log, self, 
                                ['root_mover', 'globalstate'])
 
 
     def run(self, nsteps):
+        # TODO: change so we can start from some arbitrary step number
+    
+        self.globalstate = self.globalstate.apply_samples(self.globalstate,
+                                                          step=-1)
+
+        if self.storage is not None:
+            self.storage.save(self.globalstate)
+            for sample in self.globalstate:
+                self.storage.save(sample)
+            self.storage.sync()
+
         for step in range(nsteps):
             samples = self.root_mover.move(self.globalstate)
             self.globalstate = self.globalstate.apply(samples,
@@ -252,3 +272,4 @@ class PathSampling(Calculation):
             if self.storage is not None:
                 self.globalstate.save_samples(self.storage)
                 self.globalstate.save(self.storage)
+                self.storage.sync()
