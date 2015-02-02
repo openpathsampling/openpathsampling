@@ -71,10 +71,6 @@ class testStorage(object):
         assert(os.path.isfile(data_filename("storage_test.nc")))
         store.close()
 
-
-    def test_create_atoms(self):
-        pass
-
     def test_stored_topology(self):
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
         assert(os.path.isfile(self.filename))
