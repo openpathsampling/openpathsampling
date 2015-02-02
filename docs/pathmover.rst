@@ -20,7 +20,7 @@ These are the leaves of a path tree. The atomic moved that can be made
 
     BackwardShootMover
     ForwardShootMover
-    ReplicaExchange
+    ReplicaExchangeMover
 
 
 special moves
