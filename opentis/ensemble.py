@@ -1138,18 +1138,22 @@ class WrappedEnsemble(Ensemble):
         '''
         super(WrappedEnsemble, self).__init__()
         self.ensemble = ensemble
-                
+
+        # you can also build wrapped ensembles with more flexibility when using
+        # a property for _new_ensemble
+        self._new_ensemble = self.ensemble
+
+    def __call__(self, trajectory, lazy=None):
+        return self._new_ensemble(self._alter(trajectory), lazy)
+
     def _alter(self, trajectory):
         return trajectory
         
-    def __call__(self, trajectory, lazy=None):
-        return self.ensemble(self._alter(trajectory), lazy)
-
     def can_append(self, trajectory):
-        return self.ensemble.can_append(self._alter(trajectory))
+        return self._new_ensemble.can_append(self._alter(trajectory))
 
     def can_prepend(self, trajectory):
-        return self.ensemble.can_prepend(self._alter(trajectory))
+        return self._new_ensemble.can_prepend(self._alter(trajectory))
 
 @restores_as_full_object
 class SlicedTrajectoryEnsemble(WrappedEnsemble):
@@ -1158,7 +1162,7 @@ class SlicedTrajectoryEnsemble(WrappedEnsemble):
     slice of the list of frames.
     '''
     def __init__(self, ensemble, aslice):
-        self.ensemble = ensemble
+        super(SlicedTrajectoryEnsemble, self).__init__(ensemble)
         if type(aslice) == int:
             if aslice == -1:
                 self.slice = slice(aslice,None)
@@ -1226,31 +1230,6 @@ class AppendedNameEnsemble(WrappedEnsemble):
         return self.ensemble.__str__() + " " + self.label
 
 
-@restores_as_full_object
-class WrappedEnsemble(Ensemble):
-    '''
-    Represents an ensemble where an altered version of a trajectory (extended, reversed, cropped) is part of a given ensemble
-    '''
-    def __init__(self, ensemble):
-        '''
-        Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
-        '''
-
-        super(WrappedEnsemble, self).__init__()
-        self.ensemble = ensemble
-
-        # you can also build wrapped ensembles with more flexibility when using
-        # a property for _new_ensemble
-        self._new_ensemble = self.ensemble
-
-    def __call__(self, trajectory, lazy=None):
-        return self._new_ensemble(trajectory, lazy)
-
-    def can_append(self, trajectory):
-        return self._new_ensemble.can_append(trajectory)
-
-    def can_prepend(self, trajectory):
-        return self._new_ensemble.can_prepend(trajectory)
 
 @restores_as_full_object
 class OptionalEnsemble(WrappedEnsemble):
