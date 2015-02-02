@@ -11,24 +11,21 @@ from test_helpers import (assert_equal_array_array, items_equal,
                           CalvinistDynamics,
                           CallIdentity
                          )
-import opentis as paths
-from opentis.ensemble import LengthEnsemble
-from opentis.volume import LambdaVolume
-from opentis.sample import SampleSet, Sample
-from opentis.pathmover import *
+import openpathsampling as paths
+from openpathsampling.ensemble import LengthEnsemble
+from openpathsampling.pathmover import *
 
-from opentis.shooting import UniformSelector
+from openpathsampling.shooting import UniformSelector
 
-from opentis.volume import LambdaVolume
+from openpathsampling.volume import LambdaVolume
 from test_helpers import CallIdentity
-from opentis.trajectory import Trajectory
-from opentis.snapshot import Snapshot
-from opentis.ensemble import EnsembleFactory as ef
-from opentis.orderparameter import OP_Function, OrderParameter
+from openpathsampling.trajectory import Trajectory
+from openpathsampling.ensemble import EnsembleFactory as ef
+from openpathsampling.orderparameter import OP_Function, OrderParameter
 
 import logging
-logging.getLogger('opentis.pathmover').setLevel(logging.DEBUG)
-logging.getLogger('opentis.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.pathmover').setLevel(logging.DEBUG)
+logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 
 class testMakeListOfPairs(object):
     def setup(self):
