@@ -440,6 +440,7 @@ class RandomChoiceMover(PathMover):
 
         return samples
 
+@restores_as_stub_object
 class SequentialMover(PathMover):
     '''
     Performs each of the moves in its movers list. Returns all samples
@@ -468,6 +469,7 @@ class SequentialMover(PathMover):
             sample.details.mover_path.append(self)
         return mysamples
 
+@restores_as_stub_object
 class PartialAcceptanceSequentialMover(SequentialMover):
     '''
     Performs eachmove in its movers list until complete of until one is not
@@ -505,7 +507,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
             sample.details.mover_path.append(self)
         return mysamples
 
-
+@restores_as_stub_object
 class ConditionalSequentialMover(PartialAcceptanceSequentialMover):
     '''
     Performs each move in its movers list until complete or until one is not
@@ -539,7 +541,7 @@ class ConditionalSequentialMover(PartialAcceptanceSequentialMover):
         return mysamples
 
 
-
+@restores_as_stub_object
 class ReplicaIDChange(PathMover):
     def __init__(self, new_replicas=None, old_samples=None, 
                  ensembles=None, replicas='all'):
@@ -566,7 +568,7 @@ class ReplicaIDChange(PathMover):
                            )
         return [dead_sample, new_sample]
 
-
+@restores_as_stub_object
 class EnsembleHopMover(PathMover):
     def __init__(self, bias=None, ensembles=None, replicas='all'):
         # TODO: maybe allow a version of this with a single ensemble and ANY
@@ -587,7 +589,7 @@ class EnsembleHopMover(PathMover):
         initial_ensembles = [pair[0] for pair in self.ensembles]
         logger.debug("initial_ensembles: " + str(initial_ensembles))
         legal_ensembles = [
-            s.ensemble 
+            s.ensemble
             for s in self.legal_sample_set(globalstate, initial_ensembles)
         ]
         logger.debug("globalstate ensembles" + 
@@ -632,7 +634,7 @@ class EnsembleHopMover(PathMover):
         return [path]
 
 
-
+@restores_as_stub_object
 class MinusMove(ConditionalSequentialMover):
     def __init__(self, minus_ensemble, innermost_ensembles, 
                  ensembles=None, replicas='all'):
@@ -643,7 +645,7 @@ class MinusMove(ConditionalSequentialMover):
         initialization_logging(init_log, self, ['minus_ensemble',
                                                 'innermost_ensemble'])
 
-
+@restores_as_stub_object
 class PathReversalMover(PathMover):
     def move(self, globalstate):
         rep_sample = self.select_sample(globalstate, self.ensembles)
@@ -674,7 +676,7 @@ class PathReversalMover(PathMover):
         )
         return [sample]
 
-
+@restores_as_stub_object
 class ReplicaExchangeMover(PathMover):
     def __init__(self, bias=None, ensembles=None, replicas='all'):
         if replicas=='all' and ensembles is None:
@@ -761,6 +763,7 @@ class ReplicaExchangeMover(PathMover):
             )
         return [sample1, sample2]
 
+@restores_as_stub_object
 class OneWayShootingMover(RandomChoiceMover):
     '''
     OneWayShootingMover is a special case of a RandomChoiceMover which

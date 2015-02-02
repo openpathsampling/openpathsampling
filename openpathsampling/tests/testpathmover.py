@@ -111,7 +111,7 @@ class testShootingMover(object):
         PathMover.engine = self.dyn
         try:
             op = OP_Function("myid", fcn=lambda snap : 
-                             Trajectory([snap])[0].coordinates()[0][0])
+                             snap.coordinates[0][0])
         except ValueError:
             op = OrderParameter.get_existing('myid')
         stateA = LambdaVolume(op, -100, 0.0)
@@ -161,7 +161,7 @@ class testPathReversalMover(object):
     def setup(self):
         try:
             op = OP_Function("myid", fcn=lambda snap : 
-                             Trajectory([snap])[0].coordinates()[0][0])
+                             snap.coordinates[0,0])
         except ValueError:
             op = OrderParameter.get_existing('myid')
         volA = LambdaVolume(op, -100, 0.0)
@@ -217,7 +217,7 @@ class testReplicaExchangeMover(object):
     def setup(self):
         try:
             op = OP_Function("myid", fcn=lambda snap : 
-                             Trajectory([snap])[0].coordinates()[0][0])
+                             snap.coordinates[0][0])
         except ValueError:
             op = OrderParameter.get_existing('myid')
         state1 = LambdaVolume(op, -100, 0.0)
