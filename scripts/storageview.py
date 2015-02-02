@@ -167,7 +167,7 @@ if __name__ == '__main__':
 #        sample.details
 
         nline(o_idx, '', sample.details.json)
-        nline(o_idx, str(sample.details.mover.name),
+        nline(o_idx, '',
               (str([t.idx[storage] for t in sample.details.inputs])
                + " -> " + str(sample.details.trial.idx[storage])
                + " in " + sample.ensemble.name

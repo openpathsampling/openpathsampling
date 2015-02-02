@@ -507,7 +507,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
             sample.details.mover_path.append(self)
         return mysamples
 
-restores_as_stub_object()
+@restores_as_stub_object
 class ConditionalSequentialMover(PartialAcceptanceSequentialMover):
     '''
     Performs each move in its movers list until complete or until one is not
