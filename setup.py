@@ -1,6 +1,6 @@
 """
-The openpathsampling package contains the Opentis python library to do transition
-interface sampling.
+The openpathsampling package contains the OpenPathSampling python library
+to do transition interface sampling.
 
 """
 #from distutils.sysconfig import get_config_var
@@ -116,7 +116,7 @@ def buildKeywordDictionary():
     setupKeywords["description"]       = "Python implementation of the transition interface sampling methos."
     setupKeywords["requires"]          = ["numpy", "nose"]
     setupKeywords["long_description"]  = """
-    Opentis (http://github.com/choderalab/openpathsampling) is a python library to do transition interface sampling.
+    OpenPathSampling (http://github.com/choderalab/openpathsampling) is a python library to do transition interface sampling.
     """
     outputString=""
     firstTab     = 40
