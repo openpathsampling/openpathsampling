@@ -4,7 +4,7 @@ import matplotlib.pylab as pylab
 from matplotlib.legend_handler import HandlerLine2D
 import numpy as np
 
-from opentis.snapshot import Snapshot
+from openpathsampling.snapshot import Snapshot
 
 # A little class we use for visualizing these 2D PESs
 class CallablePES(object):
