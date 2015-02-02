@@ -1,6 +1,9 @@
 import sys
 import argparse
 import os
+import time
+
+import opentis as paths
 
 from opentis.storage import Storage
 
@@ -51,19 +54,23 @@ if __name__ == '__main__':
     topology = storage.topology
 
     line("Number of Atoms", topology.n_atoms)
+    line("Number of Dimensions", topology.n_spatial)
 
-    counterion_indices = [ a.index for a in topology.atoms if a.residue.name[-1] == '+']
-    solvent_indices = [ a.index for a in topology.atoms if a.residue.name == 'HOH']
-    protein_indices = [ a.index for a in topology.atoms if a.residue.name[-1] != '+' and a.residue.name != 'HOH']
+    if type(topology) is paths.MDTrajTopology:
+        line('MDTraj Topology','')
 
-    line("Number of waters", len(solvent_indices) / 3)
-    line("Number of protein atoms", len(protein_indices))
+#    md_topology = topology.md
+
+#    counterion_indices = [ a.index for a in md_topology.atoms if a.residue.name[-1] == '+']
+#    solvent_indices = [ a.index for a in md_topology.atoms if a.residue.name == 'HOH']
+#    protein_indices = [ a.index for a in md_topology.atoms if a.residue.name[-1] != '+' and a.residue.name != 'HOH']
+
+#    line("Number of waters", len(solvent_indices) / 3)
+#    line("Number of protein atoms", len(protein_indices))
 
     headline("Snapshot Zero")
     # load initial equilibrate snapshot given by ID #0
     snapshot = storage.snapshot.load(0)
-
-    print snapshot.__dict__
 
     line("Potential Energy",str(snapshot.potential_energy))
     line("Kinetic Energy",str(snapshot.kinetic_energy))
@@ -73,7 +80,6 @@ if __name__ == '__main__':
     for e_idx in range(0, storage.ensemble.count()):
         ensemble = storage.ensemble.load(e_idx)
 #        print ensemble._loader()
-        print ensemble.name
         nline(e_idx,ensemble.name, str(ensemble).replace('\n', ''))
 
     headline("PathMovers")
@@ -98,7 +104,10 @@ if __name__ == '__main__':
 
     for p_idx in range(0, storage.collectivevariable.count()):
         obj = storage.collectivevariable.load(p_idx)
-        nline(p_idx,obj.name, str(obj.storage_caches[storage]))
+        add = ''
+        if len(obj.storage_caches[storage])>0:
+            add = '{ %d : %f, ... } ' % obj.storage_caches[storage].iteritems().next()
+        nline(p_idx,obj.name, str(len(obj.storage_caches[storage])) + ' entries ' + add)
 
 
     headline("Samples")
@@ -150,12 +159,18 @@ if __name__ == '__main__':
 
 
     for o_idx in range(0, storage.sample.count()):
+
+#        t0 = time.time()
         sample = storage.sample.load(o_idx)
-#        nline(o_idx, '', sample.details.json)
-        nline(o_idx, str(sample.details.mover.name),
+#        print time.time() - t0, 'seconds for sample'
+
+#        sample.details
+
+        nline(o_idx, '', sample.details.json)
+        nline(o_idx, '',
               (str([t.idx[storage] for t in sample.details.inputs])
-               + " -> " + str(sample.details.trial.idx[storage]) 
-               + " in " + sample.ensemble.name 
+               + " -> " + str(sample.details.trial.idx[storage])
+               + " in " + sample.ensemble.name
                + " [" + str(sample.ensemble.idx[storage]) + "]"
               )
              )

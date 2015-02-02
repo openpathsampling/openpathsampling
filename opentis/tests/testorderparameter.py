@@ -36,8 +36,7 @@ class testOP_Function(object):
     def test_dihedral_op(self):
         """ Create a dihedral order parameter """
         psi_atoms = [6,8,14,16]
-        dihedral_op = op.OP_Function("psi", md.compute_dihedrals,
-                                    trajdatafmt="mdtraj",
+        dihedral_op = op.OP_MD_Function("psi", md.compute_dihedrals,
                                     indices=[psi_atoms])
 
         mdtraj_version = self.storage.trajectory.load(0).md()

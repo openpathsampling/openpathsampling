@@ -74,7 +74,7 @@ class ToyPlot(object):
                 plt.contour(self.X, self.Y, iface, 
                             colors='r', interpolation='none', levels=[0.5])
         if self._initcond is not None:
-            ax.plot(self._initcond.coordinates[0,0], self._initcond.coordinates[0,1], 
+            ax.plot(self._initcond.coordinates[0,0], self._initcond.coordinates[0,1],
                     'ro', zorder=3)
         for traj in bold:
             plt.plot(traj.coordinates()[:,0,0], traj.coordinates()[:,0,1],
