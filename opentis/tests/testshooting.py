@@ -1,16 +1,15 @@
-
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, raises)
 from nose.plugins.skip import Skip, SkipTest
-from test_helpers import (assert_equal_array_array, 
+from openpathsampling.tests.test_helpers import (assert_equal_array_array,
                           assert_not_equal_array_array,
                           make_1d_traj,
                           CalvinistDynamics
                          )
-from opentis.shooting import *
-from opentis.pathmover import PathMover, ForwardShootMover, BackwardShootMover
-from opentis.ensemble import LengthEnsemble
-from opentis.sample import Sample, SampleSet
+from openpathsampling.shooting import *
+from openpathsampling.pathmover import PathMover, ForwardShootMover, BackwardShootMover
+from openpathsampling.ensemble import LengthEnsemble
+from openpathsampling.sample import Sample, SampleSet
 
 class SelectorTest(object):
     def setup(self):
