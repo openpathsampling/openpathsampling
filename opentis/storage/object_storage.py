@@ -1023,7 +1023,7 @@ def loadidx(func):
 
         obj.idx[self.storage] = n_idx
 
-        if self.is_named and not hasattr(obj, 'name'):
+        if self.is_named:
             # get the name of the object
             setattr(obj, 'name', self.get_name(idx))
 

@@ -104,7 +104,10 @@ if __name__ == '__main__':
 
     for p_idx in range(0, storage.collectivevariable.count()):
         obj = storage.collectivevariable.load(p_idx)
-        nline(p_idx,obj.name, str(obj.storage_caches[storage]))
+        add = ''
+        if len(obj.storage_caches[storage])>0:
+            add = '{ %d : %f, ... } ' % obj.storage_caches[storage].iteritems().next()
+        nline(p_idx,obj.name, str(len(obj.storage_caches[storage])) + ' entries ' + add)
 
 
     headline("Samples")
