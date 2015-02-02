@@ -12,6 +12,7 @@ from nose.tools import assert_items_equal, assert_equal
 from opentis.trajectory import Trajectory
 from opentis.snapshot import Snapshot
 from opentis.dynamics_engine import DynamicsEngine
+from opentis.topology import Topology
 import numpy as np
 
 def make_1d_traj(coordinates, velocities=None):
@@ -47,8 +48,11 @@ def assert_not_equal_array_array(list_a, list_b):
 
 class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
-        super(CalvinistDynamics, self).__init__(options={'ndim' : 1,
-                                                         'n_frames_max' : 12})
+        topology = Topology(n_atoms=1, n_spatial=1)
+        template = Snapshot(topology=topology)
+
+        super(CalvinistDynamics, self).__init__(options={'n_frames_max' : 12},
+                                                template=template)
         self.predestination = make_1d_traj(coordinates=predestination,
                                            velocities=[1.0]*len(predestination)
                                           )

@@ -31,8 +31,7 @@ class OpenMMEngine(paths.DynamicsEngine):
         'timestep' : 2.0 * u.femtoseconds,
         'platform' : 'fastest',
         'forcefield_solute' : 'amber96.xml',
-        'forcefield_solvent' : 'tip3p.xml',
-        'template' : paths.Snapshot()
+        'forcefield_solvent' : 'tip3p.xml'
     }
 
     @staticmethod
@@ -140,18 +139,16 @@ class OpenMMEngine(paths.DynamicsEngine):
 
     def __init__(self, options, template=None):
 
-        if template is None:
+        if 'template' in options:
             template = options['template']
 
-        self.template = template
         self.topology = template.topology
         self.options = {
-            'n_atoms' : self.topology.n_atoms,
-            'template' : template
         }
 
         super(OpenMMEngine, self).__init__(
-            options=options
+            options=options,
+            template=template
         )
 
         # set up the OpenMM simulation

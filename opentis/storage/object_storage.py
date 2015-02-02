@@ -92,12 +92,6 @@ class ObjectStore(object):
         # this handles all the setting and getting of .idx and is
         # always necessary!
 
-        _save = self.save
-        self.save = types.MethodType(saveidx(_save), self)
-
-        _load = self.load
-        self.load = types.MethodType(loadidx(_load), self)
-
         if load_partial:
             # this allows the class to load members only if needed
             # adds a different __getattr__ to the content class
@@ -115,9 +109,10 @@ class ObjectStore(object):
 
                     if hasattr(cls, '_delayed_loading'):
                         if item in cls._delayed_loading:
-                            if self.__dict__[item] is None:
-                                _loader = cls._delayed_loading['item']
-                                _loader(self)
+                            _loader = cls._delayed_loading[item]
+                            _loader(self)
+                        else:
+                            raise KeyError(item)
 
                     return self.__dict__[item]
 
@@ -125,6 +120,12 @@ class ObjectStore(object):
 
                 _load = self.load
                 self.load = types.MethodType(loadpartial(_load), self)
+
+        _save = self.save
+        self.save = types.MethodType(saveidx(_save), self)
+
+        _load = self.load
+        self.load = types.MethodType(loadidx(_load), self)
 
         if enable_caching:
             # wrap load/save to make this work. I use MethodType here to bind the
@@ -317,7 +318,7 @@ class ObjectStore(object):
         This allows to load by name for named objects
         """
         if self.is_named:
-            for idx, name in enumerate(self.variables[self.db + "_name"][:]):
+            for idx, name in enumerate(self.storage.variables[self.db + "_name"][:]):
                 self.cache[name] = idx
 
     def iterator(this, iter_range = None):
@@ -900,14 +901,12 @@ def loadpartial(func, constructor=None):
     """
 
     def inner(self, idx, *args, **kwargs):
-        if hasattr(self, '_delayed_loading'):
-            if constructor is None:
-                obj = self.load_constructor
-            else:
-                obj = getattr(self, 'load_empty')
+        if constructor is None:
+            new_func = getattr(self, 'load_empty')
         else:
-            obj = func(idx, *args, **kwargs)
-        return obj
+            new_func = getattr(self, constructor)
+
+        return new_func(idx, *args, **kwargs)
 
     return inner
 
@@ -1024,7 +1023,7 @@ def loadidx(func):
 
         obj.idx[self.storage] = n_idx
 
-        if self.is_named and not hasattr(obj, 'name'):
+        if self.is_named:
             # get the name of the object
             setattr(obj, 'name', self.get_name(idx))
 

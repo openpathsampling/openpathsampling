@@ -60,15 +60,16 @@ class testStorage(object):
         self.filename_clone = data_filename("storage_test_clone.nc")
 
     def teardown(self):
-        if os.path.isfile(data_filename("storage_test.nc")):
-            os.remove(data_filename("storage_test.nc"))
+        if os.path.isfile(self.filename):
+            os.remove(self.filename)
+
+        if os.path.isfile(self.filename_clone):
+            os.remove(self.filename_clone)
 
     def test_create_template(self):
-        Storage(filename=self.filename, template=self.template_snapshot, mode='w')
+        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
         assert(os.path.isfile(data_filename("storage_test.nc")))
-
-    def test_create_atoms(self):
-        pass
+        store.close()
 
     def test_stored_topology(self):
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
@@ -81,9 +82,11 @@ class testStorage(object):
         # check if poth topologies have the same JSON string (this also tests the simplifier for topologies
 
         assert_equal(
-            store.simplifier.topology_to_json(self.template_snapshot.topology),
-            store.simplifier.topology_to_json(loaded_topology)
+            store.simplifier.to_json(self.template_snapshot.topology),
+            store.simplifier.to_json(loaded_topology)
         )
+
+        store.close()
 
         pass
 
@@ -100,6 +103,8 @@ class testStorage(object):
         loaded_str = store2.load_str('test_variable')
 
         assert(loaded_str == test_str)
+
+        store2.close()
         pass
 
     def test_stored_template(self):
@@ -111,6 +116,8 @@ class testStorage(object):
         loaded_template = store.template
 
         compare_snapshot(loaded_template, self.template_snapshot)
+
+        store.close()
         pass
 
     def test_load_save(self):
@@ -129,6 +136,8 @@ class testStorage(object):
         loaded_copy = store.load(Snapshot, 1)
 
         compare_snapshot(loaded_template, loaded_copy)
+
+        store.close()
         pass
 
 
@@ -185,5 +194,8 @@ class testStorage(object):
 
         assert_equal(store2.snapshot.count(), 1)
         assert_equal(store2.trajectory.count(), 0)
+
+        store.close()
+        store2.close()
 
         pass
