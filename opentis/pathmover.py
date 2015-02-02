@@ -432,7 +432,7 @@ class RandomChoiceMover(PathMover):
             prob += self.weights[idx]
 
         logger_str = "RandomChoiceMover ({name}) selecting mover index {idx} ({mtype})"
-        logger.info(logger_str.format(name=self.name, idx=idx, mtype=self.movers[idx].__class__.__name__))
+        logger.info(logger_str.format(name=self.name, idx=idx, mtype=self.movers[idx].name))
 
         mover = self.movers[idx]
 
@@ -775,6 +775,7 @@ class PathReversalMover(PathMover):
         details.trial = reversed_trajectory
 
         details.accepted = ensemble(reversed_trajectory)
+        logger.info("PathReversal move accepted: "+str(details.accepted))
         if details.accepted == True:
             details.acceptance_probability = 1.0
             details.result = reversed_trajectory
