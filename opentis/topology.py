@@ -41,8 +41,8 @@ class ToyTopology(Topology):
     masses : numpy.ndarray (n_atoms, dtype=float)
         The masses associated with each atom
     '''
-    def __init__(self, n_spatial, masses, pes):
-        super(ToyTopology, self).__init__(n_atoms = 1, n_spatial=n_spatial)
+    def __init__(self, n_spatial, masses, pes, n_atoms = 1):
+        super(ToyTopology, self).__init__(n_atoms = n_atoms, n_spatial=n_spatial)
         self.masses = masses
         self.pes = pes
 
