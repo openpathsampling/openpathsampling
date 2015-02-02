@@ -2,9 +2,6 @@
 @author: David W.H. Swenson
 '''
 
-import os
-import numpy as np
-
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, raises)
 from nose.plugins.skip import Skip, SkipTest
@@ -15,15 +12,12 @@ from test_helpers import (assert_equal_array_array,
                          )
 
 from openpathsampling.ensemble import LengthEnsemble
-from openpathsampling.sample import SampleSet, Sample
 from openpathsampling.pathmover import *
 
 from openpathsampling.shooting import UniformSelector
-
 from openpathsampling.volume import LambdaVolume
 from test_helpers import CallIdentity
 from openpathsampling.trajectory import Trajectory
-from openpathsampling.snapshot import Snapshot
 from openpathsampling.ensemble import EnsembleFactory as ef
 from openpathsampling.orderparameter import OP_Function, OrderParameter
 
@@ -114,9 +108,9 @@ class testShootingMover(object):
                              snap.coordinates[0][0])
         except ValueError:
             op = OrderParameter.get_existing('myid')
-        stateA = LambdaVolume(op, -100, 0.0)
-        stateB = LambdaVolume(op, 0.65, 100)
-        self.tps = ef.A2BEnsemble(stateA, stateB)
+        self.stateA = LambdaVolume(op, -100, 0.0)
+        self.stateB = LambdaVolume(op, 0.65, 100)
+        self.tps = ef.A2BEnsemble(self.stateA, self.stateB)
         init_traj = make_1d_traj(
             coordinates=[-0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
             velocities=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
@@ -131,6 +125,9 @@ class testForwardShootMover(testShootingMover):
     def test_move(self):
         mover = ForwardShootMover(UniformSelector(), replicas=[0])
         self.dyn.initialized = True
+        print self.init_samp[0].trajectory.coordinates()
+        print self.stateB(self.init_samp[0].trajectory[0])
+        print self.stateA(self.init_samp[0].trajectory[-1])
         newsamp = mover.move(self.init_samp)
         assert_equal(len(newsamp), 1)
         assert_equal(newsamp[0].details.accepted, True)

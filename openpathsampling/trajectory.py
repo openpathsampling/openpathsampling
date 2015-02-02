@@ -182,9 +182,13 @@ class Trajectory(list):
 
     @property
     def spatial(self):
-        n_spatial = self.topology.n_spatial
+        if self.topology is None:
+            n_spatial = self[0].coordinates.shape[1]
+        else:
+            n_spatial = self.topology.n_spatial
+
         return n_spatial
-    
+
     @property
     def atoms(self):
         """
@@ -447,12 +451,14 @@ class Trajectory(list):
         This is taken from the configuration of the first frame.
         """
 
+        topology = None
+
         if len(self) > 0 and self[0].topology is not None:
             # if no topology is defined
             topology = self[0].topology
 
-        if self.atom_indices is not None:
-            topology = topology.subset(self.atom_indices)
+            if self.atom_indices is not None:
+                topology = topology.subset(self.atom_indices)
 
         return topology
 

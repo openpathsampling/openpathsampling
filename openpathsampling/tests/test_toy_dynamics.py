@@ -10,11 +10,11 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import true_func, assert_equal_array_array
 
-from opentis.toy_dynamics.toy_pes import *
-from opentis.toy_dynamics.toy_integrators import *
-from opentis.toy_dynamics.toy_engine import *
-from opentis.topology import ToyTopology
-from opentis.snapshot import Snapshot, Momentum, Configuration
+from openpathsampling.toy_dynamics.toy_pes import *
+from openpathsampling.toy_dynamics.toy_integrators import *
+from openpathsampling.toy_dynamics.toy_engine import *
+from openpathsampling.topology import ToyTopology
+from openpathsampling.snapshot import Snapshot, Momentum, Configuration
 
 
 # =========================================================================

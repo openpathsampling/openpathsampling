@@ -1,4 +1,4 @@
-from opentis.todict import restores_as_full_object
+from openpathsampling.todict import restores_as_full_object
 
 import mdtraj as md
 import numpy as np

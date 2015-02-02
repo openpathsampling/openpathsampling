@@ -1,9 +1,8 @@
 import sys
 import argparse
 import os
-import time
 
-import opentis as paths
+import openpathsampling as paths
 
 from openpathsampling.storage import Storage
 
