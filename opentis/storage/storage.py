@@ -101,7 +101,7 @@ class Storage(netcdf.Dataset):
         }
 
     def __init__(self, filename, mode=None,
-                 template=None, n_atoms=None, units=None):
+                 template=None, units=None):
         '''
         Create a storage for complex objects in a netCDF file
 
@@ -115,8 +115,6 @@ class Storage(netcdf.Dataset):
         template : opentis.Snapshot
             a Snapshot instance that contains a reference to a Topology, the
             number of atoms and used units
-        n_atoms : int or None
-            If not None overrides the number of atoms in the storage
         units : dict of {str : simtk.unit.Unit } or None
             representing a dict of string representing a dimension
             ('length', 'velocity', 'energy') pointing to
@@ -146,19 +144,13 @@ class Storage(netcdf.Dataset):
 
         if mode == 'w':
             logger.info("Setup netCDF file and create variables")
-            self._initialize_netCDF()
 
             if template.topology is not None:
                 self.topology = template.topology
-
-            if n_atoms is not None:
-                self.atoms = n_atoms
-            elif self.topology is not None:
-                self.atoms = self.topology.n_atoms
-            elif template.coordinates is not None:
-                self.atoms = template.coordinates.shape[0]
             else:
-                raise RuntimeError("Storage given neither n_atoms nor topology")
+                raise RuntimeError("Storage need a template snapshot with topology")
+
+            self._initialize_netCDF()
 
             # update the units for dimensions from the template
             self.dimension_units.update(paths.tools.units_from_snapshot(template))
@@ -167,7 +159,8 @@ class Storage(netcdf.Dataset):
             logger.info("Saving topology")
 
             # create a json from the mdtraj.Topology() and store it
-            self.write_str('topology', self.simplifier.to_json(self.simplifier.topology_to_dict(self.topology)))
+            self.write_str('topology', self.simplifier.to_json(self.topology))
+
 
             logger.info("Create initial template snapshot")
 
@@ -198,11 +191,18 @@ class Storage(netcdf.Dataset):
 
             # After we have restored the units we can load objects from the storage
 
-            self.topology = self.simplifier.topology_from_dict(self.simplifier.from_json(self.variables['topology'][0]))
-            self.atoms = self.topology.n_atoms
+            self.topology = self.simplifier.from_json(self.variables['topology'][0])
 
     def __repr__(self):
         return "OpenPathSampling netCDF Storage @ '" + self.filename + "'"
+
+    @property
+    def n_atoms(self):
+        return self.topology.n_atoms
+
+    @property
+    def n_spatial(self):
+        return self.topology.n_spatial
 
     @property
     def template(self):
@@ -223,7 +223,10 @@ class Storage(netcdf.Dataset):
         return u.Unit({self.unit_system.base_units[u.BaseDimension(dimension)] : 1.0})
 
     def __getattr__(self, item):
-        return self.__dict__[item]
+#        if item in self.__dict__:
+            return self.__dict__[item]
+ #       else:
+  #          return super(Storage, self).__getattr__(item)
 
     def __setattr__(self, key, value):
         self.__dict__[key] = value
@@ -259,10 +262,14 @@ class Storage(netcdf.Dataset):
         # add shared dimension for everyone. scalar and spatial
         if 'scalar' not in self.dimensions:
             self.createDimension('scalar', 1) # scalar dimension
-            
+
+        if 'atom' not in self.dimensions:
+            self.createDimension('atom', self.topology.n_atoms)
+
+        # spatial dimensions
         if 'spatial' not in self.dimensions:
-            self.createDimension('spatial', 3) # number of spatial dimensions
-        
+            self.createDimension('spatial', self.n_spatial)
+
         # Set global attributes.
         setattr(self, 'title', 'Open-Transition-Interface-Sampling')
         setattr(self, 'application', 'Host-Guest-System')
@@ -273,7 +280,6 @@ class Storage(netcdf.Dataset):
 
         # Create a string to hold the topology
         self.init_str('topology')
-        self.write_str('topology', '')
 
         # Force sync to disk to avoid data loss.
         self.sync()

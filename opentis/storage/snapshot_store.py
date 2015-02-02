@@ -267,6 +267,8 @@ class MomentumStore(ObjectStore):
 
     def load_empty(self, idx):
         momentum = Momentum()
+        del momentum.velocities
+        del momentum.kinetic_energy
         return momentum
 
     def update_velocities(self, obj):
@@ -357,14 +359,8 @@ class MomentumStore(ObjectStore):
 
         super(MomentumStore, self)._init()
 
-        atoms = self.storage.atoms
-
-        # define dimensions used in configuration_indices
-        if 'atom' not in self.storage.dimensions:
-            self.init_dimension('atom', atoms) # number of atoms in the simulated system
-
-        if 'spatial' not in self.storage.dimensions:
-            self.init_dimension('spatial', 3)  # number of spatial dimensions
+        n_atoms = self.storage.n_atoms
+        n_spatial = self.storage.n_spatial
 
         self.init_variable('momentum_velocities', 'float',
                 (self.db, 'atom','spatial'),
@@ -372,7 +368,7 @@ class MomentumStore(ObjectStore):
                 description="velocities[momentum][atom][coordinate] are " +
                             "velocities of atom 'atom' in dimension " +
                             "'coordinate' of momentum 'momentum'.",
-                chunksizes=(1,atoms,3))
+                chunksizes=(1,n_atoms,n_spatial))
 
         self.init_variable('momentum_kinetic', 'float', self.db,
                 self.dimension_units['energy'],
@@ -414,7 +410,6 @@ class ConfigurationStore(ObjectStore):
 
     def load(self, idx):
         storage = self.storage
-
         x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
         coordinates = u.Quantity(x, self.storage.units["configuration_coordinates"])
         b = storage.variables['configuration_box_vectors'][idx]
@@ -446,6 +441,11 @@ class ConfigurationStore(ObjectStore):
         """
         configuration = Configuration()
         configuration.topology = self.storage.topology
+
+        # if these still exist they will not be loaded using __getattr__
+        del configuration.coordinates
+        del configuration.box_vectors
+        del configuration.potential_energy
 
         return configuration
 
@@ -575,26 +575,20 @@ class ConfigurationStore(ObjectStore):
 
     def _init(self):
         super(ConfigurationStore, self)._init()
-        atoms = self.storage.atoms
-
-        # define dimensions used in configuration_indices
-        if 'atom' not in self.storage.dimensions:
-            self.init_dimension('atom', atoms)
-
-        if 'spatial' not in self.storage.dimensions:
-            self.init_dimension('spatial', 3)
+        n_atoms = self.storage.n_atoms
+        n_spatial = self.storage.n_spatial
 
         self.init_variable('configuration_coordinates', 'float',
                 (self.db, 'atom','spatial'), self.dimension_units['length'],
                 description="coordinates[configuration][atom][coordinate] " +
                             "are coordinate of atom 'atom' in dimension " +
                             "'coordinate' of configuration 'configuration'.",
-                chunksizes=(1,atoms,3))
+                chunksizes=(1,n_atoms,n_spatial))
 
         self.init_variable('configuration_box_vectors', 'float',
                 (self.db, 'spatial', 'spatial'),
                 self.dimension_units['length'],
-                chunksizes=(1,3,3))
+                chunksizes=(1,n_spatial,n_spatial))
 
         self.init_variable('configuration_potential', 'float',
                 self.db,

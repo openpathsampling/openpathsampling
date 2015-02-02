@@ -64,7 +64,7 @@ class testOpenMMEngine(object):
             # engine.topology because the latter is a mdtraj, former is
             # openmm; we might change that so that engine.simulation is the
             # only place you find an openmm topol
-            res_i = self.engine.storage.topology.atom(atom_i).residue
+            res_i = self.engine.storage.topology.md.atom(atom_i).residue
             if res_i in self.engine.solute_indices:
                 assert_items_equal(old_pos[atom_i], new_pos[atom_i])
             else:

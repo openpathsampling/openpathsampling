@@ -50,7 +50,7 @@ def snapshot_from_pdb(pdb_file, units = None):
         box_vectors=u.Quantity(pdb.unitcell_vectors[0], units['length']),
         potential_energy=u.Quantity(0.0, units['energy']),
         kinetic_energy=u.Quantity(0.0, units['energy']),
-        topology=pdb.topology
+        topology=paths.MDTrajTopology(pdb.topology)
     )
 
     return snapshot
@@ -81,7 +81,11 @@ def trajectory_from_mdtraj(mdtrajectory):
             box_v = None
         config = paths.Configuration(coordinates=coord, box_vectors=box_v)
 
-        snap = paths.Snapshot(configuration=config, momentum=empty_momentum, topology=mdtrajectory.topology)
+        snap = paths.Snapshot(
+            configuration=config,
+            momentum=empty_momentum,
+            topology=paths.MDTrajTopology(mdtrajectory.topology)
+        )
         trajectory.append(snap)
 
     return trajectory
@@ -113,7 +117,7 @@ def empty_snapshot_from_openmm_topology(topology, units):
         box_vectors=u.Quantity(topology.setUnitCellDimensions(), units['length']),
         potential_energy=u.Quantity(0.0, units['energy']),
         kinetic_energy=u.Quantity(0.0, units['energy']),
-        topology=md.Topology.from_openmm(topology)
+        topology=paths.MDTrajTopology(md.Topology.from_openmm(topology))
     )
 
     return snapshot
@@ -133,11 +137,27 @@ def units_from_snapshot(snapshot):
         representing a dict of string representing a dimension ('length', 'velocity', 'energy') pointing the
         the simtk.unit.Unit to be used
     """
-    return {
-        'length' : snapshot.coordinates.unit,
-        'velocity' : snapshot.velocities.unit,
-        'energy' : snapshot.potential_energy.unit
-    }
+
+    units = {}
+    if snapshot.coordinates is not None:
+        if hasattr(snapshot.coordinates, 'unit'):
+            units['length'] = snapshot.coordinates.unit
+        else:
+            units['length'] = u.Unit({})
+
+    if snapshot.potential_energy is not None:
+        if hasattr(snapshot.potential_energy, 'unit'):
+            units['energy'] = snapshot.potential_energy.unit
+        else:
+            units['energy'] = u.Unit({})
+
+    if snapshot.velocities is not None:
+        if hasattr(snapshot.velocities, 'unit'):
+            units['velocity'] = snapshot.velocities.unit
+        else:
+            units['velocity'] = u.Unit({})
+
+    return units
 
 def to_openmm_topology(obj):
     """
@@ -155,10 +175,11 @@ def to_openmm_topology(obj):
         an object representing an openmm.Topology
     """
     if obj.topology is not None:
-        openmm_topology = obj.topology.to_openmm()
-        box_size_dimension = np.linalg.norm(obj.box_vectors.value_in_unit(u.nanometer), axis=1)
-        openmm_topology.setUnitCellDimensions(box_size_dimension)
+        if hasattr(obj.topology, 'md'):
+            openmm_topology = obj.topology.md.to_openmm()
+            box_size_dimension = np.linalg.norm(obj.box_vectors.value_in_unit(u.nanometer), axis=1)
+            openmm_topology.setUnitCellDimensions(box_size_dimension)
 
-        return openmm_topology
+            return openmm_topology
     else:
         return None
