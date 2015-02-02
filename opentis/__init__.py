@@ -2,7 +2,7 @@ from calculation import Calculation, Bootstrapping, PathSampling
 
 from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     EntersXEnsemble, EmptyEnsemble, ExitsXEnsemble, FullEnsemble, \
-    HitXEnsemble, InXEnsemble, OutXEnsemble, AlteredEnsemble, \
+    HitXEnsemble, InXEnsemble, OutXEnsemble, WrappedEnsemble, \
     BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble, \
     LeaveXEnsemble, LengthEnsemble, LoadedEnsemble, NegatedEnsemble, \
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \

@@ -601,8 +601,7 @@ class testForceEnsembleChangeMover(object):
 class testMinusMover(object):
     def setup(self):
         try:
-            op = OP_Function("myid", fcn=lambda snap : 
-                             Trajectory([snap])[0].coordinates()[0][0])
+            op = OP_Function("myid", fcn=lambda snap : snap.coordinates[0,0])
         except ValueError:
             op = OrderParameter.get_existing('myid')
         volA = LambdaVolume(op, -100, 0.0)

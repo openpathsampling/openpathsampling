@@ -1128,7 +1128,7 @@ class EntersXEnsemble(ExitsXEnsemble):
         return False
 
 @restores_as_full_object
-class AlteredEnsemble(Ensemble):
+class WrappedEnsemble(Ensemble):
     '''
     Represents an ensemble where an altered version of a trajectory (extended, reversed, cropped) is part of a given ensemble
     '''
@@ -1136,8 +1136,7 @@ class AlteredEnsemble(Ensemble):
         '''
         Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
         '''
-        
-        super(AlteredEnsemble, self).__init__()
+        super(WrappedEnsemble, self).__init__()
         self.ensemble = ensemble
                 
     def _alter(self, trajectory):
@@ -1153,7 +1152,7 @@ class AlteredEnsemble(Ensemble):
         return self.ensemble.can_prepend(self._alter(trajectory))
 
 @restores_as_full_object
-class SlicedTrajectoryEnsemble(AlteredEnsemble):
+class SlicedTrajectoryEnsemble(WrappedEnsemble):
     '''
     An ensemble which alters the trajectory by looking at a given Python
     slice of the list of frames.
@@ -1182,7 +1181,7 @@ class SlicedTrajectoryEnsemble(AlteredEnsemble):
 
 
 @restores_as_full_object
-class BackwardPrependedTrajectoryEnsemble(AlteredEnsemble):
+class BackwardPrependedTrajectoryEnsemble(WrappedEnsemble):
     '''
     Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
     '''
@@ -1195,7 +1194,7 @@ class BackwardPrependedTrajectoryEnsemble(AlteredEnsemble):
         return trajectory.reversed + self.add_traj
 
 @restores_as_full_object
-class ForwardAppendedTrajectoryEnsemble(AlteredEnsemble):
+class ForwardAppendedTrajectoryEnsemble(WrappedEnsemble):
     '''
     Represents an ensemble which is the given ensemble but for trajectories where some trajectory is appended
     '''
@@ -1207,7 +1206,7 @@ class ForwardAppendedTrajectoryEnsemble(AlteredEnsemble):
         return self.add_traj + trajectory
 
 @restores_as_full_object
-class ReversedTrajectoryEnsemble(AlteredEnsemble):
+class ReversedTrajectoryEnsemble(WrappedEnsemble):
     '''
     Represents an ensemble 
     '''

@@ -646,7 +646,7 @@ class EnsembleHopMover(PathMover):
                            )
         return [path]
 
-@restores_as_stub_dict
+@restores_as_stub_object
 class ForceEnsembleChangeMover(EnsembleHopMover):
     '''
     Force an ensemble change in the sample.
