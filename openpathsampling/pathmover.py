@@ -520,41 +520,27 @@ class PartialAcceptanceSequentialMover(SequentialMover):
         logger.debug("==== BEGINNING " + self.name + " ====")
         subglobal = SampleSet(self.legal_sample_set(globalstate))
         mysamples = []
-        last_accepted = True
+        movepaths = []
         for mover in self.movers:
-            logger.debug("Starting sequential move step "+str(mover))
-
-            # Run the sub mover
-            movepath = mover.move(subglobal)
-            subglobal = movepath.apply_to(subglobal)
-            movepaths.append(movepath)
-            if not movepath.accepted:
             # NOTE: right now, this doesn't quite work correctly if the
             # submovers are also multimovers (e.g., SequentialMovers). We
             # need a way to see whether the move below considered itself
             # accepted; that could mean that submoves of the submove were
             # rejected but the whole submove was accepted, as with
             # SequentialMovers
-            logger.info(str(self.name) 
+            logger.info(str(self.name)
                         + " starting mover index " + str(self.movers.index(mover) )
                         + " (" + mover.name + ")"
                        )
-            newsamples = mover.move(subglobal)
-            subglobal = subglobal.apply_samples(newsamples)
-            # all samples made by the submove; pick the ones up to the first
-            # rejection
-            mysamples.extend(newsamples)
-            for sample in newsamples:
-                if sample.details.accepted == False:
-                    last_accepted = False
-                    break
-            if last_accepted == False:
-                break
-        for sample in mysamples:
-            sample.details.mover_path.append(self)
-        logger.debug("==== FINISHING " + self.name + " ====")
-        return mysamples
 
+            # Run the sub mover
+            movepath = mover.move(subglobal)
+            subglobal = movepath.apply_to(subglobal)
+            movepaths.append(movepath)
+            if not movepath.accepted:
+                break
+
+        logger.debug("==== FINISHING " + self.name + " ====")
         return paths.PartialMovePath( movepaths)
 
 
