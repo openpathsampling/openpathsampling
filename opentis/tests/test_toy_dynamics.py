@@ -142,7 +142,6 @@ class testToyEngine(object):
         pes = linear
         integ = LeapfrogVerletIntegrator(dt=0.002)
         topology=ToyTopology(
-            n_atoms = 1,
             n_spatial = 2,
             masses = sys_mass,
             pes = pes
@@ -177,7 +176,7 @@ class testToyEngine(object):
 
     def test_momentum_getter(self):
         momentum = self.sim.momentum
-        assert_items_equal(momentum.velocities,
+        assert_items_equal(momentum.velocities[0],
                            self.sim.velocities)
         assert_equal(momentum.kinetic_energy,
                      self.sim.pes.kinetic_energy(self.sim))
@@ -199,7 +198,7 @@ class testToyEngine(object):
 
     def test_load_configuration(self):
         configuration = self.sim.configuration
-        assert_items_equal(configuration.coordinates,
+        assert_items_equal(configuration.coordinates[0],
                            self.sim.positions)
         assert_equal(configuration.potential_energy,
                      self.sim.pes.V(self.sim))
@@ -208,11 +207,11 @@ class testToyEngine(object):
     def test_snapshot_get(self):
         snapshot = self.sim.current_snapshot
         n_spatial=self.sim.n_spatial
-        assert_items_equal(snapshot.momentum.velocities,
+        assert_items_equal(snapshot.momentum.velocities[0],
                            self.sim.velocities)
         assert_equal(snapshot.momentum.kinetic_energy,
                      self.sim.pes.kinetic_energy(self.sim))
-        assert_items_equal(snapshot.configuration.coordinates,
+        assert_items_equal(snapshot.configuration.coordinates[0],
                            self.sim.positions)
         assert_equal(snapshot.configuration.potential_energy,
                      self.sim.pes.V(self.sim))
@@ -237,7 +236,7 @@ class testToyEngine(object):
                                  #np.array([init_pos.append(0.0)]))
         self.sim.velocities = -self.sim.velocities
         snap2 = self.sim.generate_next_frame()
-        np.testing.assert_allclose(snap2.coordinates, init_pos)
+        np.testing.assert_allclose(snap2.coordinates[0], init_pos)
 
     def test_generate(self):
         self.sim.initialized = True
@@ -263,7 +262,6 @@ class testLeapfrogVerletIntegrator(object):
         pes = linear
         integ = LeapfrogVerletIntegrator(dt=0.002)
         topology=ToyTopology(
-            n_atoms = 1,
             n_spatial = 2,
             masses = sys_mass,
             pes = pes
@@ -319,7 +317,6 @@ class testLangevinBAOABIntegrator(object):
         integ = LangevinBAOABIntegrator(dt=0.002, temperature=0.5,
                                         gamma=1.0)
         topology=ToyTopology(
-            n_atoms = 1,
             n_spatial = 2,
             masses = sys_mass,
             pes = pes
