@@ -59,12 +59,14 @@ class ShootingPoint(object):
     @property
     def sum_bias(self):
         '''
-        Return the unnormalized probability for the total trajectory where the point has been chosen from.
+        Return the unnormalized probability for the total trajectory where
+        the point has been chosen from.
         
         Notes
         -----
-        These partition function like normalizations for a trajectory should only be computed only once.
-        Think about a way to store this. Maybe use a cache for the ShootingPoint
+        These partition function like normalizations for a trajectory should
+        only be computed only once.  Think about a way to store this. Maybe
+        use a cache for the ShootingPoint
         '''
         if self._sum_bias is None:
             self._sum_bias = self.selector.sum_bias(self.trajectory)
@@ -78,7 +80,7 @@ class ShootingPoint(object):
     @property
     def f(self):
         if self._f is None:
-            self._f = self.selector.f(self.snapshot)
+            self._f = self.selector.f(self.snapshot, self.trajectory)
             
         return self._f
 
@@ -87,7 +89,6 @@ class ShootingPoint(object):
         return self.f
 
 @restores_as_full_object
-
 class ShootingPointSelector(object):
 
     @property
@@ -97,34 +98,37 @@ class ShootingPointSelector(object):
         else:
             return None
 
-    def f(self, snapshot):
+    def f(self, snapshot, trajectory=None):
         '''
         Returns the unnormalized proposal probability of a snapshot
         
         Notes
         -----
-        
-        In principle this is an orderparameter so we could easily add caching if useful
+        In principle this is an orderparameter so we could easily add
+        caching if useful
         '''
         return 1.0
     
     def probabilities(self, snapshot, trajectory):
-        return self.f(snapshot) / self.sum_bias(trajectory)
+        return self.f(snapshot, trajectory) / self.sum_bias(trajectory)
     
     def _biases(self, trajectory):
         '''
-        Returns a list of unnormalized proposal probabilities for all snapshots in trajectory
+        Returns a list of unnormalized proposal probabilities for all
+        snapshots in trajectory
         '''
-        return [ self.f(s) for s in trajectory ]
+        return [ self.f(s, trajectory) for s in trajectory ]
     
     def sum_bias(self, trajectory):
         '''
-        Returns the unnormalized probability probability of a trajectory. This is just the sum of all proposal probabilities in a trajectory.
+        Returns the unnormalized probability probability of a trajectory.
+        This is just the sum of all proposal probabilities in a trajectory.
         
         Notes
         -----
-        For a uniform distribution this is proportional to the length of the trajectory.
-        In this case we can estimate the maximal accepted trajectory length for a given acceptance probability.
+        For a uniform distribution this is proportional to the length of the
+        trajectory. In this case we can estimate the maximal accepted
+        trajectory length for a given acceptance probability.
         
         After we have generated a new trajectory the acceptance probability only for the non-symmetric proposal of
         different snapshots is given by `probability(old_trajectory) / probability(new_trajectory)`
@@ -167,7 +171,7 @@ class GaussianBiasSelector(ShootingPointSelector):
         self.alpha = alpha
         self.l0 = l0
 
-    def f(self, snapshot):
+    def f(self, snapshot, trajectory=None):
         return math.exp(-self.alpha*(self.orderparameter(snapshot) - self.l0)**2)
 
 @restores_as_full_object
@@ -180,7 +184,7 @@ class UniformSelector(ShootingPointSelector):
         self.pad_start = pad_start
         self.pad_end = pad_end
         
-    def f(self, frame):
+    def f(self, frame, trajectory=None):
         '''
         Careful, this only returns a correct value for allowed frames since this function does not know about the position in the trajectory
         '''
@@ -194,4 +198,36 @@ class UniformSelector(ShootingPointSelector):
         
         point = ShootingPoint(self, trajectory, idx, f = 1.0, sum_bias= self.sum_bias(trajectory))
         
+        return point
+
+class FinalFrameSelector(ShootingPointSelector):
+    '''
+    Pick final trajectory frame as shooting point.
+
+    This is used for "forward" extension in, e.g., the minus move.
+    '''
+    def f(self, frame, trajectory):
+        if trajectory.index(frame) == len(trajectory)-1:
+            return 1.0
+        else:
+            return 0.0
+
+    def pick(self, trajectory):
+        point = ShootingPoint(self, trajectory, len(trajectory)-1, f=1.0, sum_bias=1.0)
+        return point
+
+class FirstFrameSelector(ShootingPointSelector):
+    '''
+    Pick first trajectory frame as shooting point.
+
+    This is used for "backward" extension in, e.g., the minus move.
+    '''
+    def f(self, frame, trajectory):
+        if trajectory.index(frame) == 0:
+            return 1.0
+        else:
+            return  0.0
+
+    def pick(self, trajectory):
+        point = ShootingPoint(self, trajectory, 0, f=1.0, sum_bias=1.0)
         return point

@@ -282,12 +282,13 @@ class DynamicsEngine(object):
                                         continue_conditions=running)
 
             logger.info("Starting trajectory")
+            log_freq = 10 # TODO: set this from a singleton class 
             while stop == False:
                                 
                 # Do integrator x steps
                 snapshot = self.generate_next_frame()
                 frame += 1
-                if frame % 10 == 0:
+                if frame % log_freq == 0:
                     logger.info("Through frame: %d", frame)
                 
                 # Store snapshot and add it to the trajectory. Stores also

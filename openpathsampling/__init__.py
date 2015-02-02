@@ -1,12 +1,14 @@
-from calculation import Calculation, Bootstrapping
+from calculation import Calculation, Bootstrapping, PathSampling
 
 from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     EntersXEnsemble, EmptyEnsemble, ExitsXEnsemble, FullEnsemble, \
-    HitXEnsemble, InXEnsemble, OutXEnsemble, AlteredEnsemble, \
+    HitXEnsemble, InXEnsemble, OutXEnsemble, WrappedEnsemble, \
     BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble, \
     LeaveXEnsemble, LengthEnsemble, LoadedEnsemble, NegatedEnsemble, \
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \
-    SequentialEnsemble, AndEnsemble, OrEnsemble, XorEnsemble, SubEnsemble
+    SequentialEnsemble, AndEnsemble, OrEnsemble, XorEnsemble, SubEnsemble, \
+    SingleFrameEnsemble, MinusInterfaceEnsemble
+
 
 
 from snapshot import Snapshot, Configuration, Momentum
@@ -18,7 +20,7 @@ from orderparameter import OP_Function, OP_MD_Function, OP_Featurizer, \
     OP_RMSD_To_Lambda, OP_Volume, OrderParameter
 
 from pathmover import (
-    BackwardShootMover, MinusMove, RandomChoiceMover, MoveDetails, \
+    BackwardShootMover, MinusMover, RandomChoiceMover, MoveDetails, \
     ForwardShootMover, PathMover, PathMoverFactory, PathReversalMover, \
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover, \
     PartialAcceptanceSequentialMover, ReplicaIDChange, SequentialMover
@@ -26,7 +28,7 @@ from pathmover import (
 )
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
-    GaussianBiasSelector
+    GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
 
 from dynamics_engine import DynamicsEngine
 
