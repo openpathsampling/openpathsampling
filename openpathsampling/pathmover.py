@@ -116,8 +116,9 @@ class MoveDetails(object):
         details = MoveDetails()
         details.accepted = True
         details.acceptance_probability = 1.0
-        details.mover = PathMover()
-        details.mover.name = "Initialization (trajectory)"
+        details.mover_path = []
+        #details.mover = PathMover()
+        #details.mover.name = "Initialization (trajectory)"
         details.inputs = [trajectory]
         details.trial = trajectory
         details.ensemble = ensemble
