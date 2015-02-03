@@ -5,6 +5,8 @@ from sample import SampleSet, Sample
 from openpathsampling.todict import restores_as_stub_object
 from openpathsampling.pathmover import PathMover
 
+from openpathsampling.movepath import SampleMovePath
+
 import openpathsampling as paths
 
 import logging
@@ -73,18 +75,6 @@ class BootstrapPromotionMove(PathMover):
         top_rep = max(globalstate.replica_list())
         old_sample = globalstate[top_rep]
 
-        shooter = self.shooters[top_rep]
-        hopper = EnsembleHopMover(bias=self.bias,
-                                  ensembles=[ensemble_from, ensemble_to],
-                                  replicas=top_rep)
-
-        replicaID = paths.ReplicaIDChange()
-
-        paths.ConditionalSequentialMover([
-            shooter,
-            hopper
-        ])
-
         details = MoveDetails()
         details_inputs = [old_sample.trajectory]
         details_mover = self
@@ -95,9 +85,11 @@ class BootstrapPromotionMove(PathMover):
         shooter = self.shooters[top_rep]
         hopper = self._hoppers[top_rep]
 
-        init_sample_set = (init_sample_set + shooter.move(init_sample_set))[0]
+
+        init_sample_set = (init_sample_set + shooter.move(init_sample_set))
         shoot_samp = init_sample_set[0]
-        hop_samp = hopper.move(init_sample_set)[0]
+        hop_path = hopper.move(init_sample_set)[0]
+        hop_samp = hop_path.samples
         init_sample_set = init_sample_set.apply(hop_samp)
 
         # bring all the metadata from the submoves into our details
@@ -135,7 +127,22 @@ class BootstrapPromotionMove(PathMover):
         logger.debug(" Shooting part: accepted = " + str(shoot_samp.details.accepted))
         logger.debug("  Hopping part: accepted = " + str(hop_samp.details.accepted))
 
-        return [sample]
+        # TODO: Rewrite using SequentialMovers
+        #
+        # top_rep = max(globalstate.replica_list())
+        #
+        # shooter = self.shooters[top_rep]
+        # hopper = self._hoppers[top_rep]
+        #
+        # replicaID = paths.ReplicaIDChange()
+        #
+        # return paths.ConditionalSequentialMover([
+        #     shooter,
+        #     hopper,
+        #     replicaID
+        # ])
+
+        return SampleMovePath([sample], accepted=details.accepted, mover=self)
 
 class InitializeSingleTrajectoryMover(PathMover):
     def __init__(self, bias=None, shooters=None,
@@ -212,9 +219,9 @@ class Bootstrapping(Calculation):
                         + "  failsteps = " + str(failsteps)
                        )
             old_rep = max(self.globalstate.replica_list())
-            samples = bootstrapmove.move(self.globalstate)
+            movepath = bootstrapmove.move(self.globalstate)
+            samples = movepath.samples
             self.globalstate = self.globalstate.apply(samples, step=step_num)
-            #print self.globalstate.samples[0]
 
             if samples[0].replica == old_rep:
                 failsteps += 1
