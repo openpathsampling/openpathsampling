@@ -832,7 +832,6 @@ class testMinusMover(object):
         gs = SampleSet([self.minus_sample, samp_bad_extension])
         movepath = self.mover.move(gs)
         samples = movepath.all_samples
-        print movepath
         assert_equal(len(samples), 5) # reject the last one
         assert_sampleset_accepted(samples, [True] * 4 + [False])
         # this only happens due to length

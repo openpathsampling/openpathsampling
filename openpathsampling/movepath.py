@@ -40,7 +40,6 @@ class MovePath(object):
     @staticmethod
     def _indent(s):
         spl = s.split('\n')
-        print spl
         spl = [' |  ' + p if p[0] == ' ' else ' +- ' + p for p in spl]
         return '\n'.join(spl)
 
@@ -170,10 +169,6 @@ class SampleMovePath(MovePath):
 
 
         self._local_samples.extend(samples)
-
-        print self._local_samples
-        print accepted
-        print type(samples)
 
     def to_dict(self):
         return {

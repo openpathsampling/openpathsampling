@@ -114,9 +114,6 @@ class SampleSetStore(ObjectStore):
         values = self.list_to_numpy(sampleset, 'sample')
         self.storage.variables['sampleset_sample_idx'][idx] = values
 
-        print sampleset.movepath.__dict__
-        print sampleset.movepath.idx
-
         self.storage.movepaths.save(sampleset.movepath)
         self.set_object('sampleset_movepath', idx, sampleset.movepath)
 

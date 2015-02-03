@@ -85,12 +85,13 @@ class BootstrapPromotionMove(PathMover):
         shooter = self.shooters[top_rep]
         hopper = self._hoppers[top_rep]
 
+        shoot_path = shooter.move(init_sample_set)
+        shoot_samp = shoot_path.all_samples[0]
+        shoot_samp_set = shoot_path.apply_to(init_sample_set)
 
-        init_sample_set = (init_sample_set + shooter.move(init_sample_set))
-        shoot_samp = init_sample_set[0]
-        hop_path = hopper.move(init_sample_set)[0]
-        hop_samp = hop_path.samples
-        init_sample_set = init_sample_set.apply(hop_samp)
+        hop_path = hopper.move(shoot_samp_set)
+        hop_samp = hop_path.all_samples[0]
+        hop_samp_set = hop_path.apply_to(shoot_samp_set)
 
         # bring all the metadata from the submoves into our details
         details.__dict__.update(shoot_samp.details.__dict__)
@@ -118,6 +119,7 @@ class BootstrapPromotionMove(PathMover):
             setattr(details, 'result_replica', details.replica+1)
         else:
             setattr(details, 'result_replica', details.replica)
+
         sample = Sample(replica=details.result_replica,
                         ensemble=details.result_ensemble,
                         trajectory=details.result,
@@ -221,9 +223,9 @@ class Bootstrapping(Calculation):
             old_rep = max(self.globalstate.replica_list())
             movepath = bootstrapmove.move(self.globalstate)
             samples = movepath.samples
-            self.globalstate = self.globalstate.apply(samples, step=step_num)
+            self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
 
-            if samples[0].replica == old_rep:
+            if len(samples) > 0 and samples[0].replica == old_rep:
                 failsteps += 1
             else:
                 failsteps = 0

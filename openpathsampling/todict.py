@@ -67,7 +67,6 @@ class ObjectJSON(object):
                     attributes = self.build(obj['_dict'])
                     return self.class_list[obj['_cls']].from_dict(attributes)
                 else:
-                    print self.class_list
                     raise ValueError('Cannot create obj of class "' + obj['_cls']+ '". Class is not registered as creatable!')
             else:
                 return {key : self.build(o) for key, o in obj.iteritems()}
