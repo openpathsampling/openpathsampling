@@ -315,3 +315,17 @@ class Sample(object):
     def set_time(step, samples):
         for sample in samples:
             sample.step = step
+
+    def copy_reset(self):
+        '''
+        Copy of Sample with initialization move details.
+        '''
+        result = Sample(
+            replica=self.replica,
+            trajectory=self.trajectory,
+            ensemble=self.ensemble,
+            details=paths.MoveDetails.initialization(self.trajectory, self.ensemble)
+        )
+        return result
+
+
