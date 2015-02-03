@@ -424,8 +424,11 @@ class RandomChoiceMover(PathMover):
     weights : list of floats
         the relative weight of each PathMover (does not need to be normalized)
     '''
-    def __init__(self, movers, ensembles=None, replicas='all', weights = None):
+    def __init__(self, movers, ensembles=None, replicas='all', weights=None, name=None):
         super(RandomChoiceMover, self).__init__(ensembles=ensembles, replicas=replicas)
+
+        if name is not None:
+            self.name = name
 
         self.movers = movers
 
