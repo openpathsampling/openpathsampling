@@ -921,7 +921,7 @@ class ReplicaExchangeMover(PathMover):
             details=details2
             )
 
-        path = paths.SampleMovePath( [sample1, sample2], mover=self, accepted=details1.accepted)
+        path = paths.SampleMovePath([sample1, sample2], mover=self, accepted=details1.accepted)
 
         return path
 

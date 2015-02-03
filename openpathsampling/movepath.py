@@ -46,8 +46,8 @@ class MovePath(object):
     def __init__(self, accepted=True, mover=None):
         self._accepted = accepted
         self._destination = None
-        self._samples = []
-        self._changes = None
+        self._local_samples = []
+        self._samples = None
         self.mover = mover
 
     def to_dict(self):
@@ -57,11 +57,11 @@ class MovePath(object):
         }
 
     @property
-    def samples(self):
+    def local_samples(self):
         """
-        A list of the contained samples for this particular move
+        A list of the samples that are needed to update the new sampleset
         """
-        return self._samples
+        return self._local_samples
 
     @property
     def all_samples(self):
@@ -71,7 +71,7 @@ class MovePath(object):
         This includes all rejected samples
         """
 
-        return self._samples
+        return self._local_samples
 
     @property
     def accepted(self):
@@ -91,43 +91,43 @@ class MovePath(object):
         """
         Standard apply is to apply the list of samples contained
         """
-        return paths.SampleSet(other).apply_samples(self._samples)
+        return paths.SampleSet(other).apply_samples(self._local_samples)
 
     @property
-    def changes(self):
+    def samples(self):
         """
         Returns a list of all samples that should be applied to
         """
-        if self._changes is None:
-            self._changes = self._get_changes()
+        if self._samples is None:
+            self._samples = self._get_samples()
 
-        return self._changes
+        return self._samples
 
-    def _get_changes(self):
+    def _get_samples(self):
         """
         A normal movepath
         """
         if self.accepted:
-            return self._samples
+            return self._local_samples
         else:
             return []
 
     def __iter__(self):
-        for sample in self.changes:
+        for sample in self.samples:
             yield sample
 
     def __len__(self):
-        return len(self.changes)
+        return len(self.samples)
 
     def __contains__(self, item):
         """
         Check, if a particular
         """
-        return (item in self.changes)
+        return (item in self.samples)
 
     def __str__(self):
         if self.accepted:
-            return 'SampleMove : %s : %s : %d samples' % (self.mover.__class__.__name__, self.accepted, len(self._samples)) + ' ' + str(self._samples) + ''
+            return 'SampleMove : %s : %s : %d samples' % (self.mover.__class__.__name__, self.accepted, len(self._local_samples)) + ' ' + str(self._local_samples) + ''
         else:
             return 'SampleMove : %s : %s :[]' % (self.mover.__class__.__name__, self.accepted)
 
@@ -167,20 +167,20 @@ class SampleMovePath(MovePath):
         if type(samples) is paths.Sample:
             samples = [samples]
 
-        self._samples.extend(samples)
+        self._local_samples.extend(samples)
 
     def to_dict(self):
         return {
             'accepted' : self.accepted,
             'mover' : self.mover,
-            'samples' : self._samples
+            'samples' : self._local_samples
         }
 
     def apply_to(self, other):
         """
         Standard apply is to apply the list of samples contained
         """
-        return paths.SampleSet(other).apply_samples(self._samples)
+        return paths.SampleSet(other).apply_samples(self._local_samples)
 
 
 @restores_as_full_object
@@ -198,8 +198,8 @@ class RandomChoiceMovePath(MovePath):
             'movepath' : self.movepath
         }
 
-    def _get_changes(self):
-        return self.movepath.changes
+    def _get_samples(self):
+        return self.movepath.samples
 
     def apply_to(self, other):
         return self.movepath.apply_to(other)
@@ -227,18 +227,18 @@ class SequentialMovePath(MovePath):
             'movepaths' : self.movepaths
         }
 
-    def _get_changes(self):
-        changes = []
+    def _get_samples(self):
+        samples = []
         for movepath in self.movepaths:
-            changes = changes + movepath.changes
-        return changes
+            samples = samples + movepath.samples
+        return samples
 
     @property
     def all_samples(self):
-        changes = []
+        samples = []
         for movepath in self.movepaths:
-            changes = changes + movepath.all_samples
-        return changes
+            samples = samples + movepath.all_samples
+        return samples
 
 
     def apply_to(self, other):
@@ -250,7 +250,7 @@ class SequentialMovePath(MovePath):
         return sampleset
 
     def __str__(self):
-        return 'SequentialMove : %s : %d samples\n' % (self.accepted, len(self.changes)) + MovePath._indent('\n'.join(map(str, self.movepaths)))
+        return 'SequentialMove : %s : %d samples\n' % (self.accepted, len(self.samples)) + MovePath._indent('\n'.join(map(str, self.movepaths)))
 
 
 @restores_as_full_object
@@ -260,11 +260,11 @@ class PartialMovePath(SequentialMovePath):
     underlying MovePaths
     """
 
-    def _get_changes(self):
+    def _get_samples(self):
         changes = []
         for movepath in self.movepaths:
             if movepath.accepted:
-                changes.extend(movepath.changes)
+                changes.extend(movepath.samples)
             else:
                 break
 
@@ -282,7 +282,7 @@ class PartialMovePath(SequentialMovePath):
         return sampleset
 
     def __str__(self):
-        return 'PartialMove : %s : %d samples\n' % (self.accepted, len(self.changes)) + MovePath._indent('\n'.join(map(str, self.movepaths)))
+        return 'PartialMove : %s : %d samples\n' % (self.accepted, len(self.samples)) + MovePath._indent('\n'.join(map(str, self.movepaths)))
 
 @restores_as_full_object
 class ExclusiveMovePath(SequentialMovePath):
@@ -302,7 +302,7 @@ class ExclusiveMovePath(SequentialMovePath):
 
         return sampleset
 
-    def _get_changes(self):
+    def _get_samples(self):
         changes = []
         for movepath in self.movepaths:
             if movepath.accepted:
@@ -320,7 +320,7 @@ class ExclusiveMovePath(SequentialMovePath):
         return True
 
     def __str__(self):
-        return 'ExclusiveMove : %s : %d samples\n' % (self.accepted, len(self.changes)) + MovePath._indent( '\n'.join(map(str, self.movepaths)))
+        return 'ExclusiveMove : %s : %d samples\n' % (self.accepted, len(self.samples)) + MovePath._indent( '\n'.join(map(str, self.movepaths)))
 
 
 

@@ -182,8 +182,8 @@ use LeaveXEnsemble as we typically do with TIS paths.
     print third_set[0].__dict__
     print third_set.__dict__
 
-    print second_path.changes
-    print first_path.changes
+    print second_path.samples
+    print first_path.samples
 
 
     mover3 = SequentialMover([
@@ -197,7 +197,7 @@ use LeaveXEnsemble as we typically do with TIS paths.
 
     third_path = mover3.move(third_set)
 
-    print third_path.changes
+    print third_path.samples
     print str(third_path)
     print len(third_path)
 
