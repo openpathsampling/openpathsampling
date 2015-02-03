@@ -1,11 +1,10 @@
 import sys
 import argparse
 import os
-import time
 
-import opentis as paths
+import openpathsampling as paths
 
-from opentis.storage import Storage
+from openpathsampling.storage import Storage
 
 if __name__ == '__main__':
 

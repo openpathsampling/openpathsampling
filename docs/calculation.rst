@@ -1,6 +1,6 @@
 .. _calculation:
 
-.. currentmodule:: opentis.calculation
+.. currentmodule:: openpathsampling.calculation
 
 Calculation Functions
 =====================

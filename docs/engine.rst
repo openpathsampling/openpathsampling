@@ -1,11 +1,11 @@
 .. _engine:
 
-.. currentmodule:: opentis.dynamicsengine
+.. currentmodule:: openpathsampling.dynamicsengine
 
 Engine Functions
 ================
 
-    >>> import opentis as ops
+    >>> import openpathsampling as ops
     >>> t = ops.Ensemble()
 
 engine basic
@@ -15,7 +15,7 @@ engine basic
 
 	DynamicsEngine
 
-.. currentmodule:: opentis.openmmengine
+.. currentmodule:: openpathsampling.openmmengine
 
 OpenMM
 ------
