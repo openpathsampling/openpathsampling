@@ -541,7 +541,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
                 break
 
         logger.debug("==== FINISHING " + self.name + " ====")
-        return paths.PartialMovePath( movepaths)
+        return paths.PartialMovePath(movepaths)
 
 
 @restores_as_stub_object
@@ -577,12 +577,10 @@ class ConditionalSequentialMover(SequentialMover):
             if not movepath.accepted:
                 break
 
-        return paths.ExclusiveMovePath( movepaths)
+        return paths.ExclusiveMovePath(movepaths)
 
 
 
-# TODO: @DWHS : I am not sure what this is doing and how it works?
-# Shouldn't
 class ReplicaIDChange(PathMover):
     def __init__(self, new_replicas=None, old_samples=None, 
                  ensembles=None, replicas='all'):
@@ -606,6 +604,7 @@ class ReplicaIDChange(PathMover):
                             ensemble=rep_sample.ensemble,
                             trajectory=rep_sample.trajectory
                            )
+
         return paths.SampleMovePath( [dead_sample, new_sample], mover=self, accepted=True)
 
 @restores_as_stub_object
@@ -676,6 +675,11 @@ class EnsembleHopMover(PathMover):
                       replica=replica
                      )
 
+        path = paths.SampleMovePath( [sample], mover=self, accepted=details.accepted)
+
+        return path
+
+
 @restores_as_stub_object
 class ForceEnsembleChangeMover(EnsembleHopMover):
     '''
@@ -708,12 +712,15 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
         setattr(details, 'trial_ensemble', ens_to)
         setattr(details, 'result_ensemble', ens_to)
 
-        path = paths.Sample(trajectory=trajectory,
-                            ensemble=details.result_ensemble, 
-                            details=details,
-                            replica=replica
-                           )
-        return [path]
+        sample = paths.Sample(
+            trajectory=trajectory,
+            ensemble=details.result_ensemble,
+            details=details,
+            replica=replica)
+
+        path = paths.SampleMovePath( [sample], mover=self, accepted=details.accepted)
+
+        return path
 
 
 @restores_as_stub_object
@@ -767,7 +774,9 @@ class RandomSubtrajectorySelectMover(PathMover):
             ensemble=self._subensemble,
             details=details
         )
-        return [sample]
+        path = paths.SampleMovePath( [sample], mover=self, accepted=details.accepted)
+
+        return path
 
 @restores_as_stub_object
 class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
@@ -912,10 +921,9 @@ class ReplicaExchangeMover(PathMover):
             details=details2
             )
 
-#        new_set = globalstate.apply([sample1, sample2], accepted = accepted, move=self)
-        new_set = SampleSet([])
+        path = paths.SampleMovePath( [sample1, sample2], mover=self, accepted=details1.accepted)
 
-        return new_set
+        return path
 
 class OneWayShootingMover(RandomChoiceMover):
     '''

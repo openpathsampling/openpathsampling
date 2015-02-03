@@ -554,7 +554,8 @@ class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
         mover = RandomSubtrajectorySelectMover(self.subensemble)
         found = {}
         for t in range(100):
-            samples = mover.move(self.gs)
+            movepath = mover.move(self.gs)
+            samples = movepath.changes
             assert_equal(len(samples), 1)
             assert_equal(self.subensemble, samples[0].ensemble)
             assert_equal(self.subensemble(samples[0].trajectory), True)
@@ -576,13 +577,15 @@ class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
         mover = RandomSubtrajectorySelectMover(self.subensemble)
         traj_with_no_subtrajs = Trajectory([0.0, 0.0, 0.0])
         self.gs[0].trajectory = traj_with_no_subtrajs
-        samples = mover.move(self.gs)
+        movepath = mover.move(self.gs)
+        samples = movepath.changes
         assert_equal(samples[0].trajectory, paths.Trajectory([]))
 
 class testFirstSubtrajectorySelectMover(SubtrajectorySelectTester):
     def test_move(self):
         mover = FirstSubtrajectorySelectMover(self.subensemble)
-        samples = mover.move(self.gs)
+        movepath = mover.move(self.gs)
+        samples = movepath.changes
         assert_equal(len(samples), 1)
         assert_equal(self.subensemble, samples[0].ensemble)
         assert_equal(self.subensemble(samples[0].trajectory), True)
@@ -592,7 +595,8 @@ class testFirstSubtrajectorySelectMover(SubtrajectorySelectTester):
 class testFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
     def test_move(self):
         mover = FinalSubtrajectorySelectMover(self.subensemble)
-        samples = mover.move(self.gs)
+        movepath = mover.move(self.gs)
+        samples = movepath.changes
         assert_equal(len(samples), 1)
         assert_equal(self.subensemble, samples[0].ensemble)
         assert_equal(self.subensemble(samples[0].trajectory), True)
@@ -617,7 +621,8 @@ class testForceEnsembleChangeMover(object):
 
     def test_in_ensemble(self):
         mover = ForceEnsembleChangeMover(ensembles=[[self.tis, self.len3]])
-        samples = mover.move(self.gs)
+        movepath = mover.move(self.gs)
+        samples = movepath.changes
         assert_equal(samples[0].details.initial_ensemble(samples[0].trajectory),
                      True)
         assert_equal(samples[0].ensemble(samples[0].trajectory), True)
@@ -625,7 +630,8 @@ class testForceEnsembleChangeMover(object):
 
     def test_not_in_ensemble(self):
         mover = ForceEnsembleChangeMover(ensembles=[[self.tis, self.len2]])
-        samples = mover.move(self.gs)
+        movepath = mover.move(self.gs)
+        samples = movepath.changes
         assert_equal(samples[0].details.initial_ensemble(samples[0].trajectory),
                      True)
         assert_equal(samples[0].ensemble, self.len2)
