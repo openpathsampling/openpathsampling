@@ -506,7 +506,7 @@ class OP_Function(OrderParameter):
             supported trajformat.
         """
         super(OP_Function, self).__init__(name)
-        self.fcn = fcn
+        self._fcn = fcn
         self.kwargs = kwargs
         return
 
@@ -515,4 +515,4 @@ class OP_Function(OrderParameter):
 
         trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
 
-        return [ self.fcn(snap, *args, **self.kwargs) for snap in trajectory]
+        return [ self._fcn(snap, *args, **self.kwargs) for snap in trajectory]
