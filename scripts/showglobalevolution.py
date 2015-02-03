@@ -2,9 +2,9 @@ import svgwrite
 import sys
 import argparse
 import os
-from opentis.storage import Storage
+from openpathsampling.storage import Storage
 
-from opentis.orderparameter import OP_Function
+from openpathsampling.orderparameter import OP_Function
 import mdtraj as md
 if __name__ == '__main__':
 

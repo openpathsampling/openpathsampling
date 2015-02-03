@@ -1,11 +1,11 @@
 .. _pathmover:
 
-.. currentmodule:: opentis.pathmover
+.. currentmodule:: openpathsampling.pathmover
 
 PathMover Functions
 ===================
 
-:class:`opentis.PathMover`
+:class:`openpathsampling.PathMover`
 
     >>> import openpathsampling as paths
     >>> mover = paths.PathMover()

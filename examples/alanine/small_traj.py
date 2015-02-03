@@ -1,7 +1,7 @@
 
 from ala_dipeptide_example import AlanineDipeptideTrajectorySimulator
-from opentis.snapshot import Snapshot
-from opentis.ensemble import LengthEnsemble
+from openpathsampling.snapshot import Snapshot
+from openpathsampling.ensemble import LengthEnsemble
 
 import time
 

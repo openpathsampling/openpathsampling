@@ -1,1 +1,1 @@
-from opentis.storage import Storage
+from openpathsampling.storage import Storage

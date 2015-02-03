@@ -15,29 +15,18 @@ install:
   - python setup.py install
 
 script:
+  # Build conda package
   - source deactivate
   - conda install --yes conda-build jinja2
   - conda build devtools/conda-recipe
   - source activate $python
   - conda install --yes $HOME/miniconda/conda-bld/linux-64/openpathsampling-*
   - conda list -e
-  - # Run tests
-  - cd opentis/tests
-  - nosetests --nocapture -vv
-#  - cd ..
-#  - cd xyz_files
-#  - nosetests --nocapture -vv
-  - cd ../..
-#  - cd examples/alanine
-#  - python ala_dipeptide_example.py
-# Run the Alanine Example ipnb as a test
-  - cd examples/ipython
-  - python ipnbdoctest.py "alanine.ipynb"
-  - python ipnbdoctest.py "sliced_sequential_ensembles.ipynb"
-  - python ipnbdoctest.py "toy_dynamics_tis.ipynb"
-#  - python ipnbdoctest.py "visualization.ipynb"
 
-  - cd ../..
+  # Run tests
+  - source devtools/ci/nosetests.sh
+  - source devtools/ci/ipythontests.sh
+
   # Push to binstar anyway.
   - bash -x devtools/ci/after_sucess.sh
 
