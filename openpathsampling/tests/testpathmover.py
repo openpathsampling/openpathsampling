@@ -24,8 +24,11 @@ from openpathsampling.ensemble import EnsembleFactory as ef
 from openpathsampling.orderparameter import OP_Function, OrderParameter
 
 import logging
-logging.getLogger('openpathsampling.pathmover').setLevel(logging.DEBUG)
+logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
+
+#logging.getLogger('openpathsampling.pathmover').propagate = False
+#logging.getLogger('openpathsampling.initialization').propagate = False
 
 class testMakeListOfPairs(object):
     def setup(self):
@@ -53,6 +56,11 @@ class testMakeListOfPairs(object):
 
     def test_empty(self):
         assert_equal(make_list_of_pairs(None), None)
+
+def assert_sampleset_accepted(sampleset, results):
+    for sample, result in zip(sampleset, results):
+        assert_equal(sample.details.accepted, result)
+
 
 class testPathMover(object):
     def setup(self):
@@ -251,9 +259,10 @@ class testReplicaExchangeMover(object):
     def test_repex_ens_rej(self):
         repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
         repex_movepath = repex_AB.move(self.gs_A0B1)
-        samples_A0B1_ens = repex_movepath.samples
-        print repex_movepath
 
+        assert_equal(len(repex_movepath.samples), 0) # since rejected
+
+        samples_A0B1_ens = repex_movepath.all_samples
         assert_equal(len(samples_A0B1_ens), 2)
         for sample in samples_A0B1_ens:
             assert_equal(sample.details.accepted, False)
@@ -764,11 +773,12 @@ class testMinusMover(object):
         gs = SampleSet([samp_other_ensemble, self.minus_sample])
         
         movepath = self.mover.move(gs)
-        samples = movepath.samples
+        samples = movepath.all_samples
         assert_equal(self.innermost(innermost_other_ensemble), False)
         assert_equal(len(samples), 3) # stop after failed repex
-        for s in samples:
-            assert_equal(s.details.accepted, False)
+        assert_equal(samples[0].details.accepted, True)
+        assert_equal(samples[1].details.accepted, False)
+        assert_equal(samples[2].details.accepted, False)
 
     def test_repex_fails_innermost_crosses_state(self):
         innermost_crosses_to_state = make_1d_traj([-0.11, 0.5, 1.8])
@@ -780,11 +790,10 @@ class testMinusMover(object):
         gs = SampleSet([samp_crosses_to_state, self.minus_sample])
         
         movepath = self.mover.move(gs)
-        samples = movepath.samples
+        samples = movepath.all_samples
         assert_equal(self.innermost(innermost_crosses_to_state), True)
         assert_equal(len(samples), 3) # stop after failed repex
-        for s in samples:
-            assert_equal(s.details.accepted, False)
+        assert_sampleset_accepted(samples, [True, False, False])
 
     def test_repex_fails_minus_crosses_to_state(self):
         minus_crosses_to_state = make_1d_traj(
@@ -805,10 +814,9 @@ class testMinusMover(object):
         assert_equal(self.minus(minus_crosses_to_state), True)
 
         movepath = self.mover.move(gs)
-        samples = movepath.samples
+        samples = movepath.all_samples
         assert_equal(len(samples), 3) # stop after failed repex
-        for s in samples:
-            assert_equal(s.details.accepted, False)
+        assert_sampleset_accepted(samples, [True, False, False])
 
     def test_extension_fails(self):
         innermost_bad_extension = [-0.25, 0.1, 0.5, 0.1, -0.25]
@@ -823,10 +831,10 @@ class testMinusMover(object):
 
         gs = SampleSet([self.minus_sample, samp_bad_extension])
         movepath = self.mover.move(gs)
-        samples = movepath.samples
+        samples = movepath.all_samples
+        print movepath
         assert_equal(len(samples), 5) # reject the last one
-        for samp in samples:
-            assert_equal(samp.details.accepted, False)
+        assert_sampleset_accepted(samples, [True] * 4 + [False])
         # this only happens due to length
         assert_equal(len(samples[-1].details.trial),
                      len(traj_bad_extension)+self.dyn.n_frames_max-1)

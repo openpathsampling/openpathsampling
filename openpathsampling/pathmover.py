@@ -923,6 +923,8 @@ class ReplicaExchangeMover(PathMover):
 
         path = paths.SampleMovePath([sample1, sample2], mover=self, accepted=details1.accepted)
 
+        print path
+
         return path
 
 class OneWayShootingMover(RandomChoiceMover):

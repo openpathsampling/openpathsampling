@@ -40,6 +40,7 @@ class MovePath(object):
     @staticmethod
     def _indent(s):
         spl = s.split('\n')
+        print spl
         spl = [' |  ' + p if p[0] == ' ' else ' +- ' + p for p in spl]
         return '\n'.join(spl)
 
@@ -167,7 +168,12 @@ class SampleMovePath(MovePath):
         if type(samples) is paths.Sample:
             samples = [samples]
 
+
         self._local_samples.extend(samples)
+
+        print self._local_samples
+        print accepted
+        print type(samples)
 
     def to_dict(self):
         return {
@@ -205,7 +211,9 @@ class RandomChoiceMovePath(MovePath):
         return self.movepath.apply_to(other)
 
     def __str__(self):
-        return MovePath._indent(str(self.movepath))
+
+        if self.accepted:
+            return 'RandomChoice :\n' + MovePath._indent(str(self.movepath))
 
     @property
     def all_samples(self):
@@ -320,7 +328,8 @@ class ExclusiveMovePath(SequentialMovePath):
         return True
 
     def __str__(self):
-        return 'ExclusiveMove : %s : %d samples\n' % (self.accepted, len(self.samples)) + MovePath._indent( '\n'.join(map(str, self.movepaths)))
+        return 'ExclusiveMove : %s : %d samples\n' % (self.accepted, len(self.samples)) + \
+               MovePath._indent( '\n'.join(map(str, self.movepaths)))
 
 
 
