@@ -114,13 +114,17 @@ class MoveDetails(object):
     @staticmethod
     def initialization(trajectory, ensemble):
         details = MoveDetails()
-        details.accepted = True,
+        details.accepted = True
         details.acceptance_probability = 1.0
-        details.mover = PathMover()
-        details.mover.name = "Initialization (trajectory)"
+        details.mover_path = []
+        #details.mover = PathMover()
+        #details.mover.name = "Initialization (trajectory)"
         details.inputs = [trajectory]
         details.trial = trajectory
         details.ensemble = ensemble
+        details.result = trajectory
+        return details
+
 
 
 @restores_as_stub_object
@@ -421,8 +425,11 @@ class RandomChoiceMover(PathMover):
     weights : list of floats
         the relative weight of each PathMover (does not need to be normalized)
     '''
-    def __init__(self, movers, ensembles=None, replicas='all', weights = None):
+    def __init__(self, movers, ensembles=None, replicas='all', weights=None, name=None):
         super(RandomChoiceMover, self).__init__(ensembles=ensembles, replicas=replicas)
+
+        if name is not None:
+            self.name = name
 
         self.movers = movers
 
