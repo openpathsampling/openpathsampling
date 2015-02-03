@@ -215,21 +215,25 @@ class Bootstrapping(Calculation):
         step_num = 0
         # if we fail nsteps times in a row, kill the job
 
+        old_ens = self.globalstate[0].ensemble
+
         while ens_num < len(self.ensembles) - 1 and failsteps < nsteps:
             logger.info("Step: " + str(step_num) 
                         + "   Ensemble: " + str(ens_num)
                         + "  failsteps = " + str(failsteps)
                        )
-            old_rep = max(self.globalstate.replica_list())
             movepath = bootstrapmove.move(self.globalstate)
             samples = movepath.samples
             self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
 
-            if len(samples) > 0 and samples[0].replica == old_rep:
+            if globalstate[0].ensemble == old_ens:
                 failsteps += 1
+                print 'fail'
             else:
+                print 'hop'
                 failsteps = 0
                 ens_num += 1
+                old_ens = samples[0].ensemble
 
             if self.storage is not None:
                 self.globalstate.save_samples(self.storage)

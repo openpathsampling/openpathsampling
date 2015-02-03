@@ -646,12 +646,13 @@ class EnsembleHopMover(PathMover):
         ens_from = ens_pair[0]
         ens_to = ens_pair[1]
 
-        logger.info("Attempting ensemble hop from {e1} to {e2}".format(
-            e1=repr(ens_from), e2=repr(ens_to)))
-
         rep_sample = self.select_sample(globalstate, ens_from)
         logger.debug("Selected sample: " + repr(rep_sample))
         replica = rep_sample.replica
+
+        logger.info("Attempting ensemble hop from {e1} to {e2} replica ID {rid}".format(
+            e1=repr(ens_from), e2=repr(ens_to), rid=repr(replica)))
+
         trajectory = rep_sample.trajectory
         logger.debug("  selected replica: " + str(replica))
         logger.debug("  initial ensemble: " + repr(rep_sample.ensemble))
@@ -659,14 +660,15 @@ class EnsembleHopMover(PathMover):
         details = MoveDetails()
         details.accepted = False
         details.inputs = [trajectory]
-        details.mover_path.append(self)
         details.result = trajectory
         setattr(details, 'initial_ensemble', ens_from)
         setattr(details, 'trial_ensemble', ens_to)
         details.accepted = ens_to(trajectory)
+        logger.info("hopping result is {res1} to {res2}".format(
+            res1=repr(ens_from(trajectory)), res2=repr(ens_to(trajectory))))
         if details.accepted == True:
             setattr(details, 'result_ensemble', ens_to)
-        else: 
+        else:
             setattr(details, 'result_ensemble', ens_from)
 
         sample = paths.Sample(trajectory=trajectory,
