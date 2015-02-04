@@ -9,8 +9,6 @@ from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     SequentialEnsemble, AndEnsemble, OrEnsemble, XorEnsemble, SubEnsemble, \
     SingleFrameEnsemble, MinusInterfaceEnsemble
 
-
-
 from snapshot import Snapshot, Configuration, Momentum
 
 from trajectory import Trajectory
