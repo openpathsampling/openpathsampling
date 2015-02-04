@@ -20,7 +20,7 @@ requirements:
     - pymbar
     - docopt
     - jinja2
-	- mdtraj
+    - mdtraj
 
   run:
     - python
