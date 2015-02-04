@@ -12,8 +12,16 @@ requirements:
 
   run:
     - python
-#    - openmm
-#    - mdtraj
+    - pandas
+    - numpy
+    - scipy
+    - netcdf4
+    - openmm
+    - openmmtools
+    - pymbar
+    - docopt
+    - pyyaml
+    - jinja2
 
 about:
   home: https://github.com/choderalab/openpathsampling
