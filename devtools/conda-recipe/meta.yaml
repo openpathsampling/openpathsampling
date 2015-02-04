@@ -20,6 +20,7 @@ requirements:
     - pymbar
     - docopt
     - jinja2
+	- mdtraj
 
   run:
     - python
@@ -33,6 +34,7 @@ requirements:
     - docopt
     - pyyaml
     - jinja2
+	- mdtraj
 
 about:
   home: https://github.com/choderalab/openpathsampling
