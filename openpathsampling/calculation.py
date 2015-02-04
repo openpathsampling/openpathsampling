@@ -161,8 +161,6 @@ class Bootstrapping(Calculation):
             samples = movepath.samples
             self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
 
-            print movepath
-
             if movepath.movepaths[0].accepted is True:
                 # shooter has been accepted
                 if movepath.movepaths[1].accepted is True:

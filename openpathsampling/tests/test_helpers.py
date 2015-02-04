@@ -85,7 +85,9 @@ class CalvinistDynamics(DynamicsEngine):
             self.frame_index += 1
         else:
             self._current_snap = self.predestination[self.frame_index-1].copy()
+            self._current_snap.momentum.velocities *= -1
             self.frame_index -= 1
+
         #print self._current_snap.coordinates[0,0]
         return self._current_snap
 
