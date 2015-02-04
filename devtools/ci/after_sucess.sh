@@ -14,7 +14,6 @@ if [[ "2.7" =~ "$python" ]]; then
     binstar -t ${BINSTAR_TOKEN}  upload  --force --u omnia -p openpathsampling-dev $HOME/miniconda/conda-bld/*/openpathsampling-dev*.tar.bz2
 fi
 
-
 if [[ "$python" != "2.7" ]]; then
     echo "No deploy on PYTHON_VERSION=${python}"; exit 0
 fi
