@@ -1,6 +1,6 @@
 package:
-  name: openpathsampling
-  version: !!str dev
+  name: openpathsampling-dev
+  version: !!str
 
 requirements:
   build:
