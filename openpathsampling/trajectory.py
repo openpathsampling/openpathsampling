@@ -78,42 +78,8 @@ class Trajectory(list):
             the reversed trajectory
         '''
 
-        t = Trajectory(self)
-        t.reverse()
-        return t
-    
-    def reverse(self):
-        """
-        Reverse the trajectory.
+        return Trajectory([snap.reversed_copy() for snap in reversed(self)])
 
-        Notes
-        -----        
-        We cannot handle the velocities correctly when reversing the trajectory, so velocities will no longer be meaningful.
-        Kinetic energies are correctly updated, however, and path actions should be accurate.
-
-        """
-        # Reverse the order of snapshots within the trajectory.
-        list.reverse(self)
-
-        # Determine number of snapshots.
-#        nsnapshots = self.__len__()
-        
-        # Recalculate kinetic energies for the *beginning* of each trajectory segment.
-        # This makes use of the fact that the energy is (approximately) conserved over each trajectory segment, in between velocity randomizations.
-        # Note that this may be a poor approximation in some cases.
-#        for t in range(nsnapshots-1):
-#            self[t].kinetic_energy = self[t+1].total_energy - self[t].potential_energy
-
-        # No use reversing momenta, since we can't determine what appropriate reversed momenta should be.
-        
-        # We could easily indicate reversed momenta by using a minus sign in front of the index
-        # this keeps everything the same and we do not need to resave the snapshots and a -idx just means take snapshot idx but invert momenta
-
-        for snapshot in self:
-            snapshot.reversed = not snapshot.reversed
-        
-        return
-    
     def coordinates(self):
         """
         Return all coordinates as a numpy array

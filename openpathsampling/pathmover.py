@@ -113,17 +113,17 @@ class MoveDetails(object):
         return mystr
 
     @staticmethod
-    def initialization(trajectory, ensemble):
+    def initialization(sample):
         details = MoveDetails()
         details.accepted = True
         details.acceptance_probability = 1.0
         details.mover_path = []
         #details.mover = PathMover()
         #details.mover.name = "Initialization (trajectory)"
-        details.inputs = [trajectory]
-        details.trial = trajectory
-        details.ensemble = ensemble
-        details.result = trajectory
+        details.inputs = [sample]
+        details.trial = sample.trajectory
+        details.ensemble = sample.ensemble
+        details.result = sample.trajectory
         return details
 
 
@@ -311,15 +311,16 @@ class ShootMover(PathMover):
     def move(self, globalstate):
         # select a legal sample, use it to determine the trajectory and the
         # ensemble needed for the dynamics
-        rep_sample = self.select_sample(globalstate, self.ensembles) 
+        rep_sample = self.select_sample(globalstate, self.ensembles)
         trajectory = rep_sample.trajectory
         dynamics_ensemble = rep_sample.ensemble
         replica = rep_sample.replica
 
         details = MoveDetails()
         details.accepted = False
-        details.inputs = [trajectory]
+        details.inputs = [rep_sample]
         details.mover_path.append(self)
+        details.mover = self
         setattr(details, 'start', trajectory)
         setattr(details, 'start_point', self.selector.pick(details.start) )
         setattr(details, 'final_point', None)
@@ -418,6 +419,8 @@ class BackwardShootMover(ShootMover):
         # DEBUG
         #setattr(details, 'repeated_partial', details.start[details.start_point.index+1:])
         #setattr(details, 'new_partial', partial_trajectory.reversed)
+
+        print []
 
         details.trial = partial_trajectory.reversed + details.start[details.start_point.index + 1:]
         details.final_point = paths.ShootingPoint(self.selector, details.trial, partial_trajectory.frames - 1)
@@ -586,10 +589,12 @@ class ConditionalSequentialMover(SequentialMover):
 
         return paths.ExclusiveMovePath(movepaths)
 
-
-
+@restores_as_stub_object
 class ReplicaIDChange(PathMover):
-    def __init__(self, new_replicas=None, old_samples=None, 
+    """
+    Creates new samples from the given ones by changing the ReplicaID
+    """
+    def __init__(self, new_replicas=None, old_samples=None,
                  ensembles=None, replicas='all'):
         super(ReplicaIDChange, self).__init__(ensembles, replicas)
         self.new_replicas = new_replicas
@@ -601,7 +606,7 @@ class ReplicaIDChange(PathMover):
         old_sample = self.old_samples[rep_sample.replica]
 
         details = MoveDetails()
-        details.inputs = rep_sample.trajectory
+        details.inputs = [rep_sample]
         # TODO: details
         dead_sample = paths.Sample(replica=rep_sample.replica,
                              ensemble=old_sample.ensemble,
@@ -666,7 +671,7 @@ class EnsembleHopMover(PathMover):
 
         details = MoveDetails()
         details.accepted = False
-        details.inputs = [trajectory]
+        details.inputs = [rep_sample]
         details.result = trajectory
         setattr(details, 'initial_ensemble', ens_from)
         setattr(details, 'trial_ensemble', ens_to)
@@ -675,6 +680,7 @@ class EnsembleHopMover(PathMover):
             res1=repr(ens_from(trajectory)), res2=repr(ens_to(trajectory))))
         if details.accepted == True:
             setattr(details, 'result_ensemble', ens_to)
+            replica += 1
         else:
             setattr(details, 'result_ensemble', ens_from)
 
@@ -714,7 +720,7 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
 
         details = MoveDetails()
         details.accepted = True
-        details.inputs = [trajectory]
+        details.inputs = [rep_sample]
         details.mover_path.append(self)
         details.result = trajectory
         setattr(details, 'initial_ensemble', ens_from)
@@ -761,7 +767,7 @@ class RandomSubtrajectorySelectMover(PathMover):
         logger.debug("Working with replica " + str(replica) + " (" + str(trajectory) + ")")
 
         details = MoveDetails()
-        details.inputs = [trajectory]
+        details.inputs = [rep_sample]
         details.mover_path.append(self)
 
         subtrajs = self._subensemble.split(trajectory)
@@ -818,7 +824,7 @@ class PathReversalMover(PathMover):
         replica = rep_sample.replica
 
         details = MoveDetails()
-        details.inputs = [trajectory]
+        details.inputs = [rep_sample]
         details.mover_path.append(self)
 
         reversed_trajectory = trajectory.reversed
@@ -892,8 +898,8 @@ class ReplicaExchangeMover(PathMover):
         allowed = from1to2 and from2to1
         details1 = MoveDetails()
         details2 = MoveDetails()
-        details1.inputs = [trajectory1, trajectory2]
-        details2.inputs = [trajectory1, trajectory2]
+        details1.inputs = [s1, s2]
+        details2.inputs = [s2, s1]
         setattr(details1, 'ensembles', [ensemble1, ensemble2])
         setattr(details2, 'ensembles', [ensemble1, ensemble2])
         details1.mover_path.append(self)

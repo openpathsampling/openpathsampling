@@ -324,7 +324,7 @@ class Sample(object):
             replica=self.replica,
             trajectory=self.trajectory,
             ensemble=self.ensemble,
-            details=paths.MoveDetails.initialization(self.trajectory, self.ensemble)
+            details=paths.MoveDetails.initialization(self)
         )
         return result
 

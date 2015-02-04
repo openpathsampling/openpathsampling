@@ -68,83 +68,17 @@ class BootstrapPromotionMove(PathMover):
         # always starts with a shooting move and a replica hop, and then, if
         # the hop was successful, a replica ID change move
 
-        #print "Starting BootstrapPromotionMove"
-
-        # We make extra variables here so that we can easily refactor. The
-        # speed cost the negligible, and it makes it easy to change things.
         top_rep = max(globalstate.replica_list())
-        old_sample = globalstate[top_rep]
-
-        details = MoveDetails()
-        details_inputs = [old_sample.trajectory]
-        details_mover = self
-        details_replica = top_rep
-
-        init_sample_set = SampleSet([old_sample])
 
         shooter = self.shooters[top_rep]
         hopper = self._hoppers[top_rep]
 
-        shoot_path = shooter.move(init_sample_set)
-        shoot_samp = shoot_path.all_samples[0]
-        shoot_samp_set = shoot_path.apply_to(init_sample_set)
+        mover = paths.PartialAcceptanceSequentialMover([
+            shooter,
+            hopper
+        ])
 
-        hop_path = hopper.move(shoot_samp_set)
-        hop_samp = hop_path.all_samples[0]
-        hop_samp_set = hop_path.apply_to(shoot_samp_set)
-
-        # bring all the metadata from the submoves into our details
-        details.__dict__.update(shoot_samp.details.__dict__)
-        details.__dict__.update(hop_samp.details.__dict__)
-
-        # set the rest of the details to their correct values
-        details.inputs = details_inputs
-        details.mover = details_mover
-        details.replica = details_replica
-        details.trial = shoot_samp.details.trial # TODO: is it, though?
-        # what about hop trial when that happens? may be cleanest if we make
-        # this truly sequential
-
-        # the move will be accepted if the shooting move is accepted, no
-        # matter what
-        details.accepted = (shoot_samp.details.accepted or 
-                            hop_samp.details.accepted)
-
-        # result trajectory is whatever came out of hop_samp
-        details.result = hop_samp.details.result
-        #details.result_ensemble = hop_samp.details.result_ensemble
-
-        setattr(details, 'start_replica', details.replica)
-        if hop_samp.details.accepted == True:
-            setattr(details, 'result_replica', details.replica+1)
-        else:
-            setattr(details, 'result_replica', details.replica)
-
-        sample = Sample(replica=details.result_replica,
-                        ensemble=details.result_ensemble,
-                        trajectory=details.result,
-                        details=details)
-
-        logger.debug("BootstrapMover: accepted = " + str(details.accepted))
-        logger.debug(" Shooting part: accepted = " + str(shoot_samp.details.accepted))
-        logger.debug("  Hopping part: accepted = " + str(hop_samp.details.accepted))
-
-        # TODO: Rewrite using SequentialMovers
-        #
-        # top_rep = max(globalstate.replica_list())
-        #
-        # shooter = self.shooters[top_rep]
-        # hopper = self._hoppers[top_rep]
-        #
-        # replicaID = paths.ReplicaIDChange()
-        #
-        # return paths.ConditionalSequentialMover([
-        #     shooter,
-        #     hopper,
-        #     replicaID
-        # ])
-
-        return SampleMovePath([sample], accepted=details.accepted, mover=self)
+        return mover.move(globalstate)
 
 class InitializeSingleTrajectoryMover(PathMover):
     def __init__(self, bias=None, shooters=None,
@@ -185,7 +119,7 @@ class Bootstrapping(Calculation):
         init_details.acceptance_probability = 1.0
         init_details.mover = PathMover()
         init_details.mover.name = "Initialization (trajectory)"
-        init_details.inputs = [trajectory]
+        init_details.inputs = []
         init_details.trial = trajectory
         init_details.ensemble = self.ensembles[0]
         sample = Sample(replica=0, trajectory=trajectory, 
@@ -222,18 +156,21 @@ class Bootstrapping(Calculation):
                         + "   Ensemble: " + str(ens_num)
                         + "  failsteps = " + str(failsteps)
                        )
+
             movepath = bootstrapmove.move(self.globalstate)
             samples = movepath.samples
             self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
 
-            if globalstate[0].ensemble == old_ens:
-                failsteps += 1
-                print 'fail'
-            else:
-                print 'hop'
-                failsteps = 0
-                ens_num += 1
-                old_ens = samples[0].ensemble
+            print movepath
+
+            if movepath.movepaths[0].accepted is True:
+                # shooter has been accepted
+                if movepath.movepaths[1].accepted is True:
+                    # hop has been accepted!
+                    failsteps = 0
+                    ens_num += 1
+                else:
+                    failsteps += 1
 
             if self.storage is not None:
                 self.globalstate.save_samples(self.storage)

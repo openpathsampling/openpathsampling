@@ -294,6 +294,34 @@ class PathTreeBuilder(object):
             states = {}
         self.states = states
 
+    @staticmethod
+    def construct_heritage(storage, sample):
+        list_of_samples = []
+
+        samp = sample
+
+        while len(samp.details.inputs) > 0:
+            if len(samp.details.inputs) == 1:
+                # just one sample so use this
+                list_of_samples.append(samp)
+                samp = samp.details.inputs[0]
+            else:
+                # if there are more than one input choose the most useful one
+                # e.g. for ReplicaExchange the initial one
+                found_one = False
+                for input in samp.details.inputs:
+                    if input.trajectory == list_of_samples[-1].trajectory:
+                        # got it
+                        found_one = True
+                        samp = input
+                        break
+
+                if not found_one:
+                    break
+
+        # reverse to get origin first
+        return [samp for samp in reversed(list_of_samples)]
+
     def from_samples(self, samples, clear=True):
 
         if len(samples) == 0:
@@ -350,7 +378,14 @@ class PathTreeBuilder(object):
 
                     fontcolor = "black"
 
-                    if sample.details.mover.name == "BackwardShootMover":
+                    draw_okay = False
+
+                    mover_name = ''
+
+                    if hasattr(sample.details, 'mover'):
+                        mover_name = sample.details.mover.name
+
+                    if mover_name == "BackwardShootMover":
                         color = "green"
                         if not accepted:
                             color = lightcolor
@@ -361,7 +396,8 @@ class PathTreeBuilder(object):
                         self.renderer.add(
                             self.renderer.label(shift, t_count, 1, str(self.storage.idx(new_traj)) + 'b', align='end',color=fontcolor)
                         )
-                    else:
+                        draw_okay = True
+                    elif mover_name == 'ForwardShootMover':
                         color = "red"
                         if not accepted:
                             color = lightcolor
@@ -372,22 +408,24 @@ class PathTreeBuilder(object):
                         self.renderer.add(
                             self.renderer.label(shift + len(new_traj) - 1, t_count, 1, str(self.storage.idx(new_traj)) + 'f', align='start',color=fontcolor)
                         )
+                        draw_okay = True
 
                     if not accepted:
                         color = lightcolor
 
-                    for pos, snapshot in enumerate(new_traj):
-                        conf = snapshot.configuration
-                        if not conf in p_y:
-                            p_y[conf] = t_count
-                            p_x[conf] = shift + pos
+                    if draw_okay:
+                        for pos, snapshot in enumerate(new_traj):
+                            conf = snapshot.configuration
+                            if not conf in p_y:
+                                p_y[conf] = t_count
+                                p_x[conf] = shift + pos
 
-                            pos_x = p_x[conf]
-                            pos_y = p_y[conf]
-                            if self.op is not None:
-                                self.renderer.add(self.renderer.block(pos_x, pos_y, color, self.op(snapshot)))
-                            else:
-                                self.renderer.add(self.renderer.block(pos_x, pos_y, color, ""))
+                                pos_x = p_x[conf]
+                                pos_y = p_y[conf]
+                                if self.op is not None:
+                                    self.renderer.add(self.renderer.block(pos_x, pos_y, color, self.op(snapshot)))
+                                else:
+                                    self.renderer.add(self.renderer.block(pos_x, pos_y, color, ""))
 
         self.p_x = p_x
         self.p_y = p_y
