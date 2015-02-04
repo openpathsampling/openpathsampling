@@ -13,7 +13,7 @@ fi
 
 if [[ "2.7" =~ "$python" ]]; then
     conda install --yes binstar jinja2
-    binstar -t ${BINSTAR_TOKEN}  upload  --force --u omnia -p openpathsampling-dev $HOME/miniconda/conda-bld/linux-64/openpathsampling-dev-*
+    binstar -t ${BINSTAR_TOKEN}  upload  --force --u omnia -p openpathsampling-dev $HOME/miniconda/conda-bld/*/openpathsampling-dev-*.tar.bz2
 fi
 
 
