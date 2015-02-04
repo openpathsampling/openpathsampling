@@ -3,4 +3,4 @@
 README
 ======
 
-# .. markdown:: opentis/README.md
+# .. markdown:: openpathsampling/README.md

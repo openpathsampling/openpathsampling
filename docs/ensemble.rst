@@ -1,15 +1,15 @@
 .. _ensemble:
 
-.. currentmodule:: opentis.ensemble
+.. currentmodule:: openpathsampling.ensemble
 
 Ensemble Functions
 ==================
 
 Trajectory analysis is the heart of MDTraj. These functions can be used to run
-a variety of analyses on :class:`opentis.Ensemble` objects.
+a variety of analyses on :class:`openpathsampling.Ensemble` objects.
 It's usually as simple as ::
 
-    >>> import opentis as ops
+    >>> import openpathsampling as ops
     >>> t = ops.Ensemble()
 
 volume Ensembles

@@ -1,6 +1,6 @@
 package:
-  name: openpathsampling
-  version: !!str dev
+  name: openpathsampling-dev
+  version: !!str
 
 requirements:
   build:
@@ -16,5 +16,5 @@ requirements:
 #    - mdtraj
 
 about:
-  home: https://github.com/choderalab/opentis
+  home: https://github.com/choderalab/openpathsampling
   license: GNU Lesser General Public License v2 or later (LGPLv2+)

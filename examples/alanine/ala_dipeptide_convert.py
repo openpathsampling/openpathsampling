@@ -4,7 +4,7 @@ This is an example file of how to remove water from a netCDF file.
 @author: Jan-Hendrik Prinz
 """
 
-from opentis.storage import Storage
+from openpathsampling.storage import Storage
 
 if __name__=="__main__":
 

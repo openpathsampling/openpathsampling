@@ -1,11 +1,11 @@
 .. _orderparameter:
 
-.. currentmodule:: opentis.orderparameter
+.. currentmodule:: openpathsampling.orderparameter
 
 Orderparameter Functions
 ========================
 
-:class:`opentis.Orderparameters`
+:class:`openpathsampling.Orderparameters`
 
     >>> import openpathsampling as paths
     >>> mover = paths.Orderparameter()

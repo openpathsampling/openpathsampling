@@ -20,23 +20,23 @@ sys.path.append(os.path.abspath('../../'))
 
 # in principle, all of these imports should be simplified once this is a
 # package
-from opentis.orderparameter import OP_Function, OP_Volume
-from opentis.openmm_engine import OpenMMEngine
-from opentis.snapshot import Snapshot
-from opentis.volume import LambdaVolumePeriodic, VolumeFactory as vf
-from opentis.pathmover import PathMoverFactory as mf
-from opentis.ensemble import EnsembleFactory as ef
-from opentis.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
+from openpathsampling.orderparameter import OP_Function, OP_Volume
+from openpathsampling.openmm_engine import OpenMMEngine
+from openpathsampling.snapshot import Snapshot
+from openpathsampling.volume import LambdaVolumePeriodic, VolumeFactory as vf
+from openpathsampling.pathmover import PathMoverFactory as mf
+from openpathsampling.ensemble import EnsembleFactory as ef
+from openpathsampling.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
                               InXEnsemble)
-from opentis.calculation import Bootstrapping
-from opentis.pathmover import PathMover
-from opentis.shooting import UniformSelector
-from opentis.sample import Sample, SampleSet
+from openpathsampling.calculation import Bootstrapping
+from openpathsampling.pathmover import PathMover
+from openpathsampling.shooting import UniformSelector
+from openpathsampling.sample import Sample, SampleSet
 
 import simtk.unit as u
 
 if __name__=="__main__":
-    logging.config.fileConfig('../../opentis/logging.conf',
+    logging.config.fileConfig('../../openpathsampling/logging.conf',
                               disable_existing_loggers=False)
     options = {'temperature' : 300.0 * u.kelvin,
                'collision_rate' : 1.0 / u.picoseconds,
