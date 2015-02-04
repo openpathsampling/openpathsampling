@@ -51,14 +51,20 @@ class BootstrapPromotionMove(PathMover):
 
         # Create all possible hoppers so we do not have to recreate these
         # every time which will result in more efficient storage
-        self._hoppers = list()
+
+        ens_pairs = []
+
         for rep in range(0,len(self.ensembles) - 1):
             ensemble_from = self.ensembles[rep]
             ensemble_to = self.ensembles[rep+1]
 
-            self._hoppers.append(EnsembleHopMover(bias=self.bias,
-                                  ensembles=[ensemble_from, ensemble_to],
-                                  replicas=rep))
+            ens_pairs.append([ensemble_from, ensemble_to])
+
+        self._hopper = EnsembleHopMover(
+            bias=self.bias,
+            ensembles=ens_pairs,
+            replicas='all'
+        )
 
 
     def move(self, globalstate):
@@ -71,11 +77,10 @@ class BootstrapPromotionMove(PathMover):
         top_rep = max(globalstate.replica_list())
 
         shooter = self.shooters[top_rep]
-        hopper = self._hoppers[top_rep]
 
         mover = paths.PartialAcceptanceSequentialMover([
             shooter,
-            hopper
+            self._hopper
         ])
 
         return mover.move(globalstate)
@@ -166,7 +171,6 @@ class Bootstrapping(Calculation):
                 if movepath.movepaths[1].accepted is True:
                     # hop has been accepted!
                     failsteps = 0
-                    ens_num += 1
                 else:
                     failsteps += 1
 

@@ -725,7 +725,8 @@ class testMinusMover(object):
 
         seg_dir = {}
         for i in range(100):
-            samples = self.mover.move(gs)
+            movepath = self.mover.move(gs)
+            samples = movepath.samples
             assert_equal(len(samples), 5)
             s_inner = [s for s in samples if s.ensemble==self.innermost]
             s_minus = [s for s in samples if s.ensemble==self.minus]
