@@ -205,8 +205,6 @@ class PathMover(object):
             selected_replicas = globalstate.replica_list()
         else:
             selected_replicas = replicas
-        print mover_replicas
-        print selected_replicas
 
         reps = list(set(mover_replicas) & set(selected_replicas))
         rep_samples = []
@@ -247,7 +245,12 @@ class PathMover(object):
         if replicas is None:
             replicas=self.replicas
         legal = self.legal_sample_set(globalstate, ensembles, replicas)
-        return random.choice(legal)
+        selected = random.choice(legal)
+        logger.info("selected sample: (" + str(selected.replica)
+                     + "," + str(selected.trajectory)
+                     + "," + str(selected.ensemble)
+                     + ")")
+        return selected
 
     def move(self, globalstate):
         '''
@@ -322,6 +325,10 @@ class ShootMover(PathMover):
         # select a legal sample, use it to determine the trajectory and the
         # ensemble needed for the dynamics
         rep_sample = self.select_sample(globalstate, self.ensembles)
+        logger.debug("sample: (" + str(rep_sample.replica)
+                     + "," + str(rep_sample.trajectory)
+                     + "," + str(rep_sample.ensemble)
+                     + ")")
         trajectory = rep_sample.trajectory
         dynamics_ensemble = rep_sample.ensemble
         replica = rep_sample.replica
@@ -349,6 +356,7 @@ class ShootMover(PathMover):
                         + ' / random : ' + str(rand)
                        )
             if (rand < self.selection_probability_ratio(details)):
+                logger.info("Shooting move accepted!")
                 details.accepted = True
                 details.result = details.trial
 

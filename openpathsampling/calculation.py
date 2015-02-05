@@ -167,7 +167,6 @@ class Bootstrapping(Calculation):
         init_log.info("Parameter: %s : %s", 'trajectory', str(trajectory))
 
     def run(self, nsteps):
-        # TODO: turn off init_log during run loop
         bootstrapmove = BootstrapPromotionMove(bias=None,
                                                shooters=self.movers,
                                                ensembles=self.ensembles,
@@ -189,7 +188,19 @@ class Bootstrapping(Calculation):
 
             movepath = bootstrapmove.move(self.globalstate)
             samples = movepath.samples
+            logger.debug("SAMPLES:")
+            for sample in samples:
+                logger.debug("(" + str(sample.replica) 
+                             + "," + str(sample.trajectory)
+                             + "," + repr(sample.ensemble)
+                            )
             self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
+            logger.debug("GLOBALSTATE:")
+            for sample in self.globalstate:
+                logger.debug("(" + str(sample.replica) 
+                             + "," + str(sample.trajectory)
+                             + "," + repr(sample.ensemble)
+                            )
 
             if movepath.movepaths[0].accepted is True:
                 # shooter has been accepted

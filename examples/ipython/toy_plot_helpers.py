@@ -51,11 +51,12 @@ class ToyPlot(object):
                 self._states += np.vectorize(CallableVolume(state))(self.X, self.Y)
 
     def add_interfaces(self, ifaces):
-        self._interfaces = []
-        for iface in ifaces:
-            self._interfaces.append(
-                np.vectorize(CallableVolume(iface))(self.X,self.Y)
-            )
+        if self._interfaces is None:
+            self._interfaces = []
+            for iface in ifaces:
+                self._interfaces.append(
+                    np.vectorize(CallableVolume(iface))(self.X,self.Y)
+                )
 
     def add_initial_condition(self, initcond):
         self._initcond = initcond
