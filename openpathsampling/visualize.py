@@ -323,7 +323,6 @@ class PathTreeBuilder(object):
         return [samp for samp in reversed(list_of_samples)]
 
     def from_samples(self, samples, clear=True):
-
         if len(samples) == 0:
             # no samples, nothing to do
             # TODO: Raise an exception or just ignore and don't output anything?
@@ -350,7 +349,7 @@ class PathTreeBuilder(object):
                 new_index = sample.details.final_point.index
                 new_conf = new_traj[new_index].configuration
 
-                accepted = sample.trajectory is new_traj
+                accepted = sample.details.accepted
 
                 if sample.trajectory is new_traj or self.rejected:
                     t_count += 1
