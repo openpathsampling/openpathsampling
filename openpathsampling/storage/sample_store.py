@@ -21,6 +21,7 @@ class SampleStore(ObjectStore):
 
             self.storage.movedetails.save(sample.details)
             self.set_object('sample_details', idx, sample.details)
+
             if sample.step is None:
                 self.save_variable('sample_step', idx, -1)
             else:

@@ -120,7 +120,7 @@ class MoveDetails(object):
         details.mover_path = []
         #details.mover = PathMover()
         #details.mover.name = "Initialization (trajectory)"
-        details.inputs = [sample]
+        details.inputs = []
         details.trial = sample.trajectory
         details.ensemble = sample.ensemble
         details.result = sample.trajectory
@@ -527,7 +527,6 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     def move(self, globalstate):
         logger.debug("==== BEGINNING " + self.name + " ====")
         subglobal = SampleSet(self.legal_sample_set(globalstate))
-        mysamples = []
         movepaths = []
         for mover in self.movers:
             # NOTE: right now, this doesn't quite work correctly if the
@@ -668,7 +667,6 @@ class EnsembleHopMover(PathMover):
         logger.debug("  initial ensemble: " + repr(rep_sample.ensemble))
 
         details = MoveDetails()
-        details.accepted = False
         details.inputs = [rep_sample]
         details.result = trajectory
         setattr(details, 'initial_ensemble', ens_from)
@@ -676,16 +674,18 @@ class EnsembleHopMover(PathMover):
         details.accepted = ens_to(trajectory)
         logger.info("hopping result is {res1} to {res2}".format(
             res1=repr(ens_from(trajectory)), res2=repr(ens_to(trajectory))))
+
         if details.accepted == True:
             setattr(details, 'result_ensemble', ens_to)
         else:
             setattr(details, 'result_ensemble', ens_from)
 
-        sample = paths.Sample(trajectory=trajectory,
-                      ensemble=details.result_ensemble, 
-                      details=details,
-                      replica=replica
-                     )
+        sample = paths.Sample(
+            trajectory=trajectory,
+            ensemble=details.result_ensemble,
+            details=details,
+            replica=replica
+        )
 
         path = paths.SampleMovePath( [sample], mover=self, accepted=details.accepted)
 
@@ -815,6 +815,7 @@ class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
 
 class PathReversalMover(PathMover):
     def move(self, globalstate):
+        print globalstate.samples[0].ensemble, self.ensembles
         rep_sample = self.select_sample(globalstate, self.ensembles)
         trajectory = rep_sample.trajectory
         ensemble = rep_sample.ensemble
@@ -1028,7 +1029,7 @@ def NeighborEnsembleReplicaExchange(ensemble_list):
     return movers
 
 def PathReversalSet(l):
-    if isinstance(l[0], Ensemble):
+    if isinstance(l[0], paths.Ensemble):
         return [PathReversalMover(ensembles=[item]) for item in l]
     else:
         return [PathReversalMover(replicas=[item]) for item in l]

@@ -208,7 +208,10 @@ class PathSampling(Calculation):
         samples = []
         for sample in globalstate:
             samples.append(sample.copy_reset())
+
         self.globalstate = SampleSet(samples)
+
+        print [samp.ensemble for samp in self.globalstate.samples]
 
         initialization_logging(init_log, self, 
                                ['root_mover', 'globalstate'])
@@ -226,7 +229,10 @@ class PathSampling(Calculation):
             self.storage.sync()
 
         for step in range(nsteps):
-            samples = self.root_mover.move(self.globalstate)
+            print step
+            movepath = self.root_mover.move(self.globalstate)
+            print movepath
+            samples = movepath.samples
             self.globalstate = self.globalstate.apply(samples,
                                                               step=step)
             if self.storage is not None:
