@@ -188,7 +188,7 @@ class PathMover(object):
     def __call__(self, sample_set):
         return sample_set
 
-    def legal_sample_set(self, globalstate, ensembles=None):
+    def legal_sample_set(self, globalstate, ensembles=None, replicas='all'):
         '''
         This returns all the samples from globalstate which are in both
         self.replicas and the parameter ensembles. If ensembles is None, we
@@ -198,9 +198,14 @@ class PathMover(object):
         TODO: Turn into a filter decorator or
         '''
         if self.replicas == 'all':
-            reps = globalstate.replica_list()
+            mover_replicas = globalstate.replica_list()
         else:
-            reps = self.replicas
+            mover_replicas = self.replicas
+        if replicas == 'all':
+            selected_replicas = globalstate.replica_list()
+        else:
+            selected_replicas = replicas
+        reps = list(set(mover_replicas) & set(selected_replicas))
         rep_samples = []
         for rep in reps:
             rep_samples.extend(globalstate.all_from_replica(rep))
@@ -228,7 +233,7 @@ class PathMover(object):
 
         return legal_samples
 
-    def select_sample(self, globalstate, ensembles=None):
+    def select_sample(self, globalstate, ensembles=None, replicas=None):
         '''
         Returns one of the legal samples given self.replica and the ensemble
         set in ensembles.
@@ -236,7 +241,9 @@ class PathMover(object):
         TODO: This must be saved somehow (it is actually I think), otherwise
         Samples are not reproducible when applied to a SampleSet!
         '''
-        legal = self.legal_sample_set(globalstate, ensembles)
+        if replicas is None:
+            replicas=self.replicas
+        legal = self.legal_sample_set(globalstate, ensembles, replicas)
         return random.choice(legal)
 
     def move(self, globalstate):
@@ -343,9 +350,9 @@ class ShootMover(PathMover):
                 details.result = details.trial
 
         sample = paths.Sample(replica=replica,
-                      trajectory=details.result, 
-                      ensemble=dynamics_ensemble,
-                      details=details)
+                              trajectory=details.result, 
+                              ensemble=dynamics_ensemble, 
+                              details=details)
 
 #        new_set = SampleSet(samples=[sample], predecessor=globalstate, accepted=True)
 #        new_set = globalstate.apply([sample], accepted = details.accepted, move=self)
@@ -587,18 +594,19 @@ class ConditionalSequentialMover(SequentialMover):
         return paths.ExclusiveMovePath(movepaths)
 
 @restores_as_stub_object
-class ReplicaIDChange(PathMover):
+class ReplicaIDChangeMover(PathMover):
     """
-    Creates new samples from the given ones by changing the ReplicaID
+    Changes the replica ID for a path.
     """
-    def __init__(self, new_replicas=None, old_samples=None,
-                 ensembles=None, replicas='all'):
+    def __init__(self, replica_pairs, ensembles=None, replicas='all'):
+        self.replica_pairs = make_list_of_pairs(replica_pairs)
         super(ReplicaIDChange, self).__init__(ensembles, replicas)
-        self.new_replicas = new_replicas
-        self.old_samples = old_samples
+        initialization_logging(logger=init_log, obj=self, 
+                               entries=['replica_pairs'])
 
     def move(self, globalstate):
-        rep_sample = self.select_sample( self.ensembles)
+        #legal_from_rep = 
+        rep_sample = self.select_sample(self.ensembles)
         new_rep = self.new_replicas[rep_sample.replica]
         old_sample = self.old_samples[rep_sample.replica]
 
@@ -606,13 +614,13 @@ class ReplicaIDChange(PathMover):
         details.inputs = [rep_sample]
         # TODO: details
         dead_sample = paths.Sample(replica=rep_sample.replica,
-                             ensemble=old_sample.ensemble,
-                             trajectory=old_sample.trajectory
-                            )
+                                   ensemble=old_sample.ensemble,
+                                   trajectory=old_sample.trajectory
+                                  )
         new_sample = paths.Sample(replica=new_rep,
-                            ensemble=rep_sample.ensemble,
-                            trajectory=rep_sample.trajectory
-                           )
+                                  ensemble=rep_sample.ensemble,
+                                  trajectory=rep_sample.trajectory
+                                 )
 
         return paths.SampleMovePath( [dead_sample, new_sample], mover=self, accepted=True)
 

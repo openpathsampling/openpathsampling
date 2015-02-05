@@ -49,24 +49,43 @@ class BootstrapPromotionMove(PathMover):
                                entries=['bias', 'shooters'])
 
 
-        # Create all possible hoppers so we do not have to recreate these
-        # every time which will result in more efficient storage
-
         ens_pairs = []
-
         for rep in range(0,len(self.ensembles) - 1):
             ensemble_from = self.ensembles[rep]
             ensemble_to = self.ensembles[rep+1]
-
             ens_pairs.append([ensemble_from, ensemble_to])
 
-        self._hopper = EnsembleHopMover(
-            bias=self.bias,
-            ensembles=ens_pairs,
-            replicas='all'
-        )
+        # alternative: use list comprehension:
+        #ens_pairs = [[self.ensembles[i], self.ensembles[i+1]]
+        #             for i in range(len(self.ensembles)-1)]
 
-        self._ensemble_dict = {ens : idx for idx, ens in enumerate(ensembles) }
+        # Bootstrapping sets numeric replica IDs. If the user wants it done
+        # differently, the user can change it.
+        self._ensemble_dict = {ens : rep for rep, ens in enumerate(ensembles) }
+        
+        # Create all possible hoppers so we do not have to recreate these
+        # every time which will result in more efficient storage
+        self._hopper = {}
+        for (enss, shoot) in zip(ens_pairs, shooters):
+            rep_from = self._ensemble_dict[enss[0]]
+            rep_to = self._ensemble_dict[enss[1]]
+            # shooting move, then ensemble hop on this pair, then replica
+            # hop to increasing replica ID
+            self._hopper[rep_from] = paths.PartialAcceptanceSequentialMover([
+                shoot,
+                paths.EnsembleHopMover(ensembles=enss),
+                paths.ReplicaIDChangeMover(replica_pairs=[rep_from, rep_to])
+            ])
+
+
+        #self._rep_hopper = ReplicaIDChangeMover(replicas=rep_pairs)
+
+        #self._ens_hopper = EnsembleHopMover(
+            #bias=self.bias, # is there any reason to include bias here?
+            #ensembles=ens_pairs,
+            #replicas='all'
+        #)
+
 
 
 
@@ -78,14 +97,16 @@ class BootstrapPromotionMove(PathMover):
         # the hop was successful, a replica ID change move
 
         # find latest ensemble in the list
-
         top_ens_idx = max([self._ensemble_dict[samp.ensemble] for samp in globalstate.samples])
-        shooter = self.shooters[top_ens_idx]
 
-        mover = paths.PartialAcceptanceSequentialMover([
-            shooter,
-            self._hopper
-        ])
+
+        mover = self._hopper[top_ens_idx]
+        #shooter = self.shooters[top_ens_idx]
+
+        #mover = paths.PartialAcceptanceSequentialMover([
+            #shooter,
+            #self._hopper
+        #])
 
         return mover.move(globalstate)
 

@@ -21,7 +21,7 @@ from pathmover import (
     BackwardShootMover, MinusMover, RandomChoiceMover, MoveDetails, \
     ForwardShootMover, PathMover, PathMoverFactory, PathReversalMover, \
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover, \
-    PartialAcceptanceSequentialMover, ReplicaIDChange, SequentialMover
+    PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover
     #, BootstrapPromotionMove
 )
 
