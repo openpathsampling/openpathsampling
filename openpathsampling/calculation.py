@@ -66,6 +66,9 @@ class BootstrapPromotionMove(PathMover):
             replicas='all'
         )
 
+        self._ensemble_dict = {ens : idx for idx, ens in enumerate(ensembles) }
+
+
 
     def move(self, globalstate):
         # the tricky part here is that, if the hop is allowed, we only want
@@ -74,9 +77,10 @@ class BootstrapPromotionMove(PathMover):
         # always starts with a shooting move and a replica hop, and then, if
         # the hop was successful, a replica ID change move
 
-        top_rep = max(globalstate.replica_list())
+        # find latest ensemble in the list
 
-        shooter = self.shooters[top_rep]
+        top_ens_idx = max([self._ensemble_dict[samp.ensemble] for samp in globalstate.samples])
+        shooter = self.shooters[top_ens_idx]
 
         mover = paths.PartialAcceptanceSequentialMover([
             shooter,
@@ -171,6 +175,7 @@ class Bootstrapping(Calculation):
                 if movepath.movepaths[1].accepted is True:
                     # hop has been accepted!
                     failsteps = 0
+                    ens_num += 1
                 else:
                     failsteps += 1
 

@@ -404,12 +404,6 @@ class BackwardShootMover(ShootMover):
                                      sh_dir="backward"
                                     ))
 
-        print 'backward', details.start_point.snapshot.velocities
-        print 'backward', details.start_point.snapshot.reversed_copy().velocities
-        print 'backward', details.start_point.snapshot.reversed_copy().reversed
-
-        print 'start', [ s.coordinates[0,0] for s in details.start ]
-
         # Run until one of the stoppers is triggered
         partial_trajectory = PathMover.engine.generate(
             details.start_point.snapshot.reversed_copy(), 
@@ -428,10 +422,6 @@ class BackwardShootMover(ShootMover):
 
         details.trial = partial_trajectory.reversed + details.start[details.start_point.index + 1:]
         details.final_point = paths.ShootingPoint(self.selector, details.trial, partial_trajectory.frames - 1)
-
-        print 'backward', details.start_point.snapshot.reversed_copy().reversed
-
-        print 'trial', [ s.coordinates[0,0] for s in details.trial ]
 
         pass
 

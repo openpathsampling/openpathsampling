@@ -456,7 +456,7 @@ class ObjectStore(object):
         Trajectoy
             the actual trajectory object
         '''
-        return self.load(self.count())
+        return self.load(self.count() - 1)
 
     def first(self):
         '''
