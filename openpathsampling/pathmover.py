@@ -205,6 +205,9 @@ class PathMover(object):
             selected_replicas = globalstate.replica_list()
         else:
             selected_replicas = replicas
+        print mover_replicas
+        print selected_replicas
+
         reps = list(set(mover_replicas) & set(selected_replicas))
         rep_samples = []
         for rep in reps:
@@ -594,35 +597,45 @@ class ConditionalSequentialMover(SequentialMover):
         return paths.ExclusiveMovePath(movepaths)
 
 @restores_as_stub_object
-class ReplicaIDChangeMover(PathMover):
+class ReplicaIDChangeMover(PathMover): 
     """
     Changes the replica ID for a path.
     """
     def __init__(self, replica_pairs, ensembles=None, replicas='all'):
         self.replica_pairs = make_list_of_pairs(replica_pairs)
-        super(ReplicaIDChange, self).__init__(ensembles, replicas)
+        super(ReplicaIDChangeMover, self).__init__(ensembles=ensembles,
+                                                   replicas=replicas)
+        self._extra_details = ['rep_from', 'rep_to']
         initialization_logging(logger=init_log, obj=self, 
                                entries=['replica_pairs'])
 
     def move(self, globalstate):
-        #legal_from_rep = 
-        rep_sample = self.select_sample(self.ensembles)
-        new_rep = self.new_replicas[rep_sample.replica]
-        old_sample = self.old_samples[rep_sample.replica]
+        legal_from_rep = [rep[0] for rep in self.replica_pairs]
+        rep_sample = self.select_sample(globalstate, 
+                                        ensembles=self.ensembles, 
+                                        replicas=legal_from_rep)
+        legal_pairs = [pair for pair in self.replica_pairs 
+                       if pair[0]==rep_sample.replica]
+        mypair = random.choice(legal_pairs)
 
         details = MoveDetails()
         details.inputs = [rep_sample]
-        # TODO: details
-        dead_sample = paths.Sample(replica=rep_sample.replica,
-                                   ensemble=old_sample.ensemble,
-                                   trajectory=old_sample.trajectory
-                                  )
-        new_sample = paths.Sample(replica=new_rep,
+        details.trial = rep_sample.trajectory
+        details.result = rep_sample.trajectory
+        details.accepted = True
+        details.acceptance_probability = 1.0
+        setattr(details, 'rep_from', mypair[0])
+        setattr(details, 'rep_to', mypair[1])
+
+        # note: currently this clones into a new replica ID. We might later
+        # want to kill the old replica ID (and possibly rename this mover).
+        new_sample = paths.Sample(replica=details.rep_to,
                                   ensemble=rep_sample.ensemble,
-                                  trajectory=rep_sample.trajectory
+                                  trajectory=rep_sample.trajectory,
+                                  details=details
                                  )
 
-        return paths.SampleMovePath( [dead_sample, new_sample], mover=self, accepted=True)
+        return paths.SampleMovePath([new_sample], mover=self, accepted=details.accepted)
 
 @restores_as_stub_object
 class EnsembleHopMover(PathMover):
@@ -680,8 +693,8 @@ class EnsembleHopMover(PathMover):
         setattr(details, 'initial_ensemble', ens_from)
         setattr(details, 'trial_ensemble', ens_to)
         details.accepted = ens_to(trajectory)
-        logger.info("hopping result is {res1} to {res2}".format(
-            res1=repr(ens_from(trajectory)), res2=repr(ens_to(trajectory))))
+        logger.info("Hop starts from legal ensemble: "+str(ens_from(trajectory)))
+        logger.info("Hop ends in legal ensemble: "+str(ens_to(trajectory)))
 
         if details.accepted == True:
             setattr(details, 'result_ensemble', ens_to)

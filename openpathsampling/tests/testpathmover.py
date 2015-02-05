@@ -24,7 +24,7 @@ from openpathsampling.ensemble import EnsembleFactory as ef
 from openpathsampling.orderparameter import OP_Function, OrderParameter
 
 import logging
-logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
+#logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 
 #logging.getLogger('openpathsampling.pathmover').propagate = False
@@ -218,6 +218,17 @@ class testPathReversalMover(object):
         gs_BXA = SampleSet([sampBXA])
         samp = (gs_BXA + self.move.move(gs_BXA))[0]
         assert_equal(samp.details.accepted, True)
+
+class testReplicaIDChangeMover(object):
+    def setup(self):
+        pass
+
+    def test_replica_in_sampleset(self):
+        raise SkipTest
+
+    def test_replica_not_in_sampleset(self):
+        raise SkipTest
+
 
 class testReplicaExchangeMover(object):
     def setup(self):
