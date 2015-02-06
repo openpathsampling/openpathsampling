@@ -19,32 +19,32 @@ where you choose the right kind of ensemble and give it the right
 initialization parameters. What's more, ensembles can be combined using the
 logical infix operators `&` (and) and `|` (or).
 
-volume Ensembles
+Volume Ensembles
 ----------------------
 .. autosummary::
     :toctree: api/generated/
 
-	EnsembleVolume
+	VolumeEnsemble
 	InXEnsemble
 	OutXEnsemble
-    HitXEnsemble
+        HitXEnsemble
 	LeaveXEnsemble
 	
-set-based Ensemble combinations
+Set-based Ensemble combinations
 -----------------------------
 .. autosummary::
     :toctree: api/generated/
 
-    AndEnsemble
-	OrEnsemble
-	XorEnsemble
-	SubEnsemble
-	EnsembleCombination
+        AndEnsemble
+        OrEnsemble
+        XorEnsemble
+        SubEnsemble
+        EnsembleCombination
 	
 length Ensembles
 -----------------------------
 .. autosummary::
     :toctree: api/generated/
 
-    LengthEnsemble
+        LengthEnsemble
     

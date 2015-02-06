@@ -10,40 +10,60 @@ PathMover Functions
     >>> import openpathsampling as paths
     >>> mover = paths.PathMover()
 
-atomic movers
--------------
+Abstract class
+--------------
 
-These are the leaves of a path tree. The atomic moved that can be made
+.. autosummary::
+    :toctree: api/generated/
+
+    PathMover
+
+Changing the trajectory
+-----------------------
 
 .. autosummary::
     :toctree: api/generated/
 
     BackwardShootMover
     ForwardShootMover
+    PathReversalMover
+
+Changing the ensemble
+---------------------
+
+.. autosummary::
+    :toctree: api/generated/
+
     ReplicaExchangeMover
+    EnsembleHopMover
 
+Changing the replica ID
+-----------------------
 
-special moves
--------------
+.. autosummary::
+    :toctree: api/generated/
+
+    ReplicaIDChange
+
+Combining movers
+----------------
+
+.. autosummary::
+    :toctree: api/generated/
+
+    RandomChoiceMover
+    SequentialMover
+    ConditionalSequentialMover
+    PartialAcceptanceSequentialMover
+
+Pre-made combined movers
+------------------------
+
 .. autosummary::
     :toctree: api/generated/
 
     MinusMove
-    RandomChoiceMover
-    PathMover
-    PathReversalMover
-    EnsembleHopMover
-    ReplicaIDChange
-
-
-collective variable-based volumes
----------------------------------
-.. autosummary::
-    :toctree: api/generated/
-
-    ConditionalSequentialMover
-    PartialAcceptanceSequentialMover
-    SequentialMover
+    OneWayShootingMover
 
 
 mover factory
