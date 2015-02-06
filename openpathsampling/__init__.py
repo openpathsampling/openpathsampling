@@ -22,7 +22,7 @@ from pathmover import (
     ForwardShootMover, PathMover, PathMoverFactory, PathReversalMover, 
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
-    ConditionalMover
+    ConditionalMover, FilterByReplica
     #, BootstrapPromotionMove
 )
 
