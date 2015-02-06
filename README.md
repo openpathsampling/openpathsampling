@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/jhprinz/msm-tis.svg?branch=visualization)](https://travis-ci.org/jhprinz/msm-tis)
+[![Build Status](https://travis-ci.org/choderalab/openpathsampling.svg?branch=master)](https://travis-ci.org/choderalab/openpathsampling)
 
 # OpenPathSampling
 
