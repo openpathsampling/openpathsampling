@@ -1,11 +1,11 @@
 .. _pathmover:
 
-.. currentmodule:: opentis.pathmover
+.. currentmodule:: openpathsampling.pathmover
 
 PathMover Functions
 ===================
 
-:class:`opentis.PathMover`
+:class:`openpathsampling.PathMover`
 
     >>> import openpathsampling as paths
     >>> mover = paths.PathMover()
@@ -20,7 +20,7 @@ These are the leaves of a path tree. The atomic moved that can be made
 
     BackwardShootMover
     ForwardShootMover
-    ReplicaExchange
+    ReplicaExchangeMover
 
 
 special moves

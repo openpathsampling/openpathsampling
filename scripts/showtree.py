@@ -1,7 +1,7 @@
 import argparse
 import os
-from opentis.storage import Storage
-from opentis.visualize import PathTreeBuilder
+from openpathsampling.storage import Storage
+from openpathsampling.visualize import PathTreeBuilder
 
 if __name__ == '__main__':
 

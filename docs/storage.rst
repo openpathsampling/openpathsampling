@@ -1,11 +1,11 @@
 .. _storage:
 
-.. currentmodule:: opentis.storage
+.. currentmodule:: openpathsampling.storage
 
 Storage Functions
 =================
 
-:class:`opentis.storage`
+:class:`openpathsampling.storage`
 
     >>> import openpathsampling as paths
     >>> mover = paths.storage.Storage()
