@@ -158,6 +158,23 @@ class SampleSet(object):
                 newset[sample.replica] = sample
         return newset
 
+    def apply_intermediates(self, samples, step=None, copy=True):
+        '''Return updated SampleSet, including all intermediates.
+
+        Useful in SequentialMovers.
+        '''
+        if type(samples) is Sample:
+            samples = [samples]
+        if copy==True:
+            newset = SampleSet(self)
+        else:
+            newset = self
+        for sample in samples:
+            # TODO: should time be a property of Sample or SampleSet?
+            sample.step = step
+            newset[sample.replica] = sample
+        return newset
+
     def replica_list(self):
         '''Returns the list of replicas IDs in this SampleSet'''
         return self.replica_dict.keys()

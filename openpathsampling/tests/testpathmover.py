@@ -26,6 +26,8 @@ from openpathsampling.orderparameter import OP_Function, OrderParameter
 import logging
 #logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
+
 
 #logging.getLogger('openpathsampling.pathmover').propagate = False
 #logging.getLogger('openpathsampling.initialization').propagate = False

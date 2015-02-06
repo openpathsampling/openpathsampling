@@ -69,13 +69,22 @@ class BootstrapPromotionMove(PathMover):
         for (enss, shoot) in zip(ens_pairs, shooters):
             rep_from = self._ensemble_dict[enss[0]]
             rep_to = self._ensemble_dict[enss[1]]
-            # shooting move, then ensemble hop on this pair, then replica
-            # hop to increasing replica ID
-            self._hopper[rep_from] = paths.PartialAcceptanceSequentialMover([
-                shoot,
-                paths.EnsembleHopMover(ensembles=enss),
-                paths.ReplicaIDChangeMover(replica_pairs=[rep_from, rep_to])
-            ])
+            # writing an algorithm this convoluted can get you shot in Texas
+            self._hopper[rep_from] = paths.ConditionalSequentialMover(
+                movers=[
+                    paths.ReplicaIDChangeMover(
+                        replica_pairs=[rep_from, rep_to]
+                    ), 
+                    shoot,
+                    paths.ConditionalMover(
+                        if_mover=paths.EnsembleHopMover(ensembles=enss),
+                        then_mover=None,
+                        else_mover=paths.ReplicaIDChangeMover(
+                            replica_pairs=[rep_to, rep_from]
+                        )
+                    )],
+                intermediate=[True, True, False]
+            )
 
 
         #self._rep_hopper = ReplicaIDChangeMover(replicas=rep_pairs)
@@ -193,6 +202,7 @@ class Bootstrapping(Calculation):
                 logger.debug("(" + str(sample.replica) 
                              + "," + str(sample.trajectory)
                              + "," + repr(sample.ensemble)
+                             + "," + str(sample.intermediate)
                             )
             self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
             logger.debug("GLOBALSTATE:")
@@ -200,6 +210,7 @@ class Bootstrapping(Calculation):
                 logger.debug("(" + str(sample.replica) 
                              + "," + str(sample.trajectory)
                              + "," + repr(sample.ensemble)
+                             + "," + str(sample.intermediate)
                             )
 
             if movepath.movepaths[0].accepted is True:
