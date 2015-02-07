@@ -8,7 +8,7 @@ from openpathsampling.todict import restores_as_stub_object
 
 class ObjectDict(dict):
     """
-    A cache that is attached to Configuration indices store in the Configuration storage
+    Cache attached to Configuration indices stored in Configuration storage
 
     Parameters
     ----------
@@ -109,7 +109,7 @@ class StorableObjectDict(ObjectDict):
 
     def storable(self, item):
         """
-        Returns True if the given item has indices to be stored in an attached storage otherwise cache it in the dict itself
+        Return True if `item` has indices to be stored in an attached storage otherwise cache it in the dict itself
         """
         for s in self.storage_caches:
             if s in item.idx and item.idx[s] > 0:
@@ -231,15 +231,17 @@ class FunctionalStorableObjectDict(StorableObjectDict):
 @restores_as_stub_object
 class OrderParameter(FunctionalStorableObjectDict):
     """
-    Initializes an OrderParameter object that is essentially a function that maps a frame (Configuration) within a trajectory (Trajectory) to a number.
+    Wrapper for a function that maps a snapshot to a number.
 
     Parameters
     ----------
     name : string
-        A descriptive name of the orderparameter. It is used in the string representation.
+        A descriptive name of the orderparameter. It is used in the string
+        representation.
     dimensions : int
-        The number of dimensions of the output order parameter. So far this is not used and will be necessary
-        or useful when storage is available
+        The number of dimensions of the output order parameter. So far this
+        is not used and will be necessary or useful when storage is
+        available
     storages : list of ConfigurationStorages()
         contains the list of storages that will be used.
 
@@ -303,7 +305,7 @@ class OrderParameter(FunctionalStorableObjectDict):
 @restores_as_stub_object
 class OP_RMSD_To_Lambda(OrderParameter):
     """
-    An OrderParameter that transforms the RMSD to a specific center to a lambda value between zero and one.
+    Transforms the RMSD from `center` to a value between zero and one.
 
     Parameters
     ----------
@@ -412,7 +414,7 @@ class OP_Featurizer(OrderParameter):
 
 @restores_as_stub_object
 class OP_MD_Function(OrderParameter):
-    """ Wrapper to decorate any appropriate function as an OrderParameter with a function that need an mdtraj object as input.
+    """Make `OrderParameter` from `fcn` that takes mdtraj.trajectory as input.
 
     Examples
     -------
@@ -455,10 +457,7 @@ class OP_MD_Function(OrderParameter):
 
 @restores_as_stub_object
 class OP_Volume(OrderParameter):
-    """
-    Wrapper that turns a Volume, which can be considered a boolean order parameter into an
-    actual OrderParamter()
-    """
+    """ Make `Volume` into `OrderParameter`: maps to 0.0 or 1.0 """
 
     def __init__(self, name, volume):
         """
@@ -476,7 +475,7 @@ class OP_Volume(OrderParameter):
 
 @restores_as_stub_object
 class OP_Function(OrderParameter):
-    """ Wrapper to decorate any appropriate function as an OrderParameter.
+    """Make any function `fcn` into an `OrderParameter`.
 
     Examples
     -------
