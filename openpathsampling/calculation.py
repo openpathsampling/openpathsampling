@@ -49,44 +49,45 @@ class BootstrapPromotionMove(PathMover):
                                entries=['bias', 'shooters'])
 
 
+        ens_pairs = [[self.ensembles[i], self.ensembles[i+1]]
+                     for i in range(len(self.ensembles)-1)]
+
+        # Bootstrapping sets numeric replica IDs. If the user wants it done
+        # differently, the user can change it.
+        self._ensemble_dict = {ens : rep for rep, ens in enumerate(ensembles) }
+        
         # Create all possible hoppers so we do not have to recreate these
         # every time which will result in more efficient storage
-
-        ens_pairs = []
-
-        for rep in range(0,len(self.ensembles) - 1):
-            ensemble_from = self.ensembles[rep]
-            ensemble_to = self.ensembles[rep+1]
-
-            ens_pairs.append([ensemble_from, ensemble_to])
-
-        self._hopper = EnsembleHopMover(
-            bias=self.bias,
-            ensembles=ens_pairs,
-            replicas='all'
-        )
-
-        self._ensemble_dict = {ens : idx for idx, ens in enumerate(ensembles) }
-
+        self._hopper = {}
+        for (enss, shoot) in zip(ens_pairs, shooters):
+            rep_from = self._ensemble_dict[enss[0]]
+            rep_to = self._ensemble_dict[enss[1]]
+            # writing an algorithm this convoluted can get you shot in Texas
+            self._hopper[rep_from] = paths.SequentialMover(
+                movers=[
+                    shoot,
+                    paths.ReplicaIDChangeMover(
+                        replica_pairs=[rep_from, rep_to]
+                    ), 
+                    paths.FilterByReplica(
+                        mover=paths.ConditionalMover(
+                            if_mover=paths.EnsembleHopMover(ensembles=enss),
+                            then_mover=None,
+                            else_mover=paths.ReplicaIDChangeMover(
+                                replica_pairs=[rep_to, rep_from]
+                            )
+                        ),
+                        replicas=[rep_to]
+                    )
+                ],
+                intermediate=[True, True, False]
+            )
 
 
     def move(self, globalstate):
-        # the tricky part here is that, if the hop is allowed, we only want
-        # to report the sample in the new ensemble. The way we do this is by
-        # treating each bootstrap move as a combination of 3 moves: it
-        # always starts with a shooting move and a replica hop, and then, if
-        # the hop was successful, a replica ID change move
-
         # find latest ensemble in the list
-
-        top_ens_idx = max([self._ensemble_dict[samp.ensemble] for samp in globalstate.samples])
-        shooter = self.shooters[top_ens_idx]
-
-        mover = paths.PartialAcceptanceSequentialMover([
-            shooter,
-            self._hopper
-        ])
-
+        top_ens_idx = len(globalstate)-1
+        mover = self._hopper[top_ens_idx]
         return mover.move(globalstate)
 
 class InitializeSingleTrajectoryMover(PathMover):
@@ -146,7 +147,6 @@ class Bootstrapping(Calculation):
         init_log.info("Parameter: %s : %s", 'trajectory', str(trajectory))
 
     def run(self, nsteps):
-        # TODO: turn off init_log during run loop
         bootstrapmove = BootstrapPromotionMove(bias=None,
                                                shooters=self.movers,
                                                ensembles=self.ensembles,
@@ -168,21 +168,32 @@ class Bootstrapping(Calculation):
 
             movepath = bootstrapmove.move(self.globalstate)
             samples = movepath.samples
+            logger.debug("SAMPLES:")
+            for sample in samples:
+                intermed = "*" if sample.intermediate else ""
+                logger.debug("(" + str(sample.replica) 
+                             + "," + str(sample.trajectory)
+                             + "," + repr(sample.ensemble)
+                             + "," + str(sample.details.accepted) + intermed
+                            )
             self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
+            logger.debug("GLOBALSTATE:")
+            for sample in self.globalstate:
+                intermed = "*" if sample.intermediate else ""
+                logger.debug("(" + str(sample.replica) 
+                             + "," + str(sample.trajectory)
+                             + "," + repr(sample.ensemble)
+                             + "," + str(sample.details.accepted) + intermed
+                            )
 
-            if movepath.movepaths[0].accepted is True:
-                # shooter has been accepted
-                if movepath.movepaths[1].accepted is True:
-                    # hop has been accepted!
-                    failsteps = 0
-                    ens_num += 1
-                else:
-                    failsteps += 1
+            old_ens_num = ens_num
+            ens_num = len(self.globalstate)-1
+            if ens_num == old_ens_num:
+                failsteps += 1
 
             if self.storage is not None:
                 self.globalstate.save_samples(self.storage)
                 self.globalstate.save(self.storage)
-                # TODO NEXT: store self.globalstate itself
             step_num += 1
 
         for sample in self.globalstate:
@@ -211,8 +222,6 @@ class PathSampling(Calculation):
 
         self.globalstate = SampleSet(samples)
 
-        print [samp.ensemble for samp in self.globalstate.samples]
-
         initialization_logging(init_log, self, 
                                ['root_mover', 'globalstate'])
 
@@ -229,12 +238,9 @@ class PathSampling(Calculation):
             self.storage.sync()
 
         for step in range(nsteps):
-            print step
             movepath = self.root_mover.move(self.globalstate)
-            print movepath
             samples = movepath.samples
-            self.globalstate = self.globalstate.apply(samples,
-                                                              step=step)
+            self.globalstate = self.globalstate.apply_samples(samples, step=step)
             if self.storage is not None:
                 self.globalstate.save_samples(self.storage)
                 self.globalstate.save(self.storage)

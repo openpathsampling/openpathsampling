@@ -170,7 +170,7 @@ class PathMover(object):
     """
     engine = None
 
-    def __init__(self, replicas='all', ensembles=None):
+    def __init__(self, replicas='all', ensembles=None, intermediate=False):
         self.name = self.__class__.__name__
 
         if type(replicas) is int:
@@ -181,14 +181,15 @@ class PathMover(object):
         if ensembles is not None and type(ensembles) is not list:
             ensembles = [ensembles]
         self.ensembles = ensembles
+        self.intermediate = intermediate
 
         initialization_logging(logger=init_log, obj=self,
-                               entries=['replicas', 'ensembles'])
+                               entries=['replicas', 'ensembles', 'intermediate'])
 
     def __call__(self, sample_set):
         return sample_set
 
-    def legal_sample_set(self, globalstate, ensembles=None):
+    def legal_sample_set(self, globalstate, ensembles=None, replicas='all'):
         '''
         This returns all the samples from globalstate which are in both
         self.replicas and the parameter ensembles. If ensembles is None, we
@@ -198,9 +199,15 @@ class PathMover(object):
         TODO: Turn into a filter decorator or
         '''
         if self.replicas == 'all':
-            reps = globalstate.replica_list()
+            mover_replicas = globalstate.replica_list()
         else:
-            reps = self.replicas
+            mover_replicas = self.replicas
+        if replicas == 'all':
+            selected_replicas = globalstate.replica_list()
+        else:
+            selected_replicas = replicas
+
+        reps = list(set(mover_replicas) & set(selected_replicas))
         rep_samples = []
         for rep in reps:
             rep_samples.extend(globalstate.all_from_replica(rep))
@@ -228,7 +235,7 @@ class PathMover(object):
 
         return legal_samples
 
-    def select_sample(self, globalstate, ensembles=None):
+    def select_sample(self, globalstate, ensembles=None, replicas=None):
         '''
         Returns one of the legal samples given self.replica and the ensemble
         set in ensembles.
@@ -236,10 +243,25 @@ class PathMover(object):
         TODO: This must be saved somehow (it is actually I think), otherwise
         Samples are not reproducible when applied to a SampleSet!
         '''
-        legal = self.legal_sample_set(globalstate, ensembles)
-        return random.choice(legal)
+        if replicas is None:
+            replicas=self.replicas
+        logger.debug("replicas: "+str(replicas)+" ensembles: "+repr(ensembles))
+        legal = self.legal_sample_set(globalstate, ensembles, replicas)
+        for sample in legal:
+            logger.debug("legal: (" + str(sample.replica)
+                         + "," + str(sample.trajectory)
+                         + "," + repr(sample.ensemble)
+                         + "," + str(sample.intermediate)
+                         + ")")
+        selected = random.choice(legal)
+        logger.debug("selected sample: (" + str(selected.replica)
+                     + "," + str(selected.trajectory)
+                     + "," + repr(selected.ensemble)
+                     + "," + str(sample.intermediate)
+                     + ")")
+        return selected
 
-    def move(self, globalstate):
+    def move(self, globalstate, intermediate=None):
         '''
         Run the generation starting with the initial trajectory specified.
 
@@ -260,6 +282,19 @@ class PathMover(object):
         '''
 
         return [] # pragma: no cover
+
+    def is_intermediate(self, sample_num, intermediate):
+        # if we don't override in call, use instance's value
+        if intermediate is None:
+            intermediate = self.intermediate
+
+        if intermediate == False:
+            return False
+        elif intermediate == True:
+            return True
+        else:
+            return intermediate[sample_num]
+
 
     def selection_probability_ratio(self, details=None):
         '''
@@ -289,8 +324,12 @@ class ShootMover(PathMover):
     a sample from a specified ensemble 
     '''
 
-    def __init__(self, selector, ensembles=None, replicas='all'):
-        super(ShootMover, self).__init__(ensembles=ensembles, replicas=replicas)
+    def __init__(self, selector, ensembles=None, replicas='all',
+                 intermediate=False):
+        super(ShootMover, self).__init__(ensembles=ensembles,
+                                         replicas=replicas,
+                                         intermediate=intermediate
+                                        )
         self.selector = selector
         self._length_stopper = PathMover.engine.max_length_stopper
         self._extra_details = ['start', 'start_point', 'trial',
@@ -308,7 +347,7 @@ class ShootMover(PathMover):
     def _generate(self, ensemble):
         self.trial = self.start
     
-    def move(self, globalstate):
+    def move(self, globalstate, intermediate=None):
         # select a legal sample, use it to determine the trajectory and the
         # ensemble needed for the dynamics
         rep_sample = self.select_sample(globalstate, self.ensembles)
@@ -339,13 +378,17 @@ class ShootMover(PathMover):
                         + ' / random : ' + str(rand)
                        )
             if (rand < self.selection_probability_ratio(details)):
+                logger.info("Shooting move accepted!")
                 details.accepted = True
                 details.result = details.trial
 
-        sample = paths.Sample(replica=replica,
-                      trajectory=details.result, 
-                      ensemble=dynamics_ensemble,
-                      details=details)
+        sample = paths.Sample(
+            replica=replica, 
+            trajectory=details.result, 
+            ensemble=dynamics_ensemble, 
+            intermediate=self.is_intermediate(0, intermediate), 
+            details=details
+        )
 
 #        new_set = SampleSet(samples=[sample], predecessor=globalstate, accepted=True)
 #        new_set = globalstate.apply([sample], accepted = details.accepted, move=self)
@@ -458,7 +501,7 @@ class RandomChoiceMover(PathMover):
         initialization_logging(init_log, self,
                                entries=['movers', 'weights'])
     
-    def move(self, globalstate):
+    def move(self, globalstate, intermediate=None):
         rand = np.random.random() * sum(self.weights)
         idx = 0
         prob = self.weights[0]
@@ -474,9 +517,52 @@ class RandomChoiceMover(PathMover):
         # Run the chosen mover
 #        sample_set = RandomMoveSampleSet(mover.move(sample_set))
 
-        path = paths.RandomChoiceMovePath( mover.move(globalstate))
+        path = paths.RandomChoiceMovePath(mover.move(globalstate, intermediate))
 
         return path
+
+class ConditionalMover(PathMover):
+    '''
+    An if-then-else structure for PathMovers.
+
+    Returns a SequentialMovePath of the if_move movepath and the then_move
+    movepath (if if_move is accepted) or the else_move movepath (if if_move
+    is rejected).
+    '''
+    def __init__(self, if_mover, then_mover, else_mover, ensembles=None,
+                 replicas='all', intermediate=False):
+        super(ConditionalMover, self).__init__(ensembles=ensembles,
+                                               replicas=replicas,
+                                               intermediate=False
+                                              )
+        self.if_mover = if_mover
+        self.then_mover = then_mover
+        self.else_mover = else_mover
+        initialization_logging(init_log, self,
+                               ['if_mover', 'then_mover', 'else_mover'])
+
+    def move(self, globalstate, intermediate):
+        subglobal = globalstate
+
+        intermed = [self.is_intermediate(i, intermediate) for i in range(3)]
+
+        ifclause = self.if_mover.move(subglobal, intermed[0])
+        samples = ifclause.samples
+        subglobal = subglobal.apply_intermediates(samples)
+        
+        if ifclause.accepted:
+            if self.then_mover is not None:
+                resultclause = self.then_mover.move(subglobal, intermed[1])
+            else:
+                resultclause = paths.EmptyMovePath()
+        else:
+            if self.else_mover is not None:
+                resultclause = self.else_mover.move(subglobal, intermed[2])
+            else:
+                resultclause = paths.EmptyMovePath()
+
+        return paths.SequentialMovePath([ifclause, resultclause])
+
 
 @restores_as_stub_object
 class SequentialMover(PathMover):
@@ -488,13 +574,16 @@ class SequentialMover(PathMover):
     replica exchanges in a given order, regardless of whether the moves
     succeed or fail.
     '''
-    def __init__(self, movers, ensembles=None, replicas='all'):
+    def __init__(self, movers, ensembles=None, replicas='all',
+                 intermediate=False):
         super(SequentialMover, self).__init__(ensembles=ensembles,
-                                              replicas=replicas)
+                                              replicas=replicas,
+                                              intermediate=intermediate
+                                             )
         self.movers = movers
         initialization_logging(init_log, self, ['movers'])
 
-    def move(self, globalstate):
+    def move(self, globalstate, intermediate=None):
         logger.debug("Starting sequential move")
 
 #        subglobal = SampleSet(self.legal_sample_set(globalstate))
@@ -502,12 +591,17 @@ class SequentialMover(PathMover):
         subglobal = globalstate
         movepaths = []
 
-        for mover in self.movers:
+        intermediate_tests = [self.is_intermediate(i, intermediate)
+                              for i in range(len(self.movers))]
+
+        for (mover, intermed) in zip(self.movers, intermediate_tests):
             logger.debug("Starting sequential move step "+str(mover))
+            logger.debug("Is intermediate? "+str(intermed))
 
             # Run the sub mover
-            movepath = mover.move(subglobal)
-            subglobal = movepath.apply_to(subglobal)
+            movepath = mover.move(subglobal, intermed)
+            samples = movepath.samples
+            subglobal = subglobal.apply_intermediates(samples)
             movepaths.append(movepath)
 
         return paths.SequentialMovePath( movepaths)
@@ -524,7 +618,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     promotion ConditionalSequentialMover. Even if the EnsembleHop fails, the
     accepted shooting move should be accepted.
     '''
-    def move(self, globalstate):
+    def move(self, globalstate, intermediate=None):
         logger.debug("==== BEGINNING " + self.name + " ====")
         subglobal = SampleSet(self.legal_sample_set(globalstate))
         movepaths = []
@@ -535,14 +629,15 @@ class PartialAcceptanceSequentialMover(SequentialMover):
             # accepted; that could mean that submoves of the submove were
             # rejected but the whole submove was accepted, as with
             # SequentialMovers
+            # @JHP: does movepath solve the above comment?
             logger.info(str(self.name)
                         + " starting mover index " + str(self.movers.index(mover) )
                         + " (" + mover.name + ")"
                        )
-
             # Run the sub mover
-            movepath = mover.move(subglobal)
-            subglobal = movepath.apply_to(subglobal)
+            movepath = mover.move(subglobal, intermediate)
+            samples = movepath.samples
+            subglobal = subglobal.apply_intermediates(samples)
             movepaths.append(movepath)
             if not movepath.accepted:
                 break
@@ -565,7 +660,7 @@ class ConditionalSequentialMover(SequentialMover):
     ConditionalSequentialMover only works if there is a *single* active
     sample per replica.
     '''
-    def move(self, globalstate):
+    def move(self, globalstate, intermediate=None):
         logger.debug("Starting conditional sequential move")
 
 #        subglobal = SampleSet(self.legal_sample_set(globalstate))
@@ -573,12 +668,18 @@ class ConditionalSequentialMover(SequentialMover):
         subglobal = globalstate
         movepaths = []
 
-        for mover in self.movers:
+        intermediate_tests = [self.is_intermediate(i, intermediate)
+                              for i in range(len(self.movers))]
+
+        logger.debug("Intermediates: "+str(intermediate_tests))
+
+        for (mover, intermed) in zip(self.movers, intermediate_tests):
             logger.debug("Starting sequential move step "+str(mover))
 
             # Run the sub mover
-            movepath = mover.move(subglobal)
-            subglobal = movepath.apply_to(subglobal)
+            movepath = mover.move(subglobal, intermed)
+            samples = movepath.samples
+            subglobal = subglobal.apply_intermediates(samples)
             movepaths.append(movepath)
 
             if not movepath.accepted:
@@ -587,44 +688,69 @@ class ConditionalSequentialMover(SequentialMover):
         return paths.ExclusiveMovePath(movepaths)
 
 @restores_as_stub_object
-class ReplicaIDChange(PathMover):
+class ReplicaIDChangeMover(PathMover): 
     """
-    Creates new samples from the given ones by changing the ReplicaID
+    Changes the replica ID for a path.
     """
-    def __init__(self, new_replicas=None, old_samples=None,
-                 ensembles=None, replicas='all'):
-        super(ReplicaIDChange, self).__init__(ensembles, replicas)
-        self.new_replicas = new_replicas
-        self.old_samples = old_samples
+    def __init__(self, replica_pairs, ensembles=None, replicas='all',
+                 intermediate=False):
+        self.replica_pairs = make_list_of_pairs(replica_pairs)
+        super(ReplicaIDChangeMover, self).__init__(ensembles=ensembles,
+                                                   replicas=replicas,
+                                                   intermediate=intermediate
+                                                  )
+        self._extra_details = ['rep_from', 'rep_to']
+        initialization_logging(logger=init_log, obj=self, 
+                               entries=['replica_pairs'])
 
-    def move(self, globalstate):
-        rep_sample = self.select_sample( self.ensembles)
-        new_rep = self.new_replicas[rep_sample.replica]
-        old_sample = self.old_samples[rep_sample.replica]
+    def move(self, globalstate, intermediate=None):
+        #logger.debug("Input intermediate: " + str(intermediate))
+        legal_from_rep = [rep[0] for rep in self.replica_pairs]
+        is_intermediate = self.is_intermediate(0, intermediate)
+        rep_sample = self.select_sample(globalstate, 
+                                        ensembles=self.ensembles, 
+                                        replicas=legal_from_rep)
+        legal_pairs = [pair for pair in self.replica_pairs 
+                       if pair[0]==rep_sample.replica]
+        mypair = random.choice(legal_pairs)
 
         details = MoveDetails()
         details.inputs = [rep_sample]
-        # TODO: details
-        dead_sample = paths.Sample(replica=rep_sample.replica,
-                             ensemble=old_sample.ensemble,
-                             trajectory=old_sample.trajectory
-                            )
-        new_sample = paths.Sample(replica=new_rep,
-                            ensemble=rep_sample.ensemble,
-                            trajectory=rep_sample.trajectory
-                           )
+        details.trial = rep_sample.trajectory
+        details.result = rep_sample.trajectory
+        details.accepted = True
+        details.acceptance_probability = 1.0
+        setattr(details, 'rep_from', mypair[0])
+        setattr(details, 'rep_to', mypair[1])
 
-        return paths.SampleMovePath( [dead_sample, new_sample], mover=self, accepted=True)
+        logger.info("Creating new sample from replica ID " + str(mypair[0])
+                    + " and putting it in replica ID " + str(mypair[1]))
+        logger.info("Move is intermediate: "+str(is_intermediate))
+
+        # note: currently this clones into a new replica ID. We might later
+        # want to kill the old replica ID (and possibly rename this mover).
+        new_sample = paths.Sample(
+            replica=details.rep_to, 
+            ensemble=rep_sample.ensemble,
+            trajectory=rep_sample.trajectory,
+            intermediate=is_intermediate,
+            details=details
+        )
+
+        return paths.SampleMovePath([new_sample], mover=self, accepted=details.accepted)
 
 @restores_as_stub_object
 class EnsembleHopMover(PathMover):
-    def __init__(self, bias=None, ensembles=None, replicas='all'):
+    def __init__(self, bias=None, ensembles=None, replicas='all',
+                 intermediate=False):
         # TODO: maybe allow a version of this with a single ensemble and ANY
         # ensemble can hop to that? messy to code; maybe same idea under
         # another name
         ensembles = make_list_of_pairs(ensembles)
         super(EnsembleHopMover, self).__init__(ensembles=ensembles, 
-                                               replicas=replicas)
+                                               replicas=replicas,
+                                               intermediate=intermediate
+                                              )
         # TODO: add support for bias: should be a list, one per pair of
         # ensembles -- another version might take a value for each ensemble,
         # and use the ratio; this latter is better for CITIS
@@ -650,7 +776,7 @@ class EnsembleHopMover(PathMover):
         ens_pair = random.choice(legal_pairs)
         return ens_pair
 
-    def move(self, globalstate):
+    def move(self, globalstate, intermediate=None):
         ens_pair = self.select_ensemble_pair(globalstate)
         ens_from = ens_pair[0]
         ens_to = ens_pair[1]
@@ -672,8 +798,8 @@ class EnsembleHopMover(PathMover):
         setattr(details, 'initial_ensemble', ens_from)
         setattr(details, 'trial_ensemble', ens_to)
         details.accepted = ens_to(trajectory)
-        logger.info("hopping result is {res1} to {res2}".format(
-            res1=repr(ens_from(trajectory)), res2=repr(ens_to(trajectory))))
+        logger.info("Hop starts from legal ensemble: "+str(ens_from(trajectory)))
+        logger.info("Hop ends in legal ensemble: "+str(ens_to(trajectory)))
 
         if details.accepted == True:
             setattr(details, 'result_ensemble', ens_to)
@@ -681,10 +807,11 @@ class EnsembleHopMover(PathMover):
             setattr(details, 'result_ensemble', ens_from)
 
         sample = paths.Sample(
+            replica=replica,
             trajectory=trajectory,
             ensemble=details.result_ensemble,
-            details=details,
-            replica=replica
+            intermediate=self.is_intermediate(0, intermediate),
+            details=details
         )
 
         path = paths.SampleMovePath( [sample], mover=self, accepted=details.accepted)
@@ -705,7 +832,7 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
         super(ForceEnsembleChangeMover, self).__init__(ensembles=ensembles,
                                                        replicas=replicas)
 
-    def move(self, globalstate):
+    def move(self, globalstate, intermediate=None):
         ens_pair = self.select_ensemble_pair(globalstate)
         ens_from = ens_pair[0]
         ens_to = ens_pair[1]
@@ -757,7 +884,7 @@ class RandomSubtrajectorySelectMover(PathMover):
     def _choose(self, trajectory_list):
         return random.choice(trajectory_list)
 
-    def move(self, globalstate):
+    def move(self, globalstate, intermediate=None):
         rep_sample = self.select_sample(globalstate)
         trajectory = rep_sample.trajectory
         replica = rep_sample.replica
@@ -814,8 +941,7 @@ class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
 
 
 class PathReversalMover(PathMover):
-    def move(self, globalstate):
-        print globalstate.samples[0].ensemble, self.ensembles
+    def move(self, globalstate, intermediate=None):
         rep_sample = self.select_sample(globalstate, self.ensembles)
         trajectory = rep_sample.trajectory
         ensemble = rep_sample.ensemble
@@ -867,7 +993,7 @@ class ReplicaExchangeMover(PathMover):
                                entries=['bias'])
 
 
-    def move(self, globalstate):
+    def move(self, globalstate, intermediate=None):
         if self.ensembles is not None:
             [ens1, ens2] = random.choice(self.ensembles)
             s1 = self.select_sample(globalstate, ens1)
@@ -937,6 +1063,22 @@ class ReplicaExchangeMover(PathMover):
         path = paths.SampleMovePath([sample1, sample2], mover=self, accepted=details1.accepted)
 
         return path
+
+
+class FilterByReplica(PathMover):
+    def __init__(self, mover, replicas, intermediate=True):
+        if type(replicas) is not list:
+            replicas = [replicas]
+        self.replicas = replicas
+        self.mover = mover
+        # TODO: clean this up
+        pass
+
+    def move(self, globalstate, intermediate):
+        filtered_gs = SampleSet(
+            [s for s in globalstate if s.replica in self.replicas]
+        )
+        return self.mover.move(filtered_gs, self.is_intermediate(0, intermediate))
 
 class OneWayShootingMover(RandomChoiceMover):
     '''
