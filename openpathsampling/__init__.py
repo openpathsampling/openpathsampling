@@ -9,8 +9,6 @@ from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     SequentialEnsemble, AndEnsemble, OrEnsemble, XorEnsemble, SubEnsemble, \
     SingleFrameEnsemble, MinusInterfaceEnsemble
 
-
-
 from snapshot import Snapshot, Configuration, Momentum
 
 from trajectory import Trajectory
@@ -33,8 +31,6 @@ from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
 from dynamics_engine import DynamicsEngine
 
 from openmm_engine import OpenMMEngine
-
-from visualize import PathTreeBuilder
 
 from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
     EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, AndVolume, \

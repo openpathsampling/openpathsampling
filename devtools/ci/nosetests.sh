@@ -2,5 +2,5 @@
 
 cd openpathsampling
 cd tests
-nosetests -v .
+nosetests -v . || exit 1
 cd ../..

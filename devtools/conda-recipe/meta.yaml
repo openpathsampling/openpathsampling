@@ -1,19 +1,40 @@
 package:
   name: openpathsampling-dev
-  version: !!str
+  version: !!str 0.0.1
+
+build:
+  preserve_egg_dir: True
+  number: 0
 
 requirements:
   build:
     - python
     - numpy
-#    - mdtraj
-#    - openmm
     - setuptools
+    - numpy
+    - scipy
+    - setuptools
+    - netcdf4
+    - openmm
+    - openmmtools
+    - pymbar
+    - docopt
+    - jinja2
+    - mdtraj
 
   run:
     - python
-#    - openmm
-#    - mdtraj
+    - pandas
+    - numpy
+    - scipy
+    - netcdf4
+    - openmm
+    - openmmtools
+    - pymbar
+    - docopt
+    - pyyaml
+    - jinja2
+    - mdtraj
 
 about:
   home: https://github.com/choderalab/openpathsampling
