@@ -93,6 +93,12 @@ class MovePath(object):
         """
         return paths.SampleSet(other).apply_samples(self._local_samples)
 
+    def apply_intermediates_to(self, other):
+        """
+        Uses SampleSet.apply_intermediates (for PartialMovePath).
+        """
+        return paths.SampleSet(other).apply_intermediates(self._local_samples)
+
     @property
     def samples(self):
         """

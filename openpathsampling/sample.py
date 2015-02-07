@@ -154,6 +154,24 @@ class SampleSet(object):
         for sample in samples:
             # TODO: should time be a property of Sample or SampleSet?
             sample.step = step
+            if sample.intermediate == False:
+                newset[sample.replica] = sample
+        return newset
+
+    def apply_intermediates(self, samples, step=None, copy=True):
+        '''Return updated SampleSet, including all intermediates.
+
+        Useful in SequentialMovers.
+        '''
+        if type(samples) is Sample:
+            samples = [samples]
+        if copy==True:
+            newset = SampleSet(self)
+        else:
+            newset = self
+        for sample in samples:
+            # TODO: should time be a property of Sample or SampleSet?
+            sample.step = step
             newset[sample.replica] = sample
         return newset
 
@@ -293,10 +311,11 @@ class Sample(object):
         the Monte Carlo step number associated with this Sample
     """
 
-    def __init__(self, replica=None, trajectory=None, ensemble=None, details=None, step=-1):
+    def __init__(self, replica=None, trajectory=None, ensemble=None, intermediate=False, details=None, step=-1):
         self.replica = replica
         self.ensemble = ensemble
         self.trajectory = trajectory
+        self.intermediate = intermediate
         self.details = details
         self.step = step
 
