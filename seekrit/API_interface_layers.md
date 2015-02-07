@@ -71,8 +71,8 @@ following methods:
   version 1.0, implementation of `__not__()` is highly recommended for
   future compatibility.)
 
-## PathMover Layer API
+## PathMover API
 
-## Calculation Layer API
+## Calculation API
 
 

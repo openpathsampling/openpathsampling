@@ -10,7 +10,7 @@ In might seem like `Ensemble(volumeA) & Ensemble(volumeB)` should be the same
 as `Ensemble(volumeA & volumeB)`. But this is absolutely *not* the case. We can
 see this easily by using `LeaveXEnsemble` as the example ensemble.
 `LeaveXEnsemble(volume)` creates an ensemble in which at least one frame must
-be outside of `volume`. So the different between `and`ing together the two
+be outside of `volume`. So the difference between `and`ing together the two
 ensembles vs. `and`ing together the two volumes can be described like this:
 
 * `LeaveXEnsemble(volumeA) & LeaveXEnsemble(volumeB)`: there is at least one
