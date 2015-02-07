@@ -707,18 +707,18 @@ class testMinusMover(object):
         assert_equal(self.minus_sample.ensemble(self.minus_sample.trajectory),
                     True)
         first_subtraj = FirstSubtrajectorySelectMover(
-            subensemble=self.minus.segment_ensemble
+            subensemble=self.minus._segment_ensemble
         )
         movepath = first_subtraj.move(SampleSet(self.minus_sample))
         samples = movepath.samples
         assert_equal(samples[0].ensemble(samples[0].trajectory), True)
         final_subtraj = FinalSubtrajectorySelectMover(
-            subensemble=self.minus.segment_ensemble
+            subensemble=self.minus._segment_ensemble
         )
         movepath = final_subtraj.move(SampleSet(self.minus_sample))
         samples = movepath.samples
         assert_equal(samples[0].ensemble(samples[0].trajectory), True)
-        assert_equal(samples[0].ensemble, self.minus.segment_ensemble)
+        assert_equal(samples[0].ensemble, self.minus._segment_ensemble)
         
 
     def test_successful_move(self):
@@ -743,7 +743,7 @@ class testMinusMover(object):
             assert_equal(len(samples), 5)
             s_inner = [s for s in samples if s.ensemble==self.innermost]
             s_minus = [s for s in samples if s.ensemble==self.minus]
-            s_sub = [s for s in samples if s.ensemble==self.minus.segment_ensemble]
+            s_sub = [s for s in samples if s.ensemble==self.minus._segment_ensemble]
             assert_equal(len(s_inner), 1)
             assert_equal(len(s_minus), 2)
             assert_equal(len(s_sub), 2)

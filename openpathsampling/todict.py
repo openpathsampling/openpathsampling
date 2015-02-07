@@ -159,8 +159,13 @@ def restores_as_full_object(super_class):
         def _from_dict(cls, my_dict = None):
             if my_dict is None:
                 my_dict={}
-
-            return cls(**my_dict)
+            try:
+                obj = cls(**my_dict)
+            except TypeError as e:
+                print my_dict
+                print cls.__name__
+                print e
+            return obj
 
         super_class.from_dict = classmethod(_from_dict)
 

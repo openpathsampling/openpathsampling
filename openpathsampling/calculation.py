@@ -75,8 +75,6 @@ class BootstrapPromotionMove(PathMover):
                 )
             )
 
-        print self._hopper
-
 
     def move(self, globalstate):
         # find latest ensemble in the list

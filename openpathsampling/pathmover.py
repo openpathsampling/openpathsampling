@@ -868,12 +868,15 @@ class RandomSubtrajectorySelectMover(PathMover):
         subtrajs = self._subensemble.split(trajectory)
         logger.debug("Found "+str(len(subtrajs))+" subtrajectories.")
 
-        if self.n_crossings is None:
-            self.length_req = lambda x: x > 0
-        else:
-            self.length_req = lambda x: x==self.n_crossings
+#        if self.n_crossings is None:
+#            length_req = lambda x: x > 0
+#        else:
+#            length_req = lambda x: x==self.n_crossings
 
-        if self.length_req(len(subtrajs)):
+#        if length_req(len(subtrajs)):
+
+        if (self.n_crossings is None and len(subtrajs) > 0) or \
+            (self.n_crossings is not None and len(subtrajs) == self.n_crossings):
             subtraj = self._choose(subtrajs)
         else:
             # return zero-length trajectory otherwise
@@ -916,7 +919,7 @@ class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
     def _choose(self, trajectory_list):
         return trajectory_list[-1]
 
-
+@restores_as_stub_object
 class PathReversalMover(PathMover):
     def move(self, globalstate):
         rep_sample = self.select_sample(globalstate, self.ensembles)
@@ -951,7 +954,7 @@ class PathReversalMover(PathMover):
 
         return path
 
-
+@restores_as_stub_object
 class ReplicaExchangeMover(PathMover):
     def __init__(self, bias=None, ensembles=None, replicas='all'):
         if replicas=='all' and ensembles is None:
@@ -1095,14 +1098,14 @@ class MinusMover(ConditionalSequentialMover):
     '''
     def __init__(self, minus_ensemble, innermost_ensemble, 
                  ensembles=None, replicas='all'):
-        segment = minus_ensemble.segment_ensemble
+        segment = minus_ensemble._segment_ensemble
         subtrajectory_selector = RandomChoiceMover([
             FirstSubtrajectorySelectMover(subensemble=segment,
-                                          n_crossings=minus_ensemble._n_crossings,
+                                          n_crossings=minus_ensemble.n_crossings,
                                           ensembles=[minus_ensemble]
                                          ),
             FinalSubtrajectorySelectMover(subensemble=segment, 
-                                          n_crossings=minus_ensemble._n_crossings,
+                                          n_crossings=minus_ensemble.n_crossings,
                                           ensembles=[minus_ensemble]
                                          ),
         ])
@@ -1139,7 +1142,7 @@ class MinusMover(ConditionalSequentialMover):
 class MultipleSetMinusMover(RandomChoiceMover):
     pass
 
-
+@restores_as_stub_object
 def NeighborEnsembleReplicaExchange(ensemble_list):
     movers = [
         ReplicaExchangeMover(ensembles=[[ensemble_list[i], ensemble_list[i+1]]])
