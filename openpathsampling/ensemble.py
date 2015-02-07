@@ -1298,8 +1298,8 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
     D.W.H. Swenson and P.G. Bolhuis. J. Chem. Phys. 141, 044101 (2014). 
     doi:10.1063/1.4890037
     '''
-    def __init__(self, state_vol, innermost_vol, n_l=2, greedy=False):
-        if (n_l < 2):
+    def __init__(self, state_vol, innermost_vol, n_crossings=2, greedy=False):
+        if (n_crossings < 2):
             raise ValueError("The number of segments n_l must be at least 2")
         inA = InXEnsemble(state_vol)
         outA = OutXEnsemble(state_vol)
@@ -1323,9 +1323,9 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
             OptionalEnsemble(interstitial),
             SingleFrameEnsemble(inA)
         ]
-        ensembles = start + loop*(n_l-1) + end
+        ensembles = start + loop*(n_crossings-1) + end
 
-        self._n_l = n_l
+        self._n_l = n_crossings
 
         super(MinusInterfaceEnsemble, self).__init__(ensembles, greedy=greedy)
 

@@ -63,25 +63,19 @@ class BootstrapPromotionMove(PathMover):
             rep_from = self._ensemble_dict[enss[0]]
             rep_to = self._ensemble_dict[enss[1]]
             # writing an algorithm this convoluted can get you shot in Texas
-            self._hopper[rep_from] = paths.SequentialMover(
-                movers=[
-                    shoot,
-                    paths.ReplicaIDChangeMover(
-                        replica_pairs=[rep_from, rep_to]
-                    ), 
-                    paths.FilterByReplica(
-                        mover=paths.ConditionalMover(
-                            if_mover=paths.EnsembleHopMover(ensembles=enss),
-                            then_mover=None,
-                            else_mover=paths.ReplicaIDChangeMover(
-                                replica_pairs=[rep_to, rep_from]
-                            )
-                        ),
-                        replicas=[rep_to]
-                    )
-                ],
-                intermediate=[True, True, False]
+            self._hopper[rep_from] = paths.RestrictToLastSampleMover(
+                paths.PartialAcceptanceSequentialMover(
+                    movers=[
+                        shoot,
+                        paths.EnsembleHopMover(ensembles=enss),
+                        paths.ReplicaIDChangeMover(
+                            replica_pairs=[rep_from, rep_to]
+                        )
+                    ]
+                )
             )
+
+        print self._hopper
 
 
     def move(self, globalstate):
@@ -170,20 +164,18 @@ class Bootstrapping(Calculation):
             samples = movepath.samples
             logger.debug("SAMPLES:")
             for sample in samples:
-                intermed = "*" if sample.intermediate else ""
-                logger.debug("(" + str(sample.replica) 
+                logger.debug("(" + str(sample.replica)
                              + "," + str(sample.trajectory)
                              + "," + repr(sample.ensemble)
-                             + "," + str(sample.details.accepted) + intermed
+                             + "," + str(sample.details.accepted)
                             )
             self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
             logger.debug("GLOBALSTATE:")
             for sample in self.globalstate:
-                intermed = "*" if sample.intermediate else ""
-                logger.debug("(" + str(sample.replica) 
+                logger.debug("(" + str(sample.replica)
                              + "," + str(sample.trajectory)
                              + "," + repr(sample.ensemble)
-                             + "," + str(sample.details.accepted) + intermed
+                             + "," + str(sample.details.accepted)
                             )
 
             old_ens_num = ens_num

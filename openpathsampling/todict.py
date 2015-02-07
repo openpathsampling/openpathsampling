@@ -109,7 +109,15 @@ class ObjectJSON(object):
 
     def to_json_object(self, obj, base_type = ''):
         simplified = self.simplify_object(obj, base_type)
-        return json.dumps(simplified)
+        try:
+            json_str = json.dumps(simplified)
+        except TypeError:
+            print obj.__class__.__name__
+            print obj.__dict__
+            print simplified
+            raise ValueError('Not possible to turn object into json')
+
+        return json_str
 
     def from_json(self, json_string):
         simplified = yaml.load(json_string)

@@ -93,12 +93,6 @@ class MovePath(object):
         """
         return paths.SampleSet(other).apply_samples(self._local_samples)
 
-    def apply_intermediates_to(self, other):
-        """
-        Uses SampleSet.apply_intermediates (for PartialMovePath).
-        """
-        return paths.SampleSet(other).apply_intermediates(self._local_samples)
-
     @property
     def samples(self):
         """
@@ -259,7 +253,9 @@ class SequentialMovePath(MovePath):
         return sampleset
 
     def __str__(self):
-        return 'SequentialMove : %s : %d samples\n' % (self.accepted, len(self.samples)) + MovePath._indent('\n'.join(map(str, self.movepaths)))
+        return 'SequentialMove : %s : %d samples\n' % \
+               (self.accepted, len(self.samples)) + \
+               MovePath._indent('\n'.join(map(str, self.movepaths)))
 
 
 @restores_as_full_object
@@ -291,7 +287,9 @@ class PartialMovePath(SequentialMovePath):
         return sampleset
 
     def __str__(self):
-        return 'PartialMove : %s : %d samples\n' % (self.accepted, len(self.samples)) + MovePath._indent('\n'.join(map(str, self.movepaths)))
+        return 'PartialMove : %s : %d samples\n' % \
+               (self.accepted, len(self.samples)) + \
+               MovePath._indent('\n'.join(map(str, self.movepaths)))
 
 @restores_as_full_object
 class ExclusiveMovePath(SequentialMovePath):
@@ -329,9 +327,26 @@ class ExclusiveMovePath(SequentialMovePath):
         return True
 
     def __str__(self):
-        return 'ExclusiveMove : %s : %d samples\n' % (self.accepted, len(self.samples)) + \
+        return 'ExclusiveMove : %s : %d samples\n' % \
+               (self.accepted, len(self.samples)) + \
                MovePath._indent( '\n'.join(map(str, self.movepaths)))
 
+class KeepLastSampleMovePath(MovePath):
+    def __init__(self, movepath):
+        super(KeepLastSampleMovePath, self).__init__()
+        self.movepath = movepath
+
+    def _get_samples(self):
+        samples = self.movepath.samples
+        if len(samples) > 1:
+            samples = [samples[-1]]
+
+        return samples
+
+    def __str__(self):
+        return 'Restrict to last sample : %s : %d samples\n' % \
+               (self.accepted, len(self.samples)) + \
+               MovePath._indent( str(self.movepath) )
 
 
 class MovePathIdea(object):
