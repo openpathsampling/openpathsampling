@@ -5,19 +5,32 @@
 # from several files.
 import math
 class WHAM(object):
+    """
+    Weighted Histogram Analysis Method
+    """
 
-    def __init__(self):
-        # default values
-        self.tol = 1e-10       # tolerance for convergence
-        self.max_iter = 1000000    # maximum number of iterations
-        self.cutoff = 0.05      # windowing cutoff
+    def __init__(self, tol=1e-10, max_iter=1000000, cutoff=0.05):
+        """
+        Initialize (empty) WHAM calculation object.
+
+        Parameters
+        ----------
+        tol : float
+            tolerance for convergence
+        max_iter : int
+            maximum number of iterations
+        cutoff : float
+            windowing cutoff
+        """
+        self.tol = tol
+        self.max_iter = max_iter
+        self.cutoff = cutoff
         self.hists = { }
         self.lnZ = []
         self.sum_hist = []
         self.nt = []
         self.nhists = 0
         self.keys = []
-        return
 
     # loads files into the dictionary
     def load_file(self,fname):
@@ -26,7 +39,6 @@ class WHAM(object):
         xvals, yvals = read_acf(fname)
         add_series_to_set(xvals, yvals, self.hists)
         self.nhists += 1
-        return
 
     # modifies the dictionary to ignore outside the window
     def prep(self):
@@ -67,6 +79,9 @@ class WHAM(object):
         return
 
     def clean_leading_ones(self):
+        """
+        Removes leading ones from input cumulative histograms.
+        """
         keys = sorted(self.hists.keys())
         for s in range(self.nhists):
             i=1 # ignore the line of zeros before 
@@ -77,9 +92,12 @@ class WHAM(object):
                 i += 1
         return
 
-    # prepares a guess of ln(Z) based for the case of crossing
-    # probabilities: assumes that the probability for each 
     def guess_lnZ(self):
+        """
+        Prepares a gues of ln(Z) based on crossing probabilities.
+
+        A trivial guess should also work, but this isn't very expensive.
+        """
         from crossing_probability import series_set_crossing_lambdas
         lambda_i = series_set_crossing_lambdas(self.hists)
         scaling = 1.0
@@ -98,12 +116,6 @@ class WHAM(object):
             scaled.append(scaling*val)
             scaling *= val
 
-        return
-
-    def apply_parseopts(self,opts):
-        self.tol = opts.tol
-        self.max_iter = opts.max_iter
-        self.cutoff = opts.cutoff
         return
 
     # wham iterations; returns the WHAM lnZ weights
@@ -190,7 +202,8 @@ class WHAM(object):
         self.guess_lnZ()
         self.prep()
         self.generate_lnZ()
-        return self.wham_histogram()
+        hist = self.wham_histogram()
+        return hist
 
 
 
@@ -212,8 +225,7 @@ def print_dict(adict):
 import sys, os
 if __name__ == "__main__":
     opts, args = parsing(sys.argv[1:])
-    wham = WHAM()
-    wham.apply_parseopts(opts)
+    wham = WHAM(tol=opts.tol, max_iter=opts.max_iter, cutoff=opts.cutoff)
     for f in args:
         wham.load_file(f)
     
