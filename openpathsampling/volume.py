@@ -11,12 +11,9 @@ from openpathsampling.todict import restores_as_full_object
 
 @restores_as_full_object
 class Volume(object):
-    def __init__(self):
-        '''
-        A Volume describes a set in configuration space
-        '''
-        pass
-    
+    """
+    A Volume describes a set of snapshots 
+    """
     def __call__(self, snapshot):
         '''
         Returns `True` if the given snapshot is part of the defined Region
@@ -78,6 +75,12 @@ class Volume(object):
 
 @restores_as_full_object
 class VolumeCombination(Volume):
+    """
+    Logical combination of volumes. 
+
+    This should be treated as an abstract class. For storage purposes, use
+    specific subclasses in practice.
+    """
     def __init__(self, volume1, volume2, fnc, str_fnc):
         super(VolumeCombination, self).__init__()
         self.volume1 = volume1
@@ -96,27 +99,32 @@ class VolumeCombination(Volume):
 
 @restores_as_full_object
 class OrVolume(VolumeCombination):
+    """ "Or" combination (union) of two volumes."""
     def __init__(self, volume1, volume2):
         super(OrVolume, self).__init__(volume1, volume2, lambda a,b : a or b, str_fnc = '{0} or {1}')
 
 @restores_as_full_object
 class AndVolume(VolumeCombination):
+    """ "And" combination (intersection) of two volumes."""
     def __init__(self, volume1, volume2):
         super(AndVolume, self).__init__(volume1, volume2, lambda a,b : a and b, str_fnc = '{0} and {1}')
 
 @restores_as_full_object
 class XorVolume(VolumeCombination):
+    """ "Xor" combination of two volumes."""
     def __init__(self, volume1, volume2):
         super(XorVolume, self).__init__(volume1, volume2, lambda a,b : a ^ b, str_fnc = '{0} xor {1}')
 
 @restores_as_full_object
 class SubVolume(VolumeCombination):
+    """ "Subtraction" combination (relative complement) of two volumes."""
     def __init__(self, volume1, volume2):
         super(SubVolume, self).__init__(volume1, volume2, lambda a,b : a and not b, str_fnc = '{0} and not {1}')
 
 
 @restores_as_full_object
 class NegatedVolume(Volume):
+    """Negation (logical not) of a volume."""
     def __init__(self, volume):
         super(NegatedVolume, self).__init__()
         self.volume = volume
@@ -129,6 +137,7 @@ class NegatedVolume(Volume):
     
 @restores_as_full_object
 class EmptyVolume(Volume):
+    """Empty volume: no snapshot can satisfy"""
     def __init__(self):
         super(EmptyVolume, self).__init__()
 
@@ -155,6 +164,7 @@ class EmptyVolume(Volume):
 
 @restores_as_full_object
 class FullVolume(Volume):
+    """Volume which all snapshots can satisfy."""
     def __init__(self):
         super(FullVolume, self).__init__()
 
@@ -181,15 +191,17 @@ class FullVolume(Volume):
 
 @restores_as_full_object
 class LambdaVolume(Volume):
-    '''
-    Defines a Volume containing all states where orderparameter is in a
-    given range.
-    '''
+    """
+    Volume defined by a range of a collective variable `orderparameter`.
+
+    Contains all snapshots `snap` for which `lamba_min <
+    orderparameter(snap)` and `lambda_max > orderparameter(snap)`.
+    """
     def __init__(self, orderparameter, lambda_min = 0.0, lambda_max = 1.0):
         '''
         Attributes
         ----------
-        orderparameter : orderparameter
+        orderparameter : OrderParameter
             the orderparameter object
         lambda_min : float
             the minimal allowed orderparameter
@@ -311,6 +323,8 @@ class LambdaVolume(Volume):
 @restores_as_full_object
 class LambdaVolumePeriodic(LambdaVolume):
     """
+    As with `LambdaVolume`, but for a periodic order parameter.
+
     Defines a Volume containing all states where orderparameter, a periodic
     function wrapping into the range [period_min, period_max], is in the
     given range [lambda_min, lambda_max].
@@ -402,7 +416,7 @@ class LambdaVolumePeriodic(LambdaVolume):
 @restores_as_full_object
 class VoronoiVolume(Volume):
     '''
-    Defines a Volume that is given by a Voronoi cell specified by a set of centers
+    Volume given by a Voronoi cell specified by a set of centers
     
     Parameters
     ----------
