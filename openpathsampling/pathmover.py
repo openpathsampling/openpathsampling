@@ -845,11 +845,11 @@ class RandomSubtrajectorySelectMover(PathMover):
     If there are no subtrajectories which satisfy the subensemble, this
     returns the zero-length trajectory.
     '''
-    def __init__(self, subensemble, n_crossings=None, ensembles=None, replicas='all'):
+    def __init__(self, subensemble, n_l=None, ensembles=None, replicas='all'):
         super(RandomSubtrajectorySelectMover, self).__init__(
             ensembles=ensembles, replicas=replicas
         )
-        self.n_crossings=n_crossings
+        self.n_l=n_l
         self._subensemble = subensemble
 
     def _choose(self, trajectory_list):
@@ -868,15 +868,15 @@ class RandomSubtrajectorySelectMover(PathMover):
         subtrajs = self._subensemble.split(trajectory)
         logger.debug("Found "+str(len(subtrajs))+" subtrajectories.")
 
-#        if self.n_crossings is None:
+#        if self.n_l is None:
 #            length_req = lambda x: x > 0
 #        else:
-#            length_req = lambda x: x==self.n_crossings
+#            length_req = lambda x: x==self.n_l
 
 #        if length_req(len(subtrajs)):
 
-        if (self.n_crossings is None and len(subtrajs) > 0) or \
-            (self.n_crossings is not None and len(subtrajs) == self.n_crossings):
+        if (self.n_l is None and len(subtrajs) > 0) or \
+            (self.n_l is not None and len(subtrajs) == self.n_l):
             subtraj = self._choose(subtrajs)
         else:
             # return zero-length trajectory otherwise
@@ -1101,11 +1101,11 @@ class MinusMover(ConditionalSequentialMover):
         segment = minus_ensemble._segment_ensemble
         subtrajectory_selector = RandomChoiceMover([
             FirstSubtrajectorySelectMover(subensemble=segment,
-                                          n_crossings=minus_ensemble.n_crossings,
+                                          n_l=minus_ensemble.n_l,
                                           ensembles=[minus_ensemble]
                                          ),
             FinalSubtrajectorySelectMover(subensemble=segment, 
-                                          n_crossings=minus_ensemble.n_crossings,
+                                          n_l=minus_ensemble.n_l,
                                           ensembles=[minus_ensemble]
                                          ),
         ])

@@ -1304,8 +1304,8 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
     _excluded_attr = ['ensembles', 'min_overlap', 'max_overlap']
 
-    def __init__(self, state_vol, innermost_vol, n_crossings=2, greedy=False):
-        if (n_crossings < 2):
+    def __init__(self, state_vol, innermost_vol, n_l=2, greedy=False):
+        if (n_l < 2):
             raise ValueError("The number of segments n_l must be at least 2")
 
         self.state_vol = state_vol
@@ -1333,9 +1333,9 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
             OptionalEnsemble(interstitial),
             SingleFrameEnsemble(inA)
         ]
-        ensembles = start + loop*(n_crossings-1) + end
+        ensembles = start + loop*(n_l-1) + end
 
-        self.n_crossings = n_crossings
+        self.n_l = n_l
 
         super(MinusInterfaceEnsemble, self).__init__(ensembles, greedy=greedy)
 

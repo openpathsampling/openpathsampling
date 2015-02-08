@@ -1109,24 +1109,24 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         self.minus_nl2 = MinusInterfaceEnsemble(
             state_vol=vol1,
             innermost_vol=vol1,
-            n_crossings=2
+            n_l=2
         )
         self.minus_interstitial_nl2 = MinusInterfaceEnsemble(
             state_vol=vol1,
             innermost_vol=vol2,
-            n_crossings=2
+            n_l=2
         )
         self.minus_nl3 = MinusInterfaceEnsemble(
             state_vol=vol1,
             innermost_vol=vol1,
-            n_crossings=3
+            n_l=3
         )
 
     @raises(ValueError)
     def test_minus_nl1_fail(self):
         minus_nl1 = MinusInterfaceEnsemble(state_vol=vol1,
                                            innermost_vol=vol2,
-                                           n_crossings=1)
+                                           n_l=1)
 
 
     def test_minus_nl2_ensemble(self):
