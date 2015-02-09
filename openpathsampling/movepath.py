@@ -47,6 +47,7 @@ class MovePath(object):
         self._accepted = accepted
         self._destination = None
         self._local_samples = []
+        self._collapsed_samples = []
         self._samples = None
         self.mover = mover
 
@@ -55,6 +56,40 @@ class MovePath(object):
             'accepted' : self.accepted,
             'mover' : self.mover,
         }
+
+    @property
+    def opened(self):
+        """
+        Return the full MovePath object
+        """
+        return self
+
+    @property
+    def closed(self):
+        """
+        Return a closed MovePath object copy
+        """
+        obj = CollapsedMovePath(samples=self.collapsed_samples, mover=self.mover)
+
+        return obj
+
+    @property
+    def collapsed_samples(self):
+        """
+        Return a collapsed set of samples with non used samples removed
+        """
+        if self._collapsed_samples is None:
+
+            s = paths.SampleSet([])
+            s.apply_samples(self)
+
+            # keep order just for being thorough
+            self._collapsed_samples = [
+                samp for samp in self.samples
+                if samp in s
+            ]
+
+        return self._collapsed_samples
 
     @property
     def local_samples(self):
@@ -70,7 +105,6 @@ class MovePath(object):
 
         This includes all rejected samples
         """
-
         return self._local_samples
 
     @property
@@ -182,6 +216,34 @@ class SampleMovePath(MovePath):
         Standard apply is to apply the list of samples contained
         """
         return paths.SampleSet(other).apply_samples(self._local_samples)
+
+
+@restores_as_full_object
+class CollapsedMovePath(SampleMovePath):
+    def opened(self):
+        if hasattr(self, '_movepath') and self._movepath is not None:
+            return self._movepath
+        else:
+            return self
+
+    def closed(self):
+        return self
+
+    @property
+    def collapsed_samples(self):
+        """
+        Return a collapsed set of samples with non used samples removed
+        """
+        if self._collapsed_samples is None:
+
+            self.collapsed_samples = self._local_samples
+        return self._collapsed_samples
+
+    def __str__(self):
+        if self.mover is not None:
+            return '%s : %d samples' % (self.mover.__class__.__name__, len(self._local_samples)) + ' ' + str(self._local_samples) + ''
+        else:
+            return '%s : %d samples' % ('CollapsedMove', len(self._local_samples)) + ' ' + str(self._local_samples) + ''
 
 
 @restores_as_full_object

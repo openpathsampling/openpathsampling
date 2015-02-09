@@ -278,7 +278,7 @@ class PathMover(object):
         object (??? can you explain this, JHP?)
         '''
 
-        return [] # pragma: no cover
+        return paths.EmptyMovePath() # pragma: no cover
 
     def selection_probability_ratio(self, details=None):
         '''
@@ -300,6 +300,14 @@ class PathMover(object):
         What about Minus Move and PathReversalMove?
         '''
         return 1.0 # pragma: no cover
+
+@restores_as_stub_object
+class CollapseMove(PathMover):
+    def __init__(self, inner_mover):
+        self.inner_mover = inner_mover
+
+    def move(self, globalstate):
+        return self.inner_mover.move(globalstate).closed
 
 @restores_as_stub_object
 class ShootMover(PathMover):

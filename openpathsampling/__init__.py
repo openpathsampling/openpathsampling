@@ -22,7 +22,8 @@ from pathmover import (
     ForwardShootMover, PathMover, PathMoverFactory, PathReversalMover, 
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
-    ConditionalMover, FilterByReplica, RestrictToLastSampleMover
+    ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
+    CollapseMove
     #, BootstrapPromotionMove
 )
 
@@ -55,4 +56,4 @@ from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
 
 from movepath import EmptyMovePath, ExclusiveMovePath, MovePath, \
     PartialMovePath, RandomChoiceMovePath, SampleMovePath, SequentialMovePath, \
-    KeepLastSampleMovePath
+    KeepLastSampleMovePath, CollapsedMovePath
