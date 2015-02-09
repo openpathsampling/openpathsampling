@@ -150,7 +150,7 @@ if __name__ == '__main__':
 
     for p_idx in range(0, storage.movepaths.count()):
         obj = storage.movepaths.load(p_idx)
-        nline(p_idx, obj.mover.cls, '')
+        nline(p_idx, '', '')
         print indent(str(obj),16)
 
 
