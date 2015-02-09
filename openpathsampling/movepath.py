@@ -242,7 +242,7 @@ class CollapsedMovePath(SampleMovePath):
 
     def __str__(self):
         if self.mover is not None:
-            return '%s [collapsed] : %d samples' % (self.mover.__class__.__name__, len(self._local_samples)) + ' ' + str(self._local_samples) + ''
+            return '%s [collapsed] : %d samples' % (self.mover.cls, len(self._local_samples)) + ' ' + str(self._local_samples) + ''
         else:
             return '%s [collapsed] : %d samples' % ('CollapsedMove', len(self._local_samples)) + ' ' + str(self._local_samples) + ''
 
