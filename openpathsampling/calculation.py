@@ -231,6 +231,7 @@ class PathSampling(Calculation):
             movepath = self.root_mover.move(self.globalstate)
             samples = movepath.samples
             self.globalstate = self.globalstate.apply_samples(samples, step=step)
+            self.globalstate.movepath = movepath
             if self.storage is not None:
                 self.globalstate.save_samples(self.storage)
                 self.globalstate.save(self.storage)
