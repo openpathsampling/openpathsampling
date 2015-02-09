@@ -159,9 +159,9 @@ class MovePath(object):
 
     def __str__(self):
         if self.accepted:
-            return 'SampleMove : %s : %s : %d samples' % (self.mover.__class__.__name__, self.accepted, len(self._local_samples)) + ' ' + str(self._local_samples) + ''
+            return 'SampleMove : %s : %s : %d samples' % (self.mover.cls, self.accepted, len(self._local_samples)) + ' ' + str(self._local_samples) + ''
         else:
-            return 'SampleMove : %s : %s :[]' % (self.mover.__class__.__name__, self.accepted)
+            return 'SampleMove : %s : %s :[]' % (self.mover.cls, self.accepted)
 
 
 @restores_as_full_object

@@ -738,7 +738,7 @@ class testMinusMover(object):
 
         seg_dir = {}
         for i in range(100):
-            movepath = self.mover.move(gs)
+            movepath = self.mover.move(gs).opened
             samples = movepath.samples
             assert_equal(len(samples), 5)
             s_inner = [s for s in samples if s.ensemble==self.innermost]
@@ -786,7 +786,7 @@ class testMinusMover(object):
         )
         gs = SampleSet([samp_other_ensemble, self.minus_sample])
         
-        movepath = self.mover.move(gs)
+        movepath = self.mover.move(gs).opened
         samples = movepath.all_samples
         assert_equal(self.innermost(innermost_other_ensemble), False)
         assert_equal(len(samples), 3) # stop after failed repex
@@ -803,7 +803,7 @@ class testMinusMover(object):
         )
         gs = SampleSet([samp_crosses_to_state, self.minus_sample])
         
-        movepath = self.mover.move(gs)
+        movepath = self.mover.move(gs).opened
         samples = movepath.all_samples
         assert_equal(self.innermost(innermost_crosses_to_state), True)
         assert_equal(len(samples), 3) # stop after failed repex
@@ -827,7 +827,7 @@ class testMinusMover(object):
 
         assert_equal(self.minus(minus_crosses_to_state), True)
 
-        movepath = self.mover.move(gs)
+        movepath = self.mover.move(gs).opened
         samples = movepath.all_samples
         assert_equal(len(samples), 3) # stop after failed repex
         assert_sampleset_accepted(samples, [True, False, False])
@@ -844,7 +844,7 @@ class testMinusMover(object):
         assert_equal(self.innermost(traj_bad_extension), True)
 
         gs = SampleSet([self.minus_sample, samp_bad_extension])
-        movepath = self.mover.move(gs)
+        movepath = self.mover.move(gs).opened
         samples = movepath.all_samples
         assert_equal(len(samples), 5) # reject the last one
         assert_sampleset_accepted(samples, [True] * 4 + [False])
