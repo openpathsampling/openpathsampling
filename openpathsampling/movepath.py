@@ -47,7 +47,7 @@ class MovePath(object):
         self._accepted = accepted
         self._destination = None
         self._local_samples = []
-        self._collapsed_samples = []
+        self._collapsed_samples = None
         self._samples = None
         self.mover = mover
 
@@ -70,7 +70,7 @@ class MovePath(object):
         Return a closed MovePath object copy
         """
         obj = CollapsedMovePath(samples=self.collapsed_samples, mover=self.mover)
-
+        obj._movepath = self
         return obj
 
     @property
@@ -79,9 +79,7 @@ class MovePath(object):
         Return a collapsed set of samples with non used samples removed
         """
         if self._collapsed_samples is None:
-
-            s = paths.SampleSet([])
-            s.apply_samples(self)
+            s = paths.SampleSet([]).apply_samples(self.samples)
 
             # keep order just for being thorough
             self._collapsed_samples = [
@@ -168,8 +166,8 @@ class MovePath(object):
 
 @restores_as_full_object
 class EmptyMovePath(MovePath):
-    def __init__(self):
-        super(EmptyMovePath, self).__init__(accepted=True)
+    def __init__(self, mover=None):
+        super(EmptyMovePath, self).__init__(accepted=True, mover=mover)
 
     def apply_to(self, other):
         return other
@@ -220,6 +218,8 @@ class SampleMovePath(MovePath):
 
 @restores_as_full_object
 class CollapsedMovePath(SampleMovePath):
+
+    @property
     def opened(self):
         if hasattr(self, '_movepath') and self._movepath is not None:
             return self._movepath
@@ -236,14 +236,15 @@ class CollapsedMovePath(SampleMovePath):
         """
         if self._collapsed_samples is None:
 
-            self.collapsed_samples = self._local_samples
+            self._collapsed_samples = self._local_samples
+
         return self._collapsed_samples
 
     def __str__(self):
         if self.mover is not None:
-            return '%s : %d samples' % (self.mover.__class__.__name__, len(self._local_samples)) + ' ' + str(self._local_samples) + ''
+            return '%s [collapsed] : %d samples' % (self.mover.__class__.__name__, len(self._local_samples)) + ' ' + str(self._local_samples) + ''
         else:
-            return '%s : %d samples' % ('CollapsedMove', len(self._local_samples)) + ' ' + str(self._local_samples) + ''
+            return '%s [collapsed] : %d samples' % ('CollapsedMove', len(self._local_samples)) + ' ' + str(self._local_samples) + ''
 
 
 @restores_as_full_object
@@ -252,8 +253,8 @@ class RandomChoiceMovePath(MovePath):
     RandomMoveMovePath contains only a reference to the underlying used
     MovePath
     """
-    def __init__(self, movepath):
-        super(RandomChoiceMovePath, self).__init__()
+    def __init__(self, movepath, mover=None):
+        super(RandomChoiceMovePath, self).__init__(mover=mover)
         self.movepath = movepath
 
     def to_dict(self):
@@ -283,8 +284,8 @@ class SequentialMovePath(MovePath):
     SequentialMovePath has no own samples, only inferred Sampled from the
     underlying MovePaths
     """
-    def __init__(self, movepaths):
-        super(SequentialMovePath, self).__init__(accepted=None)
+    def __init__(self, movepaths, mover=None):
+        super(SequentialMovePath, self).__init__(accepted=None, mover=mover)
         self.movepaths = movepaths
 
     def to_dict(self):
@@ -319,11 +320,10 @@ class SequentialMovePath(MovePath):
                (self.accepted, len(self.samples)) + \
                MovePath._indent('\n'.join(map(str, self.movepaths)))
 
-
 @restores_as_full_object
-class PartialMovePath(SequentialMovePath):
+class PartialAcceptanceSequentialMovePath(SequentialMovePath):
     """
-    PartialMovePath has no own samples, only inferred Sampled from the
+    PartialAcceptanceSequentialMovePath has no own samples, only inferred Sampled from the
     underlying MovePaths
     """
 
@@ -354,9 +354,9 @@ class PartialMovePath(SequentialMovePath):
                MovePath._indent('\n'.join(map(str, self.movepaths)))
 
 @restores_as_full_object
-class ExclusiveMovePath(SequentialMovePath):
+class ConditionalSequentialMovePath(SequentialMovePath):
     """
-    ExclusiveMovePath has no own samples, only inferred Sampled from the
+    ConditionalSequentialMovePath has no own samples, only inferred Sampled from the
     underlying MovePaths
     """
 
@@ -394,8 +394,8 @@ class ExclusiveMovePath(SequentialMovePath):
                MovePath._indent( '\n'.join(map(str, self.movepaths)))
 
 class KeepLastSampleMovePath(MovePath):
-    def __init__(self, movepath):
-        super(KeepLastSampleMovePath, self).__init__()
+    def __init__(self, movepath, mover=None):
+        super(KeepLastSampleMovePath, self).__init__(mover=mover)
         self.movepath = movepath
 
     def _get_samples(self):

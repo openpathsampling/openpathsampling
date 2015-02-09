@@ -113,6 +113,17 @@ if __name__ == '__main__':
             add = '{ %d : %f, ... } ' % obj.storage_caches[storage].iteritems().next()
         nline(p_idx,obj.name, str(len(obj.storage_caches[storage])) + ' entries ' + add)
 
+    headline("MovePaths")
+
+    for p_idx in range(0, storage.movepaths.count()):
+        obj = storage.movepaths.load(p_idx)
+        nline(p_idx, '', '')
+        print indent(str(obj),16)
+        print obj.__dict__
+        print obj.closed
+        print obj.__class__.__name__
+
+
     headline("SampleSets")
 
     for p_idx in range(0, storage.sampleset.count()):
@@ -163,7 +174,7 @@ if __name__ == '__main__':
             old_idx = idx
 
         if count > 1:
-            sys.stdout.write(" ... <" + str(count - 1) + "> ...")
+            sys.stdout.write(" <" + str(count - 1) + "> ")
         if count > 0:
             sys.stdout.write(" " + str(old_idx))
 

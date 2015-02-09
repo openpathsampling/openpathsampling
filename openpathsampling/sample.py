@@ -330,6 +330,9 @@ class Sample(object):
         mystr += "Details: "+str(self.details)+"\n"
         return mystr
 
+    def __repr__(self):
+        return '<Sample @ ' + str(hex(id(self))) + '>'
+
     @staticmethod
     def set_time(step, samples):
         for sample in samples:

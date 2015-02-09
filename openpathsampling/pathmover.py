@@ -503,7 +503,7 @@ class RandomChoiceMover(PathMover):
 
         mover = self.movers[idx]
 
-        path = paths.RandomChoiceMovePath(mover.move(globalstate))
+        path = paths.RandomChoiceMovePath(mover.move(globalstate), mover=self)
 
         return path
 
@@ -544,7 +544,7 @@ class ConditionalMover(PathMover):
             else:
                 resultclause = paths.EmptyMovePath()
 
-        return paths.SequentialMovePath([ifclause, resultclause])
+        return paths.SequentialMovePath([ifclause, resultclause], mover=self)
 
 
 @restores_as_stub_object
@@ -581,7 +581,7 @@ class SequentialMover(PathMover):
             subglobal = subglobal.apply_samples(samples)
             movepaths.append(movepath)
 
-        return paths.SequentialMovePath( movepaths)
+        return paths.SequentialMovePath(movepaths, mover=self)
 
 @restores_as_stub_object
 class PartialAcceptanceSequentialMover(SequentialMover):
@@ -620,7 +620,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
                 break
 
         logger.debug("==== FINISHING " + self.name + " ====")
-        return paths.PartialMovePath(movepaths)
+        return paths.PartialAcceptanceSequentialMovePath(movepaths, mover=self)
 
 
 @restores_as_stub_object
@@ -657,7 +657,7 @@ class ConditionalSequentialMover(SequentialMover):
             if not movepath.accepted:
                 break
 
-        return paths.ExclusiveMovePath(movepaths)
+        return paths.ConditionalSequentialMovePath(movepaths, mover=self)
 
 
 @restores_as_stub_object
@@ -667,7 +667,7 @@ class RestrictToLastSampleMover(PathMover):
 
     def move(self, globalstate):
         movepath = self.inner_mover.move(globalstate)
-        return paths.KeepLastSampleMovePath(movepath)
+        return paths.KeepLastSampleMovePath(movepath, mover=self)
 
 @restores_as_stub_object
 class ReplicaIDChangeMover(PathMover): 
@@ -1145,6 +1145,11 @@ class MinusMover(ConditionalSequentialMover):
         super(MinusMover, self).__init__(movers=movers,
                                          ensembles=ensembles,
                                          replicas=replicas)
+
+        return
+
+    def move(self, globalstate):
+        return super(MinusMover, self).move(globalstate).closed
 
 @restores_as_stub_object
 class MultipleSetMinusMover(RandomChoiceMover):
