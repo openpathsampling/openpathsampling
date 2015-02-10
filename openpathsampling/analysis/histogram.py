@@ -90,8 +90,15 @@ class Histogram(object):
         # None returns false: use that as a quick test
         if other == None:
             return False
+        if type(other.bins) is not int:
+            if type(self.bins) is int:
+                return False
+            for (t, b) in zip(self.bins, other.bins):
+                if t != b:
+                    return False
         else:
             return self._inputs == other._inputs
+        return True
 
     def _normalization(self):
         """Return normalization constant (integral over this histogram)."""

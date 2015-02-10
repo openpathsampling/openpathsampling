@@ -51,7 +51,25 @@ class testHistogram(object):
         assert_equal(histogram.count, 20)
 
     def test_compare_parameters(self):
-        raise SkipTest
+        assert_equal(self.hist_nbins.compare_parameters(None), False)
+        assert_equal(
+            self.hist_nbins_range.compare_parameters(self.hist_binwidth_range),
+            True
+        )
+        assert_equal(
+            self.hist_binwidth_range.compare_parameters(self.hist_nbins_range),
+            True
+        )
+        histo = Histogram(n_bins=5)
+        assert_equal(self.hist_nbins_range.compare_parameters(histo), False)
+        histo.histogram(self.data)
+        assert_equal(self.hist_nbins_range.compare_parameters(histo), True)
+        assert_equal(
+            self.hist_nbins_range.compare_parameters(self.hist_nbins),
+            False
+        )
+        assert_equal(histo.compare_parameters(self.hist_nbins), True)
+        assert_equal(self.hist_nbins.compare_parameters(histo), False)
 
     def test_normalized(self):
         raise SkipTest
