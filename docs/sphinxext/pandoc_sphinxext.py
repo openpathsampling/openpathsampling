@@ -61,8 +61,6 @@ def MakePandocDirective(pandoc_type=''):
                 stderr=subprocess.PIPE
             )
 
-
-
             out, err = p.communicate()
 
             print(out)

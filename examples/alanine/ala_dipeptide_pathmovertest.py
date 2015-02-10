@@ -20,7 +20,7 @@ sys.path.append(os.path.abspath('../../'))
 
 # in principle, all of these imports should be simplified once this is a
 # package
-from openpathsampling.orderparameter import OP_Function, OP_Volume
+from openpathsampling.orderparameter import OP_Function, OP_Volume, OP_MD_Function
 from openpathsampling.openmm_engine import OpenMMEngine
 from openpathsampling.snapshot import Snapshot
 from openpathsampling.volume import LambdaVolumePeriodic, VolumeFactory as vf
@@ -29,7 +29,9 @@ from openpathsampling.ensemble import EnsembleFactory as ef
 from openpathsampling.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
                               InXEnsemble)
 from openpathsampling.calculation import Bootstrapping
-from openpathsampling.pathmover import PathMover, MoveDetails, SequentialMover, ConditionalSequentialMover, PartialAcceptanceSequentialMover, ForwardShootMover
+from openpathsampling.pathmover import PathMover, MoveDetails, SequentialMover, \
+    ConditionalSequentialMover, PartialAcceptanceSequentialMover, \
+    ForwardShootMover, CollapseMove
 from openpathsampling.shooting import UniformSelector
 from openpathsampling.sample import Sample, SampleSet
 
@@ -79,14 +81,12 @@ if __name__=="__main__":
     # mdtraj's compute_dihedrals function, with the atoms in psi_atoms
 
     psi_atoms = [6,8,14,16]
-    psi = OP_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
-                      indices=[psi_atoms])
+    psi = OP_MD_Function("psi", md.compute_dihedrals, indices=[psi_atoms])
 
     # same story for phi, although we won't use that
 
     phi_atoms = [4,6,8,14]
-    phi = OP_Function("phi", md.compute_dihedrals, trajdatafmt="mdtraj",
-                      indices=[phi_atoms])
+    phi = OP_MD_Function("phi", md.compute_dihedrals, indices=[phi_atoms])
 
     # save the orderparameters in the storage
     # since they have no data cache this will only contain their name
@@ -161,6 +161,12 @@ use LeaveXEnsemble as we typically do with TIS paths.
     first_path = mover_set[0].move(first_set)
 
     print first_path.__dict__
+    print first_path
+
+    print 'Collapsed'
+
+    print first_path.collapsed_samples
+
 
     second_set = first_set + first_path
 #    second_set = first_set + first_path
@@ -186,19 +192,20 @@ use LeaveXEnsemble as we typically do with TIS paths.
     print first_path.samples
 
 
-    mover3 = SequentialMover([
+    mover3 = CollapseMove(SequentialMover([
         mover,
         PartialAcceptanceSequentialMover([mover] * 2),
-        ConditionalSequentialMover([
+        CollapseMove(ConditionalSequentialMover([
             PartialAcceptanceSequentialMover([mover] * 3)] * 2
-        ),
+        )),
         mover
-    ] * 3)
+    ] * 3))
 
     third_path = mover3.move(third_set)
 
     print third_path.samples
     print str(third_path)
+    print str(third_path.opened)
     print len(third_path)
 
     forth_set = third_set + third_path
