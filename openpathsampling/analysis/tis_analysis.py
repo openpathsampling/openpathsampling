@@ -7,14 +7,26 @@ preparation.
 
 Goal: RETIS for a simple A->B transition (one direction) boils down to
 
->>> # define orderparameter; stateA; stateB; engine; storage
->>> interfaces = VolumeSet(orderparameter, min=-infinity, max=[0.0, 0.1, 0.2])
->>> transition = RETISTransition(stateA, stateB, interfaces, storage)
->>> retis_calc = transition.calculation(engine, globalstate0)
+>>> import openpathsampling as paths
+>>> engine = ??? something that sets up the MD engine
+>>> storage = ??? something that sets up storage
+>>> orderparameter = paths.OP_Function("lambda", some_function)
+>>>
+>>> stateA = paths.LambdaVolume(orderparameter, min=-infinity, max=0.0)
+>>> stateB = paths.LambdaVolume(orderparameter, min=1.0, max=infinity)
+>>> interfaces = paths.VolumeSet(orderparameter, min=-infinity, max=[0.0, 0.1, 0.2])
+>>> transitionAB = paths.RETISTransition(stateA, stateB, interfaces, storage)
+>>> retis_calc = transitionAB.calculation(engine, globalstate0)
 >>> retis_calc.run(nsteps=10000)
->>> tcp = retis_calc.total_crossing_probability()
->>> flow = retis_calc.replica_flow()
->>> rate = retis_calc.rate()
+>>> tcp = transitionAB.total_crossing_probability()
+>>> flow = transitionAB.replica_flow()
+>>> rate = transitionAB.rate()
+
+Note that once the total crossing probability has been calculated once, it
+does not need to be recalculated as part of the rate. (Or, if it were
+calculated as part of the rate, it would be already available on its own.)
+In the order listed above, the time for the rate calculation is almost
+entirely in determining the flux from the information in the minus mover.
 """
 
 class Transition(object):
@@ -68,8 +80,8 @@ class TISTransition(Transition):
         """Dictionary of parameters for crossing probabilities"""
         pass
 
-    # properties which define the output format of analyzed data
-    @property
+    # analysis results: note that these are cached, but can be overridden by
+    # using `force=True` (or by changing the nature of histogram parameters)
     def individual_crossing_probabilities(self, force=False):
         """Return the crossing probability for each interface."""
         params_match = (self.crossing_probability_parameters == self._calcd_crossprob_params)
@@ -79,26 +91,25 @@ class TISTransition(Transition):
 
         return self._individual_crossing_probabilities
 
-    @property
     def total_crossing_probability(self, method="wham", force=False):
         """Return the total crossing probability using `method`"""
         pass
 
-    @property
-    def pathlength_histograms(self), force=False):
+    def pathlength_histograms(self, force=False):
         """Return histogram of the path length for each ensemble"""
         pass
 
-    @property
     def rate(self, flux, flux_error=None, force=False):
+        pass
+
+    def calculation(self):
+        """Creates a `PathSampling` object with reasonable defaults."""
         pass
 
 
 
 class RETISTransition(TISTransition):
-    """
-    Transition class for RETIS
-    """
+    """Transition class for RETIS."""
     def __init__(self, stateA, stateB, interfaces, storage=None):
         super(RETISTransition, self).__init__(stateA, stateB, interfaces, storage)
         self.movers['repex'] = []
@@ -131,5 +142,15 @@ class RETISTransition(TISTransition):
 
     @property
     def rate(self, flux=None, flux_error=None, force=False):
+        tcp = self.total_crossing_probability()
+        if flux is None:
+            flux = self.minus_move_flux()
+
         pass
 
+    def calculation(self):
+        """Creates a `PathSampling` object with reasonable defaults.
+        
+        Overrides `TISTransition.calculation`.
+        """
+        pass
