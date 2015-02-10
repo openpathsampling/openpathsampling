@@ -13,10 +13,9 @@ class StorageQuery(object):
 
     def __call__(self, store):
         def _query_iterator(self, store):
-            if store in self.cache:
-                store_cache = self.cache[store]
-            else:
-                store_cache = {}
+            if store not in self.cache:
+                self.cache[store] = {}
+            store_cache = self.cache[store]
 
             n_object = store.count()
 
