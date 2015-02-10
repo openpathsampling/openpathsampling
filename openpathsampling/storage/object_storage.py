@@ -269,6 +269,7 @@ class ObjectStore(object):
 
             return this._idx
 
+
         def _save(this, storage):
             storage.save(this)
 
@@ -277,6 +278,12 @@ class ObjectStore(object):
 
         self.content_class.save = _save
         self.content_class.idx = property(_idx)
+
+        if not hasattr(self.content_class, 'cls'):
+            def _cls(this):
+                return this.__class__.__name__
+
+            self.content_class.cls = property(_cls)
 
         # register as a base_class for storable objects
         self.storage.links.append(self)

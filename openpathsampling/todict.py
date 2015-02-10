@@ -173,7 +173,9 @@ def restores_as_full_object(super_class):
 
 
 class LoadedObject(object):
-    pass
+    @property
+    def cls(self):
+        return self._cls
 
 
 def restores_as_stub_object(super_class):
@@ -207,7 +209,8 @@ def restores_as_stub_object(super_class):
             for key, value in my_dict.iteritems():
                 setattr(obj, key, value)
 
-            setattr(obj, 'cls', cls.__name__)
+            setattr(obj, '_cls', cls.__name__)
+
             return obj
 
         super_class.from_dict = classmethod(_from_dict)
