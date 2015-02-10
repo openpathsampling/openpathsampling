@@ -75,18 +75,20 @@ class CalvinistDynamics(DynamicsEngine):
             for frame in self.predestination:
                 frame_val = frame.coordinates[0][0]
                 snap_val = self._current_snap.coordinates[0][0]
-                #print "looking for " + str(snap_val) + " (" + str(frame_val) + ") " + str(snap_val==frame_val)
+                # print "looking for " + str(snap_val) + " (" + str(frame_val) + ") " + str(snap_val==frame_val)
                 if frame_val == snap_val:
                     self.frame_index = self.predestination.index(frame)
+                    break
 
+            print self.frame_index
 
         if self._current_snap.velocities[0][0] >= 0:
             self._current_snap = self.predestination[self.frame_index+1].copy()
             self.frame_index += 1
         else:
-            self._current_snap = self.predestination[self.frame_index-1].copy()
+            self._current_snap = self.predestination[self.frame_index-1].reversed_copy()
             self.frame_index -= 1
-        #print self._current_snap.coordinates[0,0]
+
         return self._current_snap
 
     def stop(self, trajectory):

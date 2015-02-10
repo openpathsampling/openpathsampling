@@ -626,10 +626,9 @@ class SequentialEnsemble(Ensemble):
         if type(max_overlap) is int:
             max_overlap = (max_overlap, )*(len(ensembles)-1)
 
-        # TODO: Explain why these are tuples here and not lists
-        self.ensembles = tuple(ensembles)
-        self.min_overlap = tuple(min_overlap)
-        self.max_overlap = tuple(max_overlap)
+        self.ensembles = ensembles
+        self.min_overlap = min_overlap
+        self.max_overlap = max_overlap
         self.greedy = greedy
 
         # sanity checks
@@ -1298,16 +1297,27 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
     D.W.H. Swenson and P.G. Bolhuis. J. Chem. Phys. 141, 044101 (2014). 
     doi:10.1063/1.4890037
     '''
+
+    # don't store unnecessary stuff we recreate at initialization
+    # TODO: Check with David if it makes sense to store these and allow
+    # them being used in __init__ instead of the self-made ones
+
+    _excluded_attr = ['ensembles', 'min_overlap', 'max_overlap']
+
     def __init__(self, state_vol, innermost_vol, n_l=2, greedy=False):
         if (n_l < 2):
             raise ValueError("The number of segments n_l must be at least 2")
+
+        self.state_vol = state_vol
+        self.innermost_vol = innermost_vol
+        self.greedy = greedy
         inA = InXEnsemble(state_vol)
         outA = OutXEnsemble(state_vol)
         outX = OutXEnsemble(innermost_vol)
         inX = InXEnsemble(innermost_vol)
         leaveX = LeaveXEnsemble(innermost_vol)
         interstitial = outA & inX
-        self.segment_ensemble = EnsembleFactory.TISEnsemble(
+        self._segment_ensemble = EnsembleFactory.TISEnsemble(
             state_vol, state_vol, innermost_vol)
         #interstitial = InXEnsemble(innermost_vol - state_vol)
         start = [
@@ -1325,7 +1335,7 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         ]
         ensembles = start + loop*(n_l-1) + end
 
-        self._n_l = n_l
+        self.n_l = n_l
 
         super(MinusInterfaceEnsemble, self).__init__(ensembles, greedy=greedy)
 

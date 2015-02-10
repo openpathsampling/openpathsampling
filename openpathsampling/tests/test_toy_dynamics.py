@@ -192,7 +192,6 @@ class testToyEngine(object):
         self.sim.configuration = Configuration(
             coordinates=np.array([[1, 2, 3]])
         )
-        print self.sim.positions
         assert_items_equal(self.sim.positions, [1, 2])
 
 

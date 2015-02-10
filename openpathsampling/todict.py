@@ -67,7 +67,6 @@ class ObjectJSON(object):
                     attributes = self.build(obj['_dict'])
                     return self.class_list[obj['_cls']].from_dict(attributes)
                 else:
-                    print self.class_list
                     raise ValueError('Cannot create obj of class "' + obj['_cls']+ '". Class is not registered as creatable!')
             else:
                 return {key : self.build(o) for key, o in obj.iteritems()}
@@ -110,7 +109,15 @@ class ObjectJSON(object):
 
     def to_json_object(self, obj, base_type = ''):
         simplified = self.simplify_object(obj, base_type)
-        return json.dumps(simplified)
+        try:
+            json_str = json.dumps(simplified)
+        except TypeError:
+            print obj.__class__.__name__
+            print obj.__dict__
+            print simplified
+            raise ValueError('Not possible to turn object into json')
+
+        return json_str
 
     def from_json(self, json_string):
         simplified = yaml.load(json_string)
@@ -152,8 +159,13 @@ def restores_as_full_object(super_class):
         def _from_dict(cls, my_dict = None):
             if my_dict is None:
                 my_dict={}
-
-            return cls(**my_dict)
+            try:
+                obj = cls(**my_dict)
+            except TypeError as e:
+                print my_dict
+                print cls.__name__
+                print e
+            return obj
 
         super_class.from_dict = classmethod(_from_dict)
 

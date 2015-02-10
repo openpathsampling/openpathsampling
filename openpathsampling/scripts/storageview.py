@@ -23,6 +23,11 @@ if __name__ == '__main__':
         mode = 'a'
     )
 
+    def indent(s, width=4):
+        spl = s.split('\n')
+        spl = [' '*width + p for p in spl]
+        return '\n'.join(spl)
+
     def headline(s):
         print
         print "###############################################################################"
@@ -108,6 +113,14 @@ if __name__ == '__main__':
             add = '{ %d : %f, ... } ' % obj.storage_caches[storage].iteritems().next()
         nline(p_idx,obj.name, str(len(obj.storage_caches[storage])) + ' entries ' + add)
 
+    headline("SampleSets")
+
+    for p_idx in range(0, storage.sampleset.count()):
+        obj = storage.sampleset.load(p_idx)
+        nline(p_idx, str(len(obj.samples)) + ' sample(s)', [storage.idx(sample) for sample in obj.samples ])
+        print
+        print indent(str(obj.movepath),16)
+
 
     headline("Samples")
 
@@ -166,13 +179,13 @@ if __name__ == '__main__':
 #        sample.details
 
         nline(o_idx, '', sample.details.json)
-        nline(o_idx, '',
-              (str([t.idx[storage] for t in sample.details.inputs])
-               + " -> " + str(sample.details.trial.idx[storage])
-               + " in " + sample.ensemble.name
-               + " [" + str(sample.ensemble.idx[storage]) + "]"
-              )
-             )
+#        nline(o_idx, str(sample.details.mover.name),
+#              (str([t.idx[storage] for t in sample.details.inputs])
+#               + " -> " + str(sample.details.trial.idx[storage])
+#               + " in " + sample.ensemble.name
+#               + " [" + str(sample.ensemble.idx[storage]) + "]"
+#              )
+#             )
 #        nline(o_idx, '', str(sample.details.start_point.index) + " -> " + str(sample.details.final_point.index))
         if hasattr(sample.details, 'start'):
             print_traj('start', sample.details.start)

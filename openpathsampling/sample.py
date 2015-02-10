@@ -1,6 +1,7 @@
 import random
 
 import openpathsampling as paths
+import copy
 
 class SampleKeyError(Exception):
     def __init__(self, key, sample, sample_key):
@@ -9,7 +10,6 @@ class SampleKeyError(Exception):
         self.sample_key = sample_key
         self.msg = (str(self.key) + " does not match " + str(self.sample_key)
                     + " from " + str(self.sample))
-
 
 class SampleSet(object):
     '''
@@ -41,11 +41,16 @@ class SampleSet(object):
         A dictionary with replica IDs as keys and lists of Samples as values
     '''
 
-    def __init__(self, samples):
+    def __init__(self, samples, movepath=None):
         self.samples = []
         self.ensemble_dict = {}
         self.replica_dict = {}
         self.extend(samples)
+        if movepath is None:
+            self.movepath = paths.EmptyMovePath()
+        else:
+            self.movepath = movepath
+
 
     def __getitem__(self, key):
         if isinstance(key, paths.Ensemble):
@@ -149,6 +154,24 @@ class SampleSet(object):
         for sample in samples:
             # TODO: should time be a property of Sample or SampleSet?
             sample.step = step
+            if sample.intermediate == False:
+                newset[sample.replica] = sample
+        return newset
+
+    def apply_intermediates(self, samples, step=None, copy=True):
+        '''Return updated SampleSet, including all intermediates.
+
+        Useful in SequentialMovers.
+        '''
+        if type(samples) is Sample:
+            samples = [samples]
+        if copy==True:
+            newset = SampleSet(self)
+        else:
+            newset = self
+        for sample in samples:
+            # TODO: should time be a property of Sample or SampleSet?
+            sample.step = step
             newset[sample.replica] = sample
         return newset
 
@@ -159,7 +182,7 @@ class SampleSet(object):
     def ensemble_list(self):
         '''Returns the list of ensembles in this SampleSet'''
         return self.ensemble_dict.keys()
-            
+
     def save_samples(self, storage):
         """
         Save all samples in the current GlobalState object. This should be
@@ -210,6 +233,56 @@ class SampleSet(object):
             assert self.samples.count(samp) == 1, \
                     "More than one instance of %r!" % samp
 
+    def __add__(self, other):
+        """
+        Add the move path to the Sample and return the new sample set
+        """
+        new_set = other.apply_to(self)
+        new_set.movepath = other
+        return new_set
+
+    # @property
+    # def ensemble_dict(self):
+    #     if self._ensemble_dict is None:
+    #         self._ensemble_dict = self._get_ensemble_dict()
+    #
+    #     return self._ensemble_dict
+    #
+    # def _get_ensemble_dict(self):
+    #     """
+    #     Returns the dictionary of ensembles and their samples but not cached
+    #     :return:
+    #     """
+    #     ensembles = set([sample.ensemble for sample in self.samples])
+    #     print ensembles
+    #     return { sample.ensemble : [sample for sample in self.samples if sample.ensemble is ensemble] for ensemble in ensembles}
+    #
+    #
+    # @property
+    # def replica_dict(self):
+    #     if self._replica_dict is None:
+    #         self._replica_dict = self._get_replica_dict()
+    #
+    #     return self._replica_dict
+    #
+    # def _get_replica_dict(self):
+    #     """
+    #     Returns the dictionary of replica and their samples but not cached
+    #     :return:
+    #     """
+    #     replicas = set([sample.replica for sample in self.samples])
+    #     return { sample.replica : [sample for sample in self.samples if sample.replica is replica] for replica in replicas}
+    #
+    # def __plus__(self, other):
+    #     if other.predecessor is self:
+    #         newset = self.copy()
+    #         for sample in other._samples:
+    #             if sample not in self._samples:
+    #                 self._append(sample)
+    #
+    #         return newset
+    #     else:
+    #         raise ValueError('Incompatible MovePaths')
 
 
 class Sample(object):
@@ -238,10 +311,11 @@ class Sample(object):
         the Monte Carlo step number associated with this Sample
     """
 
-    def __init__(self, replica=None, trajectory=None, ensemble=None, details=None, step=-1):
+    def __init__(self, replica=None, trajectory=None, ensemble=None, intermediate=False, details=None, step=-1):
         self.replica = replica
         self.ensemble = ensemble
         self.trajectory = trajectory
+        self.intermediate = intermediate
         self.details = details
         self.step = step
 
@@ -269,7 +343,7 @@ class Sample(object):
             replica=self.replica,
             trajectory=self.trajectory,
             ensemble=self.ensemble,
-            details=paths.MoveDetails.initialization(self.trajectory, self.ensemble)
+            details=paths.MoveDetails.initialization(self)
         )
         return result
 
