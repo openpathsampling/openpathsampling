@@ -289,32 +289,6 @@ class ObjectStore(object):
 
         cls._delayed_loading[variable] = loader
 
-    def copy(self):
-        """
-        Create a deep copy of the ObjectStore instance
-
-        Returns
-        -------
-        ObjectStore()
-            the copied instance
-        """
-        store = copy.deepcopy(self)
-        return store
-
-    def __call__(self, storage):
-        """
-        Create a deep copy of the ObjectStore instance using the new store
-        provided as function argument
-
-        Returns
-        -------
-        ObjectStore()
-            the copied instance
-        """
-        store = self.copy()
-        store.storage = storage
-        return store
-
     def idx_by_name(self, needle):
         """
         Return the index for the (first) object with a given name from the store
@@ -541,6 +515,10 @@ class ObjectStore(object):
         -------
         number : int
             number of objects in the storage.
+
+        Notes
+        -----
+        Use len(store) instead
         '''
         return int(len(self.storage.dimensions[self.idx_dimension]))
 
