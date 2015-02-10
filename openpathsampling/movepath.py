@@ -73,6 +73,15 @@ class MovePath(object):
         obj._movepath = self
         return obj
 
+    def reduced(self, samples):
+        """
+        Reduce the underlying MovePath to a subset of relevant samples
+        """
+
+
+
+        obj = CollapsedMovePath(samples = )
+
     @property
     def collapsed_samples(self):
         """

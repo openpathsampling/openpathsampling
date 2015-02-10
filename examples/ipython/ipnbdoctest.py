@@ -129,13 +129,13 @@ class IPyTestConsole(TravisConsole):
             my_list.update(okay_list)
 
         if my_list[result]:
-            tv.write(self.green('ok'))
+            self.write(self.green('ok'))
             self.pass_count += 1
         else:
-            tv.write(self.red('fail'))
+            self.write(self.red('fail'))
             self.fail_count += 1
 
-        tv.writeln(' [' + result + ']')
+        self.writeln(' [' + result + ']')
         self.result_count[result] += 1
 
 

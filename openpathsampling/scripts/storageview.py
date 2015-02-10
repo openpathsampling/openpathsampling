@@ -153,7 +153,6 @@ if __name__ == '__main__':
         nline(p_idx, '', '')
         print indent(str(obj),16)
 
-
     headline("SampleSets")
 
     for p_idx in range(0, storage.sampleset.count()):
