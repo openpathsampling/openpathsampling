@@ -6,29 +6,42 @@ import numpy as np
 import openpathsampling as paths
 import simtk.unit as u
 
-class StorageQuery(object):
-    def __init__(self, query_fnc = None):
-        self.cache = {}
+class Query(object):
+    """
+    Return
+    """
+    def __init__(self, query_fnc = None, caching = True):
+        if caching:
+            self.cache = {}
+        else:
+            self.cache = None
         self.query_fnc = query_fnc
 
     def __call__(self, store):
         def _query_iterator(self, store):
-            if store not in self.cache:
-                self.cache[store] = {}
-            store_cache = self.cache[store]
+            if self.cache is not None:
+                if store not in self.cache:
+                    self.cache[store] = {}
+                store_cache = self.cache[store]
 
-            n_object = store.count()
+                n_object = len(store)
 
-            for idx in range(n_object):
-                if idx in store_cache:
-                    if store_cache[idx]:
-                        yield store.load(idx)
-                else:
-                    obj = store.load(idx)
-                    result = self.query_fnc(obj)
-                    self.cache[store][idx] = result
-                    if result:
-                        yield obj
+                for idx in range(n_object):
+                    if self.cache is not None:
+                        if idx in store_cache:
+                            if store_cache[idx]:
+                                yield store[idx]
+                        else:
+                            obj = store.load(idx)
+                            result = self.query_fnc(obj)
+                            self.cache[store][idx] = result
+                            if result:
+                                yield obj
+                    else:
+                        obj = store.load(idx)
+                        result = self.query_fnc(obj)
+                        if result:
+                            yield obj
 
         return _query_iterator(self, store)
 
@@ -349,6 +362,27 @@ class ObjectStore(object):
         if self.is_named:
             for idx, name in enumerate(self.storage.variables[self.db + "_name"][:]):
                 self.cache[name] = idx
+
+    def __iter__(self):
+        """
+        Add iteration over all elements in the storage
+        """
+        return self.iterator()
+
+    def __len__(self):
+        """
+        Return the number of stored objects
+
+        Returns
+        -------
+        int
+            number of stored objects
+
+        Notes
+        -----
+        Equal to `store.count()`
+        """
+        return self.count()
 
     def iterator(this, iter_range = None):
         """
