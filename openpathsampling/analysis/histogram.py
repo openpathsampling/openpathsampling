@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 class Histogram(object):
     """Wrapper for numpy.histogram with additional conveniences.
@@ -21,17 +22,22 @@ class Histogram(object):
         # and is useful for other programs that want to cache a histogram
         self._inputs = [n_bins, bin_width, bin_range]
 
+        self.bin_width = None # if not set elsewhere
+        self.bin_range = None # if not set elsewhere
+
         # regularize options
-        max_bin = max(bin_range)
-        min_bin = min(bin_range)
         if bin_range is not None:
+            max_bin = max(bin_range)
+            min_bin = min(bin_range)
             if bin_width is not None:
                 self.bin_width = bin_width
-                self.n_bins = (max_bin-min_bin)/self.bin_width
+                self.n_bins = int(math.ceil((max_bin-min_bin)/self.bin_width))
+                # if this isn't actually divisible, you'll get one extra bin
             if n_bins is not None:
                 self.n_bins = n_bins
                 self.bin_width = (max_bin-min_bin)/(self.n_bins)
-            self.bins = [min_bin + self.bin_width*i for i in range(nbins+1)]
+            self.bins = [min_bin + self.bin_width*i 
+                         for i in range(self.n_bins+1)]
         else:
             if n_bins is not None:
                 self.n_bins = n_bins
