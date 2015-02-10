@@ -71,16 +71,63 @@ class MovePath(object):
         """
         obj = CollapsedMovePath(samples=self.collapsed_samples, mover=self.mover)
         obj._movepath = self
+
         return obj
 
-    def reduced(self, samples):
+    def reduced(self, selected_samples = None, use_all_samples=False):
         """
         Reduce the underlying MovePath to a subset of relevant samples
+
+        This can be used to reduce a MovePath (and everything below) to
+        a movepath that only uses specific samples that can be picked
+        from the list of all returned samples. Note that this can be
+        problematic since a move might not return a different number of
+        samples each time it is run.
+
+        Parameters
+        ----------
+        selected_samples : list of int
+            list of integer indices to be kept from the list of returned
+            samples in this movepath. Slicing is not allowed, but negative
+            indices are and conforms to the usual python convention (-1
+            is the last samples, etc.)
+        use_all_samples : bool
+            if `True` the selected samples will be chosen from the list of
+            all created samples (accepted and rejected ones), otherwise only
+            the accepted ones will be chosen from. This is the default and
+            corresponds to chose from `.samples`
         """
 
+        # @DWHS do we want to allow also to select rejected samples? Meaning,
+        # that we could allow the user to pick samples from .all_samples
+        # or .samples
 
+        # the check for collapsed_samples makes sure that at least the
+        # relevant ones are present
 
-        obj = CollapsedMovePath(samples = )
+        if selected_samples is None:
+            # this case corresponds to .closed
+            return self.closed
+
+        if use_all_samples:
+            # choose all generated samples
+            sample_set = self.all_samples
+        else:
+            # chose only accepted ones!
+            sample_set = self.samples
+
+        # allow for negative indices to be picked, e.g. -1 is the last sample
+        selected_samples = [ idx % len(sample_set) for idx in selected_samples]
+
+        samples = [
+            samp for idx, samp in enumerate(sample_set)
+            if idx in selected_samples or samp in self.collapsed_samples
+        ]
+
+        obj = CollapsedMovePath(samples = samples, mover=self.mover)
+        obj._movepath = self
+
+        return obj
 
     @property
     def collapsed_samples(self):
