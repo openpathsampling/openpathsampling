@@ -56,4 +56,4 @@ from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
 
 from movepath import EmptyMovePath, ConditionalSequentialMovePath, MovePath, \
     PartialAcceptanceSequentialMovePath, RandomChoiceMovePath, SampleMovePath, SequentialMovePath, \
-    KeepLastSampleMovePath, CollapsedMovePath
+    KeepLastSampleMovePath, CollapsedMovePath, FilterSamplesMovePath

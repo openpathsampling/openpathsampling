@@ -126,6 +126,18 @@ class MoveDetails(object):
         details.result = sample.trajectory
         return details
 
+def keep_selected_samples(func):
+    def wrapper(self, *args, **kwargs):
+        if 'keep_samples' in kwargs:
+            keep_samples = kwargs['keep_samples']
+            del kwargs['keep_samples']
+            movepath = func(*kwargs, **kwargs)
+            return paths.FilterSamplesMovePath(movepath, selected_samples=keep_samples)
+        else:
+            movepath = func(*kwargs, **kwargs)
+            return movepath
+
+    return wrapper
 
 
 @restores_as_stub_object
@@ -258,6 +270,7 @@ class PathMover(object):
                      + ")")
         return selected
 
+    @keep_selected_samples
     def move(self, globalstate):
         '''
         Run the generation starting with the initial trajectory specified.
@@ -336,7 +349,8 @@ class ShootMover(PathMover):
     
     def _generate(self, ensemble):
         self.trial = self.start
-    
+
+    @keep_selected_samples
     def move(self, globalstate):
         # select a legal sample, use it to determine the trajectory and the
         # ensemble needed for the dynamics
@@ -489,7 +503,8 @@ class RandomChoiceMover(PathMover):
 
         initialization_logging(init_log, self,
                                entries=['movers', 'weights'])
-    
+
+    @keep_selected_samples
     def move(self, globalstate):
         rand = np.random.random() * sum(self.weights)
         idx = 0
@@ -526,6 +541,7 @@ class ConditionalMover(PathMover):
         initialization_logging(init_log, self,
                                ['if_mover', 'then_mover', 'else_mover'])
 
+    @keep_selected_samples
     def move(self, globalstate):
         subglobal = globalstate
 
@@ -564,6 +580,7 @@ class SequentialMover(PathMover):
         self.movers = movers
         initialization_logging(init_log, self, ['movers'])
 
+    @keep_selected_samples
     def move(self, globalstate):
         logger.debug("Starting sequential move")
 
@@ -595,6 +612,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     promotion ConditionalSequentialMover. Even if the EnsembleHop fails, the
     accepted shooting move should be accepted.
     '''
+    @keep_selected_samples
     def move(self, globalstate):
         logger.debug("==== BEGINNING " + self.name + " ====")
         subglobal = SampleSet(self.legal_sample_set(globalstate))
@@ -637,6 +655,7 @@ class ConditionalSequentialMover(SequentialMover):
     ConditionalSequentialMover only works if there is a *single* active
     sample per replica.
     '''
+    @keep_selected_samples
     def move(self, globalstate):
         logger.debug("Starting conditional sequential move")
 
@@ -665,6 +684,7 @@ class RestrictToLastSampleMover(PathMover):
     def __init__(self, inner_mover):
         self.inner_mover = inner_mover
 
+    @keep_selected_samples
     def move(self, globalstate):
         movepath = self.inner_mover.move(globalstate)
         return paths.KeepLastSampleMovePath(movepath, mover=self)
@@ -683,6 +703,7 @@ class ReplicaIDChangeMover(PathMover):
         initialization_logging(logger=init_log, obj=self, 
                                entries=['replica_pairs'])
 
+    @keep_selected_samples
     def move(self, globalstate):
         legal_from_rep = [rep[0] for rep in self.replica_pairs]
         rep_sample = self.select_sample(globalstate,
@@ -755,6 +776,7 @@ class EnsembleHopMover(PathMover):
         ens_pair = random.choice(legal_pairs)
         return ens_pair
 
+    @keep_selected_samples
     def move(self, globalstate):
         ens_pair = self.select_ensemble_pair(globalstate)
         ens_from = ens_pair[0]
@@ -814,6 +836,7 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
         super(ForceEnsembleChangeMover, self).__init__(ensembles=ensembles,
                                                        replicas=replicas)
 
+    @keep_selected_samples
     def move(self, globalstate):
         ens_pair = self.select_ensemble_pair(globalstate)
         ens_from = ens_pair[0]
@@ -863,6 +886,7 @@ class RandomSubtrajectorySelectMover(PathMover):
     def _choose(self, trajectory_list):
         return random.choice(trajectory_list)
 
+    @keep_selected_samples
     def move(self, globalstate):
         rep_sample = self.select_sample(globalstate)
         trajectory = rep_sample.trajectory
@@ -929,6 +953,8 @@ class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
 
 @restores_as_stub_object
 class PathReversalMover(PathMover):
+
+    @keep_selected_samples
     def move(self, globalstate):
         rep_sample = self.select_sample(globalstate, self.ensembles)
         trajectory = rep_sample.trajectory
@@ -981,6 +1007,7 @@ class ReplicaExchangeMover(PathMover):
                                entries=['bias'])
 
 
+    @keep_selected_samples
     def move(self, globalstate):
         if self.ensembles is not None:
             [ens1, ens2] = random.choice(self.ensembles)
@@ -1062,6 +1089,7 @@ class FilterByReplica(PathMover):
         # TODO: clean this up
         pass
 
+    @keep_selected_samples
     def move(self, globalstate):
         filtered_gs = SampleSet(
             [s for s in globalstate if s.replica in self.replicas]
@@ -1077,6 +1105,7 @@ class FilterBySample(PathMover):
         self.mover = mover
         self.use_all_samples = use_all_samples
 
+    @keep_selected_samples
     def move(self, globalstate):
         return paths.FilterSamplesMovePath(
             self.mover.move(globalstate),
@@ -1166,6 +1195,7 @@ class MinusMover(ConditionalSequentialMover):
 
         return
 
+    @keep_selected_samples
     def move(self, globalstate):
         return super(MinusMover, self).move(globalstate).closed
 
