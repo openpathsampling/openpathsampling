@@ -177,6 +177,9 @@ class LoadedObject(object):
     def cls(self):
         return self._cls
 
+    def __repr__(self):
+        return '<' + self._cls + ' at ' + str(hex(id(self))) + '>'
+
 
 def restores_as_stub_object(super_class):
     """

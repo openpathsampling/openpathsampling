@@ -799,6 +799,7 @@ class EnsembleHopMover(PathMover):
         details = MoveDetails()
         details.inputs = [rep_sample]
         details.result = trajectory
+        details.mover = self
         setattr(details, 'initial_ensemble', ens_from)
         setattr(details, 'trial_ensemble', ens_to)
         details.accepted = ens_to(trajectory)
