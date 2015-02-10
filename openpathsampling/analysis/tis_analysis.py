@@ -10,13 +10,19 @@ Goal: RETIS for a simple A->B transition (one direction) boils down to
 >>> import openpathsampling as paths
 >>> engine = ??? something that sets up the MD engine
 >>> storage = ??? something that sets up storage
+>>> globalstate0 = ??? something that sets up 
 >>> orderparameter = paths.OP_Function("lambda", some_function)
 >>>
 >>> stateA = paths.LambdaVolume(orderparameter, min=-infinity, max=0.0)
 >>> stateB = paths.LambdaVolume(orderparameter, min=1.0, max=infinity)
 >>> interfaces = paths.VolumeSet(orderparameter, min=-infinity, max=[0.0, 0.1, 0.2])
->>> transitionAB = paths.RETISTransition(stateA, stateB, interfaces, storage)
->>> retis_calc = transitionAB.calculation(engine, globalstate0)
+>>> transitionAB = paths.RETISTransition(stateA, stateB, orderparameter, interfaces, storage)
+>>> retis_calc = PathSampling(
+>>>     storage=storage,
+>>>     engine=engine,
+>>>     root_mover=transitionAB.default_movers(engine),
+>>>     globalstate=globalstate0
+>>> )
 >>> retis_calc.run(nsteps=10000)
 >>> tcp = transitionAB.total_crossing_probability()
 >>> flow = transitionAB.replica_flow()
@@ -48,23 +54,26 @@ class TISTransition(Transition):
     all the analysis (assuming we built these are proper TIS ensembles,
     which we DO in the intitialization!)
     """
-    def __init__(self, stateA, stateB, interfaces, storage=None):
+    def __init__(self, stateA, stateB, orderparameter, interfaces, storage=None):
         super(TISTransition, self).__init__(stateA, stateB, storage)
         # NOTE: making these into dictionaries like this will make it easy
         # to combine them in order to make a PathSampling calculation object
         self.movers['shooting'] = []
         self.movers['pathreversal'] = []
 
+        self.total_crossing_probability_method="wham" 
+
         self._calcd_crossprob_params = None # check if this changed
         self._calcd_pathlen_params = None # check if this changed 
 
-        # these get set when we run the calculation
+        # caches for the results of our calculations
         self._individual_crossing_probabilities = None
         self._total_crossing_probability = None
+        self._flux = None
+        self._rate = None
         pass
 
     # path movers
-
     @property
     def shooting_movers(self):
         return self.movers['shooting']
@@ -99,11 +108,23 @@ class TISTransition(Transition):
         """Return histogram of the path length for each ensemble"""
         pass
 
-    def rate(self, flux, flux_error=None, force=False):
+    def rate(self, flux=None, flux_error=None, force=False):
+        """Calculate the rate for this transition.
+
+        For TIS transitions, this requires the result of an external
+        calculation of the flux. 
+        """
+        if flux is not None:
+            self._flux = flux
+
+        if self._flux is None:
+            raise ValueError("No flux available to TISTransition. Cannot calculate rate")
+        
+        tcp = self.total_crossing_probability(force=force)
         pass
 
-    def calculation(self):
-        """Creates a `PathSampling` object with reasonable defaults."""
+    def default_movers(self, engine):
+        """Create reasonable default movers for a `PathSampling` calculation"""
         pass
 
 
@@ -148,9 +169,13 @@ class RETISTransition(TISTransition):
 
         pass
 
-    def calculation(self):
-        """Creates a `PathSampling` object with reasonable defaults.
+    def default_movers(self, engine):
+        """Create reasonable default movers for a `PathSampling` calculation
         
-        Overrides `TISTransition.calculation`.
+        Extends `TISTransition.default_movers`.
         """
+        pass
+
+class RETISBirectionalSetup(object):
+    def __init__(self, A_to_B, B_to_A):
         pass
