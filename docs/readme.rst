@@ -3,4 +3,4 @@
 README
 ======
 
-# .. markdown:: openpathsampling/README.md
+#.. markdown:: docs/README.md

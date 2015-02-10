@@ -16,15 +16,12 @@ class MovePath(object):
     should be kept consistent by any method which modifies the container.
     They do not need to be stored.
 
-    Note
-    ----
-        Current implementation is as an unordered set. Therefore we don't
-        have some of the convenient tools in Python sequences (e.g.,
-        slices). On the other hand, I'm not sure whether that is meaningful
-        here.
-
-        JHP: I changed it to be immutable! This makes it slower but better
-        tractable. Just a try
+    Notes
+    -----
+    Current implementation is as an unordered set. Therefore we don't
+    have some of the convenient tools in Python sequences (e.g.,
+    slices). On the other hand, I'm not sure whether that is meaningful
+    here.
 
     Attributes
     ----------
@@ -47,6 +44,7 @@ class MovePath(object):
         self._accepted = accepted
         self._destination = None
         self._local_samples = []
+        self._collapsed_samples = None
         self._samples = None
         self.mover = mover
 
@@ -57,9 +55,130 @@ class MovePath(object):
         }
 
     @property
+    def opened(self):
+        """
+        Return the full MovePath object
+
+        Notes
+        -----
+        The full Movepath can only be returned if it has been generated and
+        is still in memory. A collapsed Movepath that is loaded does NOT
+        contain the full information anymore. This is the whole purpose of
+        only storing essential information.
+        """
+        return self
+
+    @property
+    def closed(self):
+        """
+        Return a closed MovePath object copy
+
+        This will return a MovePath object that will still know the used
+        mover and all relevant samples. All underlying information about the
+        move is hidden and will not be stored
+        """
+        obj = CollapsedMovePath(samples=self.collapsed_samples, mover=self.mover)
+        obj._movepath = self
+
+        return obj
+
+    def reduced(self, selected_samples = None, use_all_samples=False):
+        """
+        Reduce the underlying MovePath to a subset of relevant samples
+
+        This can be used to reduce a MovePath (and everything below) to
+        a movepath that only uses specific samples that can be picked
+        from the list of all returned samples. Note that this can be
+        problematic since a move might not return a different number of
+        samples each time it is run.
+
+        Parameters
+        ----------
+        selected_samples : list of int
+            list of integer indices to be kept from the list of returned
+            samples in this movepath. Slicing is not allowed, but negative
+            indices are and conforms to the usual python convention (-1
+            is the last samples, etc.)
+        use_all_samples : bool
+            if `True` the selected samples will be chosen from the list of
+            all created samples (accepted and rejected ones), otherwise only
+            the accepted ones will be chosen from. This is the default and
+            corresponds to chose from `.samples`
+        """
+
+        # @DWHS do we want to allow also to select rejected samples? Meaning,
+        # that we could allow the user to pick samples from .all_samples
+        # or .samples
+
+        # the check for collapsed_samples makes sure that at least the
+        # relevant ones are present
+
+        if selected_samples is None:
+            # this case corresponds to .closed
+            return self.closed
+
+        if use_all_samples:
+            # choose all generated samples
+            sample_set = self.all_samples
+        else:
+            # chose only accepted ones!
+            sample_set = self.samples
+
+        # allow for negative indices to be picked, e.g. -1 is the last sample
+        selected_samples = [ idx % len(sample_set) for idx in selected_samples]
+
+        samples = [
+            samp for idx, samp in enumerate(sample_set)
+            if idx in selected_samples or samp in self.collapsed_samples
+        ]
+
+        obj = CollapsedMovePath(samples = samples, mover=self.mover)
+        obj._movepath = self
+
+        return obj
+
+    @property
+    def collapsed_samples(self):
+        """
+        Return a collapsed set of samples with non used samples removed
+
+        This is the minimum required set of samples to keep the `MovePath`
+        correct and allow to target sample set to be correctly created.
+        These are the samples used by `.closed`
+
+        Example
+        -------
+        Assume that you run 3 shooting moves for replica #1. Then only the
+        last of the three really matters for the target sample_set since #1
+        will be replaced by #2 which will be replaced by #3. So this function
+        will return only the last sample.
+
+        See also
+        --------
+        MovePath.closed
+        MovePath.reduced()
+
+        """
+        if self._collapsed_samples is None:
+            s = paths.SampleSet([]).apply_samples(self.samples)
+
+            # keep order just for being thorough
+            self._collapsed_samples = [
+                samp for samp in self.samples
+                if samp in s
+            ]
+
+        return self._collapsed_samples
+
+    @property
     def local_samples(self):
         """
         A list of the samples that are needed to update the new sampleset
+
+        Notes
+        -----
+        These samples are purely for this MovePath node and not for any
+        underlying nodes. It is effectively only used by SampleMovePath
         """
         return self._local_samples
 
@@ -68,19 +187,31 @@ class MovePath(object):
         """
         Returns a list of all samples generated during the PathMove.
 
-        This includes all rejected samples
-        """
+        This includes all accepted and rejected samples (which does NOT
+        include hidden samples yet)
 
+        TODO: Decide, if we want hidden samples to be included or not
+        """
         return self._local_samples
 
     @property
     def accepted(self):
+        """
+        Returns if this particular move was accepted.
+
+        Mainly used for rejected samples.
+        """
         if self._accepted is None:
             self._accepted = self._get_accepted()
 
         return self._accepted
 
     def _get_accepted(self):
+        """
+        The function that determines if a MovePath was accepted.
+
+        Is overridden by SequentialConditionalMovePath, etc.
+        """
         return True
 
     @property
@@ -91,12 +222,15 @@ class MovePath(object):
         """
         Standard apply is to apply the list of samples contained
         """
-        return paths.SampleSet(other).apply_samples(self._local_samples)
+        new_sampleset = paths.SampleSet(other).apply_samples(self.samples)
+        new_sampleset.movepath = self
 
     @property
     def samples(self):
         """
-        Returns a list of all samples that should be applied to
+        Returns a list of all samples that are accepted in this move
+
+        This contains unnecessary, but accepted samples, too.
         """
         if self._samples is None:
             self._samples = self._get_samples()
@@ -105,7 +239,9 @@ class MovePath(object):
 
     def _get_samples(self):
         """
-        A normal movepath
+        Determines all relevant accepted samples for this move
+
+        Includes all accepted samples also from submoves
         """
         if self.accepted:
             return self._local_samples
@@ -113,29 +249,42 @@ class MovePath(object):
             return []
 
     def __iter__(self):
+        """
+        Allow to iterate over all accepted samples in the move
+
+        This effectively iterates over `self.samples`
+        """
         for sample in self.samples:
             yield sample
 
     def __len__(self):
+        """
+        Returns the number of contained accepted samples
+
+        Shortcut for `len(self.samples)`
+        """
         return len(self.samples)
 
     def __contains__(self, item):
         """
-        Check, if a particular
+        Check, if a particular sample is among the accepted samples
         """
         return (item in self.samples)
 
     def __str__(self):
         if self.accepted:
-            return 'SampleMove : %s : %s : %d samples' % (self.mover.__class__.__name__, self.accepted, len(self._local_samples)) + ' ' + str(self._local_samples) + ''
+            return 'SampleMove : %s : %s : %d samples' % (self.mover.cls, self.accepted, len(self._local_samples)) + ' ' + str(self._local_samples) + ''
         else:
-            return 'SampleMove : %s : %s :[]' % (self.mover.__class__.__name__, self.accepted)
+            return 'SampleMove : %s : %s :[]' % (self.mover.cls, self.accepted)
 
 
 @restores_as_full_object
 class EmptyMovePath(MovePath):
-    def __init__(self):
-        super(EmptyMovePath, self).__init__(accepted=True)
+    """
+    A MovePath representing no changes
+    """
+    def __init__(self, mover=None):
+        super(EmptyMovePath, self).__init__(accepted=True, mover=mover)
 
     def apply_to(self, other):
         return other
@@ -155,9 +304,10 @@ class EmptyMovePath(MovePath):
 @restores_as_full_object
 class SampleMovePath(MovePath):
     """
-    Sample Move Path
+    A MovePath representing the application of samples.
 
-    Most common
+    This is the most common MovePath and all other moves use this
+    as leaves and on the lowest level consist only of `SampleMovePath`
     """
     def __init__(self, samples, accepted=True, mover=None):
         super(SampleMovePath, self).__init__(accepted=accepted, mover=mover)
@@ -185,13 +335,42 @@ class SampleMovePath(MovePath):
 
 
 @restores_as_full_object
+class CollapsedMovePath(SampleMovePath):
+    """
+    Represent a collapsed MovePath that has potential hidden sub moves
+    """
+    @property
+    def opened(self):
+        if hasattr(self, '_movepath') and self._movepath is not None:
+            return self._movepath
+        else:
+            return self
+
+    def closed(self):
+        return self
+
+    @property
+    def collapsed_samples(self):
+        if self._collapsed_samples is None:
+
+            self._collapsed_samples = self._local_samples
+
+        return self._collapsed_samples
+
+    def __str__(self):
+        if self.mover is not None:
+            return '%s [collapsed] : %d samples' % (self.mover.cls, len(self._local_samples)) + ' ' + str(self._local_samples) + ''
+        else:
+            return '%s [collapsed] : %d samples' % ('CollapsedMove', len(self._local_samples)) + ' ' + str(self._local_samples) + ''
+
+
+@restores_as_full_object
 class RandomChoiceMovePath(MovePath):
     """
-    RandomMoveMovePath contains only a reference to the underlying used
-    MovePath
+    A MovePath that represents the application of a mover chosen randomly
     """
-    def __init__(self, movepath):
-        super(RandomChoiceMovePath, self).__init__()
+    def __init__(self, movepath, mover=None):
+        super(RandomChoiceMovePath, self).__init__(mover=mover)
         self.movepath = movepath
 
     def to_dict(self):
@@ -206,9 +385,7 @@ class RandomChoiceMovePath(MovePath):
         return self.movepath.apply_to(other)
 
     def __str__(self):
-
-        if self.accepted:
-            return 'RandomChoice :\n' + MovePath._indent(str(self.movepath))
+        return 'RandomChoice :\n' + MovePath._indent(str(self.movepath))
 
     @property
     def all_samples(self):
@@ -221,8 +398,8 @@ class SequentialMovePath(MovePath):
     SequentialMovePath has no own samples, only inferred Sampled from the
     underlying MovePaths
     """
-    def __init__(self, movepaths):
-        super(SequentialMovePath, self).__init__(accepted=None)
+    def __init__(self, movepaths, mover=None):
+        super(SequentialMovePath, self).__init__(accepted=None, mover=mover)
         self.movepaths = movepaths
 
     def to_dict(self):
@@ -257,12 +434,11 @@ class SequentialMovePath(MovePath):
                (self.accepted, len(self.samples)) + \
                MovePath._indent('\n'.join(map(str, self.movepaths)))
 
-
 @restores_as_full_object
-class PartialMovePath(SequentialMovePath):
+class PartialAcceptanceSequentialMovePath(SequentialMovePath):
     """
-    PartialMovePath has no own samples, only inferred Sampled from the
-    underlying MovePaths
+    PartialAcceptanceSequentialMovePath has no own samples, only inferred
+    Sampled from the underlying MovePaths
     """
 
     def _get_samples(self):
@@ -287,15 +463,15 @@ class PartialMovePath(SequentialMovePath):
         return sampleset
 
     def __str__(self):
-        return 'PartialMove : %s : %d samples\n' % \
+        return 'PartialAcceptanceMove : %s : %d samples\n' % \
                (self.accepted, len(self.samples)) + \
                MovePath._indent('\n'.join(map(str, self.movepaths)))
 
 @restores_as_full_object
-class ExclusiveMovePath(SequentialMovePath):
+class ConditionalSequentialMovePath(SequentialMovePath):
     """
-    ExclusiveMovePath has no own samples, only inferred Sampled from the
-    underlying MovePaths
+    ConditionalSequentialMovePath has no own samples, only inferred Samples
+    from the underlying MovePaths
     """
 
     def apply_to(self, other):
@@ -327,13 +503,58 @@ class ExclusiveMovePath(SequentialMovePath):
         return True
 
     def __str__(self):
-        return 'ExclusiveMove : %s : %d samples\n' % \
+        return 'ConditionalSequentialMove : %s : %d samples\n' % \
                (self.accepted, len(self.samples)) + \
                MovePath._indent( '\n'.join(map(str, self.movepaths)))
 
+
+@restores_as_full_object
+class FilterSamplesMovePath(MovePath):
+    """
+    A MovePath that keeps a selection of the underlying samples
+    """
+    def __init__(self, movepath, selected_samples, use_all_samples=False, mover=None):
+        super(KeepLastSampleMovePath, self).__init__(mover=mover)
+        self.movepath = movepath
+        self.selected_samples = selected_samples
+        self.use_all_samples = use_all_samples
+
+
+    def _get_samples(self):
+        if self.use_all_samples:
+            # choose all generated samples
+            sample_set = self.all_samples
+        else:
+            # chose only accepted ones!
+            sample_set = self.samples
+
+        # allow for negative indices to be picked, e.g. -1 is the last sample
+        samples = [ idx % len(sample_set) for idx in self.selected_samples]
+
+        return samples
+
+    def __str__(self):
+        return 'FilterMove : pick samples [%s] from sub moves : %s : %d samples\n' % \
+               (str(self.selected_samples), self.accepted, len(self.samples)) + \
+               MovePath._indent( str(self.movepath) )
+
+@restores_as_full_object
 class KeepLastSampleMovePath(MovePath):
-    def __init__(self, movepath):
-        super(KeepLastSampleMovePath, self).__init__()
+    """
+    A MovePath that only keeps the last generated sample.
+
+    This is different from using `.reduced` which will only change the
+    level of detail that is stored. This MovePath will actually remove
+    potential relevant samples and thus affect the outcome of the new
+    SampleSet. To really remove samples also from storage you can use
+    this MovePath in combination with `.closed` or `.reduced`
+
+    Notes
+    -----
+    Does the same as `FilterSamplesMovePath(movepath, [-1], False)`
+    """
+    def __init__(self, movepath, mover=None):
+        super(KeepLastSampleMovePath, self).__init__(mover=mover)
         self.movepath = movepath
 
     def _get_samples(self):
@@ -347,220 +568,3 @@ class KeepLastSampleMovePath(MovePath):
         return 'Restrict to last sample : %s : %d samples\n' % \
                (self.accepted, len(self.samples)) + \
                MovePath._indent( str(self.movepath) )
-
-
-class MovePathIdea(object):
-    """
-    Information Class to contain the actual route/path of moves taken in
-    a complex (Path)Mover object
-
-    The contains all information necessary to
-    (a) turn the initial_sampleset into the final_sampleset
-    (b) contains the result of all submovers used in the generation of
-        the final MovePath, this includes the order in which the submoves
-        are called, if their result is the same as before (thus accepted)
-        and what samples were apply to the current (intermediate) MovePath
-
-    - The intermediate samplesets are not stored but used internally to track
-    results.
-    - Each submove has a MovePath as result and samplesets are changed using
-    samples
-    -
-
-    Examples
-    --------
-    >>> mover = Sequential([moveA1,
-    >>>     Progressive([moveB1, moveB2]),
-    >>>     Exclusive([moveC1, moveC2]),
-    >>>     moveA2
-    >>> ])
-    >>> bucket2 = mover(bucket1)
-    >>> movepath = bucket2.movepath
-    >>> print movepath
-
-    # All attempted move possibilities
-
-    1: [moveA1:y, moveB1:y, moveB2:y, moveC1:y, moveC2:y, moveA2:y]
-    2: [moveA1:y, moveB1:y, moveB2:y, moveC1:y, moveC2:n, moveA2:y]
-    3: [moveA1:y, moveB1:y, moveB2:y, moveC1:n,           moveA2:y]
-    4: [moveA1:y, moveB1:y, moveB2:n, moveC1:y, moveC2:y, moveA2:y]
-    5: [moveA1:y, moveB1:y, moveB2:n, moveC1:y, moveC2:n, moveA2:y]
-    6: [moveA1:y, moveB1:y, moveB2:n, moveC1:n,           moveA2:y]
-    7: [moveA1:y, moveB1:n,           moveC1:y, moveC2:y, moveA2:y]
-    8: [moveA1:y, moveB1:n,           moveC1:y, moveC2:n, moveA2:y]
-    9: [moveA1:y, moveB1:n,           moveC1:n,           moveA2:y]
-
-    # Accepted Move possibilities
-    1: [moveA1:y, moveB1:y, moveB2:y, moveC1:y, moveC2:y, moveA2:y]
-    2: [moveA1:y, moveB1:y, moveB2:y, moveC1:y,           moveA2:y]
-    3: [moveA1:y, moveB1:y, moveB2:y,                     moveA2:y]
-    4: [moveA1:y, moveB1:y,           moveC1:y, moveC2:y, moveA2:y]
-    5: [moveA1:y, moveB1:y,           moveC1:y,           moveA2:y]
-    6: [moveA1:y, moveB1:y,                               moveA2:y]
-    7: [moveA1:y,                     moveC1:y, moveC2:y, moveA2:y]
-    8: [moveA1:y,                     moveC1:y,           moveA2:y]
-    9: [moveA1:y,                                         moveA2:y]
-
-    # All possible move paths
-    1: S([moveA1:y, P([moveB1:y, moveB2:y]):y, E([moveC1:y, moveC2:y]):y, moveA2:y]):y
-    2: S([moveA1:y, P([moveB1:y, moveB2:y]):y, E([moveC1:y, moveC2:n]):n, moveA2:y]):y
-    3: S([moveA1:y, P([moveB1:y, moveB2:y]):y, E([moveC1:n]):n,           moveA2:y]):y
-    4: S([moveA1:y, P([moveB1:y, moveB2:n]):y, E([moveC1:y, moveC2:y]):y, moveA2:y]):y
-    5: S([moveA1:y, P([moveB1:y, moveB2:n]):y, E([moveC1:y, moveC2:n]):n, moveA2:y]):y
-    6: S([moveA1:y, P([moveB1:y, moveB2:n]):y, E([moveC1:n]):n,           moveA2:y]):y
-    7: S([moveA1:y, P([moveB1:n]):y,           E([moveC1:y, moveC2:y]):y, moveA2:y]):y
-    8: S([moveA1:y, P([moveB1:n]):y,           E([moveC1:y, moveC2:n]):n, moveA2:y]):y
-    9: S([moveA1:y, P([moveB1:n]):y,           E([moveC1:n]):n,           moveA2:y]):y
-
-    # Number of all moves
-    1: 6
-    2: 6
-    3: 5
-    4: 6
-    5: 6
-    6: 5
-    7: 5
-    8: 5
-    9: 4
-
-    # Number of accepted moves
-    1: 6
-    2: 5
-    3: 4
-    4: 5
-    5: 4
-    6: 3
-    7: 4
-    8: 3
-    9: 2
-
-    # Examples for no #8
-
-    S([
-        moveA1:y:[sample1, sample2],
-        P([
-            moveB1:y:[sample3, sample4],
-            moveB2:n:[sample5, sample6]
-        ]):y:[sample3, sample4],
-        E([
-            moveC1:y:[sample7, sample8, sample9],
-            moveC2:n:[sample10, sample11]
-        ]):n:[],
-        moveA2:y:[sample12]
-    ]):y:[sample1, sample2, sample3, sample4, sample12]
-
-    MovePaths form a group like structure with our known concatenation of
-    applying all samples in a row. But this requires that application of
-    Samples is unique. Can we assure that? This requires to set an initial
-    sample that is to be replaced by another or nothing. Adding just means to
-    start from an emtpy sample. The randomness need to be stored in the sample.
-    The we can really do
-
-    setA * setB = setC
-
-    setA * setB * setC = setA * (setB * setC) = (setA * setB) * setC
-
-    setA * setB = []
-
-    We need MovePath to know the original MovePath and a MovePath
-    that contain the moves, which can be nested. So A Move takes the full
-    MoveSample and Returns the object with added Moves which are itself
-    a MovePath.
-
-    SeqentialMovePath(
-        initial_set, [
-        MovePath(
-            moveA1:y:initial_set + [sample1, sample2]
-        ),
-        PartialMovePath(
-        [
-            moveB1:y:initial_set + [sample1, sample2] + [sample3, sample4],
-            moveB2:n:initial_set + [sample1, sample2] + [sample3, sample4] + [sample5, sample6]
-        ]):y:initial_set + [sample1, sample2] + [sample3, sample4],
-        ExcluiveMovePath([
-            moveC1:y:initial_set + [sample1, sample2] + [sample3, sample4] + [sample7, sample8, sample9],
-            moveC2:n:initial_set + [sample1, sample2] + [sample3, sample4] + [sample7, sample8, sample9] + [sample10, sample11]
-        ]):n:[],
-        moveA2:y:initial_set + [sample1, sample2] + [sample3, sample4] + [sample12]
-    ]):y:initial_set + [sample1, sample2] + [sample3, sample4] + [sample12]
-
-
-    Attributes
-    ----------
-    initial_sampleset : MovePath
-        the initial MovePath where the path originates
-    final_sampleset : MovePath
-        the final MovePath where the path ends
-    pathmover : PathMover
-        a reference to the full PathMover object called that generated
-        this path
-
-    """
-
-    def __init__(self):
-        self.initial_sampleset = None
-        self.final_sampleset = None
-        self.pathmover = None
-        self.moves = None
-        pass
-
-    def samples(self):
-        """
-        Returns all samples generated along the movepath
-
-        :return:
-        """
-
-        list_of_samples = []
-
-        return list_of_samples
-
-    def relevent_samples(self):
-        """
-        Returns all samples that are relevant in the generation of the
-        new MovePath from the old one. Overwritten samples are removed.
-
-        Usually this set should be the same as samples
-
-        :return:
-        """
-
-        list_of_samples = []
-
-        return list_of_samples
-
-    def count_movers(self, mover):
-        """
-        Return the number of times a specific mover has been called.
-
-        :return:
-        """
-
-        counts = 0
-
-        return counts
-
-
-    def count_accepts(self, mover):
-        """
-        Return number of times a specific mover has been accepted.
-
-        :param mover:
-        :return:
-        """
-
-        counts = 0
-
-        return counts
-
-    def count_rejects(self, mover):
-        """
-        Return number of times a specific mover has been rejected.
-
-        :param mover:
-        :return:
-        """
-
-        counts = 0
-
-        return counts
