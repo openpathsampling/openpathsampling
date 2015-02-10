@@ -122,20 +122,41 @@ class Histogram(object):
         histogram normalized by the sum of the bin counts, with no
         consideration of the bin widths.
         """
-
-        norm = self._normalization() if not raw_probability else self.count
-        # TODO
-        pass
+        normed_hist = self.histogram() # returns a copy
+        nnorm = self._normalization() if not raw_probability else self.count
+        norm = 1.0/nnorm
+        normed_hist = normed_hist * norm
+        return normed_hist
 
     def cumulative(self, maximum=None):
         """Cumulative from the left: number of values less than bin value.
         """
-        pass
+        cumul_hist = []
+        total = 0.0
+        for val in self._histogram:
+            total += val
+            cumul_hist.append(total)
 
+        cumul_hist = np.array(cumul_hist)
+        if maximum is not None:
+            cumul_hist *= maximum / total
+            
+        return cumul_hist
+    
     def reverse_cumulative(self, maximum=None):
         """Cumulative from the right: number of values greater than bin value.
         """
-        pass
+        cumul_hist = []
+        total = 0.0
+        for val in reversed(self._histogram):
+            total += val
+            cumul_hist.insert(0, total)
+
+        cumul_hist = np.array(cumul_hist)
+        if maximum is not None:
+            cumul_hist *= maximum / total
+            
+        return cumul_hist
 
 # TODO: might as well add a main fucntion to this; read data / weight from
 # stdin and output an appropriate histogram depending on some options. Then

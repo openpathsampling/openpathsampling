@@ -1,5 +1,6 @@
 from nose.tools import assert_equal, assert_not_equal, assert_items_equal, raises
 from nose.plugins.skip import SkipTest
+from test_helpers import assert_items_almost_equal
 
 import logging
 
@@ -40,6 +41,11 @@ class testHistogram(object):
         assert_equal(self.hist_binwidth_range.count, 10)
         assert_items_equal(hist2, self.hist)
 
+    @raises(RuntimeError)
+    def test_build_from_data_fail(self):
+        histo = Histogram(n_bins=5)
+        histo.histogram()
+
     def test_add_data_to_histogram(self):
         histogram = Histogram(n_bins=5, bin_range=(1.0, 3.5))
         hist = histogram.add_data_to_histogram(self.data)
@@ -71,14 +77,32 @@ class testHistogram(object):
         assert_equal(histo.compare_parameters(self.hist_nbins), True)
         assert_equal(self.hist_nbins.compare_parameters(histo), False)
 
+    def test_normalization(self):
+        histo = Histogram(n_bins=5)
+        hist = histo.histogram(self.data)
+        assert_equal(histo._normalization(), 5.0)
+
     def test_normalized(self):
-        raise SkipTest
+        histo = Histogram(n_bins=5)
+        hist = histo.histogram(self.data)
+        assert_items_equal(histo.normalized(), [1.0, 0.0, 0.4, 0.2, 0.4])
+        assert_items_equal(histo.normalized(raw_probability=True),
+                           [0.5, 0.0, 0.2, 0.1, 0.2])
 
     def test_cumulative(self):
-        raise SkipTest
+        histo = Histogram(n_bins=5)
+        hist = histo.histogram(self.data)
+        assert_items_almost_equal(histo.cumulative(), [5.0, 5.0, 7.0, 8.0, 10.0])
+        assert_items_almost_equal(histo.cumulative(maximum=1.0), 
+                                  [0.5, 0.5, 0.7, 0.8, 1.0])
 
     def test_reverse_cumulative(self):
-        raise SkipTest
+        histo = Histogram(n_bins=5)
+        hist = histo.histogram(self.data)
+        assert_items_almost_equal(histo.reverse_cumulative(),
+                                  [10, 5, 5, 3, 2])
+        assert_items_almost_equal(histo.reverse_cumulative(maximum=1.0),
+                                  [1.0, 0.5, 0.5, 0.3, 0.2])
 
 
 
