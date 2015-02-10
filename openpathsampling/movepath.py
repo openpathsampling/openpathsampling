@@ -331,6 +331,7 @@ class ExclusiveMovePath(SequentialMovePath):
                (self.accepted, len(self.samples)) + \
                MovePath._indent( '\n'.join(map(str, self.movepaths)))
 
+@restores_as_full_object
 class KeepLastSampleMovePath(MovePath):
     def __init__(self, movepath):
         super(KeepLastSampleMovePath, self).__init__()

@@ -358,6 +358,7 @@ class ShootMover(PathMover):
             logger.info('Proposal probability ' + str(sel_prob)
                         + ' / random : ' + str(rand)
                        )
+
             if (rand < self.selection_probability_ratio(details)):
                 logger.info("Shooting move accepted!")
                 details.accepted = True
@@ -653,11 +654,11 @@ class ConditionalSequentialMover(SequentialMover):
 
 @restores_as_stub_object
 class RestrictToLastSampleMover(PathMover):
-    def __init__(self, inner_mover):
-        self.inner_mover = inner_mover
+    def __init__(self, mover):
+        self.mover = mover
 
     def move(self, globalstate):
-        movepath = self.inner_mover.move(globalstate)
+        movepath = self.mover.move(globalstate)
         return paths.KeepLastSampleMovePath(movepath)
 
 @restores_as_stub_object

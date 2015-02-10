@@ -168,6 +168,7 @@ class Bootstrapping(Calculation):
                              + "," + str(sample.details.accepted)
                             )
             self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
+            self.globalstate.movepath = movepath
             logger.debug("GLOBALSTATE:")
             for sample in self.globalstate:
                 logger.debug("(" + str(sample.replica)
