@@ -22,10 +22,9 @@ class Histogram(object):
         # and is useful for other programs that want to cache a histogram
         self._inputs = [n_bins, bin_width, bin_range]
 
+        # regularize options
         self.bin_width = None # if not set elsewhere
         self.bin_range = None # if not set elsewhere
-
-        # regularize options
         if bin_range is not None:
             max_bin = max(bin_range)
             min_bin = min(bin_range)
@@ -45,6 +44,9 @@ class Histogram(object):
                 self.n_bins = 40 # default
             self.bins = self.n_bins
 
+        self.count = 0
+        self._histogram = None
+
     def add_data_to_histogram(self, data, weights=None):
         """Add `data` to an existing histogram; return resulting histogram"""
         if self._histogram is None:
@@ -52,9 +54,9 @@ class Histogram(object):
         newhist = np.histogram(data, bins=self.bins, weights=weights)[0]
         newcount = len(data) if weights is None else sum(weights)
         for bin_i in range(len(newhist)):
-            self._histogram[i] += newhist[i]
-            self.count += newcount
-        return self._histogram
+            self._histogram[bin_i] += newhist[bin_i]
+        self.count += newcount
+        return self._histogram.copy()
 
     def histogram(self, data=None, weights=None):
         """Build the histogram based on `data`.
@@ -75,10 +77,10 @@ class Histogram(object):
             # self.bins must be reset in case it was an integer (implicit
             # range) so we can have the correct bins if we use
             # `add_data_to_histogram` later
-            self.count = len(data) if weights in None else sum(weights)
+            self.count = len(data) if weights is None else sum(weights)
         elif self._histogram is None:
             raise RuntimeError("Histogram.histogram called without data!")
-        return self._histogram
+        return self._histogram.copy()
 
     def compare_parameters(self, other):
         """Return true if `other` has the same bin parameters as `self`.

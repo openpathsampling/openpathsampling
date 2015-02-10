@@ -32,10 +32,23 @@ class testHistogram(object):
 
 
     def test_build_from_data(self):
-        raise SkipTest
+        hist = self.hist_nbins.histogram(self.data)
+        assert_equal(self.hist_nbins.count, 10)
+        assert_items_equal(hist, self.hist)
+
+        hist2 = self.hist_binwidth_range.histogram(self.data)
+        assert_equal(self.hist_binwidth_range.count, 10)
+        assert_items_equal(hist2, self.hist)
 
     def test_add_data_to_histogram(self):
-        raise SkipTest
+        histogram = Histogram(n_bins=5, bin_range=(1.0, 3.5))
+        hist = histogram.add_data_to_histogram(self.data)
+        assert_equal(histogram.count, 10)
+        assert_items_equal(hist, self.hist)
+
+        hist2 = histogram.add_data_to_histogram(self.data)
+        assert_items_equal(hist2, map((2).__mul__, hist))
+        assert_equal(histogram.count, 20)
 
     def test_compare_parameters(self):
         raise SkipTest
