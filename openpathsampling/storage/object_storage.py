@@ -6,6 +6,33 @@ import numpy as np
 import openpathsampling as paths
 import simtk.unit as u
 
+class StorageQuery(object):
+    def __init__(self, query_fnc = None):
+        self.cache = {}
+        self.query_fnc = query_fnc
+
+    def __call__(self, store):
+        def _query_iterator(self, store):
+            if store in self.cache:
+                store_cache = self.cache[store]
+            else:
+                store_cache = {}
+
+            n_object = store.count()
+
+            for idx in range(n_object):
+                if idx in store_cache:
+                    if store_cache[idx]:
+                        yield store.load(idx)
+                else:
+                    obj = store.load(idx)
+                    result = self.query_fnc(obj)
+                    self.cache[store][idx] = result
+                    if result:
+                        yield obj
+
+        return _query_iterator(self, store)
+
 class ObjectStore(object):
     """
     Base Class for storing complex objects in a netCDF4 file. It holds a
@@ -176,6 +203,9 @@ class ObjectStore(object):
                 return obj.idx[self.storage]
 
         return None
+
+    def query(self, needle):
+        return
 
     @property
     def units(self):
