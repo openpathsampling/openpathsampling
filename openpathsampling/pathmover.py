@@ -131,10 +131,10 @@ def keep_selected_samples(func):
         if 'keep_samples' in kwargs:
             keep_samples = kwargs['keep_samples']
             del kwargs['keep_samples']
-            movepath = func(*kwargs, **kwargs)
+            movepath = func(self, *args, **kwargs)
             return paths.FilterSamplesMovePath(movepath, selected_samples=keep_samples)
         else:
-            movepath = func(*kwargs, **kwargs)
+            movepath = func(self, *args, **kwargs)
             return movepath
 
     return wrapper
