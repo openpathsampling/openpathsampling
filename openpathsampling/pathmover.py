@@ -688,7 +688,7 @@ class RestrictToLastSampleMover(PathMover):
 
     @keep_selected_samples
     def move(self, globalstate):
-        movepath = self.inner_mover.move(globalstate)
+        movepath = self.mover.move(globalstate)
         return paths.KeepLastSampleMovePath(movepath, mover=self)
 
 @restores_as_stub_object
