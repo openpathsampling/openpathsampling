@@ -1052,7 +1052,7 @@ class ReplicaExchangeMover(PathMover):
 
         return path
 
-
+@restores_as_stub_object
 class FilterByReplica(PathMover):
     def __init__(self, mover, replicas):
         if type(replicas) is not list:
@@ -1068,6 +1068,24 @@ class FilterByReplica(PathMover):
         )
         return self.mover.move(filtered_gs)
 
+@restores_as_stub_object
+class FilterBySample(PathMover):
+    def __init__(self, mover, selected_samples, use_all_samples=None):
+        if type(selected_samples) is not list:
+            selected_samples = [selected_samples]
+        self.selected_samples = selected_samples
+        self.mover = mover
+        self.use_all_samples = use_all_samples
+
+    def move(self, globalstate):
+        return paths.FilterSamplesMovePath(
+            self.mover.move(globalstate),
+            selected_samples=self.selected_samples,
+            use_all_samples=self.use_all_samples,
+            mover=self
+        )
+
+@restores_as_stub_object
 class OneWayShootingMover(RandomChoiceMover):
     '''
     OneWayShootingMover is a special case of a RandomChoiceMover which
