@@ -166,7 +166,6 @@ class Storage(netcdf.Dataset):
             # create a json from the mdtraj.Topology() and store it
             self.write_str('topology', self.simplifier.to_json(self.topology))
 
-
             logger.info("Create initial template snapshot")
 
             # Save the initial configuration
@@ -197,7 +196,7 @@ class Storage(netcdf.Dataset):
             self.topology = self.simplifier.from_json(self.variables['topology'][0])
 
     def __repr__(self):
-        return "OpenPathSampling netCDF Storage @ '" + self.filename + "'"
+        return "Storage @ '" + self.filename + "'"
 
     @property
     def n_atoms(self):
@@ -279,8 +278,27 @@ class Storage(netcdf.Dataset):
         # Force sync to disk to avoid data loss.
         self.sync()
 
-    def list_storages(self):
-        return self.links
+    def list_stores(self):
+        """
+        Return a list of registered stores
+
+        Returns
+        -------
+        list of str
+            list of stores that can be accessed using `storage.[store]`
+        """
+        return [store.db for store in self.links]
+
+    def list_storable_objects(self):
+        """
+        Return a list of storable object base classes
+
+        Returns
+        -------
+        list of class
+            list of base classes that can be stored using `storage.save(obj)`
+        """
+        return [store.content_class for store in self.links]
 
     def write_str(self, name, string):
         '''
