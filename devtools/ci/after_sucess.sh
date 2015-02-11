@@ -18,6 +18,11 @@
 #    echo "No deploy on PYTHON_VERSION=${python}"; exit 0
 #fi
 
+# Try to install pandoc
+
+sudo apt-get install cabal-install
+cabal update
+cabal install pandoc
 
 # Create the docs and push them to S3
 # -----------------------------------
