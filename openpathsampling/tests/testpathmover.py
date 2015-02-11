@@ -738,9 +738,7 @@ class testMinusMover(object):
 
         seg_dir = {}
         for i in range(100):
-            print "starting", i
             movepath = self.mover.move(gs).opened
-            print "just did move", i
             samples = movepath.samples
             assert_equal(len(samples), 5)
             s_inner = [s for s in samples if s.ensemble==self.innermost]
