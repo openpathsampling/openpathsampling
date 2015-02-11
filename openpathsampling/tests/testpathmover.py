@@ -758,7 +758,7 @@ class testMinusMover(object):
             elif items_equal(s_inner0_xvals, self.second_segment):
                 key += "2"
             else:
-                print s_inner0_xvals
+                print "s_inner0_xvals:", s_inner0_xvals
                 raise RuntimeError("Chosen segment neither first nor last!")
 
             # final sample s_minus is accepted
@@ -768,7 +768,7 @@ class testMinusMover(object):
             elif items_equal(s_minus_xvals, extend_backward):
                 key += "b"
             else:
-                print s_minus_xvals
+                print "s_minus_xvals:", s_minus_xvals
                 raise RuntimeError("Unexpected minus extension result!")
 
             try:
