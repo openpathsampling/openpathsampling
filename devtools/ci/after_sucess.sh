@@ -29,6 +29,9 @@ conda install --yes `cat docs/requirements.txt | xargs`
 
 conda list -e
 
+# Install pandoc for markdown support
+sudo apt-get install pandoc
+
 (cd docs && make html && cd -)
 ls -lt docs/_build
 pwd

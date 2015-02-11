@@ -3,4 +3,4 @@
 README
 ======
 
-#.. markdown:: docs/README.md
+.. markdown:: docs/README.md
