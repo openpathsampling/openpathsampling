@@ -5,39 +5,46 @@
 Ensemble Functions
 ==================
 
-Trajectory analysis is the heart of MDTraj. These functions can be used to run
-a variety of analyses on :class:`openpathsampling.Ensemble` objects.
-It's usually as simple as ::
+The concept of the path ensemble, the (appropriately weighted) set of
+trajectories satisfying particular conditions, is at the heart of path
+sampling techniques.
 
-    >>> import openpathsampling as ops
-    >>> t = ops.Ensemble()
+Path ensembles are created as :class:`openpathsampling.Ensemble` objects.
+Making one is usually as simple as ::
 
-volume Ensembles
+    >>> import openpathsampling as paths
+    >>> ens = paths.Ensemble()
+
+where you choose the right kind of ensemble and give it the right
+initialization parameters. What's more, ensembles can be combined using the
+logical infix operators `&` (and) and `|` (or).
+
+Volume Ensembles
 ----------------------
 .. autosummary::
     :toctree: api/generated/
 
-	EnsembleVolume
+	VolumeEnsemble
 	InXEnsemble
 	OutXEnsemble
-    HitXEnsemble
+        HitXEnsemble
 	LeaveXEnsemble
 	
-set-based Ensemble combinations
+Set-based Ensemble combinations
 -----------------------------
 .. autosummary::
     :toctree: api/generated/
 
-    AndEnsemble
-	OrEnsemble
-	XorEnsemble
-	SubEnsemble
-	EnsembleCombination
+        AndEnsemble
+        OrEnsemble
+        XorEnsemble
+        SubEnsemble
+        EnsembleCombination
 	
 length Ensembles
 -----------------------------
 .. autosummary::
     :toctree: api/generated/
 
-    LengthEnsemble
+        LengthEnsemble
     

@@ -25,9 +25,8 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 
 class DynamicsEngine(object):
     '''
-    Class to wrap a simulation tool to store the context and rerun, needed
-    parameters, storage, etc.
-    
+    Wraps simulation tool (parameters, storage, etc.)
+
     Notes
     -----
     Should be considered an abstract class: only its subclasses can be

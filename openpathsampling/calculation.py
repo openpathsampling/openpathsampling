@@ -105,8 +105,11 @@ class InitializeSingleTrajectoryMover(PathMover):
 
 
 class Bootstrapping(Calculation):
-    """The ensembles for the Bootstrapping calculation must be one ensemble
-    set, in increasing order."""
+    """Creates a SampleSet with one sample per ensemble.
+    
+    The ensembles for the Bootstrapping calculation must be one ensemble
+    set, in increasing order. Replicas are named numerically.
+    """
 
     calc_name = "Bootstrapping"
 
@@ -192,13 +195,10 @@ class Bootstrapping(Calculation):
 
 class PathSampling(Calculation):
     """
-    General path sampling code. Takes a single root_mover and generates
-    samples from that, keeping one per replica after each move. 
-
-    TODO
-    ----
-        Add a nice syntax for the root_mover, at least allowing us to
-        implicitly combine simultaneous multimovers with mixed movers.
+    General path sampling code. 
+    
+    Takes a single root_mover and generates samples from that, keeping one
+    per replica after each move. 
     """
 
     calc_name = "PathSampling"

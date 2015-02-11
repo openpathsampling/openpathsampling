@@ -12,9 +12,7 @@ from openpathsampling.todict import restores_as_full_object
 
 @restores_as_full_object
 class OpenMMEngine(paths.DynamicsEngine):
-    """We only need a few things from the simulation. This object duck-types
-    an OpenMM simulation object so that it quacks the methods we need to
-    use."""
+    """OpenMM dynamics engine."""
 
     units = {
         'length' : u.nanometers,
