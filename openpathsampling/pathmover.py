@@ -1213,7 +1213,7 @@ class CalculationMover(PathMover):
         self.calculation = calculation
 
     def move(self, globalstate, step=-1):
-        return paths.CalculationMovePath(self.mover, self.calculation, step=step)
+        return paths.CalculationMovePath(self.mover.move(globalstate), self.calculation, step=step, mover=self)
 
 @restores_as_stub_object
 class MultipleSetMinusMover(RandomChoiceMover):

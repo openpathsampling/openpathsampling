@@ -589,8 +589,8 @@ class CalculationMovePath(MovePath):
     A MovePath that just wraps a movepath and references a Calculation
     """
 
-    def __init__(self, movepath, calculation=None, step=-1):
-        super(CalculationMovePath, self).__init__(mover=movepath.mover)
+    def __init__(self, movepath, calculation=None, step=-1, mover=None):
+        super(CalculationMovePath, self).__init__(mover=mover)
         self.movepath = movepath
         self.calculation = calculation
         self.step = step
@@ -600,7 +600,7 @@ class CalculationMovePath(MovePath):
 
     def __str__(self):
         return 'CalculationStep : %s : Step # %d with %d samples\n' % \
-               (str(self.calulation.cls), self.step, len(self.samples)) + \
+               (str(self.calculation.cls), self.step, len(self.samples)) + \
                MovePath._indent( str(self.movepath) )
 
     def to_dict(self):

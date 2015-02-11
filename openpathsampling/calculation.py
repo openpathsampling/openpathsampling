@@ -209,7 +209,7 @@ class PathSampling(Calculation):
                  globalstate=None):
         super(PathSampling, self).__init__(storage, engine)
         self.root_mover = root_mover
-        self.root_mover.name = "PathSamplingRoot"
+#        self.root_mover.name = "PathSamplingRoot"
         samples = []
         for sample in globalstate:
             samples.append(sample.copy_reset())
@@ -242,3 +242,8 @@ class PathSampling(Calculation):
                 self.globalstate.save(self.storage)
                 self.storage.sync()
 
+    def to_dict(self):
+        return {
+            'root_mover' : self.root_mover,
+            'globalstate' : self.globalstate
+        }
