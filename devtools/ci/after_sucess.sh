@@ -20,9 +20,7 @@
 
 # Try to install pandoc
 
-sudo apt-get install cabal-install
-cabal update
-cabal install pandoc
+sudo apt-get install pandoc
 
 # Create the docs and push them to S3
 # -----------------------------------
