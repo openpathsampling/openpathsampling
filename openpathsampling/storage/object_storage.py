@@ -409,8 +409,18 @@ class ObjectStore(object):
         return ObjectIterator()
 
     def __getitem__(self, item):
+        """
+        Enable numpy style selection of object in the store
+        """
         try:
-            return self.load(item)
+            if type(item) is int or type(item) is str:
+                return self.load(item)
+            elif type(item) is slice:
+                return [self.load(idx) for idx in range(*item.indices(len(self)))]
+            elif type(item) is list:
+                return [self.load(idx) for idx in item]
+            elif item is Ellipsis:
+                return self.iterator()
         except KeyError:
             return None
 

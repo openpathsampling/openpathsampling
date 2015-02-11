@@ -55,6 +55,10 @@ class Storage(netcdf.Dataset):
 
         # objects with special storages
 
+        # self.objectname = ... could also be done in the initialization
+        # automatically. But the IDE would not be able to autocomplete
+        # so we leave it this way :)
+
         self.trajectory = paths.storage.TrajectoryStore(storage)
         self.snapshot = paths.storage.SnapshotStore(storage)
         self.configuration = paths.storage.ConfigurationStore(storage)
@@ -69,7 +73,7 @@ class Storage(netcdf.Dataset):
 
         self.pathmover = paths.storage.ObjectStore(storage, paths.PathMover, is_named=True)
         self.movedetails = paths.storage.ObjectStore(storage, paths.MoveDetails, is_named=False)
-        self.movepaths = paths.storage.ObjectStore(storage, paths.MovePath, is_named=False, nestable=True)
+        self.movepath = paths.storage.ObjectStore(storage, paths.MovePath, is_named=False, nestable=True)
         self.shootingpoint = paths.storage.ObjectStore(storage, paths.ShootingPoint, is_named=False)
         self.shootingpointselector = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, is_named=False)
         self.engine = paths.storage.ObjectStore(storage, paths.DynamicsEngine, is_named=True)
@@ -176,8 +180,6 @@ class Storage(netcdf.Dataset):
             logger.info("Finished setting up netCDF file")
 
         elif mode == 'a' or mode == 'r+' or mode == 'r':
-            self._restore_storages()
-
             logger.debug("Restore the dict of units from the storage")
             # Create a dict of simtk.Unit() instances for all netCDF.Variable()
             for variable_name in self.variables:
@@ -247,14 +249,6 @@ class Storage(netcdf.Dataset):
             storage.dimension_units.update(units=self.dimension_units)
             storage._init()
 
-    def _restore_storages(self):
-        '''
-        Run restore on all added classes. Usually there is nothing to do.
-        '''
-#        for storage in self.links:
-#            storage._restore()
-        pass
-
     def _initialize_netCDF(self):
         """
         Initialize the netCDF file for storage itself.
@@ -272,18 +266,21 @@ class Storage(netcdf.Dataset):
             self.createDimension('spatial', self.n_spatial)
 
         # Set global attributes.
-        setattr(self, 'title', 'Open-Transition-Interface-Sampling')
-        setattr(self, 'application', 'Host-Guest-System')
-        setattr(self, 'program', 'run.py')
-        setattr(self, 'programVersion', __version__)
-        setattr(self, 'Conventions', 'Multi-State Transition Interface TPS')
-        setattr(self, 'ConventionVersion', '0.1')
+        setattr(self, 'title', 'OpenPathSampling Storage')
+#        setattr(self, 'application', 'Host-Guest-System')
+#        setattr(self, 'program', 'run.py')
+#        setattr(self, 'programVersion', __version__)
+#        setattr(self, 'Conventions', 'Multi-State Transition Interface TPS')
+        setattr(self, 'ConventionVersion', '0.2')
 
         # Create a string to hold the topology
         self.init_str('topology')
 
         # Force sync to disk to avoid data loss.
         self.sync()
+
+    def list_storages(self):
+        return self.links
 
     def write_str(self, name, string):
         '''
