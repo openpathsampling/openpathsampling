@@ -354,6 +354,7 @@ class ShootMover(PathMover):
     def move(self, globalstate):
         # select a legal sample, use it to determine the trajectory and the
         # ensemble needed for the dynamics
+        print "start shooting"
         rep_sample = self.select_sample(globalstate, self.ensembles)
         trajectory = rep_sample.trajectory
         dynamics_ensemble = rep_sample.ensemble
@@ -368,7 +369,9 @@ class ShootMover(PathMover):
         setattr(details, 'start_point', self.selector.pick(details.start) )
         setattr(details, 'final_point', None)
 
+        print "about to generate"
         self._generate(details, dynamics_ensemble)
+        print "generated"
 
         setattr(details, 'trial_is_in_ensemble',
                 dynamics_ensemble(details.trial))
@@ -386,6 +389,7 @@ class ShootMover(PathMover):
                 details.accepted = True
                 details.result = details.trial
 
+        print "making sample"
         sample = paths.Sample(
             replica=replica, 
             trajectory=details.result, 
@@ -396,6 +400,7 @@ class ShootMover(PathMover):
 #        new_set = SampleSet(samples=[sample], predecessor=globalstate, accepted=True)
 #        new_set = globalstate.apply([sample], accepted = details.accepted, move=self)
 
+        print "making record"
         path = paths.SampleMovePath(
                 samples=[sample],
                 accepted=details.accepted,
