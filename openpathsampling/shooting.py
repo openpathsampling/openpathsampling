@@ -176,17 +176,26 @@ class GaussianBiasSelector(ShootingPointSelector):
 
 @restores_as_full_object
 class UniformSelector(ShootingPointSelector):
+    """
+    Selects random frame in range `pad_start` to `len(trajectory-pad_end`.
+
+    Attributes
+    ----------
+    pad_start : int
+        number of frames at beginning of trajectory to be excluded from
+        selection
+    pad_end : int
+        number of frames at end of trajectory to be excluded from selection
+    """
     def __init__(self, pad_start = 1, pad_end = 1):
-        '''
-        A Uniform Selector that picks equally likeli any point in the trajectory except the ones excluded using padding
-        '''
         super(UniformSelector, self).__init__()
         self.pad_start = pad_start
         self.pad_end = pad_end
         
     def f(self, frame, trajectory=None):
         '''
-        Careful, this only returns a correct value for allowed frames since this function does not know about the position in the trajectory
+        Careful, this only returns a correct value for allowed frames since
+        this function does not know about the position in the trajectory
         '''
         return 1.0
     

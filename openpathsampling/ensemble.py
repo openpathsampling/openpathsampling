@@ -17,9 +17,12 @@ init_log = logging.getLogger('opentis.initialization')
 
 @restores_as_full_object
 class Ensemble(object):
-    '''    
+    '''
+    Path ensemble object.
+
     An Ensemble represents a path ensemble, effectively a set of trajectories.
-    Typical set operations are allowed, here: and, or, xor, -(without), ~ (inverse = all - x)     
+    Typical set operations are allowed, here: and, or, xor, -(without), ~
+    (inverse = all - x)     
     
     Examples
     --------    
@@ -53,7 +56,7 @@ class Ensemble(object):
 
     def __call__(self, trajectory, lazy=None):
         '''
-        Returns `True` if the trajectory is part of the path ensemble.
+        Return `True` if the trajectory is part of the path ensemble.
 
         Parameters
         ----------
@@ -140,24 +143,23 @@ class Ensemble(object):
     def find_valid_slices(self, trajectory, lazy=True, 
                           max_length=None, min_length=1, overlap=1):
         '''
-        Returns a list of trajectories that contain sub-trajectories which
-        are in the given ensemble.
+        Return slices (subtrajectories) matching the given ensemble.
 
         Parameters
         ----------
         trajectory : Trajectory
             the actual trajectory to be splitted into ensemble parts
-        lazy : boolean
+        lazy : boolean, optional
             if True will use a faster almost linear algorithm, while False
             will run through all possibilities starting with the largest
             ones
-        max_length : int > 0
+        max_length : int > 0, optional
             if set this determines the maximal size to be tested (is mainly
             used in the recursion)
-        min_length : int > 0
+        min_length : int > 0, optional
             if set this determines the minimal size to be tested (in lazy
             mode might no
-        overlap : int >= 0
+        overlap : int >= 0, optional
             determines the allowed overlap of all trajectories to be found.
             A value of x means that two sub-trajectorie can share up to x
             frames at the beginning and x frames at the end.  Default is 1
@@ -232,9 +234,7 @@ class Ensemble(object):
             return ensemble_list
 
     def split(self, trajectory, lazy=True, max_length=None, min_length=1, overlap=1):
-        '''
-        Returns a list of trajectories that contain sub-trajectories which
-        are in the given ensemble.
+        '''Return list of subtrajectories satisfying the given ensemble.
 
         Parameters
         ----------
@@ -339,6 +339,7 @@ class Ensemble(object):
 class LoadedEnsemble(Ensemble):
     '''
     Represents an ensemble the contains trajectories of a specific length
+    ??? @JHP, update these docstrings!!!!
     '''
     def __init__(self, name, description):
         '''
@@ -473,7 +474,7 @@ class NegatedEnsemble(Ensemble):
 @restores_as_full_object
 class EnsembleCombination(Ensemble):
     '''
-    Represent the boolean concatenation of two ensembles
+    Logical combination of two ensembles
     '''
     def __init__(self, ensemble1, ensemble2, fnc, str_fnc):
         super(EnsembleCombination, self).__init__()
@@ -585,9 +586,7 @@ class SubEnsemble(EnsembleCombination):
 
 @restores_as_full_object
 class SequentialEnsemble(Ensemble):
-    """
-    An ensemble that consists of several ensembles which are satisfied by
-    the trajectory in sequence.
+    """Ensemble which satisfies several subensembles in sequence.
 
     Attributes
     ----------
@@ -915,7 +914,7 @@ class SequentialEnsemble(Ensemble):
 @restores_as_full_object
 class LengthEnsemble(Ensemble):
     '''
-    Represents an ensemble the contains trajectories of a specific length
+    The ensemble of trajectories of a given length
     '''
     def __init__(self, length):
         '''
@@ -965,7 +964,7 @@ class LengthEnsemble(Ensemble):
 @restores_as_full_object
 class VolumeEnsemble(Ensemble):
     '''
-    Describes an path ensemble using a volume object
+    Path ensembles based on the Volume object
     '''    
     def __init__(self, volume, lazy = True):
         super(VolumeEnsemble, self).__init__()
@@ -982,8 +981,7 @@ class VolumeEnsemble(Ensemble):
 @restores_as_full_object
 class InXEnsemble(VolumeEnsemble):
     '''
-    Represents an ensemble where all the selected frames of the trajectory
-    are in a specified volume
+    Ensemble of trajectories with all frames in the given volume
     '''
 
     def can_append(self, trajectory):
@@ -1017,8 +1015,7 @@ class InXEnsemble(VolumeEnsemble):
 @restores_as_full_object
 class OutXEnsemble(InXEnsemble):
     '''
-    Represents an ensemble where all the selected frames from the trajectory
-    are outside a specified volume
+    Ensemble of trajectories with all frames outside the given volume
     '''    
     @property
     def _volume(self):
@@ -1033,8 +1030,7 @@ class OutXEnsemble(InXEnsemble):
 @restores_as_full_object
 class HitXEnsemble(VolumeEnsemble):
     '''
-    Represents an ensemble where at least one of the selected frames from
-    the trajectory visit a specified volume
+    Ensemble of trajectory with at least one frame in the volume
     '''
 
     def __str__(self):
@@ -1060,8 +1056,7 @@ class HitXEnsemble(VolumeEnsemble):
 @restores_as_full_object
 class LeaveXEnsemble(HitXEnsemble):
     '''
-    Represents an ensemble where at least one frame of the trajectory is
-    outside the specified volume
+    Ensemble of trajectories with at least one frame outside the volume
     '''
     def __str__(self):
         return 'exists t such that x[t] in {0}'.format(self._volume)
@@ -1129,12 +1124,9 @@ class EntersXEnsemble(ExitsXEnsemble):
 @restores_as_full_object
 class WrappedEnsemble(Ensemble):
     '''
-    Represents an ensemble where an altered version of a trajectory (extended, reversed, cropped) is part of a given ensemble
+    Wraps an ensemble to alter it or the way it sees a trajectory
     '''
     def __init__(self, ensemble):
-        '''
-        Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
-        '''
         super(WrappedEnsemble, self).__init__()
         self.ensemble = ensemble
 
@@ -1157,8 +1149,7 @@ class WrappedEnsemble(Ensemble):
 @restores_as_full_object
 class SlicedTrajectoryEnsemble(WrappedEnsemble):
     '''
-    An ensemble which alters the trajectory by looking at a given Python
-    slice of the list of frames.
+    Alters trajectories given as arguments by taking Python slices.
     '''
     def __init__(self, ensemble, aslice):
         super(SlicedTrajectoryEnsemble, self).__init__(ensemble)
@@ -1186,7 +1177,9 @@ class SlicedTrajectoryEnsemble(WrappedEnsemble):
 @restores_as_full_object
 class BackwardPrependedTrajectoryEnsemble(WrappedEnsemble):
     '''
-    Represents an ensemble which is the given ensemble but for trajectories where some trajectory is prepended
+    Ensemble which prepends its trajectory to a given trajectory.
+
+    Used in backward shooting.
     '''
     def __init__(self, ensemble, trajectory):        
         super(BackwardPrependedTrajectoryEnsemble, self).__init__(ensemble)
@@ -1199,7 +1192,9 @@ class BackwardPrependedTrajectoryEnsemble(WrappedEnsemble):
 @restores_as_full_object
 class ForwardAppendedTrajectoryEnsemble(WrappedEnsemble):
     '''
-    Represents an ensemble which is the given ensemble but for trajectories where some trajectory is appended
+    Ensemble which appends its trajectory to a given trajectory.
+
+    Used in forward shooting.
     '''
     def __init__(self, ensemble, trajectory):
         super(ForwardAppendedTrajectoryEnsemble, self).__init__(ensemble)
@@ -1211,7 +1206,7 @@ class ForwardAppendedTrajectoryEnsemble(WrappedEnsemble):
 @restores_as_full_object
 class ReversedTrajectoryEnsemble(WrappedEnsemble):
     '''
-    Represents an ensemble 
+    Ensemble based on reversing the trajectory.
     '''
     def _alter(self, trajectory):
         return trajectory.reverse()
@@ -1219,7 +1214,7 @@ class ReversedTrajectoryEnsemble(WrappedEnsemble):
 @restores_as_full_object
 class AppendedNameEnsemble(WrappedEnsemble):
     '''
-    Adds string to ensemble name: necessary to have multiple copies of an ensemble.
+    Add string to ensemble name: allows multiple copies of an ensemble.
     '''
     def __init__(self, ensemble, label):
         self._label = label
@@ -1229,12 +1224,10 @@ class AppendedNameEnsemble(WrappedEnsemble):
         return self.ensemble.__str__() + " " + self.label
 
 
-
 @restores_as_full_object
 class OptionalEnsemble(WrappedEnsemble):
     '''
-    Makes it optional to satisfy a given ensemble (primarily useful in
-    SequentialEnsembles)
+    An ensemble which is optional for SequentialEnsembles.
     '''
 
     def __init__(self, ensemble):
@@ -1248,6 +1241,7 @@ class OptionalEnsemble(WrappedEnsemble):
 class SingleFrameEnsemble(WrappedEnsemble):
     '''
     Convenience ensemble to `and` a LengthEnsemble(1) with a given ensemble.
+
     Frequently used for SequentialEnsembles.
 
     Attributes
