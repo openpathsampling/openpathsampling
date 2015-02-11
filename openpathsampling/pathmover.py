@@ -868,7 +868,6 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
         )
 
         path = paths.SampleMovePath( [sample], mover=self, accepted=details.accepted)
-
         return path
 
 
@@ -1203,6 +1202,18 @@ class MinusMover(ConditionalSequentialMover):
     @keep_selected_samples
     def move(self, globalstate):
         return super(MinusMover, self).move(globalstate).closed
+
+@restores_as_stub_object
+class CalculationMover(PathMover):
+    """
+    This just wraps a mover and references the used calculation
+    """
+    def __init__(self, mover, calculation):
+        self.mover = mover
+        self.calculation = calculation
+
+    def move(self, globalstate, step=-1):
+        return paths.CalculationMovePath(self.mover, self.calculation, step=step)
 
 @restores_as_stub_object
 class MultipleSetMinusMover(RandomChoiceMover):
