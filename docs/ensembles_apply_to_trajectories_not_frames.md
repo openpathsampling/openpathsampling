@@ -26,8 +26,8 @@ the union. If what you want is a ensemble of trajectories which contain at
 least one frame that is simultaneously outside of `volumeA` and outside of
 `volumeB`, you can write that as `LeaveXEnsemble(volumeA | volumeB)`.
 
-![A trajectory in `InXEnsemble(volumeA) & InXEnsemble(volumeB)` but not in
-`InXEnsemble(volumeA & volumeB)`](ensembles_frames.png)
+![A trajectory in `LeaveXEnsemble(volumeA & volumeB)` but not in
+`LeaveXEnsemble(volumeA) & LeaveXEnsemble(volumeB)` ](ensembles_frames.png)
 
 ### Complementary frames do not generate the logical inverse ensemble
 
