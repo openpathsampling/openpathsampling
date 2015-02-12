@@ -524,6 +524,7 @@ class RandomChoiceMover(PathMover):
 
         return path
 
+@restores_as_stub_object
 class ConditionalMover(PathMover):
     '''
     An if-then-else structure for PathMovers.

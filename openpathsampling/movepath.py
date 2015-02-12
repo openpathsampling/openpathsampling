@@ -405,7 +405,7 @@ class SequentialMovePath(MovePath):
 
     def to_dict(self):
         return {
-            'movepath' : self.movepaths
+            'movepaths' : self.movepaths
         }
 
     def _get_samples(self):
