@@ -14,7 +14,8 @@ from docutils.parsers.rst import directives
 from docutils.frontend import OptionParser
 from docutils.utils import new_document
 from docutils.parsers.rst import Parser
-import subprocess
+from IPython.nbconvert.utils.pandoc import pandoc
+
 
 def MakePandocDirective(pandoc_type=''):
     class NotebookDirective(Directive):
@@ -47,23 +48,32 @@ def MakePandocDirective(pandoc_type=''):
             md_dir = os.path.join(setup.confdir, '..')
             md_abs_path = os.path.abspath(os.path.join(md_dir, md_filename))
 
+            with open(md_abs_path) as file:
+                source = file.read()
+
             ptype = self.pandoc_from
+
             if 'from' in self.options:
                 ptype = self.options['from']
 
-            if ptype != '':
-                arglist = ['pandoc', '--from=' + ptype, '--to=rst', md_abs_path]
-            else:
-                arglist = ['pandoc', '--to=rst', md_abs_path]
+            if ptype is '':
+                ptype = 'markdown'
 
-            p = subprocess.Popen(arglist,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
+            # if ptype != '':
+            #     arglist = ['pandoc', '--from=' + ptype, '--to=rst', md_abs_path]
+            # else:
+            #     arglist = ['pandoc', '--to=rst', md_abs_path]
+            #
+            # p = subprocess.Popen(arglist,
+            #     stdout=subprocess.PIPE,
+            #     stderr=subprocess.PIPE
+            # )
+            #
+            # out, err = p.communicate()
+            #
+            # print(out)
 
-            out, err = p.communicate()
-
-            print(out)
+            out = pandoc(source, ptype, 'rst')
 
             settings = OptionParser(components=(Parser,)).get_default_values()
             parser = Parser()
