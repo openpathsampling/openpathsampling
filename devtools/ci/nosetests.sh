@@ -3,7 +3,7 @@
 cd openpathsampling
 cd tests
 testfail=0
-nosetests -v . || testfail=1
+nosetests -v -s . || testfail=1
 cd ../..
 if [ testfail -eq 1 ]
 then

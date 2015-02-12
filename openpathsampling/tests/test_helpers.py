@@ -80,7 +80,7 @@ class CalvinistDynamics(DynamicsEngine):
                     self.frame_index = self.predestination.index(frame)
                     break
 
-            print self.frame_index
+            #print self.frame_index
 
         if self._current_snap.velocities[0][0] >= 0:
             self._current_snap = self.predestination[self.frame_index+1].copy()
