@@ -92,7 +92,7 @@ class Trajectory(list):
         # Make sure snapshots are stored and have an index and then add the snapshot index to the trajectory
 
         n_frames = self.frames     
-        n_atoms = self.atoms
+        n_atoms = self.n_atoms
         n_spatial = self.spatial
             
         output = np.zeros([n_frames, n_atoms, n_spatial], np.float32)
@@ -156,7 +156,7 @@ class Trajectory(list):
         return n_spatial
 
     @property
-    def atoms(self):
+    def n_atoms(self):
         """
         Return the number of atoms in the trajectory in the current view. 
         
