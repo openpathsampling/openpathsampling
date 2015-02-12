@@ -245,5 +245,5 @@ class PathSampling(Calculation):
     def to_dict(self):
         return {
             'root_mover' : self.root_mover,
-            'globalstate' : self.globalstate
+#            'globalstate' : self.globalstate
         }
