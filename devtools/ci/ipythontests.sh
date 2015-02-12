@@ -12,7 +12,7 @@ python ipnbdoctest.py "sliced_sequential_ensembles.ipynb" || testfail=1
 python ipnbdoctest.py "storage_tutorial.ipynb" || testfail=1
 # python ipnbdoctest.py "visualization.ipynb" || testfail=1
 cd ../..
-if [ testfail -eq 1 ]
+if [ $testfail -eq 1 ]
 then
     exit 1
 fi

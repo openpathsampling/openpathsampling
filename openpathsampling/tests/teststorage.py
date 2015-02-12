@@ -91,20 +91,28 @@ class testStorage(object):
         pass
 
     def test_write_load_str(self):
+        print "\nStarting test"
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
         assert(os.path.isfile(self.filename))
+        print "File is a file"
 
         test_str = 'test_string'
         store.init_str('test_variable')
+        print "Init'd string"
         store.write_str('test_variable', test_str)
+        print "Wrote string"
         store.close()
+        print "Closed the storage"
 
         store2 = Storage(filename=self.filename, mode='a')
+        print "Opened a second storage"
         loaded_str = store2.load_str('test_variable')
+        print "Loaded from storage"
 
         assert(loaded_str == test_str)
 
         store2.close()
+        print "Closed second storage"
         pass
 
     def test_stored_template(self):
