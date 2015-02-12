@@ -1,6 +1,10 @@
 import numpy as np
 import math
 
+# TODO: someday I should replace this with a variant of my sparse-histogram
+# code. It is easy to use and probably can be made faster than numpy for
+# large datasets (by allowing the use of generators)
+
 class Histogram(object):
     """Wrapper for numpy.histogram with additional conveniences.
 

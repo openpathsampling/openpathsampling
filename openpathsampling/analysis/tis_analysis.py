@@ -1,3 +1,4 @@
+from histogram import Histogram
 """
 Experimental analysis module.
 
@@ -7,12 +8,14 @@ preparation.
 
 Goal: RETIS for a simple A->B transition (one direction) boils down to
 
+>>> # things that would be hypothetically already set up
 >>> import openpathsampling as paths
 >>> engine = ??? something that sets up the MD engine
 >>> storage = ??? something that sets up storage
->>> globalstate0 = ??? something that sets up 
+>>> globalstate0 = ??? something that sets up initial trajectories
 >>> orderparameter = paths.OP_Function("lambda", some_function)
 >>>
+>>> # from here, this is real code
 >>> stateA = paths.LambdaVolume(orderparameter, min=-infinity, max=0.0)
 >>> stateB = paths.LambdaVolume(orderparameter, min=1.0, max=infinity)
 >>> interfaces = paths.VolumeSet(orderparameter, min=-infinity, max=[0.0, 0.1, 0.2])
@@ -35,16 +38,58 @@ In the order listed above, the time for the rate calculation is almost
 entirely in determining the flux from the information in the minus mover.
 """
 
+def pathlengths(samples):
+    for sample in samples:
+        yield len(sample.trajectory)
+
+def max_lambdas(sample, orderparameter):
+    for sample in samples:
+        yield max([orderparameter(frame) for frame in sample.trajectory])
+
+
+class Histogrammer(object):
+    """
+    Basically a dictionary to track what each histogram should be making.
+    """
+    def __init__(self, f, f_args=None, hist_args=None):
+        self.f = f
+        self.f_args = f_args
+        self._hist_args = hist_args
+        self.empty_hist = Histogram(**self._hist_args)
+
+    @property
+    def hist_args(self):
+        return self._hist_args
+
+    @property.setter
+    def hist_args(self, val):
+        self._hist_args = val
+        self.empty_hist = Histogram(**self._hist_args)
+
+
 class Transition(object):
     """
     Describes (in general) a transition between two states.
     """
     def __init__(self, stateA, stateB, storage=None):
         self.movers = {}
+        self.stateA = stateA
+        self.stateB = stateB
+        self.storage = storage
         pass
 
-    def load_samples(self, storage=None):
-        pass
+
+class TPSTransition(object):
+    """
+    Transition using TPS ensembles
+    """
+    def __init__(self, stateA, stateB, storage=None):
+        super(TPSTransition, self).__init__(stateA, stateB, storage)
+        self.movers['shooting'] = []
+        self.movers['shifting'] = []
+        self.movers['pathreversal'] = []
+        #self.ensembles = [paths.TPSEnsemble(stateA, stateB)]
+
 
 class TISTransition(Transition):
     """
@@ -63,12 +108,18 @@ class TISTransition(Transition):
 
         self.total_crossing_probability_method="wham" 
 
-        self._calcd_crossprob_params = None # check if this changed
-        self._calcd_pathlen_params = None # check if this changed 
+        # TODO: eventually I'll generalize this to include the function to
+        # be called, possibly some parameters ... can't this go to a 
+        self.ensemble_histogram_info = {
+            'pathlength_histogram' : Histogrammer(
+                f=sample_pathlength,
+                f_args=None,
+                hist_args=None
+            )
+        }
+        self.histograms = {}
 
         # caches for the results of our calculations
-        self._individual_crossing_probabilities = None
-        self._total_crossing_probability = None
         self._flux = None
         self._rate = None
         pass
@@ -89,23 +140,44 @@ class TISTransition(Transition):
         """Dictionary of parameters for crossing probabilities"""
         pass
 
-    # analysis results: note that these are cached, but can be overridden by
-    # using `force=True` (or by changing the nature of histogram parameters)
-    def individual_crossing_probabilities(self, force=False):
-        """Return the crossing probability for each interface."""
-        params_match = (self.crossing_probability_parameters == self._calcd_crossprob_params)
-        if force == True or params_match == False:
-            # redo the calculation
-            pass
+    def ensemble_statistics(self, ensemble, data, weights, force=False):
+        """Calculate stats for a given ensemble: path length, crossing prob
 
-        return self._individual_crossing_probabilities
+        In general we do all of these at once because the extra cost of
+        running through the samples twice is worse than doing the extra
+        calculations.
+        """
+        # figure out which histograms need to updated for this ensemble
+        run_it = []
+        if not force:
+            # figure out which need to be rerun
+            pass
+        else:
+            run_it = self._ensemble_histograms.keys()
+
+        for hist in run_it:
+            hist_info = self.ensemble_histogram_info[hist]
+            if hist not in self.histograms:
+                self.histograms[hist] = {}
+            self.histograms[hist][ensemble] = Histogram(**(hist_info.hist_args))
+            self.histograms[hist][ensemble].histogram(
+                hist_info.f(data, **hist_info.f_args), weights
+            )
+
+        pass
+
+    def pathlength_histogram(self, ensemble):
+        # check existence and correctness of self.histograms[pl][ens]
+        hist = self.histograms['pathlength'][ensemble]
+        return hist.normalized()
+
+    def crossing_probability(self, ensemble):
+        # check existence and correctness of self.histograms[cp][ens]
+        hist = self.histograms['crossing_probability'][ensemble]
+        return hist.reverse_cumulative()
 
     def total_crossing_probability(self, method="wham", force=False):
         """Return the total crossing probability using `method`"""
-        pass
-
-    def pathlength_histograms(self, force=False):
-        """Return histogram of the path length for each ensemble"""
         pass
 
     def rate(self, flux=None, flux_error=None, force=False):
@@ -165,7 +237,7 @@ class RETISTransition(TISTransition):
     def rate(self, flux=None, flux_error=None, force=False):
         tcp = self.total_crossing_probability()
         if flux is None:
-            flux = self.minus_move_flux()
+            (flux, flux_error) = self.minus_move_flux()
 
         pass
 
