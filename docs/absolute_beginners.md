@@ -26,7 +26,7 @@ consists of $3N$ coordinates and $3N$ velocities --- not to mention extra
 information about the simulation box. We can't think in terms of what all
 those variables are doing, so we usually try to map the full dynamics to a
 smaller set of the most important variables. These are called "collective
-variables,"
+variables," andwe use them to define the behavior of 
 
 ## Volumes apply to snapshots
 
@@ -35,11 +35,18 @@ represent some sort of region in phase space, and they tell you whether a
 given snapshot is in that region.
 
 The most common kind of volume is what we call a `LambdaVolume`. These are
-volumes based on some collective variable
+volumes based on some collective variable, as described above. In this case,
+we set a minimum and maximum value of the order parameter, and 
 
 ## Ensembles apply to trajectories
 
-We also have a class of objects called ensembles. Ensembles 
+We also have a class of objects called `Ensemble`s. More correctly, we
+should call these "path ensembles" (or even more correctly, "path ensemble
+functions.") The most important function this provides is the indicator
+function, which tells you whether or a given trajectory is in the path
+ensemble or not.  In the same way that a volume takes a snapshot from a
+trajectory and tells you whether it includes it or not, an ensemble takes a
+*whole* trajectory and tells you whether it is included.
 
 Just as configurational Monte Carlo is done by making changes to each
 snapshot, Monte Carlo can also be performed by making changes to
@@ -50,6 +57,6 @@ in OpenPathSampling.
 In configurational Monte Carlo, you need some function of the configuration
 (usually related to the energy) to decide what steps are allowed and with
 what probability. In path sampling Monte Carlo, you need some function of th
-entire trajectory. The simplest functions are what are called the ensemble
-indicator functions, ???
+entire trajectory. The simplest function is the ensemble indicator
+functions. 
 
