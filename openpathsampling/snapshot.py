@@ -112,7 +112,7 @@ class Configuration(object):
 
 
     @property
-    def atoms(self):
+    def n_atoms(self):
         '''
         Returns the number of atoms in the configuration
         '''
@@ -158,7 +158,7 @@ class Configuration(object):
         Rather slow since the topology has to be made each time. Try to avoid it
         '''
 
-        n_atoms = self.atoms
+        n_atoms = self.n_atoms
 
         output = np.zeros([1, n_atoms, 3], np.float32)
         output[0,:,:] = self.coordinates
@@ -224,7 +224,7 @@ class Momentum(object):
             self.kinetic_energy = None
 
     @property
-    def atoms(self):
+    def n_atoms(self):
         '''
         Returns the number of atoms in the momentum
         '''   
@@ -454,7 +454,7 @@ class Snapshot(object):
     
     @property
     @has('configuration')
-    def atoms(self):
+    def n_atoms(self):
         '''
         The number of atoms in the snapshot
         '''
