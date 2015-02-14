@@ -1,4 +1,5 @@
 from openpathsampling.todict import restores_as_stub_object
+from openpathsampling.pathmover import PathMover
 import openpathsampling as paths
 
 import logging
@@ -27,7 +28,7 @@ class Calculation(object):
 
 
 @restores_as_stub_object
-class BootstrapPromotionMove(paths.PathMover):
+class BootstrapPromotionMove(PathMover):
     '''
     Bootstrap promotion is the combination of an EnsembleHop (to the next
     ensemble up) with incrementing the replica ID.
@@ -77,7 +78,7 @@ class BootstrapPromotionMove(paths.PathMover):
 
 
 # TODO: Is this used anywhere? Or do we do this differently
-class InitializeSingleTrajectoryMover(paths.PathMover):
+class InitializeSingleTrajectoryMover(PathMover):
     def __init__(self, bias=None, shooters=None,
                  ensembles=None, replicas='all'):
         super(InitializeSingleTrajectoryMover, self).__init__(ensembles=ensembles,

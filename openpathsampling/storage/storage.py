@@ -66,7 +66,8 @@ class Storage(netcdf.Dataset):
         self.sample = paths.storage.SampleStore(storage)
         self.sampleset = paths.storage.SampleSetStore(storage)
 
-        self.collectivevariable = paths.storage.ObjectDictStore(storage, paths.OrderParameter, paths.Configuration)
+        self.orderparameter = paths.storage.ObjectDictStore(storage, paths.OrderParameter, paths.Configuration)
+        self.collectivevariable = self.orderparameter
         self.cv = self.collectivevariable
 
         # normal objects
@@ -76,6 +77,7 @@ class Storage(netcdf.Dataset):
         self.shootingpoint = paths.storage.ObjectStore(storage, paths.ShootingPoint, is_named=False)
         self.shootingpointselector = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, is_named=False)
         self.engine = paths.storage.ObjectStore(storage, paths.DynamicsEngine, is_named=True)
+        self.dynamicsengine = self.engine
         self.calculation = paths.storage.ObjectStore(storage, paths.Calculation, is_named=True)
 
         # nestable objects

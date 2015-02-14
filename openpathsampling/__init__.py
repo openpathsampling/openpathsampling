@@ -34,7 +34,7 @@ from dynamics_engine import DynamicsEngine
 
 from openmm_engine import OpenMMEngine
 
-from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
+from volume import Volume, VolumeCombination, VolumeFactory, \
     EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, AndVolume, \
     OrVolume, XorVolume, SubVolume
 

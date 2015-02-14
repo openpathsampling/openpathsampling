@@ -16,6 +16,7 @@ from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.pathmover import *
 
 from openpathsampling.shooting import UniformSelector
+from openpathsampling.sample import SampleSet, Sample
 
 from openpathsampling.volume import LambdaVolume
 from test_helpers import CallIdentity

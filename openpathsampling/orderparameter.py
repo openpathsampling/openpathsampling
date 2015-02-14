@@ -4,7 +4,6 @@
 
 import mdtraj as md
 import openpathsampling as paths
-from openpathsampling.todict import restores_as_stub_object
 
 class ObjectDict(dict):
     """
@@ -228,7 +227,6 @@ class FunctionalStorableObjectDict(StorableObjectDict):
 
         return fnc
 
-@restores_as_stub_object
 class OrderParameter(FunctionalStorableObjectDict):
     """
     Wrapper for a function that maps a snapshot to a number.
@@ -302,7 +300,6 @@ class OrderParameter(FunctionalStorableObjectDict):
         else:
             return None
 
-@restores_as_stub_object
 class OP_RMSD_To_Lambda(OrderParameter):
     """
     Transforms the RMSD from `center` to a value between zero and one.
@@ -369,7 +366,6 @@ class OP_RMSD_To_Lambda(OrderParameter):
 
         return map(self._scale_fnc(self.min_lambda, self.max_lambda), results)
 
-@restores_as_stub_object
 class OP_Featurizer(OrderParameter):
     """
     An OrderParameter that uses an MSMBuilder3 featurizer as the logic
@@ -412,7 +408,6 @@ class OP_Featurizer(OrderParameter):
 
         return result
 
-@restores_as_stub_object
 class OP_MD_Function(OrderParameter):
     """Make `OrderParameter` from `fcn` that takes mdtraj.trajectory as input.
 
@@ -455,7 +450,6 @@ class OP_MD_Function(OrderParameter):
         t = trajectory.md(self.topology)
         return self.fcn(t, *args, **self.kwargs)
 
-@restores_as_stub_object
 class OP_Volume(OrderParameter):
     """ Make `Volume` into `OrderParameter`: maps to 0.0 or 1.0 """
 
@@ -473,7 +467,6 @@ class OP_Volume(OrderParameter):
         result = [ float(self.volume(item)) for item in items ]
         return result
 
-@restores_as_stub_object
 class OP_Function(OrderParameter):
     """Make any function `fcn` into an `OrderParameter`.
 
