@@ -192,8 +192,6 @@ class Trajectory(list):
         # Allow for numpy style of selecting several indices using a list as index parameter
         if type(index) is list:
             ret = [ list.__getitem__(self, i) for i in index ]
-        elif type(index) is slice:
-            ret = [ list.__getitem__(self, i) for i in range(*index.indices(len(self)))]
         else:
             ret = list.__getitem__(self, index)
                 
