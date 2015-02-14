@@ -134,12 +134,6 @@ class TISTransition(Transition):
         return self.movers['pathreversal']
 
     # parameters for different types of output
-
-    @property
-    def crossing_probability_parameters(self):
-        """Dictionary of parameters for crossing probabilities"""
-        pass
-
     def ensemble_statistics(self, ensemble, data, weights, force=False):
         """Calculate stats for a given ensemble: path length, crossing prob
 
@@ -178,7 +172,18 @@ class TISTransition(Transition):
 
     def total_crossing_probability(self, method="wham", force=False):
         """Return the total crossing probability using `method`"""
-        pass
+        if method == "wham":
+            cp = {}
+            for ens in self.ensembles:
+                cp[ens] = self.crossing_probability(ens)
+            wham = WHAM()
+            wham.initial_histograms = cp
+            wham.clean_leading_ones()
+            tcp = wham.wham_bam_histogram()
+        elif method == "mbar":
+            pass
+
+        return tcp
 
     def rate(self, flux=None, flux_error=None, force=False):
         """Calculate the rate for this transition.
