@@ -166,7 +166,8 @@ class Trajectory(list):
 
         Notes
         -----        
-        If a trajectory has been subsetted then this returns only the number of the view otherwise if equals the number of atoms in the snapshots stored
+        If a trajectory has been subset then this returns only the number of the
+        view otherwise if equals the number of atoms in the snapshots stored
         
         """
 
@@ -179,14 +180,6 @@ class Trajectory(list):
     #=============================================================================================
     # LIST INHERITANCE FUNCTIONS
     #=============================================================================================
-
-    def __getslice__(self, *args, **kwargs):
-        ret =  list.__getslice__(self, *args, **kwargs)
-        if isinstance(ret, list):
-            ret = Trajectory(ret)
-            ret.atom_indices = self.atom_indices
-            
-        return ret
         
     def __getitem__(self, index):
         # Allow for numpy style of selecting several indices using a list as index parameter

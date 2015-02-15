@@ -33,7 +33,7 @@ class testSampleSet(object):
             store = getattr(self.storage, store_name)
             if hasattr(store.content_class, 'creatable'):
                 for obj in store:
-                    print 'store %s object %d' % (store_name, obj.idx[self.storage])
+#                    print 'store %s object %d' % (store_name, obj.idx[self.storage])
                     json1 = obj.json
                     obj_clone = self.json.build(obj.json)
                     json2 = self.json.simplify(obj_clone)
@@ -49,7 +49,7 @@ class testSampleSet(object):
             store = getattr(self.storage, store_name)
             if hasattr(store.content_class, 'dictable'):
                 for obj in store:
-                    print 'store %s object %d' % (store_name, obj.idx[self.storage])
+#                    print 'store %s object %d' % (store_name, obj.idx[self.storage])
                     json1 = obj.json
                     obj_clone = self.json.build(obj.json)
                     json2 = self.json.simplify(obj_clone)
