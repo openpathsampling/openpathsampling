@@ -1,6 +1,6 @@
 package:
   name: openpathsampling-dev
-  version: !!str 0.0.1
+  version: !!str 0.0.2
 
 build:
   preserve_egg_dir: True

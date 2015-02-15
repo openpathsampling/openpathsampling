@@ -69,6 +69,7 @@ class Storage(netcdf.Dataset):
 
         self.pathmover = paths.storage.ObjectStore(storage, paths.PathMover, is_named=True)
         self.movedetails = paths.storage.ObjectStore(storage, paths.MoveDetails, is_named=False)
+        self.movepaths = paths.storage.ObjectStore(storage, paths.MovePath, is_named=False, nestable=True)
         self.shootingpoint = paths.storage.ObjectStore(storage, paths.ShootingPoint, is_named=False)
         self.shootingpointselector = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, is_named=False)
         self.engine = paths.storage.ObjectStore(storage, paths.DynamicsEngine, is_named=True)

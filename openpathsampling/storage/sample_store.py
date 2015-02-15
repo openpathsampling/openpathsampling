@@ -22,7 +22,10 @@ class SampleStore(ObjectStore):
             self.storage.movedetails.save(sample.details)
             self.set_object('sample_details', idx, sample.details)
 
-            self.save_variable('sample_step', idx, sample.step)
+            if sample.step is None:
+                self.save_variable('sample_step', idx, -1)
+            else:
+                self.save_variable('sample_step', idx, sample.step)
 
     def load_empty(self, idx):
         trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
@@ -30,6 +33,9 @@ class SampleStore(ObjectStore):
         replica_idx = int(self.storage.variables['sample_replica'][idx])
 #        details_idx = int(self.storage.variables['sample_details_idx'][idx])
         step=self.load_variable('sample_step', idx)
+
+        if step < 0:
+            step = None
 
 
         obj = Sample(
@@ -109,6 +115,9 @@ class SampleSetStore(ObjectStore):
         values = self.list_to_numpy(sampleset, 'sample')
         self.storage.variables['sampleset_sample_idx'][idx] = values
 
+        self.storage.movepaths.save(sampleset.movepath)
+        self.set_object('sampleset_movepath', idx, sampleset.movepath)
+
 
     def sample_indices(self, idx):
         '''
@@ -146,11 +155,13 @@ class SampleSetStore(ObjectStore):
             the sampleset
         '''
 
+        movepath_idx = int(self.storage.variables['sampleset_movepath_idx'][idx])
+
         values = self.storage.variables['sampleset_sample_idx'][idx]
 
         # typecast to sample
         samples = self.list_from_numpy(values, 'sample')
-        sampleset = SampleSet(samples)
+        sampleset = SampleSet(samples, movepath=self.storage.movepaths.load(movepath_idx))
 
         return sampleset
 
@@ -166,3 +177,5 @@ class SampleSetStore(ObjectStore):
             variable_length = True,
             chunksizes=(1024, )
         )
+
+        self.init_variable('sampleset_movepath_idx', 'index', chunksizes=(1, ))

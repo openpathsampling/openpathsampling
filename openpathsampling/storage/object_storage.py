@@ -82,6 +82,7 @@ class ObjectStore(object):
         self.json = json
         self.simplifier = paths.storage.StorableObjectJSON(storage)
         self.identifier = self.db + '_name'
+        self._free = set()
 
         if dimension_units is not None:
             self.dimension_units = dimension_units
@@ -220,12 +221,12 @@ class ObjectStore(object):
         self.content_class.base_cls = self.content_class
 
         # add a property idx that keeps the storage reference
-
         def _idx(this):
             if not hasattr(this, '_idx'):
                 this._idx = dict()
 
             return this._idx
+
 
         def _save(this, storage):
             storage.save(this)
@@ -235,6 +236,12 @@ class ObjectStore(object):
 
         self.content_class.save = _save
         self.content_class.idx = property(_idx)
+
+        if not hasattr(self.content_class, 'cls'):
+            def _cls(this):
+                return this.__class__.__name__
+
+            self.content_class.cls = property(_cls)
 
         # register as a base_class for storable objects
         self.storage.links.append(self)
@@ -457,7 +464,7 @@ class ObjectStore(object):
         Trajectoy
             the actual trajectory object
         '''
-        return self.load(self.count())
+        return self.load(self.count() - 1)
 
     def first(self):
         '''
@@ -491,7 +498,19 @@ class ObjectStore(object):
             the number of the next free index in the storage.
             Used to store a new object.
         '''
-        return self.count()
+        count = self.count()
+        self._free = set([ idx for idx in self._free if idx >= count])
+        idx = count
+        while idx in self._free:
+            idx += 1
+
+        return idx
+
+    def reserve_idx(self, idx):
+        '''
+        Locks an idx as used
+        '''
+        self._free.add(idx)
 
     def _init(self, units=None):
         """
@@ -1051,6 +1070,9 @@ def saveidx(func):
                 idx = int(idx)
 
         obj.idx[storage] = idx
+
+        # make sure in nested saving that an IDX is not used twice!
+        self.reserve_idx(idx)
         func(obj, idx, *args, **kwargs)
 
     return inner
