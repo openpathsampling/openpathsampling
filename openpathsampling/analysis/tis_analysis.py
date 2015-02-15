@@ -61,7 +61,7 @@ class Histogrammer(object):
     def hist_args(self):
         return self._hist_args
 
-    @property.setter
+    @hist_args.setter
     def hist_args(self, val):
         self._hist_args = val
         self.empty_hist = Histogram(**self._hist_args)
