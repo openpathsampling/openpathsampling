@@ -938,7 +938,6 @@ class LengthEnsemble(Ensemble):
             return length >= self.length.start and (self.length.stop is None or length < self.length.stop)
         
     def can_append(self, trajectory):
-        print type(trajectory)
         length = trajectory.frames
         if type(self.length) is int:
             return length < self.length

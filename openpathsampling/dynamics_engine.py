@@ -232,7 +232,6 @@ class DynamicsEngine(object):
         stop = False
         if continue_conditions is not None:
             for condition in continue_conditions:
-                print type(trajectory)
                 can_continue = condition(trajectory)
                 self.running[condition] = can_continue # JHP: is this needed?
                 stop = stop or not can_continue
@@ -277,8 +276,6 @@ class DynamicsEngine(object):
             trajectory = paths.Trajectory()
             trajectory.append(snapshot)
 
-            print type(trajectory)
-            
             frame = 0
             # maybe we should stop before we even begin?
             stop = self.stop_conditions(trajectory=trajectory,

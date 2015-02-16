@@ -76,7 +76,6 @@ class testStorage(object):
 
         storage2 = Storage(filename=self.filename_clone, mode='a')
         for store_name in storage.list_stores():
-            print '%s' % store_name
             store = getattr(storage, store_name)
 
             if hasattr(store.content_class, 'creatable'):
