@@ -14,6 +14,7 @@ from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
+@restores_as_stub_object
 class Calculation(object):
 
     calc_name = "Calculation"
@@ -82,6 +83,7 @@ class BootstrapPromotionMove(PathMover):
         mover = self._hopper[top_ens_idx]
         return mover.move(globalstate)
 
+
 class InitializeSingleTrajectoryMover(PathMover):
     def __init__(self, bias=None, shooters=None,
                  ensembles=None, replicas='all'):
@@ -103,7 +105,7 @@ class InitializeSingleTrajectoryMover(PathMover):
         sample = Sample(replica=0, trajectory=trajectory,
                         ensemble=self.ensembles[0], details=init_details)
 
-
+@restores_as_stub_object
 class Bootstrapping(Calculation):
     """Creates a SampleSet with one sample per ensemble.
     
@@ -171,6 +173,7 @@ class Bootstrapping(Calculation):
                              + "," + str(sample.details.accepted)
                             )
             self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
+            self.globalstate.movepath = movepath
             logger.debug("GLOBALSTATE:")
             for sample in self.globalstate:
                 logger.debug("(" + str(sample.replica)
@@ -192,6 +195,7 @@ class Bootstrapping(Calculation):
         for sample in self.globalstate:
             assert sample.ensemble(sample.trajectory) == True, "WTF?"
 
+@restores_as_stub_object
 class PathSampling(Calculation):
     """
     General path sampling code. 
@@ -205,7 +209,7 @@ class PathSampling(Calculation):
                  globalstate=None):
         super(PathSampling, self).__init__(storage, engine)
         self.root_mover = root_mover
-        self.root_mover.name = "PathSamplingRoot"
+#        self.root_mover.name = "PathSamplingRoot"
         samples = []
         for sample in globalstate:
             samples.append(sample.copy_reset())
@@ -215,6 +219,7 @@ class PathSampling(Calculation):
         initialization_logging(init_log, self, 
                                ['root_mover', 'globalstate'])
 
+        self._mover = paths.CalculationMover(self.root_mover, self)
 
     def run(self, nsteps):
         # TODO: change so we can start from some arbitrary step number
@@ -228,7 +233,7 @@ class PathSampling(Calculation):
             self.storage.sync()
 
         for step in range(nsteps):
-            movepath = self.root_mover.move(self.globalstate)
+            movepath = self._mover.move(self.globalstate, step=step)
             samples = movepath.samples
             self.globalstate = self.globalstate.apply_samples(samples, step=step)
             self.globalstate.movepath = movepath
@@ -236,3 +241,9 @@ class PathSampling(Calculation):
                 self.globalstate.save_samples(self.storage)
                 self.globalstate.save(self.storage)
                 self.storage.sync()
+
+    def to_dict(self):
+        return {
+            'root_mover' : self.root_mover,
+#            'globalstate' : self.globalstate
+        }

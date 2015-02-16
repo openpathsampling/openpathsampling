@@ -68,15 +68,15 @@ class MoveDetails(object):
     ----------
     replica : integer
         replica ID to which this trial move would apply
-    inputs : list of Trajectry
+    inputs : list of Trajectory
         the Samples which were used as inputs to the move
     trial : Trajectory
         the Trajectory 
     trial_is_in_ensemble : bool
         whether the attempted move created a trajectory in the right
         ensemble
-    mover_path : list of PathMover
-        the sequence of calls to the PathMover which generated this trial
+    mover : PathMover
+        the PathMover which generated this sample out of other samples
 
     Specific move types may have add several other attributes for each
     MoveDetails object. For example, shooting moves will also include
@@ -90,8 +90,12 @@ class MoveDetails(object):
             accepted=>trial_in_ensemble (probably only in shooting)
 
     TODO:
-    Currently inputs/trial/accepted are in terms of Trajectory objects. I
+    Currently trial/accepted are in terms of Trajectory objects. I
     think it makes more sense for them to be Samples.
+    I kept trial, accepted as a trajectory and only changed inputs
+    to a list of samples. Since trial, accepted are move related
+    to the shooting and not necessarily dependent on a replica or
+    initial ensemble.
     '''
 
     def __init__(self, **kwargs):
@@ -100,7 +104,7 @@ class MoveDetails(object):
         self.result=None
         self.acceptance_probability=None
         self.accepted=None
-        self.mover_path=[]
+        self.mover=None
         for key, value in kwargs:
             setattr(self, key, value)
 
@@ -117,9 +121,7 @@ class MoveDetails(object):
         details = MoveDetails()
         details.accepted = True
         details.acceptance_probability = 1.0
-        details.mover_path = []
-        #details.mover = PathMover()
-        #details.mover.name = "Initialization (trajectory)"
+        details.mover = None
         details.inputs = []
         details.trial = sample.trajectory
         details.ensemble = sample.ensemble
@@ -362,7 +364,6 @@ class ShootMover(PathMover):
         details = MoveDetails()
         details.accepted = False
         details.inputs = [rep_sample]
-        details.mover_path.append(self)
         details.mover = self
         setattr(details, 'start', trajectory)
         setattr(details, 'start_point', self.selector.pick(details.start) )
@@ -381,6 +382,7 @@ class ShootMover(PathMover):
             logger.info('Proposal probability ' + str(sel_prob)
                         + ' / random : ' + str(rand)
                        )
+
             if (rand < self.selection_probability_ratio(details)):
                 logger.info("Shooting move accepted!")
                 details.accepted = True
@@ -522,6 +524,7 @@ class RandomChoiceMover(PathMover):
 
         return path
 
+@restores_as_stub_object
 class ConditionalMover(PathMover):
     '''
     An if-then-else structure for PathMovers.
@@ -681,12 +684,12 @@ class ConditionalSequentialMover(SequentialMover):
 
 @restores_as_stub_object
 class RestrictToLastSampleMover(PathMover):
-    def __init__(self, inner_mover):
-        self.inner_mover = inner_mover
+    def __init__(self, mover):
+        self.mover = mover
 
     @keep_selected_samples
     def move(self, globalstate):
-        movepath = self.inner_mover.move(globalstate)
+        movepath = self.mover.move(globalstate)
         return paths.KeepLastSampleMovePath(movepath, mover=self)
 
 @restores_as_stub_object
@@ -720,6 +723,7 @@ class ReplicaIDChangeMover(PathMover):
         details.result = rep_sample.trajectory
         details.accepted = True
         details.acceptance_probability = 1.0
+        details.mover = self
         setattr(details, 'rep_from', mypair[0])
         setattr(details, 'rep_to', mypair[1])
 
@@ -796,6 +800,7 @@ class EnsembleHopMover(PathMover):
         details = MoveDetails()
         details.inputs = [rep_sample]
         details.result = trajectory
+        details.mover = self
         setattr(details, 'initial_ensemble', ens_from)
         setattr(details, 'trial_ensemble', ens_to)
         details.accepted = ens_to(trajectory)
@@ -850,7 +855,7 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
         details = MoveDetails()
         details.accepted = True
         details.inputs = [rep_sample]
-        details.mover_path.append(self)
+        details.mover = self
         details.result = trajectory
         setattr(details, 'initial_ensemble', ens_from)
         setattr(details, 'trial_ensemble', ens_to)
@@ -864,7 +869,6 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
         )
 
         path = paths.SampleMovePath( [sample], mover=self, accepted=details.accepted)
-
         return path
 
 
@@ -895,7 +899,7 @@ class RandomSubtrajectorySelectMover(PathMover):
 
         details = MoveDetails()
         details.inputs = [rep_sample]
-        details.mover_path.append(self)
+        details.mover = self
 
         subtrajs = self._subensemble.split(trajectory)
         logger.debug("Found "+str(len(subtrajs))+" subtrajectories.")
@@ -963,7 +967,7 @@ class PathReversalMover(PathMover):
 
         details = MoveDetails()
         details.inputs = [rep_sample]
-        details.mover_path.append(self)
+        details.mover = self
 
         reversed_trajectory = trajectory.reversed
         details.trial = reversed_trajectory
@@ -1041,8 +1045,9 @@ class ReplicaExchangeMover(PathMover):
         details2.inputs = [s2, s1]
         setattr(details1, 'ensembles', [ensemble1, ensemble2])
         setattr(details2, 'ensembles', [ensemble1, ensemble2])
-        details1.mover_path.append(self)
-        details2.mover_path.append(self)
+        details1.mover = self
+        details2.mover = self
+
         details2.trial = trajectory1
         details1.trial = trajectory2
         if allowed:
@@ -1198,6 +1203,18 @@ class MinusMover(ConditionalSequentialMover):
     @keep_selected_samples
     def move(self, globalstate):
         return super(MinusMover, self).move(globalstate).closed
+
+@restores_as_stub_object
+class CalculationMover(PathMover):
+    """
+    This just wraps a mover and references the used calculation
+    """
+    def __init__(self, mover, calculation):
+        self.mover = mover
+        self.calculation = calculation
+
+    def move(self, globalstate, step=-1):
+        return paths.CalculationMovePath(self.mover.move(globalstate), self.calculation, step=step, mover=self)
 
 @restores_as_stub_object
 class MultipleSetMinusMover(RandomChoiceMover):

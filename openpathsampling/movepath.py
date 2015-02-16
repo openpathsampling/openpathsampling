@@ -125,7 +125,8 @@ class MovePath(object):
             sample_set = self.samples
 
         # allow for negative indices to be picked, e.g. -1 is the last sample
-        selected_samples = [ idx % len(sample_set) for idx in selected_samples]
+        if len(selected_samples) > 0:
+            selected_samples = [ idx % len(sample_set) for idx in selected_samples]
 
         samples = [
             samp for idx, samp in enumerate(sample_set)
@@ -513,6 +514,7 @@ class FilterSamplesMovePath(MovePath):
     """
     A MovePath that keeps a selection of the underlying samples
     """
+
     def __init__(self, movepath, selected_samples, use_all_samples=False, mover=None):
         super(KeepLastSampleMovePath, self).__init__(mover=mover)
         self.movepath = movepath
@@ -537,6 +539,13 @@ class FilterSamplesMovePath(MovePath):
         return 'FilterMove : pick samples [%s] from sub moves : %s : %d samples\n' % \
                (str(self.selected_samples), self.accepted, len(self.samples)) + \
                MovePath._indent( str(self.movepath) )
+
+    def to_dict(self):
+        return {
+            'movepath' : self.movepath,
+            'selected_samples' : self.selected_samples,
+            'use_all_samples' : self.use_all_samples
+        }
 
 @restores_as_full_object
 class KeepLastSampleMovePath(MovePath):
@@ -568,3 +577,35 @@ class KeepLastSampleMovePath(MovePath):
         return 'Restrict to last sample : %s : %d samples\n' % \
                (self.accepted, len(self.samples)) + \
                MovePath._indent( str(self.movepath) )
+
+    def to_dict(self):
+        return {
+            'movepath' : self.movepath
+        }
+
+@restores_as_full_object
+class CalculationMovePath(MovePath):
+    """
+    A MovePath that just wraps a movepath and references a Calculation
+    """
+
+    def __init__(self, movepath, calculation=None, step=-1, mover=None):
+        super(CalculationMovePath, self).__init__(mover=mover)
+        self.movepath = movepath
+        self.calculation = calculation
+        self.step = step
+
+    def _get_samples(self):
+        return self.movepath.samples
+
+    def __str__(self):
+        return 'CalculationStep : %s : Step # %d with %d samples\n' % \
+               (str(self.calculation.cls), self.step, len(self.samples)) + \
+               MovePath._indent( str(self.movepath) )
+
+    def to_dict(self):
+        return {
+            'movepath' : self.movepath,
+            'calculation' : self.calculation,
+            'step' : self.step
+        }
