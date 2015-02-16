@@ -143,18 +143,19 @@ class ObjectStore(object):
             if  hasattr(self, 'load_empty'):
                 cls = self.content_class
 
-                def _getattr(self, item):
+                def _getattr(this, item):
                     if item == '_idx':
-                        return self.__dict__['idx']
+                        return this.__dict__['idx']
 
                     if hasattr(cls, '_delayed_loading'):
                         if item in cls._delayed_loading:
+#                            _loader = getattr(self, cls._delayed_loading[item])
                             _loader = cls._delayed_loading[item]
-                            _loader(self)
+                            _loader(this)
                         else:
                             raise KeyError(item)
 
-                    return self.__dict__[item]
+                    return this.__dict__[item]
 
                 setattr(cls, '__getattr__', _getattr)
 
@@ -289,12 +290,12 @@ class ObjectStore(object):
         self.storage.links.append(self)
 
 
-    def set_variable_partial_loading(self, variable, loader):
+    def set_variable_partial_loading(self, variable, loader_fnc_name):
         cls = self.content_class
         if not hasattr(cls, '_delayed_loading'):
             cls._delayed_loading = dict()
 
-        cls._delayed_loading[variable] = loader
+        cls._delayed_loading[variable] = loader_fnc_name
 
     def idx_by_name(self, needle):
         """
@@ -549,6 +550,7 @@ class ObjectStore(object):
             the number of the next free index in the storage.
             Used to store a new object.
         '''
+
         count = self.count()
         self._free = set([ idx for idx in self._free if idx >= count])
         idx = count
@@ -976,7 +978,12 @@ def loadpartial(func, constructor=None):
         else:
             new_func = getattr(self, constructor)
 
-        return new_func(idx, *args, **kwargs)
+        loaded_obj = new_func(idx, *args, **kwargs)
+
+        # tell the partially loaded obj, which store to use for _loader
+        loaded_obj._update_from_storage = self.storage
+
+        return loaded_obj
 
     return inner
 

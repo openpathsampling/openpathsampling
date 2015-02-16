@@ -429,7 +429,7 @@ class Storage(netcdf.Dataset):
             return store.idx(obj)
 
 
-    def clone(self, filename, subset):
+    def clone(self, filename, subset=None):
         """
         Creates a copy of the netCDF file and allows to reduce the used atoms.
 
@@ -441,10 +441,14 @@ class Storage(netcdf.Dataset):
 
         # Copy all configurations and momenta to new file in reduced form
 
-        for obj in self.configuration.iterator():
-            storage2.configuration.save(obj.copy(subset), idx=obj.idx[self])
-        for obj in self.momentum.iterator():
-            storage2.momentum.save(obj.copy(subset), idx=obj.idx[self])
+        if subset is not None:
+            for obj in self.configuration:
+                storage2.configuration.save(obj.copy(subset), idx=obj.idx[self])
+            for obj in self.momentum:
+                storage2.momentum.save(obj.copy(subset), idx=obj.idx[self])
+        else:
+            self.clone_storage('configuration', storage2)
+            self.clone_storage('momentum', storage2)
 
         # All other should be copied one to one. We do this explicitely although we could just copy all
         # and exclude configurations and momenta, but this seems cleaner
@@ -452,7 +456,7 @@ class Storage(netcdf.Dataset):
         for storage_name in [
                 'trajectory', 'snapshot', 'sample', 'sampleset', 'orderparameter',
                 'pathmover', 'engine', 'movedetails', 'shootingpoint', 'shootingpointselector',
-                'globalstate', 'volume', 'ensemble' ]:
+                'globalstate', 'volume', 'ensemble', 'movepath', 'calculation']:
             self.clone_storage(storage_name, storage2)
 
         storage2.close()
@@ -495,6 +499,8 @@ class Storage(netcdf.Dataset):
             storage_name = storage_to_copy
         else:
             storage_name = storage_to_copy.db
+
+#        print storage_name
 
         for variable in self.variables.keys():
             if variable.startswith(storage_name + '_'):

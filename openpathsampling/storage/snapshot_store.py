@@ -281,7 +281,10 @@ class MomentumStore(ObjectStore):
             The Momentum object to be updated
 
         """
-        storage = self.storage
+        if hasattr(obj, '_update_from_storage'):
+            storage = obj._update_from_storage
+        else:
+            storage = self.storage
 
         idx = obj.idx[self.storage]
         v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
@@ -299,7 +302,10 @@ class MomentumStore(ObjectStore):
             The Momentum object to be updated
 
         """
-        storage = self.storage
+        if hasattr(obj, '_update_from_storage'):
+            storage = obj._update_from_storage
+        else:
+            storage = self.storage
 
         idx = obj.idx[self.storage]
         T = storage.variables['momentum_kinetic'][idx]
@@ -420,8 +426,6 @@ class ConfigurationStore(ObjectStore):
         configuration = Configuration(coordinates=coordinates, box_vectors = box_vectors, potential_energy=potential_energy)
         configuration.topology = self.storage.topology
 
-#        print 'loaded normally'
-
         return configuration
 
     def load_empty(self, idx):
@@ -459,7 +463,11 @@ class ConfigurationStore(ObjectStore):
             the Configuration object to be updated
 
         """
-        storage = self.storage
+        if hasattr(obj, '_update_from_storage'):
+            storage = obj._update_from_storage
+        else:
+            storage = self.storage
+
         idx = obj.idx[storage]
 
         x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
@@ -477,7 +485,11 @@ class ConfigurationStore(ObjectStore):
             the Configuration object to be updated
 
         """
-        storage = self.storage
+        if hasattr(obj, '_update_from_storage'):
+            storage = obj._update_from_storage
+        else:
+            storage = self.storage
+
         idx = obj.idx[storage]
 
         b = storage.variables['configuration_box_vectors'][idx]
@@ -495,7 +507,11 @@ class ConfigurationStore(ObjectStore):
             the Configuration object to be updated
 
         """
-        storage = self.storage
+        if hasattr(obj, '_update_from_storage'):
+            storage = obj._update_from_storage
+        else:
+            storage = self.storage
+
         idx = obj.idx[storage]
 
         V = storage.variables['configuration_potential'][idx]

@@ -60,182 +60,28 @@ class testStorage(object):
 
         self.filename = data_filename("storage_test.nc")
         self.filename_clone = data_filename("storage_test_clone.nc")
+        self.filename_demo = data_filename("toy_tis.nc")
 
     def teardown(self):
         if os.path.isfile(self.filename):
             os.remove(self.filename)
 
-        if os.path.isfile(self.filename_clone):
-            os.remove(self.filename_clone)
+#        if os.path.isfile(self.filename_clone):
+#            os.remove(self.filename_clone)
 
-    def test_create_template(self):
-        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
-        assert(os.path.isfile(data_filename("storage_test.nc")))
-        store.close()
+    def test_store_orderparameters(self):
+        storage = Storage(filename=self.filename_demo, mode='a')
+        storage.clone(filename=self.filename_clone)
+        assert(os.path.isfile(self.filename_clone))
 
-    def test_stored_topology(self):
-        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
-        assert(os.path.isfile(self.filename))
-        store.close()
+        storage2 = Storage(filename=self.filename_clone, mode='a')
+        for store_name in storage.list_stores():
+            print '%s' % store_name
+            store = getattr(storage, store_name)
 
-        store = Storage(filename=self.filename, mode='a')
-        loaded_topology = store.template.topology
+            if hasattr(store.content_class, 'creatable'):
+                for obj in store:
+                    storage2.save(obj)
 
-        # check if poth topologies have the same JSON string (this also tests the simplifier for topologies
-
-        assert_equal(
-            store.simplifier.to_json(self.template_snapshot.topology),
-            store.simplifier.to_json(loaded_topology)
-        )
-
-        store.close()
-
-        pass
-
-    def test_write_load_str(self):
-        print "\nStarting test"
-        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
-        assert(os.path.isfile(self.filename))
-        print "File is a file"
-
-        test_str = 'test_string'
-        store.init_str('test_variable')
-        print "Init'd string"
-        store.write_str('test_variable', test_str)
-        print "Wrote string"
-        store.close()
-        print "Closed the storage"
-
-        store2 = Storage(filename=self.filename, mode='a')
-        print "Opened a second storage"
-        loaded_str = store2.load_str('test_variable')
-        print "Loaded from storage"
-
-        assert(loaded_str == test_str)
-
-        store2.close()
-        print "Closed second storage"
-        pass
-
-    def test_stored_template(self):
-        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
-        assert(os.path.isfile(self.filename))
-        store.close()
-
-        store = Storage(filename=self.filename, mode='a')
-        loaded_template = store.template
-
-        compare_snapshot(loaded_template, self.template_snapshot)
-
-        store.close()
-        pass
-
-    def test_load_save(self):
-        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
-        assert(os.path.isfile(self.filename))
-
-        copy = self.template_snapshot.copy()
-        store.save(copy)
-
-        store.close()
-
-        store = Storage(filename=self.filename, mode='a')
-        loaded_template = store.template
-
-        compare_snapshot(loaded_template, self.template_snapshot)
-        loaded_copy = store.load(Snapshot, 1)
-
-        compare_snapshot(loaded_template, loaded_copy)
-
-        store.close()
-        pass
-
-
-    def test_clone(self):
-        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
-        assert(os.path.isfile(self.filename))
-
-        copy = self.template_snapshot.copy()
-        store.save(copy)
-
-        store.save(self.traj)
-        store.clone(filename=self.filename_clone, subset = self.options['solute_indices'])
-
-        # clone the storage and reduce the number of atoms to only solute
-
-        store2 = Storage(filename=self.filename_clone, mode='a')
-
-        # do some tests, if this is still the same data
-
-        compare_snapshot(
-            store2.snapshot.load(0),
-            store.snapshot.load(0).subset(self.options['solute_indices'])
-        )
-
-        compare_snapshot(
-            store2.snapshot.load(1),
-            store.snapshot.load(1).subset(self.options['solute_indices'])
-        )
-        store.close()
-        store2.close()
-
-        pass
-
-    def test_clone_empty(self):
-        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
-        assert(os.path.isfile(self.filename))
-
-        copy = self.template_snapshot.copy()
-        store.save(copy)
-
-        store.save(self.traj)
-        store.clone_empty(filename=self.filename_clone)
-
-        # clone the storage and reduce the number of atoms to only solute
-
-        store2 = Storage(filename=self.filename_clone, mode='a')
-
-        # do some tests, if this is still the same data
-
-        compare_snapshot(
-            store2.snapshot.load(0),
-            store.snapshot.load(0)
-        )
-
-        assert_equal(store2.snapshot.count(), 1)
-        assert_equal(store2.trajectory.count(), 0)
-
-        store.close()
-        store2.close()
-
-        pass
-
-    def test_clone_empty(self):
-        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
-        assert(os.path.isfile(self.filename))
-
-        copy = self.template_snapshot.copy()
-        store.save(copy)
-
-        store.save(self.traj)
-        store.clone_empty(filename=self.filename_clone)
-
-        # clone the storage and reduce the number of atoms to only solute
-
-        store2 = Storage(filename=self.filename_clone, mode='a')
-
-        # do some tests, if this is still the same data
-
-        compare_snapshot(
-            store2.snapshot.load(0),
-            store.snapshot.load(0)
-        )
-
-        assert_equal(store2.snapshot.count(), 1)
-        assert_equal(store2.trajectory.count(), 0)
-
-        store.close()
-        store2.close()
-
-        pass
-
+        storage.close()
+        storage2.close()
