@@ -180,17 +180,31 @@ class Trajectory(list):
     #=============================================================================================
     # LIST INHERITANCE FUNCTIONS
     #=============================================================================================
-        
+
+    def __getslice__(self, i, j):
+        print 'SLICING CALLED although deprecated', i, j
+        ret = [ list.__getitem__(self, idx) for idx in range(i,j) ]
+
+        if isinstance(ret, list):
+            ret = Trajectory(ret)
+            ret.atom_indices = self.atom_indices
+
+        return ret
     def __getitem__(self, index):
         # Allow for numpy style of selecting several indices using a list as index parameter
         if type(index) is list:
-            ret = [ list.__getitem__(self, i) for i in index ]
+            ret = [ list.__getitem__(self, idx) for idx in index ]
+        elif type(index) is slice:
+            print 'SLICE'
+            ret = [ list.__getitem__(self, idx) for idx in range(*index.indices(len(self))) ]
         else:
             ret = list.__getitem__(self, index)
                 
         if isinstance(ret, list):
             ret = Trajectory(ret)
             ret.atom_indices = self.atom_indices
+        else:
+            print type(ret)
 
         return ret
     
