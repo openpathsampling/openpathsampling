@@ -53,19 +53,19 @@ class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
 
     @property
     def beta(self):
-        return self._beta
+        return self._beta    # pragma: no cover
 
     @property
     def c1(self):
-        return self._c1
+        return self._c1      # pragma: no cover
 
     @property
     def c2(self):
-        return self._c2
+        return self._c2      # pragma: no cover
 
     @property
     def c3(self):
-        return self._c3
+        return self._c3      # pragma: no cover
 
 
     def _OU_update(self, sys, mydt):
