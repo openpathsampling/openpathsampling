@@ -112,9 +112,9 @@ class TISTransition(Transition):
         # be called, possibly some parameters ... can't this go to a 
         self.ensemble_histogram_info = {
             'pathlength_histogram' : Histogrammer(
-                f=sample_pathlength,
-                f_args=None,
-                hist_args=None
+                f=pathlengths,
+                f_args={},
+                hist_args={}
             )
         }
         self.histograms = {}
