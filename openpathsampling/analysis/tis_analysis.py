@@ -118,6 +118,7 @@ class TISTransition(Transition):
             )
         }
         self.histograms = {}
+        self._ensemble_histograms = {}
 
         # caches for the results of our calculations
         self._flux = None
@@ -134,7 +135,7 @@ class TISTransition(Transition):
         return self.movers['pathreversal']
 
     # parameters for different types of output
-    def ensemble_statistics(self, ensemble, data, weights, force=False):
+    def ensemble_statistics(self, ensemble, data, weights=None, force=False):
         """Calculate stats for a given ensemble: path length, crossing prob
 
         In general we do all of these at once because the extra cost of
@@ -149,6 +150,9 @@ class TISTransition(Transition):
         else:
             run_it = self._ensemble_histograms.keys()
 
+        if weights=None:
+            weights = [1.0]*len(data)
+
         for hist in run_it:
             hist_info = self.ensemble_histogram_info[hist]
             if hist not in self.histograms:
@@ -162,6 +166,8 @@ class TISTransition(Transition):
 
     def pathlength_histogram(self, ensemble):
         # check existence and correctness of self.histograms[pl][ens]
+        if "pathlength" not in self.histograms:
+            self.histograms['pathlength'] = {}
         hist = self.histograms['pathlength'][ensemble]
         return hist.normalized()
 
