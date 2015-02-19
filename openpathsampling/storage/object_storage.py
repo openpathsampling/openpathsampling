@@ -6,6 +6,45 @@ import numpy as np
 import openpathsampling as paths
 import simtk.unit as u
 
+class Query(object):
+    """
+    Return
+    """
+    def __init__(self, query_fnc = None, caching = True):
+        if caching:
+            self.cache = {}
+        else:
+            self.cache = None
+        self.query_fnc = query_fnc
+
+    def __call__(self, store):
+        def _query_iterator(self, store):
+            if self.cache is not None:
+                if store not in self.cache:
+                    self.cache[store] = {}
+                store_cache = self.cache[store]
+
+                n_object = len(store)
+
+                for idx in range(n_object):
+                    if self.cache is not None:
+                        if idx in store_cache:
+                            if store_cache[idx]:
+                                yield store[idx]
+                        else:
+                            obj = store.load(idx)
+                            result = self.query_fnc(obj)
+                            self.cache[store][idx] = result
+                            if result:
+                                yield obj
+                    else:
+                        obj = store.load(idx)
+                        result = self.query_fnc(obj)
+                        if result:
+                            yield obj
+
+        return _query_iterator(self, store)
+
 class ObjectStore(object):
     """
     Base Class for storing complex objects in a netCDF4 file. It holds a
@@ -177,6 +216,9 @@ class ObjectStore(object):
 
         return None
 
+    def query(self, needle):
+        return
+
     @property
     def units(self):
         """
@@ -254,32 +296,6 @@ class ObjectStore(object):
 
         cls._delayed_loading[variable] = loader
 
-    def copy(self):
-        """
-        Create a deep copy of the ObjectStore instance
-
-        Returns
-        -------
-        ObjectStore()
-            the copied instance
-        """
-        store = copy.deepcopy(self)
-        return store
-
-    def __call__(self, storage):
-        """
-        Create a deep copy of the ObjectStore instance using the new store
-        provided as function argument
-
-        Returns
-        -------
-        ObjectStore()
-            the copied instance
-        """
-        store = self.copy()
-        store.storage = storage
-        return store
-
     def idx_by_name(self, needle):
         """
         Return the index for the (first) object with a given name from the store
@@ -328,6 +344,27 @@ class ObjectStore(object):
             for idx, name in enumerate(self.storage.variables[self.db + "_name"][:]):
                 self.cache[name] = idx
 
+    def __iter__(self):
+        """
+        Add iteration over all elements in the storage
+        """
+        return self.iterator()
+
+    def __len__(self):
+        """
+        Return the number of stored objects
+
+        Returns
+        -------
+        int
+            number of stored objects
+
+        Notes
+        -----
+        Equal to `store.count()`
+        """
+        return self.count()
+
     def iterator(this, iter_range = None):
         """
         Return an iterator over all objects in the storage
@@ -372,8 +409,18 @@ class ObjectStore(object):
         return ObjectIterator()
 
     def __getitem__(self, item):
+        """
+        Enable numpy style selection of object in the store
+        """
         try:
-            return self.load(item)
+            if type(item) is int or type(item) is str:
+                return self.load(item)
+            elif type(item) is slice:
+                return [self.load(idx) for idx in range(*item.indices(len(self)))]
+            elif type(item) is list:
+                return [self.load(idx) for idx in item]
+            elif item is Ellipsis:
+                return self.iterator()
         except KeyError:
             return None
 
@@ -485,6 +532,10 @@ class ObjectStore(object):
         -------
         number : int
             number of objects in the storage.
+
+        Notes
+        -----
+        Use len(store) instead
         '''
         return int(len(self.storage.dimensions[self.idx_dimension]))
 

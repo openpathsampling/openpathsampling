@@ -23,7 +23,7 @@ from pathmover import (
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
-    CollapseMove
+    CollapseMove, CalculationMover
     #, BootstrapPromotionMove
 )
 
@@ -56,4 +56,4 @@ from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
 
 from movepath import EmptyMovePath, ConditionalSequentialMovePath, MovePath, \
     PartialAcceptanceSequentialMovePath, RandomChoiceMovePath, SampleMovePath, SequentialMovePath, \
-    KeepLastSampleMovePath, CollapsedMovePath, FilterSamplesMovePath
+    KeepLastSampleMovePath, CollapsedMovePath, FilterSamplesMovePath, CalculationMovePath

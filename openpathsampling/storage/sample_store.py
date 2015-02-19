@@ -115,7 +115,7 @@ class SampleSetStore(ObjectStore):
         values = self.list_to_numpy(sampleset, 'sample')
         self.storage.variables['sampleset_sample_idx'][idx] = values
 
-        self.storage.movepaths.save(sampleset.movepath)
+        self.storage.movepath.save(sampleset.movepath)
         self.set_object('sampleset_movepath', idx, sampleset.movepath)
 
 
@@ -161,7 +161,7 @@ class SampleSetStore(ObjectStore):
 
         # typecast to sample
         samples = self.list_from_numpy(values, 'sample')
-        sampleset = SampleSet(samples, movepath=self.storage.movepaths.load(movepath_idx))
+        sampleset = SampleSet(samples, movepath=self.storage.movepath.load(movepath_idx))
 
         return sampleset
 

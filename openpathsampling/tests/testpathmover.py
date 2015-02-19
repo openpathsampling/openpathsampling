@@ -11,9 +11,12 @@ from test_helpers import (assert_equal_array_array, items_equal,
                           CalvinistDynamics,
                           CallIdentity
                          )
+
 import openpathsampling as paths
 from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.pathmover import *
+
+from openpathsampling.sample import Sample, SampleSet
 
 from openpathsampling.shooting import UniformSelector
 
