@@ -150,8 +150,10 @@ class TISTransition(Transition):
         else:
             run_it = self._ensemble_histograms.keys()
 
-        if weights=None:
+        if weights==None:
             weights = [1.0]*len(data)
+
+        print run_it
 
         for hist in run_it:
             hist_info = self.ensemble_histogram_info[hist]
