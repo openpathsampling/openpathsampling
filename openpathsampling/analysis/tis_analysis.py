@@ -38,13 +38,28 @@ In the order listed above, the time for the rate calculation is almost
 entirely in determining the flux from the information in the minus mover.
 """
 
-def pathlengths(samples):
-    for sample in samples:
-        yield len(sample.trajectory)
+def sample_generator(samples):
+    i=0
+    while i<len(samples):
+        yield samples[i]
+        i = i+1
+
+def get_n_samples(n, samples):
+    seq = iter(sample_generator(samples))
+    result = []
+    try:
+        for i in range(n):
+            result.append(seq.next())
+    except StopIteration:
+        pass
+    return result
+
+
+def pathlength(sample):
+    return len(sample.trajectory)
 
 def max_lambdas(sample, orderparameter):
-    for sample in samples:
-        yield max([orderparameter(frame) for frame in sample.trajectory])
+    return max([orderparameter(frame) for frame in sample.trajectory])
 
 
 class Histogrammer(object):
@@ -111,8 +126,8 @@ class TISTransition(Transition):
         # TODO: eventually I'll generalize this to include the function to
         # be called, possibly some parameters ... can't this go to a 
         self.ensemble_histogram_info = {
-            'pathlength_histogram' : Histogrammer(
-                f=pathlengths,
+            'pathlength' : Histogrammer(
+                f=pathlength,
                 f_args={},
                 hist_args={}
             )
@@ -135,12 +150,18 @@ class TISTransition(Transition):
         return self.movers['pathreversal']
 
     # parameters for different types of output
-    def ensemble_statistics(self, ensemble, data, weights=None, force=False):
+    def ensemble_statistics(self, ensemble, samples, weights=None, force=False):
         """Calculate stats for a given ensemble: path length, crossing prob
 
         In general we do all of these at once because the extra cost of
         running through the samples twice is worse than doing the extra
         calculations.
+
+        Parameters
+        ----------
+        ensemble: Ensemble
+        samples : iterator over samples
+
         """
         # figure out which histograms need to updated for this ensemble
         run_it = []
@@ -148,21 +169,19 @@ class TISTransition(Transition):
             # figure out which need to be rerun
             pass
         else:
-            run_it = self._ensemble_histograms.keys()
+            run_it = self.ensemble_histogram_info.keys()
 
-        if weights==None:
-            weights = [1.0]*len(data)
-
-        print run_it
-
+        buflen = 10
+        in_ens_samples = (s for s in samples if s.ensemble == ensemble)
         for hist in run_it:
             hist_info = self.ensemble_histogram_info[hist]
-            if hist not in self.histograms:
+            if hist not in self.histograms.keys():
                 self.histograms[hist] = {}
             self.histograms[hist][ensemble] = Histogram(**(hist_info.hist_args))
-            self.histograms[hist][ensemble].histogram(
-                hist_info.f(data, **hist_info.f_args), weights
-            )
+            hist_data = []
+            for sample in in_ens_samples:
+                hist_data.append(hist_info.f(sample, **hist_info.f_args))
+            self.histograms[hist][ensemble].histogram(hist_data, weights)
 
         pass
 

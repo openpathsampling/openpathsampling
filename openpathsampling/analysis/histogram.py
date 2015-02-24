@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import matplotlib.pyplot as plt
 
 # TODO: someday I should replace this with a variant of my sparse-histogram
 # code. It is easy to use and probably can be made faster than numpy for
@@ -161,6 +162,10 @@ class Histogram(object):
             cumul_hist *= maximum / total
             
         return cumul_hist
+
+    def plt_plot(self):
+        """Plots using matplotlib"""
+        plt.plot(self.bins[1:], self._histogram)
 
 # TODO: might as well add a main fucntion to this; read data / weight from
 # stdin and output an appropriate histogram depending on some options. Then
