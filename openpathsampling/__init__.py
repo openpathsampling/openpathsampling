@@ -23,7 +23,7 @@ from pathmover import (
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
-    CollapseMove, CalculationMover
+    CollapseMove, CalculationMover, PathReversalSet
     #, BootstrapPromotionMove
 )
 

@@ -1,4 +1,5 @@
 from histogram import Histogram
+import openpathsampling as paths
 """
 Experimental analysis module.
 
@@ -138,6 +139,19 @@ class TISTransition(Transition):
         # caches for the results of our calculations
         self._flux = None
         self._rate = None
+
+        self.stateA = stateA
+        self.stateB = stateB
+        self.orderparameter = orderparameter
+        self.interfaces = interfaces
+        self.storage = storage
+        self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
+            stateA, stateB, self.interfaces
+        )
+        self.movers['shooting'] = paths.PathMoverFactory.OneWayShootingSet(
+            paths.UniformSelector(), self.ensembles
+        )
+        self.movers['pathreversal'] = paths.PathReversalSet(self.ensembles)
         pass
 
     # path movers
