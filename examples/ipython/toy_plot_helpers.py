@@ -61,7 +61,7 @@ class ToyPlot(object):
     def add_initial_condition(self, initcond):
         self._initcond = initcond
 
-    def plot_pes_initcond(self):
+    def plot_pes_initcond(self, trajectories):
         fig, ax = plt.subplots()
         if self._pes is not None:
             plt.contour(self.X, self.Y, self._pes, 
@@ -70,6 +70,10 @@ class ToyPlot(object):
             ax.plot(self._initcond.coordinates[0,0], 
                     self._initcond.coordinates[0,1],
                     'ro', zorder=3)
+        for traj in trajectories:
+            plt.plot(traj.coordinates()[:,0,0], traj.coordinates()[:,0,1],
+                     self.repcolordict[trajectories.index(traj)],
+                     zorder=2)
 
     def plot(self, trajectories=[], bold=[]):
         fig, ax = plt.subplots()
