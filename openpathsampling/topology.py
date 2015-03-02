@@ -6,6 +6,8 @@ import pandas as pd
 from simtk import unit as units
 import simtk.openmm
 
+from simtk.openmm import XmlSerializer
+
 @restores_as_full_object
 class Topology(object):
     '''
@@ -107,3 +109,31 @@ class MDTrajTopology(Topology):
         md_topology = md.Topology.from_dataframe(atoms, bonds)
 
         return cls(md_topology, dct['subsets'])
+
+@restores_as_full_object
+class OpenMMSystemTopology(Topology):
+    """A Topology that is based on an openmm.system object
+
+    """
+    def __init__(self, openmm_system, subsets = None):
+        self.system = openmm_system
+        self.n_atoms = int(self.system.getNumParticles())
+        self.n_spatial = 3
+        if subsets is None:
+            self.subsets = {}
+        else:
+            self.subsets = subsets
+
+    def subset(self, list_of_atoms):
+        return self
+
+    def to_dict(self):
+        system_xml = XmlSerializer.serialize(self.system)
+        return {'system_xml' : system_xml, 'subsets' : self.subsets}
+
+    @classmethod
+    def from_dict(cls, dct):
+        system_xml = dct['system_xml']
+        subsets = dct['subsets']
+
+        return cls(XmlSerializer.deserialize(system_xml), subsets)

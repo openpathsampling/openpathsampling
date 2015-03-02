@@ -259,3 +259,4 @@ def restores_as_stub_object(super_class):
 #         super_class.from_dict = classmethod(_from_dict)
 #
 #     return super_class
+
