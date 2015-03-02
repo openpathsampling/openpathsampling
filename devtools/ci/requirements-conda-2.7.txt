@@ -10,5 +10,4 @@ netcdf4
 msmbuilder
 openmmtools
 ipython <=2.4.1
-ipython-notebook
 matplotlib
