@@ -2,7 +2,7 @@
 """
 simple example script for running and testing notebooks.
 
-Usage: `ipnbdoctest.py foo.ipynb [bar.ipynb [...]]`
+Usage: `ipnbdoctest.py foo.ipynb`
 
 Each cell is submitted to the kernel, and the outputs are compared with those stored in the notebook.
 
