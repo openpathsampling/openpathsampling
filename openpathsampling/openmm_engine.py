@@ -219,9 +219,12 @@ class OpenMMEngine(paths.DynamicsEngine):
     def _build_current_snapshot(self):
         # TODO: Add caching for this and mark if changed
 
+        print 'get state'
         state = self.simulation.context.getState(getPositions=True,
                                                  getVelocities=True,
                                                  getEnergy=True)
+
+        print 'build snapshot'
         return paths.Snapshot(coordinates = state.getPositions(asNumpy=True),
                         box_vectors = state.getPeriodicBoxVectors(asNumpy=True),
                         potential_energy = state.getPotentialEnergy(),
