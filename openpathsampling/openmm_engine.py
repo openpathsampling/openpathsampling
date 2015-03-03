@@ -267,6 +267,7 @@ class OpenMMEngine(paths.DynamicsEngine):
             self._current_snapshot = snapshot
 
     def generate_next_frame(self):
+        print 'run for steps ', self.nsteps_per_frame
         self.simulation.step(self.nsteps_per_frame)
         self._current_snapshot = None
         return self.current_snapshot
