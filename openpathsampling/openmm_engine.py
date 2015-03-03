@@ -270,6 +270,7 @@ class OpenMMEngine(paths.DynamicsEngine):
         print 'run for steps ', self.nsteps_per_frame
         self.simulation.step(self.nsteps_per_frame)
         self._current_snapshot = None
+        print 'finished steps'
         return self.current_snapshot
 
     # (possibly temporary) shortcuts for momentum and configuration
