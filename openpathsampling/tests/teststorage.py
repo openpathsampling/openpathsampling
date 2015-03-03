@@ -26,38 +26,41 @@ def compare_snapshot(snapshot1, snapshot2):
     assert_equal(snapshot1.potential_energy, snapshot2.potential_energy)
     assert_equal(snapshot1.kinetic_energy, snapshot2.kinetic_energy)
 
+def setUp():
+    global this
+
+    # Use the standard Alanine to generate snapshots to store for higher testing
+
+    this.options = {'temperature' : 300.0 * u.kelvin,
+               'collision_rate' : 1.0 / u.picoseconds,
+               'timestep' : 2.0 * u.femtoseconds,
+               'nsteps_per_frame' : 10,
+               'n_frames_max' : 5,
+               'start_time' : time.time(),
+               'fn_initial_pdb' : data_filename("ala_small_traj.pdb"),
+               'platform' : 'fastest',
+               'solute_indices' : range(22),
+               'forcefield_solute' : 'amber96.xml',
+               'forcefield_solvent' : 'tip3p.xml'
+              }
+
+    # create a template snapshot
+    this.template_snapshot = paths.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
+
+    # and an openmm engine
+    this.engine = paths.OpenMMEngine(options=this.options, template=this.template_snapshot)
+    this.engine.initialized = True
+
+    # run a small trajectory of a few steps that can be used to save, etc...
+    this.traj = this.engine.generate(this.template_snapshot, running=[paths.LengthEnsemble(2).can_append])
+
+    this.filename = data_filename("storage_test.nc")
+    this.filename_clone = data_filename("storage_test_clone.nc")
 
 
 
 class testStorage(object):
-    def setUp(self):
-        # Use the standard Alanine to generate snapshots to store for higher testing
 
-        self.options = {'temperature' : 300.0 * u.kelvin,
-                   'collision_rate' : 1.0 / u.picoseconds,
-                   'timestep' : 2.0 * u.femtoseconds,
-                   'nsteps_per_frame' : 10,
-                   'n_frames_max' : 5,
-                   'start_time' : time.time(),
-                   'fn_initial_pdb' : data_filename("ala_small_traj.pdb"),
-                   'platform' : 'fastest',
-                   'solute_indices' : range(22), 
-                   'forcefield_solute' : 'amber96.xml',
-                   'forcefield_solvent' : 'tip3p.xml'
-                  }
-
-        # create a template snapshot
-        self.template_snapshot = paths.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
-
-        # and an openmm engine
-        self.engine = paths.OpenMMEngine(options=self.options, template=self.template_snapshot)
-        self.engine.initialized = True
-
-        # run a small trajectory of a few steps that can be used to save, etc...
-        self.traj = self.engine.generate(self.template_snapshot, running=[paths.LengthEnsemble(2).can_append])
-
-        self.filename = data_filename("storage_test.nc")
-        self.filename_clone = data_filename("storage_test_clone.nc")
 
     def teardown(self):
         if os.path.isfile(self.filename):
