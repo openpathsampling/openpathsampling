@@ -53,8 +53,6 @@ def snapshot_from_pdb(pdb_file, units = None):
         topology=paths.MDTrajTopology(pdb.topology)
     )
 
-    pdb.close()
-
     return snapshot
 
 def trajectory_from_mdtraj(mdtrajectory):
