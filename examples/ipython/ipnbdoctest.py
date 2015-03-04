@@ -19,12 +19,17 @@ import argparse
 from Queue import Empty
 #import difflib
 
-try:
-    from IPython.kernel import KernelManager
-except ImportError:
-    from IPython.zmq.blockingkernelmanager import BlockingKernelManager as KernelManager
- 
-from IPython.nbformat.current import reads, NotebookNode
+# IPython 3.0.0 ?!?
+from IPython.kernel.blocking.client import KernelClient
+from IPython.kernel.manager import KernelManager
+
+#try:
+#    from IPython.kernel import KernelManager
+#except ImportError:
+#    from IPython.zmq.blockingkernelmanager import BlockingKernelManager as KernelManager
+
+from IPython.nbformat.reader import reads
+from IPython.nbformat import NotebookNode
 
 class TravisConsole(object):
     """
@@ -35,6 +40,7 @@ class TravisConsole(object):
         self.linebreak = '\n'
         self.fold_count = dict()
         self.fold_stack = dict()
+        self.fold_uuid = 'aaaa'
 
     def fold_open(self, name):
         if name not in self.fold_count:
@@ -42,7 +48,9 @@ class TravisConsole(object):
             self.fold_stack[name] = []
 
         self.fold_count[name] += 1
-        fold_name = name.lower() + '.' + str(self.fold_count[name])
+        fold_name = name.lower() \
+                    + '.' + str(self.fold_count[name]) \
+                    + '.' + self.fold_uuid
         self.fold_stack[name].append(fold_name)
 
         self.writeln("travis_fold:start:" + fold_name)
@@ -157,21 +165,16 @@ class IPyKernel(object):
         self.km = KernelManager()
         self.km.start_kernel(extra_arguments=self.extra_arguments, stderr=open(os.devnull, 'w'))
 
-        try:
-            self.kc = self.km.client()
-            self.kc.start_channels()
-            self.iopub = self.kc.iopub_channel
-        except AttributeError:
-            # IPython 0.13
-            self.kc = self.km
-            self.kc.start_channels()
-            self.iopub = self.kc.sub_channel
+        self.kc = self.km.client()
+        self.kc.start_channels()
+        self.iopub = self.kc.iopub_channel
 
         self.shell = self.kc.shell_channel
 
         # run %pylab inline, because some notebooks assume this
         # even though they shouldn't
-        self.shell.execute("pass")
+
+        self.shell.send("pass")
         self.shell.get_msg()
         while True:
             try:
@@ -182,7 +185,7 @@ class IPyKernel(object):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.kc.stop_channels()
+#        self.kc.stop_channels()
         self.km.shutdown_kernel()
         del self.km
 
@@ -190,7 +193,7 @@ class IPyKernel(object):
         use_timeout = self.default_timeout
         if timeout is not None:
             use_timeout = timeout
-        self.shell.execute(cell.input)
+        self.kc.execute(cell.input)
         self.shell.get_msg(timeout=use_timeout)
         outs = []
 
@@ -200,7 +203,7 @@ class IPyKernel(object):
             except Empty:
                 break
             msg_type = msg['msg_type']
-            if msg_type in ('status', 'pyin'):
+            if msg_type in ('status', 'pyin', 'execute_input'):
                 continue
             elif msg_type == 'clear_output':
                 outs = []
@@ -211,7 +214,7 @@ class IPyKernel(object):
 
             if msg_type == 'stream':
                 out.stream = content['name']
-                out.text = content['data']
+                out.text = content['text']
             elif msg_type in ('display_data', 'pyout'):
                 out['metadata'] = content['metadata']
                 for mime, data in content['data'].iteritems():
@@ -221,7 +224,7 @@ class IPyKernel(object):
                     setattr(out, attr, data)
                 if msg_type == 'pyout':
                     out.prompt_number = content['execution_count']
-            elif msg_type == 'pyerr':
+            elif msg_type == 'error':
                 out.ename = content['ename']
                 out.evalue = content['evalue']
                 out.traceback = content['traceback']
@@ -229,6 +232,7 @@ class IPyKernel(object):
                 print "unhandled iopub msg:", msg_type
 
             outs.append(out)
+
         return outs
 
     def sanitize(self, s):
@@ -324,7 +328,7 @@ if __name__ == '__main__':
     tv.write("starting kernel ... ")
 
     with open(ipynb) as f:
-        nb = reads(f.read(), 'json')
+        nb = reads(f.read())
 
     with IPyKernel() as ipy:
         ipy.default_timeout = args.timeout
@@ -373,6 +377,7 @@ if __name__ == '__main__':
                         outs = ipy.run(cell)
 
                 except Exception as e:
+                    print e
                     # Internal IPython error occurred (might still be that the cell did not execute correctly)
                     if repr(e) == 'Empty()':
                         # Assume it has been timed out!
@@ -380,6 +385,7 @@ if __name__ == '__main__':
                         # tv.writeln('>>> TimeOut (%is)' % args.timeout)
                     else:
                         tv.write_result('kernel')
+                        print outs
                         tv.fold_open('ipynb.kernel')
                         tv.writeln('>>> ' + out.ename + ' ("' + out.evalue + '")')
                         tv.writeln(repr(e), indent=4)
