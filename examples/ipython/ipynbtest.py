@@ -697,8 +697,6 @@ if __name__ == '__main__':
 
             timeout = ipy.default_timeout
 
-            print commands
-
             if 'skip' in commands:
                 tv.write_result('skip')
                 continue
