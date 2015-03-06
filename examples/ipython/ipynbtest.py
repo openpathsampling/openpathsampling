@@ -521,8 +521,9 @@ class IPyKernel(object):
             a dict of key/value pairs. For a single command the value is `True`
         """
         commands = {}
-        if hasattr(cell, 'input'):
-            lines = cell.input.splitlines()
+        source = self.get_source(cell)
+        if source is not None:
+            lines = source.splitlines()
             if len(lines) > 0:
                 first_line = lines[0]
                 if first_line.startswith('#!'):
@@ -696,6 +697,8 @@ if __name__ == '__main__':
 
             timeout = ipy.default_timeout
 
+            print commands
+
             if 'skip' in commands:
                 tv.write_result('skip')
                 continue
@@ -760,6 +763,7 @@ if __name__ == '__main__':
 
             if not failed and not diff:
                 tv.write_result('success')
+
 
         tv.br()
         tv.writeln("testing results")
