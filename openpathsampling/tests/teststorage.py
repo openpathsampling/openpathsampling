@@ -27,8 +27,12 @@ def compare_snapshot(snapshot1, snapshot2):
     assert_equal(snapshot1.kinetic_energy, snapshot2.kinetic_energy)
 
 def setUp():
+    class Object():
+        pass
     # Use the standard Alanine to generate snapshots to store for higher testing
     global this
+
+    this = Object()
 
     this.options = {'temperature' : 300.0 * u.kelvin,
                'collision_rate' : 1.0 / u.picoseconds,
@@ -44,19 +48,14 @@ def setUp():
               }
 
     # create a template snapshot
-    print 'Create snapshot'
     this.template_snapshot = paths.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
 
-    print 'Create engine'
     # and an openmm engine
     this.engine = paths.OpenMMEngine(options=this.options, template=this.template_snapshot)
     this.engine.initialized = True
 
     # run a small trajectory of a few steps that can be used to save, etc...
-    print 'Generate few snapshots'
     this.traj = this.engine.generate(this.template_snapshot, running=[paths.LengthEnsemble(2).can_append])
-
-    print 'Done'
 
     this.filename = data_filename("storage_test.nc")
     this.filename_clone = data_filename("storage_test_clone.nc")
@@ -66,7 +65,7 @@ def setUp():
 class testStorage(object):
     def setUp(self):
         # reuse objects everytime
-        for key, value in this.__dict__:
+        for key, value in this.__dict__.iteritems():
             setattr(self, key, value)
 
     def teardown(self):
@@ -101,28 +100,20 @@ class testStorage(object):
         pass
 
     def test_write_load_str(self):
-        print "\nStarting test"
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
         assert(os.path.isfile(self.filename))
-        print "File is a file"
 
         test_str = 'test_string'
         store.init_str('test_variable')
-        print "Init'd string"
         store.write_str('test_variable', test_str)
-        print "Wrote string"
         store.close()
-        print "Closed the storage"
 
         store2 = Storage(filename=self.filename, mode='a')
-        print "Opened a second storage"
         loaded_str = store2.load_str('test_variable')
-        print "Loaded from storage"
 
         assert(loaded_str == test_str)
 
         store2.close()
-        print "Closed second storage"
         pass
 
     def test_stored_template(self):

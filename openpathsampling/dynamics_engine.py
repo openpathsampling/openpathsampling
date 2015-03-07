@@ -285,7 +285,6 @@ class DynamicsEngine(object):
             while stop == False:
                                 
                 # Do integrator x steps
-                print 'Generate frame'
                 snapshot = self.generate_next_frame()
                 frame += 1
                 if frame % log_freq == 0:

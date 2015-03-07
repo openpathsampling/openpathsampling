@@ -219,12 +219,10 @@ class OpenMMEngine(paths.DynamicsEngine):
     def _build_current_snapshot(self):
         # TODO: Add caching for this and mark if changed
 
-        print 'get state'
         state = self.simulation.context.getState(getPositions=True,
                                                  getVelocities=True,
                                                  getEnergy=True)
 
-        print 'build snapshot'
         return paths.Snapshot(coordinates = state.getPositions(asNumpy=True),
                         box_vectors = state.getPeriodicBoxVectors(asNumpy=True),
                         potential_energy = state.getPotentialEnergy(),
@@ -267,11 +265,8 @@ class OpenMMEngine(paths.DynamicsEngine):
             self._current_snapshot = snapshot
 
     def generate_next_frame(self):
-        print 'run for steps ', self.nsteps_per_frame
-        print self.simulation, self.simulation.context.getPlatform().getName()
         self.simulation.step(self.nsteps_per_frame)
         self._current_snapshot = None
-        print 'finished steps'
         return self.current_snapshot
 
     # (possibly temporary) shortcuts for momentum and configuration
