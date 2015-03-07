@@ -9,6 +9,6 @@ ambermini
 netcdf4
 msmbuilder
 openmmtools
-ipython <= 2.2.0
+ipython
 ipython-notebook
 matplotlib
