@@ -648,8 +648,17 @@ if __name__ == '__main__':
                     help='if set to true differences in the cell are shown ' +
                          'in `diff` style')
 
+    parser.add_argument(
+                    '-v, --verbose',
+                    dest='verbose', action='store_true',
+                    default=False,
+                    help='if set then text output is send to the ' +
+                         'console.')
+
+
     args = parser.parse_args()
     ipynb = args.file
+    verbose = args.verbose
 
     tv = IPyTestConsole()
 
@@ -703,7 +712,8 @@ if __name__ == '__main__':
                 if cell.cell_type == 'markdown':
                     for line in cell.source.splitlines():
                         # only tv.writeln(headlines in markdown
-                        if line.startswith('#'):
+                        # TODO: exclude # comments in code blocks
+                        if line.startswith('#') and line[1] != '!':
                             tv.writeln(line)
 
                 if cell.cell_type == 'heading':
@@ -755,21 +765,34 @@ if __name__ == '__main__':
                     except Exception as e:
                         # Internal IPython error occurred (might still be
                         # that the cell did not execute correctly)
-                        cell_passed = False
-                        if repr(e) == 'Empty()':
-                            # Assume it has been timed out!
-                            if cell_run_count <= timeout_rerun:
-                                cell_run_again = True
-                                tv.write('timeout [retry #%d] ' % cell_run_count)
+                        if 'ignore' not in commands:
+                            cell_passed = False
+                            if repr(e) == 'Empty()':
+                                # Assume it has been timed out!
+                                if cell_run_count <= timeout_rerun:
+                                    cell_run_again = True
+                                    tv.write('timeout [retry #%d] ' % cell_run_count)
+                                else:
+                                    tv.write_result('timeout')
+                                # tv.writeln('>>> TimeOut (%is)' % args.timeout)
                             else:
-                                tv.write_result('timeout')
-                            # tv.writeln('>>> TimeOut (%is)' % args.timeout)
+                                tv.write_result('kernel')
+                                tv.fold_open('ipynb.kernel')
+                                tv.writeln('>>> ' + out.ename + ' ("' + out.evalue + '")')
+                                tv.writeln(repr(e), indent=4)
+                                tv.fold_close('ipynb.kernel')
                         else:
-                            tv.write_result('kernel')
-                            tv.fold_open('ipynb.kernel')
-                            tv.writeln('>>> ' + out.ename + ' ("' + out.evalue + '")')
-                            tv.writeln(repr(e), indent=4)
-                            tv.fold_close('ipynb.kernel')
+                            if repr(e) == 'Empty()':
+                                # Assume it has been timed out!
+                                tv.write('timeout / ')
+                                tv.write_result('ignore')
+                            else:
+                                tv.write('kernel / ')
+                                tv.write_result('ignore')
+                                tv.fold_open('ipynb.kernel')
+                                tv.writeln('>>> ' + out.ename + ' ("' + out.evalue + '")')
+                                tv.writeln(repr(e), indent=4)
+                                tv.fold_close('ipynb.kernel')
 
                 if not cell_passed:
                     if tv.last_fail and notebook_run_count <= fail_restart:
@@ -780,33 +803,51 @@ if __name__ == '__main__':
                 failed = False
                 diff = False
                 diff_str = ''
+                out_str = ''
                 for out, ref in zip(outs, cell.outputs):
                     if out.output_type == 'error':
                         # An python error occurred. Cell is not completed correctly
-                        tv.write_result('error')
-                        tv.fold_open('ipynb.fail')
-                        tv.write('>>> ' + out.ename + ' ("' + out.evalue + '")')
-                        for idx, trace in enumerate(out.traceback):
+                        if 'ignore' not in commands:
+                            tv.write_result('error')
+                        else:
+                            tv.write('error / ')
+                            tv.write_result('ignore')
+
+                        tv.fold_open('ipynb.error')
+                        tv.writeln('>>> ' + out.ename + ' ("' + out.evalue + '")')
+
+                        for idx, trace in enumerate(out.traceback[1:]):
                             tv.writeln(trace, indent=4)
-                        tv.fold_close('ipynb.fail')
+
+                        tv.fold_close('ipynb.error')
                         failed = True
                     else:
                         this_diff, this_str = ipy.compare_outputs(out, ref)
+                        if 'verbose' in commands or verbose:
+                            if 'data' in out:
+                                for key,value in out.data.iteritems():
+                                    if 'text' in key:
+                                        out_str += value + '\n'
+
                         if this_diff:
                             # Output is different than the one in the notebook.
                             diff_str += tv.format_diff(this_str)
                             diff = True
 
-                if diff:
-                    if 'strict' in commands:
-                        # strict mode means a difference will fail the test
-                        tv.write_result('diff', okay_list={ 'diff' : False })
-                    elif 'ignore' in commands:
-                        # ignore mode means a difference will pass the test
-                        tv.write_result('diff', okay_list={ 'diff' : True })
+                if diff and not failed:
+                    if 'ignore' not in commands:
+                        if 'strict' in commands:
+                            # strict mode means a difference will fail the test
+                            tv.write_result('diff', okay_list={ 'diff' : False })
+                        elif 'lazy' in commands:
+                            # lazy mode means a difference will pass the test
+                            tv.write_result('diff', okay_list={ 'diff' : True })
+                        else:
+                            # use defaults
+                            tv.write_result('diff')
                     else:
-                        # use defaults
-                        tv.write_result('diff')
+                        tv.write('diff / ')
+                        tv.write_result('ignore')
 
                     if args.show_diff:
                         tv.fold_open('ipynb.diff')
@@ -819,6 +860,11 @@ if __name__ == '__main__':
                 if tv.last_fail and notebook_run_count <= fail_restart:
                     # we had a fail so restart the whole notebook
                     notebook_restart = True
+
+                if out_str != '' and 'quiet' not in commands:
+                    tv.fold_open('ipynb.out')
+                    tv.writeln(out_str)
+                    tv.fold_close('ipynb.out')
 
             tv.br()
             tv.writeln("  testing results")
@@ -837,7 +883,7 @@ if __name__ == '__main__':
                        tv.result_count['diff'])
             tv.writeln("  %3i cells timed out during execution [time]" %
                        tv.result_count['timeout'])
-            tv.writeln("  %3i cells ran with python errors [fail]" %
+            tv.writeln("  %3i cells ran with python errors [error]" %
                        tv.result_count['error'])
             tv.writeln("  %3i cells have been run without comparison [ignore]" %
                        tv.result_count['ignore'])
