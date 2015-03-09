@@ -33,7 +33,6 @@ The original is found in a gist under https://gist.github.com/minrk/2620735
 """
 
 import os,sys
-import base64
 import re
 import argparse
  
@@ -137,6 +136,8 @@ class TravisConsole(object):
             self.stream.write(self._indent(s, indent))
         else:
             self.stream.write(s)
+
+        self.stream.flush()
 
     def red(self, s):
         """format a string to be red in travis output
@@ -244,6 +245,11 @@ class IPyTestConsole(TravisConsole):
         self.pass_count = 0
         self.fail_count = 0
 
+        self.reset()
+
+        self.last_fail = False
+
+    def reset(self):
         self.result_count = { key : 0 for key in self.default_results.keys() }
 
     def write_result(self, result, okay_list = None):
@@ -258,9 +264,11 @@ class IPyTestConsole(TravisConsole):
         if my_list[result]:
             self.write(self.green('ok'))
             self.pass_count += 1
+            self.last_fail = False
         else:
             self.write(self.red('fail'))
             self.fail_count += 1
+            self.last_fail = True
 
         self.writeln(' [' + result + ']')
         self.result_count[result] += 1
@@ -607,10 +615,16 @@ if __name__ == '__main__':
                     help='the default timeout time in seconds for a cell ' +
                         'evaluation. Default is 300s.')
 
-    parser.add_argument('--restart-cell-if-timeout', dest='restart',
+    parser.add_argument('--rerun-if-timeout', dest='rerun',
                     type=int, default=2, nargs='?',
                     help='if set then a timeout in a cell will cause to run ' +
                          'the. Default is 2 (means make upto 3 attempts)')
+
+    parser.add_argument('--restart-if-fail', dest='restart',
+                    type=int, default=2, nargs='?',
+                    help='if set then a fail in a cell will cause to restart ' +
+                         'the full notebook!. Default is 0 (means NO rerun).' +
+                         'Use this with care.')
 
     parser.add_argument('--strict', dest='strict',
                     action='store_true',
@@ -646,9 +660,10 @@ if __name__ == '__main__':
         tv.default_results['timeout'] = False
 
     tv.writeln('testing ipython notebook : "%s"' % ipynb)
-    tv.write("starting kernel ... ")
+    tv.fold_open('ipynb')
 
-    timeout_restart = args.restart
+    timeout_rerun = args.rerun
+    fail_restart = args.restart
 
     with open(ipynb) as f:
         nb = reads(f.read())
@@ -656,165 +671,194 @@ if __name__ == '__main__':
         # simplify comparison
         nb = IPython.nbformat.convert(nb, 4)
 
-    with IPyKernel() as ipy:
-        ipy.default_timeout = args.timeout
-        tv.writeln("ok")
+    notebook_restart = True
+    notebook_run_count = 0
 
-        nbs = ipynb.split('.')
-        nb_class_name = nbs[1] + '.' + nbs[0].replace(" ", "_")
+    while (notebook_restart):
+        notebook_restart = False
+        notebook_run_count += 1
 
-        tv.br()
+        tv.reset()
+        tv.write("starting kernel ... ")
+        with IPyKernel() as ipy:
+            ipy.default_timeout = args.timeout
+            tv.writeln("ok")
 
-        if hasattr(nb, 'worksheets'):
-            ws = nb.worksheets[0]
-        else:
-            ws = nb
+            nbs = ipynb.split('.')
+            nb_class_name = nbs[1] + '.' + nbs[0].replace(" ", "_")
 
-        for cell in ws.cells:
+            tv.br()
 
-            if cell.cell_type == 'markdown':
-                for line in cell.source.splitlines():
-                    # only tv.writeln(headlines in markdown
-                    if line.startswith('#'):
-                        tv.writeln(line)
-
-            if cell.cell_type == 'heading':
-                tv.writeln('#' * cell.level + ' ' + cell.source)
-
-            if cell.cell_type != 'code':
-                continue
-
-            # if code cell then continue
-
-            if ipy.is_empty_cell(cell):
-                # empty cell will not be tested
-                continue
-
-            if hasattr(cell, 'prompt_number'):
-                tv.write(nb_class_name + '.' + 'In [%3i]' %
-                         cell.prompt_number + ' ... ')
-            elif hasattr(cell, 'execution_count') and \
-                            cell.execution_count is not None:
-                tv.write(nb_class_name + '.' + 'In [%3i]' %
-                         cell.execution_count + ' ... ')
+            if hasattr(nb, 'worksheets'):
+                ws = nb.worksheets[0]
             else:
-                tv.write(nb_class_name + '.' + 'In [???]' + ' ... ')
+                ws = nb
 
-            commands = ipy.get_commands(cell)
+            for cell in ws.cells:
 
-            result = 'success'
+                if notebook_restart:
+                    # if we restart anyway skip all remaining cells
+                    continue
 
-            timeout = ipy.default_timeout
+                if cell.cell_type == 'markdown':
+                    for line in cell.source.splitlines():
+                        # only tv.writeln(headlines in markdown
+                        if line.startswith('#'):
+                            tv.writeln(line)
 
-            if 'skip' in commands:
-                tv.write_result('skip')
-                continue
+                if cell.cell_type == 'heading':
+                    tv.writeln('#' * cell.level + ' ' + cell.source)
 
-            cell_run_count = 0
-            cell_run_again = True
-            cell_passed = True
+                if cell.cell_type != 'code':
+                    continue
 
-            while cell_run_again:
-                cell_run_count += 1
-                cell_run_again = False
+                # if code cell then continue
 
-                try:
-                    if 'timeout' in commands:
-                        outs = ipy.run(cell, timeout=int(commands['timeout']))
-                    else:
-                        outs = ipy.run(cell)
+                if ipy.is_empty_cell(cell):
+                    # empty cell will not be tested
+                    continue
 
-                except Exception as e:
-                    # Internal IPython error occurred (might still be
-                    # that the cell did not execute correctly)
-                    if repr(e) == 'Empty()':
-                        # Assume it has been timed out!
-                        if cell_run_count <= timeout_restart:
-                            cell_run_again = True
-                            tv.write('timeout [retry #%d] ' % cell_run_count)
+                if hasattr(cell, 'prompt_number'):
+                    tv.write(nb_class_name + '.' + 'In [%3i]' %
+                             cell.prompt_number + ' ... ')
+                elif hasattr(cell, 'execution_count') and \
+                                cell.execution_count is not None:
+                    tv.write(nb_class_name + '.' + 'In [%3i]' %
+                             cell.execution_count + ' ... ')
+                else:
+                    tv.write(nb_class_name + '.' + 'In [???]' + ' ... ')
+
+                commands = ipy.get_commands(cell)
+
+                result = 'success'
+
+                timeout = ipy.default_timeout
+
+                if 'skip' in commands:
+                    tv.write_result('skip')
+                    continue
+
+                cell_run_count = 0
+                cell_run_again = True
+                cell_passed = True
+
+                while cell_run_again:
+                    cell_run_count += 1
+                    cell_run_again = False
+
+                    try:
+                        if 'timeout' in commands:
+                            outs = ipy.run(cell, timeout=int(commands['timeout']))
                         else:
-                            tv.write_result('timeout')
-                            cell_passed = False
-                        # tv.writeln('>>> TimeOut (%is)' % args.timeout)
+                            outs = ipy.run(cell)
+
+                    except Exception as e:
+                        # Internal IPython error occurred (might still be
+                        # that the cell did not execute correctly)
+                        cell_passed = False
+                        if repr(e) == 'Empty()':
+                            # Assume it has been timed out!
+                            if cell_run_count <= timeout_rerun:
+                                cell_run_again = True
+                                tv.write('timeout [retry #%d] ' % cell_run_count)
+                            else:
+                                tv.write_result('timeout')
+                            # tv.writeln('>>> TimeOut (%is)' % args.timeout)
+                        else:
+                            tv.write_result('kernel')
+                            tv.fold_open('ipynb.kernel')
+                            tv.writeln('>>> ' + out.ename + ' ("' + out.evalue + '")')
+                            tv.writeln(repr(e), indent=4)
+                            tv.fold_close('ipynb.kernel')
+
+                if not cell_passed:
+                    if tv.last_fail and notebook_run_count <= fail_restart:
+                        notebook_restart = True
+
+                    continue
+
+                failed = False
+                diff = False
+                diff_str = ''
+                for out, ref in zip(outs, cell.outputs):
+                    if out.output_type == 'error':
+                        # An python error occurred. Cell is not completed correctly
+                        tv.write_result('error')
+                        tv.fold_open('ipynb.fail')
+                        tv.write('>>> ' + out.ename + ' ("' + out.evalue + '")')
+                        for idx, trace in enumerate(out.traceback):
+                            tv.writeln(trace, indent=4)
+                        tv.fold_close('ipynb.fail')
+                        failed = True
                     else:
-                        tv.write_result('kernel')
-                        tv.fold_open('ipynb.kernel')
-                        tv.writeln('>>> ' + out.ename + ' ("' + out.evalue + '")')
-                        tv.writeln(repr(e), indent=4)
-                        tv.fold_close('ipynb.kernel')
+                        this_diff, this_str = ipy.compare_outputs(out, ref)
+                        if this_diff:
+                            # Output is different than the one in the notebook.
+                            diff_str += tv.format_diff(this_str)
+                            diff = True
 
-            if not cell_passed:
-                continue
+                if diff:
+                    if 'strict' in commands:
+                        # strict mode means a difference will fail the test
+                        tv.write_result('diff', okay_list={ 'diff' : False })
+                    elif 'ignore' in commands:
+                        # ignore mode means a difference will pass the test
+                        tv.write_result('diff', okay_list={ 'diff' : True })
+                    else:
+                        # use defaults
+                        tv.write_result('diff')
 
-            failed = False
-            diff = False
-            diff_str = ''
-            for out, ref in zip(outs, cell.outputs):
-                if out.output_type == 'error':
-                    # An python error occurred. Cell is not completed correctly
-                    tv.write_result('error')
-                    tv.fold_open('ipynb.fail')
-                    tv.write('>>> ' + out.ename + ' ("' + out.evalue + '")')
-                    for idx, trace in enumerate(out.traceback):
-                        tv.writeln(trace, indent=4)
-                    tv.fold_close('ipynb.fail')
-                    failed = True
-                else:
-                    this_diff, this_str = ipy.compare_outputs(out, ref)
-                    if this_diff:
-                        # Output is different than the one in the notebook.
-                        diff_str += tv.format_diff(this_str)
-                        diff = True
+                    if args.show_diff:
+                        tv.fold_open('ipynb.diff')
+                        tv.writeln(diff_str)
+                        tv.fold_close('ipynb.diff')
 
-            if diff:
-                if 'strict' in commands:
-                    # strict mode means a difference will fail the test
-                    tv.write_result('diff', okay_list={ 'diff' : False })
-                elif 'ignore' in commands:
-                    # ignore mode means a difference will pass the test
-                    tv.write_result('diff', okay_list={ 'diff' : True })
-                else:
-                    # use defaults
-                    tv.write_result('diff')
+                if not failed and not diff:
+                    tv.write_result('success')
 
-                if args.show_diff:
-                    tv.fold_open('ipynb.diff')
-                    tv.writeln(diff_str)
-                    tv.fold_close('ipynb.diff')
+                if tv.last_fail and notebook_run_count <= fail_restart:
+                    # we had a fail so restart the whole notebook
+                    notebook_restart = True
 
-            if not failed and not diff:
-                tv.write_result('success')
+            tv.br()
+            tv.writeln("  testing results")
+            tv.writeln("  ===============")
+            if tv.pass_count > 0:
+                tv.writeln("    %3i cells passed [" %
+                           tv.pass_count + tv.green('ok') + "]" )
+            if tv.fail_count > 0:
+                tv.writeln("    %3i cells failed [" %
+                           tv.fail_count + tv.red('fail') + "]" )
 
-        tv.br()
-        tv.writeln("testing results")
-        tv.writeln("===============")
-        if tv.pass_count > 0:
-            tv.writeln("    %3i cells passed [" %
-                       tv.pass_count + tv.green('ok') + "]" )
-        if tv.fail_count > 0:
-            tv.writeln("    %3i cells failed [" %
-                       tv.fail_count + tv.red('fail') + "]" )
+            tv.br()
+            tv.writeln("  %3i cells successfully replicated [success]" %
+                       tv.result_count['success'])
+            tv.writeln("  %3i cells had mismatched outputs [diff]" %
+                       tv.result_count['diff'])
+            tv.writeln("  %3i cells timed out during execution [time]" %
+                       tv.result_count['timeout'])
+            tv.writeln("  %3i cells ran with python errors [fail]" %
+                       tv.result_count['error'])
+            tv.writeln("  %3i cells have been run without comparison [ignore]" %
+                       tv.result_count['ignore'])
+            tv.writeln("  %3i cells failed to even run (IPython error) [kernel]" %
+                       tv.result_count['kernel'])
+            tv.writeln("  %3i cells have been skipped [skip]" %
+                       tv.result_count['skip'])
 
-        tv.br()
-        tv.writeln("    %3i cells successfully replicated [success]" %
-                   tv.result_count['success'])
-        tv.writeln("    %3i cells had mismatched outputs [diff]" %
-                   tv.result_count['diff'])
-        tv.writeln("    %3i cells timed out during execution [time]" %
-                   tv.result_count['timeout'])
-        tv.writeln("    %3i cells ran with python errors [fail]" %
-                   tv.result_count['error'])
-        tv.writeln("    %3i cells have been run without comparison [ignore]" %
-                   tv.result_count['ignore'])
-        tv.writeln("    %3i cells failed to even run (IPython error) [kernel]" %
-                   tv.result_count['kernel'])
-        tv.writeln("    %3i cells have been skipped [skip]" %
-                   tv.result_count['skip'])
+            if notebook_restart:
+                tv.br()
+                tv.writeln(
+                    tv.red("  attempt #%d of max %d failed, restarting notebook!" % (notebook_run_count, fail_restart + 1))
+                )
 
-        tv.br()
-        tv.write("shutting down kernel ... ")
+            tv.br()
+            tv.write("shutting down kernel ... ")
 
-    tv.writeln('ok')
+
+        tv.writeln('ok')
+
+    tv.fold_close('ipynb')
 
     if tv.fail_count != 0:
         tv.writeln(tv.red('some tests not passed.'))
