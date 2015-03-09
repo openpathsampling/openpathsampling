@@ -607,7 +607,13 @@ if __name__ == '__main__':
                     help='the default timeout time in seconds for a cell ' +
                         'evaluation. Default is 300s.')
 
-    parser.add_argument('--strict', dest='strict', action='store_true',
+    parser.add_argument('--restart-cell-if-timeout', dest='restart',
+                    type=int, default=2, nargs='?',
+                    help='if set then a timeout in a cell will cause to run ' +
+                         'the. Default is 2 (means make upto 3 attempts)')
+
+    parser.add_argument('--strict', dest='strict',
+                    action='store_true',
                     default=False,
                     help='if set to true then the default test is that cell ' +
                         'have to match otherwise a diff will not be ' +
@@ -642,6 +648,8 @@ if __name__ == '__main__':
     tv.writeln('testing ipython notebook : "%s"' % ipynb)
     tv.write("starting kernel ... ")
 
+    timeout_restart = args.restart
+
     with open(ipynb) as f:
         nb = reads(f.read())
         # Convert all notebooks to the format IPython 3.0.0 uses to
@@ -663,6 +671,7 @@ if __name__ == '__main__':
             ws = nb
 
         for cell in ws.cells:
+
             if cell.cell_type == 'markdown':
                 for line in cell.source.splitlines():
                     # only tv.writeln(headlines in markdown
@@ -701,25 +710,40 @@ if __name__ == '__main__':
                 tv.write_result('skip')
                 continue
 
-            try:
-                if 'timeout' in commands:
-                    outs = ipy.run(cell, timeout=int(commands['timeout']))
-                else:
-                    outs = ipy.run(cell)
+            cell_run_count = 0
+            cell_run_again = True
+            cell_passed = True
 
-            except Exception as e:
-                # Internal IPython error occurred (might still be
-                # that the cell did not execute correctly)
-                if repr(e) == 'Empty()':
-                    # Assume it has been timed out!
-                    tv.write_result('timeout')
-                    # tv.writeln('>>> TimeOut (%is)' % args.timeout)
-                else:
-                    tv.write_result('kernel')
-                    tv.fold_open('ipynb.kernel')
-                    tv.writeln('>>> ' + out.ename + ' ("' + out.evalue + '")')
-                    tv.writeln(repr(e), indent=4)
-                    tv.fold_close('ipynb.kernel')
+            while cell_run_again:
+                cell_run_count += 1
+                cell_run_again = False
+
+                try:
+                    if 'timeout' in commands:
+                        outs = ipy.run(cell, timeout=int(commands['timeout']))
+                    else:
+                        outs = ipy.run(cell)
+
+                except Exception as e:
+                    # Internal IPython error occurred (might still be
+                    # that the cell did not execute correctly)
+                    if repr(e) == 'Empty()':
+                        # Assume it has been timed out!
+                        if cell_run_count <= timeout_restart:
+                            cell_run_again = True
+                            tv.write('timeout [retry #%d] ' % cell_run_count)
+                        else:
+                            tv.write_result('timeout')
+                            cell_passed = False
+                        # tv.writeln('>>> TimeOut (%is)' % args.timeout)
+                    else:
+                        tv.write_result('kernel')
+                        tv.fold_open('ipynb.kernel')
+                        tv.writeln('>>> ' + out.ename + ' ("' + out.evalue + '")')
+                        tv.writeln(repr(e), indent=4)
+                        tv.fold_close('ipynb.kernel')
+
+            if not cell_passed:
                 continue
 
             failed = False
@@ -736,7 +760,6 @@ if __name__ == '__main__':
                     tv.fold_close('ipynb.fail')
                     failed = True
                 else:
-
                     this_diff, this_str = ipy.compare_outputs(out, ref)
                     if this_diff:
                         # Output is different than the one in the notebook.
@@ -761,7 +784,6 @@ if __name__ == '__main__':
 
             if not failed and not diff:
                 tv.write_result('success')
-
 
         tv.br()
         tv.writeln("testing results")
