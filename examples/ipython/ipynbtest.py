@@ -251,6 +251,9 @@ class IPyTestConsole(TravisConsole):
 
     def reset(self):
         self.result_count = { key : 0 for key in self.default_results.keys() }
+        self.pass_count = 0
+        self.fail_count = 0
+
 
     def write_result(self, result, okay_list = None):
         """write final result of test
