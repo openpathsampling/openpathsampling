@@ -1004,7 +1004,7 @@ def loadcache(func):
 
             cc = self.cache[idx]
             if type(cc) is int:
-                logger.debug('Found IDX #', idx, ' in cache under IDX #', cc)
+                logger.debug('Found IDX #' + str(idx) + ' in cache under IDX #' + str(cc))
 
                 # here the cached value is actually only the index
                 # so it still needs to be loaded with the given index
@@ -1012,7 +1012,7 @@ def loadcache(func):
                 # and we need to actually load it
                 n_idx = cc
             else:
-                logger.debug('Found IDX #', idx, ' in cache under IDX #', cc)
+                logger.debug('Found IDX #' + str(idx) + ' in cache under IDX #' + str(cc))
 
                 # we have a real object (hopefully) and just return from cache
                 return self.cache[idx]
@@ -1095,12 +1095,12 @@ def loadidx(func):
         # method in an instance and this one is still bound - luckily - to the same 'self'. In a class decorator when wrapping
         # the class method directly it is not bound yet and so we need to include the self! Took me some time to
         # understand and figure that out
-        logger.debug('Calling load object of type ', self.content_class.__name__, ' and IDX #', idx)
+        logger.debug('Calling load object of type ' + self.content_class.__name__ + ' and IDX #' + str(idx))
         if n_idx >= len(self):
-            logger.warning('Trying to load from IDX #', n_idx, ' > number of object ', len(self))
+            logger.warning('Trying to load from IDX #' + str(n_idx) + ' > number of object ' + str(len(self)))
             return None
         elif n_idx < 0:
-            logger.warning('Trying to load negative IDX #', n_idx, ' < 0')
+            logger.warning('Trying to load negative IDX #' + str(n_idx) + ' < 0')
             return None
         else:
             obj = func(n_idx, *args, **kwargs)
@@ -1141,7 +1141,7 @@ def saveidx(func):
 
         # make sure in nested saving that an IDX is not used twice!
         self.reserve_idx(idx)
-        logger.debug('Saving ', type(obj), 'using IDX #', idx)
+        logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(idx))
         func(obj, idx, *args, **kwargs)
 
     return inner
