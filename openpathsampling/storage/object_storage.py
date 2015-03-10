@@ -6,8 +6,6 @@ import numpy as np
 import openpathsampling as paths
 import simtk.unit as u
 
-import uuid
-
 class Query(object):
     """
     Return
@@ -119,7 +117,6 @@ class ObjectStore(object):
         self.idx_dimension = content_class.__name__.lower()
         self.db = content_class.__name__.lower()
         self.cache = dict()
-        self.uuids = dict()
         self.is_named = is_named
         self.json = json
         self.simplifier = paths.storage.StorableObjectJSON(storage)
@@ -338,38 +335,6 @@ class ObjectStore(object):
         else:
             raise ValueError('Cannot search for name (str) in non-named objects')
 
-    def idx_by_uuid(self, needle):
-        """
-        Return the index for the (first) object with a given name from the store
-
-        Parameters
-        ----------
-        needle : str
-            The name of the object to be found in the storage
-
-        Returns
-        -------
-        int or None
-            The index of the first found object. If the name is not present,
-            None is returned
-
-        Notes
-        -----
-        Can only be applied to named storages.
-        """
-
-        if len(self.uuids) != len(self):
-            # apparently the uuid cache is out-of-date
-            self.update_uuid_cache()
-
-        if needle in self.uuids:
-            if type(self.uuids[needle]) is int:
-                return self.uuids[needle]
-            else:
-                return self.uuids[needle].idx[self.storage]
-
-        return None
-
     def update_name_cache(self):
         """
         Update the internal cache with all stored names in the store.
@@ -378,15 +343,6 @@ class ObjectStore(object):
         if self.is_named:
             for idx, name in enumerate(self.storage.variables[self.db + "_name"][:]):
                 self.cache[name] = idx
-
-    def update_uuid_cache(self):
-        """
-        Update the internal cache with all stored names in the store.
-        This allows to load by name for named objects
-        """
-        for idx, name in enumerate(self.storage.variables[self.db + "_uuid"][:]):
-            self.uuids[name] = idx
-
 
     def __iter__(self):
         """
@@ -529,23 +485,6 @@ class ObjectStore(object):
         else:
             return None
 
-    def get_uuid(self, idx):
-        """
-        Return the uuid of and object with given integer index
-
-        Parameters
-        ----------
-        idx : int
-            the integer index of the object whose name is to be returned
-
-        Returns
-        -------
-        str or None
-            Returns the name of the object for named objects. None otherwise.
-
-        """
-        return self.storage.variables[self.db + '_uuid'][idx]
-
     def get(self, indices):
         """
         Returns a list of objects from the given list of indices
@@ -648,10 +587,6 @@ class ObjectStore(object):
                 description='A json serialized version of the object',
                 chunksizes=tuple([10240]))
 
-        self.init_variable(self.db + "_uuid", 'str',
-                description='The uuid of the object',
-                chunksizes=tuple([36])
-                           )
 #==============================================================================
 # INITIALISATION UTILITY FUNCTIONS
 #==============================================================================
@@ -1127,9 +1062,6 @@ def savecache(func):
 # LOAD/SAVE DECORATORS FOR .idx HANDLING
 #=============================================================================
 
-def create_uuid():
-    return uuid.uuid4()
-
 def loadidx(func):
     """
     Decorator for load functions that add the basic indexing handling
@@ -1150,7 +1082,7 @@ def loadidx(func):
                 pass
 
         # ATTENTION HERE!
-        # Note that the wrapped function no self as first parameter. This is because we are wrapping a bound
+        # Note that the wrapped function ho self as first parameter. This is because we are wrapping a bound
         # method in an instance and this one is still bound - luckily - to the same 'self'. In a class decorator when wrapping
         # the class method directly it is not bound yet and so we need to include the self! Took me some time to
         # understand and figure that out
@@ -1164,8 +1096,7 @@ def loadidx(func):
         if self.is_named:
             # get the name of the object
             setattr(obj, 'name', self.get_name(idx))
-        if hasattr(self.storage.variables, self.db + '_uuid'):
-            setattr(obj, 'uuid', self.get_uuid(idx))
+
         return obj
     return inner
 
@@ -1174,10 +1105,6 @@ def saveidx(func):
     Decorator for save functions that add the basic indexing handling
     """
     def inner(self, obj, idx = None, *args, **kwargs):
-
-        if not hasattr(self, 'uuid'):
-            # no uuid yet, create one
-            self.uuid = create_uuid()
 
         storage = self.storage
         if idx is None:
@@ -1198,7 +1125,5 @@ def saveidx(func):
         # make sure in nested saving that an IDX is not used twice!
         self.reserve_idx(idx)
         func(obj, idx, *args, **kwargs)
-
-        storage.variables[self.db + '_uuid'][idx] = self.uuid
 
     return inner
