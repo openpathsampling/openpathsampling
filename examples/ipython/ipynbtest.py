@@ -766,6 +766,7 @@ if __name__ == '__main__':
                 while cell_run_again:
                     cell_run_count += 1
                     cell_run_again = False
+                    cell_passed = True
 
                     try:
                         if 'timeout' in commands:
