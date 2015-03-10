@@ -251,6 +251,9 @@ class IPyTestConsole(TravisConsole):
 
     def reset(self):
         self.result_count = { key : 0 for key in self.default_results.keys() }
+        self.pass_count = 0
+        self.fail_count = 0
+
 
     def write_result(self, result, okay_list = None):
         """write final result of test
@@ -491,8 +494,16 @@ class IPyKernel(object):
         list of diff (str)
             a list of diff representing the differences
         """
-        s1 = self.sanitize(ref_cell[key])
-        s2 = self.sanitize(test_cell[key])
+
+        if hasattr(ref_cell, key):
+            s1 = self.sanitize(ref_cell[key])
+        else:
+            s1 = ''
+
+        if hasattr(test_cell, key):
+            s2 = self.sanitize(test_cell[key])
+        else:
+            s2 = ''
 
         if key in ['image/png', 'image/svg', 'image/svg+xml']:
             if s1 != s2:
