@@ -9,10 +9,8 @@ def load_missing_snapshot(func):
     def getter(self, *args, **kwargs):
         item = func(self, *args, **kwargs)
 
-        if type(item) is int:
-            item = self.storage.snapshot[item]
-        elif type(item) is Trajectory:
-            item.storage = self.storage
+        if type(item) is tuple:
+            item = item[0][item[1]]
 
         return item
 
@@ -95,7 +93,7 @@ class TrajectoryStore(ObjectStore):
 
         # typecast to snapshot
         if self.lazy:
-            snapshots = self.list_from_numpy(values, 'int')
+            snapshots = [ tuple([self.storage.snapshot, idx]) for idx in self.list_from_numpy(values, 'int') ]
         else:
             snapshots = self.list_from_numpy(values, 'snapshot')
 
