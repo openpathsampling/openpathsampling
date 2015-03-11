@@ -126,7 +126,7 @@ class MovePath(object):
 
         # allow for negative indices to be picked, e.g. -1 is the last sample
         if len(selected_samples) > 0:
-            selected_samples = [ idx % len(sample_set) for idx in selected_samples]
+            selected_samples = [ idx % len(sample_set) if idx < 0 else idx for idx in selected_samples]
 
         samples = [
             samp for idx, samp in enumerate(sample_set)

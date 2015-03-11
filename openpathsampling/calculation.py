@@ -1,13 +1,7 @@
-from pathmover import (PathMover, MoveDetails, ReplicaExchangeMover,
-                       EnsembleHopMover)
-from sample import SampleSet, Sample
-
 from openpathsampling.todict import restores_as_stub_object
-from openpathsampling.pathmover import PathMover
-
-from openpathsampling.movepath import SampleMovePath
-
 import openpathsampling as paths
+
+from openpathsampling.pathmover import PathMover
 
 import logging
 from ops_logging import initialization_logging
@@ -28,7 +22,7 @@ class Calculation(object):
         )
 
     def set_replicas(self, samples):
-        self.globalstate = SampleSet(samples)
+        self.globalstate = paths.SampleSet(samples)
 
     def run(self, nsteps):
         logger.warning("Running an empty calculation? Try a subclass, maybe!")
@@ -84,6 +78,7 @@ class BootstrapPromotionMove(PathMover):
         return mover.move(globalstate)
 
 
+# TODO: Is this used anywhere? Or do we do this differently
 class InitializeSingleTrajectoryMover(PathMover):
     def __init__(self, bias=None, shooters=None,
                  ensembles=None, replicas='all'):
@@ -95,14 +90,14 @@ class InitializeSingleTrajectoryMover(PathMover):
                                entries=['bias', 'shooters'])
 
     def move(self, globalstate=None):
-        init_details = MoveDetails()
+        init_details = paths.MoveDetails()
         init_details.accepted = True
         init_details.acceptance_probability = 1.0
         init_details.mover = self
         init_details.inputs = []
-        init_details.trial = trajectory
-        init_details.ensemble = ensemble
-        sample = Sample(replica=0, trajectory=trajectory,
+        init_details.trial = None
+        init_details.ensemble = None
+        sample = paths.Sample(replica=0, trajectory=None,
                         ensemble=self.ensembles[0], details=init_details)
 
 @restores_as_stub_object
@@ -121,18 +116,18 @@ class Bootstrapping(Calculation):
         self.ensembles = ensembles
 
         # this is stupid; must be a better way
-        init_details = MoveDetails()
+        init_details = paths.MoveDetails()
         init_details.accepted = True
         init_details.acceptance_probability = 1.0
-        init_details.mover = PathMover()
+        init_details.mover = paths.PathMover()
         init_details.mover.name = "Initialization (trajectory)"
         init_details.inputs = []
         init_details.trial = trajectory
         init_details.ensemble = self.ensembles[0]
-        sample = Sample(replica=0, trajectory=trajectory, 
+        sample = paths.Sample(replica=0, trajectory=trajectory, 
                         ensemble=self.ensembles[0], details=init_details)
 
-        self.globalstate = SampleSet([sample])
+        self.globalstate = paths.SampleSet([sample])
         if self.storage is not None:
             self.globalstate.save_samples(self.storage)
         if movers is None:
@@ -214,7 +209,7 @@ class PathSampling(Calculation):
         for sample in globalstate:
             samples.append(sample.copy_reset())
 
-        self.globalstate = SampleSet(samples)
+        self.globalstate = paths.SampleSet(samples)
 
         initialization_logging(init_log, self, 
                                ['root_mover', 'globalstate'])

@@ -9,11 +9,6 @@ import random
 
 import openpathsampling as paths
 from openpathsampling.todict import restores_as_stub_object
-from sample import Sample, SampleSet
-# TODO: switch usage of the next paths.*
-from ensemble import Ensemble
-from trajectory import Trajectory
-
 
 import logging
 from ops_logging import initialization_logging
@@ -638,7 +633,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     @keep_selected_samples
     def move(self, globalstate):
         logger.debug("==== BEGINNING " + self.name + " ====")
-        subglobal = SampleSet(self.legal_sample_set(globalstate))
+        subglobal = paths.SampleSet(self.legal_sample_set(globalstate))
         movepaths = []
         for mover in self.movers:
             # NOTE: right now, this doesn't quite work correctly if the
@@ -936,14 +931,14 @@ class RandomSubtrajectorySelectMover(PathMover):
             subtraj = self._choose(subtrajs)
         else:
             # return zero-length trajectory otherwise
-            subtraj = Trajectory([])
+            subtraj = paths.Trajectory([])
 
         details.trial = subtraj
         details.accepted = True
         details.result = subtraj
         details.acceptance_probability = 1.0
         
-        sample = Sample(
+        sample = paths.Sample(
             replica=replica,
             trajectory=details.result,
             ensemble=self._subensemble,
@@ -1001,7 +996,7 @@ class PathReversalMover(PathMover):
             details.acceptance_probability = 0.0
             details.result = trajectory
 
-        sample = Sample(
+        sample = paths.Sample(
             replica=replica,
             trajectory=details.result,
             ensemble=ensemble,
@@ -1116,7 +1111,7 @@ class FilterByReplica(PathMover):
 
     @keep_selected_samples
     def move(self, globalstate):
-        filtered_gs = SampleSet(
+        filtered_gs = paths.SampleSet(
             [s for s in globalstate if s.replica in self.replicas]
         )
         return self.mover.move(filtered_gs)
