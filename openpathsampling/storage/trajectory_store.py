@@ -3,11 +3,28 @@ import numpy as np
 from object_storage import ObjectStore
 from openpathsampling.trajectory import Trajectory
 
+# This adds delayed snapshot loading support to Trajectory
+
+def load_missing_snapshot(func):
+    def getter(self, *args, **kwargs):
+        item = func(self, *args, **kwargs)
+
+        if type(item) is int:
+            item = self.storage.snapshot[item]
+        elif type(item) is Trajectory:
+            item.storage = self.storage
+
+        return item
+
+    return getter
+
+Trajectory.__getitem__ = load_missing_snapshot(Trajectory.__getitem__)
+Trajectory.__getslice__ = load_missing_snapshot(Trajectory.__getslice__)
 
 class TrajectoryStore(ObjectStore):
-
-    def __init__(self, storage):
+    def __init__(self, storage, lazy=True):
         super(TrajectoryStore, self).__init__(storage, Trajectory)
+        self.lazy = lazy
 
     def save(self, trajectory, idx=None):
         """
@@ -77,9 +94,15 @@ class TrajectoryStore(ObjectStore):
         values = self.storage.variables['trajectory_snapshot_idx'][idx]
 
         # typecast to snapshot
-        snapshots = self.list_from_numpy(values, 'snapshot')
+        if self.lazy:
+            snapshots = self.list_from_numpy(values, 'int')
+        else:
+            snapshots = self.list_from_numpy(values, 'snapshot')
 
         trajectory = Trajectory(snapshots)
+        # save the used storage to load snapshots if required
+
+        trajectory.storage = self.storage
 
         return trajectory
 

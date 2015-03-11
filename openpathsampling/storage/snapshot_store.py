@@ -271,7 +271,7 @@ class MomentumStore(ObjectStore):
         del momentum.kinetic_energy
         return momentum
 
-    def update_velocities(self, obj):
+    def update_velocities(self, obj, store):
         """
         Update/Load the velocities in the given obj from the attached storage
 
@@ -289,7 +289,7 @@ class MomentumStore(ObjectStore):
 
         obj.velocities = velocities
 
-    def update_kinetic_energy(self, obj):
+    def update_kinetic_energy(self, obj, store):
         """
         Update/Load the kinetic_energy in the given obj from the attached storage
 
@@ -449,7 +449,7 @@ class ConfigurationStore(ObjectStore):
 
         return configuration
 
-    def update_coordinates(self, obj):
+    def update_coordinates(self, obj, store):
         """
         Update/Load the coordinates in the given obj from the attached storage
 
@@ -467,7 +467,7 @@ class ConfigurationStore(ObjectStore):
 
         obj.coordinates = coordinates
 
-    def update_box_vectors(self, obj):
+    def update_box_vectors(self, obj, store):
         """
         Update/Load the box_vectors in the given obj from the attached storage
 
@@ -485,7 +485,7 @@ class ConfigurationStore(ObjectStore):
 
         obj.box_vectors = box_vectors
 
-    def update_potential_energy(self, obj):
+    def update_potential_energy(self, obj, store):
         """
         Update/Load the potential_energy in the given obj from the attached storage
 

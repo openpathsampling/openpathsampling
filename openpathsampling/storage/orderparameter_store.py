@@ -2,7 +2,6 @@ from object_storage import ObjectStore
 from openpathsampling.orderparameter import OrderParameter
 
 class ObjectDictStore(ObjectStore):
-
     def __init__(self, storage, cls, key_class):
         super(ObjectDictStore, self).__init__(storage, cls, is_named=True, json=False)
         self.key_class = key_class
