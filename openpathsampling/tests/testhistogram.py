@@ -20,7 +20,7 @@ class testHistogram(object):
         self.hist_binwidth_range = Histogram(bin_width=0.5, bin_range=(1.0, 3.5))
 
     def test_initialization(self):
-        assert_equal(self.default_hist.bins, 40)
+        assert_equal(self.default_hist.bins, 20)
 
         assert_equal(self.hist_nbins.bins, 5)
         assert_equal(self.hist_nbins.bin_width, None)
