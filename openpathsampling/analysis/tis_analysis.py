@@ -148,10 +148,12 @@ class TISTransition(Transition):
         self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
             stateA, stateB, self.interfaces
         )
-        self.movers['shooting'] = paths.PathMoverFactory.OneWayShootingSet(
-            paths.UniformSelector(), self.ensembles
-        )
-        self.movers['pathreversal'] = paths.PathReversalSet(self.ensembles)
+        if self.storage is None:
+            self.movers['shooting'] = paths.PathMoverFactory.OneWayShootingSet(
+                paths.UniformSelector(), self.ensembles
+            )
+            self.movers['pathreversal'] = paths.PathReversalSet(self.ensembles)
+
         pass
 
     # path movers

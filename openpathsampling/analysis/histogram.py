@@ -46,7 +46,7 @@ class Histogram(object):
             if n_bins is not None:
                 self.n_bins = n_bins
             else:
-                self.n_bins = 40 # default
+                self.n_bins = 20 # default
             self.bins = self.n_bins
 
         self.count = 0
@@ -164,7 +164,9 @@ class Histogram(object):
         return cumul_hist
 
     def plt_plot(self):
-        """Plots using matplotlib"""
+        """Plots using matplotlib
+        
+        TODO: move this to separate function"""
         plt.plot(self.bins[1:], self._histogram)
 
 # TODO: might as well add a main fucntion to this; read data / weight from
