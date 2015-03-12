@@ -66,7 +66,7 @@ class Storage(netcdf.Dataset):
         self.sample = paths.storage.SampleStore(storage)
         self.sampleset = paths.storage.SampleSetStore(storage)
 
-        self.collectivevariable = paths.storage.ObjectDictStore(storage, paths.OrderParameter, paths.Configuration)
+        self.collectivevariable = paths.storage.ObjectDictStore(storage, paths.OrderParameter, paths.Snapshot)
         self.cv = self.collectivevariable
 
         # normal objects

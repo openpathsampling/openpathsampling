@@ -377,49 +377,26 @@ class OrderParameter(FunctionalStorableObjectDict):
     storages
 
     """
-
-    _instances = dict()
-
     def __init__(self, name, dimensions = 1):
         if type(name) is str and len(name) == 0:
             raise ValueError('name must be a non-empty string')
 
-        OrderParameter._instances[name] = self
         super(OrderParameter, self).__init__(
             name=name,
             fnc=None,
             dimensions=dimensions,
-            key_class=paths.Configuration
+            key_class=paths.Snapshot
         )
 
-    @staticmethod
-    def get_existing(name):
-        if name in OrderParameter._instances:
-            return OrderParameter._instances[name]
-        else:
-            raise ValueError(name + ' does not exist as an orderparameter')
-            return None
-
-    def __eq__(self, other):
-        if self is other:
-            return True
-
-        if type(other) is type(self):
-            if hasattr(self, 'name') and hasattr(other, 'name'):
-                if self.name is not None and other.name is not None:
-                    return self.name == other.name
-
-        return False
-
     def __call__(self, items):
-        if self._isinstance(items,  paths.Snapshot):
-            return self._update(items.configuration)
-        elif self._isinstance(items, paths.Configuration):
+        if isinstance(items,  paths.Snapshot):
             return self._update(items)
-        elif self._isinstance(items, paths.Trajectory):
-            return self._update([snapshot.configuration for snapshot in items])
-        elif self._isinstance(items, list):
-            if self._isinstance(items[0], paths.Configuration):
+        elif isinstance(items, paths.Configuration):
+            return self._update(paths.Snapshot(configuration=items))
+        elif isinstance(items, paths.Trajectory):
+            return self._update(list(items))
+        elif isinstance(items, list):
+            if isinstance(items[0], paths.Snapshot):
                 return self._update(items)
         else:
             return None
