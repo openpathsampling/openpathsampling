@@ -1,10 +1,7 @@
 import base64
 import json
-import mdtraj as md
 import numpy as np
-import pandas as pd
 from simtk import unit as units
-import simtk.openmm
 import yaml
 import openpathsampling as paths
 
@@ -67,7 +64,6 @@ class ObjectJSON(object):
                     attributes = self.build(obj['_dict'])
                     return self.class_list[obj['_cls']].from_dict(attributes)
                 else:
-                    print self.class_list
                     raise ValueError('Cannot create obj of class "' + obj['_cls']+ '". Class is not registered as creatable!')
             else:
                 return {key : self.build(o) for key, o in obj.iteritems()}
@@ -110,7 +106,15 @@ class ObjectJSON(object):
 
     def to_json_object(self, obj, base_type = ''):
         simplified = self.simplify_object(obj, base_type)
-        return json.dumps(simplified)
+        try:
+            json_str = json.dumps(simplified)
+        except TypeError:
+            print obj.__class__.__name__
+            print obj.__dict__
+            print simplified
+            raise ValueError('Not possible to turn object into json')
+
+        return json_str
 
     def from_json(self, json_string):
         simplified = yaml.load(json_string)
@@ -152,8 +156,13 @@ def restores_as_full_object(super_class):
         def _from_dict(cls, my_dict = None):
             if my_dict is None:
                 my_dict={}
-
-            return cls(**my_dict)
+            try:
+                obj = cls(**my_dict)
+            except TypeError as e:
+                print my_dict
+                print cls.__name__
+                print e
+            return obj
 
         super_class.from_dict = classmethod(_from_dict)
 
@@ -161,7 +170,12 @@ def restores_as_full_object(super_class):
 
 
 class LoadedObject(object):
-    pass
+    @property
+    def cls(self):
+        return self._cls
+
+    def __repr__(self):
+        return '<' + self._cls + ' at ' + str(hex(id(self))) + '>'
 
 
 def restores_as_stub_object(super_class):
@@ -190,14 +204,58 @@ def restores_as_stub_object(super_class):
             if my_dict is None:
                 my_dict={}
 
-            obj = LoadedObject()
+#            obj = LoadedObject()
+            # TODO: I replaced the LoadedObject with the real class, but only
+            # call __new__ and not the initialization
+
+            obj = cls.__new__(cls)
 
             for key, value in my_dict.iteritems():
                 setattr(obj, key, value)
 
-            setattr(obj, 'cls', cls.__name__)
+            setattr(obj, '_cls', cls.__name__)
+
             return obj
 
         super_class.from_dict = classmethod(_from_dict)
 
     return super_class
+
+# def restores_as_stub_object_old(super_class):
+#     """
+#     A class decorator that marks a class to be storable in the storage using a LoadedObject class.
+#     This object will have the same class name, the same dict, but none of the functions and will not have
+#     been initialized. If you want real objects use @creatable
+#     :param super_class: The class to be decorated
+#     :return: The decorated class
+#     """
+#     class_list[super_class.__name__] = super_class
+#
+#     super_class.dictable = True
+#     if not hasattr(super_class, '_excluded_attr'):
+#         super_class._excluded_attr = []
+#
+#     if not hasattr(super_class, 'to_dict'):
+#         def _to_dict(self):
+#             excluded_keys = ['idx']
+#             return {key: value for key, value in self.__dict__.iteritems() if key not in excluded_keys and key not in self._excluded_attr and not key.startswith('_')}
+#
+#         super_class.to_dict = _to_dict
+#
+#     if not hasattr(super_class, 'from_dict'):
+#         def _from_dict(cls, my_dict = None):
+#             if my_dict is None:
+#                 my_dict={}
+#
+#             obj = LoadedObject()
+#
+#             for key, value in my_dict.iteritems():
+#                 setattr(obj, key, value)
+#
+#             setattr(obj, '_cls', cls.__name__)
+#
+#             return obj
+#
+#         super_class.from_dict = classmethod(_from_dict)
+#
+#     return super_class

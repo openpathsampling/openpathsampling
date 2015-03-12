@@ -12,11 +12,9 @@ class Topology(object):
     Topology is the object that contains all information about the structure
     of the system to be simulated.
 
-
-
     Attributes
     ----------
-    atoms : int
+    n_atoms : int
         number of atoms
     spatial : int
         number of spatial dimensions, default is 3
