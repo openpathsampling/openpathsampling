@@ -201,6 +201,10 @@ class TISTransition(Transition):
 
         pass
 
+    def all_statistics(self, samples, weights=None, force=False):
+        for ens in self.ensembles:
+            self.ensemble_statistics(ens, samples, weights, force)
+
     def pathlength_histogram(self, ensemble):
         # check existence and correctness of self.histograms[pl][ens]
         if "pathlength" not in self.histograms:
