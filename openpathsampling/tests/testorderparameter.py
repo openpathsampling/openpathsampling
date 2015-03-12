@@ -43,8 +43,6 @@ class testOP_Function(object):
         md_dihed = md.compute_dihedrals(mdtraj_version, indices=[psi_atoms])
         traj = self.storage.trajectory.load(0)
 
-        print list(traj)
-
         my_dihed =  dihedral_op( traj )
 
         np.testing.assert_allclose(md_dihed, my_dihed)
