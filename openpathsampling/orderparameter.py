@@ -279,7 +279,7 @@ class FunctionalStorableObjectDict(StorableObjectDict):
 @restores_as_stub_object
 class ConfigurationVariable(FunctionalStorableObjectDict):
     """
-    Wrapper for a function that maps a snapshot to a number.
+    Wrapper for a function that maps a configuration to a number.
 
     Parameters
     ----------
@@ -321,53 +321,6 @@ class ConfigurationVariable(FunctionalStorableObjectDict):
             return self._update([snapshot.configuration for snapshot in items])
         elif self._isinstance(items, list):
             if self._isinstance(items[0], paths.Configuration):
-                return self._update(items)
-        else:
-            return None
-
-@restores_as_stub_object
-class SnapshotVariable(FunctionalStorableObjectDict):
-    """
-    Wrapper for a function that maps a snapshot to a number.
-
-    Parameters
-    ----------
-    name : string
-        A descriptive name of the orderparameter. It is used in the string
-        representation.
-    dimensions : int
-        The number of dimensions of the output order parameter. So far this
-        is not used and will be necessary or useful when storage is
-        available
-    storages : list of ConfigurationStorages()
-        contains the list of storages that will be used.
-
-    Attributes
-    ----------
-    name
-    dimensions
-    storages
-
-    """
-
-    def __init__(self, name, dimensions = 1):
-        if type(name) is str and len(name) == 0:
-            raise ValueError('name must be a non-empty string')
-
-        super(OrderParameter, self).__init__(
-            name=name,
-            fnc=None,
-            dimensions=dimensions,
-            key_class=paths.Snapshot
-        )
-
-    def __call__(self, items):
-        if self._isinstance(items,  paths.Snapshot):
-            return self._update(items)
-        elif self._isinstance(items, paths.Trajectory):
-            return self._update(list(list.__iter__(items)))
-        elif self._isinstance(items, list):
-            if self._isinstance(items[0], paths.Snapshot):
                 return self._update(items)
         else:
             return None
