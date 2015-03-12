@@ -84,6 +84,8 @@ class Storage(netcdf.Dataset):
         self.ensemble = paths.storage.ObjectStore(storage, paths.Ensemble, is_named=True, nestable=True)
         self.movepath = paths.storage.ObjectStore(storage, paths.MovePath, is_named=False, nestable=True)
 
+        self.query = paths.storage.QueryStore(storage)
+
     def _setup_class(self):
         """
         Sets the basic properties for the storage
