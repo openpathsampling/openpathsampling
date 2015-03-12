@@ -461,7 +461,7 @@ class OP_RMSD_To_Lambda(OrderParameter):
         return scale
 
     def _eval(self, items):
-        trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
+        trajectory = paths.Trajectory(items)
         ptraj = trajectory.subset(self.atom_indices).md()
 
         results = md.rmsd(ptraj, self._generator)
@@ -501,7 +501,7 @@ class OP_Featurizer(OrderParameter):
         return
 
     def _eval(self, items):
-        trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
+        trajectory = paths.Trajectory(items)
 
         # create an MDtraj trajectory out of it
         ptraj = trajectory.subset(self.atom_indices).md()
@@ -543,9 +543,7 @@ class OP_MD_Function(OrderParameter):
         return
 
     def _eval(self, items, *args):
-        trajectory = paths.Trajectory(
-            [paths.Snapshot(configuration=c) for c in items]
-        )
+        trajectory = paths.Trajectory(items)
 
         if self.topology is None:
             # first time ever compute the used topology for this orderparameter to construct the mdtraj objects
@@ -611,6 +609,6 @@ class OP_Function(OrderParameter):
 
     def _eval(self, items, *args):
 
-        trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
+        trajectory = paths.Trajectory(items)
 
         return [ self._fcn(snap, *args, **self.kwargs) for snap in trajectory]
