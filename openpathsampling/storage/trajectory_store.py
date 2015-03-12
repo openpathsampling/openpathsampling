@@ -44,9 +44,22 @@ class TrajectoryStore(ObjectStore):
         """
 
         # Check if all snapshots are saved
-        map(self.storage.snapshot.save, trajectory)
+        values = []
+        for snap in list.__iter__(trajectory):
+            if type(snap) is not tuple:
+                self.storage.snapshot.save(snap)
+                values.append(snap.idx[self.storage])
+            elif snap[0].storage is not self.storage:
+                new_snap = snap[0][snap[1]]
+                self.storage.snapshot.save(new_snap)
+                values.append(new_snap.idx[self.storage])
+            else:
+                values.append(snap[1])
 
-        values = self.list_to_numpy(trajectory, 'snapshot')
+#        map(self.storage.snapshot.save, trajectory)
+#        values = self.list_to_numpy(trajectory, 'snapshot')
+
+        values = self.list_to_numpy(values, 'index')
         self.storage.variables['trajectory_snapshot_idx'][idx] = values
 
         self.storage.sync()
@@ -152,10 +165,6 @@ class TrajectoryStore(ObjectStore):
         super(TrajectoryStore, self)._init()
 
         # index associated storage in class variable for all Trajectory instances to access
-        ncfile = self.storage
-
-#        self.init_dimension('trajectory_snapshot')
-#        self.init_mixed('trajectory')
 
         self.init_variable('trajectory_snapshot_idx', 'index', 'trajectory',
             description="trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.",
