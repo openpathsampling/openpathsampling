@@ -35,7 +35,9 @@ color: #404040;
 }
 
 pre, code {
-white-space: nowrap;
+white-space: -moz-pre-wrap;
+white-space: -o-pre-wrap;
+word-wrap: break-word;
 max-width: 100%;
 padding: 12px 12px;
 background: #f6f6f6;
@@ -73,6 +75,10 @@ font-weight: normal;
 color:#404040;
 overflow-x: auto;
 /* font-weight: bold; */
+}
+
+#notebook:focus {
+outline-width: 0px;
 }
 
 .dataframe {
