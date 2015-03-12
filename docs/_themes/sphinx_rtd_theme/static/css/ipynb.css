@@ -75,6 +75,11 @@ overflow-x: auto;
 /* font-weight: bold; */
 }
 
+.dataframe {
+    margin-left:auto;
+    margin-right:auto;
+}
+
 .output_subarea {
     margin : 8px 0px 24px 0px;
 }
