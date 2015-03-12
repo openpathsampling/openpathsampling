@@ -127,8 +127,11 @@ class StorableObjectDict(ObjectDict):
         Return True if `item` has indices to be stored in an attached storage otherwise cache it in the dict itself
         """
         if type(item) is tuple:
-            if item[0].storage in self.object_storages and item[1] < len(item[0]):
-                return True
+            if item[0].content_class is self.key_class:
+                if item[0].storage in self.object_storages and item[1] < len(item[0]):
+                    return True
+                else:
+                    return False
             else:
                 return False
 
@@ -143,8 +146,13 @@ class StorableObjectDict(ObjectDict):
         """
         for s in self.storage_caches:
             if type(item) is tuple:
-                if item[1] in self.storage_caches[item[0].storage]:
-                    return True
+                if item[0].content_class is self.key_class:
+                    if item[1] in self.storage_caches[item[0].storage]:
+                        return True
+                else:
+                    # wrong type to load. Cannot ask for Configurations is
+                    # values for Snapshots are stored
+                    return False
             elif s in item.idx and item.idx[s] in self.storage_caches[s]:
                 return True
 
@@ -153,13 +161,26 @@ class StorableObjectDict(ObjectDict):
     def __contains__(self, item):
         return dict.__contains__(self, item) or self.in_store(item)
 
+    def _compatible(self, item):
+        if type(item) is tuple:
+            if item[0].content_class is self.key_class:
+                return True
+            else:
+                return False
+        else:
+            if isinstance(item, self.key_class):
+                return True
+            else:
+                return False
+
     def _get_from_stores(self, item):
-        for s in self.storage_caches:
-            if type(item) is tuple:
-                if item[1] in self.storage_caches[item[0].storage]:
-                    return self.storage_caches[item[0].storage][item[1]]
-            elif s in item.idx and item.idx[s] in self.storage_caches[s]:
-                return self.storage_caches[s][item.idx[s]]
+        if self._compatible(item):
+            for s in self.storage_caches:
+                if type(item) is tuple:
+                    if item[1] in self.storage_caches[item[0].storage]:
+                        return self.storage_caches[item[0].storage][item[1]]
+                elif s in item.idx and item.idx[s] in self.storage_caches[s]:
+                    return self.storage_caches[s][item.idx[s]]
 
         return None
 
@@ -341,14 +362,12 @@ class SnapshotVariable(FunctionalStorableObjectDict):
         )
 
     def __call__(self, items):
-        if isinstance(items,  paths.Snapshot):
+        if self._isinstance(items,  paths.Snapshot):
             return self._update(items)
-        elif isinstance(items, paths.Configuration):
-            return self._update(paths.Snapshot(configuration=items))
-        elif isinstance(items, paths.Trajectory):
-            return self._update(list(items))
-        elif isinstance(items, list):
-            if isinstance(items[0], paths.Snapshot):
+        elif self._isinstance(items, paths.Trajectory):
+            return self._update(list(list.__iter__(items)))
+        elif self._isinstance(items, list):
+            if self._isinstance(items[0], paths.Snapshot):
                 return self._update(items)
         else:
             return None
@@ -389,14 +408,12 @@ class OrderParameter(FunctionalStorableObjectDict):
         )
 
     def __call__(self, items):
-        if isinstance(items,  paths.Snapshot):
+        if self._isinstance(items,  paths.Snapshot):
             return self._update(items)
-        elif isinstance(items, paths.Configuration):
-            return self._update(paths.Snapshot(configuration=items))
-        elif isinstance(items, paths.Trajectory):
-            return self._update(list(items))
-        elif isinstance(items, list):
-            if isinstance(items[0], paths.Snapshot):
+        elif self._isinstance(items, paths.Trajectory):
+            return self._update(list(list.__iter__(items)))
+        elif self._isinstance(items, list):
+            if self._isinstance(items[0], paths.Snapshot):
                 return self._update(items)
         else:
             return None
