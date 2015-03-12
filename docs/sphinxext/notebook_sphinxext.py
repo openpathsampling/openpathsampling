@@ -129,7 +129,6 @@ def nb_to_html(nb_path):
     """convert notebook to html"""
     exporter = html.HTMLExporter(template_file='full')
     output, resources = exporter.from_filename(nb_path)
-    print(output)
     header = output.split('<head>', 1)[1].split('</head>',1)[0]
     body = output.split('<body>', 1)[1].split('</body>',1)[0]
 

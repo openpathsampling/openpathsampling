@@ -47,6 +47,7 @@ font-family: Consolas,"Andale Mono WT","Andale Mono","Lucida Console","Lucida Sa
 color:#404040;
 overflow-x: auto;
 font-weight: normal;
+line-height: 1.4;
 }
 
 div[class^='highlight'] {
