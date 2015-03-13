@@ -281,7 +281,87 @@ class TreeRenderer(object):
 
 
 
-class PathTreeBuilder(object):
+class MoveTreeBuilder(object):
+    def __init__(self, storage, op=None, states = None):
+        self.rejected = False
+        self.p_x = dict()
+        self.p_y = dict()
+        self.obj = list()
+        self.storage = storage
+        self.renderer = TreeRenderer()
+        self.op = op
+        if states is None:
+            states = {}
+        self.states = states
+
+    @staticmethod
+    def construct_heritage(storage, sample):
+        list_of_samples = []
+
+        samp = sample
+
+        while len(samp.details.inputs) > 0:
+            if len(samp.details.inputs) == 1:
+                # just one sample so use this
+                list_of_samples.append(samp)
+                samp = samp.details.inputs[0]
+            else:
+                # if there are more than one input choose the most useful one
+                # e.g. for ReplicaExchange the initial one
+                found_one = False
+                for input in samp.details.inputs:
+                    if input.trajectory == list_of_samples[-1].trajectory:
+                        # got it
+                        found_one = True
+                        samp = input
+                        break
+
+                if not found_one:
+                    break
+
+        # reverse to get origin first
+        return [samp for samp in reversed(list_of_samples)]
+
+    def full(self, ensembles, clear=True):
+
+        storage = self.storage
+
+        p_x = dict()
+        p_y = dict()
+
+        if clear:
+            self.renderer.clear()
+
+        t_count = 0
+        shift = 0
+
+        lightcolor = "gray"
+
+        for sset in storage.sampleset:
+            path = sset.movepath
+            for ens_idx, ens in enumerate(ensembles):
+                samp_ens = [samp for samp in sset if samp.ensemble is ens]
+                if len(samp_ens) > 0:
+                    self.renderer.add(self.renderer.block(ens_idx, t_count, "black", samp_ens[0].idx[storage]))
+
+    def _get_min_max(self, d):
+        return min(d.values()), max(d.values())
+
+    def _to_matrix(self):
+        min_x, max_x = self._get_min_max(self.p_x)
+        min_y, max_y = self._get_min_max(self.p_y)
+
+        matrix = [[None] * (max_x - min_x + 1) for n in range(max_y - min_y + 1)]
+
+        for s in self.p_x:
+            px = self.p_x[s]
+            py = self.p_y[s]
+            matrix[py - min_y][px - min_x] = s
+
+        return matrix
+
+
+    class PathTreeBuilder(object):
     def __init__(self, storage, op=None, states = None):
         self.rejected = False
         self.p_x = dict()
