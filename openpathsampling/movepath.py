@@ -82,6 +82,31 @@ class MovePath(object):
 
         return obj
 
+    def iter_subpaths(self):
+        if hasattr(self, 'movepath'):
+            return [self.movepath]
+        elif hasattr(self, 'movepaths'):
+            return self.movepaths
+        else:
+            return []
+
+    def traverse_bfs(self, fnc, *args, **kwargs):
+        output = []
+        for mp in self.iter_subpaths():
+            output.extend(mp.traverse_bfs(fnc, *args, **kwargs))
+        output.append(fnc(self, *args, **kwargs))
+
+        return output
+
+    def traverse_bfs_level(self, fnc, level=0, **kwargs):
+        output = []
+        for mp in self.iter_subpaths():
+            output.extend(mp.traverse_bfs_level(fnc, level + 1, **kwargs))
+        output.append((level, fnc(self, **kwargs)))
+
+        return output
+
+
     def reduced(self, selected_samples = None, use_all_samples=False):
         """
         Reduce the underlying MovePath to a subset of relevant samples
