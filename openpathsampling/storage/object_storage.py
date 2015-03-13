@@ -140,21 +140,21 @@ class ObjectStore(object):
             # and then each class can attach delayed loaders to load
             # when necessary, fall back is of course the normal load function
 
-            if  hasattr(self, 'load_empty'):
+            if hasattr(self, 'load_empty'):
                 cls = self.content_class
 
-                def _getattr(self, item):
+                def _getattr(this, item):
                     if item == '_idx':
-                        return self.__dict__['idx']
+                        return this.__dict__['idx']
 
                     if hasattr(cls, '_delayed_loading'):
                         if item in cls._delayed_loading:
                             _loader = cls._delayed_loading[item]
-                            _loader(self)
+                            _loader(this, self)
                         else:
                             raise KeyError(item)
 
-                    return self.__dict__[item]
+                    return this.__dict__[item]
 
                 setattr(cls, '__getattr__', _getattr)
 
@@ -268,7 +268,6 @@ class ObjectStore(object):
                 this._idx = dict()
 
             return this._idx
-
 
         def _save(this, storage):
             storage.save(this)

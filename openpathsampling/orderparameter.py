@@ -107,10 +107,34 @@ class StorableObjectDict(ObjectDict):
         for s in self.object_storages:
             self.storage_caches[s.storage] = dict()
 
+    def _cls(self, item):
+        if type(item) is tuple:
+            return item[0].content_class
+        else:
+            return item
+
+    def _isinstance(self, item, cls):
+        if type(item) is tuple:
+            return self._cls(item) is cls
+        else:
+            return isinstance(item, cls)
+
+    def _type(self, item):
+        return type(self._cls(item))
+
     def storable(self, item):
         """
         Return True if `item` has indices to be stored in an attached storage otherwise cache it in the dict itself
         """
+        if type(item) is tuple:
+            if item[0].content_class is self.key_class:
+                if item[0].storage in self.object_storages and item[1] < len(item[0]):
+                    return True
+                else:
+                    return False
+            else:
+                return False
+
         for s in self.storage_caches:
             if s in item.idx and item.idx[s] > 0:
                 return True
@@ -121,7 +145,15 @@ class StorableObjectDict(ObjectDict):
         Returns True, if the item is already stored in an associated cache.
         """
         for s in self.storage_caches:
-            if s in item.idx and item.idx[s] in self.storage_caches[s]:
+            if type(item) is tuple:
+                if item[0].content_class is self.key_class:
+                    if item[1] in self.storage_caches[item[0].storage]:
+                        return True
+                else:
+                    # wrong type to load. Cannot ask for Configurations is
+                    # values for Snapshots are stored
+                    return False
+            elif s in item.idx and item.idx[s] in self.storage_caches[s]:
                 return True
 
         return False
@@ -129,10 +161,26 @@ class StorableObjectDict(ObjectDict):
     def __contains__(self, item):
         return dict.__contains__(self, item) or self.in_store(item)
 
+    def _compatible(self, item):
+        if type(item) is tuple:
+            if item[0].content_class is self.key_class:
+                return True
+            else:
+                return False
+        else:
+            if isinstance(item, self.key_class):
+                return True
+            else:
+                return False
+
     def _get_from_stores(self, item):
-        for s in self.storage_caches:
-            if s in item.idx and item.idx[s] in self.storage_caches[s]:
-                return self.storage_caches[s][item.idx[s]]
+        if self._compatible(item):
+            for s in self.storage_caches:
+                if type(item) is tuple:
+                    if item[1] in self.storage_caches[item[0].storage]:
+                        return self.storage_caches[item[0].storage][item[1]]
+                elif s in item.idx and item.idx[s] in self.storage_caches[s]:
+                    return self.storage_caches[s][item.idx[s]]
 
         return None
 
@@ -204,7 +252,7 @@ class FunctionalStorableObjectDict(StorableObjectDict):
         else:
             input = [items]
 
-        if self.key_class is not None and len(input) > 0 and isinstance(input[0], self.key_class):
+        if self.key_class is not None and len(input) > 0 and self._isinstance(input[0], self.key_class):
             no_cache = self.missing(input)
 
             # Add not yet cached data
@@ -227,6 +275,55 @@ class FunctionalStorableObjectDict(StorableObjectDict):
             return transform(self(obj))
 
         return fnc
+
+@restores_as_stub_object
+class ConfigurationVariable(FunctionalStorableObjectDict):
+    """
+    Wrapper for a function that maps a configuration to a number.
+
+    Parameters
+    ----------
+    name : string
+        A descriptive name of the orderparameter. It is used in the string
+        representation.
+    dimensions : int
+        The number of dimensions of the output order parameter. So far this
+        is not used and will be necessary or useful when storage is
+        available
+    storages : list of ConfigurationStorages()
+        contains the list of storages that will be used.
+
+    Attributes
+    ----------
+    name
+    dimensions
+    storages
+
+    """
+
+    def __init__(self, name, dimensions = 1):
+        if type(name) is str and len(name) == 0:
+            raise ValueError('name must be a non-empty string')
+
+        super(OrderParameter, self).__init__(
+            name=name,
+            fnc=None,
+            dimensions=dimensions,
+            key_class=paths.Configuration
+        )
+
+    def __call__(self, items):
+        if self._isinstance(items,  paths.Snapshot):
+            return self._update(items.configuration)
+        elif self._isinstance(items, paths.Configuration):
+            return self._update(items)
+        elif self._isinstance(items, paths.Trajectory):
+            return self._update([snapshot.configuration for snapshot in items])
+        elif self._isinstance(items, list):
+            if self._isinstance(items[0], paths.Configuration):
+                return self._update(items)
+        else:
+            return None
 
 @restores_as_stub_object
 class OrderParameter(FunctionalStorableObjectDict):
@@ -252,52 +349,24 @@ class OrderParameter(FunctionalStorableObjectDict):
     storages
 
     """
-
-    _instances = dict()
-
     def __init__(self, name, dimensions = 1):
         if type(name) is str and len(name) == 0:
             raise ValueError('name must be a non-empty string')
 
-#        if name in OrderParameter._instances:
-#            raise ValueError(name + ' already exists as an orderparameter. To load an existing one use get_existing(\'' + name + '\')')
-
-        OrderParameter._instances[name] = self
         super(OrderParameter, self).__init__(
             name=name,
             fnc=None,
             dimensions=dimensions,
-            key_class=paths.Configuration
+            key_class=paths.Snapshot
         )
 
-    @staticmethod
-    def get_existing(name):
-        if name in OrderParameter._instances:
-            return OrderParameter._instances[name]
-        else:
-            raise ValueError(name + ' does not exist as an orderparameter')
-            return None
-
-    def __eq__(self, other):
-        if self is other:
-            return True
-
-        if type(other) is type(self):
-            if hasattr(self, 'name') and hasattr(other, 'name'):
-                if self.name is not None and other.name is not None:
-                    return self.name == other.name
-
-        return False
-
     def __call__(self, items):
-        if isinstance(items,  paths.Snapshot):
-            return self._update(items.configuration)
-        elif isinstance(items, paths.Configuration):
+        if self._isinstance(items,  paths.Snapshot):
             return self._update(items)
-        elif isinstance(items, paths.Trajectory):
-            return self._update([snapshot.configuration for snapshot in items])
-        elif isinstance(items, list):
-            if isinstance(items[0], paths.Configuration):
+        elif self._isinstance(items, paths.Trajectory):
+            return self._update(list(list.__iter__(items)))
+        elif self._isinstance(items, list):
+            if self._isinstance(items[0], paths.Snapshot):
                 return self._update(items)
         else:
             return None
@@ -362,7 +431,7 @@ class OP_RMSD_To_Lambda(OrderParameter):
         return scale
 
     def _eval(self, items):
-        trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
+        trajectory = paths.Trajectory(items)
         ptraj = trajectory.subset(self.atom_indices).md()
 
         results = md.rmsd(ptraj, self._generator)
@@ -402,7 +471,7 @@ class OP_Featurizer(OrderParameter):
         return
 
     def _eval(self, items):
-        trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
+        trajectory = paths.Trajectory(items)
 
         # create an MDtraj trajectory out of it
         ptraj = trajectory.subset(self.atom_indices).md()
@@ -444,9 +513,7 @@ class OP_MD_Function(OrderParameter):
         return
 
     def _eval(self, items, *args):
-        trajectory = paths.Trajectory(
-            [paths.Snapshot(configuration=c) for c in items]
-        )
+        trajectory = paths.Trajectory(items)
 
         if self.topology is None:
             # first time ever compute the used topology for this orderparameter to construct the mdtraj objects
@@ -512,6 +579,6 @@ class OP_Function(OrderParameter):
 
     def _eval(self, items, *args):
 
-        trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
+        trajectory = paths.Trajectory(items)
 
         return [ self._fcn(snap, *args, **self.kwargs) for snap in trajectory]

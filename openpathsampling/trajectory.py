@@ -200,6 +200,40 @@ class Trajectory(list):
             ret.atom_indices = self.atom_indices
 
         return ret
+
+    def __iter__(this):
+        """
+        Return an iterator over all snapshots in the storage
+
+        Parameters
+        ----------
+        iter_range : slice or None
+            if this is not `None` it confines the iterator to objects specified
+            in the slice
+
+        Returns
+        -------
+        Iterator()
+            The iterator that iterates the objects in the store
+
+        """
+        class ObjectIterator:
+            def __init__(self):
+                self.trajectory = this
+                self.idx = 0
+
+            def __iter__(self):
+                return self
+
+            def next(self):
+                if self.idx < len(self.trajectory):
+                    obj = self.trajectory[self.idx]
+                    self.idx += 1
+                    return obj
+                else:
+                    raise StopIteration()
+
+        return ObjectIterator()
     
     def __add__(self, other):        
         t = Trajectory(self)
