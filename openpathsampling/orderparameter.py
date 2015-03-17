@@ -232,12 +232,12 @@ class FunctionalStorableObjectDict(StorableObjectDict):
 
     def _update(self, items):
         if type(items) is list:
-            input = items
+            up_items = items
         else:
-            input = [items]
+            up_items = [items]
 
-        if self.key_class is not None and len(input) > 0 and self._isinstance(input[0], self.key_class):
-            no_cache = self.missing(input)
+        if self.key_class is not None and len(up_items) > 0 and self._basetype(up_items[0]) is self.key_class:
+            no_cache = self.missing(up_items)
 
             # Add not yet cached data
             if len(no_cache) > 0:

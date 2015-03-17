@@ -26,7 +26,7 @@ class ObjectDictStore(ObjectStore):
         self.sync(objectdict, idx)
 
 
-    def sync(self, objectdict, idx=None):
+    def sync(self, objectdict=None, idx=None):
         """
         This will update the stored cache of the orderparameter. It is
         different from saving in that the object is only created if it
@@ -39,6 +39,11 @@ class ObjectDictStore(ObjectStore):
 
         """
         storage = self.storage
+
+        if objectdict is None:
+            [ self.sync(od) for od in self]
+            return
+
         if idx is None:
             idx = self.idx(objectdict)
 
