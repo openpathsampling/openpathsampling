@@ -155,16 +155,7 @@ class StorableObjectDict(ObjectDict):
         return dict.__contains__(self, item) or self.in_store(item)
 
     def _compatible(self, item):
-        if type(item) is tuple:
-            if item[0].content_class is self.key_class:
-                return True
-            else:
-                return False
-        else:
-            if isinstance(item, self.key_class):
-                return True
-            else:
-                return False
+        return self._basetype(item) is self.key_class
 
     def _get_from_stores(self, item):
         if self._compatible(item):
