@@ -118,11 +118,8 @@ class testShootingMover(object):
                                       -0.1, 0.2, 0.4, 0.6, 0.8,
                                      ])
         PathMover.engine = self.dyn
-        try:
-            op = OP_Function("myid", fcn=lambda snap : 
+        op = OP_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
-        except ValueError:
-            op = OrderParameter.get_existing('myid')
         stateA = LambdaVolume(op, -100, 0.0)
         stateB = LambdaVolume(op, 0.65, 100)
         self.tps = ef.A2BEnsemble(stateA, stateB)
@@ -170,11 +167,9 @@ class testOneWayShootingMover(testShootingMover):
 
 class testPathReversalMover(object):
     def setup(self):
-        try:
-            op = OP_Function("myid", fcn=lambda snap : 
-                             snap.coordinates[0,0])
-        except ValueError:
-            op = OrderParameter.get_existing('myid')
+        op = OP_Function("myid", fcn=lambda snap :
+                             snap.coordinates[0][0])
+
         volA = LambdaVolume(op, -100, 0.0)
         volB = LambdaVolume(op, 1.0, 100)
         volX = LambdaVolume(op, -100, 0.25)
@@ -237,11 +232,9 @@ class testReplicaIDChangeMover(object):
 
 class testReplicaExchangeMover(object):
     def setup(self):
-        try:
-            op = OP_Function("myid", fcn=lambda snap : 
+        op = OP_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
-        except ValueError:
-            op = OrderParameter.get_existing('myid')
+
         state1 = LambdaVolume(op, -100, 0.0)
         state2 = LambdaVolume(op, 1, 100)
         volA = LambdaVolume(op, -100, 0.25)
@@ -667,10 +660,9 @@ class testForceEnsembleChangeMover(object):
 
 class testMinusMover(object):
     def setup(self):
-        try:
-            op = OP_Function("myid", fcn=lambda snap : snap.coordinates[0,0])
-        except ValueError:
-            op = OrderParameter.get_existing('myid')
+        op = OP_Function("myid", fcn=lambda snap :
+                             snap.coordinates[0][0])
+
         volA = LambdaVolume(op, -100, 0.0)
         volB = LambdaVolume(op, 1.0, 100)
         volX = LambdaVolume(op, -100, 0.25)
