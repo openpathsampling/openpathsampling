@@ -34,8 +34,9 @@ class ObjectDictStore(ObjectStore):
 
         Parameters
         ----------
-        objectdict : object
-            the objectdict to store
+        objectdict : object or None (default)
+            the objectdict to store. if `None` is given (default) then
+            all orderparameters are synced
 
         """
         storage = self.storage
