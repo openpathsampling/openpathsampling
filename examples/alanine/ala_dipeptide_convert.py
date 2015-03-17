@@ -14,4 +14,8 @@ if __name__=="__main__":
     )
 
     solute = range(22)
-    storage.clone('test_solute.nc', subset=solute)
+    storage.clone('test_solute.nc', subset=None)
+    storage.close()
+
+    storage2 = Storage('test_solute.nc')
+    storage2.clone('test_solute2.nc', subset=solute)

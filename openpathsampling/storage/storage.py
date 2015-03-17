@@ -454,7 +454,7 @@ class Storage(netcdf.Dataset):
         for storage_name in [
                 'trajectory', 'snapshot', 'sample', 'sampleset', 'orderparameter',
                 'pathmover', 'engine', 'movedetails', 'shootingpoint', 'shootingpointselector',
-                'globalstate', 'volume', 'ensemble', 'movepath' ]:
+                'globalstate', 'volume', 'ensemble', 'movepath', 'dynamicsengine' ]:
             self.clone_storage(storage_name, storage2)
 
         storage2.close()
