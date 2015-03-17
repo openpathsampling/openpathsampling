@@ -1003,7 +1003,7 @@ def loadcache(func):
 
             cc = self.cache[idx]
             if type(cc) is int:
-                logger.debug('Found IDX #' + str(idx) + ' in cache under IDX #' + str(cc))
+                logger.debug('Found IDX #' + str(idx) + ' in cache under position #' + str(cc))
 
                 # here the cached value is actually only the index
                 # so it still needs to be loaded with the given index
@@ -1011,7 +1011,7 @@ def loadcache(func):
                 # and we need to actually load it
                 n_idx = cc
             else:
-                logger.debug('Found IDX #' + str(idx) + ' in cache under IDX #' + str(cc))
+                logger.debug('Found IDX #' + str(idx) + ' in cache. Not loading!')
 
                 # we have a real object (hopefully) and just return from cache
                 return self.cache[idx]
