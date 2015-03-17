@@ -50,8 +50,8 @@ class SampleStore(ObjectStore):
         return obj
 
     @staticmethod
-    def update_details(obj, store):
-        storage = store.storage
+    def update_details(obj):
+        storage = obj.origin
 
         idx = obj.idx[storage]
         details_idx = int(storage.variables['sample_details_idx'][idx])

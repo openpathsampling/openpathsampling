@@ -9,7 +9,7 @@ from openpathsampling.storage import Storage
 if __name__=="__main__":
 
     storage = Storage(
-        filename="test_simple.nc",
+        filename="trajectory.nc",
         mode='a'
     )
 
