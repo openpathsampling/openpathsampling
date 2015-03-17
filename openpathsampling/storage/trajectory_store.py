@@ -3,11 +3,26 @@ import numpy as np
 from object_storage import ObjectStore
 from openpathsampling.trajectory import Trajectory
 
+# This adds delayed snapshot loading support to Trajectory
+
+def load_missing_snapshot(func):
+    def getter(self, *args, **kwargs):
+        item = func(self, *args, **kwargs)
+
+        if type(item) is tuple:
+            item = item[0][item[1]]
+
+        return item
+
+    return getter
+
+Trajectory.__getitem__ = load_missing_snapshot(Trajectory.__getitem__)
+Trajectory.__getslice__ = load_missing_snapshot(Trajectory.__getslice__)
 
 class TrajectoryStore(ObjectStore):
-
-    def __init__(self, storage):
+    def __init__(self, storage, lazy=True):
         super(TrajectoryStore, self).__init__(storage, Trajectory)
+        self.lazy = lazy
 
     def save(self, trajectory, idx=None):
         """
@@ -29,9 +44,22 @@ class TrajectoryStore(ObjectStore):
         """
 
         # Check if all snapshots are saved
-        map(self.storage.snapshot.save, trajectory)
+        values = []
+        for snap in list.__iter__(trajectory):
+            if type(snap) is not tuple:
+                self.storage.snapshot.save(snap)
+                values.append(snap.idx[self.storage])
+            elif snap[0].storage is not self.storage:
+                new_snap = snap[0][snap[1]]
+                self.storage.snapshot.save(new_snap)
+                values.append(new_snap.idx[self.storage])
+            else:
+                values.append(snap[1])
 
-        values = self.list_to_numpy(trajectory, 'snapshot')
+#        map(self.storage.snapshot.save, trajectory)
+#        values = self.list_to_numpy(trajectory, 'snapshot')
+
+        values = self.list_to_numpy(values, 'index')
         self.storage.variables['trajectory_snapshot_idx'][idx] = values
 
         self.storage.sync()
@@ -77,9 +105,15 @@ class TrajectoryStore(ObjectStore):
         values = self.storage.variables['trajectory_snapshot_idx'][idx]
 
         # typecast to snapshot
-        snapshots = self.list_from_numpy(values, 'snapshot')
+        if self.lazy:
+            snapshots = [ tuple([self.storage.snapshot, idx]) for idx in self.list_from_numpy(values, 'int') ]
+        else:
+            snapshots = self.list_from_numpy(values, 'snapshot')
 
         trajectory = Trajectory(snapshots)
+        # save the used storage to load snapshots if required
+
+        trajectory.storage = self.storage
 
         return trajectory
 
@@ -131,10 +165,6 @@ class TrajectoryStore(ObjectStore):
         super(TrajectoryStore, self)._init()
 
         # index associated storage in class variable for all Trajectory instances to access
-        ncfile = self.storage
-
-#        self.init_dimension('trajectory_snapshot')
-#        self.init_mixed('trajectory')
 
         self.init_variable('trajectory_snapshot_idx', 'index', 'trajectory',
             description="trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.",

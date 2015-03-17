@@ -66,7 +66,7 @@ class Storage(netcdf.Dataset):
         self.sample = paths.storage.SampleStore(storage)
         self.sampleset = paths.storage.SampleSetStore(storage)
 
-        self.collectivevariable = paths.storage.ObjectDictStore(storage, paths.OrderParameter, paths.Configuration)
+        self.collectivevariable = paths.storage.ObjectDictStore(storage, paths.OrderParameter, paths.Snapshot)
         self.cv = self.collectivevariable
 
         # normal objects
@@ -83,6 +83,8 @@ class Storage(netcdf.Dataset):
         self.volume = paths.storage.ObjectStore(storage, paths.Volume, is_named=True, nestable=True)
         self.ensemble = paths.storage.ObjectStore(storage, paths.Ensemble, is_named=True, nestable=True)
         self.movepath = paths.storage.ObjectStore(storage, paths.MovePath, is_named=False, nestable=True)
+
+        self.query = paths.storage.QueryStore(storage)
 
     def _setup_class(self):
         """
