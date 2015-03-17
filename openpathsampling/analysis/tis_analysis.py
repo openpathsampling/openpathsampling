@@ -124,15 +124,6 @@ class TISTransition(Transition):
 
         self.total_crossing_probability_method="wham" 
 
-        # TODO: eventually I'll generalize this to include the function to
-        # be called, possibly some parameters ... can't this go to a 
-        self.ensemble_histogram_info = {
-            'pathlength' : Histogrammer(
-                f=pathlength,
-                f_args={},
-                hist_args={}
-            )
-        }
         self.histograms = {}
         self._ensemble_histograms = {}
 
@@ -149,10 +140,26 @@ class TISTransition(Transition):
             stateA, stateB, self.interfaces
         )
         if self.storage is None:
+            # TODO: I don't like this way of handling it
             self.movers['shooting'] = paths.PathMoverFactory.OneWayShootingSet(
                 paths.UniformSelector(), self.ensembles
             )
             self.movers['pathreversal'] = paths.PathReversalSet(self.ensembles)
+
+        # TODO: eventually I'll generalize this to include the function to
+        # be called, possibly some parameters ... can't this go to a 
+        self.ensemble_histogram_info = {
+            'pathlength' : Histogrammer(
+                f=pathlength,
+                f_args={},
+                hist_args={}
+            ),
+            'max_lambda' : Histogrammer(
+                f=max_lambdas,
+                f_args={'orderparameter' : self.orderparameter},
+                hist_args={}
+            )
+        }
 
         pass
 

@@ -163,11 +163,8 @@ class Histogram(object):
             
         return cumul_hist
 
-    def plt_plot(self):
-        """Plots using matplotlib
-        
-        TODO: move this to separate function"""
-        plt.plot(self.bins[1:], self._histogram)
+    def plot_bins(self):
+        return self.bins[1:]
 
 # TODO: might as well add a main fucntion to this; read data / weight from
 # stdin and output an appropriate histogram depending on some options. Then
