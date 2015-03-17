@@ -107,20 +107,13 @@ class StorableObjectDict(ObjectDict):
         for s in self.object_storages:
             self.storage_caches[s.storage] = dict()
 
-    def _cls(self, item):
+    def _basetype(self, item):
         if type(item) is tuple:
             return item[0].content_class
+        elif hasattr(item, 'base_cls'):
+            return item.base_cls
         else:
-            return item
-
-    def _isinstance(self, item, cls):
-        if type(item) is tuple:
-            return self._cls(item) is cls
-        else:
-            return isinstance(item, cls)
-
-    def _type(self, item):
-        return type(self._cls(item))
+            return type(item)
 
     def storable(self, item):
         """
@@ -162,16 +155,7 @@ class StorableObjectDict(ObjectDict):
         return dict.__contains__(self, item) or self.in_store(item)
 
     def _compatible(self, item):
-        if type(item) is tuple:
-            if item[0].content_class is self.key_class:
-                return True
-            else:
-                return False
-        else:
-            if isinstance(item, self.key_class):
-                return True
-            else:
-                return False
+        return self._basetype(item) is self.key_class
 
     def _get_from_stores(self, item):
         if self._compatible(item):
@@ -248,12 +232,12 @@ class FunctionalStorableObjectDict(StorableObjectDict):
 
     def _update(self, items):
         if type(items) is list:
-            input = items
+            up_items = items
         else:
-            input = [items]
+            up_items = [items]
 
-        if self.key_class is not None and len(input) > 0 and self._isinstance(input[0], self.key_class):
-            no_cache = self.missing(input)
+        if self.key_class is not None and len(up_items) > 0 and self._basetype(up_items[0]) is self.key_class:
+            no_cache = self.missing(up_items)
 
             # Add not yet cached data
             if len(no_cache) > 0:
@@ -313,15 +297,21 @@ class ConfigurationVariable(FunctionalStorableObjectDict):
         )
 
     def __call__(self, items):
-        if self._isinstance(items,  paths.Snapshot):
+        item_type = self._basetype(items)
+        if item_type is paths.Snapshot:
             return self._update(items.configuration)
-        elif self._isinstance(items, paths.Configuration):
+        elif item_type is paths.Configuration:
             return self._update(items)
-        elif self._isinstance(items, paths.Trajectory):
+        elif item_type is paths.Trajectory:
             return self._update([snapshot.configuration for snapshot in items])
-        elif self._isinstance(items, list):
-            if self._isinstance(items[0], paths.Configuration):
+        elif item_type is list:
+            item_sub_type = self._basetype(items[0])
+            if item_sub_type is paths.Configuration:
                 return self._update(items)
+            elif item_sub_type is paths.Snapshot:
+                return self._update([snapshot.configuration for snapshot in items])
+            else:
+                return None
         else:
             return None
 
@@ -361,13 +351,18 @@ class OrderParameter(FunctionalStorableObjectDict):
         )
 
     def __call__(self, items):
-        if self._isinstance(items,  paths.Snapshot):
+        item_type = self._basetype(items)
+
+        if item_type is  paths.Snapshot:
             return self._update(items)
-        elif self._isinstance(items, paths.Trajectory):
+        elif item_type is paths.Trajectory:
             return self._update(list(list.__iter__(items)))
-        elif self._isinstance(items, list):
-            if self._isinstance(items[0], paths.Snapshot):
+        elif item_type is list:
+            item_sub_type = self._basetype(items[0])
+            if item_sub_type is paths.Snapshot:
                 return self._update(items)
+            else:
+                return None
         else:
             return None
 
