@@ -1,6 +1,7 @@
 import numpy as np
-import math
+import pandas as pd
 import matplotlib.pyplot as plt
+import math
 
 # TODO: someday I should replace this with a variant of my sparse-histogram
 # code. It is easy to use and probably can be made faster than numpy for
@@ -50,6 +51,7 @@ class Histogram(object):
             self.bins = self.n_bins
 
         self.count = 0
+        self.name = None
         self._histogram = None
 
     def add_data_to_histogram(self, data, weights=None):
@@ -186,15 +188,45 @@ class Histogram(object):
         # TODO: add scaling support
         return self.bins[1:]
 
-# TODO: might as well add a main fucntion to this; read data / weight from
-# stdin and output an appropriate histogram depending on some options. Then
-# it is both a useful script and a library class!
+
+def histograms_to_pandas_dataframe(hists, fcn="histogram", fcn_args={}):
+    """Converts histograms in hists to a pandas data frame"""
+    keys = None
+    hist_dict = {}
+    frames = []
+    for hist in hists:
+        # check that the keys match
+        if keys is None:
+            keys = hist.plot_bins(**fcn_args)
+        for (t,b) in zip(keys, hist.plot_bins(**fcn_args)):
+            if t != b:
+                raise Warning("Bins don't match up")
+        if hist.name is None:
+            hist.name = str(hists.index(hist))
+
+        hist_data = {
+            "histogram" : hist.histogram,
+            "normalized" : hist.normalized,
+            "reverse_cumulative" : hist.reverse_cumulative,
+            "cumulative" : hist.cumulative,
+            "rebinned" : hist.rebinned
+        }[fcn](**fcn_args)
+
+        hist_dict[hist.name] = hist_data
+        frames.append(pd.DataFrame({hist.name : hist_data}, index=keys))
+    all_frames = pd.concat(frames, axis=1)
+    return all_frames
+
 
 def write_histograms(fname, hists):
     """Writes all histograms in list `hists` to file named `fname`
     
     If the filename is the empty string, then output is to stdout.
-    Assumes that all files should have the same bins
+    Assumes that all files should have the same bins.
     """
     pass
+
+# TODO: might as well add a main fucntion to this; read data / weight from
+# stdin and output an appropriate histogram depending on some options. Then
+# it is both a useful script and a library class!
 

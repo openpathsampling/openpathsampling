@@ -121,7 +121,7 @@ class TISTransition(Transition):
     which we DO in the intitialization!)
     """
     
-    def __init__(self, stateA, stateB, orderparameter, interfaces, storage=None):
+    def __init__(self, stateA, stateB, orderparameter, interfaces, name, storage=None):
         super(TISTransition, self).__init__(stateA, stateB, storage)
         # NOTE: making these into dictionaries like this will make it easy
         # to combine them in order to make a PathSampling calculation object
@@ -131,10 +131,14 @@ class TISTransition(Transition):
         self.stateA = stateA
         self.stateB = stateB
         self.interfaces = interfaces
+        self.name = name
         self.storage = storage
         self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
             stateA, stateB, self.interfaces
         )
+
+        for ensemble in self.ensembles:
+            ensemble.name = "I'face "+str(self.ensembles.index(ensemble))
 
         if self.storage is None:
             # TODO: I don't like this way of handling it
@@ -239,8 +243,9 @@ class TISTransition(Transition):
             for sample in in_ens_samples:
                 hist_data.append(hist_info.f(sample, **hist_info.f_args))
             self.histograms[hist][ensemble].histogram(hist_data, weights)
+            self.histograms[hist][ensemble].name = (hist + " " + self.name
+                                                    + " " + ensemble.name)
 
-        pass
 
     def all_statistics(self, samples, weights=None, force=False):
         # TODO: speed this up by just running over all samples once and

@@ -4,6 +4,10 @@
 # The Weighted Histogram Analysis Method (WHAM) for combining histograms
 # from several files.
 import math
+from read_acf import read_acf
+from series_stats import add_series_to_set
+from crossing_probability import series_set_crossing_lambdas
+
 class WHAM(object):
     """
     Weighted Histogram Analysis Method
@@ -34,11 +38,18 @@ class WHAM(object):
 
     # loads files into the dictionary
     def load_file(self,fname):
-        from read_acf import read_acf
-        from series_stats import add_series_to_set
         xvals, yvals = read_acf(fname)
         add_series_to_set(xvals, yvals, self.hists)
         self.nhists += 1
+
+    def load_from_dataframe(self, df):
+        """Loads from a pandas-compatible data frame.
+
+        The data frame does not need to be from pandas, but needs to quack
+        like it is.
+        """
+        #TODO
+        pass
 
     # modifies the dictionary to ignore outside the window
     def prep(self):
@@ -98,7 +109,6 @@ class WHAM(object):
 
         A trivial guess should also work, but this isn't very expensive.
         """
-        from crossing_probability import series_set_crossing_lambdas
         lambda_i = series_set_crossing_lambdas(self.hists)
         scaling = 1.0
         crossing_prob = []
