@@ -5,6 +5,9 @@
 # from several files.
 import math
 import pandas as pd
+
+import logging
+logger = logging.getLogger(__name__)
 #from read_acf import read_acf
 #from series_stats import add_series_to_set
 #from crossing_probability import series_set_crossing_lambdas
@@ -200,17 +203,15 @@ class WHAM(object):
             # check status (mainly for debugging)
             sampling = 1 + self.max_iter # DEBUG
             if (iteration % sampling == 0):
-                print 
-                print "#niteration =", iteration,
-                print "#   diff =", diff
-                print "   lnZ =", self.lnZ
-                print "lnZnew =", lnZnew
-                print
+                logger.debug("niteration = " + str(iteration))
+                logger.debug("  diff = " + str(diff))
+                logger.debug("   lnZ = " + str(self.lnZ))
+                logger.debug("lnZnew = " + str(lnZnew))
 
-        print "#iterations=", iteration,
-        print "diff=", diff
-        print "#", self.lnZ
-        return
+        logger.info("iterations=" + str(iteration) + "diff=" + str(diff))
+        logger.info("       lnZ=" + str(self.lnZ))
+        self.convergence = (iteration, diff)
+
 
     def wham_histogram(self):
 
@@ -278,9 +279,7 @@ if __name__ == "__main__":
     wham = WHAM(tol=opts.tol, max_iter=opts.max_iter, cutoff=opts.cutoff)
     wham.load_files(args)
 
-
     wham.clean_leading_ones()
-    #print_dict(wham.hists)
     wham_hist = wham.wham_bam_histogram()
 
     print_dict(wham_hist)
