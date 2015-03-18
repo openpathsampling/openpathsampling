@@ -223,7 +223,7 @@ class PathSampling(Calculation):
                                                           step=-1)
 
         if self.storage is not None:
-            self.globalstate.save_samples(self.storage)
+            #self.globalstate.save_samples(self.storage)
             self.globalstate.save(self.storage)
             self.storage.sync()
 
@@ -233,8 +233,9 @@ class PathSampling(Calculation):
             self.globalstate = self.globalstate.apply_samples(samples, step=step)
             self.globalstate.movepath = movepath
             if self.storage is not None:
-                self.globalstate.save_samples(self.storage)
+                #self.globalstate.save_samples(self.storage)
                 self.globalstate.save(self.storage)
+                self.storage.cv.sync()
                 self.storage.sync()
 
     def to_dict(self):

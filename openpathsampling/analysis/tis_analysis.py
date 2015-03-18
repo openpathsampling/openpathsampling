@@ -1,5 +1,9 @@
 from histogram import Histogram
 import openpathsampling as paths
+from openpathsampling.todict import restores_as_full_object
+
+import time 
+
 """
 Experimental analysis module.
 
@@ -95,7 +99,7 @@ class Transition(object):
         pass
 
 
-class TPSTransition(object):
+class TPSTransition(Transition):
     """
     Transition using TPS ensembles
     """
@@ -107,6 +111,7 @@ class TPSTransition(object):
         #self.ensembles = [paths.TPSEnsemble(stateA, stateB)]
 
 
+@restores_as_full_object
 class TISTransition(Transition):
     """
     Transition using TIS ensembles.
@@ -115,6 +120,7 @@ class TISTransition(Transition):
     all the analysis (assuming we built these are proper TIS ensembles,
     which we DO in the intitialization!)
     """
+    
     def __init__(self, stateA, stateB, orderparameter, interfaces, storage=None):
         super(TISTransition, self).__init__(stateA, stateB, storage)
         # NOTE: making these into dictionaries like this will make it easy
@@ -122,29 +128,32 @@ class TISTransition(Transition):
         self.movers['shooting'] = []
         self.movers['pathreversal'] = []
 
-        self.total_crossing_probability_method="wham" 
-
-        self.histograms = {}
-        self._ensemble_histograms = {}
-
-        # caches for the results of our calculations
-        self._flux = None
-        self._rate = None
-
         self.stateA = stateA
         self.stateB = stateB
-        self.orderparameter = orderparameter
         self.interfaces = interfaces
         self.storage = storage
         self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
             stateA, stateB, self.interfaces
         )
+
         if self.storage is None:
             # TODO: I don't like this way of handling it
             self.movers['shooting'] = paths.PathMoverFactory.OneWayShootingSet(
                 paths.UniformSelector(), self.ensembles
             )
             self.movers['pathreversal'] = paths.PathReversalSet(self.ensembles)
+
+
+        self.orderparameter = orderparameter
+        self.default_orderparameter = self.orderparameter
+
+
+        self.total_crossing_probability_method="wham" 
+        self.histograms = {}
+        self._ensemble_histograms = {}
+        # caches for the results of our calculations
+        self._flux = None
+        self._rate = None
 
         # TODO: eventually I'll generalize this to include the function to
         # be called, possibly some parameters ... can't this go to a 
@@ -154,14 +163,39 @@ class TISTransition(Transition):
                 f_args={},
                 hist_args={}
             ),
-            'max_lambda' : Histogrammer(
-                f=max_lambdas,
-                f_args={'orderparameter' : self.orderparameter},
-                hist_args={}
-            )
+            #'max_lambda' : Histogrammer(
+            #    f=max_lambdas,
+            #    f_args={'orderparameter' : self.orderparameter},
+            #    hist_args={}
+            #)
         }
 
         pass
+
+    def to_dict(self):
+        ret_dict = {
+            'stateA' : self.stateA,
+            'stateB' : self.stateB,
+            'orderparameter' : self.orderparameter,
+            'interfaces' : self.interfaces,
+            'storage' : self.storage,
+            'movers' : self.movers,
+            'ensembles' : self.ensembles
+        }
+        return ret_dict
+
+    @staticmethod
+    def from_dict(self, adict):
+        mytrans = TISTransition(
+            stateA=adict['stateA'],
+            stateB=adict['stateB'],
+            orderparameter=adict['orderparameter'],
+            interfaces=adict['interfaces'],
+            storage=adict['storage']
+        )
+        mytrans.movers = adict['movers']
+        mytrans.ensembles = adict['ensembles']
+        return mytrans
 
     # path movers
     @property
@@ -197,18 +231,24 @@ class TISTransition(Transition):
         buflen = 10
         in_ens_samples = (s for s in samples if s.ensemble == ensemble)
         for hist in run_it:
+            #print "Running", time.time()
             hist_info = self.ensemble_histogram_info[hist]
             if hist not in self.histograms.keys():
                 self.histograms[hist] = {}
             self.histograms[hist][ensemble] = Histogram(**(hist_info.hist_args))
             hist_data = []
+            #print "About to sample", time.time()
             for sample in in_ens_samples:
                 hist_data.append(hist_info.f(sample, **hist_info.f_args))
+            #print "Samples built; sending to numpy", time.time()
             self.histograms[hist][ensemble].histogram(hist_data, weights)
+            #print "Done!", time.time()
 
         pass
 
     def all_statistics(self, samples, weights=None, force=False):
+        # TODO: speed this up by just running over all samples once and
+        # dealing them out to the appropriate histograms
         for ens in self.ensembles:
             self.ensemble_statistics(ens, samples, weights, force)
 
@@ -256,7 +296,20 @@ class TISTransition(Transition):
 
     def default_movers(self, engine):
         """Create reasonable default movers for a `PathSampling` calculation"""
-        pass
+        shoot_sel = paths.RandomChoiceMover(
+            movers=self.movers['shooting'],
+            name="ShootingChooser"
+        )
+        pathrev_sel = paths.RandomChoiceMover(
+            movers=self.movers['pathreversal'],
+            name="ReversalChooser"
+        )
+        root_mover = paths.RandomChoiceMover(
+            movers=[shoot_sel, pathrev_sel], 
+            weights=[1.0, 0.5],
+            name="RootMover"
+        )
+        return root_mover
 
 
 
