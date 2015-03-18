@@ -7,7 +7,7 @@ import math
 import pandas as pd
 #from read_acf import read_acf
 #from series_stats import add_series_to_set
-from crossing_probability import series_set_crossing_lambdas
+#from crossing_probability import series_set_crossing_lambdas
 
 class WHAM(object):
     """
@@ -47,9 +47,11 @@ class WHAM(object):
         frames = []
         try:
             for fname in fnames:
-                frames.append(pd.read_table(fname, index_col=0))
+                frames.append(pd.read_table(fname, index_col=0, sep=" ",
+                                            usecols=[0,1]))
         except TypeError:
-            frame.append(pd.read_table(fnames, index_col=0))
+            frame.append(pd.read_table(fnames, index_col=0, sep=" ",
+                                       usecols=[0,1]))
         df = pd.concat(frames, axis=1)
         self.load_from_dataframe(df)
         #xvals, yvals = read_acf(fname)
@@ -65,7 +67,7 @@ class WHAM(object):
         associated with a given key.
         """
         self.keys = list(df.index)
-        for key in self.keys():
+        for key in self.keys:
             self.hists[key] = list(df.loc[key])
             if len(self.hists[key]) != self.nhists:
                 if self.nhists != 0:
@@ -120,6 +122,7 @@ class WHAM(object):
         keys = sorted(self.hists.keys())
         for s in range(self.nhists):
             i=1 # ignore the line of zeros before 
+            i=0 # new version doesn't have extra line of zeros
             while (     (self.hists[keys[i]][s]==1.0) \
                     and (self.hists[keys[i+1]][s]==1.0) \
                     and (i < len(keys)-1) ):
@@ -133,7 +136,20 @@ class WHAM(object):
 
         A trivial guess should also work, but this isn't very expensive.
         """
-        lambda_i = series_set_crossing_lambdas(self.hists)
+        # taken from
+        # $DYNQ/scripts/crossing_probability.py:series_set_crossing_lambdas
+        lambda_i = { }
+        prev_set = self.hists[min(self.hists.keys())]
+        prev_lambda = 0
+        for lmbda in sorted(self.hists.keys()):
+            for i in range(len(self.hists[lmbda])):
+                if (prev_set[i]==1.0) and (self.hists[lmbda][i]!=1.0):
+                    lambda_i[i] = prev_lambda
+            prev_lambda = lmbda
+            prev_set = self.hists[lmbda]
+        lambda_i[len(lambda_i)] = max(self.hists.keys())
+
+        #lambda_i = series_set_crossing_lambdas(self.hists)
         scaling = 1.0
         crossing_prob = []
         for key in sorted(lambda_i.keys()):
@@ -261,7 +277,10 @@ if __name__ == "__main__":
     opts, args = parsing(sys.argv[1:])
     wham = WHAM(tol=opts.tol, max_iter=opts.max_iter, cutoff=opts.cutoff)
     wham.load_files(args)
+
+
     wham.clean_leading_ones()
+    #print_dict(wham.hists)
     wham_hist = wham.wham_bam_histogram()
 
     print_dict(wham_hist)
