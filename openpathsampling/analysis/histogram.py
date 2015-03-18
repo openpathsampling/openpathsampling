@@ -212,7 +212,6 @@ def histograms_to_pandas_dataframe(hists, fcn="histogram", fcn_args={}):
             "rebinned" : hist.rebinned
         }[fcn](**fcn_args)
 
-        hist_dict[hist.name] = hist_data
         frames.append(pd.DataFrame({hist.name : hist_data}, index=keys))
     all_frames = pd.concat(frames, axis=1)
     return all_frames

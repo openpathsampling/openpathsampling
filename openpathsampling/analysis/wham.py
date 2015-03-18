@@ -4,8 +4,9 @@
 # The Weighted Histogram Analysis Method (WHAM) for combining histograms
 # from several files.
 import math
-from read_acf import read_acf
-from series_stats import add_series_to_set
+import pandas as pd
+#from read_acf import read_acf
+#from series_stats import add_series_to_set
 from crossing_probability import series_set_crossing_lambdas
 
 class WHAM(object):
@@ -37,19 +38,42 @@ class WHAM(object):
         self.keys = []
 
     # loads files into the dictionary
-    def load_file(self,fname):
-        xvals, yvals = read_acf(fname)
-        add_series_to_set(xvals, yvals, self.hists)
-        self.nhists += 1
+    def load_files(self,fnames):
+        """Load a file or files into the internal structures.
+
+        Requires either pandas or something else with pandas-like read_table
+        and concat functions.
+        """
+        frames = []
+        try:
+            for fname in fnames:
+                frames.append(pd.read_table(fname, index_col=0))
+        except TypeError:
+            frame.append(pd.read_table(fnames, index_col=0))
+        df = pd.concat(frames, axis=1)
+        self.load_from_dataframe(df)
+        #xvals, yvals = read_acf(fname)
+        #add_series_to_set(xvals, yvals, self.hists)
+        #self.nhists += 1
 
     def load_from_dataframe(self, df):
         """Loads from a pandas-compatible data frame.
 
         The data frame does not need to be from pandas, but needs to quack
-        like it is.
+        like it is. In particular, it needs a .index property which gives
+        the list of row keys, and a .loc[key] property which gives the row
+        associated with a given key.
         """
-        #TODO
-        pass
+        self.keys = list(df.index)
+        for key in self.keys():
+            self.hists[key] = list(df.loc[key])
+            if len(self.hists[key]) != self.nhists:
+                if self.nhists != 0:
+                    raise Warning("Inequal number of histograms for WHAM")
+                else:
+                    self.nhists = len(self.hists[key])
+
+
 
     # modifies the dictionary to ignore outside the window
     def prep(self):
@@ -105,7 +129,7 @@ class WHAM(object):
 
     def guess_lnZ(self):
         """
-        Prepares a gues of ln(Z) based on crossing probabilities.
+        Prepares a guess of ln(Z) based on crossing probabilities.
 
         A trivial guess should also work, but this isn't very expensive.
         """
@@ -236,9 +260,7 @@ import sys, os
 if __name__ == "__main__":
     opts, args = parsing(sys.argv[1:])
     wham = WHAM(tol=opts.tol, max_iter=opts.max_iter, cutoff=opts.cutoff)
-    for f in args:
-        wham.load_file(f)
-    
+    wham.load_files(args)
     wham.clean_leading_ones()
     wham_hist = wham.wham_bam_histogram()
 
