@@ -87,6 +87,10 @@ class Histogram(object):
             raise RuntimeError("Histogram.histogram called without data!")
         return self._histogram.copy()
 
+    def __call__(self):
+        """Return copy of histogram if it has already been built"""
+        return self.histogram()
+
     def compare_parameters(self, other):
         """Return true if `other` has the same bin parameters as `self`.
 
@@ -133,8 +137,10 @@ class Histogram(object):
         normed_hist = normed_hist * norm
         return normed_hist
 
-    def cumulative(self, maximum=None):
+    def cumulative(self, maximum=1.0):
         """Cumulative from the left: number of values less than bin value.
+
+        Use `maximum=None` to get the raw counts.
         """
         cumul_hist = []
         total = 0.0
@@ -148,8 +154,10 @@ class Histogram(object):
             
         return cumul_hist
     
-    def reverse_cumulative(self, maximum=None):
+    def reverse_cumulative(self, maximum=1.0):
         """Cumulative from the right: number of values greater than bin value.
+
+        Use `maximum=None` to get the raw counts.
         """
         cumul_hist = []
         total = 0.0
@@ -163,9 +171,30 @@ class Histogram(object):
             
         return cumul_hist
 
-    def plot_bins(self):
+    def rebinned(self, scaling):
+        """Redistributes histogram bins of width binwidth*scaling
+
+        Exact if scaling is an integer; otherwise uses the assumption that
+        original bins were uniformly distributed. Note that the original
+        data is not destroyed.
+        """
+        #TODO
+        pass
+
+    def plot_bins(self, scaling=1.0):
+        """Bins used in plotting. Scaling useful when plotting `rebinned`"""
+        # TODO: add scaling support
         return self.bins[1:]
 
 # TODO: might as well add a main fucntion to this; read data / weight from
 # stdin and output an appropriate histogram depending on some options. Then
 # it is both a useful script and a library class!
+
+def write_histograms(fname, hists):
+    """Writes all histograms in list `hists` to file named `fname`
+    
+    If the filename is the empty string, then output is to stdout.
+    Assumes that all files should have the same bins
+    """
+    pass
+

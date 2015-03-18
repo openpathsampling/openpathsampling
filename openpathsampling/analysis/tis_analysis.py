@@ -158,16 +158,16 @@ class TISTransition(Transition):
         # TODO: eventually I'll generalize this to include the function to
         # be called, possibly some parameters ... can't this go to a 
         self.ensemble_histogram_info = {
+            'max_lambda' : Histogrammer(
+                f=max_lambdas,
+                f_args={'orderparameter' : self.orderparameter},
+                hist_args={}
+            ),
             'pathlength' : Histogrammer(
                 f=pathlength,
                 f_args={},
                 hist_args={}
-            ),
-            #'max_lambda' : Histogrammer(
-            #    f=max_lambdas,
-            #    f_args={'orderparameter' : self.orderparameter},
-            #    hist_args={}
-            #)
+            )
         }
 
         pass
@@ -229,20 +229,16 @@ class TISTransition(Transition):
             run_it = self.ensemble_histogram_info.keys()
 
         buflen = 10
-        in_ens_samples = (s for s in samples if s.ensemble == ensemble)
         for hist in run_it:
-            #print "Running", time.time()
+            in_ens_samples = (s for s in samples if s.ensemble == ensemble)
             hist_info = self.ensemble_histogram_info[hist]
             if hist not in self.histograms.keys():
                 self.histograms[hist] = {}
             self.histograms[hist][ensemble] = Histogram(**(hist_info.hist_args))
             hist_data = []
-            #print "About to sample", time.time()
             for sample in in_ens_samples:
                 hist_data.append(hist_info.f(sample, **hist_info.f_args))
-            #print "Samples built; sending to numpy", time.time()
             self.histograms[hist][ensemble].histogram(hist_data, weights)
-            #print "Done!", time.time()
 
         pass
 
