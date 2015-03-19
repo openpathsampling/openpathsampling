@@ -321,6 +321,15 @@ class RETISTransition(TISTransition):
         self.movers['repex'] = []
         self.movers['minus'] = []
 
+        self.minus_ensemble = paths.MinusInterfaceEnsemble(
+            state_vol=stateA, 
+            innermost_vol=interfaces[0]
+        )
+
+        self.movers['repex'] = paths.NeighborEnsembleReplicaExchange(self.ensembles)
+        self.movers['minus'] = paths.MinusMover(self.minus_ensemble, self.ensemble[0])
+
+
     @property
     def repex_movers(self):
         pass
