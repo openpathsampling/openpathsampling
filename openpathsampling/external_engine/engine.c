@@ -5,7 +5,7 @@
 int main(int argc, char ** argv)
 {
     if (argc < 2) {
-        printf("Requires two arguments: delay time (ms) and filename");
+        printf("Requires two arguments: delay time (ms) and filename\n");
         exit(1);
     }
     // argv[0] is program name
