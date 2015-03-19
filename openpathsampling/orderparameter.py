@@ -172,7 +172,7 @@ class NestableObjectDict(dict):
         it = iter(replace)
         return [ it.next() if obj is not None else None for obj in some ]
 
-    def _join_list(self, nones, replace):
+    def _replace_none(self, nones, replace):
         it = iter(replace)
         return [ obj if obj is not None else it.next() for obj in nones ]
 
@@ -251,16 +251,13 @@ class NODFunction(NestableObjectDict):
 
         return fnc
 
-class NODMultiStore(NODStore):
-    pass
-
 class NODStore(NestableObjectDict):
-    def __init__(self, name, key_class, dimensions, store_name, scope=None):
+    def __init__(self, name, key_class, dimensions, store, scope=None):
         super(NODStore, self).__init__()
         self.name = name
         self.dimensions = dimensions
-        self.store_name = store_name
-        self.storage = None
+        self.store = store
+        self.key_class = key_class
 
         if scope is None:
             self.scope = self
@@ -275,15 +272,14 @@ class NODStore(NestableObjectDict):
             self.sync()
 
     @property
-    def store(self):
-        return getattr(self.storage, self.store_name)
+    def storage(self):
+        return self.store.storage
 
     def sync(self):
         storable = { key : value for key, value in self.iteritems() if self.storage in key.idx }
 
         self.store.set_values(self.scope, storable.keys(), storable.values())
-
-        self.store.sync(self.scope)
+        # TODO: Allow to keep not saved values
         self.clear()
 
     def _get_key(self, item):
@@ -315,7 +311,7 @@ class NODStore(NestableObjectDict):
         keys = [self._get_key(item) for item in missing]
         replace = self._apply_some_list(self._load_list, keys)
 
-        return self._join_list(cached, replace)
+        return self._replace_none(cached, replace)
 
     def _load(self, key):
         return self.store.get_value(self.scope, key)
@@ -331,6 +327,10 @@ class NODStore(NestableObjectDict):
         else:
             return type(item)
 
+class NODMultiStore(NODStore):
+    pass
+
+
 class NODWrap(NestableObjectDict):
     def __init__(self, post):
         super(NODWrap, self).__init__()
@@ -338,6 +338,9 @@ class NODWrap(NestableObjectDict):
 
     def __getitem__(self, items):
         return self.post[items]
+
+    def __setitem__(self, key, value):
+        self.post[key] = value
 
 class NODBuffer(NestableObjectDict):
     """
@@ -377,15 +380,17 @@ class OrderParameter(NODWrap):
         if type(name) is str and len(name) == 0:
             raise ValueError('name must be a non-empty string')
 
+        self.pre_dict = NODTransform(self._pre_item)
+        self.multi_dict = NODMultiStore()
         self.store_dict = NODStore(name, paths.Snapshot, dimensions, 'collectivevariable')
         self.cache_dict = NestableObjectDict()
         self.func_dict = NODFunction(None)
         self.func_dict._eval = self._eval
 
         self.name = name
-#self.store_dict +
         super(OrderParameter, self).__init__(
-            post= self.func_dict +  self.cache_dict
+            post= self.func_dict + self.store_dict +
+                  self.cache_dict + self.multi_dict + self.pre_dict
         )
 
     def _pre_item(self, items):
