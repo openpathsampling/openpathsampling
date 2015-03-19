@@ -5,6 +5,8 @@
 import mdtraj as md
 import openpathsampling as paths
 from openpathsampling.todict import restores_as_stub_object
+import collections
+
 
 class NestableObjectDict(dict):
     """
@@ -48,16 +50,16 @@ class NestableObjectDict(dict):
         return None
 
     def __getitem__(self, items):
-        is_list = type(items) is list
+        is_listable = isinstance(items, collections.Iterable)
 #        print 'Get from ', self.__class__.__name__, items
 
-        if is_list:
+        if is_listable:
             results = self._get_list(items)
         else:
             results = self._get(items)
 
         if self.post is not None:
-            if is_list:
+            if is_listable:
                 nones = [obj[0] for obj in zip(items, results) if obj[1] is None]
                 if len(nones) == 0:
                     return results
@@ -82,7 +84,7 @@ class NestableObjectDict(dict):
         self[items] = values
 
     def __setitem__(self, key, value):
-        if type(key) is list:
+        if isinstance(key, collections.Iterable):
             self._set_list(key, value)
         else:
             self._set(key, value)
@@ -184,7 +186,7 @@ class NODExpandMulti(NestableObjectDict):
     """
 
     def __getitem__(self, items):
-        is_list = type(items) is list
+        is_list = isinstance(items, collections.Iterable)
 
         if not is_list:
             return self.post[items]
@@ -268,7 +270,7 @@ class NODStore(NestableObjectDict):
         self.max_save_buffer_size = 100
 
     def _add_new(self, items, values):
-        if type(items) is list:
+        if isinstance(items, collections.Iterable):
             [dict.__setitem__(self, item, value) for item, value in zip(items, values)]
         else:
             dict.__setitem__(self, items, values)
@@ -485,8 +487,8 @@ class OrderParameter(NODWrap):
             return items
         elif item_type is paths.Trajectory:
             return list(list.__iter__(items))
-        elif item_type is list:
-            item_sub_type = self.store_dict._basetype(items[0])
+        elif isinstance(item_type, collections.Iterable):
+            item_sub_type = self.store_dict._basetype(iter(items).next())
             if item_sub_type is paths.Snapshot:
                 return items
             else:
