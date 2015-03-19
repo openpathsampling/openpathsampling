@@ -26,8 +26,17 @@ class ObjectDictStore(ObjectStore):
 
         storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
 
+        if True:
+            # this will copy the cache from an op and store it
+            self.store_cache(objectdict)
 
         self.sync(objectdict)
+        self.storage.sync()
+
+    def store_cache(self, objectdict):
+        objectdict.store_dict.update_nod_stores()
+        if self.storage in objectdict.store_dict.nod_stores:
+            objectdict.store_dict.nod_stores[self.storage].update(objectdict.cache_dict)
 
     def sync(self, objectdict=None):
         """
@@ -49,6 +58,8 @@ class ObjectDictStore(ObjectStore):
         objectdict.store_dict.update_nod_stores()
         if self.storage in objectdict.store_dict.nod_stores:
             objectdict.store_dict.nod_stores[self.storage].sync()
+
+        self.storage.sync()
 
     def set_value(self, objectdict, position, value):
         storage = self.storage

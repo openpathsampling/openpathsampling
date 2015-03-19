@@ -284,10 +284,11 @@ class NODStore(NestableObjectDict):
 
     def sync(self):
         storable = { key.idx[self.storage] : value for key, value in self.iteritems() if self.storage in key.idx }
+        non_storable = { key : value for key, value in self.iteritems() if self.storage not in key.idx }
 
         self.store.set_list_value(self.scope, storable.keys(), storable.values())
-        # TODO: Allow to keep not saved values
         self.clear()
+        self.update(non_storable)
 
     def _get_key(self, item):
         if item is None:
