@@ -1,8 +1,6 @@
 from object_storage import ObjectStore
 from openpathsampling.orderparameter import OrderParameter
 
-import numpy as np
-
 class ObjectDictStore(ObjectStore):
     def __init__(self, storage, cls, key_class):
         super(ObjectDictStore, self).__init__(storage, cls, is_named=True, json=False)
@@ -19,14 +17,19 @@ class ObjectDictStore(ObjectStore):
         idx : int
             the index
         """
+        storage = self.storage
+
         var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
 
         if var_name + '_value' not in self.storage.variables:
             self.init_variable(var_name + '_value', 'float', (self.key_class.__name__.lower()))
 
+        storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
+
+
         self.sync(objectdict)
 
-    def sync(self, objectdict):
+    def sync(self, objectdict=None):
         """
         This will update the stored cache of the orderparameter. It is
         different from saving in that the object is only created if it is
@@ -39,10 +42,13 @@ class ObjectDictStore(ObjectStore):
             all orderparameters are synced
 
         """
+        if objectdict is None:
+            map(self.sync, self)
+            return
+
         objectdict.store_dict.update_nod_stores()
         if self.storage in objectdict.store_dict.nod_stores:
             objectdict.store_dict.nod_stores[self.storage].sync()
-
 
     def set_value(self, objectdict, position, value):
         storage = self.storage
@@ -109,13 +115,6 @@ class ObjectDictStore(ObjectStore):
         storage = self.storage
 
         name = storage.variables[self.idx_dimension + '_name'][idx]
-        var_name = self.idx_dimension + '_' + str(idx) + '_' + name
-
-#        length = self.load_variable(self.idx_dimension + '_length', idx)
-#        stored_idx = storage.variables[var_name + '_set'][0:length]
-#        data_all = storage.variables[var_name + '_value'][:]
-#        data = self.list_from_numpy(data_all[self.list_from_numpy(stored_idx, 'index')], 'float')
-
         op = OrderParameter(name)
 
         return op

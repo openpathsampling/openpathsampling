@@ -288,6 +288,8 @@ class NODStore(NestableObjectDict):
         self.clear()
 
     def _get_key(self, item):
+        if item is None:
+            return None
         if type(item) is tuple:
             if item[0].content_class is self.key_class:
                 return item[1]
@@ -314,12 +316,7 @@ class NODStore(NestableObjectDict):
         cached, missing = self._split_list_dict(self, items)
 
         keys = [self._get_key(item) for item in missing]
-
-        print keys, missing, len(keys), len(missing)
-
         replace = self._apply_some_list(self._load_list, keys)
-
-        print cached, replace, len(replace)
 
         return self._replace_none(cached, replace)
 
@@ -374,9 +371,7 @@ class NODMultiStore(NODStore):
     def _add_new(self, items, values):
         if len(self.storages) != len(self.nod_stores):
             self.update_nod_stores()
-        print 'Add',
         for s in self.nod_stores:
-            print 'Add2Store', items ,values
             self.nod_stores[s]._add_new(items, values)
 
         pass
@@ -463,7 +458,7 @@ class OrderParameter(NODWrap):
     storages
 
     """
-    def __init__(self, name, dimensions = 1):
+    def __init__(self, name, dimensions = 1, auto_sync=True):
         if type(name) is str and len(name) == 0:
             raise ValueError('name must be a non-empty string')
 
@@ -473,12 +468,15 @@ class OrderParameter(NODWrap):
         self.cache_dict = NestableObjectDict()
         self.func_dict = NODFunction(None)
         self.func_dict._eval = self._eval
+        self.auto_sync = auto_sync
 
         self.name = name
         super(OrderParameter, self).__init__(
             post= self.func_dict + self.store_dict +
                   self.cache_dict + self.multi_dict + self.pre_dict
         )
+
+
 
     def _pre_item(self, items):
         item_type = self.store_dict._basetype(items)
