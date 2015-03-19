@@ -2,5 +2,10 @@
 
 cd openpathsampling
 cd tests
-nosetests -v .
+testfail=0
+nosetests -v -s . || testfail=1
 cd ../..
+if [ $testfail -eq 1 ]
+then
+    exit 1
+fi

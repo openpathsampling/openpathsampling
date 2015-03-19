@@ -8,7 +8,7 @@ from openpathsampling.todict import restores_as_stub_object
 
 class ObjectDict(dict):
     """
-    A cache that is attached to Configuration indices store in the Configuration storage
+    Cache attached to Configuration indices stored in Configuration storage
 
     Parameters
     ----------
@@ -107,10 +107,27 @@ class StorableObjectDict(ObjectDict):
         for s in self.object_storages:
             self.storage_caches[s.storage] = dict()
 
+    def _basetype(self, item):
+        if type(item) is tuple:
+            return item[0].content_class
+        elif hasattr(item, 'base_cls'):
+            return item.base_cls
+        else:
+            return type(item)
+
     def storable(self, item):
         """
-        Returns True if the given item has indices to be stored in an attached storage otherwise cache it in the dict itself
+        Return True if `item` has indices to be stored in an attached storage otherwise cache it in the dict itself
         """
+        if type(item) is tuple:
+            if item[0].content_class is self.key_class:
+                if item[0].storage in self.object_storages and item[1] < len(item[0]):
+                    return True
+                else:
+                    return False
+            else:
+                return False
+
         for s in self.storage_caches:
             if s in item.idx and item.idx[s] > 0:
                 return True
@@ -121,7 +138,15 @@ class StorableObjectDict(ObjectDict):
         Returns True, if the item is already stored in an associated cache.
         """
         for s in self.storage_caches:
-            if s in item.idx and item.idx[s] in self.storage_caches[s]:
+            if type(item) is tuple:
+                if item[0].content_class is self.key_class:
+                    if item[1] in self.storage_caches[item[0].storage]:
+                        return True
+                else:
+                    # wrong type to load. Cannot ask for Configurations is
+                    # values for Snapshots are stored
+                    return False
+            elif s in item.idx and item.idx[s] in self.storage_caches[s]:
                 return True
 
         return False
@@ -129,10 +154,17 @@ class StorableObjectDict(ObjectDict):
     def __contains__(self, item):
         return dict.__contains__(self, item) or self.in_store(item)
 
+    def _compatible(self, item):
+        return self._basetype(item) is self.key_class
+
     def _get_from_stores(self, item):
-        for s in self.storage_caches:
-            if s in item.idx and item.idx[s] in self.storage_caches[s]:
-                return self.storage_caches[s][item.idx[s]]
+        if self._compatible(item):
+            for s in self.storage_caches:
+                if type(item) is tuple:
+                    if item[1] in self.storage_caches[item[0].storage]:
+                        return self.storage_caches[item[0].storage][item[1]]
+                elif s in item.idx and item.idx[s] in self.storage_caches[s]:
+                    return self.storage_caches[s][item.idx[s]]
 
         return None
 
@@ -200,12 +232,12 @@ class FunctionalStorableObjectDict(StorableObjectDict):
 
     def _update(self, items):
         if type(items) is list:
-            input = items
+            up_items = items
         else:
-            input = [items]
+            up_items = [items]
 
-        if self.key_class is not None and len(input) > 0 and isinstance(input[0], self.key_class):
-            no_cache = self.missing(input)
+        if self.key_class is not None and len(up_items) > 0 and self._basetype(up_items[0]) is self.key_class:
+            no_cache = self.missing(up_items)
 
             # Add not yet cached data
             if len(no_cache) > 0:
@@ -229,17 +261,19 @@ class FunctionalStorableObjectDict(StorableObjectDict):
         return fnc
 
 @restores_as_stub_object
-class OrderParameter(FunctionalStorableObjectDict):
+class ConfigurationVariable(FunctionalStorableObjectDict):
     """
-    Initializes an OrderParameter object that is essentially a function that maps a frame (Configuration) within a trajectory (Trajectory) to a number.
+    Wrapper for a function that maps a configuration to a number.
 
     Parameters
     ----------
     name : string
-        A descriptive name of the orderparameter. It is used in the string representation.
+        A descriptive name of the orderparameter. It is used in the string
+        representation.
     dimensions : int
-        The number of dimensions of the output order parameter. So far this is not used and will be necessary
-        or useful when storage is available
+        The number of dimensions of the output order parameter. So far this
+        is not used and will be necessary or useful when storage is
+        available
     storages : list of ConfigurationStorages()
         contains the list of storages that will be used.
 
@@ -251,16 +285,10 @@ class OrderParameter(FunctionalStorableObjectDict):
 
     """
 
-    _instances = dict()
-
     def __init__(self, name, dimensions = 1):
         if type(name) is str and len(name) == 0:
             raise ValueError('name must be a non-empty string')
 
-#        if name in OrderParameter._instances:
-#            raise ValueError(name + ' already exists as an orderparameter. To load an existing one use get_existing(\'' + name + '\')')
-
-        OrderParameter._instances[name] = self
         super(OrderParameter, self).__init__(
             name=name,
             fnc=None,
@@ -268,42 +296,80 @@ class OrderParameter(FunctionalStorableObjectDict):
             key_class=paths.Configuration
         )
 
-    @staticmethod
-    def get_existing(name):
-        if name in OrderParameter._instances:
-            return OrderParameter._instances[name]
+    def __call__(self, items):
+        item_type = self._basetype(items)
+        if item_type is paths.Snapshot:
+            return self._update(items.configuration)
+        elif item_type is paths.Configuration:
+            return self._update(items)
+        elif item_type is paths.Trajectory:
+            return self._update([snapshot.configuration for snapshot in items])
+        elif item_type is list:
+            item_sub_type = self._basetype(items[0])
+            if item_sub_type is paths.Configuration:
+                return self._update(items)
+            elif item_sub_type is paths.Snapshot:
+                return self._update([snapshot.configuration for snapshot in items])
+            else:
+                return None
         else:
-            raise ValueError(name + ' does not exist as an orderparameter')
             return None
 
-    def __eq__(self, other):
-        if self is other:
-            return True
+@restores_as_stub_object
+class OrderParameter(FunctionalStorableObjectDict):
+    """
+    Wrapper for a function that maps a snapshot to a number.
 
-        if type(other) is type(self):
-            if hasattr(self, 'name') and hasattr(other, 'name'):
-                if self.name is not None and other.name is not None:
-                    return self.name == other.name
+    Parameters
+    ----------
+    name : string
+        A descriptive name of the orderparameter. It is used in the string
+        representation.
+    dimensions : int
+        The number of dimensions of the output order parameter. So far this
+        is not used and will be necessary or useful when storage is
+        available
+    storages : list of ConfigurationStorages()
+        contains the list of storages that will be used.
 
-        return False
+    Attributes
+    ----------
+    name
+    dimensions
+    storages
+
+    """
+    def __init__(self, name, dimensions = 1):
+        if type(name) is str and len(name) == 0:
+            raise ValueError('name must be a non-empty string')
+
+        super(OrderParameter, self).__init__(
+            name=name,
+            fnc=None,
+            dimensions=dimensions,
+            key_class=paths.Snapshot
+        )
 
     def __call__(self, items):
-        if isinstance(items,  paths.Snapshot):
-            return self._update(items.configuration)
-        elif isinstance(items, paths.Configuration):
+        item_type = self._basetype(items)
+
+        if item_type is  paths.Snapshot:
             return self._update(items)
-        elif isinstance(items, paths.Trajectory):
-            return self._update([snapshot.configuration for snapshot in items])
-        elif isinstance(items, list):
-            if isinstance(items[0], paths.Configuration):
+        elif item_type is paths.Trajectory:
+            return self._update(list(list.__iter__(items)))
+        elif item_type is list:
+            item_sub_type = self._basetype(items[0])
+            if item_sub_type is paths.Snapshot:
                 return self._update(items)
+            else:
+                return None
         else:
             return None
 
 @restores_as_stub_object
 class OP_RMSD_To_Lambda(OrderParameter):
     """
-    An OrderParameter that transforms the RMSD to a specific center to a lambda value between zero and one.
+    Transforms the RMSD from `center` to a value between zero and one.
 
     Parameters
     ----------
@@ -360,7 +426,7 @@ class OP_RMSD_To_Lambda(OrderParameter):
         return scale
 
     def _eval(self, items):
-        trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
+        trajectory = paths.Trajectory(items)
         ptraj = trajectory.subset(self.atom_indices).md()
 
         results = md.rmsd(ptraj, self._generator)
@@ -400,7 +466,7 @@ class OP_Featurizer(OrderParameter):
         return
 
     def _eval(self, items):
-        trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
+        trajectory = paths.Trajectory(items)
 
         # create an MDtraj trajectory out of it
         ptraj = trajectory.subset(self.atom_indices).md()
@@ -412,7 +478,7 @@ class OP_Featurizer(OrderParameter):
 
 @restores_as_stub_object
 class OP_MD_Function(OrderParameter):
-    """ Wrapper to decorate any appropriate function as an OrderParameter with a function that need an mdtraj object as input.
+    """Make `OrderParameter` from `fcn` that takes mdtraj.trajectory as input.
 
     Examples
     -------
@@ -442,9 +508,7 @@ class OP_MD_Function(OrderParameter):
         return
 
     def _eval(self, items, *args):
-        trajectory = paths.Trajectory(
-            [paths.Snapshot(configuration=c) for c in items]
-        )
+        trajectory = paths.Trajectory(items)
 
         if self.topology is None:
             # first time ever compute the used topology for this orderparameter to construct the mdtraj objects
@@ -455,10 +519,7 @@ class OP_MD_Function(OrderParameter):
 
 @restores_as_stub_object
 class OP_Volume(OrderParameter):
-    """
-    Wrapper that turns a Volume, which can be considered a boolean order parameter into an
-    actual OrderParamter()
-    """
+    """ Make `Volume` into `OrderParameter`: maps to 0.0 or 1.0 """
 
     def __init__(self, name, volume):
         """
@@ -476,7 +537,7 @@ class OP_Volume(OrderParameter):
 
 @restores_as_stub_object
 class OP_Function(OrderParameter):
-    """ Wrapper to decorate any appropriate function as an OrderParameter.
+    """Make any function `fcn` into an `OrderParameter`.
 
     Examples
     -------
@@ -513,6 +574,6 @@ class OP_Function(OrderParameter):
 
     def _eval(self, items, *args):
 
-        trajectory = paths.Trajectory([paths.Snapshot(configuration=c) for c in items])
+        trajectory = paths.Trajectory(items)
 
         return [ self._fcn(snap, *args, **self.kwargs) for snap in trajectory]

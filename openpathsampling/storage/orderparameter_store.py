@@ -2,7 +2,6 @@ from object_storage import ObjectStore
 from openpathsampling.orderparameter import OrderParameter
 
 class ObjectDictStore(ObjectStore):
-
     def __init__(self, storage, cls, key_class):
         super(ObjectDictStore, self).__init__(storage, cls, is_named=True, json=False)
         self.key_class = key_class
@@ -27,7 +26,7 @@ class ObjectDictStore(ObjectStore):
         self.sync(objectdict, idx)
 
 
-    def sync(self, objectdict, idx=None):
+    def sync(self, objectdict=None, idx=None):
         """
         This will update the stored cache of the orderparameter. It is
         different from saving in that the object is only created if it
@@ -35,11 +34,17 @@ class ObjectDictStore(ObjectStore):
 
         Parameters
         ----------
-        objectdict : object
-            the objectdict to store
+        objectdict : object or None (default)
+            the objectdict to store. if `None` is given (default) then
+            all orderparameters are synced
 
         """
         storage = self.storage
+
+        if objectdict is None:
+            [ self.sync(od) for od in self]
+            return
+
         if idx is None:
             idx = self.idx(objectdict)
 

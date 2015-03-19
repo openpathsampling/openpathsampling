@@ -9,8 +9,6 @@ from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     SequentialEnsemble, AndEnsemble, OrEnsemble, XorEnsemble, SubEnsemble, \
     SingleFrameEnsemble, MinusInterfaceEnsemble
 
-
-
 from snapshot import Snapshot, Configuration, Momentum
 
 from trajectory import Trajectory
@@ -20,10 +18,12 @@ from orderparameter import OP_Function, OP_MD_Function, OP_Featurizer, \
     OP_RMSD_To_Lambda, OP_Volume, OrderParameter
 
 from pathmover import (
-    BackwardShootMover, MinusMover, RandomChoiceMover, MoveDetails, \
-    ForwardShootMover, PathMover, PathMoverFactory, PathReversalMover, \
-    ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover, \
-    PartialAcceptanceSequentialMover, ReplicaIDChange, SequentialMover
+    BackwardShootMover, MinusMover, RandomChoiceMover, MoveDetails,
+    ForwardShootMover, PathMover, PathMoverFactory, PathReversalMover, 
+    ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
+    PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
+    ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
+    CollapseMove, CalculationMover
     #, BootstrapPromotionMove
 )
 
@@ -33,8 +33,6 @@ from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
 from dynamics_engine import DynamicsEngine
 
 from openmm_engine import OpenMMEngine
-
-from visualize import PathTreeBuilder
 
 from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
     EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, AndVolume, \
@@ -55,3 +53,7 @@ from toy_dynamics.toy_engine import ToyEngine
 
 from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
     LeapfrogVerletIntegrator
+
+from movepath import EmptyMovePath, ConditionalSequentialMovePath, MovePath, \
+    PartialAcceptanceSequentialMovePath, RandomChoiceMovePath, SampleMovePath, SequentialMovePath, \
+    KeepLastSampleMovePath, CollapsedMovePath, FilterSamplesMovePath, CalculationMovePath

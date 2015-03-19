@@ -12,26 +12,24 @@ from openpathsampling.todict import restores_as_full_object
 
 @restores_as_full_object
 class OpenMMEngine(paths.DynamicsEngine):
-    """We only need a few things from the simulation. This object duck-types
-    an OpenMM simulation object so that it quacks the methods we need to
-    use."""
+    """OpenMM dynamics engine."""
 
     units = {
-        'length' : u.nanometers,
-        'velocity' : u.nanometers / u.picoseconds,
-        'energy' : u.joule / u.mole
+        'length': u.nanometers,
+        'velocity': u.nanometers / u.picoseconds,
+        'energy': u.joule / u.mole
     }
 
     _default_options = {
-        'nsteps_per_frame' : 10,
-        'solute_indices' : [0],
-        'n_frames_max' : 5000,
-        "temperature" : 300.0 *  u.kelvin,
-        'collision_rate' : 1.0 / u.picoseconds,
-        'timestep' : 2.0 * u.femtoseconds,
-        'platform' : 'fastest',
-        'forcefield_solute' : 'amber96.xml',
-        'forcefield_solvent' : 'tip3p.xml'
+        'nsteps_per_frame': 10,
+        'solute_indices': [0],
+        'n_frames_max': 5000,
+        "temperature": 300.0 * u.kelvin,
+        'collision_rate': 1.0 / u.picoseconds,
+        'timestep': 2.0 * u.femtoseconds,
+        'platform': 'fastest',
+        'forcefield_solute': 'amber96.xml',
+        'forcefield_solvent': 'tip3p.xml'
     }
 
     @staticmethod
@@ -83,7 +81,7 @@ class OpenMMEngine(paths.DynamicsEngine):
     @staticmethod
     def _create_with_storage(filename, template, options, units=None):
         # for openmm we will create a suitable for configuration with
-        # attached box_vectors and topolgy
+        # attached box_vectors and topology
 
         if type(template) is str:
             template = paths.snapshot_from_pdb(template, units=units)
@@ -224,6 +222,7 @@ class OpenMMEngine(paths.DynamicsEngine):
         state = self.simulation.context.getState(getPositions=True,
                                                  getVelocities=True,
                                                  getEnergy=True)
+
         return paths.Snapshot(coordinates = state.getPositions(asNumpy=True),
                         box_vectors = state.getPeriodicBoxVectors(asNumpy=True),
                         potential_energy = state.getPotentialEnergy(),

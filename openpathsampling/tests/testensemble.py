@@ -158,9 +158,6 @@ class EnsembleTest(object):
             self._single_test(test_fcn, ttraj[test], results[test], failmsg)
 
 
-
-
-
     def _run(self, results):
         """Actually run tests on the trajectory and the wrapped trajectory.
 

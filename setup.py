@@ -99,7 +99,7 @@ def buildKeywordDictionary():
     setupKeywords["author"]            = "David W.H. Swenson, Jan-Hendrik Prinz, Peter Bolhuis and John D. Chodera"
     setupKeywords["author_email"]      = "dwhs@hyperblazer.net, jan.prinz@choderalab.org, p.g.bolhuis@uva.nl, choderaj@mskcc.org"
     setupKeywords["license"]           = "GPL 2.0"
-    setupKeywords["url"]               = "http://github.com/choderalab/openpathsampling"
+    setupKeywords["url"]               = "http://www.openpathsampling.org"
     setupKeywords["download_url"]      = "http://github.com/choderalab/openpathsampling"
     setupKeywords["packages"]          = ['openpathsampling', 'openpathsampling.storage', 'openpathsampling.toy_dynamics', 'openpathsampling.tests']
     setupKeywords["package_dir"]       = {

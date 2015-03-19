@@ -6,6 +6,49 @@ import numpy as np
 import openpathsampling as paths
 import simtk.unit as u
 
+import logging
+logger = logging.getLogger(__name__)
+init_log = logging.getLogger('openpathsampling.initialization')
+
+class Query(object):
+    """
+    Return
+    """
+    def __init__(self, query_fnc = None, caching = True):
+        if caching:
+            self.cache = {}
+        else:
+            self.cache = None
+        self.query_fnc = query_fnc
+
+    def __call__(self, store):
+        def _query_iterator(self, store):
+            if self.cache is not None:
+                if store not in self.cache:
+                    self.cache[store] = {}
+                store_cache = self.cache[store]
+
+                n_object = len(store)
+
+                for idx in range(n_object):
+                    if self.cache is not None:
+                        if idx in store_cache:
+                            if store_cache[idx]:
+                                yield store[idx]
+                        else:
+                            obj = store.load(idx)
+                            result = self.query_fnc(obj)
+                            self.cache[store][idx] = result
+                            if result:
+                                yield obj
+                    else:
+                        obj = store.load(idx)
+                        result = self.query_fnc(obj)
+                        if result:
+                            yield obj
+
+        return _query_iterator(self, store)
+
 class ObjectStore(object):
     """
     Base Class for storing complex objects in a netCDF4 file. It holds a
@@ -82,6 +125,7 @@ class ObjectStore(object):
         self.json = json
         self.simplifier = paths.storage.StorableObjectJSON(storage)
         self.identifier = self.db + '_name'
+        self._free = set()
 
         if dimension_units is not None:
             self.dimension_units = dimension_units
@@ -100,21 +144,21 @@ class ObjectStore(object):
             # and then each class can attach delayed loaders to load
             # when necessary, fall back is of course the normal load function
 
-            if  hasattr(self, 'load_empty'):
+            if hasattr(self, 'load_empty'):
                 cls = self.content_class
 
-                def _getattr(self, item):
+                def _getattr(this, item):
                     if item == '_idx':
-                        return self.__dict__['idx']
+                        return this.__dict__['idx']
 
                     if hasattr(cls, '_delayed_loading'):
                         if item in cls._delayed_loading:
                             _loader = cls._delayed_loading[item]
-                            _loader(self)
+                            _loader(this, self)
                         else:
                             raise KeyError(item)
 
-                    return self.__dict__[item]
+                    return this.__dict__[item]
 
                 setattr(cls, '__getattr__', _getattr)
 
@@ -176,6 +220,9 @@ class ObjectStore(object):
 
         return None
 
+    def query(self, needle):
+        return
+
     @property
     def units(self):
         """
@@ -220,7 +267,6 @@ class ObjectStore(object):
         self.content_class.base_cls = self.content_class
 
         # add a property idx that keeps the storage reference
-
         def _idx(this):
             if not hasattr(this, '_idx'):
                 this._idx = dict()
@@ -236,6 +282,12 @@ class ObjectStore(object):
         self.content_class.save = _save
         self.content_class.idx = property(_idx)
 
+        if not hasattr(self.content_class, 'cls'):
+            def _cls(this):
+                return this.__class__.__name__
+
+            self.content_class.cls = property(_cls)
+
         # register as a base_class for storable objects
         self.storage.links.append(self)
 
@@ -246,32 +298,6 @@ class ObjectStore(object):
             cls._delayed_loading = dict()
 
         cls._delayed_loading[variable] = loader
-
-    def copy(self):
-        """
-        Create a deep copy of the ObjectStore instance
-
-        Returns
-        -------
-        ObjectStore()
-            the copied instance
-        """
-        store = copy.deepcopy(self)
-        return store
-
-    def __call__(self, storage):
-        """
-        Create a deep copy of the ObjectStore instance using the new store
-        provided as function argument
-
-        Returns
-        -------
-        ObjectStore()
-            the copied instance
-        """
-        store = self.copy()
-        store.storage = storage
-        return store
 
     def idx_by_name(self, needle):
         """
@@ -321,6 +347,27 @@ class ObjectStore(object):
             for idx, name in enumerate(self.storage.variables[self.db + "_name"][:]):
                 self.cache[name] = idx
 
+    def __iter__(self):
+        """
+        Add iteration over all elements in the storage
+        """
+        return self.iterator()
+
+    def __len__(self):
+        """
+        Return the number of stored objects
+
+        Returns
+        -------
+        int
+            number of stored objects
+
+        Notes
+        -----
+        Equal to `store.count()`
+        """
+        return self.count()
+
     def iterator(this, iter_range = None):
         """
         Return an iterator over all objects in the storage
@@ -365,8 +412,18 @@ class ObjectStore(object):
         return ObjectIterator()
 
     def __getitem__(self, item):
+        """
+        Enable numpy style selection of object in the store
+        """
         try:
-            return self.load(item)
+            if type(item) is int or type(item) is str:
+                return self.load(item)
+            elif type(item) is slice:
+                return [self.load(idx) for idx in range(*item.indices(len(self)))]
+            elif type(item) is list:
+                return [self.load(idx) for idx in item]
+            elif item is Ellipsis:
+                return self.iterator()
         except KeyError:
             return None
 
@@ -457,7 +514,7 @@ class ObjectStore(object):
         Trajectoy
             the actual trajectory object
         '''
-        return self.load(self.count())
+        return self.load(self.count() - 1)
 
     def first(self):
         '''
@@ -478,6 +535,10 @@ class ObjectStore(object):
         -------
         number : int
             number of objects in the storage.
+
+        Notes
+        -----
+        Use len(store) instead
         '''
         return int(len(self.storage.dimensions[self.idx_dimension]))
 
@@ -491,7 +552,19 @@ class ObjectStore(object):
             the number of the next free index in the storage.
             Used to store a new object.
         '''
-        return self.count()
+        count = self.count()
+        self._free = set([ idx for idx in self._free if idx >= count])
+        idx = count
+        while idx in self._free:
+            idx += 1
+
+        return idx
+
+    def reserve_idx(self, idx):
+        '''
+        Locks an idx as used
+        '''
+        self._free.add(idx)
 
     def _init(self, units=None):
         """
@@ -927,14 +1000,19 @@ def loadcache(func):
 
         # if it is in the cache, return it, otherwise not :)
         if idx in self.cache:
+
             cc = self.cache[idx]
             if type(cc) is int:
+                logger.debug('Found IDX #' + str(idx) + ' in cache under position #' + str(cc))
+
                 # here the cached value is actually only the index
                 # so it still needs to be loaded with the given index
                 # this happens when we want to load by name (str)
                 # and we need to actually load it
                 n_idx = cc
             else:
+                logger.debug('Found IDX #' + str(idx) + ' in cache. Not loading!')
+
                 # we have a real object (hopefully) and just return from cache
                 return self.cache[idx]
 
@@ -1016,7 +1094,15 @@ def loadidx(func):
         # method in an instance and this one is still bound - luckily - to the same 'self'. In a class decorator when wrapping
         # the class method directly it is not bound yet and so we need to include the self! Took me some time to
         # understand and figure that out
-        obj = func(n_idx, *args, **kwargs)
+        logger.debug('Calling load object of type ' + self.content_class.__name__ + ' and IDX #' + str(idx))
+        if n_idx >= len(self):
+            logger.warning('Trying to load from IDX #' + str(n_idx) + ' > number of object ' + str(len(self)))
+            return None
+        elif n_idx < 0:
+            logger.warning('Trying to load negative IDX #' + str(n_idx) + ' < 0')
+            return None
+        else:
+            obj = func(n_idx, *args, **kwargs)
 
         if not hasattr(obj, 'idx'):
             obj.idx = dict()
@@ -1051,6 +1137,10 @@ def saveidx(func):
                 idx = int(idx)
 
         obj.idx[storage] = idx
+
+        # make sure in nested saving that an IDX is not used twice!
+        self.reserve_idx(idx)
+        logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(idx))
         func(obj, idx, *args, **kwargs)
 
     return inner

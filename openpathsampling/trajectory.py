@@ -78,42 +78,8 @@ class Trajectory(list):
             the reversed trajectory
         '''
 
-        t = Trajectory(self)
-        t.reverse()
-        return t
-    
-    def reverse(self):
-        """
-        Reverse the trajectory.
+        return Trajectory([snap.reversed_copy() for snap in reversed(self)])
 
-        Notes
-        -----        
-        We cannot handle the velocities correctly when reversing the trajectory, so velocities will no longer be meaningful.
-        Kinetic energies are correctly updated, however, and path actions should be accurate.
-
-        """
-        # Reverse the order of snapshots within the trajectory.
-        list.reverse(self)
-
-        # Determine number of snapshots.
-#        nsnapshots = self.__len__()
-        
-        # Recalculate kinetic energies for the *beginning* of each trajectory segment.
-        # This makes use of the fact that the energy is (approximately) conserved over each trajectory segment, in between velocity randomizations.
-        # Note that this may be a poor approximation in some cases.
-#        for t in range(nsnapshots-1):
-#            self[t].kinetic_energy = self[t+1].total_energy - self[t].potential_energy
-
-        # No use reversing momenta, since we can't determine what appropriate reversed momenta should be.
-        
-        # We could easily indicate reversed momenta by using a minus sign in front of the index
-        # this keeps everything the same and we do not need to resave the snapshots and a -idx just means take snapshot idx but invert momenta
-
-        for snapshot in self:
-            snapshot.reversed = not snapshot.reversed
-        
-        return
-    
     def coordinates(self):
         """
         Return all coordinates as a numpy array
@@ -126,7 +92,7 @@ class Trajectory(list):
         # Make sure snapshots are stored and have an index and then add the snapshot index to the trajectory
 
         n_frames = self.frames     
-        n_atoms = self.atoms
+        n_atoms = self.n_atoms
         n_spatial = self.spatial
             
         output = np.zeros([n_frames, n_atoms, n_spatial], np.float32)
@@ -190,7 +156,7 @@ class Trajectory(list):
         return n_spatial
 
     @property
-    def atoms(self):
+    def n_atoms(self):
         """
         Return the number of atoms in the trajectory in the current view. 
         
@@ -234,6 +200,40 @@ class Trajectory(list):
             ret.atom_indices = self.atom_indices
 
         return ret
+
+    def __iter__(this):
+        """
+        Return an iterator over all snapshots in the storage
+
+        Parameters
+        ----------
+        iter_range : slice or None
+            if this is not `None` it confines the iterator to objects specified
+            in the slice
+
+        Returns
+        -------
+        Iterator()
+            The iterator that iterates the objects in the store
+
+        """
+        class ObjectIterator:
+            def __init__(self):
+                self.trajectory = this
+                self.idx = 0
+
+            def __iter__(self):
+                return self
+
+            def next(self):
+                if self.idx < len(self.trajectory):
+                    obj = self.trajectory[self.idx]
+                    self.idx += 1
+                    return obj
+                else:
+                    raise StopIteration()
+
+        return ObjectIterator()
     
     def __add__(self, other):        
         t = Trajectory(self)

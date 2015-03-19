@@ -55,6 +55,10 @@ class Storage(netcdf.Dataset):
 
         # objects with special storages
 
+        # self.objectname = ... could also be done in the initialization
+        # automatically. But the IDE would not be able to autocomplete
+        # so we leave it this way :)
+
         self.trajectory = paths.storage.TrajectoryStore(storage)
         self.snapshot = paths.storage.SnapshotStore(storage)
         self.configuration = paths.storage.ConfigurationStore(storage)
@@ -62,7 +66,7 @@ class Storage(netcdf.Dataset):
         self.sample = paths.storage.SampleStore(storage)
         self.sampleset = paths.storage.SampleSetStore(storage)
 
-        self.collectivevariable = paths.storage.ObjectDictStore(storage, paths.OrderParameter, paths.Configuration)
+        self.collectivevariable = paths.storage.ObjectDictStore(storage, paths.OrderParameter, paths.Snapshot)
         self.cv = self.collectivevariable
 
         # normal objects
@@ -72,11 +76,15 @@ class Storage(netcdf.Dataset):
         self.shootingpoint = paths.storage.ObjectStore(storage, paths.ShootingPoint, is_named=False)
         self.shootingpointselector = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, is_named=False)
         self.engine = paths.storage.ObjectStore(storage, paths.DynamicsEngine, is_named=True)
+        self.calculation = paths.storage.ObjectStore(storage, paths.Calculation, is_named=True)
 
         # nestable objects
 
         self.volume = paths.storage.ObjectStore(storage, paths.Volume, is_named=True, nestable=True)
         self.ensemble = paths.storage.ObjectStore(storage, paths.Ensemble, is_named=True, nestable=True)
+        self.movepath = paths.storage.ObjectStore(storage, paths.MovePath, is_named=False, nestable=True)
+
+        self.query = paths.storage.QueryStore(storage)
 
     def _setup_class(self):
         """
@@ -161,7 +169,6 @@ class Storage(netcdf.Dataset):
             # create a json from the mdtraj.Topology() and store it
             self.write_str('topology', self.simplifier.to_json(self.topology))
 
-
             logger.info("Create initial template snapshot")
 
             # Save the initial configuration
@@ -175,8 +182,6 @@ class Storage(netcdf.Dataset):
             logger.info("Finished setting up netCDF file")
 
         elif mode == 'a' or mode == 'r+' or mode == 'r':
-            self._restore_storages()
-
             logger.debug("Restore the dict of units from the storage")
             # Create a dict of simtk.Unit() instances for all netCDF.Variable()
             for variable_name in self.variables:
@@ -194,7 +199,7 @@ class Storage(netcdf.Dataset):
             self.topology = self.simplifier.from_json(self.variables['topology'][0])
 
     def __repr__(self):
-        return "OpenPathSampling netCDF Storage @ '" + self.filename + "'"
+        return "Storage @ '" + self.filename + "'"
 
     @property
     def n_atoms(self):
@@ -246,14 +251,6 @@ class Storage(netcdf.Dataset):
             storage.dimension_units.update(units=self.dimension_units)
             storage._init()
 
-    def _restore_storages(self):
-        '''
-        Run restore on all added classes. Usually there is nothing to do.
-        '''
-#        for storage in self.links:
-#            storage._restore()
-        pass
-
     def _initialize_netCDF(self):
         """
         Initialize the netCDF file for storage itself.
@@ -271,18 +268,40 @@ class Storage(netcdf.Dataset):
             self.createDimension('spatial', self.n_spatial)
 
         # Set global attributes.
-        setattr(self, 'title', 'Open-Transition-Interface-Sampling')
-        setattr(self, 'application', 'Host-Guest-System')
-        setattr(self, 'program', 'run.py')
-        setattr(self, 'programVersion', __version__)
-        setattr(self, 'Conventions', 'Multi-State Transition Interface TPS')
-        setattr(self, 'ConventionVersion', '0.1')
+        setattr(self, 'title', 'OpenPathSampling Storage')
+#        setattr(self, 'application', 'Host-Guest-System')
+#        setattr(self, 'program', 'run.py')
+#        setattr(self, 'programVersion', __version__)
+#        setattr(self, 'Conventions', 'Multi-State Transition Interface TPS')
+        setattr(self, 'ConventionVersion', '0.2')
 
         # Create a string to hold the topology
         self.init_str('topology')
 
         # Force sync to disk to avoid data loss.
         self.sync()
+
+    def list_stores(self):
+        """
+        Return a list of registered stores
+
+        Returns
+        -------
+        list of str
+            list of stores that can be accessed using `storage.[store]`
+        """
+        return [store.db for store in self.links]
+
+    def list_storable_objects(self):
+        """
+        Return a list of storable object base classes
+
+        Returns
+        -------
+        list of class
+            list of base classes that can be stored using `storage.save(obj)`
+        """
+        return [store.content_class for store in self.links]
 
     def write_str(self, name, string):
         '''

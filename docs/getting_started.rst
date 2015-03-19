@@ -7,7 +7,7 @@ Installation
 Platforms
 =========
 
-MAC, Linux, Windows but only with limited OpenMM support. Not recommended.
+Mac and Linux. Windows only has limited OpenMM support. (Not recommended)
 
 Supported Hardware
 ------------------
@@ -18,7 +18,7 @@ Install with Conda
 ------------------
 .. _install-with-conda:
 
-`conda <http://www.continuum.io/blog/conda>`_ is a python package manager built for scientific python. Unlike ``easy_install`` or ``pip``, it handles binaries and binary dependencies, which are critical for most scientific workflows. If you're a ``conda`` user, you can install MDTraj by adding the omnia channel. If you're not a conda user, you should look into it. ::
+`conda <http://www.continuum.io/blog/conda>`_ is a python package manager built for scientific python. Unlike ``easy_install`` or ``pip``, it handles binaries and binary dependencies, which are critical for most scientific workflows. If you're a ``conda`` user, you can install OpenPathSampling by adding the omnia channel. If you're not a conda user, you should look into it. ::
 
 To install OpenPathSampling with conda, use the following commands ::
 
@@ -34,15 +34,15 @@ Clone the source code repository from github::
 
   $ git clone git://github.com/choderalab/openpathsampling.git
 
-If you don't have ``git``, you can download the source code as a zip file from
-https://github.com/rmcgibbo/mdtraj/archive/master.zip. Then, in the directory containing the source code, you can install it with. ::
+Then, in the directory containing the source code, you can install it with ::
 
   $ python setup.py install
 
 Dependencies
 ============
 
-To use mdtraj, the following libraries and software will need to be installed.
+To use OpenPathSampling, the following libraries and software will need to
+be installed.
 
     Linux, Mac OS X or Windows operating system
         We develop mainly on 64-bit Linux and Mac machines. Windows is not
