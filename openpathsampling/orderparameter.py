@@ -228,7 +228,10 @@ class NODFunction(NestableObjectDict):
         self.fnc_uses_lists = fnc_uses_lists
 
     def _eval(self, val):
-        return self._fnc(val)
+        if hasattr(self, '_fnc'):
+            return self._fnc(val)
+        else:
+            return None
 
     def _contains(self, item):
         return False
@@ -267,7 +270,7 @@ class NODStore(NestableObjectDict):
         else:
             self.scope = scope
 
-        self.max_save_buffer_size = 100
+        self.max_save_buffer_size = None
 
     def _add_new(self, items, values):
         if isinstance(items, collections.Iterable):
@@ -275,7 +278,7 @@ class NODStore(NestableObjectDict):
         else:
             dict.__setitem__(self, items, values)
 
-        if len(self) > self.max_save_buffer_size:
+        if self.max_save_buffer_size is not None and len(self) > self.max_save_buffer_size:
             self.sync()
 
     @property
@@ -283,6 +286,7 @@ class NODStore(NestableObjectDict):
         return self.store.storage
 
     def sync(self):
+        print 'Synced'
         storable = { key.idx[self.storage] : value for key, value in self.iteritems() if self.storage in key.idx }
         non_storable = { key : value for key, value in self.iteritems() if self.storage not in key.idx }
 
@@ -470,7 +474,7 @@ class OrderParameter(NODWrap):
     storages
 
     """
-    def __init__(self, name, dimensions = 1, auto_sync=True):
+    def __init__(self, name, dimensions = 1):
         if type(name) is str and len(name) == 0:
             raise ValueError('name must be a non-empty string')
 
@@ -479,8 +483,10 @@ class OrderParameter(NODWrap):
         self.store_dict = NODMultiStore('collectivevariable', name, dimensions, self)
         self.cache_dict = NestableObjectDict()
         self.func_dict = NODFunction(None)
-        self.func_dict._eval = self._eval
-        self.auto_sync = auto_sync
+        if hasattr(self, '_eval'):
+            self.func_dict._eval = self._eval
+        else:
+            self.func_dict._eval = None
 
         self.name = name
         super(OrderParameter, self).__init__(
