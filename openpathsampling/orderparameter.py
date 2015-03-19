@@ -159,7 +159,7 @@ class NestableObjectDict(dict):
 
     def _split_list_dict(self, dct, items):
         nones = [dct[item] if item in dct else None for item in items]
-        missing = [item for item in items if dct[item] is None]
+        missing = [item for item in items if item not in dct]
 
         return nones, missing
 
@@ -358,6 +358,15 @@ class NODMultiStore(NODStore):
         else:
             return []
 
+    def sync(self):
+        if len(self.storages) != len(self.nod_stores):
+            self.update_nod_stores()
+
+        if len(self.nod_stores) == 0:
+            return None
+
+        map(store.sync() for store in self.nod_stores.values())
+
     def add_nod_store(self, storage):
         self.nod_stores[storage] = NODStore(self.name, self.dimensions, getattr(storage, self.store_name), self.scope)
 
@@ -487,12 +496,14 @@ class OrderParameter(NODWrap):
             return items
         elif item_type is paths.Trajectory:
             return list(list.__iter__(items))
-        elif isinstance(item_type, collections.Iterable):
+        elif isinstance(items, collections.Iterable):
             item_sub_type = self.store_dict._basetype(iter(items).next())
             if item_sub_type is paths.Snapshot:
                 return items
             else:
-                return [None] * len(items)
+                raise KeyError('the orderparameter is only compatible with ' +
+                               'snapshots, trajectories or other iteratble of snapshots!')
+                return None
         else:
             return None
 
