@@ -26,7 +26,7 @@ class ObjectDictStore(ObjectStore):
 
         self.sync(objectdict)
 
-    def sync(self, objectdict=None):
+    def sync(self, objectdict):
         """
         This will update the stored cache of the orderparameter. It is
         different from saving in that the object is only created if it is
@@ -39,17 +39,10 @@ class ObjectDictStore(ObjectStore):
             all orderparameters are synced
 
         """
-        storage = self.storage
-        idx = self.idx(objectdict)
+        objectdict.store_dict.update_nod_stores()
+        if self.storage in objectdict.store_dict.nod_stores:
+            objectdict.store_dict.nod_stores[self.storage].sync()
 
-        if idx is not None and idx >=0:
-            cache = objectdict.store_dict
-#            length = len(cache)
-
-            var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
-
-#            self.save_variable(self.idx_dimension + '_length', idx, length)
-            storage.variables[var_name + '_value'][cache.keys()] = self.list_to_numpy(cache.values(), 'float')
 
     def set_value(self, objectdict, position, value):
         storage = self.storage
@@ -76,7 +69,7 @@ class ObjectDictStore(ObjectStore):
             var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
             val = storage.variables[var_name + '_value'][position]
 
-            if val is np.ma.masked:
+            if hasattr(val, 'mask'):
                 return None
             else:
                 return val

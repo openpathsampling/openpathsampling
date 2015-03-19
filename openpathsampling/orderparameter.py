@@ -49,6 +49,7 @@ class NestableObjectDict(dict):
 
     def __getitem__(self, items):
         is_list = type(items) is list
+#        print 'Get from ', self.__class__.__name__, items
 
         if is_list:
             results = self._get_list(items)
@@ -155,8 +156,8 @@ class NestableObjectDict(dict):
         return other
 
     def _split_list_dict(self, dct, items):
-        nones = [item[self] if item in self else None for item in items]
-        missing = [item for item in items if item in self]
+        nones = [dct[item] if item in dct else None for item in items]
+        missing = [item for item in items if dct[item] is None]
 
         return nones, missing
 
@@ -186,7 +187,7 @@ class NODExpandMulti(NestableObjectDict):
         is_list = type(items) is list
 
         if not is_list:
-            return self.post._get(items)
+            return self.post[items]
 
         if len(items) == 0:
             return []
@@ -204,7 +205,7 @@ class NODExpandMulti(NestableObjectDict):
         pass
 
 class NODTransform(NestableObjectDict):
-    def __init__(self, transform, post):
+    def __init__(self, transform):
         super(NODTransform, self).__init__()
         self.transform = transform
 
@@ -252,12 +253,12 @@ class NODFunction(NestableObjectDict):
         return fnc
 
 class NODStore(NestableObjectDict):
-    def __init__(self, name, key_class, dimensions, store, scope=None):
+    def __init__(self, name, dimensions, store, scope=None):
         super(NODStore, self).__init__()
         self.name = name
         self.dimensions = dimensions
         self.store = store
-        self.key_class = key_class
+        self.key_class = store.content_class
 
         if scope is None:
             self.scope = self
@@ -267,7 +268,11 @@ class NODStore(NestableObjectDict):
         self.max_save_buffer_size = 100
 
     def _add_new(self, items, values):
-        [dict.__setitem__(self, item, value) for item, value in zip(items, values)]
+        if type(items) is list:
+            [dict.__setitem__(self, item, value) for item, value in zip(items, values)]
+        else:
+            dict.__setitem__(self, items, values)
+
         if len(self) > self.max_save_buffer_size:
             self.sync()
 
@@ -276,9 +281,9 @@ class NODStore(NestableObjectDict):
         return self.store.storage
 
     def sync(self):
-        storable = { key : value for key, value in self.iteritems() if self.storage in key.idx }
+        storable = { key.idx[self.storage] : value for key, value in self.iteritems() if self.storage in key.idx }
 
-        self.store.set_values(self.scope, storable.keys(), storable.values())
+        self.store.set_list_value(self.scope, storable.keys(), storable.values())
         # TODO: Allow to keep not saved values
         self.clear()
 
@@ -295,21 +300,26 @@ class NODStore(NestableObjectDict):
         return None
 
     def _get(self, item):
-        if item in self:
-            return self[item]
+        if dict.__contains__(self, item):
+            return dict.__getitem__(self, item)
 
         key = self._get_key(item)
 
         if key is None:
             return None
 
-        return self._load(self, key)
+        return self._load(key)
 
     def _get_list(self, items):
         cached, missing = self._split_list_dict(self, items)
 
         keys = [self._get_key(item) for item in missing]
+
+        print keys, missing, len(keys), len(missing)
+
         replace = self._apply_some_list(self._load_list, keys)
+
+        print cached, replace, len(replace)
 
         return self._replace_none(cached, replace)
 
@@ -328,7 +338,84 @@ class NODStore(NestableObjectDict):
             return type(item)
 
 class NODMultiStore(NODStore):
-    pass
+    def __init__(self, store_name, name, dimensions, scope):
+        super(NODStore, self).__init__()
+        self.name = name
+        self.dimensions = dimensions
+        self.store_name = store_name
+
+        if scope is None:
+            self.scope = self
+        else:
+            self.scope = scope
+
+        self.nod_stores = {}
+        self.update_nod_stores()
+
+    @property
+    def storages(self):
+        if hasattr(self.scope, 'idx'):
+            return self.scope.idx.keys()
+        else:
+            return []
+
+    def add_nod_store(self, storage):
+        self.nod_stores[storage] = NODStore(self.name, self.dimensions, getattr(storage, self.store_name), self.scope)
+
+    def update_nod_stores(self):
+        for storage in self.nod_stores:
+            if storage not in self.storages:
+                del self.nod_stores[storage]
+
+        for storage in self.storages:
+            if storage not in self.nod_stores:
+                self.add_nod_store(storage)
+
+    def _add_new(self, items, values):
+        if len(self.storages) != len(self.nod_stores):
+            self.update_nod_stores()
+        print 'Add',
+        for s in self.nod_stores:
+            print 'Add2Store', items ,values
+            self.nod_stores[s]._add_new(items, values)
+
+        pass
+
+    def _get(self, item):
+        if len(self.storages) != len(self.nod_stores):
+            self.update_nod_stores()
+
+        if len(self.nod_stores) == 0:
+            return None
+
+        results = dict()
+        for s in self.nod_stores:
+            results[s] = self.nod_stores[s][item]
+
+        for s, result in results.iteritems():
+            if result is not None:
+                return result
+
+        return None
+
+
+    def _get_list(self, items):
+        if len(self.storages) != len(self.nod_stores):
+            self.update_nod_stores()
+
+        if len(self.nod_stores) == 0:
+            return [None] * len(items)
+
+        results_list = dict()
+        for s in self.nod_stores:
+            results_list[s] = self.nod_stores[s][items]
+
+        output = [None] * len(items)
+        for s, results in results_list.iteritems():
+            output = [item if item is not None or results is None else result
+                     for item, result in zip(output, results) ]
+
+        return output
 
 
 class NODWrap(NestableObjectDict):
@@ -381,8 +468,8 @@ class OrderParameter(NODWrap):
             raise ValueError('name must be a non-empty string')
 
         self.pre_dict = NODTransform(self._pre_item)
-        self.multi_dict = NODMultiStore()
-        self.store_dict = NODStore(name, paths.Snapshot, dimensions, 'collectivevariable')
+        self.multi_dict = NODExpandMulti()
+        self.store_dict = NODMultiStore('collectivevariable', name, dimensions, self)
         self.cache_dict = NestableObjectDict()
         self.func_dict = NODFunction(None)
         self.func_dict._eval = self._eval
@@ -397,15 +484,15 @@ class OrderParameter(NODWrap):
         item_type = self.store_dict._basetype(items)
 
         if item_type is  paths.Snapshot:
-            return self._update(items)
+            return items
         elif item_type is paths.Trajectory:
-            return self._update(list(list.__iter__(items)))
+            return list(list.__iter__(items))
         elif item_type is list:
-            item_sub_type = self._basetype(items[0])
+            item_sub_type = self.store_dict._basetype(items[0])
             if item_sub_type is paths.Snapshot:
-                return self._update(items)
+                return items
             else:
-                return None
+                return [None] * len(items)
         else:
             return None
 
