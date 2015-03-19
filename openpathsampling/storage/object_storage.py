@@ -400,7 +400,7 @@ class ObjectStore(object):
                 return self
 
             def next(self):
-                if self.idx < self.storage.count():
+                if self.idx < self.end:
                     obj = self.storage.load(self.idx)
                     if self.iter_range is not None and self.iter_range.step is not None:
                         self.idx += self.iter_range.step
