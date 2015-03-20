@@ -5,8 +5,10 @@
 import mdtraj as md
 import openpathsampling as paths
 from openpathsampling.todict import restores_as_stub_object
+import collections
 
-class ObjectDict(dict):
+
+class NestableObjectDict(dict):
     """
     Cache attached to Configuration indices stored in Configuration storage
 
@@ -19,30 +21,102 @@ class ObjectDict(dict):
     ----------
     name
 
+    fnc : index (int) -> value (float)
+        the function used to generate the cache values for the specified index. In essence a list
+    dimensions : int
+        the dimension of the stored values. Default is `1`
+    content_class : Class
+        the class of objects that can be stored
+    fnc_uses_lists : boolean
+        if True then in the case that the dict is called with several object at a time. The dict
+        creates a list of missing ones and passes all of these to the evaluating function at once.
+        Otherwise the fall-back is to call each item seperately. If possible always the multiple-
+        option should be used.
+
+    Attributes
+    ----------
+    content_class
+    fnc_uses_lists
+    dimensions
     """
 
-    def __init__(self, dimensions = 1, key_class = None):
+    use_unique = True
+
+    def __init__(self):
         dict.__init__(self)
-        self.dimensions = dimensions
-        self.key_class = key_class
+        self.post = None
 
-    def _get(self, obj):
-        return dict.__getitem__(self, obj)
-
-    def _set(self, obj, value):
-        return dict.__setitem__(self, obj, value)
+    def __iter__(self):
+        return None
 
     def __getitem__(self, items):
-        # Allow for numpy style of selecting several indices using a list as index parameter
-        if type(items) is list:
-            ret = [self._get(key) for key in items]
-        else:
-            ret = self._get(items)
+        is_listable = isinstance(items, collections.Iterable)
+#        print 'Get from ', self.__class__.__name__, items
 
-        return ret
+        if is_listable:
+            results = self._get_list(items)
+        else:
+            results = self._get(items)
+
+        if self.post is not None:
+            if is_listable:
+                nones = [obj[0] for obj in zip(items, results) if obj[1] is None]
+                if len(nones) == 0:
+                    return results
+                else:
+                    rep = self.post[[p for p in nones]]
+                    self._add_new(nones, rep)
+
+                    it = iter(rep)
+                    return [it.next() if p[1] is None else p[1] for p in zip(items, results)]
+            else:
+                if results is None:
+                    rep = self.post[items]
+
+                    self._add_new(items, rep)
+                    return rep
+                else:
+                    return results
+
+        return results
+
+    def _add_new(self, items, values):
+        self[items] = values
 
     def __setitem__(self, key, value):
-        self._set(key, value)
+        if isinstance(key, collections.Iterable):
+            self._set_list(key, value)
+        else:
+            self._set(key, value)
+
+#    def __contains__(self, item):
+#        return dict.__contains__(self, item) or self.in_store(item)
+
+
+    def _contains(self, item):
+        return dict.__contains__(self, item)
+
+    def _contains_list(self, items):
+        return [dict.__contains__(self, item) for item in items]
+
+    def _set(self, item, value):
+        dict.__setitem__(self, item, value)
+
+    def _set_list(self, items, values):
+        [dict.__setitem__(self, item, value) for item, value in zip(items, values)]
+
+    def _get(self, item):
+        try:
+            return dict.__getitem__(self, item)
+        except KeyError:
+            return None
+
+    def _get_list(self, items):
+        return [ self._get(item) for item in items ]
+
+    def push(self):
+        pass
+
 
     def existing(self, objs):
         """
@@ -76,36 +150,188 @@ class ObjectDict(dict):
         """
         return [obj for obj in objs if obj not in self]
 
+    def __call__(self, items):
+        return self[items]
 
-class StorableObjectDict(ObjectDict):
+    def __add__(self, other):
+        other.post = self
+        return other
+
+    def _split_list_dict(self, dct, items):
+        nones = [dct[item] if item in dct else None for item in items]
+        missing = [item for item in items if item not in dct]
+
+        return nones, missing
+
+    def _split_list(self, keys, values):
+        missing = [ obj[0] for obj in zip(keys,values) if obj[1] is None ]
+        nones = values
+
+        return nones, missing
+
+    def _apply_some_list(self, func, items):
+        some = [item for item in items if item is not None]
+        replace = func(some)
+        it = iter(replace)
+        return [ it.next() if obj is not None else None for obj in some ]
+
+    def _replace_none(self, nones, replace):
+        it = iter(replace)
+        return [ obj if obj is not None else it.next() for obj in nones ]
+
+
+class NODExpandMulti(NestableObjectDict):
     """
-    A cache that is attached to Configuration indices store in the Configuration storage
-
-    Parameters
-    ----------
-    name : string
-        A short and unique name to be used in storage
-
-    Attributes
-    ----------
-    name
+    Will only request the unique keys to post
     """
 
-    def __init__(self, name, dimensions = 1, key_class = None):
-        super(StorableObjectDict, self).__init__(dimensions=dimensions, key_class=key_class)
+    def __getitem__(self, items):
+        is_list = isinstance(items, collections.Iterable)
 
+        if not is_list:
+            return self.post[items]
+
+        if len(items) == 0:
+            return []
+
+        uniques = list(set(items))
+        rep_unique = self.post[[p for p in uniques]]
+        multi_cache = dict(zip(uniques, rep_unique))
+
+        return [multi_cache[item] for item in items]
+
+    def __setitem__(self, key, value):
+        self.post[key] = value
+
+    def _add_new(self, items, values):
+        pass
+
+class NODTransform(NestableObjectDict):
+    def __init__(self, transform):
+        super(NODTransform, self).__init__()
+        self.transform = transform
+
+    def __getitem__(self, item):
+        return self.post[self.transform(item)]
+
+    def __setitem__(self, key, value):
+        self.post[self.transform(key)] = value
+
+    def _add_new(self, items, values):
+        pass
+
+
+class NODFunction(NestableObjectDict):
+    def __init__(self, fnc, fnc_uses_lists=True):
+        super(NODFunction, self).__init__()
+        self._fnc = fnc
+        self.fnc_uses_lists = fnc_uses_lists
+
+    def _eval(self, val):
+        if hasattr(self, '_fnc'):
+            return self._fnc(val)
+        else:
+            return None
+
+    def _contains(self, item):
+        return False
+
+    def _get(self, items):
+        if self.fnc_uses_lists:
+            result = self._eval([items])
+            return result[0]
+        else:
+            result = self._eval(items)
+            return result
+
+    def _get_list(self, items):
+        if self.fnc_uses_lists:
+            result = self._eval(items)
+            return result
+        else:
+            return [self._eval(obj) for obj in items]
+
+    def get_transformed_view(self, transform):
+        def fnc(obj):
+            return transform(self(obj))
+
+        return fnc
+
+class NODStore(NestableObjectDict):
+    def __init__(self, name, dimensions, store, scope=None):
+        super(NODStore, self).__init__()
         self.name = name
-        self.storage_caches = dict() # caches the values stored in the data file
-        self.var_name = key_class.__name__.lower() + '_' + 'op_' + self.name
-        self.object_storages = [] # contains the list of associated ObjectStorages (that itself link to netCDF files)
+        self.dimensions = dimensions
+        self.store = store
+        self.key_class = store.content_class
 
-        for s in self.object_storages:
-            if s.content_class is not key_class:
-                print 'One of the storages does not store objects of type :', key_class.__name__
-                return
+        if scope is None:
+            self.scope = self
+        else:
+            self.scope = scope
 
-        for s in self.object_storages:
-            self.storage_caches[s.storage] = dict()
+        self.max_save_buffer_size = None
+
+    def _add_new(self, items, values):
+        if isinstance(items, collections.Iterable):
+            [dict.__setitem__(self, item, value) for item, value in zip(items, values)]
+        else:
+            dict.__setitem__(self, items, values)
+
+        if self.max_save_buffer_size is not None and len(self) > self.max_save_buffer_size:
+            self.sync()
+
+    @property
+    def storage(self):
+        return self.store.storage
+
+    def sync(self):
+        print 'Synced'
+        storable = { key.idx[self.storage] : value for key, value in self.iteritems() if self.storage in key.idx }
+        non_storable = { key : value for key, value in self.iteritems() if self.storage not in key.idx }
+
+        self.store.set_list_value(self.scope, storable.keys(), storable.values())
+        self.clear()
+        self.update(non_storable)
+
+    def _get_key(self, item):
+        if item is None:
+            return None
+        if type(item) is tuple:
+            if item[0].content_class is self.key_class:
+                return item[1]
+            else:
+                return None
+
+        elif self.storage in item.idx:
+            return item.idx[self.storage]
+
+        return None
+
+    def _get(self, item):
+        if dict.__contains__(self, item):
+            return dict.__getitem__(self, item)
+
+        key = self._get_key(item)
+
+        if key is None:
+            return None
+
+        return self._load(key)
+
+    def _get_list(self, items):
+        cached, missing = self._split_list_dict(self, items)
+
+        keys = [self._get_key(item) for item in missing]
+        replace = self._apply_some_list(self._load_list, keys)
+
+        return self._replace_none(cached, replace)
+
+    def _load(self, key):
+        return self.store.get_value(self.scope, key)
+
+    def _load_list(self, keys):
+        return self.store.get_list_value(self.scope, keys)
 
     def _basetype(self, item):
         if type(item) is tuple:
@@ -115,208 +341,117 @@ class StorableObjectDict(ObjectDict):
         else:
             return type(item)
 
-    def storable(self, item):
-        """
-        Return True if `item` has indices to be stored in an attached storage otherwise cache it in the dict itself
-        """
-        if type(item) is tuple:
-            if item[0].content_class is self.key_class:
-                if item[0].storage in self.object_storages and item[1] < len(item[0]):
-                    return True
-                else:
-                    return False
-            else:
-                return False
+class NODMultiStore(NODStore):
+    def __init__(self, store_name, name, dimensions, scope):
+        super(NODStore, self).__init__()
+        self.name = name
+        self.dimensions = dimensions
+        self.store_name = store_name
 
-        for s in self.storage_caches:
-            if s in item.idx and item.idx[s] > 0:
-                return True
-        return False
-
-    def in_store(self, item):
-        """
-        Returns True, if the item is already stored in an associated cache.
-        """
-        for s in self.storage_caches:
-            if type(item) is tuple:
-                if item[0].content_class is self.key_class:
-                    if item[1] in self.storage_caches[item[0].storage]:
-                        return True
-                else:
-                    # wrong type to load. Cannot ask for Configurations is
-                    # values for Snapshots are stored
-                    return False
-            elif s in item.idx and item.idx[s] in self.storage_caches[s]:
-                return True
-
-        return False
-
-    def __contains__(self, item):
-        return dict.__contains__(self, item) or self.in_store(item)
-
-    def _compatible(self, item):
-        return self._basetype(item) is self.key_class
-
-    def _get_from_stores(self, item):
-        if self._compatible(item):
-            for s in self.storage_caches:
-                if type(item) is tuple:
-                    if item[1] in self.storage_caches[item[0].storage]:
-                        return self.storage_caches[item[0].storage][item[1]]
-                elif s in item.idx and item.idx[s] in self.storage_caches[s]:
-                    return self.storage_caches[s][item.idx[s]]
-
-        return None
-
-    def _set_to_stores(self, obj, value):
-        for s in self.storage_caches:
-            if s in obj.idx:
-                self.storage_caches[s][obj.idx[s]] = value
-
-    def _set(self, obj, value):
-        if self.storable(obj):
-            self._set_to_stores(obj, value)
+        if scope is None:
+            self.scope = self
         else:
-            return dict.__setitem__(self, obj, value)
+            self.scope = scope
 
-    def _get(self, item):
-        if self.in_store(item):
-            return self._get_from_stores(item)
-        else:
-            return dict.__getitem__(self, item)
+        self.nod_stores = {}
+        self.update_nod_stores()
 
-    def __str__(self):
-        return "{ 'memory' : " + dict.__str__(self) + ", 'storages' : " + str(self.storage_caches) + " }"
-
-
-class FunctionalStorableObjectDict(StorableObjectDict):
-    """
-    A simple dict implementation that will call a function for unknown values
-
-    Parameters
-    ----------
-    fnc : index (int) -> value (float)
-        the function used to generate the cache values for the specified index. In essence a list
-    dimensions : int
-        the dimension of the stored values. Default is `1`
-    content_class : Class
-        the class of objects that can be stored
-    allow_multiple : boolean
-        if True then in the case that the dict is called with several object at a time. The dict
-        creates a list of missing ones and passes all of these to the evaluating function at once.
-        Otherwise the fall-back is to call each item seperately. If possible always the multiple-
-        option should be used.
-
-    Attributes
-    ----------
-    content_class
-    allow_multiple
-    dimensions
-
-    """
-
-    def __init__(self, name, fnc, dimensions = 1, key_class = None, allow_multiple = True):
-        super(FunctionalStorableObjectDict, self).__init__(
-            name=name,
-            dimensions=dimensions,
-            key_class=key_class
-        )
-        self._fnc = fnc
-        self.allow_multiple = allow_multiple
-
-    def _eval(self, val):
-        return self._fnc(val)
-
-    def __call__(self, obj):
-        return self._update(obj)
-
-    def _update(self, items):
-        if type(items) is list:
-            up_items = items
-        else:
-            up_items = [items]
-
-        if self.key_class is not None and len(up_items) > 0 and self._basetype(up_items[0]) is self.key_class:
-            no_cache = self.missing(up_items)
-
-            # Add not yet cached data
-            if len(no_cache) > 0:
-                if self.allow_multiple:
-                    result = self._eval(no_cache)
-
-                    for key, res in zip(no_cache, result):
-                        self[key] = res
-                else:
-                    for obj in no_cache:
-                        self[obj] = self._eval(obj)
-
-            return self[items]
+    @property
+    def storages(self):
+        if hasattr(self.scope, 'idx'):
+            return self.scope.idx.keys()
         else:
             return []
 
-    def get_transformed_view(self, transform):
-        def fnc(obj):
-            return transform(self(obj))
+    def sync(self):
+        if len(self.storages) != len(self.nod_stores):
+            self.update_nod_stores()
 
-        return fnc
-
-@restores_as_stub_object
-class ConfigurationVariable(FunctionalStorableObjectDict):
-    """
-    Wrapper for a function that maps a configuration to a number.
-
-    Parameters
-    ----------
-    name : string
-        A descriptive name of the orderparameter. It is used in the string
-        representation.
-    dimensions : int
-        The number of dimensions of the output order parameter. So far this
-        is not used and will be necessary or useful when storage is
-        available
-    storages : list of ConfigurationStorages()
-        contains the list of storages that will be used.
-
-    Attributes
-    ----------
-    name
-    dimensions
-    storages
-
-    """
-
-    def __init__(self, name, dimensions = 1):
-        if type(name) is str and len(name) == 0:
-            raise ValueError('name must be a non-empty string')
-
-        super(OrderParameter, self).__init__(
-            name=name,
-            fnc=None,
-            dimensions=dimensions,
-            key_class=paths.Configuration
-        )
-
-    def __call__(self, items):
-        item_type = self._basetype(items)
-        if item_type is paths.Snapshot:
-            return self._update(items.configuration)
-        elif item_type is paths.Configuration:
-            return self._update(items)
-        elif item_type is paths.Trajectory:
-            return self._update([snapshot.configuration for snapshot in items])
-        elif item_type is list:
-            item_sub_type = self._basetype(items[0])
-            if item_sub_type is paths.Configuration:
-                return self._update(items)
-            elif item_sub_type is paths.Snapshot:
-                return self._update([snapshot.configuration for snapshot in items])
-            else:
-                return None
-        else:
+        if len(self.nod_stores) == 0:
             return None
 
+        map(store.sync() for store in self.nod_stores.values())
+
+    def add_nod_store(self, storage):
+        self.nod_stores[storage] = NODStore(self.name, self.dimensions, getattr(storage, self.store_name), self.scope)
+
+    def update_nod_stores(self):
+        for storage in self.nod_stores:
+            if storage not in self.storages:
+                del self.nod_stores[storage]
+
+        for storage in self.storages:
+            if storage not in self.nod_stores:
+                self.add_nod_store(storage)
+
+    def _add_new(self, items, values):
+        if len(self.storages) != len(self.nod_stores):
+            self.update_nod_stores()
+        for s in self.nod_stores:
+            self.nod_stores[s]._add_new(items, values)
+
+        pass
+
+    def _get(self, item):
+        if len(self.storages) != len(self.nod_stores):
+            self.update_nod_stores()
+
+        if len(self.nod_stores) == 0:
+            return None
+
+        results = dict()
+        for s in self.nod_stores:
+            results[s] = self.nod_stores[s][item]
+
+        for s, result in results.iteritems():
+            if result is not None:
+                return result
+
+        return None
+
+
+    def _get_list(self, items):
+        if len(self.storages) != len(self.nod_stores):
+            self.update_nod_stores()
+
+        if len(self.nod_stores) == 0:
+            return [None] * len(items)
+
+        results_list = dict()
+        for s in self.nod_stores:
+            results_list[s] = self.nod_stores[s][items]
+
+        output = [None] * len(items)
+        for s, results in results_list.iteritems():
+            output = [item if item is not None or results is None else result
+                     for item, result in zip(output, results) ]
+
+        return output
+
+
+class NODWrap(NestableObjectDict):
+    def __init__(self, post):
+        super(NODWrap, self).__init__()
+        self.post = post
+
+    def __getitem__(self, items):
+        return self.post[items]
+
+    def __setitem__(self, key, value):
+        self.post[key] = value
+
+class NODBuffer(NestableObjectDict):
+    """
+    Implements a dict with a buffer that reads sequentially ahead
+    """
+
+class NODCache(NestableObjectDict):
+    """
+    Implements a dict with intelligent caching of limited size
+    """
+
 @restores_as_stub_object
-class OrderParameter(FunctionalStorableObjectDict):
+class OrderParameter(NODWrap):
     """
     Wrapper for a function that maps a snapshot to a number.
 
@@ -343,25 +478,38 @@ class OrderParameter(FunctionalStorableObjectDict):
         if type(name) is str and len(name) == 0:
             raise ValueError('name must be a non-empty string')
 
+        self.pre_dict = NODTransform(self._pre_item)
+        self.multi_dict = NODExpandMulti()
+        self.store_dict = NODMultiStore('collectivevariable', name, dimensions, self)
+        self.cache_dict = NestableObjectDict()
+        self.func_dict = NODFunction(None)
+        if hasattr(self, '_eval'):
+            self.func_dict._eval = self._eval
+        else:
+            self.func_dict._eval = None
+
+        self.name = name
         super(OrderParameter, self).__init__(
-            name=name,
-            fnc=None,
-            dimensions=dimensions,
-            key_class=paths.Snapshot
+            post= self.func_dict + self.store_dict +
+                  self.cache_dict + self.multi_dict + self.pre_dict
         )
 
-    def __call__(self, items):
-        item_type = self._basetype(items)
+
+
+    def _pre_item(self, items):
+        item_type = self.store_dict._basetype(items)
 
         if item_type is  paths.Snapshot:
-            return self._update(items)
+            return items
         elif item_type is paths.Trajectory:
-            return self._update(list(list.__iter__(items)))
-        elif item_type is list:
-            item_sub_type = self._basetype(items[0])
+            return list(list.__iter__(items))
+        elif isinstance(items, collections.Iterable):
+            item_sub_type = self.store_dict._basetype(iter(items).next())
             if item_sub_type is paths.Snapshot:
-                return self._update(items)
+                return items
             else:
+                raise KeyError('the orderparameter is only compatible with ' +
+                               'snapshots, trajectories or other iteratble of snapshots!')
                 return None
         else:
             return None

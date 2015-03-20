@@ -154,7 +154,8 @@ class ObjectStore(object):
                     if hasattr(cls, '_delayed_loading'):
                         if item in cls._delayed_loading:
                             _loader = cls._delayed_loading[item]
-                            _loader(this, self)
+#                            print 'from', repr(self.storage), id(self), 'and not', repr(this), 'load', item
+                            _loader(this)
                         else:
                             raise KeyError(item)
 
@@ -399,7 +400,7 @@ class ObjectStore(object):
                 return self
 
             def next(self):
-                if self.idx < self.storage.count():
+                if self.idx < self.end:
                     obj = self.storage.load(self.idx)
                     if self.iter_range is not None and self.iter_range.step is not None:
                         self.idx += self.iter_range.step
@@ -979,7 +980,10 @@ def loadpartial(func, constructor=None):
         else:
             new_func = getattr(self, constructor)
 
-        return new_func(idx, *args, **kwargs)
+        return_obj = new_func(idx, *args, **kwargs)
+        # this tells the obj where it was loaded from
+        return_obj._origin = self.storage
+        return return_obj
 
     return inner
 
