@@ -1,5 +1,5 @@
 ###############################################################
-#| CLASS Order Parameter
+# | CLASS Order Parameter
 ###############################################################
 
 import mdtraj as md
@@ -7,6 +7,7 @@ import openpathsampling as paths
 from openpathsampling.todict import restores_as_stub_object
 import chainableobjectdict as cod
 import collections
+
 
 @restores_as_stub_object
 class OrderParameter(cod.CODWrap):
@@ -32,13 +33,15 @@ class OrderParameter(cod.CODWrap):
     storages
 
     """
-    def __init__(self, name, dimensions = 1):
+
+    def __init__(self, name, dimensions=1):
         if type(name) is str and len(name) == 0:
             raise ValueError('name must be a non-empty string')
 
         self.pre_dict = cod.CODTransform(self._pre_item)
         self.multi_dict = cod.CODExpandMulti()
-        self.store_dict = cod.CODMultiStore('collectivevariable', name, dimensions, self)
+        self.store_dict = cod.CODMultiStore('collectivevariable', name,
+                                            dimensions, self)
         self.cache_dict = cod.NestableObjectDict()
         self.func_dict = cod.CODFunction(None)
         if hasattr(self, '_eval'):
@@ -48,8 +51,8 @@ class OrderParameter(cod.CODWrap):
 
         self.name = name
         super(OrderParameter, self).__init__(
-            post= self.func_dict + self.store_dict +
-                  self.cache_dict + self.multi_dict + self.pre_dict
+            post=self.func_dict + self.store_dict +
+                 self.cache_dict + self.multi_dict + self.pre_dict
         )
 
     def flush_unstorable(self):
@@ -76,14 +79,49 @@ class OrderParameter(cod.CODWrap):
         """
 
         self.store_dict.flush_unstorable()
-        storable = { key : value for key, value in self.cache_dict.iteritems() if self.storage in key.idx }
+        storable = {key: value for key, value in self.cache_dict.iteritems()
+                    if len(key.idx) > 0}
         self.clear()
         self.update(storable)
+
+    def sync(self, store=None, flush_storable=True):
+        """
+        Sync this orderparameter with attached storages
+
+        Parameters
+        ----------
+        store : OrderparameterStore or None
+            the store to be used, otherwise all underlying storages are synced
+        flush_storable : bool
+            if `False` the store will be synced and information about
+            data that could not be stored are kept in the caches so that they
+            can potentially (when the associated snapshots have been stored)
+            be synced later. This is safer in the sense that you will not loose
+            any computed result, but on the other hand might induce an overhead
+            since the list of not yet saved snapshot can be very large and needs
+            to be searched EVERYTIME the store is saved. If possible you should
+            use `True` (default) here and eventually recompute lost data (which
+            is done automatically).
+        """
+        self.store_dict.update_nod_stores()
+        if store is None:
+            for storage in self.store_dict.cod_stores:
+                self.store_dict.cod_stores[storage].sync(flush_storable)
+        else:
+            if store.storage in self.store_dict.cod_stores:
+                self.store_dict.cod_stores[store.storage].sync(flush_storable)
+
+        storable = {key: value for key, value in self.cache_dict.iteritems()
+                    if len(key.idx) > 0}
+
+        self.cache_dict.clear()
+        self.cache_dict.update(storable)
+
 
     def _pre_item(self, items):
         item_type = self.store_dict._basetype(items)
 
-        if item_type is  paths.Snapshot:
+        if item_type is paths.Snapshot:
             return items
         elif item_type is paths.Trajectory:
             return list(list.__iter__(items))
@@ -97,6 +135,7 @@ class OrderParameter(cod.CODWrap):
                 return None
         else:
             return None
+
 
 @restores_as_stub_object
 class OP_RMSD_To_Lambda(OrderParameter):
@@ -138,7 +177,8 @@ class OP_RMSD_To_Lambda(OrderParameter):
         self.min_lambda = lambda_min
         self.max_lambda = max_lambda
 
-        self._generator = paths.Trajectory([center]).subset(self.atom_indices).md()
+        self._generator = paths.Trajectory([center]).subset(
+            self.atom_indices).md()
         return
 
     ################################################################################
@@ -165,6 +205,7 @@ class OP_RMSD_To_Lambda(OrderParameter):
 
         return map(self._scale_fnc(self.min_lambda, self.max_lambda), results)
 
+
 @restores_as_stub_object
 class OP_Featurizer(OrderParameter):
     """
@@ -190,7 +231,8 @@ class OP_Featurizer(OrderParameter):
     """
 
     def __init__(self, name, featurizer, atom_indices=None):
-        super(OP_Featurizer, self).__init__(name, dimensions=featurizer.n_features)
+        super(OP_Featurizer, self).__init__(name,
+                                            dimensions=featurizer.n_features)
 
         self.atom_indices = atom_indices
         self.featurizer = featurizer
@@ -208,6 +250,7 @@ class OP_Featurizer(OrderParameter):
 
         return result
 
+
 @restores_as_stub_object
 class OP_MD_Function(OrderParameter):
     """Make `OrderParameter` from `fcn` that takes mdtraj.trajectory as input.
@@ -222,6 +265,7 @@ class OP_MD_Function(OrderParameter):
     >>>                              indices=[phi_atoms])
     >>> print psi_orderparam( traj.md() )
     """
+
     def __init__(self, name, fcn, **kwargs):
         """
         Parameters
@@ -249,6 +293,7 @@ class OP_MD_Function(OrderParameter):
         t = trajectory.md(self.topology)
         return self.fcn(t, *args, **self.kwargs)
 
+
 @restores_as_stub_object
 class OP_Volume(OrderParameter):
     """ Make `Volume` into `OrderParameter`: maps to 0.0 or 1.0 """
@@ -264,8 +309,9 @@ class OP_Volume(OrderParameter):
         self.volume = volume
 
     def _eval(self, items):
-        result = [ float(self.volume(item)) for item in items ]
+        result = [float(self.volume(item)) for item in items]
         return result
+
 
 @restores_as_stub_object
 class OP_Function(OrderParameter):
@@ -282,6 +328,7 @@ class OP_Function(OrderParameter):
     >>>                              indices=[psi_atoms])
     >>> print psi_orderparam( traj.md() )
     """
+
     def __init__(self, name, fcn, **kwargs):
         """
         Parameters
@@ -305,7 +352,6 @@ class OP_Function(OrderParameter):
 
 
     def _eval(self, items, *args):
-
         trajectory = paths.Trajectory(items)
 
-        return [ self._fcn(snap, *args, **self.kwargs) for snap in trajectory]
+        return [self._fcn(snap, *args, **self.kwargs) for snap in trajectory]

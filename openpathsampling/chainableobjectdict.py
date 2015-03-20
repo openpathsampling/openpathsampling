@@ -280,16 +280,20 @@ class CODStore(NestableObjectDict):
     def storage(self):
         return self.store.storage
 
-    def sync(self):
-        storable = { key.idx[self.storage] : value for key, value in self.iteritems() if self.storage in key.idx }
-        non_storable = { key : value for key, value in self.iteritems() if self.storage not in key.idx }
-
+    def sync(self, flush_storable=True):
+        storable = { key.idx[self.storage] : value for key, value in self.iteritems() if len(key.idx) > 0 }
         self.store.set_list_value(self.scope, storable.keys(), storable.values())
-        self.clear()
-        self.update(non_storable)
 
-    def clear_unstored_snapshots(self):
-        storable = { key : value for key, value in self.iteritems() if self.storage in key.idx }
+        if not flush_storable:
+            non_storable = { key : value for key, value in self.iteritems() if len(key.idx) == 0 }
+            self.clear()
+            self.update(non_storable)
+        else:
+            self.clear()
+
+
+    def flush_unstorable(self):
+        storable = { key : value for key, value in self.iteritems() if len(key.idx) > 0 }
         self.clear()
         self.update(storable)
 
@@ -352,7 +356,7 @@ class CODMultiStore(CODStore):
         else:
             self.scope = scope
 
-        self.nod_stores = {}
+        self.cod_stores = {}
         self.update_nod_stores()
 
     @property
@@ -362,54 +366,55 @@ class CODMultiStore(CODStore):
         else:
             return []
 
-    def clear_unstored_snapshots(self):
-        if len(self.storages) != len(self.nod_stores):
+    def flush_unstorable(self):
+        if len(self.storages) != len(self.cod_stores):
             self.update_nod_stores()
 
-        if len(self.nod_stores) == 0:
+        if len(self.cod_stores) == 0:
             return None
 
-        [ store.clear_unstored_snapshots() for store in self.nod_stores.values() ]
+        [ store.flush_unstorable() for store in self.cod_stores.values() ]
 
 
-    def sync(self):
-        if len(self.storages) != len(self.nod_stores):
+    def sync(self, flush_storable=True):
+        if len(self.storages) != len(self.cod_stores):
             self.update_nod_stores()
 
-        if len(self.nod_stores) == 0:
+        if len(self.cod_stores) == 0:
             return None
-        [ store.sync() for store in self.nod_stores.values() ]
+
+        [ store.sync(flush_storable) for store in self.cod_stores.values() ]
 
     def add_nod_store(self, storage):
-        self.nod_stores[storage] = CODStore(self.name, self.dimensions, getattr(storage, self.store_name), self.scope)
+        self.cod_stores[storage] = CODStore(self.name, self.dimensions, getattr(storage, self.store_name), self.scope)
 
     def update_nod_stores(self):
-        for storage in self.nod_stores:
+        for storage in self.cod_stores:
             if storage not in self.storages:
-                del self.nod_stores[storage]
+                del self.cod_stores[storage]
 
         for storage in self.storages:
-            if storage not in self.nod_stores:
+            if storage not in self.cod_stores:
                 self.add_nod_store(storage)
 
     def _add_new(self, items, values):
-        if len(self.storages) != len(self.nod_stores):
+        if len(self.storages) != len(self.cod_stores):
             self.update_nod_stores()
-        for s in self.nod_stores:
-            self.nod_stores[s]._add_new(items, values)
+        for s in self.cod_stores:
+            self.cod_stores[s]._add_new(items, values)
 
         pass
 
     def _get(self, item):
-        if len(self.storages) != len(self.nod_stores):
+        if len(self.storages) != len(self.cod_stores):
             self.update_nod_stores()
 
-        if len(self.nod_stores) == 0:
+        if len(self.cod_stores) == 0:
             return None
 
         results = dict()
-        for s in self.nod_stores:
-            results[s] = self.nod_stores[s][item]
+        for s in self.cod_stores:
+            results[s] = self.cod_stores[s][item]
 
         for s, result in results.iteritems():
             if result is not None:
@@ -419,15 +424,15 @@ class CODMultiStore(CODStore):
 
 
     def _get_list(self, items):
-        if len(self.storages) != len(self.nod_stores):
+        if len(self.storages) != len(self.cod_stores):
             self.update_nod_stores()
 
-        if len(self.nod_stores) == 0:
+        if len(self.cod_stores) == 0:
             return [None] * len(items)
 
         results_list = dict()
-        for s in self.nod_stores:
-            results_list[s] = self.nod_stores[s][items]
+        for s in self.cod_stores:
+            results_list[s] = self.cod_stores[s][items]
 
         output = [None] * len(items)
         for s, results in results_list.iteritems():

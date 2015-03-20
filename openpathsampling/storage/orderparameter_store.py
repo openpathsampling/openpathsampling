@@ -35,10 +35,10 @@ class ObjectDictStore(ObjectStore):
 
     def store_cache(self, objectdict):
         objectdict.store_dict.update_nod_stores()
-        if self.storage in objectdict.store_dict.nod_stores:
-            objectdict.store_dict.nod_stores[self.storage].update(objectdict.cache_dict)
+        if self.storage in objectdict.store_dict.cod_stores:
+            objectdict.store_dict.cod_stores[self.storage].update(objectdict.cache_dict)
 
-    def sync(self, objectdict=None):
+    def sync(self, objectdict=None, flush_unstorable=True):
         """
         This will update the stored cache of the orderparameter. It is
         different from saving in that the object is only created if it is
@@ -50,14 +50,21 @@ class ObjectDictStore(ObjectStore):
             the objectdict to store. if `None` is given (default) then
             all orderparameters are synced
 
+        flush_unstorable : bool
+            if `True` all not storable entries will be removed from cache. See
+            `Orderparameter.sync()` for explanation
+
+        See also
+        --------
+        Orderparameter.sync
+
         """
         if objectdict is None:
-            map(self.sync, self)
+            for obj in self:
+                self.sync(obj, flush_unstorable)
             return
 
-        objectdict.store_dict.update_nod_stores()
-        if self.storage in objectdict.store_dict.nod_stores:
-            objectdict.store_dict.nod_stores[self.storage].sync()
+        objectdict.sync(store=self, flush_storable=flush_unstorable)
 
         self.storage.sync()
 
