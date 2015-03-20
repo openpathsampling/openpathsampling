@@ -1,4 +1,10 @@
-# API Layers in OpenPathSampling
+# Contributor APIs
+
+Perhaps you have a problem which is complicated enough that you need to add
+major new functionality to OpenPathSampling. In general, we suggest that you
+first see whether the functionality you want to add can be done using the
+tools introduced at the power user level, but if not, you can implement
+useful subclasses by following these instructions.
 
 
 ## Dynamics Engine API
@@ -14,10 +20,10 @@ generates trajectories, using a very simple API.
 To add support for a new dynamics engine, you must create a subclass of our
 `DynamicsEngine` object. This subclass must implement the following features:
 
-* `@property` called `Subclass.snapshot`: getting this returns the current
-  state of the simulation in the form of an `openpathsampling.Snapshot`
-  object. Setting initializes a simulation in the state given by the
-  `openpathsampling.Snapshot`.
+* `@property` called `Subclass.current_snapshot`: getting this returns the
+  current state of the simulation in the form of an
+  `openpathsampling.Snapshot` object. Setting initializes a simulation in
+  the state given by the `openpathsampling.Snapshot`.
 * `next_frame()`: a function that returns the next saved frame from the
   simulation
 * `stop()`: a function that tells the simulation to stop. For simulations
@@ -36,8 +42,8 @@ The most obvious way to combine OPS with another engine is if that engine
 has a convenient API such that you can, in one function call, obtain the
 next frame. This is what we mean by "direct control." For a very simple
 example of direct control, see our `ToyDynamicsEngine`. The `OpenMMEngine`
-provides a much more powerful (and more complicated)
-interface with direct control.
+provides a much more powerful (and more complicated) interface with direct
+control.
 
 However, in some situations you can't exercise direct control over the
 simulation: it's quite possible that your dynamics engine doesn't provide a
@@ -72,6 +78,21 @@ following methods:
   future compatibility.)
 
 ## PathMover API
+
+As with ensembles, we have very powerful facilities for creating new
+`PathMover`s without resorting to creating new subclasses. However, if you
+must create a new subclass, here's what you should understand about
+`PathMover`s.
+
+First, the fundamental object that goes into each move as input is a
+`SampleSet`, which is (at heart) a list of `Sample`s. `Sample`s are ???
+
+`PathMover`s can, in general, be split into two categories: "control"
+and "change". "Change" `PathMover`s actually generate new `Sample`s, whereas
+"Control" `PathMover`s affect which other `PathMover`s are called. See the
+power user discussion of `PathMover`s for more details.
+
+??? something about the MovePaths, and then the .move function ???
 
 ## Calculation API
 
