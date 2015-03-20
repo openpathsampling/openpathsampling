@@ -96,6 +96,13 @@ class Transition(object):
         self.stateA = stateA
         self.stateB = stateB
         self.storage = storage
+
+        self._mover_acceptance = {}
+        pass
+
+    def calculate_mover_acceptance(self, samples):
+        for sample in samples:
+            pass
         pass
 
 
