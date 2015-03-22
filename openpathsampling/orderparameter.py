@@ -1,322 +1,16 @@
 ###############################################################
-#| CLASS Order Parameter
+# | CLASS Order Parameter
 ###############################################################
 
 import mdtraj as md
 import openpathsampling as paths
 from openpathsampling.todict import restores_as_stub_object
+import chainableobjectdict as cod
+import collections
 
-class ObjectDict(dict):
-    """
-    Cache attached to Configuration indices stored in Configuration storage
-
-    Parameters
-    ----------
-    name : string
-        A short and unique name to be used in storage
-
-    Attributes
-    ----------
-    name
-
-    """
-
-    def __init__(self, dimensions = 1, key_class = None):
-        dict.__init__(self)
-        self.dimensions = dimensions
-        self.key_class = key_class
-
-    def _get(self, obj):
-        return dict.__getitem__(self, obj)
-
-    def _set(self, obj, value):
-        return dict.__setitem__(self, obj, value)
-
-    def __getitem__(self, items):
-        # Allow for numpy style of selecting several indices using a list as index parameter
-        if type(items) is list:
-            ret = [self._get(key) for key in items]
-        else:
-            ret = self._get(items)
-
-        return ret
-
-    def __setitem__(self, key, value):
-        self._set(key, value)
-
-    def existing(self, objs):
-        """
-        Find a subset of indices that are present in the cache
-
-        Parameters
-        ----------
-        indices : list of int
-            the initial list of indices to be tested
-
-        Returns
-        -------
-        existing : list of int
-            the subset of indices present in the cache
-        """
-        return [obj for obj in objs if obj in self]
-
-    def missing(self, objs):
-        """
-        Find a subset of indices that are NOT present in the cache
-
-        Parameters
-        ----------
-        indices : list of int
-            the initial list of indices to be tested
-
-        Returns
-        -------
-        existing : list of int
-            the subset of indices NOT present in the cache
-        """
-        return [obj for obj in objs if obj not in self]
-
-
-class StorableObjectDict(ObjectDict):
-    """
-    A cache that is attached to Configuration indices store in the Configuration storage
-
-    Parameters
-    ----------
-    name : string
-        A short and unique name to be used in storage
-
-    Attributes
-    ----------
-    name
-    """
-
-    def __init__(self, name, dimensions = 1, key_class = None):
-        super(StorableObjectDict, self).__init__(dimensions=dimensions, key_class=key_class)
-
-        self.name = name
-        self.storage_caches = dict() # caches the values stored in the data file
-        self.var_name = key_class.__name__.lower() + '_' + 'op_' + self.name
-        self.object_storages = [] # contains the list of associated ObjectStorages (that itself link to netCDF files)
-
-        for s in self.object_storages:
-            if s.content_class is not key_class:
-                print 'One of the storages does not store objects of type :', key_class.__name__
-                return
-
-        for s in self.object_storages:
-            self.storage_caches[s.storage] = dict()
-
-    def _basetype(self, item):
-        if type(item) is tuple:
-            return item[0].content_class
-        elif hasattr(item, 'base_cls'):
-            return item.base_cls
-        else:
-            return type(item)
-
-    def storable(self, item):
-        """
-        Return True if `item` has indices to be stored in an attached storage otherwise cache it in the dict itself
-        """
-        if type(item) is tuple:
-            if item[0].content_class is self.key_class:
-                if item[0].storage in self.object_storages and item[1] < len(item[0]):
-                    return True
-                else:
-                    return False
-            else:
-                return False
-
-        for s in self.storage_caches:
-            if s in item.idx and item.idx[s] > 0:
-                return True
-        return False
-
-    def in_store(self, item):
-        """
-        Returns True, if the item is already stored in an associated cache.
-        """
-        for s in self.storage_caches:
-            if type(item) is tuple:
-                if item[0].content_class is self.key_class:
-                    if item[1] in self.storage_caches[item[0].storage]:
-                        return True
-                else:
-                    # wrong type to load. Cannot ask for Configurations is
-                    # values for Snapshots are stored
-                    return False
-            elif s in item.idx and item.idx[s] in self.storage_caches[s]:
-                return True
-
-        return False
-
-    def __contains__(self, item):
-        return dict.__contains__(self, item) or self.in_store(item)
-
-    def _compatible(self, item):
-        return self._basetype(item) is self.key_class
-
-    def _get_from_stores(self, item):
-        if self._compatible(item):
-            for s in self.storage_caches:
-                if type(item) is tuple:
-                    if item[1] in self.storage_caches[item[0].storage]:
-                        return self.storage_caches[item[0].storage][item[1]]
-                elif s in item.idx and item.idx[s] in self.storage_caches[s]:
-                    return self.storage_caches[s][item.idx[s]]
-
-        return None
-
-    def _set_to_stores(self, obj, value):
-        for s in self.storage_caches:
-            if s in obj.idx:
-                self.storage_caches[s][obj.idx[s]] = value
-
-    def _set(self, obj, value):
-        if self.storable(obj):
-            self._set_to_stores(obj, value)
-        else:
-            return dict.__setitem__(self, obj, value)
-
-    def _get(self, item):
-        if self.in_store(item):
-            return self._get_from_stores(item)
-        else:
-            return dict.__getitem__(self, item)
-
-    def __str__(self):
-        return "{ 'memory' : " + dict.__str__(self) + ", 'storages' : " + str(self.storage_caches) + " }"
-
-
-class FunctionalStorableObjectDict(StorableObjectDict):
-    """
-    A simple dict implementation that will call a function for unknown values
-
-    Parameters
-    ----------
-    fnc : index (int) -> value (float)
-        the function used to generate the cache values for the specified index. In essence a list
-    dimensions : int
-        the dimension of the stored values. Default is `1`
-    content_class : Class
-        the class of objects that can be stored
-    allow_multiple : boolean
-        if True then in the case that the dict is called with several object at a time. The dict
-        creates a list of missing ones and passes all of these to the evaluating function at once.
-        Otherwise the fall-back is to call each item seperately. If possible always the multiple-
-        option should be used.
-
-    Attributes
-    ----------
-    content_class
-    allow_multiple
-    dimensions
-
-    """
-
-    def __init__(self, name, fnc, dimensions = 1, key_class = None, allow_multiple = True):
-        super(FunctionalStorableObjectDict, self).__init__(
-            name=name,
-            dimensions=dimensions,
-            key_class=key_class
-        )
-        self._fnc = fnc
-        self.allow_multiple = allow_multiple
-
-    def _eval(self, val):
-        return self._fnc(val)
-
-    def __call__(self, obj):
-        return self._update(obj)
-
-    def _update(self, items):
-        if type(items) is list:
-            up_items = items
-        else:
-            up_items = [items]
-
-        if self.key_class is not None and len(up_items) > 0 and self._basetype(up_items[0]) is self.key_class:
-            no_cache = self.missing(up_items)
-
-            # Add not yet cached data
-            if len(no_cache) > 0:
-                if self.allow_multiple:
-                    result = self._eval(no_cache)
-
-                    for key, res in zip(no_cache, result):
-                        self[key] = res
-                else:
-                    for obj in no_cache:
-                        self[obj] = self._eval(obj)
-
-            return self[items]
-        else:
-            return []
-
-    def get_transformed_view(self, transform):
-        def fnc(obj):
-            return transform(self(obj))
-
-        return fnc
 
 @restores_as_stub_object
-class ConfigurationVariable(FunctionalStorableObjectDict):
-    """
-    Wrapper for a function that maps a configuration to a number.
-
-    Parameters
-    ----------
-    name : string
-        A descriptive name of the orderparameter. It is used in the string
-        representation.
-    dimensions : int
-        The number of dimensions of the output order parameter. So far this
-        is not used and will be necessary or useful when storage is
-        available
-    storages : list of ConfigurationStorages()
-        contains the list of storages that will be used.
-
-    Attributes
-    ----------
-    name
-    dimensions
-    storages
-
-    """
-
-    def __init__(self, name, dimensions = 1):
-        if type(name) is str and len(name) == 0:
-            raise ValueError('name must be a non-empty string')
-
-        super(OrderParameter, self).__init__(
-            name=name,
-            fnc=None,
-            dimensions=dimensions,
-            key_class=paths.Configuration
-        )
-
-    def __call__(self, items):
-        item_type = self._basetype(items)
-        if item_type is paths.Snapshot:
-            return self._update(items.configuration)
-        elif item_type is paths.Configuration:
-            return self._update(items)
-        elif item_type is paths.Trajectory:
-            return self._update([snapshot.configuration for snapshot in items])
-        elif item_type is list:
-            item_sub_type = self._basetype(items[0])
-            if item_sub_type is paths.Configuration:
-                return self._update(items)
-            elif item_sub_type is paths.Snapshot:
-                return self._update([snapshot.configuration for snapshot in items])
-            else:
-                return None
-        else:
-            return None
-
-@restores_as_stub_object
-class OrderParameter(FunctionalStorableObjectDict):
+class OrderParameter(cod.CODWrap):
     """
     Wrapper for a function that maps a snapshot to a number.
 
@@ -339,32 +33,110 @@ class OrderParameter(FunctionalStorableObjectDict):
     storages
 
     """
-    def __init__(self, name, dimensions = 1):
+
+    def __init__(self, name, dimensions=1):
         if type(name) is str and len(name) == 0:
             raise ValueError('name must be a non-empty string')
 
+        self.pre_dict = cod.CODTransform(self._pre_item)
+        self.multi_dict = cod.CODExpandMulti()
+        self.store_dict = cod.CODMultiStore('collectivevariable', name,
+                                            dimensions, self)
+        self.cache_dict = cod.NestableObjectDict()
+        self.expand_dict = cod.CODUnwrapTuple()
+        self.func_dict = cod.CODFunction(None)
+        if hasattr(self, '_eval'):
+            self.func_dict._eval = self._eval
+        else:
+            self.func_dict._eval = None
+
+        self.name = name
         super(OrderParameter, self).__init__(
-            name=name,
-            fnc=None,
-            dimensions=dimensions,
-            key_class=paths.Snapshot
+            post=self.func_dict + self.expand_dict + self.store_dict +
+                 self.cache_dict + self.multi_dict + self.pre_dict
         )
 
-    def __call__(self, items):
-        item_type = self._basetype(items)
+    def flush_unstorable(self):
+        """
+        Will remove all snapshots from all caches that a not stored at the time
 
-        if item_type is  paths.Snapshot:
-            return self._update(items)
+        This is mainly used to speed up things when it is clear that all the
+        snapshots so far used (in orderparameters) that have NOT been saved
+        will only be temporary. It does not break anything but if you want to
+        save ops for such a snapshot later you have to save the snapshot and then
+        call op(snapshot) to get it to storage.
+
+        E.g., When you run a bootstrapping then you create lots of samples and
+        compute their orderparameters without ever wanting to save these. The
+        problem is that theoretically you could and the storage keeps track of
+        all potential orderparameters that could be saved. Since the only way
+        to determine which of the cached values can be stored when sync is
+        called is to search all cached snapshots we want to avoid doing that
+        for snapshots where we know that these will not be saved. This
+        function does this, by removing all snapshots from the caches that
+        are not yet stored and thus removing the necessity to check them everytime
+        you want to sync. Thus the goal is to keep the storage cache small. At best
+        empty after each safe.
+        """
+
+        self.store_dict.flush_unstorable()
+        storable = {key: value for key, value in self.cache_dict.iteritems()
+                    if len(key.idx) > 0}
+        self.clear()
+        self.update(storable)
+
+    def sync(self, store=None, flush_storable=True):
+        """
+        Sync this orderparameter with attached storages
+
+        Parameters
+        ----------
+        store : OrderparameterStore or None
+            the store to be used, otherwise all underlying storages are synced
+        flush_storable : bool
+            if `False` the store will be synced and information about
+            data that could not be stored are kept in the caches so that they
+            can potentially (when the associated snapshots have been stored)
+            be synced later. This is safer in the sense that you will not loose
+            any computed result, but on the other hand might induce an overhead
+            since the list of not yet saved snapshot can be very large and needs
+            to be searched EVERYTIME the store is saved. If possible you should
+            use `True` (default) here and eventually recompute lost data (which
+            is done automatically).
+        """
+        self.store_dict.update_nod_stores()
+        if store is None:
+            for storage in self.store_dict.cod_stores:
+                self.store_dict.cod_stores[storage].sync(flush_storable)
+        else:
+            if store.storage in self.store_dict.cod_stores:
+                self.store_dict.cod_stores[store.storage].sync(flush_storable)
+
+        storable = {key: value for key, value in self.cache_dict.iteritems()
+                    if type(key) is tuple or len(key.idx) > 0}
+
+        self.cache_dict.clear()
+        self.cache_dict.update(storable)
+
+
+    def _pre_item(self, items):
+        item_type = self.store_dict._basetype(items)
+
+        if item_type is paths.Snapshot:
+            return items
         elif item_type is paths.Trajectory:
-            return self._update(list(list.__iter__(items)))
-        elif item_type is list:
-            item_sub_type = self._basetype(items[0])
+            return list(list.__iter__(items))
+        elif isinstance(items, collections.Iterable):
+            item_sub_type = self.store_dict._basetype(iter(items).next())
             if item_sub_type is paths.Snapshot:
-                return self._update(items)
+                return items
             else:
+                raise KeyError('the orderparameter is only compatible with ' +
+                               'snapshots, trajectories or other iteratble of snapshots!')
                 return None
         else:
             return None
+
 
 @restores_as_stub_object
 class OP_RMSD_To_Lambda(OrderParameter):
@@ -406,7 +178,8 @@ class OP_RMSD_To_Lambda(OrderParameter):
         self.min_lambda = lambda_min
         self.max_lambda = max_lambda
 
-        self._generator = paths.Trajectory([center]).subset(self.atom_indices).md()
+        self._generator = paths.Trajectory([center]).subset(
+            self.atom_indices).md()
         return
 
     ################################################################################
@@ -433,6 +206,7 @@ class OP_RMSD_To_Lambda(OrderParameter):
 
         return map(self._scale_fnc(self.min_lambda, self.max_lambda), results)
 
+
 @restores_as_stub_object
 class OP_Featurizer(OrderParameter):
     """
@@ -458,7 +232,8 @@ class OP_Featurizer(OrderParameter):
     """
 
     def __init__(self, name, featurizer, atom_indices=None):
-        super(OP_Featurizer, self).__init__(name, dimensions=featurizer.n_features)
+        super(OP_Featurizer, self).__init__(name,
+                                            dimensions=featurizer.n_features)
 
         self.atom_indices = atom_indices
         self.featurizer = featurizer
@@ -476,6 +251,7 @@ class OP_Featurizer(OrderParameter):
 
         return result
 
+
 @restores_as_stub_object
 class OP_MD_Function(OrderParameter):
     """Make `OrderParameter` from `fcn` that takes mdtraj.trajectory as input.
@@ -490,6 +266,7 @@ class OP_MD_Function(OrderParameter):
     >>>                              indices=[phi_atoms])
     >>> print psi_orderparam( traj.md() )
     """
+
     def __init__(self, name, fcn, **kwargs):
         """
         Parameters
@@ -517,6 +294,7 @@ class OP_MD_Function(OrderParameter):
         t = trajectory.md(self.topology)
         return self.fcn(t, *args, **self.kwargs)
 
+
 @restores_as_stub_object
 class OP_Volume(OrderParameter):
     """ Make `Volume` into `OrderParameter`: maps to 0.0 or 1.0 """
@@ -532,8 +310,9 @@ class OP_Volume(OrderParameter):
         self.volume = volume
 
     def _eval(self, items):
-        result = [ float(self.volume(item)) for item in items ]
+        result = [float(self.volume(item)) for item in items]
         return result
+
 
 @restores_as_stub_object
 class OP_Function(OrderParameter):
@@ -550,6 +329,7 @@ class OP_Function(OrderParameter):
     >>>                              indices=[psi_atoms])
     >>> print psi_orderparam( traj.md() )
     """
+
     def __init__(self, name, fcn, **kwargs):
         """
         Parameters
@@ -573,7 +353,6 @@ class OP_Function(OrderParameter):
 
 
     def _eval(self, items, *args):
-
         trajectory = paths.Trajectory(items)
 
-        return [ self._fcn(snap, *args, **self.kwargs) for snap in trajectory]
+        return [self._fcn(snap, *args, **self.kwargs) for snap in trajectory]

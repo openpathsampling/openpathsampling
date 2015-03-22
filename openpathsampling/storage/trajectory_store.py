@@ -20,9 +20,10 @@ Trajectory.__getitem__ = load_missing_snapshot(Trajectory.__getitem__)
 Trajectory.__getslice__ = load_missing_snapshot(Trajectory.__getslice__)
 
 class TrajectoryStore(ObjectStore):
-    def __init__(self, storage, lazy=True):
+    def __init__(self, storage, lazy=True, use_snapshot_cache=True):
         super(TrajectoryStore, self).__init__(storage, Trajectory)
         self.lazy = lazy
+        self.use_snapshot_cache = use_snapshot_cache
 
     def save(self, trajectory, idx=None):
         """
@@ -106,7 +107,10 @@ class TrajectoryStore(ObjectStore):
 
         # typecast to snapshot
         if self.lazy:
-            snapshots = [ tuple([self.storage.snapshot, idx]) for idx in self.list_from_numpy(values, 'int') ]
+            if self.use_snapshot_cache:
+                snapshots = [ self.storage.snapshot.cache[idx] if idx in self.storage.snapshot.cache else tuple([self.storage.snapshot, idx]) for idx in self.list_from_numpy(values, 'int') ]
+            else:
+                snapshots = [ tuple([self.storage.snapshot, idx]) for idx in self.list_from_numpy(values, 'int') ]
         else:
             snapshots = self.list_from_numpy(values, 'snapshot')
 

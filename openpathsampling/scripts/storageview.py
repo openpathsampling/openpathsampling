@@ -139,12 +139,17 @@ if __name__ == '__main__':
 
     headline("Orderparameters (" + str(storage.collectivevariable.count()) + ")")
 
+    all_snapshot_traj = storage.snapshot.all()
+
     for p_idx in range(0, storage.collectivevariable.count()):
         obj = storage.collectivevariable.load(p_idx)
         add = ''
-        if len(obj.storage_caches[storage])>0:
-            add = '{ %d : %f, ... } ' % obj.storage_caches[storage].iteritems().next()
-        nline(p_idx,obj.name, str(len(obj.storage_caches[storage])) + ' entries ' + add)
+        values = obj(all_snapshot_traj)
+        found_values = [ (idx, value) for idx, value in enumerate(values) if value is not None ]
+        if len(found_values) > 0:
+            add = '{ %d : %f, ... } ' % (found_values[0][0], found_values[0][1] )
+
+        nline(p_idx,obj.name, str(len(found_values)) + ' entries ' + add)
 
     headline("MovePaths")
 
