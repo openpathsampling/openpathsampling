@@ -43,6 +43,7 @@ class OrderParameter(cod.CODWrap):
         self.store_dict = cod.CODMultiStore('collectivevariable', name,
                                             dimensions, self)
         self.cache_dict = cod.NestableObjectDict()
+        self.expand_dict = cod.CODUnwrapTuple()
         self.func_dict = cod.CODFunction(None)
         if hasattr(self, '_eval'):
             self.func_dict._eval = self._eval
@@ -51,7 +52,7 @@ class OrderParameter(cod.CODWrap):
 
         self.name = name
         super(OrderParameter, self).__init__(
-            post=self.func_dict + self.store_dict +
+            post=self.func_dict + self.expand_dict + self.store_dict +
                  self.cache_dict + self.multi_dict + self.pre_dict
         )
 
@@ -112,7 +113,7 @@ class OrderParameter(cod.CODWrap):
                 self.store_dict.cod_stores[store.storage].sync(flush_storable)
 
         storable = {key: value for key, value in self.cache_dict.iteritems()
-                    if len(key.idx) > 0}
+                    if type(key) is tuple or len(key.idx) > 0}
 
         self.cache_dict.clear()
         self.cache_dict.update(storable)

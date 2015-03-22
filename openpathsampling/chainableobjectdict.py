@@ -222,9 +222,9 @@ class CODFunction(NestableObjectDict):
         self._fnc = fnc
         self.fnc_uses_lists = fnc_uses_lists
 
-    def _eval(self, val):
+    def _eval(self, items):
         if hasattr(self, '_fnc'):
-            return self._fnc(val)
+            return self._fnc(items)
         else:
             return None
 
@@ -233,7 +233,9 @@ class CODFunction(NestableObjectDict):
 
     def _get(self, item):
         if self._eval is None:
-            raise KeyError('No cached values for item - %s' % str(item))
+            return None
+#             raise KeyError('No cached values for item - %s' % str(item))
+
         if self.fnc_uses_lists:
             result = self._eval([item])
             return result[0]
@@ -243,7 +245,8 @@ class CODFunction(NestableObjectDict):
 
     def _get_list(self, items):
         if self._eval is None:
-            raise KeyError('No cached values for %d items - %s' % (len(items), str(items)))
+            return [None] * len(items)
+#            raise KeyError('No cached values for %d items - %s' % (len(items), str(items)))
 
         if self.fnc_uses_lists:
             result = self._eval(items)
@@ -286,7 +289,10 @@ class CODStore(NestableObjectDict):
         return self.store.storage
 
     def sync(self, flush_storable=True):
-        storable = [ (key.idx[self.storage], value) for key, value in self.iteritems() if len(key.idx) > 0 ]
+        storable = [ (key.idx[self.storage], value)
+            for key, value in self.iteritems()
+                if type(key) is not tuple and len(key.idx) > 0]
+
         if len(storable) > 0:
             storable_sorted = sorted(storable, key=lambda x: x[0])
             storable_keys = [x[0] for x in storable_sorted]
@@ -465,6 +471,25 @@ class CODMultiStore(CODStore):
                      for item, result in zip(output, results) ]
 
         return output
+
+class CODUnwrapTuple(NestableObjectDict):
+    def __init__(self):
+        super(CODUnwrapTuple, self).__init__()
+
+    def __getitem__(self, items):
+        if isinstance(items, collections.Iterable):
+            return self.post([value[0].load(value[1])
+                if type(value) is tuple else value for value in items])
+        else:
+            if type(items) is tuple:
+                items = items[0].load(items[1])
+
+            return self.post[items]
+
+    def __setitem__(self, key, value):
+        self.post[key] = value
+
+
 
 
 class CODWrap(NestableObjectDict):
