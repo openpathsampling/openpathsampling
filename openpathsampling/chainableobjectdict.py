@@ -46,7 +46,6 @@ class NestableObjectDict(dict):
 
     def __getitem__(self, items):
         is_listable = isinstance(items, collections.Iterable)
-#        print 'Get from ', self.__class__.__name__, items
 
         if is_listable:
             results = self._get_list(items)
@@ -168,7 +167,8 @@ class NestableObjectDict(dict):
         some = [item for item in items if item is not None]
         replace = func(some)
         it = iter(replace)
-        return [ it.next() if obj is not None else None for obj in some ]
+
+        return [ it.next() if obj is not None else None for obj in items ]
 
     def _replace_none(self, nones, replace):
         it = iter(replace)
@@ -231,15 +231,20 @@ class CODFunction(NestableObjectDict):
     def _contains(self, item):
         return False
 
-    def _get(self, items):
+    def _get(self, item):
+        if self._eval is None:
+            raise KeyError('No cached values for item - %s' % str(item))
         if self.fnc_uses_lists:
-            result = self._eval([items])
+            result = self._eval([item])
             return result[0]
         else:
-            result = self._eval(items)
+            result = self._eval(item)
             return result
 
     def _get_list(self, items):
+        if self._eval is None:
+            raise KeyError('No cached values for %d items - %s' % (len(items), str(items)))
+
         if self.fnc_uses_lists:
             result = self._eval(items)
             return result
@@ -286,7 +291,6 @@ class CODStore(NestableObjectDict):
             storable_sorted = sorted(storable, key=lambda x: x[0])
             storable_keys = [x[0] for x in storable_sorted]
             storable_values = [x[1] for x in storable_sorted]
-            print storable_keys
             self.store.set_list_value(self.scope, storable_keys, storable_values)
 
             if not flush_storable:
@@ -309,8 +313,9 @@ class CODStore(NestableObjectDict):
     def _get_key(self, item):
         if item is None:
             return None
+
         if type(item) is tuple:
-            if item[0].content_class is self.key_class:
+            if item[0].content_class is self.store.key_class:
                 return item[1]
             else:
                 return None

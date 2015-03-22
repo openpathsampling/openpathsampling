@@ -46,15 +46,13 @@ class SnapshotStore(ObjectStore):
 
         Notes
         -----
-        Usually you want to use storage.snapshot.iterator() to get an
-        iterator over all snapshots
+        If you are interested in orderparameters this is faster since it does not
+        load the snapshots. Otherwise storage.snapshot is fine to get an
+        iterator. Both should should be about the same speed.
         """
-        t = Trajectory()
-        count = self.count()
-        for snapshot_idx in range(0,count):
-            t.append(self.load(snapshot_idx))
-
-        return t
+        #TODO: Might think about replacing the iterator with this since it is
+        # faster for orderparameters
+        return Trajectory([ (self, idx) for idx in range(len(self)) ])
 
     def save(self, snapshot, idx=None):
         """
