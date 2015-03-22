@@ -281,15 +281,24 @@ class CODStore(NestableObjectDict):
         return self.store.storage
 
     def sync(self, flush_storable=True):
-        storable = { key.idx[self.storage] : value for key, value in self.iteritems() if len(key.idx) > 0 }
-        self.store.set_list_value(self.scope, storable.keys(), storable.values())
+        storable = [ (key.idx[self.storage], value) for key, value in self.iteritems() if len(key.idx) > 0 ]
+        if len(storable) > 0:
+            storable_sorted = sorted(storable, key=lambda x: x[0])
+            storable_keys = [x[0] for x in storable_sorted]
+            storable_values = [x[1] for x in storable_sorted]
+            print storable_keys
+            self.store.set_list_value(self.scope, storable_keys, storable_values)
 
-        if not flush_storable:
-            non_storable = { key : value for key, value in self.iteritems() if len(key.idx) == 0 }
-            self.clear()
-            self.update(non_storable)
+            if not flush_storable:
+                non_storable = { key : value for key, value in self.iteritems() if len(key.idx) == 0 }
+                self.clear()
+                self.update(non_storable)
+            else:
+                self.clear()
         else:
-            self.clear()
+            if flush_storable:
+                self.clear()
+
 
 
     def flush_unstorable(self):
@@ -334,7 +343,18 @@ class CODStore(NestableObjectDict):
         return self.store.get_value(self.scope, key)
 
     def _load_list(self, keys):
-        return self.store.get_list_value(self.scope, keys)
+        # This is to load all keys in ordered fashion since netCDF does not
+        # allow reading in unsorted order using lists
+        # TODO: Might consider moving this logic to the store, but this is faster
+        # Also requesting an empty list raises an Error
+        if len(keys) > 0:
+            keys_sorted = sorted(enumerate(keys), key=lambda x: x[1])
+            loadable_keys = [x[1] for x in keys_sorted]
+            loadable_idxs = [x[0] for x in keys_sorted]
+            values_sorted = self.store.get_list_value(self.scope, loadable_keys)
+            return [values_sorted[idx] for idx in loadable_idxs]
+        else:
+            return []
 
     def _basetype(self, item):
         if type(item) is tuple:
