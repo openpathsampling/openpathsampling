@@ -106,7 +106,7 @@ class TrajectoryStore(ObjectStore):
 
         # typecast to snapshot
         if self.lazy:
-            snapshots = [ tuple([self.storage.snapshot, idx]) for idx in self.list_from_numpy(values, 'int') ]
+            snapshots = [ self.cache[idx] if idx in self.cache else tuple([self.storage.snapshot, idx]) for idx in self.list_from_numpy(values, 'int') ]
         else:
             snapshots = self.list_from_numpy(values, 'snapshot')
 
