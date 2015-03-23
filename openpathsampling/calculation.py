@@ -237,6 +237,11 @@ class PathSampling(Calculation):
                 self.globalstate.save(self.storage)
                 self.storage.cv.sync()
                 self.storage.sync()
+                # Note: This saves all orderparameters, but does this with
+                # removing computed values for not saved orderparameters
+                # We assume that this is the right cause of action for this
+                # case.
+                self.storage.cv.sync()
 
     def to_dict(self):
         return {
