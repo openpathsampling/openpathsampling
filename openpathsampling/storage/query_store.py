@@ -36,7 +36,7 @@ class QueryStore():
 
         output = []
 
-        op_dict = orderparameter.storage_caches[storage]
+        op_dict = storage.cv.get_list_value(orderparameter, slice(None,None))
 
         for sset_id in range(len(storage.sampleset)):
             if step is not None and sset_id != step:
