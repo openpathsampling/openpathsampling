@@ -401,7 +401,8 @@ class RandomChoiceMovePath(MovePath):
 
     def to_dict(self):
         return {
-            'movepath' : self.movepath
+            'movepath' : self.movepath,
+            'mover' : self.mover
         }
 
     def _get_samples(self):
@@ -430,7 +431,8 @@ class SequentialMovePath(MovePath):
 
     def to_dict(self):
         return {
-            'movepaths' : self.movepaths
+            'movepaths' : self.movepaths,
+            'mover' : self.mover
         }
 
     def _get_samples(self):
@@ -569,7 +571,8 @@ class FilterSamplesMovePath(MovePath):
         return {
             'movepath' : self.movepath,
             'selected_samples' : self.selected_samples,
-            'use_all_samples' : self.use_all_samples
+            'use_all_samples' : self.use_all_samples,
+            'mover' : self.mover
         }
 
 @restores_as_full_object
@@ -605,7 +608,8 @@ class KeepLastSampleMovePath(MovePath):
 
     def to_dict(self):
         return {
-            'movepath' : self.movepath
+            'movepath' : self.movepath,
+            'mover' : self.mover
         }
 
 @restores_as_full_object
@@ -632,5 +636,6 @@ class CalculationMovePath(MovePath):
         return {
             'movepath' : self.movepath,
             'calculation' : self.calculation,
-            'step' : self.step
+            'step' : self.step,
+            'mover' : self.mover
         }

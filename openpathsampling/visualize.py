@@ -569,11 +569,11 @@ class PathTreeBuilder(object):
             if hasattr(sample.details, 'start_point'):
                 old_traj = sample.details.start_point.trajectory
                 old_index = sample.details.start_point.index
-                old_conf = old_traj[old_index].configuration
+                old_conf = old_traj[old_index]
 
                 new_traj = sample.details.final_point.trajectory
                 new_index = sample.details.final_point.index
-                new_conf = new_traj[new_index].configuration
+                new_conf = new_traj[new_index]
 
                 accepted = sample.details.accepted
 
@@ -581,7 +581,7 @@ class PathTreeBuilder(object):
                     t_count += 1
                     if not old_conf in p_x:
                         for pos, snapshot in enumerate(old_traj):
-                            conf = snapshot.configuration
+                            conf = snapshot
                             p_x[conf] = pos
                             p_y[conf] = t_count
 
@@ -640,7 +640,7 @@ class PathTreeBuilder(object):
 
                     if draw_okay:
                         for pos, snapshot in enumerate(new_traj):
-                            conf = snapshot.configuration
+                            conf = snapshot
                             if not conf in p_y:
                                 p_y[conf] = t_count
                                 p_x[conf] = shift + pos
@@ -675,6 +675,7 @@ class PathTreeBuilder(object):
                 xp = x + min_x
                 for r in rr:
                     op = ops[r]
+#                    print matrix[y][x], type(matrix[y][x])
                     if matrix[y][x] is not None and bool(op(matrix[y][x])):
                         if rr[r] is None:
                             rr[r] = xp
