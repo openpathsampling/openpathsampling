@@ -363,7 +363,10 @@ class CODStore(NestableObjectDict):
             loadable_keys = [x[1] for x in keys_sorted]
             loadable_idxs = [x[0] for x in keys_sorted]
             values_sorted = self.store.get_list_value(self.scope, loadable_keys)
-            return [values_sorted[idx] for idx in loadable_idxs]
+            ret = [0.0] * len(keys)
+            [ret.__setitem__(idx, values_sorted[pos])
+                    for pos, idx in enumerate(loadable_idxs)]
+            return ret
         else:
             return []
 
