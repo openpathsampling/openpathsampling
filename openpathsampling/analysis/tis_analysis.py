@@ -128,7 +128,8 @@ class TISTransition(Transition):
     which we DO in the intitialization!)
     """
     
-    def __init__(self, stateA, stateB, orderparameter, interfaces, name, storage=None):
+    def __init__(self, stateA, stateB, orderparameter=None, interfaces=None,
+                 name=None, storage=None):
         super(TISTransition, self).__init__(stateA, stateB, storage)
         # NOTE: making these into dictionaries like this will make it easy
         # to combine them in order to make a PathSampling calculation object
