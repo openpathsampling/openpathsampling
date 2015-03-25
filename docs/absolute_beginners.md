@@ -12,9 +12,6 @@ conceptual framework that OpenPathSampling is built on.
 of Frenkel and Smit's "Understanding Molecular Simulation", or find another
 text that provides a similar introduction.
 
-We assume that you're familiar with the idea that molecular dynamics can be
-used to generate trajectories. And we also assume 
-
 Path sampling techniques apply, obviously, to "paths". We will use the word
 "trajectory" interchangeably with "path". Each path is made up of several
 "snapshots" or "frames". Again, we often use these words interchangeably.
@@ -26,7 +23,16 @@ consists of $3N$ coordinates and $3N$ velocities --- not to mention extra
 information about the simulation box. We can't think in terms of what all
 those variables are doing, so we usually try to map the full dynamics to a
 smaller set of the most important variables. These are called "collective
-variables," andwe use them to define the behavior of 
+variables," and we use them to describe the behavior of molecules in ways
+that we can better understand.
+
+Of course, there are an infinite number of possible collective variable
+definitions, and finding the best ones to describe the process of a given
+transition is very difficult. When specifically referring to a collective
+variable which is used to describe the progress of a transition, we will
+sometimes call that an "order parameter" or a "reaction coordinate."
+Selecting a good order parameter is a necessary first step for some of the
+methods implemented in OpenPathSampling.
 
 ## Volumes apply to snapshots
 
@@ -36,7 +42,9 @@ given snapshot is in that region.
 
 The most common kind of volume is what we call a `LambdaVolume`. These are
 volumes based on some collective variable, as described above. In this case,
-we set a minimum and maximum value of the order parameter, and 
+we set a minimum and maximum value of the collective variable. Since the
+collective variable takes a snapshot and maps it to a single number, we can
+determine whether any snapshot is within that volume.
 
 ## Ensembles apply to trajectories
 
@@ -56,7 +64,30 @@ in OpenPathSampling.
 
 In configurational Monte Carlo, you need some function of the configuration
 (usually related to the energy) to decide what steps are allowed and with
-what probability. In path sampling Monte Carlo, you need some function of th
-entire trajectory. The simplest function is the ensemble indicator
-functions. 
+what probability. In path sampling Monte Carlo, you need some function of
+the entire trajectory. The simplest function is the ensemble indicator
+functions. In the same way that a `Volume` object can tell you whether a
+snapshot is in that `Volume`, an `Ensemble` object can tell you whether or
+not a trajectory is in that `Ensemble`.
 
+A new development in OpenPathSampling is the concept of the "can-extend"
+functions, `can_append` and `can_prepend`. A given ensemble's `can_append`
+function takes a trajectory, and tells you whether there is any way that
+trajectory could be a subtrajectory of a trajectory in the ensemble. 
+While these existed implicitly in the stopping conditions from previous
+implementations, the new idea in OpenPathSampling is that they, as well as
+the ensembles, can be combined in predictable ways to form new and
+well-behaved ensembles. See the power user information on ensembles for more
+details.
+
+## PathMovers move in path space
+
+Let's further consider the analogy with configurational Monte Carlo. When
+doing importance sampling, you need a way to generate a new trial
+configuration from the old configuration. In simple Monte Carlo, this is
+often just a random move of one atom. There are also more advanced
+approaches such as cluster moves.
+
+For path sampling, we need a similar way to move through path space. This is
+what path movers do: they create new trial trajectories for our ensembles.
+The most important path mover is probable the shooting move.

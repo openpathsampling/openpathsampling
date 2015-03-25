@@ -85,15 +85,29 @@ must create a new subclass, here's what you should understand about
 `PathMover`s.
 
 First, the fundamental object that goes into each move as input is a
-`SampleSet`, which is (at heart) a list of `Sample`s. `Sample`s are ???
+`SampleSet`, which is (at heart) a list of `Sample`s. `Sample`s consist of a
+`trajectory`, an identifier for that trajectory `traj_id`, an `ensemble`,
+and further `details` about how that trajectory works. Typically, the move
+takes as input a `SampleSet` with active samples (for example, one sample
+for each ensemble in RETIS). 
 
 `PathMover`s can, in general, be split into two categories: "control"
 and "change". "Change" `PathMover`s actually generate new `Sample`s, whereas
 "Control" `PathMover`s affect which other `PathMover`s are called. See the
-power user discussion of `PathMover`s for more details.
+power user discussion of `PathMover`s for more details: it is very important
+to understand what is feasible there before trying to implement a new
+`PathMover` with the more difficult techniques described here.
 
 ??? something about the MovePaths, and then the .move function ???
 
-## Calculation API
+## PathSimulator API
 
-
+The `PathSimulator` API is by far the simplest. The `PathSimulator` is
+basically what you would normally consider to be the "main" function. In
+many cases, you're trying to sample a specific set of ensembles, and so that
+`PathSampling` example is all you need. Since this ends up being the
+outside loop, you can override it in any way you desire. However, we
+recommend including the `storage` and `engine` in the initialization, and
+calling the main function `.run()`. We usually give `.run` a parameter to
+indicate when it should stop (number of steps to take, or maximum number of
+failed attempts to allow, for example).
