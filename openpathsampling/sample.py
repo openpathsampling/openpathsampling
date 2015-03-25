@@ -348,4 +348,23 @@ class Sample(object):
         )
         return result
 
+    @staticmethod
+    def initial_sample(replica, trajectory, ensemble):
+        """
+        Initial sample from scratch.
+
+        Used to create sample in a given ensemble when generating initial
+        conditions from trajectories.
+        """
+        result = Sample(
+            replica=replica,
+            trajectory=trajectory,
+            ensemble=ensemble,
+            details=paths.MoveDetails.initialization_from_scratch(
+                trajectory=trajectory,
+                ensemble=ensemble)
+        )
+        return result
+        
+
 

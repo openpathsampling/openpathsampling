@@ -49,15 +49,13 @@ class SampleStore(ObjectStore):
 
         return obj
 
-    def update_details(self, obj):
-        if hasattr(obj, '_update_from_storage'):
-            storage = obj._update_from_storage
-        else:
-            storage = self.storage
+    @staticmethod
+    def update_details(obj):
+        storage = obj._origin
 
         idx = obj.idx[storage]
         details_idx = int(storage.variables['sample_details_idx'][idx])
-        details=storage.movedetails.load(details_idx)
+        details = storage.movedetails.load(details_idx)
 
         obj.details = details
 

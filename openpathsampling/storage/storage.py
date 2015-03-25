@@ -66,8 +66,7 @@ class Storage(netcdf.Dataset):
         self.sample = paths.storage.SampleStore(storage)
         self.sampleset = paths.storage.SampleSetStore(storage)
 
-        self.orderparameter = paths.storage.ObjectDictStore(storage, paths.OrderParameter, paths.Configuration)
-        self.collectivevariable = self.orderparameter
+        self.collectivevariable = paths.storage.ObjectDictStore(storage, paths.OrderParameter, paths.Snapshot)
         self.cv = self.collectivevariable
 
         # normal objects
@@ -85,6 +84,12 @@ class Storage(netcdf.Dataset):
         self.volume = paths.storage.ObjectStore(storage, paths.Volume, is_named=True, nestable=True)
         self.ensemble = paths.storage.ObjectStore(storage, paths.Ensemble, is_named=True, nestable=True)
         self.movepath = paths.storage.ObjectStore(storage, paths.MovePath, is_named=False, nestable=True)
+
+        self.transition = paths.storage.ObjectStore(storage,
+                                                    paths.TISTransition,
+                                                    is_named=True)
+
+        self.query = paths.storage.QueryStore(storage)
 
     def _setup_class(self):
         """
@@ -441,14 +446,12 @@ class Storage(netcdf.Dataset):
 
         # Copy all configurations and momenta to new file in reduced form
 
-        if subset is not None:
-            for obj in self.configuration:
-                storage2.configuration.save(obj.copy(subset), idx=obj.idx[self])
-            for obj in self.momentum:
-                storage2.momentum.save(obj.copy(subset), idx=obj.idx[self])
-        else:
-            self.clone_storage('configuration', storage2)
-            self.clone_storage('momentum', storage2)
+        for obj in self.configuration.iterator():
+#            print obj._delayed_loading
+#            [ value(obj, self.configuration) for key, value in obj._delayed_loading.iteritems() ]
+            storage2.configuration.save(obj.copy(subset), idx=obj.idx[self])
+        for obj in self.momentum.iterator():
+            storage2.momentum.save(obj.copy(subset), idx=obj.idx[self])
 
         # All other should be copied one to one. We do this explicitely although we could just copy all
         # and exclude configurations and momenta, but this seems cleaner
@@ -456,7 +459,7 @@ class Storage(netcdf.Dataset):
         for storage_name in [
                 'trajectory', 'snapshot', 'sample', 'sampleset', 'orderparameter',
                 'pathmover', 'engine', 'movedetails', 'shootingpoint', 'shootingpointselector',
-                'globalstate', 'volume', 'ensemble', 'movepath', 'calculation']:
+                'globalstate', 'volume', 'ensemble', 'movepath', 'dynamicsengine' ]:
             self.clone_storage(storage_name, storage2)
 
         storage2.close()
@@ -499,8 +502,6 @@ class Storage(netcdf.Dataset):
             storage_name = storage_to_copy
         else:
             storage_name = storage_to_copy.db
-
-#        print storage_name
 
         for variable in self.variables.keys():
             if variable.startswith(storage_name + '_'):

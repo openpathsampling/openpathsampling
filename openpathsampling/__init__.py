@@ -23,7 +23,7 @@ from pathmover import (
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
-    CollapseMove, CalculationMover
+    CollapseMove, CalculationMover, PathReversalSet
     #, BootstrapPromotionMove
 )
 
@@ -54,6 +54,12 @@ from toy_dynamics.toy_engine import ToyEngine
 from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
     LeapfrogVerletIntegrator
 
-from movepath import EmptyMovePath, ConditionalSequentialMovePath, MovePath, \
-    PartialAcceptanceSequentialMovePath, RandomChoiceMovePath, SampleMovePath, SequentialMovePath, \
-    KeepLastSampleMovePath, CollapsedMovePath, FilterSamplesMovePath, CalculationMovePath
+from analysis.tis_analysis import TISTransition
+
+from movepath import (EmptyMovePath, ConditionalSequentialMovePath,
+                      MovePath, PartialAcceptanceSequentialMovePath,
+                      RandomChoiceMovePath, SampleMovePath,
+                      SequentialMovePath,  KeepLastSampleMovePath,
+                      CollapsedMovePath, FilterSamplesMovePath,
+                      CalculationMovePath
+                     )
