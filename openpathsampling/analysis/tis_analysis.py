@@ -285,6 +285,7 @@ class TISTransition(Transition):
         elif method == "mbar":
             pass
 
+        self.tcp = tcp
         return tcp
 
     def rate(self, flux=None, flux_error=None, force=False):
@@ -360,6 +361,7 @@ class RETISTransition(TISTransition):
 
     @property
     def multiple_set_minus_switching(self):
+        # TODO: move this to network
         pass
 
     @property
@@ -377,6 +379,3 @@ class RETISTransition(TISTransition):
         """
         pass
 
-class RETISBirectionalSetup(object):
-    def __init__(self, A_to_B, B_to_A):
-        pass
