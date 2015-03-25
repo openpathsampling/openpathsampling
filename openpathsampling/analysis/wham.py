@@ -126,19 +126,14 @@ class WHAM(object):
         for s in range(self.nhists):
             i=1 # ignore the line of zeros before 
             i=0 # new version doesn't have extra line of zeros
-            while (     (self.hists[keys[i]][s]==1.0) \
-                    and (self.hists[keys[i+1]][s]==1.0) \
-                    and (i < len(keys)-1) ):
+            while ((i < len(keys)-1) and
+                   (abs(self.hists[keys[i]][s] - 1.0) < self.tol) and
+                   (abs(self.hists[keys[i+1]][s] - 1.0) < self.tol)):
                 self.hists[keys[i]][s] = 0.0
                 i += 1
         return
 
-    def guess_lnZ(self):
-        """
-        Prepares a guess of ln(Z) based on crossing probabilities.
-
-        A trivial guess should also work, but this isn't very expensive.
-        """
+    def pre_guess(self):
         # taken from
         # $DYNQ/scripts/crossing_probability.py:series_set_crossing_lambdas
         lambda_i = { }
@@ -146,17 +141,26 @@ class WHAM(object):
         prev_lambda = 0
         for lmbda in sorted(self.hists.keys()):
             for i in range(len(self.hists[lmbda])):
-                if (prev_set[i]==1.0) and (self.hists[lmbda][i]!=1.0):
+                if (abs(prev_set[i]-1.0) < self.tol and 
+                        abs(self.hists[lmbda][i]-1.0) > self.tol):
                     lambda_i[i] = prev_lambda
             prev_lambda = lmbda
             prev_set = self.hists[lmbda]
         lambda_i[len(lambda_i)] = max(self.hists.keys())
+        return lambda_i
 
-        #lambda_i = series_set_crossing_lambdas(self.hists)
+    def guess_lnZ(self):
+        """
+        Prepares a guess of ln(Z) based on crossing probabilities.
+
+        A trivial guess should also work, but this isn't very expensive.
+        """
+
+        lambda_i = self.pre_guess()
         scaling = 1.0
         crossing_prob = []
         for key in sorted(lambda_i.keys()):
-            #print key, lambda_i[key]
+            #print key, lambda_i[key], self.hists[lambda_i[key]] #DEBUG
             if (key > 1):
                 crossing_prob.append(self.hists[lambda_i[key-1]][key-2])
             elif (key > 0):
@@ -164,6 +168,7 @@ class WHAM(object):
 
         scaled = []
         scaling = 1.0
+        #print crossing_prob #DEBUG
         for val in crossing_prob:
             self.lnZ.append(math.log(scaling*val))
             scaled.append(scaling*val)
