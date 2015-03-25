@@ -21,6 +21,7 @@ requirements:
     - docopt
     - jinja2
     - mdtraj
+    - svgwrite
 
   run:
     - python
@@ -35,6 +36,7 @@ requirements:
     - pyyaml
     - jinja2
     - mdtraj
+    - svgwrite
 
 about:
   home: https://github.com/choderalab/openpathsampling

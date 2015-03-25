@@ -49,13 +49,13 @@ class SampleStore(ObjectStore):
 
         return obj
 
-    def update_details(self, obj):
-        storage = self.storage
+    @staticmethod
+    def update_details(obj):
+        storage = obj._origin
 
-        idx = obj.idx[self.storage]
-        details_idx = int(self.storage.variables['sample_details_idx'][idx])
-        t0 = time.time()
-        details=self.storage.movedetails.load(details_idx)
+        idx = obj.idx[storage]
+        details_idx = int(storage.variables['sample_details_idx'][idx])
+        details = storage.movedetails.load(details_idx)
 
         obj.details = details
 
