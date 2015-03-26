@@ -43,22 +43,6 @@ In the order listed above, the time for the rate calculation is almost
 entirely in determining the flux from the information in the minus mover.
 """
 
-def sample_generator(samples):
-    i=0
-    while i<len(samples):
-        yield samples[i]
-        i = i+1
-
-def get_n_samples(n, samples):
-    seq = iter(sample_generator(samples))
-    result = []
-    try:
-        for i in range(n):
-            result.append(seq.next())
-    except StopIteration:
-        pass
-    return result
-
 
 def pathlength(sample):
     return len(sample.trajectory)
@@ -132,23 +116,27 @@ class TISTransition(Transition):
         super(TISTransition, self).__init__(stateA, stateB, storage)
         # NOTE: making these into dictionaries like this will make it easy
         # to combine them in order to make a PathSampling calculation object
-        self.movers['shooting'] = []
-        self.movers['pathreversal'] = []
 
         self.stateA = stateA
         self.stateB = stateB
         self.interfaces = interfaces
         self.name = name
         self.storage = storage
-        self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
-            stateA, stateB, self.interfaces
-        )
 
-        for ensemble in self.ensembles:
-            ensemble.name = "I'face "+str(self.ensembles.index(ensemble))
+        # If we reload from a storage file, we want to use the
+        # ensembles/movers from the file, not the automatically generated
+        # ones here
 
-        if self.storage is None:
-            # TODO: I don't like this way of handling it
+        # build ensembles if we don't already have them
+        if not hasattr(self, "ensembles"):
+            self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
+                stateA, stateB, self.interfaces
+            )
+            for ensemble in self.ensembles:
+                ensemble.name = "I'face "+str(self.ensembles.index(ensemble))
+
+        # build movers if we don't already have them
+        if self.movers == {}:
             self.movers['shooting'] = paths.PathMoverFactory.OneWayShootingSet(
                 paths.UniformSelector(), self.ensembles
             )
@@ -181,7 +169,6 @@ class TISTransition(Transition):
             )
         }
 
-        pass
 
     def to_dict(self):
         ret_dict = {
@@ -208,15 +195,6 @@ class TISTransition(Transition):
         mytrans.ensembles = adict['ensembles']
         return mytrans
 
-    # path movers
-    @property
-    def shooting_movers(self):
-        return self.movers['shooting']
-
-    @property
-    def pathreversal_movers(self):
-        return self.movers['pathreversal']
-
     # parameters for different types of output
     def ensemble_statistics(self, ensemble, samples, weights=None, force=False):
         """Calculate stats for a given ensemble: path length, crossing prob
@@ -234,7 +212,7 @@ class TISTransition(Transition):
         # figure out which histograms need to updated for this ensemble
         run_it = []
         if not force:
-            # figure out which need to be rerun
+            # TODO figure out which need to be rerun
             pass
         else:
             run_it = self.ensemble_histogram_info.keys()
@@ -267,12 +245,12 @@ class TISTransition(Transition):
         hist = self.histograms['pathlength'][ensemble]
         return hist.normalized()
 
-    def crossing_probability(self, ensemble):
+    def crossing_probability(self, ensemble, nblocks=1):
         # check existence and correctness of self.histograms[cp][ens]
         hist = self.histograms['crossing_probability'][ensemble]
         return hist.reverse_cumulative()
 
-    def total_crossing_probability(self, method="wham", force=False):
+    def total_crossing_probability(self, method="wham", force=False, nblocks=1):
         """Return the total crossing probability using `method`"""
         if method == "wham":
             cp = {}
