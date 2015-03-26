@@ -176,9 +176,13 @@ class NestableObjectDict(dict):
 
 class CODStorableCache(NestableObjectDict):
     def _add_new(self, items, values):
-        for item, value in zip(items, values):
-            if type(item) is tuple or len(item.idx) > 0:
-                self[item] = value
+        if isinstance(items, collections.Iterable):
+            for item, value in zip(items, values):
+                if type(item) is tuple or len(item.idx) > 0:
+                    self._set(item, value)
+        else:
+            if type(items) is tuple or len(items.idx) > 0:
+                self._set(items, values)
 
 class CODExpandMulti(NestableObjectDict):
     """
