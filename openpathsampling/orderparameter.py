@@ -56,6 +56,8 @@ class OrderParameter(cod.CODWrap):
                  self.cache_dict + self.multi_dict + self.pre_dict
         )
 
+        self._stored = False
+
     def sync(self, store=None, flush_storable=True):
         """
         Sync this orderparameter with attached storages
@@ -82,6 +84,16 @@ class OrderParameter(cod.CODWrap):
         else:
             if store.storage in self.store_dict.cod_stores:
                 self.store_dict.cod_stores[store.storage].sync(flush_storable)
+
+        if self._stored is False and hasattr(self, 'idx'):
+            # only do this when saving and remove all not storable objects from
+            # cache
+            self._stored = True
+            storable = {key: value for key, value in self.cache_dict.iteritems()
+                if type(key) is tuple or len(key.idx) > 0 }
+
+            self.cache_dict.clear()
+            self.cache_dict.update(storable)
 
     def _pre_item(self, items):
         item_type = self.store_dict._basetype(items)
