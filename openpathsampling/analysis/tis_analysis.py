@@ -75,11 +75,10 @@ class Transition(object):
     """
     Describes (in general) a transition between two states.
     """
-    def __init__(self, stateA, stateB, storage=None):
+    def __init__(self, stateA, stateB):
         self.movers = {}
         self.stateA = stateA
         self.stateB = stateB
-        self.storage = storage
 
         self._mover_acceptance = {}
         pass
@@ -94,8 +93,8 @@ class TPSTransition(Transition):
     """
     Transition using TPS ensembles
     """
-    def __init__(self, stateA, stateB, storage=None):
-        super(TPSTransition, self).__init__(stateA, stateB, storage)
+    def __init__(self, stateA, stateB):
+        super(TPSTransition, self).__init__(stateA, stateB)
         self.movers['shooting'] = []
         self.movers['shifting'] = []
         self.movers['pathreversal'] = []
@@ -110,10 +109,25 @@ class TISTransition(Transition):
     The additional information from the TIS ensembles allows us to set up
     all the analysis (assuming we built these are proper TIS ensembles,
     which we DO in the intitialization!)
+
+    Parameters
+    ----------
+    stateA : Volume
+        Volume for the state from which the transition begins
+    stateB : Volume
+        Volume for the state in which the transition ends
+    interfaces : list of Volume
+        Volumes for the interfaces
+    orderparameter : CollectiveVariable
+        order parameter to be used in the analysis (does not need to be the
+        parameter which defines the interfaces, although it usually is)
+    name : string
+        name for the transition
+
     """
     
-    def __init__(self, stateA, stateB, orderparameter, interfaces, name, storage=None):
-        super(TISTransition, self).__init__(stateA, stateB, storage)
+    def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
+        super(TISTransition, self).__init__(stateA, stateB)
         # NOTE: making these into dictionaries like this will make it easy
         # to combine them in order to make a PathSampling calculation object
 
@@ -121,7 +135,6 @@ class TISTransition(Transition):
         self.stateB = stateB
         self.interfaces = interfaces
         self.name = name
-        self.storage = storage
 
         # If we reload from a storage file, we want to use the
         # ensembles/movers from the file, not the automatically generated
@@ -129,23 +142,14 @@ class TISTransition(Transition):
 
         # build ensembles if we don't already have them
         if not hasattr(self, "ensembles"):
-            self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
-                stateA, stateB, self.interfaces
-            )
-            for ensemble in self.ensembles:
-                ensemble.name = "I'face "+str(self.ensembles.index(ensemble))
+            self.build_ensembles(self.stateA, self.stateB, self.interfaces)
 
         # build movers if we don't already have them
         if self.movers == {}:
-            self.movers['shooting'] = paths.PathMoverFactory.OneWayShootingSet(
-                paths.UniformSelector(), self.ensembles
-            )
-            self.movers['pathreversal'] = paths.PathReversalSet(self.ensembles)
-
+            self.build_movers()
 
         self.orderparameter = orderparameter
         self.default_orderparameter = self.orderparameter
-
 
         self.total_crossing_probability_method="wham" 
         self.histograms = {}
@@ -176,24 +180,37 @@ class TISTransition(Transition):
             'stateB' : self.stateB,
             'orderparameter' : self.orderparameter,
             'interfaces' : self.interfaces,
-            'storage' : self.storage,
+            'name' : self.name,
             'movers' : self.movers,
             'ensembles' : self.ensembles
         }
         return ret_dict
 
     @staticmethod
-    def from_dict(self, adict):
+    def from_dict(adict):
         mytrans = TISTransition(
             stateA=adict['stateA'],
             stateB=adict['stateB'],
-            orderparameter=adict['orderparameter'],
             interfaces=adict['interfaces'],
-            storage=adict['storage']
+            orderparameter=adict['orderparameter'],
+            name=adict['name']
         )
         mytrans.movers = adict['movers']
         mytrans.ensembles = adict['ensembles']
         return mytrans
+
+    def build_ensembles(self, stateA, stateB, interfaces):
+        self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
+            stateA, stateB, self.interfaces
+        )
+        for ensemble in self.ensembles:
+            ensemble.name = "I'face "+str(self.ensembles.index(ensemble))
+
+    def build_movers(self):
+        self.movers['shooting'] = paths.PathMoverFactory.OneWayShootingSet(
+            paths.UniformSelector(), self.ensembles
+        )
+        self.movers['pathreversal'] = paths.PathReversalSet(self.ensembles)
 
     # parameters for different types of output
     def ensemble_statistics(self, ensemble, samples, weights=None, force=False):
@@ -299,21 +316,25 @@ class TISTransition(Transition):
         return root_mover
 
 
-
 class RETISTransition(TISTransition):
     """Transition class for RETIS."""
-    def __init__(self, stateA, stateB, interfaces, storage=None):
-        super(RETISTransition, self).__init__(stateA, stateB, interfaces, storage)
-        self.movers['repex'] = []
-        self.movers['minus'] = []
+    def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
+        super(RETISTransition, self).__init__(stateA, stateB, interfaces,
+                                              orderparameter, name)
 
         self.minus_ensemble = paths.MinusInterfaceEnsemble(
             state_vol=stateA, 
             innermost_vol=interfaces[0]
         )
 
-        self.movers['repex'] = paths.NeighborEnsembleReplicaExchange(self.ensembles)
-        self.movers['minus'] = paths.MinusMover(self.minus_ensemble, self.ensemble[0])
+        try:
+            self.movers['repex']
+        except KeyError:
+            self.movers['repex'] = paths.NeighborEnsembleReplicaExchange(self.ensembles)
+        try:
+            self.movers['minus']
+        except KeyError:
+            self.movers['minus'] = paths.MinusMover(self.minus_ensemble, self.ensemble[0])
 
 
     @property
