@@ -174,6 +174,11 @@ class NestableObjectDict(dict):
         it = iter(replace)
         return [ obj if obj is not None else it.next() for obj in nones ]
 
+class CODStorableCache(NestableObjectDict):
+    def _add_new(self, items, values):
+        for item, value in zip(items, values):
+            if type(item) is tuple or len(item.idx) > 0:
+                self[item] = value
 
 class CODExpandMulti(NestableObjectDict):
     """
@@ -309,13 +314,6 @@ class CODStore(NestableObjectDict):
             if flush_storable:
                 self.clear()
 
-
-
-    def flush_unstorable(self):
-        storable = { key : value for key, value in self.iteritems() if len(key.idx) > 0 }
-        self.clear()
-        self.update(storable)
-
     def _get_key(self, item):
         if item is None:
             return None
@@ -399,16 +397,6 @@ class CODMultiStore(CODStore):
             return self.scope.idx.keys()
         else:
             return []
-
-    def flush_unstorable(self):
-        if len(self.storages) != len(self.cod_stores):
-            self.update_nod_stores()
-
-        if len(self.cod_stores) == 0:
-            return None
-
-        [ store.flush_unstorable() for store in self.cod_stores.values() ]
-
 
     def sync(self, flush_storable=True):
         if len(self.storages) != len(self.cod_stores):
