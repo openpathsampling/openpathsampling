@@ -5,7 +5,7 @@ cd examples/ipython
 testfail=0
 python ipynbtest.py "alanine.ipynb" || testfail=1
 python ipynbtest.py "sliced_sequential_ensembles.ipynb" || testfail=1
-python ipynbtest.py "toy_dynamics_tis.ipynb" || testfail=1
+python ipynbtest.py "toy_boostrapping.ipynb" || testfail=1
 python ipynbtest.py "toy_tis.ipynb" || testfail=1
 python ipynbtest.py "toy_storage.ipynb" || testfail=1
 python ipynbtest.py "langevin_integrator_check.ipynb" || testfail=1
