@@ -1235,7 +1235,6 @@ class CalculationMover(PathMover):
 class MultipleSetMinusMover(RandomChoiceMover):
     pass
 
-@restores_as_stub_object
 def NeighborEnsembleReplicaExchange(ensemble_list):
     movers = [
         ReplicaExchangeMover(ensembles=[[ensemble_list[i], ensemble_list[i+1]]])

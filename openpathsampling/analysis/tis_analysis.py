@@ -334,7 +334,7 @@ class RETISTransition(TISTransition):
         try:
             self.movers['minus']
         except KeyError:
-            self.movers['minus'] = paths.MinusMover(self.minus_ensemble, self.ensemble[0])
+            self.movers['minus'] = paths.MinusMover(self.minus_ensemble, self.ensembles[0])
 
 
     @property
