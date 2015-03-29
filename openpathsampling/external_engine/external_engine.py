@@ -1,6 +1,6 @@
 import openpathsampling as paths
-from paths.dynamics_engine import DynamicsEngine
-from paths.todict import restores_as_full_object
+from openpathsampling import DynamicsEngine
+from openpathsampling import restores_as_full_object
 
 import subprocess
 
