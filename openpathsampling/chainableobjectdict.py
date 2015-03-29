@@ -246,7 +246,6 @@ class CODFunction(NestableObjectDict):
     def _get_list(self, items):
         if self._eval is None:
             return [None] * len(items)
-#            raise KeyError('No cached values for %d items - %s' % (len(items), str(items)))
 
         if self.fnc_uses_lists:
             result = self._eval(items)
@@ -291,7 +290,7 @@ class CODStore(NestableObjectDict):
     def sync(self, flush_storable=True):
         storable = [ (key.idx[self.storage], value)
             for key, value in self.iteritems()
-                if type(key) is not tuple and len(key.idx) > 0]
+                if type(key) is not tuple and len(key.idx) > 0 and self.storage in key.idx ]
 
         if len(storable) > 0:
             storable_sorted = sorted(storable, key=lambda x: x[0])
