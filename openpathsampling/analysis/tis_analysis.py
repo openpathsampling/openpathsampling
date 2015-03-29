@@ -376,5 +376,17 @@ class RETISTransition(TISTransition):
         
         Extends `TISTransition.default_movers`.
         """
-        pass
+        repex_sel = paths.RandomChoiceMover(
+            movers=self.movers['repex'],
+            name="ReplicaExchange"
+        )
+        tis_root_mover = super(RETISTransition, self).default_movers(engine)
+        movers = tis_root_mover.movers + [repex_sel, self.movers['minus']]
+        weights = tis_root_mover.weights + [0.5, 0.2 / len(self.ensembles)]
+        root_mover = paths.RandomChoiceMover(
+            movers=movers,
+            weights=weights,
+            name="RootMover"
+        )
+        return root_mover
 
