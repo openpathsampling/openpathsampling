@@ -267,7 +267,7 @@ class SampleSet(object):
         way to translate.
         """
         translation = {}
-        for ens1 in sset.ensemble_list:
+        for ens1 in sset.ensemble_list():
             for ens2 in new_ensembles:
                 if ens1.__str__() == ens2.__str__():
                     translation[ens1] = ens2
