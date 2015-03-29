@@ -41,9 +41,6 @@ class ChainDict(dict):
         dict.__init__(self)
         self.post = None
 
-    def __iter__(self):
-        return None
-
     def __getitem__(self, items):
         is_listable = isinstance(items, collections.Iterable)
 
@@ -75,6 +72,7 @@ class ChainDict(dict):
         return results
 
     def _add_new(self, items, values):
+
         self[items] = values
 
     def __setitem__(self, key, value):
@@ -90,10 +88,11 @@ class ChainDict(dict):
         return [dict.__contains__(self, item) for item in items]
 
     def _set(self, item, value):
-        dict.__setitem__(self, item, value)
+        if value is not None:
+            dict.__setitem__(self, item, value)
 
     def _set_list(self, items, values):
-        [dict.__setitem__(self, item, value) for item, value in zip(items, values)]
+        [dict.__setitem__(self, item, value) for item, value in zip(items, values) if value is not None]
 
     def _get(self, item):
         try:
@@ -244,15 +243,18 @@ class BufferedStore(Wrap):
     def _add_new(self, items, values):
         if isinstance(items, collections.Iterable):
             for item, value in zip(items, values):
-                if type(item) is tuple or len(item.idx) > 0 \
-                        and self.storage in item.idx:
-                    self._cache._set(item, value)
-                    self._store._set(item, value)
+                if value is not None:
+                    if type(item) is tuple or len(item.idx) > 0 \
+                            and self.storage in item.idx:
+                        self._cache._set(item, value)
+                        self._store._set(item, value)
         else:
-            if type(items) is tuple or len(items.idx) > 0 \
-                        and self.storage in items.idx:
-                self._cache._set(items, values)
-                self._store._set(items, values)
+            if values is not None:
+                if type(items) is tuple or len(items.idx) > 0 \
+                            and self.storage in items.idx:
+
+                    self._cache._set(items, values)
+                    self._store._set(items, values)
 
 
 class Store(ChainDict):
@@ -426,27 +428,37 @@ class MultiStore(Store):
         for s in self.cod_stores:
             results[s] = self.cod_stores[s][item]
 
-        for s, result in results.iteritems():
-            if result is not None:
-                return result
+        output = None
 
-        return None
+        for result in results.values():
+            if result is None:
+                return None
+            elif output is None:
+                output = result
+
+        return output
 
 
     def _get_list(self, items):
         if len(self.storages) != len(self.cod_stores):
             self.update_nod_stores()
 
+        output = [None] * len(items)
+
         if len(self.cod_stores) == 0:
-            return [None] * len(items)
+            return output
 
         results_list = dict()
         for s in self.cod_stores:
             results_list[s] = self.cod_stores[s][items]
 
-        output = [None] * len(items)
+        first = True
         for s, results in results_list.iteritems():
-            output = [item if item is not None or results is None else result
+            if first:
+                output = results
+                first = False
+            else:
+                output = [None if item is None or result is None else output
                      for item, result in zip(output, results) ]
 
         return output

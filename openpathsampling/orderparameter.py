@@ -68,11 +68,11 @@ class OrderParameter(cd.Wrap):
             the storage for which the cache should be copied
         """
         if storage in self.store_dict.cod_stores:
-            self.store_dict.cod_stores[storage].post.update(self.cache_dict)
             stored = {
                 key : value for key, value in self.cache_dict
                     if type(key) is tuple or storage in key.idx
             }
+            self.store_dict.cod_stores[storage].post.update(stored)
             self.store_dict.cod_stores[storage].update(stored)
 
     def sync(self, storage):
