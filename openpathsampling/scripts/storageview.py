@@ -80,6 +80,7 @@ if __name__ == '__main__':
     headline("Content")
 
     line("Number of trajectories", storage.trajectory.count())
+    line("Number of snapshots", storage.snapshot.count())
     line("Number of configurations", storage.configuration.count())
     line("Number of momenta", storage.momentum.count())
 
@@ -150,6 +151,8 @@ if __name__ == '__main__':
             add = '{ %d : %f, ... } ' % (found_values[0][0], found_values[0][1] )
 
         nline(p_idx,obj.name, str(len(found_values)) + ' entries ' + add)
+
+    exit()
 
     headline("MovePaths")
 

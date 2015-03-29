@@ -5,12 +5,12 @@
 import mdtraj as md
 import openpathsampling as paths
 from openpathsampling.todict import restores_as_stub_object
-import chainableobjectdict as cod
+import chaindict as cd
 import collections
 
 
 @restores_as_stub_object
-class OrderParameter(cod.CODWrap):
+class OrderParameter(cd.Wrap):
     """
     Wrapper for a function that maps a snapshot to a number.
 
@@ -38,13 +38,13 @@ class OrderParameter(cod.CODWrap):
         if type(name) is str and len(name) == 0:
             raise ValueError('name must be a non-empty string')
 
-        self.pre_dict = cod.CODTransform(self._pre_item)
-        self.multi_dict = cod.CODExpandMulti()
-        self.store_dict = cod.CODMultiStore('collectivevariable', name,
+        self.pre_dict = cd.Transform(self._pre_item)
+        self.multi_dict = cd.ExpandMulti()
+        self.store_dict = cd.MultiStore('collectivevariable', name,
                                             dimensions, self)
-        self.cache_dict = cod.CODStorableCache()
-        self.expand_dict = cod.CODUnwrapTuple()
-        self.func_dict = cod.CODFunction(None)
+        self.cache_dict = cd.ChainDict()
+        self.expand_dict = cd.UnwrapTuple()
+        self.func_dict = cd.Function(None)
         if hasattr(self, '_eval'):
             self.func_dict._eval = self._eval
         else:
@@ -52,13 +52,30 @@ class OrderParameter(cod.CODWrap):
 
         self.name = name
         super(OrderParameter, self).__init__(
-            post=self.func_dict + self.expand_dict + self.store_dict +
-                 self.cache_dict + self.multi_dict + self.pre_dict
+            post=self.func_dict + self.expand_dict + self.cache_dict +
+                 self.store_dict + self.multi_dict + self.pre_dict
         )
 
         self._stored = False
 
-    def sync(self, store=None, flush_storable=True):
+    def flush_cache(self, storage):
+        """
+        Copy the cache to the internal storage cache for saving
+
+        Parameters
+        ----------
+        storage : Storage()
+            the storage for which the cache should be copied
+        """
+        if storage in self.store_dict.cod_stores:
+            self.store_dict.cod_stores[storage].post.update(self.cache_dict)
+            stored = {
+                key : value for key, value in self.cache_dict
+                    if type(key) is tuple or storage in key.idx
+            }
+            self.store_dict.cod_stores[storage].update(stored)
+
+    def sync(self, storage):
         """
         Sync this orderparameter with attached storages
 
@@ -66,34 +83,15 @@ class OrderParameter(cod.CODWrap):
         ----------
         store : OrderparameterStore or None
             the store to be used, otherwise all underlying storages are synced
-        flush_storable : bool
-            if `False` the store will be synced and information about
-            data that could not be stored are kept in the caches so that they
-            can potentially (when the associated snapshots have been stored)
-            be synced later. This is safer in the sense that you will not loose
-            any computed result, but on the other hand might induce an overhead
-            since the list of not yet saved snapshot can be very large and needs
-            to be searched EVERYTIME the store is saved. If possible you should
-            use `True` (default) here and eventually recompute lost data (which
-            is done automatically).
+        store_cache : bool
+            if `False` (default) the store will only store new values. If
+            `True` also the cached values will be stored. This is much more
+            costly and is usually only run once, when the orderparameter is
+            saved the first time
         """
         self.store_dict.update_nod_stores()
-        if store is None:
-            for storage in self.store_dict.cod_stores:
-                self.store_dict.cod_stores[storage].sync(flush_storable)
-        else:
-            if store.storage in self.store_dict.cod_stores:
-                self.store_dict.cod_stores[store.storage].sync(flush_storable)
-
-        if self._stored is False and hasattr(self, 'idx'):
-            # only do this when saving and remove all not storable objects from
-            # cache
-            self._stored = True
-            storable = {key: value for key, value in self.cache_dict.iteritems()
-                if type(key) is tuple or len(key.idx) > 0 }
-
-            self.cache_dict.clear()
-            self.cache_dict.update(storable)
+        if storage in self.store_dict.cod_stores:
+            self.store_dict.cod_stores[storage].sync()
 
     def _pre_item(self, items):
         item_type = self.store_dict._basetype(items)
