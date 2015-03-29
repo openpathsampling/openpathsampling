@@ -42,7 +42,7 @@ class OrderParameter(cod.CODWrap):
         self.multi_dict = cod.CODExpandMulti()
         self.store_dict = cod.CODMultiStore('collectivevariable', name,
                                             dimensions, self)
-        self.cache_dict = cod.NestableObjectDict()
+        self.cache_dict = cod.CODStorableCache()
         self.expand_dict = cod.CODUnwrapTuple()
         self.func_dict = cod.CODFunction(None)
         if hasattr(self, '_eval'):
@@ -56,34 +56,7 @@ class OrderParameter(cod.CODWrap):
                  self.cache_dict + self.multi_dict + self.pre_dict
         )
 
-    def flush_unstorable(self):
-        """
-        Will remove all snapshots from all caches that a not stored at the time
-
-        This is mainly used to speed up things when it is clear that all the
-        snapshots so far used (in orderparameters) that have NOT been saved
-        will only be temporary. It does not break anything but if you want to
-        save ops for such a snapshot later you have to save the snapshot and then
-        call op(snapshot) to get it to storage.
-
-        E.g., When you run a bootstrapping then you create lots of samples and
-        compute their orderparameters without ever wanting to save these. The
-        problem is that theoretically you could and the storage keeps track of
-        all potential orderparameters that could be saved. Since the only way
-        to determine which of the cached values can be stored when sync is
-        called is to search all cached snapshots we want to avoid doing that
-        for snapshots where we know that these will not be saved. This
-        function does this, by removing all snapshots from the caches that
-        are not yet stored and thus removing the necessity to check them everytime
-        you want to sync. Thus the goal is to keep the storage cache small. At best
-        empty after each safe.
-        """
-
-        self.store_dict.flush_unstorable()
-        storable = {key: value for key, value in self.cache_dict.iteritems()
-                    if len(key.idx) > 0}
-        self.clear()
-        self.update(storable)
+        self._stored = False
 
     def sync(self, store=None, flush_storable=True):
         """
@@ -112,12 +85,15 @@ class OrderParameter(cod.CODWrap):
             if store.storage in self.store_dict.cod_stores:
                 self.store_dict.cod_stores[store.storage].sync(flush_storable)
 
-        storable = {key: value for key, value in self.cache_dict.iteritems()
-                    if type(key) is tuple or len(key.idx) > 0}
+        if self._stored is False and hasattr(self, 'idx'):
+            # only do this when saving and remove all not storable objects from
+            # cache
+            self._stored = True
+            storable = {key: value for key, value in self.cache_dict.iteritems()
+                if type(key) is tuple or len(key.idx) > 0 }
 
-        self.cache_dict.clear()
-        self.cache_dict.update(storable)
-
+            self.cache_dict.clear()
+            self.cache_dict.update(storable)
 
     def _pre_item(self, items):
         item_type = self.store_dict._basetype(items)
