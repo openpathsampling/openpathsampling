@@ -113,25 +113,11 @@ class MoveDetails(object):
 
     @staticmethod
     def initialization(sample):
-        details = MoveDetails()
-        details.accepted = True
-        details.acceptance_probability = 1.0
-        details.mover = None
-        details.inputs = []
-        details.trial = sample.trajectory
-        details.ensemble = sample.ensemble
-        details.result = sample.trajectory
-        return details
+        return MoveDetails.initialization_from_scratch(sample.trajectory,
+                                                       sample.ensemble)
 
     @staticmethod
     def initialization_from_scratch(trajectory, ensemble):
-        """JHP, please don't remove this! You created a loop where we need
-        MoveDetails to make a sample, and we need a sample to make
-        MoveDetails. It makes more sense to have THIS be underlying, and use
-        initialization_from_sample when appropriate.
-
-        THIS IS USED BY Sample.initial_sample
-        """
         details = MoveDetails()
         details.accepted = True
         details.acceptance_probability = 1.0
@@ -1235,7 +1221,6 @@ class CalculationMover(PathMover):
 class MultipleSetMinusMover(RandomChoiceMover):
     pass
 
-@restores_as_stub_object
 def NeighborEnsembleReplicaExchange(ensemble_list):
     movers = [
         ReplicaExchangeMover(ensembles=[[ensemble_list[i], ensemble_list[i+1]]])
