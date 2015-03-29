@@ -46,15 +46,13 @@ class SnapshotStore(ObjectStore):
 
         Notes
         -----
-        Usually you want to use storage.snapshot.iterator() to get an
-        iterator over all snapshots
+        If you are interested in orderparameters this is faster since it does not
+        load the snapshots. Otherwise storage.snapshot is fine to get an
+        iterator. Both should should be about the same speed.
         """
-        t = Trajectory()
-        count = self.count()
-        for snapshot_idx in range(0,count):
-            t.append(self.load(snapshot_idx))
-
-        return t
+        #TODO: Might think about replacing the iterator with this since it is
+        # faster for orderparameters
+        return Trajectory([ (self, idx) for idx in range(len(self)) ])
 
     def save(self, snapshot, idx=None):
         """
@@ -272,7 +270,7 @@ class MomentumStore(ObjectStore):
         return momentum
 
     @staticmethod
-    def update_velocities(obj, store):
+    def update_velocities(obj):
         """
         Update/Load the velocities in the given obj from the attached storage
 
@@ -282,7 +280,7 @@ class MomentumStore(ObjectStore):
             The Momentum object to be updated
 
         """
-        storage = store.storage
+        storage = obj._origin
 
         idx = obj.idx[storage]
         v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
@@ -291,7 +289,7 @@ class MomentumStore(ObjectStore):
         obj.velocities = velocities
 
     @staticmethod
-    def update_kinetic_energy(obj, store):
+    def update_kinetic_energy(obj):
         """
         Update/Load the kinetic_energy in the given obj from the attached storage
 
@@ -301,7 +299,7 @@ class MomentumStore(ObjectStore):
             The Momentum object to be updated
 
         """
-        storage = store.storage
+        storage = obj._origin
 
         idx = obj.idx[storage]
         T = storage.variables['momentum_kinetic'][idx]
@@ -452,7 +450,7 @@ class ConfigurationStore(ObjectStore):
         return configuration
 
     @staticmethod
-    def update_coordinates(obj, store):
+    def update_coordinates(obj):
         """
         Update/Load the coordinates in the given obj from the attached storage
 
@@ -462,7 +460,7 @@ class ConfigurationStore(ObjectStore):
             the Configuration object to be updated
 
         """
-        storage = store.storage
+        storage = obj._origin
         idx = obj.idx[storage]
 
         x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
@@ -471,7 +469,7 @@ class ConfigurationStore(ObjectStore):
         obj.coordinates = coordinates
 
     @staticmethod
-    def update_box_vectors(obj, store):
+    def update_box_vectors(obj):
         """
         Update/Load the box_vectors in the given obj from the attached storage
 
@@ -481,7 +479,7 @@ class ConfigurationStore(ObjectStore):
             the Configuration object to be updated
 
         """
-        storage = store.storage
+        storage = obj._origin
         idx = obj.idx[storage]
 
         b = storage.variables['configuration_box_vectors'][idx]
@@ -490,7 +488,7 @@ class ConfigurationStore(ObjectStore):
         obj.box_vectors = box_vectors
 
     @staticmethod
-    def update_potential_energy(obj, store):
+    def update_potential_energy(obj):
         """
         Update/Load the potential_energy in the given obj from the attached storage
 
@@ -500,7 +498,7 @@ class ConfigurationStore(ObjectStore):
             the Configuration object to be updated
 
         """
-        storage = store.storage
+        storage = obj._origin
         idx = obj.idx[storage]
 
         V = storage.variables['configuration_potential'][idx]

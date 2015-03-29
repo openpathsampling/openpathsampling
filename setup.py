@@ -101,7 +101,11 @@ def buildKeywordDictionary():
     setupKeywords["license"]           = "GPL 2.0"
     setupKeywords["url"]               = "http://www.openpathsampling.org"
     setupKeywords["download_url"]      = "http://github.com/choderalab/openpathsampling"
-    setupKeywords["packages"]          = ['openpathsampling', 'openpathsampling.storage', 'openpathsampling.toy_dynamics', 'openpathsampling.tests']
+    setupKeywords["packages"]          = ['openpathsampling',
+                                          'openpathsampling.storage',
+                                          'openpathsampling.toy_dynamics',
+                                          'openpathsampling.tests',
+                                          'openpathsampling.analysis']
     setupKeywords["package_dir"]       = {
         'openpathsampling' : 'openpathsampling',
         'openpathsampling.storage' : 'openpathsampling/storage',

@@ -84,6 +84,10 @@ class Storage(netcdf.Dataset):
         self.ensemble = paths.storage.ObjectStore(storage, paths.Ensemble, is_named=True, nestable=True)
         self.movepath = paths.storage.ObjectStore(storage, paths.MovePath, is_named=False, nestable=True)
 
+        self.transition = paths.storage.ObjectStore(storage,
+                                                    paths.TISTransition,
+                                                    is_named=True)
+
         self.query = paths.storage.QueryStore(storage)
 
     def _setup_class(self):
@@ -442,6 +446,8 @@ class Storage(netcdf.Dataset):
         # Copy all configurations and momenta to new file in reduced form
 
         for obj in self.configuration.iterator():
+#            print obj._delayed_loading
+#            [ value(obj, self.configuration) for key, value in obj._delayed_loading.iteritems() ]
             storage2.configuration.save(obj.copy(subset), idx=obj.idx[self])
         for obj in self.momentum.iterator():
             storage2.momentum.save(obj.copy(subset), idx=obj.idx[self])
@@ -452,7 +458,7 @@ class Storage(netcdf.Dataset):
         for storage_name in [
                 'trajectory', 'snapshot', 'sample', 'sampleset', 'orderparameter',
                 'pathmover', 'engine', 'movedetails', 'shootingpoint', 'shootingpointselector',
-                'globalstate', 'volume', 'ensemble' ]:
+                'globalstate', 'volume', 'ensemble', 'movepath', 'dynamicsengine' ]:
             self.clone_storage(storage_name, storage2)
 
         storage2.close()

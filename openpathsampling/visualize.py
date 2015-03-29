@@ -281,6 +281,86 @@ class TreeRenderer(object):
 
 
 
+class MoveTreeBuilder(object):
+    def __init__(self, storage, op=None, states = None):
+        self.rejected = False
+        self.p_x = dict()
+        self.p_y = dict()
+        self.obj = list()
+        self.storage = storage
+        self.renderer = TreeRenderer()
+        self.op = op
+        if states is None:
+            states = {}
+        self.states = states
+
+    @staticmethod
+    def construct_heritage(storage, sample):
+        list_of_samples = []
+
+        samp = sample
+
+        while len(samp.details.inputs) > 0:
+            if len(samp.details.inputs) == 1:
+                # just one sample so use this
+                list_of_samples.append(samp)
+                samp = samp.details.inputs[0]
+            else:
+                # if there are more than one input choose the most useful one
+                # e.g. for ReplicaExchange the initial one
+                found_one = False
+                for input in samp.details.inputs:
+                    if input.trajectory == list_of_samples[-1].trajectory:
+                        # got it
+                        found_one = True
+                        samp = input
+                        break
+
+                if not found_one:
+                    break
+
+        # reverse to get origin first
+        return [samp for samp in reversed(list_of_samples)]
+
+    def full(self, ensembles, clear=True):
+
+        storage = self.storage
+
+        p_x = dict()
+        p_y = dict()
+
+        if clear:
+            self.renderer.clear()
+
+        t_count = 0
+        shift = 0
+
+        lightcolor = "gray"
+
+        for sset in storage.sampleset:
+            path = sset.movepath
+            for ens_idx, ens in enumerate(ensembles):
+                samp_ens = [samp for samp in sset if samp.ensemble is ens]
+                if len(samp_ens) > 0:
+                    self.renderer.add(self.renderer.block(ens_idx, t_count, "black", samp_ens[0].idx[storage]))
+
+    def _get_min_max(self, d):
+        return min(d.values()), max(d.values())
+
+    def _to_matrix(self):
+        min_x, max_x = self._get_min_max(self.p_x)
+        min_y, max_y = self._get_min_max(self.p_y)
+
+        matrix = [[None] * (max_x - min_x + 1) for n in range(max_y - min_y + 1)]
+
+        for s in self.p_x:
+            px = self.p_x[s]
+            py = self.p_y[s]
+            matrix[py - min_y][px - min_x] = s
+
+        return matrix
+
+
 class PathTreeBuilder(object):
     def __init__(self, storage, op=None, states = None):
         self.rejected = False
@@ -343,11 +423,11 @@ class PathTreeBuilder(object):
             if hasattr(sample.details, 'start_point'):
                 old_traj = sample.details.start_point.trajectory
                 old_index = sample.details.start_point.index
-                old_conf = old_traj[old_index].configuration
+                old_conf = old_traj[old_index]
 
                 new_traj = sample.details.final_point.trajectory
                 new_index = sample.details.final_point.index
-                new_conf = new_traj[new_index].configuration
+                new_conf = new_traj[new_index]
 
                 accepted = sample.details.accepted
 
@@ -355,7 +435,7 @@ class PathTreeBuilder(object):
                     t_count += 1
                     if not old_conf in p_x:
                         for pos, snapshot in enumerate(old_traj):
-                            conf = snapshot.configuration
+                            conf = snapshot
                             p_x[conf] = pos
                             p_y[conf] = t_count
 
@@ -414,7 +494,7 @@ class PathTreeBuilder(object):
 
                     if draw_okay:
                         for pos, snapshot in enumerate(new_traj):
-                            conf = snapshot.configuration
+                            conf = snapshot
                             if not conf in p_y:
                                 p_y[conf] = t_count
                                 p_x[conf] = shift + pos
@@ -449,6 +529,7 @@ class PathTreeBuilder(object):
                 xp = x + min_x
                 for r in rr:
                     op = ops[r]
+#                    print matrix[y][x], type(matrix[y][x])
                     if matrix[y][x] is not None and bool(op(matrix[y][x])):
                         if rr[r] is None:
                             rr[r] = xp

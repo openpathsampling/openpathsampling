@@ -123,6 +123,26 @@ class MoveDetails(object):
         details.result = sample.trajectory
         return details
 
+    @staticmethod
+    def initialization_from_scratch(trajectory, ensemble):
+        """JHP, please don't remove this! You created a loop where we need
+        MoveDetails to make a sample, and we need a sample to make
+        MoveDetails. It makes more sense to have THIS be underlying, and use
+        initialization_from_sample when appropriate.
+
+        THIS IS USED BY Sample.initial_sample
+        """
+        details = MoveDetails()
+        details.accepted = True
+        details.acceptance_probability = 1.0
+        details.mover = None
+        details.inputs = []
+        details.trial = trajectory
+        details.ensemble = ensemble
+        details.result = trajectory
+        return details
+
+
 def keep_selected_samples(func):
     def wrapper(self, *args, **kwargs):
         if 'keep_samples' in kwargs:

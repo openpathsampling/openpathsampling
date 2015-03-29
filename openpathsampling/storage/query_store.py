@@ -7,10 +7,8 @@ class QueryStore():
     def trajectory_orderparameter(self, orderparameter, ensemble=None, replica=None, step=None):
         """
         Return list of orderparameters fast for specific sets of samples
-
         samples can be all samples found in specific or all sampleset and filter
         these by ensemble and/or replica.
-
         Parameters
         ----------
         orderparameter : paths.Orderparameter()
@@ -24,7 +22,6 @@ class QueryStore():
         step : int or None
             if not None only samples from the specific step are used.
             For `None` (default) all sampleset steps are considered.
-
         Returns
         -------
         list of list of float
@@ -39,7 +36,7 @@ class QueryStore():
 
         output = []
 
-        op_dict = orderparameter.storage_caches[storage]
+        op_dict = storage.cv.get_list_value(orderparameter, slice(None,None))
 
         for sset_id in range(len(storage.sampleset)):
             if step is not None and sset_id != step:
@@ -65,10 +62,8 @@ class QueryStore():
     def trajectory_length(self, ensemble=None, replica=None, step=None):
         """
         Return list of trajectory lengths fast for specific sets of samples
-
         samples can be all samples found in specific or all sampleset and filter
         these by ensemble and/or replica.
-
         Parameters
         ----------
         ensemble : paths.Ensemble or None
@@ -80,7 +75,6 @@ class QueryStore():
         step : int or None
             if not None only samples from the specific step are used.
             For `None` (default) all sampleset steps are considered.
-
         Returns
         -------
         list of int

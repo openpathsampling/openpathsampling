@@ -17,19 +17,31 @@ class ObjectDictStore(ObjectStore):
         idx : int
             the index
         """
+        storage = self.storage
+
         var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
 
         if var_name + '_value' not in self.storage.variables:
             self.init_variable(var_name + '_value', 'float', (self.key_class.__name__.lower()))
-            self.init_variable(var_name + '_set', 'index', (self.key_class.__name__.lower()))
 
-        self.sync(objectdict, idx)
+        storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
 
+        if True:
+            # this will copy the cache from an op and store it
+            self.store_cache(objectdict)
 
-    def sync(self, objectdict=None, idx=None):
+        self.sync(objectdict)
+        self.storage.sync()
+
+    def store_cache(self, objectdict):
+        objectdict.store_dict.update_nod_stores()
+        if self.storage in objectdict.store_dict.cod_stores:
+            objectdict.store_dict.cod_stores[self.storage].update(objectdict.cache_dict)
+
+    def sync(self, objectdict=None, flush_unstorable=True):
         """
         This will update the stored cache of the orderparameter. It is
-        different from saving in that the object is only created if it
+        different from saving in that the object is only created if it is
         saved (and the object caching will prevent additional creation)
 
         Parameters
@@ -38,32 +50,70 @@ class ObjectDictStore(ObjectStore):
             the objectdict to store. if `None` is given (default) then
             all orderparameters are synced
 
-        """
-        storage = self.storage
+        flush_unstorable : bool
+            if `True` all not storable entries will be removed from cache. See
+            `Orderparameter.sync()` for explanation
 
+        See also
+        --------
+        Orderparameter.sync
+
+        """
         if objectdict is None:
-            [ self.sync(od) for od in self]
+            for obj in self:
+                self.sync(obj, flush_unstorable)
             return
 
-        if idx is None:
-            idx = self.idx(objectdict)
+        objectdict.sync(store=self, flush_storable=flush_unstorable)
+
+        self.storage.sync()
+
+    def set_value(self, objectdict, position, value):
+        storage = self.storage
+        idx = self.idx(objectdict)
 
         if idx is not None and idx >=0:
-            self._update_store(objectdict)
-            store = objectdict.storage_caches[storage]
-            length = len(store)
-
             var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
+            storage.variables[var_name + '_value'][position] = value
 
-            storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
-            self.save_variable(self.idx_dimension + '_length', idx, length)
-            storage.variables[var_name + '_value'][store.keys()] = self.list_to_numpy(store.values(), 'float')
-            storage.variables[var_name + '_set'][0:length] = store.keys()
+    def set_list_value(self, objectdict, positions, values):
+        storage = self.storage
+        idx = self.idx(objectdict)
 
-            self.tidy_cache(objectdict)
+        if idx is not None and idx >=0:
+            var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
+            storage.variables[var_name + '_value'][positions] = values
 
 
-    def load(self, idx, op=None):
+    def get_value(self, objectdict, position):
+        storage = self.storage
+        idx = self.idx(objectdict)
+
+        if idx is not None and idx >=0:
+            var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
+            val = storage.variables[var_name + '_value'][position]
+
+            if hasattr(val, 'mask'):
+                return None
+            else:
+                return val
+
+        return None
+
+    def get_list_value(self, objectdict, positions):
+        storage = self.storage
+        idx = self.idx(objectdict)
+
+        if idx is not None and idx >=0:
+            var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
+            val = storage.variables[var_name + '_value'][positions]
+
+            return val.tolist()
+
+        return [None] * len(positions)
+
+
+    def load(self, idx):
         """
         Restores the cache from the storage using the name of the
         orderparameter.
@@ -83,26 +133,9 @@ class ObjectDictStore(ObjectStore):
         storage = self.storage
 
         name = storage.variables[self.idx_dimension + '_name'][idx]
-        var_name = self.idx_dimension + '_' + str(idx) + '_' + name
-        length = self.load_variable(self.idx_dimension + '_length', idx)
-        stored_idx = storage.variables[var_name + '_set'][0:length]
-        data_all = storage.variables[var_name + '_value'][:]
-        data = self.list_from_numpy(data_all[self.list_from_numpy(stored_idx, 'index')], 'float')
-
-        if op is None:
-            op = OrderParameter(name)
-
-        op.storage_caches[storage] = dict(zip(stored_idx, data))
+        op = OrderParameter(name)
 
         return op
-
-    def restore(self, obj):
-        idx = self.idx_by_name(obj.identifier)
-
-        if idx is not None:
-            return self.load(idx, obj)
-        else:
-            return None
 
     def _init(self):
         """
@@ -111,51 +144,51 @@ class ObjectDictStore(ObjectStore):
         """
         super(ObjectDictStore, self)._init()
 
-        self.init_variable(self.idx_dimension + '_length', 'index', self.idx_dimension, chunksizes=(1, ))
+#        self.init_variable(self.idx_dimension + '_length', 'index', self.idx_dimension, chunksizes=(1, ))
 
-    def _update_store(self, obj):
-        """
-        This will transfer everything from the memory cache into the storage
-        copy in memory which is used to interact with the file storage.
-
-        Parameters
-        ----------
-        storage : Storage() on None
-            The storage (not ObjectStore) to store in. If None then all
-            associated storages will be updated up.
-
-        """
-
-        storage = self.storage
-
-        if storage not in obj.storage_caches:
-            # TODO: Throw exception
-            obj.storage_caches[storage] = dict()
-
-        store = obj.storage_caches[storage]
-        for item, value in obj.iteritems():
-            if storage in item.idx:
-                store[item.idx[storage]] = value
-
-    def tidy_cache(self, obj):
-        """
-        This will transfer everything from the memory cache into the storage copy in memory which is used to interact with
-        the file storage.
-
-        Parameters
-        ----------
-        storage : Storage() on None
-            The storage (not ObjectStore) to store in. If None then all associated storages will be cleaned up.
-
-        """
-
-        storage = self.storage
-
-        if storage not in obj.storage_caches:
-            # TODO: Throw exception
-            obj.storage_caches[storage] = dict()
-
-        new_dict = {item: value for item, value in obj.iteritems() if storage not in item.idx}
-
-        obj.clear()
-        obj.update(new_dict)
+    # def _update_store(self, obj):
+    #     """
+    #     This will transfer everything from the memory cache into the storage
+    #     copy in memory which is used to interact with the file storage.
+    #
+    #     Parameters
+    #     ----------
+    #     storage : Storage() on None
+    #         The storage (not ObjectStore) to store in. If None then all
+    #         associated storages will be updated up.
+    #
+    #     """
+    #
+    #     storage = self.storage
+    #
+    #     if storage not in obj.storage_caches:
+    #         # TODO: Throw exception
+    #         obj.storage_caches[storage] = dict()
+    #
+    #     store = obj.storage_caches[storage]
+    #     for item, value in obj.iteritems():
+    #         if storage in item.idx:
+    #             store[item.idx[storage]] = value
+    #
+    # def tidy_cache(self, obj):
+    #     """
+    #     This will transfer everything from the memory cache into the storage copy in memory which is used to interact with
+    #     the file storage.
+    #
+    #     Parameters
+    #     ----------
+    #     storage : Storage() on None
+    #         The storage (not ObjectStore) to store in. If None then all associated storages will be cleaned up.
+    #
+    #     """
+    #
+    #     storage = self.storage
+    #
+    #     if storage not in obj.storage_caches:
+    #         # TODO: Throw exception
+    #         obj.storage_caches[storage] = dict()
+    #
+    #     new_dict = {item: value for item, value in obj.iteritems() if storage not in item.idx}
+    #
+    #     obj.clear()
+    #     obj.update(new_dict)
