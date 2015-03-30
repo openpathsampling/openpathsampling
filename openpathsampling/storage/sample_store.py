@@ -160,7 +160,7 @@ class SampleSetStore(ObjectStore):
         values = self.storage.variables['sampleset_sample_idx'][idx]
 
         # typecast to sample
-        samples = self.list_from_numpy(values, 'sample')
+        samples = self.list_from_numpy(values, 'samples')
         sample_set = SampleSet(samples, movepath=self.storage.movepaths.load(movepath_idx))
 
         return sample_set

@@ -112,7 +112,7 @@ class TrajectoryStore(ObjectStore):
             else:
                 snapshots = [ tuple([self.storage.snapshots, idx]) for idx in self.list_from_numpy(values, 'int') ]
         else:
-            snapshots = self.list_from_numpy(values, 'snapshot')
+            snapshots = self.list_from_numpy(values, 'snapshots')
 
         trajectory = Trajectory(snapshots)
         # save the used storage to load snapshots if required
