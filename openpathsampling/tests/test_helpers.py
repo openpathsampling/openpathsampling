@@ -13,7 +13,7 @@ import numpy as np
 
 from openpathsampling.trajectory import Trajectory
 from openpathsampling.snapshot import Snapshot
-from openpathsampling.dynamics_engine import DynamicsEngine
+from openpathsampling.dynamics.dynamics_engine import DynamicsEngine
 from openpathsampling import Topology
 
 
