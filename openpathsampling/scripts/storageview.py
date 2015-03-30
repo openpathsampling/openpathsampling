@@ -127,8 +127,8 @@ if __name__ == '__main__':
 
     headline("ShootingPointSelector")
 
-    for p_idx in range(0, storage.shootingpointselector.count()):
-        obj = storage.shootingpointselector.load(p_idx)
+    for p_idx in range(0, storage.shootingpointselectors.count()):
+        obj = storage.shootingpointselectors.load(p_idx)
         nline(p_idx, obj.cls, '')
 #        print indent(format_by_json(simplifier.from_json(obj.json)), 16)
 

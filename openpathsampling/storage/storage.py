@@ -73,8 +73,8 @@ class Storage(netcdf.Dataset):
 
         self.pathmovers = paths.storage.ObjectStore(storage, paths.PathMover, is_named=True)
         self.movedetails = paths.storage.ObjectStore(storage, paths.MoveDetails, is_named=False)
-        self.shootingpoint = paths.storage.ObjectStore(storage, paths.ShootingPoint, is_named=False)
-        self.shootingpointselector = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, is_named=False)
+        self.shootingpoints = paths.storage.ObjectStore(storage, paths.ShootingPoint, is_named=False)
+        self.shootingpointselectors = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, is_named=False)
         self.engine = paths.storage.ObjectStore(storage, paths.DynamicsEngine, is_named=True)
         self.pathsimulator = paths.storage.ObjectStore(storage, paths.PathSimulator, is_named=True)
 
@@ -93,7 +93,8 @@ class Storage(netcdf.Dataset):
         self._objects = { name : getattr(self, name) for name in
                           ['trajectories', 'snapshots', 'configurations',
                            'samples', 'sample_sets', 'collectivevariables',
-                           'cvs', 'pathmovers', ''
+                           'cvs', 'pathmovers', 'shootingpoints',
+
 
                           ]
                           }
