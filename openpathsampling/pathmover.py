@@ -113,15 +113,21 @@ class MoveDetails(object):
 
     @staticmethod
     def initialization(sample):
+        return MoveDetails.initialization_from_scratch(sample.trajectory,
+                                                       sample.ensemble)
+
+    @staticmethod
+    def initialization_from_scratch(trajectory, ensemble):
         details = MoveDetails()
         details.accepted = True
         details.acceptance_probability = 1.0
         details.mover = None
         details.inputs = []
-        details.trial = sample.trajectory
-        details.ensemble = sample.ensemble
-        details.result = sample.trajectory
+        details.trial = trajectory
+        details.ensemble = ensemble
+        details.result = trajectory
         return details
+
 
 def keep_selected_samples(func):
     def wrapper(self, *args, **kwargs):
@@ -1215,7 +1221,6 @@ class CalculationMover(PathMover):
 class MultipleSetMinusMover(RandomChoiceMover):
     pass
 
-@restores_as_stub_object
 def NeighborEnsembleReplicaExchange(ensemble_list):
     movers = [
         ReplicaExchangeMover(ensembles=[[ensemble_list[i], ensemble_list[i+1]]])
