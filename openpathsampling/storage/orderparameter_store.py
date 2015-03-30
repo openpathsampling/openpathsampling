@@ -26,19 +26,11 @@ class ObjectDictStore(ObjectStore):
 
         storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
 
-        if True:
-            # this will copy the cache from an op and store it
-            self.store_cache(objectdict)
-
+        # this will copy the cache from an op and store it
+        objectdict.flush_cache(self.storage)
         self.sync(objectdict)
-        self.storage.sync()
 
-    def store_cache(self, objectdict):
-        objectdict.store_dict.update_nod_stores()
-        if self.storage in objectdict.store_dict.cod_stores:
-            objectdict.store_dict.cod_stores[self.storage].update(objectdict.cache_dict)
-
-    def sync(self, objectdict=None, flush_unstorable=True):
+    def sync(self, objectdict=None):
         """
         This will update the stored cache of the orderparameter. It is
         different from saving in that the object is only created if it is
@@ -50,10 +42,6 @@ class ObjectDictStore(ObjectStore):
             the objectdict to store. if `None` is given (default) then
             all orderparameters are synced
 
-        flush_unstorable : bool
-            if `True` all not storable entries will be removed from cache. See
-            `Orderparameter.sync()` for explanation
-
         See also
         --------
         Orderparameter.sync
@@ -61,11 +49,10 @@ class ObjectDictStore(ObjectStore):
         """
         if objectdict is None:
             for obj in self:
-                self.sync(obj, flush_unstorable)
+                self.sync(obj)
             return
 
-        objectdict.sync(store=self, flush_storable=flush_unstorable)
-
+        objectdict.sync(storage=self.storage)
         self.storage.sync()
 
     def set_value(self, objectdict, position, value):
