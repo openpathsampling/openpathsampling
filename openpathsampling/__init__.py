@@ -1,4 +1,4 @@
-from calculation import Calculation, Bootstrapping, PathSampling
+from pathsimulator import PathSimulator, Bootstrapping, PathSampling
 
 from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     EntersXEnsemble, EmptyEnsemble, ExitsXEnsemble, FullEnsemble, \
@@ -23,7 +23,7 @@ from pathmover import (
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
-    CollapseMove, CalculationMover, PathReversalSet,
+    CollapseMove, PathSimulatorMover, PathReversalSet,
     NeighborEnsembleReplicaExchange
     #, BootstrapPromotionMove
 )
@@ -62,5 +62,5 @@ from movepath import (EmptyMovePath, ConditionalSequentialMovePath,
                       RandomChoiceMovePath, SampleMovePath,
                       SequentialMovePath,  KeepLastSampleMovePath,
                       CollapsedMovePath, FilterSamplesMovePath,
-                      CalculationMovePath
+                      PathSimulatorMovePath
                      )
