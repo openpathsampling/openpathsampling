@@ -11,7 +11,7 @@ import numpy as np
 
 import openpathsampling as paths
 from openpathsampling.util.todict import restores_as_stub_object
-from ops_logging import initialization_logging
+from openpathsampling.util.ops_logging import initialization_logging
 
 
 logger = logging.getLogger(__name__)

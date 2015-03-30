@@ -2,15 +2,17 @@
 @author David W.H. Swenson
 '''
 import time
+import os
 
 from nose.tools import (assert_equal)
 import numpy.testing as npt
 import simtk.unit as u
 
 from test_helpers import (data_filename)
-from openpathsampling.dynamics.openmm.openmm_engine import *
 from openpathsampling.snapshot import Snapshot
+import openpathsampling as paths
 import openpathsampling.dynamics.openmm as omm
+from openpathsampling.storage import Storage
 
 
 def compare_snapshot(snapshot1, snapshot2):
@@ -46,7 +48,7 @@ def setUp():
     this.template_snapshot = omm.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
 
     # and an openmm engine
-    this.engine = paths.OpenMMEngine(options=this.options, template=this.template_snapshot)
+    this.engine = omm.OpenMMEngine(options=this.options, template=this.template_snapshot)
 
     # run a small trajectory of a few steps that can be used to save, etc...
     this.traj = this.engine.generate(this.template_snapshot, running=[paths.LengthEnsemble(2).can_append])
