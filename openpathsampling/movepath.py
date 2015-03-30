@@ -1,7 +1,7 @@
 __author__ = 'jan-hendrikprinz'
 
 import openpathsampling as paths
-from openpathsampling.todict import restores_as_full_object
+from openpathsampling.util.todict import restores_as_full_object
 
 @restores_as_full_object
 class MovePath(object):

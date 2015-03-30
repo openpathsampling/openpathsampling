@@ -1,8 +1,6 @@
 from histogram import Histogram
 import openpathsampling as paths
-from openpathsampling.todict import restores_as_full_object
-
-import time 
+from openpathsampling.util.todict import restores_as_full_object
 
 """
 Experimental analysis module.

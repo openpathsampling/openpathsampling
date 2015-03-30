@@ -4,14 +4,15 @@ Created on 19.07.2014
 @author: Jan-Hendrik Prinz
 '''
 
-import numpy as np
 import random
+import logging
+
+import numpy as np
 
 import openpathsampling as paths
-from openpathsampling.todict import restores_as_stub_object
-
-import logging
+from openpathsampling.util.todict import restores_as_stub_object
 from ops_logging import initialization_logging
+
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')

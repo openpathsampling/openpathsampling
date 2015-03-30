@@ -4,8 +4,10 @@ Created on 03.09.2014
 @author: Jan-Hendrik Prinz, David W.H. Swenson
 '''
 
-import range_logic
-from openpathsampling.todict import restores_as_full_object
+from openpathsampling.util import range_logic
+
+from openpathsampling.util.todict import restores_as_full_object
+
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 

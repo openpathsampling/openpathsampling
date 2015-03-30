@@ -1,9 +1,10 @@
 import math
+import logging
+
 import numpy as np
 
-from openpathsampling.todict import restores_as_full_object
-import logging
-from ops_logging import initialization_logging
+from openpathsampling.util.todict import restores_as_full_object
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 

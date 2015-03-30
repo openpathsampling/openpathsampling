@@ -16,7 +16,7 @@ class ObjectJSON(object):
         if class_list is not None:
             self.class_list = class_list
         else:
-            self.class_list = paths.todict.class_list
+            self.class_list = paths.util.todict.class_list
 
     def simplify_object(self, obj, base_type = ''):
         return { '_cls' : obj.__class__.__name__, '_dict' : self.simplify(obj.to_dict(), obj.base_cls_name) }

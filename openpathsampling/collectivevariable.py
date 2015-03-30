@@ -2,11 +2,13 @@
 # | CLASS Order Parameter
 ###############################################################
 
-import mdtraj as md
-import openpathsampling as paths
-from openpathsampling.todict import restores_as_stub_object
-import chaindict as cd
 import collections
+
+import mdtraj as md
+
+import openpathsampling as paths
+from openpathsampling.util.todict import restores_as_stub_object
+import openpathsampling.util.chaindict as cd
 
 
 @restores_as_stub_object
