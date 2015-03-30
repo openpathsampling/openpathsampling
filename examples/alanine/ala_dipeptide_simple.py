@@ -65,7 +65,7 @@ if __name__=="__main__":
 
     engine.equilibrate(5)
     snap = engine.current_snapshot
-    engine.storage.snapshot.save(snap, 0)
+    engine.storage.snapshots.save(snap, 0)
     engine.initialized = True
     PathMover.engine = engine
 
@@ -86,8 +86,8 @@ if __name__=="__main__":
 
     # save the collectivevariables in the storage
     # since they have no data cache this will only contain their name
-    psi.save(storage=engine.storage.collectivevariable)
-    phi.save(storage=engine.storage.collectivevariable)
+    psi.save(storage=engine.storage.collectivevariables)
+    phi.save(storage=engine.storage.collectivevariables)
 
     # now we define our states and our interfaces
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
@@ -113,7 +113,7 @@ if __name__=="__main__":
 
     mover_set = mf.OneWayShootingSet(UniformSelector(), interface_set)
 
-    snapshot = engine.storage.snapshot.load(0)
+    snapshot = engine.storage.snapshots.load(0)
     
     first_traj_ensemble = SequentialEnsemble([
         AllOutEnsemble(stateA) | LengthEnsemble(0),

@@ -238,7 +238,7 @@ class PathSampling(PathSimulator):
                 # removing computed values for not saved collectivevariables
                 # We assume that this is the right cause of action for this
                 # case.
-                self.storage.cv.sync()
+                self.storage.cvs.sync()
 
     def to_dict(self):
         return {

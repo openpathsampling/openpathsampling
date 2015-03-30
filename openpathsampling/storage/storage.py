@@ -59,19 +59,19 @@ class Storage(netcdf.Dataset):
         # automatically. But the IDE would not be able to autocomplete
         # so we leave it this way :)
 
-        self.trajectory = paths.storage.TrajectoryStore(storage)
-        self.snapshot = paths.storage.SnapshotStore(storage)
-        self.configuration = paths.storage.ConfigurationStore(storage)
+        self.trajectories = paths.storage.TrajectoryStore(storage)
+        self.snapshots = paths.storage.SnapshotStore(storage)
+        self.configurations = paths.storage.ConfigurationStore(storage)
         self.momentum = paths.storage.MomentumStore(storage)
-        self.sample = paths.storage.SampleStore(storage)
-        self.sampleset = paths.storage.SampleSetStore(storage)
+        self.samples = paths.storage.SampleStore(storage)
+        self.sample_sets = paths.storage.SampleSetStore(storage)
 
-        self.collectivevariable = paths.storage.ObjectDictStore(storage, paths.CollectiveVariable, paths.Snapshot)
-        self.cv = self.collectivevariable
+        self.collectivevariables = paths.storage.ObjectDictStore(storage, paths.CollectiveVariable, paths.Snapshot)
+        self.cvs = self.collectivevariables
 
         # normal objects
 
-        self.pathmover = paths.storage.ObjectStore(storage, paths.PathMover, is_named=True)
+        self.pathmovers = paths.storage.ObjectStore(storage, paths.PathMover, is_named=True)
         self.movedetails = paths.storage.ObjectStore(storage, paths.MoveDetails, is_named=False)
         self.shootingpoint = paths.storage.ObjectStore(storage, paths.ShootingPoint, is_named=False)
         self.shootingpointselector = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, is_named=False)
@@ -89,6 +89,18 @@ class Storage(netcdf.Dataset):
                                                     is_named=True)
 
         self.query = paths.storage.QueryStore(storage)
+
+        self._objects = { name : getattr(self, name) for name in
+                          ['trajectories', 'snapshots', 'configurations',
+                           'samples', 'sample_sets', 'collectivevariables',
+                           'cvs', 'pathmovers', ''
+
+                          ]
+                          }
+
+    @property
+    def objects(self):
+        return self._objects
 
     def _setup_class(self):
         """
@@ -176,7 +188,7 @@ class Storage(netcdf.Dataset):
             logger.info("Create initial template snapshot")
 
             # Save the initial configuration
-            self.snapshot.save(template)
+            self.snapshots.save(template)
 
             self.createVariable('template_idx', 'i4', 'scalar')
             self.variables['template_idx'][:] = template.idx[self]
@@ -223,7 +235,7 @@ class Storage(netcdf.Dataset):
         Snapshot
             the initial snapshot
         """
-        return self.snapshot.load(int(self.variables['template_idx'][0]))
+        return self.snapshots.load(int(self.variables['template_idx'][0]))
 
     def get_unit(self, dimension):
         """
@@ -445,10 +457,10 @@ class Storage(netcdf.Dataset):
 
         # Copy all configurations and momenta to new file in reduced form
 
-        for obj in self.configuration.iterator():
+        for obj in self.configurations.iterator():
 #            print obj._delayed_loading
 #            [ value(obj, self.configuration) for key, value in obj._delayed_loading.iteritems() ]
-            storage2.configuration.save(obj.copy(subset), idx=obj.idx[self])
+            storage2.configurations.save(obj.copy(subset), idx=obj.idx[self])
         for obj in self.momentum.iterator():
             storage2.momentum.save(obj.copy(subset), idx=obj.idx[self])
 

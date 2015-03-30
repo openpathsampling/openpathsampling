@@ -194,7 +194,7 @@ class SampleSet(object):
         storage : Storage()
             the underlying netcdf file to be used for storage
         """
-        map(storage.sample.save, self.samples)
+        map(storage.samples.save, self.samples)
 
     def sanity_check(self):
         '''Checks that the sample trajectories satisfy their ensembles

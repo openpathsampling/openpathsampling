@@ -174,7 +174,7 @@ class MovePath(object):
     @property
     def local_samples(self):
         """
-        A list of the samples that are needed to update the new sampleset
+        A list of the samples that are needed to update the new sample_set
 
         Notes
         -----
@@ -223,8 +223,8 @@ class MovePath(object):
         """
         Standard apply is to apply the list of samples contained
         """
-        new_sampleset = paths.SampleSet(other).apply_samples(self.samples)
-        new_sampleset.movepath = self
+        new_sample_set = paths.SampleSet(other).apply_samples(self.samples)
+        new_sample_set.movepath = self
 
     @property
     def samples(self):
@@ -425,12 +425,12 @@ class SequentialMovePath(MovePath):
 
 
     def apply_to(self, other):
-        sampleset = other
+        sample_set = other
 
         for movepath in self.movepaths:
-            sampleset = movepath.apply_to(sampleset)
+            sample_set = movepath.apply_to(sample_set)
 
-        return sampleset
+        return sample_set
 
     def __str__(self):
         return 'SequentialMove : %s : %d samples\n' % \
@@ -455,15 +455,15 @@ class PartialAcceptanceSequentialMovePath(SequentialMovePath):
         return changes
 
     def apply_to(self, other):
-        sampleset = other
+        sample_set = other
 
         for movepath in self.movepaths:
             if movepath.accepted:
-                sampleset = movepath.apply_to(sampleset)
+                sample_set = movepath.apply_to(sample_set)
             else:
                 break
 
-        return sampleset
+        return sample_set
 
     def __str__(self):
         return 'PartialAcceptanceMove : %s : %d samples\n' % \
@@ -478,15 +478,15 @@ class ConditionalSequentialMovePath(SequentialMovePath):
     """
 
     def apply_to(self, other):
-        sampleset = other
+        sample_set = other
 
         for movepath in self.movepaths:
             if movepath.accepted:
-                sampleset = movepath.apply_to(sampleset)
+                sample_set = movepath.apply_to(sample_set)
             else:
                 return other
 
-        return sampleset
+        return sample_set
 
     def _get_samples(self):
         changes = []

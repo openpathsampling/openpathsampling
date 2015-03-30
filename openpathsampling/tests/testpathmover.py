@@ -62,8 +62,8 @@ class testMakeListOfPairs(object):
     def test_empty(self):
         assert_equal(make_list_of_pairs(None), None)
 
-def assert_sampleset_accepted(sampleset, results):
-    for sample, result in zip(sampleset, results):
+def assert_sample_set_accepted(sample_set, results):
+    for sample, result in zip(sample_set, results):
         assert_equal(sample.details.accepted, result)
 
 
@@ -223,10 +223,10 @@ class testReplicaIDChangeMover(object):
     def setup(self):
         pass
 
-    def test_replica_in_sampleset(self):
+    def test_replica_in_sample_set(self):
         raise SkipTest
 
-    def test_replica_not_in_sampleset(self):
+    def test_replica_not_in_sample_set(self):
         raise SkipTest
 
 
@@ -802,7 +802,7 @@ class testMinusMover(object):
         samples = movepath.all_samples
         assert_equal(self.innermost(innermost_crosses_to_state), True)
         assert_equal(len(samples), 3) # stop after failed repex
-        assert_sampleset_accepted(samples, [True, False, False])
+        assert_sample_set_accepted(samples, [True, False, False])
 
     def test_repex_fails_minus_crosses_to_state(self):
         minus_crosses_to_state = make_1d_traj(
@@ -825,7 +825,7 @@ class testMinusMover(object):
         movepath = self.mover.move(gs).opened
         samples = movepath.all_samples
         assert_equal(len(samples), 3) # stop after failed repex
-        assert_sampleset_accepted(samples, [True, False, False])
+        assert_sample_set_accepted(samples, [True, False, False])
 
     def test_extension_fails(self):
         innermost_bad_extension = [-0.25, 0.1, 0.5, 0.1, -0.25]
@@ -842,7 +842,7 @@ class testMinusMover(object):
         movepath = self.mover.move(gs).opened
         samples = movepath.all_samples
         assert_equal(len(samples), 5) # reject the last one
-        assert_sampleset_accepted(samples, [True] * 4 + [False])
+        assert_sample_set_accepted(samples, [True] * 4 + [False])
         # this only happens due to length
         assert_equal(len(samples[-1].details.trial),
                      len(traj_bad_extension)+self.dyn.n_frames_max-1)

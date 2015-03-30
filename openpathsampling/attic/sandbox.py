@@ -25,18 +25,18 @@ if __name__ == '__main__':
     PathMover.simulator = simulator
     storage = simulator.storage
 
-    print "Currently", simulator.storage.trajectory.count(), "simulations in the storage"
-    print "Currently", simulator.storage.configuration.count(), "total frames in the storage"
+    print "Currently", simulator.storage.trajectories.count(), "simulations in the storage"
+    print "Currently", simulator.storage.configurations.count(), "total frames in the storage"
 
     Trajectory.storage = simulator.storage.trajectory
 
-    if simulator.storage.trajectory.count() == 0:
+    if simulator.storage.trajectories.count() == 0:
         # load initial equilibrate snapshot given by ID #0
-        snapshot = simulator.storage.snapshot.load(0)
+        snapshot = simulator.storage.snapshots.load(0)
 
         # generate from this snapshot a trajectory with 50 steps
         traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,6))])
-        simulator.storage.trajectory.save(traj)
+        simulator.storage.trajectories.save(traj)
 
         print len(traj)
 
@@ -45,11 +45,11 @@ if __name__ == '__main__':
         
     if True:
         cc = Trajectory.storage.load(1)[ 0 ]
-        cc = storage.snapshot.load(0)
+        cc = storage.snapshots.load(0)
         op = CV_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices)
-        storage.collectivevariable.restore(op)
+        storage.collectivevariables.restore(op)
         print op(Trajectory.storage.load(1)[0:2])
-        dd = simulator.storage.trajectory.load(1)[ 0:6 ]
+        dd = simulator.storage.trajectories.load(1)[ 0:6 ]
         lV = LambdaVolume(op, 0.0, 0.06)
         lV2 = LambdaVolume(op, 0.0, 0.08)
 
@@ -67,7 +67,7 @@ if __name__ == '__main__':
                        True
                        )
 
-        tt = simulator.storage.trajectory.load(1)
+        tt = simulator.storage.trajectories.load(1)
 
 #        print [ (op(d)) for d in dd ]
 #        op.save()
@@ -152,15 +152,15 @@ if __name__ == '__main__':
 
         mm = MixedMover([bm, fm])
 
-        tt = storage.trajectory.last()
+        tt = storage.trajectories.last()
 
         pth = mm.move(tt)
 
-        storage.sample.save(pth)
+        storage.samples.save(pth)
 
         print pth.details.json
 
-        loaded = storage.pathmover.load(mm.idx[storage])
+        loaded = storage.pathmovers.load(mm.idx[storage])
 
         print 'ensemble Check :', mm.ensemble(pth.trajectory)
 
@@ -182,7 +182,7 @@ if __name__ == '__main__':
         en = AllOutEnsemble(lV, slice(1, -1), lazy = False)
         print en(pth.details.final)
 
-        op.save(storage=storage.collectivevariable)
+        op.save(storage=storage.collectivevariables)
 
         exit()
 

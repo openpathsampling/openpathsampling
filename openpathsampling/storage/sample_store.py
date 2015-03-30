@@ -11,7 +11,7 @@ class SampleStore(ObjectStore):
 
     def save(self, sample, idx=None):
         if idx is not None:
-            self.storage.trajectory.save(sample.trajectory)
+            self.storage.trajectories.save(sample.trajectory)
             self.set_object('sample_trajectory', idx, sample.trajectory)
 
             self.storage.ensemble.save(sample.ensemble)
@@ -39,7 +39,7 @@ class SampleStore(ObjectStore):
 
 
         obj = Sample(
-            trajectory=self.storage.trajectory.load(trajectory_idx),
+            trajectory=self.storage.trajectories.load(trajectory_idx),
             replica=replica_idx,
             ensemble=self.storage.ensemble.load(ensemble_idx),
             step=step
@@ -81,7 +81,7 @@ class SampleStore(ObjectStore):
 
 
         obj = Sample(
-            trajectory=self.storage.trajectory.load(trajectory_idx),
+            trajectory=self.storage.trajectories.load(trajectory_idx),
             replica=replica_idx,
             ensemble=self.storage.ensemble.load(ensemble_idx),
             details=self.storage.movedetails.load(details_idx),
@@ -108,25 +108,25 @@ class SampleSetStore(ObjectStore):
     def __init__(self, storage):
         super(SampleSetStore, self).__init__(storage, SampleSet, json=False)
 
-    def save(self, sampleset, idx=None):
+    def save(self, sample_set, idx=None):
         # Check if all samples are saved
-        map(self.storage.sample.save, sampleset)
+        map(self.storage.samples.save, sample_set)
 
-        values = self.list_to_numpy(sampleset, 'sample')
+        values = self.list_to_numpy(sample_set, 'sample')
         self.storage.variables['sampleset_sample_idx'][idx] = values
 
-        self.storage.movepath.save(sampleset.movepath)
-        self.set_object('sampleset_movepath', idx, sampleset.movepath)
+        self.storage.movepath.save(sample_set.movepath)
+        self.set_object('sampleset_movepath', idx, sample_set.movepath)
 
 
     def sample_indices(self, idx):
         '''
-        Load sample indices for sampleset with ID 'idx' from the storage
+        Load sample indices for sample_set with ID 'idx' from the storage
 
         Parameters
         ----------
         idx : int
-            ID of the sampleset
+            ID of the sample_set
 
         Returns
         -------
@@ -142,17 +142,17 @@ class SampleSetStore(ObjectStore):
 
     def load(self, idx):
         '''
-        Return a sampleset from the storage
+        Return a sample_set from the storage
 
         Parameters
         ----------
         idx : int
-            index of the sampleset (counts from 0)
+            index of the sample_set (counts from 0)
 
         Returns
         -------
-        sampleset
-            the sampleset
+        sample_set
+            the sample_set
         '''
 
         movepath_idx = int(self.storage.variables['sampleset_movepath_idx'][idx])
@@ -161,9 +161,9 @@ class SampleSetStore(ObjectStore):
 
         # typecast to sample
         samples = self.list_from_numpy(values, 'sample')
-        sampleset = SampleSet(samples, movepath=self.storage.movepath.load(movepath_idx))
+        sample_set = SampleSet(samples, movepath=self.storage.movepath.load(movepath_idx))
 
-        return sampleset
+        return sample_set
 
     def _init(self, units=None):
         """

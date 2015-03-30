@@ -337,7 +337,7 @@ class MoveTreeBuilder(object):
 
         lightcolor = "gray"
 
-        for sset in storage.sampleset:
+        for sset in storage.sample_set:
             path = sset.movepath
             for ens_idx, ens in enumerate(ensembles):
                 samp_ens = [samp for samp in sset if samp.ensemble is ens]
@@ -518,7 +518,7 @@ class PathTreeBuilder(object):
         self.renderer.width = max_x - min_x + 3.0
 
         op_names = { arg[0] : arg[1] for arg in self.states }
-        ops = {op : self.storage.collectivevariable.load(op) for op in op_names.keys() }
+        ops = {op : self.storage.collectivevariables.load(op) for op in op_names.keys() }
 
         matrix = self._to_matrix()
 

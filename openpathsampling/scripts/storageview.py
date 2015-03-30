@@ -79,9 +79,9 @@ if __name__ == '__main__':
 
     headline("Content")
 
-    line("Number of trajectories", storage.trajectory.count())
-    line("Number of snapshots", storage.snapshot.count())
-    line("Number of configurations", storage.configuration.count())
+    line("Number of trajectories", storage.trajectories.count())
+    line("Number of snapshots", storage.snapshots.count())
+    line("Number of configurations", storage.configurations.count())
     line("Number of momenta", storage.momentum.count())
 
     headline("Topology")
@@ -105,7 +105,7 @@ if __name__ == '__main__':
 
     headline("Snapshot Zero")
     # load initial equilibrate snapshot given by ID #0
-    snapshot = storage.snapshot.load(0)
+    snapshot = storage.snapshots.load(0)
 
     line("Potential Energy",str(snapshot.potential_energy))
     line("Kinetic Energy",str(snapshot.kinetic_energy))
@@ -120,8 +120,8 @@ if __name__ == '__main__':
 
     headline("PathMovers")
 
-    for p_idx in range(0, storage.pathmover.count()):
-        pathmover = storage.pathmover.load(p_idx)
+    for p_idx in range(0, storage.pathmovers.count()):
+        pathmover = storage.pathmovers.load(p_idx)
         nline(p_idx,pathmover.name, '')
         print indent(format_by_json(simplifier.from_json(pathmover.json)), 16)
 
@@ -132,18 +132,18 @@ if __name__ == '__main__':
         nline(p_idx, obj.cls, '')
 #        print indent(format_by_json(simplifier.from_json(obj.json)), 16)
 
-    headline("ShootingPoints (" + str(storage.shootingpoint.count()) + ")")
+    headline("ShootingPoints (" + str(storage.shootingpoints.count()) + ")")
 
-#    for p_idx in range(0, storage.shootingpoint.count()):
-#        obj = storage.shootingpoint.load(p_idx)
+#    for p_idx in range(0, storage.shootingpoints.count()):
+#        obj = storage.shootingpoints.load(p_idx)
 #        nline(p_idx,obj.json, obj.cls)
 
-    headline("CollectiveVariables (" + str(storage.collectivevariable.count()) + ")")
+    headline("CollectiveVariables (" + str(storage.collectivevariables.count()) + ")")
 
-    all_snapshot_traj = storage.snapshot.all()
+    all_snapshot_traj = storage.snapshots.all()
 
-    for p_idx in range(0, storage.collectivevariable.count()):
-        obj = storage.collectivevariable.load(p_idx)
+    for p_idx in range(0, storage.collectivevariables.count()):
+        obj = storage.collectivevariables.load(p_idx)
         add = ''
         values = obj(all_snapshot_traj)
         found_values = [ (idx, value) for idx, value in enumerate(values) if value is not None ]
@@ -161,8 +161,8 @@ if __name__ == '__main__':
 
     headline("SampleSets")
 
-    for p_idx in range(0, storage.sampleset.count()):
-        obj = storage.sampleset.load(p_idx)
+    for p_idx in range(0, storage.sample_sets.count()):
+        obj = storage.sample_sets.load(p_idx)
         nline(p_idx, str(len(obj.samples)) + ' sample(s)', [storage.idx(sample) for sample in obj.samples ])
         print indent(str(obj.movepath),16)
 
@@ -192,7 +192,7 @@ if __name__ == '__main__':
 
     def format_traj(traj_obj):
         s = ''
-        traj = storage.trajectory.snapshot_indices(traj_obj.idx[storage])
+        traj = storage.trajectories.snapshot_indices(traj_obj.idx[storage])
         old_idx = -2
         count = 0
         for idx in traj:
@@ -215,20 +215,20 @@ if __name__ == '__main__':
         return s
 
     def print_traj(name, traj_obj):
-        traj = storage.trajectory.snapshot_indices(traj_obj.idx[storage])
+        traj = storage.trajectories.snapshot_indices(traj_obj.idx[storage])
         sys.stdout.write("      {:>10}:  {:>5} frames [".format(name, str(len(traj))) + ' ]')
         print format_traj(traj_obj)
 
 
-    for o_idx in range(0, storage.sample.count()):
+    for o_idx in range(0, storage.samples.count()):
 
-        sample = storage.sample.load(o_idx)
+        sample = storage.samples.load(o_idx)
         nline(o_idx, 'trajectory #' + str(storage.idx(sample.trajectory)),'[ ' + str(len(sample.trajectory)) + ' frames ] ' + format_traj(sample.trajectory))
 
     headline("Trajectories")
 
-    for t_idx in range(0, storage.trajectory.count()):
-        traj = storage.trajectory.snapshot_indices(t_idx)
+    for t_idx in range(0, storage.trajectories.count()):
+        traj = storage.trajectories.snapshot_indices(t_idx)
         sys.stdout.write("  {:>4} [{:>5} frames] : ".format(str(t_idx),str(len(traj))))
         old_idx = -2
         count = 0

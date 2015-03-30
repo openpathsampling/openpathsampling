@@ -147,9 +147,9 @@ if __name__ == '__main__':
     last_x = -1
 
 
-    for o_idx in range(0, storage.sample.count()):
+    for o_idx in range(0, storage.samples.count()):
 
-        sample = storage.sample.load(o_idx)
+        sample = storage.samples.load(o_idx)
         ensemble = sample.ensemble
         length = len(sample.details.final)
 

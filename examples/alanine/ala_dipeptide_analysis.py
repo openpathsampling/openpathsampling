@@ -24,10 +24,10 @@ if __name__ == "__main__":
                       indices=[psi_atoms])
 
     # restore old computed values
-    storage.cv.restore(psi)
+    storage.cvs.restore(psi)
 
-    for tnum in range(1,storage.trajectory.count()+1):
-        traj = storage.trajectory.load(tnum)
+    for tnum in range(1,storage.trajectories.count()+1):
+        traj = storage.trajectories.load(tnum)
         degrees = 180/3.14159 # psi reports in radians; I think in degrees
         psis = [psi(snap) for snap in traj]
         print max(psis)*degrees
