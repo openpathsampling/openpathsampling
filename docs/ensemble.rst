@@ -25,20 +25,20 @@ Volume Ensembles
     :toctree: api/generated/
 
 	VolumeEnsemble
-	InXEnsemble
-	OutXEnsemble
-        HitXEnsemble
-	LeaveXEnsemble
+	AllInEnsemble
+	AllOutEnsemble
+        PartInEnsemble
+	PartAllOutEnsemble
 	
 Set-based Ensemble combinations
 -----------------------------
 .. autosummary::
     :toctree: api/generated/
 
-        AndEnsemble
-        OrEnsemble
-        XorEnsemble
-        SubEnsemble
+        IntersectionEnsemble
+        UnionEnsemble
+        SymmetricDifferenceEnsemble
+        RelativeComplementEnsemble
         EnsembleCombination
 	
 length Ensembles
