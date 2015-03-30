@@ -5,12 +5,12 @@
 import mdtraj as md
 import openpathsampling as paths
 from openpathsampling.todict import restores_as_stub_object
-import chainableobjectdict as cod
+import chaindict as cd
 import collections
 
 
 @restores_as_stub_object
-class OrderParameter(cod.CODWrap):
+class OrderParameter(cd.Wrap):
     """
     Wrapper for a function that maps a snapshot to a number.
 
@@ -38,13 +38,13 @@ class OrderParameter(cod.CODWrap):
         if type(name) is str and len(name) == 0:
             raise ValueError('name must be a non-empty string')
 
-        self.pre_dict = cod.CODTransform(self._pre_item)
-        self.multi_dict = cod.CODExpandMulti()
-        self.store_dict = cod.CODMultiStore('collectivevariable', name,
+        self.pre_dict = cd.Transform(self._pre_item)
+        self.multi_dict = cd.ExpandMulti()
+        self.store_dict = cd.MultiStore('collectivevariable', name,
                                             dimensions, self)
-        self.cache_dict = cod.NestableObjectDict()
-        self.expand_dict = cod.CODUnwrapTuple()
-        self.func_dict = cod.CODFunction(None)
+        self.cache_dict = cd.ChainDict()
+        self.expand_dict = cd.UnwrapTuple()
+        self.func_dict = cd.Function(None)
         if hasattr(self, '_eval'):
             self.func_dict._eval = self._eval
         else:
@@ -52,40 +52,30 @@ class OrderParameter(cod.CODWrap):
 
         self.name = name
         super(OrderParameter, self).__init__(
-            post=self.func_dict + self.expand_dict + self.store_dict +
-                 self.cache_dict + self.multi_dict + self.pre_dict
+            post=self.func_dict + self.expand_dict + self.cache_dict +
+                 self.store_dict + self.multi_dict + self.pre_dict
         )
 
-    def flush_unstorable(self):
+        self._stored = False
+
+    def flush_cache(self, storage):
         """
-        Will remove all snapshots from all caches that a not stored at the time
+        Copy the cache to the internal storage cache for saving
 
-        This is mainly used to speed up things when it is clear that all the
-        snapshots so far used (in orderparameters) that have NOT been saved
-        will only be temporary. It does not break anything but if you want to
-        save ops for such a snapshot later you have to save the snapshot and then
-        call op(snapshot) to get it to storage.
-
-        E.g., When you run a bootstrapping then you create lots of samples and
-        compute their orderparameters without ever wanting to save these. The
-        problem is that theoretically you could and the storage keeps track of
-        all potential orderparameters that could be saved. Since the only way
-        to determine which of the cached values can be stored when sync is
-        called is to search all cached snapshots we want to avoid doing that
-        for snapshots where we know that these will not be saved. This
-        function does this, by removing all snapshots from the caches that
-        are not yet stored and thus removing the necessity to check them everytime
-        you want to sync. Thus the goal is to keep the storage cache small. At best
-        empty after each safe.
+        Parameters
+        ----------
+        storage : Storage()
+            the storage for which the cache should be copied
         """
+        if storage in self.store_dict.cod_stores:
+            stored = {
+                key : value for key, value in self.cache_dict
+                    if type(key) is tuple or storage in key.idx
+            }
+            self.store_dict.cod_stores[storage].post.update(stored)
+            self.store_dict.cod_stores[storage].update(stored)
 
-        self.store_dict.flush_unstorable()
-        storable = {key: value for key, value in self.cache_dict.iteritems()
-                    if len(key.idx) > 0}
-        self.clear()
-        self.update(storable)
-
-    def sync(self, store=None, flush_storable=True):
+    def sync(self, storage):
         """
         Sync this orderparameter with attached storages
 
@@ -93,31 +83,15 @@ class OrderParameter(cod.CODWrap):
         ----------
         store : OrderparameterStore or None
             the store to be used, otherwise all underlying storages are synced
-        flush_storable : bool
-            if `False` the store will be synced and information about
-            data that could not be stored are kept in the caches so that they
-            can potentially (when the associated snapshots have been stored)
-            be synced later. This is safer in the sense that you will not loose
-            any computed result, but on the other hand might induce an overhead
-            since the list of not yet saved snapshot can be very large and needs
-            to be searched EVERYTIME the store is saved. If possible you should
-            use `True` (default) here and eventually recompute lost data (which
-            is done automatically).
+        store_cache : bool
+            if `False` (default) the store will only store new values. If
+            `True` also the cached values will be stored. This is much more
+            costly and is usually only run once, when the orderparameter is
+            saved the first time
         """
         self.store_dict.update_nod_stores()
-        if store is None:
-            for storage in self.store_dict.cod_stores:
-                self.store_dict.cod_stores[storage].sync(flush_storable)
-        else:
-            if store.storage in self.store_dict.cod_stores:
-                self.store_dict.cod_stores[store.storage].sync(flush_storable)
-
-        storable = {key: value for key, value in self.cache_dict.iteritems()
-                    if type(key) is tuple or len(key.idx) > 0}
-
-        self.cache_dict.clear()
-        self.cache_dict.update(storable)
-
+        if storage in self.store_dict.cod_stores:
+            self.store_dict.cod_stores[storage].sync()
 
     def _pre_item(self, items):
         item_type = self.store_dict._basetype(items)
