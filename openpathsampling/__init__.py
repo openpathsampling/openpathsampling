@@ -39,15 +39,11 @@ from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
     EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, IntersectionVolume, \
     UnionVolume, SymmetricDifferenceVolume, RelativeComplementVolume
 
-from todict import ObjectJSON, restores_as_full_object, \
-    restores_as_stub_object, class_list
+#from todict import ObjectJSON, restores_as_full_object, \
+#    restores_as_stub_object, class_list
 
-from openpathsampling.dynamics.openmm.util import empty_snapshot_from_openmm_topology, snapshot_from_pdb, \
-    to_openmm_topology, trajectory_from_mdtraj
-from openpathsampling.snapshot import units_to_dict
+from todict import ObjectJSON
 
-from openpathsampling.dynamics.openmm.topology import MDTrajTopology
-from openpathsampling.dynamics.toy.topology import ToyTopology
 from openpathsampling.topology import Topology
 
 from analysis.tis_analysis import TISTransition, RETISTransition

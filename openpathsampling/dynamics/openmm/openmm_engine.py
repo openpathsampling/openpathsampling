@@ -10,6 +10,8 @@ import openpathsampling as paths
 from openpathsampling.storage import Storage
 from openpathsampling.todict import restores_as_full_object
 
+from util import snapshot_from_pdb, to_openmm_topology
+
 @restores_as_full_object
 class OpenMMEngine(paths.DynamicsEngine):
     """OpenMM dynamics engine."""
@@ -84,7 +86,7 @@ class OpenMMEngine(paths.DynamicsEngine):
         # attached box_vectors and topology
 
         if type(template) is str:
-            template = paths.snapshot_from_pdb(template, units=units)
+            template = snapshot_from_pdb(template, units=units)
 
         # once we have a template configuration (coordinates to not really
         # matter) we can create a storage. We might move this logic out of
@@ -153,7 +155,7 @@ class OpenMMEngine(paths.DynamicsEngine):
         forcefield = ForceField( self.options["forcefield_solute"],
                                  self.options["forcefield_solvent"] )
 
-        openmm_topology = paths.to_openmm_topology(self.template)
+        openmm_topology = to_openmm_topology(self.template)
 
         system = forcefield.createSystem( openmm_topology,
                                           nonbondedMethod=PME,

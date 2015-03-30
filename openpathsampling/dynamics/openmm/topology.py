@@ -4,7 +4,7 @@ import pandas as pd
 from simtk import unit as units
 import simtk.openmm
 
-from openpathsampling import Topology
+from openpathsampling.topology import Topology
 from openpathsampling.todict import restores_as_full_object
 
 

@@ -5,6 +5,7 @@ import simtk.unit as u
 import numpy as np
 
 import openpathsampling as paths
+from topology import MDTrajTopology
 
 
 def updateunits(func):
@@ -51,7 +52,7 @@ def snapshot_from_pdb(pdb_file, units = None):
         box_vectors=u.Quantity(pdb.unitcell_vectors[0], units['length']),
         potential_energy=u.Quantity(0.0, units['energy']),
         kinetic_energy=u.Quantity(0.0, units['energy']),
-        topology=paths.MDTrajTopology(pdb.topology)
+        topology=MDTrajTopology(pdb.topology)
     )
 
     return snapshot

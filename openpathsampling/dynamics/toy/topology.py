@@ -1,10 +1,11 @@
-from openpathsampling import restores_as_full_object, Topology
+from openpathsampling.todict import restores_as_full_object
+import openpathsampling as paths
 
 __author__ = 'jan-hendrikprinz'
 
 
 @restores_as_full_object
-class ToyTopology(Topology):
+class ToyTopology(paths.Topology):
     '''
     Attributes
     ----------

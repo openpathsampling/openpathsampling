@@ -1,7 +1,6 @@
-from openpathsampling import restores_as_full_object
+from openpathsampling.todict import restores_as_full_object
 
 __author__ = 'jan-hendrikprinz'
-
 
 @restores_as_full_object
 class Topology(object):

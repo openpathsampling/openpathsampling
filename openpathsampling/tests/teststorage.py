@@ -10,6 +10,7 @@ import simtk.unit as u
 from test_helpers import (data_filename)
 from openpathsampling.dynamics.openmm.openmm_engine import *
 from openpathsampling.snapshot import Snapshot
+import openpathsampling.dynamics.openmm as omm
 
 
 def compare_snapshot(snapshot1, snapshot2):
@@ -42,7 +43,7 @@ def setUp():
               }
 
     # create a template snapshot
-    this.template_snapshot = paths.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
+    this.template_snapshot = omm.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
 
     # and an openmm engine
     this.engine = paths.OpenMMEngine(options=this.options, template=this.template_snapshot)
