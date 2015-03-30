@@ -91,16 +91,13 @@ class Storage(netcdf.Dataset):
         self.query = paths.storage.QueryStore(storage)
 
         self._objects = { name : getattr(self, name) for name in
-                          ['trajectories', 'snapshots', 'configurations',
-                           'samples', 'sample_sets', 'collectivevariables',
-                           'cvs', 'pathmovers', 'movedetails', 'shootingpoints',
-                           'shootingpointselectors', 'engines',
-                           'pathsimulators', 'volumes', 'ensembles',
-                           'movepaths', 'transitions'
-
-
-                          ]
-                          }
+                  ['trajectories', 'snapshots', 'configurations',
+                   'samples', 'sample_sets', 'collectivevariables',
+                   'cvs', 'pathmovers', 'movedetails', 'shootingpoints',
+                   'shootingpointselectors', 'engines',
+                   'pathsimulators', 'volumes', 'ensembles',
+                   'movepaths', 'transitions'
+                  ]}
 
     @property
     def objects(self):
@@ -530,7 +527,6 @@ class Storage(netcdf.Dataset):
                 else:
                     for idx in range(0, len(self.variables[variable])):
                         new_storage.variables[variable][idx] = self.variables[variable][idx]
-
 
 
 class StorableObjectJSON(paths.todict.ObjectJSON):
