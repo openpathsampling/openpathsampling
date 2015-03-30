@@ -109,7 +109,7 @@ class OpenMMEngine(paths.DynamicsEngine):
             options=options
         )
         engine.storage = storage
-        storage.engine.save(engine)
+        storage.engines.save(engine)
 
         return engine
 
@@ -129,7 +129,7 @@ class OpenMMEngine(paths.DynamicsEngine):
 #            options=options
 #        )
 
-        engine = storage.engine.load(0)
+        engine = storage.engines.load(0)
 
         engine.storage = storage
         return engine

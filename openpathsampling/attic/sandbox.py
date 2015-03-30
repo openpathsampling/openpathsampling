@@ -131,7 +131,7 @@ if __name__ == '__main__':
         en = AllOutEnsemble(lV, slice(1,-1), lazy = False)
         print en(tt)
 
-        storage.ensemble.save(en)
+        storage.ensembles.save(en)
 
         bm = BackwardShootMover(
                 selector = UniformSelector(),

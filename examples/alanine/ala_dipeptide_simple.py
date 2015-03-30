@@ -94,7 +94,7 @@ if __name__=="__main__":
     stateA = LambdaVolumePeriodic(psi, -120.0/degrees, -30.0/degrees)
     stateB = LambdaVolumePeriodic(psi, 100/degrees, 180/degrees)
 
-    engine.storage.volume.save(stateA)
+    engine.storate.volumes.save(stateA)
 
     # set up minima and maxima for this transition's interface set
     minima = map((1.0 / degrees).__mul__,
@@ -109,7 +109,7 @@ if __name__=="__main__":
         # Give each interface a name
         interface.name = 'Interface '+str(no)
         # And save all of these
-        engine.storage.ensemble.save(interface)
+        engine.storage.ensembles.save(interface)
 
     mover_set = mf.OneWayShootingSet(UniformSelector(), interface_set)
 

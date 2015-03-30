@@ -14,7 +14,7 @@ class SampleStore(ObjectStore):
             self.storage.trajectories.save(sample.trajectory)
             self.set_object('sample_trajectory', idx, sample.trajectory)
 
-            self.storage.ensemble.save(sample.ensemble)
+            self.storage.ensembles.save(sample.ensemble)
             self.set_object('sample_ensemble', idx, sample.ensemble)
 
             self.save_variable('sample_replica', idx, sample.replica)
@@ -41,7 +41,7 @@ class SampleStore(ObjectStore):
         obj = Sample(
             trajectory=self.storage.trajectories.load(trajectory_idx),
             replica=replica_idx,
-            ensemble=self.storage.ensemble.load(ensemble_idx),
+            ensemble=self.storage.ensembles.load(ensemble_idx),
             step=step
         )
 
@@ -83,7 +83,7 @@ class SampleStore(ObjectStore):
         obj = Sample(
             trajectory=self.storage.trajectories.load(trajectory_idx),
             replica=replica_idx,
-            ensemble=self.storage.ensemble.load(ensemble_idx),
+            ensemble=self.storage.ensembles.load(ensemble_idx),
             details=self.storage.movedetails.load(details_idx),
             step=step
         )
@@ -115,7 +115,7 @@ class SampleSetStore(ObjectStore):
         values = self.list_to_numpy(sample_set, 'sample')
         self.storage.variables['sampleset_sample_idx'][idx] = values
 
-        self.storage.movepath.save(sample_set.movepath)
+        self.storage.movepaths.save(sample_set.movepath)
         self.set_object('sampleset_movepath', idx, sample_set.movepath)
 
 
@@ -161,7 +161,7 @@ class SampleSetStore(ObjectStore):
 
         # typecast to sample
         samples = self.list_from_numpy(values, 'sample')
-        sample_set = SampleSet(samples, movepath=self.storage.movepath.load(movepath_idx))
+        sample_set = SampleSet(samples, movepath=self.storage.movepaths.load(movepath_idx))
 
         return sample_set
 

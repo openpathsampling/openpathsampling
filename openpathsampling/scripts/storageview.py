@@ -112,8 +112,8 @@ if __name__ == '__main__':
 
     headline("Ensembles")
 
-    for e_idx in range(0, storage.ensemble.count()):
-        ensemble = storage.ensemble.load(e_idx)
+    for e_idx in range(0, storage.ensembles.count()):
+        ensemble = storage.ensembles.load(e_idx)
         nline(e_idx,ensemble.cls, '')
 #        print indent(str(ensemble),16)
         print indent(format_by_json(simplifier.from_json(ensemble.json)), 16)
@@ -154,8 +154,8 @@ if __name__ == '__main__':
 
     headline("MovePaths")
 
-    for p_idx in range(0, storage.movepath.count()):
-        obj = storage.movepath.load(p_idx)
+    for p_idx in range(0, storage.movepaths.count()):
+        obj = storage.movepaths.load(p_idx)
         nline(p_idx, '', '')
         print indent(str(obj),16)
 

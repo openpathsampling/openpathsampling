@@ -75,16 +75,16 @@ class Storage(netcdf.Dataset):
         self.movedetails = paths.storage.ObjectStore(storage, paths.MoveDetails, is_named=False)
         self.shootingpoints = paths.storage.ObjectStore(storage, paths.ShootingPoint, is_named=False)
         self.shootingpointselectors = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, is_named=False)
-        self.engine = paths.storage.ObjectStore(storage, paths.DynamicsEngine, is_named=True)
-        self.pathsimulator = paths.storage.ObjectStore(storage, paths.PathSimulator, is_named=True)
+        self.engines = paths.storage.ObjectStore(storage, paths.DynamicsEngine, is_named=True)
+        self.pathsimulators = paths.storage.ObjectStore(storage, paths.PathSimulator, is_named=True)
 
         # nestable objects
 
-        self.volume = paths.storage.ObjectStore(storage, paths.Volume, is_named=True, nestable=True)
-        self.ensemble = paths.storage.ObjectStore(storage, paths.Ensemble, is_named=True, nestable=True)
-        self.movepath = paths.storage.ObjectStore(storage, paths.MovePath, is_named=False, nestable=True)
+        self.volumes = paths.storage.ObjectStore(storage, paths.Volume, is_named=True, nestable=True)
+        self.ensembles = paths.storage.ObjectStore(storage, paths.Ensemble, is_named=True, nestable=True)
+        self.movepaths = paths.storage.ObjectStore(storage, paths.MovePath, is_named=False, nestable=True)
 
-        self.transition = paths.storage.ObjectStore(storage,
+        self.transitions = paths.storage.ObjectStore(storage,
                                                     paths.TISTransition,
                                                     is_named=True)
 
@@ -94,6 +94,9 @@ class Storage(netcdf.Dataset):
                           ['trajectories', 'snapshots', 'configurations',
                            'samples', 'sample_sets', 'collectivevariables',
                            'cvs', 'pathmovers', 'shootingpoints',
+                           'shootingpointselectors', 'engines',
+                           'pathsimulators', 'volumes', 'ensembles',
+                           'movepaths', 'transitions'
 
 
                           ]

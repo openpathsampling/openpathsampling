@@ -111,7 +111,7 @@ if __name__=="__main__":
         # Give each interface a name
         interface.name = 'Interface '+str(no)
         # And save all of these
-        engine.storage.ensemble.save(interface)
+        engine.storage.ensembles.save(interface)
 
     mover_set = mf.OneWayShootingSet(UniformSelector(), interface_set)
 
