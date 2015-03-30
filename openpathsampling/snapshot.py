@@ -10,6 +10,7 @@ import numpy as np
 import mdtraj as md
 
 #THIS SHOULD NOT BE NECESSARY! SEE XYZ BELOW
+from simtk import unit as u
 import simtk.unit as u 
 
 
@@ -555,3 +556,40 @@ class Snapshot(object):
 
         this = Snapshot(configuration=self.configuration.copy(subset), momentum=self.momentum.copy(subset), reversed=self.reversed)
         return this
+
+    def units_to_dict(self):
+        """
+        Returns a dict of simtk.unit.Unit instances that represent the used units in the snapshot
+
+        Parameters
+        ----------
+        snapshot : Snapshot
+            the snapshot to be used
+
+        Returns
+        -------
+        units : dict of {str : simtk.unit.Unit }
+            representing a dict of string representing a dimension ('length', 'velocity', 'energy') pointing the
+            the simtk.unit.Unit to be used
+        """
+
+        units = {}
+        if self.coordinates is not None:
+            if hasattr(self.coordinates, 'unit'):
+                units['length'] = self.coordinates.unit
+            else:
+                units['length'] = u.Unit({})
+
+        if self.potential_energy is not None:
+            if hasattr(self.potential_energy, 'unit'):
+                units['energy'] = self.potential_energy.unit
+            else:
+                units['energy'] = u.Unit({})
+
+        if self.velocities is not None:
+            if hasattr(self.velocities, 'unit'):
+                units['velocity'] = self.velocities.unit
+            else:
+                units['velocity'] = u.Unit({})
+
+        return units

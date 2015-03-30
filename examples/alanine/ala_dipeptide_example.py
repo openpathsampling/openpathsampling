@@ -10,18 +10,20 @@ TIS simulation on alanine dipeptide.
 # script
 
 import logging.config
+import time
+import sys
+import os
+
 import numpy as np
 import mdtraj as md
-import time
 
-import sys, os
 sys.path.append(os.path.abspath('../'))
 sys.path.append(os.path.abspath('../../'))
 
 # in principle, all of these imports should be simplified once this is a
 # package
 from openpathsampling.collectivevariable import CV_Function, CV_Volume
-from openpathsampling.openmm_engine import OpenMMEngine
+from openpathsampling.dynamics.openmm.openmm_engine import OpenMMEngine
 from openpathsampling.snapshot import Snapshot
 from openpathsampling.volume import LambdaVolumePeriodic, VolumeFactory as vf
 from openpathsampling.pathmover import PathMoverFactory as mf
@@ -31,7 +33,6 @@ from openpathsampling.ensemble import (LengthEnsemble, SequentialEnsemble, AllOu
 from openpathsampling.pathsimulator import Bootstrapping
 from openpathsampling.pathmover import PathMover
 from openpathsampling.shooting import UniformSelector
-from openpathsampling.sample import Sample, SampleSet
 
 import simtk.unit as u
 

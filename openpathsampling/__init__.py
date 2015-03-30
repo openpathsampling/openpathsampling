@@ -33,7 +33,7 @@ from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
 
 from dynamics_engine import DynamicsEngine
 
-from openmm_engine import OpenMMEngine
+from openpathsampling.dynamics.openmm.openmm_engine import OpenMMEngine
 
 from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
     EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, IntersectionVolume, \
@@ -42,18 +42,13 @@ from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
 from todict import ObjectJSON, restores_as_full_object, \
     restores_as_stub_object, class_list
 
-from tools import empty_snapshot_from_openmm_topology, snapshot_from_pdb, \
-    to_openmm_topology, trajectory_from_mdtraj, units_from_snapshot
+from openpathsampling.dynamics.openmm.util import empty_snapshot_from_openmm_topology, snapshot_from_pdb, \
+    to_openmm_topology, trajectory_from_mdtraj
+from openpathsampling.snapshot import units_to_dict
 
-from topology import ToyTopology, MDTrajTopology, Topology
-
-from toy_dynamics.toy_pes import Gaussian, HarmonicOscillator, LinearSlope, \
-    OuterWalls, Toy_PES, Toy_PES_Add, Toy_PES_Sub
-
-from toy_dynamics.toy_engine import ToyEngine
-
-from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
-    LeapfrogVerletIntegrator
+from openpathsampling.dynamics.openmm.topology import MDTrajTopology
+from openpathsampling.dynamics.toy.topology import ToyTopology
+from openpathsampling.topology import Topology
 
 from analysis.tis_analysis import TISTransition, RETISTransition
 

@@ -1,22 +1,16 @@
 '''
 @author David W.H. Swenson
 '''
-import os
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises)
-from nose.plugins.skip import Skip, SkipTest
-from test_helpers import (true_func, data_filename,
-                          assert_equal_array_array,
-                          assert_not_equal_array_array)
-
-import numpy.testing as npt
-
-from openpathsampling.openmm_engine import *
-from openpathsampling.snapshot import Snapshot
-from openpathsampling.snapshot import Momentum, Configuration
-
-import simtk.unit as u
 import time
+
+from nose.tools import (assert_equal)
+import numpy.testing as npt
+import simtk.unit as u
+
+from test_helpers import (data_filename)
+from openpathsampling.dynamics.openmm.openmm_engine import *
+from openpathsampling.snapshot import Snapshot
+
 
 def compare_snapshot(snapshot1, snapshot2):
     npt.assert_allclose(snapshot1.box_vectors, snapshot2.box_vectors, rtol=1e-7, atol=0)

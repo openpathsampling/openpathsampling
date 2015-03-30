@@ -181,7 +181,7 @@ class Storage(netcdf.Dataset):
             self._initialize_netCDF()
 
             # update the units for dimensions from the template
-            self.dimension_units.update(paths.tools.units_from_snapshot(template))
+            self.dimension_units.update(template.units_to_dict())
             self._init_storages()
 
             logger.info("Saving topology")
