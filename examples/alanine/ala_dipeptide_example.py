@@ -71,7 +71,6 @@ if __name__=="__main__":
     engine.equilibrate(5)
     snap = engine.current_snapshot
     engine.storage.snapshots.save(snap, 0)
-    engine.initialized = True
     PathMover.engine = engine
 
     # this generates an order parameter (callable) object named psi (so if

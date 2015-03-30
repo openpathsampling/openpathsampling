@@ -34,7 +34,6 @@ if __name__ == "__main__":
 
     simulator.equilibrate(5)
     snap = Snapshot(simulator.simulation.context)
-    simulator.initialized = True
 
     ensemble = LengthEnsemble(10)
 

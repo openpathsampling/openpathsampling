@@ -136,7 +136,6 @@ class testShootingMover(object):
 class testForwardShootMover(testShootingMover):
     def test_move(self):
         mover = ForwardShootMover(UniformSelector(), replicas=[0])
-        self.dyn.initialized = True
         movepath = mover.move(self.init_samp)
         newsamp = self.init_samp + movepath
         assert_equal(len(newsamp), 1)
@@ -147,7 +146,6 @@ class testForwardShootMover(testShootingMover):
 class testBackwardShootMover(testShootingMover):
     def test_move(self):
         mover = BackwardShootMover(UniformSelector(), replicas=[0])
-        self.dyn.initialized = True
         movepath = mover.move(self.init_samp)
         newsamp = self.init_samp + movepath
         assert_equal(len(newsamp), 1)
@@ -679,7 +677,6 @@ class testMinusMover(object):
             1.16, 1.26, 1.16, -0.16, 1.16, 1.26, 1.16
         ])
         PathMover.engine = self.dyn
-        self.dyn.initialized = True
         self.innermost = ef.TISEnsemble(volA, volB, volX)
         self.minus = paths.MinusInterfaceEnsemble(volA, volX)
         self.mover = MinusMover(minus_ensemble=self.minus,

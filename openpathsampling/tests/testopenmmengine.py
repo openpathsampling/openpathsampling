@@ -121,7 +121,6 @@ class testOpenMMEngine(object):
         assert_not_equal_array_array(old_vel, new_vel)
 
     def test_generate(self):
-        self.engine.initialized = True
         traj = self.engine.generate(self.engine.current_snapshot, [true_func])
         assert_equal(len(traj), self.engine.n_frames_max)
 

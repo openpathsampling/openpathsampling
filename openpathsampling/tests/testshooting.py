@@ -19,7 +19,6 @@ class SelectorTest(object):
                                       0.1, 0.2, 0.3, 0.4, 0.5])
                                       #0.5, 0.4, 0.3, 0.2, 0.1])
         PathMover.engine = self.dyn
-        self.dyn.initialized = True
         self.ens = LengthEnsemble(5)
         self.gs = SampleSet(Sample(
             replica=0, trajectory=self.mytraj, ensemble=self.ens

@@ -47,7 +47,6 @@ def setUp():
 
     # and an openmm engine
     this.engine = paths.OpenMMEngine(options=this.options, template=this.template_snapshot)
-    this.engine.initialized = True
 
     # run a small trajectory of a few steps that can be used to save, etc...
     this.traj = this.engine.generate(this.template_snapshot, running=[paths.LengthEnsemble(2).can_append])

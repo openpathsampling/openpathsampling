@@ -83,9 +83,6 @@ class ReplicaExchangeTPS(object):
         self.title = 'Replica-exchange simulation'
         self.store_filename = ncfilename
         self.verbose = True
-        
-        # Flag as uninitialized.
-        self._initialized = False
 
         return
 

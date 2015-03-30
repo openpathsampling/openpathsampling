@@ -236,7 +236,6 @@ class testToyEngine(object):
         np.testing.assert_allclose(snap2.coordinates[0], init_pos)
 
     def test_generate(self):
-        self.sim.initialized = True
         traj = self.sim.generate(self.sim.current_snapshot, [true_func])
         assert_equal(len(traj), self.sim.n_frames_max)
 
