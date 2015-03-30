@@ -334,7 +334,7 @@ class Ensemble(object):
     def _lencheck(self, trajectory):
         if hasattr(self, 'frames'):
             if type(self.frames) is int:
-                return trajectory.frames > self.frames and trajectory.frames >= -self.frames
+                return len(trajectory) > self.frames and len(trajectory) >= -self.frames
                 
 class LoadedEnsemble(Ensemble):
     '''
@@ -931,14 +931,14 @@ class LengthEnsemble(Ensemble):
         pass
     
     def __call__(self, trajectory, lazy=None):
-        length = trajectory.frames
+        length = len(trajectory)
         if type(self.length) is int:
             return length == self.length
         else:
             return length >= self.length.start and (self.length.stop is None or length < self.length.stop)
         
     def can_append(self, trajectory):
-        length = trajectory.frames
+        length = len(trajectory)
         if type(self.length) is int:
             return length < self.length
         else:
@@ -988,7 +988,7 @@ class AllInEnsemble(VolumeEnsemble):
         if len(trajectory) == 0:
             return True
         else:
-            return self(trajectory[slice(trajectory.frames-1, None)])
+            return self(trajectory[slice(len(trajectory)-1, None)])
 
     def can_prepend(self, trajectory):
         if len(trajectory) == 0:
