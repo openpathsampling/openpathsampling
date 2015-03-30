@@ -2,10 +2,9 @@
 @author David W.H. Swenson
 """
 
-from hull import Hull
-from volume import Volume
+import openpathsampling as paths
 
-class HullVolume(Volume):
+class HullVolume(paths.Volume):
     '''Defines a Volume based on a Hull object.
 
     Attributes
