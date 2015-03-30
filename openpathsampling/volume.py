@@ -35,7 +35,7 @@ class Volume(object):
         elif type(other) is FullVolume:
             return other
         else:
-            return OrVolume(self, other)
+            return UnionVolume(self, other)
 
     def __xor__(self, other):
         if self is other:
@@ -45,7 +45,7 @@ class Volume(object):
         elif type(other) is FullVolume:
             return ~ self
         else:
-            return XorVolume(self, other)
+            return SymmetricDifferenceVolume(self, other)
 
     def __and__(self, other):
         if self is other:
@@ -55,7 +55,7 @@ class Volume(object):
         elif type(other) is FullVolume:
             return self
         else:
-            return AndVolume(self, other)
+            return IntersectionVolume(self, other)
 
     def __sub__(self, other):
         if self is other:
@@ -65,7 +65,7 @@ class Volume(object):
         elif type(other) is FullVolume:
             return EmptyVolume()
         else:
-            return SubVolume(self, other)
+            return RelativeComplementVolume(self, other)
         
     def __invert__(self):
         return NegatedVolume(self)
@@ -98,28 +98,28 @@ class VolumeCombination(Volume):
         return { 'volume1' : self.volume1, 'volume2' : self.volume2 }
 
 @restores_as_full_object
-class OrVolume(VolumeCombination):
+class UnionVolume(VolumeCombination):
     """ "Or" combination (union) of two volumes."""
     def __init__(self, volume1, volume2):
-        super(OrVolume, self).__init__(volume1, volume2, lambda a,b : a or b, str_fnc = '{0} or {1}')
+        super(UnionVolume, self).__init__(volume1, volume2, lambda a,b : a or b, str_fnc = '{0} or {1}')
 
 @restores_as_full_object
-class AndVolume(VolumeCombination):
+class IntersectionVolume(VolumeCombination):
     """ "And" combination (intersection) of two volumes."""
     def __init__(self, volume1, volume2):
-        super(AndVolume, self).__init__(volume1, volume2, lambda a,b : a and b, str_fnc = '{0} and {1}')
+        super(IntersectionVolume, self).__init__(volume1, volume2, lambda a,b : a and b, str_fnc = '{0} and {1}')
 
 @restores_as_full_object
-class XorVolume(VolumeCombination):
+class SymmetricDifferenceVolume(VolumeCombination):
     """ "Xor" combination of two volumes."""
     def __init__(self, volume1, volume2):
-        super(XorVolume, self).__init__(volume1, volume2, lambda a,b : a ^ b, str_fnc = '{0} xor {1}')
+        super(SymmetricDifferenceVolume, self).__init__(volume1, volume2, lambda a,b : a ^ b, str_fnc = '{0} xor {1}')
 
 @restores_as_full_object
-class SubVolume(VolumeCombination):
+class RelativeComplementVolume(VolumeCombination):
     """ "Subtraction" combination (relative complement) of two volumes."""
     def __init__(self, volume1, volume2):
-        super(SubVolume, self).__init__(volume1, volume2, lambda a,b : a and not b, str_fnc = '{0} and not {1}')
+        super(RelativeComplementVolume, self).__init__(volume1, volume2, lambda a,b : a and not b, str_fnc = '{0} and not {1}')
 
 
 @restores_as_full_object
@@ -269,7 +269,7 @@ class LambdaVolume(Volume):
         elif len(lrange) == 1:
             return self._copy_with_new_range(lrange[0][0], lrange[0][1])
         elif len(lrange) == 2:
-            return OrVolume(
+            return UnionVolume(
                 self._copy_with_new_range(lrange[0][0], lrange[0][1]),
                 self._copy_with_new_range(lrange[1][0], lrange[1][1])
             )

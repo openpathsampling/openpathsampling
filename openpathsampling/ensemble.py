@@ -290,7 +290,7 @@ class Ensemble(object):
         elif type(other) is FullEnsemble:
             return other
         else:
-            return OrEnsemble(self, other)
+            return UnionEnsemble(self, other)
 
     def __xor__(self, other):
         if self is other:
@@ -300,7 +300,7 @@ class Ensemble(object):
         elif type(other) is FullEnsemble:
             return NegatedEnsemble(self)        
         else:
-            return XorEnsemble(self, other)
+            return SymmetricDifferenceEnsemble(self, other)
 
     def __and__(self, other):
         if self is other:
@@ -310,7 +310,7 @@ class Ensemble(object):
         elif type(other) is FullEnsemble:
             return self
         else:
-            return AndEnsemble(self, other)
+            return IntersectionEnsemble(self, other)
 
     def __sub__(self, other):
         if self is other:
@@ -320,7 +320,7 @@ class Ensemble(object):
         elif type(other) is FullEnsemble:
             return EmptyEnsemble()
         else:
-            return SubEnsemble(self, other)
+            return RelativeComplementEnsemble(self, other)
         
     def __invert__(self):
         return NegatedEnsemble(self)
@@ -565,24 +565,24 @@ class EnsembleCombination(Ensemble):
         return self.sfnc.format('(\n' + Ensemble._indent(str(self.ensemble1)) + '\n)' , '(\n' + Ensemble._indent(str(self.ensemble2)) + '\n)')
 
 @restores_as_full_object
-class OrEnsemble(EnsembleCombination):
+class UnionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(OrEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a or b, str_fnc = '{0}\nor\n{1}')
+        super(UnionEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a or b, str_fnc = '{0}\nor\n{1}')
 
 @restores_as_full_object
-class AndEnsemble(EnsembleCombination):
+class IntersectionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(AndEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and b, str_fnc = '{0}\nand\n{1}')
+        super(IntersectionEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and b, str_fnc = '{0}\nand\n{1}')
 
 @restores_as_full_object
-class XorEnsemble(EnsembleCombination):
+class SymmetricDifferenceEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(XorEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a ^ b, str_fnc = '{0}\nxor\n{1}')
+        super(SymmetricDifferenceEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a ^ b, str_fnc = '{0}\nxor\n{1}')
 
 @restores_as_full_object
-class SubEnsemble(EnsembleCombination):
+class RelativeComplementEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(SubEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and not b, str_fnc = '{0}\nand not\n{1}')
+        super(RelativeComplementEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and not b, str_fnc = '{0}\nand not\n{1}')
 
 @restores_as_full_object
 class SequentialEnsemble(Ensemble):

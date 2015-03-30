@@ -6,7 +6,7 @@ from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble, \
     LeaveXEnsemble, LengthEnsemble, LoadedEnsemble, NegatedEnsemble, \
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \
-    SequentialEnsemble, AndEnsemble, OrEnsemble, XorEnsemble, SubEnsemble, \
+    SequentialEnsemble, IntersectionEnsemble, UnionEnsemble, SymmetricDifferenceEnsemble, RelativeComplementEnsemble, \
     SingleFrameEnsemble, MinusInterfaceEnsemble
 
 from snapshot import Snapshot, Configuration, Momentum
@@ -36,8 +36,8 @@ from dynamics_engine import DynamicsEngine
 from openmm_engine import OpenMMEngine
 
 from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
-    EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, AndVolume, \
-    OrVolume, XorVolume, SubVolume
+    EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, IntersectionVolume, \
+    UnionVolume, SymmetricDifferenceVolume, RelativeComplementVolume
 
 from todict import ObjectJSON, restores_as_full_object, \
     restores_as_stub_object, class_list
