@@ -2,13 +2,13 @@
 
 .. currentmodule:: openpathsampling.collectivevariable
 
-Orderparameter Functions
+CollectiveVariable Functions
 ========================
 
-:class:`openpathsampling.Orderparameters`
+:class:`openpathsampling.CollectiveVariables`
 
     >>> import openpathsampling as paths
-    >>> mover = paths.Orderparameter()
+    >>> mover = paths.CollectiveVariable()
 
 basic orderparamters
 --------------------

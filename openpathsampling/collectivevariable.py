@@ -81,7 +81,7 @@ class CollectiveVariable(cd.Wrap):
 
         Parameters
         ----------
-        store : OrderparameterStore or None
+        store : CollectiveVariableStore or None
             the store to be used, otherwise all underlying storages are synced
         store_cache : bool
             if `False` (default) the store will only store new values. If

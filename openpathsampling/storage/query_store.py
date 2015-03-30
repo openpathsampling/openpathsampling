@@ -11,7 +11,7 @@ class QueryStore():
         these by ensemble and/or replica.
         Parameters
         ----------
-        collectivevariable : paths.Orderparameter()
+        collectivevariable : paths.CollectiveVariable()
             the collectivevariable from which the values should be extracted
         ensemble : paths.Ensemble or None
             if not None only samples from the specific ensemble are used.

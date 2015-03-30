@@ -44,7 +44,7 @@ class ObjectDictStore(ObjectStore):
 
         See also
         --------
-        Orderparameter.sync
+        CollectiveVariable.sync
 
         """
         if objectdict is None:

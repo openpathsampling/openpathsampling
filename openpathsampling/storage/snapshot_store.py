@@ -157,7 +157,7 @@ class SnapshotStore(ObjectStore):
         self.init_variable('snapshot_momentum_reversed', 'bool', self.db, chunksizes=(1, ))
 
 #=============================================================================================
-# ORDERPARAMETER UTILITY FUNCTIONS
+# COLLECTIVE VARIABLE UTILITY FUNCTIONS
 #=============================================================================================
 
     @property

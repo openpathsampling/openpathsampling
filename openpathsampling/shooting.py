@@ -164,7 +164,7 @@ class ShootingPointSelector(object):
 class GaussianBiasSelector(ShootingPointSelector):
     def __init__(self, collectivevariable, alpha = 1.0, l0 = 0.5):
         '''
-        A Selector that biasses according to a specified Orderparameter using a mean l0 and a variance alpha
+        A Selector that biasses according to a specified CollectiveVariable using a mean l0 and a variance alpha
         '''
         super(GaussianBiasSelector, self).__init__()
         self.collectivevariable = collectivevariable
