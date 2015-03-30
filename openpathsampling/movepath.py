@@ -272,6 +272,21 @@ class MovePath(object):
         """
         return (item in self.samples)
 
+    def contains(self, mover):
+        """
+        Check if a given mover is part of this MovePath.
+        """
+        # TODO: In my opinion (DWHS) this should be the behavior of the
+        # __contains__ operation
+        if self.mover == mover:
+            return True
+        else:
+            try:
+                return self.movepath.contains(mover)
+            except NameError:
+                return False
+
+
     def __str__(self):
         if self.accepted:
             return 'SampleMove : %s : %s : %d samples' % (self.mover.cls, self.accepted, len(self._local_samples)) + ' ' + str(self._local_samples) + ''
