@@ -7,7 +7,7 @@ Created on 08.07.2014
 import numpy as np
 
 from openpathsampling.Simulator import Simulator
-from openpathsampling.orderparameter import OP_RMSD_To_Lambda, OP_Multi_RMSD
+from openpathsampling.collectivevariable import CV_RMSD_To_Lambda, CV_Multi_RMSD
 from openpathsampling.volume import LambdaVolume, VoronoiVolume
 from openpathsampling.ensemble import EnsembleFactory as ef
 import time
@@ -46,14 +46,14 @@ if __name__ == '__main__':
     if True:
         cc = Trajectory.storage.load(1)[ 0 ]
         cc = storage.snapshot.load(0)
-        op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices)
+        op = CV_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices)
         storage.collectivevariable.restore(op)
         print op(Trajectory.storage.load(1)[0:2])
         dd = simulator.storage.trajectory.load(1)[ 0:6 ]
         lV = LambdaVolume(op, 0.0, 0.06)
         lV2 = LambdaVolume(op, 0.0, 0.08)
 
-        # if this uses the same orderparameter it is fast, since the values are cached!
+        # if this uses the same collectivevariable it is fast, since the values are cached!
         tis = ef.TISEnsemble(
                        LambdaVolume(op, 0.0, 0.041),
                        LambdaVolume(op, 0.0, 0.041),
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         # be true in the next step. This should be passed to the pathmover to stop simulating for a particular ensemble
 
         vn = VoronoiVolume(
-                OP_Multi_RMSD('Voronoi', tt[[0,2]], atom_indices=simulator.solute_indices),
+                CV_Multi_RMSD('Voronoi', tt[[0,2]], atom_indices=simulator.solute_indices),
                 state = 0
                 )
 

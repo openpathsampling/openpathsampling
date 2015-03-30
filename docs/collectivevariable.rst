@@ -1,6 +1,6 @@
-.. _orderparameter:
+.. _collectivevariable:
 
-.. currentmodule:: openpathsampling.orderparameter
+.. currentmodule:: openpathsampling.collectivevariable
 
 Orderparameter Functions
 ========================
@@ -15,15 +15,15 @@ basic orderparamters
 .. autosummary::
     :toctree: api/generated/
 
-    OrderParameter
-    OP_Function
+    CollectiveVariable
+    CV_Function
 
-simple orderparameters
+simple collectivevariables
 ----------------------
 .. autosummary::
     :toctree: api/generated/
 
-    OP_Volume
+    CV_Volume
 
 
 mdtraj orderparamters
@@ -31,10 +31,10 @@ mdtraj orderparamters
 .. autosummary::
     :toctree: api/generated/
 
-    OP_MD_Function
-    OP_RMSD_To_Lambda
+    CV_MD_Function
+    CV_RMSD_To_Lambda
 
-msmbuilder3 orderparameters
+msmbuilder3 collectivevariables
 ---------------------------
 
-    OP_Featurizer
+    CV_Featurizer

@@ -19,7 +19,7 @@ sys.path.append(os.path.abspath('../../'))
 
 # in principle, all of these imports should be simplified once this is a
 # package
-from openpathsampling.orderparameter import OP_Function, OP_Volume
+from openpathsampling.collectivevariable import CV_Function, CV_Volume
 from openpathsampling.openmm_engine import OpenMMEngine
 from openpathsampling.snapshot import Snapshot
 from openpathsampling.volume import LambdaVolumePeriodic, VolumeFactory as vf
@@ -75,16 +75,16 @@ if __name__=="__main__":
     # mdtraj's compute_dihedrals function, with the atoms in psi_atoms
 
     psi_atoms = [6,8,14,16]
-    psi = OP_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
+    psi = CV_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
                       indices=[psi_atoms])
 
     # same story for phi, although we won't use that
 
     phi_atoms = [4,6,8,14]
-    phi = OP_Function("phi", md.compute_dihedrals, trajdatafmt="mdtraj",
+    phi = CV_Function("phi", md.compute_dihedrals, trajdatafmt="mdtraj",
                       indices=[phi_atoms])
 
-    # save the orderparameters in the storage
+    # save the collectivevariables in the storage
     # since they have no data cache this will only contain their name
     psi.save(storage=engine.storage.collectivevariable)
     phi.save(storage=engine.storage.collectivevariable)

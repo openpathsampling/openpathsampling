@@ -14,8 +14,8 @@ from snapshot import Snapshot, Configuration, Momentum
 from trajectory import Trajectory
 from sample import Sample, SampleSet
 
-from orderparameter import OP_Function, OP_MD_Function, OP_Featurizer, \
-    OP_RMSD_To_Lambda, OP_Volume, OrderParameter
+from collectivevariable import CV_Function, CV_MD_Function, CV_Featurizer, \
+    CV_RMSD_To_Lambda, CV_Volume, CollectiveVariable
 
 from pathmover import (
     BackwardShootMover, MinusMover, RandomChoiceMover, MoveDetails,
