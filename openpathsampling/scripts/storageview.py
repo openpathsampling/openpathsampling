@@ -152,8 +152,6 @@ if __name__ == '__main__':
 
         nline(p_idx,obj.name, str(len(found_values)) + ' entries ' + add)
 
-    exit()
-
     headline("MovePaths")
 
     for p_idx in range(0, storage.movepath.count()):
