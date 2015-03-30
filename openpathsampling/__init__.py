@@ -23,7 +23,7 @@ from pathmover import (
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
-    CollapseMove, CalculationMover, PathReversalSet,
+    CollapseMove, PathSimulatorMover, PathReversalSet,
     NeighborEnsembleReplicaExchange
     #, BootstrapPromotionMove
 )
@@ -62,5 +62,5 @@ from movepath import (EmptyMovePath, ConditionalSequentialMovePath,
                       RandomChoiceMovePath, SampleMovePath,
                       SequentialMovePath,  KeepLastSampleMovePath,
                       CollapsedMovePath, FilterSamplesMovePath,
-                      CalculationMovePath
+                      PathSimulatorMovePath
                      )

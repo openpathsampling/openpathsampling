@@ -25,7 +25,7 @@ class PathSimulator(object):
         self.globalstate = paths.SampleSet(samples)
 
     def run(self, nsteps):
-        logger.warning("Running an empty calculation? Try a subclass, maybe!")
+        logger.warning("Running an empty pathsimulator? Try a subclass, maybe!")
 
 
 @restores_as_stub_object
@@ -104,7 +104,7 @@ class InitializeSingleTrajectoryMover(PathMover):
 class Bootstrapping(PathSimulator):
     """Creates a SampleSet with one sample per ensemble.
     
-    The ensembles for the Bootstrapping calculation must be one ensemble
+    The ensembles for the Bootstrapping pathsimulator must be one ensemble
     set, in increasing order. Replicas are named numerically.
     """
 
@@ -214,7 +214,7 @@ class PathSampling(PathSimulator):
         initialization_logging(init_log, self, 
                                ['root_mover', 'globalstate'])
 
-        self._mover = paths.CalculationMover(self.root_mover, self)
+        self._mover = paths.PathSimulatorMover(self.root_mover, self)
 
     def run(self, nsteps):
         # TODO: change so we can start from some arbitrary step number

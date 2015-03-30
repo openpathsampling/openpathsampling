@@ -177,7 +177,7 @@ use PartOutEnsemble as we typically do with TIS paths.
     print """
 Starting the bootstrapping procedure to obtain initial paths. First we
 define our shooting movers (randomly pick fwd or bkwd shooting), then build
-the bootstrapping calculation, then we run it. 
+the bootstrapping pathsimulator, then we run it.
     """
     bootstrap = Bootstrapping(storage=engine.storage,
                               engine=engine,
