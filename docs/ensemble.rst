@@ -28,7 +28,7 @@ Volume Ensembles
 	AllInEnsemble
 	AllOutEnsemble
         PartInEnsemble
-	PartAllOutEnsemble
+	PartOutEnsemble
 	
 Set-based Ensemble combinations
 -----------------------------
