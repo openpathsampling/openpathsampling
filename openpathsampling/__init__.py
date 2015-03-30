@@ -31,7 +31,7 @@ from pathmover import (
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
     GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
 
-from dynamics_engine import DynamicsEngine
+from openpathsampling.dynamics.dynamics_engine import DynamicsEngine
 
 from openpathsampling.dynamics.openmm.openmm_engine import OpenMMEngine
 

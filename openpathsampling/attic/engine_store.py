@@ -1,5 +1,5 @@
 from object_storage_with_lazyloading import ObjectStorage
-from openpathsampling.dynamics_engine import DynamicsEngine
+from openpathsampling.dynamics.dynamics_engine import DynamicsEngine
 
 class DynamicsEngineStorage(ObjectStorage):
 
