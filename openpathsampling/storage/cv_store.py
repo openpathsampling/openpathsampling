@@ -1,5 +1,5 @@
 from object_storage import ObjectStore
-from openpathsampling.orderparameter import OrderParameter
+from openpathsampling.collectivevariable import CollectiveVariable
 
 class ObjectDictStore(ObjectStore):
     def __init__(self, storage, cls, key_class):
@@ -32,7 +32,7 @@ class ObjectDictStore(ObjectStore):
 
     def sync(self, objectdict=None):
         """
-        This will update the stored cache of the orderparameter. It is
+        This will update the stored cache of the collectivevariable. It is
         different from saving in that the object is only created if it is
         saved (and the object caching will prevent additional creation)
 
@@ -40,11 +40,11 @@ class ObjectDictStore(ObjectStore):
         ----------
         objectdict : object or None (default)
             the objectdict to store. if `None` is given (default) then
-            all orderparameters are synced
+            all collectivevariables are synced
 
         See also
         --------
-        Orderparameter.sync
+        CollectiveVariable.sync
 
         """
         if objectdict is None:
@@ -103,7 +103,7 @@ class ObjectDictStore(ObjectStore):
     def load(self, idx):
         """
         Restores the cache from the storage using the name of the
-        orderparameter.
+        collectivevariable.
 
         Parameters
         ----------
@@ -120,7 +120,7 @@ class ObjectDictStore(ObjectStore):
         storage = self.storage
 
         name = storage.variables[self.idx_dimension + '_name'][idx]
-        op = OrderParameter(name)
+        op = CollectiveVariable(name)
 
         return op
 

@@ -66,7 +66,7 @@ class Storage(netcdf.Dataset):
         self.sample = paths.storage.SampleStore(storage)
         self.sampleset = paths.storage.SampleSetStore(storage)
 
-        self.collectivevariable = paths.storage.ObjectDictStore(storage, paths.OrderParameter, paths.Snapshot)
+        self.collectivevariable = paths.storage.ObjectDictStore(storage, paths.CollectiveVariable, paths.Snapshot)
         self.cv = self.collectivevariable
 
         # normal objects
@@ -456,7 +456,7 @@ class Storage(netcdf.Dataset):
         # and exclude configurations and momenta, but this seems cleaner
 
         for storage_name in [
-                'trajectory', 'snapshot', 'sample', 'sampleset', 'orderparameter',
+                'trajectory', 'snapshot', 'sample', 'sampleset', 'collectivevariable',
                 'pathmover', 'engine', 'movedetails', 'shootingpoint', 'shootingpointselector',
                 'globalstate', 'volume', 'ensemble', 'movepath', 'dynamicsengine' ]:
             self.clone_storage(storage_name, storage2)
@@ -467,7 +467,7 @@ class Storage(netcdf.Dataset):
         """
         Creates a copy of the netCDF file and replicates only the static parts which I consider
             ensembles, volumes, engines, pathmovers, shootingpointselectors. We do not need to
-            reconstruct orderparameters since these need to be created again completely and then
+            reconstruct collectivevariables since these need to be created again completely and then
             the necessary arrays in the file will be created automatically anyway.
 
         Notes
@@ -505,7 +505,7 @@ class Storage(netcdf.Dataset):
         for variable in self.variables.keys():
             if variable.startswith(storage_name + '_'):
                 if variable not in new_storage.variables:
-                    # orderparameters have additional variables in the storage that need to be copied
+                    # collectivevariables have additional variables in the storage that need to be copied
                     new_storage.createVariable(variable, str(self.variables[variable].dtype), self.variables[variable].dimensions)
                     for attr in self.variables[variable].ncattrs():
                         setattr(new_storage.variables[variable], attr, getattr(self.variables[variable], attr))

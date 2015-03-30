@@ -945,7 +945,7 @@ class ObjectStore(object):
             self.storage.variables[name + '_idx'][idx] = -1
 
 #==============================================================================
-# ORDERPARAMETER UTILITY FUNCTIONS
+# COLLECTIVE VARIABLE UTILITY FUNCTIONS
 #==============================================================================
 
     @property

@@ -27,9 +27,9 @@ class Ensemble(object):
     Examples
     --------    
     >>> EnsembleFactory.TISEnsemble(
-    >>>     LambdaVolume(orderparameter_A, 0.0, 0.02), 
-    >>>     LambdaVolume(orderparameter_A, 0.0, 0.02), 
-    >>>     LambdaVolume(orderparameter_A, 0.0, 0.08), 
+    >>>     LambdaVolume(collectivevariable_A, 0.0, 0.02),
+    >>>     LambdaVolume(collectivevariable_A, 0.0, 0.02),
+    >>>     LambdaVolume(collectivevariable_A, 0.0, 0.08),
     >>>     True
     >>>     )
 
