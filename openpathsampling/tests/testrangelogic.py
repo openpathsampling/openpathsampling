@@ -1,7 +1,7 @@
+from nose.tools import assert_equal
 
-from nose.tools import assert_equal, assert_not_equal, raises
-from nose.plugins.skip import Skip, SkipTest
-from openpathsampling.range_logic import *
+from openpathsampling.util.range_logic import *
+
 
 class testRangeLogic(object):
     def test_range_and(self):

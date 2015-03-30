@@ -36,7 +36,7 @@ from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
     EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, IntersectionVolume, \
     UnionVolume, SymmetricDifferenceVolume, RelativeComplementVolume
 
-from todict import ObjectJSON
+from openpathsampling.util.todict import ObjectJSON
 
 from openpathsampling.topology import Topology
 

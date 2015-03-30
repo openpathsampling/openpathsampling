@@ -1,4 +1,4 @@
-from openpathsampling.todict import restores_as_full_object
+from openpathsampling.util.todict import restores_as_full_object
 import openpathsampling as paths
 
 __author__ = 'jan-hendrikprinz'

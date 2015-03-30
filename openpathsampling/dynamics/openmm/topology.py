@@ -5,7 +5,7 @@ from simtk import unit as units
 import simtk.openmm
 
 from openpathsampling.topology import Topology
-from openpathsampling.todict import restores_as_full_object
+from openpathsampling.util.todict import restores_as_full_object
 
 
 @restores_as_full_object

@@ -1,16 +1,16 @@
 import os
+
 import numpy as np
 from openmmtools.integrators import VVVRIntegrator
-
 import simtk.unit as u
 import simtk.openmm as openmm
 from simtk.openmm.app import ForceField, PME, HBonds, PDBFile
 
 import openpathsampling as paths
 from openpathsampling.storage import Storage
-from openpathsampling.todict import restores_as_full_object
-
+from openpathsampling.util.todict import restores_as_full_object
 from util import snapshot_from_pdb, to_openmm_topology
+
 
 @restores_as_full_object
 class OpenMMEngine(paths.DynamicsEngine):
