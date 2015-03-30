@@ -25,7 +25,6 @@ from pathmover import (
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
     CollapseMove, PathSimulatorMover, PathReversalSet,
     NeighborEnsembleReplicaExchange
-    #, BootstrapPromotionMove
 )
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
@@ -33,14 +32,9 @@ from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
 
 from openpathsampling.dynamics.dynamics_engine import DynamicsEngine
 
-from openpathsampling.dynamics.openmm.openmm_engine import OpenMMEngine
-
 from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
     EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, IntersectionVolume, \
     UnionVolume, SymmetricDifferenceVolume, RelativeComplementVolume
-
-#from todict import ObjectJSON, restores_as_full_object, \
-#    restores_as_stub_object, class_list
 
 from todict import ObjectJSON
 
