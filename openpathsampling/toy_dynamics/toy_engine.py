@@ -44,8 +44,7 @@ class ToyEngine(DynamicsEngine):
 
         options['n_atoms'] = 1
 
-        super(ToyEngine, self).__init__(
-                                        options=options)
+        super(ToyEngine, self).__init__(options=options)
 
         self.template = template
         self.mass = template.topology.masses
