@@ -9,9 +9,9 @@ logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 @restores_as_stub_object
-class Calculation(object):
+class PathSimulator(object):
 
-    calc_name = "Calculation"
+    calc_name = "PathSimulator"
 
     def __init__(self, storage, engine=None):
         self.storage = storage
@@ -101,7 +101,7 @@ class InitializeSingleTrajectoryMover(PathMover):
                         ensemble=self.ensembles[0], details=init_details)
 
 @restores_as_stub_object
-class Bootstrapping(Calculation):
+class Bootstrapping(PathSimulator):
     """Creates a SampleSet with one sample per ensemble.
     
     The ensembles for the Bootstrapping calculation must be one ensemble
@@ -191,7 +191,7 @@ class Bootstrapping(Calculation):
             assert sample.ensemble(sample.trajectory) == True, "WTF?"
 
 @restores_as_stub_object
-class PathSampling(Calculation):
+class PathSampling(PathSimulator):
     """
     General path sampling code. 
     

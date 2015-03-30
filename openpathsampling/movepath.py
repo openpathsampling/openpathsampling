@@ -590,7 +590,7 @@ class KeepLastSampleMovePath(MovePath):
 @restores_as_full_object
 class CalculationMovePath(MovePath):
     """
-    A MovePath that just wraps a movepath and references a Calculation
+    A MovePath that just wraps a movepath and references a PathSimulator
     """
 
     def __init__(self, movepath, calculation=None, step=-1, mover=None):

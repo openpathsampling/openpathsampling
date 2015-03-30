@@ -1,4 +1,4 @@
-from calculation import Calculation, Bootstrapping, PathSampling
+from pathsimulator import PathSimulator, Bootstrapping, PathSampling
 
 from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     EntersXEnsemble, EmptyEnsemble, ExitsXEnsemble, FullEnsemble, \
