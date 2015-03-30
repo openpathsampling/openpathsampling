@@ -40,7 +40,7 @@ class CollectiveVariable(cd.Wrap):
 
         self.pre_dict = cd.Transform(self._pre_item)
         self.multi_dict = cd.ExpandMulti()
-        self.store_dict = cd.MultiStore('collectivevariable', name,
+        self.store_dict = cd.MultiStore('collectivevariables', name,
                                             dimensions, self)
         self.cache_dict = cd.ChainDict()
         self.expand_dict = cd.UnwrapTuple()
