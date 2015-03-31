@@ -47,7 +47,7 @@ class PathMoveChange(object):
         self._collapsed_samples = None
         self._samples = None
         self.mover = mover
-        self.movepaths = list()
+        self.subchanges = list()
 
     def to_dict(self):
         return {
@@ -56,9 +56,9 @@ class PathMoveChange(object):
         }
 
     @property
-    def movepath(self):
-        if len(self.movepaths) == 1:
-            return self.movepaths[0]
+    def subchange(self):
+        if len(self.subchanges) == 1:
+            return self.subchanges[0]
         else:
             return None
 
@@ -86,7 +86,7 @@ class PathMoveChange(object):
         move is hidden and will not be stored
         """
         obj = CollapsedMovePath(samples=self.collapsed_samples, mover=self.mover)
-        obj._movepath = self
+        obj._subchange = self
 
         return obj
 
@@ -95,7 +95,7 @@ class PathMoveChange(object):
         Reduce the underlying PathMoveChange to a subset of relevant samples
 
         This can be used to reduce a PathMoveChange (and everything below) to
-        a movepath that only uses specific samples that can be picked
+        a subchange that only uses specific samples that can be picked
         from the list of all returned samples. Note that this can be
         problematic since a move might not return a different number of
         samples each time it is run.
@@ -104,7 +104,7 @@ class PathMoveChange(object):
         ----------
         selected_samples : list of int
             list of integer indices to be kept from the list of returned
-            samples in this movepath. Slicing is not allowed, but negative
+            samples in this subchange. Slicing is not allowed, but negative
             indices are and conforms to the usual python convention (-1
             is the last samples, etc.)
         use_all_samples : bool
@@ -142,7 +142,7 @@ class PathMoveChange(object):
         ]
 
         obj = CollapsedMovePath(samples = samples, mover=self.mover)
-        obj._movepath = self
+        obj._subchange = self
 
         return obj
 
@@ -232,7 +232,7 @@ class PathMoveChange(object):
         Standard apply is to apply the list of samples contained
         """
         new_sample_set = paths.SampleSet(other).apply_samples(self.samples)
-        new_sample_set.movepath = self
+#        new_sample_set.pathmovechange = self
         return new_sample_set
 
 
@@ -355,8 +355,8 @@ class CollapsedMovePath(SamplePathMoveChange):
     """
     @property
     def opened(self):
-        if hasattr(self, '_movepath') and self._movepath is not None:
-            return self._movepath
+        if hasattr(self, '_subchange') and self._subchange is not None:
+            return self._subchange
         else:
             return self
 
@@ -383,28 +383,28 @@ class RandomChoicePathMoveChange(PathMoveChange):
     """
     A PathMoveChange that represents the application of a mover chosen randomly
     """
-    def __init__(self, movepath, mover=None):
+    def __init__(self, subchange, mover=None):
         super(RandomChoicePathMoveChange, self).__init__(mover=mover)
-        self.movepaths = [movepath]
+        self.subchanges = [subchange]
 
     def to_dict(self):
         return {
             'mover' : self.mover,
-            'movepaths' : self.movepaths
+            'subchanges' : self.subchanges
         }
 
     def _get_samples(self):
-        return self.movepath.samples
+        return self.subchange.samples
 
     def apply_to(self, other):
-        return self.movepath.apply_to(other)
+        return self.subchange.apply_to(other)
 
     def __str__(self):
-        return 'RandomChoice :\n' + PathMoveChange._indent(str(self.movepath))
+        return 'RandomChoice :\n' + PathMoveChange._indent(str(self.subchange))
 
     @property
     def all_samples(self):
-        return self.movepath.all_samples
+        return self.subchange.all_samples
 
 
 @restores_as_full_object
@@ -413,42 +413,42 @@ class SequentialPathMoveChange(PathMoveChange):
     SequentialPathMoveChange has no own samples, only inferred Sampled from the
     underlying MovePaths
     """
-    def __init__(self, movepaths, mover=None):
+    def __init__(self, subchanges, mover=None):
         super(SequentialPathMoveChange, self).__init__(accepted=None, mover=mover)
-        self.movepaths = movepaths
+        self.subchanges = subchanges
 
     def to_dict(self):
         return {
-            'movepaths' : self.movepaths,
+            'subchanges' : self.subchanges,
             'mover' : self.mover
         }
 
     def _get_samples(self):
         samples = []
-        for movepath in self.movepaths:
-            samples = samples + movepath.samples
+        for subchange in self.subchanges:
+            samples = samples + subchange.samples
         return samples
 
     @property
     def all_samples(self):
         samples = []
-        for movepath in self.movepaths:
-            samples = samples + movepath.all_samples
+        for subchange in self.subchanges:
+            samples = samples + subchange.all_samples
         return samples
 
 
     def apply_to(self, other):
         sample_set = other
 
-        for movepath in self.movepaths:
-            sample_set = movepath.apply_to(sample_set)
+        for subchange in self.subchanges:
+            sample_set = subchange.apply_to(sample_set)
 
         return sample_set
 
     def __str__(self):
         return 'SequentialMove : %s : %d samples\n' % \
                (self.accepted, len(self.samples)) + \
-               PathMoveChange._indent('\n'.join(map(str, self.movepaths)))
+               PathMoveChange._indent('\n'.join(map(str, self.subchanges)))
 
 @restores_as_full_object
 class PartialAcceptanceSequentialMovePath(SequentialPathMoveChange):
@@ -459,9 +459,9 @@ class PartialAcceptanceSequentialMovePath(SequentialPathMoveChange):
 
     def _get_samples(self):
         changes = []
-        for movepath in self.movepaths:
-            if movepath.accepted:
-                changes.extend(movepath.samples)
+        for subchange in self.subchanges:
+            if subchange.accepted:
+                changes.extend(subchange.samples)
             else:
                 break
 
@@ -470,9 +470,9 @@ class PartialAcceptanceSequentialMovePath(SequentialPathMoveChange):
     def apply_to(self, other):
         sample_set = other
 
-        for movepath in self.movepaths:
-            if movepath.accepted:
-                sample_set = movepath.apply_to(sample_set)
+        for subchange in self.subchanges:
+            if subchange.accepted:
+                sample_set = subchange.apply_to(sample_set)
             else:
                 break
 
@@ -481,7 +481,7 @@ class PartialAcceptanceSequentialMovePath(SequentialPathMoveChange):
     def __str__(self):
         return 'PartialAcceptanceMove : %s : %d samples\n' % \
                (self.accepted, len(self.samples)) + \
-               PathMoveChange._indent('\n'.join(map(str, self.movepaths)))
+               PathMoveChange._indent('\n'.join(map(str, self.subchanges)))
 
 @restores_as_full_object
 class ConditionalSequentialMovePath(SequentialPathMoveChange):
@@ -493,9 +493,9 @@ class ConditionalSequentialMovePath(SequentialPathMoveChange):
     def apply_to(self, other):
         sample_set = other
 
-        for movepath in self.movepaths:
-            if movepath.accepted:
-                sample_set = movepath.apply_to(sample_set)
+        for subchange in self.subchanges:
+            if subchange.accepted:
+                sample_set = subchange.apply_to(sample_set)
             else:
                 return other
 
@@ -503,17 +503,17 @@ class ConditionalSequentialMovePath(SequentialPathMoveChange):
 
     def _get_samples(self):
         changes = []
-        for movepath in self.movepaths:
-            if movepath.accepted:
-                changes.extend(movepath)
+        for subchange in self.subchanges:
+            if subchange.accepted:
+                changes.extend(subchange)
             else:
                 return []
 
         return changes
 
     def _get_accepted(self):
-        for movepath in self.movepaths:
-            if not movepath.accepted:
+        for subchange in self.subchanges:
+            if not subchange.accepted:
                 return False
 
         return True
@@ -521,7 +521,7 @@ class ConditionalSequentialMovePath(SequentialPathMoveChange):
     def __str__(self):
         return 'ConditionalSequentialMove : %s : %d samples\n' % \
                (self.accepted, len(self.samples)) + \
-               PathMoveChange._indent( '\n'.join(map(str, self.movepaths)))
+               PathMoveChange._indent( '\n'.join(map(str, self.subchanges)))
 
 
 @restores_as_full_object
@@ -530,9 +530,9 @@ class FilterSamplesPathMoveChange(PathMoveChange):
     A PathMoveChange that keeps a selection of the underlying samples
     """
 
-    def __init__(self, movepath, selected_samples, use_all_samples=False, mover=None):
+    def __init__(self, subchange, selected_samples, use_all_samples=False, mover=None):
         super(KeepLastSamplePathMoveChange, self).__init__(mover=mover)
-        self.movepaths = [movepath]
+        self.subchanges = [subchange]
         self.selected_samples = selected_samples
         self.use_all_samples = use_all_samples
 
@@ -553,11 +553,11 @@ class FilterSamplesPathMoveChange(PathMoveChange):
     def __str__(self):
         return 'FilterMove : pick samples [%s] from sub moves : %s : %d samples\n' % \
                (str(self.selected_samples), self.accepted, len(self.samples)) + \
-               PathMoveChange._indent( str(self.movepath) )
+               PathMoveChange._indent( str(self.subchange) )
 
     def to_dict(self):
         return {
-            'movepaths' : self.movepaths,
+            'subchanges' : self.subchanges,
             'selected_samples' : self.selected_samples,
             'use_all_samples' : self.use_all_samples,
             'mover' : self.mover
@@ -576,14 +576,14 @@ class KeepLastSamplePathMoveChange(PathMoveChange):
 
     Notes
     -----
-    Does the same as `FilterSamplesPathMoveChange(movepath, [-1], False)`
+    Does the same as `FilterSamplesPathMoveChange(subchange, [-1], False)`
     """
-    def __init__(self, movepath, mover=None):
+    def __init__(self, subchange, mover=None):
         super(KeepLastSamplePathMoveChange, self).__init__(mover=mover)
-        self.movepaths = [movepath]
+        self.subchanges = [subchange]
 
     def _get_samples(self):
-        samples = self.movepath.samples
+        samples = self.subchange.samples
         if len(samples) > 1:
             samples = [samples[-1]]
 
@@ -592,37 +592,37 @@ class KeepLastSamplePathMoveChange(PathMoveChange):
     def __str__(self):
         return 'Restrict to last sample : %s : %d samples\n' % \
                (self.accepted, len(self.samples)) + \
-               PathMoveChange._indent( str(self.movepath) )
+               PathMoveChange._indent( str(self.subchange) )
 
     def to_dict(self):
         return {
-            'movepaths' : self.movepaths,
+            'subchanges' : self.subchanges,
             'mover' : self.mover
         }
 
 @restores_as_full_object
 class PathSimulatorPathMoveChange(PathMoveChange):
     """
-    A PathMoveChange that just wraps a movepath and references a PathSimulator
+    A PathMoveChange that just wraps a subchange and references a PathSimulator
     """
 
-    def __init__(self, movepath, pathsimulator=None, step=-1, mover=None):
+    def __init__(self, subchange, pathsimulator=None, step=-1, mover=None):
         super(PathSimulatorPathMoveChange, self).__init__(mover=mover)
-        self.movepaths = [movepath]
+        self.subchanges = [subchange]
         self.pathsimulator = pathsimulator
         self.step = step
 
     def _get_samples(self):
-        return self.movepath.samples
+        return self.subchange.samples
 
     def __str__(self):
         return 'PathSimulatorStep : %s : Step # %d with %d samples\n' % \
                (str(self.pathsimulator.cls), self.step, len(self.samples)) + \
-               PathMoveChange._indent( str(self.movepath) )
+               PathMoveChange._indent( str(self.subchange) )
 
     def to_dict(self):
         return {
-            'movepaths' : self.movepaths,
+            'subchanges' : self.subchanges,
             'pathsimulator' : self.pathsimulator,
             'step' : self.step,
             'mover' : self.mover
