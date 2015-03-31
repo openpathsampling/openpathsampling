@@ -55,7 +55,8 @@ from toy_dynamics.toy_engine import ToyEngine
 from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
     LeapfrogVerletIntegrator
 
-from analysis.tis_analysis import TISTransition, RETISTransition
+from analysis.tis_analysis import TISTransition, RETISTransition, Transition, \
+    TPSTransition
 
 from movepath import (EmptyMovePath, ConditionalSequentialMovePath,
                       MovePath, PartialAcceptanceSequentialMovePath,

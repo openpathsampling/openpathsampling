@@ -187,7 +187,6 @@ class TISTransition(Transition):
             )
         }
 
-
     def to_dict(self):
         ret_dict = {
             'stateA' : self.stateA,

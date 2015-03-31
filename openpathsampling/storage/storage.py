@@ -85,7 +85,7 @@ class Storage(netcdf.Dataset):
         self.movepath = paths.storage.ObjectStore(storage, paths.MovePath, is_named=False, nestable=True)
 
         self.transition = paths.storage.ObjectStore(storage,
-                                                    paths.TISTransition,
+                                                    paths.Transition,
                                                     is_named=True)
 
         self.query = paths.storage.QueryStore(storage)
