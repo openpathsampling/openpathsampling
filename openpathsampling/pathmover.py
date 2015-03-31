@@ -392,8 +392,7 @@ class ShootMover(PathMover):
         sample = paths.Sample(
             replica=replica, 
             trajectory=details.result, 
-            ensemble=dynamics_ensemble,
-            details=details
+            ensemble=dynamics_ensemble
         )
 
 #        new_set = SampleSet(samples=[sample], predecessor=globalstate, accepted=True)
@@ -402,7 +401,8 @@ class ShootMover(PathMover):
         path = paths.SamplePathMoveChange(
                 samples=[sample],
                 accepted=details.accepted,
-                mover=self
+                mover=self,
+                details=details
         )
 
         return path

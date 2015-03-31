@@ -40,7 +40,7 @@ class PathMoveChange(object):
         spl = [' |  ' + p if p[0] == ' ' else ' +- ' + p for p in spl]
         return '\n'.join(spl)
 
-    def __init__(self, accepted=True, mover=None):
+    def __init__(self, accepted=True, mover=None, details=None):
         self._accepted = accepted
         self._destination = None
         self._local_samples = []
@@ -48,11 +48,13 @@ class PathMoveChange(object):
         self._samples = None
         self.mover = mover
         self.subchanges = list()
+        self.details = details
 
     def to_dict(self):
         return {
             'accepted' : self.accepted,
-            'mover' : self.mover
+            'mover' : self.mover,
+            'details' : self.details
         }
 
     @property
@@ -422,8 +424,8 @@ class EmptyPathMoveChange(PathMoveChange):
     """
     A PathMoveChange representing no changes
     """
-    def __init__(self, mover=None):
-        super(EmptyPathMoveChange, self).__init__(accepted=True, mover=mover)
+    def __init__(self, mover=None, details=None):
+        super(EmptyPathMoveChange, self).__init__(accepted=True, mover=mover, details=details)
 
     def apply_to(self, other):
         return other
@@ -448,8 +450,8 @@ class SamplePathMoveChange(PathMoveChange):
     This is the most common PathMoveChange and all other moves use this
     as leaves and on the lowest level consist only of `SamplePathMoveChange`
     """
-    def __init__(self, samples, accepted=True, mover=None):
-        super(SamplePathMoveChange, self).__init__(accepted=accepted, mover=mover)
+    def __init__(self, samples, accepted=True, mover=None, details=None):
+        super(SamplePathMoveChange, self).__init__(accepted=accepted, mover=mover, details=details)
         if samples is None:
             return
 
@@ -463,7 +465,8 @@ class SamplePathMoveChange(PathMoveChange):
         return {
             'accepted' : self.accepted,
             'mover' : self.mover,
-            'samples' : self._local_samples
+            'samples' : self._local_samples,
+            'details' : self.details
         }
 
     def apply_to(self, other):
@@ -508,14 +511,15 @@ class RandomChoicePathMoveChange(PathMoveChange):
     """
     A PathMoveChange that represents the application of a mover chosen randomly
     """
-    def __init__(self, subchange, mover=None):
-        super(RandomChoicePathMoveChange, self).__init__(mover=mover)
+    def __init__(self, subchange, mover=None, details=None):
+        super(RandomChoicePathMoveChange, self).__init__(mover=mover, details=details)
         self.subchanges = [subchange]
 
     def to_dict(self):
         return {
             'mover' : self.mover,
-            'subchanges' : self.subchanges
+            'subchanges' : self.subchanges,
+            'details' : self.details
         }
 
     def _get_samples(self):
@@ -538,14 +542,15 @@ class SequentialPathMoveChange(PathMoveChange):
     SequentialPathMoveChange has no own samples, only inferred Sampled from the
     underlying MovePaths
     """
-    def __init__(self, subchanges, mover=None):
-        super(SequentialPathMoveChange, self).__init__(accepted=None, mover=mover)
+    def __init__(self, subchanges, mover=None, details=None):
+        super(SequentialPathMoveChange, self).__init__(accepted=None, mover=mover, details=details)
         self.subchanges = subchanges
 
     def to_dict(self):
         return {
             'subchanges' : self.subchanges,
-            'mover' : self.mover
+            'mover' : self.mover,
+            'details' : self.details
         }
 
     def _get_samples(self):

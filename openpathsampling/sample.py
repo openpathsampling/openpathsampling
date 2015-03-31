@@ -357,12 +357,11 @@ class Sample(object):
         the Monte Carlo step number associated with this Sample
     """
 
-    def __init__(self, replica=None, trajectory=None, ensemble=None, intermediate=False, details=None, step=-1):
+    def __init__(self, replica=None, trajectory=None, ensemble=None, intermediate=False, step=-1):
         self.replica = replica
         self.ensemble = ensemble
         self.trajectory = trajectory
         self.intermediate = intermediate
-        self.details = details
         self.step = step
 
     def __call__(self):
@@ -373,7 +372,6 @@ class Sample(object):
         mystr += "Replica: "+str(self.replica)+"\n"
         mystr += "Trajectory: "+str(self.trajectory)+"\n"
         mystr += "Ensemble: "+repr(self.ensemble)+"\n"
-        mystr += "Details: "+str(self.details)+"\n"
         return mystr
 
     def __repr__(self):
@@ -391,8 +389,7 @@ class Sample(object):
         result = Sample(
             replica=self.replica,
             trajectory=self.trajectory,
-            ensemble=self.ensemble,
-            details=paths.MoveDetails.initialization(self)
+            ensemble=self.ensemble
         )
         return result
 
@@ -407,10 +404,7 @@ class Sample(object):
         result = Sample(
             replica=replica,
             trajectory=trajectory,
-            ensemble=ensemble,
-            details=paths.MoveDetails.initialization_from_scratch(
-                trajectory=trajectory,
-                ensemble=ensemble)
+            ensemble=ensemble
         )
         return result
         
