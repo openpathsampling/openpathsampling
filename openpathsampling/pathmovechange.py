@@ -47,12 +47,20 @@ class PathMoveChange(object):
         self._collapsed_samples = None
         self._samples = None
         self.mover = mover
+        self.movepaths = list()
 
     def to_dict(self):
         return {
             'accepted' : self.accepted,
-            'mover' : self.mover,
+            'mover' : self.mover
         }
+
+    @property
+    def movepath(self):
+        if len(self.movepaths) == 1:
+            return self.movepaths[0]
+        else:
+            return None
 
     @property
     def opened(self):
@@ -377,12 +385,12 @@ class RandomChoicePathMoveChange(PathMoveChange):
     """
     def __init__(self, movepath, mover=None):
         super(RandomChoicePathMoveChange, self).__init__(mover=mover)
-        self.movepath = movepath
+        self.movepaths = [movepath]
 
     def to_dict(self):
         return {
-            'movepath' : self.movepath,
-            'mover' : self.mover
+            'mover' : self.mover,
+            'movepaths' : self.movepaths
         }
 
     def _get_samples(self):
@@ -524,7 +532,7 @@ class FilterSamplesPathMoveChange(PathMoveChange):
 
     def __init__(self, movepath, selected_samples, use_all_samples=False, mover=None):
         super(KeepLastSamplePathMoveChange, self).__init__(mover=mover)
-        self.movepath = movepath
+        self.movepaths = [movepath]
         self.selected_samples = selected_samples
         self.use_all_samples = use_all_samples
 
@@ -549,7 +557,7 @@ class FilterSamplesPathMoveChange(PathMoveChange):
 
     def to_dict(self):
         return {
-            'movepath' : self.movepath,
+            'movepaths' : self.movepaths,
             'selected_samples' : self.selected_samples,
             'use_all_samples' : self.use_all_samples,
             'mover' : self.mover
@@ -572,7 +580,7 @@ class KeepLastSamplePathMoveChange(PathMoveChange):
     """
     def __init__(self, movepath, mover=None):
         super(KeepLastSamplePathMoveChange, self).__init__(mover=mover)
-        self.movepath = movepath
+        self.movepaths = [movepath]
 
     def _get_samples(self):
         samples = self.movepath.samples
@@ -588,7 +596,7 @@ class KeepLastSamplePathMoveChange(PathMoveChange):
 
     def to_dict(self):
         return {
-            'movepath' : self.movepath,
+            'movepaths' : self.movepaths,
             'mover' : self.mover
         }
 
@@ -600,7 +608,7 @@ class PathSimulatorPathMoveChange(PathMoveChange):
 
     def __init__(self, movepath, pathsimulator=None, step=-1, mover=None):
         super(PathSimulatorPathMoveChange, self).__init__(mover=mover)
-        self.movepath = movepath
+        self.movepaths = [movepath]
         self.pathsimulator = pathsimulator
         self.step = step
 
@@ -614,7 +622,7 @@ class PathSimulatorPathMoveChange(PathMoveChange):
 
     def to_dict(self):
         return {
-            'movepath' : self.movepath,
+            'movepaths' : self.movepaths,
             'pathsimulator' : self.pathsimulator,
             'step' : self.step,
             'mover' : self.mover
