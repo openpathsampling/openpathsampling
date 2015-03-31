@@ -371,7 +371,6 @@ class PathMoveChange(object):
         """
         return True
 
-    @property
     def __add__(self, other):
         return SequentialPathMoveChange([self, other])
 
@@ -410,28 +409,6 @@ class PathMoveChange(object):
         else:
             return []
 
-    def __iter__(self):
-        """
-        Allow to iterate over all accepted samples in the move
-
-        This effectively iterates over `self.samples`
-        """
-        for sample in self.samples:
-            yield sample
-
-    def __len__(self):
-        """
-        Returns the number of contained accepted samples
-
-        Shortcut for `len(self.samples)`
-        """
-        return len(self.samples)
-
-    def __contains__(self, item):
-        """
-        Check, if a particular sample is among the accepted samples
-        """
-        return (item in self.samples)
 
     def __str__(self):
         if self.accepted:
