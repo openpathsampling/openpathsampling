@@ -90,14 +90,6 @@ class PathMoveChange(object):
 
         return obj
 
-    def iter_subpaths(self):
-        if hasattr(self, 'movepath'):
-            return [self.movepath]
-        elif hasattr(self, 'movepaths'):
-            return self.movepaths
-        else:
-            return []
-
     def traverse_dfs(self, fnc, **kwargs):
         """
         Perform a depth first traverse of the movepath (DFS) applying a function
@@ -125,7 +117,7 @@ class PathMoveChange(object):
         traverse_dfs_level, traverse_bfs, traverse_bfs_level
         """
         output = list()
-        for mp in self.iter_subpaths():
+        for mp in self.subchanges:
             output.extend(mp.traverse_dfs(fnc, **kwargs))
         output.append(fnc(self, **kwargs))
 
@@ -162,7 +154,7 @@ class PathMoveChange(object):
         """
 
         output = list()
-        for mp in self.iter_subpaths():
+        for mp in self.subchanges:
             output.extend(mp.traverse_dfs_level(fnc, level + 1, **kwargs))
         output.append((level, fnc(self, **kwargs)))
 
@@ -198,7 +190,7 @@ class PathMoveChange(object):
         output = list()
         output.append(fnc(self, **kwargs))
 
-        for mp in self.iter_subpaths():
+        for mp in self.subchanges:
             output.extend(mp.traverse_dfs(fnc, **kwargs))
 
         return output
@@ -235,7 +227,7 @@ class PathMoveChange(object):
         output = list()
         output.append((level, fnc(self, **kwargs)))
 
-        for mp in self.iter_subpaths():
+        for mp in self.subchanges:
             output.extend(mp.traverse_dfs_level(fnc, level + 1, **kwargs))
 
         return output
