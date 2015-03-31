@@ -225,8 +225,11 @@ class PathMoveChange(object):
         """
         new_sample_set = paths.SampleSet(other).apply_samples(self.samples)
         new_sample_set.movepath = self
+        return new_sample_set
 
 
+    def __call__(self, other):
+        return self.apply_to(other)
 
     @property
     def samples(self):
