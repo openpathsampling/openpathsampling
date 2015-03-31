@@ -113,25 +113,11 @@ class MoveDetails(object):
 
     @staticmethod
     def initialization(sample):
-        details = MoveDetails()
-        details.accepted = True
-        details.acceptance_probability = 1.0
-        details.mover = None
-        details.inputs = []
-        details.trial = sample.trajectory
-        details.ensemble = sample.ensemble
-        details.result = sample.trajectory
-        return details
+        return MoveDetails.initialization_from_scratch(sample.trajectory,
+                                                       sample.ensemble)
 
     @staticmethod
     def initialization_from_scratch(trajectory, ensemble):
-        """JHP, please don't remove this! You created a loop where we need
-        MoveDetails to make a sample, and we need a sample to make
-        MoveDetails. It makes more sense to have THIS be underlying, and use
-        initialization_from_sample when appropriate.
-
-        THIS IS USED BY Sample.initial_sample
-        """
         details = MoveDetails()
         details.accepted = True
         details.acceptance_probability = 1.0
@@ -1046,13 +1032,13 @@ class ReplicaExchangeMover(PathMover):
         replica2 = s2.replica
 
         from1to2 = ensemble2(trajectory1)
-        logger.debug("trajectory " + repr(trajectory1) +
-                     " into ensemble " + repr(ensemble2) +
-                     " : " + str(from1to2))
+        logger.info("trajectory " + repr(trajectory1) +
+                    " into ensemble " + repr(ensemble2) +
+                    " : " + str(from1to2))
         from2to1 = ensemble1(trajectory2)
-        logger.debug("trajectory " + repr(trajectory2) +
-                     " into ensemble " + repr(ensemble1) +
-                     " : " + str(from2to1))
+        logger.info("trajectory " + repr(trajectory2) +
+                    " into ensemble " + repr(ensemble1) +
+                    " : " + str(from2to1))
         allowed = from1to2 and from2to1
         details1 = MoveDetails()
         details2 = MoveDetails()
@@ -1073,6 +1059,8 @@ class ReplicaExchangeMover(PathMover):
             details2.acceptance_probability = 1.0
             details1.result = trajectory2
             details2.result = trajectory1
+            finalrep1 = replica2
+            finalrep2 = replica1
         else:
             # No swap
             details1.accepted = False
@@ -1081,15 +1069,17 @@ class ReplicaExchangeMover(PathMover):
             details2.acceptance_probability = 0.0
             details1.result = trajectory1
             details2.result = trajectory2
+            finalrep1 = replica1
+            finalrep2 = replica2
 
         sample1 = paths.Sample(
-            replica=replica1,
+            replica=finalrep1,
             trajectory=details1.result,
             ensemble=ensemble1,
             details=details1
         )
         sample2 = paths.Sample(
-            replica=replica2,
+            replica=finalrep2,
             trajectory=details2.result,
             ensemble=ensemble2,
             details=details2
@@ -1209,15 +1199,16 @@ class MinusMover(ConditionalSequentialMover):
         self.innermost_ensemble = innermost_ensemble
         initialization_logging(init_log, self, ['minus_ensemble',
                                                 'innermost_ensemble'])
+
         super(MinusMover, self).__init__(movers=movers,
                                          ensembles=ensembles,
                                          replicas=replicas)
 
-        return
 
     @keep_selected_samples
     def move(self, globalstate):
-        return super(MinusMover, self).move(globalstate).closed
+        result = super(MinusMover, self).move(globalstate).closed
+        return result
 
 @restores_as_stub_object
 class CalculationMover(PathMover):
@@ -1235,7 +1226,6 @@ class CalculationMover(PathMover):
 class MultipleSetMinusMover(RandomChoiceMover):
     pass
 
-@restores_as_stub_object
 def NeighborEnsembleReplicaExchange(ensemble_list):
     movers = [
         ReplicaExchangeMover(ensembles=[[ensemble_list[i], ensemble_list[i+1]]])
