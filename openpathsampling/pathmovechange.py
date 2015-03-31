@@ -675,8 +675,8 @@ class FilterSamplesPathMoveChange(PathMoveChange):
     A PathMoveChange that keeps a selection of the underlying samples
     """
 
-    def __init__(self, subchange, selected_samples, use_all_samples=False, mover=None):
-        super(KeepLastSamplePathMoveChange, self).__init__(mover=mover)
+    def __init__(self, subchange, selected_samples, use_all_samples=False, mover=None, details=None):
+        super(KeepLastSamplePathMoveChange, self).__init__(mover=mover, details=details)
         self.subchanges = [subchange]
         self.selected_samples = selected_samples
         self.use_all_samples = use_all_samples
@@ -705,7 +705,8 @@ class FilterSamplesPathMoveChange(PathMoveChange):
             'subchanges' : self.subchanges,
             'selected_samples' : self.selected_samples,
             'use_all_samples' : self.use_all_samples,
-            'mover' : self.mover
+            'mover' : self.mover,
+            'details' : self.details
         }
 
 @restores_as_full_object
@@ -723,8 +724,8 @@ class KeepLastSamplePathMoveChange(PathMoveChange):
     -----
     Does the same as `FilterSamplesPathMoveChange(subchange, [-1], False)`
     """
-    def __init__(self, subchange, mover=None):
-        super(KeepLastSamplePathMoveChange, self).__init__(mover=mover)
+    def __init__(self, subchange, mover=None, details=None):
+        super(KeepLastSamplePathMoveChange, self).__init__(mover=mover, details=details)
         self.subchanges = [subchange]
 
     def _get_samples(self):
@@ -742,7 +743,8 @@ class KeepLastSamplePathMoveChange(PathMoveChange):
     def to_dict(self):
         return {
             'subchanges' : self.subchanges,
-            'mover' : self.mover
+            'mover' : self.mover,
+            'details' : self.details
         }
 
 @restores_as_full_object
@@ -751,8 +753,8 @@ class PathSimulatorPathMoveChange(PathMoveChange):
     A PathMoveChange that just wraps a subchange and references a PathSimulator
     """
 
-    def __init__(self, subchange, pathsimulator=None, step=-1, mover=None):
-        super(PathSimulatorPathMoveChange, self).__init__(mover=mover)
+    def __init__(self, subchange, pathsimulator=None, step=-1, mover=None, details=None):
+        super(PathSimulatorPathMoveChange, self).__init__(mover=mover, details=details)
         self.subchanges = [subchange]
         self.pathsimulator = pathsimulator
         self.step = step
@@ -770,5 +772,6 @@ class PathSimulatorPathMoveChange(PathMoveChange):
             'subchanges' : self.subchanges,
             'pathsimulator' : self.pathsimulator,
             'step' : self.step,
-            'mover' : self.mover
+            'mover' : self.mover,
+            'details' : self.details
         }
