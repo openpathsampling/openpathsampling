@@ -100,6 +100,13 @@ class PathMoveChange(object):
             yield subchange
         yield self
 
+    def __len__(self):
+        # TODO: Add caching here?
+        return len(list(self))
+
+    def __contains__(self, item):
+        return item in list(self)
+
     def traverse_dfs(self, fnc, **kwargs):
         """
         Perform a depth first traverse of the movepath (DFS) applying a function
