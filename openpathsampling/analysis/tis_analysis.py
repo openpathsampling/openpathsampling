@@ -355,15 +355,8 @@ class RETISTransition(TISTransition):
 
         # loop over moves which include a repex
 
-
         # run stats to get replica flow and stats on up_trips, down_trips,
         # round_trips
-
-        # this should check to build the replica exchange network. If the
-        # number of neighbors at any station is more than 2, we can't do
-        # "normal" replica flow -- instead produce a network graph. Or,
-        # actually, ALWAYS produce a network graph (although this will be a
-        # feature to implement later)
         pass
 
     @property
@@ -371,11 +364,6 @@ class RETISTransition(TISTransition):
         # 1. get the samples in the minus ensemble
         # 2. summarize_trajectory for each
         # 3. calculate the flux
-        pass
-
-    @property
-    def multiple_set_minus_switching(self):
-        # TODO: move this to network
         pass
 
     @property
