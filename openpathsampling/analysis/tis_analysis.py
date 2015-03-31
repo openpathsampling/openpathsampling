@@ -376,5 +376,59 @@ class RETISTransition(TISTransition):
         
         Extends `TISTransition.default_movers`.
         """
-        pass
+        repex_sel = paths.RandomChoiceMover(
+            movers=self.movers['repex'],
+            name="ReplicaExchange"
+        )
+        tis_root_mover = super(RETISTransition, self).default_movers(engine)
+        movers = tis_root_mover.movers + [repex_sel, self.movers['minus']]
+        weights = tis_root_mover.weights + [0.5, 0.2 / len(self.ensembles)]
+        root_mover = paths.RandomChoiceMover(
+            movers=movers,
+            weights=weights,
+            name="RootMover"
+        )
+        return root_mover
 
+def summarize_trajectory(trajectory, label_dict):
+    """Summarize trajectory based on number of continuous frames in volumes.
+
+    Parameters
+    ----------
+    trajectory : Trajectory
+        input trajectory
+    label_dict : dict
+        dictionary with labels for keys and volumes for values
+
+    Returns
+    -------
+    list of tuple
+        format is (label, number_of_frames)
+    """
+    last_vol = None
+    count = 0
+    segment_labels = []
+    for frame in traj:
+        in_state = []
+        for key in label_dict.keys():
+            if label_dict[key](frame):
+                in_state.append(key)
+        if len(key) > 1:
+            raise RuntimeError("States not disjoint")
+        if len(key) == 0:
+            current_vol = None
+        else:
+            current_vol = key
+        
+        if last_vol == current_vol:
+            count += 1
+        else:
+            if count > 0:
+                segment_labels.append( (last_vol, count) )
+            last_vol = current_vol
+            count = 1
+    return segment_labels
+
+
+
+        
