@@ -816,14 +816,14 @@ class EnsembleHopMover(PathMover):
         sample = paths.Sample(
             replica=replica,
             trajectory=trajectory,
-            ensemble=details.result_ensemble,
-            details=details
+            ensemble=details.result_ensemble
         )
 
         path = paths.SamplePathMoveChange(
             [sample],
             mover=self,
-            accepted=details.accepted
+            accepted=details.accepted,
+            details=details
         )
 
         return path
@@ -865,11 +865,15 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
         sample = paths.Sample(
             trajectory=trajectory,
             ensemble=details.result_ensemble,
-            details=details,
             replica=replica
         )
 
-        path = paths.SamplePathMoveChange( [sample], mover=self, accepted=details.accepted)
+        path = paths.SamplePathMoveChange(
+            [sample],
+            mover=self,
+            accepted=details.accepted,
+            details=details
+        )
         return path
 
 
@@ -927,10 +931,14 @@ class RandomSubtrajectorySelectMover(PathMover):
         sample = paths.Sample(
             replica=replica,
             trajectory=details.result,
-            ensemble=self._subensemble,
+            ensemble=self._subensemble
+        )
+        path = paths.SamplePathMoveChange(
+            [sample],
+            mover=self,
+            accepted=details.accepted,
             details=details
         )
-        path = paths.SamplePathMoveChange( [sample], mover=self, accepted=details.accepted)
 
         return path
 
@@ -985,11 +993,15 @@ class PathReversalMover(PathMover):
         sample = paths.Sample(
             replica=replica,
             trajectory=details.result,
-            ensemble=ensemble,
-            details=details
+            ensemble=ensemble
         )
 
-        path = paths.SamplePathMoveChange( [sample], mover=self, accepted=details.accepted)
+        path = paths.SamplePathMoveChange(
+            [sample],
+            mover=self,
+            accepted=details.accepted,
+            details=details
+        )
 
         return path
 
@@ -1040,52 +1052,42 @@ class ReplicaExchangeMover(PathMover):
                     " into ensemble " + repr(ensemble1) +
                     " : " + str(from2to1))
         allowed = from1to2 and from2to1
-        details1 = MoveDetails()
-        details2 = MoveDetails()
-        details1.inputs = [s1, s2]
-        details2.inputs = [s2, s1]
-        setattr(details1, 'ensembles', [ensemble1, ensemble2])
-        setattr(details2, 'ensembles', [ensemble1, ensemble2])
-        details1.mover = self
-        details2.mover = self
+        details = MoveDetails()
+        details.inputs = [s1, s2]
+        setattr(details, 'ensembles', [ensemble1, ensemble2])
 
-        details2.trial = trajectory1
-        details1.trial = trajectory2
+        details.trials = [trajectory2, trajectory1]
         if allowed:
             # Swap
-            details1.accepted = True
-            details2.accepted = True
-            details1.acceptance_probability = 1.0
-            details2.acceptance_probability = 1.0
-            details1.result = trajectory2
-            details2.result = trajectory1
+            details.accepted = True
+            details.acceptance_probability = 1.0
+            details.results = [trajectory2, trajectory1]
             finalrep1 = replica2
             finalrep2 = replica1
         else:
             # No swap
-            details1.accepted = False
-            details2.accepted = False
-            details1.acceptance_probability = 0.0
-            details2.acceptance_probability = 0.0
-            details1.result = trajectory1
-            details2.result = trajectory2
+            details.accepted = False
+            details.acceptance_probability = 0.0
+            details.result = [trajectory1, trajectory2]
             finalrep1 = replica1
             finalrep2 = replica2
 
         sample1 = paths.Sample(
             replica=finalrep1,
-            trajectory=details1.result,
-            ensemble=ensemble1,
-            details=details1
+            trajectory=details.results[0],
+            ensemble=ensemble1
         )
         sample2 = paths.Sample(
             replica=finalrep2,
-            trajectory=details2.result,
-            ensemble=ensemble2,
-            details=details2
-            )
+            trajectory=details.results[1],
+            ensemble=ensemble2
+        )
 
-        path = paths.SamplePathMoveChange([sample1, sample2], mover=self, accepted=details1.accepted)
+        path = paths.SamplePathMoveChange(
+            [sample1, sample2],
+            mover=self,
+            accepted=details.accepted
+        )
 
         return path
 
