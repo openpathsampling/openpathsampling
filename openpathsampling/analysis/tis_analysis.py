@@ -338,7 +338,27 @@ class RETISTransition(TISTransition):
 
 
     @property
-    def replica_flow(self):
+    def replica_flow(self, bottom=None, top=None):
+        if bottom is None:
+            bottom = self.minus_ensemble
+        if top is None:
+            top = self.ensembles[-1]
+
+        updown = {}
+        round_trips = {}
+        for ens in [self.minus_ensemble] + self.ensembles:
+            updown[ens] = 0
+            nvisits[ens] = 0
+            up_trips[ens] = []
+            down_trips[ens] = []
+            round_trips[ens] = []
+
+        # loop over moves which include a repex
+
+
+        # run stats to get replica flow and stats on up_trips, down_trips,
+        # round_trips
+
         # this should check to build the replica exchange network. If the
         # number of neighbors at any station is more than 2, we can't do
         # "normal" replica flow -- instead produce a network graph. Or,
