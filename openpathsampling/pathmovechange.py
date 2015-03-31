@@ -90,6 +90,16 @@ class PathMoveChange(object):
 
         return obj
 
+    def __iter__(self):
+        yield self
+        for subchange in self.subchanges:
+            yield subchange
+
+    def __reversed__(self):
+        for subchange in self.subchanges:
+            yield subchange
+        yield self
+
     def traverse_dfs(self, fnc, **kwargs):
         """
         Perform a depth first traverse of the movepath (DFS) applying a function
@@ -116,12 +126,7 @@ class PathMoveChange(object):
         --------
         traverse_dfs_level, traverse_bfs, traverse_bfs_level
         """
-        output = list()
-        for mp in self.subchanges:
-            output.extend(mp.traverse_dfs(fnc, **kwargs))
-        output.append(fnc(self, **kwargs))
-
-        return output
+        return [ fnc(node, **kwargs) for node in reversed(self) ]
 
     def traverse_dfs_level(self, fnc, level=0, **kwargs):
         """
@@ -187,13 +192,7 @@ class PathMoveChange(object):
         traverse_bfs_level, traverse_bfs_level, traverse_dfs
 
         """
-        output = list()
-        output.append(fnc(self, **kwargs))
-
-        for mp in self.subchanges:
-            output.extend(mp.traverse_dfs(fnc, **kwargs))
-
-        return output
+        return [ fnc(node, **kwargs) for node in iter(self) ]
 
     def traverse_bfs_level(self, fnc, level=0, **kwargs):
         """
