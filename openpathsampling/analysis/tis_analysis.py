@@ -338,14 +338,6 @@ class RETISTransition(TISTransition):
 
 
     @property
-    def repex_movers(self):
-        pass
-
-    @property
-    def minus_movers(self):
-        pass
-
-    @property
     def replica_flow(self):
         # this should check to build the replica exchange network. If the
         # number of neighbors at any station is more than 2, we can't do
@@ -356,6 +348,9 @@ class RETISTransition(TISTransition):
 
     @property
     def minus_move_flux(self):
+        # 1. get the samples in the minus ensemble
+        # 2. summarize_trajectory for each
+        # 3. calculate the flux
         pass
 
     @property
@@ -390,8 +385,13 @@ class RETISTransition(TISTransition):
         )
         return root_mover
 
+
 def summarize_trajectory(trajectory, label_dict):
     """Summarize trajectory based on number of continuous frames in volumes.
+
+    This uses a dictionary of disjoint volumes: the volumes must be disjoint
+    so that every frame can be mapped to one volume. If the frame maps to
+    none of the given volumes, it returns the label None.
 
     Parameters
     ----------
@@ -414,7 +414,7 @@ def summarize_trajectory(trajectory, label_dict):
             if label_dict[key](frame):
                 in_state.append(key)
         if len(key) > 1:
-            raise RuntimeError("States not disjoint")
+            raise RuntimeError("Volumes given to summarize_trajectory not disjoint")
         if len(key) == 0:
             current_vol = None
         else:
