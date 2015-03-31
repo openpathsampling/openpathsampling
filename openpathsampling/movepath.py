@@ -174,7 +174,7 @@ class MovePath(object):
     @property
     def local_samples(self):
         """
-        A list of the samples that are needed to update the new sampleset
+        A list of the samples that are needed to update the new sample_set
 
         Notes
         -----
@@ -223,8 +223,8 @@ class MovePath(object):
         """
         Standard apply is to apply the list of samples contained
         """
-        new_sampleset = paths.SampleSet(other).apply_samples(self.samples)
-        new_sampleset.movepath = self
+        new_sample_set = paths.SampleSet(other).apply_samples(self.samples)
+        new_sample_set.movepath = self
 
     @property
     def samples(self):
@@ -425,12 +425,12 @@ class SequentialMovePath(MovePath):
 
 
     def apply_to(self, other):
-        sampleset = other
+        sample_set = other
 
         for movepath in self.movepaths:
-            sampleset = movepath.apply_to(sampleset)
+            sample_set = movepath.apply_to(sample_set)
 
-        return sampleset
+        return sample_set
 
     def __str__(self):
         return 'SequentialMove : %s : %d samples\n' % \
@@ -455,15 +455,15 @@ class PartialAcceptanceSequentialMovePath(SequentialMovePath):
         return changes
 
     def apply_to(self, other):
-        sampleset = other
+        sample_set = other
 
         for movepath in self.movepaths:
             if movepath.accepted:
-                sampleset = movepath.apply_to(sampleset)
+                sample_set = movepath.apply_to(sample_set)
             else:
                 break
 
-        return sampleset
+        return sample_set
 
     def __str__(self):
         return 'PartialAcceptanceMove : %s : %d samples\n' % \
@@ -478,15 +478,15 @@ class ConditionalSequentialMovePath(SequentialMovePath):
     """
 
     def apply_to(self, other):
-        sampleset = other
+        sample_set = other
 
         for movepath in self.movepaths:
             if movepath.accepted:
-                sampleset = movepath.apply_to(sampleset)
+                sample_set = movepath.apply_to(sample_set)
             else:
                 return other
 
-        return sampleset
+        return sample_set
 
     def _get_samples(self):
         changes = []
@@ -588,29 +588,29 @@ class KeepLastSampleMovePath(MovePath):
         }
 
 @restores_as_full_object
-class CalculationMovePath(MovePath):
+class PathSimulatorMovePath(MovePath):
     """
-    A MovePath that just wraps a movepath and references a Calculation
+    A MovePath that just wraps a movepath and references a PathSimulator
     """
 
-    def __init__(self, movepath, calculation=None, step=-1, mover=None):
-        super(CalculationMovePath, self).__init__(mover=mover)
+    def __init__(self, movepath, pathsimulator=None, step=-1, mover=None):
+        super(PathSimulatorMovePath, self).__init__(mover=mover)
         self.movepath = movepath
-        self.calculation = calculation
+        self.pathsimulator = pathsimulator
         self.step = step
 
     def _get_samples(self):
         return self.movepath.samples
 
     def __str__(self):
-        return 'CalculationStep : %s : Step # %d with %d samples\n' % \
-               (str(self.calculation.cls), self.step, len(self.samples)) + \
+        return 'PathSimulatorStep : %s : Step # %d with %d samples\n' % \
+               (str(self.pathsimulator.cls), self.step, len(self.samples)) + \
                MovePath._indent( str(self.movepath) )
 
     def to_dict(self):
         return {
             'movepath' : self.movepath,
-            'calculation' : self.calculation,
+            'pathsimulator' : self.pathsimulator,
             'step' : self.step,
             'mover' : self.mover
         }

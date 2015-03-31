@@ -25,7 +25,7 @@ def setup_package():
     )
 
     mytraj = paths.Trajectory.from_mdtraj(mdtrajectory)
-    storage.trajectory.save(mytraj)
+    storage.trajectories.save(mytraj)
 
     storage.close()
 

@@ -194,7 +194,7 @@ class SampleSet(object):
         storage : Storage()
             the underlying netcdf file to be used for storage
         """
-        map(storage.sample.save, self.samples)
+        map(storage.samples.save, self.samples)
 
     def sanity_check(self):
         '''Checks that the sample trajectories satisfy their ensembles
@@ -240,6 +240,52 @@ class SampleSet(object):
         new_set = other.apply_to(self)
         new_set.movepath = other
         return new_set
+
+    @staticmethod
+    def map_trajectory_to_ensembles(trajectory, ensembles):
+        """Return SampleSet mapping one trajectory to all ensembles.
+
+        One common approach to starting a pathsimulator is to take a single
+        transition trajectory (which satisfies all ensembles) and use it as
+        the starting point for all ensembles.
+        """
+        return SampleSet(
+            [Sample.initial_sample(replica=ensembles.index(e),
+                                   trajectory=paths.Trajectory(trajectory), # copy
+                                   ensemble = e)
+            for e in ensembles]
+    )
+
+    @staticmethod
+    def translate_ensembles(sset, new_ensembles):
+        """Return SampleSet using `new_ensembles` as ensembles.
+
+        This replaces the samples in TODO
+
+        Note that this assumes that the mapping of old ensembles to new
+        ensembles is injective. If this is not true, then there is no unique
+        way to translate.
+        """
+        translation = {}
+        for ens1 in sset.ensemble_list():
+            for ens2 in new_ensembles:
+                if ens1.__str__() == ens2.__str__():
+                    translation[ens1] = ens2
+        return SampleSet(
+            [
+                Sample(
+                    replica=s.replica,
+                    ensemble=translation[s.ensemble],
+                    trajectory=s.trajectory,
+                    intermediate=s.intermediate,
+                    details=s.details,
+                    step=s.step
+                )
+                for s in sset
+            ]
+        )
+
+
 
     # @property
     # def ensemble_dict(self):

@@ -309,7 +309,7 @@ class testLeapfrogVerletIntegrator(object):
 
 class testLangevinBAOABIntegrator(object):
     '''Testing for correctness is hard, since this is a stochastic
-    calculation. However, we can at least run tests to make sure nothing
+    pathsimulator. However, we can at least run tests to make sure nothing
     crashes.'''
     def setUp(self):
         pes = linear

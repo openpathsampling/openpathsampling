@@ -33,7 +33,7 @@ class SnapshotStore(ObjectStore):
         momentum_idx = self.momentum_idx(idx)
         momentum_reversed = self.momentum_reversed(idx)
 
-        snapshot.configuration = self.storage.configuration.load(configuration_idx)
+        snapshot.configuration = self.storage.configurations.load(configuration_idx)
         snapshot.momentum = self.storage.momentum.load(momentum_idx)
 
         snapshot.reversed = momentum_reversed
@@ -46,12 +46,12 @@ class SnapshotStore(ObjectStore):
 
         Notes
         -----
-        If you are interested in orderparameters this is faster since it does not
-        load the snapshots. Otherwise storage.snapshot is fine to get an
+        If you are interested in collectivevariables this is faster since it does not
+        load the snapshots. Otherwise storage.snapshots is fine to get an
         iterator. Both should should be about the same speed.
         """
         #TODO: Might think about replacing the iterator with this since it is
-        # faster for orderparameters
+        # faster for collectivevariables
         return Trajectory([ (self, idx) for idx in range(len(self)) ])
 
     def save(self, snapshot, idx=None):
@@ -74,7 +74,7 @@ class SnapshotStore(ObjectStore):
         storage = self.storage
 
         if snapshot.configuration is not None:
-            storage.configuration.save(snapshot.configuration)
+            storage.configurations.save(snapshot.configuration)
             self.save_variable('snapshot_configuration_idx', idx, snapshot.configuration.idx[storage])
         else:
             self.save_variable('snapshot_configuration_idx', idx, -1)
@@ -157,7 +157,7 @@ class SnapshotStore(ObjectStore):
         self.init_variable('snapshot_momentum_reversed', 'bool', self.db, chunksizes=(1, ))
 
 #=============================================================================================
-# ORDERPARAMETER UTILITY FUNCTIONS
+# COLLECTIVE VARIABLE UTILITY FUNCTIONS
 #=============================================================================================
 
     @property

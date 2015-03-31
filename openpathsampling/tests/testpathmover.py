@@ -24,7 +24,7 @@ from openpathsampling.volume import LambdaVolume
 from test_helpers import CallIdentity
 from openpathsampling.trajectory import Trajectory
 from openpathsampling.ensemble import EnsembleFactory as ef
-from openpathsampling.orderparameter import OP_Function, OrderParameter
+from openpathsampling.collectivevariable import CV_Function, CollectiveVariable
 
 import logging
 #logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
@@ -62,8 +62,8 @@ class testMakeListOfPairs(object):
     def test_empty(self):
         assert_equal(make_list_of_pairs(None), None)
 
-def assert_sampleset_accepted(sampleset, results):
-    for sample, result in zip(sampleset, results):
+def assert_sample_set_accepted(sample_set, results):
+    for sample, result in zip(sample_set, results):
         assert_equal(sample.details.accepted, result)
 
 
@@ -118,7 +118,7 @@ class testShootingMover(object):
                                       -0.1, 0.2, 0.4, 0.6, 0.8,
                                      ])
         PathMover.engine = self.dyn
-        op = OP_Function("myid", fcn=lambda snap :
+        op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
         stateA = LambdaVolume(op, -100, 0.0)
         stateB = LambdaVolume(op, 0.65, 100)
@@ -167,7 +167,7 @@ class testOneWayShootingMover(testShootingMover):
 
 class testPathReversalMover(object):
     def setup(self):
-        op = OP_Function("myid", fcn=lambda snap :
+        op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
 
         volA = LambdaVolume(op, -100, 0.0)
@@ -223,16 +223,16 @@ class testReplicaIDChangeMover(object):
     def setup(self):
         pass
 
-    def test_replica_in_sampleset(self):
+    def test_replica_in_sample_set(self):
         raise SkipTest
 
-    def test_replica_not_in_sampleset(self):
+    def test_replica_not_in_sample_set(self):
         raise SkipTest
 
 
 class testReplicaExchangeMover(object):
     def setup(self):
-        op = OP_Function("myid", fcn=lambda snap :
+        op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
 
         state1 = LambdaVolume(op, -100, 0.0)
@@ -540,8 +540,8 @@ class SubtrajectorySelectTester(object):
     def setup(self):
         op = CallIdentity()
         vol = paths.LambdaVolume(op, -0.5, 0.5)
-        inX = paths.InXEnsemble(vol)
-        outX = paths.OutXEnsemble(vol)
+        inX = paths.AllInEnsemble(vol)
+        outX = paths.AllOutEnsemble(vol)
         self.ensemble = paths.SequentialEnsemble([
             inX, outX, inX, outX, inX, outX, inX
         ])
@@ -660,7 +660,7 @@ class testForceEnsembleChangeMover(object):
 
 class testMinusMover(object):
     def setup(self):
-        op = OP_Function("myid", fcn=lambda snap :
+        op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
 
         volA = LambdaVolume(op, -100, 0.0)
@@ -802,7 +802,7 @@ class testMinusMover(object):
         samples = movepath.all_samples
         assert_equal(self.innermost(innermost_crosses_to_state), True)
         assert_equal(len(samples), 3) # stop after failed repex
-        assert_sampleset_accepted(samples, [True, False, False])
+        assert_sample_set_accepted(samples, [True, False, False])
 
     def test_repex_fails_minus_crosses_to_state(self):
         minus_crosses_to_state = make_1d_traj(
@@ -825,7 +825,7 @@ class testMinusMover(object):
         movepath = self.mover.move(gs).opened
         samples = movepath.all_samples
         assert_equal(len(samples), 3) # stop after failed repex
-        assert_sampleset_accepted(samples, [True, False, False])
+        assert_sample_set_accepted(samples, [True, False, False])
 
     def test_extension_fails(self):
         innermost_bad_extension = [-0.25, 0.1, 0.5, 0.1, -0.25]
@@ -842,7 +842,7 @@ class testMinusMover(object):
         movepath = self.mover.move(gs).opened
         samples = movepath.all_samples
         assert_equal(len(samples), 5) # reject the last one
-        assert_sampleset_accepted(samples, [True] * 4 + [False])
+        assert_sample_set_accepted(samples, [True] * 4 + [False])
         # this only happens due to length
         assert_equal(len(samples[-1].details.trial),
                      len(traj_bad_extension)+self.dyn.n_frames_max-1)

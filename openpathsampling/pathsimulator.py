@@ -9,9 +9,9 @@ logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 @restores_as_stub_object
-class Calculation(object):
+class PathSimulator(object):
 
-    calc_name = "Calculation"
+    calc_name = "PathSimulator"
 
     def __init__(self, storage, engine=None):
         self.storage = storage
@@ -25,7 +25,7 @@ class Calculation(object):
         self.globalstate = paths.SampleSet(samples)
 
     def run(self, nsteps):
-        logger.warning("Running an empty calculation? Try a subclass, maybe!")
+        logger.warning("Running an empty pathsimulator? Try a subclass, maybe!")
 
 
 @restores_as_stub_object
@@ -101,10 +101,10 @@ class InitializeSingleTrajectoryMover(PathMover):
                         ensemble=self.ensembles[0], details=init_details)
 
 @restores_as_stub_object
-class Bootstrapping(Calculation):
+class Bootstrapping(PathSimulator):
     """Creates a SampleSet with one sample per ensemble.
     
-    The ensembles for the Bootstrapping calculation must be one ensemble
+    The ensembles for the Bootstrapping pathsimulator must be one ensemble
     set, in increasing order. Replicas are named numerically.
     """
 
@@ -191,7 +191,7 @@ class Bootstrapping(Calculation):
             assert sample.ensemble(sample.trajectory) == True, "WTF?"
 
 @restores_as_stub_object
-class PathSampling(Calculation):
+class PathSampling(PathSimulator):
     """
     General path sampling code. 
     
@@ -214,7 +214,7 @@ class PathSampling(Calculation):
         initialization_logging(init_log, self, 
                                ['root_mover', 'globalstate'])
 
-        self._mover = paths.CalculationMover(self.root_mover, self)
+        self._mover = paths.PathSimulatorMover(self.root_mover, self)
 
     def run(self, nsteps):
         # TODO: change so we can start from some arbitrary step number
@@ -223,7 +223,6 @@ class PathSampling(Calculation):
                                                           step=-1)
 
         if self.storage is not None:
-            #self.globalstate.save_samples(self.storage)
             self.globalstate.save(self.storage)
             self.storage.sync()
 
@@ -233,15 +232,13 @@ class PathSampling(Calculation):
             self.globalstate = self.globalstate.apply_samples(samples, step=step)
             self.globalstate.movepath = movepath
             if self.storage is not None:
-                #self.globalstate.save_samples(self.storage)
                 self.globalstate.save(self.storage)
-                self.storage.cv.sync()
                 self.storage.sync()
-                # Note: This saves all orderparameters, but does this with
-                # removing computed values for not saved orderparameters
+                # Note: This saves all collectivevariables, but does this with
+                # removing computed values for not saved collectivevariables
                 # We assume that this is the right cause of action for this
                 # case.
-                self.storage.cv.sync()
+                self.storage.cvs.sync()
 
     def to_dict(self):
         return {

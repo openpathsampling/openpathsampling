@@ -27,9 +27,9 @@ class Ensemble(object):
     Examples
     --------    
     >>> EnsembleFactory.TISEnsemble(
-    >>>     LambdaVolume(orderparameter_A, 0.0, 0.02), 
-    >>>     LambdaVolume(orderparameter_A, 0.0, 0.02), 
-    >>>     LambdaVolume(orderparameter_A, 0.0, 0.08), 
+    >>>     LambdaVolume(collectivevariable_A, 0.0, 0.02),
+    >>>     LambdaVolume(collectivevariable_A, 0.0, 0.02),
+    >>>     LambdaVolume(collectivevariable_A, 0.0, 0.08),
     >>>     True
     >>>     )
 
@@ -101,7 +101,7 @@ class Ensemble(object):
         Notes
         -----
         This is only tricky for this that depend on the history like
-        HitXEnsemble or LeaveXEnsembles. In theory these can only be checked
+        PartInEnsemble or PartOutEnsembles. In theory these can only be checked
         if the full range of frames has been generated. This could be
         triggered, when the last frame is reached.  This is even more
         difficult if this depends on the length.
@@ -131,7 +131,7 @@ class Ensemble(object):
         Notes
         
         This is only tricky for this that depend on the history like
-        HitXEnsemble or LeaveXEnsembles. In theory these can only be checked
+        PartInEnsemble or PartOutEnsembles. In theory these can only be checked
         if the full range of frames has been generated. This could be
         triggered, when the last frame is reached.  This is even more
         difficult if this depends on the length.
@@ -290,7 +290,7 @@ class Ensemble(object):
         elif type(other) is FullEnsemble:
             return other
         else:
-            return OrEnsemble(self, other)
+            return UnionEnsemble(self, other)
 
     def __xor__(self, other):
         if self is other:
@@ -300,7 +300,7 @@ class Ensemble(object):
         elif type(other) is FullEnsemble:
             return NegatedEnsemble(self)        
         else:
-            return XorEnsemble(self, other)
+            return SymmetricDifferenceEnsemble(self, other)
 
     def __and__(self, other):
         if self is other:
@@ -310,7 +310,7 @@ class Ensemble(object):
         elif type(other) is FullEnsemble:
             return self
         else:
-            return AndEnsemble(self, other)
+            return IntersectionEnsemble(self, other)
 
     def __sub__(self, other):
         if self is other:
@@ -320,7 +320,7 @@ class Ensemble(object):
         elif type(other) is FullEnsemble:
             return EmptyEnsemble()
         else:
-            return SubEnsemble(self, other)
+            return RelativeComplementEnsemble(self, other)
         
     def __invert__(self):
         return NegatedEnsemble(self)
@@ -334,7 +334,7 @@ class Ensemble(object):
     def _lencheck(self, trajectory):
         if hasattr(self, 'frames'):
             if type(self.frames) is int:
-                return trajectory.frames > self.frames and trajectory.frames >= -self.frames
+                return len(trajectory) > self.frames and len(trajectory) >= -self.frames
                 
 class LoadedEnsemble(Ensemble):
     '''
@@ -565,24 +565,24 @@ class EnsembleCombination(Ensemble):
         return self.sfnc.format('(\n' + Ensemble._indent(str(self.ensemble1)) + '\n)' , '(\n' + Ensemble._indent(str(self.ensemble2)) + '\n)')
 
 @restores_as_full_object
-class OrEnsemble(EnsembleCombination):
+class UnionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(OrEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a or b, str_fnc = '{0}\nor\n{1}')
+        super(UnionEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a or b, str_fnc = '{0}\nor\n{1}')
 
 @restores_as_full_object
-class AndEnsemble(EnsembleCombination):
+class IntersectionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(AndEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and b, str_fnc = '{0}\nand\n{1}')
+        super(IntersectionEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and b, str_fnc = '{0}\nand\n{1}')
 
 @restores_as_full_object
-class XorEnsemble(EnsembleCombination):
+class SymmetricDifferenceEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(XorEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a ^ b, str_fnc = '{0}\nxor\n{1}')
+        super(SymmetricDifferenceEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a ^ b, str_fnc = '{0}\nxor\n{1}')
 
 @restores_as_full_object
-class SubEnsemble(EnsembleCombination):
+class RelativeComplementEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(SubEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and not b, str_fnc = '{0}\nand not\n{1}')
+        super(RelativeComplementEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and not b, str_fnc = '{0}\nand not\n{1}')
 
 @restores_as_full_object
 class SequentialEnsemble(Ensemble):
@@ -931,14 +931,14 @@ class LengthEnsemble(Ensemble):
         pass
     
     def __call__(self, trajectory, lazy=None):
-        length = trajectory.frames
+        length = len(trajectory)
         if type(self.length) is int:
             return length == self.length
         else:
             return length >= self.length.start and (self.length.stop is None or length < self.length.stop)
         
     def can_append(self, trajectory):
-        length = trajectory.frames
+        length = len(trajectory)
         if type(self.length) is int:
             return length < self.length
         else:
@@ -979,7 +979,7 @@ class VolumeEnsemble(Ensemble):
         return self.volume
 
 @restores_as_full_object
-class InXEnsemble(VolumeEnsemble):
+class AllInEnsemble(VolumeEnsemble):
     '''
     Ensemble of trajectories with all frames in the given volume
     '''
@@ -988,7 +988,7 @@ class InXEnsemble(VolumeEnsemble):
         if len(trajectory) == 0:
             return True
         else:
-            return self(trajectory[slice(trajectory.frames-1, None)])
+            return self(trajectory[slice(len(trajectory)-1, None)])
 
     def can_prepend(self, trajectory):
         if len(trajectory) == 0:
@@ -1006,14 +1006,14 @@ class InXEnsemble(VolumeEnsemble):
         return True
 
     def __invert__(self):
-        return LeaveXEnsemble(self.volume, self.frames, self.lazy)
+        return PartOutEnsemble(self.volume, self.frames, self.lazy)
 
     def __str__(self):
         return 'x[t] in {0} for all t'.format(self._volume)
 
 
 @restores_as_full_object
-class OutXEnsemble(InXEnsemble):
+class AllOutEnsemble(AllInEnsemble):
     '''
     Ensemble of trajectories with all frames outside the given volume
     '''    
@@ -1025,10 +1025,10 @@ class OutXEnsemble(InXEnsemble):
         return 'x[t] in {0} for all t'.format(self._volume)
 
     def __invert__(self):
-        return HitXEnsemble(self.volume, self.frames, self.lazy)
+        return PartInEnsemble(self.volume, self.frames, self.lazy)
 
 @restores_as_full_object
-class HitXEnsemble(VolumeEnsemble):
+class PartInEnsemble(VolumeEnsemble):
     '''
     Ensemble of trajectory with at least one frame in the volume
     '''
@@ -1051,10 +1051,10 @@ class HitXEnsemble(VolumeEnsemble):
         return False
 
     def __invert__(self):
-        return OutXEnsemble(self.volume, self.frames, self.lazy)
+        return AllOutEnsemble(self.volume, self.frames, self.lazy)
 
 @restores_as_full_object
-class LeaveXEnsemble(HitXEnsemble):
+class PartOutEnsemble(PartInEnsemble):
     '''
     Ensemble of trajectories with at least one frame outside the volume
     '''
@@ -1063,11 +1063,11 @@ class LeaveXEnsemble(HitXEnsemble):
       
     @property
     def _volume(self):
-        # effectively use HitXEnsemble but with inverted volume
+        # effectively use PartInEnsemble but with inverted volume
         return ~ self.volume
 
     def __invert__(self):
-        return InXEnsemble(self.volume, self.frames, self.lazy)
+        return AllInEnsemble(self.volume, self.frames, self.lazy)
 
     def __call__(self, trajectory, lazy=None):
         for frame in trajectory:
@@ -1305,15 +1305,15 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         self.state_vol = state_vol
         self.innermost_vol = innermost_vol
         self.greedy = greedy
-        inA = InXEnsemble(state_vol)
-        outA = OutXEnsemble(state_vol)
-        outX = OutXEnsemble(innermost_vol)
-        inX = InXEnsemble(innermost_vol)
-        leaveX = LeaveXEnsemble(innermost_vol)
+        inA = AllInEnsemble(state_vol)
+        outA = AllOutEnsemble(state_vol)
+        outX = AllOutEnsemble(innermost_vol)
+        inX = AllInEnsemble(innermost_vol)
+        leaveX = PartOutEnsemble(innermost_vol)
         interstitial = outA & inX
         self._segment_ensemble = EnsembleFactory.TISEnsemble(
             state_vol, state_vol, innermost_vol)
-        #interstitial = InXEnsemble(innermost_vol - state_vol)
+        #interstitial = AllInEnsemble(innermost_vol - state_vol)
         start = [
             SingleFrameEnsemble(inA),
             OptionalEnsemble(interstitial),
@@ -1352,7 +1352,7 @@ class EnsembleFactory():
         ensemble : Ensemble
             The constructed Ensemble
         '''
-        return InXEnsemble(volume, 0)
+        return AllInEnsemble(volume, 0)
 
     @staticmethod
     def EndXEnsemble(volume):
@@ -1369,7 +1369,7 @@ class EnsembleFactory():
         ensemble : Ensemble
             The constructed Ensemble
         '''        
-        return InXEnsemble(volume, -1)
+        return AllInEnsemble(volume, -1)
 
     @staticmethod
     def A2BEnsemble(volume_a, volume_b, lazy = True):
@@ -1390,9 +1390,9 @@ class EnsembleFactory():
         '''        
         # TODO: this is actually only for flexible path length TPS now
         return SequentialEnsemble([
-            SingleFrameEnsemble(InXEnsemble(volume_a)),
-            OutXEnsemble(volume_a | volume_b),
-            SingleFrameEnsemble(InXEnsemble(volume_b))
+            SingleFrameEnsemble(AllInEnsemble(volume_a)),
+            AllOutEnsemble(volume_a | volume_b),
+            SingleFrameEnsemble(AllInEnsemble(volume_b))
         ])
 
 
@@ -1418,9 +1418,9 @@ class EnsembleFactory():
             The constructed Ensemble
         '''
         ens = SequentialEnsemble([
-            SingleFrameEnsemble(InXEnsemble(volume_a)),
-            OutXEnsemble(volume_a | volume_b) & LeaveXEnsemble(volume_x),
-            SingleFrameEnsemble(InXEnsemble(volume_a | volume_b))
+            SingleFrameEnsemble(AllInEnsemble(volume_a)),
+            AllOutEnsemble(volume_a | volume_b) & PartOutEnsemble(volume_x),
+            SingleFrameEnsemble(AllInEnsemble(volume_a | volume_b))
         ])
         return ens
 

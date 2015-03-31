@@ -8,7 +8,7 @@ import time
 Experimental analysis module.
 
 The idea here is to simplify the vast majority of common analysis routines.
-Interestingly, the process should also simplify a lot of calculation
+Interestingly, the process should also simplify a lot of pathsimulator
 preparation.
 
 Goal: RETIS for a simple A->B transition (one direction) boils down to
@@ -18,13 +18,13 @@ Goal: RETIS for a simple A->B transition (one direction) boils down to
 >>> engine = ??? something that sets up the MD engine
 >>> storage = ??? something that sets up storage
 >>> globalstate0 = ??? something that sets up initial trajectories
->>> orderparameter = paths.OP_Function("lambda", some_function)
+>>> collectivevariable = paths.CV_Function("lambda", some_function)
 >>>
 >>> # from here, this is real code
->>> stateA = paths.LambdaVolume(orderparameter, min=-infinity, max=0.0)
->>> stateB = paths.LambdaVolume(orderparameter, min=1.0, max=infinity)
->>> interfaces = paths.VolumeSet(orderparameter, min=-infinity, max=[0.0, 0.1, 0.2])
->>> transitionAB = paths.RETISTransition(stateA, stateB, orderparameter, interfaces, storage)
+>>> stateA = paths.LambdaVolume(collectivevariable, min=-infinity, max=0.0)
+>>> stateB = paths.LambdaVolume(collectivevariable, min=1.0, max=infinity)
+>>> interfaces = paths.VolumeSet(collectivevariable, min=-infinity, max=[0.0, 0.1, 0.2])
+>>> transitionAB = paths.RETISTransition(stateA, stateB, collectivevariable, interfaces, storage)
 >>> retis_calc = PathSampling(
 >>>     storage=storage,
 >>>     engine=engine,
@@ -39,7 +39,7 @@ Goal: RETIS for a simple A->B transition (one direction) boils down to
 Note that once the total crossing probability has been calculated once, it
 does not need to be recalculated as part of the rate. (Or, if it were
 calculated as part of the rate, it would be already available on its own.)
-In the order listed above, the time for the rate calculation is almost
+In the order listed above, the time for the rate pathsimulator is almost
 entirely in determining the flux from the information in the minus mover.
 """
 
@@ -47,8 +47,8 @@ entirely in determining the flux from the information in the minus mover.
 def pathlength(sample):
     return len(sample.trajectory)
 
-def max_lambdas(sample, orderparameter):
-    return max([orderparameter(frame) for frame in sample.trajectory])
+def max_lambdas(sample, collectivevariable):
+    return max([collectivevariable(frame) for frame in sample.trajectory])
 
 
 class Histogrammer(object):
@@ -118,7 +118,7 @@ class TISTransition(Transition):
         Volume for the state in which the transition ends
     interfaces : list of Volume
         Volumes for the interfaces
-    orderparameter : CollectiveVariable
+    collectivevariable : CollectiveVariable
         order parameter to be used in the analysis (does not need to be the
         parameter which defines the interfaces, although it usually is)
     name : string
@@ -126,10 +126,10 @@ class TISTransition(Transition):
 
     """
     
-    def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
+    def __init__(self, stateA, stateB, interfaces, collectivevariable=None, name=None):
         super(TISTransition, self).__init__(stateA, stateB)
         # NOTE: making these into dictionaries like this will make it easy
-        # to combine them in order to make a PathSampling calculation object
+        # to combine them in order to make a PathSampling pathsimulator object
 
         self.stateA = stateA
         self.stateB = stateB
@@ -148,8 +148,8 @@ class TISTransition(Transition):
         if self.movers == {}:
             self.build_movers()
 
-        self.orderparameter = orderparameter
-        self.default_orderparameter = self.orderparameter
+        self.collectivevariable = collectivevariable
+        self.default_collectivevariable = self.collectivevariable
 
         self.total_crossing_probability_method="wham" 
         self.histograms = {}
@@ -163,7 +163,7 @@ class TISTransition(Transition):
         self.ensemble_histogram_info = {
             'max_lambda' : Histogrammer(
                 f=max_lambdas,
-                f_args={'orderparameter' : self.orderparameter},
+                f_args={'collectivevariable' : self.collectivevariable},
                 hist_args={}
             ),
             'pathlength' : Histogrammer(
@@ -178,7 +178,7 @@ class TISTransition(Transition):
         ret_dict = {
             'stateA' : self.stateA,
             'stateB' : self.stateB,
-            'orderparameter' : self.orderparameter,
+            'collectivevariable' : self.collectivevariable,
             'interfaces' : self.interfaces,
             'name' : self.name,
             'movers' : self.movers,
@@ -192,7 +192,7 @@ class TISTransition(Transition):
             stateA=adict['stateA'],
             stateB=adict['stateB'],
             interfaces=adict['interfaces'],
-            orderparameter=adict['orderparameter'],
+            collectivevariable=adict['collectivevariable'],
             name=adict['name']
         )
         mytrans.movers = adict['movers']
@@ -287,7 +287,7 @@ class TISTransition(Transition):
         """Calculate the rate for this transition.
 
         For TIS transitions, this requires the result of an external
-        calculation of the flux. 
+        pathsimulator of the flux.
         """
         if flux is not None:
             self._flux = flux
@@ -299,7 +299,7 @@ class TISTransition(Transition):
         pass
 
     def default_movers(self, engine):
-        """Create reasonable default movers for a `PathSampling` calculation"""
+        """Create reasonable default movers for a `PathSampling` pathsimulator"""
         shoot_sel = paths.RandomChoiceMover(
             movers=self.movers['shooting'],
             name="ShootingChooser"
@@ -318,9 +318,9 @@ class TISTransition(Transition):
 
 class RETISTransition(TISTransition):
     """Transition class for RETIS."""
-    def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
+    def __init__(self, stateA, stateB, interfaces, collectivevariable=None, name=None):
         super(RETISTransition, self).__init__(stateA, stateB, interfaces,
-                                              orderparameter, name)
+                                              collectivevariable, name)
 
         self.minus_ensemble = paths.MinusInterfaceEnsemble(
             state_vol=stateA, 
@@ -372,9 +372,21 @@ class RETISTransition(TISTransition):
         pass
 
     def default_movers(self, engine):
-        """Create reasonable default movers for a `PathSampling` calculation
+        """Create reasonable default movers for a `PathSampling` pathsimulator
         
         Extends `TISTransition.default_movers`.
         """
-        pass
+        repex_sel = paths.RandomChoiceMover(
+            movers=self.movers['repex'],
+            name="ReplicaExchange"
+        )
+        tis_root_mover = super(RETISTransition, self).default_movers(engine)
+        movers = tis_root_mover.movers + [repex_sel, self.movers['minus']]
+        weights = tis_root_mover.weights + [0.5, 0.2 / len(self.ensembles)]
+        root_mover = paths.RandomChoiceMover(
+            movers=movers,
+            weights=weights,
+            name="RootMover"
+        )
+        return root_mover
 

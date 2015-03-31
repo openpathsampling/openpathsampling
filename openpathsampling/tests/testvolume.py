@@ -112,23 +112,23 @@ class testLambdaVolume(object):
     def test_or_combinations(self):
         assert_equal((volA | volB), volume.LambdaVolume(op_id, -0.5, 0.75))
         assert_equal((volB | volC), 
-                     volume.OrVolume(volB, volC))
+                     volume.UnionVolume(volB, volC))
         assert_equal((volB | volC)(0.0), False)
         assert_equal((volB | volC)(0.5), True)
         assert_equal((volB | volC)(-0.5), True)
         
         # go to VolumeCombination if order parameters isn't the same
         assert_equal((volA2 | volB),
-                     volume.OrVolume(volA2, volB))
+                     volume.UnionVolume(volA2, volB))
 
     def test_xor_combinations(self):
         assert_equal((volA ^ volB),
-                     volume.OrVolume(
+                     volume.UnionVolume(
                          volume.LambdaVolume(op_id, -0.5, 0.25),
                          volume.LambdaVolume(op_id, 0.5, 0.75)
                      ))
         assert_equal((volA ^ volA2),
-                     volume.XorVolume(volA, volA2))
+                     volume.SymmetricDifferenceVolume(volA, volA2))
 
     def test_sub_combinations(self):
         assert_equal((volA - volB), volume.LambdaVolume(op_id, -0.5, 0.25))
@@ -136,13 +136,13 @@ class testLambdaVolume(object):
         assert_equal((volA - volD), volume.EmptyVolume())
         assert_equal((volB - volA), volume.LambdaVolume(op_id, 0.5, 0.75))
         assert_equal((volD - volA),
-                     volume.OrVolume(
+                     volume.UnionVolume(
                          volume.LambdaVolume(op_id, -0.75, -0.5),
                          volume.LambdaVolume(op_id, 0.5, 0.75)
                      )
                     )
         assert_equal((volA2 - volA),
-                     volume.SubVolume(volA2, volA))
+                     volume.RelativeComplementVolume(volA2, volA))
 
     def test_str(self):
         assert_equal(volA.__str__(), "{x|Id(x) in [-0.5, 0.5]}")
@@ -270,13 +270,13 @@ class testLambdaVolumePeriodic(object):
         assert_equal((self.pvolB & self.pvolD), self.pvolB)
         # go to special case
         assert_equal((self.pvolE & self.pvolA_),
-                     volume.OrVolume(
+                     volume.UnionVolume(
                          volume.LambdaVolumePeriodic(op_id, -150,-100),
                          volume.LambdaVolumePeriodic(op_id, 75, 150)
                      )
                     )
         # go to super if needed
-        assert_equal(type(self.pvolA & volA), volume.AndVolume)
+        assert_equal(type(self.pvolA & volA), volume.IntersectionVolume)
 
     def test_periodic_or_combos(self):
         assert_equal((self.pvolA | self.pvolB), self.pvolD)
@@ -284,9 +284,9 @@ class testLambdaVolumePeriodic(object):
         assert_equal((self.pvolA | self.pvolB)(80), True)
         assert_equal((self.pvolA | self.pvolB)(125), False)
         assert_equal((self.pvolB | self.pvolC),
-                     volume.OrVolume(self.pvolB, self.pvolC))
+                     volume.UnionVolume(self.pvolB, self.pvolC))
         assert_equal((self.pvolC | self.pvolB), 
-                     volume.OrVolume(self.pvolC, self.pvolB))
+                     volume.UnionVolume(self.pvolC, self.pvolB))
         assert_is((self.pvolA | self.pvolA), self.pvolA)
         assert_equal((self.pvolA | self.pvolA_), volume.FullVolume())
         assert_equal((self.pvolE | self.pvolD), self.pvolE)
@@ -297,7 +297,7 @@ class testLambdaVolumePeriodic(object):
         assert_equal(self.pvolA ^ self.pvolA_, volume.FullVolume())
         assert_equal(self.pvolA ^ self.pvolA, volume.EmptyVolume())
         assert_equal(self.pvolE ^ self.pvolD,
-                     volume.OrVolume(
+                     volume.UnionVolume(
                          volume.LambdaVolumePeriodic(op_id, -150, -100),
                          volume.LambdaVolumePeriodic(op_id, 100, 150)))
         assert_equal(self.pvolB ^ self.pvolC, self.pvolB | self.pvolC)
@@ -323,7 +323,7 @@ class testLambdaVolumePeriodic(object):
         assert_equal(self.pvolB - self.pvolC, self.pvolB)
         assert_equal(self.pvolA - self.pvolA, volume.EmptyVolume())
         assert_equal(self.pvolE - self.pvolD,
-                     volume.OrVolume(
+                     volume.UnionVolume(
                          volume.LambdaVolumePeriodic(op_id, -150, -100),
                          volume.LambdaVolumePeriodic(op_id, 100, 150)))
         assert_equal(self.pvolE - self.pvolA_,
