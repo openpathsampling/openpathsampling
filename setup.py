@@ -103,14 +103,21 @@ def buildKeywordDictionary():
     setupKeywords["download_url"]      = "http://github.com/choderalab/openpathsampling"
     setupKeywords["packages"]          = ['openpathsampling',
                                           'openpathsampling.storage',
-                                          'openpathsampling.toy_dynamics',
+                                          'openpathsampling.dynamics',
+                                          'openpathsampling.dynamics.openmm',
+                                          'openpathsampling.dynamics.toy',
                                           'openpathsampling.tests',
+                                          'openpathsampling.util',
                                           'openpathsampling.analysis']
     setupKeywords["package_dir"]       = {
         'openpathsampling' : 'openpathsampling',
         'openpathsampling.storage' : 'openpathsampling/storage',
-        'openpathsampling.toy_dynamics' : 'openpathsampling/toy_dynamics',
-        'openpathsampling.tests' : 'openpathsampling/tests'
+        'openpathsampling.dynamics' : 'openpathsampling/dynamics',
+        'openpathsampling.dynamics.toy' : 'openpathsampling/dynamics/toy',
+        'openpathsampling.dynamics.openmm' : 'openpathsampling/dynamics/openmm',
+        'openpathsampling.util' : 'openpathsampling/util',
+        'openpathsampling.tests' : 'openpathsampling/tests',
+        'openpathsampling.analysis' : 'openpathsampling/analysis'
     }
     #setupKeywords["py_modules"]        = ["pymbar", "timeseries", "testsystems", "confidenceintervals"]
     setupKeywords["data_files"]        = []
