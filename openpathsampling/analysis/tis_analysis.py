@@ -43,22 +43,6 @@ In the order listed above, the time for the rate calculation is almost
 entirely in determining the flux from the information in the minus mover.
 """
 
-def sample_generator(samples):
-    i=0
-    while i<len(samples):
-        yield samples[i]
-        i = i+1
-
-def get_n_samples(n, samples):
-    seq = iter(sample_generator(samples))
-    result = []
-    try:
-        for i in range(n):
-            result.append(seq.next())
-    except StopIteration:
-        pass
-    return result
-
 
 def pathlength(sample):
     return len(sample.trajectory)
@@ -91,11 +75,10 @@ class Transition(object):
     """
     Describes (in general) a transition between two states.
     """
-    def __init__(self, stateA, stateB, storage=None):
+    def __init__(self, stateA, stateB):
         self.movers = {}
         self.stateA = stateA
         self.stateB = stateB
-        self.storage = storage
 
         self._mover_acceptance = {}
         pass
@@ -110,8 +93,8 @@ class TPSTransition(Transition):
     """
     Transition using TPS ensembles
     """
-    def __init__(self, stateA, stateB, storage=None):
-        super(TPSTransition, self).__init__(stateA, stateB, storage)
+    def __init__(self, stateA, stateB):
+        super(TPSTransition, self).__init__(stateA, stateB)
         self.movers['shooting'] = []
         self.movers['shifting'] = []
         self.movers['pathreversal'] = []
@@ -126,39 +109,47 @@ class TISTransition(Transition):
     The additional information from the TIS ensembles allows us to set up
     all the analysis (assuming we built these are proper TIS ensembles,
     which we DO in the intitialization!)
+
+    Parameters
+    ----------
+    stateA : Volume
+        Volume for the state from which the transition begins
+    stateB : Volume
+        Volume for the state in which the transition ends
+    interfaces : list of Volume
+        Volumes for the interfaces
+    orderparameter : CollectiveVariable
+        order parameter to be used in the analysis (does not need to be the
+        parameter which defines the interfaces, although it usually is)
+    name : string
+        name for the transition
+
     """
     
-    def __init__(self, stateA, stateB, orderparameter=None, interfaces=None,
-                 name=None, storage=None):
-        super(TISTransition, self).__init__(stateA, stateB, storage)
+    def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
+        super(TISTransition, self).__init__(stateA, stateB)
         # NOTE: making these into dictionaries like this will make it easy
         # to combine them in order to make a PathSampling calculation object
-        self.movers['shooting'] = []
-        self.movers['pathreversal'] = []
 
         self.stateA = stateA
         self.stateB = stateB
         self.interfaces = interfaces
         self.name = name
-        self.storage = storage
-        self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
-            stateA, stateB, self.interfaces
-        )
 
-        for ensemble in self.ensembles:
-            ensemble.name = "I'face "+str(self.ensembles.index(ensemble))
+        # If we reload from a storage file, we want to use the
+        # ensembles/movers from the file, not the automatically generated
+        # ones here
 
-        if self.storage is None:
-            # TODO: I don't like this way of handling it
-            self.movers['shooting'] = paths.PathMoverFactory.OneWayShootingSet(
-                paths.UniformSelector(), self.ensembles
-            )
-            self.movers['pathreversal'] = paths.PathReversalSet(self.ensembles)
+        # build ensembles if we don't already have them
+        if not hasattr(self, "ensembles"):
+            self.build_ensembles(self.stateA, self.stateB, self.interfaces)
 
+        # build movers if we don't already have them
+        if self.movers == {}:
+            self.build_movers()
 
         self.orderparameter = orderparameter
         self.default_orderparameter = self.orderparameter
-
 
         self.total_crossing_probability_method="wham" 
         self.histograms = {}
@@ -182,7 +173,6 @@ class TISTransition(Transition):
             )
         }
 
-        pass
 
     def to_dict(self):
         ret_dict = {
@@ -190,33 +180,37 @@ class TISTransition(Transition):
             'stateB' : self.stateB,
             'orderparameter' : self.orderparameter,
             'interfaces' : self.interfaces,
-            'storage' : self.storage,
+            'name' : self.name,
             'movers' : self.movers,
             'ensembles' : self.ensembles
         }
         return ret_dict
 
     @staticmethod
-    def from_dict(self, adict):
+    def from_dict(adict):
         mytrans = TISTransition(
             stateA=adict['stateA'],
             stateB=adict['stateB'],
-            orderparameter=adict['orderparameter'],
             interfaces=adict['interfaces'],
-            storage=adict['storage']
+            orderparameter=adict['orderparameter'],
+            name=adict['name']
         )
         mytrans.movers = adict['movers']
         mytrans.ensembles = adict['ensembles']
         return mytrans
 
-    # path movers
-    @property
-    def shooting_movers(self):
-        return self.movers['shooting']
+    def build_ensembles(self, stateA, stateB, interfaces):
+        self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
+            stateA, stateB, self.interfaces
+        )
+        for ensemble in self.ensembles:
+            ensemble.name = "I'face "+str(self.ensembles.index(ensemble))
 
-    @property
-    def pathreversal_movers(self):
-        return self.movers['pathreversal']
+    def build_movers(self):
+        self.movers['shooting'] = paths.PathMoverFactory.OneWayShootingSet(
+            paths.UniformSelector(), self.ensembles
+        )
+        self.movers['pathreversal'] = paths.PathReversalSet(self.ensembles)
 
     # parameters for different types of output
     def ensemble_statistics(self, ensemble, samples, weights=None, force=False):
@@ -235,7 +229,7 @@ class TISTransition(Transition):
         # figure out which histograms need to updated for this ensemble
         run_it = []
         if not force:
-            # figure out which need to be rerun
+            # TODO figure out which need to be rerun
             pass
         else:
             run_it = self.ensemble_histogram_info.keys()
@@ -268,12 +262,12 @@ class TISTransition(Transition):
         hist = self.histograms['pathlength'][ensemble]
         return hist.normalized()
 
-    def crossing_probability(self, ensemble):
+    def crossing_probability(self, ensemble, nblocks=1):
         # check existence and correctness of self.histograms[cp][ens]
         hist = self.histograms['crossing_probability'][ensemble]
         return hist.reverse_cumulative()
 
-    def total_crossing_probability(self, method="wham", force=False):
+    def total_crossing_probability(self, method="wham", force=False, nblocks=1):
         """Return the total crossing probability using `method`"""
         if method == "wham":
             cp = {}
@@ -286,6 +280,7 @@ class TISTransition(Transition):
         elif method == "mbar":
             pass
 
+        self.tcp = tcp
         return tcp
 
     def rate(self, flux=None, flux_error=None, force=False):
@@ -321,33 +316,49 @@ class TISTransition(Transition):
         return root_mover
 
 
-
 class RETISTransition(TISTransition):
     """Transition class for RETIS."""
-    def __init__(self, stateA, stateB, interfaces, storage=None):
-        super(RETISTransition, self).__init__(stateA, stateB, interfaces, storage)
-        self.movers['repex'] = []
-        self.movers['minus'] = []
+    def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
+        super(RETISTransition, self).__init__(stateA, stateB, interfaces,
+                                              orderparameter, name)
 
         self.minus_ensemble = paths.MinusInterfaceEnsemble(
             state_vol=stateA, 
             innermost_vol=interfaces[0]
         )
 
-        self.movers['repex'] = paths.NeighborEnsembleReplicaExchange(self.ensembles)
-        self.movers['minus'] = paths.MinusMover(self.minus_ensemble, self.ensemble[0])
+        try:
+            self.movers['repex']
+        except KeyError:
+            self.movers['repex'] = paths.NeighborEnsembleReplicaExchange(self.ensembles)
+        try:
+            self.movers['minus']
+        except KeyError:
+            self.movers['minus'] = paths.MinusMover(self.minus_ensemble, self.ensembles[0])
 
 
     @property
-    def repex_movers(self):
-        pass
+    def replica_flow(self, bottom=None, top=None):
+        if bottom is None:
+            bottom = self.minus_ensemble
+        if top is None:
+            top = self.ensembles[-1]
 
-    @property
-    def minus_movers(self):
-        pass
+        updown = {}
+        round_trips = {}
+        for ens in [self.minus_ensemble] + self.ensembles:
+            updown[ens] = 0
+            nvisits[ens] = 0
+            up_trips[ens] = []
+            down_trips[ens] = []
+            round_trips[ens] = []
 
-    @property
-    def replica_flow(self):
+        # loop over moves which include a repex
+
+
+        # run stats to get replica flow and stats on up_trips, down_trips,
+        # round_trips
+
         # this should check to build the replica exchange network. If the
         # number of neighbors at any station is more than 2, we can't do
         # "normal" replica flow -- instead produce a network graph. Or,
@@ -357,10 +368,14 @@ class RETISTransition(TISTransition):
 
     @property
     def minus_move_flux(self):
+        # 1. get the samples in the minus ensemble
+        # 2. summarize_trajectory for each
+        # 3. calculate the flux
         pass
 
     @property
     def multiple_set_minus_switching(self):
+        # TODO: move this to network
         pass
 
     @property
@@ -376,8 +391,64 @@ class RETISTransition(TISTransition):
         
         Extends `TISTransition.default_movers`.
         """
-        pass
+        repex_sel = paths.RandomChoiceMover(
+            movers=self.movers['repex'],
+            name="ReplicaExchange"
+        )
+        tis_root_mover = super(RETISTransition, self).default_movers(engine)
+        movers = tis_root_mover.movers + [repex_sel, self.movers['minus']]
+        weights = tis_root_mover.weights + [0.5, 0.2 / len(self.ensembles)]
+        root_mover = paths.RandomChoiceMover(
+            movers=movers,
+            weights=weights,
+            name="RootMover"
+        )
+        return root_mover
 
-class RETISBirectionalSetup(object):
-    def __init__(self, A_to_B, B_to_A):
-        pass
+
+def summarize_trajectory(trajectory, label_dict):
+    """Summarize trajectory based on number of continuous frames in volumes.
+
+    This uses a dictionary of disjoint volumes: the volumes must be disjoint
+    so that every frame can be mapped to one volume. If the frame maps to
+    none of the given volumes, it returns the label None.
+
+    Parameters
+    ----------
+    trajectory : Trajectory
+        input trajectory
+    label_dict : dict
+        dictionary with labels for keys and volumes for values
+
+    Returns
+    -------
+    list of tuple
+        format is (label, number_of_frames)
+    """
+    last_vol = None
+    count = 0
+    segment_labels = []
+    for frame in traj:
+        in_state = []
+        for key in label_dict.keys():
+            if label_dict[key](frame):
+                in_state.append(key)
+        if len(key) > 1:
+            raise RuntimeError("Volumes given to summarize_trajectory not disjoint")
+        if len(key) == 0:
+            current_vol = None
+        else:
+            current_vol = key
+        
+        if last_vol == current_vol:
+            count += 1
+        else:
+            if count > 0:
+                segment_labels.append( (last_vol, count) )
+            last_vol = current_vol
+            count = 1
+    return segment_labels
+
+
+
+        
