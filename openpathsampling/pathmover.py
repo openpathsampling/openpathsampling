@@ -1200,9 +1200,6 @@ class MinusMover(ConditionalSequentialMover):
         initialization_logging(init_log, self, ['minus_ensemble',
                                                 'innermost_ensemble'])
 
-        self._stateVol = self.minus_ensemble.state_vol
-        self._interstitialVol = self.minus_ensemble.innermost_vol - self.minus_ensemble.state_vol
-        self._outsideVol = ~self.minus_ensemble.innermost_vol
         super(MinusMover, self).__init__(movers=movers,
                                          ensembles=ensembles,
                                          replicas=replicas)
@@ -1211,31 +1208,6 @@ class MinusMover(ConditionalSequentialMover):
     @keep_selected_samples
     def move(self, globalstate):
         result = super(MinusMover, self).move(globalstate).closed
-        if result.accepted:
-            # track info on length of paths in each segment
-            samp = result.samples[0]
-            traj = samp.trajectory
-            last_vol = None
-            count = 0
-            segment_labels = []
-            for frame in traj:
-                if self._stateVol(frame):
-                    current_vol = "A" # state
-                elif self._interstitialVol(frame):
-                    current_vol = "I" # interstitial
-                elif self._outsideVol(frame):
-                    current_vol = "X" # external
-                else:
-                    raise RuntimeError("Poorly defined minus ensemble")
-                if last_vol == current_vol:
-                    count += 1
-                else:
-                    if last_vol is not None:
-                        segment_labels.append( (last_vol, count) )
-                        pass
-                    last_vol = current_vol
-                    count = 1
-            samp.details.setattr("segment_labels", segment_labels)
         return result
 
 @restores_as_stub_object
