@@ -13,6 +13,11 @@ class TransitionNetwork(object):
 
 class TISNetwork(TransitionNetwork):
     def __init__(self):
+        # this should check to build the replica exchange network. If the
+        # number of neighbors at any station is more than 2, we can't do
+        # "normal" replica flow -- instead produce a network graph. Or,
+        # actually, ALWAYS produce a network graph (although this will be a
+        # feature to implement later)
         pass
 
     def from_transitions(self, transitions, interfaces=None):
@@ -58,6 +63,11 @@ class MSTISNetwork(TISNetwork):
 
 class MISTISNetwork(TISNetwork):
     def __init__(self):
+        pass
+
+    @property
+    def multiple_set_minus_switching(self):
+        # TODO: move this to network
         pass
 
     def default_mover(self):
