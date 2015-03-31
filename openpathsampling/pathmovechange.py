@@ -104,7 +104,7 @@ class PathMoveChange(object):
 
     def __len__(self):
         # TODO: Add caching here?
-        return len(list(self))
+        return len(list(iter(self)))
 
     def __contains__(self, item):
         return item in list(self)

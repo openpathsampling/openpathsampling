@@ -82,7 +82,7 @@ class Storage(netcdf.Dataset):
 
         self.volumes = paths.storage.ObjectStore(storage, paths.Volume, is_named=True, nestable=True)
         self.ensembles = paths.storage.ObjectStore(storage, paths.Ensemble, is_named=True, nestable=True)
-        self.movepaths = paths.storage.ObjectStore(storage, paths.PathMoveChange, is_named=False, nestable=True)
+        self.pathmovechanges = paths.storage.ObjectStore(storage, paths.PathMoveChange, is_named=False, nestable=True)
 
         self.transitions = paths.storage.ObjectStore(storage,
                                                     paths.TISTransition,
@@ -96,7 +96,7 @@ class Storage(netcdf.Dataset):
                    'cvs', 'pathmovers', 'movedetails', 'shootingpoints',
                    'shootingpointselectors', 'engines',
                    'pathsimulators', 'volumes', 'ensembles',
-                   'movepaths', 'transitions'
+                   'pathmovechanges', 'transitions'
                   ]}
 
     @property

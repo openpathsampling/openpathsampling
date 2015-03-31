@@ -140,9 +140,10 @@ class testForwardShootMover(testShootingMover):
         movepath = mover.move(self.init_samp)
         newsamp = self.init_samp + movepath
         assert_equal(len(newsamp), 1)
-        assert_equal(newsamp[0].details.accepted, True)
+        movepath
+        assert_equal(movepath.details.accepted, True)
         assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
-        assert_equal(newsamp[0].trajectory, newsamp[0].details.trial)
+        assert_equal(newsamp[0].trajectory, movepath.details.trial)
 
 class testBackwardShootMover(testShootingMover):
     def test_move(self):
@@ -151,9 +152,9 @@ class testBackwardShootMover(testShootingMover):
         movepath = mover.move(self.init_samp)
         newsamp = self.init_samp + movepath
         assert_equal(len(newsamp), 1)
-        assert_equal(newsamp[0].details.accepted, True)
+        assert_equal(movepath.details.accepted, True)
         assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
-        assert_equal(newsamp[0].trajectory, newsamp[0].details.trial)
+        assert_equal(newsamp[0].trajectory, movepath.details.trial)
 
 class testOneWayShootingMover(testShootingMover):
     def test_mover_initialization(self):
@@ -182,42 +183,40 @@ class testPathReversalMover(object):
                                velocities=[0.1, 0.05, -0.05])
         sampAXA = Sample(trajectory=trajAXA,
                          ensemble=self.tis,
-                         replica=0,
-                         details=MoveDetails())
+                         replica=0)
         gs_AXA = SampleSet([sampAXA])
-        samp = (gs_AXA + self.move.move(gs_AXA))[0]
-        assert_equal(samp.details.accepted, True)
+        movepath = self.move.move(gs_AXA)
+        assert_equal(movepath.accepted, True)
 
     def test_A_A_path(self):
         trajA_A = make_1d_traj(coordinates=[-0.3, 0.1, -0.4])
         sampA_A = Sample(trajectory=trajA_A,
                          ensemble=self.tis,
-                         replica=0,
-                         details=MoveDetails())
+                         replica=0)
         gs_A_A = SampleSet([sampA_A])
-        samp = (gs_A_A + self.move.move(gs_A_A))[0]
-        assert_equal(samp.details.accepted, False)
+        movepath = self.move.move(gs_A_A)
+        assert_equal(movepath.accepted, False)
 
 
     def test_AB_path(self):
         trajAXB = make_1d_traj(coordinates=[-0.2, 0.75, 1.8])
         sampAXB = Sample(trajectory=trajAXB,
                          ensemble=self.tis,
-                         replica=0,
-                         details=MoveDetails())
+                         replica=0)
         gs_AXB = SampleSet([sampAXB])
-        samp = (gs_AXB + self.move.move(gs_AXB))[0]
-        assert_equal(samp.details.accepted, False)
+        movepath = self.move.move(gs_AXB)
+        assert_equal(movepath.accepted, False)
+
 
     def test_BA_path(self):
         trajBXA = make_1d_traj(coordinates=[1.2, 0.7, -0.25])
         sampBXA = Sample(trajectory=trajBXA,
                          ensemble=self.tis,
-                         replica=0,
-                         details=MoveDetails())
+                         replica=0)
         gs_BXA = SampleSet([sampBXA])
-        samp = (gs_BXA + self.move.move(gs_BXA))[0]
-        assert_equal(samp.details.accepted, True)
+        movepath = self.move.move(gs_BXA)
+        assert_equal(movepath.accepted, True)
+
 
 class testReplicaIDChangeMover(object):
     def setup(self):
@@ -254,10 +253,14 @@ class testReplicaExchangeMover(object):
         repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
         samples_B2A1_ens = repex_AB.move(self.gs_B1A2)
         assert_equal(len(samples_B2A1_ens), 2)
-        for sample in samples_B2A1_ens:
-            assert_equal(sample.details.accepted, True)
-            assert_equal(sample.trajectory, sample.details.result)
-            assert_equal(sample.details.trial, sample.details.result)
+
+        assert_equal(samples_B2A1_ens.details.accepted, True)
+        for trial, result in zip(samples_B2A1_ens.details.trials, samples_B2A1_ens.details.results):
+            assert_equal(trial, result)
+
+        for sample in zip(samples_B2A1_ens.samples, samples_B2A1_ens.details.results):
+            assert_equal(sample.trajectory, samples_B2A1_ens.details.result)
+
         B2 = [s for s in samples_B2A1_ens if s.ensemble==self.tisB]
         assert_equal(len(B2), 1)
         assert_equal(B2[0].trajectory, self.traj2)
@@ -285,7 +288,6 @@ class testReplicaExchangeMover(object):
         B1 = [s for s in samples_A0B1_ens if s.ensemble==self.tisB]
         assert_equal(len(B1), 1)
         assert_equal(B1[0].trajectory, self.traj1)
-
 
     def test_repex_rep_acc(self):
         repex_12 = ReplicaExchangeMover(replicas=[[1,2]])
@@ -372,8 +374,7 @@ class testSequentialMover(object):
                                                       [len2, len2]])
         self.init_sample = Sample(trajectory=traj,
                                   ensemble=len3,
-                                  replica=0,
-                                  details=MoveDetails())
+                                  replica=0)
         self.tis = tis
         self.tps = tps
         self.len3 = len3
