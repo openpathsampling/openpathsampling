@@ -82,7 +82,7 @@ class Storage(netcdf.Dataset):
 
         self.volumes = paths.storage.ObjectStore(storage, paths.Volume, is_named=True, nestable=True)
         self.ensembles = paths.storage.ObjectStore(storage, paths.Ensemble, is_named=True, nestable=True)
-        self.movepaths = paths.storage.ObjectStore(storage, paths.MovePath, is_named=False, nestable=True)
+        self.movepaths = paths.storage.ObjectStore(storage, paths.PathMoveChange, is_named=False, nestable=True)
 
         self.transitions = paths.storage.ObjectStore(storage,
                                                     paths.TISTransition,

@@ -57,10 +57,10 @@ from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
 
 from analysis.tis_analysis import TISTransition, RETISTransition
 
-from movepath import (EmptyMovePath, ConditionalSequentialMovePath,
-                      MovePath, PartialAcceptanceSequentialMovePath,
-                      RandomChoiceMovePath, SampleMovePath,
-                      SequentialMovePath,  KeepLastSampleMovePath,
-                      CollapsedMovePath, FilterSamplesMovePath,
-                      PathSimulatorMovePath
+from pathmovechange import (EmptyPathMoveChange, ConditionalSequentialMovePath,
+                      PathMoveChange, PartialAcceptanceSequentialMovePath,
+                      RandomChoicePathMoveChange, SamplePathMoveChange,
+                      SequentialPathMoveChange,  KeepLastSamplePathMoveChange,
+                      CollapsedMovePath, FilterSamplesPathMoveChange,
+                      PathSimulatorPathMoveChange
                      )

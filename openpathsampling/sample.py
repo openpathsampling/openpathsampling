@@ -47,7 +47,7 @@ class SampleSet(object):
         self.replica_dict = {}
         self.extend(samples)
         if movepath is None:
-            self.movepath = paths.EmptyMovePath()
+            self.movepath = paths.EmptyPathMoveChange()
         else:
             self.movepath = movepath
 
