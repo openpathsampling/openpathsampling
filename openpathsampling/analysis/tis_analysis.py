@@ -3,6 +3,8 @@ from wham import WHAM
 import openpathsampling as paths
 from openpathsampling.todict import restores_as_full_object
 
+import inspect
+
 import time 
 
 """
@@ -82,7 +84,6 @@ class Transition(object):
         self.stateB = stateB
 
         self._mover_acceptance = {}
-        pass
 
     def calculate_mover_acceptance(self, samples):
         for sample in samples:
@@ -145,6 +146,7 @@ class TISTransition(Transition):
         # NOTE: making these into dictionaries like this will make it easy
         # to combine them in order to make a PathSampling calculation object
 
+
         self.stateA = stateA
         self.stateB = stateB
         self.interfaces = interfaces
@@ -201,7 +203,7 @@ class TISTransition(Transition):
 
     @staticmethod
     def from_dict(dct):
-        mytrans = TISTransition(
+        mytrans = paths.TISTransition(
             stateA=dct['stateA'],
             stateB=dct['stateB'],
             interfaces=dct['interfaces'],
@@ -332,8 +334,7 @@ class TISTransition(Transition):
 class RETISTransition(TISTransition):
     """Transition class for RETIS."""
     def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
-        super(RETISTransition, self).__init__(stateA, stateB, interfaces,
-                                              orderparameter, name)
+        super(RETISTransition, self).__init__(stateA, stateB, interfaces, orderparameter, name)
 
         self.minus_ensemble = paths.MinusInterfaceEnsemble(
             state_vol=stateA, 
@@ -365,7 +366,7 @@ class RETISTransition(TISTransition):
 
     @staticmethod
     def from_dict(dct):
-        mytrans = TISTransition(
+        mytrans = RETISTransition(
             stateA=dct['stateA'],
             stateB=dct['stateB'],
             interfaces=dct['interfaces'],
@@ -408,7 +409,7 @@ class RETISTransition(TISTransition):
     def rate(self, flux=None, flux_error=None, force=False):
         tcp = self.total_crossing_probability()
         if flux is None:
-            (flux, flux_error) = self.minus_move_flux()
+            (flux, flux_error) = self.minus_move_flux
 
         pass
 

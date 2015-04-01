@@ -84,9 +84,7 @@ class Storage(netcdf.Dataset):
         self.ensemble = paths.storage.ObjectStore(storage, paths.Ensemble, is_named=True, nestable=True)
         self.movepath = paths.storage.ObjectStore(storage, paths.MovePath, is_named=False, nestable=True)
 
-        self.transition = paths.storage.ObjectStore(storage,
-                                                    paths.Transition,
-                                                    is_named=True)
+        self.transition = paths.storage.ObjectStore(storage, paths.Transition, is_named=True)
 
         self.query = paths.storage.QueryStore(storage)
 
@@ -520,7 +518,7 @@ class Storage(netcdf.Dataset):
 class StorableObjectJSON(paths.todict.ObjectJSON):
     def __init__(self, storage, unit_system = None, class_list = None):
         super(StorableObjectJSON, self).__init__(unit_system, class_list)
-        self.excluded_keys = ['name', 'idx', 'json', 'identifier']
+        self.excluded_keys = ['idx', 'json', 'identifier']
         self.storage = storage
 
     def simplify(self,obj, base_type = ''):

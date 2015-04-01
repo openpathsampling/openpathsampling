@@ -11,7 +11,7 @@ class ObjectJSON(object):
     """
 
     def __init__(self, unit_system = None, class_list = None):
-        self.excluded_keys = ['name']
+        self.excluded_keys = []
         self.unit_system = unit_system
         if class_list is not None:
             self.class_list = class_list
