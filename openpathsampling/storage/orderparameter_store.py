@@ -3,7 +3,7 @@ from openpathsampling.orderparameter import OrderParameter
 
 class ObjectDictStore(ObjectStore):
     def __init__(self, storage, cls, key_class):
-        super(ObjectDictStore, self).__init__(storage, cls, is_named=True, json=False)
+        super(ObjectDictStore, self).__init__(storage, cls, has_uid=True, json=False)
         self.key_class = key_class
 
     def save(self, objectdict, idx):
@@ -24,7 +24,7 @@ class ObjectDictStore(ObjectStore):
         if var_name + '_value' not in self.storage.variables:
             self.init_variable(var_name + '_value', 'float', (self.key_class.__name__.lower()))
 
-        storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
+        storage.variables[self.idx_dimension + '_uid'][idx] = objectdict.name
 
         # this will copy the cache from an op and store it
         objectdict.flush_cache(self.storage)
@@ -119,7 +119,7 @@ class ObjectDictStore(ObjectStore):
 
         storage = self.storage
 
-        name = storage.variables[self.idx_dimension + '_name'][idx]
+        name = storage.variables[self.idx_dimension + '_uid'][idx]
         op = OrderParameter(name)
 
         return op

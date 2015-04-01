@@ -4,7 +4,7 @@ from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     EntersXEnsemble, EmptyEnsemble, ExitsXEnsemble, FullEnsemble, \
     HitXEnsemble, InXEnsemble, OutXEnsemble, WrappedEnsemble, \
     BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble, \
-    LeaveXEnsemble, LengthEnsemble, LoadedEnsemble, NegatedEnsemble, \
+    LeaveXEnsemble, LengthEnsemble, NegatedEnsemble, \
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \
     SequentialEnsemble, AndEnsemble, OrEnsemble, XorEnsemble, SubEnsemble, \
     SingleFrameEnsemble, MinusInterfaceEnsemble

@@ -47,7 +47,6 @@ class Ensemble(object):
 
 #        self._traj = dict()
 #        self.last = None
-        self.name = ''
 
     def __eq__(self, other):
         if self is other:
@@ -335,30 +334,6 @@ class Ensemble(object):
         if hasattr(self, 'frames'):
             if type(self.frames) is int:
                 return trajectory.frames > self.frames and trajectory.frames >= -self.frames
-                
-class LoadedEnsemble(Ensemble):
-    '''
-    Represents an ensemble the contains trajectories of a specific length
-    ??? @JHP, update these docstrings!!!!
-    '''
-    def __init__(self, name, description):
-        '''
-        A path ensemble that describes path of a specific length
-
-        Parameters
-        ----------
-        length : int or slice
-            The specific length (int) or the range of allowed trajectory lengths (slice)
-        '''
-
-        super(LoadedEnsemble, self).__init__()
-
-        self.name = name
-        self.description = description
-        pass
-
-    def __str__(self):
-        return self.description
 
 @restores_as_full_object
 class EmptyEnsemble(Ensemble):

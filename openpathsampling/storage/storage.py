@@ -71,20 +71,20 @@ class Storage(netcdf.Dataset):
 
         # normal objects
 
-        self.pathmover = paths.storage.ObjectStore(storage, paths.PathMover, is_named=True)
-        self.movedetails = paths.storage.ObjectStore(storage, paths.MoveDetails, is_named=False)
-        self.shootingpoint = paths.storage.ObjectStore(storage, paths.ShootingPoint, is_named=False)
-        self.shootingpointselector = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, is_named=False)
-        self.engine = paths.storage.ObjectStore(storage, paths.DynamicsEngine, is_named=True)
-        self.calculation = paths.storage.ObjectStore(storage, paths.Calculation, is_named=True)
+        self.pathmover = paths.storage.ObjectStore(storage, paths.PathMover, has_uid=True)
+        self.movedetails = paths.storage.ObjectStore(storage, paths.MoveDetails, has_uid=False)
+        self.shootingpoint = paths.storage.ObjectStore(storage, paths.ShootingPoint, has_uid=False)
+        self.shootingpointselector = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, has_uid=False)
+        self.engine = paths.storage.ObjectStore(storage, paths.DynamicsEngine, has_uid=True)
+        self.calculation = paths.storage.ObjectStore(storage, paths.Calculation, has_uid=True)
 
         # nestable objects
 
-        self.volume = paths.storage.ObjectStore(storage, paths.Volume, is_named=True, nestable=True)
-        self.ensemble = paths.storage.ObjectStore(storage, paths.Ensemble, is_named=True, nestable=True)
-        self.movepath = paths.storage.ObjectStore(storage, paths.MovePath, is_named=False, nestable=True)
+        self.volume = paths.storage.ObjectStore(storage, paths.Volume, has_uid=True, nestable=True)
+        self.ensemble = paths.storage.ObjectStore(storage, paths.Ensemble, has_uid=True, nestable=True)
+        self.movepath = paths.storage.ObjectStore(storage, paths.MovePath, has_uid=False, nestable=True)
 
-        self.transition = paths.storage.ObjectStore(storage, paths.Transition, is_named=True)
+        self.transition = paths.storage.ObjectStore(storage, paths.Transition, has_uid=True)
 
         self.query = paths.storage.QueryStore(storage)
 
