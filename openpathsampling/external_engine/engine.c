@@ -17,9 +17,9 @@ int main(int argc, char ** argv)
     sleep_time.tv_sec = milliseconds / 1000;
     sleep_time.tv_nsec = (milliseconds % 1000) * 1000000;
 
-    int max_steps = 100000;
+    int max_steps = 1000000;
     int i; for (i=0; i<max_steps; i++) {
-        fprintf(f, "0.0\n");
+        fprintf(f, "0.0\n"); fflush(f); 
         nanosleep(&sleep_time, &foo);
     }
 }

@@ -6,17 +6,25 @@ import openpathsampling as paths
 
 from external_engine import *
 
+import psutil
+
+import time
+
+def setUp():
+    # TODO: run Makefile
+    pass
+
 class testExternalEngine(object):
     def setUp(self):
         slow_options = {
             'n_frames_max' : 10000, 
-            'engine_command' : "engine 100 engine.out",
-            'trajectory_file' : "engine.out"
+            'engine_sleep' : 100,
+            'name_prefix' : "test"
         }
         fast_options = {
             'n_frames_max' : 10000, 
-            'engine_command' : "engine 0 engine.out",
-            'trajectory_file' : "engine.out"
+            'engine_sleep' : 0,
+            'name_prefix' : "test"
         }
         self.template = paths.Snapshot()
         self.slow_engine = ExternalEngine(slow_options, self.template)
@@ -24,11 +32,22 @@ class testExternalEngine(object):
         self.ensemble = paths.LengthEnsemble(5)
 
     def test_start_stop(self):
-        self.slow_engine.start(self.template)
-        # check that it is running
-        self.slow_engine.stop(self.template)
-        # check that it has stopped
-        raise SkipTest
+        eng = self.fast_engine
+        #print get_all_pids()
+        # check that it isn't running yet
+        try:
+            assert_equal(eng.proc.is_running(), False)
+        except AttributeError:
+            pass # if eng.proc doesn't exist, then it isn't running
+
+        # start it; check that it is running
+        eng.start(self.template)
+        assert_equal(eng.proc.is_running(), True)
+        assert_equal(eng.proc.status(), 'running')
+
+        # stop it; check that it isn't running
+        eng.stop(self.template)
+        assert_equal(eng.proc.is_running(), False)
 
     def test_read_frame_from_file(self):
         raise SkipTest
@@ -40,4 +59,5 @@ class testExternalEngine(object):
     def test_fast_run(self):
         # generate traj in LengthEnsemble if frames come as fast as possible
         raise SkipTest
+
 
