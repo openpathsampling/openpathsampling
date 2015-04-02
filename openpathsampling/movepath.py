@@ -1,9 +1,9 @@
 __author__ = 'jan-hendrikprinz'
 
 import openpathsampling as paths
-from openpathsampling.todict import restores_as_full_object
+from openpathsampling.todict import ops_object
 
-@restores_as_full_object
+@ops_object
 class MovePath(object):
     '''
     MovePath is essentially a list of samples, with a few conveniences.  It
@@ -272,6 +272,21 @@ class MovePath(object):
         """
         return (item in self.samples)
 
+    def contains(self, mover):
+        """
+        Check if a given mover is part of this MovePath.
+        """
+        # TODO: In my opinion (DWHS) this should be the behavior of the
+        # __contains__ operation
+        if self.mover == mover:
+            return True
+        else:
+            try:
+                return self.movepath.contains(mover)
+            except NameError:
+                return False
+
+
     def __str__(self):
         if self.accepted:
             return 'SampleMove : %s : %s : %d samples' % (self.mover.cls, self.accepted, len(self._local_samples)) + ' ' + str(self._local_samples) + ''
@@ -279,7 +294,7 @@ class MovePath(object):
             return 'SampleMove : %s : %s :[]' % (self.mover.cls, self.accepted)
 
 
-@restores_as_full_object
+@ops_object
 class EmptyMovePath(MovePath):
     """
     A MovePath representing no changes
@@ -302,7 +317,7 @@ class EmptyMovePath(MovePath):
 
 
 
-@restores_as_full_object
+@ops_object
 class SampleMovePath(MovePath):
     """
     A MovePath representing the application of samples.
@@ -335,7 +350,7 @@ class SampleMovePath(MovePath):
         return paths.SampleSet(other).apply_samples(self._local_samples)
 
 
-@restores_as_full_object
+@ops_object
 class CollapsedMovePath(SampleMovePath):
     """
     Represent a collapsed MovePath that has potential hidden sub moves
@@ -365,7 +380,7 @@ class CollapsedMovePath(SampleMovePath):
             return '%s [collapsed] : %d samples' % ('CollapsedMove', len(self._local_samples)) + ' ' + str(self._local_samples) + ''
 
 
-@restores_as_full_object
+@ops_object
 class RandomChoiceMovePath(MovePath):
     """
     A MovePath that represents the application of a mover chosen randomly
@@ -394,7 +409,7 @@ class RandomChoiceMovePath(MovePath):
         return self.movepath.all_samples
 
 
-@restores_as_full_object
+@ops_object
 class SequentialMovePath(MovePath):
     """
     SequentialMovePath has no own samples, only inferred Sampled from the
@@ -437,7 +452,7 @@ class SequentialMovePath(MovePath):
                (self.accepted, len(self.samples)) + \
                MovePath._indent('\n'.join(map(str, self.movepaths)))
 
-@restores_as_full_object
+@ops_object
 class PartialAcceptanceSequentialMovePath(SequentialMovePath):
     """
     PartialAcceptanceSequentialMovePath has no own samples, only inferred
@@ -470,7 +485,7 @@ class PartialAcceptanceSequentialMovePath(SequentialMovePath):
                (self.accepted, len(self.samples)) + \
                MovePath._indent('\n'.join(map(str, self.movepaths)))
 
-@restores_as_full_object
+@ops_object
 class ConditionalSequentialMovePath(SequentialMovePath):
     """
     ConditionalSequentialMovePath has no own samples, only inferred Samples
@@ -511,7 +526,7 @@ class ConditionalSequentialMovePath(SequentialMovePath):
                MovePath._indent( '\n'.join(map(str, self.movepaths)))
 
 
-@restores_as_full_object
+@ops_object
 class FilterSamplesMovePath(MovePath):
     """
     A MovePath that keeps a selection of the underlying samples
@@ -550,7 +565,7 @@ class FilterSamplesMovePath(MovePath):
             'mover' : self.mover
         }
 
-@restores_as_full_object
+@ops_object
 class KeepLastSampleMovePath(MovePath):
     """
     A MovePath that only keeps the last generated sample.
@@ -587,7 +602,7 @@ class KeepLastSampleMovePath(MovePath):
             'mover' : self.mover
         }
 
-@restores_as_full_object
+@ops_object
 class CalculationMovePath(MovePath):
     """
     A MovePath that just wraps a movepath and references a Calculation

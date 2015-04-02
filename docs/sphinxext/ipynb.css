@@ -23,7 +23,7 @@ overflow-x: auto;
 background: #fff;
 margin: 0;
 margin-left: 12px;
-margin-top: -20px;
+margin-top: 0px;
 margin-bottom: 4px;
 padding: 6px 0px 2px 12px;
 font-family: Consolas,"Andale Mono WT","Andale Mono","Lucida Console","Lucida Sans Typewriter","DejaVu Sans Mono","Bitstream Vera Sans Mono","Liberation Mono","Nimbus Mono L",Monaco,"Courier New",Courier,monospace;
@@ -35,7 +35,9 @@ color: #404040;
 }
 
 pre, code {
-white-space: nowrap;
+white-space: -moz-pre-wrap;
+white-space: -o-pre-wrap;
+word-wrap: break-word;
 max-width: 100%;
 padding: 12px 12px;
 background: #f6f6f6;
@@ -45,6 +47,7 @@ font-family: Consolas,"Andale Mono WT","Andale Mono","Lucida Console","Lucida Sa
 color:#404040;
 overflow-x: auto;
 font-weight: normal;
+line-height: 1.4;
 }
 
 div[class^='highlight'] {
@@ -69,20 +72,48 @@ margin: 2px;
 
 /* font-family: Courier; */
 font-weight: normal;
-font-variant: small-caps;
+/*font-variant: small-caps;*/
 color:#404040;
 overflow-x: auto;
 /* font-weight: bold; */
 }
 
-.output_subarea {
-margin : 8px 0px 24px 0px;
+#notebook:focus {
+outline-width: 0px;
 }
 
+.dataframe {
+    margin-left:auto;
+    margin-right:auto;
+}
+
+.output_subarea {
+    margin : 8px 0px 24px 0px;
+}
+
+.output_svg, .output_png {
+    text-align: center;
+    max-height: 640px;
+    overflow: auto;
+}
+
+.output_text {
+    text-align: left;
+}
+
+
 .output_pyout {
-font-size: 12px;
+    font-size: 12px;
 }
 
 .dataframe td, .dataframe th {
-padding: 4px
+    padding: 4px
+}
+
+.input {
+    margin-top:24px;
+}
+
+img {
+width:auto;
 }

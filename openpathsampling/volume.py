@@ -5,11 +5,11 @@ Created on 03.09.2014
 '''
 
 import range_logic
-from openpathsampling.todict import restores_as_full_object
+from openpathsampling.todict import ops_object
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
-@restores_as_full_object
+@ops_object
 class Volume(object):
     """
     A Volume describes a set of snapshots 
@@ -73,7 +73,7 @@ class Volume(object):
     def __eq__(self, other):
         return str(self) == str(other)
 
-@restores_as_full_object
+@ops_object
 class VolumeCombination(Volume):
     """
     Logical combination of volumes. 
@@ -122,7 +122,7 @@ class RelativeComplementVolume(VolumeCombination):
         super(RelativeComplementVolume, self).__init__(volume1, volume2, lambda a,b : a and not b, str_fnc = '{0} and not {1}')
 
 
-@restores_as_full_object
+@ops_object
 class NegatedVolume(Volume):
     """Negation (logical not) of a volume."""
     def __init__(self, volume):
@@ -135,7 +135,7 @@ class NegatedVolume(Volume):
     def __str__(self):
         return '(not ' + str(self.volume) + ')'
     
-@restores_as_full_object
+@ops_object
 class EmptyVolume(Volume):
     """Empty volume: no snapshot can satisfy"""
     def __init__(self):
@@ -162,7 +162,7 @@ class EmptyVolume(Volume):
     def __str__(self):
         return 'empty'
 
-@restores_as_full_object
+@ops_object
 class FullVolume(Volume):
     """Volume which all snapshots can satisfy."""
     def __init__(self):
@@ -189,7 +189,7 @@ class FullVolume(Volume):
     def __str__(self):
         return 'all'
 
-@restores_as_full_object
+@ops_object
 class LambdaVolume(Volume):
     """
     Volume defined by a range of a collective variable `collectivevariable`.
@@ -320,7 +320,7 @@ class LambdaVolume(Volume):
     def __str__(self):
         return '{{x|{2}(x) in [{0}, {1}]}}'.format( self.lambda_min, self.lambda_max, self.collectivevariable.name)
 
-@restores_as_full_object
+@ops_object
 class LambdaVolumePeriodic(LambdaVolume):
     """
     As with `LambdaVolume`, but for a periodic order parameter.
@@ -413,7 +413,7 @@ class LambdaVolumePeriodic(LambdaVolume):
                         self.lambda_min, self.lambda_max, 
                         self.collectivevariable.name)
 
-@restores_as_full_object
+@ops_object
 class VoronoiVolume(Volume):
     '''
     Volume given by a Voronoi cell specified by a set of centers
