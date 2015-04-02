@@ -120,7 +120,6 @@ class ObjectDictStore(ObjectStore):
         storage = self.storage
 
         name = storage.variables[self.idx_dimension + '_name'][idx]
-        print name, len(name)
         op = OrderParameter(name)
 
         return op
