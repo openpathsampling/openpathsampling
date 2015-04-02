@@ -8,8 +8,6 @@ from openpathsampling.todict import restores_as_stub_object
 import chaindict as cd
 import collections
 
-
-@restores_as_stub_object
 class OrderParameter(cd.Wrap):
     """
     Wrapper for a function that maps a snapshot to a number.

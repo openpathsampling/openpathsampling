@@ -1252,8 +1252,8 @@ class PathMoverFactory(object):
         if type(selector_set) is not list:
             selector_set = [selector_set]*len(interface_set)
         mover_set = [
-            OneWayShootingMover(sel=sel, ensembles=[iface])
-            for (sel, iface) in zip(selector_set, interface_set)
+            OneWayShootingMover(selector=selector, ensembles=[iface])
+            for (selector, iface) in zip(selector_set, interface_set)
         ]
         return mover_set
 
