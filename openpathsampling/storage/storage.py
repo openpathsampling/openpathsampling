@@ -522,6 +522,8 @@ class StorableObjectJSON(paths.todict.ObjectJSON):
         self.storage = storage
 
     def simplify(self,obj, base_type = ''):
+        if obj is self.storage:
+            return { '_storage' : 'self' }
         if type(obj).__module__ != '__builtin__':
             if hasattr(obj, 'idx') and (not hasattr(obj, 'nestable') or (obj.base_cls_name != base_type)):
                 # this also returns the base class name used for storage
@@ -534,6 +536,9 @@ class StorableObjectJSON(paths.todict.ObjectJSON):
 
     def build(self,obj):
         if type(obj) is dict:
+            if '_storage' in obj:
+                if obj['_storage'] == 'self':
+                    return self.storage
             if '_cls' in obj and '_idx' in obj:
                 if obj['_cls'] in paths.todict.class_list:
                     base_cls = paths.todict.class_list[obj['_cls']]
