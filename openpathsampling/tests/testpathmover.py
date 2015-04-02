@@ -261,9 +261,11 @@ class testReplicaExchangeMover(object):
         B2 = [s for s in samples_B2A1_ens if s.ensemble==self.tisB]
         assert_equal(len(B2), 1)
         assert_equal(B2[0].trajectory, self.traj2)
+        assert_equal(B2[0].replica, 2)
         A1 = [s for s in samples_B2A1_ens if s.ensemble==self.tisA]
         assert_equal(len(A1), 1)
         assert_equal(A1[0].trajectory, self.traj1)
+        assert_equal(A1[0].replica, 1)
 
     def test_repex_ens_rej(self):
         repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])

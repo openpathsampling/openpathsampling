@@ -71,22 +71,20 @@ class Storage(netcdf.Dataset):
 
         # normal objects
 
-        self.pathmover = paths.storage.ObjectStore(storage, paths.PathMover, is_named=True)
-        self.movedetails = paths.storage.ObjectStore(storage, paths.MoveDetails, is_named=False)
-        self.shootingpoint = paths.storage.ObjectStore(storage, paths.ShootingPoint, is_named=False)
-        self.shootingpointselector = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, is_named=False)
-        self.engine = paths.storage.ObjectStore(storage, paths.DynamicsEngine, is_named=True)
-        self.calculation = paths.storage.ObjectStore(storage, paths.Calculation, is_named=True)
+        self.pathmover = paths.storage.ObjectStore(storage, paths.PathMover, has_uid=True)
+        self.movedetails = paths.storage.ObjectStore(storage, paths.MoveDetails, has_uid=False)
+        self.shootingpoint = paths.storage.ObjectStore(storage, paths.ShootingPoint, has_uid=False)
+        self.shootingpointselector = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, has_uid=False)
+        self.engine = paths.storage.ObjectStore(storage, paths.DynamicsEngine, has_uid=True)
+        self.calculation = paths.storage.ObjectStore(storage, paths.Calculation, has_uid=True)
 
         # nestable objects
 
-        self.volume = paths.storage.ObjectStore(storage, paths.Volume, is_named=True, nestable=True)
-        self.ensemble = paths.storage.ObjectStore(storage, paths.Ensemble, is_named=True, nestable=True)
-        self.movepath = paths.storage.ObjectStore(storage, paths.MovePath, is_named=False, nestable=True)
+        self.volume = paths.storage.ObjectStore(storage, paths.Volume, has_uid=True, nestable=True)
+        self.ensemble = paths.storage.ObjectStore(storage, paths.Ensemble, has_uid=True, nestable=True)
+        self.movepath = paths.storage.ObjectStore(storage, paths.MovePath, has_uid=False, nestable=True)
 
-        self.transition = paths.storage.ObjectStore(storage,
-                                                    paths.TISTransition,
-                                                    is_named=True)
+        self.transition = paths.storage.ObjectStore(storage, paths.Transition, has_uid=True)
 
         self.query = paths.storage.QueryStore(storage)
 
@@ -520,10 +518,12 @@ class Storage(netcdf.Dataset):
 class StorableObjectJSON(paths.todict.ObjectJSON):
     def __init__(self, storage, unit_system = None, class_list = None):
         super(StorableObjectJSON, self).__init__(unit_system, class_list)
-        self.excluded_keys = ['name', 'idx', 'json', 'identifier']
+        self.excluded_keys = ['idx', 'json', 'identifier']
         self.storage = storage
 
     def simplify(self,obj, base_type = ''):
+        if obj is self.storage:
+            return { '_storage' : 'self' }
         if type(obj).__module__ != '__builtin__':
             if hasattr(obj, 'idx') and (not hasattr(obj, 'nestable') or (obj.base_cls_name != base_type)):
                 # this also returns the base class name used for storage
@@ -536,6 +536,9 @@ class StorableObjectJSON(paths.todict.ObjectJSON):
 
     def build(self,obj):
         if type(obj) is dict:
+            if '_storage' in obj:
+                if obj['_storage'] == 'self':
+                    return self.storage
             if '_cls' in obj and '_idx' in obj:
                 if obj['_cls'] in paths.todict.class_list:
                     base_cls = paths.todict.class_list[obj['_cls']]
