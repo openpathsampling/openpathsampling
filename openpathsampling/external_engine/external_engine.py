@@ -88,8 +88,9 @@ class ExternalEngine(DynamicsEngine):
 
     def stop(self, trajectory):
         super(ExternalEngine, self).stop(trajectory)
-        self.proc.send_signal(self.killsig)
-        self.proc.wait() # wait for the zombie to die
+        proc = self.who_to_kill()
+        proc.send_signal(self.killsig)
+        proc.wait() # wait for the zombie to die
         self.cleanup()
 
     # FROM HERE ARE THE FUNCTIONS TO OVERRIDE IN SUBCLASSES:
@@ -103,19 +104,34 @@ class ExternalEngine(DynamicsEngine):
         # the first associated with frame_num until either (a) you hit EOF
         # or (b) you have a complete frame; then you need to return
         # appropriately 
-        line = linecache.getline(filename, frame_num)
+        first_line = frame_num
+        line = linecache.getline(filename, first_line)
         if line is '':
-            return None
-        elif line[-1] != "\n":
-            return "partial"
+            snap = None
         else:
-            return paths.Snapshot(coordinates=[[float(line)]],
-                                  velocities=[[1.0]]
-                                 )
+            try:
+                floatval = float(line)
+                snap = paths.Snapshot(coordinates=[[floatval]],
+                                      velocities=[[1.0]]
+                                     )
+            except ValueError:
+                snap = "partial"
+        return snap
 
     def write_frame_to_file(self, filename, snapshot, mode="a"):
         """Writes given snapshot to file."""
         pass
+
+    def who_to_kill(self):
+        """Returns psutil.Process object to send kill signal to.
+        
+        Might override to send kill signal to a process other than the one
+        directly spawned above (e.g., when launching parallel runs)
+        """
+        # this should only be called if you're about to kill the process; if
+        # the process doesn't exist, you shouldn't be killing anything and
+        # it will raise an error
+        return self.proc
 
     def cleanup(self):
         """Any cleanup actions to do after the subprocess dies."""
