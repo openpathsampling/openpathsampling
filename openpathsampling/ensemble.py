@@ -428,9 +428,9 @@ class NegatedEnsemble(Ensemble):
     '''
     Negates an Ensemble and simulates a `not` statement
     '''
-    def __init__(self, volume):
+    def __init__(self, ensemble):
         super(NegatedEnsemble, self).__init__()
-        self.ensemble = volume
+        self.ensemble = ensemble
         
     def __call__(self, trajectory, lazy=None):
         return not self.ensemble(trajectory, lazy)
@@ -451,6 +451,7 @@ class EnsembleCombination(Ensemble):
     '''
     Logical combination of two ensembles
     '''
+    #TODO: EnsembleCombination cannot be saved alone yet!
     def __init__(self, ensemble1, ensemble2, fnc, str_fnc):
         super(EnsembleCombination, self).__init__()
         self.ensemble1 = ensemble1
@@ -1126,25 +1127,25 @@ class SlicedTrajectoryEnsemble(WrappedEnsemble):
     '''
     Alters trajectories given as arguments by taking Python slices.
     '''
-    def __init__(self, ensemble, aslice):
+    def __init__(self, ensemble, region):
         super(SlicedTrajectoryEnsemble, self).__init__(ensemble)
-        if type(aslice) == int:
-            if aslice == -1:
-                self.slice = slice(aslice,None)
+        if type(region) == int:
+            if region == -1:
+                self.region = slice(region,None)
             else:
-                self.slice = slice(aslice, aslice+1)
+                self.region = slice(region, region+1)
         else:
-            self.slice = aslice
+            self.region = region
 
     def _alter(self, trajectory):
-        return trajectory[self.slice]
+        return trajectory[self.region]
 
     def __str__(self):
         # TODO: someday may add different string support for slices with
         # only one frame
-        start = "" if self.slice.start is None else str(self.slice.start)
-        stop = "" if self.slice.stop is None else str(self.slice.stop)
-        step = "" if self.slice.step is None else " every "+str(self.slice.step)
+        start = "" if self.region.start is None else str(self.region.start)
+        stop = "" if self.region.stop is None else str(self.region.stop)
+        step = "" if self.region.step is None else " every "+str(self.region.step)
         return ("(" + self.ensemble.__str__() +
                 " in {" + start + ":" + stop + "}" + step + ")")
 
@@ -1156,13 +1157,13 @@ class BackwardPrependedTrajectoryEnsemble(WrappedEnsemble):
 
     Used in backward shooting.
     '''
-    def __init__(self, ensemble, trajectory):        
+    def __init__(self, ensemble, add_trajectory):
         super(BackwardPrependedTrajectoryEnsemble, self).__init__(ensemble)
-        self.add_traj = trajectory        
+        self.add_trajectory = add_trajectory
 
     def _alter(self, trajectory):
 #        print [ s.idx for s in trajectory.reversed + self.add_traj]
-        return trajectory.reversed + self.add_traj
+        return trajectory.reversed + self.add_trajectory
 
 @restores_as_full_object
 class ForwardAppendedTrajectoryEnsemble(WrappedEnsemble):
@@ -1171,12 +1172,12 @@ class ForwardAppendedTrajectoryEnsemble(WrappedEnsemble):
 
     Used in forward shooting.
     '''
-    def __init__(self, ensemble, trajectory):
+    def __init__(self, ensemble, add_trajectory):
         super(ForwardAppendedTrajectoryEnsemble, self).__init__(ensemble)
-        self.add_traj = trajectory
+        self.add_trajectory = add_trajectory
 
     def _alter(self, trajectory):
-        return self.add_traj + trajectory
+        return self.add_trajectory + trajectory
 
 @restores_as_full_object
 class ReversedTrajectoryEnsemble(WrappedEnsemble):
@@ -1192,7 +1193,7 @@ class AppendedNameEnsemble(WrappedEnsemble):
     Add string to ensemble name: allows multiple copies of an ensemble.
     '''
     def __init__(self, ensemble, label):
-        self._label = label
+        self.label = label
         super(AppendedNameEnsemble, self).__init(ensemble)
 
     def __str__(self):

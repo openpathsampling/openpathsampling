@@ -8,7 +8,7 @@ import numpy as np
 import random
 
 import openpathsampling as paths
-from openpathsampling.todict import restores_as_stub_object
+from openpathsampling.todict import restores_as_full_object
 
 import logging
 from ops_logging import initialization_logging
@@ -55,7 +55,7 @@ def make_list_of_pairs(l):
     # part to work.
     return outlist
 
-@restores_as_stub_object
+@restores_as_full_object
 class MoveDetails(object):
     '''Details of the move as applied to a given replica
 
@@ -143,7 +143,7 @@ def keep_selected_samples(func):
     return wrapper
 
 
-@restores_as_stub_object
+@restores_as_full_object
 class PathMover(object):
     """
     A PathMover is the description of how to generate a new path from an old
@@ -317,7 +317,7 @@ class PathMover(object):
         '''
         return 1.0 # pragma: no cover
 
-@restores_as_stub_object
+@restores_as_full_object
 class CollapseMove(PathMover):
     def __init__(self, inner_mover):
         self.inner_mover = inner_mover
@@ -325,7 +325,7 @@ class CollapseMove(PathMover):
     def move(self, globalstate):
         return self.inner_mover.move(globalstate).closed
 
-@restores_as_stub_object
+@restores_as_full_object
 class ShootMover(PathMover):
     '''
     A pathmover that implements a general shooting algorithm that generates
@@ -337,7 +337,11 @@ class ShootMover(PathMover):
                                          replicas=replicas
                                         )
         self.selector = selector
-        self._length_stopper = PathMover.engine.max_length_stopper
+        if hasattr(PathMover, 'engine') and hasattr(PathMover.engine, 'max_length_stopper'):
+            self._length_stopper = PathMover.engine.max_length_stopper
+        else:
+            self._length_stopper = paths.FullEnsemble().can_append
+
         self._extra_details = ['start', 'start_point', 'trial',
                               'final_point']
         initialization_logging(logger=init_log, obj=self,
@@ -408,7 +412,7 @@ class ShootMover(PathMover):
         return path
     
     
-@restores_as_stub_object
+@restores_as_full_object
 class ForwardShootMover(ShootMover):
     '''
     A pathmover that implements the forward shooting algorithm
@@ -441,7 +445,7 @@ class ForwardShootMover(ShootMover):
         details.final_point = paths.ShootingPoint(self.selector, details.trial,
                                             shooting_point)
     
-@restores_as_stub_object
+@restores_as_full_object
 class BackwardShootMover(ShootMover):
     '''
     A pathmover that implements the backward shooting algorithm
@@ -474,7 +478,7 @@ class BackwardShootMover(ShootMover):
 
         pass
 
-@restores_as_stub_object
+@restores_as_full_object
 class RandomChoiceMover(PathMover):
     '''
     Chooses a random mover from its movers list, and runs that move. Returns
@@ -525,7 +529,7 @@ class RandomChoiceMover(PathMover):
 
         return path
 
-@restores_as_stub_object
+@restores_as_full_object
 class ConditionalMover(PathMover):
     '''
     An if-then-else structure for PathMovers.
@@ -567,7 +571,7 @@ class ConditionalMover(PathMover):
         return paths.SequentialMovePath([ifclause, resultclause], mover=self)
 
 
-@restores_as_stub_object
+@restores_as_full_object
 class SequentialMover(PathMover):
     '''
     Performs each of the moves in its movers list. Returns all samples
@@ -604,7 +608,7 @@ class SequentialMover(PathMover):
 
         return paths.SequentialMovePath(movepaths, mover=self)
 
-@restores_as_stub_object
+@restores_as_full_object
 class PartialAcceptanceSequentialMover(SequentialMover):
     '''
     Performs each move in its movers list until complete or until one is not
@@ -645,7 +649,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
         return paths.PartialAcceptanceSequentialMovePath(movepaths, mover=self)
 
 
-@restores_as_stub_object
+@restores_as_full_object
 class ConditionalSequentialMover(SequentialMover):
     '''
     Performs each move in its movers list until complete or until one is not
@@ -683,9 +687,10 @@ class ConditionalSequentialMover(SequentialMover):
         return paths.ConditionalSequentialMovePath(movepaths, mover=self)
 
 
-@restores_as_stub_object
+@restores_as_full_object
 class RestrictToLastSampleMover(PathMover):
     def __init__(self, mover):
+        super(RestrictToLastSampleMover, self).__init__()
         self.mover = mover
 
     @keep_selected_samples
@@ -693,7 +698,7 @@ class RestrictToLastSampleMover(PathMover):
         movepath = self.mover.move(globalstate)
         return paths.KeepLastSampleMovePath(movepath, mover=self)
 
-@restores_as_stub_object
+@restores_as_full_object
 class ReplicaIDChangeMover(PathMover): 
     """
     Changes the replica ID for a path.
@@ -746,7 +751,7 @@ class ReplicaIDChangeMover(PathMover):
             accepted=details.accepted
         )
 
-@restores_as_stub_object
+@restores_as_full_object
 class EnsembleHopMover(PathMover):
     def __init__(self, bias=None, ensembles=None, replicas='all'):
         # TODO: maybe allow a version of this with a single ensemble and ANY
@@ -829,7 +834,7 @@ class EnsembleHopMover(PathMover):
         return path
 
 
-@restores_as_stub_object
+@restores_as_full_object
 class ForceEnsembleChangeMover(EnsembleHopMover):
     '''
     Force an ensemble change in the sample.
@@ -873,7 +878,7 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
         return path
 
 
-@restores_as_stub_object
+@restores_as_full_object
 class RandomSubtrajectorySelectMover(PathMover):
     '''
     Samples a random subtrajectory satisfying the given subensemble.
@@ -934,7 +939,7 @@ class RandomSubtrajectorySelectMover(PathMover):
 
         return path
 
-@restores_as_stub_object
+@restores_as_full_object
 class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
     '''
     Samples the first subtrajectory satifying the given subensemble.
@@ -945,7 +950,7 @@ class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
     def _choose(self, trajectory_list):
         return trajectory_list[0]
 
-@restores_as_stub_object
+@restores_as_full_object
 class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
     '''
     Samples the final subtrajectory satifying the given subensemble.
@@ -956,7 +961,7 @@ class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
     def _choose(self, trajectory_list):
         return trajectory_list[-1]
 
-@restores_as_stub_object
+@restores_as_full_object
 class PathReversalMover(PathMover):
 
     @keep_selected_samples
@@ -993,7 +998,7 @@ class PathReversalMover(PathMover):
 
         return path
 
-@restores_as_stub_object
+@restores_as_full_object
 class ReplicaExchangeMover(PathMover):
     def __init__(self, bias=None, ensembles=None, replicas='all'):
         if replicas=='all' and ensembles is None:
@@ -1089,7 +1094,7 @@ class ReplicaExchangeMover(PathMover):
 
         return path
 
-@restores_as_stub_object
+@restores_as_full_object
 class FilterByReplica(PathMover):
     def __init__(self, mover, replicas):
         if type(replicas) is not list:
@@ -1106,7 +1111,7 @@ class FilterByReplica(PathMover):
         )
         return self.mover.move(filtered_gs)
 
-@restores_as_stub_object
+@restores_as_full_object
 class FilterBySample(PathMover):
     def __init__(self, mover, selected_samples, use_all_samples=None):
         if type(selected_samples) is not list:
@@ -1124,7 +1129,7 @@ class FilterBySample(PathMover):
             mover=self
         )
 
-@restores_as_stub_object
+@restores_as_full_object
 class OneWayShootingMover(RandomChoiceMover):
     '''
     OneWayShootingMover is a special case of a RandomChoiceMover which
@@ -1142,16 +1147,17 @@ class OneWayShootingMover(RandomChoiceMover):
     replicas : list or 'all'
         valid replicas
     '''
-    def __init__(self, sel, ensembles=None, replicas='all'):
+    def __init__(self, selector, ensembles=None, replicas='all'):
         movers = [
-            ForwardShootMover(sel, ensembles),
-            BackwardShootMover(sel, ensembles)
+            ForwardShootMover(selector, ensembles),
+            BackwardShootMover(selector, ensembles)
         ]
         super(OneWayShootingMover, self).__init__(
             movers=movers, ensembles=ensembles, replicas=replicas
         )
+        self.selector = selector
 
-@restores_as_stub_object
+@restores_as_full_object
 class MinusMover(ConditionalSequentialMover):
     '''
     Instance of a MinusMover.
@@ -1210,7 +1216,7 @@ class MinusMover(ConditionalSequentialMover):
         result = super(MinusMover, self).move(globalstate).closed
         return result
 
-@restores_as_stub_object
+@restores_as_full_object
 class CalculationMover(PathMover):
     """
     This just wraps a mover and references the used calculation
@@ -1222,7 +1228,7 @@ class CalculationMover(PathMover):
     def move(self, globalstate, step=-1):
         return paths.CalculationMovePath(self.mover.move(globalstate), self.calculation, step=step, mover=self)
 
-@restores_as_stub_object
+@restores_as_full_object
 class MultipleSetMinusMover(RandomChoiceMover):
     pass
 

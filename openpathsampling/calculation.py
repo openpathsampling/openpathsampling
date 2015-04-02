@@ -78,28 +78,6 @@ class BootstrapPromotionMove(PathMover):
         return mover.move(globalstate)
 
 
-# TODO: Is this used anywhere? Or do we do this differently
-class InitializeSingleTrajectoryMover(PathMover):
-    def __init__(self, bias=None, shooters=None,
-                 ensembles=None, replicas='all'):
-        super(InitializeSingleTrajectoryMover, self).__init__(ensembles=ensembles,
-                                                     replicas=replicas)
-        self.shooters = shooters
-        self.bias = bias
-        initialization_logging(logger=init_log, obj=self,
-                               entries=['bias', 'shooters'])
-
-    def move(self, globalstate=None):
-        init_details = paths.MoveDetails()
-        init_details.accepted = True
-        init_details.acceptance_probability = 1.0
-        init_details.mover = self
-        init_details.inputs = []
-        init_details.trial = None
-        init_details.ensemble = None
-        sample = paths.Sample(replica=0, trajectory=None,
-                        ensemble=self.ensembles[0], details=init_details)
-
 @restores_as_stub_object
 class Bootstrapping(Calculation):
     """Creates a SampleSet with one sample per ensemble.
