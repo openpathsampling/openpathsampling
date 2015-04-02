@@ -540,22 +540,22 @@ class EnsembleCombination(Ensemble):
 #        print self.sfnc, self.ensemble1, self.ensemble2, self.sfnc.format('(' + str(self.ensemble1) + ')' , '(' + str(self.ensemble1) + ')')
         return self.sfnc.format('(\n' + Ensemble._indent(str(self.ensemble1)) + '\n)' , '(\n' + Ensemble._indent(str(self.ensemble2)) + '\n)')
 
-@restores_as_full_object
+@ops_object
 class UnionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
         super(UnionEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a or b, str_fnc = '{0}\nor\n{1}')
 
-@restores_as_full_object
+@ops_object
 class IntersectionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
         super(IntersectionEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and b, str_fnc = '{0}\nand\n{1}')
 
-@restores_as_full_object
+@ops_object
 class SymmetricDifferenceEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
         super(SymmetricDifferenceEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a ^ b, str_fnc = '{0}\nxor\n{1}')
 
-@restores_as_full_object
+@ops_object
 class RelativeComplementEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
         super(RelativeComplementEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and not b, str_fnc = '{0}\nand not\n{1}')
@@ -954,7 +954,7 @@ class VolumeEnsemble(Ensemble):
         '''
         return self.volume
 
-@restores_as_full_object
+@ops_object
 class AllInEnsemble(VolumeEnsemble):
     '''
     Ensemble of trajectories with all frames in the given volume
@@ -988,7 +988,7 @@ class AllInEnsemble(VolumeEnsemble):
         return 'x[t] in {0} for all t'.format(self._volume)
 
 
-@restores_as_full_object
+@ops_object
 class AllOutEnsemble(AllInEnsemble):
     '''
     Ensemble of trajectories with all frames outside the given volume
@@ -1003,7 +1003,7 @@ class AllOutEnsemble(AllInEnsemble):
     def __invert__(self):
         return PartInEnsemble(self.volume, self.frames, self.lazy)
 
-@restores_as_full_object
+@ops_object
 class PartInEnsemble(VolumeEnsemble):
     '''
     Ensemble of trajectory with at least one frame in the volume
@@ -1029,7 +1029,7 @@ class PartInEnsemble(VolumeEnsemble):
     def __invert__(self):
         return AllOutEnsemble(self.volume, self.frames, self.lazy)
 
-@restores_as_full_object
+@ops_object
 class PartOutEnsemble(PartInEnsemble):
     '''
     Ensemble of trajectories with at least one frame outside the volume
