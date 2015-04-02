@@ -288,7 +288,6 @@ class ObjectStore(object):
 
             self.content_class.uid = property(_uid_get, _uid_set)
 
-
         def _save(this, storage):
             storage.save(this)
 

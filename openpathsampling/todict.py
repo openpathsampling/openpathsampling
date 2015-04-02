@@ -4,6 +4,7 @@ import numpy as np
 from simtk import unit as units
 import yaml
 import openpathsampling as paths
+import inspect
 
 class ObjectJSON(object):
     """
@@ -145,21 +146,51 @@ def restores_as_full_object(super_class):
     if not hasattr(super_class, '_excluded_attr'):
         super_class._excluded_attr = []
 
+    if not hasattr(super_class, '_exclude_private_attr'):
+        super_class._exclude_private_attr = True
+
+    if not hasattr(super_class, '_restore_non_initial_attr'):
+        super_class._restore_non_initial_attr = True
+
+    if not hasattr(super_class, '_restore_name'):
+        super_class._restore_name = True
+
     if not hasattr(super_class, 'to_dict'):
         def _to_dict(self):
-            excluded_keys = ['idx']
-            return {key: value for key, value in self.__dict__.iteritems() if key not in excluded_keys and key not in self._excluded_attr and not key.startswith('_')}
+            excluded_keys = ['idx', 'json', 'identifier']
+            return {
+                key: value for key, value in self.__dict__.iteritems()
+                if key not in excluded_keys
+                and key not in self._excluded_attr
+                and not (key.startswith('_') and self._exclude_private_attr)
+            }
 
         super_class.to_dict = _to_dict
 
     if not hasattr(super_class, 'from_dict'):
-        def _from_dict(cls, my_dict = None):
-            if my_dict is None:
-                my_dict={}
+        def _from_dict(cls, dct = None):
+            if dct is None:
+                dct={}
             try:
-                obj = cls(**my_dict)
+                init_dct = dct
+                non_init_dct = {}
+                if hasattr(super_class, 'args'):
+                    args = super_class.args()
+                    init_dct = {key: dct[key] for key in dct if key in args}
+                    non_init_dct = {key: dct[key] for key in dct if key not in args}
+
+                obj = cls(**init_dct)
+
+                if super_class._restore_non_initial_attr:
+                    for key, value in non_init_dct.iteritems():
+                        setattr(obj, key, value)
+                else:
+                    if super_class._restore_name:
+                        if 'name' in dct:
+                            obj.name = dct['name']
+
             except TypeError as e:
-                print my_dict
+                print dct
                 print cls.__name__
                 print e
             return obj
@@ -167,16 +198,6 @@ def restores_as_full_object(super_class):
         super_class.from_dict = classmethod(_from_dict)
 
     return super_class
-
-
-class LoadedObject(object):
-    @property
-    def cls(self):
-        return self._cls
-
-    def __repr__(self):
-        return '<' + self._cls + ' at ' + str(hex(id(self))) + '>'
-
 
 def restores_as_stub_object(super_class):
     """
@@ -259,3 +280,13 @@ def restores_as_stub_object(super_class):
 #         super_class.from_dict = classmethod(_from_dict)
 #
 #     return super_class
+
+class BaseObject(object):
+    """
+    Base mixin class provide some nice convenience methods
+    """
+    @classmethod
+    def args(cls):
+        cls._args = inspect.getargspec(cls.__init__)
+        return cls._args
+
