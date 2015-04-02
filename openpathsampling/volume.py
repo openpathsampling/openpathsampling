@@ -7,8 +7,6 @@ Created on 03.09.2014
 import range_logic
 from openpathsampling.todict import restores_as_full_object
 
-# TODO: Make Full and Empty be Singletons to avoid storing them several times!
-
 @restores_as_full_object
 class Volume(object):
     """
@@ -413,80 +411,6 @@ class LambdaVolumePeriodic(LambdaVolume):
                         self.lambda_min, self.lambda_max, 
                         self.orderparameter.name)
 
-@restores_as_full_object
-class VoronoiVolume(Volume):
-    '''
-    Volume given by a Voronoi cell specified by a set of centers
-    
-    Parameters
-    ----------
-    orderparameter : OP_Multi_RMSD
-        must be an OP_Multi_RMSD orderparameter that returns several RMSDs
-    state : int
-        the index of the center for the chosen voronoi cell
-
-    Attributes
-    ----------
-    orderparameter : orderparameter
-        the orderparameter object
-    state : int
-        the index of the center for the chosen voronoi cell
-
-    '''
-    
-    def __init__(self, orderparameter, state):
-        super(VoronoiVolume, self).__init__()
-        self.orderparameter = orderparameter
-        self.state = state
-        
-    def cell(self, snapshot):
-        '''
-        Returns the index of the voronoicell snapshot is in
-        
-        Parameters
-        ----------
-        snapshot : Snapshot
-            the snapshot to be tested
-        
-        Returns
-        -------
-        int
-            index of the voronoi cell
-        '''
-        distances = self.orderparameter(snapshot)
-        min_val = 1000000000.0
-        min_idx = -1 
-        for idx, d in enumerate(distances):
-            if d < min_val:
-                min_val = d
-                min_idx = idx
-        
-        return min_idx
-
-    def __call__(self, snapshot, state = None):
-        '''
-        Returns `True` if snapshot belongs to voronoi cell in state
-        
-        Parameters
-        ----------
-        snapshot : Snapshot
-            snapshot to be tested
-        state : int or None
-            index of the cell to be tested. If `None` (Default) then the internal self.state is used
-            
-        Returns
-        -------
-        bool
-            returns `True` is snapshot is on the specified voronoi cell
-        
-        '''
-        
-        # short but slower would be 
-        
-        if state is None:
-            state = self.state
-        
-        return self.cell(snapshot) == state
 
 class VolumeFactory(object):
     @staticmethod

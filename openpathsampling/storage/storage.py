@@ -76,6 +76,7 @@ class Storage(netcdf.Dataset):
         self.shootingpoint = paths.storage.ObjectStore(storage, paths.ShootingPoint, is_named=False)
         self.shootingpointselector = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, is_named=False)
         self.engine = paths.storage.ObjectStore(storage, paths.DynamicsEngine, is_named=True)
+        self.dynamicsengine = self.engine
         self.calculation = paths.storage.ObjectStore(storage, paths.Calculation, is_named=True)
 
         # nestable objects
@@ -433,7 +434,7 @@ class Storage(netcdf.Dataset):
             return store.idx(obj)
 
 
-    def clone(self, filename, subset):
+    def clone(self, filename, subset=None):
         """
         Creates a copy of the netCDF file and allows to reduce the used atoms.
 

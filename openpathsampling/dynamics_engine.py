@@ -235,6 +235,7 @@ class DynamicsEngine(object):
                 can_continue = condition(trajectory)
                 self.running[condition] = can_continue # JHP: is this needed?
                 stop = stop or not can_continue
+
         stop = stop or not self.max_length_stopper.can_append(trajectory)
         return stop
 
@@ -274,7 +275,7 @@ class DynamicsEngine(object):
             # Store initial state for each trajectory segment in trajectory.
             trajectory = paths.Trajectory()
             trajectory.append(snapshot)
-            
+
             frame = 0
             # maybe we should stop before we even begin?
             stop = self.stop_conditions(trajectory=trajectory,

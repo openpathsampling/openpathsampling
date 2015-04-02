@@ -420,8 +420,6 @@ class ConfigurationStore(ObjectStore):
         configuration = Configuration(coordinates=coordinates, box_vectors = box_vectors, potential_energy=potential_energy)
         configuration.topology = self.storage.topology
 
-#        print 'loaded normally'
-
         return configuration
 
     def load_empty(self, idx):

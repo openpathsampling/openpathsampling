@@ -2,6 +2,7 @@ import math
 import numpy as np
 
 from openpathsampling.todict import restores_as_full_object
+
 import logging
 from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)

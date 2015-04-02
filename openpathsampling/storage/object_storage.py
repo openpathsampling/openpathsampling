@@ -153,8 +153,8 @@ class ObjectStore(object):
 
                     if hasattr(cls, '_delayed_loading'):
                         if item in cls._delayed_loading:
+#                            _loader = getattr(self, cls._delayed_loading[item])
                             _loader = cls._delayed_loading[item]
-#                            print 'from', repr(self.storage), id(self), 'and not', repr(this), 'load', item
                             _loader(this)
                         else:
                             raise KeyError(item)
@@ -293,12 +293,12 @@ class ObjectStore(object):
         self.storage.links.append(self)
 
 
-    def set_variable_partial_loading(self, variable, loader):
+    def set_variable_partial_loading(self, variable, loader_fnc_name):
         cls = self.content_class
         if not hasattr(cls, '_delayed_loading'):
             cls._delayed_loading = dict()
 
-        cls._delayed_loading[variable] = loader
+        cls._delayed_loading[variable] = loader_fnc_name
 
     def idx_by_name(self, needle):
         """
@@ -553,6 +553,7 @@ class ObjectStore(object):
             the number of the next free index in the storage.
             Used to store a new object.
         '''
+
         count = self.count()
         self._free = set([ idx for idx in self._free if idx >= count])
         idx = count
@@ -980,10 +981,12 @@ def loadpartial(func, constructor=None):
         else:
             new_func = getattr(self, constructor)
 
-        return_obj = new_func(idx, *args, **kwargs)
-        # this tells the obj where it was loaded from
-        return_obj._origin = self.storage
-        return return_obj
+        loaded_obj = new_func(idx, *args, **kwargs)
+
+        # tell the partially loaded obj, which store to use for _loader
+        loaded_obj._update_from_storage = self.storage
+
+        return loaded_obj
 
     return inner
 

@@ -1,4 +1,5 @@
 from openpathsampling.todict import restores_as_stub_object
+from openpathsampling.pathmover import PathMover
 import openpathsampling as paths
 
 from openpathsampling.pathmover import PathMover
