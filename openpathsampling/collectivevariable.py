@@ -4,9 +4,9 @@
 
 import mdtraj as md
 import openpathsampling as paths
-from openpathsampling.todict import restores_as_stub_object
 import chaindict as cd
 import collections
+from openpathsampling.todict import ops_object
 
 
 @restores_as_stub_object
@@ -35,26 +35,32 @@ class CollectiveVariable(cd.Wrap):
     """
 
     def __init__(self, name, dimensions=1):
-        if type(name) is str and len(name) == 0:
+        if (type(name) is not str and type(name) is not unicode) or len(name) == 0:
+            print type(name), len(name)
             raise ValueError('name must be a non-empty string')
+
+        self.name = name
 
         self.pre_dict = cd.Transform(self._pre_item)
         self.multi_dict = cd.ExpandMulti()
         self.store_dict = cd.MultiStore('collectivevariables', name,
                                             dimensions, self)
         self.cache_dict = cd.ChainDict()
-        self.expand_dict = cd.UnwrapTuple()
-        self.func_dict = cd.Function(None)
         if hasattr(self, '_eval'):
-            self.func_dict._eval = self._eval
-        else:
-            self.func_dict._eval = None
+            self.expand_dict = cd.UnwrapTuple()
+            self.func_dict = cd.Function(None)
 
-        self.name = name
-        super(CollectiveVariable, self).__init__(
-            post=self.func_dict + self.expand_dict + self.cache_dict +
-                 self.store_dict + self.multi_dict + self.pre_dict
-        )
+            self.func_dict._eval = self._eval
+
+            super(OrderParameter, self).__init__(
+                post=self.func_dict + self.expand_dict + self.cache_dict +
+                     self.store_dict + self.multi_dict + self.pre_dict
+            )
+
+        else:
+            super(OrderParameter, self).__init__(
+                post=self.cache_dict + self.store_dict + self.multi_dict + self.pre_dict
+            )
 
         self._stored = False
 

@@ -822,7 +822,7 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
         init_as_slice = SlicedTrajectoryEnsemble(AllInEnsemble(vol1),
                                                  slice(3, 4))
         assert_equal(init_as_int, init_as_slice)
-        assert_equal(init_as_slice.slice, init_as_int.slice)
+        assert_equal(init_as_slice.region, init_as_int.region)
 
     def test_sliced_as_TISEnsemble(self):
         '''SlicedTrajectory and Sequential give same TIS results'''
