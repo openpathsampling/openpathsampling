@@ -12,6 +12,8 @@ import time
 
 import linecache
 
+import sys # DEBUG
+
 @restores_as_full_object
 class ExternalEngine(DynamicsEngine):
     """
@@ -26,7 +28,7 @@ class ExternalEngine(DynamicsEngine):
     default_options = {
         'n_frames_max' : 10000,
         'name_prefix' : "test",
-        'default_sleep_ms' : 10,
+        'default_sleep_ms' : 100,
         'engine_sleep' : 100
     }
 
@@ -41,8 +43,6 @@ class ExternalEngine(DynamicsEngine):
         super(ExternalEngine, self).__init__(options=options)
         self.template = template
         self.sleep_ms = self.default_sleep_ms
-        # per engine, you can override this to terminate with the signal of
-        # your choice
         self._traj_num = -1
 
     @property
@@ -57,11 +57,14 @@ class ExternalEngine(DynamicsEngine):
         # should be completely general
         next_frame_found = False
         while not next_frame_found:
-            next_frame = self.read_frame_from_file(self.frame_num)
+            next_frame = self.read_frame_from_file(self.output_file,
+                                                   self.frame_num)
+            #print self.frame_num, next_frame # DEBUG LOGGER
             if next_frame == "partial":
-                pass # rerun immediately
+                time.sleep(0.001) # wait a millisec and rerun
             elif next_frame is None:
                 # TODO: optimize sleep time
+                #print "Sleep", self.sleep_ms / 1000.0 # TODO logger
                 time.sleep(self.sleep_ms/1000.0)
             elif isinstance(next_frame, paths.Snapshot): # success
                 self.current_snapshot = next_frame
@@ -74,6 +77,7 @@ class ExternalEngine(DynamicsEngine):
     def start(self, snapshot=None):
         super(ExternalEngine, self).start(snapshot)
         self._traj_num += 1
+        self.frame_num = 0
         self.set_filenames(self._traj_num)
         self.write_frame_to_file(self.input_file, self.current_snapshot)
 
@@ -100,11 +104,14 @@ class ExternalEngine(DynamicsEngine):
         If no frame is available, returns None. If the frame appears to be
         partially written, returns string "partial".
         """
-        # in a more complicated case, you'll need to read in all lines from
-        # the first associated with frame_num until either (a) you hit EOF
-        # or (b) you have a complete frame; then you need to return
-        # appropriately 
-        first_line = frame_num
+        # under most circumstances, start with linecache.checkcache and
+        # setting the value of the first line
+        linecache.checkcache(filename)
+        first_line = frame_num + 1
+    
+        # create a snapshot out of lines starting with first_line... if
+        # nothing exists, linecache returns '', so we return None.
+        # Otherwise, try to make a snapshot and return "partial" if we fail
         line = linecache.getline(filename, first_line)
         if line is '':
             snap = None

@@ -46,7 +46,7 @@ class testExternalEngine(object):
         assert_equal(eng.proc.status(), 'running') # zombies also run
 
         # stop it; check that it isn't running
-        eng.stop(self.template)
+        eng.stop(None)
         assert_equal(eng.proc.is_running(), False)
 
     def test_read_frame_from_file(self):
@@ -54,13 +54,13 @@ class testExternalEngine(object):
         testf = open('testf1.data', 'w')
         testf.write("1.0\n2.0\n3.0\n")
         testf.close()
-        snap2 = eng.read_frame_from_file("testf1.data", 2)
+        snap2 = eng.read_frame_from_file("testf1.data", 1)
         assert_equal(snap2.xyz[0][0], 2.0)
-        snap1 = eng.read_frame_from_file("testf1.data", 1)
+        snap1 = eng.read_frame_from_file("testf1.data", 0)
         assert_equal(snap1.xyz[0][0], 1.0)
-        snap3 = eng.read_frame_from_file("testf1.data", 3)
+        snap3 = eng.read_frame_from_file("testf1.data", 2)
         assert_equal(snap3.xyz[0][0], 3.0)
-        snap4 = eng.read_frame_from_file("testf1.data", 4)
+        snap4 = eng.read_frame_from_file("testf1.data", 3)
         assert_equal(snap4, None)
         os.remove('testf1.data')
 
@@ -69,18 +69,32 @@ class testExternalEngine(object):
         testf = open('testf2.data', 'w')
         testf.write("6.0\ninvalid")
         testf.close()
-        snap1 = eng.read_frame_from_file("testf2.data", 1)
+        snap1 = eng.read_frame_from_file("testf2.data", 0)
         assert_equal(snap1.xyz[0][0], 6.0)
-        snap2 = eng.read_frame_from_file("testf2.data", 2)
+        snap2 = eng.read_frame_from_file("testf2.data", 1)
         assert_equal(snap2, "partial")
         os.remove('testf2.data')
 
+
+    def test_generate_next_frame(self):
+        eng = self.slow_engine
+        eng.start(self.template)
+        traj = eng.generate_next_frame()
+        eng.stop(traj)
+
+
     def test_slow_run(self):
         # generate traj in LengthEnsemble if frames only come every 100ms
-        raise SkipTest
+        self.slow_engine.initialized = True
+        traj = self.slow_engine.generate(self.template, 
+                                         [self.ensemble.can_append])
+        assert_equal(len(traj), 5)
 
     def test_fast_run(self):
         # generate traj in LengthEnsemble if frames come as fast as possible
-        raise SkipTest
+        self.fast_engine.initialized = True
+        traj = self.fast_engine.generate(self.template, 
+                                         [self.ensemble.can_append])
+        assert_equal(len(traj), 5)
 
 
