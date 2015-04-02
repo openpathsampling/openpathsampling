@@ -13,7 +13,7 @@ class Calculation(object):
 
     calc_name = "Calculation"
 
-    _exclude_attr = ['globalstate']
+    _excluded_attr = ['globalstate']
 
     def __init__(self, storage, engine=None):
         self.storage = storage
@@ -186,8 +186,9 @@ class PathSampling(Calculation):
         self.root_mover = root_mover
 #        self.root_mover.name = "PathSamplingRoot"
         samples = []
-        for sample in globalstate:
-            samples.append(sample.copy_reset())
+        if globalstate is not None:
+            for sample in globalstate:
+                samples.append(sample.copy_reset())
 
         self.globalstate = paths.SampleSet(samples)
 
@@ -195,14 +196,6 @@ class PathSampling(Calculation):
                                ['root_mover', 'globalstate'])
 
         self._mover = paths.CalculationMover(self.root_mover, self)
-
-    def to_dict(self):
-        return {
-            'storage' : self.storage,
-            'engine' : self.engine,
-            'root_mover' : self.root_mover,
-            '_mover' : self._mover
-        }
 
     def run(self, nsteps):
         # TODO: change so we can start from some arbitrary step number
@@ -227,9 +220,3 @@ class PathSampling(Calculation):
                 # We assume that this is the right cause of action for this
                 # case.
                 self.storage.cv.sync()
-
-    def to_dict(self):
-        return {
-            'root_mover' : self.root_mover,
-#            'globalstate' : self.globalstate
-        }
