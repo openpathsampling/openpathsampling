@@ -71,7 +71,7 @@ def trajectory_from_mdtraj(mdtrajectory):
     """
     trajectory = paths.Trajectory()
     empty_momentum = paths.Momentum()
-    for frame_num in range(mdtrajectory.n_frames):
+    for frame_num in range(len(mdtrajectory)):
         # mdtraj trajectories only have coordinates and box_vectors
         coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
         if mdtrajectory.unitcell_vectors is not None:
