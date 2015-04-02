@@ -104,11 +104,11 @@ if __name__ == '__main__':
                 )
 
         print "Iteration test"
-        for l in range(0,tt.frames + 0):
+        for l in range(0,len(tt) + 0):
             print tis.can_append(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
 
         print "Iteration test"
-        for l in range(0,tt.frames + 0):
+        for l in range(0,len(tt) + 0):
             print tis.can_append(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
 
         print op(tt[0])
