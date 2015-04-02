@@ -4,13 +4,12 @@
 
 import mdtraj as md
 import openpathsampling as paths
-from openpathsampling.todict import restores_as_stub_object
 import chaindict as cd
 import collections
 from openpathsampling.todict import ops_object
 
 
-@restores_as_stub_object
+@ops_object
 class CollectiveVariable(cd.Wrap):
     """
     Wrapper for a function that maps a snapshot to a number.
@@ -53,13 +52,13 @@ class CollectiveVariable(cd.Wrap):
 
             self.func_dict._eval = self._eval
 
-            super(OrderParameter, self).__init__(
+            super(CollectiveVariable, self).__init__(
                 post=self.func_dict + self.expand_dict + self.cache_dict +
                      self.store_dict + self.multi_dict + self.pre_dict
             )
 
         else:
-            super(OrderParameter, self).__init__(
+            super(CollectiveVariable, self).__init__(
                 post=self.cache_dict + self.store_dict + self.multi_dict + self.pre_dict
             )
 
@@ -119,7 +118,7 @@ class CollectiveVariable(cd.Wrap):
             return None
 
 
-@restores_as_stub_object
+@ops_object
 class CV_RMSD_To_Lambda(CollectiveVariable):
     """
     Transforms the RMSD from `center` to a value between zero and one.
@@ -188,7 +187,7 @@ class CV_RMSD_To_Lambda(CollectiveVariable):
         return map(self._scale_fnc(self.min_lambda, self.max_lambda), results)
 
 
-@restores_as_stub_object
+@ops_object
 class CV_Featurizer(CollectiveVariable):
     """
     An CollectiveVariable that uses an MSMBuilder3 featurizer as the logic
@@ -233,7 +232,7 @@ class CV_Featurizer(CollectiveVariable):
         return result
 
 
-@restores_as_stub_object
+@ops_object
 class CV_MD_Function(CollectiveVariable):
     """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
 
@@ -276,7 +275,7 @@ class CV_MD_Function(CollectiveVariable):
         return self.fcn(t, *args, **self.kwargs)
 
 
-@restores_as_stub_object
+@ops_object
 class CV_Volume(CollectiveVariable):
     """ Make `Volume` into `CollectiveVariable`: maps to 0.0 or 1.0 """
 
@@ -295,7 +294,7 @@ class CV_Volume(CollectiveVariable):
         return result
 
 
-@restores_as_stub_object
+@ops_object
 class CV_Function(CollectiveVariable):
     """Make any function `fcn` into an `CollectiveVariable`.
 

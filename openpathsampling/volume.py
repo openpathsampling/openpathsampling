@@ -97,25 +97,25 @@ class VolumeCombination(Volume):
     def to_dict(self):
         return { 'volume1' : self.volume1, 'volume2' : self.volume2 }
 
-@restores_as_full_object
+@ops_object
 class UnionVolume(VolumeCombination):
     """ "Or" combination (union) of two volumes."""
     def __init__(self, volume1, volume2):
         super(UnionVolume, self).__init__(volume1, volume2, lambda a,b : a or b, str_fnc = '{0} or {1}')
 
-@restores_as_full_object
+@ops_object
 class IntersectionVolume(VolumeCombination):
     """ "And" combination (intersection) of two volumes."""
     def __init__(self, volume1, volume2):
         super(IntersectionVolume, self).__init__(volume1, volume2, lambda a,b : a and b, str_fnc = '{0} and {1}')
 
-@restores_as_full_object
+@ops_object
 class SymmetricDifferenceVolume(VolumeCombination):
     """ "Xor" combination of two volumes."""
     def __init__(self, volume1, volume2):
         super(SymmetricDifferenceVolume, self).__init__(volume1, volume2, lambda a,b : a ^ b, str_fnc = '{0} xor {1}')
 
-@restores_as_full_object
+@ops_object
 class RelativeComplementVolume(VolumeCombination):
     """ "Subtraction" combination (relative complement) of two volumes."""
     def __init__(self, volume1, volume2):
