@@ -266,11 +266,11 @@ class testReplicaExchangeMover(object):
         for sample, result in zip(change.samples, change.details.results):
             assert_equal(sample.trajectory, result)
 
-        B2 = [s for s in samples_B2A1_ens if s.ensemble==self.tisB]
+        B2 = [s for s in samples if s.ensemble==self.tisB]
         assert_equal(len(B2), 1)
         assert_equal(B2[0].trajectory, self.traj2)
         assert_equal(B2[0].replica, 2)
-        A1 = [s for s in samples_B2A1_ens if s.ensemble==self.tisA]
+        A1 = [s for s in samples if s.ensemble==self.tisA]
         assert_equal(len(A1), 1)
         assert_equal(A1[0].trajectory, self.traj1)
         assert_equal(A1[0].replica, 1)
@@ -302,7 +302,7 @@ class testReplicaExchangeMover(object):
         repex_12 = ReplicaExchangeMover(replicas=[[1,2]])
         samples_B2A1_rep = repex_12.move(self.gs_B1A2)
         change = samples_B2A1_rep
-        samples = change.all_samples
+        samples = change.samples
         assert_equal(len(samples), 2)
 
         assert_equal(change.accepted, True)
@@ -313,10 +313,10 @@ class testReplicaExchangeMover(object):
         assert_not_equal(change.details.trials[0], change.details.results[1])
         assert_not_equal(change.details.trials[1], change.details.results[0])
 
-        B2 = [s for s in samples_B2A1_rep if s.ensemble==self.tisB]
+        B2 = [s for s in samples if s.ensemble==self.tisB]
         assert_equal(len(B2), 1)
         assert_equal(B2[0].trajectory, self.traj2)
-        A1 = [s for s in samples_B2A1_rep if s.ensemble==self.tisA]
+        A1 = [s for s in samples if s.ensemble==self.tisA]
         assert_equal(len(A1), 1)
         assert_equal(A1[0].trajectory, self.traj1)
 
