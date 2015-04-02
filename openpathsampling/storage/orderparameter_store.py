@@ -24,7 +24,7 @@ class ObjectDictStore(ObjectStore):
         if var_name + '_value' not in self.storage.variables:
             self.init_variable(var_name + '_value', 'float', (self.key_class.__name__.lower()))
 
-        storage.variables[self.idx_dimension + '_uid'][idx] = objectdict.name
+        storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
 
         # this will copy the cache from an op and store it
         objectdict.flush_cache(self.storage)
@@ -119,7 +119,8 @@ class ObjectDictStore(ObjectStore):
 
         storage = self.storage
 
-        name = storage.variables[self.idx_dimension + '_uid'][idx]
+        name = storage.variables[self.idx_dimension + '_name'][idx]
+        print name, len(name)
         op = OrderParameter(name)
 
         return op
@@ -131,51 +132,8 @@ class ObjectDictStore(ObjectStore):
         """
         super(ObjectDictStore, self)._init()
 
-#        self.init_variable(self.idx_dimension + '_length', 'index', self.idx_dimension, chunksizes=(1, ))
-
-    # def _update_store(self, obj):
-    #     """
-    #     This will transfer everything from the memory cache into the storage
-    #     copy in memory which is used to interact with the file storage.
-    #
-    #     Parameters
-    #     ----------
-    #     storage : Storage() on None
-    #         The storage (not ObjectStore) to store in. If None then all
-    #         associated storages will be updated up.
-    #
-    #     """
-    #
-    #     storage = self.storage
-    #
-    #     if storage not in obj.storage_caches:
-    #         # TODO: Throw exception
-    #         obj.storage_caches[storage] = dict()
-    #
-    #     store = obj.storage_caches[storage]
-    #     for item, value in obj.iteritems():
-    #         if storage in item.idx:
-    #             store[item.idx[storage]] = value
-    #
-    # def tidy_cache(self, obj):
-    #     """
-    #     This will transfer everything from the memory cache into the storage copy in memory which is used to interact with
-    #     the file storage.
-    #
-    #     Parameters
-    #     ----------
-    #     storage : Storage() on None
-    #         The storage (not ObjectStore) to store in. If None then all associated storages will be cleaned up.
-    #
-    #     """
-    #
-    #     storage = self.storage
-    #
-    #     if storage not in obj.storage_caches:
-    #         # TODO: Throw exception
-    #         obj.storage_caches[storage] = dict()
-    #
-    #     new_dict = {item: value for item, value in obj.iteritems() if storage not in item.idx}
-    #
-    #     obj.clear()
-    #     obj.update(new_dict)
+        self.init_variable(
+            self.idx_dimension + '_name',
+            'str',
+            self.idx_dimension, chunksizes=(1, )
+        )

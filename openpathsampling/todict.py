@@ -193,6 +193,7 @@ def restores_as_full_object(super_class):
 
                 if super_class._restore_non_initial_attr:
                     for key, value in non_init_dct.iteritems():
+#                        print key, ':', value
                         setattr(obj, key, value)
                 else:
                     if super_class._restore_name:
