@@ -936,7 +936,7 @@ class RandomSubtrajectorySelectMover(PathMover):
         sample = paths.Sample(
             replica=replica,
             trajectory=details.result,
-            ensemble=self._subensemble
+            ensemble=self.subensemble
         )
         path = paths.SamplePathMoveChange(
             [sample],
@@ -1073,7 +1073,7 @@ class ReplicaExchangeMover(PathMover):
             # No swap
             details.accepted = False
             details.acceptance_probability = 0.0
-            details.result = [trajectory1, trajectory2]
+            details.results = [trajectory1, trajectory2]
             finalrep1 = replica1
             finalrep2 = replica2
 
@@ -1091,7 +1091,8 @@ class ReplicaExchangeMover(PathMover):
         path = paths.SamplePathMoveChange(
             [sample1, sample2],
             mover=self,
-            accepted=details.accepted
+            accepted=details.accepted,
+            details=details
         )
 
         return path

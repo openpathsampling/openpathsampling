@@ -71,22 +71,22 @@ class Storage(netcdf.Dataset):
 
         # normal objects
 
-        self.pathmovers = paths.storage.ObjectStore(storage, paths.PathMover, is_named=True)
-        self.movedetails = paths.storage.ObjectStore(storage, paths.MoveDetails, is_named=False)
-        self.shootingpoints = paths.storage.ObjectStore(storage, paths.ShootingPoint, is_named=False)
-        self.shootingpointselectors = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, is_named=False)
-        self.engines = paths.storage.ObjectStore(storage, paths.DynamicsEngine, is_named=True)
-        self.pathsimulators = paths.storage.ObjectStore(storage, paths.PathSimulator, is_named=True)
+        self.pathmovers = paths.storage.ObjectStore(storage, paths.PathMover, has_uid=True)
+        self.movedetails = paths.storage.ObjectStore(storage, paths.MoveDetails, has_uid=False)
+        self.shootingpoints = paths.storage.ObjectStore(storage, paths.ShootingPoint, has_uid=False)
+        self.shootingpointselectors = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, has_uid=False)
+        self.engines = paths.storage.ObjectStore(storage, paths.DynamicsEngine, has_uid=True)
+        self.pathsimulators = paths.storage.ObjectStore(storage, paths.PathSimulator, has_uid=True)
 
         # nestable objects
 
-        self.volumes = paths.storage.ObjectStore(storage, paths.Volume, is_named=True, nestable=True)
-        self.ensembles = paths.storage.ObjectStore(storage, paths.Ensemble, is_named=True, nestable=True)
-        self.pathmovechanges = paths.storage.ObjectStore(storage, paths.PathMoveChange, is_named=False, nestable=True)
+        self.volumes = paths.storage.ObjectStore(storage, paths.Volume, has_uid=True, nestable=True)
+        self.ensembles = paths.storage.ObjectStore(storage, paths.Ensemble, has_uid=True, nestable=True)
+        self.pathmovechanges = paths.storage.ObjectStore(storage, paths.PathMoveChange, has_uid=False, nestable=True)
 
         self.transitions = paths.storage.ObjectStore(storage,
                                                     paths.TISTransition,
-                                                    is_named=True)
+                                                    has_uid=True)
 
         self.query = paths.storage.QueryStore(storage)
 

@@ -3,7 +3,7 @@ from openpathsampling.pathmovechange import PathMoveChange
 
 class PathMoveChangeStore(ObjectStore):
     def __init__(self, storage):
-        super(PathMoveChangeStore, self).__init__(storage, PathMoveChange, is_named=False, nestable=True, load_partial=True)
+        super(PathMoveChangeStore, self).__init__(storage, PathMoveChange, has_uid=False, nestable=True, load_partial=True)
         self.set_variable_partial_loading('details', self.update_details)
 
     def load_empty(self, idx):

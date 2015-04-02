@@ -3,7 +3,7 @@ __author__ = 'jan-hendrikprinz'
 import openpathsampling as paths
 from openpathsampling.todict import ops_object
 
-@restores_as_full_object
+@ops_object
 class PathMoveChange(object):
     '''
     PathMoveChange is essentially a list of samples, with a few conveniences.  It
@@ -96,6 +96,10 @@ class PathMoveChange(object):
         yield self
         for subchange in self.subchanges:
             yield subchange
+
+    def __getitem__(self, item):
+        if type(item) is int:
+            return self.subchanges[item]
 
     def __reversed__(self):
         for subchange in self.subchanges:
@@ -434,7 +438,7 @@ class PathMoveChange(object):
             return 'SampleMove : %s : %s :[]' % (self.mover.cls, self.accepted)
 
 
-@restores_as_full_object
+@ops_object
 class EmptyPathMoveChange(PathMoveChange):
     """
     A PathMoveChange representing no changes
@@ -457,7 +461,7 @@ class EmptyPathMoveChange(PathMoveChange):
 
 
 
-@restores_as_full_object
+@ops_object
 class SamplePathMoveChange(PathMoveChange):
     """
     A PathMoveChange representing the application of samples.
@@ -491,7 +495,7 @@ class SamplePathMoveChange(PathMoveChange):
         return paths.SampleSet(other).apply_samples(self._local_samples)
 
 
-@restores_as_full_object
+@ops_object
 class CollapsedMovePath(SamplePathMoveChange):
     """
     Represent a collapsed PathMoveChange that has potential hidden sub moves
@@ -521,7 +525,7 @@ class CollapsedMovePath(SamplePathMoveChange):
             return '%s [collapsed] : %d samples' % ('CollapsedMove', len(self._local_samples)) + ' ' + str(self._local_samples) + ''
 
 
-@restores_as_full_object
+@ops_object
 class RandomChoicePathMoveChange(PathMoveChange):
     """
     A PathMoveChange that represents the application of a mover chosen randomly
@@ -551,7 +555,7 @@ class RandomChoicePathMoveChange(PathMoveChange):
         return self.subchange.all_samples
 
 
-@restores_as_full_object
+@ops_object
 class SequentialPathMoveChange(PathMoveChange):
     """
     SequentialPathMoveChange has no own samples, only inferred Sampled from the
@@ -595,7 +599,7 @@ class SequentialPathMoveChange(PathMoveChange):
                (self.accepted, len(self.samples)) + \
                PathMoveChange._indent('\n'.join(map(str, self.subchanges)))
 
-@restores_as_full_object
+@ops_object
 class PartialAcceptanceSequentialMovePath(SequentialPathMoveChange):
     """
     PartialAcceptanceSequentialMovePath has no own samples, only inferred
@@ -628,7 +632,7 @@ class PartialAcceptanceSequentialMovePath(SequentialPathMoveChange):
                (self.accepted, len(self.samples)) + \
                PathMoveChange._indent('\n'.join(map(str, self.subchanges)))
 
-@restores_as_full_object
+@ops_object
 class ConditionalSequentialMovePath(SequentialPathMoveChange):
     """
     ConditionalSequentialMovePath has no own samples, only inferred Samples
@@ -669,14 +673,14 @@ class ConditionalSequentialMovePath(SequentialPathMoveChange):
                PathMoveChange._indent( '\n'.join(map(str, self.subchanges)))
 
 
-@restores_as_full_object
+@ops_object
 class FilterSamplesPathMoveChange(PathMoveChange):
     """
     A PathMoveChange that keeps a selection of the underlying samples
     """
 
     def __init__(self, subchange, selected_samples, use_all_samples=False, mover=None, details=None):
-        super(KeepLastSamplePathMoveChange, self).__init__(mover=mover, details=details)
+        super(FilterSamplesPathMoveChange, self).__init__(mover=mover, details=details)
         self.subchanges = [subchange]
         self.selected_samples = selected_samples
         self.use_all_samples = use_all_samples
@@ -709,7 +713,7 @@ class FilterSamplesPathMoveChange(PathMoveChange):
             'details' : self.details
         }
 
-@restores_as_full_object
+@ops_object
 class KeepLastSamplePathMoveChange(PathMoveChange):
     """
     A PathMoveChange that only keeps the last generated sample.
@@ -747,7 +751,7 @@ class KeepLastSamplePathMoveChange(PathMoveChange):
             'details' : self.details
         }
 
-@restores_as_full_object
+@ops_object
 class PathSimulatorPathMoveChange(PathMoveChange):
     """
     A PathMoveChange that just wraps a subchange and references a PathSimulator
