@@ -21,7 +21,6 @@ init_log = logging.getLogger('openpathsampling.initialization')
 #############################################################################
 
 @restores_as_full_object
-
 class ShootingPoint(object):
 
     def __init__(self, selector, trajectory, index, f = None, sum_bias = None):
@@ -88,8 +87,19 @@ class ShootingPoint(object):
     def bias(self):
         return self.f
 
+    def to_dict(self):
+        return {
+            'selector' : self.selector,
+            'trajectory' : self.trajectory,
+            'index' : self.index,
+            'f' : self._f,
+            'sum_bias' : self._sum_bias
+        }
+
 @restores_as_full_object
 class ShootingPointSelector(object):
+    def __init__(self):
+        pass
 
     @property
     def identifier(self):
