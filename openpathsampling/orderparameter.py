@@ -56,7 +56,6 @@ class OrderParameter(cd.Wrap):
                      self.store_dict + self.multi_dict + self.pre_dict
             )
 
-
         else:
             super(OrderParameter, self).__init__(
                 post=self.cache_dict + self.store_dict + self.multi_dict + self.pre_dict

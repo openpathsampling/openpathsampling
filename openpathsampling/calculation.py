@@ -1,4 +1,4 @@
-from openpathsampling.todict import restores_as_stub_object
+from openpathsampling.todict import restores_as_stub_object, restores_as_full_object
 import openpathsampling as paths
 
 from openpathsampling.pathmover import PathMover
@@ -8,10 +8,12 @@ from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-@restores_as_stub_object
+@restores_as_full_object
 class Calculation(object):
 
     calc_name = "Calculation"
+
+    _exclude_attr = ['globalstate']
 
     def __init__(self, storage, engine=None):
         self.storage = storage
@@ -28,7 +30,7 @@ class Calculation(object):
         logger.warning("Running an empty calculation? Try a subclass, maybe!")
 
 
-@restores_as_stub_object
+@restores_as_full_object
 class BootstrapPromotionMove(PathMover):
     '''
     Bootstrap promotion is the combination of an EnsembleHop (to the next
@@ -78,7 +80,7 @@ class BootstrapPromotionMove(PathMover):
         return mover.move(globalstate)
 
 
-@restores_as_stub_object
+@restores_as_full_object
 class Bootstrapping(Calculation):
     """Creates a SampleSet with one sample per ensemble.
     
@@ -168,7 +170,7 @@ class Bootstrapping(Calculation):
         for sample in self.globalstate:
             assert sample.ensemble(sample.trajectory) == True, "WTF?"
 
-@restores_as_stub_object
+@restores_as_full_object
 class PathSampling(Calculation):
     """
     General path sampling code. 
@@ -193,6 +195,14 @@ class PathSampling(Calculation):
                                ['root_mover', 'globalstate'])
 
         self._mover = paths.CalculationMover(self.root_mover, self)
+
+    def to_dict(self):
+        return {
+            'storage' : self.storage,
+            'engine' : self.engine,
+            'root_mover' : self.root_mover,
+            '_mover' : self._mover
+        }
 
     def run(self, nsteps):
         # TODO: change so we can start from some arbitrary step number
