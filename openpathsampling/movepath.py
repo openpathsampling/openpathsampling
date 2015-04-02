@@ -602,7 +602,7 @@ class KeepLastSampleMovePath(MovePath):
             'mover' : self.mover
         }
 
-@restores_as_full_object
+@ops_object
 class PathSimulatorMovePath(MovePath):
     """
     A MovePath that just wraps a movepath and references a PathSimulator

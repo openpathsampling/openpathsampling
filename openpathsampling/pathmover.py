@@ -1216,14 +1216,13 @@ class MinusMover(ConditionalSequentialMover):
         result = super(MinusMover, self).move(globalstate).closed
         return result
 
-@restores_as_stub_object
+@ops_object
 class PathSimulatorMover(PathMover):
     """
     This just wraps a mover and references the used pathsimulator
     """
     def __init__(self, mover, pathsimulator):
-    def __init__(self, mover, calculation):
-        super(CalculationMover, self).__init__()
+        super(PathSimulatorMover, self).__init__()
         self.mover = mover
         self.pathsimulator = pathsimulator
 
