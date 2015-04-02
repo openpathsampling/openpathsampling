@@ -10,6 +10,8 @@ import signal
 import shlex
 import time
 
+import linecache
+
 @restores_as_full_object
 class ExternalEngine(DynamicsEngine):
     """
@@ -19,12 +21,16 @@ class ExternalEngine(DynamicsEngine):
     will work with the trivial `engine.c` developed for testing purposes.
     """
 
+    # TODO: include clever adaptive waiting scheme
+
     default_options = {
         'n_frames_max' : 10000,
         'name_prefix' : "test",
         'default_sleep_ms' : 10,
         'engine_sleep' : 100
     }
+
+    killsig = signal.SIGTERM
 
     def __init__(self, options, template):
         # needs to be overridden for each engine
@@ -37,8 +43,7 @@ class ExternalEngine(DynamicsEngine):
         self.sleep_ms = self.default_sleep_ms
         # per engine, you can override this to terminate with the signal of
         # your choice
-        self.killsig = signal.SIGKILL
-        self.traj_num = -1
+        self._traj_num = -1
 
     @property
     def current_snapshot(self):
@@ -47,65 +52,78 @@ class ExternalEngine(DynamicsEngine):
     @current_snapshot.setter
     def current_snapshot(self, snap):
         self._current_snapshot = snap
-        # for a real engine, this should also write frame to whatever
-        # file is input for the trajectory
 
     def generate_next_frame(self):
         # should be completely general
         next_frame_found = False
         while not next_frame_found:
-            try:
-                next_frame = self.read_frame_from_file(self.frame_num)
-                next_frame_found = True
-            except: #TODO what error to throw here?
-                time.sleep(self.sleep_ms/1000.0)
+            next_frame = self.read_frame_from_file(self.frame_num)
+            if next_frame == "partial":
+                pass # rerun immediately
+            elif next_frame is None:
                 # TODO: optimize sleep time
-        self.current_snapshot = next_frame
+                time.sleep(self.sleep_ms/1000.0)
+            elif isinstance(next_frame, paths.Snapshot): # success
+                self.current_snapshot = next_frame
+                next_frame_found = True
+                self.frame_num += 1
+            else:
+                raise RuntimeError("Strange return value from read_next_frame_from_file")
         return self.current_snapshot
 
     def start(self, snapshot=None):
         super(ExternalEngine, self).start(snapshot)
-        self.traj_num += 1
-        self.set_input_filename(self.traj_num)
-        self.set_output_filename(self.traj_num)
-        if snapshot is not None:
-            self.current_snapshot = snapshot
+        self._traj_num += 1
+        self.set_filenames(self._traj_num)
         self.write_frame_to_file(self.input_file, self.current_snapshot)
 
         cmd = shlex.split(self.engine_command())
         try:
+            # TODO: add the ability to have handlers for stdin and stdout
             self.proc = psutil.Popen(shlex.split(self.engine_command()),
-                                         preexec_fn=os.setsid
-                                        )
+                                     preexec_fn=os.setsid
+                                    )
         except OSError:
-            pass #TODO: need to handle this, but do what?
+            pass #TODO: need to handle this, but do what? Probably reraise
 
     def stop(self, trajectory):
         super(ExternalEngine, self).stop(trajectory)
         self.proc.send_signal(self.killsig)
         self.proc.wait() # wait for the zombie to die
+        self.cleanup()
 
     # FROM HERE ARE THE FUNCTIONS TO OVERRIDE IN SUBCLASSES:
     def read_frame_from_file(self, filename, frame_num):
-        """Reads given frame number from file, and returns snapshot
+        """Reads given frame number from file, and returns snapshot.
+        
+        If no frame is available, returns None. If the frame appears to be
+        partially written, returns string "partial".
         """
-        # main part that needs to be rewritten for each engine
+        # in a more complicated case, you'll need to read in all lines from
+        # the first associated with frame_num until either (a) you hit EOF
+        # or (b) you have a complete frame; then you need to return
+        # appropriately 
+        line = linecache.getline(filename, frame_num)
+        if line is '':
+            return None
+        elif line[-1] != "\n":
+            return "partial"
+        else:
+            return paths.Snapshot(coordinates=[[float(line)]],
+                                  velocities=[[1.0]]
+                                 )
+
+    def write_frame_to_file(self, filename, snapshot, mode="a"):
+        """Writes given snapshot to file."""
         pass
 
-    def write_frame_to_file(self, filename, snapshot):
-        """Writes given snapshot to appropriate input file.
-        """
-        # also needs to be rewritten for each engine
+    def cleanup(self):
+        """Any cleanup actions to do after the subprocess dies."""
         pass
 
-    def set_input_filename(self, number):
-        """Sets the filename for the input to trajectory number `number`
-        """
-        self.input_file = self.name_prefix + str(number) + ".inp"
-
-    def set_output_filename(self, number):
-        """Sets the filename for the output from trajectory number `number`
-        """
+    def set_filenames(self, number):
+        """Sets names for files associated with trajectory `number`"""
+        self.input_file = self.name_prefix + str(number) + ".inp" # not used
         self.output_file = self.name_prefix + str(number) + ".out"
 
     def engine_command(self):

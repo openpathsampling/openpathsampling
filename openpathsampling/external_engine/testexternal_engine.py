@@ -33,7 +33,6 @@ class testExternalEngine(object):
 
     def test_start_stop(self):
         eng = self.fast_engine
-        #print get_all_pids()
         # check that it isn't running yet
         try:
             assert_equal(eng.proc.is_running(), False)
@@ -43,13 +42,16 @@ class testExternalEngine(object):
         # start it; check that it is running
         eng.start(self.template)
         assert_equal(eng.proc.is_running(), True)
-        assert_equal(eng.proc.status(), 'running')
+        assert_equal(eng.proc.status(), 'running') # zombies also run
 
         # stop it; check that it isn't running
         eng.stop(self.template)
         assert_equal(eng.proc.is_running(), False)
 
     def test_read_frame_from_file(self):
+        raise SkipTest
+
+    def test_read_frame_while_writing_file(self):
         raise SkipTest
 
     def test_slow_run(self):
