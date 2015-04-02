@@ -1,7 +1,7 @@
 from histogram import Histogram
 from wham import WHAM
 import openpathsampling as paths
-from openpathsampling.todict import restores_as_full_object
+from openpathsampling.todict import ops_object
 
 import inspect
 
@@ -73,7 +73,7 @@ class Histogrammer(object):
         self._hist_args = val
         self.empty_hist = Histogram(**self._hist_args)
 
-@restores_as_full_object
+@ops_object
 class Transition(object):
     """
     Describes (in general) a transition between two states.
@@ -104,7 +104,7 @@ class Transition(object):
             stateB=dct['stateB']
         )
 
-@restores_as_full_object
+@ops_object
 class TPSTransition(Transition):
     """
     Transition using TPS ensembles
@@ -116,7 +116,7 @@ class TPSTransition(Transition):
         self.movers['pathreversal'] = []
         #self.ensembles = [paths.TPSEnsemble(stateA, stateB)]
 
-@restores_as_full_object
+@ops_object
 class TISTransition(Transition):
     """
     Transition using TIS ensembles.
@@ -330,7 +330,7 @@ class TISTransition(Transition):
         )
         return root_mover
 
-@restores_as_full_object
+@ops_object
 class RETISTransition(TISTransition):
     """Transition class for RETIS."""
     def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):

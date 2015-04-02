@@ -1,4 +1,4 @@
-from openpathsampling.todict import restores_as_stub_object, restores_as_full_object
+from openpathsampling.todict import ops_object
 import openpathsampling as paths
 
 from openpathsampling.pathmover import PathMover
@@ -8,7 +8,7 @@ from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-@restores_as_full_object
+@ops_object
 class Calculation(object):
 
     calc_name = "Calculation"
@@ -30,7 +30,7 @@ class Calculation(object):
         logger.warning("Running an empty calculation? Try a subclass, maybe!")
 
 
-@restores_as_full_object
+@ops_object
 class BootstrapPromotionMove(PathMover):
     '''
     Bootstrap promotion is the combination of an EnsembleHop (to the next
@@ -80,7 +80,7 @@ class BootstrapPromotionMove(PathMover):
         return mover.move(globalstate)
 
 
-@restores_as_full_object
+@ops_object
 class Bootstrapping(Calculation):
     """Creates a SampleSet with one sample per ensemble.
     
@@ -170,7 +170,7 @@ class Bootstrapping(Calculation):
         for sample in self.globalstate:
             assert sample.ensemble(sample.trajectory) == True, "WTF?"
 
-@restores_as_full_object
+@ops_object
 class PathSampling(Calculation):
     """
     General path sampling code. 
