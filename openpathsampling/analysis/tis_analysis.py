@@ -207,7 +207,7 @@ class TISTransition(Transition):
             stateA=dct['stateA'],
             stateB=dct['stateB'],
             interfaces=dct['interfaces'],
-            orderparameter=dct['orderparameter'],
+            collectivevariable=dct['collectivevariable'],
             name=dct['name']
         )
         mytrans.movers = dct['movers']
@@ -356,7 +356,7 @@ class RETISTransition(TISTransition):
         ret_dict = {
             'stateA' : self.stateA,
             'stateB' : self.stateB,
-            'orderparameter' : self.orderparameter,
+            'collectivevariable' : self.collectivevariable,
             'interfaces' : self.interfaces,
             'name' : self.name,
             'movers' : self.movers,
@@ -371,7 +371,7 @@ class RETISTransition(TISTransition):
             stateA=dct['stateA'],
             stateB=dct['stateB'],
             interfaces=dct['interfaces'],
-            orderparameter=dct['orderparameter'],
+            collectivevariable=dct['collectivevariable'],
             name=dct['name']
         )
         mytrans.minus_ensemble = dct['minus_ensemble']

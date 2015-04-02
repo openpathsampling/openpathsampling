@@ -154,8 +154,8 @@ if __name__ == '__main__':
 
     headline("MovePaths")
 
-    for p_idx in range(0, storage.movepaths.count()):
-        obj = storage.movepaths.load(p_idx)
+    for p_idx in range(0, storage.pathmovechanges.count()):
+        obj = storage.pathmovechanges.load(p_idx)
         nline(p_idx, '', '')
         print indent(str(obj),16)
 

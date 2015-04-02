@@ -67,7 +67,7 @@ def assert_sample_set_accepted(sample_set, results):
         assert_equal(sample.details.accepted, result)
 
 def assert_subchanges_set_accepted(change, results):
-    for ch, result in zip(change, results):
+    for ch, result in zip(change.subchanges, results):
         assert_equal(ch.accepted, result)
 
 class testPathMover(object):

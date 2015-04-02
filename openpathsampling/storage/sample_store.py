@@ -17,9 +17,6 @@ class SampleStore(ObjectStore):
 
             self.save_variable('sample_replica', idx, sample.replica)
 
-            self.storage.movedetails.save(sample.details)
-            self.set_object('sample_details', idx, sample.details)
-
             if sample.step is None:
                 self.save_variable('sample_step', idx, -1)
             else:
@@ -78,7 +75,7 @@ class SampleSetStore(ObjectStore):
         values = self.list_to_numpy(sample_set, 'sample')
         self.storage.variables['sampleset_sample_idx'][idx] = values
 
-        self.storage.movepaths.save(sample_set.movepath)
+        self.storage.pathmovechanges.save(sample_set.movepath)
         self.set_object('sampleset_movepath', idx, sample_set.movepath)
 
 
@@ -124,7 +121,7 @@ class SampleSetStore(ObjectStore):
 
         # typecast to sample
         samples = self.list_from_numpy(values, 'samples')
-        sample_set = SampleSet(samples, movepath=self.storage.movepaths.load(movepath_idx))
+        sample_set = SampleSet(samples, movepath=self.storage.pathmovechanges.load(movepath_idx))
 
         return sample_set
 

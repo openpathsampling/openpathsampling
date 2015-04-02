@@ -95,17 +95,8 @@ class Bootstrapping(PathSimulator):
         super(Bootstrapping, self).__init__(storage, engine)
         self.ensembles = ensembles
 
-        # this is stupid; must be a better way
-        init_details = paths.MoveDetails()
-        init_details.accepted = True
-        init_details.acceptance_probability = 1.0
-        init_details.mover = paths.PathMover()
-        init_details.mover.name = "Initialization (trajectory)"
-        init_details.inputs = []
-        init_details.trial = trajectory
-        init_details.ensemble = self.ensembles[0]
-        sample = paths.Sample(replica=0, trajectory=trajectory, 
-                        ensemble=self.ensembles[0], details=init_details)
+        sample = paths.Sample(replica=0, trajectory=trajectory,
+                        ensemble=self.ensembles[0])
 
         self.globalstate = paths.SampleSet([sample])
         if self.storage is not None:
@@ -145,7 +136,6 @@ class Bootstrapping(PathSimulator):
                 logger.debug("(" + str(sample.replica)
                              + "," + str(sample.trajectory)
                              + "," + repr(sample.ensemble)
-                             + "," + str(sample.details.accepted)
                             )
             self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
             self.globalstate.movepath = movepath
@@ -154,7 +144,6 @@ class Bootstrapping(PathSimulator):
                 logger.debug("(" + str(sample.replica)
                              + "," + str(sample.trajectory)
                              + "," + repr(sample.ensemble)
-                             + "," + str(sample.details.accepted)
                             )
 
             old_ens_num = ens_num
@@ -219,4 +208,4 @@ class PathSampling(PathSimulator):
                 # removing computed values for not saved collectivevariables
                 # We assume that this is the right cause of action for this
                 # case.
-                self.storage.cv.sync()
+                self.storage.cvs.sync()

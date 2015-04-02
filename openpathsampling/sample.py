@@ -280,7 +280,6 @@ class SampleSet(object):
                     ensemble=translation[s.ensemble],
                     trajectory=s.trajectory,
                     intermediate=s.intermediate,
-                    details=s.details,
                     step=s.step
                 )
                 for s in sset

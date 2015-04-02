@@ -93,9 +93,10 @@ class PathMoveChange(object):
         return obj
 
     def __iter__(self):
-#        yield self
+        yield self
         for subchange in self.subchanges:
-            yield subchange
+            for change in subchange:
+                yield change
 
     def __getitem__(self, item):
         if type(item) is int:
@@ -103,15 +104,18 @@ class PathMoveChange(object):
 
     def __reversed__(self):
         for subchange in self.subchanges:
-            yield subchange
+            for change in subchange:
+                yield change
+
         yield self
+
 
     def __len__(self):
         # TODO: Add caching here?
         return len(list(iter(self)))
 
     def __contains__(self, item):
-        return item in list(self)
+        return item in self.traverse_dfs(lambda x : x.mover)
 
     def traverse_dfs(self, fnc, **kwargs):
         """
@@ -147,7 +151,7 @@ class PathMoveChange(object):
 
         This traverses the underlying movepath tree and applies the given function
         at each node returning a list of tuples (level, function()) .
-        That means that sub_movepaths are called BEFORE the node itself is
+        That means that sub_pathmovechanges are called BEFORE the node itself is
         evaluated.
 
         Parameters
@@ -184,7 +188,7 @@ class PathMoveChange(object):
 
         This traverses the underlying movepath tree and applies the given function
         at each node returning a list of the results. The BFS will result in the
-        order in which samples are generated.  That means that sub_movepaths are
+        order in which samples are generated.  That means that sub_pathmovechanges are
         called AFTER the node itself is evaluated.
 
         Parameters
@@ -213,7 +217,7 @@ class PathMoveChange(object):
 
         This traverses the underlying movepath tree and applies the given function
         at each node returning a list of tuples (level, function()) .
-        That means that sub_movepaths are called AFTER the node itself is evaluated.
+        That means that sub_pathmovechanges are called AFTER the node itself is evaluated.
 
         Parameters
         ----------
@@ -537,7 +541,7 @@ class RandomChoicePathMoveChange(PathMoveChange):
     def to_dict(self):
         return {
             'mover' : self.mover,
-            'subchanges' : self.subchanges,
+            'subchange' : self.subchanges[0],
             'details' : self.details
         }
 
@@ -672,7 +676,6 @@ class ConditionalSequentialMovePath(SequentialPathMoveChange):
                (self.accepted, len(self.samples)) + \
                PathMoveChange._indent( '\n'.join(map(str, self.subchanges)))
 
-
 @ops_object
 class FilterSamplesPathMoveChange(PathMoveChange):
     """
@@ -706,7 +709,7 @@ class FilterSamplesPathMoveChange(PathMoveChange):
 
     def to_dict(self):
         return {
-            'subchanges' : self.subchanges,
+            'subchange' : self.subchanges[0],
             'selected_samples' : self.selected_samples,
             'use_all_samples' : self.use_all_samples,
             'mover' : self.mover,
@@ -746,7 +749,7 @@ class KeepLastSamplePathMoveChange(PathMoveChange):
 
     def to_dict(self):
         return {
-            'subchanges' : self.subchanges,
+            'subchange' : self.subchanges[0],
             'mover' : self.mover,
             'details' : self.details
         }
@@ -773,7 +776,7 @@ class PathSimulatorPathMoveChange(PathMoveChange):
 
     def to_dict(self):
         return {
-            'subchanges' : self.subchanges,
+            'subchange' : self.subchanges[0],
             'pathsimulator' : self.pathsimulator,
             'step' : self.step,
             'mover' : self.mover,

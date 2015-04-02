@@ -595,7 +595,7 @@ class SequentialMover(PathMover):
 #        subglobal = SampleSet(self.legal_sample_set(globalstate))
 
         subglobal = globalstate
-        movepaths = []
+        pathmovechanges = []
 
         for mover in self.movers:
             logger.debug("Starting sequential move step "+str(mover))
@@ -604,9 +604,9 @@ class SequentialMover(PathMover):
             movepath = mover.move(subglobal)
             samples = movepath.samples
             subglobal = subglobal.apply_samples(samples)
-            movepaths.append(movepath)
+            pathmovechanges.append(movepath)
 
-        return paths.SequentialPathMoveChange(movepaths, mover=self)
+        return paths.SequentialPathMoveChange(pathmovechanges, mover=self)
 
 @ops_object
 class PartialAcceptanceSequentialMover(SequentialMover):
@@ -624,7 +624,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     def move(self, globalstate):
         logger.debug("==== BEGINNING " + self.name + " ====")
         subglobal = paths.SampleSet(self.legal_sample_set(globalstate))
-        movepaths = []
+        pathmovechanges = []
         for mover in self.movers:
             # NOTE: right now, this doesn't quite work correctly if the
             # submovers are also multimovers (e.g., SequentialMovers). We
@@ -641,12 +641,12 @@ class PartialAcceptanceSequentialMover(SequentialMover):
             movepath = mover.move(subglobal)
             samples = movepath.samples
             subglobal = subglobal.apply_samples(samples)
-            movepaths.append(movepath)
+            pathmovechanges.append(movepath)
             if not movepath.accepted:
                 break
 
         logger.debug("==== FINISHING " + self.name + " ====")
-        return paths.PartialAcceptanceSequentialMovePath(movepaths, mover=self)
+        return paths.PartialAcceptanceSequentialMovePath(pathmovechanges, mover=self)
 
 
 @ops_object
@@ -670,7 +670,7 @@ class ConditionalSequentialMover(SequentialMover):
 #        subglobal = SampleSet(self.legal_sample_set(globalstate))
 
         subglobal = globalstate
-        movepaths = []
+        pathmovechanges = []
 
         for mover in self.movers:
             logger.debug("Starting sequential move step "+str(mover))
@@ -679,12 +679,12 @@ class ConditionalSequentialMover(SequentialMover):
             movepath = mover.move(subglobal)
             samples = movepath.samples
             subglobal = subglobal.apply_samples(samples)
-            movepaths.append(movepath)
+            pathmovechanges.append(movepath)
 
             if not movepath.accepted:
                 break
 
-        return paths.ConditionalSequentialMovePath(movepaths, mover=self)
+        return paths.ConditionalSequentialMovePath(pathmovechanges, mover=self)
 
 
 @ops_object
@@ -741,14 +741,14 @@ class ReplicaIDChangeMover(PathMover):
         new_sample = paths.Sample(
             replica=details.rep_to, 
             ensemble=rep_sample.ensemble,
-            trajectory=rep_sample.trajectory,
-            details=details
+            trajectory=rep_sample.trajectory
         )
 
         return paths.SamplePathMoveChange(
             [new_sample],
             mover=self,
-            accepted=details.accepted
+            accepted=details.accepted,
+            details=details
         )
 
 @ops_object
