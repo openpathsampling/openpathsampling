@@ -66,6 +66,9 @@ def assert_sample_set_accepted(sample_set, results):
     for sample, result in zip(sample_set, results):
         assert_equal(sample.details.accepted, result)
 
+def assert_subchanges_set_accepted(change, results):
+    for ch, result in zip(change, results):
+        assert_equal(ch.accepted, result)
 
 class testPathMover(object):
     def setup(self):
@@ -252,14 +255,16 @@ class testReplicaExchangeMover(object):
     def test_repex_ens_acc(self):
         repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
         samples_B2A1_ens = repex_AB.move(self.gs_B1A2)
-        assert_equal(len(samples_B2A1_ens), 2)
+        change = samples_B2A1_ens
+        samples = change.samples
+        assert_equal(len(samples), 2)
 
-        assert_equal(samples_B2A1_ens.details.accepted, True)
-        for trial, result in zip(samples_B2A1_ens.details.trials, samples_B2A1_ens.details.results):
+        assert_equal(change.accepted, True)
+        for trial, result in zip(change.details.trials, change.details.results):
             assert_equal(trial, result)
 
-        for sample in zip(samples_B2A1_ens.samples, samples_B2A1_ens.details.results):
-            assert_equal(sample.trajectory, samples_B2A1_ens.details.result)
+        for sample, result in zip(change.samples, change.details.results):
+            assert_equal(sample.trajectory, result)
 
         B2 = [s for s in samples_B2A1_ens if s.ensemble==self.tisB]
         assert_equal(len(B2), 1)
@@ -278,10 +283,14 @@ class testReplicaExchangeMover(object):
 
         samples_A0B1_ens = repex_change.all_samples
         assert_equal(len(samples_A0B1_ens), 2)
-        for sample in samples_A0B1_ens:
-            assert_equal(sample.details.accepted, False)
-            assert_equal(sample.trajectory, sample.details.result)
-            assert_not_equal(sample.details.trial, sample.details.result)
+        assert_equal(repex_change.accepted, False)
+
+        assert_equal(samples_A0B1_ens[0].trajectory, repex_change.details.results[0])
+        assert_equal(samples_A0B1_ens[1].trajectory, repex_change.details.results[1])
+
+        assert_not_equal(repex_change.details.trials[0], repex_change.details.results[0])
+        assert_not_equal(repex_change.details.trials[1], repex_change.details.results[1])
+
         A0 = [s for s in samples_A0B1_ens if s.ensemble==self.tisA]
         assert_equal(len(A0), 1)
         assert_equal(A0[0].trajectory, self.traj0)
@@ -292,11 +301,18 @@ class testReplicaExchangeMover(object):
     def test_repex_rep_acc(self):
         repex_12 = ReplicaExchangeMover(replicas=[[1,2]])
         samples_B2A1_rep = repex_12.move(self.gs_B1A2)
-        assert_equal(len(samples_B2A1_rep), 2)
-        for sample in samples_B2A1_rep:
-            assert_equal(sample.details.accepted, True)
-            assert_equal(sample.trajectory, sample.details.result)
-            assert_equal(sample.details.trial, sample.details.result)
+        change = samples_B2A1_rep
+        samples = change.all_samples
+        assert_equal(len(samples), 2)
+
+        assert_equal(change.accepted, True)
+
+        assert_equal(samples[0].trajectory, change.details.results[0])
+        assert_equal(samples[1].trajectory, change.details.results[1])
+
+        assert_not_equal(change.details.trials[0], change.details.results[1])
+        assert_not_equal(change.details.trials[1], change.details.results[0])
+
         B2 = [s for s in samples_B2A1_rep if s.ensemble==self.tisB]
         assert_equal(len(B2), 1)
         assert_equal(B2[0].trajectory, self.traj2)
@@ -327,8 +343,8 @@ class testRandomChoiceMover(object):
         # sample
         count = {}
         for t in range(100):
-            samples = self.mover.move(self.init_samp)
-            assert_equal(len(samples), 1)
+            change = self.mover.move(self.init_samp)
+            assert_equal(len(change.samples), 1)
 #            try:
                 # Since self is the root mover, mover_path[-1] is self.
                 # That means that mover_path[-2] is the mover that this
@@ -491,8 +507,8 @@ class testConditionalSequentialMover(testSequentialMover):
         change = move.move(gs)
         samples = change.samples
         assert_equal(len(samples), 3)
-        for sample in samples:
-            assert_equal(sample.details.accepted, True)
+        for ch in change:
+            assert_equal(change.accepted, True)
         gs = gs + change
         assert_equal(gs[0].ensemble, self.tps)
 
@@ -732,6 +748,8 @@ class testMinusMover(object):
 
         seg_dir = {}
         for i in range(100):
+            print i, gs
+            print str(self.mover)
             change = self.mover.move(gs).opened
             samples = change.samples
             assert_equal(len(samples), 5)
@@ -742,8 +760,8 @@ class testMinusMover(object):
             assert_equal(len(s_minus), 2)
             assert_equal(len(s_sub), 2)
 
-            for s in samples:
-                assert_equal(s.details.accepted, True)
+            for c in change:
+                assert_equal(c.accepted, True)
 
             key = ""
             s_inner0_xvals = [s.coordinates[0,0] for s in s_inner[0].trajectory]
@@ -784,9 +802,8 @@ class testMinusMover(object):
         samples = change.all_samples
         assert_equal(self.innermost(innermost_other_ensemble), False)
         assert_equal(len(samples), 3) # stop after failed repex
-        assert_equal(samples[0].details.accepted, True)
-        assert_equal(samples[1].details.accepted, False)
-        assert_equal(samples[2].details.accepted, False)
+        assert_equal(change[0].accepted, True)
+        assert_equal(change[1].accepted, False)
 
     def test_repex_fails_innermost_crosses_state(self):
         innermost_crosses_to_state = make_1d_traj([-0.11, 0.5, 1.8])
@@ -799,9 +816,12 @@ class testMinusMover(object):
         
         change = self.mover.move(gs).opened
         samples = change.all_samples
+        print change
+        print samples
+        print list(change)
         assert_equal(self.innermost(innermost_crosses_to_state), True)
         assert_equal(len(samples), 3) # stop after failed repex
-        assert_sample_set_accepted(samples, [True, False, False])
+        assert_subchanges_set_accepted(change, [True, False, False])
 
     def test_repex_fails_minus_crosses_to_state(self):
         minus_crosses_to_state = make_1d_traj(
@@ -824,7 +844,7 @@ class testMinusMover(object):
         change = self.mover.move(gs).opened
         samples = change.all_samples
         assert_equal(len(samples), 3) # stop after failed repex
-        assert_sample_set_accepted(samples, [True, False, False])
+        assert_subchanges_set_accepted(change, [True, False, False])
 
     def test_extension_fails(self):
         innermost_bad_extension = [-0.25, 0.1, 0.5, 0.1, -0.25]
@@ -841,7 +861,7 @@ class testMinusMover(object):
         change = self.mover.move(gs).opened
         samples = change.all_samples
         assert_equal(len(samples), 5) # reject the last one
-        assert_sample_set_accepted(samples, [True] * 4 + [False])
+        assert_subchanges_set_accepted(change, [True] * 4 + [False])
         # this only happens due to length
-        assert_equal(len(samples[-1].details.trial),
+        assert_equal(len(change[-1][0].details.trial),
                      len(traj_bad_extension)+self.dyn.n_frames_max-1)

@@ -93,7 +93,7 @@ class PathMoveChange(object):
         return obj
 
     def __iter__(self):
-        yield self
+#        yield self
         for subchange in self.subchanges:
             yield subchange
 
@@ -323,6 +323,7 @@ class PathMoveChange(object):
 
         """
         if self._collapsed_samples is None:
+            print 'Collapse', self.__class__, self.samples
             s = paths.SampleSet([]).apply_samples(self.samples)
 
             # keep order just for being thorough
@@ -513,7 +514,6 @@ class CollapsedMovePath(SamplePathMoveChange):
     @property
     def collapsed_samples(self):
         if self._collapsed_samples is None:
-
             self._collapsed_samples = self._local_samples
 
         return self._collapsed_samples
@@ -654,7 +654,7 @@ class ConditionalSequentialMovePath(SequentialPathMoveChange):
         changes = []
         for subchange in self.subchanges:
             if subchange.accepted:
-                changes.extend(subchange)
+                changes.extend(subchange.samples)
             else:
                 return []
 

@@ -152,6 +152,8 @@ class SampleSet(object):
         else:
             newset = self
         for sample in samples:
+            if type(sample) is not paths.Sample:
+                raise ValueError('No SAMPLE!')
             # TODO: should time be a property of Sample or SampleSet?
             sample.step = step
             if sample.intermediate == False:
