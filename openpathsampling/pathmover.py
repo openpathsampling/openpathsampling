@@ -891,7 +891,7 @@ class RandomSubtrajectorySelectMover(PathMover):
             ensembles=ensembles, replicas=replicas
         )
         self.n_l=n_l
-        self._subensemble = subensemble
+        self.subensemble = subensemble
 
     def _choose(self, trajectory_list):
         return random.choice(trajectory_list)
@@ -907,7 +907,7 @@ class RandomSubtrajectorySelectMover(PathMover):
         details.inputs = [rep_sample]
         details.mover = self
 
-        subtrajs = self._subensemble.split(trajectory)
+        subtrajs = self.subensemble.split(trajectory)
         logger.debug("Found "+str(len(subtrajs))+" subtrajectories.")
 
 #        if self.n_l is None:
@@ -932,7 +932,7 @@ class RandomSubtrajectorySelectMover(PathMover):
         sample = paths.Sample(
             replica=replica,
             trajectory=details.result,
-            ensemble=self._subensemble,
+            ensemble=self.subensemble,
             details=details
         )
         path = paths.SampleMovePath( [sample], mover=self, accepted=details.accepted)
@@ -1222,6 +1222,7 @@ class CalculationMover(PathMover):
     This just wraps a mover and references the used calculation
     """
     def __init__(self, mover, calculation):
+        super(CalculationMover, self).__init__()
         self.mover = mover
         self.calculation = calculation
 
