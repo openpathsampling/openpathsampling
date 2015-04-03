@@ -19,7 +19,7 @@ class WHAM(object):
 
     def __init__(self, tol=1e-10, max_iter=1000000, cutoff=0.05):
         """
-        Initialize (empty) WHAM calculation object.
+        Initialize (empty) WHAM pathsimulator object.
 
         Parameters
         ----------

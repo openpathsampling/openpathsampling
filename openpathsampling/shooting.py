@@ -210,10 +210,10 @@ class UniformSelector(ShootingPointSelector):
         return 1.0
     
     def sum_bias(self, trajectory):
-        return float(trajectory.frames - self.pad_start - self.pad_end)
+        return float(len(trajectory) - self.pad_start - self.pad_end)
         
     def pick(self, trajectory):
-        idx = np.random.random_integers(self.pad_start, trajectory.frames - self.pad_end - 1)
+        idx = np.random.random_integers(self.pad_start, len(trajectory) - self.pad_end - 1)
         
         point = ShootingPoint(self, trajectory, idx, f = 1.0, sum_bias= self.sum_bias(trajectory))
         
