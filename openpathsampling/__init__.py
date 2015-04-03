@@ -26,7 +26,6 @@ from pathmover import (
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
     CollapseMove, PathSimulatorMover, PathReversalSet,
     NeighborEnsembleReplicaExchange
-    #, BootstrapPromotionMove
 )
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
