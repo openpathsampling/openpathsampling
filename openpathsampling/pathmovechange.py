@@ -327,7 +327,6 @@ class PathMoveChange(object):
 
         """
         if self._collapsed_samples is None:
-            print 'Collapse', self.__class__, self.samples
             s = paths.SampleSet([]).apply_samples(self.samples)
 
             # keep order just for being thorough
