@@ -4,12 +4,11 @@
 
 import mdtraj as md
 import openpathsampling as paths
-from openpathsampling.todict import restores_as_stub_object
 import chaindict as cd
 import collections
+from openpathsampling.todict import ops_object
 
-
-@restores_as_stub_object
+@ops_object
 class OrderParameter(cd.Wrap):
     """
     Wrapper for a function that maps a snapshot to a number.
@@ -35,26 +34,32 @@ class OrderParameter(cd.Wrap):
     """
 
     def __init__(self, name, dimensions=1):
-        if type(name) is str and len(name) == 0:
+        if (type(name) is not str and type(name) is not unicode) or len(name) == 0:
+            print type(name), len(name)
             raise ValueError('name must be a non-empty string')
+
+        self.name = name
 
         self.pre_dict = cd.Transform(self._pre_item)
         self.multi_dict = cd.ExpandMulti()
         self.store_dict = cd.MultiStore('collectivevariable', name,
                                             dimensions, self)
         self.cache_dict = cd.ChainDict()
-        self.expand_dict = cd.UnwrapTuple()
-        self.func_dict = cd.Function(None)
         if hasattr(self, '_eval'):
-            self.func_dict._eval = self._eval
-        else:
-            self.func_dict._eval = None
+            self.expand_dict = cd.UnwrapTuple()
+            self.func_dict = cd.Function(None)
 
-        self.name = name
-        super(OrderParameter, self).__init__(
-            post=self.func_dict + self.expand_dict + self.cache_dict +
-                 self.store_dict + self.multi_dict + self.pre_dict
-        )
+            self.func_dict._eval = self._eval
+
+            super(OrderParameter, self).__init__(
+                post=self.func_dict + self.expand_dict + self.cache_dict +
+                     self.store_dict + self.multi_dict + self.pre_dict
+            )
+
+        else:
+            super(OrderParameter, self).__init__(
+                post=self.cache_dict + self.store_dict + self.multi_dict + self.pre_dict
+            )
 
         self._stored = False
 
@@ -112,7 +117,7 @@ class OrderParameter(cd.Wrap):
             return None
 
 
-@restores_as_stub_object
+@ops_object
 class OP_RMSD_To_Lambda(OrderParameter):
     """
     Transforms the RMSD from `center` to a value between zero and one.
@@ -181,7 +186,7 @@ class OP_RMSD_To_Lambda(OrderParameter):
         return map(self._scale_fnc(self.min_lambda, self.max_lambda), results)
 
 
-@restores_as_stub_object
+@ops_object
 class OP_Featurizer(OrderParameter):
     """
     An OrderParameter that uses an MSMBuilder3 featurizer as the logic
@@ -226,7 +231,7 @@ class OP_Featurizer(OrderParameter):
         return result
 
 
-@restores_as_stub_object
+@ops_object
 class OP_MD_Function(OrderParameter):
     """Make `OrderParameter` from `fcn` that takes mdtraj.trajectory as input.
 
@@ -269,7 +274,7 @@ class OP_MD_Function(OrderParameter):
         return self.fcn(t, *args, **self.kwargs)
 
 
-@restores_as_stub_object
+@ops_object
 class OP_Volume(OrderParameter):
     """ Make `Volume` into `OrderParameter`: maps to 0.0 or 1.0 """
 
@@ -288,7 +293,7 @@ class OP_Volume(OrderParameter):
         return result
 
 
-@restores_as_stub_object
+@ops_object
 class OP_Function(OrderParameter):
     """Make any function `fcn` into an `OrderParameter`.
 
