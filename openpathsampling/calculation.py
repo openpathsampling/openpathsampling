@@ -212,6 +212,7 @@ class PathSampling(Calculation):
             samples = movepath.samples
             self.globalstate = self.globalstate.apply_samples(samples, step=step)
             self.globalstate.movepath = movepath
+            self.globalstate.sanity_check()
             if self.storage is not None:
                 self.globalstate.save(self.storage)
                 self.storage.sync()

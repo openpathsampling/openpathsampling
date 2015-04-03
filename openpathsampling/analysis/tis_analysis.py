@@ -53,6 +53,10 @@ def pathlength(sample):
 def max_lambdas(sample, orderparameter):
     return max([orderparameter(frame) for frame in sample.trajectory])
 
+def sampleset_sample_generator(storage):
+    for sset in storage.sampleset:
+        for sample in sset:
+            yield sample
 
 class Histogrammer(object):
     """
@@ -249,25 +253,37 @@ class TISTransition(Transition):
         else:
             run_it = self.ensemble_histogram_info.keys()
 
-        buflen = 10
         for hist in run_it:
-            in_ens_samples = (s for s in samples if s.ensemble == ensemble)
             hist_info = self.ensemble_histogram_info[hist]
             if hist not in self.histograms.keys():
                 self.histograms[hist] = {}
             self.histograms[hist][ensemble] = Histogram(**(hist_info.hist_args))
-            hist_data = []
-            for sample in in_ens_samples:
-                hist_data.append(hist_info.f(sample, **hist_info.f_args))
-            self.histograms[hist][ensemble].histogram(hist_data, weights)
+
+        in_ens_samples = (s for s in samples if s.ensemble == ensemble)
+        hist_data = {}
+        buflen = -1
+        sample_buf = []
+        for sample in in_ens_samples:
+            for hist in run_it:
+                hist_info = self.ensemble_histogram_info[hist]
+                hist_data_sample = hist_info.f(sample, **hist_info.f_args)
+                try:
+                    hist_data[hist].append(hist_data_sample)
+                except KeyError:
+                    hist_data[hist] = [hist_data_sample]
+
+
+        for hist in run_it:
+            self.histograms[hist][ensemble].histogram(hist_data[hist], weights)
             self.histograms[hist][ensemble].name = (hist + " " + self.name
                                                     + " " + ensemble.name)
 
 
-    def all_statistics(self, samples, weights=None, force=False):
+    def all_statistics(self, storage, weights=None, force=False):
         # TODO: speed this up by just running over all samples once and
         # dealing them out to the appropriate histograms
         for ens in self.ensembles:
+            samples = sampleset_sample_generator(storage)
             self.ensemble_statistics(ens, samples, weights, force)
 
     def pathlength_histogram(self, ensemble):
