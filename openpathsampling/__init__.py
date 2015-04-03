@@ -4,7 +4,7 @@ from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     EntersXEnsemble, EmptyEnsemble, ExitsXEnsemble, FullEnsemble, \
     HitXEnsemble, InXEnsemble, OutXEnsemble, WrappedEnsemble, \
     BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble, \
-    LeaveXEnsemble, LengthEnsemble, LoadedEnsemble, NegatedEnsemble, \
+    LeaveXEnsemble, LengthEnsemble, NegatedEnsemble, \
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \
     SequentialEnsemble, AndEnsemble, OrEnsemble, XorEnsemble, SubEnsemble, \
     SingleFrameEnsemble, MinusInterfaceEnsemble
@@ -39,8 +39,7 @@ from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
     EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, AndVolume, \
     OrVolume, XorVolume, SubVolume
 
-from todict import ObjectJSON, restores_as_full_object, \
-    restores_as_stub_object, class_list
+from todict import ObjectJSON, ops_object, class_list
 
 from tools import empty_snapshot_from_openmm_topology, snapshot_from_pdb, \
     to_openmm_topology, trajectory_from_mdtraj, units_from_snapshot
@@ -55,7 +54,8 @@ from toy_dynamics.toy_engine import ToyEngine
 from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
     LeapfrogVerletIntegrator
 
-from analysis.tis_analysis import TISTransition, RETISTransition
+from analysis.tis_analysis import TISTransition, RETISTransition, Transition, \
+    TPSTransition
 
 from movepath import (EmptyMovePath, ConditionalSequentialMovePath,
                       MovePath, PartialAcceptanceSequentialMovePath,

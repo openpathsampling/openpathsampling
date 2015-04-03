@@ -1,6 +1,9 @@
 from histogram import Histogram
+from wham import WHAM
 import openpathsampling as paths
-from openpathsampling.todict import restores_as_full_object
+from openpathsampling.todict import ops_object
+
+import inspect
 
 import time 
 
@@ -70,7 +73,7 @@ class Histogrammer(object):
         self._hist_args = val
         self.empty_hist = Histogram(**self._hist_args)
 
-
+@ops_object
 class Transition(object):
     """
     Describes (in general) a transition between two states.
@@ -81,14 +84,27 @@ class Transition(object):
         self.stateB = stateB
 
         self._mover_acceptance = {}
-        pass
 
     def calculate_mover_acceptance(self, samples):
         for sample in samples:
             pass
         pass
 
+    def to_dict(self):
+        return {
+            'stateA' : self.stateA,
+            'stateB' : self.stateB,
+            'movers' : self.movers
+        }
 
+    @staticmethod
+    def from_dict(dct):
+        return Transition(
+            stateA=dct['stateA'],
+            stateB=dct['stateB']
+        )
+
+@ops_object
 class TPSTransition(Transition):
     """
     Transition using TPS ensembles
@@ -100,8 +116,7 @@ class TPSTransition(Transition):
         self.movers['pathreversal'] = []
         #self.ensembles = [paths.TPSEnsemble(stateA, stateB)]
 
-
-@restores_as_full_object
+@ops_object
 class TISTransition(Transition):
     """
     Transition using TIS ensembles.
@@ -130,6 +145,7 @@ class TISTransition(Transition):
         super(TISTransition, self).__init__(stateA, stateB)
         # NOTE: making these into dictionaries like this will make it easy
         # to combine them in order to make a PathSampling calculation object
+
 
         self.stateA = stateA
         self.stateB = stateB
@@ -173,7 +189,6 @@ class TISTransition(Transition):
             )
         }
 
-
     def to_dict(self):
         ret_dict = {
             'stateA' : self.stateA,
@@ -187,16 +202,16 @@ class TISTransition(Transition):
         return ret_dict
 
     @staticmethod
-    def from_dict(adict):
-        mytrans = TISTransition(
-            stateA=adict['stateA'],
-            stateB=adict['stateB'],
-            interfaces=adict['interfaces'],
-            orderparameter=adict['orderparameter'],
-            name=adict['name']
+    def from_dict(dct):
+        mytrans = paths.TISTransition(
+            stateA=dct['stateA'],
+            stateB=dct['stateB'],
+            interfaces=dct['interfaces'],
+            orderparameter=dct['orderparameter'],
+            name=dct['name']
         )
-        mytrans.movers = adict['movers']
-        mytrans.ensembles = adict['ensembles']
+        mytrans.movers = dct['movers']
+        mytrans.ensembles = dct['ensembles']
         return mytrans
 
     def build_ensembles(self, stateA, stateB, interfaces):
@@ -315,12 +330,11 @@ class TISTransition(Transition):
         )
         return root_mover
 
-
+@ops_object
 class RETISTransition(TISTransition):
     """Transition class for RETIS."""
     def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
-        super(RETISTransition, self).__init__(stateA, stateB, interfaces,
-                                              orderparameter, name)
+        super(RETISTransition, self).__init__(stateA, stateB, interfaces, orderparameter, name)
 
         self.minus_ensemble = paths.MinusInterfaceEnsemble(
             state_vol=stateA, 
@@ -335,6 +349,34 @@ class RETISTransition(TISTransition):
             self.movers['minus']
         except KeyError:
             self.movers['minus'] = paths.MinusMover(self.minus_ensemble, self.ensembles[0])
+
+
+    def to_dict(self):
+        ret_dict = {
+            'stateA' : self.stateA,
+            'stateB' : self.stateB,
+            'orderparameter' : self.orderparameter,
+            'interfaces' : self.interfaces,
+            'name' : self.name,
+            'movers' : self.movers,
+            'ensembles' : self.ensembles,
+            'minus_ensemble' : self.minus_ensemble
+        }
+        return ret_dict
+
+    @staticmethod
+    def from_dict(dct):
+        mytrans = RETISTransition(
+            stateA=dct['stateA'],
+            stateB=dct['stateB'],
+            interfaces=dct['interfaces'],
+            orderparameter=dct['orderparameter'],
+            name=dct['name']
+        )
+        mytrans.minus_ensemble = dct['minus_ensemble']
+        mytrans.movers = dct['movers']
+        mytrans.ensembles = dct['ensembles']
+        return mytrans
 
 
     @property
@@ -367,7 +409,7 @@ class RETISTransition(TISTransition):
     def rate(self, flux=None, flux_error=None, force=False):
         tcp = self.total_crossing_probability()
         if flux is None:
-            (flux, flux_error) = self.minus_move_flux()
+            (flux, flux_error) = self.minus_move_flux
 
         pass
 
@@ -408,7 +450,7 @@ def summarize_trajectory(trajectory, label_dict):
     last_vol = None
     count = 0
     segment_labels = []
-    for frame in traj:
+    for frame in trajectory:
         in_state = []
         for key in label_dict.keys():
             if label_dict[key](frame):
