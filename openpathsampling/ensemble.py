@@ -606,6 +606,8 @@ class SequentialEnsemble(Ensemble):
         self.max_overlap = max_overlap
         self.greedy = greedy
 
+        self._cache = { }
+
         # sanity checks
         if len(self.min_overlap) != len(self.max_overlap):
             raise ValueError("len(min_overlap) != len(max_overlap)")
@@ -614,6 +616,23 @@ class SequentialEnsemble(Ensemble):
         for i in range(len(self.min_overlap)):
             if min_overlap[i] > max_overlap[i]:
                 raise ValueError("min_overlap greater than max_overlap!")
+
+    def _check_cache(self, trajectory=None, function=None):
+        """Checks and resets (if necessary) the sequential ensemble cache.
+        
+        The cache is used to speed up the sequential ensemble calculation by
+        resuming a point from a previous trajectory."""
+        self._cache['function'] = function
+        self._cache['ens_num'] = 0
+        self._cache['subtraj_first'] = 0
+        self._cache['subtraj_final'] = -1
+        if trajectory is not None:
+            self._cache['first_snap'] = trajectory[0]
+            self._cache['final_snap'] = trajectory[-1]
+        else:
+            self._cache['first_snap'] = None
+            self._cache['final_snap'] = None
+
 
     def transition_frames(self, trajectory, lazy=None):
         # it is easiest to understand this decision tree as a simplified
