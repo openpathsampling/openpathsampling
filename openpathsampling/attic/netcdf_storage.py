@@ -203,9 +203,9 @@ class NetCDFStorage(object):
         ncgrp_options = self.ncfile.createGroup(group_name)
         
         # Store run parameters.
-        for obj_name in obj.options_to_store:
+        for obj_uid in obj.options_to_store:
             # Get option value.
-            option_value = getattr(obj, obj_name)
+            option_value = getattr(obj, obj_uid)
             # If Quantity, strip off units first.
             option_unit = None
             if type(option_value) == units.Quantity:
@@ -217,22 +217,22 @@ class NetCDFStorage(object):
             if type(option_value) == bool:
                 option_value = int(option_value)
             # Store the variable.
-#            if self.verbose_root: print "Storing option: %s -> %s (type: %s)" % (obj_name, option_value, str(option_type))
+#            if self.verbose_root: print "Storing option: %s -> %s (type: %s)" % (obj_uid, option_value, str(option_type))
 # TODO: Include list type ?
             if type(option_value) == str:
-                ncvar = ncgrp_options.createVariable(obj_name, type(option_value), 'scalar')
+                ncvar = ncgrp_options.createVariable(obj_uid, type(option_value), 'scalar')
                 packed_data = numpy.empty(1, 'O')
                 packed_data[0] = option_value
                 ncvar[:] = packed_data
             else:
-                ncvar = ncgrp_options.createVariable(obj_name, type(option_value))
+                ncvar = ncgrp_options.createVariable(obj_uid, type(option_value))
                 ncvar.assignValue(option_value)
             if option_unit: setattr(ncvar, 'units', str(option_unit))
             setattr(ncvar, 'type', option_type.__name__) 
 
         return
 
-    def _store_single_options(self, ncgrp, obj_name, obj):
+    def _store_single_options(self, ncgrp, obj_uid, obj):
         """
         Store run parameters in NetCDF file.
 
@@ -260,19 +260,19 @@ class NetCDFStorage(object):
         if type(option_value) == bool:
             option_value = int(option_value)
         # Store the variable.
-#            if self.verbose_root: print "Storing option: %s -> %s (type: %s)" % (obj_name, option_value, str(option_type))
+#            if self.verbose_root: print "Storing option: %s -> %s (type: %s)" % (obj_uid, option_value, str(option_type))
 
         if option_type.__module__ != '__builtin__':
             # non of the standard cases -> use pickle to serialize
             option_value = pickle.dumps(option_value)
             
         if type(option_value) == str:
-            ncvar = ncgrp_options.createVariable(option_name, type(option_value), 'scalar')
+            ncvar = ncgrp_options.createVariable(option_uid, type(option_value), 'scalar')
             packed_data = numpy.empty(1, 'O')
             packed_data[0] = option_value
             ncvar[:] = packed_data
         else:
-            ncvar = ncgrp_options.createVariable(option_name, type(option_value))
+            ncvar = ncgrp_options.createVariable(option_uid, type(option_value))
             ncvar.assignValue(option_value)
             
         if option_unit: 
@@ -302,9 +302,9 @@ class NetCDFStorage(object):
         ncgrp_options = self.ncfile.groups[group_name]
 
         # Load run parameters.
-        for obj_name in ncgrp_options.variables.keys():
+        for obj_uid in ncgrp_options.variables.keys():
             # Get NetCDF variable.
-            option_ncvar = ncgrp_options.variables[obj_name]
+            option_ncvar = ncgrp_options.variables[obj_uid]
             # Get option value.
             option_value = option_ncvar[0]
             # Cast to Python type.
@@ -318,8 +318,8 @@ class NetCDFStorage(object):
                 option_unit = eval(option_unit_name, vars(units))
                 option_value = units.Quantity(option_value, option_unit)
             # Store option.
-            if self.verbose_root: print "Restoring option: %s -> %s (type: %s)" % (obj_name, str(option_value), type(option_value))
-            setattr(obj, obj_name, option_value)
+            if self.verbose_root: print "Restoring option: %s -> %s (type: %s)" % (obj_uid, str(option_value), type(option_value))
+            setattr(obj, obj_uid, option_value)
             
         # Signal success.
         return True
