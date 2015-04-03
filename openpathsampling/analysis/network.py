@@ -28,6 +28,11 @@ class TISNetwork(TransitionNetwork):
     def default_mover(self):
         pass
 
+def join_ms_outer(outers):
+    pass
+
+def join_mis_minus(minuses):
+    pass
 
 class MSTISNetwork(TISNetwork):
     def __init__(self, trans_info):
