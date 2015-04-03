@@ -595,10 +595,10 @@ class ObjectStore(object):
         """
         # define dimensions used for the specific object
         self.storage.createDimension(self.idx_dimension, 0)
-        if self.has_name:
-            self.init_variable(self.db + "_name", 'str',
-                description='A short descriptive name for convenience',
-                chunksizes=tuple([10240]))
+#        if self.has_name:
+#            self.init_variable(self.db + "_name", 'str',
+#                description='A short descriptive name for convenience',
+#                chunksizes=tuple([10240]))
 
         if self.has_uid:
             self.init_variable(self.db + "_uid", 'str',
