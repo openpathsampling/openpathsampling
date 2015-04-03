@@ -161,8 +161,8 @@ if __name__ == '__main__':
 
     headline("SampleSets")
 
-    for p_idx in range(0, storage.sample_sets.count()):
-        obj = storage.sample_sets.load(p_idx)
+    for p_idx in range(0, storage.samplesets.count()):
+        obj = storage.samplesets.load(p_idx)
         nline(p_idx, str(len(obj.samples)) + ' sample(s)', [storage.idx(sample) for sample in obj.samples ])
         print indent(str(obj.movepath),16)
 

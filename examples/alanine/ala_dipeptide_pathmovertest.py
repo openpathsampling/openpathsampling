@@ -211,7 +211,7 @@ use PartOutEnsemble as we typically do with TIS paths.
     forth_set = third_set + third_path
     print interface0_ensemble(forth_set[0].trajectory)
 
-    engine.storage.sample_sets.save(forth_set)
+    engine.storage.samplesets.save(forth_set)
 
     exit()
 

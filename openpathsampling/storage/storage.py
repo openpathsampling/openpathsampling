@@ -64,7 +64,7 @@ class Storage(netcdf.Dataset):
         self.configurations = paths.storage.ConfigurationStore(storage)
         self.momentum = paths.storage.MomentumStore(storage)
         self.samples = paths.storage.SampleStore(storage)
-        self.sample_sets = paths.storage.SampleSetStore(storage)
+        self.samplesets = paths.storage.SampleSetStore(storage)
 
         self.collectivevariables = paths.storage.ObjectDictStore(storage, paths.CollectiveVariable, paths.Snapshot)
         self.cvs = self.collectivevariables
@@ -92,7 +92,7 @@ class Storage(netcdf.Dataset):
 
         self._objects = { name : getattr(self, name) for name in
                   ['trajectories', 'snapshots', 'configurations',
-                   'samples', 'sample_sets', 'collectivevariables',
+                   'samples', 'samplesets', 'collectivevariables',
                    'cvs', 'pathmovers', 'movedetails', 'shootingpoints',
                    'shootingpointselectors', 'engines',
                    'pathsimulators', 'volumes', 'ensembles',
