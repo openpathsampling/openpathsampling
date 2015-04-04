@@ -207,7 +207,7 @@ class TISTransition(Transition):
             stateA=dct['stateA'],
             stateB=dct['stateB'],
             interfaces=dct['interfaces'],
-            orderparameter=dct['orderparameter'],
+            collectivevariable=dct['collectivevariable'],
             name=dct['name']
         )
         mytrans.movers = dct['movers']
@@ -333,8 +333,8 @@ class TISTransition(Transition):
 @ops_object
 class RETISTransition(TISTransition):
     """Transition class for RETIS."""
-    def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
-        super(RETISTransition, self).__init__(stateA, stateB, interfaces, orderparameter, name)
+    def __init__(self, stateA, stateB, interfaces, collectivevariable=None, name=None):
+        super(RETISTransition, self).__init__(stateA, stateB, interfaces, collectivevariable, name)
 
         self.minus_ensemble = paths.MinusInterfaceEnsemble(
             state_vol=stateA, 
@@ -355,7 +355,7 @@ class RETISTransition(TISTransition):
         ret_dict = {
             'stateA' : self.stateA,
             'stateB' : self.stateB,
-            'orderparameter' : self.orderparameter,
+            'collectivevariable' : self.collectivevariable,
             'interfaces' : self.interfaces,
             'name' : self.name,
             'movers' : self.movers,
@@ -370,7 +370,7 @@ class RETISTransition(TISTransition):
             stateA=dct['stateA'],
             stateB=dct['stateB'],
             interfaces=dct['interfaces'],
-            orderparameter=dct['orderparameter'],
+            collectivevariable=dct['collectivevariable'],
             name=dct['name']
         )
         mytrans.minus_ensemble = dct['minus_ensemble']
