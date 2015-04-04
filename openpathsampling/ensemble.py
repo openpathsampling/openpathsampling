@@ -607,6 +607,7 @@ class SequentialEnsemble(Ensemble):
         self.greedy = greedy
 
         self._cache = { }
+        self._check_cache()
 
         # sanity checks
         if len(self.min_overlap) != len(self.max_overlap):
@@ -617,29 +618,49 @@ class SequentialEnsemble(Ensemble):
             if min_overlap[i] > max_overlap[i]:
                 raise ValueError("min_overlap greater than max_overlap!")
 
-    def _check_cache(self, trajectory=None, function=None):
+    def _check_cache(self, trajectory=None, function=None, reset=None):
         """Checks and resets (if necessary) the sequential ensemble cache.
         
         The cache is used to speed up the sequential ensemble calculation by
-        resuming a point from a previous trajectory."""
-        self._cache['function'] = function
-        self._cache['ens_num'] = 0
-        self._cache['subtraj_first'] = 0
-        self._cache['subtraj_final'] = -1
-        if trajectory is not None:
-            self._cache['first_snap'] = trajectory[0]
-            self._cache['final_snap'] = trajectory[-1]
-        else:
-            self._cache['first_snap'] = None
-            self._cache['final_snap'] = None
+        resuming a point from a previous trajectory. It resets if the
+        function has changed or if the trajectory has changed (or if a reset
+        is forced by calling with reset=True).
+        """
+        if reset is None and function == self._cache['function']:
+            reset = (
+                (
+                    (function == "can_append" or function == "call") and 
+                    trajectory[0] == self._cache['first_snap']
+                ) or (
+                    function == "can_prepend" and
+                    trajectory[-1] == self._cache['final_snap']
+                )
+            )
+
+        if reset:
+            self._cache['function'] = function
+            self._cache['ens_num'] = 0
+            self._cache['subtraj_first'] = 0
+            self._cache['subtraj_final'] = -1
+            self._cache['ens_first'] = 0
+            self._cache['ens_final'] = -1
+            if trajectory is not None:
+                self._cache['first_snap'] = trajectory[0]
+                self._cache['final_snap'] = trajectory[-1]
+            else:
+                self._cache['first_snap'] = None
+                self._cache['final_snap'] = None
 
 
     def transition_frames(self, trajectory, lazy=None):
         # it is easiest to understand this decision tree as a simplified
         # version of the can_append decision tree; see that for detailed
         # comments
+        self._check_cache(trajectory, function="call")
+
         ens_num = 0
         subtraj_first = 0
+
         traj_final = len(trajectory)
         final_ens = len(self.ensembles)-1
         transitions = []
@@ -746,13 +767,15 @@ class SequentialEnsemble(Ensemble):
         # (b) return False (we can't append)
         # (c) loop around to text another subtrajectory (we can't tell)
         # Returning false can only happen if all ensembles have been tested
-        traj_final = len(trajectory)
-        final_ens = len(self.ensembles)-1
-        #print traj_final, final_ens
+        self._check_cache(trajectory, function="can_append")
+
         subtraj_first = 0
         ens_num = 0
         ens_first = 0
 
+        traj_final = len(trajectory)
+        final_ens = len(self.ensembles)-1
+        #print traj_final, final_ens
         # logging startup
         logger.debug("Beginning can_append")
         for ens in self.ensembles:
