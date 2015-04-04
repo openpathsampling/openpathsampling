@@ -626,16 +626,19 @@ class SequentialEnsemble(Ensemble):
         function has changed or if the trajectory has changed (or if a reset
         is forced by calling with reset=True).
         """
-        if reset is None and function == self._cache['function']:
-            reset = (
-                (
-                    (function == "can_append" or function == "call") and 
-                    trajectory[0] == self._cache['first_snap']
-                ) or (
-                    function == "can_prepend" and
-                    trajectory[-1] == self._cache['final_snap']
+        try:
+            if reset is None and function == self._cache['function']:
+                reset = (
+                    (
+                        (function == "can_append" or function == "call") and 
+                        trajectory[0] == self._cache['first_snap']
+                    ) or (
+                        function == "can_prepend" and
+                        trajectory[-1] == self._cache['final_snap']
+                    )
                 )
-            )
+        except KeyError:
+            reset = True
 
         if reset:
             self._cache['function'] = function
