@@ -2,9 +2,9 @@ from pathsimulator import PathSimulator, Bootstrapping, PathSampling
 
 from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     EntersXEnsemble, EmptyEnsemble, ExitsXEnsemble, FullEnsemble, \
-    PartInEnsemble, AllInEnsemble, AllOutEnsemble, WrappedEnsemble, \
+    PartInXEnsemble, AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble, \
     BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble, \
-    PartOutEnsemble, LengthEnsemble, NegatedEnsemble, \
+    PartOutXEnsemble, LengthEnsemble, NegatedEnsemble, \
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \
     SequentialEnsemble, IntersectionEnsemble, UnionEnsemble, \
     SymmetricDifferenceEnsemble, RelativeComplementEnsemble, \

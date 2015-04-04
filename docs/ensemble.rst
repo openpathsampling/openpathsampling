@@ -25,10 +25,10 @@ Volume Ensembles
     :toctree: api/generated/
 
 	VolumeEnsemble
-	AllInEnsemble
-	AllOutEnsemble
-        PartInEnsemble
-	PartOutEnsemble
+	AllInXXEnsemble
+	AllOutXXEnsemble
+        PartInXXEnsemble
+	PartOutXXEnsemble
 	
 Set-based Ensemble combinations
 -----------------------------
