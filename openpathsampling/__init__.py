@@ -2,11 +2,12 @@ from calculation import Calculation, Bootstrapping, PathSampling
 
 from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     EntersXEnsemble, EmptyEnsemble, ExitsXEnsemble, FullEnsemble, \
-    HitXEnsemble, InXEnsemble, OutXEnsemble, WrappedEnsemble, \
+    PartInXEnsemble, AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble, \
     BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble, \
-    LeaveXEnsemble, LengthEnsemble, NegatedEnsemble, \
+    PartOutXEnsemble, LengthEnsemble, NegatedEnsemble, \
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \
-    SequentialEnsemble, AndEnsemble, OrEnsemble, XorEnsemble, SubEnsemble, \
+    SequentialEnsemble, IntersectionEnsemble, UnionEnsemble, \
+    SymmetricDifferenceEnsemble, RelativeComplementEnsemble, \
     SingleFrameEnsemble, MinusInterfaceEnsemble
 
 from snapshot import Snapshot, Configuration, Momentum
@@ -36,8 +37,9 @@ from dynamics_engine import DynamicsEngine
 from openmm_engine import OpenMMEngine
 
 from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
-    EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, AndVolume, \
-    OrVolume, XorVolume, SubVolume
+    EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, \
+    IntersectionVolume, \
+    UnionVolume, SymmetricDifferenceVolume, RelativeComplementVolume
 
 from todict import ObjectJSON, ops_object, class_list
 

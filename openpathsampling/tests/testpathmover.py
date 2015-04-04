@@ -542,8 +542,8 @@ class SubtrajectorySelectTester(object):
     def setup(self):
         op = CallIdentity()
         vol = paths.LambdaVolume(op, -0.5, 0.5)
-        inX = paths.InXEnsemble(vol)
-        outX = paths.OutXEnsemble(vol)
+        inX = paths.AllInXEnsemble(vol)
+        outX = paths.AllOutXEnsemble(vol)
         self.ensemble = paths.SequentialEnsemble([
             inX, outX, inX, outX, inX, outX, inX
         ])

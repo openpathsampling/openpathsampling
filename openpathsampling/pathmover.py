@@ -474,7 +474,7 @@ class BackwardShootMover(ShootMover):
         #setattr(details, 'new_partial', partial_trajectory.reversed)
 
         details.trial = partial_trajectory.reversed + details.start[details.start_point.index + 1:]
-        details.final_point = paths.ShootingPoint(self.selector, details.trial, partial_trajectory.frames - 1)
+        details.final_point = paths.ShootingPoint(self.selector, details.trial, len(partial_trajectory) - 1)
 
         pass
 
