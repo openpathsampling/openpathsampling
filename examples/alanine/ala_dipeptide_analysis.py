@@ -6,8 +6,8 @@ from collectivevariable import CV_Function
 from snapshot import Snapshot, Configuration
 from volume import LambdaVolumePeriodic
 from ensemble import EnsembleFactory as ef
-from ensemble import (LengthEnsemble, SequentialEnsemble, AllOutEnsemble,
-                      AllInEnsemble)
+from ensemble import (LengthEnsemble, SequentialEnsemble, AllOutXEnsemble,
+                      AllInXEnsemble)
 from storage import Storage
 from trajectory import Trajectory
 
