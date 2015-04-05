@@ -797,6 +797,7 @@ class testSequentialEnsemble(EnsembleTest):
         raise SkipTest
 
 
+
     def test_str(self):
         assert_equal(self.pseudo_tis.__str__(), """[
 (
@@ -815,6 +816,26 @@ and
   len(x) = 1
 )
 ]""")
+
+
+class testSequentialEnsembleCaching(EnsembleTest):
+    """Tests for the faster SequentialEnsemble with caching."""
+    def setUp(self):
+        pass
+
+    def test_sequential_cache_reset(self):
+        raise SkipTest
+
+    def test_sequential_caching_can_append(self):
+        raise SkipTest
+
+    def test_sequential_caching_call(self):
+        raise SkipTest
+
+    def test_sequential_caching_can_prepend(self):
+        raise SkipTest
+
+
 
 class testSlicedTrajectoryEnsemble(EnsembleTest):
     def test_sliced_ensemble_init(self):
