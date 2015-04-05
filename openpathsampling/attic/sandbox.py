@@ -13,7 +13,7 @@ from openpathsampling.ensemble import EnsembleFactory as ef
 import time
 from openpathsampling.pathmover import ForwardShootMover, BackwardShootMover, PathMover, MixedMover
 from openpathsampling.shooting import UniformSelector
-from openpathsampling.ensemble import LengthEnsemble, AllInEnsemble, AllOutEnsemble
+from openpathsampling.ensemble import LengthEnsemble, AllInXEnsemble, AllOutXEnsemble
 from openpathsampling.trajectory import Trajectory
 from pymbar import MBAR
 from openpathsampling.snapshot import Snapshot
@@ -122,13 +122,13 @@ if __name__ == '__main__':
         en = ef.A2BEnsemble(lV, lV, True)
         print en(tt)
 
-        en = AllInEnsemble(lV, 0)
+        en = AllInXEnsemble(lV, 0)
         print en(tt)
 
-        en = AllInEnsemble(lV, -1)
+        en = AllInXEnsemble(lV, -1)
         print en(tt)
 
-        en = AllOutEnsemble(lV, slice(1,-1), lazy = False)
+        en = AllOutXEnsemble(lV, slice(1,-1), lazy = False)
         print en(tt)
 
         storage.ensembles.save(en)
@@ -173,13 +173,13 @@ if __name__ == '__main__':
         en = ef.A2BEnsemble(lV, lV, True)
         print en(pth.details.final)
 
-        en = AllInEnsemble(lV, 0)
+        en = AllInXEnsemble(lV, 0)
         print en(pth.details.final)
 
-        en = AllInEnsemble(lV, -1)
+        en = AllInXEnsemble(lV, -1)
         print en(pth.details.final)
 
-        en = AllOutEnsemble(lV, slice(1, -1), lazy = False)
+        en = AllOutXEnsemble(lV, slice(1, -1), lazy = False)
         print en(pth.details.final)
 
         op.save(storage=storage.collectivevariables)

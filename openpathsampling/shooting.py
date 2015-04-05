@@ -3,8 +3,9 @@ import logging
 
 import numpy as np
 
-from openpathsampling.util.todict import restores_as_full_object
-
+from openpathsampling.todict import ops_object
+import logging
+from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
@@ -21,8 +22,7 @@ init_log = logging.getLogger('openpathsampling.initialization')
 #  
 #############################################################################
 
-@restores_as_full_object
-
+@ops_object
 class ShootingPoint(object):
 
     def __init__(self, selector, trajectory, index, f = None, sum_bias = None):
@@ -89,8 +89,19 @@ class ShootingPoint(object):
     def bias(self):
         return self.f
 
-@restores_as_full_object
+    def to_dict(self):
+        return {
+            'selector' : self.selector,
+            'trajectory' : self.trajectory,
+            'index' : self.index,
+            'f' : self._f,
+            'sum_bias' : self._sum_bias
+        }
+
+@ops_object
 class ShootingPointSelector(object):
+    def __init__(self):
+        pass
 
     @property
     def identifier(self):
@@ -161,7 +172,7 @@ class ShootingPointSelector(object):
 
         return point
 
-@restores_as_full_object
+@ops_object
 class GaussianBiasSelector(ShootingPointSelector):
     def __init__(self, collectivevariable, alpha = 1.0, l0 = 0.5):
         '''
@@ -175,7 +186,7 @@ class GaussianBiasSelector(ShootingPointSelector):
     def f(self, snapshot, trajectory=None):
         return math.exp(-self.alpha*(self.collectivevariable(snapshot) - self.l0)**2)
 
-@restores_as_full_object
+@ops_object
 class UniformSelector(ShootingPointSelector):
     """
     Selects random frame in range `pad_start` to `len(trajectory-pad_end`.
@@ -209,7 +220,7 @@ class UniformSelector(ShootingPointSelector):
         point = ShootingPoint(self, trajectory, idx, f = 1.0, sum_bias= self.sum_bias(trajectory))
         
         return point
-@restores_as_full_object
+@ops_object
 class FinalFrameSelector(ShootingPointSelector):
     '''
     Pick final trajectory frame as shooting point.
@@ -226,7 +237,7 @@ class FinalFrameSelector(ShootingPointSelector):
         point = ShootingPoint(self, trajectory, len(trajectory)-1, f=1.0, sum_bias=1.0)
         return point
 
-@restores_as_full_object
+@ops_object
 class FirstFrameSelector(ShootingPointSelector):
     '''
     Pick first trajectory frame as shooting point.

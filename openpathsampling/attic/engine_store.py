@@ -32,7 +32,7 @@ class DynamicsEngineStorage(ObjectStorage):
         self.storage.variables['dynamicsengine_type'][int(idx)] = engine.__class__.__name__
 
         if self.named and hasattr(engine, 'name'):
-            self.storage.variables[self.db + '_name'][idx] = engine.name
+            self.storage.variables[self.db + '_uid'][idx] = engine.name
 
         self.storage.variables['dynamicsengine_options'][int(idx)] = self.simplifier.to_json(engine.options)
 

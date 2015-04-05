@@ -1,8 +1,8 @@
-from openpathsampling.util.todict import restores_as_full_object
+from openpathsampling.todict import ops_object
 
 __author__ = 'jan-hendrikprinz'
 
-@restores_as_full_object
+@ops_object
 class Topology(object):
     '''
     Topology is the object that contains all information about the structure

@@ -28,8 +28,8 @@ from openpathsampling.snapshot import Snapshot
 from openpathsampling.volume import LambdaVolumePeriodic, VolumeFactory as vf
 from openpathsampling.pathmover import PathMoverFactory as mf
 from openpathsampling.ensemble import EnsembleFactory as ef
-from openpathsampling.ensemble import (LengthEnsemble, SequentialEnsemble, AllOutEnsemble,
-                              AllInEnsemble)
+from openpathsampling.ensemble import (LengthEnsemble, SequentialEnsemble, AllOutXEnsemble,
+                              AllInXEnsemble)
 from openpathsampling.pathsimulator import Bootstrapping
 from openpathsampling.pathmover import PathMover
 from openpathsampling.shooting import UniformSelector
@@ -122,18 +122,18 @@ for the innermost interface.
 We do this by using a special sequential ensemble for the sequence.
 This path ensemble is particularly complex because we want to be sure that
 the path we generate is in the ensemble we desire: this means that we can't
-use PartOutEnsemble as we typically do with TIS paths.
+use PartOutXEnsemble as we typically do with TIS paths.
     """
     snapshot = engine.storage.snapshots.load(0)
 
     first_traj_ensemble = SequentialEnsemble([
-        AllOutEnsemble(stateA) | LengthEnsemble(0),
-        AllInEnsemble(stateA),
-        (AllOutEnsemble(stateA) & AllInEnsemble(interface0)) | LengthEnsemble(0),
-        AllInEnsemble(interface0) | LengthEnsemble(0),
-        AllOutEnsemble(interface0),
-        AllOutEnsemble(stateA) | LengthEnsemble(0),
-        AllInEnsemble(stateA) & LengthEnsemble(1)
+        AllOutXEnsemble(stateA) | LengthEnsemble(0),
+        AllInXEnsemble(stateA),
+        (AllOutXEnsemble(stateA) & AllInXEnsemble(interface0)) | LengthEnsemble(0),
+        AllInXEnsemble(interface0) | LengthEnsemble(0),
+        AllOutXEnsemble(interface0),
+        AllOutXEnsemble(stateA) | LengthEnsemble(0),
+        AllInXEnsemble(stateA) & LengthEnsemble(1)
     ])
 
     interface0_ensemble = interface_set[0]
