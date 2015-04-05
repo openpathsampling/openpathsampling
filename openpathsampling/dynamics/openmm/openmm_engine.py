@@ -10,8 +10,13 @@ import openpathsampling as paths
 from openpathsampling.storage import Storage
 from openpathsampling.todict import ops_object
 
+from openpathsampling.dynamics.openmm import snapshot_from_pdb, \
+    to_openmm_topology
+
+from openpathsampling.dynamics import DynamicsEngine
+
 @ops_object
-class OpenMMEngine(paths.DynamicsEngine):
+class OpenMMEngine(DynamicsEngine):
     """OpenMM dynamics engine."""
 
     units = {

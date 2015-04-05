@@ -4,11 +4,11 @@ import pandas as pd
 from simtk import unit as units
 import simtk.openmm
 
-from openpathsampling.topology import Topology
-from openpathsampling.todict import restores_as_full_object
+from openpathsampling.dynamics.topology import Topology
+from openpathsampling.todict import ops_object
 
 
-@restores_as_full_object
+@ops_object
 class MDTrajTopology(Topology):
     def __init__(self, mdtraj_topology, subsets = None):
         self.md = mdtraj_topology

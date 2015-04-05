@@ -40,7 +40,7 @@ from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
 
 from todict import ObjectJSON, ops_object, class_list
 
-from openpathsampling.topology import Topology
+from openpathsampling.dynamics.topology import Topology
 
 from dynamics.toy import ToyTopology
 
