@@ -13,7 +13,7 @@ from openpathsampling.ensemble import EnsembleFactory as ef
 import time
 from openpathsampling.pathmover import ForwardShootMover, BackwardShootMover, PathMover, MixedMover
 from openpathsampling.shooting import UniformSelector
-from openpathsampling.ensemble import LengthEnsemble, InXEnsemble, OutXEnsemble
+from openpathsampling.ensemble import LengthEnsemble, AllInXEnsemble, AllOutXEnsemble
 from openpathsampling.trajectory import Trajectory
 from pymbar import MBAR
 from openpathsampling.snapshot import Snapshot
@@ -104,11 +104,11 @@ if __name__ == '__main__':
                 )
 
         print "Iteration test"
-        for l in range(0,tt.frames + 0):
+        for l in range(0,len(tt) + 0):
             print tis.can_append(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
 
         print "Iteration test"
-        for l in range(0,tt.frames + 0):
+        for l in range(0,len(tt) + 0):
             print tis.can_append(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
 
         print op(tt[0])
@@ -122,13 +122,13 @@ if __name__ == '__main__':
         en = ef.A2BEnsemble(lV, lV, True)
         print en(tt)
 
-        en = InXEnsemble(lV, 0)
+        en = AllInXEnsemble(lV, 0)
         print en(tt)
 
-        en = InXEnsemble(lV, -1)
+        en = AllInXEnsemble(lV, -1)
         print en(tt)
 
-        en = OutXEnsemble(lV, slice(1,-1), lazy = False)
+        en = AllOutXEnsemble(lV, slice(1,-1), lazy = False)
         print en(tt)
 
         storage.ensemble.save(en)
@@ -173,13 +173,13 @@ if __name__ == '__main__':
         en = ef.A2BEnsemble(lV, lV, True)
         print en(pth.details.final)
 
-        en = InXEnsemble(lV, 0)
+        en = AllInXEnsemble(lV, 0)
         print en(pth.details.final)
 
-        en = InXEnsemble(lV, -1)
+        en = AllInXEnsemble(lV, -1)
         print en(pth.details.final)
 
-        en = OutXEnsemble(lV, slice(1, -1), lazy = False)
+        en = AllOutXEnsemble(lV, slice(1, -1), lazy = False)
         print en(pth.details.final)
 
         op.save(storage=storage.collectivevariable)

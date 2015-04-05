@@ -25,8 +25,8 @@ from openpathsampling.snapshot import Snapshot
 from openpathsampling.volume import LambdaVolumePeriodic, VolumeFactory as vf
 from openpathsampling.pathmover import PathMoverFactory as mf
 from openpathsampling.ensemble import EnsembleFactory as ef
-from openpathsampling.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
-                              InXEnsemble)
+from openpathsampling.ensemble import (LengthEnsemble, SequentialEnsemble, AllOutXEnsemble,
+                              AllInXEnsemble)
 from openpathsampling.calculation import Bootstrapping
 from openpathsampling.pathmover import PathMover
 from openpathsampling.shooting import UniformSelector
@@ -116,13 +116,13 @@ if __name__=="__main__":
     snapshot = engine.storage.snapshot.load(0)
     
     first_traj_ensemble = SequentialEnsemble([
-        OutXEnsemble(stateA) | LengthEnsemble(0),
-        InXEnsemble(stateA),
-        (OutXEnsemble(stateA) & InXEnsemble(interface0)) | LengthEnsemble(0),
-        InXEnsemble(interface0) | LengthEnsemble(0),
-        OutXEnsemble(interface0),
-        OutXEnsemble(stateA) | LengthEnsemble(0),
-        InXEnsemble(stateA) & LengthEnsemble(1)
+        AllOutXEnsemble(stateA) | LengthEnsemble(0),
+        AllInXEnsemble(stateA),
+        (AllOutXEnsemble(stateA) & AllInXEnsemble(interface0)) | LengthEnsemble(0),
+        AllInXEnsemble(interface0) | LengthEnsemble(0),
+        AllOutXEnsemble(interface0),
+        AllOutXEnsemble(stateA) | LengthEnsemble(0),
+        AllInXEnsemble(stateA) & LengthEnsemble(1)
     ])
 
     interface0_ensemble = interface_set[0]
