@@ -1,7 +1,7 @@
 __author__ = 'jan-hendrikprinz'
 
 import openpathsampling as paths
-from openpathsampling.todict import ops_object
+from openpathsampling.util.todict import ops_object
 
 @ops_object
 class PathMoveChange(object):

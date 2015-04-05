@@ -3,7 +3,7 @@ import logging
 
 import numpy as np
 
-from openpathsampling.todict import ops_object
+from openpathsampling.util.todict import ops_object
 import logging
 from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)

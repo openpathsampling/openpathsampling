@@ -4,10 +4,10 @@ Created on 03.09.2014
 @author: jan-hendrikprinz, David W.H. Swenson
 '''
 
-from openpathsampling.todict import ops_object
-
-from openpathsampling.util.todict import restores_as_full_object
+from openpathsampling.util.todict import ops_object
 import openpathsampling as paths
+
+import logging
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('opentis.initialization')

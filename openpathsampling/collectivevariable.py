@@ -6,7 +6,7 @@ import mdtraj as md
 import openpathsampling as paths
 import chaindict as cd
 import collections
-from openpathsampling.todict import ops_object
+from openpathsampling.util.todict import ops_object
 
 
 @ops_object

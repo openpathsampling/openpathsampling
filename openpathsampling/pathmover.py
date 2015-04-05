@@ -10,7 +10,8 @@ import logging
 import numpy as np
 
 import openpathsampling as paths
-from openpathsampling.todict import ops_object
+from openpathsampling.util.todict import ops_object
+from openpathsampling.util.ops_logging import initialization_logging
 
 
 logger = logging.getLogger(__name__)

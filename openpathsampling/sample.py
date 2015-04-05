@@ -1,7 +1,6 @@
 import random
 
 import openpathsampling as paths
-import copy
 
 class SampleKeyError(Exception):
     def __init__(self, key, sample, sample_key):

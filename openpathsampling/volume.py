@@ -5,9 +5,7 @@ Created on 03.09.2014
 '''
 
 import range_logic
-from openpathsampling.todict import ops_object
-
-from openpathsampling.util.todict import restores_as_full_object
+from openpathsampling.util.todict import ops_object
 
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!

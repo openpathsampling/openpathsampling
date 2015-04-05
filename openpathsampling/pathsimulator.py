@@ -1,7 +1,9 @@
-from openpathsampling.todict import ops_object
+from openpathsampling.util.todict import ops_object
 import openpathsampling as paths
 from openpathsampling.pathmover import PathMover
 from openpathsampling.util.ops_logging import initialization_logging
+
+import logging
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
