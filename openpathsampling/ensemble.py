@@ -100,7 +100,7 @@ class Ensemble(object):
         Notes
         -----
         This is only tricky for this that depend on the history like
-        HitXEnsemble or LeaveXEnsembles. In theory these can only be checked
+        PartInXEnsemble or PartOutXEnsembles. In theory these can only be checked
         if the full range of frames has been generated. This could be
         triggered, when the last frame is reached.  This is even more
         difficult if this depends on the length.
@@ -130,7 +130,7 @@ class Ensemble(object):
         Notes
         
         This is only tricky for this that depend on the history like
-        HitXEnsemble or LeaveXEnsembles. In theory these can only be checked
+        PartInXEnsemble or PartOutXEnsembles. In theory these can only be checked
         if the full range of frames has been generated. This could be
         triggered, when the last frame is reached.  This is even more
         difficult if this depends on the length.
@@ -289,7 +289,7 @@ class Ensemble(object):
         elif type(other) is FullEnsemble:
             return other
         else:
-            return OrEnsemble(self, other)
+            return UnionEnsemble(self, other)
 
     def __xor__(self, other):
         if self is other:
@@ -299,7 +299,7 @@ class Ensemble(object):
         elif type(other) is FullEnsemble:
             return NegatedEnsemble(self)        
         else:
-            return XorEnsemble(self, other)
+            return SymmetricDifferenceEnsemble(self, other)
 
     def __and__(self, other):
         if self is other:
@@ -309,7 +309,7 @@ class Ensemble(object):
         elif type(other) is FullEnsemble:
             return self
         else:
-            return AndEnsemble(self, other)
+            return IntersectionEnsemble(self, other)
 
     def __sub__(self, other):
         if self is other:
@@ -319,7 +319,7 @@ class Ensemble(object):
         elif type(other) is FullEnsemble:
             return EmptyEnsemble()
         else:
-            return SubEnsemble(self, other)
+            return RelativeComplementEnsemble(self, other)
         
     def __invert__(self):
         return NegatedEnsemble(self)
@@ -541,24 +541,24 @@ class EnsembleCombination(Ensemble):
         return self.sfnc.format('(\n' + Ensemble._indent(str(self.ensemble1)) + '\n)' , '(\n' + Ensemble._indent(str(self.ensemble2)) + '\n)')
 
 @ops_object
-class OrEnsemble(EnsembleCombination):
+class UnionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(OrEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a or b, str_fnc = '{0}\nor\n{1}')
+        super(UnionEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a or b, str_fnc = '{0}\nor\n{1}')
 
 @ops_object
-class AndEnsemble(EnsembleCombination):
+class IntersectionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(AndEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and b, str_fnc = '{0}\nand\n{1}')
+        super(IntersectionEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and b, str_fnc = '{0}\nand\n{1}')
 
 @ops_object
-class XorEnsemble(EnsembleCombination):
+class SymmetricDifferenceEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(XorEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a ^ b, str_fnc = '{0}\nxor\n{1}')
+        super(SymmetricDifferenceEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a ^ b, str_fnc = '{0}\nxor\n{1}')
 
 @ops_object
-class SubEnsemble(EnsembleCombination):
+class RelativeComplementEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(SubEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and not b, str_fnc = '{0}\nand not\n{1}')
+        super(RelativeComplementEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and not b, str_fnc = '{0}\nand not\n{1}')
 
 @ops_object
 class SequentialEnsemble(Ensemble):
@@ -952,14 +952,14 @@ class LengthEnsemble(Ensemble):
         pass
     
     def __call__(self, trajectory, lazy=None):
-        length = trajectory.frames
+        length = len(trajectory)
         if type(self.length) is int:
             return length == self.length
         else:
             return length >= self.length.start and (self.length.stop is None or length < self.length.stop)
         
     def can_append(self, trajectory):
-        length = trajectory.frames
+        length = len(trajectory)
         if type(self.length) is int:
             return length < self.length
         else:
@@ -1000,7 +1000,7 @@ class VolumeEnsemble(Ensemble):
         return self.volume
 
 @ops_object
-class InXEnsemble(VolumeEnsemble):
+class AllInXEnsemble(VolumeEnsemble):
     '''
     Ensemble of trajectories with all frames in the given volume
     '''
@@ -1009,7 +1009,7 @@ class InXEnsemble(VolumeEnsemble):
         if len(trajectory) == 0:
             return True
         else:
-            return self(trajectory[slice(trajectory.frames-1, None)])
+            return self(trajectory[slice(len(trajectory)-1, None)])
 
     def can_prepend(self, trajectory):
         if len(trajectory) == 0:
@@ -1027,14 +1027,14 @@ class InXEnsemble(VolumeEnsemble):
         return True
 
     def __invert__(self):
-        return LeaveXEnsemble(self.volume, self.frames, self.lazy)
+        return PartOutXEnsemble(self.volume, self.frames, self.lazy)
 
     def __str__(self):
         return 'x[t] in {0} for all t'.format(self._volume)
 
 
 @ops_object
-class OutXEnsemble(InXEnsemble):
+class AllOutXEnsemble(AllInXEnsemble):
     '''
     Ensemble of trajectories with all frames outside the given volume
     '''    
@@ -1046,10 +1046,10 @@ class OutXEnsemble(InXEnsemble):
         return 'x[t] in {0} for all t'.format(self._volume)
 
     def __invert__(self):
-        return HitXEnsemble(self.volume, self.frames, self.lazy)
+        return PartInXEnsemble(self.volume, self.frames, self.lazy)
 
 @ops_object
-class HitXEnsemble(VolumeEnsemble):
+class PartInXEnsemble(VolumeEnsemble):
     '''
     Ensemble of trajectory with at least one frame in the volume
     '''
@@ -1072,10 +1072,10 @@ class HitXEnsemble(VolumeEnsemble):
         return False
 
     def __invert__(self):
-        return OutXEnsemble(self.volume, self.frames, self.lazy)
+        return AllOutXEnsemble(self.volume, self.frames, self.lazy)
 
 @ops_object
-class LeaveXEnsemble(HitXEnsemble):
+class PartOutXEnsemble(PartInXEnsemble):
     '''
     Ensemble of trajectories with at least one frame outside the volume
     '''
@@ -1084,11 +1084,11 @@ class LeaveXEnsemble(HitXEnsemble):
       
     @property
     def _volume(self):
-        # effectively use HitXEnsemble but with inverted volume
+        # effectively use PartInXEnsemble but with inverted volume
         return ~ self.volume
 
     def __invert__(self):
-        return InXEnsemble(self.volume, self.frames, self.lazy)
+        return AllInXEnsemble(self.volume, self.frames, self.lazy)
 
     def __call__(self, trajectory, lazy=None):
         for frame in trajectory:
@@ -1326,15 +1326,15 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         self.state_vol = state_vol
         self.innermost_vol = innermost_vol
         self.greedy = greedy
-        inA = InXEnsemble(state_vol)
-        outA = OutXEnsemble(state_vol)
-        outX = OutXEnsemble(innermost_vol)
-        inX = InXEnsemble(innermost_vol)
-        leaveX = LeaveXEnsemble(innermost_vol)
+        inA = AllInXEnsemble(state_vol)
+        outA = AllOutXEnsemble(state_vol)
+        outX = AllOutXEnsemble(innermost_vol)
+        inX = AllInXEnsemble(innermost_vol)
+        leaveX = PartOutXEnsemble(innermost_vol)
         interstitial = outA & inX
         self._segment_ensemble = EnsembleFactory.TISEnsemble(
             state_vol, state_vol, innermost_vol)
-        #interstitial = InXEnsemble(innermost_vol - state_vol)
+        #interstitial = AllInXEnsemble(innermost_vol - state_vol)
         start = [
             SingleFrameEnsemble(inA),
             OptionalEnsemble(interstitial),
@@ -1373,7 +1373,7 @@ class EnsembleFactory():
         ensemble : Ensemble
             The constructed Ensemble
         '''
-        return InXEnsemble(volume, 0)
+        return AllInXEnsemble(volume, 0)
 
     @staticmethod
     def EndXEnsemble(volume):
@@ -1390,7 +1390,7 @@ class EnsembleFactory():
         ensemble : Ensemble
             The constructed Ensemble
         '''        
-        return InXEnsemble(volume, -1)
+        return AllInXEnsemble(volume, -1)
 
     @staticmethod
     def A2BEnsemble(volume_a, volume_b, lazy = True):
@@ -1411,9 +1411,9 @@ class EnsembleFactory():
         '''        
         # TODO: this is actually only for flexible path length TPS now
         return SequentialEnsemble([
-            SingleFrameEnsemble(InXEnsemble(volume_a)),
-            OutXEnsemble(volume_a | volume_b),
-            SingleFrameEnsemble(InXEnsemble(volume_b))
+            SingleFrameEnsemble(AllInXEnsemble(volume_a)),
+            AllOutXEnsemble(volume_a | volume_b),
+            SingleFrameEnsemble(AllInXEnsemble(volume_b))
         ])
 
 
@@ -1439,9 +1439,9 @@ class EnsembleFactory():
             The constructed Ensemble
         '''
         ens = SequentialEnsemble([
-            SingleFrameEnsemble(InXEnsemble(volume_a)),
-            OutXEnsemble(volume_a | volume_b) & LeaveXEnsemble(volume_x),
-            SingleFrameEnsemble(InXEnsemble(volume_a | volume_b))
+            SingleFrameEnsemble(AllInXEnsemble(volume_a)),
+            AllOutXEnsemble(volume_a | volume_b) & PartOutXEnsemble(volume_x),
+            SingleFrameEnsemble(AllInXEnsemble(volume_a | volume_b))
         ])
         return ens
 
