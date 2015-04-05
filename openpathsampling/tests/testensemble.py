@@ -860,7 +860,15 @@ class testSequentialEnsembleCaching(EnsembleTest):
         assert_equal(self._was_cache_reset(self.pseudo_minus), True)
 
     def test_sequential_check_cache_trajectory(self):
-        raise SkipTest
+        traj2 = ttraj['lower_in_out_in']
+        self.pseudo_minus._cache['ens_num']=1
+        assert_equal(self._was_cache_reset(self.pseudo_minus), False)
+        self.pseudo_minus._check_cache(self.traj, "can_append")
+        assert_equal(self._was_cache_reset(self.pseudo_minus), True)
+        self.pseudo_minus._cache['ens_num']=1
+        assert_equal(self._was_cache_reset(self.pseudo_minus), False)
+        self.pseudo_minus._check_cache(traj2, "can_append")
+        assert_equal(self._was_cache_reset(self.pseudo_minus), True)
 
 
     def test_sequential_caching_can_append(self):
