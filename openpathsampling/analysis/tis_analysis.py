@@ -11,7 +11,7 @@ import time
 Experimental analysis module.
 
 The idea here is to simplify the vast majority of common analysis routines.
-Interestingly, the process should also simplify a lot of pathsimulator
+Interestingly, the process should also simplify a lot of simulation
 preparation.
 
 Goal: RETIS for a simple A->B transition (one direction) boils down to
@@ -42,7 +42,7 @@ Goal: RETIS for a simple A->B transition (one direction) boils down to
 Note that once the total crossing probability has been calculated once, it
 does not need to be recalculated as part of the rate. (Or, if it were
 calculated as part of the rate, it would be already available on its own.)
-In the order listed above, the time for the rate pathsimulator is almost
+In the order listed above, the time for the rate calculation is almost
 entirely in determining the flux from the information in the minus mover.
 """
 
@@ -144,7 +144,7 @@ class TISTransition(Transition):
     def __init__(self, stateA, stateB, interfaces, collectivevariable=None, name=None):
         super(TISTransition, self).__init__(stateA, stateB)
         # NOTE: making these into dictionaries like this will make it easy
-        # to combine them in order to make a PathSampling pathsimulator object
+        # to combine them in order to make a PathSampling PathSimulator object
 
 
         self.stateA = stateA

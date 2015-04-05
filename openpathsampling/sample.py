@@ -247,7 +247,7 @@ class SampleSet(object):
     def map_trajectory_to_ensembles(trajectory, ensembles):
         """Return SampleSet mapping one trajectory to all ensembles.
 
-        One common approach to starting a pathsimulator is to take a single
+        One common approach to starting a simulation is to take a single
         transition trajectory (which satisfies all ensembles) and use it as
         the starting point for all ensembles.
         """
