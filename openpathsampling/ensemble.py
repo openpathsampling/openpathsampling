@@ -710,7 +710,7 @@ class SequentialEnsemble(Ensemble):
         ens = self.ensembles[ens_num]
         subtraj = traj[slice(subtraj_first, subtraj_final)]
         while ( (ens.can_prepend(subtraj, trusted=True) or 
-                 ens(subtraj, trusted=True)
+                 ens(subtraj)#TODO: make this trusted; needs "reverse" check
                 ) and subtraj_first >= traj_first):
             subtraj_first -= 1
             subtraj = traj[slice(subtraj_first, subtraj_final)]
@@ -965,6 +965,8 @@ class AllInXEnsemble(VolumeEnsemble):
     def can_append(self, trajectory, trusted=False):
         if len(trajectory) == 0:
             return True
+        #else:
+            #return self(trajectory, trusted)
         if trusted == True:
             return self(trajectory[slice(len(trajectory)-1, None)])
         else:
@@ -973,19 +975,25 @@ class AllInXEnsemble(VolumeEnsemble):
     def can_prepend(self, trajectory, trusted=False):
         if len(trajectory) == 0:
             return True
-        if trusted == True:
-            return self(trajectory[slice(0,1)])
         else:
             return self(trajectory)
+
+            #return self(trajectory[slice(0,1)])
+        #else:
+            #return self(trajectory)
         
     
     def __call__(self, trajectory, trusted=None):
         if len(trajectory) == 0:
             return False
-        for frame in trajectory:
-            if not self._volume(frame):
-                return False
-        return True
+        if trusted == True:
+            frame = trajectory[-1]
+            return self._volume(frame)
+        else:
+            for frame in trajectory:
+                if not self._volume(frame):
+                    return False
+            return True
 
     def __invert__(self):
         return PartOutXEnsemble(self.volume, self.frames, self.trusted)
