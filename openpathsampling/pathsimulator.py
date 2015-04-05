@@ -1,4 +1,4 @@
-from openpathsampling.todict import restores_as_stub_object
+from openpathsampling.todict import ops_object
 import openpathsampling as paths
 
 from openpathsampling.pathmover import PathMover
@@ -8,10 +8,12 @@ from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-@restores_as_stub_object
+@ops_object
 class PathSimulator(object):
 
     calc_name = "PathSimulator"
+
+    _excluded_attr = ['globalstate']
 
     def __init__(self, storage, engine=None):
         self.storage = storage
@@ -28,7 +30,7 @@ class PathSimulator(object):
         logger.warning("Running an empty pathsimulator? Try a subclass, maybe!")
 
 
-@restores_as_stub_object
+@ops_object
 class BootstrapPromotionMove(PathMover):
     '''
     Bootstrap promotion is the combination of an EnsembleHop (to the next
@@ -78,29 +80,7 @@ class BootstrapPromotionMove(PathMover):
         return mover.move(globalstate)
 
 
-# TODO: Is this used anywhere? Or do we do this differently
-class InitializeSingleTrajectoryMover(PathMover):
-    def __init__(self, bias=None, shooters=None,
-                 ensembles=None, replicas='all'):
-        super(InitializeSingleTrajectoryMover, self).__init__(ensembles=ensembles,
-                                                     replicas=replicas)
-        self.shooters = shooters
-        self.bias = bias
-        initialization_logging(logger=init_log, obj=self,
-                               entries=['bias', 'shooters'])
-
-    def move(self, globalstate=None):
-        init_details = paths.MoveDetails()
-        init_details.accepted = True
-        init_details.acceptance_probability = 1.0
-        init_details.mover = self
-        init_details.inputs = []
-        init_details.trial = None
-        init_details.ensemble = None
-        sample = paths.Sample(replica=0, trajectory=None,
-                        ensemble=self.ensembles[0], details=init_details)
-
-@restores_as_stub_object
+@ops_object
 class Bootstrapping(PathSimulator):
     """Creates a SampleSet with one sample per ensemble.
     
@@ -115,17 +95,8 @@ class Bootstrapping(PathSimulator):
         super(Bootstrapping, self).__init__(storage, engine)
         self.ensembles = ensembles
 
-        # this is stupid; must be a better way
-        init_details = paths.MoveDetails()
-        init_details.accepted = True
-        init_details.acceptance_probability = 1.0
-        init_details.mover = paths.PathMover()
-        init_details.mover.name = "Initialization (trajectory)"
-        init_details.inputs = []
-        init_details.trial = trajectory
-        init_details.ensemble = self.ensembles[0]
-        sample = paths.Sample(replica=0, trajectory=trajectory, 
-                        ensemble=self.ensembles[0], details=init_details)
+        sample = paths.Sample(replica=0, trajectory=trajectory,
+                        ensemble=self.ensembles[0])
 
         self.globalstate = paths.SampleSet([sample])
         if self.storage is not None:
@@ -165,7 +136,6 @@ class Bootstrapping(PathSimulator):
                 logger.debug("(" + str(sample.replica)
                              + "," + str(sample.trajectory)
                              + "," + repr(sample.ensemble)
-                             + "," + str(sample.details.accepted)
                             )
             self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
             self.globalstate.movepath = movepath
@@ -174,7 +144,6 @@ class Bootstrapping(PathSimulator):
                 logger.debug("(" + str(sample.replica)
                              + "," + str(sample.trajectory)
                              + "," + repr(sample.ensemble)
-                             + "," + str(sample.details.accepted)
                             )
 
             old_ens_num = ens_num
@@ -190,7 +159,7 @@ class Bootstrapping(PathSimulator):
         for sample in self.globalstate:
             assert sample.ensemble(sample.trajectory) == True, "WTF?"
 
-@restores_as_stub_object
+@ops_object
 class PathSampling(PathSimulator):
     """
     General path sampling code. 
@@ -206,8 +175,9 @@ class PathSampling(PathSimulator):
         self.root_mover = root_mover
 #        self.root_mover.name = "PathSamplingRoot"
         samples = []
-        for sample in globalstate:
-            samples.append(sample.copy_reset())
+        if globalstate is not None:
+            for sample in globalstate:
+                samples.append(sample.copy_reset())
 
         self.globalstate = paths.SampleSet(samples)
 
@@ -239,9 +209,3 @@ class PathSampling(PathSimulator):
                 # We assume that this is the right cause of action for this
                 # case.
                 self.storage.cvs.sync()
-
-    def to_dict(self):
-        return {
-            'root_mover' : self.root_mover,
-#            'globalstate' : self.globalstate
-        }

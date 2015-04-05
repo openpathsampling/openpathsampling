@@ -8,11 +8,9 @@ from simtk.openmm.app import ForceField, PME, HBonds, PDBFile
 
 import openpathsampling as paths
 from openpathsampling.storage import Storage
-from openpathsampling.todict import restores_as_full_object
+from openpathsampling.todict import ops_object
 
-from util import snapshot_from_pdb, to_openmm_topology
-
-@restores_as_full_object
+@ops_object
 class OpenMMEngine(paths.DynamicsEngine):
     """OpenMM dynamics engine."""
 

@@ -64,43 +64,40 @@ class Storage(netcdf.Dataset):
         self.configurations = paths.storage.ConfigurationStore(storage)
         self.momentum = paths.storage.MomentumStore(storage)
         self.samples = paths.storage.SampleStore(storage)
-        self.sample_sets = paths.storage.SampleSetStore(storage)
+        self.samplesets = paths.storage.SampleSetStore(storage)
 
         self.collectivevariables = paths.storage.ObjectDictStore(storage, paths.CollectiveVariable, paths.Snapshot)
         self.cvs = self.collectivevariables
 
         # normal objects
 
-        self.pathmovers = paths.storage.ObjectStore(storage, paths.PathMover, is_named=True)
-        self.movedetails = paths.storage.ObjectStore(storage, paths.MoveDetails, is_named=False)
-        self.shootingpoints = paths.storage.ObjectStore(storage, paths.ShootingPoint, is_named=False)
-        self.shootingpointselectors = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, is_named=False)
-        self.engines = paths.storage.ObjectStore(storage, paths.DynamicsEngine, is_named=True)
-        self.pathsimulators = paths.storage.ObjectStore(storage, paths.PathSimulator, is_named=True)
+        self.pathmovers = paths.storage.ObjectStore(storage, paths.PathMover, has_uid=True)
+        self.movedetails = paths.storage.ObjectStore(storage, paths.MoveDetails, has_uid=False)
+        self.shootingpoints = paths.storage.ObjectStore(storage, paths.ShootingPoint, has_uid=False)
+        self.shootingpointselectors = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, has_uid=False)
+        self.engines = paths.storage.ObjectStore(storage, paths.DynamicsEngine, has_uid=True)
+        self.pathsimulators = paths.storage.ObjectStore(storage, paths.PathSimulator, has_uid=True)
 
         # nestable objects
 
-        self.volumes = paths.storage.ObjectStore(storage, paths.Volume, is_named=True, nestable=True)
-        self.ensembles = paths.storage.ObjectStore(storage, paths.Ensemble, is_named=True, nestable=True)
-        self.movepaths = paths.storage.ObjectStore(storage, paths.MovePath, is_named=False, nestable=True)
+        self.volumes = paths.storage.ObjectStore(storage, paths.Volume, has_uid=True, nestable=True)
+        self.ensembles = paths.storage.ObjectStore(storage, paths.Ensemble, has_uid=True, nestable=True)
+        self.pathmovechanges = paths.storage.ObjectStore(storage, paths.PathMoveChange, has_uid=False, nestable=True)
 
         self.transitions = paths.storage.ObjectStore(storage,
                                                     paths.TISTransition,
-                                                    is_named=True)
+                                                    has_uid=True)
 
         self.query = paths.storage.QueryStore(storage)
 
         self._objects = { name : getattr(self, name) for name in
-                          ['trajectories', 'snapshots', 'configurations',
-                           'samples', 'sample_sets', 'collectivevariables',
-                           'cvs', 'pathmovers', 'shootingpoints',
-                           'shootingpointselectors', 'engines',
-                           'pathsimulators', 'volumes', 'ensembles',
-                           'movepaths', 'transitions'
-
-
-                          ]
-                          }
+                  ['trajectories', 'snapshots', 'configurations',
+                   'samples', 'samplesets', 'collectivevariables',
+                   'cvs', 'pathmovers', 'movedetails', 'shootingpoints',
+                   'shootingpointselectors', 'engines',
+                   'pathsimulators', 'volumes', 'ensembles',
+                   'pathmovechanges', 'transitions'
+                  ]}
 
     @property
     def objects(self):
@@ -532,14 +529,15 @@ class Storage(netcdf.Dataset):
                         new_storage.variables[variable][idx] = self.variables[variable][idx]
 
 
-
 class StorableObjectJSON(paths.todict.ObjectJSON):
     def __init__(self, storage, unit_system = None, class_list = None):
         super(StorableObjectJSON, self).__init__(unit_system, class_list)
-        self.excluded_keys = ['name', 'idx', 'json', 'identifier']
+        self.excluded_keys = ['idx', 'json', 'identifier']
         self.storage = storage
 
     def simplify(self,obj, base_type = ''):
+        if obj is self.storage:
+            return { '_storage' : 'self' }
         if type(obj).__module__ != '__builtin__':
             if hasattr(obj, 'idx') and (not hasattr(obj, 'nestable') or (obj.base_cls_name != base_type)):
                 # this also returns the base class name used for storage
@@ -552,6 +550,9 @@ class StorableObjectJSON(paths.todict.ObjectJSON):
 
     def build(self,obj):
         if type(obj) is dict:
+            if '_storage' in obj:
+                if obj['_storage'] == 'self':
+                    return self.storage
             if '_cls' in obj and '_idx' in obj:
                 if obj['_cls'] in paths.todict.class_list:
                     base_cls = paths.todict.class_list[obj['_cls']]

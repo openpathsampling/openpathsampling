@@ -1,11 +1,9 @@
 import math
 
 import numpy as np
+from openpathsampling.todict import ops_object
 
-from openpathsampling.util.todict import restores_as_full_object
-
-
-@restores_as_full_object
+@ops_object
 class LeapfrogVerletIntegrator(object):
     """Leapfrog Integrator. Not for actual use; but the momentum and
     position update functions are used in other integrators, so we inherit
@@ -28,7 +26,7 @@ class LeapfrogVerletIntegrator(object):
         self._momentum_update(sys, self.dt)
         self._position_update(sys, 0.5*self.dt)
 
-@restores_as_full_object
+@ops_object
 class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
     """ Langevin integrator for simple toy models
 

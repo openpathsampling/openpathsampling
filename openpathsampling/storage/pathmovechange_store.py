@@ -1,26 +1,41 @@
 from object_storage import ObjectStore
-from openpathsampling.sample import SampleSet, Sample
+from openpathsampling.pathmovechange import PathMoveChange
 
-import time
-
-class SampleStore(ObjectStore):
+class PathMoveChangeStore(ObjectStore):
     def __init__(self, storage):
-        super(SampleStore, self).__init__(storage, Sample, json=False)
+        super(PathMoveChangeStore, self).__init__(storage, PathMoveChange, has_uid=False, nestable=True, load_partial=True)
+        self.set_variable_partial_loading('details', self.update_details)
 
-    def save(self, sample, idx=None):
-        if idx is not None:
-            self.storage.trajectories.save(sample.trajectory)
-            self.set_object('sample_trajectory', idx, sample.trajectory)
+    def load_empty(self, idx):
+        trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
+        ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
+        replica_idx = int(self.storage.variables['sample_replica'][idx])
+        step=self.load_variable('sample_step', idx)
 
-            self.storage.ensembles.save(sample.ensemble)
-            self.set_object('sample_ensemble', idx, sample.ensemble)
+        if step < 0:
+            step = None
 
-            self.save_variable('sample_replica', idx, sample.replica)
 
-            if sample.step is None:
-                self.save_variable('sample_step', idx, -1)
-            else:
-                self.save_variable('sample_step', idx, sample.step)
+        obj = Sample(
+            trajectory=self.storage.trajectories.load(trajectory_idx),
+            replica=replica_idx,
+            ensemble=self.storage.ensembles.load(ensemble_idx),
+            step=step
+        )
+
+        del obj.details
+
+        return obj
+
+    @staticmethod
+    def update_details(obj):
+        storage = obj._origin
+
+        idx = obj.idx[storage]
+        details_idx = int(storage.variables['sample_details_idx'][idx])
+        details = storage.movedetails.load(details_idx)
+
+        obj.details = details
 
     def load(self, idx):
         '''
@@ -39,6 +54,7 @@ class SampleStore(ObjectStore):
         trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
         ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
         replica_idx = int(self.storage.variables['sample_replica'][idx])
+        details_idx = int(self.storage.variables['sample_details_idx'][idx])
         step=self.load_variable('sample_step', idx)
 
 
@@ -46,6 +62,7 @@ class SampleStore(ObjectStore):
             trajectory=self.storage.trajectories.load(trajectory_idx),
             replica=replica_idx,
             ensemble=self.storage.ensembles.load(ensemble_idx),
+            details=self.storage.movedetails.load(details_idx),
             step=step
         )
 
@@ -54,13 +71,14 @@ class SampleStore(ObjectStore):
     def by_ensemble(self, ensemble):
         return [ sample for sample in self.iterator() if sample.ensemble == ensemble ]
 
-    def _init(self, units=None):
-        super(SampleStore, self)._init(units)
+    def _init(self):
+        super(SampleStore, self)._init()
 
         # New short-hand definition
         self.init_variable('sample_trajectory_idx', 'index', chunksizes=(1, ))
         self.init_variable('sample_ensemble_idx', 'index', chunksizes=(1, ))
         self.init_variable('sample_replica', 'index', chunksizes=(1, ))
+        self.init_variable('sample_details_idx', 'index', chunksizes=(1, ))
         self.init_variable('sample_step', 'index', chunksizes=(1, ))
 
 class SampleSetStore(ObjectStore):
