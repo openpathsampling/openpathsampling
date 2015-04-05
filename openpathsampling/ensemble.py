@@ -696,8 +696,9 @@ class SequentialEnsemble(Ensemble):
         subtraj = traj[slice(subtraj_first, subtraj_final+1)]
         # if we're in the ensemble or could eventually be in the ensemble,
         # we keep building the subtrajectory
-        while ( (ens.can_append(subtraj) or ens(subtraj)) and 
-                    subtraj_final < traj_final):
+        while ( (ens.can_append(subtraj, trusted=True) or 
+                 ens(subtraj, trusted=True)
+                ) and subtraj_final < traj_final):
             subtraj_final += 1
             # TODO: replace with append; probably faster
             subtraj = traj[slice(subtraj_first, subtraj_final+1)]
@@ -708,8 +709,9 @@ class SequentialEnsemble(Ensemble):
         traj_first = 0
         ens = self.ensembles[ens_num]
         subtraj = traj[slice(subtraj_first, subtraj_final)]
-        while ( (ens.can_prepend(subtraj) or ens(subtraj)) and
-               subtraj_first >= traj_first):
+        while ( (ens.can_prepend(subtraj, trusted=True) or 
+                 ens(subtraj, trusted=True)
+                ) and subtraj_first >= traj_first):
             subtraj_first -= 1
             subtraj = traj[slice(subtraj_first, subtraj_final)]
         return subtraj_first+1
