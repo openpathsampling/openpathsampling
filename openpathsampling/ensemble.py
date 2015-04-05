@@ -64,6 +64,9 @@ class Ensemble(object):
         '''
         return False
 
+    def check_reverse(self, trajectory, trusted=False):
+        return self(trajectory, trusted=False)
+
     def check(self, trajectory):
         return self(trajectory, trusted = False)
 
@@ -710,7 +713,7 @@ class SequentialEnsemble(Ensemble):
         ens = self.ensembles[ens_num]
         subtraj = traj[slice(subtraj_first, subtraj_final)]
         while ( (ens.can_prepend(subtraj, trusted=True) or 
-                 ens(subtraj)#TODO: make this trusted; needs "reverse" check
+                 ens.check_reverse(subtraj, trusted=True)
                 ) and subtraj_first >= traj_first):
             subtraj_first -= 1
             subtraj = traj[slice(subtraj_first, subtraj_final)]
@@ -994,6 +997,15 @@ class AllInXEnsemble(VolumeEnsemble):
                 if not self._volume(frame):
                     return False
             return True
+
+    def check_reverse(self, trajectory, trusted=False):
+        # order in this one only matters if it is trusted
+        if trusted:
+            frame = trajectory[0]
+            return self._volume(frame)
+        else:
+            return self(trajectory) # in this case, order wouldn't matter
+
 
     def __invert__(self):
         return PartOutXEnsemble(self.volume, self.frames, self.trusted)
