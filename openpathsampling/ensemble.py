@@ -625,20 +625,30 @@ class SequentialEnsemble(Ensemble):
         resuming a point from a previous trajectory. It resets if the
         function has changed or if the trajectory has changed (or if a reset
         is forced by calling with reset=True).
+
         """
         try:
             if reset is None and function == self._cache['function']:
                 reset = (
                     (
                         (function == "can_append" or function == "call") and 
-                        trajectory[0] == self._cache['first_snap']
+                        trajectory[0] != self._cache['first_snap']
                     ) or (
                         function == "can_prepend" and
-                        trajectory[-1] == self._cache['final_snap']
+                        trajectory[-1] != self._cache['final_snap']
                     )
                 )
+            else:
+                reset = True
         except KeyError:
             reset = True
+
+        # LOGGING
+        #try:
+            #cached = self._cache['function']
+        #except KeyError:
+            #cached = "Empty"
+        #print function , cached, reset
 
         if reset:
             self._cache['function'] = function

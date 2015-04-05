@@ -821,10 +821,47 @@ and
 class testSequentialEnsembleCaching(EnsembleTest):
     """Tests for the faster SequentialEnsemble with caching."""
     def setUp(self):
-        pass
+        self.inX = AllInXEnsemble(vol1)
+        self.outX = AllOutXEnsemble(vol1)
+        self.length1 = LengthEnsemble(1)
+        self.pseudo_minus = SequentialEnsemble([
+            self.inX & self.length1,
+            self.outX,
+            self.inX,
+            self.outX,
+            self.inX & self.length1 
+        ])
+        self.traj = ttraj['lower_in_out_in_in_out_in']
 
-    def test_sequential_cache_reset(self):
+    def _was_cache_reset(self, ens):
+        cache = ens._cache
+        return (
+            cache['ens_num'] == 0 and
+            cache['subtraj_first'] == 0 and
+            cache['subtraj_final'] == -1 and
+            cache['ens_first'] == 0 and
+            cache['ens_final'] == -1
+        )
+
+    def test_sequential_cache_initially_reset(self):
+        assert_equal(self._was_cache_reset(self.pseudo_minus), True)
+
+    def test_sequential_check_cache_function(self):
+        self.pseudo_minus._cache['ens_num']=1
+        assert_equal(self._was_cache_reset(self.pseudo_minus), False)
+        self.pseudo_minus._check_cache(self.traj, "can_append")
+        assert_equal(self._was_cache_reset(self.pseudo_minus), True)
+        self.pseudo_minus._cache['ens_num']=1
+        assert_equal(self._was_cache_reset(self.pseudo_minus), False)
+        assert_equal(self.pseudo_minus._cache['function'], "can_append")
+        self.pseudo_minus._check_cache(self.traj, "can_append")
+        assert_equal(self._was_cache_reset(self.pseudo_minus), False)
+        self.pseudo_minus._check_cache(self.traj, "call")
+        assert_equal(self._was_cache_reset(self.pseudo_minus), True)
+
+    def test_sequential_check_cache_trajectory(self):
         raise SkipTest
+
 
     def test_sequential_caching_can_append(self):
         raise SkipTest
