@@ -42,15 +42,13 @@ from todict import ObjectJSON, ops_object, class_list
 
 from openpathsampling.topology import Topology
 
-from topology import ToyTopology, MDTrajTopology, Topology
+from dynamics.toy import ToyTopology
 
-from toy_dynamics.toy_pes import Gaussian, HarmonicOscillator, LinearSlope, \
-    OuterWalls, Toy_PES, Toy_PES_Add, Toy_PES_Sub
+from dynamics.toy import Gaussian, HarmonicOscillator, LinearSlope, \
+    OuterWalls, Toy_PES, Toy_PES_Add, Toy_PES_Sub, ToyEngine, \
+    LangevinBAOABIntegrator, LeapfrogVerletIntegrator
 
-from toy_dynamics.toy_engine import ToyEngine
-
-from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
-    LeapfrogVerletIntegrator
+from dynamics.openmm import MDTrajTopology, OpenMMEngine
 
 from analysis.tis_analysis import TISTransition, RETISTransition, Transition, \
     TPSTransition
