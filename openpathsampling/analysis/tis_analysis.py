@@ -1,4 +1,4 @@
-from histogram import Histogram
+from histogram import Histogram, histograms_to_pandas_dataframe
 from wham import WHAM
 import openpathsampling as paths
 from openpathsampling.todict import ops_object
@@ -298,14 +298,26 @@ class TISTransition(Transition):
         hist = self.histograms['crossing_probability'][ensemble]
         return hist.reverse_cumulative()
 
-    def total_crossing_probability(self, method="wham", force=False, nblocks=1):
+    def total_crossing_probability(self, method="wham", storage=None, force=False, nblocks=1):
         """Return the total crossing probability using `method`"""
         if method == "wham":
-            cp = {}
+            run_ensembles = False
             for ens in self.ensembles:
-                cp[ens] = self.crossing_probability(ens)
+                try:
+                    hist = self.histograms['max_lambda'][ens]
+                except KeyError:
+                    run_ensembles = True
+            if run_ensembles or force:
+                if storage is None:
+                    raise RuntimeError("Unable to build histograms without storage source")
+                self.all_statistics(storage, force=True)
+                         
+            df = histograms_to_pandas_dataframe(
+                self.histograms['max_lambda'].values(),
+                fcn="reverse_cumulative"
+            ).sort(axis=1)
             wham = WHAM()
-            wham.initial_histograms = cp
+            wham.load_from_dataframe(df)
             wham.clean_leading_ones()
             tcp = wham.wham_bam_histogram()
         elif method == "mbar":
