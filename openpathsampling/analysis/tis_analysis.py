@@ -89,8 +89,30 @@ class Transition(object):
 
         self._mover_acceptance = {}
 
-    def calculate_mover_acceptance(self, samples):
-        for sample in samples:
+    @property
+    def all_movers(self):
+        all_movers = []
+        for movetype in self.movers.keys():
+            all_movers += self.movers[movetype]
+        return all_movers
+
+    def categorize_movers(self):
+        # need a way to identify all the repex-based moves, and all the
+        # generating-based moves, etc
+        pass
+
+
+    def calculate_mover_acceptance(self, storage, movers=None):
+        # regularlize format of movers argument:
+        if movers is None:
+            movers = self.all_movers
+        try:
+            nmovers = len(movers)
+        except TypeError:
+            nmovers = 1
+            movers = [movers]
+
+        for movechange in storage.movepath:
             pass
         pass
 
@@ -178,8 +200,6 @@ class TISTransition(Transition):
         self._flux = None
         self._rate = None
 
-        # TODO: eventually I'll generalize this to include the function to
-        # be called, possibly some parameters ... can't this go to a 
         self.ensemble_histogram_info = {
             'max_lambda' : Histogrammer(
                 f=max_lambdas,
