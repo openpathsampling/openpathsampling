@@ -170,7 +170,7 @@ class TISTransition(Transition):
         self.total_crossing_probability_method="wham" 
         self.histograms = {}
         self._ensemble_histograms = {}
-        # caches for the results of our pathsimulators
+        # caches for the results of our calculation
         self._flux = None
         self._rate = None
 
@@ -233,7 +233,7 @@ class TISTransition(Transition):
 
         In general we do all of these at once because the extra cost of
         running through the samples twice is worse than doing the extra
-        pathsimulators.
+        calculations.
 
         Parameters
         ----------
@@ -302,7 +302,7 @@ class TISTransition(Transition):
         """Calculate the rate for this transition.
 
         For TIS transitions, this requires the result of an external
-        pathsimulator of the flux.
+        calculation of the flux.
         """
         if flux is not None:
             self._flux = flux
