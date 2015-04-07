@@ -11,7 +11,7 @@ class Histogram(object):
     """Wrapper for numpy.histogram with additional conveniences.
 
     In addition to the behavior in numpy.histogram, this provides a few
-    additional pathsimulators, as well as behavior that allows for better
+    additional calculations, as well as behavior that allows for better
     interactive use (tricks to assist caching by libraries using it, etc.)
     """
     def __init__(self, n_bins=None, bin_width=None, bin_range=None):

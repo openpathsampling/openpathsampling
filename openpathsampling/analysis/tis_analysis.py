@@ -1,4 +1,4 @@
-from histogram import Histogram
+from histogram import Histogram, histograms_to_pandas_dataframe
 from wham import WHAM
 import openpathsampling as paths
 from openpathsampling.todict import ops_object
@@ -21,13 +21,13 @@ Goal: RETIS for a simple A->B transition (one direction) boils down to
 >>> engine = ??? something that sets up the MD engine
 >>> storage = ??? something that sets up storage
 >>> globalstate0 = ??? something that sets up initial trajectories
->>> collectivevariable = paths.CV_Function("lambda", some_function)
+>>> orderparameter = paths.CV_Function("lambda", some_function)
 >>>
 >>> # from here, this is real code
->>> stateA = paths.LambdaVolume(collectivevariable, min=-infinity, max=0.0)
->>> stateB = paths.LambdaVolume(collectivevariable, min=1.0, max=infinity)
->>> interfaces = paths.VolumeSet(collectivevariable, min=-infinity, max=[0.0, 0.1, 0.2])
->>> transitionAB = paths.RETISTransition(stateA, stateB, collectivevariable, interfaces, storage)
+>>> stateA = paths.LambdaVolume(orderparameter, min=-infinity, max=0.0)
+>>> stateB = paths.LambdaVolume(orderparameter, min=1.0, max=infinity)
+>>> interfaces = paths.VolumeSet(orderparameter, min=-infinity, max=[0.0, 0.1, 0.2])
+>>> transitionAB = paths.RETISTransition(stateA, stateB, orderparameter, interfaces, storage)
 >>> retis_calc = PathSampling(
 >>>     storage=storage,
 >>>     engine=engine,
@@ -50,9 +50,13 @@ entirely in determining the flux from the information in the minus mover.
 def pathlength(sample):
     return len(sample.trajectory)
 
-def max_lambdas(sample, collectivevariable):
-    return max([collectivevariable(frame) for frame in sample.trajectory])
+def max_lambdas(sample, orderparameter):
+    return max([orderparameter(frame) for frame in sample.trajectory])
 
+def sampleset_sample_generator(storage):
+    for sset in storage.sampleset:
+        for sample in sset:
+            yield sample
 
 class Histogrammer(object):
     """
@@ -133,7 +137,7 @@ class TISTransition(Transition):
         Volume for the state in which the transition ends
     interfaces : list of Volume
         Volumes for the interfaces
-    collectivevariable : CollectiveVariable
+    orderparameter : CollectiveVariable
         order parameter to be used in the analysis (does not need to be the
         parameter which defines the interfaces, although it usually is)
     name : string
@@ -141,7 +145,7 @@ class TISTransition(Transition):
 
     """
     
-    def __init__(self, stateA, stateB, interfaces, collectivevariable=None, name=None):
+    def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
         super(TISTransition, self).__init__(stateA, stateB)
         # NOTE: making these into dictionaries like this will make it easy
         # to combine them in order to make a PathSampling PathSimulator object
@@ -164,13 +168,13 @@ class TISTransition(Transition):
         if self.movers == {}:
             self.build_movers()
 
-        self.collectivevariable = collectivevariable
-        self.default_collectivevariable = self.collectivevariable
+        self.orderparameter = orderparameter
+        self.default_orderparameter = self.orderparameter
 
         self.total_crossing_probability_method="wham" 
         self.histograms = {}
         self._ensemble_histograms = {}
-        # caches for the results of our pathsimulators
+        # caches for the results of our calculation
         self._flux = None
         self._rate = None
 
@@ -179,7 +183,7 @@ class TISTransition(Transition):
         self.ensemble_histogram_info = {
             'max_lambda' : Histogrammer(
                 f=max_lambdas,
-                f_args={'collectivevariable' : self.collectivevariable},
+                f_args={'orderparameter' : self.orderparameter},
                 hist_args={}
             ),
             'pathlength' : Histogrammer(
@@ -193,7 +197,7 @@ class TISTransition(Transition):
         ret_dict = {
             'stateA' : self.stateA,
             'stateB' : self.stateB,
-            'collectivevariable' : self.collectivevariable,
+            'orderparameter' : self.orderparameter,
             'interfaces' : self.interfaces,
             'name' : self.name,
             'movers' : self.movers,
@@ -207,7 +211,7 @@ class TISTransition(Transition):
             stateA=dct['stateA'],
             stateB=dct['stateB'],
             interfaces=dct['interfaces'],
-            collectivevariable=dct['collectivevariable'],
+            orderparameter=dct['orderparameter'],
             name=dct['name']
         )
         mytrans.movers = dct['movers']
@@ -233,7 +237,7 @@ class TISTransition(Transition):
 
         In general we do all of these at once because the extra cost of
         running through the samples twice is worse than doing the extra
-        pathsimulators.
+        calculations.
 
         Parameters
         ----------
@@ -249,25 +253,37 @@ class TISTransition(Transition):
         else:
             run_it = self.ensemble_histogram_info.keys()
 
-        buflen = 10
         for hist in run_it:
-            in_ens_samples = (s for s in samples if s.ensemble == ensemble)
             hist_info = self.ensemble_histogram_info[hist]
             if hist not in self.histograms.keys():
                 self.histograms[hist] = {}
             self.histograms[hist][ensemble] = Histogram(**(hist_info.hist_args))
-            hist_data = []
-            for sample in in_ens_samples:
-                hist_data.append(hist_info.f(sample, **hist_info.f_args))
-            self.histograms[hist][ensemble].histogram(hist_data, weights)
+
+        in_ens_samples = (s for s in samples if s.ensemble == ensemble)
+        hist_data = {}
+        buflen = -1
+        sample_buf = []
+        for sample in in_ens_samples:
+            for hist in run_it:
+                hist_info = self.ensemble_histogram_info[hist]
+                hist_data_sample = hist_info.f(sample, **hist_info.f_args)
+                try:
+                    hist_data[hist].append(hist_data_sample)
+                except KeyError:
+                    hist_data[hist] = [hist_data_sample]
+
+
+        for hist in run_it:
+            self.histograms[hist][ensemble].histogram(hist_data[hist], weights)
             self.histograms[hist][ensemble].name = (hist + " " + self.name
                                                     + " " + ensemble.name)
 
 
-    def all_statistics(self, samples, weights=None, force=False):
+    def all_statistics(self, storage, weights=None, force=False):
         # TODO: speed this up by just running over all samples once and
         # dealing them out to the appropriate histograms
         for ens in self.ensembles:
+            samples = sampleset_sample_generator(storage)
             self.ensemble_statistics(ens, samples, weights, force)
 
     def pathlength_histogram(self, ensemble):
@@ -282,14 +298,26 @@ class TISTransition(Transition):
         hist = self.histograms['crossing_probability'][ensemble]
         return hist.reverse_cumulative()
 
-    def total_crossing_probability(self, method="wham", force=False, nblocks=1):
+    def total_crossing_probability(self, method="wham", storage=None, force=False, nblocks=1):
         """Return the total crossing probability using `method`"""
         if method == "wham":
-            cp = {}
+            run_ensembles = False
             for ens in self.ensembles:
-                cp[ens] = self.crossing_probability(ens)
+                try:
+                    hist = self.histograms['max_lambda'][ens]
+                except KeyError:
+                    run_ensembles = True
+            if run_ensembles or force:
+                if storage is None:
+                    raise RuntimeError("Unable to build histograms without storage source")
+                self.all_statistics(storage, force=True)
+                         
+            df = histograms_to_pandas_dataframe(
+                self.histograms['max_lambda'].values(),
+                fcn="reverse_cumulative"
+            ).sort(axis=1)
             wham = WHAM()
-            wham.initial_histograms = cp
+            wham.load_from_dataframe(df)
             wham.clean_leading_ones()
             tcp = wham.wham_bam_histogram()
         elif method == "mbar":
@@ -302,7 +330,7 @@ class TISTransition(Transition):
         """Calculate the rate for this transition.
 
         For TIS transitions, this requires the result of an external
-        pathsimulator of the flux.
+        calculation of the flux.
         """
         if flux is not None:
             self._flux = flux
@@ -333,9 +361,8 @@ class TISTransition(Transition):
 @ops_object
 class RETISTransition(TISTransition):
     """Transition class for RETIS."""
-    def __init__(self, stateA, stateB, interfaces, collectivevariable=None, name=None):
-        super(RETISTransition, self).__init__(stateA, stateB, interfaces,
-                                              collectivevariable, name)
+    def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
+        super(RETISTransition, self).__init__(stateA, stateB, interfaces, orderparameter, name)
 
         self.minus_ensemble = paths.MinusInterfaceEnsemble(
             state_vol=stateA, 
@@ -356,7 +383,7 @@ class RETISTransition(TISTransition):
         ret_dict = {
             'stateA' : self.stateA,
             'stateB' : self.stateB,
-            'collectivevariable' : self.collectivevariable,
+            'orderparameter' : self.orderparameter,
             'interfaces' : self.interfaces,
             'name' : self.name,
             'movers' : self.movers,
@@ -371,7 +398,7 @@ class RETISTransition(TISTransition):
             stateA=dct['stateA'],
             stateB=dct['stateB'],
             interfaces=dct['interfaces'],
-            collectivevariable=dct['collectivevariable'],
+            orderparameter=dct['orderparameter'],
             name=dct['name']
         )
         mytrans.minus_ensemble = dct['minus_ensemble']
@@ -381,29 +408,32 @@ class RETISTransition(TISTransition):
 
 
     @property
-    def repex_movers(self):
-        pass
+    def replica_flow(self, bottom=None, top=None):
+        if bottom is None:
+            bottom = self.minus_ensemble
+        if top is None:
+            top = self.ensembles[-1]
 
-    @property
-    def minus_movers(self):
-        pass
+        updown = {}
+        round_trips = {}
+        for ens in [self.minus_ensemble] + self.ensembles:
+            updown[ens] = 0
+            nvisits[ens] = 0
+            up_trips[ens] = []
+            down_trips[ens] = []
+            round_trips[ens] = []
 
-    @property
-    def replica_flow(self):
-        # this should check to build the replica exchange network. If the
-        # number of neighbors at any station is more than 2, we can't do
-        # "normal" replica flow -- instead produce a network graph. Or,
-        # actually, ALWAYS produce a network graph (although this will be a
-        # feature to implement later)
+        # loop over moves which include a repex
+
+        # run stats to get replica flow and stats on up_trips, down_trips,
+        # round_trips
         pass
 
     @property
     def minus_move_flux(self):
-        pass
-
-    @property
-    def multiple_set_minus_switching(self):
-        # TODO: move this to network
+        # 1. get the samples in the minus ensemble
+        # 2. summarize_trajectory for each
+        # 3. calculate the flux
         pass
 
     @property
@@ -433,8 +463,13 @@ class RETISTransition(TISTransition):
         )
         return root_mover
 
+
 def summarize_trajectory(trajectory, label_dict):
     """Summarize trajectory based on number of continuous frames in volumes.
+
+    This uses a dictionary of disjoint volumes: the volumes must be disjoint
+    so that every frame can be mapped to one volume. If the frame maps to
+    none of the given volumes, it returns the label None.
 
     Parameters
     ----------
@@ -457,7 +492,7 @@ def summarize_trajectory(trajectory, label_dict):
             if label_dict[key](frame):
                 in_state.append(key)
         if len(key) > 1:
-            raise RuntimeError("States not disjoint")
+            raise RuntimeError("Volumes given to summarize_trajectory not disjoint")
         if len(key) == 0:
             current_vol = None
         else:
