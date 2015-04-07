@@ -76,7 +76,7 @@ class Storage(netcdf.Dataset):
         self.shootingpoint = paths.storage.ObjectStore(storage, paths.ShootingPoint, has_uid=False)
         self.shootingpointselector = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, has_uid=False)
         self.engine = paths.storage.ObjectStore(storage, paths.DynamicsEngine, has_uid=True)
-        self.calculation = paths.storage.ObjectStore(storage, paths.Calculation, has_uid=True)
+        self.pathsimulator = paths.storage.ObjectStore(storage, paths.PathSimulator, has_uid=True)
 
         # nestable objects
 
