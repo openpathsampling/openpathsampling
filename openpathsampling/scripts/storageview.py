@@ -138,7 +138,7 @@ if __name__ == '__main__':
 #        obj = storage.shootingpoint.load(p_idx)
 #        nline(p_idx,obj.json, obj.cls)
 
-    headline("Orderparameters (" + str(storage.collectivevariable.count()) + ")")
+    headline("CollectiveVariables (" + str(storage.collectivevariable.count()) + ")")
 
     all_snapshot_traj = storage.snapshot.all()
 

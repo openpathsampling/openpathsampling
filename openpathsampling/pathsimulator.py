@@ -216,8 +216,8 @@ class PathSampling(PathSimulator):
             if self.storage is not None:
                 self.globalstate.save(self.storage)
                 self.storage.sync()
-                # Note: This saves all orderparameters, but does this with
-                # removing computed values for not saved orderparameters
+                # Note: This saves all collectivevariables, but does this with
+                # removing computed values for not saved collectivevariables
                 # We assume that this is the right cause of action for this
                 # case.
                 self.storage.cv.sync()

@@ -21,7 +21,7 @@ Goal: RETIS for a simple A->B transition (one direction) boils down to
 >>> engine = ??? something that sets up the MD engine
 >>> storage = ??? something that sets up storage
 >>> globalstate0 = ??? something that sets up initial trajectories
->>> orderparameter = paths.OP_Function("lambda", some_function)
+>>> orderparameter = paths.CV_Function("lambda", some_function)
 >>>
 >>> # from here, this is real code
 >>> stateA = paths.LambdaVolume(orderparameter, min=-infinity, max=0.0)
