@@ -1,51 +1,12 @@
-from openpathsampling.todict import ops_object
-
 import mdtraj as md
 import numpy as np
 import pandas as pd
 from simtk import unit as units
 import simtk.openmm
 
-@ops_object
-class Topology(object):
-    '''
-    Topology is the object that contains all information about the structure
-    of the system to be simulated.
+from openpathsampling.dynamics.topology import Topology
+from openpathsampling.todict import ops_object
 
-    Attributes
-    ----------
-    n_atoms : int
-        number of atoms
-    spatial : int
-        number of spatial dimensions, default is 3
-    '''
-
-    def __init__(self, n_atoms, n_spatial = 3):
-        self.n_atoms = n_atoms
-        self.n_spatial = n_spatial
-
-    def subset(self, list_of_atoms):
-        return Topology(
-            n_atoms=len(list_of_atoms),
-            n_spatial=self.n_spatial
-        )
-
-
-@ops_object
-class ToyTopology(Topology):
-    '''
-    Attributes
-    ----------
-    masses : numpy.ndarray (n_atoms, dtype=float)
-        The masses associated with each atom
-    '''
-    def __init__(self, n_spatial, masses, pes, n_atoms = 1):
-        super(ToyTopology, self).__init__(n_atoms = n_atoms, n_spatial=n_spatial)
-        self.masses = masses
-        self.pes = pes
-
-    def subset(self, list_of_atoms):
-        return self
 
 @ops_object
 class MDTrajTopology(Topology):

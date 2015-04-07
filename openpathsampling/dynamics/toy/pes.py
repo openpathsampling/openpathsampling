@@ -1,9 +1,6 @@
 import numpy as np
 from openpathsampling.todict import ops_object
 
-# The decorator @restores_ allows us to restore the object from a JSON
-# string completely and can thus be stored automatically
-
 @ops_object
 class Toy_PES(object):
     # For now, we only support additive combinations; maybe someday that can

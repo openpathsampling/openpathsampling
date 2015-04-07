@@ -3,7 +3,9 @@ __author__ = 'jan-hendrikprinz'
 import mdtraj as md
 import simtk.unit as u
 import numpy as np
+
 import openpathsampling as paths
+from topology import MDTrajTopology
 
 
 def updateunits(func):
@@ -50,7 +52,7 @@ def snapshot_from_pdb(pdb_file, units = None):
         box_vectors=u.Quantity(pdb.unitcell_vectors[0], units['length']),
         potential_energy=u.Quantity(0.0, units['energy']),
         kinetic_energy=u.Quantity(0.0, units['energy']),
-        topology=paths.MDTrajTopology(pdb.topology)
+        topology=MDTrajTopology(pdb.topology)
     )
 
     return snapshot
@@ -121,43 +123,6 @@ def empty_snapshot_from_openmm_topology(topology, units):
     )
 
     return snapshot
-
-def units_from_snapshot(snapshot):
-    """
-    Returns a dict of simtk.unit.Unit instances that represent the used units in the snapshot
-
-    Parameters
-    ----------
-    snapshot : Snapshot
-        the snapshot to be used
-
-    Returns
-    -------
-    units : dict of {str : simtk.unit.Unit }
-        representing a dict of string representing a dimension ('length', 'velocity', 'energy') pointing the
-        the simtk.unit.Unit to be used
-    """
-
-    units = {}
-    if snapshot.coordinates is not None:
-        if hasattr(snapshot.coordinates, 'unit'):
-            units['length'] = snapshot.coordinates.unit
-        else:
-            units['length'] = u.Unit({})
-
-    if snapshot.potential_energy is not None:
-        if hasattr(snapshot.potential_energy, 'unit'):
-            units['energy'] = snapshot.potential_energy.unit
-        else:
-            units['energy'] = u.Unit({})
-
-    if snapshot.velocities is not None:
-        if hasattr(snapshot.velocities, 'unit'):
-            units['velocity'] = snapshot.velocities.unit
-        else:
-            units['velocity'] = u.Unit({})
-
-    return units
 
 def to_openmm_topology(obj):
     """

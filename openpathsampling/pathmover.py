@@ -135,7 +135,7 @@ def keep_selected_samples(func):
             keep_samples = kwargs['keep_samples']
             del kwargs['keep_samples']
             movepath = func(self, *args, **kwargs)
-            return paths.FilterSamplesMovePath(movepath, selected_samples=keep_samples)
+            return paths.FilterSamplesPathMoveChange(movepath, selected_samples=keep_samples)
         else:
             movepath = func(self, *args, **kwargs)
             return movepath
@@ -294,7 +294,7 @@ class PathMover(object):
         object (??? can you explain this, JHP?)
         '''
 
-        return paths.EmptyMovePath() # pragma: no cover
+        return paths.EmptyPathMoveChange() # pragma: no cover
 
     def selection_probability_ratio(self, details=None):
         '''
@@ -396,17 +396,17 @@ class ShootMover(PathMover):
         sample = paths.Sample(
             replica=replica, 
             trajectory=details.result, 
-            ensemble=dynamics_ensemble,
-            details=details
+            ensemble=dynamics_ensemble
         )
 
 #        new_set = SampleSet(samples=[sample], predecessor=globalstate, accepted=True)
 #        new_set = globalstate.apply([sample], accepted = details.accepted, move=self)
 
-        path = paths.SampleMovePath(
+        path = paths.SamplePathMoveChange(
                 samples=[sample],
                 accepted=details.accepted,
-                mover=self
+                mover=self,
+                details=details
         )
 
         return path
@@ -441,7 +441,7 @@ class ForwardShootMover(ShootMover):
         #setattr(details, 'repeated_partial', details.start[0:shooting_point])
         #setattr(details, 'new_partial', partial_trajectory)
 
-        details.trial = details.start[0:shooting_point] + partial_trajectory
+        details.trial = details.start[0:shooting_point + 1] + partial_trajectory[1:]
         details.final_point = paths.ShootingPoint(self.selector, details.trial,
                                             shooting_point)
     
@@ -473,7 +473,7 @@ class BackwardShootMover(ShootMover):
         #setattr(details, 'repeated_partial', details.start[details.start_point.index+1:])
         #setattr(details, 'new_partial', partial_trajectory.reversed)
 
-        details.trial = partial_trajectory.reversed + details.start[details.start_point.index + 1:]
+        details.trial = partial_trajectory[1:].reversed + details.start[details.start_point.index:]
         details.final_point = paths.ShootingPoint(self.selector, details.trial, len(partial_trajectory) - 1)
 
         pass
@@ -525,7 +525,7 @@ class RandomChoiceMover(PathMover):
 
         mover = self.movers[idx]
 
-        path = paths.RandomChoiceMovePath(mover.move(globalstate), mover=self)
+        path = paths.RandomChoicePathMoveChange(mover.move(globalstate), mover=self)
 
         return path
 
@@ -534,7 +534,7 @@ class ConditionalMover(PathMover):
     '''
     An if-then-else structure for PathMovers.
 
-    Returns a SequentialMovePath of the if_move movepath and the then_move
+    Returns a SequentialPathMoveChange of the if_move movepath and the then_move
     movepath (if if_move is accepted) or the else_move movepath (if if_move
     is rejected).
     '''
@@ -561,14 +561,14 @@ class ConditionalMover(PathMover):
             if self.then_mover is not None:
                 resultclause = self.then_mover.move(subglobal)
             else:
-                resultclause = paths.EmptyMovePath()
+                resultclause = paths.EmptyPathMoveChange()
         else:
             if self.else_mover is not None:
                 resultclause = self.else_mover.move(subglobal)
             else:
-                resultclause = paths.EmptyMovePath()
+                resultclause = paths.EmptyPathMoveChange()
 
-        return paths.SequentialMovePath([ifclause, resultclause], mover=self)
+        return paths.SequentialPathMoveChange([ifclause, resultclause], mover=self)
 
 
 @ops_object
@@ -595,7 +595,7 @@ class SequentialMover(PathMover):
 #        subglobal = SampleSet(self.legal_sample_set(globalstate))
 
         subglobal = globalstate
-        movepaths = []
+        pathmovechanges = []
 
         for mover in self.movers:
             logger.debug("Starting sequential move step "+str(mover))
@@ -604,9 +604,9 @@ class SequentialMover(PathMover):
             movepath = mover.move(subglobal)
             samples = movepath.samples
             subglobal = subglobal.apply_samples(samples)
-            movepaths.append(movepath)
+            pathmovechanges.append(movepath)
 
-        return paths.SequentialMovePath(movepaths, mover=self)
+        return paths.SequentialPathMoveChange(pathmovechanges, mover=self)
 
 @ops_object
 class PartialAcceptanceSequentialMover(SequentialMover):
@@ -624,7 +624,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     def move(self, globalstate):
         logger.debug("==== BEGINNING " + self.name + " ====")
         subglobal = paths.SampleSet(self.legal_sample_set(globalstate))
-        movepaths = []
+        pathmovechanges = []
         for mover in self.movers:
             # NOTE: right now, this doesn't quite work correctly if the
             # submovers are also multimovers (e.g., SequentialMovers). We
@@ -641,12 +641,12 @@ class PartialAcceptanceSequentialMover(SequentialMover):
             movepath = mover.move(subglobal)
             samples = movepath.samples
             subglobal = subglobal.apply_samples(samples)
-            movepaths.append(movepath)
+            pathmovechanges.append(movepath)
             if not movepath.accepted:
                 break
 
         logger.debug("==== FINISHING " + self.name + " ====")
-        return paths.PartialAcceptanceSequentialMovePath(movepaths, mover=self)
+        return paths.PartialAcceptanceSequentialMovePath(pathmovechanges, mover=self)
 
 
 @ops_object
@@ -670,7 +670,7 @@ class ConditionalSequentialMover(SequentialMover):
 #        subglobal = SampleSet(self.legal_sample_set(globalstate))
 
         subglobal = globalstate
-        movepaths = []
+        pathmovechanges = []
 
         for mover in self.movers:
             logger.debug("Starting sequential move step "+str(mover))
@@ -679,12 +679,12 @@ class ConditionalSequentialMover(SequentialMover):
             movepath = mover.move(subglobal)
             samples = movepath.samples
             subglobal = subglobal.apply_samples(samples)
-            movepaths.append(movepath)
+            pathmovechanges.append(movepath)
 
             if not movepath.accepted:
                 break
 
-        return paths.ConditionalSequentialMovePath(movepaths, mover=self)
+        return paths.ConditionalSequentialMovePath(pathmovechanges, mover=self)
 
 
 @ops_object
@@ -696,7 +696,7 @@ class RestrictToLastSampleMover(PathMover):
     @keep_selected_samples
     def move(self, globalstate):
         movepath = self.mover.move(globalstate)
-        return paths.KeepLastSampleMovePath(movepath, mover=self)
+        return paths.KeepLastSamplePathMoveChange(movepath, mover=self)
 
 @ops_object
 class ReplicaIDChangeMover(PathMover): 
@@ -741,14 +741,14 @@ class ReplicaIDChangeMover(PathMover):
         new_sample = paths.Sample(
             replica=details.rep_to, 
             ensemble=rep_sample.ensemble,
-            trajectory=rep_sample.trajectory,
-            details=details
+            trajectory=rep_sample.trajectory
         )
 
-        return paths.SampleMovePath(
+        return paths.SamplePathMoveChange(
             [new_sample],
             mover=self,
-            accepted=details.accepted
+            accepted=details.accepted,
+            details=details
         )
 
 @ops_object
@@ -821,14 +821,14 @@ class EnsembleHopMover(PathMover):
         sample = paths.Sample(
             replica=replica,
             trajectory=trajectory,
-            ensemble=details.result_ensemble,
-            details=details
+            ensemble=details.result_ensemble
         )
 
-        path = paths.SampleMovePath(
+        path = paths.SamplePathMoveChange(
             [sample],
             mover=self,
-            accepted=details.accepted
+            accepted=details.accepted,
+            details=details
         )
 
         return path
@@ -870,11 +870,15 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
         sample = paths.Sample(
             trajectory=trajectory,
             ensemble=details.result_ensemble,
-            details=details,
             replica=replica
         )
 
-        path = paths.SampleMovePath( [sample], mover=self, accepted=details.accepted)
+        path = paths.SamplePathMoveChange(
+            [sample],
+            mover=self,
+            accepted=details.accepted,
+            details=details
+        )
         return path
 
 
@@ -932,10 +936,14 @@ class RandomSubtrajectorySelectMover(PathMover):
         sample = paths.Sample(
             replica=replica,
             trajectory=details.result,
-            ensemble=self.subensemble,
+            ensemble=self.subensemble
+        )
+        path = paths.SamplePathMoveChange(
+            [sample],
+            mover=self,
+            accepted=details.accepted,
             details=details
         )
-        path = paths.SampleMovePath( [sample], mover=self, accepted=details.accepted)
 
         return path
 
@@ -990,11 +998,15 @@ class PathReversalMover(PathMover):
         sample = paths.Sample(
             replica=replica,
             trajectory=details.result,
-            ensemble=ensemble,
-            details=details
+            ensemble=ensemble
         )
 
-        path = paths.SampleMovePath( [sample], mover=self, accepted=details.accepted)
+        path = paths.SamplePathMoveChange(
+            [sample],
+            mover=self,
+            accepted=details.accepted,
+            details=details
+        )
 
         return path
 
@@ -1045,52 +1057,43 @@ class ReplicaExchangeMover(PathMover):
                      " into ensemble " + repr(ensemble1) +
                      " : " + str(from2to1))
         allowed = from1to2 and from2to1
-        details1 = MoveDetails()
-        details2 = MoveDetails()
-        details1.inputs = [s1, s2]
-        details2.inputs = [s2, s1]
-        setattr(details1, 'ensembles', [ensemble1, ensemble2])
-        setattr(details2, 'ensembles', [ensemble1, ensemble2])
-        details1.mover = self
-        details2.mover = self
+        details = MoveDetails()
+        details.inputs = [s1, s2]
+        setattr(details, 'ensembles', [ensemble1, ensemble2])
 
-        details2.trial = trajectory1
-        details1.trial = trajectory2
+        details.trials = [trajectory2, trajectory1]
         if allowed:
             # Swap
-            details1.accepted = True
-            details2.accepted = True
-            details1.acceptance_probability = 1.0
-            details2.acceptance_probability = 1.0
-            details1.result = trajectory2
-            details2.result = trajectory1
+            details.accepted = True
+            details.acceptance_probability = 1.0
+            details.results = [trajectory2, trajectory1]
             finalrep1 = replica2
             finalrep2 = replica1
         else:
             # No swap
-            details1.accepted = False
-            details2.accepted = False
-            details1.acceptance_probability = 0.0
-            details2.acceptance_probability = 0.0
-            details1.result = trajectory1
-            details2.result = trajectory2
+            details.accepted = False
+            details.acceptance_probability = 0.0
+            details.results = [trajectory1, trajectory2]
             finalrep1 = replica1
             finalrep2 = replica2
 
         sample1 = paths.Sample(
             replica=finalrep1,
-            trajectory=details1.result,
-            ensemble=ensemble1,
-            details=details1
+            trajectory=details.results[0],
+            ensemble=ensemble1
         )
         sample2 = paths.Sample(
             replica=finalrep2,
-            trajectory=details2.result,
-            ensemble=ensemble2,
-            details=details2
-            )
+            trajectory=details.results[1],
+            ensemble=ensemble2
+        )
 
-        path = paths.SampleMovePath([sample1, sample2], mover=self, accepted=details1.accepted)
+        path = paths.SamplePathMoveChange(
+            [sample1, sample2],
+            mover=self,
+            accepted=details.accepted,
+            details=details
+        )
 
         return path
 
@@ -1122,7 +1125,7 @@ class FilterBySample(PathMover):
 
     @keep_selected_samples
     def move(self, globalstate):
-        return paths.FilterSamplesMovePath(
+        return paths.FilterSamplesPathMoveChange(
             self.mover.move(globalstate),
             selected_samples=self.selected_samples,
             use_all_samples=self.use_all_samples,
@@ -1227,7 +1230,7 @@ class PathSimulatorMover(PathMover):
         self.pathsimulator = pathsimulator
 
     def move(self, globalstate, step=-1):
-        return paths.PathSimulatorMovePath(self.mover.move(globalstate), self.pathsimulator, step=step, mover=self)
+        return paths.PathSimulatorPathMoveChange(self.mover.move(globalstate), self.pathsimulator, step=step, mover=self)
 
 @ops_object
 class MultipleSetMinusMover(RandomChoiceMover):

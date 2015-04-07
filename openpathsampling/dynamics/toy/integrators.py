@@ -1,4 +1,5 @@
 import math
+
 import numpy as np
 from openpathsampling.todict import ops_object
 

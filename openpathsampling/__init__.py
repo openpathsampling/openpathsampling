@@ -31,9 +31,7 @@ from pathmover import (
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
     GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
 
-from dynamics_engine import DynamicsEngine
-
-from openmm_engine import OpenMMEngine
+from openpathsampling.dynamics.dynamics_engine import DynamicsEngine
 
 from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
     EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, \
@@ -42,26 +40,23 @@ from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
 
 from todict import ObjectJSON, ops_object, class_list
 
-from tools import empty_snapshot_from_openmm_topology, snapshot_from_pdb, \
-    to_openmm_topology, trajectory_from_mdtraj, units_from_snapshot
+from openpathsampling.dynamics.topology import Topology
 
-from topology import ToyTopology, MDTrajTopology, Topology
+from dynamics.toy import ToyTopology
 
-from toy_dynamics.toy_pes import Gaussian, HarmonicOscillator, LinearSlope, \
-    OuterWalls, Toy_PES, Toy_PES_Add, Toy_PES_Sub
+from dynamics.toy import Gaussian, HarmonicOscillator, LinearSlope, \
+    OuterWalls, Toy_PES, Toy_PES_Add, Toy_PES_Sub, ToyEngine, \
+    LangevinBAOABIntegrator, LeapfrogVerletIntegrator
 
-from toy_dynamics.toy_engine import ToyEngine
-
-from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
-    LeapfrogVerletIntegrator
+from dynamics.openmm import MDTrajTopology, OpenMMEngine
 
 from analysis.tis_analysis import TISTransition, RETISTransition, Transition, \
     TPSTransition
 
-from movepath import (EmptyMovePath, ConditionalSequentialMovePath,
-                      MovePath, PartialAcceptanceSequentialMovePath,
-                      RandomChoiceMovePath, SampleMovePath,
-                      SequentialMovePath,  KeepLastSampleMovePath,
-                      CollapsedMovePath, FilterSamplesMovePath,
-                      PathSimulatorMovePath
+from pathmovechange import (EmptyPathMoveChange, ConditionalSequentialMovePath,
+                      PathMoveChange, PartialAcceptanceSequentialMovePath,
+                      RandomChoicePathMoveChange, SamplePathMoveChange,
+                      SequentialPathMoveChange,  KeepLastSamplePathMoveChange,
+                      CollapsedMovePath, FilterSamplesPathMoveChange,
+                      PathSimulatorPathMoveChange
                      )

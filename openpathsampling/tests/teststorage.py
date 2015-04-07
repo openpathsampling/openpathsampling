@@ -1,22 +1,17 @@
 '''
 @author David W.H. Swenson
 '''
-import os
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises)
-from nose.plugins.skip import Skip, SkipTest
-from test_helpers import (true_func, data_filename,
-                          assert_equal_array_array,
-                          assert_not_equal_array_array)
-
-import numpy.testing as npt
-
-from openpathsampling.openmm_engine import *
-from openpathsampling.snapshot import Snapshot
-from openpathsampling.snapshot import Momentum, Configuration
-
-import simtk.unit as u
 import time
+
+from nose.tools import (assert_equal)
+import numpy.testing as npt
+import simtk.unit as u
+
+from test_helpers import (data_filename)
+from openpathsampling.dynamics.openmm.openmm_engine import *
+from openpathsampling.snapshot import Snapshot
+import openpathsampling.dynamics.openmm as omm
+
 
 def compare_snapshot(snapshot1, snapshot2):
     npt.assert_allclose(snapshot1.box_vectors, snapshot2.box_vectors, rtol=1e-7, atol=0)
@@ -48,11 +43,10 @@ def setUp():
               }
 
     # create a template snapshot
-    this.template_snapshot = paths.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
+    this.template_snapshot = omm.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
 
     # and an openmm engine
     this.engine = paths.OpenMMEngine(options=this.options, template=this.template_snapshot)
-    this.engine.initialized = True
 
     # run a small trajectory of a few steps that can be used to save, etc...
     this.traj = this.engine.generate(this.template_snapshot, running=[paths.LengthEnsemble(2).can_append])
@@ -167,13 +161,13 @@ class testStorage(object):
         # do some tests, if this is still the same data
 
         compare_snapshot(
-            store2.snapshot.load(0),
-            store.snapshot.load(0).subset(self.options['solute_indices'])
+            store2.snapshots.load(0),
+            store.snapshots.load(0).subset(self.options['solute_indices'])
         )
 
         compare_snapshot(
-            store2.snapshot.load(1),
-            store.snapshot.load(1).subset(self.options['solute_indices'])
+            store2.snapshots.load(1),
+            store.snapshots.load(1).subset(self.options['solute_indices'])
         )
         store.close()
         store2.close()
@@ -197,12 +191,12 @@ class testStorage(object):
         # do some tests, if this is still the same data
 
         compare_snapshot(
-            store2.snapshot.load(0),
-            store.snapshot.load(0)
+            store2.snapshots.load(0),
+            store.snapshots.load(0)
         )
 
-        assert_equal(store2.snapshot.count(), 1)
-        assert_equal(store2.trajectory.count(), 0)
+        assert_equal(store2.snapshots.count(), 1)
+        assert_equal(store2.trajectories.count(), 0)
 
         store.close()
         store2.close()

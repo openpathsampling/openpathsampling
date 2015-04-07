@@ -1,20 +1,19 @@
 '''
 @author David W.H. Swenson
 '''
-import os
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises)
-from nose.plugins.skip import Skip, SkipTest
+import time
+
+from nose.tools import (assert_equal, assert_items_equal)
+from nose.plugins.skip import SkipTest
+import simtk.unit as u
+
 from test_helpers import (true_func, data_filename,
                           assert_equal_array_array,
                           assert_not_equal_array_array)
-
-from openpathsampling.openmm_engine import *
+from openpathsampling.dynamics.openmm.openmm_engine import *
 from openpathsampling.snapshot import Snapshot
 from openpathsampling.snapshot import Momentum, Configuration
 
-import simtk.unit as u
-import time
 
 class testOpenMMEngine(object):
     def setUp(self):
@@ -122,7 +121,6 @@ class testOpenMMEngine(object):
         assert_not_equal_array_array(old_vel, new_vel)
 
     def test_generate(self):
-        self.engine.initialized = True
         traj = self.engine.generate(self.engine.current_snapshot, [true_func])
         assert_equal(len(traj), self.engine.n_frames_max)
 

@@ -6,14 +6,16 @@ a duck.
 """
 
 import os
-from pkg_resources import resource_filename 
+
+from pkg_resources import resource_filename
 from nose.tools import assert_items_equal, assert_equal
+import numpy as np
 
 from openpathsampling.trajectory import Trajectory
 from openpathsampling.snapshot import Snapshot
-from openpathsampling.dynamics_engine import DynamicsEngine
-from openpathsampling.topology import Topology
-import numpy as np
+from openpathsampling.dynamics.dynamics_engine import DynamicsEngine
+from openpathsampling import Topology
+
 
 def make_1d_traj(coordinates, velocities=None, topology=None):
     if velocities is None:

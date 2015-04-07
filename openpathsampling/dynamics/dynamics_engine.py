@@ -57,7 +57,6 @@ class DynamicsEngine(object):
         initialized.
         '''
 
-        self.initialized = False
         self.running = dict()
 
         # if there has not been created a storage by the init of a derived
@@ -265,48 +264,43 @@ class DynamicsEngine(object):
         aborted. Otherwise check the length and compare to max_frames
         """
 
-        # Are we ready to rumble ?
-        if self.initialized:
-            
-            self.current_snapshot = snapshot
-            self.start()
 
-            # Store initial state for each trajectory segment in trajectory.
-            trajectory = paths.Trajectory()
+        self.current_snapshot = snapshot
+        self.start()
+
+        # Store initial state for each trajectory segment in trajectory.
+        trajectory = paths.Trajectory()
+        trajectory.append(snapshot)
+
+        frame = 0
+        # maybe we should stop before we even begin?
+        stop = self.stop_conditions(trajectory=trajectory,
+                                    continue_conditions=running)
+
+        logger.info("Starting trajectory")
+        log_freq = 10 # TODO: set this from a singleton class
+        while stop == False:
+
+            # Do integrator x steps
+            snapshot = self.generate_next_frame()
+            frame += 1
+            if frame % log_freq == 0:
+                logger.info("Through frame: %d", frame)
+
+            # Store snapshot and add it to the trajectory. Stores also
+            # final frame the last time
+#                if self.storage is not None:
+#                    self.storage.snapshots.save(snapshot)
             trajectory.append(snapshot)
-            
-            frame = 0
-            # maybe we should stop before we even begin?
+
+            # Check if we should stop. If not, continue simulation
             stop = self.stop_conditions(trajectory=trajectory,
                                         continue_conditions=running)
 
-            logger.info("Starting trajectory")
-            log_freq = 10 # TODO: set this from a singleton class 
-            while stop == False:
-                                
-                # Do integrator x steps
-                snapshot = self.generate_next_frame()
-                frame += 1
-                if frame % log_freq == 0:
-                    logger.info("Through frame: %d", frame)
-                
-                # Store snapshot and add it to the trajectory. Stores also
-                # final frame the last time
-#                if self.storage is not None:
-#                    self.storage.snapshot.save(snapshot)
-                trajectory.append(snapshot)
-                
-                # Check if we should stop. If not, continue simulation
-                stop = self.stop_conditions(trajectory=trajectory,
-                                            continue_conditions=running)
 
-
-            # exit the while loop once we must stop, so we call the engine's
-            # stop function (which should manage any end-of-trajectory
-            # cleanup)
-            self.stop(trajectory)
-            logger.info("Finished trajectory, length: %d", frame)
-            return trajectory
-        else:
-            raise RuntimeWarning("Can't generate from an uninitialized system!")
-
+        # exit the while loop once we must stop, so we call the engine's
+        # stop function (which should manage any end-of-trajectory
+        # cleanup)
+        self.stop(trajectory)
+        logger.info("Finished trajectory, length: %d", frame)
+        return trajectory

@@ -6,13 +6,14 @@ from openpathsampling.storage import Storage
 import mdtraj as md
 
 from test_helpers import data_filename
+import openpathsampling.dynamics.openmm as omm
 
 def setup_package():
     # this should generate the trajectory.nc file which we'll use for
     # everything else
     mdtrajectory = md.load(data_filename("ala_small_traj.pdb"))
 
-    snapshot = paths.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
+    snapshot = omm.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
 
     # once we have a template configuration (coordinates to not really matter)
     # we can create a storage. We might move this logic out of the dynamics engine
@@ -25,7 +26,7 @@ def setup_package():
     )
 
     mytraj = paths.Trajectory.from_mdtraj(mdtrajectory)
-    storage.trajectory.save(mytraj)
+    storage.trajectories.save(mytraj)
 
     storage.close()
 
