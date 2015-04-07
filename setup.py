@@ -115,7 +115,6 @@ def buildKeywordDictionary():
         'openpathsampling.dynamics' : 'openpathsampling/dynamics',
         'openpathsampling.dynamics.toy' : 'openpathsampling/dynamics/toy',
         'openpathsampling.dynamics.openmm' : 'openpathsampling/dynamics/openmm',
-        'openpathsampling.util' : 'openpathsampling/util',
         'openpathsampling.tests' : 'openpathsampling/tests',
         'openpathsampling.analysis' : 'openpathsampling/analysis'
     }
