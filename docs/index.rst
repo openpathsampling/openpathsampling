@@ -29,7 +29,7 @@ API Reference
    ensemble
    shooting
    pathmover
-   calculation
+   pathsimulator
    engine
    storage
 

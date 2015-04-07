@@ -188,7 +188,7 @@ class VoronoiTesselation(object):
         traj : Trajectory
             trajectory to be clustered
         recalc : bool
-            forces a calculation of the cluster center and not using the cached assignments (Default False) 
+            forces a calculation of the cluster center and not using the cached assignments (Default False)
         
         RETURNS
         

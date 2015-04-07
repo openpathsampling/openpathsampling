@@ -11,7 +11,7 @@ import time
 Experimental analysis module.
 
 The idea here is to simplify the vast majority of common analysis routines.
-Interestingly, the process should also simplify a lot of calculation
+Interestingly, the process should also simplify a lot of simulation
 preparation.
 
 Goal: RETIS for a simple A->B transition (one direction) boils down to
@@ -144,7 +144,7 @@ class TISTransition(Transition):
     def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
         super(TISTransition, self).__init__(stateA, stateB)
         # NOTE: making these into dictionaries like this will make it easy
-        # to combine them in order to make a PathSampling calculation object
+        # to combine them in order to make a PathSampling PathSimulator object
 
 
         self.stateA = stateA
@@ -170,7 +170,7 @@ class TISTransition(Transition):
         self.total_crossing_probability_method="wham" 
         self.histograms = {}
         self._ensemble_histograms = {}
-        # caches for the results of our calculations
+        # caches for the results of our calculation
         self._flux = None
         self._rate = None
 
@@ -302,7 +302,7 @@ class TISTransition(Transition):
         """Calculate the rate for this transition.
 
         For TIS transitions, this requires the result of an external
-        calculation of the flux. 
+        calculation of the flux.
         """
         if flux is not None:
             self._flux = flux
@@ -314,7 +314,7 @@ class TISTransition(Transition):
         pass
 
     def default_movers(self, engine):
-        """Create reasonable default movers for a `PathSampling` calculation"""
+        """Create reasonable default movers for a `PathSampling` pathsimulator"""
         shoot_sel = paths.RandomChoiceMover(
             movers=self.movers['shooting'],
             name="ShootingChooser"
@@ -414,7 +414,7 @@ class RETISTransition(TISTransition):
         pass
 
     def default_movers(self, engine):
-        """Create reasonable default movers for a `PathSampling` calculation
+        """Create reasonable default movers for a `PathSampling` pathsimulator
         
         Extends `TISTransition.default_movers`.
         """
