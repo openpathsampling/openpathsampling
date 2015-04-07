@@ -28,7 +28,7 @@ from openpathsampling.pathmover import PathMoverFactory as mf
 from openpathsampling.ensemble import EnsembleFactory as ef
 from openpathsampling.ensemble import (LengthEnsemble, SequentialEnsemble, AllOutXEnsemble,
                               AllInXEnsemble)
-from openpathsampling.calculation import Bootstrapping
+from openpathsampling.pathsimulator import Bootstrapping
 from openpathsampling.pathmover import PathMover
 from openpathsampling.shooting import UniformSelector
 from openpathsampling.sample import Sample, SampleSet
@@ -177,7 +177,7 @@ use PartOutXEnsemble as we typically do with TIS paths.
     print """
 Starting the bootstrapping procedure to obtain initial paths. First we
 define our shooting movers (randomly pick fwd or bkwd shooting), then build
-the bootstrapping calculation, then we run it. 
+the bootstrapping pathsimulator, then we run it.
     """
     bootstrap = Bootstrapping(storage=engine.storage,
                               engine=engine,
