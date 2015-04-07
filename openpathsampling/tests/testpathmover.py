@@ -747,8 +747,6 @@ class testMinusMover(object):
 
         seg_dir = {}
         for i in range(100):
-            print i, gs
-            print str(self.mover)
             change = self.mover.move(gs).opened
             samples = change.samples
             assert_equal(len(samples), 5)
@@ -815,9 +813,6 @@ class testMinusMover(object):
         
         change = self.mover.move(gs).opened
         samples = change.all_samples
-        print change
-        print samples
-        print list(change)
         assert_equal(self.innermost(innermost_crosses_to_state), True)
         assert_equal(len(samples), 3) # stop after failed repex
         assert_subchanges_set_accepted(change, [True, False, False])
