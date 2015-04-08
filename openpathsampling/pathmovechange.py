@@ -111,54 +111,60 @@ class PathMoveChange(object):
 
 
     def __len__(self):
-        # TODO: Add caching here?
-        return len(list(iter(self)))
+        if self._len is None:
+            self._len = len(list(iter(self)))
+
+        return self._len
 
     def __contains__(self, item):
-        return item in self.traverse_dfs(lambda x : x.mover)
+        return item in self.traverse_post_order(lambda x : x.mover)
 
-    def traverse_dfs(self, fnc, **kwargs):
+    def traverse_post_order(self, fnc, **kwargs):
         """
-        Perform a depth first traverse of the movepath (DFS) applying a function
+        Traverse the tree of pathmovechanges in post-order applying a function
 
-        This traverses the underlying movepath tree and applies the given function
-        at each node returning a list of the results. The DFS will result in the
-        order in which samples are generated. That means that submover are called
-        first before the node itself is evaluated.
+        This traverses the underlying tree of pathmovechanges and applies the
+        given function at each node returning a list of the results. Post-order
+        will result in the order in which samples are generated. That means
+        that subchanges are called first BEFORE the node itself is evaluated.
 
         Parameters
         ----------
-        fnc : function(movepath, args, kwargs)
-            the function run at each movepath node. It is given the node and
-            the optional parameters
+        fnc : function(pathmovechange, args, kwargs)
+            the function run at each pathmovechange node. It is given the node
+            and the optional (fixed) parameters
         kwargs : named arguments
             optional arguments added to the function
 
         Returns
         -------
-        list
+        list (fnc(node, **kwargs))
             flattened list of the results of the traverse
+
+        Notes
+        -----
+        This uses the same order as `reversed()`
 
         See also
         --------
-        traverse_dfs_level, traverse_bfs, traverse_bfs_level
+        traverse_pre_order, traverse_post_order, level_pre_order, level_post_order
         """
         return [ fnc(node, **kwargs) for node in reversed(self) ]
 
-    def traverse_dfs_level(self, fnc, level=0, **kwargs):
+    def level_post_order(self, fnc, level=0, **kwargs):
         """
-        Perform a depth first traverse of the movepath (DFS) applying a function
+        Traverse the tree of pathmovechanges in post-order applying a function
 
-        This traverses the underlying movepath tree and applies the given function
-        at each node returning a list of tuples (level, function()) .
-        That means that sub_pathmovechanges are called BEFORE the node itself is
-        evaluated.
+        This traverses the underlying tree of pathmovechanges and applies the
+        given function at each node returning a list of the results. Post-order
+        will result in the order in which samples are generated. That means
+        that subchanges are called first BEFORE the node itself is evaluated.
 
         Parameters
         ----------
-        fnc : function(movepath, args, kwargs)
-            the function run at each movepath node. It is given the node and
-            the optional parameters
+        fnc : function(pathmovechange, args, kwargs)
+            the function run at each pathmovechange node. It is given the node
+            and the optional parameters
         level : int
             the initial level
         kwargs : named arguments
@@ -166,64 +172,66 @@ class PathMoveChange(object):
 
         Returns
         -------
-        list of tuple (level, func(node, **kwargs)
+        list of tuple(level, func(node, **kwargs))
             flattened list of tuples of results of the traverse. First part of
             the tuple is the level, second part is the function result.
 
         See also
         --------
-        traverse_dfs, traverse_bfs, traverse_bfs_level
+        traverse_pre_order, traverse_post_order, level_pre_order, level_post_order
         """
 
         output = list()
         for mp in self.subchanges:
-            output.extend(mp.traverse_dfs_level(fnc, level + 1, **kwargs))
+            output.extend(mp.level_post_order(fnc, level + 1, **kwargs))
         output.append((level, fnc(self, **kwargs)))
 
         return output
 
-    def traverse_bfs(self, fnc, **kwargs):
+    def traverse_pre_order(self, fnc, **kwargs):
         """
-        Perform a breadth first traverse of the movepath (BFS) applying a function
+        Traverse the tree of pathmovechanges in pre-order applying a function
 
-        This traverses the underlying movepath tree and applies the given function
-        at each node returning a list of the results. The BFS will result in the
-        order in which samples are generated.  That means that sub_pathmovechanges are
-        called AFTER the node itself is evaluated.
+        This traverses the underlying tree of pathmovechanges and applies the
+        given function at each node returning a list of the results. Pre-order
+        means that subchanges are called AFTER the node itself is evaluated.
 
         Parameters
         ----------
-        fnc : function(movepath, args, kwargs)
-            the function run at each movepath node. It is given the node and
-            the optional parameters
+        fnc : function(pathmovechange, args, kwargs)
+            the function run at each pathmovechange node. It is given the node
+            and the optional parameters
         kwargs : named arguments
             optional arguments added to the function
 
         Returns
         -------
-        list
+        list (fnc(node, **kwargs))
             flattened list of the results of the traverse
+
+        Notes
+        -----
+        This uses the same order as `iter()`
 
         See also
         --------
-        traverse_bfs_level, traverse_bfs_level, traverse_dfs
-
+        traverse_pre_order, traverse_post_order, level_pre_order, level_post_order
         """
         return [ fnc(node, **kwargs) for node in iter(self) ]
 
-    def traverse_bfs_level(self, fnc, level=0, **kwargs):
+    def level_pre_order(self, fnc, level=0, **kwargs):
         """
-        Perform a breadth first traverse of the movepath (BFS) applying a function
+        Traverse the tree of pathmovechanges in pre-order applying a function
 
-        This traverses the underlying movepath tree and applies the given function
-        at each node returning a list of tuples (level, function()) .
-        That means that sub_pathmovechanges are called AFTER the node itself is evaluated.
+        This traverses the underlying tree of pathmovechanges and applies the
+        given function at each node returning a list of the results. Pre-order
+        means that subchanges are called AFTER the node itself is evaluated.
 
         Parameters
         ----------
-        fnc : function(movepath, args, kwargs)
-            the function run at each movepath node. It is given the node and
-            the optional parameters
+        fnc : function(pathmovechange, args, kwargs)
+            the function run at each pathmovechange node. It is given the node
+            and the optional parameters
         level : int
             the initial level
         kwargs : named arguments
@@ -231,20 +239,21 @@ class PathMoveChange(object):
 
         Returns
         -------
-        list of tuple (level, func(node, **kwargs)
+        list of tuple(level, fnc(node, **kwargs))
             flattened list of tuples of results of the traverse. First part of
             the tuple is the level, second part is the function result.
 
+
         See also
         --------
-        traverse_bfs, traverse_bfs_level, traverse_dfs
+        traverse_pre_order, traverse_post_order, level_pre_order, level_post_order
         """
 
         output = list()
         output.append((level, fnc(self, **kwargs)))
 
         for mp in self.subchanges:
-            output.extend(mp.traverse_dfs_level(fnc, level + 1, **kwargs))
+            output.extend(mp.level_post_order(fnc, level + 1, **kwargs))
 
         return output
 
@@ -430,7 +439,7 @@ class PathMoveChange(object):
             return True
         else:
             try:
-                return self.movepath.contains(mover)
+                return self.pathmovechange.contains(mover)
             except NameError:
                 return False
 
