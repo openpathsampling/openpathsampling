@@ -6,10 +6,10 @@ API Functions
 	:maxdepth: 2
 
 **************
-OrderParameter
+CollectiveVariable
 **************
 	
-.. automodule:: orderparameter
+.. automodule:: collectivevariable
 	:members:
 	:inherited-members:
 	:show-inheritance:

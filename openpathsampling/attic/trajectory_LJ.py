@@ -458,7 +458,7 @@ class TransitionPathSampling(object):
 
         OPTIONAL ARGUMENTS
 
-        platform (simtk.chem.openPlatform) - platform to use for OpenMM calculations
+        platform (simtk.chem.openPlatform) - platform to use for OpenMM pathsimulators
         
         """
 

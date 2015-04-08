@@ -4,15 +4,15 @@ class QueryStore():
         self.storage = storage
 
 
-    def trajectory_orderparameter(self, orderparameter, ensemble=None, replica=None, step=None):
+    def trajectory_collectivevariable(self, collectivevariable, ensemble=None, replica=None, step=None):
         """
-        Return list of orderparameters fast for specific sets of samples
+        Return list of collectivevariables fast for specific sets of samples
         samples can be all samples found in specific or all sampleset and filter
         these by ensemble and/or replica.
         Parameters
         ----------
-        orderparameter : paths.Orderparameter()
-            the orderparameter from which the values should be extracted
+        collectivevariable : paths.CollectiveVariable()
+            the collectivevariable from which the values should be extracted
         ensemble : paths.Ensemble or None
             if not None only samples from the specific ensemble are used.
             For `None` (default) all ensembles are considered
@@ -26,7 +26,7 @@ class QueryStore():
         -------
         list of list of float
             Returns for each sample a list of floats which represent the
-            orderparameter values of the trajectory of the samples
+            collectivevariable values of the trajectory of the samples
         """
 
         storage = self.storage
@@ -36,7 +36,7 @@ class QueryStore():
 
         output = []
 
-        op_dict = storage.cv.get_list_value(orderparameter, slice(None,None))
+        op_dict = storage.cv.get_list_value(collectivevariable, slice(None,None))
 
         for sset_id in range(len(storage.sampleset)):
             if step is not None and sset_id != step:

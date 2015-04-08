@@ -657,7 +657,7 @@ class ObjectStorage(object):
         self.storage.variables[name][idx, begin:begin+len(data)] = values
 
 #=============================================================================================
-# ORDERPARAMETER UTILITY FUNCTIONS
+# COLLECTIVE VARIABLE UTILITY FUNCTIONS
 #=============================================================================================
 
     @property
