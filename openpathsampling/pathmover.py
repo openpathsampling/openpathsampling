@@ -513,6 +513,14 @@ class RandomChoiceMover(PathMover):
 
     @keep_selected_samples
     def move(self, globalstate):
+
+        details = MoveDetails()
+        details.accepted = False
+        details.inputs = []
+        details.mover = self
+
+        details.result = details.start
+
         rand = np.random.random() * sum(self.weights)
         idx = 0
         prob = self.weights[0]
@@ -520,12 +528,18 @@ class RandomChoiceMover(PathMover):
             idx += 1
             prob += self.weights[idx]
 
+        details.choice = idx
+
         logger_str = "RandomChoiceMover ({name}) selecting mover index {idx} ({mtype})"
         logger.info(logger_str.format(name=self.name, idx=idx, mtype=self.movers[idx].name))
 
         mover = self.movers[idx]
 
-        path = paths.RandomChoicePathMoveChange(mover.move(globalstate), mover=self)
+        path = paths.RandomChoicePathMoveChange(
+            mover.move(globalstate),
+            mover=self,
+            details=details
+        )
 
         return path
 

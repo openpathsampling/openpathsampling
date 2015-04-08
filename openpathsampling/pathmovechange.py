@@ -105,7 +105,7 @@ class PathMoveChange(object):
 
     def __reversed__(self):
         for subchange in self.subchanges:
-            for change in subchange:
+            for change in reversed(subchange):
                 yield change
 
         yield self
@@ -254,7 +254,7 @@ class PathMoveChange(object):
         output.append((level, fnc(self, **kwargs)))
 
         for mp in self.subchanges:
-            output.extend(mp.level_post_order(fnc, level + 1, **kwargs))
+            output.extend(mp.level_pre_order(fnc, level + 1, **kwargs))
 
         return output
 
@@ -430,21 +430,6 @@ class PathMoveChange(object):
             return []
 
 
-    def contains(self, mover):
-        """
-        Check if a given mover is part of this MovePath.
-        """
-        # TODO: In my opinion (DWHS) this should be the behavior of the
-        # __contains__ operation
-        if self.mover == mover:
-            return True
-        else:
-            try:
-                return self.pathmovechange.contains(mover)
-            except NameError:
-                return False
-
-
     def __str__(self):
         if self.accepted:
             return 'SampleMove : %s : %s : %d samples' % (self.mover.cls, self.accepted, len(self._local_samples)) + ' ' + str(self._local_samples) + ''
@@ -490,7 +475,6 @@ class SamplePathMoveChange(PathMoveChange):
 
         if type(samples) is paths.Sample:
             samples = [samples]
-
 
         self._local_samples.extend(samples)
 
