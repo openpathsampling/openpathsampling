@@ -1,4 +1,4 @@
-from histogram import Histogram
+from histogram import Histogram, histograms_to_pandas_dataframe
 from wham import WHAM
 import openpathsampling as paths
 from openpathsampling.todict import ops_object
@@ -11,7 +11,7 @@ import time
 Experimental analysis module.
 
 The idea here is to simplify the vast majority of common analysis routines.
-Interestingly, the process should also simplify a lot of calculation
+Interestingly, the process should also simplify a lot of simulation
 preparation.
 
 Goal: RETIS for a simple A->B transition (one direction) boils down to
@@ -21,7 +21,7 @@ Goal: RETIS for a simple A->B transition (one direction) boils down to
 >>> engine = ??? something that sets up the MD engine
 >>> storage = ??? something that sets up storage
 >>> globalstate0 = ??? something that sets up initial trajectories
->>> orderparameter = paths.OP_Function("lambda", some_function)
+>>> orderparameter = paths.CV_Function("lambda", some_function)
 >>>
 >>> # from here, this is real code
 >>> stateA = paths.LambdaVolume(orderparameter, min=-infinity, max=0.0)
@@ -53,6 +53,10 @@ def pathlength(sample):
 def max_lambdas(sample, orderparameter):
     return max([orderparameter(frame) for frame in sample.trajectory])
 
+def sampleset_sample_generator(storage):
+    for sset in storage.sampleset:
+        for sample in sset:
+            yield sample
 
 class Histogrammer(object):
     """
@@ -144,7 +148,7 @@ class TISTransition(Transition):
     def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
         super(TISTransition, self).__init__(stateA, stateB)
         # NOTE: making these into dictionaries like this will make it easy
-        # to combine them in order to make a PathSampling calculation object
+        # to combine them in order to make a PathSampling PathSimulator object
 
 
         self.stateA = stateA
@@ -170,7 +174,7 @@ class TISTransition(Transition):
         self.total_crossing_probability_method="wham" 
         self.histograms = {}
         self._ensemble_histograms = {}
-        # caches for the results of our calculations
+        # caches for the results of our calculation
         self._flux = None
         self._rate = None
 
@@ -249,25 +253,37 @@ class TISTransition(Transition):
         else:
             run_it = self.ensemble_histogram_info.keys()
 
-        buflen = 10
         for hist in run_it:
-            in_ens_samples = (s for s in samples if s.ensemble == ensemble)
             hist_info = self.ensemble_histogram_info[hist]
             if hist not in self.histograms.keys():
                 self.histograms[hist] = {}
             self.histograms[hist][ensemble] = Histogram(**(hist_info.hist_args))
-            hist_data = []
-            for sample in in_ens_samples:
-                hist_data.append(hist_info.f(sample, **hist_info.f_args))
-            self.histograms[hist][ensemble].histogram(hist_data, weights)
+
+        in_ens_samples = (s for s in samples if s.ensemble == ensemble)
+        hist_data = {}
+        buflen = -1
+        sample_buf = []
+        for sample in in_ens_samples:
+            for hist in run_it:
+                hist_info = self.ensemble_histogram_info[hist]
+                hist_data_sample = hist_info.f(sample, **hist_info.f_args)
+                try:
+                    hist_data[hist].append(hist_data_sample)
+                except KeyError:
+                    hist_data[hist] = [hist_data_sample]
+
+
+        for hist in run_it:
+            self.histograms[hist][ensemble].histogram(hist_data[hist], weights)
             self.histograms[hist][ensemble].name = (hist + " " + self.name
                                                     + " " + ensemble.name)
 
 
-    def all_statistics(self, samples, weights=None, force=False):
+    def all_statistics(self, storage, weights=None, force=False):
         # TODO: speed this up by just running over all samples once and
         # dealing them out to the appropriate histograms
         for ens in self.ensembles:
+            samples = sampleset_sample_generator(storage)
             self.ensemble_statistics(ens, samples, weights, force)
 
     def pathlength_histogram(self, ensemble):
@@ -282,14 +298,26 @@ class TISTransition(Transition):
         hist = self.histograms['crossing_probability'][ensemble]
         return hist.reverse_cumulative()
 
-    def total_crossing_probability(self, method="wham", force=False, nblocks=1):
+    def total_crossing_probability(self, method="wham", storage=None, force=False, nblocks=1):
         """Return the total crossing probability using `method`"""
         if method == "wham":
-            cp = {}
+            run_ensembles = False
             for ens in self.ensembles:
-                cp[ens] = self.crossing_probability(ens)
+                try:
+                    hist = self.histograms['max_lambda'][ens]
+                except KeyError:
+                    run_ensembles = True
+            if run_ensembles or force:
+                if storage is None:
+                    raise RuntimeError("Unable to build histograms without storage source")
+                self.all_statistics(storage, force=True)
+                         
+            df = histograms_to_pandas_dataframe(
+                self.histograms['max_lambda'].values(),
+                fcn="reverse_cumulative"
+            ).sort(axis=1)
             wham = WHAM()
-            wham.initial_histograms = cp
+            wham.load_from_dataframe(df)
             wham.clean_leading_ones()
             tcp = wham.wham_bam_histogram()
         elif method == "mbar":
@@ -302,7 +330,7 @@ class TISTransition(Transition):
         """Calculate the rate for this transition.
 
         For TIS transitions, this requires the result of an external
-        calculation of the flux. 
+        calculation of the flux.
         """
         if flux is not None:
             self._flux = flux
@@ -314,7 +342,7 @@ class TISTransition(Transition):
         pass
 
     def default_movers(self, engine):
-        """Create reasonable default movers for a `PathSampling` calculation"""
+        """Create reasonable default movers for a `PathSampling` pathsimulator"""
         shoot_sel = paths.RandomChoiceMover(
             movers=self.movers['shooting'],
             name="ShootingChooser"
@@ -417,7 +445,7 @@ class RETISTransition(TISTransition):
         pass
 
     def default_movers(self, engine):
-        """Create reasonable default movers for a `PathSampling` calculation
+        """Create reasonable default movers for a `PathSampling` pathsimulator
         
         Extends `TISTransition.default_movers`.
         """

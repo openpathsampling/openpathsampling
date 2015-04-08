@@ -4,7 +4,7 @@ import argparse
 import os
 from openpathsampling.storage import Storage
 
-from openpathsampling.orderparameter import OP_Function
+from openpathsampling.collectivevariable import CV_Function
 import mdtraj as md
 if __name__ == '__main__':
 
@@ -37,7 +37,7 @@ if __name__ == '__main__':
                                                      )
 
     psi_atoms = [6,8,14,16]
-    psi = OP_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
+    psi = CV_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
       indices=[psi_atoms])
 
 

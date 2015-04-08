@@ -24,12 +24,12 @@ API Reference
    :maxdepth: 1
 
    core
-   orderparameter
+   collectivevariable
    volume
    ensemble
    shooting
    pathmover
-   calculation
+   pathsimulator
    engine
    storage
 
