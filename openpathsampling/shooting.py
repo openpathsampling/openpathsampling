@@ -114,7 +114,7 @@ class ShootingPointSelector(object):
         
         Notes
         -----
-        In principle this is an orderparameter so we could easily add
+        In principle this is an collectivevariable so we could easily add
         caching if useful
         '''
         return 1.0
@@ -172,17 +172,17 @@ class ShootingPointSelector(object):
 
 @ops_object
 class GaussianBiasSelector(ShootingPointSelector):
-    def __init__(self, orderparameter, alpha = 1.0, l0 = 0.5):
+    def __init__(self, collectivevariable, alpha = 1.0, l0 = 0.5):
         '''
-        A Selector that biasses according to a specified Orderparameter using a mean l0 and a variance alpha
+        A Selector that biasses according to a specified CollectiveVariable using a mean l0 and a variance alpha
         '''
         super(GaussianBiasSelector, self).__init__()
-        self.orderparameter = orderparameter
+        self.collectivevariable = collectivevariable
         self.alpha = alpha
         self.l0 = l0
 
     def f(self, snapshot, trajectory=None):
-        return math.exp(-self.alpha*(self.orderparameter(snapshot) - self.l0)**2)
+        return math.exp(-self.alpha*(self.collectivevariable(snapshot) - self.l0)**2)
 
 @ops_object
 class UniformSelector(ShootingPointSelector):

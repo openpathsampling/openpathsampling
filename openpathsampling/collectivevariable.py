@@ -8,15 +8,16 @@ import chaindict as cd
 import collections
 from openpathsampling.todict import ops_object
 
+
 @ops_object
-class OrderParameter(cd.Wrap):
+class CollectiveVariable(cd.Wrap):
     """
     Wrapper for a function that maps a snapshot to a number.
 
     Parameters
     ----------
     name : string
-        A descriptive name of the orderparameter. It is used in the string
+        A descriptive name of the collectivevariable. It is used in the string
         representation.
     dimensions : int
         The number of dimensions of the output order parameter. So far this
@@ -51,13 +52,13 @@ class OrderParameter(cd.Wrap):
 
             self.func_dict._eval = self._eval
 
-            super(OrderParameter, self).__init__(
+            super(CollectiveVariable, self).__init__(
                 post=self.func_dict + self.expand_dict + self.cache_dict +
                      self.store_dict + self.multi_dict + self.pre_dict
             )
 
         else:
-            super(OrderParameter, self).__init__(
+            super(CollectiveVariable, self).__init__(
                 post=self.cache_dict + self.store_dict + self.multi_dict + self.pre_dict
             )
 
@@ -82,16 +83,16 @@ class OrderParameter(cd.Wrap):
 
     def sync(self, storage):
         """
-        Sync this orderparameter with attached storages
+        Sync this collectivevariable with attached storages
 
         Parameters
         ----------
-        store : OrderparameterStore or None
+        store : CollectiveVariableStore or None
             the store to be used, otherwise all underlying storages are synced
         store_cache : bool
             if `False` (default) the store will only store new values. If
             `True` also the cached values will be stored. This is much more
-            costly and is usually only run once, when the orderparameter is
+            costly and is usually only run once, when the collectivevariable is
             saved the first time
         """
         self.store_dict.update_nod_stores()
@@ -110,7 +111,7 @@ class OrderParameter(cd.Wrap):
             if item_sub_type is paths.Snapshot:
                 return items
             else:
-                raise KeyError('the orderparameter is only compatible with ' +
+                raise KeyError('the collectivevariable is only compatible with ' +
                                'snapshots, trajectories or other iteratble of snapshots!')
                 return None
         else:
@@ -118,7 +119,7 @@ class OrderParameter(cd.Wrap):
 
 
 @ops_object
-class OP_RMSD_To_Lambda(OrderParameter):
+class CV_RMSD_To_Lambda(CollectiveVariable):
     """
     Transforms the RMSD from `center` to a value between zero and one.
 
@@ -150,7 +151,7 @@ class OP_RMSD_To_Lambda(OrderParameter):
     """
 
     def __init__(self, name, center, lambda_min, max_lambda, atom_indices=None):
-        super(OP_RMSD_To_Lambda, self).__init__(name, dimensions=1)
+        super(CV_RMSD_To_Lambda, self).__init__(name, dimensions=1)
 
         self.atom_indices = atom_indices
         self.center = center
@@ -187,9 +188,9 @@ class OP_RMSD_To_Lambda(OrderParameter):
 
 
 @ops_object
-class OP_Featurizer(OrderParameter):
+class CV_Featurizer(CollectiveVariable):
     """
-    An OrderParameter that uses an MSMBuilder3 featurizer as the logic
+    An CollectiveVariable that uses an MSMBuilder3 featurizer as the logic
 
     Parameters
     ----------
@@ -211,7 +212,7 @@ class OP_Featurizer(OrderParameter):
     """
 
     def __init__(self, name, featurizer, atom_indices=None):
-        super(OP_Featurizer, self).__init__(name,
+        super(CV_Featurizer, self).__init__(name,
                                             dimensions=featurizer.n_features)
 
         self.atom_indices = atom_indices
@@ -232,8 +233,8 @@ class OP_Featurizer(OrderParameter):
 
 
 @ops_object
-class OP_MD_Function(OrderParameter):
-    """Make `OrderParameter` from `fcn` that takes mdtraj.trajectory as input.
+class CV_MD_Function(CollectiveVariable):
+    """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
 
     Examples
     -------
@@ -241,7 +242,7 @@ class OP_MD_Function(OrderParameter):
     >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
     >>> import mdtraj as md
     >>> psi_atoms = [7,9,15,17]
-    >>> psi_orderparam = OP_Function("psi", md.compute_dihedrals,
+    >>> psi_orderparam = CV_Function("psi", md.compute_dihedrals,
     >>>                              indices=[phi_atoms])
     >>> print psi_orderparam( traj.md() )
     """
@@ -257,7 +258,7 @@ class OP_MD_Function(OrderParameter):
             atoms which define a specific distance/angle)
 
         """
-        super(OP_MD_Function, self).__init__(name)
+        super(CV_MD_Function, self).__init__(name)
         self.fcn = fcn
         self.kwargs = kwargs
         self.topology = None
@@ -267,7 +268,7 @@ class OP_MD_Function(OrderParameter):
         trajectory = paths.Trajectory(items)
 
         if self.topology is None:
-            # first time ever compute the used topology for this orderparameter to construct the mdtraj objects
+            # first time ever compute the used topology for this collectivevariable to construct the mdtraj objects
             self.topology = trajectory.topology.md
 
         t = trajectory.md(self.topology)
@@ -275,8 +276,8 @@ class OP_MD_Function(OrderParameter):
 
 
 @ops_object
-class OP_Volume(OrderParameter):
-    """ Make `Volume` into `OrderParameter`: maps to 0.0 or 1.0 """
+class CV_Volume(CollectiveVariable):
+    """ Make `Volume` into `CollectiveVariable`: maps to 0.0 or 1.0 """
 
     def __init__(self, name, volume):
         """
@@ -285,7 +286,7 @@ class OP_Volume(OrderParameter):
 
         """
 
-        super(OP_Volume, self).__init__(name)
+        super(CV_Volume, self).__init__(name)
         self.volume = volume
 
     def _eval(self, items):
@@ -294,8 +295,8 @@ class OP_Volume(OrderParameter):
 
 
 @ops_object
-class OP_Function(OrderParameter):
-    """Make any function `fcn` into an `OrderParameter`.
+class CV_Function(CollectiveVariable):
+    """Make any function `fcn` into an `CollectiveVariable`.
 
     Examples
     -------
@@ -303,7 +304,7 @@ class OP_Function(OrderParameter):
     >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
     >>> import mdtraj as md
     >>> psi_atoms = [6,8,14,16]
-    >>> psi_orderparam = OP_Function("psi", md.compute_dihedrals,
+    >>> psi_orderparam = CV_Function("psi", md.compute_dihedrals,
     >>>                              trajdatafmt="mdtraj",
     >>>                              indices=[psi_atoms])
     >>> print psi_orderparam( traj.md() )
@@ -325,7 +326,7 @@ class OP_Function(OrderParameter):
             trick, and to instead create separate wrapper classes for each
             supported trajformat.
         """
-        super(OP_Function, self).__init__(name)
+        super(CV_Function, self).__init__(name)
         self._fcn = fcn
         self.kwargs = kwargs
         return

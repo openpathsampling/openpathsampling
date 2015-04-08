@@ -11,8 +11,8 @@ if __name__ == '__main__':
                    const=True, default=False,
                    help='show also rejected paths')
     parser.add_argument('file', metavar='file.nc', help='an integer for the accumulator')
-    parser.add_argument('--show', metavar='orderparameter/snapshot/configuration/momentum', default='',
-                   help='show an orderparameter or an id of the snapshot/configuration/momentum')
+    parser.add_argument('--show', metavar='collectivevariable/snapshot/configuration/momentum', default='',
+                   help='show an collectivevariable or an id of the snapshot/configuration/momentum')
 
     parser.add_argument('--pdf', dest='pdf', action='store_const',
                    const=True, default=False,
@@ -23,12 +23,12 @@ if __name__ == '__main__':
                    help='create a svg embedded in a html')
 
     parser.add_argument('--state', nargs=2, action='append',
-                        help='add a background coloring to s snapshot using the given orderparameter.',
-                        metavar=('orderparameter', 'color'))
+                        help='add a background coloring to s snapshot using the given collectivevariable.',
+                        metavar=('collectivevariable', 'color'))
 
     parser.add_argument('--show-degree', dest='in_degree', action='store_const',
                    const=True, default=False,
-                   help='shows orderparameters in degree and not plain')
+                   help='shows collectivevariables in degree and not plain')
 
     args = parser.parse_args()
 
