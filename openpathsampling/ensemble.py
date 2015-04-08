@@ -15,6 +15,74 @@ init_log = logging.getLogger('opentis.initialization')
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
+# note: the cache is not storable, because that would just be silly!
+class EnsembleCache(object):
+    """Object used by ensembles to enable fast algorithms for basic functions.
+
+    The contents stored in the `can_append`, `can_prepend`, `call`, and
+    `check_reverse` dictionaries will depend on the ensemble. Only two of
+    these dictionaries should be non-`None` at any time: either the pair
+    `call` and `can_append`, or the pair `check_reverse` and `can_prepend`.
+
+    This object also contains basic functions to manage the cache.
+
+    Attributes
+    ----------
+        start_frame : Snapshot
+        prev_last_frame : Snapshot
+        direction : +1 or -1
+        contents : dictionary
+    """
+    def __init__(self, direction=None):
+        self.start_frame = None
+        self.prev_last_frame = None
+        self.last_length = None
+        self.direction = direction
+        self.contents = { }
+
+    def check(self, trajectory=None, reset=None):
+        """Checks and resets (if necessary) the ensemble cache.
+        """
+        if trajectory is not None:
+            if reset is None:
+                reset = (
+                    self.direction > 0 and (
+                        trajectory[0] != self.start_frame or
+                        len(trajectory) - 1 != last_length
+                        #TODO add check on penultimate snapshot:w
+                    )
+                ) or (
+                    self.direction < 0 and trajectory[-1] != self.start_frame
+                )
+        else:
+            reset = True
+
+        if reset:
+            if self.direction > 0:
+                self.start_frame = trajectory[0]
+                self.prev_last_frame = trajectory[-1]
+                self.last_length = len(trajectory)
+                self.contents = { }
+            elif self.direction < 0:
+                self.start_frame = trajectory[-1]
+                self.prev_last_frame = trajectory[0]
+                self.last_length = len(trajectory)
+                self.contents = { }
+            else:
+                raise RuntimeWarning("EnsembleCache.direction = " + 
+                                     str(self.direction) + " invalid.")
+        # by returning reset, we allow the functions that call this to reset
+        # other things as well
+        return reset
+
+    def update(self, trajectory):
+        if self.direction > 0:
+            self.prev_last_frame = trajectory[-1]
+        else:
+            self.prev_last_frame = trajectory[0]
+        self.last_length = len(trajectory)
+
+
 @ops_object
 class Ensemble(object):
     '''
@@ -103,9 +171,9 @@ class Ensemble(object):
         Notes
         -----
         This is only tricky for this that depend on the history like
-        PartInXEnsemble or PartOutXEnsembles. In theory these can only be checked
-        if the full range of frames has been generated. This could be
-        triggered, when the last frame is reached.  This is even more
+        PartInXEnsemble or PartOutXEnsembles. In theory these can only be
+        checked if the full range of frames has been generated. This could
+        be triggered, when the last frame is reached.  This is even more
         difficult if this depends on the length.
         '''
         return True        
@@ -609,8 +677,8 @@ class SequentialEnsemble(Ensemble):
         self.max_overlap = max_overlap
         self.greedy = greedy
 
-        self._cache = { }
-        self._check_cache()
+        #self._cache = { } # TODO
+        #self._check_cache()
 
         # sanity checks
         if len(self.min_overlap) != len(self.max_overlap):
@@ -621,58 +689,27 @@ class SequentialEnsemble(Ensemble):
             if min_overlap[i] > max_overlap[i]:
                 raise ValueError("min_overlap greater than max_overlap!")
 
-    def _check_cache(self, trajectory=None, function=None, reset=None):
-        """Checks and resets (if necessary) the sequential ensemble cache.
-        
-        The cache is used to speed up the sequential ensemble calculation by
-        resuming a point from a previous trajectory. It resets if the
-        function has changed or if the trajectory has changed (or if a reset
-        is forced by calling with reset=True).
-
-        """
-        try:
-            if reset is None and function == self._cache['function']:
-                reset = (
-                    (
-                        (function == "can_append" or function == "call") and 
-                        trajectory[0] != self._cache['first_snap']
-                    ) or (
-                        function == "can_prepend" and
-                        trajectory[-1] != self._cache['final_snap']
-                    )
-                )
-            else:
-                reset = True
-        except KeyError:
-            reset = True
-
-        # LOGGING
-        #try:
-            #cached = self._cache['function']
-        #except KeyError:
-            #cached = "Empty"
-        #print function , cached, reset
-
-        if reset:
-            self._cache['function'] = function
-            self._cache['ens_num'] = 0
-            self._cache['subtraj_first'] = 0
-            self._cache['subtraj_final'] = -1
-            self._cache['ens_first'] = 0
-            self._cache['ens_final'] = -1
-            if trajectory is not None:
-                self._cache['first_snap'] = trajectory[0]
-                self._cache['final_snap'] = trajectory[-1]
-            else:
-                self._cache['first_snap'] = None
-                self._cache['final_snap'] = None
+    #def update_cache(self, trajectory)
+    #    if reset:
+    #        self._cache['function'] = function
+    #        self._cache['ens_num'] = 0
+    #        self._cache['subtraj_first'] = 0
+    #        self._cache['subtraj_final'] = -1
+    #        self._cache['ens_first'] = 0
+    #        self._cache['ens_final'] = -1
+    #        if trajectory is not None:
+    #            self._cache['first_snap'] = trajectory[0]
+    #            self._cache['final_snap'] = trajectory[-1]
+    #        else:
+    #            self._cache['first_snap'] = None
+    #            self._cache['final_snap'] = None
 
 
     def transition_frames(self, trajectory, trusted=None):
         # it is easiest to understand this decision tree as a simplified
         # version of the can_append decision tree; see that for detailed
         # comments
-        self._check_cache(trajectory, function="call")
+        #self._check_cache(trajectory, function="call")
 
         ens_num = 0
         subtraj_first = 0
@@ -785,7 +822,7 @@ class SequentialEnsemble(Ensemble):
         # (b) return False (we can't append)
         # (c) loop around to text another subtrajectory (we can't tell)
         # Returning false can only happen if all ensembles have been tested
-        self._check_cache(trajectory, function="can_append")
+        #self._check_cache(trajectory, function="can_append")
 
         subtraj_first = 0
         ens_num = 0

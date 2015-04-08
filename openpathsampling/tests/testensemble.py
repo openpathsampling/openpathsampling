@@ -817,10 +817,39 @@ and
 )
 ]""")
 
+class EnsembleCacheTest(EnsembleTest):
+    def _was_cache_reset(self, cache):
+        return cache.contents == { }
 
-class testSequentialEnsembleCaching(EnsembleTest):
-    """Tests for the faster SequentialEnsemble with caching."""
+class testEnsembleCache(EnsembleCacheTest):
     def setUp(self):
+        self.fwd = EnsembleCache(direction=+1)
+        self.rev = EnsembleCache(direction=-1)
+        self.traj = ttraj['lower_in_out_in_in_out_in']
+
+    def test_initially_reset(self):
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        assert_equal(self._was_cache_reset(self.rev), True)
+
+    def test_change_trajectory(self):
+        traj2 = ttraj['lower_in_out_in']
+        self.fwd.contents = { 'test' : 'object' }
+        assert_equal(self._was_cache_reset(self.fwd), False)
+        self.fwd.check(self.traj)
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        self.fwd.contents['ens_num'] = 1
+        assert_equal(self._was_cache_reset(self.fwd), False)
+        self.fwd.check(traj2)
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        # TODO add tests for backward
+
+    def test_update(self):
+        pass
+
+
+class testSequentialEnsembleCache(testEnsembleCache):
+    def setUp(self):
+        super(testSequentialEnsembleCache, self).setUp()
         self.inX = AllInXEnsemble(vol1)
         self.outX = AllOutXEnsemble(vol1)
         self.length1 = LengthEnsemble(1)
@@ -832,43 +861,6 @@ class testSequentialEnsembleCaching(EnsembleTest):
             self.inX & self.length1 
         ])
         self.traj = ttraj['lower_in_out_in_in_out_in']
-
-    def _was_cache_reset(self, ens):
-        cache = ens._cache
-        return (
-            cache['ens_num'] == 0 and
-            cache['subtraj_first'] == 0 and
-            cache['subtraj_final'] == -1 and
-            cache['ens_first'] == 0 and
-            cache['ens_final'] == -1
-        )
-
-    def test_sequential_cache_initially_reset(self):
-        assert_equal(self._was_cache_reset(self.pseudo_minus), True)
-
-    def test_sequential_check_cache_function(self):
-        self.pseudo_minus._cache['ens_num']=1
-        assert_equal(self._was_cache_reset(self.pseudo_minus), False)
-        self.pseudo_minus._check_cache(self.traj, "can_append")
-        assert_equal(self._was_cache_reset(self.pseudo_minus), True)
-        self.pseudo_minus._cache['ens_num']=1
-        assert_equal(self._was_cache_reset(self.pseudo_minus), False)
-        assert_equal(self.pseudo_minus._cache['function'], "can_append")
-        self.pseudo_minus._check_cache(self.traj, "can_append")
-        assert_equal(self._was_cache_reset(self.pseudo_minus), False)
-        self.pseudo_minus._check_cache(self.traj, "call")
-        assert_equal(self._was_cache_reset(self.pseudo_minus), True)
-
-    def test_sequential_check_cache_trajectory(self):
-        traj2 = ttraj['lower_in_out_in']
-        self.pseudo_minus._cache['ens_num']=1
-        assert_equal(self._was_cache_reset(self.pseudo_minus), False)
-        self.pseudo_minus._check_cache(self.traj, "can_append")
-        assert_equal(self._was_cache_reset(self.pseudo_minus), True)
-        self.pseudo_minus._cache['ens_num']=1
-        assert_equal(self._was_cache_reset(self.pseudo_minus), False)
-        self.pseudo_minus._check_cache(traj2, "can_append")
-        assert_equal(self._was_cache_reset(self.pseudo_minus), True)
 
 
     def test_sequential_caching_can_append(self):
