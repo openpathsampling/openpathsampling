@@ -117,14 +117,113 @@ class PathMoveChange(object):
 
         return self._len
 
-    def __contains__(self, item):
-        return item in self.traverse_post_order(lambda x : x.mover)
+    def _check_head_node(self, item):
+        if isinstance(item.keys()[0], paths.PathMover):
+            # a subtree of pathmovers
+            if self.mover is item.keys()[0]:
+                #print 'found head'
+                # found current head node, check, if children match in order
+                left = 0
+                submovers = [ch.mover for ch in self.subchanges]
+                subvalues = item.values()[0]
+                if type(subvalues) is not list:
+                    subvalues = [subvalues]
 
-    def traverse_post_order(self, fnc, **kwargs):
+                for sub in subvalues:
+                    if left >= len(self.subchanges):
+                        # no more subchanges to match
+                        return False
+                    if sub is None:
+                        # None is a placeholder so move token +1
+                        left = left + 1
+                    if type(sub) is dict:
+                        if sub.keys()[0] is None:
+                            while left < len(self.subchanges):
+                                if not {self.subchanges[left].mover : sub.values()[0]} in self.subchanges[left]:
+                                    left = left + 1
+                                else:
+                                    left = left + 1
+                                    break
+
+                            if left == len(self.subchanges):
+                                return False
+                        elif sub.keys()[0] not in submovers[left:]:
+                            #print 'missing sub', sub.keys()[0], 'in', submovers[left:]
+                            return False
+                        else:
+                            idx = submovers.index(sub.keys()[0])
+                            left = idx + 1
+                            if not {sub.keys()[0] : sub.values()[0]} in self.subchanges[idx]:
+                                #print 'try', {sub.keys()[0] : sub.values()[0]}
+                                return False
+
+                    elif isinstance(sub, paths.PathMover):
+                        if sub not in submovers[left:]:
+                            return False
+                        idx = submovers.index(sub)
+                        left = idx + 1
+
+                return True
+
+        elif item.keys()[0] is None or len(item) == 0:
+            # empty tree and nothing is in every tree
+            return True
+
+    def __contains__(self, item):
+        if isinstance(item, paths.PathMover):
+            return item in self.map_post_order(lambda x : x.mover)
+        elif isinstance(item, paths.PathMoveChange):
+            return item in iter(self)
+        elif type(item) is dict:
+            if self._check_head_node(item):
+                return True
+
+            # the head node did not fit so continue trying subnodes
+            for sub in self.subchanges:
+                if item in sub:
+                    return True
+
+            return False
+
+        else:
+            raise ValueError('Only PathMovers or PathMoveChanges can be tested.')
+
+    def tree(self):
+        return {self : [ ch.tree() for ch in self.subchanges] }
+
+    def movetree(self):
+        return {self.mover : [ ch.movetree() for ch in self.subchanges] }
+
+    def map_tree(self, fnc, **kwargs):
+        """
+        Apply a function to each node and return the tree
+
+        Parameters
+        ----------
+        fnc : function(pathmovechange, args, kwargs)
+            the function run at each pathmovechange node. It is given the node
+            and the optional (fixed) parameters
+        kwargs : named arguments
+            optional arguments added to the function
+
+        Returns
+        -------
+        tree (fnc(node, **kwargs))
+            nested list of the results of the map
+        """
+
+        if len(self.subchanges) > 1:
+            return { fnc(self, **kwargs) : [node.map_tree(fnc, **kwargs) for node in self.subchanges]}
+        elif len(self.subchanges) == 1:
+            return { fnc(self, **kwargs) : self.subchanges[0].map_tree(fnc, **kwargs)}
+        else:
+            return fnc(self, **kwargs)
+
+    def map_post_order(self, fnc, **kwargs):
         """
         Traverse the tree of pathmovechanges in post-order applying a function
 
-        This traverses the underlying tree of pathmovechanges and applies the
+        This maps the underlying tree of pathmovechanges and applies the
         given function at each node returning a list of the results. Post-order
         will result in the order in which samples are generated. That means
         that subchanges are called first BEFORE the node itself is evaluated.
@@ -140,7 +239,7 @@ class PathMoveChange(object):
         Returns
         -------
         list (fnc(node, **kwargs))
-            flattened list of the results of the traverse
+            flattened list of the results of the map
 
         Notes
         -----
@@ -148,7 +247,7 @@ class PathMoveChange(object):
 
         See also
         --------
-        traverse_pre_order, traverse_post_order, level_pre_order, level_post_order
+        map_pre_order, map_post_order, level_pre_order, level_post_order
         """
         return [ fnc(node, **kwargs) for node in reversed(self) ]
 
@@ -156,7 +255,7 @@ class PathMoveChange(object):
         """
         Traverse the tree of pathmovechanges in post-order applying a function
 
-        This traverses the underlying tree of pathmovechanges and applies the
+        This maps the underlying tree of pathmovechanges and applies the
         given function at each node returning a list of the results. Post-order
         will result in the order in which samples are generated. That means
         that subchanges are called first BEFORE the node itself is evaluated.
@@ -174,12 +273,12 @@ class PathMoveChange(object):
         Returns
         -------
         list of tuple(level, func(node, **kwargs))
-            flattened list of tuples of results of the traverse. First part of
+            flattened list of tuples of results of the map. First part of
             the tuple is the level, second part is the function result.
 
         See also
         --------
-        traverse_pre_order, traverse_post_order, level_pre_order, level_post_order
+        map_pre_order, map_post_order, level_pre_order, level_post_order
         """
 
         output = list()
@@ -189,11 +288,11 @@ class PathMoveChange(object):
 
         return output
 
-    def traverse_pre_order(self, fnc, **kwargs):
+    def map_pre_order(self, fnc, **kwargs):
         """
         Traverse the tree of pathmovechanges in pre-order applying a function
 
-        This traverses the underlying tree of pathmovechanges and applies the
+        This maps the underlying tree of pathmovechanges and applies the
         given function at each node returning a list of the results. Pre-order
         means that subchanges are called AFTER the node itself is evaluated.
 
@@ -208,7 +307,7 @@ class PathMoveChange(object):
         Returns
         -------
         list (fnc(node, **kwargs))
-            flattened list of the results of the traverse
+            flattened list of the results of the map
 
         Notes
         -----
@@ -216,7 +315,7 @@ class PathMoveChange(object):
 
         See also
         --------
-        traverse_pre_order, traverse_post_order, level_pre_order, level_post_order
+        map_pre_order, map_post_order, level_pre_order, level_post_order
         """
         return [ fnc(node, **kwargs) for node in iter(self) ]
 
@@ -224,7 +323,7 @@ class PathMoveChange(object):
         """
         Traverse the tree of pathmovechanges in pre-order applying a function
 
-        This traverses the underlying tree of pathmovechanges and applies the
+        This maps the underlying tree of pathmovechanges and applies the
         given function at each node returning a list of the results. Pre-order
         means that subchanges are called AFTER the node itself is evaluated.
 
@@ -241,13 +340,13 @@ class PathMoveChange(object):
         Returns
         -------
         list of tuple(level, fnc(node, **kwargs))
-            flattened list of tuples of results of the traverse. First part of
+            flattened list of tuples of results of the map. First part of
             the tuple is the level, second part is the function result.
 
 
         See also
         --------
-        traverse_pre_order, traverse_post_order, level_pre_order, level_post_order
+        map_pre_order, map_post_order, level_pre_order, level_post_order
         """
 
         output = list()
