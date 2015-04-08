@@ -46,6 +46,7 @@ class PathMoveChange(object):
         self._local_samples = []
         self._collapsed_samples = None
         self._samples = None
+        self._len = None
         self.mover = mover
         self.subchanges = list()
         self.details = details
