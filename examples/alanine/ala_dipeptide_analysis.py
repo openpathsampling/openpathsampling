@@ -2,12 +2,12 @@ import sys
 import os
 sys.path.append(os.path.abspath('../'))
 from Simulator import Simulator
-from orderparameter import OP_Function
+from collectivevariable import CV_Function
 from snapshot import Snapshot, Configuration
 from volume import LambdaVolumePeriodic
 from ensemble import EnsembleFactory as ef
-from ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
-                      InXEnsemble)
+from ensemble import (LengthEnsemble, SequentialEnsemble, AllOutXEnsemble,
+                      AllInXEnsemble)
 from storage import Storage
 from trajectory import Trajectory
 
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     )
 
     psi_atoms = [6,8,14,16]
-    psi = OP_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
+    psi = CV_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
                       indices=[psi_atoms])
 
     # restore old computed values

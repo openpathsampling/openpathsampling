@@ -1,12 +1,13 @@
-from calculation import Calculation, Bootstrapping, PathSampling
+from pathsimulator import PathSimulator, Bootstrapping, PathSampling
 
 from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
     EntersXEnsemble, EmptyEnsemble, ExitsXEnsemble, FullEnsemble, \
-    HitXEnsemble, InXEnsemble, OutXEnsemble, WrappedEnsemble, \
+    PartInXEnsemble, AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble, \
     BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble, \
-    LeaveXEnsemble, LengthEnsemble, NegatedEnsemble, \
+    PartOutXEnsemble, LengthEnsemble, NegatedEnsemble, \
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \
-    SequentialEnsemble, AndEnsemble, OrEnsemble, XorEnsemble, SubEnsemble, \
+    SequentialEnsemble, IntersectionEnsemble, UnionEnsemble, \
+    SymmetricDifferenceEnsemble, RelativeComplementEnsemble, \
     SingleFrameEnsemble, MinusInterfaceEnsemble
 
 from snapshot import Snapshot, Configuration, Momentum
@@ -14,8 +15,8 @@ from snapshot import Snapshot, Configuration, Momentum
 from trajectory import Trajectory
 from sample import Sample, SampleSet
 
-from orderparameter import OP_Function, OP_MD_Function, OP_Featurizer, \
-    OP_RMSD_To_Lambda, OP_Volume, OrderParameter
+from collectivevariable import CV_Function, CV_MD_Function, CV_Featurizer, \
+    CV_RMSD_To_Lambda, CV_Volume, CollectiveVariable
 
 from pathmover import (
     BackwardShootMover, MinusMover, RandomChoiceMover, MoveDetails,
@@ -23,9 +24,8 @@ from pathmover import (
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
-    CollapseMove, CalculationMover, PathReversalSet,
+    CollapseMove, PathSimulatorMover, PathReversalSet,
     NeighborEnsembleReplicaExchange
-    #, BootstrapPromotionMove
 )
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
@@ -36,8 +36,9 @@ from dynamics_engine import DynamicsEngine
 from openmm_engine import OpenMMEngine
 
 from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
-    EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, AndVolume, \
-    OrVolume, XorVolume, SubVolume
+    EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, \
+    IntersectionVolume, \
+    UnionVolume, SymmetricDifferenceVolume, RelativeComplementVolume
 
 from todict import ObjectJSON, ops_object, class_list
 
@@ -62,5 +63,5 @@ from movepath import (EmptyMovePath, ConditionalSequentialMovePath,
                       RandomChoiceMovePath, SampleMovePath,
                       SequentialMovePath,  KeepLastSampleMovePath,
                       CollapsedMovePath, FilterSamplesMovePath,
-                      CalculationMovePath
+                      PathSimulatorMovePath
                      )

@@ -24,7 +24,7 @@ from openpathsampling.volume import LambdaVolume
 from test_helpers import CallIdentity
 from openpathsampling.trajectory import Trajectory
 from openpathsampling.ensemble import EnsembleFactory as ef
-from openpathsampling.orderparameter import OP_Function, OrderParameter
+from openpathsampling.collectivevariable import CV_Function, CollectiveVariable
 
 import logging
 #logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
@@ -118,7 +118,7 @@ class testShootingMover(object):
                                       -0.1, 0.2, 0.4, 0.6, 0.8,
                                      ])
         PathMover.engine = self.dyn
-        op = OP_Function("myid", fcn=lambda snap :
+        op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
         stateA = LambdaVolume(op, -100, 0.0)
         stateB = LambdaVolume(op, 0.65, 100)
@@ -167,7 +167,7 @@ class testOneWayShootingMover(testShootingMover):
 
 class testPathReversalMover(object):
     def setup(self):
-        op = OP_Function("myid", fcn=lambda snap :
+        op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
 
         volA = LambdaVolume(op, -100, 0.0)
@@ -232,7 +232,7 @@ class testReplicaIDChangeMover(object):
 
 class testReplicaExchangeMover(object):
     def setup(self):
-        op = OP_Function("myid", fcn=lambda snap :
+        op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
 
         state1 = LambdaVolume(op, -100, 0.0)
@@ -542,8 +542,8 @@ class SubtrajectorySelectTester(object):
     def setup(self):
         op = CallIdentity()
         vol = paths.LambdaVolume(op, -0.5, 0.5)
-        inX = paths.InXEnsemble(vol)
-        outX = paths.OutXEnsemble(vol)
+        inX = paths.AllInXEnsemble(vol)
+        outX = paths.AllOutXEnsemble(vol)
         self.ensemble = paths.SequentialEnsemble([
             inX, outX, inX, outX, inX, outX, inX
         ])
@@ -662,7 +662,7 @@ class testForceEnsembleChangeMover(object):
 
 class testMinusMover(object):
     def setup(self):
-        op = OP_Function("myid", fcn=lambda snap :
+        op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
 
         volA = LambdaVolume(op, -100, 0.0)

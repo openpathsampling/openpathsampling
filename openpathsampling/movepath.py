@@ -603,29 +603,29 @@ class KeepLastSampleMovePath(MovePath):
         }
 
 @ops_object
-class CalculationMovePath(MovePath):
+class PathSimulatorMovePath(MovePath):
     """
-    A MovePath that just wraps a movepath and references a Calculation
+    A MovePath that just wraps a movepath and references a PathSimulator
     """
 
-    def __init__(self, movepath, calculation=None, step=-1, mover=None):
-        super(CalculationMovePath, self).__init__(mover=mover)
+    def __init__(self, movepath, pathsimulator=None, step=-1, mover=None):
+        super(PathSimulatorMovePath, self).__init__(mover=mover)
         self.movepath = movepath
-        self.calculation = calculation
+        self.pathsimulator = pathsimulator
         self.step = step
 
     def _get_samples(self):
         return self.movepath.samples
 
     def __str__(self):
-        return 'CalculationStep : %s : Step # %d with %d samples\n' % \
-               (str(self.calculation.cls), self.step, len(self.samples)) + \
+        return 'PathSimulatorStep : %s : Step # %d with %d samples\n' % \
+               (str(self.pathsimulator.cls), self.step, len(self.samples)) + \
                MovePath._indent( str(self.movepath) )
 
     def to_dict(self):
         return {
             'movepath' : self.movepath,
-            'calculation' : self.calculation,
+            'pathsimulator' : self.pathsimulator,
             'step' : self.step,
             'mover' : self.mover
         }

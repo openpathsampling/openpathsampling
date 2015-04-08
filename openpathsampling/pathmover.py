@@ -474,7 +474,7 @@ class BackwardShootMover(ShootMover):
         #setattr(details, 'new_partial', partial_trajectory.reversed)
 
         details.trial = partial_trajectory.reversed + details.start[details.start_point.index + 1:]
-        details.final_point = paths.ShootingPoint(self.selector, details.trial, partial_trajectory.frames - 1)
+        details.final_point = paths.ShootingPoint(self.selector, details.trial, len(partial_trajectory) - 1)
 
         pass
 
@@ -1037,13 +1037,13 @@ class ReplicaExchangeMover(PathMover):
         replica2 = s2.replica
 
         from1to2 = ensemble2(trajectory1)
-        logger.info("trajectory " + repr(trajectory1) +
-                    " into ensemble " + repr(ensemble2) +
-                    " : " + str(from1to2))
+        logger.debug("trajectory " + repr(trajectory1) +
+                     " into ensemble " + repr(ensemble2) +
+                     " : " + str(from1to2))
         from2to1 = ensemble1(trajectory2)
-        logger.info("trajectory " + repr(trajectory2) +
-                    " into ensemble " + repr(ensemble1) +
-                    " : " + str(from2to1))
+        logger.debug("trajectory " + repr(trajectory2) +
+                     " into ensemble " + repr(ensemble1) +
+                     " : " + str(from2to1))
         allowed = from1to2 and from2to1
         details1 = MoveDetails()
         details2 = MoveDetails()
@@ -1217,17 +1217,17 @@ class MinusMover(ConditionalSequentialMover):
         return result
 
 @ops_object
-class CalculationMover(PathMover):
+class PathSimulatorMover(PathMover):
     """
-    This just wraps a mover and references the used calculation
+    This just wraps a mover and references the used pathsimulator
     """
-    def __init__(self, mover, calculation):
-        super(CalculationMover, self).__init__()
+    def __init__(self, mover, pathsimulator):
+        super(PathSimulatorMover, self).__init__()
         self.mover = mover
-        self.calculation = calculation
+        self.pathsimulator = pathsimulator
 
     def move(self, globalstate, step=-1):
-        return paths.CalculationMovePath(self.mover.move(globalstate), self.calculation, step=step, mover=self)
+        return paths.PathSimulatorMovePath(self.mover.move(globalstate), self.pathsimulator, step=step, mover=self)
 
 @ops_object
 class MultipleSetMinusMover(RandomChoiceMover):
