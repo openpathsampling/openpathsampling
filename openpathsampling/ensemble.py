@@ -44,15 +44,20 @@ class EnsembleCache(object):
         """Checks and resets (if necessary) the ensemble cache.
         """
         if trajectory is not None:
+            lentraj = len(trajectory)
             if reset is None:
                 reset = (
                     self.direction > 0 and (
                         trajectory[0] != self.start_frame or
-                        len(trajectory) - 1 != self.last_length
-                        #TODO add check on penultimate snapshot:w
+                        lentraj - 1 != self.last_length or
+                        (lentraj > 1 and trajectory[-2] != self.prev_last_frame)
                     )
                 ) or (
-                    self.direction < 0 and trajectory[-1] != self.start_frame
+                    self.direction < 0 and (
+                        trajectory[-1] != self.start_frame or
+                        lentraj - 1 != self.last_length or
+                        (lentraj > 1 and trajectory[1] != self.prev_last_frame)
+                    )
                 )
         else:
             reset = True
@@ -73,15 +78,16 @@ class EnsembleCache(object):
                                      str(self.direction) + " invalid.")
         # by returning reset, we allow the functions that call this to reset
         # other things as well
-
-        return reset
-
-    def update(self, trajectory):
+        self.last_length = len(trajectory)
         if self.direction > 0:
             self.prev_last_frame = trajectory[-1]
-        else:
+        elif self.direction < 0:
             self.prev_last_frame = trajectory[0]
-        self.last_length = len(trajectory)
+        else:
+            raise RuntimeWarning("EnsembleCache.direction = " + 
+                                 str(self.direction) + " invalid.")
+
+        return reset
 
 
 @ops_object

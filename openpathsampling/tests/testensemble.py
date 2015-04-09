@@ -833,6 +833,7 @@ class testEnsembleCache(EnsembleCacheTest):
 
     def test_change_trajectory(self):
         traj2 = ttraj['lower_in_out_in']
+        # tests for forward
         self.fwd.contents = { 'test' : 'object' }
         assert_equal(self._was_cache_reset(self.fwd), False)
         self.fwd.check(self.traj)
@@ -841,31 +842,65 @@ class testEnsembleCache(EnsembleCacheTest):
         assert_equal(self._was_cache_reset(self.fwd), False)
         self.fwd.check(traj2)
         assert_equal(self._was_cache_reset(self.fwd), True)
-        # TODO add tests for backward
+        # tests for backward
+        self.rev.contents = { 'test' : 'object' }
+        assert_equal(self._was_cache_reset(self.rev), False)
+        self.rev.check(self.traj)
+        assert_equal(self._was_cache_reset(self.rev), True)
+        self.rev.contents['ens_num'] = 1
+        assert_equal(self._was_cache_reset(self.rev), False)
+        self.rev.check(traj2)
+        assert_equal(self._was_cache_reset(self.rev), True)
 
     def test_trajectory_by_frame(self):
+        # tests for forward
         self.fwd.check(self.traj[0:1])
         assert_equal(self._was_cache_reset(self.fwd), True)
         self.fwd.contents = { 'test' : 'object' }
         assert_equal(self._was_cache_reset(self.fwd), False)
         self.fwd.check(self.traj[0:2])
         assert_equal(self._was_cache_reset(self.fwd), False)
-        # TODO add tests for backward
+        # tests for backward
+        self.rev.check(self.traj[-1:])
+        assert_equal(self._was_cache_reset(self.rev), True)
+        self.rev.contents = { 'test' : 'object' }
+        assert_equal(self._was_cache_reset(self.rev), False)
+        self.rev.check(self.traj[-2:])
+        assert_equal(self._was_cache_reset(self.rev), False)
 
     def test_trajectory_skips_frame(self):
+        # tests for forward
         self.fwd.check(self.traj[0:1])
         assert_equal(self._was_cache_reset(self.fwd), True)
         self.fwd.contents = { 'test' : 'object' }
         assert_equal(self._was_cache_reset(self.fwd), False)
         self.fwd.check(self.traj[0:3])
         assert_equal(self._was_cache_reset(self.fwd), True)
-        # TODO add tests for backward
+        # tests for backward
+        self.rev.check(self.traj[-1:])
+        assert_equal(self._was_cache_reset(self.rev), True)
+        self.rev.contents = { 'test' : 'object' }
+        assert_equal(self._was_cache_reset(self.rev), False)
+        self.rev.check(self.traj[-3:])
+        assert_equal(self._was_cache_reset(self.rev), True)
 
     def test_trajectory_middle_frame_changes(self):
-        raise SkipTest
-
-    def test_update(self):
-        pass
+        # tests for forward
+        self.fwd.check(self.traj[0:2])
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        self.fwd.contents = { 'test' : 'object' }
+        assert_equal(self._was_cache_reset(self.fwd), False)
+        new_traj = self.traj[0:1] + self.traj[3:5]
+        self.fwd.check(new_traj)
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        # tests for backward
+        self.rev.check(self.traj[0:2])
+        assert_equal(self._was_cache_reset(self.rev), True)
+        self.rev.contents = { 'test' : 'object' }
+        assert_equal(self._was_cache_reset(self.rev), False)
+        new_traj = self.traj[-4:-2] + self.traj[-1:] 
+        self.rev.check(new_traj)
+        assert_equal(self._was_cache_reset(self.rev), True)
 
 
 class testSequentialEnsembleCache(testEnsembleCache):
