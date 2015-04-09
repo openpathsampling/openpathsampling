@@ -110,7 +110,6 @@ class PathMoveChange(object):
 
         yield self
 
-
     def __len__(self):
         if self._len is None:
             self._len = len(list(iter(self)))
@@ -166,10 +165,37 @@ class PathMoveChange(object):
                 return True
 
         elif item.keys()[0] is None or len(item) == 0:
-            # empty tree and nothing is in every tree
+            # means empty tree and since nothing is in every tree return true
             return True
 
     def __contains__(self, item):
+        """
+        Check if a pathmover, pathmovechange or a tree is in self
+
+        A node is either None or a PathMover
+
+        1. Subchanges are given using a dict { parent : child }
+        2. Several subchanges are given in a list. [child1, child2]
+        3. A single subchange can be given as a list of length 1 or a single mover.
+        4. None is a wildcat and matches everything
+
+        Examples
+        --------
+        >>> tree1 = {mover1 : mover2}
+        >>> tree2 = {mover1 : [mover2, mover3]}
+        >>> tree3 = {mover1 : [mover2, {mover4 : [mover5]}] }
+        >>> tree4 = {}
+
+        Notes
+        -----
+        TODO: Add other types of nodes. e.g. explicit PathMoveChange,
+        Boolean for .accepted
+
+        Parameters
+        ----------
+        item : PathMover, PathMoveChange, PathMoveTree
+
+        """
         if isinstance(item, paths.PathMover):
             return item in self.map_post_order(lambda x : x.mover)
         elif isinstance(item, paths.PathMoveChange):
@@ -500,7 +526,6 @@ class PathMoveChange(object):
         new_sample_set = paths.SampleSet(other).apply_samples(self.samples)
 #        new_sample_set.pathmovechange = self
         return new_sample_set
-
 
     def __call__(self, other):
         return self.apply_to(other)

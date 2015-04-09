@@ -519,8 +519,6 @@ class RandomChoiceMover(PathMover):
         details.inputs = []
         details.mover = self
 
-        details.result = details.start
-
         rand = np.random.random() * sum(self.weights)
         idx = 0
         prob = self.weights[0]
@@ -534,6 +532,8 @@ class RandomChoiceMover(PathMover):
         logger.info(logger_str.format(name=self.name, idx=idx, mtype=self.movers[idx].name))
 
         mover = self.movers[idx]
+
+        details.chosen_mover = mover
 
         path = paths.RandomChoicePathMoveChange(
             mover.move(globalstate),
