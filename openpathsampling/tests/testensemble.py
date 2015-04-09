@@ -843,6 +843,27 @@ class testEnsembleCache(EnsembleCacheTest):
         assert_equal(self._was_cache_reset(self.fwd), True)
         # TODO add tests for backward
 
+    def test_trajectory_by_frame(self):
+        self.fwd.check(self.traj[0:1])
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        self.fwd.contents = { 'test' : 'object' }
+        assert_equal(self._was_cache_reset(self.fwd), False)
+        self.fwd.check(self.traj[0:2])
+        assert_equal(self._was_cache_reset(self.fwd), False)
+        # TODO add tests for backward
+
+    def test_trajectory_skips_frame(self):
+        self.fwd.check(self.traj[0:1])
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        self.fwd.contents = { 'test' : 'object' }
+        assert_equal(self._was_cache_reset(self.fwd), False)
+        self.fwd.check(self.traj[0:3])
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        # TODO add tests for backward
+
+    def test_trajectory_middle_frame_changes(self):
+        raise SkipTest
+
     def test_update(self):
         pass
 

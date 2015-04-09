@@ -48,7 +48,7 @@ class EnsembleCache(object):
                 reset = (
                     self.direction > 0 and (
                         trajectory[0] != self.start_frame or
-                        len(trajectory) - 1 != last_length
+                        len(trajectory) - 1 != self.last_length
                         #TODO add check on penultimate snapshot:w
                     )
                 ) or (
@@ -73,6 +73,7 @@ class EnsembleCache(object):
                                      str(self.direction) + " invalid.")
         # by returning reset, we allow the functions that call this to reset
         # other things as well
+
         return reset
 
     def update(self, trajectory):
