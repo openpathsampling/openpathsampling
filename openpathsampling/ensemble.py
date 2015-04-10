@@ -40,25 +40,39 @@ class EnsembleCache(object):
         self.direction = direction
         self.contents = { }
 
+    def bad_direction_error(self):
+        raise RuntimeError("EnsembleCache.direction = " +
+                           str(self.direction) + " invalid.") #nocover
+
     def check(self, trajectory=None, reset=None):
         """Checks and resets (if necessary) the ensemble cache.
         """
         if trajectory is not None:
-            lentraj = len(trajectory)
+            # if the first frame has changed, we should reset
             if reset is None:
-                reset = (
-                    self.direction > 0 and (
-                        trajectory[0] != self.start_frame or
-                        lentraj - 1 != self.last_length or
-                        (lentraj > 1 and trajectory[-2] != self.prev_last_frame)
-                    )
-                ) or (
-                    self.direction < 0 and (
-                        trajectory[-1] != self.start_frame or
-                        lentraj - 1 != self.last_length or
-                        (lentraj > 1 and trajectory[1] != self.prev_last_frame)
-                    )
-                )
+                lentraj = len(trajectory)
+                if self.direction > 0:
+                    if trajectory[0] != self.start_frame:
+                        reset = True
+                    else:
+                        if lentraj == self.last_length:
+                            reset = (trajectory[-1] != self.prev_last_frame)
+                        elif lentraj == self.last_length + 1:
+                            reset = (trajectory[-2] != self.prev_last_frame)
+                        else:
+                            reset = True
+                elif self.direction < 0:
+                    if trajectory[-1] != self.start_frame:
+                        reset = True
+                    else:
+                        if lentraj == self.last_length:
+                            reset = (trajectory[0] != self.prev_last_frame)
+                        elif lentraj == self.last_length + 1:
+                            reset = (trajectory[1] != self.prev_last_frame)
+                        else:
+                            reset = True
+                else:
+                    self.bad_direction_error()
         else:
             reset = True
 
@@ -74,8 +88,7 @@ class EnsembleCache(object):
                 self.last_length = len(trajectory)
                 self.contents = { }
             else:
-                raise RuntimeWarning("EnsembleCache.direction = " + 
-                                     str(self.direction) + " invalid.")
+                self.bad_direction_error()
         # by returning reset, we allow the functions that call this to reset
         # other things as well
         self.last_length = len(trajectory)

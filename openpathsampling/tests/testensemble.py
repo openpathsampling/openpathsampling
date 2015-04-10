@@ -868,6 +868,17 @@ class testEnsembleCache(EnsembleCacheTest):
         self.rev.check(self.traj[-2:])
         assert_equal(self._was_cache_reset(self.rev), False)
 
+    def test_same_traj_twice_no_reset(self):
+        # tests for forward
+        self.fwd.check(self.traj)
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        self.fwd.contents = { 'test' : 'object' }
+        self.fwd.check(self.traj)
+        #assert_equal(self._was_cache_reset(self.fwd), False)
+        # tests for backward
+        raise SkipTest
+
+
     def test_trajectory_skips_frame(self):
         # tests for forward
         self.fwd.check(self.traj[0:1])
@@ -903,9 +914,8 @@ class testEnsembleCache(EnsembleCacheTest):
         assert_equal(self._was_cache_reset(self.rev), True)
 
 
-class testSequentialEnsembleCache(testEnsembleCache):
+class testSequentialEnsembleCache(EnsembleCacheTest):
     def setUp(self):
-        super(testSequentialEnsembleCache, self).setUp()
         self.inX = AllInXEnsemble(vol1)
         self.outX = AllOutXEnsemble(vol1)
         self.length1 = LengthEnsemble(1)
@@ -920,6 +930,31 @@ class testSequentialEnsembleCache(testEnsembleCache):
 
 
     def test_sequential_caching_can_append(self):
+        #cache = self.pseudo_minus._cache_can_append
+        assert_equal(self.pseudo_minus.can_append(self.traj[0:1]), True)
+        #assert_equal(self._was_cache_reset(cache), True)
+        for i in range(1, len(self.traj)-1):
+            assert_equal(self.pseudo_minus.can_append(self.traj[0:i+1]), True)
+            #assert_equal(self._was_cache_reset(cache), False)
+        assert_equal(self.pseudo_minus.can_append(self.traj), False)
+        #assert_equal(self._was_cache_reset(cache), False)
+
+    def test_sequential_caching_resets(self):
+        #cache = self.pseudo_minus._cache_can_append
+        assert_equal(self.pseudo_minus.can_append(self.traj[2:3]), True)
+        assert_equal(self.pseudo_minus(self.traj[2:3]), False)
+        #assert_equal(self._was_cache_reset(cache), True)
+        assert_equal(self.pseudo_minus.can_append(self.traj[2:4]), True)
+        assert_equal(self.pseudo_minus(self.traj[2:4]), False)
+        #assert_equal(self._was_cache_reset(cache), True)
+        for i in range(4, len(self.traj)-1):
+            assert_equal(self.pseudo_minus.can_append(self.traj[2:i+1]), True)
+            assert_equal(self.pseudo_minus(self.traj[2:i+1]), False)
+            #assert_equal(self._was_cache_reset(cache), False)
+        assert_equal(self.pseudo_minus.can_append(self.traj[2:]), False)
+        assert_equal(self.pseudo_minus(self.traj[2:]), False)
+        #assert_equal(self._was_cache_reset(cache), False)
+        # TODO: same story backward
         raise SkipTest
 
     def test_sequential_caching_call(self):
