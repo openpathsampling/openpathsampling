@@ -874,9 +874,13 @@ class testEnsembleCache(EnsembleCacheTest):
         assert_equal(self._was_cache_reset(self.fwd), True)
         self.fwd.contents = { 'test' : 'object' }
         self.fwd.check(self.traj)
-        #assert_equal(self._was_cache_reset(self.fwd), False)
+        assert_equal(self._was_cache_reset(self.fwd), False)
         # tests for backward
-        raise SkipTest
+        self.rev.check(self.traj)
+        assert_equal(self._was_cache_reset(self.rev), True)
+        self.rev.contents = { 'test' : 'object' }
+        self.rev.check(self.traj)
+        assert_equal(self._was_cache_reset(self.rev), False)
 
 
     def test_trajectory_skips_frame(self):
@@ -930,9 +934,11 @@ class testSequentialEnsembleCache(EnsembleCacheTest):
 
 
     def test_sequential_caching_can_append(self):
-        #cache = self.pseudo_minus._cache_can_append
+        cache = self.pseudo_minus._cache_can_append
         assert_equal(self.pseudo_minus.can_append(self.traj[0:1]), True)
-        #assert_equal(self._was_cache_reset(cache), True)
+        assert_equal(cache.contents['ens_num'], 1)
+        assert_equal(cache.contents['ens_from'], 0)
+        assert_equal(cache.contents['subtraj_from'], 1)
         for i in range(1, len(self.traj)-1):
             assert_equal(self.pseudo_minus.can_append(self.traj[0:i+1]), True)
             #assert_equal(self._was_cache_reset(cache), False)

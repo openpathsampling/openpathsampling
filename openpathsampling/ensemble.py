@@ -697,8 +697,11 @@ class SequentialEnsemble(Ensemble):
         self.max_overlap = max_overlap
         self.greedy = greedy
 
-        #self._cache = { } # TODO
-        #self._check_cache()
+        self._use_cache = True # cache can be turned off
+        self._cache_can_append = EnsembleCache(+1)
+        self._cache_call = EnsembleCache(+1)
+        self._cache_can_prepend = EnsembleCache(-1)
+        self._cache_check_reverse = EnsembleCache(-1)
 
         # sanity checks
         if len(self.min_overlap) != len(self.max_overlap):
@@ -709,20 +712,29 @@ class SequentialEnsemble(Ensemble):
             if min_overlap[i] > max_overlap[i]:
                 raise ValueError("min_overlap greater than max_overlap!")
 
-    #def update_cache(self, trajectory)
-    #    if reset:
-    #        self._cache['function'] = function
-    #        self._cache['ens_num'] = 0
-    #        self._cache['subtraj_first'] = 0
-    #        self._cache['subtraj_final'] = -1
-    #        self._cache['ens_first'] = 0
-    #        self._cache['ens_final'] = -1
-    #        if trajectory is not None:
-    #            self._cache['first_snap'] = trajectory[0]
-    #            self._cache['final_snap'] = trajectory[-1]
-    #        else:
-    #            self._cache['first_snap'] = None
-    #            self._cache['final_snap'] = None
+    def update_cache(self, cache, ens_num, ens_from, subtraj_from):
+        """Updates the given cache.
+
+        Parameters
+        ----------
+        ens_num : integer
+            current value of `ens_num` in the sequential ensemble
+        ens_from : integer
+            current "start" ensemble index. For forward-direction caches,
+            this is ens_first. For reverse-direction caches, this is
+            ens_final. The "initial" (in the appropriate direction) frame is
+            assigned to this ensemble
+        subtraj_from : integer
+            index of the "start" frame of the subtrajectory in this
+            subensemble. For forward-direction caches, this is the first
+            frame of the subtrajectory. For reverse-direction caches, this
+            is the final frame of the subtrajectory.
+        """
+        cache.contents = {
+            'ens_num' : ens_num,
+            'ens_from' : ens_from,
+            'subtraj_from' : subtraj_from
+        }
 
 
     def transition_frames(self, trajectory, trusted=None):
@@ -809,6 +821,11 @@ class SequentialEnsemble(Ensemble):
         subtraj = traj[slice(subtraj_first, subtraj_final+1)]
         # if we're in the ensemble or could eventually be in the ensemble,
         # we keep building the subtrajectory
+        #TODO: FIXME change this to use the cache
+
+        # TODO: this doesn't actually reflect the correct behavior: should
+        # be the proper hybrid definition where we can append until/unless
+        # we overshoot
         while ( (ens.can_append(subtraj, trusted=True) or 
                  ens(subtraj, trusted=True)
                 ) and subtraj_final < traj_final):
@@ -843,10 +860,15 @@ class SequentialEnsemble(Ensemble):
         # (c) loop around to text another subtrajectory (we can't tell)
         # Returning false can only happen if all ensembles have been tested
         #self._check_cache(trajectory, function="can_append")
+        cache = self._cache_can_append
 
         subtraj_first = 0
         ens_num = 0
         ens_first = 0
+
+
+        if self._use_cache and cache.contents == { }:
+            self.update_cache(cache, 0, 0, 0)
 
         traj_final = len(trajectory)
         final_ens = len(self.ensembles)-1
@@ -897,7 +919,7 @@ class SequentialEnsemble(Ensemble):
                     )
                     ens_num += 1
                     subtraj_first = subtraj_final
-
+                    self.update_cache(cache, ens_num, ens_first, subtraj_first)
                     logger.debug("Moving to the next ensemble " + str(ens_num))
             else:
                 if subtraj_final == traj_final:
@@ -909,6 +931,7 @@ class SequentialEnsemble(Ensemble):
                     logger.debug("Moving on because of allowed zero-length ensemble")
                     ens_num += 1
                     subtraj_first = subtraj_final
+                    self.update_cache(cache, ens_num, ens_first, subtraj_first)
                 else:
                     # not all frames assigned, couldn't find a sequence
                     # start over with sequences that begin with the next
@@ -924,6 +947,7 @@ class SequentialEnsemble(Ensemble):
                         ens_first += 1
                         ens_num = ens_first
                         subtraj_first = 0
+                        self.update_cache(cache, ens_num, ens_first, subtraj_first)
 
 
     def can_prepend(self, trajectory, trusted=False):
