@@ -56,6 +56,10 @@ def make_list_of_pairs(l):
     return outlist
 
 @ops_object
+class Detail(object):
+    pass
+
+@ops_object
 class MoveDetails(object):
     '''Details of the move as applied to a given replica
 
@@ -185,7 +189,7 @@ class PathMover(object):
     """
     engine = None
 
-    def __init__(self, replicas='all', ensembles=None):
+    def __init__(self,  ensembles=None):
         self.name = self.__class__.__name__
 
         if type(replicas) is int:
@@ -333,9 +337,7 @@ class ShootMover(PathMover):
     '''
 
     def __init__(self, selector, ensembles=None, replicas='all'):
-        super(ShootMover, self).__init__(ensembles=ensembles,
-                                         replicas=replicas
-                                        )
+        super(ShootMover, self).__init__(ensembles=ensembles)
         self.selector = selector
         if hasattr(PathMover, 'engine') and hasattr(PathMover.engine, 'max_length_stopper'):
             self._length_stopper = PathMover.engine.max_length_stopper
@@ -495,8 +497,8 @@ class RandomChoiceMover(PathMover):
     weights : list of floats
         the relative weight of each PathMover (does not need to be normalized)
     '''
-    def __init__(self, movers, ensembles=None, replicas='all', weights=None, name=None):
-        super(RandomChoiceMover, self).__init__(ensembles=ensembles, replicas=replicas)
+    def __init__(self, movers, ensembles=None,  weights=None, name=None):
+        super(RandomChoiceMover, self).__init__(ensembles=ensembles)
 
         if name is not None:
             self.name = name
@@ -554,9 +556,7 @@ class ConditionalMover(PathMover):
     '''
     def __init__(self, if_mover, then_mover, else_mover, ensembles=None,
                  replicas='all'):
-        super(ConditionalMover, self).__init__(ensembles=ensembles,
-                                               replicas=replicas
-                                              )
+        super(ConditionalMover, self).__init__(ensembles=ensembles)
         self.if_mover = if_mover
         self.then_mover = then_mover
         self.else_mover = else_mover
@@ -595,10 +595,8 @@ class SequentialMover(PathMover):
     replica exchanges in a given order, regardless of whether the moves
     succeed or fail.
     '''
-    def __init__(self, movers, ensembles=None, replicas='all'):
-        super(SequentialMover, self).__init__(ensembles=ensembles,
-                                              replicas=replicas,
-                                             )
+    def __init__(self, movers, ensembles=None):
+        super(SequentialMover, self).__init__(ensembles=ensembles)
         self.movers = movers
         initialization_logging(init_log, self, ['movers'])
 
@@ -717,11 +715,9 @@ class ReplicaIDChangeMover(PathMover):
     """
     Changes the replica ID for a path.
     """
-    def __init__(self, replica_pairs, ensembles=None, replicas='all'):
+    def __init__(self, replica_pairs, ensembles=None):
         self.replica_pairs = make_list_of_pairs(replica_pairs)
-        super(ReplicaIDChangeMover, self).__init__(ensembles=ensembles,
-                                                   replicas=replicas
-                                                  )
+        super(ReplicaIDChangeMover, self).__init__(ensembles=ensembles)
         self._extra_details = ['rep_from', 'rep_to']
         initialization_logging(logger=init_log, obj=self, 
                                entries=['replica_pairs'])
@@ -767,14 +763,12 @@ class ReplicaIDChangeMover(PathMover):
 
 @ops_object
 class EnsembleHopMover(PathMover):
-    def __init__(self, bias=None, ensembles=None, replicas='all'):
+    def __init__(self, bias=None, ensembles=None):
         # TODO: maybe allow a version of this with a single ensemble and ANY
         # ensemble can hop to that? messy to code; maybe same idea under
         # another name
         ensembles = make_list_of_pairs(ensembles)
-        super(EnsembleHopMover, self).__init__(ensembles=ensembles, 
-                                               replicas=replicas
-                                              )
+        super(EnsembleHopMover, self).__init__(ensembles=ensembles)
         # TODO: add support for bias: should be a list, one per pair of
         # ensembles -- another version might take a value for each ensemble,
         # and use the ratio; this latter is better for CITIS
@@ -856,10 +850,9 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
     This should only be used as part of other moves, since this can create
     samples which are not valid.
     '''
-    def __init__(self, ensembles=None, replicas='all'):
+    def __init__(self, ensembles=None):
         # no bias allowed
-        super(ForceEnsembleChangeMover, self).__init__(ensembles=ensembles,
-                                                       replicas=replicas)
+        super(ForceEnsembleChangeMover, self).__init__(ensembles=ensembles)
 
     @keep_selected_samples
     def move(self, globalstate):
@@ -904,10 +897,8 @@ class RandomSubtrajectorySelectMover(PathMover):
     If there are no subtrajectories which satisfy the subensemble, this
     returns the zero-length trajectory.
     '''
-    def __init__(self, subensemble, n_l=None, ensembles=None, replicas='all'):
-        super(RandomSubtrajectorySelectMover, self).__init__(
-            ensembles=ensembles, replicas=replicas
-        )
+    def __init__(self, subensemble, n_l=None, ensembles=None):
+        super(RandomSubtrajectorySelectMover, self).__init__(ensembles=ensembles)
         self.n_l=n_l
         self.subensemble = subensemble
 
@@ -1026,7 +1017,7 @@ class PathReversalMover(PathMover):
 
 @ops_object
 class ReplicaExchangeMover(PathMover):
-    def __init__(self, bias=None, ensembles=None, replicas='all'):
+    def __init__(self, bias=None, ensembles=None):
         if replicas=='all' and ensembles is None:
             # replicas MUST be a non-empty list of pairs
             raise ValueError("Specify replicas for ReplicaExchangeMover")
@@ -1035,8 +1026,7 @@ class ReplicaExchangeMover(PathMover):
         ensembles = make_list_of_pairs(ensembles)
         # either replicas or ensembles must be a list of pairs; more
         # complicated filtering can be done with a wrapper class
-        super(ReplicaExchangeMover, self).__init__(ensembles=ensembles, 
-                                                   replicas=replicas)
+        super(ReplicaExchangeMover, self).__init__(ensembles=ensembles)
         # TODO: add support for bias; cf EnsembleHopMover
         self.bias = bias
         initialization_logging(logger=init_log, obj=self,
@@ -1164,13 +1154,13 @@ class OneWayShootingMover(RandomChoiceMover):
     replicas : list or 'all'
         valid replicas
     '''
-    def __init__(self, selector, ensembles=None, replicas='all'):
+    def __init__(self, selector, ensembles=None):
         movers = [
             ForwardShootMover(selector, ensembles),
             BackwardShootMover(selector, ensembles)
         ]
         super(OneWayShootingMover, self).__init__(
-            movers=movers, ensembles=ensembles, replicas=replicas
+            movers=movers, ensembles=ensembles
         )
         self.selector = selector
 
@@ -1185,7 +1175,7 @@ class MinusMover(ConditionalSequentialMover):
     of path space.
     '''
     def __init__(self, minus_ensemble, innermost_ensemble, 
-                 ensembles=None, replicas='all'):
+                 ensembles=None):
         segment = minus_ensemble._segment_ensemble
         subtrajectory_selector = RandomChoiceMover([
             FirstSubtrajectorySelectMover(subensemble=segment,
@@ -1223,9 +1213,7 @@ class MinusMover(ConditionalSequentialMover):
         initialization_logging(init_log, self, ['minus_ensemble',
                                                 'innermost_ensemble'])
 
-        super(MinusMover, self).__init__(movers=movers,
-                                         ensembles=ensembles,
-                                         replicas=replicas)
+        super(MinusMover, self).__init__(movers=movers, ensembles=ensembles)
 
 
     @keep_selected_samples

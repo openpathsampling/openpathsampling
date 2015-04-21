@@ -362,6 +362,9 @@ class Sample(object):
         self.replica = replica
         self.ensemble = ensemble
         self.trajectory = trajectory
+        self.details = None
+        self.parent = None
+        self.origin = None
         self.intermediate = intermediate
         self.step = step
 

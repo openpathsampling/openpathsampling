@@ -40,10 +40,13 @@ class PathMoveChange(object):
         spl = [' |  ' + p if p[0] == ' ' else ' +- ' + p for p in spl]
         return '\n'.join(spl)
 
-    def __init__(self, accepted=True, mover=None, details=None):
+    def __init__(self, accepted=True, mover=None, details=None, trials=None):
         self._accepted = accepted
         self._destination = None
-        self._local_samples = []
+        if trials is None:
+            self.trials = []
+        else:
+            self.trials = trials
         self._collapsed_samples = None
         self._samples = None
         self._len = None
@@ -55,7 +58,8 @@ class PathMoveChange(object):
         return {
             'accepted' : self.accepted,
             'mover' : self.mover,
-            'details' : self.details
+            'details' : self.details,
+            'trials' : self.trials
         }
 
     @property
@@ -63,6 +67,7 @@ class PathMoveChange(object):
         if len(self.subchanges) == 1:
             return self.subchanges[0]
         else:
+            # TODO: might raise exception
             return None
 
     @property
@@ -473,7 +478,7 @@ class PathMoveChange(object):
         return self._collapsed_samples
 
     @property
-    def local_samples(self):
+    def trials(self):
         """
         A list of the samples that are needed to update the new sample_set
 
@@ -482,7 +487,7 @@ class PathMoveChange(object):
         These samples are purely for this PathMoveChange node and not for any
         underlying nodes. It is effectively only used by SamplePathMoveChange
         """
-        return self._local_samples
+        return self.trials
 
     @property
     def all_samples(self):
@@ -494,7 +499,7 @@ class PathMoveChange(object):
 
         TODO: Decide, if we want hidden samples to be included or not
         """
-        return self._local_samples
+        return self.trials
 
     @property
     def accepted(self):
@@ -504,17 +509,9 @@ class PathMoveChange(object):
         Mainly used for rejected samples.
         """
         if self._accepted is None:
-            self._accepted = self._get_accepted()
+            self._accepted = len(self.samples) > 0
 
         return self._accepted
-
-    def _get_accepted(self):
-        """
-        The function that determines if a PathMoveChange was accepted.
-
-        Is overridden by SequentialConditionalMovePath, etc.
-        """
-        return True
 
     def __add__(self, other):
         return SequentialPathMoveChange([self, other])
@@ -549,14 +546,14 @@ class PathMoveChange(object):
         Includes all accepted samples also from submoves
         """
         if self.accepted:
-            return self._local_samples
+            return self.trials
         else:
             return []
 
 
     def __str__(self):
         if self.accepted:
-            return 'SampleMove : %s : %s : %d samples' % (self.mover.cls, self.accepted, len(self._local_samples)) + ' ' + str(self._local_samples) + ''
+            return 'SampleMove : %s : %s : %d samples' % (self.mover.cls, self.accepted, len(self.trials)) + ' ' + str(self.trials) + ''
         else:
             return 'SampleMove : %s : %s :[]' % (self.mover.cls, self.accepted)
 
@@ -600,13 +597,13 @@ class SamplePathMoveChange(PathMoveChange):
         if type(samples) is paths.Sample:
             samples = [samples]
 
-        self._local_samples.extend(samples)
+        self.trials.extend(samples)
 
     def to_dict(self):
         return {
             'accepted' : self.accepted,
             'mover' : self.mover,
-            'samples' : self._local_samples,
+            'samples' : self.trials,
             'details' : self.details
         }
 
@@ -614,7 +611,7 @@ class SamplePathMoveChange(PathMoveChange):
         """
         Standard apply is to apply the list of samples contained
         """
-        return paths.SampleSet(other).apply_samples(self._local_samples)
+        return paths.SampleSet(other).apply_samples(self.trials)
 
 
 @ops_object
@@ -635,15 +632,15 @@ class CollapsedMovePath(SamplePathMoveChange):
     @property
     def collapsed_samples(self):
         if self._collapsed_samples is None:
-            self._collapsed_samples = self._local_samples
+            self._collapsed_samples = self.trials
 
         return self._collapsed_samples
 
     def __str__(self):
         if self.mover is not None:
-            return '%s [collapsed] : %d samples' % (self.mover.cls, len(self._local_samples)) + ' ' + str(self._local_samples) + ''
+            return '%s [collapsed] : %d samples' % (self.mover.cls, len(self.trials)) + ' ' + str(self.trials) + ''
         else:
-            return '%s [collapsed] : %d samples' % ('CollapsedMove', len(self._local_samples)) + ' ' + str(self._local_samples) + ''
+            return '%s [collapsed] : %d samples' % ('CollapsedMove', len(self.trials)) + ' ' + str(self.trials) + ''
 
 
 @ops_object
