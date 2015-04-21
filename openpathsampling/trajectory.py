@@ -351,7 +351,43 @@ class Trajectory(list):
 
         return log_q
 
-    
+    #=============================================================================================
+    # ANALYSIS FUNCTIONS
+    #=============================================================================================
+
+    def correlation(self, other):
+        """
+        Checks if two trajectories share a common snapshot
+
+        Parameters
+        ----------
+        other : Trajectory()
+            the second trajectory to check for common snapshots
+
+        Returns
+        -------
+        bool
+            returns True if at least one snapshot appears in both trajectories
+        """
+
+        t1id = None
+        t2id = None
+
+        if hasattr(self, 'idx') and hasattr(other, 'idx'):
+            shared_store = set(self.idx.keys()) & set(other.idx.keys())
+            # both are saved so use the snapshot idx as identifiers
+            if len(shared_store) > 0:
+                storage = list(shared_store)[0]
+                t1id = storage.trajectories.snapshot_indicies(self.idx[storage])
+                t2id = storage.trajectories.snapshot_indicies(other.idx[storage])
+
+        if t1id is None:
+            t1idx = [ id(snap) for snap in self ]
+            t2idx = [ id(snap) for snap in other ]
+
+        return bool(set(t1id) & set(t2id))
+
+
     #=============================================================================================
     # UTILITY FUNCTIONS
     #=============================================================================================
