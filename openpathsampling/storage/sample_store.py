@@ -22,6 +22,13 @@ class SampleStore(ObjectStore):
             else:
                 self.save_variable('sample_step', idx, sample.step)
 
+            self.save_variable('sample_parent', idx, sample.parent)
+            self.save_variable('sample_details', idx, sample.details)
+            self.save_variable('sample_valid', idx, sample.valid)
+            self.save_variable('sample_accepted', idx, sample.accepted)
+
+
+
     def load(self, idx):
         '''
         Return a sample from the storage
@@ -39,14 +46,22 @@ class SampleStore(ObjectStore):
         trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
         ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
         replica_idx = int(self.storage.variables['sample_replica'][idx])
+        parent_idx = int(self.storage.variables['sample_parent'][idx])
+        details_idx = int(self.storage.variables['sample_details'][idx])
         step=self.load_variable('sample_step', idx)
+        valid=self.load_variable('sample_valid', idx)
+        accepted=bool(self.load_variable('sample_accepted', idx))
 
 
         obj = Sample(
-            trajectory=self.storage.trajectories.load(trajectory_idx),
+            trajectory=self.storage.trajectories[trajectory_idx],
             replica=replica_idx,
-            ensemble=self.storage.ensembles.load(ensemble_idx),
-            step=step
+            ensemble=self.storage.ensembles[ensemble_idx],
+            step=step,
+            valid=valid,
+            parent=self.storage.samples[parent_idx],
+            details=self.storage.movedetails[details_idx],
+            accepted=accepted
         )
 
         return obj
@@ -62,6 +77,10 @@ class SampleStore(ObjectStore):
         self.init_variable('sample_ensemble_idx', 'index', chunksizes=(1, ))
         self.init_variable('sample_replica', 'index', chunksizes=(1, ))
         self.init_variable('sample_step', 'index', chunksizes=(1, ))
+        self.init_variable('sample_parent', 'index', chunksizes=(1, ))
+        self.init_variable('sample_valid', 'index', chunksizes=(1, ))
+        self.init_variable('sample_details', 'index', chunksizes=(1, ))
+        self.init_variable('sample_accepted', 'index', chunksizes=(1, ))
 
 class SampleSetStore(ObjectStore):
 
