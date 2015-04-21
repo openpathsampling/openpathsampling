@@ -387,6 +387,38 @@ class Trajectory(list):
 
         return bool(set(t1id) & set(t2id))
 
+    def shared_snapshots(self, other):
+        """
+        Returns a set of shared snapshots
+
+        Parameters
+        ----------
+        other : Trajectory()
+            the second trajectory to use
+
+        Returns
+        -------
+        set of Snapshot()
+            the set of common snapshots
+        """
+        return set(list(self)) & set(list(other))
+
+    def common_subtrajectory(self, other):
+        """
+        Returns a subtrajectory which only contains frames present in other
+
+        Parameters
+        ----------
+        other : Trajectory()
+            the second trajectory to use
+
+        Returns
+        -------
+        Trajectory
+            the shared subtrajectory
+        """
+        shared = self.shared_snapshots(other)
+        return Trajectory([ snap for snap in self if snap in shared])
 
     #=============================================================================================
     # UTILITY FUNCTIONS
