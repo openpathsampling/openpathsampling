@@ -459,7 +459,7 @@ class ObjectStore(object):
             the loaded object
         '''
 
-        return self.load_object(self.idx_dimension + '_json', idx)
+        return self.load_json(self.idx_dimension + '_json', idx)
 
     def save(self, obj, idx=None):
         """
@@ -480,7 +480,7 @@ class ObjectStore(object):
         if self.has_uid and hasattr(obj, '_uid'):
             self.storage.variables[self.identifier][idx] = obj._uid
 
-        self.save_object(self.idx_dimension + '_json', idx, obj)
+        self.save_json(self.idx_dimension + '_json', idx, obj)
 
     def get_name(self, idx):
         """
@@ -768,9 +768,9 @@ class ObjectStore(object):
         """
         self.storage.variables[name][idx] = value
 
-    def load_object(self, name, idx):
+    def load_json(self, name, idx):
         """
-        Load an object from the associated storage
+        Load an object from the associated storage using json
 
         Parameters
         ----------
@@ -796,7 +796,7 @@ class ObjectStore(object):
 
         return obj
 
-    def save_object(self, name, idx, obj):
+    def save_json(self, name, idx, obj):
         """
         Save an object as a json string in a variable in the referenced storage
 
@@ -814,6 +814,50 @@ class ObjectStore(object):
             setattr(obj, 'json', self.object_to_json(obj))
 
         self.storage.variables[name][idx] = obj.json
+
+    def load_object(self, name, idx, store):
+        """
+        Load an object from the associated storage
+
+        Parameters
+        ----------
+        name : str
+            the name of the variable in the netCDF storage
+        idx : int
+            the integer index in the variable
+
+        Returns
+        -------
+        object
+            the loaded object
+
+        """
+        idx = int(idx)
+        obj_idx = self.storage.variables[name][idx]
+
+        return store[int(idx)]
+
+    def save_object(self, name, idx, obj):
+        """
+        Save a storable object using its inter idx.
+
+        Parameters
+        ----------
+        name : str
+            the name of the variable in the netCDF storage
+        idx : int
+            the integer index in the variable
+        obj : object
+            the object to be stored
+
+        """
+        if obj is None:
+            self.storage.variables[name][idx] = -1
+        else:
+            storage = self.storage
+            storage.save(obj)
+            storage.variables[name][idx] = obj.idx[storage]
+
 
 #==============================================================================
 # CONVERSION UTILITIES

@@ -37,9 +37,8 @@ class BootstrapPromotionMove(PathMover):
     ensemble up) with incrementing the replica ID.
     '''
     def __init__(self, bias=None, shooters=None,
-                 ensembles=None, replicas='all'):
-        super(BootstrapPromotionMove, self).__init__(ensembles=ensembles,
-                                                     replicas=replicas)
+                 ensembles=None):
+        super(BootstrapPromotionMove, self).__init__(ensembles=ensembles)
         self.shooters = shooters
         self.bias = bias
         initialization_logging(logger=init_log, obj=self,
@@ -112,8 +111,7 @@ class Bootstrapping(PathSimulator):
     def run(self, nsteps):
         bootstrapmove = BootstrapPromotionMove(bias=None,
                                                shooters=self.movers,
-                                               ensembles=self.ensembles,
-                                               replicas='all'
+                                               ensembles=self.ensembles
                                               )
 
         ens_num = 0

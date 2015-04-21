@@ -22,12 +22,10 @@ class SampleStore(ObjectStore):
             else:
                 self.save_variable('sample_step', idx, sample.step)
 
-            self.save_variable('sample_parent', idx, sample.parent)
-            self.save_variable('sample_details', idx, sample.details)
+            self.save_object('sample_parent', idx, sample.parent)
+            self.save_object('sample_details', idx, sample.details)
             self.save_variable('sample_valid', idx, sample.valid)
             self.save_variable('sample_accepted', idx, sample.accepted)
-
-
 
     def load(self, idx):
         '''
@@ -60,7 +58,7 @@ class SampleStore(ObjectStore):
             step=step,
             valid=valid,
             parent=self.storage.samples[parent_idx],
-            details=self.storage.movedetails[details_idx],
+            details=self.storage._details[details_idx],
             accepted=accepted
         )
 

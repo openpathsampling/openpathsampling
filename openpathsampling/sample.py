@@ -204,8 +204,8 @@ class SampleSet(object):
         '''
         for sample in self:
             # TODO: Replace by using .valid which means that it is in the ensemble
-            # assert(sample.valid)
-            assert(sample.ensemble(sample.trajectory))
+            assert(sample.valid)
+            #assert(sample.ensemble(sample.trajectory))
 
     def consistency_check(self):
         '''This is mainly a sanity check for use in testing, but might be
@@ -380,7 +380,11 @@ class Sample(object):
         self.intermediate = intermediate
         self.step = step
         self.details = None
-        self.valid = valid
+        if valid is None:
+            # valid? figure it out
+            self.valid = self.ensemble(self.trajectory)
+        else:
+            self.valid = valid
 
     def __call__(self):
         return self.trajectory
