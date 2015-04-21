@@ -73,7 +73,7 @@ class Storage(netcdf.Dataset):
         # normal objects
 
         self.pathmovers = paths.storage.ObjectStore(storage, paths.PathMover, has_uid=True)
-        self.movedetails = paths.storage.ObjectStore(storage, paths.MoveDetails, has_uid=False)
+        self._details = paths.storage.ObjectStore(storage, paths.Details, has_uid=False)
         self.shootingpoints = paths.storage.ObjectStore(storage, paths.ShootingPoint, has_uid=False)
         self.shootingpointselectors = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, has_uid=False)
         self.engines = paths.storage.ObjectStore(storage, paths.DynamicsEngine, has_uid=True)
@@ -97,7 +97,7 @@ class Storage(netcdf.Dataset):
                    'cvs', 'pathmovers', 'movedetails', 'shootingpoints',
                    'shootingpointselectors', 'engines',
                    'pathsimulators', 'volumes', 'ensembles',
-                   'pathmovechanges', 'transitions'
+                   'pathmovechanges', 'transitions' ,'_details'
                   ]}
 
     @property

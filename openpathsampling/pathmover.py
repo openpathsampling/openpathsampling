@@ -1215,7 +1215,24 @@ class PathMoverFactory(object):
 
 
 @ops_object
-class MoveDetails(object):
+class Details(object):
+    '''Details of an object. Can contain any data
+    '''
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs:
+            setattr(self, key, value)
+
+    def __str__(self):
+        # primarily for debugging/interactive use
+        mystr = ""
+        for key in self.__dict__.keys():
+            if not isinstance(self.__dict__[key], paths.Ensemble):
+                mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
+        return mystr
+
+@ops_object
+class MoveDetails(Details):
     '''Details of the move as applied to a given replica
 
     Attributes
@@ -1256,81 +1273,32 @@ class MoveDetails(object):
         self.inputs=None
         self.trials=None
         self.results=None
-        for key, value in kwargs:
-            setattr(self, key, value)
+        super(MoveDetails, self).__init__(**kwargs)
 
-    def __str__(self):
-        # primarily for debugging/interactive use
-        mystr = ""
-        for key in self.__dict__.keys():
-            if not isinstance(self.__dict__[key], paths.Ensemble):
-                mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
-        return mystr
-
-    @staticmethod
-    def initialization(sample):
-        return MoveDetails.initialization_from_scratch(sample.trajectory,
-                                                       sample.ensemble)
-
-    @staticmethod
-    def initialization_from_scratch(trajectory, ensemble):
-        details = MoveDetails()
-        details.inputs = []
-        details.trials = trajectory
-        details.ensemble = ensemble # might go to Change and not Details
-        details.results = trajectory
-        return details
+    # @staticmethod
+    # def initialization(sample):
+    #     return MoveDetails.initialization_from_scratch(sample.trajectory,
+    #                                                    sample.ensemble)
+    #
+    # @staticmethod
+    # def initialization_from_scratch(trajectory, ensemble):
+    #     details = MoveDetails()
+    #     details.inputs = []
+    #     details.trials = trajectory
+    #     details.ensemble = ensemble # might go to Change and not Details
+    #     details.results = trajectory
+    #     return details
 
 @ops_object
 class SampleDetails(object):
-    '''Details of the move as applied to a given sample
+    '''Details of a sample
 
     Attributes
     ----------
-    replica : integer
-        replica ID to which this trial move would apply
-    inputs : list of Trajectory
-        the Samples which were used as inputs to the move
-    trial : Trajectory
-        the Trajectory
-    trial_is_in_ensemble : bool
-        whether the attempted move created a trajectory in the right
-        ensemble
-    mover : PathMover
-        the PathMover which generated this sample out of other samples
-
-    Specific move types may have add several other attributes for each
-    MoveDetails object. For example, shooting moves will also include
-    information about the shooting point selection, etc.
-
-    TODO (or at least to put somewhere):
-    rejection_reason : String
-        explanation of reasons the path was rejected
-
-    RENAME: inputs=>initial
-            accepted=>trial_in_ensemble (probably only in shooting)
-
-    TODO:
-    Currently trial/accepted are in terms of Trajectory objects. I
-    think it makes more sense for them to be Samples.
-    I kept trial, accepted as a trajectory and only changed inputs
-    to a list of samples. Since trial, accepted are move related
-    to the shooting and not necessarily dependent on a replica or
-    initial ensemble.
+    selection_probability : float
+        the chance that a sample will be accepted due to asymmetrical proposal
     '''
 
     def __init__(self, **kwargs):
-        self.acceptance_probability=1.0
-        self.in_ensemble=None
-        self.accepted=None
-        self.mover=None
-        for key, value in kwargs:
-            setattr(self, key, value)
-
-    def __str__(self):
-        # primarily for debugging/interactive use
-        mystr = ""
-        for key in self.__dict__.keys():
-            if not isinstance(self.__dict__[key], paths.Ensemble):
-                mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
-        return mystr
+        self.selection_probability=1.0
+        super(SampleDetails, self).__init__(**kwargs)
