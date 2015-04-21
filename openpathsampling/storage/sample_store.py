@@ -7,6 +7,49 @@ class SampleStore(ObjectStore):
     def __init__(self, storage):
         super(SampleStore, self).__init__(storage, Sample, json=False)
 
+        self.set_variable_partial_loading('details', self.update_details)
+
+    def load_empty(self, idx):
+        trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
+        ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
+        replica_idx = int(self.storage.variables['sample_replica'][idx])
+        parent_idx = int(self.storage.variables['sample_parent'][idx])
+        valid=self.load_variable('sample_valid', idx)
+        accepted=bool(self.load_variable('sample_accepted', idx))
+
+
+        obj = Sample(
+            trajectory=self.storage.trajectories[trajectory_idx],
+            replica=replica_idx,
+            ensemble=self.storage.ensembles[ensemble_idx],
+            valid=valid,
+            parent=self.storage.samples[parent_idx],
+            details=None,
+            accepted=accepted
+        )
+
+        del obj.details
+
+        return obj
+
+    @staticmethod
+    def update_details(obj):
+        """
+        Update/Load the velocities in the given obj from the attached storage
+
+        Parameters
+        ----------
+        obj : Momentum
+            The Momentum object to be updated
+
+        """
+        storage = obj._origin
+
+        idx = obj.idx[storage]
+        details_idx = int(storage.variables['sample_details'][idx])
+
+        obj.details = storage._details[details_idx]
+
     def save(self, sample, idx=None):
         if idx is not None:
             self.storage.trajectories.save(sample.trajectory)
@@ -16,12 +59,6 @@ class SampleStore(ObjectStore):
             self.set_object('sample_ensemble', idx, sample.ensemble)
 
             self.save_variable('sample_replica', idx, sample.replica)
-
-            if sample.step is None:
-                self.save_variable('sample_step', idx, -1)
-            else:
-                self.save_variable('sample_step', idx, sample.step)
-
             self.save_object('sample_parent', idx, sample.parent)
             self.save_object('sample_details', idx, sample.details)
             self.save_variable('sample_valid', idx, sample.valid)
@@ -46,7 +83,6 @@ class SampleStore(ObjectStore):
         replica_idx = int(self.storage.variables['sample_replica'][idx])
         parent_idx = int(self.storage.variables['sample_parent'][idx])
         details_idx = int(self.storage.variables['sample_details'][idx])
-        step=self.load_variable('sample_step', idx)
         valid=self.load_variable('sample_valid', idx)
         accepted=bool(self.load_variable('sample_accepted', idx))
 
@@ -55,7 +91,6 @@ class SampleStore(ObjectStore):
             trajectory=self.storage.trajectories[trajectory_idx],
             replica=replica_idx,
             ensemble=self.storage.ensembles[ensemble_idx],
-            step=step,
             valid=valid,
             parent=self.storage.samples[parent_idx],
             details=self.storage._details[details_idx],

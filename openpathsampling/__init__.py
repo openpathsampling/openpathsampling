@@ -60,7 +60,7 @@ from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
 from analysis.tis_analysis import TISTransition, RETISTransition, Transition, \
     TPSTransition
 
-from pathmover import Details
+from pathmover import Details, MoveDetails, SampleDetails
 
 from pathmovechange import (EmptyPathMoveChange, ConditionalSequentialPathMoveChange,
                       PathMoveChange, PartialAcceptanceSequentialPathMoveChange,

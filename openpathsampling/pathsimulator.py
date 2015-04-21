@@ -108,13 +108,15 @@ class Bootstrapping(PathSimulator):
                                ['movers', 'ensembles'])
         init_log.info("Parameter: %s : %s", 'trajectory', str(trajectory))
 
-    def run(self, nsteps):
-        bootstrapmove = BootstrapPromotionMove(bias=None,
+        self._bootstrapmove = BootstrapPromotionMove(bias=None,
                                                shooters=self.movers,
                                                ensembles=self.ensembles
                                               )
 
-        ens_num = 0
+    def run(self, nsteps):
+        bootstrapmove = self._bootstrapmove
+
+        ens_num = len(self.globalstate)-1
         failsteps = 0
         step_num = 0
         # if we fail nsteps times in a row, kill the job
@@ -122,27 +124,27 @@ class Bootstrapping(PathSimulator):
         old_ens = self.globalstate[0].ensemble
 
         while ens_num < len(self.ensembles) - 1 and failsteps < nsteps:
-            logger.info("Step: " + str(step_num) 
+            logger.info("Step: " + str(step_num)
                         + "   Ensemble: " + str(ens_num)
                         + "  failsteps = " + str(failsteps)
                        )
 
             movepath = bootstrapmove.move(self.globalstate)
             samples = movepath.samples
-            logger.debug("SAMPLES:")
-            for sample in samples:
-                logger.debug("(" + str(sample.replica)
-                             + "," + str(sample.trajectory)
-                             + "," + repr(sample.ensemble)
-                            )
+#            logger.debug("SAMPLES:")
+#            for sample in samples:
+#                logger.debug("(" + str(sample.replica)
+#                             + "," + str(sample.trajectory)
+#                             + "," + repr(sample.ensemble)
+#                            )
             self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
             self.globalstate.movepath = movepath
-            logger.debug("GLOBALSTATE:")
-            for sample in self.globalstate:
-                logger.debug("(" + str(sample.replica)
-                             + "," + str(sample.trajectory)
-                             + "," + repr(sample.ensemble)
-                            )
+#            logger.debug("GLOBALSTATE:")
+#            for sample in self.globalstate:
+#                logger.debug("(" + str(sample.replica)
+#                             + "," + str(sample.trajectory)
+#                             + "," + repr(sample.ensemble)
+#                            )
 
             old_ens_num = ens_num
             ens_num = len(self.globalstate)-1
@@ -150,12 +152,11 @@ class Bootstrapping(PathSimulator):
                 failsteps += 1
 
             if self.storage is not None:
-                self.globalstate.save_samples(self.storage)
+#                self.globalstate.save_samples(self.storage)
                 self.globalstate.save(self.storage)
             step_num += 1
 
-        for sample in self.globalstate:
-            assert sample.ensemble(sample.trajectory) == True, "WTF?"
+            self.globalstate.sanity_check()
 
 @ops_object
 class PathSampling(PathSimulator):

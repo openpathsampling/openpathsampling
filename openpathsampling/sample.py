@@ -156,25 +156,6 @@ class SampleSet(object):
                 raise ValueError('No SAMPLE!')
             # TODO: should time be a property of Sample or SampleSet?
             sample.step = step
-            if not sample.intermediate:
-                newset[sample.replica] = sample
-        return newset
-
-    # TODO: Remove
-    def apply_intermediates(self, samples, step=None, copy=True):
-        '''Return updated SampleSet, including all intermediates.
-
-        Useful in SequentialMovers.
-        '''
-        if type(samples) is Sample:
-            samples = [samples]
-        if copy==True:
-            newset = SampleSet(self)
-        else:
-            newset = self
-        for sample in samples:
-            # TODO: should time be a property of Sample or SampleSet?
-            sample.step = step
             newset[sample.replica] = sample
         return newset
 
@@ -282,7 +263,6 @@ class SampleSet(object):
                     replica=s.replica,
                     ensemble=translation[s.ensemble],
                     trajectory=s.trajectory,
-                    intermediate=s.intermediate,
                     step=s.step
                 )
                 for s in sset
@@ -365,7 +345,6 @@ class Sample(object):
                  replica=None,
                  trajectory=None,
                  ensemble=None,
-                 intermediate=False,
                  accepted=True,
                  details=None,
                  valid=None,
@@ -377,9 +356,8 @@ class Sample(object):
         self.ensemble = ensemble
         self.trajectory = trajectory
         self.parent = parent
-        self.intermediate = intermediate
         self.step = step
-        self.details = None
+        self.details = details
         if valid is None:
             # valid? figure it out
             self.valid = self.ensemble(self.trajectory)

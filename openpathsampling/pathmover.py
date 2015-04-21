@@ -1290,7 +1290,7 @@ class MoveDetails(Details):
     #     return details
 
 @ops_object
-class SampleDetails(object):
+class SampleDetails(Details):
     '''Details of a sample
 
     Attributes
