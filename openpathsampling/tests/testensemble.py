@@ -6,8 +6,9 @@ import openpathsampling as paths
 from openpathsampling.ensemble import *
 
 import logging
-logging.getLogger('opentis.ensemble').setLevel(logging.DEBUG)
-logging.getLogger('opentis.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.ensemble').setLevel(logging.DEBUG)
+logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 
 import re
 import random
@@ -558,6 +559,9 @@ class testSequentialEnsemble(EnsembleTest):
                    'lower_in_cross_in_cross_in' : False
                   }
         for test in results.keys():
+            logging.getLogger('openpathsampling.ensemble').debug(
+                "Testing " + str(test) + " (" + str(results[test]) + ")"
+            )
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.minus.can_append, 
                                 ttraj[test], results[test], failmsg)
@@ -764,10 +768,10 @@ class testSequentialEnsemble(EnsembleTest):
             'upper_in_cross_in' : True,
             'lower_in_cross_in' : True
         }
-        logging.getLogger('opentis.ensemble').info("Starting tests....")
+        logging.getLogger('openpathsampling.ensemble').info("Starting tests....")
         for test in match_results.keys():
             failmsg = "Match failure in "+test+"("+str(ttraj[test])+"): "
-            logging.getLogger('opentis.ensemble').info(
+            logging.getLogger('openpathsampling.ensemble').info(
                 "Testing: "+str(test)
             )
             self._single_test(ensemble, ttraj[test], 
@@ -939,11 +943,31 @@ class testSequentialEnsembleCache(EnsembleCacheTest):
         assert_equal(cache.contents['ens_num'], 1)
         assert_equal(cache.contents['ens_from'], 0)
         assert_equal(cache.contents['subtraj_from'], 1)
-        for i in range(1, len(self.traj)-1):
-            assert_equal(self.pseudo_minus.can_append(self.traj[0:i+1]), True)
-            #assert_equal(self._was_cache_reset(cache), False)
-        assert_equal(self.pseudo_minus.can_append(self.traj), False)
-        #assert_equal(self._was_cache_reset(cache), False)
+        logging.getLogger('openpathsampling.ensemble').debug("Starting [0:2]")
+        assert_equal(self.pseudo_minus.can_append(self.traj[0:2]), True)
+        assert_equal(cache.contents['ens_num'], 1)
+        assert_equal(cache.contents['ens_from'], 0)
+        assert_equal(cache.contents['subtraj_from'], 1)
+        logging.getLogger('openpathsampling.ensemble').debug("Starting [0:3]")
+        assert_equal(self.pseudo_minus.can_append(self.traj[0:3]), True)
+        assert_equal(cache.contents['ens_num'], 2)
+        assert_equal(cache.contents['ens_from'], 0)
+        assert_equal(cache.contents['subtraj_from'], 2)
+        logging.getLogger('openpathsampling.ensemble').debug("Starting [0:4]")
+        assert_equal(self.pseudo_minus.can_append(self.traj[0:4]), True)
+        assert_equal(cache.contents['ens_num'], 2)
+        assert_equal(cache.contents['ens_from'], 0)
+        assert_equal(cache.contents['subtraj_from'], 2)
+        logging.getLogger('openpathsampling.ensemble').debug("Starting [0:5]")
+        assert_equal(self.pseudo_minus.can_append(self.traj[0:5]), True)
+        assert_equal(cache.contents['ens_num'], 3)
+        assert_equal(cache.contents['ens_from'], 0)
+        assert_equal(cache.contents['subtraj_from'], 4)
+        logging.getLogger('openpathsampling.ensemble').debug("Starting [0:6]")
+        assert_equal(self.pseudo_minus.can_append(self.traj[0:6]), False)
+        assert_equal(cache.contents['ens_num'], 4)
+        assert_equal(cache.contents['ens_from'], 0)
+        assert_equal(cache.contents['subtraj_from'], 5)
 
     def test_sequential_caching_resets(self):
         #cache = self.pseudo_minus._cache_can_append

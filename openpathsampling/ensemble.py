@@ -730,11 +730,26 @@ class SequentialEnsemble(Ensemble):
             frame of the subtrajectory. For reverse-direction caches, this
             is the final frame of the subtrajectory.
         """
-        cache.contents = {
-            'ens_num' : ens_num,
-            'ens_from' : ens_from,
-            'subtraj_from' : subtraj_from
-        }
+        if ens_num is None:
+            ens_num = cache.contents['ens_num']
+        if ens_from is None:
+            ens_from = cache.contents['ens_from']
+        if subtraj_from is None:
+            subtraj_from = cache.contents['subtraj_from']
+
+        cache.contents['ens_num'] = ens_num
+        cache.contents['ens_from'] = ens_from
+        cache.contents['subtraj_from'] = subtraj_from
+        logger.debug("Setting cache | ens_num " + str(ens_num) +
+                     " | ens_from " + str(ens_from) +
+                     " | subtraj_from " + str(subtraj_from)
+                    )
+
+    def assign_frames(self, cache, ens_num, subtraj_first=None, subtraj_final=None):
+        if ens_num is None:
+            cache.contents['assignments'] = { }
+        else:
+            cache.contents['assignments'][ens_num] = slice(subtraj_first, subtraj_final) 
 
 
     def transition_frames(self, trajectory, trusted=None):
@@ -867,17 +882,29 @@ class SequentialEnsemble(Ensemble):
         ens_first = 0
 
 
-        if self._use_cache and cache.contents == { }:
-            self.update_cache(cache, 0, 0, 0)
+        if self._use_cache: 
+            cache.check(trajectory)
+            if cache.contents == { }:
+                self.update_cache(cache, 0, 0, 0)
+                self.assign_frames(cache, None, None, None)
+            else:
+                subtraj_first = cache.contents['subtraj_from']
+                ens_num = cache.contents['ens_num']
+                ens_first = cache.contents['ens_from']
+
 
         traj_final = len(trajectory)
         final_ens = len(self.ensembles)-1
         #print traj_final, final_ens
         # logging startup
-        logger.debug("Beginning can_append")
-        for ens in self.ensembles:
+        logger.debug(
+            "Beginning can_append with subtraj_first=" + str(subtraj_first)
+            + "; ens_first=" + str(ens_first) + "; ens_num=" + str(ens_num)
+        )
+        for i in range(len(self.ensembles)):
+            ens = self.ensembles[i]
             logger.debug(
-                "Ensemble " + str(self.ensembles.index(ens)) + 
+                "Ensemble " + str(i) + 
                 " : " + ens.__class__.__name__
             )
 
@@ -895,6 +922,7 @@ class SequentialEnsemble(Ensemble):
                         # we're in the last ensemble and the whole
                         # trajectory is assigned: can we append?
                         logger.debug("Returning can_append for " + str(self.ensembles[ens_num].__class__.__name__))
+                        self.update_cache(cache, ens_num, ens_first, subtraj_first)
                         return self.ensembles[ens_num].can_append(subtraj)
                     else:
                         logger.debug(
@@ -917,14 +945,28 @@ class SequentialEnsemble(Ensemble):
                         " through " + str(subtraj_final) + 
                         " to ensemble " + str(ens_num)
                     )
+                    self.assign_frames(cache, ens_num, subtraj_first,
+                                       subtraj_final)
                     ens_num += 1
-                    subtraj_first = subtraj_final
                     self.update_cache(cache, ens_num, ens_first, subtraj_first)
+                    subtraj_first = subtraj_final
                     logger.debug("Moving to the next ensemble " + str(ens_num))
-            else:
+            else: 
                 if subtraj_final == traj_final:
                     # all frames assigned, but not all ensembles finished;
                     # next frame might satisfy next ensemble
+                    if self._use_cache:
+                        prev_slice = cache.contents['assignments'][ens_num-1]
+                        prev_subtraj = trajectory[prev_slice]
+                        if self.ensembles[ens_num-1].can_append(prev_subtraj):
+                            logger.debug(
+                                "Premature promotion: returning to ensemble " + 
+                                str(ens_num-1)
+                            )
+                            ens_num -= 1
+                            subtraj_first = None
+                        
+                    self.update_cache(cache, ens_num, ens_first, subtraj_first)
                     logger.debug("All frames assigned, more ensembles to go: returning True")
                     return True
                 elif self.ensembles[ens_num](paths.Trajectory([])):
