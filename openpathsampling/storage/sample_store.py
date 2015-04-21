@@ -16,7 +16,7 @@ class SampleStore(ObjectStore):
         parent_idx = int(self.storage.variables['sample_parent'][idx])
         valid=self.load_variable('sample_valid', idx)
         accepted=bool(self.load_variable('sample_accepted', idx))
-
+        pathmover_idx = int(self.storage.variables['sample_pathmover_idx'][idx])
 
         obj = Sample(
             trajectory=self.storage.trajectories[trajectory_idx],
@@ -25,7 +25,8 @@ class SampleStore(ObjectStore):
             valid=valid,
             parent=self.storage.samples[parent_idx],
             details=None,
-            accepted=accepted
+            accepted=accepted,
+            mover=self.storage.pathmovers[pathmover_idx]
         )
 
         del obj.details
@@ -63,6 +64,7 @@ class SampleStore(ObjectStore):
             self.save_object('sample_details', idx, sample.details)
             self.save_variable('sample_valid', idx, sample.valid)
             self.save_variable('sample_accepted', idx, sample.accepted)
+            self.save_object('sample_pathmover', idx, sample.mover)
 
     def load(self, idx):
         '''
@@ -81,8 +83,9 @@ class SampleStore(ObjectStore):
         trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
         ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
         replica_idx = int(self.storage.variables['sample_replica'][idx])
-        parent_idx = int(self.storage.variables['sample_parent'][idx])
-        details_idx = int(self.storage.variables['sample_details'][idx])
+        parent_idx = int(self.storage.variables['sample_parent_idx'][idx])
+        details_idx = int(self.storage.variables['sample_details_idx'][idx])
+        pathmover_idx = int(self.storage.variables['sample_pathmover_idx'][idx])
         valid=self.load_variable('sample_valid', idx)
         accepted=bool(self.load_variable('sample_accepted', idx))
 
@@ -94,7 +97,8 @@ class SampleStore(ObjectStore):
             valid=valid,
             parent=self.storage.samples[parent_idx],
             details=self.storage._details[details_idx],
-            accepted=accepted
+            accepted=accepted,
+            mover=self.storage.pathmovers[pathmover_idx]
         )
 
         return obj
@@ -112,7 +116,8 @@ class SampleStore(ObjectStore):
         self.init_variable('sample_parent_idx', 'index', chunksizes=(1, ))
         self.init_variable('sample_valid', 'index', chunksizes=(1, ))
         self.init_variable('sample_details_idx', 'index', chunksizes=(1, ))
-        self.init_variable('sample_accepted', 'index', chunksizes=(1, ))
+        self.init_variable('sample_accepted', 'bool', chunksizes=(1, ))
+        self.init_variable('sample_pathmover_idx', 'index', chunksizes=(1, ))
 
 class SampleSetStore(ObjectStore):
 

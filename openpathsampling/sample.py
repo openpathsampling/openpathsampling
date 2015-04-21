@@ -349,6 +349,7 @@ class Sample(object):
                  details=None,
                  valid=None,
                  parent=None,
+                 mover=None,
                  step=-1
                  ):
         self.accepted = accepted
@@ -358,6 +359,7 @@ class Sample(object):
         self.parent = parent
         self.step = step
         self.details = details
+        self.mover = mover
         if valid is None:
             # valid? figure it out
             self.valid = self.ensemble(self.trajectory)
