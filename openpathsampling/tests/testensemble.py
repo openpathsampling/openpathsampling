@@ -155,6 +155,9 @@ class EnsembleTest(object):
                 results["upper_"+test] = not default
 
         for test in results.keys():
+            logging.getLogger('openpathsampling.ensemble').debug(
+                "Starting test for " + test + "("+str(ttraj[test])+")"
+            )
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(test_fcn, ttraj[test], results[test], failmsg)
 
@@ -936,6 +939,21 @@ class testSequentialEnsembleCache(EnsembleCacheTest):
         ])
         self.traj = ttraj['lower_in_out_in_in_out_in']
 
+    def test_all_in_as_seq_can_append(self):
+        ens = SequentialEnsemble([AllInXEnsemble(vol1 | vol2 | vol3)])
+        cache = ens._cache_can_append
+        traj = ttraj['upper_in_in_out_out_in_in']
+        for i in traj:
+            print i,
+        print
+        assert_equal(ens.can_append(traj[0:1]), True)
+        assert_equal(ens.can_append(traj[0:2]), True)
+        assert_equal(ens.can_append(traj[0:3]), True)
+        assert_equal(ens.can_append(traj[0:4]), True)
+        assert_equal(ens.can_append(traj[0:5]), True)
+        assert_equal(ens.can_append(traj[0:6]), True)
+        
+
 
     def test_sequential_caching_can_append(self):
         cache = self.pseudo_minus._cache_can_append
@@ -992,6 +1010,7 @@ class testSequentialEnsembleCache(EnsembleCacheTest):
 
     def test_sequential_caching_can_prepend(self):
         raise SkipTest
+
 
 
 
