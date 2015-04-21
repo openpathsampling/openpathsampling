@@ -1090,6 +1090,8 @@ def savecache(func):
             # name afterwards from cache
             self.cache[obj._uid] = obj
 
+
+
     return inner
 
 #=============================================================================
@@ -1168,5 +1170,8 @@ def saveidx(func):
         self.reserve_idx(idx)
         logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(idx))
         func(obj, idx, *args, **kwargs)
+
+        if self.has_uid and hasattr(obj, '_uid') and obj._uid != '':
+            self.storage.variables[self.identifier][idx] = obj._uid
 
     return inner
