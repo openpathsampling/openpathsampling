@@ -362,7 +362,10 @@ class Sample(object):
         self.mover = mover
         if valid is None:
             # valid? figure it out
-            self.valid = self.ensemble(self.trajectory)
+            if self.trajectory is None:
+                self.valid = True
+            else:
+                self.valid = self.ensemble(self.trajectory)
         else:
             self.valid = valid
 
