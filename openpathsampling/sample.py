@@ -203,6 +203,8 @@ class SampleSet(object):
         '''Checks that the sample trajectories satisfy their ensembles
         '''
         for sample in self:
+            # TODO: Replace by using .valid which means that it is in the ensemble
+            # assert(sample.valid)
             assert(sample.ensemble(sample.trajectory))
 
     def consistency_check(self):

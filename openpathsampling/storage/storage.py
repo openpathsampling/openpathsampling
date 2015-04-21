@@ -94,7 +94,7 @@ class Storage(netcdf.Dataset):
         self._objects = { name : getattr(self, name) for name in
                   ['trajectories', 'snapshots', 'configurations',
                    'samples', 'samplesets', 'collectivevariables',
-                   'cvs', 'pathmovers', 'movedetails', 'shootingpoints',
+                   'cvs', 'pathmovers', 'shootingpoints',
                    'shootingpointselectors', 'engines',
                    'pathsimulators', 'volumes', 'ensembles',
                    'pathmovechanges', 'transitions' ,'_details'

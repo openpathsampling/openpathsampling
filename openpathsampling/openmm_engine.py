@@ -9,6 +9,8 @@ import openpathsampling as paths
 from openpathsampling.storage import Storage
 from openpathsampling.todict import ops_object
 
+from openpathsampling.integrators import VVVRIntegrator
+
 @ops_object
 class OpenMMEngine(paths.DynamicsEngine):
     """OpenMM dynamics engine."""
