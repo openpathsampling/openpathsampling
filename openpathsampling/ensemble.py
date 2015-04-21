@@ -1313,7 +1313,7 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         inX = AllInXEnsemble(innermost_vol)
         leaveX = PartOutXEnsemble(innermost_vol)
         interstitial = outA & inX
-        self._segment_ensemble = EnsembleFactory.TISEnsemble(
+        self._segment_ensemble = paths.TISEnsemble(
             state_vol, state_vol, innermost_vol)
         #interstitial = AllInXEnsemble(innermost_vol - state_vol)
         start = [
@@ -1334,6 +1334,50 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         self.n_l = n_l
 
         super(MinusInterfaceEnsemble, self).__init__(ensembles, greedy=greedy)
+
+@ops_object
+class TISEnsemble(SequentialEnsemble):
+    """An ensemble for TIS (or AMS).
+
+    Begin in `initial_states`, end in either `initial_states` or
+    `final_states`, and cross `interface`.
+
+    Attributes
+    ----------
+    initial_states : Volume or list of Volume
+        Volume(s) that only the first or last frame may be in
+    final_states : Volume or list of Volume
+        Volume(s) that only the last frame may be in
+    interface : Volume
+        Volume which the trajectory must exit to be accepted
+    """
+    def __init__(self, initial_states, final_states, interface):
+        # regularize to list of volumes
+        try:
+            n_initial_states = len(initial_states)
+        except TypeError:
+            n_initial_states = 1
+            initial_states = [initial_states]
+
+        try:
+            n_final_states = len(final_states)
+        except TypeError:
+            n_final_states = 1
+            final_states = [final_states]
+
+        self.initial_states = initial_states
+        self.final_states = final_states
+        self.interface = interface
+
+        volume_a = paths.volume.join_volumes(initial_states)
+        volume_b = paths.volume.join_volumes(final_states)
+
+        super(TISEnsemble, self).__init__([
+            AllInXEnsemble(volume_a) & LengthEnsemble(1),
+            AllOutXEnsemble(volume_a | volume_b) & PartOutXEnsemble(interface),
+            AllInXEnsemble(volume_a | volume_b) & LengthEnsemble(1)
+        ])
+
 
 class EnsembleFactory():
     '''
@@ -1398,41 +1442,12 @@ class EnsembleFactory():
         ])
 
 
-
-    @staticmethod
-    def TISEnsemble(volume_a, volume_b, volume_x, trusted = True):
-        '''
-        Construct an TIS ensemble that starts in (x[0]) in volume_a, ends in volume_b and is in either volumes in between
-        and will also leave volume_x at some point
-        
-        Parameters
-        ----------
-        volume_a : volume
-            The volume to start in 
-        volume_b : volume
-            The volume to end in 
-        volume_x : volume
-            The volume to leave 
-        
-        Returns
-        -------
-        ensemble : Ensemble
-            The constructed Ensemble
-        '''
-        ens = SequentialEnsemble([
-            SingleFrameEnsemble(AllInXEnsemble(volume_a)),
-            AllOutXEnsemble(volume_a | volume_b) & PartOutXEnsemble(volume_x),
-            SingleFrameEnsemble(AllInXEnsemble(volume_a | volume_b))
-        ])
-        return ens
-
-
     @staticmethod
     def TISEnsembleSet(volume_a, volume_b, volumes_x, trusted=True):
         myset = []
         for vol in volumes_x:
             myset.append(
-                EnsembleFactory.TISEnsemble(volume_a, volume_b, vol, trusted)
+                paths.TISEnsemble(volume_a, volume_b, vol)
             )
         return myset
 
