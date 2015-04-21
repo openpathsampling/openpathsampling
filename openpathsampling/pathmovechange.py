@@ -1,3 +1,5 @@
+from openpathsampling import ops_object
+
 __author__ = 'jan-hendrikprinz'
 
 import openpathsampling as paths
@@ -40,13 +42,7 @@ class PathMoveChange(object):
         spl = [' |  ' + p if p[0] == ' ' else ' +- ' + p for p in spl]
         return '\n'.join(spl)
 
-    def __init__(self, accepted=True, mover=None, details=None, trials=None):
-        self._accepted = accepted
-        self._destination = None
-        if trials is None:
-            self.trials = []
-        else:
-            self.trials = trials
+    def __init__(self, mover=None, details=None):
         self._collapsed_samples = None
         self._samples = None
         self._len = None
@@ -56,10 +52,8 @@ class PathMoveChange(object):
 
     def to_dict(self):
         return {
-            'accepted' : self.accepted,
             'mover' : self.mover,
-            'details' : self.details,
-            'trials' : self.trials
+            'details' : self.details
         }
 
     @property
@@ -487,7 +481,7 @@ class PathMoveChange(object):
         These samples are purely for this PathMoveChange node and not for any
         underlying nodes. It is effectively only used by SamplePathMoveChange
         """
-        return self.trials
+        return self._trials
 
     @property
     def all_samples(self):
@@ -498,8 +492,9 @@ class PathMoveChange(object):
         include hidden samples yet)
 
         TODO: Decide, if we want hidden samples to be included or not
+        TODO: might be obsolete
         """
-        return self.trials
+        return self._trials
 
     @property
     def accepted(self):
@@ -520,9 +515,7 @@ class PathMoveChange(object):
         """
         Standard apply is to apply the list of samples contained
         """
-        new_sample_set = paths.SampleSet(other).apply_samples(self.samples)
-#        new_sample_set.pathmovechange = self
-        return new_sample_set
+        return other
 
     def __call__(self, other):
         return self.apply_to(other)
@@ -545,10 +538,7 @@ class PathMoveChange(object):
 
         Includes all accepted samples also from submoves
         """
-        if self.accepted:
-            return self.trials
-        else:
-            return []
+        return []
 
 
     def __str__(self):
@@ -589,21 +579,26 @@ class SamplePathMoveChange(PathMoveChange):
     This is the most common PathMoveChange and all other moves use this
     as leaves and on the lowest level consist only of `SamplePathMoveChange`
     """
-    def __init__(self, samples, accepted=True, mover=None, details=None):
-        super(SamplePathMoveChange, self).__init__(accepted=accepted, mover=mover, details=details)
-        if samples is None:
-            return
+    def __init__(self, trials, mover=None, details=None):
+        super(SamplePathMoveChange, self).__init__(mover=mover, details=details)
+        if trials is None:
+            self._trials = []
+        else:
+            if type(trials) is paths.Sample:
+                trials = [trials]
 
-        if type(samples) is paths.Sample:
-            samples = [samples]
+            self._trials.extend(trials)
 
-        self.trials.extend(samples)
+        self._trials = trials
+
+    def _get_samples(self):
+        return [ sample for sample in self.trials if sample.accepted ]
+
 
     def to_dict(self):
         return {
-            'accepted' : self.accepted,
             'mover' : self.mover,
-            'samples' : self.trials,
+            'trials' : self.trials,
             'details' : self.details
         }
 
@@ -611,7 +606,10 @@ class SamplePathMoveChange(PathMoveChange):
         """
         Standard apply is to apply the list of samples contained
         """
-        return paths.SampleSet(other).apply_samples(self.trials)
+        new_sample_set = paths.SampleSet(other).apply_samples(self.samples)
+        #TODO: add pathmove change to new sampleset?
+#        new_sample_set.pathmovechange = self
+        return new_sample_set
 
 
 @ops_object
@@ -680,7 +678,7 @@ class SequentialPathMoveChange(PathMoveChange):
     underlying MovePaths
     """
     def __init__(self, subchanges, mover=None, details=None):
-        super(SequentialPathMoveChange, self).__init__(accepted=None, mover=mover, details=details)
+        super(SequentialPathMoveChange, self).__init__(mover=mover, details=details)
         self.subchanges = subchanges
 
     def to_dict(self):
@@ -703,7 +701,6 @@ class SequentialPathMoveChange(PathMoveChange):
             samples = samples + subchange.all_samples
         return samples
 
-
     def apply_to(self, other):
         sample_set = other
 
@@ -718,7 +715,7 @@ class SequentialPathMoveChange(PathMoveChange):
                PathMoveChange._indent('\n'.join(map(str, self.subchanges)))
 
 @ops_object
-class PartialAcceptanceSequentialMovePath(SequentialPathMoveChange):
+class PartialAcceptanceSequentialPathMoveChange(SequentialPathMoveChange):
     """
     PartialAcceptanceSequentialMovePath has no own samples, only inferred
     Sampled from the underlying MovePaths
@@ -734,6 +731,7 @@ class PartialAcceptanceSequentialMovePath(SequentialPathMoveChange):
 
         return changes
 
+    #TODO: Could be removed
     def apply_to(self, other):
         sample_set = other
 
@@ -751,7 +749,7 @@ class PartialAcceptanceSequentialMovePath(SequentialPathMoveChange):
                PathMoveChange._indent('\n'.join(map(str, self.subchanges)))
 
 @ops_object
-class ConditionalSequentialMovePath(SequentialPathMoveChange):
+class ConditionalSequentialPathMoveChange(SequentialPathMoveChange):
     """
     ConditionalSequentialMovePath has no own samples, only inferred Samples
     from the underlying MovePaths
@@ -777,13 +775,6 @@ class ConditionalSequentialMovePath(SequentialPathMoveChange):
                 return []
 
         return changes
-
-    def _get_accepted(self):
-        for subchange in self.subchanges:
-            if not subchange.accepted:
-                return False
-
-        return True
 
     def __str__(self):
         return 'ConditionalSequentialMove : %s : %d samples\n' % \

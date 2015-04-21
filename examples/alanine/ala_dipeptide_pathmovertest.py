@@ -29,9 +29,10 @@ from openpathsampling.ensemble import EnsembleFactory as ef
 from openpathsampling.ensemble import (LengthEnsemble, SequentialEnsemble, AllOutXEnsemble,
                               AllInXEnsemble)
 from openpathsampling.pathsimulator import Bootstrapping
-from openpathsampling.pathmover import PathMover, MoveDetails, SequentialMover, \
+from openpathsampling.pathmover import PathMover, SequentialMover, \
     ConditionalSequentialMover, PartialAcceptanceSequentialMover, \
     ForwardShootMover, CollapseMove
+from openpathsampling.pathmovechange import MoveDetails
 from openpathsampling.shooting import UniformSelector
 from openpathsampling.sample import Sample, SampleSet
 

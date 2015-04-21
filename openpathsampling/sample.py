@@ -156,10 +156,11 @@ class SampleSet(object):
                 raise ValueError('No SAMPLE!')
             # TODO: should time be a property of Sample or SampleSet?
             sample.step = step
-            if sample.intermediate == False:
+            if not sample.intermediate:
                 newset[sample.replica] = sample
         return newset
 
+    # TODO: Remove
     def apply_intermediates(self, samples, step=None, copy=True):
         '''Return updated SampleSet, including all intermediates.
 
@@ -358,15 +359,26 @@ class Sample(object):
         the Monte Carlo step number associated with this Sample
     """
 
-    def __init__(self, replica=None, trajectory=None, ensemble=None, intermediate=False, step=-1):
+    def __init__(self,
+                 replica=None,
+                 trajectory=None,
+                 ensemble=None,
+                 intermediate=False,
+                 accepted=True,
+                 details=None,
+                 valid=None,
+                 parent=None,
+                 step=-1
+                 ):
+        self.accepted = accepted
         self.replica = replica
         self.ensemble = ensemble
         self.trajectory = trajectory
-        self.details = None
-        self.parent = None
-        self.origin = None
+        self.parent = parent
         self.intermediate = intermediate
         self.step = step
+        self.details = None
+        self.valid = valid
 
     def __call__(self):
         return self.trajectory
@@ -413,4 +425,12 @@ class Sample(object):
         return result
         
 
+    @property
+    def acceptance_probability(self):
+        if not self.valid:
+            return 0.0
 
+        if hasattr(self.details) and self.details is not None and hasattr(self.details, 'selection_probability'):
+            return self.details.selection_probability
+
+        return 1.0

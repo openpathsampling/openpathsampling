@@ -9,6 +9,8 @@ import netCDF4 as netcdf
 import os.path
 
 import logging
+from openpathsampling.pathmovechange import MoveDetails
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
@@ -72,7 +74,7 @@ class Storage(netcdf.Dataset):
         # normal objects
 
         self.pathmovers = paths.storage.ObjectStore(storage, paths.PathMover, has_uid=True)
-        self.movedetails = paths.storage.ObjectStore(storage, paths.MoveDetails, has_uid=False)
+        self.movedetails = paths.storage.ObjectStore(storage, MoveDetails, has_uid=False)
         self.shootingpoints = paths.storage.ObjectStore(storage, paths.ShootingPoint, has_uid=False)
         self.shootingpointselectors = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, has_uid=False)
         self.engines = paths.storage.ObjectStore(storage, paths.DynamicsEngine, has_uid=True)
