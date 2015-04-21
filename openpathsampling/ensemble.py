@@ -615,20 +615,21 @@ class EnsembleCombination(Ensemble):
 
     def can_prepend(self, trajectory, trusted=False):
         if Ensemble.use_shortcircuit:
-            a = self.ensemble1.can_prepend(trajectory)
+            a = self.ensemble1.can_prepend(trajectory, trusted)
             res_true = self._continue_fnc(a, True)
             res_false = self._continue_fnc(a, False)
             if res_false == res_true:
                 # result is independent of ensemble_b so ignore it
                 return res_true
             else:
-                b = self.ensemble2.can_prepend(trajectory)
+                b = self.ensemble2.can_prepend(trajectory, trusted)
                 if b is True:
                     return res_true
                 else:
                     return res_false
         else:
-            return self.fnc(self.ensemble1.can_prepend(trajectory), self.ensemble2.can_prepend(trajectory))
+            return self.fnc(self.ensemble1.can_prepend(trajectory, trusted), 
+                            self.ensemble2.can_prepend(trajectory, trusted))
 
     def __str__(self):
 #        print self.sfnc, self.ensemble1, self.ensemble2, self.sfnc.format('(' + str(self.ensemble1) + ')' , '(' + str(self.ensemble1) + ')')
@@ -843,7 +844,6 @@ class SequentialEnsemble(Ensemble):
         subtraj = traj[slice(subtraj_first, subtraj_final+1)]
         # if we're in the ensemble or could eventually be in the ensemble,
         # we keep building the subtrajectory
-        #TODO: FIXME change this to use the cache
 
         # TODO: this doesn't actually reflect the cleanest behavior: should
         # be the proper hybrid definition where we can append until/unless
@@ -860,8 +860,12 @@ class SequentialEnsemble(Ensemble):
                          str(subtraj_final+1) + " / " + str(traj_final))
         return subtraj_final
     
-    def _find_subtraj_first(self, traj, subtraj_final, ens_num):
-        subtraj_first = subtraj_final-1
+    def _find_subtraj_first(self, traj, subtraj_final, ens_num,
+                            last_checked=None):
+        if last_checked is None:
+            subtraj_first = subtraj_final-1
+        else:
+            subtraj_first = min(last_checked, subtraj_final-1)
         traj_first = 0
         ens = self.ensembles[ens_num]
         subtraj = traj[slice(subtraj_first, subtraj_final)]
@@ -918,7 +922,6 @@ class SequentialEnsemble(Ensemble):
 
         while True: #  main loop, with various 
             if self._use_cache and cache.trusted:
-                # TODO: fix this
                 last_checked = trajectory.index(cache.prev_last_frame)-1
             else:
                 last_checked = None
@@ -1012,11 +1015,24 @@ class SequentialEnsemble(Ensemble):
 
     def can_prepend(self, trajectory, trusted=False):
         # based on .can_append(); see notes there for algorithm details
+        cache = self._cache_can_prepend
+
         traj_first = 0
         first_ens = 0
         subtraj_final = len(trajectory)
         ens_final = len(self.ensembles)-1
         ens_num = ens_final
+
+        if self._use_cache:
+            cache.check(trajectory)
+            if cache.contents == { }:
+                self.update_cache(cache, ens_num, first_ens, subtraj_final)
+                self.assign_frames(cache, None, None, None)
+            else:
+                subtraj_final = cache.contents['subtraj_from']
+                ens_num = cache.contents['ens_num']
+                ens_final = cache.contents['ens_from']
+
 
         # logging startup
         logger.debug("Beginning can_prepend")
@@ -1027,8 +1043,12 @@ class SequentialEnsemble(Ensemble):
             )
 
         while True:
-            subtraj_first = self._find_subtraj_first(trajectory,
-                                                     subtraj_final, ens_num)
+            if self._use_cache and cache.trusted:
+                last_checked = trajectory.index(cache.prev_last_frame)+1
+            else:
+                last_checked = None
+            subtraj_first = self._find_subtraj_first(
+                trajectory, subtraj_final, ens_num, last_checked)
             logger.debug(
                 str(ens_num) + " : " +
                 "("+str(subtraj_first)+","+str(subtraj_final)+")"
@@ -1038,7 +1058,8 @@ class SequentialEnsemble(Ensemble):
                 if ens_num == first_ens:
                     if subtraj_first == traj_first:
                         logger.debug("Returning can_prepend")
-                        return self.ensembles[ens_num].can_prepend(subtraj)
+                        return self.ensembles[ens_num].can_prepend(subtraj,
+                                                                  trusted=True)
                     else:
                         logger.debug(
                             "Returning false due to incomplete assigns: " + 
@@ -1052,22 +1073,39 @@ class SequentialEnsemble(Ensemble):
                             " through " + str(subtraj_final) + 
                             " to ensemble " + str(ens_num) + ": No match"
                         )
-                    logger.debug(
-                        "Assigning frames " + str(subtraj_first) +
-                        " through " + str(subtraj_final) + 
-                        " to ensemble " + str(ens_num)
-                    )
+                    else:
+                        logger.debug(
+                            "Assigning frames " + str(subtraj_first) +
+                            " through " + str(subtraj_final) + 
+                            " to ensemble " + str(ens_num)
+                        )
+                        self.assign_frames(cache, ens_num, subtraj_first,
+                                           subtraj_final)
+                        self.update_cache(cache, ens_num, ens_final, subtraj_final)
                     ens_num -= 1
                     subtraj_final = subtraj_first
                     logger.debug("Moving to the next ensemble " + str(ens_num))
             else:
                 if subtraj_first == traj_first:
+                    if self._use_cache:
+                        prev_slice = cache.contents['assignments'][ens_num+1]
+                        prev_subtraj = trajectory[prev_slice]
+                        prev_ens = self.ensembles[ens_num+1]
+                        if prev_ens.can_prepend(prev_subtraj, trusted=True):
+                            logger.debug(
+                                "Premature promotion: returning to ensemble " + 
+                                str(ens_num+1)
+                            )
+                            ens_num += 1
+                            subtraj_first = None
+                    self.update_cache(cache, ens_num, ens_final, subtraj_final)
                     logger.debug("All frames assigned, more ensembles to go: returning True")
                     return True
                 elif self.ensembles[ens_num](paths.Trajectory([])):
                     logger.debug("Moving on because of allowed zero-length ensemble")
                     ens_num -= 1
                     subtraj_final = subtraj_first
+                    self.update_cache(cache, ens_num, ens_final, subtraj_final)
                 else:
                     if ens_final == first_ens:
                         logger.debug("Started with the last ensemble, got nothin'")
@@ -1080,6 +1118,7 @@ class SequentialEnsemble(Ensemble):
                         ens_final -= 1
                         ens_num = ens_final
                         subtraj_final = len(trajectory)
+                        self.update_cache(cache, ens_num, ens_final, subtraj_final)
 
     def __str__(self):
         head = "[\n"
@@ -1164,8 +1203,6 @@ class AllInXEnsemble(VolumeEnsemble):
     def can_append(self, trajectory, trusted=False):
         if len(trajectory) == 0:
             return True
-        #else:
-            #return self(trajectory, trusted)
         if trusted == True:
             return self(trajectory[slice(len(trajectory)-1, None)], trusted)
         else:
@@ -1174,12 +1211,10 @@ class AllInXEnsemble(VolumeEnsemble):
     def can_prepend(self, trajectory, trusted=False):
         if len(trajectory) == 0:
             return True
+        if trusted == True:
+            return self(trajectory[slice(0,1)], trusted)
         else:
             return self(trajectory)
-
-            #return self(trajectory[slice(0,1)])
-        #else:
-            #return self(trajectory)
         
     
     def __call__(self, trajectory, trusted=None):
