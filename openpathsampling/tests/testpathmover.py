@@ -75,11 +75,11 @@ class testPathMover(object):
         self.l1 = LengthEnsemble(1)
         self.l2 = LengthEnsemble(2)
         self.l3 = LengthEnsemble(3)
-        self.repsAll_ensNone = PathMover(replicas='all')
-        self.reps12_ensNone = PathMover(replicas=[1, 2])
+        self.repsAll_ensNone = PathMover()
+#        self.reps12_ensNone = PathMover(replicas=[1, 2])
         self.repsAll_ens1 = PathMover(ensembles=self.l1)
         self.repsAll_ens12 = PathMover(ensembles=[self.l1, self.l2])
-        self.reps1_ens2 = PathMover(replicas=1, ensembles=[self.l2])
+#        self.reps1_ens2 = PathMover(replicas=1, ensembles=[self.l2])
         self.s1 = Sample(replica=1, ensemble=self.l2)
         self.s2 = Sample(replica=2, ensemble=self.l1)
         self.s3 = Sample(replica=3, ensemble=self.l1)
@@ -89,14 +89,14 @@ class testPathMover(object):
     def test_legal_sample_set(self):
         assert_items_equal(self.repsAll_ensNone.legal_sample_set(self.sset),
                            [self.s1, self.s2, self.s3, self.s4])
-        assert_items_equal(self.reps12_ensNone.legal_sample_set(self.sset),
-                           [self.s1, self.s2, self.s4])
+#        assert_items_equal(self.reps12_ensNone.legal_sample_set(self.sset),
+#                           [self.s1, self.s2, self.s4])
         assert_items_equal(self.repsAll_ens12.legal_sample_set(self.sset),
                            [self.s1, self.s2, self.s3])
         assert_items_equal(self.repsAll_ens1.legal_sample_set(self.sset),
                            [self.s2, self.s3])
-        assert_items_equal(self.reps1_ens2.legal_sample_set(self.sset),
-                           [self.s1])
+#        assert_items_equal(self.reps1_ens2.legal_sample_set(self.sset),
+#                           [self.s1])
         assert_items_equal(
             self.repsAll_ensNone.legal_sample_set(self.sset, ensembles=self.l1),
             [self.s2, self.s3]
@@ -108,7 +108,7 @@ class testPathMover(object):
 
 
     def test_select_sample(self):
-        assert_equal(self.reps1_ens2.select_sample(self.sset), self.s1)
+#        assert_equal(self.reps1_ens2.select_sample(self.sset), self.s1)
         selected = self.repsAll_ens1.select_sample(self.sset)
         try:
             assert_equal(selected, self.s2)
@@ -138,30 +138,29 @@ class testShootingMover(object):
 
 class testForwardShootMover(testShootingMover):
     def test_move(self):
-        mover = ForwardShootMover(UniformSelector(), replicas=[0])
+        mover = ForwardShootMover(UniformSelector(), ensembles=self.tps)
         self.dyn.initialized = True
         change = mover.move(self.init_samp)
         newsamp = self.init_samp + change
         assert_equal(len(newsamp), 1)
-        change
-        assert_equal(change.details.accepted, True)
+        assert_equal(change.accepted, True)
         assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
-        assert_equal(newsamp[0].trajectory, change.details.trial)
+        assert_equal(newsamp[0].trajectory, change.trials[0].trajectory)
 
 class testBackwardShootMover(testShootingMover):
     def test_move(self):
-        mover = BackwardShootMover(UniformSelector(), replicas=[0])
+        mover = BackwardShootMover(UniformSelector(), ensembles=self.tps)
         self.dyn.initialized = True
         change = mover.move(self.init_samp)
         newsamp = self.init_samp + change
         assert_equal(len(newsamp), 1)
-        assert_equal(change.details.accepted, True)
+        assert_equal(change.accepted, True)
         assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
-        assert_equal(newsamp[0].trajectory, change.details.trial)
+        assert_equal(newsamp[0].trajectory, change.trials[0].trajectory)
 
 class testOneWayShootingMover(testShootingMover):
     def test_mover_initialization(self):
-        mover = OneWayShootingMover(UniformSelector, replicas=[0])
+        mover = OneWayShootingMover(UniformSelector, ensembles=self.tps)
         assert_equal(len(mover.movers), 2)
         assert_equal(isinstance(mover, RandomChoiceMover), True)
         assert_equal(isinstance(mover, OneWayShootingMover), True)
@@ -252,32 +251,11 @@ class testReplicaExchangeMover(object):
         self.gs_B1A2 = SampleSet([self.sampB1, self.sampA2])
         self.gs_A0B1 = SampleSet([self.sampA0, self.sampB1])
 
-    def test_repex_ens_acc(self):
-        repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
-        samples_B2A1_ens = repex_AB.move(self.gs_B1A2)
-        change = samples_B2A1_ens
-        samples = change.samples
-        assert_equal(len(samples), 2)
-
-        assert_equal(change.accepted, True)
-        for trial, result in zip(change.details.trials, change.details.results):
-            assert_equal(trial, result)
-
-        for sample, result in zip(change.samples, change.details.results):
-            assert_equal(sample.trajectory, result)
-
-        B2 = [s for s in samples if s.ensemble==self.tisB]
-        assert_equal(len(B2), 1)
-        assert_equal(B2[0].trajectory, self.traj2)
-        assert_equal(B2[0].replica, 2)
-        A1 = [s for s in samples if s.ensemble==self.tisA]
-        assert_equal(len(A1), 1)
-        assert_equal(A1[0].trajectory, self.traj1)
-        assert_equal(A1[0].replica, 1)
-
     def test_repex_ens_rej(self):
         repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
-        repex_change = repex_AB.move(self.gs_A0B1)
+        old_sset = self.gs_A0B1
+        repex_change = repex_AB.move(old_sset)
+        samples = repex_change.samples
 
         assert_equal(len(repex_change.samples), 0) # since rejected
 
@@ -285,33 +263,32 @@ class testReplicaExchangeMover(object):
         assert_equal(len(samples_A0B1_ens), 2)
         assert_equal(repex_change.accepted, False)
 
-        assert_equal(samples_A0B1_ens[0].trajectory, repex_change.details.results[0])
-        assert_equal(samples_A0B1_ens[1].trajectory, repex_change.details.results[1])
+        new_sset = old_sset.apply_samples(samples)
 
-        assert_not_equal(repex_change.details.trials[0], repex_change.details.results[0])
-        assert_not_equal(repex_change.details.trials[1], repex_change.details.results[1])
+        assert_equal(new_sset[0].trajectory, old_sset[0].trajectory)
+        assert_equal(new_sset[1].trajectory, old_sset[1].trajectory)
 
         A0 = [s for s in samples_A0B1_ens if s.ensemble==self.tisA]
         assert_equal(len(A0), 1)
-        assert_equal(A0[0].trajectory, self.traj0)
+        assert_equal(A0[0].trajectory, self.traj1)
         B1 = [s for s in samples_A0B1_ens if s.ensemble==self.tisB]
         assert_equal(len(B1), 1)
-        assert_equal(B1[0].trajectory, self.traj1)
+        assert_equal(B1[0].trajectory, self.traj0)
 
-    def test_repex_rep_acc(self):
-        repex_12 = ReplicaExchangeMover(replicas=[[1,2]])
-        samples_B2A1_rep = repex_12.move(self.gs_B1A2)
+    def test_repex_ens_acc(self):
+        repex_12 = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
+        old_sset = self.gs_B1A2
+        samples_B2A1_rep = repex_12.move(old_sset)
         change = samples_B2A1_rep
         samples = change.samples
         assert_equal(len(samples), 2)
 
         assert_equal(change.accepted, True)
 
-        assert_equal(samples[0].trajectory, change.details.results[0])
-        assert_equal(samples[1].trajectory, change.details.results[1])
+        new_sset = old_sset.apply_samples(samples)
 
-        assert_not_equal(change.details.trials[0], change.details.results[1])
-        assert_not_equal(change.details.trials[1], change.details.results[0])
+        assert_equal(new_sset[1].trajectory, old_sset[2].trajectory)
+        assert_equal(new_sset[2].trajectory, old_sset[1].trajectory)
 
         B2 = [s for s in samples if s.ensemble==self.tisB]
         assert_equal(len(B2), 1)
@@ -856,7 +833,9 @@ class testMinusMover(object):
         change = self.mover.move(gs).opened
         samples = change.all_samples
         assert_equal(len(samples), 5) # reject the last one
-        assert_subchanges_set_accepted(change, [True] * 4 + [False])
+        print [ s.accepted for s in change.subchanges]
+        print [ s.mover for s in change.subchanges]
+        assert_subchanges_set_accepted(change, [True] * 3 + [False])
         # this only happens due to length
-        assert_equal(len(change[-1][0].details.trial),
+        assert_equal(len(change[-1][0].trials[0].trajectory),
                      len(traj_bad_extension)+self.dyn.n_frames_max-1)

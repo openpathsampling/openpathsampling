@@ -286,16 +286,18 @@ class ShootMover(PathMover):
 
         sample_details = SampleDetails()
         setattr(sample_details, 'start_point', self.selector.pick(trajectory) )
+        sample_details.start = trajectory
+
 
         self._generate(sample_details, dynamics_ensemble)
 
-        in_ensemble = dynamics_ensemble(sample_details.result)
+        valid = dynamics_ensemble(sample_details.trial)
         accepted = False
 
         sel_prob = self.selection_probability_ratio(sample_details)
         sample_details.selection_probability = sel_prob
 
-        if in_ensemble:
+        if valid:
             rand = np.random.random()
             logger.info('Proposal probability ' + str(sel_prob)
                         + ' / random : ' + str(rand)
@@ -310,11 +312,12 @@ class ShootMover(PathMover):
             sample_details.acceptance_probability = 0.0
 
 
+
         trial = paths.Sample(
             replica=replica,
-            trajectory=sample_details.result,
+            trajectory=sample_details.trial,
             ensemble=dynamics_ensemble,
-            valid=dynamics_ensemble(sample_details.result),
+            valid=valid,
             accepted=accepted,
             parent=rep_sample,
             details=sample_details
@@ -1011,7 +1014,7 @@ class ReplicaExchangeMover(PathMover):
             details = SampleDetails()
         )
         trial2 = paths.Sample(
-            replica=rep1,
+            replica=replica1,
             trajectory=trajectory2,
             ensemble=ensemble1,
             valid=from2to1,

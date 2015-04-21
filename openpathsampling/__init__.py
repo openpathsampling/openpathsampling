@@ -64,6 +64,6 @@ from pathmovechange import (EmptyPathMoveChange, ConditionalSequentialPathMoveCh
                       PathMoveChange, PartialAcceptanceSequentialPathMoveChange,
                       RandomChoicePathMoveChange, SamplePathMoveChange,
                       SequentialPathMoveChange,  KeepLastSamplePathMoveChange,
-                      CollapsedMovePath, FilterSamplesPathMoveChange,
+                      CollapsedPathMoveChange, FilterSamplesPathMoveChange,
                       PathSimulatorPathMoveChange
                      )

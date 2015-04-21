@@ -46,6 +46,8 @@ class PathMoveChange(object):
         self._collapsed_samples = None
         self._samples = None
         self._len = None
+        self._accepted = None
+        self._accepted = None
         self.mover = mover
         self.subchanges = list()
         self.details = details
@@ -87,7 +89,7 @@ class PathMoveChange(object):
         mover and all relevant samples. All underlying information about the
         move is hidden and will not be stored
         """
-        obj = CollapsedMovePath(samples=self.collapsed_samples, mover=self.mover)
+        obj = CollapsedPathMoveChange(trials=self.collapsed_samples, mover=self.mover)
         obj._subchange = self
 
         return obj
@@ -433,7 +435,7 @@ class PathMoveChange(object):
             if idx in selected_samples or samp in self.collapsed_samples
         ]
 
-        obj = CollapsedMovePath(samples = samples, mover=self.mover)
+        obj = CollapsedPathMoveChange(trials=samples, mover=self.mover)
         obj._subchange = self
 
         return obj
@@ -554,7 +556,7 @@ class EmptyPathMoveChange(PathMoveChange):
     A PathMoveChange representing no changes
     """
     def __init__(self, mover=None, details=None):
-        super(EmptyPathMoveChange, self).__init__(accepted=True, mover=mover, details=details)
+        super(EmptyPathMoveChange, self).__init__(mover=mover, details=details)
 
     def apply_to(self, other):
         return other
@@ -581,15 +583,12 @@ class SamplePathMoveChange(PathMoveChange):
     """
     def __init__(self, trials, mover=None, details=None):
         super(SamplePathMoveChange, self).__init__(mover=mover, details=details)
-        if trials is None:
-            self._trials = []
-        else:
-            if type(trials) is paths.Sample:
-                trials = [trials]
+        self._trials = []
 
-            self._trials.extend(trials)
+        if type(trials) is paths.Sample:
+            trials = [trials]
 
-        self._trials = trials
+        self._trials.extend(trials)
 
     def _get_samples(self):
         return [ sample for sample in self.trials if sample.accepted ]
@@ -613,7 +612,7 @@ class SamplePathMoveChange(PathMoveChange):
 
 
 @ops_object
-class CollapsedMovePath(SamplePathMoveChange):
+class CollapsedPathMoveChange(SamplePathMoveChange):
     """
     Represent a collapsed PathMoveChange that has potential hidden sub moves
     """
