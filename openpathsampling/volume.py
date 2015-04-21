@@ -6,6 +6,7 @@ Created on 03.09.2014
 
 import range_logic
 from openpathsampling.todict import ops_object
+import time
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 

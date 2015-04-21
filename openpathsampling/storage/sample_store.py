@@ -53,10 +53,10 @@ class SampleStore(ObjectStore):
     def save(self, sample, idx=None):
         if idx is not None:
             self.storage.trajectories.save(sample.trajectory)
-            self.set_object('sample_trajectory', idx, sample.trajectory)
+            self.save_object('sample_trajectory', idx, sample.trajectory)
 
             self.storage.ensembles.save(sample.ensemble)
-            self.set_object('sample_ensemble', idx, sample.ensemble)
+            self.save_object('sample_ensemble', idx, sample.ensemble)
 
             self.save_variable('sample_replica', idx, sample.replica)
             self.save_object('sample_parent', idx, sample.parent)
@@ -109,10 +109,9 @@ class SampleStore(ObjectStore):
         self.init_variable('sample_trajectory_idx', 'index', chunksizes=(1, ))
         self.init_variable('sample_ensemble_idx', 'index', chunksizes=(1, ))
         self.init_variable('sample_replica', 'index', chunksizes=(1, ))
-        self.init_variable('sample_step', 'index', chunksizes=(1, ))
-        self.init_variable('sample_parent', 'index', chunksizes=(1, ))
+        self.init_variable('sample_parent_idx', 'index', chunksizes=(1, ))
         self.init_variable('sample_valid', 'index', chunksizes=(1, ))
-        self.init_variable('sample_details', 'index', chunksizes=(1, ))
+        self.init_variable('sample_details_idx', 'index', chunksizes=(1, ))
         self.init_variable('sample_accepted', 'index', chunksizes=(1, ))
 
 class SampleSetStore(ObjectStore):
@@ -128,7 +127,7 @@ class SampleSetStore(ObjectStore):
         self.storage.variables['sampleset_sample_idx'][idx] = values
 
         self.storage.pathmovechanges.save(sample_set.movepath)
-        self.set_object('sampleset_movepath', idx, sample_set.movepath)
+        self.save_object('sampleset_movepath', idx, sample_set.movepath)
 
 
     def sample_indices(self, idx):

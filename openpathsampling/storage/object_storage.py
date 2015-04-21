@@ -815,49 +815,6 @@ class ObjectStore(object):
 
         self.storage.variables[name][idx] = obj.json
 
-    def load_object(self, name, idx, store):
-        """
-        Load an object from the associated storage
-
-        Parameters
-        ----------
-        name : str
-            the name of the variable in the netCDF storage
-        idx : int
-            the integer index in the variable
-
-        Returns
-        -------
-        object
-            the loaded object
-
-        """
-        idx = int(idx)
-        obj_idx = self.storage.variables[name][idx]
-
-        return store[int(idx)]
-
-    def save_object(self, name, idx, obj):
-        """
-        Save a storable object using its inter idx.
-
-        Parameters
-        ----------
-        name : str
-            the name of the variable in the netCDF storage
-        idx : int
-            the integer index in the variable
-        obj : object
-            the object to be stored
-
-        """
-        if obj is None:
-            self.storage.variables[name][idx] = -1
-        else:
-            storage = self.storage
-            storage.save(obj)
-            storage.variables[name][idx] = obj.idx[storage]
-
 
 #==============================================================================
 # CONVERSION UTILITIES
@@ -962,7 +919,7 @@ class ObjectStore(object):
 #==============================================================================
 
     # TODO: This might go tho storage.py
-    def get_object(self, name, idx, cls):
+    def load_object(self, name, idx, store):
         """
         Load an object from the storage
 
@@ -984,11 +941,10 @@ class ObjectStore(object):
         if index < 0:
             return None
 
-        store = getattr(self.storage, cls)
         obj = store.load(index)
         return obj
 
-    def set_object(self, name, idx, obj):
+    def save_object(self, name, idx, obj):
         """
         Store an object in the storage
 
@@ -1002,10 +958,13 @@ class ObjectStore(object):
             the object to be stored
 
         """
+        storage = self.storage
+
         if obj is not None:
-            self.storage.variables[name + '_idx'][idx] = obj.idx[self.storage]
+            storage.save(obj)
+            storage.variables[name + '_idx'][idx] = obj.idx[storage]
         else:
-            self.storage.variables[name + '_idx'][idx] = -1
+            storage.variables[name + '_idx'][idx] = -1
 
 #==============================================================================
 # COLLECTIVE VARIABLE UTILITY FUNCTIONS

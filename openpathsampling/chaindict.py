@@ -369,6 +369,7 @@ class MultiStore(Store):
         self.name = name
         self.dimensions = dimensions
         self.store_name = store_name
+        self._storages = []
 
         if scope is None:
             self.scope = self
@@ -381,7 +382,9 @@ class MultiStore(Store):
     @property
     def storages(self):
         if hasattr(self.scope, 'idx'):
-            return self.scope.idx.keys()
+            if len(self.scope.idx) != len(self._storages):
+                self._storages = self.scope.idx.keys()
+            return self._storages
         else:
             return []
 
@@ -414,8 +417,6 @@ class MultiStore(Store):
             self.update_nod_stores()
         for s in self.cod_stores:
             self.cod_stores[s]._add_new(items, values)
-
-        pass
 
     def _get(self, item):
         if len(self.storages) != len(self.cod_stores):

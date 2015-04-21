@@ -94,7 +94,7 @@ class SampleSetStore(ObjectStore):
         self.storage.variables['sampleset_sample_idx'][idx] = values
 
         self.storage.pathmovechanges.save(sample_set.movepath)
-        self.set_object('sampleset_movepath', idx, sample_set.movepath)
+        self.save_object('sampleset_movepath', idx, sample_set.movepath)
 
 
     def sample_indices(self, idx):
