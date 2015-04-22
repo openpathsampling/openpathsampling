@@ -377,8 +377,8 @@ class Trajectory(list):
             # both are saved so use the snapshot idx as identifiers
             if len(shared_store) > 0:
                 storage = list(shared_store)[0]
-                t1id = storage.trajectories.snapshot_indicies(self.idx[storage])
-                t2id = storage.trajectories.snapshot_indicies(other.idx[storage])
+                t1id = storage.trajectories.snapshot_indices(self.idx[storage])
+                t2id = storage.trajectories.snapshot_indices(other.idx[storage])
                 return bool(set(t1id) & set(t2id))
 
         # Use some fallback
