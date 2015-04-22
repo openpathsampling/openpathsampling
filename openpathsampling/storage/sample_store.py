@@ -8,6 +8,10 @@ class SampleStore(ObjectStore):
         super(SampleStore, self).__init__(storage, Sample, json=False)
 
         self.set_variable_partial_loading('details', self.update_details)
+        self.set_variable_partial_loading('parent', self.update_parent)
+        self.set_variable_partial_loading('mover', self.update_mover)
+        self.set_variable_partial_loading('ensemble', self.update_ensemble)
+
 
     def load_empty(self, idx):
         trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
@@ -21,14 +25,17 @@ class SampleStore(ObjectStore):
         obj = Sample(
             trajectory=self.storage.trajectories[trajectory_idx],
             replica=replica_idx,
-            ensemble=self.storage.ensembles[ensemble_idx],
+            ensemble=None,
             valid=valid,
-            parent=self.storage.samples[parent_idx],
+            parent=None,
             details=None,
             accepted=accepted,
-            mover=self.storage.pathmovers[pathmover_idx]
+            mover=None
         )
 
+        del obj.details
+        del obj.details
+        del obj.details
         del obj.details
 
         return obj
