@@ -106,16 +106,8 @@ class CollectiveVariable(cd.Wrap):
             return items
         elif item_type is paths.Trajectory:
             return list(list.__iter__(items))
-        elif isinstance(items, collections.Iterable):
-            item_sub_type = self.store_dict._basetype(iter(items).next())
-            if item_sub_type is paths.Snapshot:
-                return items
-            else:
-                raise KeyError('the collectivevariable is only compatible with ' +
-                               'snapshots, trajectories or other iteratble of snapshots!')
-                return None
         else:
-            return None
+            return items
 
 
 @ops_object

@@ -42,11 +42,13 @@ class ChainDict(dict):
         self.post = None
 
     def __getitem__(self, items):
-        is_listable = isinstance(items, collections.Iterable)
 
-        if is_listable:
+        is_listable = False
+        try:
+            iter(items)
             results = self._get_list(items)
-        else:
+            is_listable = True
+        except:
             results = self._get(items)
 
         if self.post is not None:
@@ -143,6 +145,23 @@ class Wrap(ChainDict):
 
     def __setitem__(self, key, value):
         self.post[key] = value
+
+class ExpandSingle(ChainDict):
+    """
+    Will take care of iterables
+    """
+
+    def __getitem__(self, items):
+        if hasattr(items, '__iter__'):
+            return self.post[[items]][0]
+        else:
+            return self.post[items]
+
+    def __setitem__(self, key, value):
+        self.post[key] = value
+
+    def _add_new(self, items, values):
+        pass
 
 class ExpandMulti(ChainDict):
     """

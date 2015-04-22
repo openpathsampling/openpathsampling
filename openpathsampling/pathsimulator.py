@@ -29,13 +29,11 @@ class PathSimulator(object):
 
     def sync_storage(self):
         if self.storage is not None:
-            self.storage.cv.sync()
+            self.storage.cvs.sync()
             self.storage.sync()
-
 
     def run(self, nsteps):
         logger.warning("Running an empty pathsimulator? Try a subclass, maybe!")
-
 
 @ops_object
 class BootstrapPromotionMove(PathMover):
