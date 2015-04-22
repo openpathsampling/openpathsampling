@@ -6,8 +6,18 @@ Created on 03.09.2014
 
 import range_logic
 from openpathsampling.todict import ops_object
+import time
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
+
+def join_volumes(volume_list):
+    volume = None
+    for vol in volume_list:
+        if volume is None:
+            volume = vol
+        else:
+            volume = volume | vol
+    return volume
 
 @ops_object
 class Volume(object):

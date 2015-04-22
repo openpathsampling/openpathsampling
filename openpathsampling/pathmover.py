@@ -320,7 +320,8 @@ class ShootMover(PathMover):
             valid=valid,
             accepted=accepted,
             parent=rep_sample,
-            details=sample_details
+            details=sample_details,
+            mover=self
         )
 
         move_details = MoveDetails()
@@ -670,7 +671,8 @@ class ReplicaIDChangeMover(PathMover):
             trajectory=rep_sample.trajectory,
             valid=rep_sample.valid,
             accepted=True,
-            parent=rep_sample
+            parent=rep_sample,
+            mover=self
         )
 
         # Can be used to remove the old sample. Not used yet!
@@ -680,7 +682,8 @@ class ReplicaIDChangeMover(PathMover):
             ensemble=rep_sample.ensemble,
             accepted=True,
             valid=True,
-            parent=None
+            parent=None,
+            mover=self
         )
 
         details = MoveDetails()
@@ -758,7 +761,8 @@ class EnsembleHopMover(PathMover):
             ensemble=ens_to,
             valid=valid,
             accepted=valid,
-            details=sample_details
+            details=sample_details,
+            mover=self
         )
 
         details = MoveDetails()
@@ -809,7 +813,8 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
             trajectory=trajectory,
             ensemble=ens_to,
             replica=replica,
-            details=sample_details
+            details=sample_details,
+            mover=self
         )
 
         details = MoveDetails()
@@ -876,7 +881,8 @@ class RandomSubtrajectorySelectMover(PathMover):
             ensemble=self.subensemble,
             valid=self.subensemble(subtraj),
             accepted=True,
-            parent=rep_sample
+            parent=rep_sample,
+            mover=self
         )
 
         details = MoveDetails()
@@ -944,7 +950,8 @@ class PathReversalMover(PathMover):
             ensemble=ensemble,
             valid=valid,
             accepted=valid,
-            details=sample_details
+            details=sample_details,
+            mover=self
         )
 
         details = MoveDetails()
@@ -1009,7 +1016,8 @@ class ReplicaExchangeMover(PathMover):
             valid=from1to2,
             accepted=accepted,
             parent=s1,
-            details = SampleDetails()
+            details = SampleDetails(),
+            mover=self
         )
         trial2 = paths.Sample(
             replica=replica1,
@@ -1018,7 +1026,8 @@ class ReplicaExchangeMover(PathMover):
             valid=from2to1,
             accepted=accepted,
             parent=s2,
-            details=SampleDetails()
+            details=SampleDetails(),
+            mover=self
         )
 
         details = MoveDetails()
@@ -1288,7 +1297,7 @@ class MoveDetails(Details):
     #     return details
 
 @ops_object
-class SampleDetails(object):
+class SampleDetails(Details):
     '''Details of a sample
 
     Attributes

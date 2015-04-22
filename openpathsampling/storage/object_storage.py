@@ -1,4 +1,3 @@
-import copy
 import yaml
 import types
 
@@ -289,7 +288,8 @@ class ObjectStore(object):
             self.content_class.uid = property(_uid_get, _uid_set)
 
         def _save(this, storage):
-            storage.save(this)
+            if storage is not None:
+                storage.save(this)
 
         if nestable:
             self.content_class.nestable = True
@@ -459,7 +459,7 @@ class ObjectStore(object):
             the loaded object
         '''
 
-        return self.load_object(self.idx_dimension + '_json', idx)
+        return self.load_json(self.idx_dimension + '_json', idx)
 
     def save(self, obj, idx=None):
         """
@@ -480,7 +480,7 @@ class ObjectStore(object):
         if self.has_uid and hasattr(obj, '_uid'):
             self.storage.variables[self.identifier][idx] = obj._uid
 
-        self.save_object(self.idx_dimension + '_json', idx, obj)
+        self.save_json(self.idx_dimension + '_json', idx, obj)
 
     def get_name(self, idx):
         """
@@ -631,7 +631,7 @@ class ObjectStore(object):
         if name not in self.storage.dimensions:
             self.storage.createDimension(name, length)
 
-        self.storage.sync()
+#        self.storage.sync()
 
     def init_variable(self, name, var_type, dimensions = None, units=None,
                       description=None, variable_length=False, chunksizes=None):
@@ -727,7 +727,7 @@ class ObjectStore(object):
             # Define long (human-readable) names for variables.
             setattr(ncvar,    "long_str", description)
 
-        self.storage.sync()
+#        self.storage.sync()
 
 #==============================================================================
 # LOAD / SAVE UTILITY FUNCTIONS
@@ -768,9 +768,9 @@ class ObjectStore(object):
         """
         self.storage.variables[name][idx] = value
 
-    def load_object(self, name, idx):
+    def load_json(self, name, idx):
         """
-        Load an object from the associated storage
+        Load an object from the associated storage using json
 
         Parameters
         ----------
@@ -796,7 +796,7 @@ class ObjectStore(object):
 
         return obj
 
-    def save_object(self, name, idx, obj):
+    def save_json(self, name, idx, obj):
         """
         Save an object as a json string in a variable in the referenced storage
 
@@ -814,6 +814,7 @@ class ObjectStore(object):
             setattr(obj, 'json', self.object_to_json(obj))
 
         self.storage.variables[name][idx] = obj.json
+
 
 #==============================================================================
 # CONVERSION UTILITIES
@@ -918,7 +919,7 @@ class ObjectStore(object):
 #==============================================================================
 
     # TODO: This might go tho storage.py
-    def get_object(self, name, idx, cls):
+    def load_object(self, name, idx, store):
         """
         Load an object from the storage
 
@@ -940,11 +941,10 @@ class ObjectStore(object):
         if index < 0:
             return None
 
-        store = getattr(self.storage, cls)
         obj = store.load(index)
         return obj
 
-    def set_object(self, name, idx, obj):
+    def save_object(self, name, idx, obj):
         """
         Store an object in the storage
 
@@ -958,10 +958,13 @@ class ObjectStore(object):
             the object to be stored
 
         """
+        storage = self.storage
+
         if obj is not None:
-            self.storage.variables[name + '_idx'][idx] = obj.idx[self.storage]
+            storage.save(obj)
+            storage.variables[name + '_idx'][idx] = obj.idx[storage]
         else:
-            self.storage.variables[name + '_idx'][idx] = -1
+            storage.variables[name + '_idx'][idx] = -1
 
 #==============================================================================
 # COLLECTIVE VARIABLE UTILITY FUNCTIONS
@@ -1087,6 +1090,8 @@ def savecache(func):
             # name afterwards from cache
             self.cache[obj._uid] = obj
 
+
+
     return inner
 
 #=============================================================================
@@ -1166,4 +1171,39 @@ def saveidx(func):
         logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(idx))
         func(obj, idx, *args, **kwargs)
 
+        if self.has_uid and hasattr(obj, '_uid') and obj._uid != '':
+            self.storage.variables[self.identifier][idx] = obj._uid
+
     return inner
+
+# CREATE EASY UPDATE WRAPPER
+
+def func_update_object(attribute, db, variable, store):
+    """
+    Create a delayed loading function for stores
+
+    Parameters
+    ----------
+    attribute : string
+        name of the attribute of the object to be updated. E.g. for sample.mover this is 'mover'
+    db : string
+        the storage prefix where the object are stored in the file. E.g. for samples this is 'sample'
+    variable : string
+        the name of the variable in the storage. this is often the same as the attribute
+    store : string
+        the name of the store. E.g. 'trajectories'
+
+    Returns
+    -------
+    function
+        the function that is used for updating
+    """
+    def updater(obj):
+        storage = obj._origin
+
+        idx = obj.idx[storage]
+        obj_idx = int(storage.variables[db + '_' + variable + '_idx'][idx])
+
+        setattr(obj, attribute, getattr(storage, store).load(obj_idx))
+
+    return staticmethod(updater)

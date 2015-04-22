@@ -94,7 +94,7 @@ class Storage(netcdf.Dataset):
         self._objects = { name : getattr(self, name) for name in
                   ['trajectories', 'snapshots', 'configurations',
                    'samples', 'samplesets', 'collectivevariables',
-                   'cvs', 'pathmovers', 'movedetails', 'shootingpoints',
+                   'cvs', 'pathmovers', 'shootingpoints',
                    'shootingpointselectors', 'engines',
                    'pathsimulators', 'volumes', 'ensembles',
                    'pathmovechanges', 'transitions' ,'_details'
@@ -215,6 +215,8 @@ class Storage(netcdf.Dataset):
             # After we have restored the units we can load objects from the storage
 
             self.topology = self.simplifier.from_json(self.variables['topology'][0])
+
+        self.sync()
 
     def __repr__(self):
         return "Storage @ '" + self.filename + "'"

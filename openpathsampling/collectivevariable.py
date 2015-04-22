@@ -41,6 +41,7 @@ class CollectiveVariable(cd.Wrap):
 
         self.name = name
 
+        self.single_dict = cd.ExpandSingle()
         self.pre_dict = cd.Transform(self._pre_item)
         self.multi_dict = cd.ExpandMulti()
         self.store_dict = cd.MultiStore('collectivevariables', name,
@@ -54,12 +55,12 @@ class CollectiveVariable(cd.Wrap):
 
             super(CollectiveVariable, self).__init__(
                 post=self.func_dict + self.expand_dict + self.cache_dict +
-                     self.store_dict + self.multi_dict + self.pre_dict
+                     self.store_dict + self.multi_dict + self.single_dict + self.pre_dict
             )
 
         else:
             super(CollectiveVariable, self).__init__(
-                post=self.cache_dict + self.store_dict + self.multi_dict + self.pre_dict
+                post=self.cache_dict + self.store_dict + self.multi_dict + self.single_dict + self.pre_dict
             )
 
         self._stored = False
@@ -105,17 +106,16 @@ class CollectiveVariable(cd.Wrap):
         if item_type is paths.Snapshot:
             return items
         elif item_type is paths.Trajectory:
-            return list(list.__iter__(items))
-        elif isinstance(items, collections.Iterable):
-            item_sub_type = self.store_dict._basetype(iter(items).next())
-            if item_sub_type is paths.Snapshot:
-                return items
+            if len(items) == 0:
+                return []
+            elif len(items) == 1:
+                return [list.__getitem__(items, 0)]
             else:
-                raise KeyError('the collectivevariable is only compatible with ' +
-                               'snapshots, trajectories or other iteratble of snapshots!')
-                return None
+                return list(list.__iter__(items))
+        elif hasattr(items, '__iter__'):
+            return list(items)
         else:
-            return None
+            return items
 
 
 @ops_object

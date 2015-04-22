@@ -1,14 +1,16 @@
 from pathsimulator import PathSimulator, Bootstrapping, PathSampling
 
-from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
-    EntersXEnsemble, EmptyEnsemble, ExitsXEnsemble, FullEnsemble, \
-    PartInXEnsemble, AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble, \
-    BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble, \
-    PartOutXEnsemble, LengthEnsemble, NegatedEnsemble, \
-    ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \
-    SequentialEnsemble, IntersectionEnsemble, UnionEnsemble, \
-    SymmetricDifferenceEnsemble, RelativeComplementEnsemble, \
-    SingleFrameEnsemble, MinusInterfaceEnsemble
+from ensemble import (
+    Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
+    EmptyEnsemble, ExitsXEnsemble, FullEnsemble, PartInXEnsemble,
+    AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble,
+    BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble,
+    PartOutXEnsemble, LengthEnsemble, NegatedEnsemble,
+    ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble,
+    SequentialEnsemble, IntersectionEnsemble, UnionEnsemble,
+    SymmetricDifferenceEnsemble, RelativeComplementEnsemble,
+    SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble
+)
 
 from snapshot import Snapshot, Configuration, Momentum
 
@@ -33,7 +35,7 @@ from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
 
 from dynamics_engine import DynamicsEngine
 
-#from openmm_engine import OpenMMEngine
+from openmm_engine import OpenMMEngine
 
 from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
     EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, \
@@ -42,12 +44,12 @@ from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
 
 from todict import ObjectJSON, ops_object, class_list
 
-#from tools import empty_snapshot_from_openmm_topology, snapshot_from_pdb, \
-#    to_openmm_topology, trajectory_from_mdtraj
+from tools import empty_snapshot_from_openmm_topology, snapshot_from_pdb, \
+    to_openmm_topology, trajectory_from_mdtraj
 
 from tools import units_from_snapshot
 
-from topology import ToyTopology,  Topology #,MDTrajTopology
+from topology import ToyTopology, Topology, MDTrajTopology
 
 from toy_dynamics.toy_pes import Gaussian, HarmonicOscillator, LinearSlope, \
     OuterWalls, Toy_PES, Toy_PES_Add, Toy_PES_Sub
@@ -60,7 +62,7 @@ from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
 from analysis.tis_analysis import TISTransition, RETISTransition, Transition, \
     TPSTransition
 
-from pathmover import Details
+from pathmover import Details, MoveDetails, SampleDetails
 
 from pathmovechange import (EmptyPathMoveChange, ConditionalSequentialPathMoveChange,
                       PathMoveChange, PartialAcceptanceSequentialPathMoveChange,
