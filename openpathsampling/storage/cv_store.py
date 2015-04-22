@@ -53,7 +53,7 @@ class ObjectDictStore(ObjectStore):
             return
 
         objectdict.sync(storage=self.storage)
-        self.storage.sync()
+#        self.storage.sync()
 
     def set_value(self, objectdict, position, value):
         storage = self.storage
