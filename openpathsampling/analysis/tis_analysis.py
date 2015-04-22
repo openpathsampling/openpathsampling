@@ -2,6 +2,7 @@ from histogram import Histogram, histograms_to_pandas_dataframe
 from wham import WHAM
 import openpathsampling as paths
 from openpathsampling.todict import ops_object
+import sys
 
 import inspect
 
@@ -89,32 +90,71 @@ class Transition(object):
 
         self._mover_acceptance = {}
 
-    @property
-    def all_movers(self):
-        all_movers = []
-        for movetype in self.movers.keys():
-            all_movers += self.movers[movetype]
-        return all_movers
 
-    def categorize_movers(self):
-        # need a way to identify all the repex-based moves, and all the
-        # generating-based moves, etc
+    def _move_summary_line(self, move_name, n_accepted, n_trials,
+                           n_total_trials, indentation):
+        line = ("* "*indentation + move_name + 
+                " ran " + str(float(n_trials)/n_total_trials*100) + 
+                "% of the cycles with acceptance " + str(n_accepted) + "/" + 
+                str(n_trials) + " (" + str(float(n_accepted) / n_trials) + 
+                ") \n")
+        return line
+
+
+    def move_summary(self, storage, movers=None, output=sys.stdout):
+        """
+        Provides a summary of the movers in `storage` based on this transition.
+
+        The summary includes the number of moves attempted and the
+        acceptance rate. In some cases, extra lines are printed for each of
+        the submoves.
+
+        Parameters
+        ----------
+        storage : Storage
+            The storage object
+        movers : None or string or (list of) PathMover
+            If None, provides a short summary of the keys in self.mover. If
+            a string, provides a short summary using that string as a key in
+            the `movers` dict. If a mover or list of movers, provides
+            summary for each of those movers.
+        output : file
+            file to direct output
+        """
         pass
 
+    def _move_summary_line(self, move_name, n_accepted, n_trials,
+                           n_total_trials, indentation):
+        line = ("* "*indentation + move_name + 
+                " ran " + str(float(n_trials)/n_total_trials*100) + 
+                "% of the cycles with acceptance " + str(n_accepted) + "/" + 
+                str(n_trials) + " (" + str(float(n_accepted) / n_trials) + 
+                ") \n")
+        return line
 
-    def calculate_mover_acceptance(self, storage, movers=None):
-        # regularlize format of movers argument:
-        if movers is None:
-            movers = self.all_movers
-        try:
-            nmovers = len(movers)
-        except TypeError:
-            nmovers = 1
-            movers = [movers]
 
-        for movechange in storage.movepath:
-            pass
+    def move_summary(self, storage, movers=None, output=sys.stdout):
+        """
+        Provides a summary of the movers in `storage` based on this transition.
+
+        The summary includes the number of moves attempted and the
+        acceptance rate. In some cases, extra lines are printed for each of
+        the submoves.
+
+        Parameters
+        ----------
+        storage : Storage
+            The storage object
+        movers : None or string or (list of) PathMover
+            If None, provides a short summary of the keys in self.mover. If
+            a string, provides a short summary using that string as a key in
+            the `movers` dict. If a mover or list of movers, provides
+            summary for each of those movers.
+        output : file
+            file to direct output
+        """
         pass
+
 
     def to_dict(self):
         return {
