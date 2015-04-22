@@ -47,7 +47,7 @@ class SampleSet(object):
         self.replica_dict = {}
         self.extend(samples)
         if movepath is None:
-            self.movepath = paths.EmptyMovePath()
+            self.movepath = paths.EmptyPathMoveChange()
         else:
             self.movepath = movepath
 
@@ -152,24 +152,8 @@ class SampleSet(object):
         else:
             newset = self
         for sample in samples:
-            # TODO: should time be a property of Sample or SampleSet?
-            sample.step = step
-            if sample.intermediate == False:
-                newset[sample.replica] = sample
-        return newset
-
-    def apply_intermediates(self, samples, step=None, copy=True):
-        '''Return updated SampleSet, including all intermediates.
-
-        Useful in SequentialMovers.
-        '''
-        if type(samples) is Sample:
-            samples = [samples]
-        if copy==True:
-            newset = SampleSet(self)
-        else:
-            newset = self
-        for sample in samples:
+            if type(sample) is not paths.Sample:
+                raise ValueError('No SAMPLE!')
             # TODO: should time be a property of Sample or SampleSet?
             sample.step = step
             newset[sample.replica] = sample
@@ -194,12 +178,14 @@ class SampleSet(object):
         storage : Storage()
             the underlying netcdf file to be used for storage
         """
-        map(storage.sample.save, self.samples)
+        map(storage.samples.save, self.samples)
 
     def sanity_check(self):
         '''Checks that the sample trajectories satisfy their ensembles
         '''
         for sample in self:
+            # TODO: Replace by using .valid which means that it is in the ensemble
+            #assert(sample.valid)
             assert(sample.ensemble(sample.trajectory))
 
     def consistency_check(self):
@@ -277,8 +263,6 @@ class SampleSet(object):
                     replica=s.replica,
                     ensemble=translation[s.ensemble],
                     trajectory=s.trajectory,
-                    intermediate=s.intermediate,
-                    details=s.details,
                     step=s.step
                 )
                 for s in sset
@@ -357,13 +341,33 @@ class Sample(object):
         the Monte Carlo step number associated with this Sample
     """
 
-    def __init__(self, replica=None, trajectory=None, ensemble=None, intermediate=False, details=None, step=-1):
+    def __init__(self,
+                 replica=None,
+                 trajectory=None,
+                 ensemble=None,
+                 accepted=True,
+                 details=None,
+                 valid=None,
+                 parent=None,
+                 mover=None,
+                 step=-1
+                 ):
+        self.accepted = accepted
         self.replica = replica
         self.ensemble = ensemble
         self.trajectory = trajectory
-        self.intermediate = intermediate
-        self.details = details
+        self.parent = parent
         self.step = step
+        self.details = details
+        self.mover = mover
+        if valid is None:
+            # valid? figure it out
+            if self.trajectory is None:
+                self.valid = True
+            else:
+                self.valid = self.ensemble(self.trajectory)
+        else:
+            self.valid = valid
 
     def __call__(self):
         return self.trajectory
@@ -373,7 +377,6 @@ class Sample(object):
         mystr += "Replica: "+str(self.replica)+"\n"
         mystr += "Trajectory: "+str(self.trajectory)+"\n"
         mystr += "Ensemble: "+repr(self.ensemble)+"\n"
-        mystr += "Details: "+str(self.details)+"\n"
         return mystr
 
     def __repr__(self):
@@ -391,8 +394,7 @@ class Sample(object):
         result = Sample(
             replica=self.replica,
             trajectory=self.trajectory,
-            ensemble=self.ensemble,
-            details=paths.MoveDetails.initialization(self)
+            ensemble=self.ensemble
         )
         return result
 
@@ -407,12 +409,17 @@ class Sample(object):
         result = Sample(
             replica=replica,
             trajectory=trajectory,
-            ensemble=ensemble,
-            details=paths.MoveDetails.initialization_from_scratch(
-                trajectory=trajectory,
-                ensemble=ensemble)
+            ensemble=ensemble
         )
         return result
         
 
+    @property
+    def acceptance_probability(self):
+        if not self.valid:
+            return 0.0
 
+        if hasattr(self.details) and self.details is not None and hasattr(self.details, 'selection_probability'):
+            return self.details.selection_probability
+
+        return 1.0

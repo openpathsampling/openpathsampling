@@ -42,37 +42,24 @@ class ChainDict(dict):
         self.post = None
 
     def __getitem__(self, items):
-        is_listable = isinstance(items, collections.Iterable)
+        results = self._get_list(items)
 
-        if is_listable:
-            results = self._get_list(items)
-        else:
-            results = self._get(items)
+        # print 'Res', self.__class__.__name__, results
 
         if self.post is not None:
-            if is_listable:
-                nones = [obj[0] for obj in zip(items, results) if obj[1] is None]
-                if len(nones) == 0:
-                    return results
-                else:
-                    rep = self.post[[p for p in nones]]
-                    self._add_new(nones, rep)
-
-                    it = iter(rep)
-                    return [it.next() if p[1] is None else p[1] for p in zip(items, results)]
+            nones = [obj[0] for obj in zip(items, results) if obj[1] is None]
+            if len(nones) == 0:
+                return results
             else:
-                if results is None:
-                    rep = self.post[items]
+                rep = self.post[[p for p in nones]]
+                self._add_new(nones, rep)
 
-                    self._add_new(items, rep)
-                    return rep
-                else:
-                    return results
+                it = iter(rep)
+                return [it.next() if p[1] is None else p[1] for p in zip(items, results)]
 
         return results
 
     def _add_new(self, items, values):
-
         self[items] = values
 
     def __setitem__(self, key, value):
@@ -144,17 +131,29 @@ class Wrap(ChainDict):
     def __setitem__(self, key, value):
         self.post[key] = value
 
+class ExpandSingle(ChainDict):
+    """
+    Will take care of iterables
+    """
+
+    def __getitem__(self, items):
+        if hasattr(items, '__iter__'):
+            return self.post[items]
+        else:
+            return self.post[[items]][0]
+
+    def __setitem__(self, key, value):
+        self.post[key] = value
+
+    def _add_new(self, items, values):
+        pass
+
 class ExpandMulti(ChainDict):
     """
     Will only request the unique keys to post
     """
 
     def __getitem__(self, items):
-        is_list = isinstance(items, collections.Iterable)
-
-        if not is_list:
-            return self.post[items]
-
         if len(items) == 0:
             return []
 
@@ -241,21 +240,12 @@ class BufferedStore(Wrap):
         self._store.sync()
 
     def _add_new(self, items, values):
-        if isinstance(items, collections.Iterable):
-            for item, value in zip(items, values):
-                if value is not None:
-                    if type(item) is tuple or len(item.idx) > 0 \
-                            and self.storage in item.idx:
-                        self._cache._set(item, value)
-                        self._store._set(item, value)
-        else:
-            if values is not None:
-                if type(items) is tuple or len(items.idx) > 0 \
-                            and self.storage in items.idx:
-
-                    self._cache._set(items, values)
-                    self._store._set(items, values)
-
+        for item, value in zip(items, values):
+            if value is not None:
+                if type(item) is tuple or len(item.idx) > 0 \
+                        and self.storage in item.idx:
+                    self._cache._set(item, value)
+                    self._store._set(item, value)
 
 class Store(ChainDict):
     def __init__(self, name, dimensions, store, scope=None):
@@ -273,10 +263,7 @@ class Store(ChainDict):
         self.max_save_buffer_size = None
 
     def _add_new(self, items, values):
-        if isinstance(items, collections.Iterable):
-            [dict.__setitem__(self, item, value) for item, value in zip(items, values)]
-        else:
-            dict.__setitem__(self, items, values)
+        [dict.__setitem__(self, item, value) for item, value in zip(items, values)]
 
         if self.max_save_buffer_size is not None and len(self) > self.max_save_buffer_size:
             self.sync()
@@ -306,12 +293,12 @@ class Store(ChainDict):
             return None
 
         if type(item) is tuple:
-            if item[0].content_class is self.store.key_class:
+            if item[0].storage is self.store.storage:
                 return item[1]
             else:
-                return None
+                item = item[0][item[1]]
 
-        elif self.storage in item.idx:
+        if self.storage in item.idx:
             return item.idx[self.storage]
 
         return None
@@ -369,6 +356,7 @@ class MultiStore(Store):
         self.name = name
         self.dimensions = dimensions
         self.store_name = store_name
+        self._storages = []
 
         if scope is None:
             self.scope = self
@@ -381,7 +369,9 @@ class MultiStore(Store):
     @property
     def storages(self):
         if hasattr(self.scope, 'idx'):
-            return self.scope.idx.keys()
+            if len(self.scope.idx) != len(self._storages):
+                self._storages = self.scope.idx.keys()
+            return self._storages
         else:
             return []
 
@@ -415,9 +405,8 @@ class MultiStore(Store):
         for s in self.cod_stores:
             self.cod_stores[s]._add_new(items, values)
 
-        pass
-
     def _get(self, item):
+        print 'Should not appear'
         if len(self.storages) != len(self.cod_stores):
             self.update_nod_stores()
 
@@ -443,10 +432,10 @@ class MultiStore(Store):
         if len(self.storages) != len(self.cod_stores):
             self.update_nod_stores()
 
-        output = [None] * len(items)
+
 
         if len(self.cod_stores) == 0:
-            return output
+            return [None] * len(items)
 
         results_list = dict()
         for s in self.cod_stores:
@@ -458,8 +447,10 @@ class MultiStore(Store):
                 output = results
                 first = False
             else:
-                output = [None if item is None or result is None else output
+                output = [None if item is None or result is None else item
                      for item, result in zip(output, results) ]
+
+#        print output
 
         return output
 
@@ -470,14 +461,8 @@ class UnwrapTuple(ChainDict):
         super(UnwrapTuple, self).__init__()
 
     def __getitem__(self, items):
-        if isinstance(items, collections.Iterable):
-            return self.post([value[0].load(value[1])
-                if type(value) is tuple else value for value in items])
-        else:
-            if type(items) is tuple:
-                items = items[0].load(items[1])
-
-            return self.post[items]
+        return self.post([value[0].load(value[1])
+            if type(value) is tuple else value for value in items])
 
     def __setitem__(self, key, value):
         self.post[key] = value

@@ -7,7 +7,7 @@ class QueryStore():
     def trajectory_collectivevariable(self, collectivevariable, ensemble=None, replica=None, step=None):
         """
         Return list of collectivevariables fast for specific sets of samples
-        samples can be all samples found in specific or all sampleset and filter
+        samples can be all samples found in specific or all sample_set and filter
         these by ensemble and/or replica.
         Parameters
         ----------
@@ -21,7 +21,7 @@ class QueryStore():
             For `None` (default) all replica IDs are considered.
         step : int or None
             if not None only samples from the specific step are used.
-            For `None` (default) all sampleset steps are considered.
+            For `None` (default) all sample_set steps are considered.
         Returns
         -------
         list of list of float
@@ -36,9 +36,9 @@ class QueryStore():
 
         output = []
 
-        op_dict = storage.cv.get_list_value(collectivevariable, slice(None,None))
+        op_dict = storage.cvs.get_list_value(collectivevariable, slice(None,None))
 
-        for sset_id in range(len(storage.sampleset)):
+        for sset_id in range(len(storage.sample_set)):
             if step is not None and sset_id != step:
                 continue
 
@@ -62,7 +62,7 @@ class QueryStore():
     def trajectory_length(self, ensemble=None, replica=None, step=None):
         """
         Return list of trajectory lengths fast for specific sets of samples
-        samples can be all samples found in specific or all sampleset and filter
+        samples can be all samples found in specific or all sample_set and filter
         these by ensemble and/or replica.
         Parameters
         ----------
@@ -74,7 +74,7 @@ class QueryStore():
             For `None` (default) all replica IDs are considered.
         step : int or None
             if not None only samples from the specific step are used.
-            For `None` (default) all sampleset steps are considered.
+            For `None` (default) all sample_set steps are considered.
         Returns
         -------
         list of int
@@ -87,7 +87,7 @@ class QueryStore():
 
         output = []
 
-        for sset_id in range(len(storage.sampleset)):
+        for sset_id in range(len(storage.sample_set)):
             if step is not None and sset_id != step:
                 continue
 
