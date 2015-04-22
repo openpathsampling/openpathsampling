@@ -100,8 +100,7 @@ class Transition(object):
                 ") \n")
         return line
 
-
-    def move_summary(self, storage, movers=None, output=sys.stdout):
+    def move_summary(self, storage, movers=None, output=sys.stdout, depth=0):
         """
         Provides a summary of the movers in `storage` based on this transition.
 
@@ -120,39 +119,12 @@ class Transition(object):
             summary for each of those movers.
         output : file
             file to direct output
+        depth : integer or None
+            depth of submovers to show: if integer, shows that many
+            submovers for each move; if None, shows all submovers
         """
-        pass
-
-    def _move_summary_line(self, move_name, n_accepted, n_trials,
-                           n_total_trials, indentation):
-        line = ("* "*indentation + move_name + 
-                " ran " + str(float(n_trials)/n_total_trials*100) + 
-                "% of the cycles with acceptance " + str(n_accepted) + "/" + 
-                str(n_trials) + " (" + str(float(n_accepted) / n_trials) + 
-                ") \n")
-        return line
-
-
-    def move_summary(self, storage, movers=None, output=sys.stdout):
-        """
-        Provides a summary of the movers in `storage` based on this transition.
-
-        The summary includes the number of moves attempted and the
-        acceptance rate. In some cases, extra lines are printed for each of
-        the submoves.
-
-        Parameters
-        ----------
-        storage : Storage
-            The storage object
-        movers : None or string or (list of) PathMover
-            If None, provides a short summary of the keys in self.mover. If
-            a string, provides a short summary using that string as a key in
-            the `movers` dict. If a mover or list of movers, provides
-            summary for each of those movers.
-        output : file
-            file to direct output
-        """
+        if movers is None:
+            movers = self.movers.keys()
         pass
 
 
@@ -386,6 +358,24 @@ class TISTransition(Transition):
         self.tcp = tcp
         return tcp
 
+    def conditional_transition_probability(self, samples, ensemble, force=False):
+        """
+        This transition's conditional transition probability for a given
+        ensemble.
+
+        The conditional transition probability for an ensemble is the
+        probability that a path in that ensemble makes the transition from
+        state A to state B.
+        """
+        n_acc = 0
+        n_try = 0
+        for samp in sample:
+            if samp.ensemble == ensemble:
+                if self.stateB(samp.trajectory[-1]):
+                    n_acc += 1
+                n_try += 1
+        return float(n_acc)/n_try
+
     def rate(self, flux=None, flux_error=None, force=False):
         """Calculate the rate for this transition.
 
@@ -399,6 +389,8 @@ class TISTransition(Transition):
             raise ValueError("No flux available to TISTransition. Cannot calculate rate")
         
         tcp = self.total_crossing_probability(force=force)
+        #ctp = self.conditional_transition_probability(force=force)
+        #conditional_transition_probability
         pass
 
     def default_movers(self, engine):
