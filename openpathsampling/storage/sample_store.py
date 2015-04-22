@@ -34,10 +34,10 @@ class SampleStore(ObjectStore):
 
         return obj
 
-    update_details = func_update_object('sample', 'details', '_details')
-    update_parent = func_update_object('sample', 'parent', 'trajectories')
-    update_mover = func_update_object('sample', 'mover', 'pathmovers')
-    update_ensemble = func_update_object('sample', 'ensemble', 'ensembles')
+    update_details = func_update_object('details', 'sample', 'details', '_details')
+    update_parent = func_update_object('parent', 'sample', 'parent', 'samples')
+    update_mover = func_update_object('mover', 'sample', 'pathmover', 'pathmovers')
+    update_ensemble = func_update_object('ensemble', 'sample', 'ensemble', 'ensembles')
 
     def save(self, sample, idx=None):
         if idx is not None:
