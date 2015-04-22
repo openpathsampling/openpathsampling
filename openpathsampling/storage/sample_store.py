@@ -1,11 +1,12 @@
 from object_storage import ObjectStore
 from openpathsampling.sample import SampleSet, Sample
+from openpathsampling.storage.object_storage import func_update_object
 
 import time
 
 class SampleStore(ObjectStore):
     def __init__(self, storage):
-        super(SampleStore, self).__init__(storage, Sample, json=False)
+        super(SampleStore, self).__init__(storage, Sample, json=False, load_partial=True)
 
         self.set_variable_partial_loading('details', self.update_details)
         self.set_variable_partial_loading('parent', self.update_parent)
@@ -15,48 +16,28 @@ class SampleStore(ObjectStore):
 
     def load_empty(self, idx):
         trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
-        ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
         replica_idx = int(self.storage.variables['sample_replica'][idx])
-        parent_idx = int(self.storage.variables['sample_parent'][idx])
         valid=self.load_variable('sample_valid', idx)
         accepted=bool(self.load_variable('sample_accepted', idx))
-        pathmover_idx = int(self.storage.variables['sample_pathmover_idx'][idx])
 
         obj = Sample(
             trajectory=self.storage.trajectories[trajectory_idx],
             replica=replica_idx,
-            ensemble=None,
             valid=valid,
-            parent=None,
-            details=None,
             accepted=accepted,
-            mover=None
         )
 
         del obj.details
-        del obj.details
-        del obj.details
-        del obj.details
+        del obj.ensemble
+        del obj.mover
+        del obj.parent
 
         return obj
 
-    @staticmethod
-    def update_details(obj):
-        """
-        Update/Load the velocities in the given obj from the attached storage
-
-        Parameters
-        ----------
-        obj : Momentum
-            The Momentum object to be updated
-
-        """
-        storage = obj._origin
-
-        idx = obj.idx[storage]
-        details_idx = int(storage.variables['sample_details'][idx])
-
-        obj.details = storage._details[details_idx]
+    update_details = func_update_object('sample', 'details', '_details')
+    update_parent = func_update_object('sample', 'parent', 'trajectories')
+    update_mover = func_update_object('sample', 'mover', 'pathmovers')
+    update_ensemble = func_update_object('sample', 'ensemble', 'ensembles')
 
     def save(self, sample, idx=None):
         if idx is not None:

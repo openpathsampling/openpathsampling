@@ -1175,3 +1175,16 @@ def saveidx(func):
             self.storage.variables[self.identifier][idx] = obj._uid
 
     return inner
+
+# CREATE EASY UPDATE WRAPPER
+
+def func_update_object(object, variable, store):
+    def updater(obj):
+        storage = obj._origin
+
+        idx = obj.idx[storage]
+        obj_idx = int(storage.variables[object + '_' + variable + '_idx'][idx])
+
+        setattr(obj, variable, getattr(storage, store).load(obj_idx))
+
+    return staticmethod(updater)
