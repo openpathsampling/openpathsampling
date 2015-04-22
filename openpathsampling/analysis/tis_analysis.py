@@ -1,5 +1,6 @@
 from histogram import Histogram, histograms_to_pandas_dataframe
 from wham import WHAM
+from lookup_function import LookupFunction
 import openpathsampling as paths
 from openpathsampling.todict import ops_object
 import sys
@@ -388,8 +389,8 @@ class TISTransition(Transition):
         elif method == "mbar":
             pass
 
-        self.tcp = tcp
-        return tcp
+        self.tcp = LookupFunction(tcp.keys(), tcp.values())
+        return self.tcp
 
     def conditional_transition_probability(self, samples, ensemble, force=False):
         """

@@ -3,7 +3,7 @@ class LookupFunction(object):
         self.pairs = { }
         for (x,y) in zip(ordinate, abscissa):
             self.pairs[x] = y
-        self.sorted_ordinates = self.pairs.keys().sort()
+        self.sorted_ordinates = sorted(self.pairs.keys())
 
     def keys(self):
         return list(self.sorted_ordinates)
