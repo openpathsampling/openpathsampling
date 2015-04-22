@@ -3,8 +3,8 @@ from openpathsampling.todict import ops_object
 import mdtraj as md
 import numpy as np
 import pandas as pd
-from simtk import unit as units
-import simtk.openmm
+#from simtk import unit as units
+#import simtk.openmm
 
 @ops_object
 class Topology(object):
