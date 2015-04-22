@@ -1,14 +1,16 @@
 from pathsimulator import PathSimulator, Bootstrapping, PathSampling
 
-from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
-    EntersXEnsemble, EmptyEnsemble, ExitsXEnsemble, FullEnsemble, \
-    PartInXEnsemble, AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble, \
-    BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble, \
-    PartOutXEnsemble, LengthEnsemble, NegatedEnsemble, \
-    ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \
-    SequentialEnsemble, IntersectionEnsemble, UnionEnsemble, \
-    SymmetricDifferenceEnsemble, RelativeComplementEnsemble, \
-    SingleFrameEnsemble, MinusInterfaceEnsemble
+from ensemble import (
+    Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
+    EmptyEnsemble, ExitsXEnsemble, FullEnsemble, PartInXEnsemble,
+    AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble,
+    BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble,
+    PartOutXEnsemble, LengthEnsemble, NegatedEnsemble,
+    ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble,
+    SequentialEnsemble, IntersectionEnsemble, UnionEnsemble,
+    SymmetricDifferenceEnsemble, RelativeComplementEnsemble,
+    SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble
+)
 
 from snapshot import Snapshot, Configuration, Momentum
 

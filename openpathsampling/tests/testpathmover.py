@@ -176,13 +176,14 @@ class testPathReversalMover(object):
         volA = LambdaVolume(op, -100, 0.0)
         volB = LambdaVolume(op, 1.0, 100)
         volX = LambdaVolume(op, -100, 0.25)
-        self.tis = ef.TISEnsemble(volA, volB, volX)
+        self.tis = paths.TISEnsemble(volA, volB, volX)
         self.move = PathReversalMover()
         self.op = op
 
     def test_AXA_path(self):
         trajAXA = make_1d_traj(coordinates=[-0.1, 0.75, -0.6],
                                velocities=[0.1, 0.05, -0.05])
+        assert_equal(self.tis(trajAXA), True)
         sampAXA = Sample(trajectory=trajAXA,
                          ensemble=self.tis,
                          replica=0)
@@ -240,8 +241,8 @@ class testReplicaExchangeMover(object):
         state2 = LambdaVolume(op, 1, 100)
         volA = LambdaVolume(op, -100, 0.25)
         volB = LambdaVolume(op, -100, 0.50)
-        self.tisA = ef.TISEnsemble(state1, state2, volA)
-        self.tisB = ef.TISEnsemble(state1, state2, volB)
+        self.tisA = paths.TISEnsemble(state1, state2, volA)
+        self.tisB = paths.TISEnsemble(state1, state2, volB)
         self.traj0 = make_1d_traj([-0.1, 0.2, 0.3, 0.1, -0.2])
         self.traj1 = make_1d_traj([-0.1, 0.1, 0.4, 0.6, 0.3, 0.2, -0.15]) 
         self.traj2 = make_1d_traj([-0.1, 0.2, 0.3, 0.7, 0.6, 0.4, 0.1, -0.15])
@@ -305,7 +306,7 @@ class testRandomChoiceMover(object):
         volA = LambdaVolume(op, -100, 0.0)
         volB = LambdaVolume(op, 1.0, 100)
         volX = LambdaVolume(op, -100, 0.25)
-        self.tis = ef.TISEnsemble(volA, volB, volX)
+        self.tis = paths.TISEnsemble(volA, volB, volX)
         self.tps = ef.A2BEnsemble(volA, volB)
         self.len3 = LengthEnsemble(3)
         self.init_samp = SampleSet([Sample(trajectory=traj,
@@ -344,7 +345,7 @@ class testSequentialMover(object):
         volA = LambdaVolume(op, -100, 0.0)
         volB = LambdaVolume(op, 1.0, 100)
         volX = LambdaVolume(op, -100, 0.25)
-        tis = ef.TISEnsemble(volA, volB, volX)
+        tis = paths.TISEnsemble(volA, volB, volX)
         tps = ef.A2BEnsemble(volA, volB)
         len3 = LengthEnsemble(3)
         len2 = LengthEnsemble(2)
@@ -623,7 +624,7 @@ class testForceEnsembleChangeMover(object):
         volA = LambdaVolume(op, -100, 0.0)
         volB = LambdaVolume(op, 1.0, 100)
         volX = LambdaVolume(op, -100, 0.25)
-        self.tis = ef.TISEnsemble(volA, volB, volX)
+        self.tis = paths.TISEnsemble(volA, volB, volX)
         self.len3 = LengthEnsemble(3)
         self.len2 = LengthEnsemble(2)
         self.gs = SampleSet(Sample(
@@ -672,7 +673,7 @@ class testMinusMover(object):
         ])
         PathMover.engine = self.dyn
         self.dyn.initialized = True
-        self.innermost = ef.TISEnsemble(volA, volB, volX)
+        self.innermost = paths.TISEnsemble(volA, volB, volX)
         self.minus = paths.MinusInterfaceEnsemble(volA, volX)
         self.mover = MinusMover(minus_ensemble=self.minus,
                                 innermost_ensemble=self.innermost)
