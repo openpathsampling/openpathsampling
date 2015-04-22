@@ -191,6 +191,9 @@ def ops_object(super_class):
 
                 obj = cls(**init_dct)
 
+                for key in init_dct:
+                    if init_dct[key]
+
                 if super_class._restore_non_initial_attr:
                     if len(non_init_dct) > 0:
                         for key, value in non_init_dct.iteritems():
