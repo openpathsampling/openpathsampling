@@ -90,6 +90,12 @@ class Transition(object):
 
         self._mover_acceptance = {}
 
+    @property
+    def all_movers(self):
+        all_movers = []
+        for movetype in self.movers.keys():
+            all_movers += self.movers[movetype]
+        return all_movers
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, indentation):
@@ -125,6 +131,33 @@ class Transition(object):
         """
         if movers is None:
             movers = self.movers.keys()
+        pass
+
+    @property
+    def all_movers(self):
+        all_movers = []
+        for movetype in self.movers.keys():
+            all_movers += self.movers[movetype]
+        return all_movers
+
+    def categorize_movers(self):
+        # need a way to identify all the repex-based moves, and all the
+        # generating-based moves, etc
+        pass
+
+
+    def calculate_mover_acceptance(self, storage, movers=None):
+        # regularlize format of movers argument:
+        if movers is None:
+            movers = self.all_movers
+        try:
+            nmovers = len(movers)
+        except TypeError:
+            nmovers = 1
+            movers = [movers]
+
+        for movechange in storage.movepath:
+            pass
         pass
 
 
