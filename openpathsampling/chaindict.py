@@ -293,7 +293,7 @@ class Store(ChainDict):
             return None
 
         if type(item) is tuple:
-            if item[0] is self.store:
+            if item[0].storage is self.store.storage:
                 return item[1]
             else:
                 item = item[0][item[1]]
