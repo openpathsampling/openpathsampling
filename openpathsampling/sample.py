@@ -185,8 +185,8 @@ class SampleSet(object):
         '''
         for sample in self:
             # TODO: Replace by using .valid which means that it is in the ensemble
-            assert(sample.valid)
-            #assert(sample.ensemble(sample.trajectory))
+            #assert(sample.valid)
+            assert(sample.ensemble(sample.trajectory))
 
     def consistency_check(self):
         '''This is mainly a sanity check for use in testing, but might be
