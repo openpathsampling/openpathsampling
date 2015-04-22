@@ -5,6 +5,7 @@ from simtk import unit as units
 import yaml
 import openpathsampling as paths
 import inspect
+import types
 
 class ObjectJSON(object):
     """
@@ -190,9 +191,6 @@ def ops_object(super_class):
                     non_init_dct = {key: dct[key] for key in dct if key not in args}
 
                 obj = cls(**init_dct)
-
-                for key in init_dct:
-                    if init_dct[key]
 
                 if super_class._restore_non_initial_attr:
                     if len(non_init_dct) > 0:

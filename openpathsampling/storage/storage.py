@@ -557,16 +557,12 @@ class StorableObjectJSON(paths.todict.ObjectJSON):
                 if obj['_storage'] == 'self':
                     return self.storage
             if '_cls' in obj and '_idx' in obj:
-                def _load_later():
-                    print 'loaded later', obj.base_cls_name
-                    if obj['_cls'] in paths.todict.class_list:
-                        base_cls = paths.todict.class_list[obj['_cls']]
-                        result = self.storage.load(base_cls, obj['_idx'])
-                    else:
-                        result = self.storage.load(obj['_cls'], obj['_idx'])
+                if obj['_cls'] in paths.todict.class_list:
+                    base_cls = paths.todict.class_list[obj['_cls']]
+                    result = self.storage.load(base_cls, obj['_idx'])
+                else:
+                    result = self.storage.load(obj['_cls'], obj['_idx'])
 
-                    return result
-
-                return property(_load_later)
+                return result
 
         return super(StorableObjectJSON, self).build(obj)
