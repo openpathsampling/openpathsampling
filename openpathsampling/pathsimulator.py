@@ -18,6 +18,7 @@ class PathSimulator(object):
     def __init__(self, storage, engine=None):
         self.storage = storage
         self.engine = engine
+        self.save_frequency = 1
         initialization_logging(
             logger=init_log, obj=self,
             entries=['storage', 'engine']
@@ -25,6 +26,12 @@ class PathSimulator(object):
 
     def set_replicas(self, samples):
         self.globalstate = paths.SampleSet(samples)
+
+    def sync_storage(self):
+        if self.storage is not None:
+            self.storage.cv.sync()
+            self.storage.sync()
+
 
     def run(self, nsteps):
         logger.warning("Running an empty pathsimulator? Try a subclass, maybe!")
@@ -212,12 +219,19 @@ class PathSampling(PathSimulator):
             samples = movepath.samples
             self.globalstate = self.globalstate.apply_samples(samples, step=step)
             self.globalstate.movepath = movepath
-            self.globalstate.sanity_check()
             if self.storage is not None:
                 self.globalstate.save(self.storage)
-                self.storage.sync()
-                # Note: This saves all collectivevariables, but does this with
-                # removing computed values for not saved collectivevariables
-                # We assume that this is the right cause of action for this
-                # case.
-                self.storage.cv.sync()
+
+            if step % self.save_frequency == 0:
+                self.globalstate.sanity_check()
+                self.sync_storage()
+                #if self.storage is not None:
+                    # Note: This saves all collectivevariables, but does
+                    # this with removing computed values for not saved
+                    # collectivevariables We assume that this is the right
+                    # cause of action for this case.
+                    #self.storage.cv.sync()
+                    #self.storage.sync()
+
+        self.sync_storage()
+

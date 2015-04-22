@@ -1009,7 +1009,37 @@ class testSequentialEnsembleCache(EnsembleCacheTest):
         raise SkipTest
 
     def test_sequential_caching_can_prepend(self):
-        raise SkipTest
+        cache = self.pseudo_minus._cache_can_prepend
+        print "5"
+        assert_equal(self.pseudo_minus.can_prepend(self.traj[5:6]), True)
+        assert_equal(cache.contents['ens_num'], 3)
+        assert_equal(cache.contents['ens_from'], 4)
+        assert_equal(cache.contents['subtraj_from'], -1)
+        print "4"
+        assert_equal(self.pseudo_minus.can_prepend(self.traj[4:6]), True)
+        assert_equal(cache.contents['ens_num'], 3)
+        assert_equal(cache.contents['ens_from'], 4)
+        assert_equal(cache.contents['subtraj_from'], -1)
+        print "3"
+        assert_equal(self.pseudo_minus.can_prepend(self.traj[3:6]), True)
+        assert_equal(cache.contents['ens_num'], 2)
+        assert_equal(cache.contents['ens_from'], 4)
+        assert_equal(cache.contents['subtraj_from'], -2)
+        print "2"
+        assert_equal(self.pseudo_minus.can_prepend(self.traj[2:6]), True)
+        assert_equal(cache.contents['ens_num'], 2)
+        assert_equal(cache.contents['ens_from'], 4)
+        assert_equal(cache.contents['subtraj_from'], -2)
+        print "1"
+        assert_equal(self.pseudo_minus.can_prepend(self.traj[1:6]), True)
+        assert_equal(cache.contents['ens_num'], 1)
+        assert_equal(cache.contents['ens_from'], 4)
+        assert_equal(cache.contents['subtraj_from'], -4)
+        print "0"
+        assert_equal(self.pseudo_minus.can_prepend(self.traj[0:6]), False)
+        assert_equal(cache.contents['ens_num'], 0)
+        assert_equal(cache.contents['ens_from'], 4)
+        assert_equal(cache.contents['subtraj_from'], -5)
 
 
 

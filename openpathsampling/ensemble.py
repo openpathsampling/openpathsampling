@@ -11,7 +11,7 @@ import openpathsampling as paths
 import logging
 from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
-init_log = logging.getLogger('opentis.initialization')
+init_log = logging.getLogger('openpathsampling.initialization')
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
@@ -76,6 +76,8 @@ class EnsembleCache(object):
         else:
             reset = True
 
+        self.last_length = len(trajectory)
+        self.trusted = (self.last_length == 1)
         if reset:
             logger.debug("Resetting cache " + str(self))
             if self.direction > 0:
@@ -90,10 +92,10 @@ class EnsembleCache(object):
                 self.contents = { }
             else:
                 self.bad_direction_error()
+        else:
+            self.trusted = True
         # by returning reset, we allow the functions that call this to reset
         # other things as well
-        self.last_length = len(trajectory)
-        self.trusted = (self.last_length == 1)
         if self.direction > 0:
             self.prev_last_frame = trajectory[-1]
         elif self.direction < 0:
@@ -734,11 +736,11 @@ class SequentialEnsemble(Ensemble):
             frame of the subtrajectory. For reverse-direction caches, this
             is the final frame of the subtrajectory.
         """
-        if ens_num is None:
+        if ens_num == "keep":
             ens_num = cache.contents['ens_num']
-        if ens_from is None:
+        if ens_from == "keep":
             ens_from = cache.contents['ens_from']
-        if subtraj_from is None:
+        if subtraj_from == "keep":
             subtraj_from = cache.contents['subtraj_from']
 
         cache.contents['ens_num'] = ens_num
@@ -869,11 +871,15 @@ class SequentialEnsemble(Ensemble):
         traj_first = 0
         ens = self.ensembles[ens_num]
         subtraj = traj[slice(subtraj_first, subtraj_final)]
+        logger.debug("*Traj slice " + str(subtraj_first) + " " + 
+                     str(subtraj_final) + " / " + str(len(traj)))
         while ( (ens.can_prepend(subtraj, trusted=True) or 
                  ens.check_reverse(subtraj, trusted=True)
                 ) and subtraj_first >= traj_first):
             subtraj_first -= 1
             subtraj = traj[slice(subtraj_first, subtraj_final)]
+            logger.debug(" Traj slice " + str(subtraj_first+1) + " " + 
+                         str(subtraj_final) + " / " + str(len(traj)))
         return subtraj_first+1
 
 
@@ -891,6 +897,8 @@ class SequentialEnsemble(Ensemble):
         # Returning false can only happen if all ensembles have been tested
         #self._check_cache(trajectory, function="can_append")
         cache = self._cache_can_append
+        if trusted:
+            cache.trusted = True
 
         subtraj_first = 0
         ens_num = 0
@@ -953,7 +961,7 @@ class SequentialEnsemble(Ensemble):
                 else:
                     # subtraj existed, but not yet final ensemble
                     # so we start with the next ensemble
-                    if subtraj_final != traj_final and not self.ensembles[ens_num](subtraj):
+                    if subtraj_final != traj_final and not self.ensembles[ens_num](subtraj, trusted=cache.trusted):
                         logger.debug(
                             "Couldn't assign frames " + str(subtraj_first) +
                             " through " + str(subtraj_final) + 
@@ -985,9 +993,9 @@ class SequentialEnsemble(Ensemble):
                                 str(ens_num-1)
                             )
                             ens_num -= 1
-                            subtraj_first = None
+                            subtraj_first = "keep"
                         
-                    self.update_cache(cache, ens_num, ens_first, subtraj_first)
+                        self.update_cache(cache, ens_num, ens_first, subtraj_first)
                     logger.debug("All frames assigned, more ensembles to go: returning True")
                     return True
                 elif self.ensembles[ens_num](paths.Trajectory([])):
@@ -1016,6 +1024,8 @@ class SequentialEnsemble(Ensemble):
     def can_prepend(self, trajectory, trusted=False):
         # based on .can_append(); see notes there for algorithm details
         cache = self._cache_can_prepend
+        if trusted:
+            cache.trusted = True
 
         traj_first = 0
         first_ens = 0
@@ -1029,13 +1039,16 @@ class SequentialEnsemble(Ensemble):
                 self.update_cache(cache, ens_num, first_ens, subtraj_final)
                 self.assign_frames(cache, None, None, None)
             else:
-                subtraj_final = cache.contents['subtraj_from']
+                subtraj_final = len(trajectory)+cache.contents['subtraj_from']
                 ens_num = cache.contents['ens_num']
                 ens_final = cache.contents['ens_from']
 
 
         # logging startup
-        logger.debug("Beginning can_prepend")
+        logger.debug("Beginning can_prepend with ens_num:" + str(ens_num) +
+                     "  ens_final:" + str(ens_final) + "  subtraj_final " +
+                     str(subtraj_final)
+                    )
         for i in range(len(self.ensembles)):
             logger.debug(
                 "Ensemble " + str(i) + 
@@ -1049,6 +1062,10 @@ class SequentialEnsemble(Ensemble):
                 last_checked = None
             subtraj_first = self._find_subtraj_first(
                 trajectory, subtraj_final, ens_num, last_checked)
+
+            assign_final = subtraj_final - len(trajectory)
+            if assign_final == 0:
+                assign_final = None
             logger.debug(
                 str(ens_num) + " : " +
                 "("+str(subtraj_first)+","+str(subtraj_final)+")"
@@ -1058,6 +1075,8 @@ class SequentialEnsemble(Ensemble):
                 if ens_num == first_ens:
                     if subtraj_first == traj_first:
                         logger.debug("Returning can_prepend")
+                        self.update_cache(cache, ens_num, ens_final,
+                                          assign_final)
                         return self.ensembles[ens_num].can_prepend(subtraj,
                                                                   trusted=True)
                     else:
@@ -1067,7 +1086,7 @@ class SequentialEnsemble(Ensemble):
                         )
                         return False
                 else:
-                    if subtraj_first != traj_first and not self.ensembles[ens_num](subtraj):
+                    if subtraj_first != traj_first and not self.ensembles[ens_num](subtraj, trusted=True):
                         logger.debug(
                             "Couldn't assign frames " + str(subtraj_first) +
                             " through " + str(subtraj_final) + 
@@ -1079,9 +1098,11 @@ class SequentialEnsemble(Ensemble):
                             " through " + str(subtraj_final) + 
                             " to ensemble " + str(ens_num)
                         )
-                        self.assign_frames(cache, ens_num, subtraj_first,
-                                           subtraj_final)
-                        self.update_cache(cache, ens_num, ens_final, subtraj_final)
+                        assign_first = subtraj_first-len(trajectory)
+                        self.assign_frames(cache, ens_num, assign_first,
+                                           assign_final)
+                        self.update_cache(cache, ens_num, ens_final,
+                                          assign_final)
                     ens_num -= 1
                     subtraj_final = subtraj_first
                     logger.debug("Moving to the next ensemble " + str(ens_num))
@@ -1089,7 +1110,10 @@ class SequentialEnsemble(Ensemble):
                 if subtraj_first == traj_first:
                     if self._use_cache:
                         prev_slice = cache.contents['assignments'][ens_num+1]
+                        logger.debug("prev_slice " + str(prev_slice))
                         prev_subtraj = trajectory[prev_slice]
+                        logger.debug("prev_subtraj " + str(prev_subtraj))
+                        logger.debug("traj " + str(trajectory))
                         prev_ens = self.ensembles[ens_num+1]
                         if prev_ens.can_prepend(prev_subtraj, trusted=True):
                             logger.debug(
@@ -1097,8 +1121,12 @@ class SequentialEnsemble(Ensemble):
                                 str(ens_num+1)
                             )
                             ens_num += 1
-                            subtraj_first = None
-                    self.update_cache(cache, ens_num, ens_final, subtraj_final)
+                            assign_final = "keep"
+
+                        logger.debug("(first, final)" + str( (subtraj_first,
+                                                              subtraj_final)))
+                        self.update_cache(cache, ens_num, ens_final, 
+                                          assign_final)
                     logger.debug("All frames assigned, more ensembles to go: returning True")
                     return True
                 elif self.ensembles[ens_num](paths.Trajectory([])):
@@ -1221,9 +1249,11 @@ class AllInXEnsemble(VolumeEnsemble):
         if len(trajectory) == 0:
             return False
         if trusted == True:
+            #print "trusted"
             frame = trajectory[-1]
             return self._volume(frame)
         else:
+            #print "untrusted"
             for frame in trajectory:
                 if not self._volume(frame):
                     return False
@@ -1232,9 +1262,11 @@ class AllInXEnsemble(VolumeEnsemble):
     def check_reverse(self, trajectory, trusted=False):
         # order in this one only matters if it is trusted
         if trusted:
+            #print "Rev Trusted"
             frame = trajectory[0]
             return self._volume(frame)
         else:
+            #print "Rev UnTrusted"
             return self(trajectory) # in this case, order wouldn't matter
 
 
@@ -1366,6 +1398,7 @@ class WrappedEnsemble(Ensemble):
         # you can also build wrapped ensembles with more flexibility when using
         # a property for _new_ensemble
         self._new_ensemble = self.ensemble
+        self.trusted = None
 
     def __call__(self, trajectory, trusted=None):
         return self._new_ensemble(self._alter(trajectory), trusted)
@@ -1374,7 +1407,8 @@ class WrappedEnsemble(Ensemble):
         return trajectory
         
     def can_append(self, trajectory, trusted=False):
-        return self._new_ensemble.can_append(self._alter(trajectory))
+        return self._new_ensemble.can_append(self._alter(trajectory),
+                                             self.trusted)
 
     def can_prepend(self, trajectory, trusted=False):
         return self._new_ensemble.can_prepend(self._alter(trajectory))
