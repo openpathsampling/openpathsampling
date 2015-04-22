@@ -1178,13 +1178,32 @@ def saveidx(func):
 
 # CREATE EASY UPDATE WRAPPER
 
-def func_update_object(object, variable, store):
+def func_update_object(attribute, db, variable, store):
+    """
+    Create a delayed loading function for stores
+
+    Parameters
+    ----------
+    attribute : string
+        name of the attribute of the object to be updated. E.g. for sample.mover this is 'mover'
+    db : string
+        the storage prefix where the object are stored in the file. E.g. for samples this is 'sample'
+    variable : string
+        the name of the variable in the storage. this is often the same as the attribute
+    store : string
+        the name of the store. E.g. 'trajectories'
+
+    Returns
+    -------
+    function
+        the function that is used for updating
+    """
     def updater(obj):
         storage = obj._origin
 
         idx = obj.idx[storage]
-        obj_idx = int(storage.variables[object + '_' + variable + '_idx'][idx])
+        obj_idx = int(storage.variables[db + '_' + variable + '_idx'][idx])
 
-        setattr(obj, variable, getattr(storage, store).load(obj_idx))
+        setattr(obj, attribute, getattr(storage, store).load(obj_idx))
 
     return staticmethod(updater)
