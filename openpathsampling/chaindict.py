@@ -42,39 +42,22 @@ class ChainDict(dict):
         self.post = None
 
     def __getitem__(self, items):
-
-        is_listable = False
-        try:
-            iter(items)
-            results = self._get_list(items)
-            is_listable = True
-        except:
-            results = self._get(items)
+        results = self._get_list(items)
 
         if self.post is not None:
-            if is_listable:
-                nones = [obj[0] for obj in zip(items, results) if obj[1] is None]
-                if len(nones) == 0:
-                    return results
-                else:
-                    rep = self.post[[p for p in nones]]
-                    self._add_new(nones, rep)
-
-                    it = iter(rep)
-                    return [it.next() if p[1] is None else p[1] for p in zip(items, results)]
+            nones = [obj[0] for obj in zip(items, results) if obj[1] is None]
+            if len(nones) == 0:
+                return results
             else:
-                if results is None:
-                    rep = self.post[items]
+                rep = self.post[[p for p in nones]]
+                self._add_new(nones, rep)
 
-                    self._add_new(items, rep)
-                    return rep
-                else:
-                    return results
+                it = iter(rep)
+                return [it.next() if p[1] is None else p[1] for p in zip(items, results)]
 
         return results
 
     def _add_new(self, items, values):
-
         self[items] = values
 
     def __setitem__(self, key, value):
@@ -153,9 +136,9 @@ class ExpandSingle(ChainDict):
 
     def __getitem__(self, items):
         if hasattr(items, '__iter__'):
-            return self.post[[items]][0]
-        else:
             return self.post[items]
+        else:
+            return self.post[[items]][0]
 
     def __setitem__(self, key, value):
         self.post[key] = value
@@ -169,11 +152,6 @@ class ExpandMulti(ChainDict):
     """
 
     def __getitem__(self, items):
-        is_list = isinstance(items, collections.Iterable)
-
-        if not is_list:
-            return self.post[items]
-
         if len(items) == 0:
             return []
 
@@ -260,21 +238,12 @@ class BufferedStore(Wrap):
         self._store.sync()
 
     def _add_new(self, items, values):
-        if isinstance(items, collections.Iterable):
-            for item, value in zip(items, values):
-                if value is not None:
-                    if type(item) is tuple or len(item.idx) > 0 \
-                            and self.storage in item.idx:
-                        self._cache._set(item, value)
-                        self._store._set(item, value)
-        else:
-            if values is not None:
-                if type(items) is tuple or len(items.idx) > 0 \
-                            and self.storage in items.idx:
-
-                    self._cache._set(items, values)
-                    self._store._set(items, values)
-
+        for item, value in zip(items, values):
+            if value is not None:
+                if type(item) is tuple or len(item.idx) > 0 \
+                        and self.storage in item.idx:
+                    self._cache._set(item, value)
+                    self._store._set(item, value)
 
 class Store(ChainDict):
     def __init__(self, name, dimensions, store, scope=None):
@@ -292,10 +261,7 @@ class Store(ChainDict):
         self.max_save_buffer_size = None
 
     def _add_new(self, items, values):
-        if isinstance(items, collections.Iterable):
-            [dict.__setitem__(self, item, value) for item, value in zip(items, values)]
-        else:
-            dict.__setitem__(self, items, values)
+        [dict.__setitem__(self, item, value) for item, value in zip(items, values)]
 
         if self.max_save_buffer_size is not None and len(self) > self.max_save_buffer_size:
             self.sync()
@@ -490,14 +456,8 @@ class UnwrapTuple(ChainDict):
         super(UnwrapTuple, self).__init__()
 
     def __getitem__(self, items):
-        if isinstance(items, collections.Iterable):
-            return self.post([value[0].load(value[1])
-                if type(value) is tuple else value for value in items])
-        else:
-            if type(items) is tuple:
-                items = items[0].load(items[1])
-
-            return self.post[items]
+        return self.post([value[0].load(value[1])
+            if type(value) is tuple else value for value in items])
 
     def __setitem__(self, key, value):
         self.post[key] = value
