@@ -1065,8 +1065,11 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
             AllOutXEnsemble(vol1 | vol3) & PartOutXEnsemble(vol2),
             AllInXEnsemble(vol1 | vol3) & LengthEnsemble(1)
         ])
+        real_tis = paths.TISEnsemble(vol1, vol3, vol2)
         for test in ttraj.keys():
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(real_tis, ttraj[test],
+                              sequential_tis(ttraj[test]), failmsg)
             self._single_test(sliced_tis, ttraj[test], 
                               sequential_tis(ttraj[test]), failmsg)
 
