@@ -46,12 +46,12 @@ class SnapshotStore(ObjectStore):
 
         Notes
         -----
-        If you are interested in orderparameters this is faster since it does not
+        If you are interested in collectivevariables this is faster since it does not
         load the snapshots. Otherwise storage.snapshot is fine to get an
         iterator. Both should should be about the same speed.
         """
         #TODO: Might think about replacing the iterator with this since it is
-        # faster for orderparameters
+        # faster for collectivevariables
         return Trajectory([ (self, idx) for idx in range(len(self)) ])
 
     def save(self, snapshot, idx=None):
@@ -157,7 +157,7 @@ class SnapshotStore(ObjectStore):
         self.init_variable('snapshot_momentum_reversed', 'bool', self.db, chunksizes=(1, ))
 
 #=============================================================================================
-# ORDERPARAMETER UTILITY FUNCTIONS
+# COLLECTIVE VARIABLE UTILITY FUNCTIONS
 #=============================================================================================
 
     @property
@@ -236,7 +236,7 @@ class MomentumStore(ObjectStore):
             print 'Think about how to handle this. It should only be None if loaded lazy and in this case it will never be saved.'
 
         # Force sync to disk to avoid data loss.
-        storage.sync()
+#        storage.sync()
 
     def load(self, idx):
         '''
@@ -402,7 +402,7 @@ class ConfigurationStore(ObjectStore):
         # log that topologies were different
 
         # Force sync to disk to avoid data loss.
-        storage.sync()
+#        storage.sync()
 
 
     def get(self, indices):

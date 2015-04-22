@@ -80,6 +80,7 @@ if __name__ == '__main__':
     headline("Content")
 
     line("Number of trajectories", storage.trajectory.count())
+    line("Number of snapshots", storage.snapshot.count())
     line("Number of configurations", storage.configuration.count())
     line("Number of momenta", storage.momentum.count())
 
@@ -137,7 +138,7 @@ if __name__ == '__main__':
 #        obj = storage.shootingpoint.load(p_idx)
 #        nline(p_idx,obj.json, obj.cls)
 
-    headline("Orderparameters (" + str(storage.collectivevariable.count()) + ")")
+    headline("CollectiveVariables (" + str(storage.collectivevariable.count()) + ")")
 
     all_snapshot_traj = storage.snapshot.all()
 

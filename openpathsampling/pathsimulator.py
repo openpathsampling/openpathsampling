@@ -1,5 +1,4 @@
-from openpathsampling.todict import restores_as_stub_object
-from openpathsampling.pathmover import PathMover
+from openpathsampling.todict import ops_object
 import openpathsampling as paths
 
 from openpathsampling.pathmover import PathMover
@@ -9,14 +8,17 @@ from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-@restores_as_stub_object
-class Calculation(object):
+@ops_object
+class PathSimulator(object):
 
-    calc_name = "Calculation"
+    calc_name = "PathSimulator"
+
+    _excluded_attr = ['globalstate']
 
     def __init__(self, storage, engine=None):
         self.storage = storage
         self.engine = engine
+        self.save_frequency = 1
         initialization_logging(
             logger=init_log, obj=self,
             entries=['storage', 'engine']
@@ -25,11 +27,17 @@ class Calculation(object):
     def set_replicas(self, samples):
         self.globalstate = paths.SampleSet(samples)
 
+    def sync_storage(self):
+        if self.storage is not None:
+            self.storage.cv.sync()
+            self.storage.sync()
+
+
     def run(self, nsteps):
-        logger.warning("Running an empty calculation? Try a subclass, maybe!")
+        logger.warning("Running an empty pathsimulator? Try a subclass, maybe!")
 
 
-@restores_as_stub_object
+@ops_object
 class BootstrapPromotionMove(PathMover):
     '''
     Bootstrap promotion is the combination of an EnsembleHop (to the next
@@ -79,33 +87,11 @@ class BootstrapPromotionMove(PathMover):
         return mover.move(globalstate)
 
 
-# TODO: Is this used anywhere? Or do we do this differently
-class InitializeSingleTrajectoryMover(PathMover):
-    def __init__(self, bias=None, shooters=None,
-                 ensembles=None, replicas='all'):
-        super(InitializeSingleTrajectoryMover, self).__init__(ensembles=ensembles,
-                                                     replicas=replicas)
-        self.shooters = shooters
-        self.bias = bias
-        initialization_logging(logger=init_log, obj=self,
-                               entries=['bias', 'shooters'])
-
-    def move(self, globalstate=None):
-        init_details = paths.MoveDetails()
-        init_details.accepted = True
-        init_details.acceptance_probability = 1.0
-        init_details.mover = self
-        init_details.inputs = []
-        init_details.trial = None
-        init_details.ensemble = None
-        sample = paths.Sample(replica=0, trajectory=None,
-                        ensemble=self.ensembles[0], details=init_details)
-
-@restores_as_stub_object
-class Bootstrapping(Calculation):
+@ops_object
+class Bootstrapping(PathSimulator):
     """Creates a SampleSet with one sample per ensemble.
     
-    The ensembles for the Bootstrapping calculation must be one ensemble
+    The ensembles for the Bootstrapping pathsimulator must be one ensemble
     set, in increasing order. Replicas are named numerically.
     """
 
@@ -191,8 +177,8 @@ class Bootstrapping(Calculation):
         for sample in self.globalstate:
             assert sample.ensemble(sample.trajectory) == True, "WTF?"
 
-@restores_as_stub_object
-class PathSampling(Calculation):
+@ops_object
+class PathSampling(PathSimulator):
     """
     General path sampling code. 
     
@@ -207,15 +193,16 @@ class PathSampling(Calculation):
         self.root_mover = root_mover
 #        self.root_mover.name = "PathSamplingRoot"
         samples = []
-        for sample in globalstate:
-            samples.append(sample.copy_reset())
+        if globalstate is not None:
+            for sample in globalstate:
+                samples.append(sample.copy_reset())
 
         self.globalstate = paths.SampleSet(samples)
 
         initialization_logging(init_log, self, 
                                ['root_mover', 'globalstate'])
 
-        self._mover = paths.CalculationMover(self.root_mover, self)
+        self._mover = paths.PathSimulatorMover(self.root_mover, self)
 
     def run(self, nsteps):
         # TODO: change so we can start from some arbitrary step number
@@ -224,7 +211,6 @@ class PathSampling(Calculation):
                                                           step=-1)
 
         if self.storage is not None:
-            #self.globalstate.save_samples(self.storage)
             self.globalstate.save(self.storage)
             self.storage.sync()
 
@@ -234,18 +220,18 @@ class PathSampling(Calculation):
             self.globalstate = self.globalstate.apply_samples(samples, step=step)
             self.globalstate.movepath = movepath
             if self.storage is not None:
-                #self.globalstate.save_samples(self.storage)
                 self.globalstate.save(self.storage)
-                self.storage.cv.sync()
-                self.storage.sync()
-                # Note: This saves all orderparameters, but does this with
-                # removing computed values for not saved orderparameters
-                # We assume that this is the right cause of action for this
-                # case.
-                self.storage.cv.sync()
 
-    def to_dict(self):
-        return {
-            'root_mover' : self.root_mover,
-#            'globalstate' : self.globalstate
-        }
+            if step % self.save_frequency == 0:
+                self.globalstate.sanity_check()
+                self.sync_storage()
+                #if self.storage is not None:
+                    # Note: This saves all collectivevariables, but does
+                    # this with removing computed values for not saved
+                    # collectivevariables We assume that this is the right
+                    # cause of action for this case.
+                    #self.storage.cv.sync()
+                    #self.storage.sync()
+
+        self.sync_storage()
+

@@ -4,20 +4,20 @@
 
 import mdtraj as md
 import openpathsampling as paths
-from openpathsampling.todict import restores_as_stub_object
-import chainableobjectdict as cod
+import chaindict as cd
 import collections
+from openpathsampling.todict import ops_object
 
 
-@restores_as_stub_object
-class OrderParameter(cod.CODWrap):
+@ops_object
+class CollectiveVariable(cd.Wrap):
     """
     Wrapper for a function that maps a snapshot to a number.
 
     Parameters
     ----------
     name : string
-        A descriptive name of the orderparameter. It is used in the string
+        A descriptive name of the collectivevariable. It is used in the string
         representation.
     dimensions : int
         The number of dimensions of the output order parameter. So far this
@@ -35,89 +35,69 @@ class OrderParameter(cod.CODWrap):
     """
 
     def __init__(self, name, dimensions=1):
-        if type(name) is str and len(name) == 0:
+        if (type(name) is not str and type(name) is not unicode) or len(name) == 0:
+            print type(name), len(name)
             raise ValueError('name must be a non-empty string')
 
-        self.pre_dict = cod.CODTransform(self._pre_item)
-        self.multi_dict = cod.CODExpandMulti()
-        self.store_dict = cod.CODMultiStore('collectivevariable', name,
-                                            dimensions, self)
-        self.cache_dict = cod.NestableObjectDict()
-        self.expand_dict = cod.CODUnwrapTuple()
-        self.func_dict = cod.CODFunction(None)
-        if hasattr(self, '_eval'):
-            self.func_dict._eval = self._eval
-        else:
-            self.func_dict._eval = None
-
         self.name = name
-        super(OrderParameter, self).__init__(
-            post=self.func_dict + self.expand_dict + self.store_dict +
-                 self.cache_dict + self.multi_dict + self.pre_dict
-        )
 
-    def flush_unstorable(self):
+        self.pre_dict = cd.Transform(self._pre_item)
+        self.multi_dict = cd.ExpandMulti()
+        self.store_dict = cd.MultiStore('collectivevariable', name,
+                                            dimensions, self)
+        self.cache_dict = cd.ChainDict()
+        if hasattr(self, '_eval'):
+            self.expand_dict = cd.UnwrapTuple()
+            self.func_dict = cd.Function(None)
+
+            self.func_dict._eval = self._eval
+
+            super(CollectiveVariable, self).__init__(
+                post=self.func_dict + self.expand_dict + self.cache_dict +
+                     self.store_dict + self.multi_dict + self.pre_dict
+            )
+
+        else:
+            super(CollectiveVariable, self).__init__(
+                post=self.cache_dict + self.store_dict + self.multi_dict + self.pre_dict
+            )
+
+        self._stored = False
+
+    def flush_cache(self, storage):
         """
-        Will remove all snapshots from all caches that a not stored at the time
-
-        This is mainly used to speed up things when it is clear that all the
-        snapshots so far used (in orderparameters) that have NOT been saved
-        will only be temporary. It does not break anything but if you want to
-        save ops for such a snapshot later you have to save the snapshot and then
-        call op(snapshot) to get it to storage.
-
-        E.g., When you run a bootstrapping then you create lots of samples and
-        compute their orderparameters without ever wanting to save these. The
-        problem is that theoretically you could and the storage keeps track of
-        all potential orderparameters that could be saved. Since the only way
-        to determine which of the cached values can be stored when sync is
-        called is to search all cached snapshots we want to avoid doing that
-        for snapshots where we know that these will not be saved. This
-        function does this, by removing all snapshots from the caches that
-        are not yet stored and thus removing the necessity to check them everytime
-        you want to sync. Thus the goal is to keep the storage cache small. At best
-        empty after each safe.
-        """
-
-        self.store_dict.flush_unstorable()
-        storable = {key: value for key, value in self.cache_dict.iteritems()
-                    if len(key.idx) > 0}
-        self.clear()
-        self.update(storable)
-
-    def sync(self, store=None, flush_storable=True):
-        """
-        Sync this orderparameter with attached storages
+        Copy the cache to the internal storage cache for saving
 
         Parameters
         ----------
-        store : OrderparameterStore or None
+        storage : Storage()
+            the storage for which the cache should be copied
+        """
+        if storage in self.store_dict.cod_stores:
+            stored = {
+                key : value for key, value in self.cache_dict
+                    if type(key) is tuple or storage in key.idx
+            }
+            self.store_dict.cod_stores[storage].post.update(stored)
+            self.store_dict.cod_stores[storage].update(stored)
+
+    def sync(self, storage):
+        """
+        Sync this collectivevariable with attached storages
+
+        Parameters
+        ----------
+        store : CollectiveVariableStore or None
             the store to be used, otherwise all underlying storages are synced
-        flush_storable : bool
-            if `False` the store will be synced and information about
-            data that could not be stored are kept in the caches so that they
-            can potentially (when the associated snapshots have been stored)
-            be synced later. This is safer in the sense that you will not loose
-            any computed result, but on the other hand might induce an overhead
-            since the list of not yet saved snapshot can be very large and needs
-            to be searched EVERYTIME the store is saved. If possible you should
-            use `True` (default) here and eventually recompute lost data (which
-            is done automatically).
+        store_cache : bool
+            if `False` (default) the store will only store new values. If
+            `True` also the cached values will be stored. This is much more
+            costly and is usually only run once, when the collectivevariable is
+            saved the first time
         """
         self.store_dict.update_nod_stores()
-        if store is None:
-            for storage in self.store_dict.cod_stores:
-                self.store_dict.cod_stores[storage].sync(flush_storable)
-        else:
-            if store.storage in self.store_dict.cod_stores:
-                self.store_dict.cod_stores[store.storage].sync(flush_storable)
-
-        storable = {key: value for key, value in self.cache_dict.iteritems()
-                    if type(key) is tuple or len(key.idx) > 0}
-
-        self.cache_dict.clear()
-        self.cache_dict.update(storable)
-
+        if storage in self.store_dict.cod_stores:
+            self.store_dict.cod_stores[storage].sync()
 
     def _pre_item(self, items):
         item_type = self.store_dict._basetype(items)
@@ -131,15 +111,15 @@ class OrderParameter(cod.CODWrap):
             if item_sub_type is paths.Snapshot:
                 return items
             else:
-                raise KeyError('the orderparameter is only compatible with ' +
+                raise KeyError('the collectivevariable is only compatible with ' +
                                'snapshots, trajectories or other iteratble of snapshots!')
                 return None
         else:
             return None
 
 
-@restores_as_stub_object
-class OP_RMSD_To_Lambda(OrderParameter):
+@ops_object
+class CV_RMSD_To_Lambda(CollectiveVariable):
     """
     Transforms the RMSD from `center` to a value between zero and one.
 
@@ -171,7 +151,7 @@ class OP_RMSD_To_Lambda(OrderParameter):
     """
 
     def __init__(self, name, center, lambda_min, max_lambda, atom_indices=None):
-        super(OP_RMSD_To_Lambda, self).__init__(name, dimensions=1)
+        super(CV_RMSD_To_Lambda, self).__init__(name, dimensions=1)
 
         self.atom_indices = atom_indices
         self.center = center
@@ -207,10 +187,10 @@ class OP_RMSD_To_Lambda(OrderParameter):
         return map(self._scale_fnc(self.min_lambda, self.max_lambda), results)
 
 
-@restores_as_stub_object
-class OP_Featurizer(OrderParameter):
+@ops_object
+class CV_Featurizer(CollectiveVariable):
     """
-    An OrderParameter that uses an MSMBuilder3 featurizer as the logic
+    An CollectiveVariable that uses an MSMBuilder3 featurizer as the logic
 
     Parameters
     ----------
@@ -232,7 +212,7 @@ class OP_Featurizer(OrderParameter):
     """
 
     def __init__(self, name, featurizer, atom_indices=None):
-        super(OP_Featurizer, self).__init__(name,
+        super(CV_Featurizer, self).__init__(name,
                                             dimensions=featurizer.n_features)
 
         self.atom_indices = atom_indices
@@ -252,9 +232,9 @@ class OP_Featurizer(OrderParameter):
         return result
 
 
-@restores_as_stub_object
-class OP_MD_Function(OrderParameter):
-    """Make `OrderParameter` from `fcn` that takes mdtraj.trajectory as input.
+@ops_object
+class CV_MD_Function(CollectiveVariable):
+    """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
 
     Examples
     -------
@@ -262,7 +242,7 @@ class OP_MD_Function(OrderParameter):
     >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
     >>> import mdtraj as md
     >>> psi_atoms = [7,9,15,17]
-    >>> psi_orderparam = OP_Function("psi", md.compute_dihedrals,
+    >>> psi_orderparam = CV_Function("psi", md.compute_dihedrals,
     >>>                              indices=[phi_atoms])
     >>> print psi_orderparam( traj.md() )
     """
@@ -278,7 +258,7 @@ class OP_MD_Function(OrderParameter):
             atoms which define a specific distance/angle)
 
         """
-        super(OP_MD_Function, self).__init__(name)
+        super(CV_MD_Function, self).__init__(name)
         self.fcn = fcn
         self.kwargs = kwargs
         self.topology = None
@@ -288,16 +268,16 @@ class OP_MD_Function(OrderParameter):
         trajectory = paths.Trajectory(items)
 
         if self.topology is None:
-            # first time ever compute the used topology for this orderparameter to construct the mdtraj objects
+            # first time ever compute the used topology for this collectivevariable to construct the mdtraj objects
             self.topology = trajectory.topology.md
 
         t = trajectory.md(self.topology)
         return self.fcn(t, *args, **self.kwargs)
 
 
-@restores_as_stub_object
-class OP_Volume(OrderParameter):
-    """ Make `Volume` into `OrderParameter`: maps to 0.0 or 1.0 """
+@ops_object
+class CV_Volume(CollectiveVariable):
+    """ Make `Volume` into `CollectiveVariable`: maps to 0.0 or 1.0 """
 
     def __init__(self, name, volume):
         """
@@ -306,7 +286,7 @@ class OP_Volume(OrderParameter):
 
         """
 
-        super(OP_Volume, self).__init__(name)
+        super(CV_Volume, self).__init__(name)
         self.volume = volume
 
     def _eval(self, items):
@@ -314,9 +294,9 @@ class OP_Volume(OrderParameter):
         return result
 
 
-@restores_as_stub_object
-class OP_Function(OrderParameter):
-    """Make any function `fcn` into an `OrderParameter`.
+@ops_object
+class CV_Function(CollectiveVariable):
+    """Make any function `fcn` into an `CollectiveVariable`.
 
     Examples
     -------
@@ -324,7 +304,7 @@ class OP_Function(OrderParameter):
     >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
     >>> import mdtraj as md
     >>> psi_atoms = [6,8,14,16]
-    >>> psi_orderparam = OP_Function("psi", md.compute_dihedrals,
+    >>> psi_orderparam = CV_Function("psi", md.compute_dihedrals,
     >>>                              trajdatafmt="mdtraj",
     >>>                              indices=[psi_atoms])
     >>> print psi_orderparam( traj.md() )
@@ -346,7 +326,7 @@ class OP_Function(OrderParameter):
             trick, and to instead create separate wrapper classes for each
             supported trajformat.
         """
-        super(OP_Function, self).__init__(name)
+        super(CV_Function, self).__init__(name)
         self._fcn = fcn
         self.kwargs = kwargs
         return

@@ -12,7 +12,7 @@ class HullVolume(Volume):
     ----------
     hull : Hull
         a hull object
-    orderparameter : orderparameter
+    collectivevariable : collectivevariable
         object that takes a system and return a point in the space within
         which the hull is defined
     '''
@@ -20,10 +20,10 @@ class HullVolume(Volume):
     # TODO: if we find ourselves looking for both Voronoi cells and Delaunay
     # simplices, one can be sped up by first doing the other
 
-    def __init__(self, hull, orderparameter):
+    def __init__(self, hull, collectivevariable):
         super(HullVolume, self).__init__()
         self.hull = hull
-        self.orderparameter = orderparameter
+        self.collectivevariable = collectivevariable
 
     def cell(self, snapshot):
         '''Returns the simplex number for the snapshot
@@ -38,7 +38,7 @@ class HullVolume(Volume):
         int
             the number of the simplex (in the order used in the hull)
         '''
-        return self.hull.find_simplex(self.orderparameter(snapshot))
+        return self.hull.find_simplex(self.collectivevariable(snapshot))
 
     def __call__(self, snapshot):
         '''

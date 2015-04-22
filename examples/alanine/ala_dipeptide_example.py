@@ -20,15 +20,15 @@ sys.path.append(os.path.abspath('../../'))
 
 # in principle, all of these imports should be simplified once this is a
 # package
-from openpathsampling.orderparameter import OP_Function, OP_Volume
+from openpathsampling.collectivevariable import CV_Function, CV_Volume
 from openpathsampling.openmm_engine import OpenMMEngine
 from openpathsampling.snapshot import Snapshot
 from openpathsampling.volume import LambdaVolumePeriodic, VolumeFactory as vf
 from openpathsampling.pathmover import PathMoverFactory as mf
 from openpathsampling.ensemble import EnsembleFactory as ef
-from openpathsampling.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
-                              InXEnsemble)
-from openpathsampling.calculation import Bootstrapping
+from openpathsampling.ensemble import (LengthEnsemble, SequentialEnsemble, AllOutXEnsemble,
+                              AllInXEnsemble)
+from openpathsampling.pathsimulator import Bootstrapping
 from openpathsampling.pathmover import PathMover
 from openpathsampling.shooting import UniformSelector
 from openpathsampling.sample import Sample, SampleSet
@@ -79,16 +79,16 @@ if __name__=="__main__":
     # mdtraj's compute_dihedrals function, with the atoms in psi_atoms
 
     psi_atoms = [6,8,14,16]
-    psi = OP_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
+    psi = CV_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
                       indices=[psi_atoms])
 
     # same story for phi, although we won't use that
 
     phi_atoms = [4,6,8,14]
-    phi = OP_Function("phi", md.compute_dihedrals, trajdatafmt="mdtraj",
+    phi = CV_Function("phi", md.compute_dihedrals, trajdatafmt="mdtraj",
                       indices=[phi_atoms])
 
-    # save the orderparameters in the storage
+    # save the collectivevariables in the storage
     # since they have no data cache this will only contain their name
     psi.save(storage=engine.storage.collectivevariable)
     phi.save(storage=engine.storage.collectivevariable)
@@ -122,18 +122,18 @@ for the innermost interface.
 We do this by using a special sequential ensemble for the sequence.
 This path ensemble is particularly complex because we want to be sure that
 the path we generate is in the ensemble we desire: this means that we can't
-use LeaveXEnsemble as we typically do with TIS paths.
+use PartOutXEnsemble as we typically do with TIS paths.
     """
     snapshot = engine.storage.snapshot.load(0)
 
     first_traj_ensemble = SequentialEnsemble([
-        OutXEnsemble(stateA) | LengthEnsemble(0),
-        InXEnsemble(stateA),
-        (OutXEnsemble(stateA) & InXEnsemble(interface0)) | LengthEnsemble(0),
-        InXEnsemble(interface0) | LengthEnsemble(0),
-        OutXEnsemble(interface0),
-        OutXEnsemble(stateA) | LengthEnsemble(0),
-        InXEnsemble(stateA) & LengthEnsemble(1)
+        AllOutXEnsemble(stateA) | LengthEnsemble(0),
+        AllInXEnsemble(stateA),
+        (AllOutXEnsemble(stateA) & AllInXEnsemble(interface0)) | LengthEnsemble(0),
+        AllInXEnsemble(interface0) | LengthEnsemble(0),
+        AllOutXEnsemble(interface0),
+        AllOutXEnsemble(stateA) | LengthEnsemble(0),
+        AllInXEnsemble(stateA) & LengthEnsemble(1)
     ])
 
     interface0_ensemble = interface_set[0]
@@ -177,7 +177,7 @@ use LeaveXEnsemble as we typically do with TIS paths.
     print """
 Starting the bootstrapping procedure to obtain initial paths. First we
 define our shooting movers (randomly pick fwd or bkwd shooting), then build
-the bootstrapping calculation, then we run it. 
+the bootstrapping pathsimulator, then we run it.
     """
     bootstrap = Bootstrapping(storage=engine.storage,
                               engine=engine,
@@ -189,25 +189,25 @@ the bootstrapping calculation, then we run it.
     bootstrap.run(50)
 
     print """
-    Saving all cached computations of orderparameters.
+    Saving all cached computations of collectivevariables.
     """
 
     engine.storage.collectivevariable.sync(psi)
     engine.storage.collectivevariable.sync(phi)
 
-    # Save all interface volumes as orderparameters
-    op_vol_set = [OP_Volume('OP' + str(idx), vol) for idx, vol in enumerate(volume_set)]
+    # Save all interface volumes as collectivevariables
+    op_vol_set = [CV_Volume('OP' + str(idx), vol) for idx, vol in enumerate(volume_set)]
 
     for op in op_vol_set:
         op(engine.storage.snapshot.all())
         engine.storage.collectivevariable.save(op)
 
-    # Create an orderparameter from a volume
-    op_inA = OP_Volume('StateA', stateA)
-    op_inB = OP_Volume('StateB', stateB)
-    op_notinAorB = OP_Volume('StateX', ~ (stateA | stateB))
+    # Create an collectivevariable from a volume
+    op_inA = CV_Volume('StateA', stateA)
+    op_inB = CV_Volume('StateB', stateB)
+    op_notinAorB = CV_Volume('StateX', ~ (stateA | stateB))
 
-    # compute the orderparameter for all snapshots
+    # compute the collectivevariable for all snapshots
     op_inA(engine.storage.snapshot.all())
     op_inB(engine.storage.snapshot.all())
     op_notinAorB(engine.storage.snapshot.all())

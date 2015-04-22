@@ -91,7 +91,7 @@ class Trajectory(list):
 
         # Make sure snapshots are stored and have an index and then add the snapshot index to the trajectory
 
-        n_frames = self.frames     
+        n_frames = len(self)
         n_atoms = self.n_atoms
         n_spatial = self.spatial
             
@@ -106,7 +106,7 @@ class Trajectory(list):
         return output
     
     @property
-    def frames(self):
+    def n_snapshots(self):
         """
         Return the number of frames in the trajectory.
         
@@ -116,11 +116,33 @@ class Trajectory(list):
 
         Notes
         -----
-        Might be removed in later versions len(trajectory) is more intuitive
-        
+        Might be removed in later versions for len(trajectory) is more pythonic
+
+        See also
+        --------
+        n_frames, len
+
         """
 
         return len(self)
+
+    @property
+    def n_frames(self):
+        """
+        Return the number of frames in the trajectory.
+
+        Returns
+        -------
+        length (int) - the number of frames in the trajectory
+
+        See also
+        --------
+        n_snapshots, len
+
+        """
+
+        return len(self)
+
 
     def configurations(self):
         """
@@ -425,7 +447,7 @@ class Trajectory(list):
         trajectory = Trajectory()
         empty_momentum = paths.Momentum()
         empty_momentum.velocities = None
-        for frame_num in range(mdtrajectory.n_frames):
+        for frame_num in range(len(mdtrajectory)):
             # mdtraj trajectories only have coordinates and box_vectors
             coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
             if mdtrajectory.unitcell_vectors is not None:
