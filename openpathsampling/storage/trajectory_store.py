@@ -63,7 +63,7 @@ class TrajectoryStore(ObjectStore):
         values = self.list_to_numpy(values, 'index')
         self.storage.variables['trajectory_snapshot_idx'][idx] = values
 
-        self.storage.sync()
+#        self.storage.sync()
 
     def snapshot_indices(self, idx):
         '''

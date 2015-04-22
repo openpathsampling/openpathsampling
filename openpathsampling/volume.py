@@ -9,6 +9,15 @@ from openpathsampling.todict import ops_object
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
+def join_volumes(volume_list):
+    volume = None
+    for vol in volume_list:
+        if volume is None:
+            volume = vol
+        else:
+            volume = volume | vol
+    return volume
+
 @ops_object
 class Volume(object):
     """
