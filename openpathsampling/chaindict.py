@@ -44,6 +44,8 @@ class ChainDict(dict):
     def __getitem__(self, items):
         results = self._get_list(items)
 
+        # print 'Res', self.__class__.__name__, results
+
         if self.post is not None:
             nones = [obj[0] for obj in zip(items, results) if obj[1] is None]
             if len(nones) == 0:
@@ -291,12 +293,12 @@ class Store(ChainDict):
             return None
 
         if type(item) is tuple:
-            if item[0].content_class is self.store.key_class:
+            if item[0] is self.store:
                 return item[1]
             else:
-                return None
+                item = item[0][item[1]]
 
-        elif self.storage in item.idx:
+        if self.storage in item.idx:
             return item.idx[self.storage]
 
         return None
@@ -404,6 +406,7 @@ class MultiStore(Store):
             self.cod_stores[s]._add_new(items, values)
 
     def _get(self, item):
+        print 'Should not appear'
         if len(self.storages) != len(self.cod_stores):
             self.update_nod_stores()
 
@@ -429,10 +432,10 @@ class MultiStore(Store):
         if len(self.storages) != len(self.cod_stores):
             self.update_nod_stores()
 
-        output = [None] * len(items)
+
 
         if len(self.cod_stores) == 0:
-            return output
+            return [None] * len(items)
 
         results_list = dict()
         for s in self.cod_stores:
@@ -444,8 +447,10 @@ class MultiStore(Store):
                 output = results
                 first = False
             else:
-                output = [None if item is None or result is None else output
+                output = [None if item is None or result is None else item
                      for item, result in zip(output, results) ]
+
+#        print output
 
         return output
 

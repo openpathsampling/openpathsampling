@@ -112,8 +112,9 @@ class CollectiveVariable(cd.Wrap):
                 return [list.__getitem__(items, 0)]
             else:
                 return list(list.__iter__(items))
+        elif hasattr(items, '__iter__'):
+            return list(items)
         else:
-            print item_type
             return items
 
 
