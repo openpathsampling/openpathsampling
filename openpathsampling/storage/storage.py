@@ -216,6 +216,8 @@ class Storage(netcdf.Dataset):
 
             self.topology = self.simplifier.from_json(self.variables['topology'][0])
 
+        self.sync()
+
     def __repr__(self):
         return "Storage @ '" + self.filename + "'"
 
