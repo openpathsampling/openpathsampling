@@ -631,7 +631,7 @@ class ObjectStore(object):
         if name not in self.storage.dimensions:
             self.storage.createDimension(name, length)
 
-        self.storage.sync()
+#        self.storage.sync()
 
     def init_variable(self, name, var_type, dimensions = None, units=None,
                       description=None, variable_length=False, chunksizes=None):
@@ -727,7 +727,7 @@ class ObjectStore(object):
             # Define long (human-readable) names for variables.
             setattr(ncvar,    "long_str", description)
 
-        self.storage.sync()
+#        self.storage.sync()
 
 #==============================================================================
 # LOAD / SAVE UTILITY FUNCTIONS

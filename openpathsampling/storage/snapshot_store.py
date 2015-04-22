@@ -236,7 +236,7 @@ class MomentumStore(ObjectStore):
             print 'Think about how to handle this. It should only be None if loaded lazy and in this case it will never be saved.'
 
         # Force sync to disk to avoid data loss.
-        storage.sync()
+        # storage.sync()
 
     def load(self, idx):
         '''
@@ -402,7 +402,7 @@ class ConfigurationStore(ObjectStore):
         # log that topologies were different
 
         # Force sync to disk to avoid data loss.
-        storage.sync()
+        # storage.sync()
 
 
     def get(self, indices):
