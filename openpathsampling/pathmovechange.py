@@ -133,7 +133,7 @@ class PathMoveChange(object):
                 if type(subvalues) is not list:
                     subvalues = [subvalues]
 
-                for sub in subvalues:
+                for sub in zip(subvalues[0::2], subvalues[1::2]):
                     if left >= len(self.subchanges):
                         # no more subchanges to match
                         return False
@@ -157,7 +157,7 @@ class PathMoveChange(object):
                         else:
                             idx = submovers.index(sub[0])
                             left = idx + 1
-                            if not [sub.keys()[0] [sub[1]]] in self.subchanges[idx]:
+                            if not [sub[0], [sub[1]]] in self.subchanges[idx]:
                                 #print 'try', {sub.keys()[0] : sub.values()[0]}
                                 return False
 
@@ -228,14 +228,18 @@ class PathMoveChange(object):
         return {self.mover : [ ch.movetree() for ch in self.subchanges] }
 
     def keytree(self, movepath=None):
+
         if movepath is None:
             movepath = [self.mover]
+
         result = list()
         result.append( ( movepath, self ) )
         mp = []
         for sub in self.subchanges:
-            result.extend([ ( movepath + [mp + m[0]], m[1] ) for m in sub.keytree() ])
-            mp.append(sub.mover)
+            subtree = sub.keytree()
+            result.extend([ ( movepath + [mp + m[0]], m[1] ) for m in subtree ])
+#            print subtree[-1][0]
+            mp = mp + subtree[-1][0]
 
 
         return result
@@ -541,13 +545,13 @@ class PathMoveChange(object):
     def __call__(self, other):
         return self.apply_to(other)
 
-    def get(self, key):
+    def getkey(self, key):
         if self.mover is key[0]:
             subid = 0
             ret = self
             if len(key) > 1:
-                for submove in key[1]:
-                    if submove is not None:
+                for submove in zip(key[1][0::2], key[1][1::2]):
+                    if submove[0] is not None:
                         subres = self.subchanges[subid]
                         if subres is not None:
                             ret = subres
