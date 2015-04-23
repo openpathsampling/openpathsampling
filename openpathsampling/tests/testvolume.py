@@ -186,7 +186,7 @@ class testLambdaVolumePeriodic(object):
         vol = volume.LambdaVolumePeriodic(op_id,
                                           lambda_min, lambda_max)
         assert_equal(vol.__str__(),
-            "{x|Id(x) [periodic] in [-150, 70]}")
+            "{x|Id(x) [periodic] in [-150.0, 70.0]}")
         # out of state
         assert_equal(False, vol(lambda_min-1.0))
         assert_equal(False, vol(lambda_max+1.0))
