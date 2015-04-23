@@ -353,7 +353,70 @@ class Trajectory(list):
 
         return log_q
 
-    
+    #=============================================================================================
+    # ANALYSIS FUNCTIONS
+    #=============================================================================================
+
+    def correlation(self, other):
+        """
+        Checks if two trajectories share a common snapshot
+
+        Parameters
+        ----------
+        other : Trajectory()
+            the second trajectory to check for common snapshots
+
+        Returns
+        -------
+        bool
+            returns True if at least one snapshot appears in both trajectories
+        """
+
+        if hasattr(self, 'idx') and hasattr(other, 'idx'):
+            shared_store = set(self.idx.keys()) & set(other.idx.keys())
+            # both are saved so use the snapshot idx as identifiers
+            if len(shared_store) > 0:
+                storage = list(shared_store)[0]
+                t1id = storage.trajectories.snapshot_indices(self.idx[storage])
+                t2id = storage.trajectories.snapshot_indices(other.idx[storage])
+                return bool(set(t1id) & set(t2id))
+
+        # Use some fallback
+        return bool(self.shared_snapshots(other))
+
+    def shared_snapshots(self, other):
+        """
+        Returns a set of shared snapshots
+
+        Parameters
+        ----------
+        other : Trajectory()
+            the second trajectory to use
+
+        Returns
+        -------
+        set of Snapshot()
+            the set of common snapshots
+        """
+        return set(list(self)) & set(list(other))
+
+    def shared_subtrajectory(self, other):
+        """
+        Returns a subtrajectory which only contains frames present in other
+
+        Parameters
+        ----------
+        other : Trajectory()
+            the second trajectory to use
+
+        Returns
+        -------
+        Trajectory
+            the shared subtrajectory
+        """
+        shared = self.shared_snapshots(other)
+        return Trajectory([ snap for snap in self if snap in shared])
+
     #=============================================================================================
     # UTILITY FUNCTIONS
     #=============================================================================================
