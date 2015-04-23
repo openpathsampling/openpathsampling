@@ -1209,10 +1209,14 @@ class PathMoverFactory(object):
     def OneWayShootingSet(selector_set, interface_set):
         if type(selector_set) is not list:
             selector_set = [selector_set]*len(interface_set)
-        mover_set = [
-            OneWayShootingMover(selector=selector, ensembles=[iface])
-            for (selector, iface) in zip(selector_set, interface_set)
-        ]
+
+        mover_set = []
+        for (selector, iface) in zip(selector_set, interface_set):
+            mover = OneWayShootingMover(selector=selector,
+                                        ensembles=[iface])
+            mover.name = "OneWayShootingMover " + str(iface.name)
+            mover_set.append(mover)
+
         return mover_set
 
     @staticmethod

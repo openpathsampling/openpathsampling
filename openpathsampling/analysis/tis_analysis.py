@@ -121,7 +121,7 @@ class Transition(object):
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, indentation):
-        line = ("* "*indentation + move_name + 
+        line = ("* "*indentation + str(move_name) + 
                 " ran " + str(float(n_trials)/n_total_trials*100) + 
                 "% of the cycles with acceptance " + str(n_accepted) + "/" + 
                 str(n_trials) + " (" + str(float(n_accepted) / n_trials) + 
@@ -165,17 +165,20 @@ class Transition(object):
         my_movers = { }
         if movers is None:
             movers = self.movers.keys()
-        try:
-            my_movers[key] = self.movers[key]
-        except KeyError:
-            my_movers = movers
+        if type(movers) is str:
+            movers = self.movers[movers]
+        for key in movers:
+            try:
+                my_movers[key] = self.movers[key]
+            except KeyError:
+                my_movers[key] = [key]
 
         stats = { } 
         for groupname in my_movers.keys():
-            stats[group] = [0, 0]
+            stats[groupname] = [0, 0]
 
         if self._mover_acceptance == { }:
-            self.movers(storage)
+            self.move_acceptance(storage)
         
         tot_trials = len(storage.pathmovechanges)
         for groupname in my_movers.keys():
