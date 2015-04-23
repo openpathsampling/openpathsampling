@@ -288,8 +288,8 @@ class testReplicaExchangeMover(object):
 
         new_sset = old_sset.apply_samples(samples)
 
-        assert_equal(new_sset[1].trajectory, old_sset[2].trajectory)
-        assert_equal(new_sset[2].trajectory, old_sset[1].trajectory)
+        assert_equal(new_sset[1].trajectory, old_sset[1].trajectory)
+        assert_equal(new_sset[2].trajectory, old_sset[2].trajectory)
 
         B2 = [s for s in samples if s.ensemble==self.tisB]
         assert_equal(len(B2), 1)
