@@ -402,13 +402,72 @@ class PathTreeBuilder(object):
         if clear:
             self.renderer.clear()
 
-        t_count = 0
+        t_count = 1
         shift = 0
 
         lightcolor = "gray"
 
+        first = True
+
         for sample in samples:
-            if hasattr(sample.details, 'start_point'):
+            if first is True:
+                first = False
+                for pos, snapshot in enumerate(sample.trajectory):
+                    conf = snapshot
+                    p_x[conf] = pos
+                    p_y[conf] = t_count
+
+                    pos_x = p_x[conf]
+                    pos_y = p_y[conf]
+                    if self.op is not None:
+                        self.renderer.add(self.renderer.block(pos_x, pos_y, "black", self.op(snapshot)))
+                    else:
+                        self.renderer.add(self.renderer.block(pos_x, pos_y, "black", ""))
+
+                self.renderer.add(
+                    self.renderer.label(0, t_count, 1, str(self.storage.idx(sample.trajectory)) + 'b', align='end',color='black')
+                )
+
+            elif type(sample.mover) is paths.ReplicaExchangeMover:
+                # Reversal
+                print 'REPEX'
+                # for pos, snapshot in enumerate(sample.trajectory):
+                #     conf = snapshot
+                #     p_x[conf] = pos
+                #     p_y[conf] = t_count
+                #
+                #     pos_x = p_x[conf]
+                #     pos_y = p_y[conf]
+                #     if self.op is not None:
+                #         self.renderer.add(self.renderer.block(pos_x, pos_y, "blue", self.op(snapshot)))
+                #     else:
+                #         self.renderer.add(self.renderer.block(pos_x, pos_y, "blue", ""))
+
+                self.renderer.add(
+                    self.renderer.label(0, t_count, 1, str(self.storage.idx(sample.trajectory)) + 'b', align='end',color='black')
+                )
+
+            elif type(sample.mover) is paths.PathReversalMover:
+                # Reversal
+                print 'REVERSAL'
+                for pos, snapshot in enumerate(sample.trajectory):
+                    conf = snapshot
+                    p_x[conf] = pos
+                    p_y[conf] = t_count
+
+                    pos_x = p_x[conf]
+                    pos_y = p_y[conf]
+                    if self.op is not None:
+                        self.renderer.add(self.renderer.block(pos_x, pos_y, "orange", self.op(snapshot)))
+                    else:
+                        self.renderer.add(self.renderer.block(pos_x, pos_y, "orange", ""))
+
+                self.renderer.add(
+                    self.renderer.label(0, t_count, 1, str(self.storage.idx(sample.trajectory)) + 'b', align='end',color='black')
+                )
+
+            elif hasattr(sample.details, 'start_point'):
+                # ShootingMove
                 old_traj = sample.details.start_point.trajectory
                 old_index = sample.details.start_point.index
                 old_conf = old_traj[old_index]
@@ -420,27 +479,12 @@ class PathTreeBuilder(object):
                 accepted = sample.accepted
 
                 if sample.trajectory is new_traj or self.rejected:
-                    t_count += 1
-                    if not old_conf in p_x:
-                        for pos, snapshot in enumerate(old_traj):
-                            conf = snapshot
-                            p_x[conf] = pos
-                            p_y[conf] = t_count
 
-                            pos_x = p_x[conf]
-                            pos_y = p_y[conf]
-                            if self.op is not None:
-                                self.renderer.add(self.renderer.block(pos_x, pos_y, "black", self.op(snapshot)))
-                            else:
-                                self.renderer.add(self.renderer.block(pos_x, pos_y, "black", ""))
-
-                        self.renderer.add(
-                            self.renderer.label(0, t_count, 1, str(self.storage.idx(new_traj)) + 'b', align='end',color='black')
-                        )
-
-                        t_count += 1
-
-                    shift = p_x[old_conf] - new_index
+                    if old_conf not in p_x:
+                        print 'Non old', oldsample.mover
+                        shift = 0
+                    else:
+                        shift = p_x[old_conf] - new_index
 
 
                     fontcolor = "black"
@@ -457,7 +501,7 @@ class PathTreeBuilder(object):
                             color = lightcolor
                             fontcolor = lightcolor
                         self.renderer.add(
-                            self.renderer.v_connection(shift + new_index, p_y[old_conf], t_count, color)
+                            self.renderer.v_connection(shift + new_index + 1, p_y[old_conf], t_count, color)
                         )
                         self.renderer.add(
                             self.renderer.label(shift, t_count, 1, str(self.storage.idx(new_traj)) + 'b', align='end',color=fontcolor)
@@ -469,7 +513,7 @@ class PathTreeBuilder(object):
                             color = lightcolor
                             fontcolor = lightcolor
                         self.renderer.add(
-                            self.renderer.v_connection(shift + new_index + 1, p_y[old_conf], t_count, color)
+                            self.renderer.v_connection(shift + new_index, p_y[old_conf], t_count, color)
                         )
                         self.renderer.add(
                             self.renderer.label(shift + len(new_traj) - 1, t_count, 1, str(self.storage.idx(new_traj)) + 'f', align='start',color=fontcolor)
@@ -492,6 +536,10 @@ class PathTreeBuilder(object):
                                     self.renderer.add(self.renderer.block(pos_x, pos_y, color, self.op(snapshot)))
                                 else:
                                     self.renderer.add(self.renderer.block(pos_x, pos_y, color, ""))
+
+            oldsample = sample
+            t_count += 1
+
 
         self.p_x = p_x
         self.p_y = p_y

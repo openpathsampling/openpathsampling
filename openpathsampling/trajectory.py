@@ -224,6 +224,41 @@ class Trajectory(list):
 
         return ret
 
+    def __reversed__(self):(this):
+        """
+        Return an iterator over all snapshots in the storage
+
+        Parameters
+        ----------
+        iter_range : slice or None
+            if this is not `None` it confines the iterator to objects specified
+            in the slice
+
+        Returns
+        -------
+        Iterator()
+            The iterator that iterates the objects in the store
+
+        """
+        class ObjectIterator:
+            def __init__(self):
+                self.trajectory = this
+                self.idx = 0
+                self.length = len(this)
+
+            def __iter__(self):
+                return self
+
+            def next(self):
+                if self.idx < self.length:
+                    obj = self.trajectory[self.idx]
+                    self.idx += 1
+                    return obj
+                else:
+                    raise StopIteration()
+
+        return ObjectIterator()
+
     def __iter__(this):
         """
         Return an iterator over all snapshots in the storage
