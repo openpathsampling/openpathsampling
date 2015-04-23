@@ -771,12 +771,10 @@ class EnsembleHopMover(PathMover):
         setattr(details, 'initial_ensemble', ens_from)
         setattr(details, 'trial_ensemble', ens_to)
 
-        if valid == True:
+        if valid:
             setattr(details, 'result_ensemble', ens_to)
         else:
             setattr(details, 'result_ensemble', ens_from)
-
-
 
         path = paths.SamplePathMoveChange(
             [trial],
@@ -1015,7 +1013,7 @@ class ReplicaExchangeMover(PathMover):
         accepted = from1to2 and from2to1
 
         trial1 = paths.Sample(
-            replica=replica2,
+            replica=replica1,
             trajectory=trajectory1,
             ensemble=ensemble2,
             valid=from1to2,
@@ -1025,7 +1023,7 @@ class ReplicaExchangeMover(PathMover):
             mover=self
         )
         trial2 = paths.Sample(
-            replica=replica1,
+            replica=replica2,
             trajectory=trajectory2,
             ensemble=ensemble1,
             valid=from2to1,
