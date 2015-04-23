@@ -117,6 +117,10 @@ class PathMoveChange(object):
 
         return self._len
 
+    def key(self, change):
+        tree = self.keytree()
+        return [leave for leave in tree if leave[1] is change ][0][0]
+
     def _check_head_node(self, item):
         if isinstance(item.keys()[0], paths.PathMover):
             # a subtree of pathmovers
@@ -220,6 +224,18 @@ class PathMoveChange(object):
 
     def movetree(self):
         return {self.mover : [ ch.movetree() for ch in self.subchanges] }
+
+    def keytree(self, movepath=None):
+        if movepath is None:
+            movepath = [self.mover]
+        result = list()
+        result.append( ( movepath, self ) )
+        mp = []
+        for sub in self.subchanges:
+            mp.append(sub.mover)
+            result.extend(sub.keytree(movepath +  [mp]))
+
+        return result
 
     def map_tree(self, fnc, **kwargs):
         """
