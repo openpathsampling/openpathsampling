@@ -1458,3 +1458,24 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         ]
         self._test_everything(self.minus_nl3.can_prepend, non_default, True)
 
+# TODO: this whole class should become a single test in SeqEns
+class testSingleEnsembleSequentialEnsemble(EnsembleTest):
+    def setUp(self):
+        #self.inner_ens = AllInXEnsemble(vol1 | vol2)
+        self.inner_ens = LengthEnsemble(3) & AllInXEnsemble( vol1 | vol2 )
+        self.ens = SequentialEnsemble([self.inner_ens])
+
+    def test_it_all(self):
+        for test in ttraj.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.ens, ttraj[test],
+                              self.inner_ens(ttraj[test]), failmsg)
+            self._single_test(self.ens.can_append, ttraj[test],
+                              self.inner_ens.can_append(ttraj[test]), failmsg)
+            self._single_test(self.ens.can_prepend, ttraj[test],
+                              self.inner_ens.can_prepend(ttraj[test]), failmsg)
+            
+
+
+
+
