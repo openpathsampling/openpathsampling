@@ -121,15 +121,15 @@ class PathMoveChange(object):
         tree = self.keytree()
         return [leave for leave in tree if leave[1] is change ][0][0]
 
-    def _check_head_node(self, item):
-        if isinstance(item.keys()[0], paths.PathMover):
+    def _check_head_node(self, items):
+        if isinstance(items[0], paths.PathMover):
             # a subtree of pathmovers
-            if self.mover is item.keys()[0]:
+            if self.mover is items[0]:
                 #print 'found head'
                 # found current head node, check, if children match in order
                 left = 0
                 submovers = [ch.mover for ch in self.subchanges]
-                subvalues = item.values()[0]
+                subvalues = items[1]
                 if type(subvalues) is not list:
                     subvalues = [subvalues]
 
@@ -141,9 +141,9 @@ class PathMoveChange(object):
                         # None is a placeholder so move token +1
                         left = left + 1
                     if type(sub) is dict:
-                        if sub.keys()[0] is None:
+                        if sub[0] is None:
                             while left < len(self.subchanges):
-                                if not {self.subchanges[left].mover : sub.values()[0]} in self.subchanges[left]:
+                                if not [self.subchanges[left].mover, [sub[1]]] in self.subchanges[left]:
                                     left = left + 1
                                 else:
                                     left = left + 1
@@ -151,13 +151,13 @@ class PathMoveChange(object):
 
                             if left == len(self.subchanges):
                                 return False
-                        elif sub.keys()[0] not in submovers[left:]:
+                        elif sub[0] not in submovers[left:]:
                             #print 'missing sub', sub.keys()[0], 'in', submovers[left:]
                             return False
                         else:
-                            idx = submovers.index(sub.keys()[0])
+                            idx = submovers.index(sub[0])
                             left = idx + 1
-                            if not {sub.keys()[0] : sub.values()[0]} in self.subchanges[idx]:
+                            if not [sub.keys()[0] [sub[1]]] in self.subchanges[idx]:
                                 #print 'try', {sub.keys()[0] : sub.values()[0]}
                                 return False
 
@@ -169,7 +169,7 @@ class PathMoveChange(object):
 
                 return True
 
-        elif item.keys()[0] is None or len(item) == 0:
+        elif items[0] is None or len(items) == 0:
             # means empty tree and since nothing is in every tree return true
             return True
 
@@ -205,14 +205,16 @@ class PathMoveChange(object):
             return item in self.map_post_order(lambda x : x.mover)
         elif isinstance(item, paths.PathMoveChange):
             return item in iter(self)
-        elif type(item) is dict:
+        elif type(item) is list:
             if self._check_head_node(item):
                 return True
 
+            # Disable checking for submoves for now
+
             # the head node did not fit so continue trying subnodes
-            for sub in self.subchanges:
-                if item in sub:
-                    return True
+#            for sub in self.subchanges:
+#                if item in sub:
+#                    return True
 
             return False
 
@@ -232,8 +234,9 @@ class PathMoveChange(object):
         result.append( ( movepath, self ) )
         mp = []
         for sub in self.subchanges:
+            result.extend([ ( movepath + [mp + m[0]], m[1] ) for m in sub.keytree() ])
             mp.append(sub.mover)
-            result.extend(sub.keytree(movepath +  [mp]))
+
 
         return result
 
@@ -537,6 +540,22 @@ class PathMoveChange(object):
 
     def __call__(self, other):
         return self.apply_to(other)
+
+    def get(self, key):
+        if self.mover is key[0]:
+            subid = 0
+            ret = self
+            if len(key) > 1:
+                for submove in key[1]:
+                    if submove is not None:
+                        subres = self.subchanges[subid]
+                        if subres is not None:
+                            ret = subres
+                        else:
+                            return None
+            return ret
+        else:
+            return None
 
     @property
     def samples(self):
