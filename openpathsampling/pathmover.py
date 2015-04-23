@@ -762,7 +762,8 @@ class EnsembleHopMover(PathMover):
             valid=valid,
             accepted=valid,
             details=sample_details,
-            mover=self
+            mover=self,
+            parent=rep_sample
         )
 
         details = MoveDetails()
@@ -816,7 +817,8 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
             ensemble=ens_to,
             replica=replica,
             details=sample_details,
-            mover=self
+            mover=self,
+            parent=rep_sample
         )
 
         details = MoveDetails()
@@ -953,7 +955,8 @@ class PathReversalMover(PathMover):
             valid=valid,
             accepted=valid,
             details=sample_details,
-            mover=self
+            mover=self,
+            parent=rep_sample
         )
 
         details = MoveDetails()
