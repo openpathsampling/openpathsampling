@@ -220,8 +220,8 @@ class LambdaVolume(Volume):
         '''
         super(LambdaVolume, self).__init__()
         self.collectivevariable = collectivevariable
-        self.lambda_min = lambda_min
-        self.lambda_max = lambda_max
+        self.lambda_min = float(lambda_min)
+        self.lambda_max = float(lambda_max)
         
     # Typically, the logical combinations are only done once. Because of
     # this, it is worth passing these through a check to speed up the logic.

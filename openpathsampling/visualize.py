@@ -430,7 +430,7 @@ class PathTreeBuilder(object):
 
             elif type(sample.mover) is paths.ReplicaExchangeMover:
                 # Reversal
-                print 'REPEX'
+                #print 'REPEX'
                 # for pos, snapshot in enumerate(sample.trajectory):
                 #     conf = snapshot
                 #     p_x[conf] = pos
@@ -443,16 +443,16 @@ class PathTreeBuilder(object):
                 #     else:
                 #         self.renderer.add(self.renderer.block(pos_x, pos_y, "blue", ""))
 
-                self.renderer.add(
-                    self.renderer.label(0, t_count, 1, str(self.storage.idx(sample.trajectory)) + 'b', align='end',color='black')
-                )
+                #self.renderer.add(
+                #    self.renderer.label(0, t_count, 1, 'RX', align='end',color='black')
+                #)
+                t_count -= 1
 
             elif type(sample.mover) is paths.PathReversalMover:
                 # Reversal
-                print 'REVERSAL'
                 for pos, snapshot in enumerate(sample.trajectory):
                     conf = snapshot
-                    p_x[conf] = pos
+                    p_x[conf] = pos + shift
                     p_y[conf] = t_count
 
                     pos_x = p_x[conf]
@@ -463,7 +463,7 @@ class PathTreeBuilder(object):
                         self.renderer.add(self.renderer.block(pos_x, pos_y, "orange", ""))
 
                 self.renderer.add(
-                    self.renderer.label(0, t_count, 1, str(self.storage.idx(sample.trajectory)) + 'b', align='end',color='black')
+                    self.renderer.label(shift, t_count, 1, str(self.storage.idx(sample.trajectory)) + 'r', align='end',color='black')
                 )
 
             elif hasattr(sample.details, 'start_point'):

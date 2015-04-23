@@ -224,7 +224,7 @@ class Trajectory(list):
 
         return ret
 
-    def __reversed__(self):(this):
+    def __reversed__(this):
         """
         Return an iterator over all snapshots in the storage
 
@@ -243,16 +243,15 @@ class Trajectory(list):
         class ObjectIterator:
             def __init__(self):
                 self.trajectory = this
-                self.idx = 0
-                self.length = len(this)
+                self.idx = len(this)
 
             def __iter__(self):
                 return self
 
             def next(self):
-                if self.idx < self.length:
+                if self.idx > 0:
+                    self.idx -= 1
                     obj = self.trajectory[self.idx]
-                    self.idx += 1
                     return obj
                 else:
                     raise StopIteration()
