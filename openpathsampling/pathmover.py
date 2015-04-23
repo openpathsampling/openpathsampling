@@ -770,12 +770,10 @@ class EnsembleHopMover(PathMover):
         setattr(details, 'initial_ensemble', ens_from)
         setattr(details, 'trial_ensemble', ens_to)
 
-        if valid == True:
+        if valid:
             setattr(details, 'result_ensemble', ens_to)
         else:
             setattr(details, 'result_ensemble', ens_from)
-
-
 
         path = paths.SamplePathMoveChange(
             [trial],
