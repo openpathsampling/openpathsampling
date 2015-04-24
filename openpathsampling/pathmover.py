@@ -237,6 +237,13 @@ class PathMover(object):
         '''
         return 1.0 # pragma: no cover
 
+    def __str__(self):
+        if self.name == self.__class__.__name__:
+            return self.__repr__()
+        else:
+            return self.name
+
+
 @ops_object
 class CollapseMove(PathMover):
     def __init__(self, inner_mover):

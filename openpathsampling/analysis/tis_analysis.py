@@ -476,6 +476,11 @@ class TISTransition(Transition):
                 n_try += 1
         ctp = float(n_acc)/n_try
         logger.info("CTP: " + str(n_acc) + "/" + str(n_try) + "=" + str(ctp) + "\n")
+        try:
+            self.ctp[ensemble] = ctp
+        except AttributeError:
+            self.ctp = { ensemble : ctp }
+
         return ctp
 
     def rate(self, flux=None, flux_error=None, force=False):
