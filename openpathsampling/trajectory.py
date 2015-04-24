@@ -392,7 +392,7 @@ class Trajectory(list):
     # ANALYSIS FUNCTIONS
     #=============================================================================================
 
-    def correlation(self, other):
+    def is_correlated(self, other):
         """
         Checks if two trajectories share a common snapshot
 
@@ -407,19 +407,19 @@ class Trajectory(list):
             returns True if at least one snapshot appears in both trajectories
         """
 
-        if hasattr(self, 'idx') and hasattr(other, 'idx'):
-            shared_store = set(self.idx.keys()) & set(other.idx.keys())
-            # both are saved so use the snapshot idx as identifiers
-            if len(shared_store) > 0:
-                storage = list(shared_store)[0]
-                t1id = storage.trajectories.snapshot_indices(self.idx[storage])
-                t2id = storage.trajectories.snapshot_indices(other.idx[storage])
-                return bool(set(t1id) & set(t2id))
+        # if hasattr(self, 'idx') and hasattr(other, 'idx'):
+        #     shared_store = set(self.idx.keys()) & set(other.idx.keys())
+        #     # both are saved so use the snapshot idx as identifiers
+        #     if len(shared_store) > 0:
+        #         storage = list(shared_store)[0]
+        #         t1id = storage.trajectories.snapshot_indices(self.idx[storage])
+        #         t2id = storage.trajectories.snapshot_indices(other.idx[storage])
+        #         return bool(set(t1id) & set(t2id))
 
         # Use some fallback
-        return bool(self.shared_snapshots(other))
+        return bool(self.shared_configurations(other))
 
-    def shared_snapshots(self, other):
+    def shared_configurations(self, other):
         """
         Returns a set of shared snapshots
 
@@ -433,7 +433,7 @@ class Trajectory(list):
         set of Snapshot()
             the set of common snapshots
         """
-        return set(list(self)) & set(list(other))
+        return set([snap.configuration for snap in self]) & set(list([snap.configuration for snap in self]))
 
     def shared_subtrajectory(self, other):
         """
@@ -449,8 +449,8 @@ class Trajectory(list):
         Trajectory
             the shared subtrajectory
         """
-        shared = self.shared_snapshots(other)
-        return Trajectory([ snap for snap in self if snap in shared])
+        shared = self.shared_configurations(other)
+        return Trajectory([ snap for snap in self if snap.configuration in shared])
 
     #=============================================================================================
     # UTILITY FUNCTIONS
