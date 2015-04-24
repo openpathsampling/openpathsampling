@@ -193,6 +193,14 @@ class TISTransition(Transition):
             )
         }
 
+    def __str__(self):
+        mystr = str(self.__class__.__name__) + str(self.name) + "\n"
+        mystr += str(self.stateA.name) + " -> " + str(self.stateB.name) + "\n"
+        for iface in self.interfaces:
+            mystr += "Interface: " + str(self.interfaces.name) + "\n"
+        return mystr
+
+
     def to_dict(self):
         ret_dict = {
             'stateA' : self.stateA,

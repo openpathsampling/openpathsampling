@@ -4,14 +4,15 @@ class TransitionNetwork(object):
     def __init__(self):
         pass
 
-    def replica_flow_map(self):
+    @property
+    def all_ensembles(self):
         pass
 
-    def replica_flow(self, bottom, top):
-        pass
-
+#    def replica_exchange_matrix(self):
 
 class TISNetwork(TransitionNetwork):
+    # TODO: most of the analysis stuff should end up in here; the bigger
+    # differences are in setup, not analysis
     def __init__(self):
         # this should check to build the replica exchange network. If the
         # number of neighbors at any station is more than 2, we can't do
@@ -21,11 +22,8 @@ class TISNetwork(TransitionNetwork):
         pass
 
     def from_transitions(self, transitions, interfaces=None):
-        # TODO: this will have to be disabled until I can do something
+        # this will have to be disabled until I can do something
         # better with it
-        pass
-
-    def default_mover(self):
         pass
 
 def join_ms_outer(outers):
@@ -34,10 +32,20 @@ def join_ms_outer(outers):
 def join_mis_minus(minuses):
     pass
 
+# hack to used a named tuple for data here.. rename from DepartureInfo?
+# see: http://stackoverflow.com/questions/11351032/
+class DepartureInfo(collections.namedtuple('DepartureInfo',
+                                           ['state', 'interfaces', 'name',
+                                            'orderparameter'])):
+    def __new__(cls, state, interfaces, name, orderparameter=None):
+        return super(DepartureInfo, cls).__new__(cls, state, interfaces,
+                                                 name, orderparameter)
+
+
 class MSTISNetwork(TISNetwork):
     def __init__(self, trans_info):
-        states, interfaces, orderparams, names = zip(*trans_info)
-        self.out_state = {}
+        states, interfaces, names, orderparams = zip(*trans_info)
+        self.from_state = {}
         msouters = []
         for state, ifaces, op, name in trans_info:
             state_index = states.index(state)
@@ -46,7 +54,7 @@ class MSTISNetwork(TISNetwork):
             for other in other_states[1:]:
                 union_others = union_others | other
 
-            self.out_state[state] = RETISTransition(
+            self.from_state[state] = RETISTransition(
                 stateA=state, 
                 stateB=union_others,
                 interfaces=ifaces[:-1],
@@ -57,24 +65,19 @@ class MSTISNetwork(TISNetwork):
 
         pass
 
-    def disallow(self, stateA, stateB):
+#    def disallow(self, stateA, stateB):
 
-        pass
-
-    def default_mover(self):
+    def default_movers(self):
         pass
 
 
 
 class MISTISNetwork(TISNetwork):
-    def __init__(self):
+    def __init__(self, transitions):
         pass
 
-    @property
-    def multiple_set_minus_switching(self):
-        # TODO: move this to network
-        pass
+#    def multiple_set_minus_switching(self):
 
-    def default_mover(self):
+    def default_movers(self):
         pass
 
