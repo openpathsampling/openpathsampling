@@ -1,14 +1,16 @@
 from pathsimulator import PathSimulator, Bootstrapping, PathSampling
 
-from ensemble import Ensemble, EnsembleCombination, EnsembleFactory, \
-    EntersXEnsemble, EmptyEnsemble, ExitsXEnsemble, FullEnsemble, \
-    PartInXEnsemble, AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble, \
-    BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble, \
-    PartOutXEnsemble, LengthEnsemble, NegatedEnsemble, \
-    ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble, \
-    SequentialEnsemble, IntersectionEnsemble, UnionEnsemble, \
-    SymmetricDifferenceEnsemble, RelativeComplementEnsemble, \
-    SingleFrameEnsemble, MinusInterfaceEnsemble
+from ensemble import (
+    Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
+    EmptyEnsemble, ExitsXEnsemble, FullEnsemble, PartInXEnsemble,
+    AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble,
+    BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble,
+    PartOutXEnsemble, LengthEnsemble, NegatedEnsemble,
+    ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble,
+    SequentialEnsemble, IntersectionEnsemble, UnionEnsemble,
+    SymmetricDifferenceEnsemble, RelativeComplementEnsemble,
+    SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble
+)
 
 from snapshot import Snapshot, Configuration, Momentum
 
@@ -19,14 +21,14 @@ from collectivevariable import CV_Function, CV_MD_Function, CV_Featurizer, \
     CV_RMSD_To_Lambda, CV_Volume, CollectiveVariable
 
 from pathmover import (
-    BackwardShootMover, MinusMover, RandomChoiceMover, MoveDetails,
-    ForwardShootMover, PathMover, PathMoverFactory, PathReversalMover, 
+    BackwardShootMover, MinusMover, RandomChoiceMover, ForwardShootMover, PathMover, PathMoverFactory, PathReversalMover,
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
     CollapseMove, PathSimulatorMover, PathReversalSet,
     NeighborEnsembleReplicaExchange
 )
+
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
     GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
@@ -43,9 +45,11 @@ from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
 from todict import ObjectJSON, ops_object, class_list
 
 from tools import empty_snapshot_from_openmm_topology, snapshot_from_pdb, \
-    to_openmm_topology, trajectory_from_mdtraj, units_from_snapshot
+    to_openmm_topology, trajectory_from_mdtraj
 
-from topology import ToyTopology, MDTrajTopology, Topology
+from tools import units_from_snapshot
+
+from topology import ToyTopology, Topology, MDTrajTopology
 
 from toy_dynamics.toy_pes import Gaussian, HarmonicOscillator, LinearSlope, \
     OuterWalls, Toy_PES, Toy_PES_Add, Toy_PES_Sub
@@ -58,10 +62,12 @@ from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
 from analysis.tis_analysis import TISTransition, RETISTransition, Transition, \
     TPSTransition
 
-from movepath import (EmptyMovePath, ConditionalSequentialMovePath,
-                      MovePath, PartialAcceptanceSequentialMovePath,
-                      RandomChoiceMovePath, SampleMovePath,
-                      SequentialMovePath,  KeepLastSampleMovePath,
-                      CollapsedMovePath, FilterSamplesMovePath,
-                      PathSimulatorMovePath
+from pathmover import Details, MoveDetails, SampleDetails
+
+from pathmovechange import (EmptyPathMoveChange, ConditionalSequentialPathMoveChange,
+                      PathMoveChange, PartialAcceptanceSequentialPathMoveChange,
+                      RandomChoicePathMoveChange, SamplePathMoveChange,
+                      SequentialPathMoveChange,  KeepLastSamplePathMoveChange,
+                      CollapsedPathMoveChange, FilterSamplesPathMoveChange,
+                      PathSimulatorPathMoveChange
                      )

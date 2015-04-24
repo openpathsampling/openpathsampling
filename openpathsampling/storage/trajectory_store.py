@@ -48,22 +48,22 @@ class TrajectoryStore(ObjectStore):
         values = []
         for snap in list.__iter__(trajectory):
             if type(snap) is not tuple:
-                self.storage.snapshot.save(snap)
+                self.storage.snapshots.save(snap)
                 values.append(snap.idx[self.storage])
             elif snap[0].storage is not self.storage:
                 new_snap = snap[0][snap[1]]
-                self.storage.snapshot.save(new_snap)
+                self.storage.snapshots.save(new_snap)
                 values.append(new_snap.idx[self.storage])
             else:
                 values.append(snap[1])
 
-#        map(self.storage.snapshot.save, trajectory)
+#        map(self.storage.snapshots.save, trajectory)
 #        values = self.list_to_numpy(trajectory, 'snapshot')
 
         values = self.list_to_numpy(values, 'index')
         self.storage.variables['trajectory_snapshot_idx'][idx] = values
 
-        self.storage.sync()
+        # self.storage.sync()
 
     def snapshot_indices(self, idx):
         '''
@@ -108,11 +108,11 @@ class TrajectoryStore(ObjectStore):
         # typecast to snapshot
         if self.lazy:
             if self.use_snapshot_cache:
-                snapshots = [ self.storage.snapshot.cache[idx] if idx in self.storage.snapshot.cache else tuple([self.storage.snapshot, idx]) for idx in self.list_from_numpy(values, 'int') ]
+                snapshots = [ self.storage.snapshots.cache[idx] if idx in self.storage.snapshots.cache else tuple([self.storage.snapshots, idx]) for idx in self.list_from_numpy(values, 'int') ]
             else:
-                snapshots = [ tuple([self.storage.snapshot, idx]) for idx in self.list_from_numpy(values, 'int') ]
+                snapshots = [ tuple([self.storage.snapshots, idx]) for idx in self.list_from_numpy(values, 'int') ]
         else:
-            snapshots = self.list_from_numpy(values, 'snapshot')
+            snapshots = self.list_from_numpy(values, 'snapshots')
 
         trajectory = Trajectory(snapshots)
         # save the used storage to load snapshots if required

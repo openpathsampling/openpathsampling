@@ -48,18 +48,18 @@ if __name__ == '__main__':
 
 
     if args.show == 'snapshot':
-        show_op = storage.snapshot.op_idx
+        show_op = storage.snapshots.op_idx
     elif args.show == 'configuration':
-        show_op = storage.snapshot.op_configuration_idx
+        show_op = storage.snapshots.op_configuration_idx
     elif args.show == 'momentum':
-        show_op = storage.snapshot.op_momentum_idx
+        show_op = storage.snapshots.op_momentum_idx
     elif args.show == '':
         def show_id(s):
             return ''
 
         show_op = show_id
     else:
-        show_op = storage.cv.load(args.show)
+        show_op = storage.cvs.load(args.show)
 
     if args.in_degree:
         inner = show_op
@@ -69,7 +69,7 @@ if __name__ == '__main__':
         show_op = func
 
     tree = PathTreeBuilder(storage, op=show_op, states=args.state)
-    samples = storage.sample.by_ensemble(storage.ensemble.load(4))
+    samples = storage.samples.by_ensemble(storage.ensembles.load(4))
     tree.from_samples(samples)
 
     if args.pdf:

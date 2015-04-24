@@ -203,8 +203,9 @@ class Trajectory(list):
     #=============================================================================================
 
     def __getslice__(self, *args, **kwargs):
+#        print 'PRE',  list(list.__iter__(self))
         ret =  list.__getslice__(self, *args, **kwargs)
-        if isinstance(ret, list):
+        if type(ret) is list:
             ret = Trajectory(ret)
             ret.atom_indices = self.atom_indices
             
@@ -212,16 +213,36 @@ class Trajectory(list):
         
     def __getitem__(self, index):
         # Allow for numpy style of selecting several indices using a list as index parameter
-        if type(index) is list:
+        if hasattr(index, '__iter__'):
             ret = [ list.__getitem__(self, i) for i in index ]
         else:
             ret = list.__getitem__(self, index)
                 
-        if isinstance(ret, list):
+        if type(ret) is list:
             ret = Trajectory(ret)
             ret.atom_indices = self.atom_indices
 
         return ret
+
+    def __reversed__(this):
+        class ObjectIterator:
+            def __init__(self):
+                self.trajectory = this
+                self.idx = len(this)
+                self.length = 0
+
+            def __iter__(self):
+                return self
+
+            def next(self):
+                if self.idx > self.length:
+                    self.idx -= 1
+                    obj = self.trajectory[self.idx]
+                    return obj
+                else:
+                    raise StopIteration()
+
+        return ObjectIterator()
 
     def __iter__(this):
         """
@@ -243,12 +264,13 @@ class Trajectory(list):
             def __init__(self):
                 self.trajectory = this
                 self.idx = 0
+                self.length = len(this)
 
             def __iter__(self):
                 return self
 
             def next(self):
-                if self.idx < len(self.trajectory):
+                if self.idx < self.length:
                     obj = self.trajectory[self.idx]
                     self.idx += 1
                     return obj
@@ -351,7 +373,70 @@ class Trajectory(list):
 
         return log_q
 
-    
+    #=============================================================================================
+    # ANALYSIS FUNCTIONS
+    #=============================================================================================
+
+    def is_correlated(self, other):
+        """
+        Checks if two trajectories share a common snapshot
+
+        Parameters
+        ----------
+        other : Trajectory()
+            the second trajectory to check for common snapshots
+
+        Returns
+        -------
+        bool
+            returns True if at least one snapshot appears in both trajectories
+        """
+
+        # if hasattr(self, 'idx') and hasattr(other, 'idx'):
+        #     shared_store = set(self.idx.keys()) & set(other.idx.keys())
+        #     # both are saved so use the snapshot idx as identifiers
+        #     if len(shared_store) > 0:
+        #         storage = list(shared_store)[0]
+        #         t1id = storage.trajectories.snapshot_indices(self.idx[storage])
+        #         t2id = storage.trajectories.snapshot_indices(other.idx[storage])
+        #         return bool(set(t1id) & set(t2id))
+
+        # Use some fallback
+        return bool(self.shared_configurations(other))
+
+    def shared_configurations(self, other):
+        """
+        Returns a set of shared snapshots
+
+        Parameters
+        ----------
+        other : Trajectory()
+            the second trajectory to use
+
+        Returns
+        -------
+        set of Snapshot()
+            the set of common snapshots
+        """
+        return set([snap.configuration for snap in self]) & set(list([snap.configuration for snap in self]))
+
+    def shared_subtrajectory(self, other):
+        """
+        Returns a subtrajectory which only contains frames present in other
+
+        Parameters
+        ----------
+        other : Trajectory()
+            the second trajectory to use
+
+        Returns
+        -------
+        Trajectory
+            the shared subtrajectory
+        """
+        shared = self.shared_configurations(other)
+        return Trajectory([ snap for snap in self if snap.configuration in shared])
+
     #=============================================================================================
     # UTILITY FUNCTIONS
     #=============================================================================================
