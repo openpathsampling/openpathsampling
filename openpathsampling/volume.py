@@ -222,6 +222,9 @@ class LambdaVolume(Volume):
         self.collectivevariable = collectivevariable
         self.lambda_min = float(lambda_min)
         self.lambda_max = float(lambda_max)
+        self.name = (str(self.lambda_min) + "<" +
+                     str(self.collectivevariable.name) + "<" +
+                     str(self.lambda_max))
         
     # Typically, the logical combinations are only done once. Because of
     # this, it is worth passing these through a check to speed up the logic.
@@ -519,10 +522,14 @@ class VolumeFactory(object):
 
     @staticmethod
     def LambdaVolumeSet(op, minvals, maxvals):
+        # TODO: clean up to only use min_i or max_i in name if necessary
         minvals, maxvals = VolumeFactory._check_minmax(minvals, maxvals)
         myset = []
-        for i in range(len(maxvals)):
-            myset.append(LambdaVolume(op, minvals[i], maxvals[i]))
+        for (min_i, max_i) in zip(minvals, maxvals):
+            volume = LambdaVolume(op, min_i, max_i)
+            name = str(min_i) + "<" + op.name + "<" + str(max_i)
+            volume.name = name
+            myset.append(volume)
         return myset
 
     @staticmethod
