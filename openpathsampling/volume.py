@@ -222,6 +222,9 @@ class LambdaVolume(Volume):
         self.collectivevariable = collectivevariable
         self.lambda_min = float(lambda_min)
         self.lambda_max = float(lambda_max)
+        self.name = (str(self.lambda_min) + "<" +
+                     str(self.collectivevariable.name) + "<" +
+                     str(self.lambda_max))
         
     # Typically, the logical combinations are only done once. Because of
     # this, it is worth passing these through a check to speed up the logic.
