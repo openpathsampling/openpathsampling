@@ -1,6 +1,8 @@
 import svgwrite
 import os
 
+import openpathsampling as paths
+
 class TreeRenderer(object):
     def __init__(self):
         self.start_x = 0
@@ -337,7 +339,7 @@ class MoveTreeBuilder(object):
 
         lightcolor = "gray"
 
-        for sset in storage.sampleset:
+        for sset in storage.sample_set:
             path = sset.movepath
             for ens_idx, ens in enumerate(ensembles):
                 samp_ens = [samp for samp in sset if samp.ensemble is ens]
@@ -380,24 +382,10 @@ class PathTreeBuilder(object):
 
         samp = sample
 
-        while len(samp.details.inputs) > 0:
-            if len(samp.details.inputs) == 1:
-                # just one sample so use this
-                list_of_samples.append(samp)
-                samp = samp.details.inputs[0]
-            else:
-                # if there are more than one input choose the most useful one
-                # e.g. for ReplicaExchange the initial one
-                found_one = False
-                for input in samp.details.inputs:
-                    if input.trajectory == list_of_samples[-1].trajectory:
-                        # got it
-                        found_one = True
-                        samp = input
-                        break
-
-                if not found_one:
-                    break
+        while samp.parent is not None:
+            # just one sample so use this
+            list_of_samples.append(samp)
+            samp = samp.parent
 
         # reverse to get origin first
         return [samp for samp in reversed(list_of_samples)]
@@ -414,13 +402,72 @@ class PathTreeBuilder(object):
         if clear:
             self.renderer.clear()
 
-        t_count = 0
+        t_count = 1
         shift = 0
 
         lightcolor = "gray"
 
+        first = True
+
         for sample in samples:
-            if hasattr(sample.details, 'start_point'):
+            if first is True:
+                first = False
+                for pos, snapshot in enumerate(sample.trajectory):
+                    conf = snapshot
+                    p_x[conf] = pos
+                    p_y[conf] = t_count
+
+                    pos_x = p_x[conf]
+                    pos_y = p_y[conf]
+                    if self.op is not None:
+                        self.renderer.add(self.renderer.block(pos_x, pos_y, "black", self.op(snapshot)))
+                    else:
+                        self.renderer.add(self.renderer.block(pos_x, pos_y, "black", ""))
+
+                self.renderer.add(
+                    self.renderer.label(0, t_count, 1, str(self.storage.idx(sample.trajectory)) + 'b', align='end',color='black')
+                )
+
+            elif type(sample.mover) is paths.ReplicaExchangeMover:
+                # Reversal
+                #print 'REPEX'
+                # for pos, snapshot in enumerate(sample.trajectory):
+                #     conf = snapshot
+                #     p_x[conf] = pos
+                #     p_y[conf] = t_count
+                #
+                #     pos_x = p_x[conf]
+                #     pos_y = p_y[conf]
+                #     if self.op is not None:
+                #         self.renderer.add(self.renderer.block(pos_x, pos_y, "blue", self.op(snapshot)))
+                #     else:
+                #         self.renderer.add(self.renderer.block(pos_x, pos_y, "blue", ""))
+
+                #self.renderer.add(
+                #    self.renderer.label(0, t_count, 1, 'RX', align='end',color='black')
+                #)
+                t_count -= 1
+
+            elif type(sample.mover) is paths.PathReversalMover:
+                # Reversal
+                for pos, snapshot in enumerate(sample.trajectory):
+                    conf = snapshot
+                    p_x[conf] = pos + shift
+                    p_y[conf] = t_count
+
+                    pos_x = p_x[conf]
+                    pos_y = p_y[conf]
+                    if self.op is not None:
+                        self.renderer.add(self.renderer.block(pos_x, pos_y, "orange", self.op(snapshot)))
+                    else:
+                        self.renderer.add(self.renderer.block(pos_x, pos_y, "orange", ""))
+
+                self.renderer.add(
+                    self.renderer.label(shift, t_count, 1, str(self.storage.idx(sample.trajectory)) + 'r', align='end',color='black')
+                )
+
+            elif hasattr(sample.details, 'start_point'):
+                # ShootingMove
                 old_traj = sample.details.start_point.trajectory
                 old_index = sample.details.start_point.index
                 old_conf = old_traj[old_index]
@@ -429,30 +476,15 @@ class PathTreeBuilder(object):
                 new_index = sample.details.final_point.index
                 new_conf = new_traj[new_index]
 
-                accepted = sample.details.accepted
+                accepted = sample.accepted
 
                 if sample.trajectory is new_traj or self.rejected:
-                    t_count += 1
-                    if not old_conf in p_x:
-                        for pos, snapshot in enumerate(old_traj):
-                            conf = snapshot
-                            p_x[conf] = pos
-                            p_y[conf] = t_count
 
-                            pos_x = p_x[conf]
-                            pos_y = p_y[conf]
-                            if self.op is not None:
-                                self.renderer.add(self.renderer.block(pos_x, pos_y, "black", self.op(snapshot)))
-                            else:
-                                self.renderer.add(self.renderer.block(pos_x, pos_y, "black", ""))
-
-                        self.renderer.add(
-                            self.renderer.label(0, t_count, 1, str(self.storage.idx(new_traj)) + 'b', align='end',color='black')
-                        )
-
-                        t_count += 1
-
-                    shift = p_x[old_conf] - new_index
+                    if old_conf not in p_x:
+                        print 'Non old', oldsample.mover
+                        shift = 0
+                    else:
+                        shift = p_x[old_conf] - new_index
 
 
                     fontcolor = "black"
@@ -461,28 +493,27 @@ class PathTreeBuilder(object):
 
                     mover_name = ''
 
-                    if hasattr(sample.details, 'mover'):
-                        mover_name = sample.details.mover.name
+                    mover_type = type(sample.mover)
 
-                    if mover_name == "BackwardShootMover":
+                    if mover_type is paths.BackwardShootMover:
                         color = "green"
                         if not accepted:
                             color = lightcolor
                             fontcolor = lightcolor
                         self.renderer.add(
-                            self.renderer.v_connection(shift + new_index, p_y[old_conf], t_count, color)
+                            self.renderer.v_connection(shift + new_index + 1, p_y[old_conf], t_count, color)
                         )
                         self.renderer.add(
                             self.renderer.label(shift, t_count, 1, str(self.storage.idx(new_traj)) + 'b', align='end',color=fontcolor)
                         )
                         draw_okay = True
-                    elif mover_name == 'ForwardShootMover':
+                    elif mover_type is paths.ForwardShootMover:
                         color = "red"
                         if not accepted:
                             color = lightcolor
                             fontcolor = lightcolor
                         self.renderer.add(
-                            self.renderer.v_connection(shift + new_index + 1, p_y[old_conf], t_count, color)
+                            self.renderer.v_connection(shift + new_index, p_y[old_conf], t_count, color)
                         )
                         self.renderer.add(
                             self.renderer.label(shift + len(new_traj) - 1, t_count, 1, str(self.storage.idx(new_traj)) + 'f', align='start',color=fontcolor)
@@ -506,6 +537,10 @@ class PathTreeBuilder(object):
                                 else:
                                     self.renderer.add(self.renderer.block(pos_x, pos_y, color, ""))
 
+            oldsample = sample
+            t_count += 1
+
+
         self.p_x = p_x
         self.p_y = p_y
 
@@ -517,34 +552,31 @@ class PathTreeBuilder(object):
         self.renderer.height = max_y - min_y + 2.0
         self.renderer.width = max_x - min_x + 3.0
 
-        op_names = { arg[0] : arg[1] for arg in self.states }
-        ops = {op : self.storage.collectivevariable.load(op) for op in op_names.keys() }
-
         matrix = self._to_matrix()
 
-        for y in range(0, max_y - min_y + 1):
-            rr = { op_name : None for op_name in op_names.keys() }
-            yp = y + min_y
-            for x in range(0, (max_x - min_x + 1)):
-                xp = x + min_x
-                for r in rr:
-                    op = ops[r]
-#                    print matrix[y][x], type(matrix[y][x])
-                    if matrix[y][x] is not None and bool(op(matrix[y][x])):
-                        if rr[r] is None:
-                            rr[r] = xp
-                    else:
-                        if rr[r] is not None:
-                            self.renderer.pre(
-                                self.renderer.shade(rr[r], yp, xp - rr[r], op_names[r])
-                            )
-                            rr[r] = None
+        if hasattr(self, 'states') and len(self.states) > 0:
+            for y in range(0, max_y - min_y + 1):
+                rr = { op_color : None for op_color in self.states }
+                yp = y + min_y
+                for x in range(0, (max_x - min_x + 1)):
+                    xp = x + min_x
+                    for r in rr:
+                        op = self.states[r]
+                        if matrix[y][x] is not None and bool(op(matrix[y][x])):
+                            if rr[r] is None:
+                                rr[r] = xp
+                        else:
+                            if rr[r] is not None:
+                                self.renderer.pre(
+                                    self.renderer.shade(rr[r], yp, xp - rr[r], r)
+                                )
+                                rr[r] = None
 
-            for r in rr:
-                if rr[r] is not None:
-                    self.renderer.pre(
-                        self.renderer.shade(rr[r], yp, xp - rr[r] + 1, op_names[r])
-                    )
+                for r in rr:
+                    if rr[r] is not None:
+                        self.renderer.pre(
+                            self.renderer.shade(rr[r], yp, xp - rr[r] + 1, r)
+                        )
 
 
 

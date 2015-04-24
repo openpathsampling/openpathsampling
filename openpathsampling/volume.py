@@ -6,8 +6,18 @@ Created on 03.09.2014
 
 import range_logic
 from openpathsampling.todict import ops_object
+import time
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
+
+def join_volumes(volume_list):
+    volume = None
+    for vol in volume_list:
+        if volume is None:
+            volume = vol
+        else:
+            volume = volume | vol
+    return volume
 
 @ops_object
 class Volume(object):
@@ -210,8 +220,8 @@ class LambdaVolume(Volume):
         '''
         super(LambdaVolume, self).__init__()
         self.collectivevariable = collectivevariable
-        self.lambda_min = lambda_min
-        self.lambda_max = lambda_max
+        self.lambda_min = float(lambda_min)
+        self.lambda_max = float(lambda_max)
         
     # Typically, the logical combinations are only done once. Because of
     # this, it is worth passing these through a check to speed up the logic.

@@ -5,6 +5,7 @@ from simtk import unit as units
 import yaml
 import openpathsampling as paths
 import inspect
+import types
 
 class ObjectJSON(object):
     """

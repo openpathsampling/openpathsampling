@@ -54,7 +54,7 @@ def max_lambdas(sample, orderparameter):
     return max([orderparameter(frame) for frame in sample.trajectory])
 
 def sampleset_sample_generator(storage):
-    for sset in storage.sampleset:
+    for sset in storage.samplesets:
         for sample in sset:
             yield sample
 
