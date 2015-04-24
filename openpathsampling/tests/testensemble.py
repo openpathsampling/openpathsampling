@@ -6,8 +6,9 @@ import openpathsampling as paths
 from openpathsampling.ensemble import *
 
 import logging
-logging.getLogger('opentis.ensemble').setLevel(logging.DEBUG)
-logging.getLogger('opentis.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.ensemble').setLevel(logging.DEBUG)
+logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 
 import re
 import random
@@ -154,6 +155,9 @@ class EnsembleTest(object):
                 results["upper_"+test] = not default
 
         for test in results.keys():
+            logging.getLogger('openpathsampling.ensemble').debug(
+                "Starting test for " + test + "("+str(ttraj[test])+")"
+            )
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(test_fcn, ttraj[test], results[test], failmsg)
 
@@ -179,12 +183,12 @@ class EnsembleTest(object):
             self._single_test(self.slice_ens, wrapped, results[test], failmsg)
 
 
-class testLeaveXEnsemble(EnsembleTest):
+class testPartOutXEnsemble(EnsembleTest):
     def setUp(self):
-        self.leaveX = LeaveXEnsemble(vol1)
+        self.leaveX = PartOutXEnsemble(vol1)
 
     def test_leaveX(self):
-        """LeaveXEnsemble passes the trajectory test suite"""
+        """PartOutXEnsemble passes the trajectory test suite"""
         for test in ttraj.keys():
             if "out" in in_out_parser(test):
                 res = True
@@ -194,7 +198,7 @@ class testLeaveXEnsemble(EnsembleTest):
             self._single_test(self.leaveX, ttraj[test], res, failmsg)
 
     def test_leaveX_0(self):
-        """LeaveXEnsemble treatment of zero-length trajectory"""
+        """PartOutXEnsemble treatment of zero-length trajectory"""
         assert_equal(self.leaveX(paths.Trajectory([])), False)
         assert_equal(self.leaveX.can_append(paths.Trajectory([])), True)
         assert_equal(self.leaveX.can_prepend(paths.Trajectory([])), True)
@@ -204,12 +208,12 @@ class testLeaveXEnsemble(EnsembleTest):
         assert_equal(self.leaveX.__str__(), 
                      "exists t such that x[t] in (not "+volstr+")")
 
-class testInXEnsemble(EnsembleTest):
+class testAllInXEnsemble(EnsembleTest):
     def setUp(self):
-        self.inX = InXEnsemble(vol1)
+        self.inX = AllInXEnsemble(vol1)
 
     def test_inX(self):
-        """InXEnsemble passes the trajectory test suite"""
+        """AllInXEnsemble passes the trajectory test suite"""
         for test in ttraj.keys():
             if "out" in in_out_parser(test):
                 res = False
@@ -219,7 +223,7 @@ class testInXEnsemble(EnsembleTest):
             self._single_test(self.inX, ttraj[test], res, failmsg)
 
     def test_inX_0(self):
-        """InXEnsemble treatment of zero-length trajectory"""
+        """AllInXEnsemble treatment of zero-length trajectory"""
         assert_equal(self.inX(paths.Trajectory([])), False)
         assert_equal(self.inX.can_append(paths.Trajectory([])), True)
         assert_equal(self.inX.can_prepend(paths.Trajectory([])), True)
@@ -229,12 +233,12 @@ class testInXEnsemble(EnsembleTest):
         assert_equal(self.inX.__str__(),
                      "x[t] in "+volstr+" for all t")
 
-class testOutXEnsemble(EnsembleTest):
+class testAllOutXEnsemble(EnsembleTest):
     def setUp(self):
-        self.outX = OutXEnsemble(vol1)
+        self.outX = AllOutXEnsemble(vol1)
 
     def test_outX(self):
-        """OutXEnsemble passes the trajectory test suite"""
+        """AllOutXEnsemble passes the trajectory test suite"""
         for test in ttraj.keys():
             if "in" in in_out_parser(test):
                 res = False
@@ -244,7 +248,7 @@ class testOutXEnsemble(EnsembleTest):
             self._single_test(self.outX, ttraj[test], res, failmsg)
 
     def test_outX_0(self):
-        """OutXEnsemble treatment of zero-length trajectory"""
+        """AllOutXEnsemble treatment of zero-length trajectory"""
         assert_equal(self.outX(paths.Trajectory([])), False)
         assert_equal(self.outX.can_append(paths.Trajectory([])), True)
         assert_equal(self.outX.can_prepend(paths.Trajectory([])), True)
@@ -254,12 +258,12 @@ class testOutXEnsemble(EnsembleTest):
         assert_equal(self.outX.__str__(),
                      "x[t] in (not "+volstr+") for all t")
 
-class testHitXEnsemble(EnsembleTest):
+class testPartInXEnsemble(EnsembleTest):
     def setUp(self):
-        self.hitX = HitXEnsemble(vol1)
+        self.hitX = PartInXEnsemble(vol1)
 
     def test_hitX(self):
-        """HitXEnsemble passes the trajectory test suite"""
+        """PartInXEnsemble passes the trajectory test suite"""
         for test in ttraj.keys():
             if "in" in in_out_parser(test):
                 res = True
@@ -269,7 +273,7 @@ class testHitXEnsemble(EnsembleTest):
             self._single_test(self.hitX, ttraj[test], res, failmsg)
 
     def test_hitX_0(self):
-        """HitXEnsemble treatment of zero-length trajectory"""
+        """PartInXEnsemble treatment of zero-length trajectory"""
         assert_equal(self.hitX(paths.Trajectory([])), False)
         assert_equal(self.hitX.can_append(paths.Trajectory([])), True)
         assert_equal(self.hitX.can_prepend(paths.Trajectory([])), True)
@@ -393,15 +397,15 @@ class testEntersXEnsemble(testExitsXEnsemble):
 
 class testSequentialEnsemble(EnsembleTest):
     def setUp(self):
-        self.inX = InXEnsemble(vol1)
-        self.outX = OutXEnsemble(vol1)
-        self.hitX = HitXEnsemble(vol1)
-        self.leaveX = LeaveXEnsemble(vol1)
+        self.inX = AllInXEnsemble(vol1)
+        self.outX = AllOutXEnsemble(vol1)
+        self.hitX = PartInXEnsemble(vol1)
+        self.leaveX = PartOutXEnsemble(vol1)
         self.enterX = EntersXEnsemble(vol1)
         self.exitX = ExitsXEnsemble(vol1)
-        self.inInterface = InXEnsemble(vol2)
-        self.leaveX0 = LeaveXEnsemble(vol2)
-        self.inX0 = InXEnsemble(vol2)
+        self.inInterface = AllInXEnsemble(vol2)
+        self.leaveX0 = PartOutXEnsemble(vol2)
+        self.inX0 = AllInXEnsemble(vol2)
         self.length1 = LengthEnsemble(1)
         # pseudo_tis and pseudo_minus assume that the interface is equal to
         # the state boundary
@@ -558,6 +562,9 @@ class testSequentialEnsemble(EnsembleTest):
                    'lower_in_cross_in_cross_in' : False
                   }
         for test in results.keys():
+            logging.getLogger('openpathsampling.ensemble').debug(
+                "Testing " + str(test) + " (" + str(results[test]) + ")"
+            )
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.minus.can_append, 
                                 ttraj[test], results[test], failmsg)
@@ -671,7 +678,7 @@ class testSequentialEnsemble(EnsembleTest):
 
 
     def test_sequential_in_out(self):
-        """SequentialEnsembles based on In/OutXEnsemble"""
+        """SequentialEnsembles based on In/AllOutXEnsemble"""
         # idea: for each ttraj, use the key name to define in/out behavior,
         # dynamically construct a SequentialEnsemble
         ens_dict = {'in' : self.inX, 'out' : self.outX }
@@ -764,10 +771,10 @@ class testSequentialEnsemble(EnsembleTest):
             'upper_in_cross_in' : True,
             'lower_in_cross_in' : True
         }
-        logging.getLogger('opentis.ensemble').info("Starting tests....")
+        logging.getLogger('openpathsampling.ensemble').info("Starting tests....")
         for test in match_results.keys():
             failmsg = "Match failure in "+test+"("+str(ttraj[test])+"): "
-            logging.getLogger('opentis.ensemble').info(
+            logging.getLogger('openpathsampling.ensemble').info(
                 "Testing: "+str(test)
             )
             self._single_test(ensemble, ttraj[test], 
@@ -797,6 +804,7 @@ class testSequentialEnsemble(EnsembleTest):
         raise SkipTest
 
 
+
     def test_str(self):
         assert_equal(self.pseudo_tis.__str__(), """[
 (
@@ -816,34 +824,257 @@ and
 )
 ]""")
 
+class EnsembleCacheTest(EnsembleTest):
+    def _was_cache_reset(self, cache):
+        return cache.contents == { }
+
+class testEnsembleCache(EnsembleCacheTest):
+    def setUp(self):
+        self.fwd = EnsembleCache(direction=+1)
+        self.rev = EnsembleCache(direction=-1)
+        self.traj = ttraj['lower_in_out_in_in_out_in']
+
+    def test_initially_reset(self):
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        assert_equal(self._was_cache_reset(self.rev), True)
+
+    def test_change_trajectory(self):
+        traj2 = ttraj['lower_in_out_in']
+        # tests for forward
+        self.fwd.contents = { 'test' : 'object' }
+        assert_equal(self._was_cache_reset(self.fwd), False)
+        self.fwd.check(self.traj)
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        self.fwd.contents['ens_num'] = 1
+        assert_equal(self._was_cache_reset(self.fwd), False)
+        self.fwd.check(traj2)
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        # tests for backward
+        self.rev.contents = { 'test' : 'object' }
+        assert_equal(self._was_cache_reset(self.rev), False)
+        self.rev.check(self.traj)
+        assert_equal(self._was_cache_reset(self.rev), True)
+        self.rev.contents['ens_num'] = 1
+        assert_equal(self._was_cache_reset(self.rev), False)
+        self.rev.check(traj2)
+        assert_equal(self._was_cache_reset(self.rev), True)
+
+    def test_trajectory_by_frame(self):
+        # tests for forward
+        self.fwd.check(self.traj[0:1])
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        self.fwd.contents = { 'test' : 'object' }
+        assert_equal(self._was_cache_reset(self.fwd), False)
+        self.fwd.check(self.traj[0:2])
+        assert_equal(self._was_cache_reset(self.fwd), False)
+        # tests for backward
+        self.rev.check(self.traj[-1:])
+        assert_equal(self._was_cache_reset(self.rev), True)
+        self.rev.contents = { 'test' : 'object' }
+        assert_equal(self._was_cache_reset(self.rev), False)
+        self.rev.check(self.traj[-2:])
+        assert_equal(self._was_cache_reset(self.rev), False)
+
+    def test_same_traj_twice_no_reset(self):
+        # tests for forward
+        self.fwd.check(self.traj)
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        self.fwd.contents = { 'test' : 'object' }
+        self.fwd.check(self.traj)
+        assert_equal(self._was_cache_reset(self.fwd), False)
+        # tests for backward
+        self.rev.check(self.traj)
+        assert_equal(self._was_cache_reset(self.rev), True)
+        self.rev.contents = { 'test' : 'object' }
+        self.rev.check(self.traj)
+        assert_equal(self._was_cache_reset(self.rev), False)
+
+
+    def test_trajectory_skips_frame(self):
+        # tests for forward
+        self.fwd.check(self.traj[0:1])
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        self.fwd.contents = { 'test' : 'object' }
+        assert_equal(self._was_cache_reset(self.fwd), False)
+        self.fwd.check(self.traj[0:3])
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        # tests for backward
+        self.rev.check(self.traj[-1:])
+        assert_equal(self._was_cache_reset(self.rev), True)
+        self.rev.contents = { 'test' : 'object' }
+        assert_equal(self._was_cache_reset(self.rev), False)
+        self.rev.check(self.traj[-3:])
+        assert_equal(self._was_cache_reset(self.rev), True)
+
+    def test_trajectory_middle_frame_changes(self):
+        # tests for forward
+        self.fwd.check(self.traj[0:2])
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        self.fwd.contents = { 'test' : 'object' }
+        assert_equal(self._was_cache_reset(self.fwd), False)
+        new_traj = self.traj[0:1] + self.traj[3:5]
+        self.fwd.check(new_traj)
+        assert_equal(self._was_cache_reset(self.fwd), True)
+        # tests for backward
+        self.rev.check(self.traj[0:2])
+        assert_equal(self._was_cache_reset(self.rev), True)
+        self.rev.contents = { 'test' : 'object' }
+        assert_equal(self._was_cache_reset(self.rev), False)
+        new_traj = self.traj[-4:-2] + self.traj[-1:] 
+        self.rev.check(new_traj)
+        assert_equal(self._was_cache_reset(self.rev), True)
+
+
+class testSequentialEnsembleCache(EnsembleCacheTest):
+    def setUp(self):
+        self.inX = AllInXEnsemble(vol1)
+        self.outX = AllOutXEnsemble(vol1)
+        self.length1 = LengthEnsemble(1)
+        self.pseudo_minus = SequentialEnsemble([
+            self.inX & self.length1,
+            self.outX,
+            self.inX,
+            self.outX,
+            self.inX & self.length1 
+        ])
+        self.traj = ttraj['lower_in_out_in_in_out_in']
+
+    def test_all_in_as_seq_can_append(self):
+        ens = SequentialEnsemble([AllInXEnsemble(vol1 | vol2 | vol3)])
+        cache = ens._cache_can_append
+        traj = ttraj['upper_in_in_out_out_in_in']
+        for i in traj:
+            print i,
+        print
+        assert_equal(ens.can_append(traj[0:1]), True)
+        assert_equal(ens.can_append(traj[0:2]), True)
+        assert_equal(ens.can_append(traj[0:3]), True)
+        assert_equal(ens.can_append(traj[0:4]), True)
+        assert_equal(ens.can_append(traj[0:5]), True)
+        assert_equal(ens.can_append(traj[0:6]), True)
+        
+
+
+    def test_sequential_caching_can_append(self):
+        cache = self.pseudo_minus._cache_can_append
+        assert_equal(self.pseudo_minus.can_append(self.traj[0:1]), True)
+        assert_equal(cache.contents['ens_num'], 1)
+        assert_equal(cache.contents['ens_from'], 0)
+        assert_equal(cache.contents['subtraj_from'], 1)
+        logging.getLogger('openpathsampling.ensemble').debug("Starting [0:2]")
+        assert_equal(self.pseudo_minus.can_append(self.traj[0:2]), True)
+        assert_equal(cache.contents['ens_num'], 1)
+        assert_equal(cache.contents['ens_from'], 0)
+        assert_equal(cache.contents['subtraj_from'], 1)
+        logging.getLogger('openpathsampling.ensemble').debug("Starting [0:3]")
+        assert_equal(self.pseudo_minus.can_append(self.traj[0:3]), True)
+        assert_equal(cache.contents['ens_num'], 2)
+        assert_equal(cache.contents['ens_from'], 0)
+        assert_equal(cache.contents['subtraj_from'], 2)
+        logging.getLogger('openpathsampling.ensemble').debug("Starting [0:4]")
+        assert_equal(self.pseudo_minus.can_append(self.traj[0:4]), True)
+        assert_equal(cache.contents['ens_num'], 2)
+        assert_equal(cache.contents['ens_from'], 0)
+        assert_equal(cache.contents['subtraj_from'], 2)
+        logging.getLogger('openpathsampling.ensemble').debug("Starting [0:5]")
+        assert_equal(self.pseudo_minus.can_append(self.traj[0:5]), True)
+        assert_equal(cache.contents['ens_num'], 3)
+        assert_equal(cache.contents['ens_from'], 0)
+        assert_equal(cache.contents['subtraj_from'], 4)
+        logging.getLogger('openpathsampling.ensemble').debug("Starting [0:6]")
+        assert_equal(self.pseudo_minus.can_append(self.traj[0:6]), False)
+        assert_equal(cache.contents['ens_num'], 4)
+        assert_equal(cache.contents['ens_from'], 0)
+        assert_equal(cache.contents['subtraj_from'], 5)
+
+    def test_sequential_caching_resets(self):
+        #cache = self.pseudo_minus._cache_can_append
+        assert_equal(self.pseudo_minus.can_append(self.traj[2:3]), True)
+        assert_equal(self.pseudo_minus(self.traj[2:3]), False)
+        #assert_equal(self._was_cache_reset(cache), True)
+        assert_equal(self.pseudo_minus.can_append(self.traj[2:4]), True)
+        assert_equal(self.pseudo_minus(self.traj[2:4]), False)
+        #assert_equal(self._was_cache_reset(cache), True)
+        for i in range(4, len(self.traj)-1):
+            assert_equal(self.pseudo_minus.can_append(self.traj[2:i+1]), True)
+            assert_equal(self.pseudo_minus(self.traj[2:i+1]), False)
+            #assert_equal(self._was_cache_reset(cache), False)
+        assert_equal(self.pseudo_minus.can_append(self.traj[2:]), False)
+        assert_equal(self.pseudo_minus(self.traj[2:]), False)
+        #assert_equal(self._was_cache_reset(cache), False)
+        # TODO: same story backward
+        raise SkipTest
+
+    def test_sequential_caching_call(self):
+        raise SkipTest
+
+    def test_sequential_caching_can_prepend(self):
+        cache = self.pseudo_minus._cache_can_prepend
+        print "5"
+        assert_equal(self.pseudo_minus.can_prepend(self.traj[5:6]), True)
+        assert_equal(cache.contents['ens_num'], 3)
+        assert_equal(cache.contents['ens_from'], 4)
+        assert_equal(cache.contents['subtraj_from'], -1)
+        print "4"
+        assert_equal(self.pseudo_minus.can_prepend(self.traj[4:6]), True)
+        assert_equal(cache.contents['ens_num'], 3)
+        assert_equal(cache.contents['ens_from'], 4)
+        assert_equal(cache.contents['subtraj_from'], -1)
+        print "3"
+        assert_equal(self.pseudo_minus.can_prepend(self.traj[3:6]), True)
+        assert_equal(cache.contents['ens_num'], 2)
+        assert_equal(cache.contents['ens_from'], 4)
+        assert_equal(cache.contents['subtraj_from'], -2)
+        print "2"
+        assert_equal(self.pseudo_minus.can_prepend(self.traj[2:6]), True)
+        assert_equal(cache.contents['ens_num'], 2)
+        assert_equal(cache.contents['ens_from'], 4)
+        assert_equal(cache.contents['subtraj_from'], -2)
+        print "1"
+        assert_equal(self.pseudo_minus.can_prepend(self.traj[1:6]), True)
+        assert_equal(cache.contents['ens_num'], 1)
+        assert_equal(cache.contents['ens_from'], 4)
+        assert_equal(cache.contents['subtraj_from'], -4)
+        print "0"
+        assert_equal(self.pseudo_minus.can_prepend(self.traj[0:6]), False)
+        assert_equal(cache.contents['ens_num'], 0)
+        assert_equal(cache.contents['ens_from'], 4)
+        assert_equal(cache.contents['subtraj_from'], -5)
+
+
+
+
 class testSlicedTrajectoryEnsemble(EnsembleTest):
     def test_sliced_ensemble_init(self):
-        init_as_int = SlicedTrajectoryEnsemble(InXEnsemble(vol1), 3)
-        init_as_slice = SlicedTrajectoryEnsemble(InXEnsemble(vol1),
+        init_as_int = SlicedTrajectoryEnsemble(AllInXEnsemble(vol1), 3)
+        init_as_slice = SlicedTrajectoryEnsemble(AllInXEnsemble(vol1),
                                                  slice(3, 4))
         assert_equal(init_as_int, init_as_slice)
-        assert_equal(init_as_slice.slice, init_as_int.slice)
+        assert_equal(init_as_slice.region, init_as_int.region)
 
     def test_sliced_as_TISEnsemble(self):
         '''SlicedTrajectory and Sequential give same TIS results'''
         sliced_tis = (
-            SlicedTrajectoryEnsemble(InXEnsemble(vol1), 0) &
-            SlicedTrajectoryEnsemble(OutXEnsemble(vol1 | vol3), slice(1,-1)) & 
-            SlicedTrajectoryEnsemble(LeaveXEnsemble(vol2), slice(1,-1)) &
-            SlicedTrajectoryEnsemble(InXEnsemble(vol1 | vol3), -1)
+            SlicedTrajectoryEnsemble(AllInXEnsemble(vol1), 0) &
+            SlicedTrajectoryEnsemble(AllOutXEnsemble(vol1 | vol3), slice(1,-1)) &
+            SlicedTrajectoryEnsemble(PartOutXEnsemble(vol2), slice(1,-1)) &
+            SlicedTrajectoryEnsemble(AllInXEnsemble(vol1 | vol3), -1)
         )
         sequential_tis = SequentialEnsemble([
-            InXEnsemble(vol1) & LengthEnsemble(1),
-            OutXEnsemble(vol1 | vol3) & LeaveXEnsemble(vol2),
-            InXEnsemble(vol1 | vol3) & LengthEnsemble(1)
+            AllInXEnsemble(vol1) & LengthEnsemble(1),
+            AllOutXEnsemble(vol1 | vol3) & PartOutXEnsemble(vol2),
+            AllInXEnsemble(vol1 | vol3) & LengthEnsemble(1)
         ])
+        real_tis = paths.TISEnsemble(vol1, vol3, vol2)
         for test in ttraj.keys():
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(real_tis, ttraj[test],
+                              sequential_tis(ttraj[test]), failmsg)
             self._single_test(sliced_tis, ttraj[test], 
                               sequential_tis(ttraj[test]), failmsg)
 
     def test_slice_outside_trajectory_range(self):
-        ens = SlicedTrajectoryEnsemble(InXEnsemble(vol1), slice(5,9))
+        ens = SlicedTrajectoryEnsemble(AllInXEnsemble(vol1), slice(5,9))
         test = 'upper_in'
         # the slice should return the empty trajectory, and therefore should
         # return false
@@ -851,7 +1082,7 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
 
     def test_even_sliced_trajectory(self):
         even_slice = slice(None, None, 2)
-        ens = SlicedTrajectoryEnsemble(InXEnsemble(vol1), even_slice)
+        ens = SlicedTrajectoryEnsemble(AllInXEnsemble(vol1), even_slice)
         bare_results = {'in' : True,
                         'in_in' : True,
                         'in_in_in' : True,
@@ -871,8 +1102,8 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
     def test_sliced_sequential_global_whole(self):
         even_slice = slice(None, None, 2)
         ens = SlicedTrajectoryEnsemble(SequentialEnsemble([
-            InXEnsemble(vol1),
-            OutXEnsemble(vol1)
+            AllInXEnsemble(vol1),
+            AllOutXEnsemble(vol1)
         ]), even_slice)
 
         bare_results = {'in_in_out' : True,
@@ -892,8 +1123,8 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
     def test_sliced_sequential_subtraj_member(self):
         even_slice = slice(None, None, 2)
         ens = SequentialEnsemble([
-            InXEnsemble(vol1),
-            SlicedTrajectoryEnsemble(OutXEnsemble(vol1), even_slice)
+            AllInXEnsemble(vol1),
+            SlicedTrajectoryEnsemble(AllOutXEnsemble(vol1), even_slice)
         ])
         bare_results = {'in_out_in' : True,
                         'in_out_out_in' : False,
@@ -912,9 +1143,9 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
     def test_sliced_sequential_subtraj_middle(self):
         even_slice = slice(None, None, 2)
         ens = SequentialEnsemble([
-            InXEnsemble(vol1),
-            SlicedTrajectoryEnsemble(OutXEnsemble(vol1), even_slice),
-            InXEnsemble(vol1) & LengthEnsemble(1)
+            AllInXEnsemble(vol1),
+            SlicedTrajectoryEnsemble(AllOutXEnsemble(vol1), even_slice),
+            AllInXEnsemble(vol1) & LengthEnsemble(1)
         ])
         bare_results = {'in_in_out_out_in_in' : False
                        }
@@ -929,7 +1160,7 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
         slice_1_10 = slice(1, 10)
         slice_1_end = slice(1,None)
         slice_no_ends = slice(1, -1)
-        inX = InXEnsemble(vol1)
+        inX = AllInXEnsemble(vol1)
         inXstr = "x[t] in {x|Id(x) in [0.1, 0.5]} for all t"
         assert_equal(SlicedTrajectoryEnsemble(inX, even_slice).__str__(),
                      "("+inXstr+" in {:} every 2)")
@@ -943,19 +1174,19 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
 class testOptionalEnsemble(EnsembleTest):
     def setUp(self):
         self.start_opt = SequentialEnsemble([
-            OptionalEnsemble(OutXEnsemble(vol1)),
-            InXEnsemble(vol1),
-            OutXEnsemble(vol1),
+            OptionalEnsemble(AllOutXEnsemble(vol1)),
+            AllInXEnsemble(vol1),
+            AllOutXEnsemble(vol1),
         ])
         self.end_opt = SequentialEnsemble([
-            OutXEnsemble(vol1),
-            InXEnsemble(vol1),
-            OptionalEnsemble(OutXEnsemble(vol1))
+            AllOutXEnsemble(vol1),
+            AllInXEnsemble(vol1),
+            OptionalEnsemble(AllOutXEnsemble(vol1))
         ])
         self.mid_opt = SequentialEnsemble([
-            InXEnsemble(vol1),
-            OptionalEnsemble(OutXEnsemble(vol1) & InXEnsemble(vol2)),
-            OutXEnsemble(vol2),
+            AllInXEnsemble(vol1),
+            OptionalEnsemble(AllOutXEnsemble(vol1) & AllInXEnsemble(vol2)),
+            AllOutXEnsemble(vol2),
         ])
 
     def test_optional_start(self):
@@ -1096,7 +1327,7 @@ class testOptionalEnsemble(EnsembleTest):
 
 
     def test_optional_str(self):
-        inX = InXEnsemble(vol1)
+        inX = AllInXEnsemble(vol1)
         opt_inX = OptionalEnsemble(inX)
         assert_equal(opt_inX.__str__(), "{"+inX.__str__()+"} (OPTIONAL)")
 

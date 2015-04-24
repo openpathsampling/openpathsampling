@@ -458,7 +458,7 @@ class TransitionPathSampling(object):
 
         OPTIONAL ARGUMENTS
 
-        platform (simtk.chem.openPlatform) - platform to use for OpenMM calculations
+        platform (simtk.chem.openPlatform) - platform to use for OpenMM pathsimulators
         
         """
 
@@ -1159,8 +1159,8 @@ class ReplicaExchangeTPS(object):
         #setattr(ncvar_activities, 'C_format', r'%5.3f')
         
         # Define long (human-readable) names for variables.
-        setattr(ncvar_states,    "long_name", "states[iteration][replica] is the state index (0..nstates-1) of replica 'replica' of iteration 'iteration'.")
-        setattr(ncvar_mixing,    "long_name", "mixing[iteration][i][j] is the fraction of proposed transitions between states i and j that were accepted during mixing using the coordinates from iteration 'iteration-1'.")
+        setattr(ncvar_states,    "long_uid", "states[iteration][replica] is the state index (0..nstates-1) of replica 'replica' of iteration 'iteration'.")
+        setattr(ncvar_mixing,    "long_uid", "mixing[iteration][i][j] is the fraction of proposed transitions between states i and j that were accepted during mixing using the coordinates from iteration 'iteration-1'.")
         # TODO: other variables 
 
         # Store fields.

@@ -40,10 +40,10 @@ class testFirstFrameSelector(SelectorTest):
 
     def test_shooting_move(self):
         self.shooter = ForwardShootMover(FirstFrameSelector(), replicas=[0])
-        movepath = self.shooter.move(self.gs)
-        samples = movepath.all_samples
+        change = self.shooter.move(self.gs)
+        samples = change.all_samples
         assert_equal(len(samples), 1)
-        assert_equal(samples[0].details.accepted, True)
+        assert_equal(change.accepted, True)
         assert_items_equal([-0.5, -0.4, -0.3, -0.2, -0.1],
                            [s.coordinates[0][0] for s in samples[0].trajectory]
                           )
@@ -62,9 +62,9 @@ class testFinalFrameSelector(SelectorTest):
 
     def test_shooting_move(self):
         self.shooter = BackwardShootMover(FinalFrameSelector(), replicas=[0])
-        movepath = self.shooter.move(self.gs)
-        samples = movepath.all_samples
-        assert_equal(samples[0].details.accepted, True)
+        change = self.shooter.move(self.gs)
+        samples = change.all_samples
+        assert_equal(change.accepted, True)
         assert_items_equal([0.1, 0.2, 0.3, 0.4, 0.5],
                            [s.coordinates[0][0] for s in samples[0].trajectory]
                           )
