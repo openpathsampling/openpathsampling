@@ -32,15 +32,7 @@ def join_ms_outer(outers):
 def join_mis_minus(minuses):
     pass
 
-# hack to used a named tuple for data here.. rename from DepartureInfo?
-# see: http://stackoverflow.com/questions/11351032/
-class DepartureInfo(collections.namedtuple('DepartureInfo',
-                                           ['state', 'interfaces', 'name',
-                                            'orderparameter'])):
-    def __new__(cls, state, interfaces, name, orderparameter=None):
-        return super(DepartureInfo, cls).__new__(cls, state, interfaces,
-                                                 name, orderparameter)
-
+#def msouter_state_switching(mstis, storage):
 
 class MSTISNetwork(TISNetwork):
     def __init__(self, trans_info):
@@ -67,16 +59,17 @@ class MSTISNetwork(TISNetwork):
 
 #    def disallow(self, stateA, stateB):
 
+
     def default_movers(self):
         pass
 
 
+#def multiple_set_minus_switching(mistis, storage):
 
 class MISTISNetwork(TISNetwork):
     def __init__(self, transitions):
         pass
 
-#    def multiple_set_minus_switching(self):
 
     def default_movers(self):
         pass

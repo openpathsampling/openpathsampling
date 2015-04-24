@@ -33,6 +33,8 @@ class ToyPlot(object):
         self.repcolordict = {0 : 'k-', 1 : 'r-', 2 : 'g-', 3 : 'b-', 
                              4 : 'r-', 5 : 'k-'}
 
+        self.contour_range = np.arange(0.0, 1.5, 0.1)
+
         self._states = None
         self._pes = None
         self._interfaces = None
@@ -83,7 +85,7 @@ class ToyPlot(object):
                        aspect='auto')
         if self._pes is not None:
             plt.contour(self.X, self.Y, self._pes, 
-                        levels=np.arange(0.0, 1.5, 0.1), colors='k')
+                        levels=self.contour_range, colors='k')
         if self._interfaces is not None:
             for iface in self._interfaces:
                 plt.contour(self.X, self.Y, iface, 
