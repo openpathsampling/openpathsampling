@@ -13,25 +13,31 @@ control works best when there's already a Python API for your engine, or
 when start-up time is nearly nothing compared to obtaining a single MD step.
 
 With indirect control, we take a different approach: we launch a trajectory
-as a separate process, and check in on the trajectory it outputs until ???.
-
+as a separate process, and check in on the trajectory file it outputs until
+we hit the stopping condition. Then we kill the subprocess and clean up.
 
 ---
 
 For both APIs, the main ideas are the same: your subclass needs to translate
 information back and forth between our `Snapshot` class and your engine's
 internal data storage, and your subclass needs to be able to tell your
-engine to run its dynamics.
+engine to run its dynamics. The main difference is that the indirect
+approach uses the file system and external processes as intermediates for
+this translation.
 
 ## Direct control API
 
 ## Indirect control API
 
-* `read_frame_from_file(filename, frame_num)`
-* `write_frame_to_file(filename, snapshot, mode="a")`
-* `engine_command()`
-* `set_filenames(number)`
-* `cleanup()`
+* `read_frame_from_file(filename, frame_num)`: reads the frame from the
+  external engine's file format
+* `write_frame_to_file(filename, snapshot, mode="a")`: writes the frame to
+  the external engine's format (used to initiate trajectories)
+* `engine_command()`: returns a string of the command to be called by the
+  operating system
+* `set_filenames(number)`: sets the file names for step `number`
+* `cleanup()`: does any clean-up tasks needed after killing the subprocess
+  (e.g., removing temporary files)
 
 Additionally, you may wish to override the following options:
 
