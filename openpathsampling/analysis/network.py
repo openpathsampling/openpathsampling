@@ -29,33 +29,59 @@ class TISNetwork(TransitionNetwork):
 def join_ms_outer(outers):
     pass
 
-def join_mis_minus(minuses):
-    pass
+#def join_mis_minus(minuses):
+    #pass
 
 #def msouter_state_switching(mstis, storage):
 
+def get_movers_from_transitions(label, transitions):
+    movers = []
+    for trans in transitions:
+        movers += trans.movers[label]
+    return movers
+
 class MSTISNetwork(TISNetwork):
+    """
+    Multiple state transition interface sampling network.
+
+    The way this works is that it sees two effective sets of transitions.
+    First, there are sampling transitions. These are based on ensembles
+    which go to any final state. Second, there are analysis transitions.
+    These are based on ensembles which go to a specific final state.
+    """
     def __init__(self, trans_info):
-        states, interfaces, names, orderparams = zip(*trans_info)
+        self.trans_info = trans_info
         self.from_state = {}
-        msouters = []
-        for state, ifaces, op, name in trans_info:
+        self.outers = []
+        self.movers = { } 
+        for (state, ifaces, name, op) in trans_info:
+            states, interfaces, names, orderparams = zip(*trans_info)
             state_index = states.index(state)
             other_states = states[:state_index]+states[state_index+1:]
-            union_others = other_states[0]
-            for other in other_states[1:]:
-                union_others = union_others | other
+            union_others = paths.volume.join_volumes(other_states)
 
-            self.from_state[state] = RETISTransition(
+            self.from_state[state] = paths.RETISTransition(
                 stateA=state, 
                 stateB=union_others,
                 interfaces=ifaces[:-1],
                 name="Out "+name,
                 orderparameter=op
             )
-            msouters.append(ifaces[-1])
+            outers.append(ifaces[-1])
+
+        # get the movers from all of our sampling-based transitions
+        for label in ['shooting', 'pathreversal', 'minus', 'repex']:
+            self.movers[label] = get_movers_from_transitions(
+                label=label,
+                transition=self.from_state.values()
+            )
+        # default is only 1 MS outer, but in principle you could have
+        # multiple distinct MS outer interfaces
+        self.ms_outers = [join_ms_outer(outers)]
+        # TODO: set up repex
 
         pass
+
 
 #    def disallow(self, stateA, stateB):
 

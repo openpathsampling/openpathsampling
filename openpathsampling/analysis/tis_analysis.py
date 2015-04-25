@@ -328,7 +328,7 @@ class TISTransition(Transition):
         mystr = str(self.__class__.__name__) + str(self.name) + "\n"
         mystr += str(self.stateA.name) + " -> " + str(self.stateB.name) + "\n"
         for iface in self.interfaces:
-            mystr += "Interface: " + str(self.interfaces.name) + "\n"
+            mystr += "Interface: " + str(iface.name) + "\n"
         return mystr
 
 
