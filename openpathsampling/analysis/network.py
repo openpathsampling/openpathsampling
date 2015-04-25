@@ -26,8 +26,6 @@ class TISNetwork(TransitionNetwork):
         # better with it
         pass
 
-def join_ms_outer(outers):
-    pass
 
 #def join_mis_minus(minuses):
     #pass
@@ -54,6 +52,7 @@ class MSTISNetwork(TISNetwork):
         self.from_state = {}
         self.outers = []
         self.movers = { } 
+        self.outer_ensembles = []
         for (state, ifaces, name, op) in trans_info:
             states, interfaces, names, orderparams = zip(*trans_info)
             state_index = states.index(state)
@@ -67,17 +66,25 @@ class MSTISNetwork(TISNetwork):
                 name="Out "+name,
                 orderparameter=op
             )
-            outers.append(ifaces[-1])
+            self.outers.append(ifaces[-1])
+            outer_ensemble = paths.TISEnsemble(
+                initial_states=state | union_others,
+                final_states=state | union_others,
+                interface=ifaces[-1]
+            )
+            outer_ensemble.name = "outer " + str(state)
+            self.outer_ensembles.append(outer_ensemble)
+
 
         # get the movers from all of our sampling-based transitions
         for label in ['shooting', 'pathreversal', 'minus', 'repex']:
             self.movers[label] = get_movers_from_transitions(
                 label=label,
-                transition=self.from_state.values()
+                transitions=self.from_state.values()
             )
         # default is only 1 MS outer, but in principle you could have
         # multiple distinct MS outer interfaces
-        self.ms_outers = [join_ms_outer(outers)]
+        self.ms_outers = [paths.ensemble.join_ensembles(self.outer_ensembles)]
         # TODO: set up repex
 
         pass
