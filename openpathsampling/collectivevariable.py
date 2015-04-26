@@ -65,22 +65,6 @@ class CollectiveVariable(cd.Wrap):
 
         self._stored = False
 
-    def __eq__(self, other):
-        """Override the default Equals behavior"""
-        if isinstance(other, self.__class__):
-            return self.__dict__ == other.__dict__
-        return NotImplemented
-
-    def __ne__(self, other):
-        """Define a non-equality test"""
-        if isinstance(other, self.__class__):
-            return not self.__eq__(other)
-        return NotImplemented
-
-    def __hash__(self):
-        """Override the default hash behavior (that returns the id or the object)"""
-        return hash(tuple(sorted(self.__dict__.items())))
-
     def flush_cache(self, storage):
         """
         Copy the cache to the internal storage cache for saving
@@ -346,6 +330,38 @@ class CV_Function(CollectiveVariable):
         self._fcn = fcn
         self.kwargs = kwargs
         return
+
+    def to_dict(self):
+        return {
+            'name' : self.name,
+            'fcn' : self.fcn,
+            'kwargs' : self.kwargs
+        }
+
+    @staticmethod
+    def from_dict(self, dct):
+        return CV_Function(
+            name=dct['name'],
+            fcn=dct['fcn'],
+            **dct['kwargs']
+        )
+
+    def __eq__(self, other):
+        """Override the default Equals behavior"""
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
+    def __ne__(self, other):
+        """Define a non-equality test"""
+        if isinstance(other, self.__class__):
+            return not self.__eq__(other)
+        return NotImplemented
+
+    def __hash__(self):
+        """Override the default hash behavior (that returns the id or the object)"""
+        return hash(tuple(sorted(self.__dict__.items())))
+
 
 
     def _eval(self, items, *args):
