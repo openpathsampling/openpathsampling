@@ -1655,6 +1655,7 @@ class TISEnsemble(SequentialEnsemble):
         self.initial_states = initial_states
         self.final_states = final_states
         self.interface = interface
+        self.name = interface.name
 
         volume_a = paths.volume.join_volumes(initial_states)
         volume_b = paths.volume.join_volumes(final_states)
