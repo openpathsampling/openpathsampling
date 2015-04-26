@@ -2,11 +2,10 @@
 # | CLASS Order Parameter
 ###############################################################
 
-import mdtraj as md
 import openpathsampling as paths
 import chaindict as cd
-import collections
 from openpathsampling.todict import ops_object
+import pickle
 
 
 @ops_object
@@ -169,6 +168,24 @@ class CV_Featurizer(CollectiveVariable):
 
         return
 
+    _compare_keys = [ 'name', 'featurizer' ]
+
+    def to_dict(self):
+        return {
+            'name' : self.name,
+            'atom_indices' : self.atom_indices,
+            'featurizer_pickle' : pickle.dumps(self.featurizer)
+        }
+
+    @staticmethod
+    def from_dict(dct):
+        return CV_Function(
+            name=dct['name'],
+            atom_indices=dct['atom_indices'],
+            featurizer=pickle.loads(dct['featurizer_pickle'])
+        )
+
+
     def _eval(self, items):
         trajectory = paths.Trajectory(items)
 
@@ -238,6 +255,8 @@ class CV_Volume(CollectiveVariable):
         super(CV_Volume, self).__init__(name)
         self.volume = volume
 
+    _compare_keys = ['name', 'volume']
+
     def _eval(self, items):
         result = [float(self.volume(item)) for item in items]
         return result
@@ -249,30 +268,11 @@ class CV_Volume(CollectiveVariable):
         }
 
     @staticmethod
-    def from_dict(self, dct):
+    def from_dict(dct):
         return CV_Function(
             name=dct['name'],
             volume=dct['volume']
         )
-
-    def __eq__(self, other):
-        """Override the default Equals behavior"""
-        if isinstance(other, self.__class__):
-            if self.name != other.name:
-                return False
-            if self._fcn.func_code.op_code != other._fcn.func_code.op_code:
-                # Compare Bytecode. Not perfect, but should be good enough
-                return False
-
-            return True
-
-        return NotImplemented
-
-    def __ne__(self, other):
-        """Define a non-equality test"""
-        if isinstance(other, self.__class__):
-            return not self.__eq__(other)
-        return NotImplemented
 
 @ops_object
 class CV_Function(CollectiveVariable):
@@ -319,7 +319,7 @@ class CV_Function(CollectiveVariable):
         }
 
     @staticmethod
-    def from_dict(self, dct):
+    def from_dict(dct):
         return CV_Function(
             name=dct['name'],
             fcn=dct['fcn'],
@@ -337,12 +337,6 @@ class CV_Function(CollectiveVariable):
 
             return True
 
-        return NotImplemented
-
-    def __ne__(self, other):
-        """Define a non-equality test"""
-        if isinstance(other, self.__class__):
-            return not self.__eq__(other)
         return NotImplemented
 
     def _eval(self, items, *args):
