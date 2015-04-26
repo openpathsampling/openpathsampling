@@ -117,75 +117,24 @@ class CollectiveVariable(cd.Wrap):
         else:
             return items
 
+    _compare_keys = ['name']
 
-@ops_object
-class CV_RMSD_To_Lambda(CollectiveVariable):
-    """
-    Transforms the RMSD from `center` to a value between zero and one.
+    def __eq__(self, other):
+        """Override the default Equals behavior"""
+        if isinstance(other, self.__class__):
+            for key in self._compare_keys:
+                if self.__dict__[key] != other.__dict__[key]:
+                    return False
 
-    Parameters
-    ----------
-    center : snapshot
-        a trajectory snapshot that is used as the point to compute the RMSD to
-    lambda_min : float
-        rmsd value that corresponds to lambda zero
-    max_lambda : float
-        rmsd value that corresponds to lambda one
-    atom_indices : list of integers (optional)
-        a list of integers that is used in the rmsd computation. Usually solvent should be excluded
+            return True
 
-    Attributes
-    ----------
-    center : snapshot
-        a trajectory snapshot that is used as the point to compute the RMSD to
-    lambda_min : float
-        rmsd value that corresponds to lambda zero
-    max_lambda : float
-        rmsd value that corresponds to lambda one
-    atom_indices : list of integers (optional)
-        a list of integers that is used in the rmsd computation. Usually solvent should be excluded
-    metric : msmbuilder.metrics.RMSD
-        the RMSD metric object used to compute the RMSD
-    _generator : mdtraj.Trajectory prepared by metric.prepare_trajectory
-        trajectory object that contains only the center configuration to which the RMSD is computed to
-    """
+        return NotImplemented
 
-    def __init__(self, name, center, lambda_min, max_lambda, atom_indices=None):
-        super(CV_RMSD_To_Lambda, self).__init__(name, dimensions=1)
-
-        self.atom_indices = atom_indices
-        self.center = center
-        self.min_lambda = lambda_min
-        self.max_lambda = max_lambda
-
-        self._generator = paths.Trajectory([center]).subset(
-            self.atom_indices).md()
-        return
-
-    ################################################################################
-    ##  Actual computation of closest point using RMSD
-    ################################################################################
-
-    @staticmethod
-    def _scale_fnc(mi, ma):
-        def scale(x):
-            if x < mi:
-                return 0.0
-            elif x > ma:
-                return 1.0
-            else:
-                return (x - mi) / (ma - mi)
-
-        return scale
-
-    def _eval(self, items):
-        trajectory = paths.Trajectory(items)
-        ptraj = trajectory.subset(self.atom_indices).md()
-
-        results = md.rmsd(ptraj, self._generator)
-
-        return map(self._scale_fnc(self.min_lambda, self.max_lambda), results)
-
+    def __ne__(self, other):
+        """Define a non-equality test"""
+        if isinstance(other, self.__class__):
+            return not self.__eq__(other)
+        return NotImplemented
 
 @ops_object
 class CV_Featurizer(CollectiveVariable):
@@ -293,6 +242,37 @@ class CV_Volume(CollectiveVariable):
         result = [float(self.volume(item)) for item in items]
         return result
 
+    def to_dict(self):
+        return {
+            'name' : self.name,
+            'volume' : self.volume,
+        }
+
+    @staticmethod
+    def from_dict(self, dct):
+        return CV_Function(
+            name=dct['name'],
+            volume=dct['volume']
+        )
+
+    def __eq__(self, other):
+        """Override the default Equals behavior"""
+        if isinstance(other, self.__class__):
+            if self.name != other.name:
+                return False
+            if self._fcn.func_code.op_code != other._fcn.func_code.op_code:
+                # Compare Bytecode. Not perfect, but should be good enough
+                return False
+
+            return True
+
+        return NotImplemented
+
+    def __ne__(self, other):
+        """Define a non-equality test"""
+        if isinstance(other, self.__class__):
+            return not self.__eq__(other)
+        return NotImplemented
 
 @ops_object
 class CV_Function(CollectiveVariable):
@@ -364,12 +344,6 @@ class CV_Function(CollectiveVariable):
         if isinstance(other, self.__class__):
             return not self.__eq__(other)
         return NotImplemented
-
-    def __hash__(self):
-        """Override the default hash behavior (that returns the id or the object)"""
-        return hash(tuple(sorted(self.__dict__.items())))
-
-
 
     def _eval(self, items, *args):
         trajectory = paths.Trajectory(items)
