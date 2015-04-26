@@ -349,7 +349,14 @@ class CV_Function(CollectiveVariable):
     def __eq__(self, other):
         """Override the default Equals behavior"""
         if isinstance(other, self.__class__):
-            return self.__dict__ == other.__dict__
+            if self.name != other.name:
+                return False
+            if self._fcn.func_code.op_code != other._fcn.func_code.op_code:
+                # Compare Bytecode. Not perfect, but should be good enough
+                return False
+
+            return True
+
         return NotImplemented
 
     def __ne__(self, other):
