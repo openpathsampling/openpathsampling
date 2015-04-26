@@ -168,7 +168,7 @@ class CV_Featurizer(CollectiveVariable):
 
         return
 
-    _compare_keys = [ 'name', 'featurizer' ]
+    _compare_keys = [ 'name' ]
 
     def to_dict(self):
         return {
@@ -184,7 +184,6 @@ class CV_Featurizer(CollectiveVariable):
             atom_indices=dct['atom_indices'],
             featurizer=pickle.loads(dct['featurizer_pickle'])
         )
-
 
     def _eval(self, items):
         trajectory = paths.Trajectory(items)
@@ -227,17 +226,34 @@ class CV_MD_Function(CollectiveVariable):
         super(CV_MD_Function, self).__init__(name)
         self.fcn = fcn
         self.kwargs = kwargs
-        self.topology = None
+        self._topology = None
         return
+
+    _compare_keys = [ 'name', 'featurizer' ]
+
+    def to_dict(self):
+        return {
+            'name' : self.name,
+            'fcn' : self.fcn,
+            'kwargs' : self.kwargs
+        }
+
+    @staticmethod
+    def from_dict(dct):
+        return CV_Function(
+            name=dct['name'],
+            fcn=dct['fcn'],
+            **dct['kwargs']
+        )
 
     def _eval(self, items, *args):
         trajectory = paths.Trajectory(items)
 
-        if self.topology is None:
+        if self._topology is None:
             # first time ever compute the used topology for this collectivevariable to construct the mdtraj objects
-            self.topology = trajectory.topology.md
+            self._topology = trajectory.topology.md
 
-        t = trajectory.md(self.topology)
+        t = trajectory.md(self._topology)
         return self.fcn(t, *args, **self.kwargs)
 
 
