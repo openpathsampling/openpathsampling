@@ -5,7 +5,7 @@ from simtk import unit as units
 import yaml
 import openpathsampling as paths
 import inspect
-import types
+import pickle
 
 class ObjectJSON(object):
     """
@@ -48,6 +48,10 @@ class ObjectJSON(object):
             return result
         elif type(obj) is slice:
             return { '_slice' : [obj.start, obj.stop, obj.step]}
+        elif callable(obj):
+            # use pickle
+            # TODO: check if we unnecessarily pickle something we do not have to
+            return { '_pickle' : pickle.dumps(obj) }
         else:
             oo = obj
             return oo
@@ -67,6 +71,8 @@ class ObjectJSON(object):
                     return self.class_list[obj['_cls']].from_dict(attributes)
                 else:
                     raise ValueError('Cannot create obj of class "' + obj['_cls']+ '". Class is not registered as creatable!')
+            elif '_pickle' in obj:
+                return pickle.loads(obj['_pickle'])
             else:
                 return {key : self.build(o) for key, o in obj.iteritems()}
         elif type(obj) is tuple:
