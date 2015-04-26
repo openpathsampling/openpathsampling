@@ -9,6 +9,7 @@ import logging
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.DEBUG)
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logger = logging.getLogger('openpathsampling.tests.testensemble')
 
 import re
 import random
@@ -479,6 +480,38 @@ class testSequentialEnsemble(EnsembleTest):
     def test_overlap_max_gap(self):
         """SequentialEnsemble works if max overlap is negative (gap)"""
         raise SkipTest
+
+    def test_seqens_order_combo(self):
+        # regression test for #229
+        import numpy as np
+        op = paths.CV_Function(name="x", fcn=lambda snap : snap.xyz[0][0])
+        bigvol = paths.LambdaVolume(collectivevariable=op,
+                                    lambda_min=-100.0, lambda_max=100.0)
+
+        traj = paths.Trajectory([
+            paths.Snapshot(
+                coordinates=np.array([[-0.5, 0.0]]), 
+                velocities=np.array([[0.0,0.0]])
+            )
+        ])
+
+        vol_ens = paths.AllInXEnsemble(bigvol)
+        len_ens = paths.LengthEnsemble(5)
+
+        combo1 = vol_ens & len_ens
+        combo2 = len_ens & vol_ens
+
+        seq1 = SequentialEnsemble([combo1])
+        seq2 = SequentialEnsemble([combo2])
+        logger.debug("Checking combo1")
+        assert_equal(combo1.can_append(traj), True)
+        logger.debug("Checking combo2")
+        assert_equal(combo2.can_append(traj), True)
+        logger.debug("Checking seq1")
+        assert_equal(seq1.can_append(traj), True)
+        logger.debug("Checking seq2")
+        assert_equal(seq2.can_append(traj), True)
+
 
     def test_can_append_tis(self):
         """SequentialEnsemble as TISEnsemble knows when it can append"""

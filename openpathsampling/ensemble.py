@@ -201,7 +201,7 @@ class Ensemble(object):
         difficult if this depends on the length.
         '''
         return True        
-    
+
     def can_prepend(self, trajectory, trusted=False):
         '''
         Returns true, if the trajectory so far can still be in the ensemble
@@ -562,9 +562,10 @@ class EnsembleCombination(Ensemble):
         # This makes sense since the expensive part is the ensemble testing not computing two logic operations
         if Ensemble.use_shortcircuit:
             a = self.ensemble1(trajectory, trusted)
+            logger.debug("Combination is " + self.__class__.__name__)
             logger.debug("Combination: " + self.ensemble1.__class__.__name__ + 
                          " is "+str(a))
-            logger.debug("Combination: " + self.ensemble2.__class__.__name__ +   
+            logger.debug("Combination: " + self.ensemble2.__class__.__name__ +
                          " is " +str(self.ensemble2(trajectory, trusted)))
             logger.debug("Combination: returning " + 
                          str(self.fnc(a,self.ensemble2(trajectory,trusted))))
@@ -580,19 +581,21 @@ class EnsembleCombination(Ensemble):
             return self.fnc(self.ensemble1(trajectory, trusted), self.ensemble2(trajectory, trusted))
 
     # Forward / Backward is tricky
-    # We can do the following. If a or b is true this means that the real result could be false or true, we just
-    # keep going but we should have stopped. If a or b is false this means for that ensemble continuing is not
-    # feasible and so false really means false. To check if a logical combination should be continued just
-    # try for all true values a potential false and check if we should continue.
+    # We can do the following. If a or b is true this means that the real
+    # result could be false or true, we just keep going but we should have
+    # stopped. If a or b is false this means for that ensemble continuing is
+    # not feasible and so false really means false. To check if a logical
+    # combination should be continued just try for all true values a
+    # potential false and check if we should continue.
 
     def _continue_fnc(self, a, b):
         fnc = self.fnc
         res = fnc(a,b)
-        if a is True:
+        if a == True:
             res |= fnc(False, b)
-        if b is True:
+        if b == True:
             res |= fnc(a, False)
-        if a is True and b is True:
+        if a == True and b == True:
             res |= fnc(False, False)
 
         return res
@@ -600,6 +603,15 @@ class EnsembleCombination(Ensemble):
     def can_append(self, trajectory, trusted=False):
         if Ensemble.use_shortcircuit:
             a = self.ensemble1.can_append(trajectory, trusted)
+            logger.debug("Combination is " + self.__class__.__name__)
+            logger.debug("Combination.can_append: " + 
+                         self.ensemble1.__class__.__name__ + " is "+str(a))
+            logger.debug("Combination.can_append: " 
+                         + self.ensemble2.__class__.__name__ +
+                         " is " +
+                         str(self.ensemble2.can_append(trajectory, trusted)))
+            logger.debug("Combination.can_append: returning " + 
+                         str(self.fnc(a,self.ensemble2.can_append(trajectory,trusted))))
             res_true = self._continue_fnc(a, True)
             res_false = self._continue_fnc(a, False)
             if res_false == res_true:
@@ -607,9 +619,12 @@ class EnsembleCombination(Ensemble):
                 return res_true
             else:
                 b = self.ensemble2.can_append(trajectory, trusted)
-                if b is True:
+                #logger.debug("b is " + str(b))
+                if b == True:
+                    #logger.debug("Will return res_true")
                     return res_true
                 else:
+                    #logger.debug("Will return res_false")
                     return res_false
         else:
             return self.fnc(self.ensemble1.can_append(trajectory, trusted), 
@@ -625,7 +640,7 @@ class EnsembleCombination(Ensemble):
                 return res_true
             else:
                 b = self.ensemble2.can_prepend(trajectory, trusted)
-                if b is True:
+                if b == True:
                     return res_true
                 else:
                     return res_false
@@ -835,7 +850,7 @@ class SequentialEnsemble(Ensemble):
         -------
         int
             Frame of traj which is the final frame for a subtraj starting at
-            subtraj_first and satisfying self.ensembles[ens_num]
+            subtraj_first and satisfying self.ensembles.can_append[ens_num]
         """
         if last_checked is None:
             subtraj_final = subtraj_first
@@ -852,6 +867,9 @@ class SequentialEnsemble(Ensemble):
         # we overshoot
         logger.debug("*Traj slice " + str(subtraj_first) + " " + 
                      str(subtraj_final+1) + " / " + str(traj_final))
+        logger.debug("Ensemble " + str(ens.__class__.__name__) + str(ens))
+        logger.debug("Can-app " + str(ens.can_append(subtraj, trusted=True)))
+        logger.debug("Call    " + str(ens(subtraj, trusted=True)))
         while ( (ens.can_append(subtraj, trusted=True) or 
                  ens(subtraj, trusted=True)
                 ) and subtraj_final < traj_final):
@@ -1184,7 +1202,11 @@ class LengthEnsemble(Ensemble):
     def can_append(self, trajectory, trusted=False):
         length = len(trajectory)
         if type(self.length) is int:
-            return length < self.length
+            return_value = (length < self.length)
+            logger.debug("LengthEnsemble.can_append: Segment length " + 
+                         str(length) + " < " + str(self.length) + " : " +
+                         str(return_value))
+            return return_value
         else:
             return self.length.stop is None or length < self.length.stop - 1
 
