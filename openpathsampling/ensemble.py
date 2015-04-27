@@ -76,8 +76,8 @@ class EnsembleCache(object):
         else:
             reset = True
 
+        self.trusted = not reset and (len(trajectory) <= self.last_length + 1) 
         self.last_length = len(trajectory)
-        self.trusted = (self.last_length == 1)
         if reset:
             logger.debug("Resetting cache " + str(self))
             if self.direction > 0:
@@ -101,8 +101,7 @@ class EnsembleCache(object):
         elif self.direction < 0:
             self.prev_last_frame = trajectory[0]
         else:
-            raise RuntimeWarning("EnsembleCache.direction = " + 
-                                 str(self.direction) + " invalid.")
+            self.bad_direction_error()
 
         return reset
 
@@ -765,6 +764,7 @@ class SequentialEnsemble(Ensemble):
                      " | ens_from " + str(ens_from) +
                      " | subtraj_from " + str(subtraj_from)
                     )
+        logger.debug("Trusted: " + str(cache.trusted))
 
     def assign_frames(self, cache, ens_num, subtraj_first=None, subtraj_final=None):
         if ens_num is None:
@@ -867,7 +867,7 @@ class SequentialEnsemble(Ensemble):
         # we overshoot
         logger.debug("*Traj slice " + str(subtraj_first) + " " + 
                      str(subtraj_final+1) + " / " + str(traj_final))
-        logger.debug("Ensemble " + str(ens.__class__.__name__) + str(ens))
+        logger.debug("Ensemble " + str(ens.__class__.__name__))# + str(ens))
         logger.debug("Can-app " + str(ens.can_append(subtraj, trusted=True)))
         logger.debug("Call    " + str(ens(subtraj, trusted=True)))
         while ( (ens.can_append(subtraj, trusted=True) or 
