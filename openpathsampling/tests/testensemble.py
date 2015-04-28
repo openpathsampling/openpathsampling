@@ -97,7 +97,7 @@ def setUp():
                  "abaa", "abba", "abaab", "ababa", "abbab", "ac", "bc",
                  "abaaba", "aobab", "abab", "abcbababcba", "aca", "abc",
                  "acaca", "acac", "caca", "aaca", "baca", "aaba", "aab",
-                 "aabbaa"
+                 "aabbaa", "abbb"
                 ]
     ttraj = build_trajdict(trajtypes, lower, upper)
 
@@ -1363,6 +1363,31 @@ class testOptionalEnsemble(EnsembleTest):
         inX = AllInXEnsemble(vol1)
         opt_inX = OptionalEnsemble(inX)
         assert_equal(opt_inX.__str__(), "{"+inX.__str__()+"} (OPTIONAL)")
+
+class testForwardAppendedTrajectoryEnsemble(EnsembleTest):
+    def setUp(self):
+        self.inX = AllInXEnsemble(vol1)
+
+    def test_bad_start_traj(self):
+        traj = ttraj['upper_out_in_in_in']
+        ens = ForwardAppendedTrajectoryEnsemble(
+            SequentialEnsemble([self.inX]),
+            traj[0:2]
+        )
+        assert_equal(ens.can_append(traj[0:3]), False)
+        assert_equal(ens(traj[0:3]), False)
+
+    def test_good_start_traj(self):
+        traj = ttraj['upper_in_in_in']
+        ens = ForwardAppendedTrajectoryEnsemble(
+            SequentialEnsemble([self.inX]),
+            traj[0:2]
+        )
+        assert_equal(ens.can_append(traj[0:3]), True)
+        assert_equal(ens(traj[0:3]), True)
+
+    def test_caching_in_fwdapp_seq(self):
+        raise SkipTest
 
 class testMinusInterfaceEnsemble(EnsembleTest):
     def setUp(self):

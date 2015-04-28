@@ -76,7 +76,7 @@ class EnsembleCache(object):
         else:
             reset = True
 
-        self.trusted = not reset and (len(trajectory) <= self.last_length + 1) 
+        self.trusted = not reset 
         self.last_length = len(trajectory)
         if reset:
             logger.debug("Resetting cache " + str(self))
@@ -764,7 +764,7 @@ class SequentialEnsemble(Ensemble):
                      " | ens_from " + str(ens_from) +
                      " | subtraj_from " + str(subtraj_from)
                     )
-        logger.debug("Trusted: " + str(cache.trusted))
+        logger.debug("Cache is Trusted: " + str(cache.trusted))
 
     def assign_frames(self, cache, ens_num, subtraj_first=None, subtraj_final=None):
         if ens_num is None:
@@ -941,6 +941,9 @@ class SequentialEnsemble(Ensemble):
         logger.debug(
             "Beginning can_append with subtraj_first=" + str(subtraj_first)
             + "; ens_first=" + str(ens_first) + "; ens_num=" + str(ens_num)
+        )
+        logger.debug(
+            "Can-append sees a trusted cache: " + str(cache.trusted)
         )
         for i in range(len(self.ensembles)):
             ens = self.ensembles[i]
