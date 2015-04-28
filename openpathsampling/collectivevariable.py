@@ -323,6 +323,9 @@ class CV_External_Function(CollectiveVariable):
             if self.fcn != other.fcn:
                 return False
 
+            if self.kwargs != other.kwargs:
+                return False
+
             return True
 
         return NotImplemented
