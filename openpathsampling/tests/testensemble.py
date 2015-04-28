@@ -9,6 +9,7 @@ import logging
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.DEBUG)
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logger = logging.getLogger('openpathsampling.tests.testensemble')
 
 import re
 import random
@@ -479,6 +480,38 @@ class testSequentialEnsemble(EnsembleTest):
     def test_overlap_max_gap(self):
         """SequentialEnsemble works if max overlap is negative (gap)"""
         raise SkipTest
+
+    def test_seqens_order_combo(self):
+        # regression test for #229
+        import numpy as np
+        op = paths.CV_Function(name="x", fcn=lambda snap : snap.xyz[0][0])
+        bigvol = paths.LambdaVolume(collectivevariable=op,
+                                    lambda_min=-100.0, lambda_max=100.0)
+
+        traj = paths.Trajectory([
+            paths.Snapshot(
+                coordinates=np.array([[-0.5, 0.0]]), 
+                velocities=np.array([[0.0,0.0]])
+            )
+        ])
+
+        vol_ens = paths.AllInXEnsemble(bigvol)
+        len_ens = paths.LengthEnsemble(5)
+
+        combo1 = vol_ens & len_ens
+        combo2 = len_ens & vol_ens
+
+        seq1 = SequentialEnsemble([combo1])
+        seq2 = SequentialEnsemble([combo2])
+        logger.debug("Checking combo1")
+        assert_equal(combo1.can_append(traj), True)
+        logger.debug("Checking combo2")
+        assert_equal(combo2.can_append(traj), True)
+        logger.debug("Checking seq1")
+        assert_equal(seq1.can_append(traj), True)
+        logger.debug("Checking seq2")
+        assert_equal(seq2.can_append(traj), True)
+
 
     def test_can_append_tis(self):
         """SequentialEnsemble as TISEnsemble knows when it can append"""
@@ -1457,4 +1490,53 @@ class testMinusInterfaceEnsemble(EnsembleTest):
             'out_in_in_in_out_in_out_in_in_in_out'
         ]
         self._test_everything(self.minus_nl3.can_prepend, non_default, True)
+
+# TODO: this whole class should become a single test in SeqEns
+class testSingleEnsembleSequentialEnsemble(EnsembleTest):
+    def setUp(self):
+        #self.inner_ens = AllInXEnsemble(vol1 | vol2)
+        self.inner_ens = LengthEnsemble(3) & AllInXEnsemble( vol1 | vol2 )
+        self.ens = SequentialEnsemble([self.inner_ens])
+
+    def test_it_all(self):
+        for test in ttraj.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.ens, ttraj[test],
+                              self.inner_ens(ttraj[test]), failmsg)
+            self._single_test(self.ens.can_append, ttraj[test],
+                              self.inner_ens.can_append(ttraj[test]), failmsg)
+            self._single_test(self.ens.can_prepend, ttraj[test],
+                              self.inner_ens.can_prepend(ttraj[test]), failmsg)
+            
+
+
+class testEnsembleSplit(EnsembleTest):
+    def setUp(self):
+        self.inA = AllInXEnsemble(vol1)
+        self.outA = AllOutXEnsemble(vol1)
+
+    def test_split(self):
+        raise SkipTest
+        print vol1
+        traj1 = ttraj['upper_in_out_in_in']
+        print [s for s in traj1]
+        subtrajs_in_1 = self.inA.split(traj1)
+        assert_equal(len(subtrajs_in_1), 2)
+        assert_equal(len(subtrajs_in_1[0]), 1)
+        assert_equal(len(subtrajs_in_1[1]), 2)
+        subtrajs_out_1 = self.outA.split(traj1)
+        assert_equal(len(subtrajs_out_1), 1)
+
+        traj2 = ttraj['upper_in_out_in_in_out_in']
+        print [s for s in traj2]
+        subtrajs_in_2 = self.inA.split(traj2)
+        assert_equal(len(subtrajs_in_2), 3)
+        assert_equal(len(subtrajs_in_2[0]), 1)
+        assert_equal(len(subtrajs_in_2[1]), 2)
+        assert_equal(len(subtrajs_in_2[2]), 1)
+        subtrajs_out_2 = self.outA.split(traj2)
+        assert_equal(len(subtrajs_out_2), 2)
+        assert_equal(len(subtrajs_out_2[0]), 1)
+        assert_equal(len(subtrajs_out_2[1]), 1)
+
 

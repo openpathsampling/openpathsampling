@@ -54,6 +54,25 @@ class Histogram(object):
         self.name = None
         self._histogram = None
 
+    @staticmethod
+    def sum_histograms(hists):
+        (w, r) = (hists[0].bin_width, hists[0].bin_range)
+        newhist = Histogram(bin_width=w, bin_range=r)
+
+        for hist in hists:
+            if not newhist.compare_parameters(hist):
+                raise RuntimeError
+
+            newhist.count += hist.count
+            try:
+                for i in range(newhist.n_bins):
+                    newhist._histogram[i] += hist._histogram[i]
+            except TypeError:
+                newhist._histogram = hist._histogram.copy()
+        
+        return newhist
+
+
     def add_data_to_histogram(self, data, weights=None):
         """Add `data` to an existing histogram; return resulting histogram"""
         if self._histogram is None:

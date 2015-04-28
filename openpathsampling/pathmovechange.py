@@ -7,6 +7,7 @@ from openpathsampling.todict import ops_object
 
 @ops_object
 class PathMoveChange(object):
+    #TODO: this docstring is false
     '''
     PathMoveChange is essentially a list of samples, with a few conveniences.  It
     can be treated as a list of samples (using, e.g., .append), or as a
