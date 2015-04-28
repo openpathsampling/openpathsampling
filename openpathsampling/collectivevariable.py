@@ -6,7 +6,8 @@ import openpathsampling as paths
 import chaindict as cd
 from openpathsampling.todict import ops_object
 import marshal, base64, types
-import mdtraj as md
+import mdtraj
+import msmbuilder
 
 
 @ops_object
@@ -137,98 +138,6 @@ class CollectiveVariable(cd.Wrap):
         return NotImplemented
 
 @ops_object
-class CV_Featurizer(CollectiveVariable):
-    """
-    An CollectiveVariable that uses an MSMBuilder3 featurizer as the logic
-
-    Parameters
-    ----------
-    centers : trajectory
-        a trajectory of snapshots that are used as the points to compute the RMSD to
-    atom_indices : list of integers (optional)
-        a list of integers that is used in the rmsd computation. Usually solvent should be excluded
-    metric : msmbuilder.metrics.Metric
-        the metric object used to compute the RMSD
-
-    Attributes
-    ----------
-    centers : trajectory
-        a trajectory of snapshots that are used as the points to compute the RMSD to
-    atom_indices : list of integers (optional)
-        a list of integers that is used in the rmsd computation. Usually solvent should be excluded
-    metric : msmbuilder.metrics.RMSD
-        the RMSD metric object used to compute the RMSD
-    """
-
-    def __init__(self, name, featurizer, **kwargs):
-
-        # turn Snapshot and Trajectory into md.trajectory
-
-        self.featurizer = featurizer
-        self.kwargs = kwargs
-
-        for key in kwargs:
-            if type(kwargs[key]) is paths.Snapshot:
-                kwargs[key] = kwargs[key].md()
-            elif type(kwargs[key]) is paths.Trajectory:
-                kwargs[key] = kwargs[key].md()
-
-        self._feat = featurizer(**kwargs)
-
-        super(CV_Featurizer, self).__init__(
-            name,
-            dimensions=self._feat.n_features
-        )
-
-        return
-
-    _compare_keys = [ 'name' ]
-
-    def to_dict(self):
-
-        featurizer = None
-
-        if self.featurizer.__module__.split('.')[0] in ['msmbuilder']:
-            featurizer = {
-                '_module' : self.featurizer.__module__,
-                '_featurizer_name' : self.featurizer.func_code.co_name
-            }
-
-        return {
-            'name' : self.name,
-            'featurizer' : featurizer,
-            'kwargs' : self.kwargs
-        }
-
-    @classmethod
-    def from_dict(cls, dct):
-        featurizer = None
-        md_fcn = dct['md_fcn']
-        if dct['md_fcn'] is not None:
-            if '_module' in md_fcn:
-                module = md_fcn['_module']
-                if module.split('.')[0] == 'msmbuilder':
-                    featurizer = getattr(md, md_fcn['_featurizer_name'])
-
-        return cls(
-            name=dct['name'],
-            featurizer=featurizer,
-            **dct['kwargs']
-        )
-
-
-    def _eval(self, items):
-        trajectory = paths.Trajectory(items)
-
-        # create an MDtraj trajectory out of it
-        ptraj = trajectory.subset(self.atom_indices).md()
-
-        # run the featurizer
-        result = self.featurizer.partial_transform(ptraj)
-
-        return result
-
-@ops_object
 class CV_Volume(CollectiveVariable):
     """ Make `Volume` into `CollectiveVariable`: maps to 0.0 or 1.0 """
 
@@ -279,7 +188,7 @@ class CV_Function(CollectiveVariable):
 
     allow_marshal = True
 
-    def __init__(self, name, fcn, **kwargs):
+    def __init__(self, name, fcn, dimensions=1, **kwargs):
         """
         Parameters
         ----------
@@ -295,7 +204,7 @@ class CV_Function(CollectiveVariable):
             trick, and to instead create separate wrapper classes for each
             supported trajformat.
         """
-        super(CV_Function, self).__init__(name)
+        super(CV_Function, self).__init__(name, dimensions=dimensions)
         self.fcn = fcn
         self.kwargs = kwargs
         return
@@ -354,7 +263,87 @@ class CV_Function(CollectiveVariable):
         return [self.fcn(snap, *args, **self.kwargs) for snap in trajectory]
 
 @ops_object
-class CV_MD_Function(CV_Function):
+class CV_External_Function(CollectiveVariable):
+
+    _allowed_modules = []
+
+    def __init__(self, name, fcn, dimensions=1, **kwargs):
+        """
+        Parameters
+        ----------
+        name : str
+        fcn : function
+        kwargs :
+            named arguments which should be given to `fcn` (for example, the
+            atoms which define a specific distance/angle)
+
+        Notes
+        -----
+            We may decide that it is better not to use the trajdatafmt
+            trick, and to instead create separate wrapper classes for each
+            supported trajformat.
+        """
+        super(CV_External_Function, self).__init__(name, dimensions=dimensions)
+        self.fcn = fcn
+        self.kwargs = kwargs
+
+    @classmethod
+    def from_dict(cls, dct):
+        fcn = None
+
+        fcn_dct = dct['fcn']
+        if fcn_dct is not None:
+            if '_module' in fcn_dct:
+                module = fcn_dct['_module']
+                packages = module.split('.')
+                if packages[0] in cls._allowed_modules:
+                    package = globals()[packages[0]]
+                    for p in packages[1:]:
+                        package = getattr(package, p)
+
+                    fcn = getattr(package, fcn_dct['_fcn_name'])
+
+        return cls(
+            name=dct['name'],
+            fcn=fcn,
+            **dct['kwargs']
+        )
+
+    def _fcn_name(self, fcn):
+        # works for functions
+        return fcn.__name__
+        # for classes we need return fcn.__class__.__name__
+
+    def __eq__(self, other):
+        """Override the default Equals behavior"""
+        if isinstance(other, self.__class__):
+            if self.name != other.name:
+                return False
+
+            if self.fcn != other.fcn:
+                return False
+
+            return True
+
+        return NotImplemented
+
+    def to_dict(self):
+        fcn = None
+        if self.fcn.__module__.split('.')[0] in self._allowed_modules:
+            # only store the function and the module
+            fcn = {
+                '_module' : self.fcn.__module__,
+                '_fcn_name' : self._fcn_name(self.fcn)
+            }
+
+        return {
+            'name' : self.name,
+            'fcn' : fcn,
+            'kwargs' : self.kwargs
+        }
+
+@ops_object
+class CV_MD_Function(CV_External_Function):
     """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
 
     Examples
@@ -368,7 +357,10 @@ class CV_MD_Function(CV_Function):
     >>> print psi_orderparam( traj.md() )
     """
 
-    def __init__(self, name, fcn, **kwargs):
+    _allowed_modules = ['mdtraj']
+    _compare_keys = ['name']
+
+    def __init__(self, name, fcn, dimensions=1, **kwargs):
         """
         Parameters
         ----------
@@ -379,58 +371,79 @@ class CV_MD_Function(CV_Function):
             atoms which define a specific distance/angle)
 
         """
-        super(CV_MD_Function, self).__init__(name, fcn, **kwargs)
+        super(CV_MD_Function, self).__init__(
+            name, fcn, dimensions=dimensions, **kwargs
+        )
         self._topology = None
-        return
 
     def _eval(self, items, *args):
         trajectory = paths.Trajectory(items)
 
         if self._topology is None:
-            # first time ever compute the used topology for this collectivevariable to construct the mdtraj objects
             self._topology = trajectory.topology.md
 
         t = trajectory.md(self._topology)
         return self.fcn(t, *args, **self.kwargs)
 
-    def to_dict(self):
-        fcn = None
-        if self.allow_marshal and callable(self.fcn):
-            # use marshal
-            if self.fcn.__module__ == '__main__':
-                fcn = {
-                    '_marshal' : base64.b64encode(marshal.dumps(self.fcn.func_code))
-                }
-            elif self.fcn.__module__.split('.')[0] in ['mdtraj']:
-                # only store the function and the module
-                fcn = {
-                    '_module' : self.fcn.__module__,
-                    '_fcn_name' : self.fcn.func_code.co_name
-                }
+@ops_object
+class CV_Featurizer(CV_External_Function):
+    """
+    An CollectiveVariable that uses an MSMBuilder3 featurizer as the logic
 
+    Parameters
+    ----------
+    centers : trajectory
+        a trajectory of snapshots that are used as the points to compute the RMSD to
+    atom_indices : list of integers (optional)
+        a list of integers that is used in the rmsd computation. Usually solvent should be excluded
+    metric : msmbuilder.metrics.Metric
+        the metric object used to compute the RMSD
 
-        return {
-            'name' : self.name,
-            'fcn' : fcn,
-            'kwargs' : self.kwargs
-        }
+    Attributes
+    ----------
+    centers : trajectory
+        a trajectory of snapshots that are used as the points to compute the RMSD to
+    atom_indices : list of integers (optional)
+        a list of integers that is used in the rmsd computation. Usually solvent should be excluded
+    metric : msmbuilder.metrics.RMSD
+        the RMSD metric object used to compute the RMSD
+    """
 
-    @classmethod
-    def from_dict(cls, dct):
-        fcn = None
-        if cls.allow_marshal:
-            fcn_dct = dct['fcn']
-            if fcn_dct is not None:
-                if '_marshal' in fcn_dct:
-                    code = marshal.loads(base64.b64decode(dct['_marshal']))
-                    fcn = types.FunctionType(code, globals(), code.co_name)
-                elif '_module' in fcn_dct:
-                    module = fcn_dct['_module']
-                    if module.split('.')[0] == 'mdtraj':
-                        fcn = getattr(md, fcn_dct['_fcn_name'])
+    def __init__(self, name, featurizer, **kwargs):
 
-        return cls(
-            name=dct['name'],
-            fcn=fcn,
-            **dct['kwargs']
+        self.kwargs = kwargs
+        # turn Snapshot and Trajectory into md.trajectory
+        for key in kwargs:
+            if type(kwargs[key]) is paths.Snapshot:
+                kwargs[key] = kwargs[key].md()
+            elif type(kwargs[key]) is paths.Trajectory:
+                kwargs[key] = kwargs[key].md()
+
+        self._feat = featurizer(**kwargs)
+
+        super(CV_Featurizer, self).__init__(
+            name,
+            fcn=featurizer,
+            dimensions=self._feat.n_features,
+            **self.kwargs
         )
+
+
+    _compare_keys = [ 'name' ]
+    _allowed_modules = [ 'msmbuilder' ]
+
+    def _eval(self, items):
+        trajectory = paths.Trajectory(items)
+
+        # create an MDtraj trajectory out of it
+        ptraj = trajectory.md()
+
+        # run the featurizer
+        result = self._feat.partial_transform(ptraj)
+
+        return result
+
+    def _fcn_name(self, fcn):
+        # works for functions
+        return fcn.__name__
+        # for classes we need return fcn.__class__.__name__
