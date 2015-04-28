@@ -5,7 +5,6 @@ from simtk import unit as units
 import yaml
 import openpathsampling as paths
 import inspect
-import marshal, types
 
 class ObjectJSON(object):
     """
@@ -50,10 +49,6 @@ class ObjectJSON(object):
             return result
         elif type(obj) is slice:
             return { '_slice' : [obj.start, obj.stop, obj.step]}
-        elif self.allow_marshal and callable(obj):
-            # use marshal
-            # TODO: check if we unnecessarily pickle something we do not have to
-            return { '_marshal' : marshal.dumps(obj.func_code) }
         else:
             oo = obj
             return oo
@@ -73,9 +68,6 @@ class ObjectJSON(object):
                     return self.class_list[obj['_cls']].from_dict(attributes)
                 else:
                     raise ValueError('Cannot create obj of class "' + obj['_cls']+ '". Class is not registered as creatable!')
-            elif '_marshal' in obj:
-                code = marshal.loads(obj['_pickle'])
-                return types.FunctionType(code, globals())
             else:
                 return {key : self.build(o) for key, o in obj.iteritems()}
         elif type(obj) is tuple:

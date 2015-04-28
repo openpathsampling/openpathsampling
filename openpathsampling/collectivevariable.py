@@ -5,7 +5,8 @@
 import openpathsampling as paths
 import chaindict as cd
 from openpathsampling.todict import ops_object
-import pickle
+import marshal, base64, types
+import mdtraj as md
 
 
 @ops_object
@@ -159,31 +160,62 @@ class CV_Featurizer(CollectiveVariable):
         the RMSD metric object used to compute the RMSD
     """
 
-    def __init__(self, name, featurizer, atom_indices=None):
-        super(CV_Featurizer, self).__init__(name,
-                                            dimensions=featurizer.n_features)
+    def __init__(self, name, featurizer, **kwargs):
 
-        self.atom_indices = atom_indices
+        # turn Snapshot and Trajectory into md.trajectory
+
         self.featurizer = featurizer
+        self.kwargs = kwargs
+
+        for key in kwargs:
+            if type(kwargs[key]) is paths.Snapshot:
+                kwargs[key] = kwargs[key].md()
+            elif type(kwargs[key]) is paths.Trajectory:
+                kwargs[key] = kwargs[key].md()
+
+        self._feat = featurizer(**kwargs)
+
+        super(CV_Featurizer, self).__init__(
+            name,
+            dimensions=self._feat.n_features
+        )
 
         return
 
     _compare_keys = [ 'name' ]
 
     def to_dict(self):
+
+        featurizer = None
+
+        if self.featurizer.__module__.split('.')[0] in ['msmbuilder']:
+            featurizer = {
+                '_module' : self.featurizer.__module__,
+                '_featurizer_name' : self.featurizer.func_code.co_name
+            }
+
         return {
             'name' : self.name,
-            'atom_indices' : self.atom_indices,
-            'featurizer_pickle' : pickle.dumps(self.featurizer)
+            'featurizer' : featurizer,
+            'kwargs' : self.kwargs
         }
 
-    @staticmethod
-    def from_dict(dct):
-        return CV_Function(
+    @classmethod
+    def from_dict(cls, dct):
+        featurizer = None
+        md_fcn = dct['md_fcn']
+        if dct['md_fcn'] is not None:
+            if '_module' in md_fcn:
+                module = md_fcn['_module']
+                if module.split('.')[0] == 'msmbuilder':
+                    featurizer = getattr(md, md_fcn['_featurizer_name'])
+
+        return cls(
             name=dct['name'],
-            atom_indices=dct['atom_indices'],
-            featurizer=pickle.loads(dct['featurizer_pickle'])
+            featurizer=featurizer,
+            **dct['kwargs']
         )
+
 
     def _eval(self, items):
         trajectory = paths.Trajectory(items)
@@ -195,67 +227,6 @@ class CV_Featurizer(CollectiveVariable):
         result = self.featurizer.partial_transform(ptraj)
 
         return result
-
-
-@ops_object
-class CV_MD_Function(CollectiveVariable):
-    """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
-
-    Examples
-    -------
-    >>> # To create an order parameter which calculates the dihedral formed
-    >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
-    >>> import mdtraj as md
-    >>> psi_atoms = [7,9,15,17]
-    >>> psi_orderparam = CV_Function("psi", md.compute_dihedrals,
-    >>>                              indices=[phi_atoms])
-    >>> print psi_orderparam( traj.md() )
-    """
-
-    def __init__(self, name, fcn, **kwargs):
-        """
-        Parameters
-        ----------
-        name : str
-        fcn : function
-        kwargs :
-            named arguments which should be given to `fcn` (for example, the
-            atoms which define a specific distance/angle)
-
-        """
-        super(CV_MD_Function, self).__init__(name)
-        self.fcn = fcn
-        self.kwargs = kwargs
-        self._topology = None
-        return
-
-    _compare_keys = [ 'name', 'featurizer' ]
-
-    def to_dict(self):
-        return {
-            'name' : self.name,
-            'fcn' : self.fcn,
-            'kwargs' : self.kwargs
-        }
-
-    @staticmethod
-    def from_dict(dct):
-        return CV_Function(
-            name=dct['name'],
-            fcn=dct['fcn'],
-            **dct['kwargs']
-        )
-
-    def _eval(self, items, *args):
-        trajectory = paths.Trajectory(items)
-
-        if self._topology is None:
-            # first time ever compute the used topology for this collectivevariable to construct the mdtraj objects
-            self._topology = trajectory.topology.md
-
-        t = trajectory.md(self._topology)
-        return self.fcn(t, *args, **self.kwargs)
-
 
 @ops_object
 class CV_Volume(CollectiveVariable):
@@ -285,7 +256,7 @@ class CV_Volume(CollectiveVariable):
 
     @staticmethod
     def from_dict(dct):
-        return CV_Function(
+        return CV_Volume(
             name=dct['name'],
             volume=dct['volume']
         )
@@ -306,6 +277,8 @@ class CV_Function(CollectiveVariable):
     >>> print psi_orderparam( traj.md() )
     """
 
+    allow_marshal = True
+
     def __init__(self, name, fcn, **kwargs):
         """
         Parameters
@@ -323,31 +296,51 @@ class CV_Function(CollectiveVariable):
             supported trajformat.
         """
         super(CV_Function, self).__init__(name)
-        self._fcn = fcn
+        self.fcn = fcn
         self.kwargs = kwargs
         return
 
+
     def to_dict(self):
+        fcn = None
+        if self.allow_marshal and callable(self.fcn):
+            # use marshal
+            if self.fcn.__module__ == '__main__':
+                fcn = {
+                    '_marshal' : base64.b64encode(marshal.dumps(self.fcn.func_code))
+                }
+
         return {
             'name' : self.name,
-            'fcn' : self.fcn,
+            'fcn' : fcn,
             'kwargs' : self.kwargs
         }
 
-    @staticmethod
-    def from_dict(dct):
-        return CV_Function(
+    @classmethod
+    def from_dict(cls, dct):
+        fcn = None
+        if cls.allow_marshal:
+            fcn_dct = dct['fcn']
+            if fcn_dct is not None:
+                if '_marshal' in fcn_dct:
+                    code = marshal.loads(base64.b64decode(fcn_dct['_marshal']))
+                    fcn = types.FunctionType(code, globals(), code.co_name)
+
+        return cls(
             name=dct['name'],
-            fcn=dct['fcn'],
+            fcn=fcn,
             **dct['kwargs']
         )
+
 
     def __eq__(self, other):
         """Override the default Equals behavior"""
         if isinstance(other, self.__class__):
             if self.name != other.name:
                 return False
-            if self._fcn.func_code.op_code != other._fcn.func_code.op_code:
+            if hasattr(self.fcn.func_code, 'op_code') and \
+                hasattr(other.fcn.func_code, 'op_code') and \
+                    self.fcn.func_code.op_code != other.fcn.func_code.op_code:
                 # Compare Bytecode. Not perfect, but should be good enough
                 return False
 
@@ -358,4 +351,86 @@ class CV_Function(CollectiveVariable):
     def _eval(self, items, *args):
         trajectory = paths.Trajectory(items)
 
-        return [self._fcn(snap, *args, **self.kwargs) for snap in trajectory]
+        return [self.fcn(snap, *args, **self.kwargs) for snap in trajectory]
+
+@ops_object
+class CV_MD_Function(CV_Function):
+    """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
+
+    Examples
+    -------
+    >>> # To create an order parameter which calculates the dihedral formed
+    >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
+    >>> import mdtraj as md
+    >>> psi_atoms = [7,9,15,17]
+    >>> psi_orderparam = CV_Function("psi", md.compute_dihedrals,
+    >>>                              indices=[phi_atoms])
+    >>> print psi_orderparam( traj.md() )
+    """
+
+    def __init__(self, name, fcn, **kwargs):
+        """
+        Parameters
+        ----------
+        name : str
+        fcn : function
+        kwargs :
+            named arguments which should be given to `fcn` (for example, the
+            atoms which define a specific distance/angle)
+
+        """
+        super(CV_MD_Function, self).__init__(name, fcn, **kwargs)
+        self._topology = None
+        return
+
+    def _eval(self, items, *args):
+        trajectory = paths.Trajectory(items)
+
+        if self._topology is None:
+            # first time ever compute the used topology for this collectivevariable to construct the mdtraj objects
+            self._topology = trajectory.topology.md
+
+        t = trajectory.md(self._topology)
+        return self.fcn(t, *args, **self.kwargs)
+
+    def to_dict(self):
+        fcn = None
+        if self.allow_marshal and callable(self.fcn):
+            # use marshal
+            if self.fcn.__module__ == '__main__':
+                fcn = {
+                    '_marshal' : base64.b64encode(marshal.dumps(self.fcn.func_code))
+                }
+            elif self.fcn.__module__.split('.')[0] in ['mdtraj']:
+                # only store the function and the module
+                fcn = {
+                    '_module' : self.fcn.__module__,
+                    '_fcn_name' : self.fcn.func_code.co_name
+                }
+
+
+        return {
+            'name' : self.name,
+            'fcn' : fcn,
+            'kwargs' : self.kwargs
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
+        fcn = None
+        if cls.allow_marshal:
+            fcn_dct = dct['fcn']
+            if fcn_dct is not None:
+                if '_marshal' in fcn_dct:
+                    code = marshal.loads(base64.b64decode(dct['_marshal']))
+                    fcn = types.FunctionType(code, globals(), code.co_name)
+                elif '_module' in fcn_dct:
+                    module = fcn_dct['_module']
+                    if module.split('.')[0] == 'mdtraj':
+                        fcn = getattr(md, fcn_dct['_fcn_name'])
+
+        return cls(
+            name=dct['name'],
+            fcn=fcn,
+            **dct['kwargs']
+        )
