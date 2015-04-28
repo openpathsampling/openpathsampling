@@ -1431,11 +1431,11 @@ class WrappedEnsemble(Ensemble):
     def _alter(self, trajectory):
         return trajectory
         
-    def can_append(self, trajectory, trusted=False):
+    def can_append(self, trajectory, trusted=None):
         return self._new_ensemble.can_append(self._alter(trajectory),
                                              self.trusted)
 
-    def can_prepend(self, trajectory, trusted=False):
+    def can_prepend(self, trajectory, trusted=None):
         return self._new_ensemble.can_prepend(self._alter(trajectory))
 
 @ops_object
