@@ -1,7 +1,9 @@
 from histogram import Histogram, histograms_to_pandas_dataframe
 from wham import WHAM
+from lookup_function import LookupFunction
 import openpathsampling as paths
 from openpathsampling.todict import ops_object
+import sys
 
 import inspect
 
@@ -46,6 +48,9 @@ In the order listed above, the time for the rate calculation is almost
 entirely in determining the flux from the information in the minus mover.
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def pathlength(sample):
     return len(sample.trajectory)
@@ -89,10 +94,138 @@ class Transition(object):
 
         self._mover_acceptance = {}
 
-    def calculate_mover_acceptance(self, samples):
-        for sample in samples:
+    @property
+    def all_movers(self):
+        all_movers = []
+        for movetype in self.movers.keys():
+            all_movers += self.movers[movetype]
+        return all_movers
+
+    def _assign_sample(self, sample):
+        if sample.ensemble in self.all_ensembles:
+            try:
+                self._samples_by_ensemble[sample.ensemble].append(sample)
+            except KeyError:
+                self._samples_by_ensemble[sample.ensemble] = [sample]
+            try: 
+                self._samples_by_id[sample.replica].append(sample)
+            except KeyError:
+                self._samples_by_id[sample.replica] = [sample]
+
+    def initialize_with_storage(self, storage, force=False):
+        if self._samples_by_ensemble == { }:
+            force=True
+        if force:
+            for sample in sampleset_sample_generator(storage):
+                self._assign_sample(sample)
+
+    def _move_summary_line(self, move_name, n_accepted, n_trials,
+                           n_total_trials, indentation):
+        line = ("* "*indentation + str(move_name) + 
+                " ran " + str(float(n_trials)/n_total_trials*100) + 
+                "% of the cycles with acceptance " + str(n_accepted) + "/" + 
+                str(n_trials) + " (" + str(float(n_accepted) / n_trials) + 
+                ") \n")
+        return line
+
+    def move_acceptance(self, storage):
+        for delta in storage.pathmovechanges:
+            for m in delta:
+                acc = 1 if m.accepted else 0
+                key = (m.mover, str(delta.key(m)))
+                try:
+                    self._mover_acceptance[key][0] += acc
+                    self._mover_acceptance[key][1] += 1
+                except KeyError:
+                    self._mover_acceptance[key] = [acc, 1]
+
+    def move_summary(self, storage, movers=None, output=sys.stdout, depth=0):
+        """
+        Provides a summary of the movers in `storage` based on this transition.
+
+        The summary includes the number of moves attempted and the
+        acceptance rate. In some cases, extra lines are printed for each of
+        the submoves.
+
+        Parameters
+        ----------
+        storage : Storage
+            The storage object
+        movers : None or string or list of PathMover
+            If None, provides a short summary of the keys in self.mover. If
+            a string, provides a short summary using that string as a key in
+            the `movers` dict. If a mover or list of movers, provides
+            summary for each of those movers.
+        output : file
+            file to direct output
+        depth : integer or None
+            depth of submovers to show: if integer, shows that many
+            submovers for each move; if None, shows all submovers
+        """
+        my_movers = { }
+        if movers is None:
+            movers = self.movers.keys()
+        if type(movers) is str:
+            movers = self.movers[movers]
+        for key in movers:
+            try:
+                my_movers[key] = self.movers[key]
+            except KeyError:
+                my_movers[key] = [key]
+
+        stats = { } 
+        for groupname in my_movers.keys():
+            stats[groupname] = [0, 0]
+
+        if self._mover_acceptance == { }:
+            self.move_acceptance(storage)
+        
+        tot_trials = len(storage.pathmovechanges)
+        for groupname in my_movers.keys():
+            group = my_movers[groupname]
+            for mover in group:
+                key_iter = (k for k in self._mover_acceptance.keys()
+                            if k[0] == mover)
+                for k in key_iter:
+                    stats[groupname][0] += self._mover_acceptance[k][0]
+                    stats[groupname][1] += self._mover_acceptance[k][1]
+
+        for groupname in my_movers.keys():
+            line = self._move_summary_line(
+                move_name=groupname, 
+                n_accepted=stats[groupname][0],
+                n_trials=stats[groupname][1], 
+                n_total_trials=tot_trials,
+                indentation=0
+            )
+            output.write(line)
+
+    @property
+    def all_movers(self):
+        all_movers = []
+        for movetype in self.movers.keys():
+            all_movers += self.movers[movetype]
+        return all_movers
+
+    @property
+    def all_ensembles(self):
+        return self.ensembles
+
+
+    def calculate_mover_acceptance(self, storage, movers=None):
+        # regularlize format of movers argument:
+        if movers is None:
+            movers = self.all_movers
+        try:
+            nmovers = len(movers)
+        except TypeError:
+            nmovers = 1
+            movers = [movers]
+
+        for movechange in storage.movepath:
             pass
         pass
+
 
     def to_dict(self):
         return {
@@ -178,8 +311,6 @@ class TISTransition(Transition):
         self._flux = None
         self._rate = None
 
-        # TODO: eventually I'll generalize this to include the function to
-        # be called, possibly some parameters ... can't this go to a 
         self.ensemble_histogram_info = {
             'max_lambda' : Histogrammer(
                 f=max_lambdas,
@@ -323,8 +454,34 @@ class TISTransition(Transition):
         elif method == "mbar":
             pass
 
-        self.tcp = tcp
-        return tcp
+        self.tcp = LookupFunction(tcp.keys(), tcp.values())
+        return self.tcp
+
+    def conditional_transition_probability(self, storage, ensemble, force=False):
+        """
+        This transition's conditional transition probability for a given
+        ensemble.
+
+        The conditional transition probability for an ensemble is the
+        probability that a path in that ensemble makes the transition from
+        state A to state B.
+        """
+        samples = sampleset_sample_generator(storage)
+        n_acc = 0
+        n_try = 0
+        for samp in samples:
+            if samp.ensemble == ensemble:
+                if self.stateB(samp.trajectory[-1]):
+                    n_acc += 1
+                n_try += 1
+        ctp = float(n_acc)/n_try
+        logger.info("CTP: " + str(n_acc) + "/" + str(n_try) + "=" + str(ctp) + "\n")
+        try:
+            self.ctp[ensemble] = ctp
+        except AttributeError:
+            self.ctp = { ensemble : ctp }
+
+        return ctp
 
     def rate(self, flux=None, flux_error=None, force=False):
         """Calculate the rate for this transition.
@@ -339,6 +496,8 @@ class TISTransition(Transition):
             raise ValueError("No flux available to TISTransition. Cannot calculate rate")
         
         tcp = self.total_crossing_probability(force=force)
+        #ctp = self.conditional_transition_probability(force=force)
+        #conditional_transition_probability
         pass
 
     def default_movers(self, engine):
@@ -376,7 +535,7 @@ class RETISTransition(TISTransition):
         try:
             self.movers['minus']
         except KeyError:
-            self.movers['minus'] = paths.MinusMover(self.minus_ensemble, self.ensembles[0])
+            self.movers['minus'] = [paths.MinusMover(self.minus_ensemble, self.ensembles[0])]
 
 
     def to_dict(self):
@@ -406,6 +565,10 @@ class RETISTransition(TISTransition):
         mytrans.ensembles = dct['ensembles']
         return mytrans
 
+    @property
+    def all_ensembles(self):
+        return self.ensembles + [self.minus_ensemble]
+
 
     @property
     def replica_flow(self, bottom=None, top=None):
@@ -430,7 +593,10 @@ class RETISTransition(TISTransition):
         pass
 
     @property
-    def minus_move_flux(self):
+    def minus_move_flux(self, storage):
+        minus_moves = (d for d in storage.pathmovechanges 
+                       if self.movers['minus'] in d)
+
         # 1. get the samples in the minus ensemble
         # 2. summarize_trajectory for each
         # 3. calculate the flux
@@ -454,7 +620,8 @@ class RETISTransition(TISTransition):
             name="ReplicaExchange"
         )
         tis_root_mover = super(RETISTransition, self).default_movers(engine)
-        movers = tis_root_mover.movers + [repex_sel, self.movers['minus']]
+        minus = self.movers['minus']
+        movers = tis_root_mover.movers + [repex_sel] + minus
         weights = tis_root_mover.weights + [0.5, 0.2 / len(self.ensembles)]
         root_mover = paths.RandomChoiceMover(
             movers=movers,

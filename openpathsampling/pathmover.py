@@ -237,6 +237,13 @@ class PathMover(object):
         '''
         return 1.0 # pragma: no cover
 
+    def __str__(self):
+        if self.name == self.__class__.__name__:
+            return self.__repr__()
+        else:
+            return self.name
+
+
 @ops_object
 class CollapseMove(PathMover):
     def __init__(self, inner_mover):
@@ -1209,10 +1216,14 @@ class PathMoverFactory(object):
     def OneWayShootingSet(selector_set, interface_set):
         if type(selector_set) is not list:
             selector_set = [selector_set]*len(interface_set)
-        mover_set = [
-            OneWayShootingMover(selector=selector, ensembles=[iface])
-            for (selector, iface) in zip(selector_set, interface_set)
-        ]
+
+        mover_set = []
+        for (selector, iface) in zip(selector_set, interface_set):
+            mover = OneWayShootingMover(selector=selector,
+                                        ensembles=[iface])
+            mover.name = "OneWayShootingMover " + str(iface.name)
+            mover_set.append(mover)
+
         return mover_set
 
     @staticmethod

@@ -1516,3 +1516,52 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         ]
         self._test_everything(self.minus_nl3.can_prepend, non_default, True)
 
+# TODO: this whole class should become a single test in SeqEns
+class testSingleEnsembleSequentialEnsemble(EnsembleTest):
+    def setUp(self):
+        #self.inner_ens = AllInXEnsemble(vol1 | vol2)
+        self.inner_ens = LengthEnsemble(3) & AllInXEnsemble( vol1 | vol2 )
+        self.ens = SequentialEnsemble([self.inner_ens])
+
+    def test_it_all(self):
+        for test in ttraj.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.ens, ttraj[test],
+                              self.inner_ens(ttraj[test]), failmsg)
+            self._single_test(self.ens.can_append, ttraj[test],
+                              self.inner_ens.can_append(ttraj[test]), failmsg)
+            self._single_test(self.ens.can_prepend, ttraj[test],
+                              self.inner_ens.can_prepend(ttraj[test]), failmsg)
+            
+
+
+class testEnsembleSplit(EnsembleTest):
+    def setUp(self):
+        self.inA = AllInXEnsemble(vol1)
+        self.outA = AllOutXEnsemble(vol1)
+
+    def test_split(self):
+        raise SkipTest
+        print vol1
+        traj1 = ttraj['upper_in_out_in_in']
+        print [s for s in traj1]
+        subtrajs_in_1 = self.inA.split(traj1)
+        assert_equal(len(subtrajs_in_1), 2)
+        assert_equal(len(subtrajs_in_1[0]), 1)
+        assert_equal(len(subtrajs_in_1[1]), 2)
+        subtrajs_out_1 = self.outA.split(traj1)
+        assert_equal(len(subtrajs_out_1), 1)
+
+        traj2 = ttraj['upper_in_out_in_in_out_in']
+        print [s for s in traj2]
+        subtrajs_in_2 = self.inA.split(traj2)
+        assert_equal(len(subtrajs_in_2), 3)
+        assert_equal(len(subtrajs_in_2[0]), 1)
+        assert_equal(len(subtrajs_in_2[1]), 2)
+        assert_equal(len(subtrajs_in_2[2]), 1)
+        subtrajs_out_2 = self.outA.split(traj2)
+        assert_equal(len(subtrajs_out_2), 2)
+        assert_equal(len(subtrajs_out_2[0]), 1)
+        assert_equal(len(subtrajs_out_2[1]), 1)
+
+

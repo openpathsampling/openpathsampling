@@ -104,6 +104,21 @@ class Trajectory(list):
                 output[frame_index,:,:] = self[frame_index].coordinates[self.atom_indices,:]
 
         return output
+
+    def xyz(self):
+        n_frames = len(self)
+        n_atoms = self.n_atoms
+        n_spatial = self.spatial
+            
+        output = np.zeros([n_frames, n_atoms, n_spatial], np.float32)
+        
+        for frame_index in range(n_frames):      
+            if self.atom_indices is None:
+                output[frame_index,:,:] = self[frame_index].xyz
+            else:
+                output[frame_index,:,:] = self[frame_index].xyz[self.atom_indices,:]
+
+        return output
     
     @property
     def n_snapshots(self):
