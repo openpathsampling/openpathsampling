@@ -5,12 +5,13 @@ from simtk import unit as units
 import yaml
 import openpathsampling as paths
 import inspect
-import types
 
 class ObjectJSON(object):
     """
     A simple implementation of a pickle algorithm to create object that can be converted to json and back
     """
+
+    allow_marshal = True
 
     def __init__(self, unit_system = None, class_list = None):
         self.excluded_keys = []

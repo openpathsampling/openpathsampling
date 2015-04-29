@@ -51,9 +51,7 @@ class testCV_Function(object):
         """ Create an atom pair collectivevariable using MSMSBuilder3 """
 
         atom_pairs = [[0,1], [10,14]]
-
-        atom_pair_featurizer = AtomPairsFeaturizer(atom_pairs)
-        atom_pair_op = op.CV_Featurizer("atom_pairs", atom_pair_featurizer)
+        atom_pair_op = op.CV_Featurizer("atom_pairs", AtomPairsFeaturizer, pair_indices=atom_pairs)
 
         mdtraj_version = self.storage.trajectories.load(0).md()
         md_distances = md.compute_distances(mdtraj_version, atom_pairs)
