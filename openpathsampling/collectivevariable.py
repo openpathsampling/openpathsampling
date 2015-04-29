@@ -5,15 +5,16 @@
 import openpathsampling as paths
 import chaindict as cd
 from openpathsampling.todict import ops_object
-import marshal, base64, types
-import mdtraj
-import msmbuilder
-
+import marshal
+import base64
+import types
+import opcode
 
 @ops_object
 class CollectiveVariable(cd.Wrap):
     """
-    Wrapper for a function that maps a snapshot to a number.
+    Wrapper for a function that maps a snapshot, an iterable of snapshots
+    (like to a number.
 
     Parameters
     ----------
@@ -36,17 +37,19 @@ class CollectiveVariable(cd.Wrap):
     """
 
     def __init__(self, name, dimensions=1):
-        if (type(name) is not str and type(name) is not unicode) or len(name) == 0:
+        if (type(name) is not str and type(name) is not unicode) or len(
+                name) == 0:
             print type(name), len(name)
             raise ValueError('name must be a non-empty string')
 
         self.name = name
+        self.dimensions = dimensions
 
         self.single_dict = cd.ExpandSingle()
         self.pre_dict = cd.Transform(self._pre_item)
         self.multi_dict = cd.ExpandMulti()
         self.store_dict = cd.MultiStore('collectivevariables', name,
-                                            dimensions, self)
+                                        dimensions, self)
         self.cache_dict = cd.ChainDict()
         if hasattr(self, '_eval'):
             self.expand_dict = cd.UnwrapTuple()
@@ -77,8 +80,8 @@ class CollectiveVariable(cd.Wrap):
         """
         if storage in self.store_dict.cod_stores:
             stored = {
-                key : value for key, value in self.cache_dict
-                    if type(key) is tuple or storage in key.idx
+                key: value for key, value in self.cache_dict
+                if type(key) is tuple or storage in key.idx
             }
             self.store_dict.cod_stores[storage].post.update(stored)
             self.store_dict.cod_stores[storage].update(stored)
@@ -118,7 +121,7 @@ class CollectiveVariable(cd.Wrap):
         else:
             return items
 
-    _compare_keys = ['name']
+    _compare_keys = ['name', 'dimensions']
 
     def __eq__(self, other):
         """Override the default Equals behavior"""
@@ -136,6 +139,7 @@ class CollectiveVariable(cd.Wrap):
         if isinstance(other, self.__class__):
             return not self.__eq__(other)
         return NotImplemented
+
 
 @ops_object
 class CV_Volume(CollectiveVariable):
@@ -159,8 +163,8 @@ class CV_Volume(CollectiveVariable):
 
     def to_dict(self):
         return {
-            'name' : self.name,
-            'volume' : self.volume,
+            'name': self.name,
+            'volume': self.volume,
         }
 
     @staticmethod
@@ -170,23 +174,15 @@ class CV_Volume(CollectiveVariable):
             volume=dct['volume']
         )
 
+
 @ops_object
 class CV_Function(CollectiveVariable):
     """Make any function `fcn` into an `CollectiveVariable`.
 
-    Examples
-    -------
-    >>> # To create an order parameter which calculates the dihedral formed
-    >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
-    >>> import mdtraj as md
-    >>> psi_atoms = [6,8,14,16]
-    >>> psi_orderparam = CV_Function("psi", md.compute_dihedrals,
-    >>>                              trajdatafmt="mdtraj",
-    >>>                              indices=[psi_atoms])
-    >>> print psi_orderparam( traj.md() )
     """
 
     allow_marshal = True
+    allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy']
 
     def __init__(self, name, fcn, dimensions=1, **kwargs):
         """
@@ -205,39 +201,97 @@ class CV_Function(CollectiveVariable):
             supported trajformat.
         """
         super(CV_Function, self).__init__(name, dimensions=dimensions)
-        self.fcn = fcn
+        self.callable_fcn = fcn
         self.kwargs = kwargs
         return
 
+    @staticmethod
+    def _find_var(code, op):
+        opcodes = code.func_code.co_code
+        i = 0
+        ret = []
+        while i < len(opcodes):
+            if ord(opcodes[i]) == op:
+                ret.append((i, ord(opcodes[i+1]) + ord(opcodes[i+2]) * 256))
+            if opcodes[i] < opcode.HAVE_ARGUMENT: #90, as mentioned earlier
+                i += 1
+            else:
+                i += 3
+
+        return [ code.func_code.co_names[i[1]] for i in ret ]
 
     def to_dict(self):
         fcn = None
-        if self.allow_marshal and callable(self.fcn):
-            # use marshal
-            if self.fcn.__module__ == '__main__':
-                fcn = {
-                    '_marshal' : base64.b64encode(marshal.dumps(self.fcn.func_code))
-                }
+        f = self.callable_fcn
+        f_module = f.__module__
+        is_local = f_module == '__main__'
+        is_class = isinstance(f, (type, types.ClassType))
+        if not is_class:
+            if is_local:
+                # this is a local function, let's see if we can save it
+                if self.allow_marshal and callable(self.callable_fcn):
+                    # use marshal
+                    global_vars = CV_Function._find_var(f, opcode.opmap['LOAD_GLOBAL'])
+                    import_vars = CV_Function._find_var(f, opcode.opmap['IMPORT_NAME'])
+
+                    if len(global_vars) > 0:
+                        print 'Not good. Your function relies on globally set variables ' + \
+                              'and these cannot be saved!'
+                        print 'requires the following globals to be set:', global_vars
+                        print 'Check, if you can replace these by constants or variables ' + \
+                              'that are defined within the function itself'
+
+                    not_allowed_modules = [ module for module in import_vars
+                                            if module not in CV_Function.allowed_modules]
+
+                    if len(not_allowed_modules) > 0:
+                        print 'requires the following modules to be installed:', import_vars
+                        print 'note that some of these are not allowed so be careful', not_allowed_modules
+
+                    fcn = {
+                        '_marshal': base64.b64encode(
+                            marshal.dumps(self.callable_fcn.func_code)),
+                        '_global_vars': global_vars,
+                        '_module_vars': import_vars
+                    }
+
+            elif not is_local:
+                # save the external class, e.g. msmbuilder featurizer
+                if f_module.split('.')[0] in self.allowed_modules:
+                    # only store the function and the module
+                    fcn = {
+                        '_module': self.callable_fcn.__module__,
+                        '_name': self.callable_fcn.__name__
+                    }
 
         return {
-            'name' : self.name,
-            'fcn' : fcn,
-            'kwargs' : self.kwargs
+            'name': self.name,
+            'fcn': fcn,
+            'dimensions': self.dimensions,
+            'kwargs': self.kwargs
         }
 
     @classmethod
     def from_dict(cls, dct):
-        fcn = None
-        if cls.allow_marshal:
-            fcn_dct = dct['fcn']
-            if fcn_dct is not None:
-                if '_marshal' in fcn_dct:
-                    code = marshal.loads(base64.b64decode(fcn_dct['_marshal']))
-                    fcn = types.FunctionType(code, globals(), code.co_name)
+        f = None
+        f_dict = dct['fcn']
+        if f_dict is not None:
+            if '_marshal' in f_dict:
+                if cls.allow_marshal:
+                    code = marshal.loads(base64.b64decode(f_dict['_marshal']))
+                    f = types.FunctionType(code, globals(), code.co_name)
+
+            elif '_module' in f_dict:
+                module = f_dict['_module']
+                packages = module.split('.')
+                if packages[0] in cls.allowed_modules:
+                    imp = __import__(module)
+                    f = getattr(imp, f_dict['_name'])
 
         return cls(
             name=dct['name'],
-            fcn=fcn,
+            fcn=f,
+            dimensions=dct['dimensions'],
             **dct['kwargs']
         )
 
@@ -247,9 +301,13 @@ class CV_Function(CollectiveVariable):
         if isinstance(other, self.__class__):
             if self.name != other.name:
                 return False
-            if hasattr(self.fcn.func_code, 'op_code') and \
-                hasattr(other.fcn.func_code, 'op_code') and \
-                    self.fcn.func_code.op_code != other.fcn.func_code.op_code:
+            if self.dimensions != other.dimensions:
+                return False
+            if self.kwargs != other.kwargs:
+                return False
+
+            if hasattr(self.callable_fcn.func_code, 'op_code') and \
+                    self.callable_fcn.func_code.op_code != other.callable_fcn.func_code.op_code:
                 # Compare Bytecode. Not perfect, but should be good enough
                 return False
 
@@ -257,17 +315,35 @@ class CV_Function(CollectiveVariable):
 
         return NotImplemented
 
-    def _eval(self, items, *args):
+    def _eval(self, items):
         trajectory = paths.Trajectory(items)
 
-        return [self.fcn(snap, *args, **self.kwargs) for snap in trajectory]
+        return [self.callable_fcn(snap, **self.kwargs) for snap in trajectory]
+
 
 @ops_object
-class CV_External_Function(CollectiveVariable):
+class CV_Class(CollectiveVariable):
+    """Make any callable class `cls` into an `CollectiveVariable`.
+
+    the class instance will be called with single snapshots or a list of
+    snapshots. The instance will be created using kwargs.
+
+    Examples
+    -------
+    >>> # To create an order parameter which calculates the dihedral formed
+    >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
+    >>> import mdtraj as md
+    >>> traj = None
+    >>> psi_atoms = [6,8,14,16]
+    >>> psi_orderparam = CV_Function("psi", md.compute_dihedrals,
+    >>>                              trajdatafmt="mdtraj",
+    >>>                              indices=[psi_atoms])
+    >>> print psi_orderparam( traj.md() )
+    """
 
     _allowed_modules = []
 
-    def __init__(self, name, fcn, dimensions=1, **kwargs):
+    def __init__(self, name, cls, dimensions=1, **kwargs):
         """
         Parameters
         ----------
@@ -283,36 +359,60 @@ class CV_External_Function(CollectiveVariable):
             trick, and to instead create separate wrapper classes for each
             supported trajformat.
         """
-        super(CV_External_Function, self).__init__(name, dimensions=dimensions)
-        self.fcn = fcn
+        super(CV_Class, self).__init__(name, dimensions=dimensions)
+        self.callable_cls = cls
         self.kwargs = kwargs
+        self._instance = cls(**kwargs)
+        return
+
+    def _eval(self, items):
+        trajectory = paths.Trajectory(items)
+
+        return [self._instance(snap, **self.kwargs) for snap in trajectory]
+
+    def to_dict(self):
+        cls = None
+        c = self.callable_cls
+        c_module = c.__module__
+        is_local = c_module == '__main__'
+        is_class = isinstance(c, (type, types.ClassType))
+
+        if is_class:
+            if is_local:
+                raise TypeError('Locally defined classes are not storable yet')
+            elif not is_local:
+                if c_module.split('.')[0] in self._allowed_modules:
+                    # only store the function and the module
+                    cls = {
+                        '_module': c.__module__,
+                        '_name': c.__name__
+                    }
+
+        return {
+            'name': self.name,
+            'cls': cls,
+            'dimensions': self.dimensions,
+            'kwargs': self.kwargs
+        }
 
     @classmethod
     def from_dict(cls, dct):
-        fcn = None
-
-        fcn_dct = dct['fcn']
-        if fcn_dct is not None:
-            if '_module' in fcn_dct:
-                module = fcn_dct['_module']
+        c = None
+        c_dict = dct['fcn']
+        if c_dict is not None:
+            if '_module' in c_dict:
+                module = c_dict['_module']
                 packages = module.split('.')
-                if packages[0] in cls._allowed_modules:
-                    package = globals()[packages[0]]
-                    for p in packages[1:]:
-                        package = getattr(package, p)
-
-                    fcn = getattr(package, fcn_dct['_fcn_name'])
+                if packages[0] in cls.allowed_modules:
+                    imp = __import__(module)
+                    c = getattr(imp, c_dict['_name'])
 
         return cls(
             name=dct['name'],
-            fcn=fcn,
+            cls=c,
+            dimensions=dct['dimensions'],
             **dct['kwargs']
         )
-
-    def _fcn_name(self, fcn):
-        # works for functions
-        return fcn.__name__
-        # for classes we need return fcn.__class__.__name__
 
     def __eq__(self, other):
         """Override the default Equals behavior"""
@@ -330,23 +430,9 @@ class CV_External_Function(CollectiveVariable):
 
         return NotImplemented
 
-    def to_dict(self):
-        fcn = None
-        if self.fcn.__module__.split('.')[0] in self._allowed_modules:
-            # only store the function and the module
-            fcn = {
-                '_module' : self.fcn.__module__,
-                '_fcn_name' : self._fcn_name(self.fcn)
-            }
-
-        return {
-            'name' : self.name,
-            'fcn' : fcn,
-            'kwargs' : self.kwargs
-        }
 
 @ops_object
-class CV_MD_Function(CV_External_Function):
+class CV_MD_Function(CV_Function):
     """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
 
     Examples
@@ -354,14 +440,12 @@ class CV_MD_Function(CV_External_Function):
     >>> # To create an order parameter which calculates the dihedral formed
     >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
     >>> import mdtraj as md
+    >>> traj = 'paths.Trajectory()'
     >>> psi_atoms = [7,9,15,17]
     >>> psi_orderparam = CV_Function("psi", md.compute_dihedrals,
-    >>>                              indices=[phi_atoms])
+    >>>                              indices=[[2,4,6,8]])
     >>> print psi_orderparam( traj.md() )
     """
-
-    _allowed_modules = ['mdtraj']
-    _compare_keys = ['name']
 
     def __init__(self, name, fcn, dimensions=1, **kwargs):
         """
@@ -379,17 +463,18 @@ class CV_MD_Function(CV_External_Function):
         )
         self._topology = None
 
-    def _eval(self, items, *args):
+    def _eval(self, items):
         trajectory = paths.Trajectory(items)
 
         if self._topology is None:
             self._topology = trajectory.topology.md
 
         t = trajectory.md(self._topology)
-        return self.fcn(t, *args, **self.kwargs)
+        return self.callable_fcn(t, **self.kwargs)
+
 
 @ops_object
-class CV_Featurizer(CV_External_Function):
+class CV_Featurizer(CV_Class):
     """
     An CollectiveVariable that uses an MSMBuilder3 featurizer as the logic
 
@@ -426,14 +511,14 @@ class CV_Featurizer(CV_External_Function):
 
         super(CV_Featurizer, self).__init__(
             name,
-            fcn=featurizer,
+            cls=featurizer,
             dimensions=self._feat.n_features,
             **self.kwargs
         )
 
 
-    _compare_keys = [ 'name' ]
-    _allowed_modules = [ 'msmbuilder' ]
+    _compare_keys = ['name']
+    _allowed_modules = ['msmbuilder']
 
     def _eval(self, items):
         trajectory = paths.Trajectory(items)
@@ -445,8 +530,3 @@ class CV_Featurizer(CV_External_Function):
         result = self._feat.partial_transform(ptraj)
 
         return result
-
-    def _fcn_name(self, fcn):
-        # works for functions
-        return fcn.__name__
-        # for classes we need return fcn.__class__.__name__
