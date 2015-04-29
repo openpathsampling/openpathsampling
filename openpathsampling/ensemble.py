@@ -1424,6 +1424,9 @@ class WrappedEnsemble(Ensemble):
         # a property for _new_ensemble
         self._new_ensemble = self.ensemble
         self.trusted = None
+        self._cache_can_append = EnsembleCache(+1)
+        self._cache_call = EnsembleCache(+1)
+        self._cache_can_prepend = EnsembleCache(-1)
 
     def __call__(self, trajectory, trusted=None):
         return self._new_ensemble(self._alter(trajectory), trusted)
@@ -1491,9 +1494,34 @@ class ForwardAppendedTrajectoryEnsemble(WrappedEnsemble):
     def __init__(self, ensemble, add_trajectory):
         super(ForwardAppendedTrajectoryEnsemble, self).__init__(ensemble)
         self.add_trajectory = add_trajectory
+        self._cached_trajectory = paths.Trajectory(add_trajectory)
 
     def _alter(self, trajectory):
-        return self.add_trajectory + trajectory
+        logger.debug("Starting _alter")
+        reset = self._cache_can_append.check(trajectory)
+        if not reset:
+            final_frame = trajectory[-1]
+            if self._cached_trajectory[-1] != final_frame:
+                self._cached_trajectory.append(final_frame)
+        else: 
+            logger.debug("doing it oldstyle")
+            self._cached_trajectory = self.add_trajectory + trajectory
+
+        # DEBUG 
+        #logger.debug("add   " + str([i for i in self.add_trajectory]))
+        #logger.debug("traj  " + str([i for i in trajectory]))
+        #logger.debug("cache " + str([i for i in self._cached_trajectory]))
+        #oldstyle = self.add_trajectory + trajectory
+        #for (t,b) in zip(self._cached_trajectory,
+                         #self.add_trajectory+trajectory):
+            #logger.debug(str(t) + " ?=? " + str(b))
+            #assert(t == b)
+        #assert(len(self._cached_trajectory) == len(oldstyle))
+
+        return self._cached_trajectory
+
+    def can_prepend(self, trajectory, trusted=None):
+        raise RuntimeError("ForwardAppendedTrajectoryEnsemble.can_prepend is nonsense.")
 
 @ops_object
 class ReversedTrajectoryEnsemble(WrappedEnsemble):

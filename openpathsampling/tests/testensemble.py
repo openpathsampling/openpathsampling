@@ -1383,11 +1383,27 @@ class testForwardAppendedTrajectoryEnsemble(EnsembleTest):
             SequentialEnsemble([self.inX]),
             traj[0:2]
         )
-        assert_equal(ens.can_append(traj[0:3]), True)
-        assert_equal(ens(traj[0:3]), True)
+        assert_equal(ens.can_append(traj[2:3]), True)
+        assert_equal(ens(traj[2:3]), True)
+
 
     def test_caching_in_fwdapp_seq(self):
-        raise SkipTest
+        inX = AllInXEnsemble(vol1)
+        outX = AllOutXEnsemble(vol1)
+        length1 = LengthEnsemble(1)
+        pseudo_minus = SequentialEnsemble([
+            inX & length1,
+            outX,
+            inX,
+            outX,
+            inX & length1 
+        ])
+        traj = ttraj['upper_in_out_in_in_out_in']
+        ens = ForwardAppendedTrajectoryEnsemble(pseudo_minus, traj[0:2])
+        assert_equal(ens.can_append(traj[2:3]), True)
+        assert_equal(ens.can_append(traj[2:4]), True)
+        assert_equal(ens.can_append(traj[2:5]), True)
+        assert_equal(ens.can_append(traj[2:6]), False)
 
 class testMinusInterfaceEnsemble(EnsembleTest):
     def setUp(self):
