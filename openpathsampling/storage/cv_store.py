@@ -3,10 +3,10 @@ from openpathsampling.collectivevariable import CollectiveVariable
 
 class ObjectDictStore(ObjectStore):
     def __init__(self, storage, cls, key_class):
-        super(ObjectDictStore, self).__init__(storage, cls, has_uid=True, json=False)
+        super(ObjectDictStore, self).__init__(storage, cls, has_uid=True, json=True)
         self.key_class = key_class
 
-    def save(self, objectdict, idx):
+    def save(self, objectdict, idx=None):
         """
         Save the current state of the cache to the storage.
 
@@ -24,7 +24,9 @@ class ObjectDictStore(ObjectStore):
         if var_name + '_value' not in self.storage.variables:
             self.init_variable(var_name + '_value', 'float', (self.key_class.__name__.lower()))
 
-        storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
+#        storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
+
+        self.save_json(self.idx_dimension + '_json', idx, objectdict)
 
         # this will copy the cache from an op and store it
         objectdict.flush_cache(self.storage)
@@ -118,8 +120,8 @@ class ObjectDictStore(ObjectStore):
 
         storage = self.storage
 
-        name = storage.variables[self.idx_dimension + '_name'][idx]
-        op = CollectiveVariable(name)
+#        name = storage.variables[self.idx_dimension + '_name'][idx]
+        op = self.load_json(self.idx_dimension + '_json', idx)
 
         return op
 
