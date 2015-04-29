@@ -1,16 +1,17 @@
 import os
 import numpy as np
-from openmmtools.integrators import VVVRIntegrator
+#from openmmtools.integrators import VVVRIntegrator
 
 import simtk.unit as u
-import simtk.openmm as openmm
-from simtk.openmm.app import ForceField, PME, HBonds, PDBFile
+from simtk.openmm.app import ForceField, PME, HBonds, PDBFile, Simulation
 
 import openpathsampling as paths
 from openpathsampling.storage import Storage
-from openpathsampling.todict import restores_as_full_object
+from openpathsampling.todict import ops_object
 
-@restores_as_full_object
+from openpathsampling.integrators import VVVRIntegrator
+
+@ops_object
 class OpenMMEngine(paths.DynamicsEngine):
     """OpenMM dynamics engine."""
 
@@ -109,7 +110,7 @@ class OpenMMEngine(paths.DynamicsEngine):
             options=options
         )
         engine.storage = storage
-        storage.engine.save(engine)
+        storage.engines.save(engine)
 
         return engine
 
@@ -129,7 +130,7 @@ class OpenMMEngine(paths.DynamicsEngine):
 #            options=options
 #        )
 
-        engine = storage.engine.load(0)
+        engine = storage.engines.load(0)
 
         engine.storage = storage
         return engine
@@ -164,7 +165,7 @@ class OpenMMEngine(paths.DynamicsEngine):
                                      self.options["collision_rate"],
                                      self.options["timestep"] )
 
-        simulation = openmm.app.Simulation(openmm_topology, system,
+        simulation = Simulation(openmm_topology, system,
                                            integrator)
 
         # claim the OpenMM simulation as our own

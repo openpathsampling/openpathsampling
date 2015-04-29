@@ -1,12 +1,12 @@
-from openpathsampling.todict import restores_as_full_object
+from openpathsampling.todict import ops_object
 
 import mdtraj as md
 import numpy as np
 import pandas as pd
-from simtk import unit as units
-import simtk.openmm
+#from simtk import unit as units
+#import simtk.openmm
 
-@restores_as_full_object
+@ops_object
 class Topology(object):
     '''
     Topology is the object that contains all information about the structure
@@ -31,7 +31,7 @@ class Topology(object):
         )
 
 
-@restores_as_full_object
+@ops_object
 class ToyTopology(Topology):
     '''
     Attributes
@@ -47,7 +47,7 @@ class ToyTopology(Topology):
     def subset(self, list_of_atoms):
         return self
 
-@restores_as_full_object
+@ops_object
 class MDTrajTopology(Topology):
     def __init__(self, mdtraj_topology, subsets = None):
         self.md = mdtraj_topology

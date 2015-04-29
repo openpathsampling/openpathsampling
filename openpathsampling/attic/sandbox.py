@@ -7,13 +7,13 @@ Created on 08.07.2014
 import numpy as np
 
 from openpathsampling.Simulator import Simulator
-from openpathsampling.orderparameter import OP_RMSD_To_Lambda, OP_Multi_RMSD
+from openpathsampling.collectivevariable import CV_RMSD_To_Lambda, CV_Multi_RMSD
 from openpathsampling.volume import LambdaVolume, VoronoiVolume
 from openpathsampling.ensemble import EnsembleFactory as ef
 import time
 from openpathsampling.pathmover import ForwardShootMover, BackwardShootMover, PathMover, MixedMover
 from openpathsampling.shooting import UniformSelector
-from openpathsampling.ensemble import LengthEnsemble, InXEnsemble, OutXEnsemble
+from openpathsampling.ensemble import LengthEnsemble, AllInXEnsemble, AllOutXEnsemble
 from openpathsampling.trajectory import Trajectory
 from pymbar import MBAR
 from openpathsampling.snapshot import Snapshot
@@ -25,18 +25,18 @@ if __name__ == '__main__':
     PathMover.simulator = simulator
     storage = simulator.storage
 
-    print "Currently", simulator.storage.trajectory.count(), "simulations in the storage"
-    print "Currently", simulator.storage.configuration.count(), "total frames in the storage"
+    print "Currently", simulator.storage.trajectories.count(), "simulations in the storage"
+    print "Currently", simulator.storage.configurations.count(), "total frames in the storage"
 
     Trajectory.storage = simulator.storage.trajectory
 
-    if simulator.storage.trajectory.count() == 0:
+    if simulator.storage.trajectories.count() == 0:
         # load initial equilibrate snapshot given by ID #0
-        snapshot = simulator.storage.snapshot.load(0)
+        snapshot = simulator.storage.snapshots.load(0)
 
         # generate from this snapshot a trajectory with 50 steps
         traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,6))])
-        simulator.storage.trajectory.save(traj)
+        simulator.storage.trajectories.save(traj)
 
         print len(traj)
 
@@ -45,15 +45,15 @@ if __name__ == '__main__':
         
     if True:
         cc = Trajectory.storage.load(1)[ 0 ]
-        cc = storage.snapshot.load(0)
-        op = OP_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices)
-        storage.collectivevariable.restore(op)
+        cc = storage.snapshots.load(0)
+        op = CV_RMSD_To_Lambda('lambda1', cc, 0.00, 1.00, atom_indices=simulator.solute_indices)
+        storage.collectivevariables.restore(op)
         print op(Trajectory.storage.load(1)[0:2])
-        dd = simulator.storage.trajectory.load(1)[ 0:6 ]
+        dd = simulator.storage.trajectories.load(1)[ 0:6 ]
         lV = LambdaVolume(op, 0.0, 0.06)
         lV2 = LambdaVolume(op, 0.0, 0.08)
 
-        # if this uses the same orderparameter it is fast, since the values are cached!
+        # if this uses the same collectivevariable it is fast, since the values are cached!
         tis = ef.TISEnsemble(
                        LambdaVolume(op, 0.0, 0.041),
                        LambdaVolume(op, 0.0, 0.041),
@@ -67,7 +67,7 @@ if __name__ == '__main__':
                        True
                        )
 
-        tt = simulator.storage.trajectory.load(1)
+        tt = simulator.storage.trajectories.load(1)
 
 #        print [ (op(d)) for d in dd ]
 #        op.save()
@@ -99,16 +99,16 @@ if __name__ == '__main__':
         # be true in the next step. This should be passed to the pathmover to stop simulating for a particular ensemble
 
         vn = VoronoiVolume(
-                OP_Multi_RMSD('Voronoi', tt[[0,2]], atom_indices=simulator.solute_indices),
+                CV_Multi_RMSD('Voronoi', tt[[0,2]], atom_indices=simulator.solute_indices),
                 state = 0
                 )
 
         print "Iteration test"
-        for l in range(0,tt.frames + 0):
+        for l in range(0,len(tt) + 0):
             print tis.can_append(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
 
         print "Iteration test"
-        for l in range(0,tt.frames + 0):
+        for l in range(0,len(tt) + 0):
             print tis.can_append(tt[0:l]), tis(tt[0:l]), lV(tt[l]), lV2(tt[l]), vn(tt[l]), vn.cell(tt[l])
 
         print op(tt[0])
@@ -122,16 +122,16 @@ if __name__ == '__main__':
         en = ef.A2BEnsemble(lV, lV, True)
         print en(tt)
 
-        en = InXEnsemble(lV, 0)
+        en = AllInXEnsemble(lV, 0)
         print en(tt)
 
-        en = InXEnsemble(lV, -1)
+        en = AllInXEnsemble(lV, -1)
         print en(tt)
 
-        en = OutXEnsemble(lV, slice(1,-1), lazy = False)
+        en = AllOutXEnsemble(lV, slice(1,-1), lazy = False)
         print en(tt)
 
-        storage.ensemble.save(en)
+        storage.ensembles.save(en)
 
         bm = BackwardShootMover(
                 selector = UniformSelector(),
@@ -152,15 +152,15 @@ if __name__ == '__main__':
 
         mm = MixedMover([bm, fm])
 
-        tt = storage.trajectory.last()
+        tt = storage.trajectories.last()
 
         pth = mm.move(tt)
 
-        storage.sample.save(pth)
+        storage.samples.save(pth)
 
         print pth.details.json
 
-        loaded = storage.pathmover.load(mm.idx[storage])
+        loaded = storage.pathmovers.load(mm.idx[storage])
 
         print 'ensemble Check :', mm.ensemble(pth.trajectory)
 
@@ -173,16 +173,16 @@ if __name__ == '__main__':
         en = ef.A2BEnsemble(lV, lV, True)
         print en(pth.details.final)
 
-        en = InXEnsemble(lV, 0)
+        en = AllInXEnsemble(lV, 0)
         print en(pth.details.final)
 
-        en = InXEnsemble(lV, -1)
+        en = AllInXEnsemble(lV, -1)
         print en(pth.details.final)
 
-        en = OutXEnsemble(lV, slice(1, -1), lazy = False)
+        en = AllOutXEnsemble(lV, slice(1, -1), lazy = False)
         print en(pth.details.final)
 
-        op.save(storage=storage.collectivevariable)
+        op.save(storage=storage.collectivevariables)
 
         exit()
 

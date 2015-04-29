@@ -293,7 +293,7 @@ class DynamicsEngine(object):
                 # Store snapshot and add it to the trajectory. Stores also
                 # final frame the last time
 #                if self.storage is not None:
-#                    self.storage.snapshot.save(snapshot)
+#                    self.storage.snapshots.save(snapshot)
                 trajectory.append(snapshot)
                 
                 # Check if we should stop. If not, continue simulation

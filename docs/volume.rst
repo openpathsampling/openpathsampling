@@ -24,10 +24,10 @@ set-based volume combinations
 
     FullVolume
     EmptyVolume
-    AndVolume
-    OrVolume
-    XorVolume
-    SubVolume
+    IntersectionVolume
+    UnionVolume
+    SymmetricDifferenceVolume
+    RelativeComplementVolume
     VolumeCombination
 
 collective variable-based volumes

@@ -25,8 +25,8 @@ class CallableVolume(object):
 
 class ToyPlot(object):
     def __init__(self):
-        range_x = np.arange(-1.1, 1.1, 0.01)
-        range_y = np.arange(-1.1, 0.9, 0.01)
+        range_x = np.arange(-1.1, 1.1, 0.05)
+        range_y = np.arange(-1.1, 0.9, 0.05)
         self.extent = [range_x[0], range_x[-1], range_y[0], range_y[-1]]
         self.X, self.Y = np.meshgrid(range_x, range_y)
         pylab.rcParams['figure.figsize'] = 9, 6
@@ -61,6 +61,20 @@ class ToyPlot(object):
     def add_initial_condition(self, initcond):
         self._initcond = initcond
 
+    def plot_pes_initcond(self, trajectories):
+        fig, ax = plt.subplots()
+        if self._pes is not None:
+            plt.contour(self.X, self.Y, self._pes, 
+                        levels=np.arange(0.0, 1.5, 0.1), colors='k')
+        if self._initcond is not None:
+            ax.plot(self._initcond.coordinates[0,0], 
+                    self._initcond.coordinates[0,1],
+                    'ro', zorder=3)
+        for traj in trajectories:
+            plt.plot(traj.coordinates()[:,0,0], traj.coordinates()[:,0,1],
+                     self.repcolordict[trajectories.index(traj)],
+                     zorder=2)
+
     def plot(self, trajectories=[], bold=[]):
         fig, ax = plt.subplots()
         if self._states is not None:
@@ -75,14 +89,15 @@ class ToyPlot(object):
                 plt.contour(self.X, self.Y, iface, 
                             colors='r', interpolation='none', levels=[0.5])
         if self._initcond is not None:
-            ax.plot(self._initcond.coordinates[0,0], self._initcond.coordinates[0,1],
+            ax.plot(self._initcond.coordinates[0,0], 
+                    self._initcond.coordinates[0,1],
                     'ro', zorder=3)
         for traj in bold:
-            plt.plot(traj.coordinates()[:,0,0], traj.coordinates()[:,0,1],
+            plt.plot(traj.xyz()[:,0,0], traj.xyz()[:,0,1],
                      self.repcolordict[bold.index(traj)], linewidth=2,
                     zorder=1)
         for traj in trajectories:
-            plt.plot(traj.coordinates()[:,0,0], traj.coordinates()[:,0,1],
+            plt.plot(traj.xyz()[:,0,0], traj.xyz()[:,0,1],
                      self.repcolordict[trajectories.index(traj)],
                      zorder=2)
 

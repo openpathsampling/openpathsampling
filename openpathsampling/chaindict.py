@@ -3,7 +3,7 @@ __author__ = 'jan-hendrikprinz'
 import collections
 
 
-class NestableObjectDict(dict):
+class ChainDict(dict):
     """
     Cache attached to Configuration indices stored in Configuration storage
 
@@ -41,36 +41,21 @@ class NestableObjectDict(dict):
         dict.__init__(self)
         self.post = None
 
-    def __iter__(self):
-        return None
-
     def __getitem__(self, items):
-        is_listable = isinstance(items, collections.Iterable)
+        results = self._get_list(items)
 
-        if is_listable:
-            results = self._get_list(items)
-        else:
-            results = self._get(items)
+        # print 'Res', self.__class__.__name__, results
 
         if self.post is not None:
-            if is_listable:
-                nones = [obj[0] for obj in zip(items, results) if obj[1] is None]
-                if len(nones) == 0:
-                    return results
-                else:
-                    rep = self.post[[p for p in nones]]
-                    self._add_new(nones, rep)
-
-                    it = iter(rep)
-                    return [it.next() if p[1] is None else p[1] for p in zip(items, results)]
+            nones = [obj[0] for obj in zip(items, results) if obj[1] is None]
+            if len(nones) == 0:
+                return results
             else:
-                if results is None:
-                    rep = self.post[items]
+                rep = self.post[[p for p in nones]]
+                self._add_new(nones, rep)
 
-                    self._add_new(items, rep)
-                    return rep
-                else:
-                    return results
+                it = iter(rep)
+                return [it.next() if p[1] is None else p[1] for p in zip(items, results)]
 
         return results
 
@@ -83,10 +68,6 @@ class NestableObjectDict(dict):
         else:
             self._set(key, value)
 
-#    def __contains__(self, item):
-#        return dict.__contains__(self, item) or self.in_store(item)
-
-
     def _contains(self, item):
         return dict.__contains__(self, item)
 
@@ -94,10 +75,11 @@ class NestableObjectDict(dict):
         return [dict.__contains__(self, item) for item in items]
 
     def _set(self, item, value):
-        dict.__setitem__(self, item, value)
+        if value is not None:
+            dict.__setitem__(self, item, value)
 
     def _set_list(self, items, values):
-        [dict.__setitem__(self, item, value) for item, value in zip(items, values)]
+        [dict.__setitem__(self, item, value) for item, value in zip(items, values) if value is not None]
 
     def _get(self, item):
         try:
@@ -107,42 +89,6 @@ class NestableObjectDict(dict):
 
     def _get_list(self, items):
         return [ self._get(item) for item in items ]
-
-    def push(self):
-        pass
-
-
-    def existing(self, objs):
-        """
-        Find a subset of indices that are present in the cache
-
-        Parameters
-        ----------
-        indices : list of int
-            the initial list of indices to be tested
-
-        Returns
-        -------
-        existing : list of int
-            the subset of indices present in the cache
-        """
-        return [obj for obj in objs if obj in self]
-
-    def missing(self, objs):
-        """
-        Find a subset of indices that are NOT present in the cache
-
-        Parameters
-        ----------
-        indices : list of int
-            the initial list of indices to be tested
-
-        Returns
-        -------
-        existing : list of int
-            the subset of indices NOT present in the cache
-        """
-        return [obj for obj in objs if obj not in self]
 
     def __call__(self, items):
         return self[items]
@@ -174,18 +120,40 @@ class NestableObjectDict(dict):
         it = iter(replace)
         return [ obj if obj is not None else it.next() for obj in nones ]
 
+class Wrap(ChainDict):
+    def __init__(self, post):
+        super(Wrap, self).__init__()
+        self.post = post
 
-class CODExpandMulti(NestableObjectDict):
+    def __getitem__(self, items):
+        return self.post[items]
+
+    def __setitem__(self, key, value):
+        self.post[key] = value
+
+class ExpandSingle(ChainDict):
+    """
+    Will take care of iterables
+    """
+
+    def __getitem__(self, items):
+        if hasattr(items, '__iter__'):
+            return self.post[items]
+        else:
+            return self.post[[items]][0]
+
+    def __setitem__(self, key, value):
+        self.post[key] = value
+
+    def _add_new(self, items, values):
+        pass
+
+class ExpandMulti(ChainDict):
     """
     Will only request the unique keys to post
     """
 
     def __getitem__(self, items):
-        is_list = isinstance(items, collections.Iterable)
-
-        if not is_list:
-            return self.post[items]
-
         if len(items) == 0:
             return []
 
@@ -201,9 +169,9 @@ class CODExpandMulti(NestableObjectDict):
     def _add_new(self, items, values):
         pass
 
-class CODTransform(NestableObjectDict):
+class Transform(ChainDict):
     def __init__(self, transform):
-        super(CODTransform, self).__init__()
+        super(Transform, self).__init__()
         self.transform = transform
 
     def __getitem__(self, item):
@@ -215,10 +183,9 @@ class CODTransform(NestableObjectDict):
     def _add_new(self, items, values):
         pass
 
-
-class CODFunction(NestableObjectDict):
+class Function(ChainDict):
     def __init__(self, fnc, fnc_uses_lists=True):
-        super(CODFunction, self).__init__()
+        super(Function, self).__init__()
         self._fnc = fnc
         self.fnc_uses_lists = fnc_uses_lists
 
@@ -246,7 +213,6 @@ class CODFunction(NestableObjectDict):
     def _get_list(self, items):
         if self._eval is None:
             return [None] * len(items)
-#            raise KeyError('No cached values for %d items - %s' % (len(items), str(items)))
 
         if self.fnc_uses_lists:
             result = self._eval(items)
@@ -260,9 +226,30 @@ class CODFunction(NestableObjectDict):
 
         return fnc
 
-class CODStore(NestableObjectDict):
+class BufferedStore(Wrap):
     def __init__(self, name, dimensions, store, scope=None):
-        super(CODStore, self).__init__()
+        self.storage = store.storage
+        self._store = Store(name, dimensions, store, scope)
+        self._cache = ChainDict()
+
+        super(BufferedStore, self).__init__(
+            post=self._store + self._cache
+        )
+
+    def sync(self):
+        self._store.sync()
+
+    def _add_new(self, items, values):
+        for item, value in zip(items, values):
+            if value is not None:
+                if type(item) is tuple or len(item.idx) > 0 \
+                        and self.storage in item.idx:
+                    self._cache._set(item, value)
+                    self._store._set(item, value)
+
+class Store(ChainDict):
+    def __init__(self, name, dimensions, store, scope=None):
+        super(Store, self).__init__()
         self.name = name
         self.dimensions = dimensions
         self.store = store
@@ -276,10 +263,7 @@ class CODStore(NestableObjectDict):
         self.max_save_buffer_size = None
 
     def _add_new(self, items, values):
-        if isinstance(items, collections.Iterable):
-            [dict.__setitem__(self, item, value) for item, value in zip(items, values)]
-        else:
-            dict.__setitem__(self, items, values)
+        [dict.__setitem__(self, item, value) for item, value in zip(items, values)]
 
         if self.max_save_buffer_size is not None and len(self) > self.max_save_buffer_size:
             self.sync()
@@ -288,45 +272,33 @@ class CODStore(NestableObjectDict):
     def storage(self):
         return self.store.storage
 
-    def sync(self, flush_storable=True):
+    def sync(self):
+#        print 'Sync', len(self)
         storable = [ (key.idx[self.storage], value)
-            for key, value in self.iteritems()
-                if type(key) is not tuple and len(key.idx) > 0]
+                            for key, value in self.iteritems()
+                            if type(key) is not tuple and len(key.idx) > 0
+                            and self.storage in key.idx]
 
         if len(storable) > 0:
             storable_sorted = sorted(storable, key=lambda x: x[0])
             storable_keys = [x[0] for x in storable_sorted]
             storable_values = [x[1] for x in storable_sorted]
             self.store.set_list_value(self.scope, storable_keys, storable_values)
-
-            if not flush_storable:
-                non_storable = { key : value for key, value in self.iteritems() if len(key.idx) == 0 }
-                self.clear()
-                self.update(non_storable)
-            else:
-                self.clear()
+            self.clear()
         else:
-            if flush_storable:
-                self.clear()
-
-
-
-    def flush_unstorable(self):
-        storable = { key : value for key, value in self.iteritems() if len(key.idx) > 0 }
-        self.clear()
-        self.update(storable)
+            self.clear()
 
     def _get_key(self, item):
         if item is None:
             return None
 
         if type(item) is tuple:
-            if item[0].content_class is self.store.key_class:
+            if item[0].storage is self.store.storage:
                 return item[1]
             else:
-                return None
+                item = item[0][item[1]]
 
-        elif self.storage in item.idx:
+        if self.storage in item.idx:
             return item.idx[self.storage]
 
         return None
@@ -363,7 +335,10 @@ class CODStore(NestableObjectDict):
             loadable_keys = [x[1] for x in keys_sorted]
             loadable_idxs = [x[0] for x in keys_sorted]
             values_sorted = self.store.get_list_value(self.scope, loadable_keys)
-            return [values_sorted[idx] for idx in loadable_idxs]
+            ret = [0.0] * len(keys)
+            [ret.__setitem__(idx, values_sorted[pos])
+                    for pos, idx in enumerate(loadable_idxs)]
+            return ret
         else:
             return []
 
@@ -375,12 +350,13 @@ class CODStore(NestableObjectDict):
         else:
             return type(item)
 
-class CODMultiStore(CODStore):
+class MultiStore(Store):
     def __init__(self, store_name, name, dimensions, scope):
-        super(CODStore, self).__init__()
+        super(Store, self).__init__()
         self.name = name
         self.dimensions = dimensions
         self.store_name = store_name
+        self._storages = []
 
         if scope is None:
             self.scope = self
@@ -393,31 +369,26 @@ class CODMultiStore(CODStore):
     @property
     def storages(self):
         if hasattr(self.scope, 'idx'):
-            return self.scope.idx.keys()
+            if len(self.scope.idx) != len(self._storages):
+                self._storages = self.scope.idx.keys()
+            return self._storages
         else:
             return []
 
-    def flush_unstorable(self):
+    def sync(self):
         if len(self.storages) != len(self.cod_stores):
             self.update_nod_stores()
 
         if len(self.cod_stores) == 0:
             return None
 
-        [ store.flush_unstorable() for store in self.cod_stores.values() ]
-
-
-    def sync(self, flush_storable=True):
-        if len(self.storages) != len(self.cod_stores):
-            self.update_nod_stores()
-
-        if len(self.cod_stores) == 0:
-            return None
-
-        [ store.sync(flush_storable) for store in self.cod_stores.values() ]
+        [store.sync() for store in self.cod_stores.values()]
 
     def add_nod_store(self, storage):
-        self.cod_stores[storage] = CODStore(self.name, self.dimensions, getattr(storage, self.store_name), self.scope)
+        self.cod_stores[storage] = BufferedStore(
+            self.name, self.dimensions, getattr(storage, self.store_name),
+            self.scope
+        )
 
     def update_nod_stores(self):
         for storage in self.cod_stores:
@@ -434,9 +405,8 @@ class CODMultiStore(CODStore):
         for s in self.cod_stores:
             self.cod_stores[s]._add_new(items, values)
 
-        pass
-
     def _get(self, item):
+        print 'Should not appear'
         if len(self.storages) != len(self.cod_stores):
             self.update_nod_stores()
 
@@ -447,16 +417,22 @@ class CODMultiStore(CODStore):
         for s in self.cod_stores:
             results[s] = self.cod_stores[s][item]
 
-        for s, result in results.iteritems():
-            if result is not None:
-                return result
+        output = None
 
-        return None
+        for result in results.values():
+            if result is None:
+                return None
+            elif output is None:
+                output = result
+
+        return output
 
 
     def _get_list(self, items):
         if len(self.storages) != len(self.cod_stores):
             self.update_nod_stores()
+
+
 
         if len(self.cod_stores) == 0:
             return [None] * len(items)
@@ -465,50 +441,28 @@ class CODMultiStore(CODStore):
         for s in self.cod_stores:
             results_list[s] = self.cod_stores[s][items]
 
-        output = [None] * len(items)
+        first = True
         for s, results in results_list.iteritems():
-            output = [item if item is not None or results is None else result
+            if first:
+                output = results
+                first = False
+            else:
+                output = [None if item is None or result is None else item
                      for item, result in zip(output, results) ]
+
+#        print output
 
         return output
 
-class CODUnwrapTuple(NestableObjectDict):
+
+
+class UnwrapTuple(ChainDict):
     def __init__(self):
-        super(CODUnwrapTuple, self).__init__()
+        super(UnwrapTuple, self).__init__()
 
     def __getitem__(self, items):
-        if isinstance(items, collections.Iterable):
-            return self.post([value[0].load(value[1])
-                if type(value) is tuple else value for value in items])
-        else:
-            if type(items) is tuple:
-                items = items[0].load(items[1])
-
-            return self.post[items]
+        return self.post([value[0].load(value[1])
+            if type(value) is tuple else value for value in items])
 
     def __setitem__(self, key, value):
         self.post[key] = value
-
-
-
-
-class CODWrap(NestableObjectDict):
-    def __init__(self, post):
-        super(CODWrap, self).__init__()
-        self.post = post
-
-    def __getitem__(self, items):
-        return self.post[items]
-
-    def __setitem__(self, key, value):
-        self.post[key] = value
-
-class CODBuffer(NestableObjectDict):
-    """
-    Implements a dict with a buffer that reads sequentially ahead
-    """
-
-class CODCache(NestableObjectDict):
-    """
-    Implements a dict with intelligent caching of limited size
-    """

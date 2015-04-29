@@ -1,10 +1,10 @@
 import numpy as np
-from openpathsampling.todict import restores_as_full_object
+from openpathsampling.todict import ops_object
 
 # The decorator @restores_ allows us to restore the object from a JSON
 # string completely and can thus be stored automatically
 
-@restores_as_full_object
+@ops_object
 class Toy_PES(object):
     # For now, we only support additive combinations; maybe someday that can
     # include multiplication, too
@@ -33,7 +33,7 @@ class Toy_PES_Combination(Toy_PES):
     def dVdx(self, sys):
         return self._dfdx_fcn(self.pes1.dVdx(sys), self.pes2.dVdx(sys))
 
-@restores_as_full_object
+@ops_object
 class Toy_PES_Sub(Toy_PES_Combination):
     def __init__(self, pes1, pes2):
         self.pes1 = pes1
@@ -41,7 +41,7 @@ class Toy_PES_Sub(Toy_PES_Combination):
         self._fcn = lambda a, b: a - b
         self._dfdx_fcn = lambda a, b: a - b
 
-@restores_as_full_object
+@ops_object
 class Toy_PES_Add(Toy_PES_Combination):
     def __init__(self, pes1, pes2):
         self.pes1 = pes1
@@ -49,7 +49,7 @@ class Toy_PES_Add(Toy_PES_Combination):
         self._fcn = lambda a, b: a + b
         self._dfdx_fcn = lambda a, b: a + b
 
-@restores_as_full_object
+@ops_object
 class HarmonicOscillator(Toy_PES):
     def __init__(self, A, omega, x0):
         self.A = np.array(A)
@@ -66,7 +66,7 @@ class HarmonicOscillator(Toy_PES):
         k = self.omega*self.omega*sys.mass
         return self.A*k*dx
 
-@restores_as_full_object
+@ops_object
 class Gaussian(Toy_PES):
     ''' Returns the Gaussian given by A*exp(-\sum_i alpha[i]*(x[i]-x0[i])^2)
     '''
@@ -87,7 +87,7 @@ class Gaussian(Toy_PES):
             self._local_dVdx[i] = -2*self.alpha[i]*dx[i]*exp_part
         return self._local_dVdx
 
-@restores_as_full_object
+@ops_object
 class OuterWalls(Toy_PES):
     def __init__(self, sigma, x0):
         self.sigma = np.array(sigma)
@@ -107,7 +107,7 @@ class OuterWalls(Toy_PES):
             self._local_dVdx[i] = 6.0*self.sigma[i]*dx[i]**5
         return self._local_dVdx
 
-@restores_as_full_object
+@ops_object
 class LinearSlope(Toy_PES):
     def __init__(self, m, c):
         self.m = m

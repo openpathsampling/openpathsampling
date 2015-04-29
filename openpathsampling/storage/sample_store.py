@@ -1,5 +1,6 @@
 from object_storage import ObjectStore
 from openpathsampling.sample import SampleSet, Sample
+from openpathsampling.storage.object_storage import func_update_object
 
 import time
 
@@ -8,56 +9,50 @@ class SampleStore(ObjectStore):
         super(SampleStore, self).__init__(storage, Sample, json=False, load_partial=True)
 
         self.set_variable_partial_loading('details', self.update_details)
+        self.set_variable_partial_loading('parent', self.update_parent)
+        self.set_variable_partial_loading('mover', self.update_mover)
+        self.set_variable_partial_loading('ensemble', self.update_ensemble)
 
-    def save(self, sample, idx=None):
-        if idx is not None:
-            self.storage.trajectory.save(sample.trajectory)
-            self.set_object('sample_trajectory', idx, sample.trajectory)
-
-            self.storage.ensemble.save(sample.ensemble)
-            self.set_object('sample_ensemble', idx, sample.ensemble)
-
-            self.save_variable('sample_replica', idx, sample.replica)
-
-            self.storage.movedetails.save(sample.details)
-            self.set_object('sample_details', idx, sample.details)
-
-            if sample.step is None:
-                self.save_variable('sample_step', idx, -1)
-            else:
-                self.save_variable('sample_step', idx, sample.step)
 
     def load_empty(self, idx):
         trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
-        ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
         replica_idx = int(self.storage.variables['sample_replica'][idx])
-#        details_idx = int(self.storage.variables['sample_details_idx'][idx])
-        step=self.load_variable('sample_step', idx)
-
-        if step < 0:
-            step = None
-
+        valid=self.load_variable('sample_valid', idx)
+        accepted=bool(self.load_variable('sample_accepted', idx))
 
         obj = Sample(
-            trajectory=self.storage.trajectory.load(trajectory_idx),
+            trajectory=self.storage.trajectories[trajectory_idx],
             replica=replica_idx,
-            ensemble=self.storage.ensemble.load(ensemble_idx),
-            step=step
+            valid=valid,
+            accepted=accepted,
         )
 
         del obj.details
+        del obj.ensemble
+        del obj.mover
+        del obj.parent
 
         return obj
 
-    @staticmethod
-    def update_details(obj):
-        storage = obj._origin
+    update_details = func_update_object('details', 'sample', 'details', '_details')
+    update_parent = func_update_object('parent', 'sample', 'parent', 'samples')
+    update_mover = func_update_object('mover', 'sample', 'pathmover', 'pathmovers')
+    update_ensemble = func_update_object('ensemble', 'sample', 'ensemble', 'ensembles')
 
-        idx = obj.idx[storage]
-        details_idx = int(storage.variables['sample_details_idx'][idx])
-        details = storage.movedetails.load(details_idx)
+    def save(self, sample, idx=None):
+        if idx is not None:
+            self.storage.trajectories.save(sample.trajectory)
+            self.save_object('sample_trajectory', idx, sample.trajectory)
 
-        obj.details = details
+            self.storage.ensembles.save(sample.ensemble)
+            self.save_object('sample_ensemble', idx, sample.ensemble)
+
+            self.save_variable('sample_replica', idx, sample.replica)
+            self.save_object('sample_parent', idx, sample.parent)
+            self.save_object('sample_details', idx, sample.details)
+            self.save_variable('sample_valid', idx, sample.valid)
+            self.save_variable('sample_accepted', idx, sample.accepted)
+            self.save_object('sample_pathmover', idx, sample.mover)
 
     def load(self, idx):
         '''
@@ -76,16 +71,22 @@ class SampleStore(ObjectStore):
         trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
         ensemble_idx = int(self.storage.variables['sample_ensemble_idx'][idx])
         replica_idx = int(self.storage.variables['sample_replica'][idx])
+        parent_idx = int(self.storage.variables['sample_parent_idx'][idx])
         details_idx = int(self.storage.variables['sample_details_idx'][idx])
-        step=self.load_variable('sample_step', idx)
+        pathmover_idx = int(self.storage.variables['sample_pathmover_idx'][idx])
+        valid=self.load_variable('sample_valid', idx)
+        accepted=bool(self.load_variable('sample_accepted', idx))
 
 
         obj = Sample(
-            trajectory=self.storage.trajectory.load(trajectory_idx),
+            trajectory=self.storage.trajectories[trajectory_idx],
             replica=replica_idx,
-            ensemble=self.storage.ensemble.load(ensemble_idx),
-            details=self.storage.movedetails.load(details_idx),
-            step=step
+            ensemble=self.storage.ensembles[ensemble_idx],
+            valid=valid,
+            parent=self.storage.samples[parent_idx],
+            details=self.storage._details[details_idx],
+            accepted=accepted,
+            mover=self.storage.pathmovers[pathmover_idx]
         )
 
         return obj
@@ -93,40 +94,43 @@ class SampleStore(ObjectStore):
     def by_ensemble(self, ensemble):
         return [ sample for sample in self.iterator() if sample.ensemble == ensemble ]
 
-    def _init(self):
-        super(SampleStore, self)._init()
+    def _init(self, units=None):
+        super(SampleStore, self)._init(units)
 
         # New short-hand definition
         self.init_variable('sample_trajectory_idx', 'index', chunksizes=(1, ))
         self.init_variable('sample_ensemble_idx', 'index', chunksizes=(1, ))
         self.init_variable('sample_replica', 'index', chunksizes=(1, ))
+        self.init_variable('sample_parent_idx', 'index', chunksizes=(1, ))
+        self.init_variable('sample_valid', 'index', chunksizes=(1, ))
         self.init_variable('sample_details_idx', 'index', chunksizes=(1, ))
-        self.init_variable('sample_step', 'index', chunksizes=(1, ))
+        self.init_variable('sample_accepted', 'bool', chunksizes=(1, ))
+        self.init_variable('sample_pathmover_idx', 'index', chunksizes=(1, ))
 
 class SampleSetStore(ObjectStore):
 
     def __init__(self, storage):
         super(SampleSetStore, self).__init__(storage, SampleSet, json=False)
 
-    def save(self, sampleset, idx=None):
+    def save(self, sample_set, idx=None):
         # Check if all samples are saved
-        map(self.storage.sample.save, sampleset)
+        map(self.storage.samples.save, sample_set)
 
-        values = self.list_to_numpy(sampleset, 'sample')
+        values = self.list_to_numpy(sample_set, 'sample')
         self.storage.variables['sampleset_sample_idx'][idx] = values
 
-        self.storage.movepath.save(sampleset.movepath)
-        self.set_object('sampleset_movepath', idx, sampleset.movepath)
+        self.storage.pathmovechanges.save(sample_set.movepath)
+        self.save_object('sampleset_movepath', idx, sample_set.movepath)
 
 
     def sample_indices(self, idx):
         '''
-        Load sample indices for sampleset with ID 'idx' from the storage
+        Load sample indices for sample_set with ID 'idx' from the storage
 
         Parameters
         ----------
         idx : int
-            ID of the sampleset
+            ID of the sample_set
 
         Returns
         -------
@@ -142,17 +146,17 @@ class SampleSetStore(ObjectStore):
 
     def load(self, idx):
         '''
-        Return a sampleset from the storage
+        Return a sample_set from the storage
 
         Parameters
         ----------
         idx : int
-            index of the sampleset (counts from 0)
+            index of the sample_set (counts from 0)
 
         Returns
         -------
-        sampleset
-            the sampleset
+        sample_set
+            the sample_set
         '''
 
         movepath_idx = int(self.storage.variables['sampleset_movepath_idx'][idx])
@@ -160,10 +164,10 @@ class SampleSetStore(ObjectStore):
         values = self.storage.variables['sampleset_sample_idx'][idx]
 
         # typecast to sample
-        samples = self.list_from_numpy(values, 'sample')
-        sampleset = SampleSet(samples, movepath=self.storage.movepath.load(movepath_idx))
+        samples = self.list_from_numpy(values, 'samples')
+        sample_set = SampleSet(samples, movepath=self.storage.pathmovechanges.load(movepath_idx))
 
-        return sampleset
+        return sample_set
 
     def _init(self, units=None):
         """

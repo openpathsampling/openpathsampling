@@ -9,6 +9,9 @@ import copy
 import numpy as np
 import mdtraj as md
 
+#THIS SHOULD NOT BE NECESSARY! SEE XYZ BELOW
+import simtk.unit as u 
+
 
 #=============================================================================
 # SIMULATION CONFIGURATION
@@ -405,6 +408,22 @@ class Snapshot(object):
         The coordinates in the configuration
         """
         return self.configuration.coordinates
+
+    @property
+    @has('configuration')
+    def xyz(self):
+        """
+        Coordinates without dimensions.
+
+        SERIOUS PROBLEM: whether .coordinates returns a u.Quantity or jut
+        numpy array depending on situation (at least for ToyDynamics). This
+        is bad.
+        """
+        coord = self.configuration.coordinates
+        if type(coord) is u.Quantity:
+            return coord._value
+        else:
+            return coord
 
     @property
     @has('momentum')

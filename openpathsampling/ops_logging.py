@@ -16,5 +16,3 @@ def initialization_logging(logger, obj, entries):
                 str(hex(id(obj))), str(obj.__class__.__name__))
     for entry in working_dict.keys():
         logger.info("Parameter: %s : %s", str(entry), str(working_dict[entry]))
-
-

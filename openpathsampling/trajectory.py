@@ -91,7 +91,7 @@ class Trajectory(list):
 
         # Make sure snapshots are stored and have an index and then add the snapshot index to the trajectory
 
-        n_frames = self.frames     
+        n_frames = len(self)
         n_atoms = self.n_atoms
         n_spatial = self.spatial
             
@@ -104,9 +104,24 @@ class Trajectory(list):
                 output[frame_index,:,:] = self[frame_index].coordinates[self.atom_indices,:]
 
         return output
+
+    def xyz(self):
+        n_frames = len(self)
+        n_atoms = self.n_atoms
+        n_spatial = self.spatial
+            
+        output = np.zeros([n_frames, n_atoms, n_spatial], np.float32)
+        
+        for frame_index in range(n_frames):      
+            if self.atom_indices is None:
+                output[frame_index,:,:] = self[frame_index].xyz
+            else:
+                output[frame_index,:,:] = self[frame_index].xyz[self.atom_indices,:]
+
+        return output
     
     @property
-    def frames(self):
+    def n_snapshots(self):
         """
         Return the number of frames in the trajectory.
         
@@ -116,11 +131,33 @@ class Trajectory(list):
 
         Notes
         -----
-        Might be removed in later versions len(trajectory) is more intuitive
-        
+        Might be removed in later versions for len(trajectory) is more pythonic
+
+        See also
+        --------
+        n_frames, len
+
         """
 
         return len(self)
+
+    @property
+    def n_frames(self):
+        """
+        Return the number of frames in the trajectory.
+
+        Returns
+        -------
+        length (int) - the number of frames in the trajectory
+
+        See also
+        --------
+        n_snapshots, len
+
+        """
+
+        return len(self)
+
 
     def configurations(self):
         """
@@ -181,8 +218,9 @@ class Trajectory(list):
     #=============================================================================================
 
     def __getslice__(self, *args, **kwargs):
+#        print 'PRE',  list(list.__iter__(self))
         ret =  list.__getslice__(self, *args, **kwargs)
-        if isinstance(ret, list):
+        if type(ret) is list:
             ret = Trajectory(ret)
             ret.atom_indices = self.atom_indices
             
@@ -190,16 +228,36 @@ class Trajectory(list):
         
     def __getitem__(self, index):
         # Allow for numpy style of selecting several indices using a list as index parameter
-        if type(index) is list:
+        if hasattr(index, '__iter__'):
             ret = [ list.__getitem__(self, i) for i in index ]
         else:
             ret = list.__getitem__(self, index)
                 
-        if isinstance(ret, list):
+        if type(ret) is list:
             ret = Trajectory(ret)
             ret.atom_indices = self.atom_indices
 
         return ret
+
+    def __reversed__(this):
+        class ObjectIterator:
+            def __init__(self):
+                self.trajectory = this
+                self.idx = len(this)
+                self.length = 0
+
+            def __iter__(self):
+                return self
+
+            def next(self):
+                if self.idx > self.length:
+                    self.idx -= 1
+                    obj = self.trajectory[self.idx]
+                    return obj
+                else:
+                    raise StopIteration()
+
+        return ObjectIterator()
 
     def __iter__(this):
         """
@@ -221,12 +279,13 @@ class Trajectory(list):
             def __init__(self):
                 self.trajectory = this
                 self.idx = 0
+                self.length = len(this)
 
             def __iter__(self):
                 return self
 
             def next(self):
-                if self.idx < len(self.trajectory):
+                if self.idx < self.length:
                     obj = self.trajectory[self.idx]
                     self.idx += 1
                     return obj
@@ -329,7 +388,70 @@ class Trajectory(list):
 
         return log_q
 
-    
+    #=============================================================================================
+    # ANALYSIS FUNCTIONS
+    #=============================================================================================
+
+    def is_correlated(self, other):
+        """
+        Checks if two trajectories share a common snapshot
+
+        Parameters
+        ----------
+        other : Trajectory()
+            the second trajectory to check for common snapshots
+
+        Returns
+        -------
+        bool
+            returns True if at least one snapshot appears in both trajectories
+        """
+
+        # if hasattr(self, 'idx') and hasattr(other, 'idx'):
+        #     shared_store = set(self.idx.keys()) & set(other.idx.keys())
+        #     # both are saved so use the snapshot idx as identifiers
+        #     if len(shared_store) > 0:
+        #         storage = list(shared_store)[0]
+        #         t1id = storage.trajectories.snapshot_indices(self.idx[storage])
+        #         t2id = storage.trajectories.snapshot_indices(other.idx[storage])
+        #         return bool(set(t1id) & set(t2id))
+
+        # Use some fallback
+        return bool(self.shared_configurations(other))
+
+    def shared_configurations(self, other):
+        """
+        Returns a set of shared snapshots
+
+        Parameters
+        ----------
+        other : Trajectory()
+            the second trajectory to use
+
+        Returns
+        -------
+        set of Snapshot()
+            the set of common snapshots
+        """
+        return set([snap.configuration for snap in self]) & set(list([snap.configuration for snap in self]))
+
+    def shared_subtrajectory(self, other):
+        """
+        Returns a subtrajectory which only contains frames present in other
+
+        Parameters
+        ----------
+        other : Trajectory()
+            the second trajectory to use
+
+        Returns
+        -------
+        Trajectory
+            the shared subtrajectory
+        """
+        shared = self.shared_configurations(other)
+        return Trajectory([ snap for snap in self if snap.configuration in shared])
+
     #=============================================================================================
     # UTILITY FUNCTIONS
     #=============================================================================================
@@ -420,7 +542,7 @@ class Trajectory(list):
         trajectory = Trajectory()
         empty_momentum = paths.Momentum()
         empty_momentum.velocities = None
-        for frame_num in range(mdtrajectory.n_frames):
+        for frame_num in range(len(mdtrajectory)):
             # mdtraj trajectories only have coordinates and box_vectors
             coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
             if mdtrajectory.unitcell_vectors is not None:
