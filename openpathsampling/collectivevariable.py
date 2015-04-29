@@ -13,8 +13,8 @@ import opcode
 @ops_object
 class CollectiveVariable(cd.Wrap):
     """
-    Wrapper for a function that maps a snapshot, an iterable of snapshots
-    (like to a number.
+    Wrapper for a function that maps a snapshot or an iterable of snapshots
+    (like Trajectory) to a number or vector.
 
     Parameters
     ----------
@@ -25,14 +25,30 @@ class CollectiveVariable(cd.Wrap):
         The number of dimensions of the output order parameter. So far this
         is not used and will be necessary or useful when storage is
         available
-    storages : list of ConfigurationStorages()
-        contains the list of storages that will be used.
 
     Attributes
     ----------
     name
     dimensions
-    storages
+    single_dict : ChainDict
+        The ChainDict that takes care of using only a single element instead of
+        an iterable. In the case of a single object. It will be wrapped in a list
+        and later only the single element will be returned
+
+    pre_dict : ChainDict
+        The ChainDict that will convert all possible input types into parsable
+        lists of snapshots, like Trajectory, etc.
+    multi_dict
+        The ChainDict that will filter duplicate elements for faster calculation
+        and compatibility with netcdf format.
+    cache_dict
+        The ChainDict that will cache calculated values for fast access
+    expand_dict
+        The ChainDict that will turn unloaded snapshots into real ones so that the
+        underlying function will be called with real data
+    func_dict
+        The ChainDict that will call the actual function in case non of the
+        preceeding ChainDicts have returned data
 
     """
 
@@ -92,13 +108,8 @@ class CollectiveVariable(cd.Wrap):
 
         Parameters
         ----------
-        store : CollectiveVariableStore or None
+        storage : Storage or None
             the store to be used, otherwise all underlying storages are synced
-        store_cache : bool
-            if `False` (default) the store will only store new values. If
-            `True` also the cached values will be stored. This is much more
-            costly and is usually only run once, when the collectivevariable is
-            saved the first time
         """
         self.store_dict.update_nod_stores()
         if storage in self.store_dict.cod_stores:
@@ -143,12 +154,22 @@ class CollectiveVariable(cd.Wrap):
 
 @ops_object
 class CV_Volume(CollectiveVariable):
-    """ Make `Volume` into `CollectiveVariable`: maps to 0.0 or 1.0 """
+    """ Make `Volume` into `CollectiveVariable`: maps to 0.0 or 1.0
+
+    Attributes
+    ----------
+    name
+    volume
+    """
 
     def __init__(self, name, volume):
         """
         Parameters
         ----------
+        name : string
+            name of the collective variable
+        volume : Volume()
+            the Volume instance to be treated as a (storable) CV
 
         """
 
@@ -177,8 +198,14 @@ class CV_Volume(CollectiveVariable):
 
 @ops_object
 class CV_Function(CollectiveVariable):
-    """Make any function `fcn` into an `CollectiveVariable`.
+    """Make any function `fcn` into a `CollectiveVariable`.
 
+    Attributes
+    ----------
+    name
+    fcn
+    dimensions
+    kwargs
     """
 
     allow_marshal = True
@@ -190,15 +217,40 @@ class CV_Function(CollectiveVariable):
         ----------
         name : str
         fcn : function
+            The function to be used, can almost be an arbitrary function.
         kwargs :
             named arguments which should be given to `fcn` (for example, the
-            atoms which define a specific distance/angle)
+            atoms which define a specific distance/angle). Finally
+            `fnc(list_of_snapshots, **kwargs)` is called
 
         Notes
         -----
-            We may decide that it is better not to use the trajdatafmt
-            trick, and to instead create separate wrapper classes for each
-            supported trajformat.
+        This function is very powerful, but need some explanation if you want
+        the function to be stored alongside all other information in your
+        storage. The problem is that a python function relies (usually) on
+        an underlying global namespace that can be accessed. This is especially
+        important when using an iPython notebook. The problem is, that the
+        function that stored your used-definited function has no knowledge
+        about this underlying namespace and its variables. All it can save is
+        names of variables from your namespace to be used. This means you can
+        store arbitrary functions, but these will only work, if you call the
+        reconstructed ones from the same context (scope). This is a powerful
+        feature because a function might do something different in another
+        context, but in our case we cannot store these additional information.
+
+        What we can do, is analyse your function and determine which variables
+        (if at all these are) and inform you, if you might run into trouble.
+        To avoid problem you should try to:
+        1. import necessary modules inside of your function
+        2. create constants inside your function
+
+        >>> def func(snapshot):
+        >>>     import mdtraj as md
+        >>>     indices = [4,6,8,10]
+        >>>     return md.compute_dihedrals(Trajectory([snapshot]).md(), [indices=indices])
+
+        We will also check if non-standard modules are importet, which are now
+        numpy, math, msmbuilder and mdtraj
         """
         super(CV_Function, self).__init__(name, dimensions=dimensions)
         self.callable_fcn = fcn
@@ -328,6 +380,13 @@ class CV_Class(CollectiveVariable):
     the class instance will be called with single snapshots or a list of
     snapshots. The instance will be created using kwargs.
 
+    Attributes
+    ----------
+    name
+    dimensions
+    cls
+    kwargs
+
     Examples
     -------
     >>> # To create an order parameter which calculates the dihedral formed
@@ -341,24 +400,28 @@ class CV_Class(CollectiveVariable):
     >>> print psi_orderparam( traj.md() )
     """
 
-    _allowed_modules = []
+    _allowed_modules = [ 'msmbuilder' ]
 
     def __init__(self, name, cls, dimensions=1, **kwargs):
         """
         Parameters
         ----------
         name : str
-        fcn : function
-        kwargs :
-            named arguments which should be given to `fcn` (for example, the
-            atoms which define a specific distance/angle)
+        cls : Class
+            a class where instances have a `__call__` attribute
+        kwargs : **kwargs
+            named arguments which should be given to `cls` (for example, the
+            atoms which define a specific distance/angle). Finally an instance
+            `instance = cls(**kwargs)` is create when the CV is created and
+            using the CV will call `instance(list_of_snapshots)`
 
         Notes
         -----
-            We may decide that it is better not to use the trajdatafmt
-            trick, and to instead create separate wrapper classes for each
-            supported trajformat.
+        Right now you cannot store user-defined classes. Only classes
+        from external packages can be used. For the time being we allow
+        classes from msmbuilder.
         """
+
         super(CV_Class, self).__init__(name, dimensions=dimensions)
         self.callable_cls = cls
         self.kwargs = kwargs
@@ -435,6 +498,10 @@ class CV_Class(CollectiveVariable):
 class CV_MD_Function(CV_Function):
     """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
 
+    This is identical to CV_Function except that the function is called with
+    an mdraj.Trajetory object instead of the openpathsampling.Trajectory one using
+    `fnc(traj.md(), **kwargs)`
+
     Examples
     -------
     >>> # To create an order parameter which calculates the dihedral formed
@@ -444,7 +511,7 @@ class CV_MD_Function(CV_Function):
     >>> psi_atoms = [7,9,15,17]
     >>> psi_orderparam = CV_Function("psi", md.compute_dihedrals,
     >>>                              indices=[[2,4,6,8]])
-    >>> print psi_orderparam( traj.md() )
+    >>> print psi_orderparam( traj )
     """
 
     def __init__(self, name, fcn, dimensions=1, **kwargs):
@@ -478,26 +545,26 @@ class CV_Featurizer(CV_Class):
     """
     An CollectiveVariable that uses an MSMBuilder3 featurizer as the logic
 
-    Parameters
+    Attribues
     ----------
-    centers : trajectory
-        a trajectory of snapshots that are used as the points to compute the RMSD to
-    atom_indices : list of integers (optional)
-        a list of integers that is used in the rmsd computation. Usually solvent should be excluded
-    metric : msmbuilder.metrics.Metric
-        the metric object used to compute the RMSD
-
-    Attributes
-    ----------
-    centers : trajectory
-        a trajectory of snapshots that are used as the points to compute the RMSD to
-    atom_indices : list of integers (optional)
-        a list of integers that is used in the rmsd computation. Usually solvent should be excluded
-    metric : msmbuilder.metrics.RMSD
-        the RMSD metric object used to compute the RMSD
+    name
+    cls
     """
 
     def __init__(self, name, featurizer, **kwargs):
+        """
+
+        Parameters
+        ----------
+        name
+        featurizer : msmbuilder.Featurizer
+            the featurizer used as a class
+
+        Notes
+        -----
+        All trajectories or snapshots passed in kwargs will be converted
+        to mdtraj objects for convenience
+        """
 
         self.kwargs = kwargs
         # turn Snapshot and Trajectory into md.trajectory
