@@ -18,7 +18,7 @@ from trajectory import Trajectory
 from sample import Sample, SampleSet
 
 from collectivevariable import CV_Function, CV_MD_Function, CV_Featurizer, \
-    CV_RMSD_To_Lambda, CV_Volume, CollectiveVariable
+    CV_Volume, CollectiveVariable
 
 from pathmover import (
     BackwardShootMover, MinusMover, RandomChoiceMover, ForwardShootMover, PathMover, PathMoverFactory, PathReversalMover,
