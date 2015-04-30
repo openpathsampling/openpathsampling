@@ -310,7 +310,7 @@ class Snapshot(object):
 
     def __init__(self, coordinates=None, velocities=None, box_vectors=None,
                  potential_energy=None, kinetic_energy=None, topology=None,
-                 configuration=None, momentum=None, reversed=False):
+                 configuration=None, momentum=None, is_reversed=False):
         """
         Create a simulation snapshot. Initialization happens primarily in
         one of two ways:
@@ -362,7 +362,7 @@ class Snapshot(object):
         if topology is not None:
             self.configuration.topology = topology
 
-        self.reversed = reversed
+        self.is_reversed = is_reversed
 
         if coordinates is not None: 
             self.configuration.coordinates = copy.deepcopy(coordinates)
@@ -391,7 +391,9 @@ class Snapshot(object):
             if np.any(np.isnan(self.configuration.coordinates)):
                 raise ValueError("Some coordinates became 'nan'; simulation is unstable or buggy.")
                 
-        pass
+        self._reversed = None
+        # this will always create the mirrored copy so we can save in pairs!
+        self.reversed
 
     @property
     @has('configuration')
@@ -433,7 +435,7 @@ class Snapshot(object):
         copy of the original (unreversed) velocities is made which is then
         returned
         """
-        if self.reversed:
+        if self.is_reversed:
             return -1.0 * self.momentum.velocities
         else:
             return self.momentum.velocities
@@ -505,7 +507,7 @@ class Snapshot(object):
         Snapshot()
             the deep copy
         """
-        this = Snapshot(configuration=self.configuration, momentum=self.momentum, reversed=self.reversed)
+        this = Snapshot(configuration=self.configuration, momentum=self.momentum, is_reversed=self.is_reversed)
         return this
     
     def reversed_copy(self):
@@ -520,17 +522,22 @@ class Snapshot(object):
             the deep copy
         """
 
-        return self.copy().reverse()
+        obj = self.copy()
+        obj.is_reversed = not obj.is_reversed
+        return obj
 
-    def reverse(self):
+    @property
+    def reversed(self):
         """
         Reversed the momenta. This only flips a boolean and marks the given
         snapshot are reversed. This is fast and should be used instead of
         read velocity inversion.
         """
-        # TODO: reversed=>is_reversed to avoid confusion w/ built-in reversed
-        self.reversed = not self.reversed
-        return self
+        if self._reversed is None:
+            self._reversed = self.reversed_copy()
+            self._reversed._reversed = self
+
+        return self._reversed
     
     @has('configuration')
     def md(self):
@@ -553,5 +560,5 @@ class Snapshot(object):
         So far the potential and kinetic energies are copied and are thus false but still useful!?!
         """
 
-        this = Snapshot(configuration=self.configuration.copy(subset), momentum=self.momentum.copy(subset), reversed=self.reversed)
+        this = Snapshot(configuration=self.configuration.copy(subset), momentum=self.momentum.copy(subset), reversed=self.is_reversed)
         return this
