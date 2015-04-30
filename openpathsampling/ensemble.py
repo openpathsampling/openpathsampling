@@ -1481,8 +1481,16 @@ class BackwardPrependedTrajectoryEnsemble(WrappedEnsemble):
         self.add_trajectory = add_trajectory
 
     def _alter(self, trajectory):
-#        print [ s.idx for s in trajectory.reversed + self.add_traj]
-        return trajectory.reversed + self.add_trajectory
+        logger.debug("Starting BackwardPrepended._alter")
+
+        revtraj = trajectory.reversed
+        altered = revtraj + self.add_trajectory
+
+        logger.debug("revtraj " + str([id(i) for i in revtraj]))
+        logger.debug("add     " + str([id(i) for i in self.add_trajectory]))
+        logger.debug("altered " + str([id(i) for i in altered]))
+
+        return altered
 
 @ops_object
 class ForwardAppendedTrajectoryEnsemble(WrappedEnsemble):
