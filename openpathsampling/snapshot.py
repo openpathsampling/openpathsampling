@@ -310,7 +310,8 @@ class Snapshot(object):
 
     def __init__(self, coordinates=None, velocities=None, box_vectors=None,
                  potential_energy=None, kinetic_energy=None, topology=None,
-                 configuration=None, momentum=None, is_reversed=False):
+                 configuration=None, momentum=None, is_reversed=False,
+                 reversed_copy=None):
         """
         Create a simulation snapshot. Initialization happens primarily in
         one of two ways:
@@ -390,10 +391,12 @@ class Snapshot(object):
             # something is wrong.
             if np.any(np.isnan(self.configuration.coordinates)):
                 raise ValueError("Some coordinates became 'nan'; simulation is unstable or buggy.")
-                
-        self._reversed = None
-        # this will always create the mirrored copy so we can save in pairs!
-        self.reversed
+
+        if reversed_copy is None:
+            # this will always create the mirrored copy so we can save in pairs!
+            self._reversed = Snapshot(configuration=self.configuration, momentum=self.momentum, is_reversed=not self.is_reversed, reversed_copy=self)
+        else:
+            self._reversed = reversed_copy
 
     @property
     @has('configuration')

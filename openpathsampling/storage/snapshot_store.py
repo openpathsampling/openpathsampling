@@ -27,19 +27,24 @@ class SnapshotStore(ObjectStore):
             the loaded snapshot instance
         '''
 
-        snapshot = Snapshot()
 
         configuration_idx = self.configuration_idx(idx)
         momentum_idx = self.momentum_idx(idx)
         momentum_reversed = self.momentum_reversed(idx)
         reversed_idx = self.reversed_idx(idx)
 
-        snapshot.configuration = self.storage.configurations.load(configuration_idx)
-        snapshot.momentum = self.storage.momentum.load(momentum_idx)
+        configuration = self.storage.configurations.load(configuration_idx)
+        momentum = self.storage.momentum.load(momentum_idx)
 
-        snapshot._reversed = self.storage.snapshots.load()
+        snapshot = Snapshot(configuration=configuration, momentum=momentum, is_reversed=momentum_reversed, reversed_copy=None)
+        snapshot_reversed = Snapshot(configuration=configuration, momentum=momentum, is_reversed=not momentum_reversed, reversed_copy=None)
 
-        snapshot.is_reversed = momentum_reversed
+        snapshot._reversed = snapshot_reversed
+        snapshot_reversed._reversed = snapshot
+
+        # fix caching!
+        snapshot_reversed.idx[self.storage] = reversed_idx
+        self.cache[reversed_idx] = snapshot_reversed
 
         return snapshot
 
