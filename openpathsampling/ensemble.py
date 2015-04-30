@@ -1479,18 +1479,26 @@ class BackwardPrependedTrajectoryEnsemble(WrappedEnsemble):
     def __init__(self, ensemble, add_trajectory):
         super(BackwardPrependedTrajectoryEnsemble, self).__init__(ensemble)
         self.add_trajectory = add_trajectory
+        self._cached_trajectory = paths.Trajectory(add_trajectory)
 
     def _alter(self, trajectory):
         logger.debug("Starting BackwardPrepended._alter")
+        reset = self._cache_can_prepend.check(trajectory)
+        #reset = False
+        if not reset:
+            logger.debug("reset")
+            first_frame = trajectory[-1]
+            first_frame.reverse()
+            if self._cached_trajectory[0] != first_frame:
+                self._cached_trajectory.insert(0,first_frame)
+        else:
+            self._cached_trajectory = trajectory.reversed + self.add_trajectory
 
-        revtraj = trajectory.reversed
-        altered = revtraj + self.add_trajectory
-
-        logger.debug("revtraj " + str([id(i) for i in revtraj]))
+        #logger.debug("revtraj " + str([id(i) for i in revtraj]))
         logger.debug("add     " + str([id(i) for i in self.add_trajectory]))
-        logger.debug("altered " + str([id(i) for i in altered]))
+        logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
 
-        return altered
+        return self._cached_trajectory
 
 @ops_object
 class ForwardAppendedTrajectoryEnsemble(WrappedEnsemble):
