@@ -125,6 +125,7 @@ class ObjectStore(object):
         self.simplifier = paths.storage.StorableObjectJSON(storage)
         self.identifier = self.db + '_uid'
         self._free = set()
+        self._cached_all = False
 
         if dimension_units is not None:
             self.dimension_units = dimension_units
@@ -219,9 +220,6 @@ class ObjectStore(object):
                 return obj.idx[self.storage]
 
         return None
-
-    def query(self, needle):
-        return
 
     @property
     def units(self):
@@ -460,6 +458,44 @@ class ObjectStore(object):
         '''
 
         return self.load_json(self.idx_dimension + '_json', idx)
+
+    def clear_cache(self):
+        """Clear the cache and force reloading
+
+        """
+
+        self.cache = dict()
+        self._cached_all = False
+
+    def cache_all(self):
+        """Load all samples as fast as possible into the cache
+
+        """
+        if not self._cached_all:
+            idxs = range(len(self))
+            jsons = self.storage.variables[self.idx_dimension + '_json'][:]
+
+            [ self.add_single_to_cache(i,j) for i,j in zip(
+                idxs,
+                jsons) ]
+
+            self._cached_all = True
+
+    def add_single_to_cache(self, idx, json):
+        """
+        Add a single object to cache by json
+        """
+
+        simplified = yaml.load(json)
+        obj = self.simplifier.build(simplified)
+
+        obj.json = json
+        obj.idx[self.storage] = idx
+
+        self.cache[idx] = obj
+
+        return obj
+
 
     def save(self, obj, idx=None):
         """

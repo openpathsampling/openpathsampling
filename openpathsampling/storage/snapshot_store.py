@@ -27,16 +27,24 @@ class SnapshotStore(ObjectStore):
             the loaded snapshot instance
         '''
 
-        snapshot = Snapshot()
 
         configuration_idx = self.configuration_idx(idx)
         momentum_idx = self.momentum_idx(idx)
         momentum_reversed = self.momentum_reversed(idx)
+        reversed_idx = self.reversed_idx(idx)
 
-        snapshot.configuration = self.storage.configurations.load(configuration_idx)
-        snapshot.momentum = self.storage.momentum.load(momentum_idx)
+        configuration = self.storage.configurations.load(configuration_idx)
+        momentum = self.storage.momentum.load(momentum_idx)
 
-        snapshot.reversed = momentum_reversed
+        snapshot = Snapshot(configuration=configuration, momentum=momentum, is_reversed=momentum_reversed, reversed_copy=None)
+        snapshot_reversed = Snapshot(configuration=configuration, momentum=momentum, is_reversed=not momentum_reversed, reversed_copy=None)
+
+        snapshot._reversed = snapshot_reversed
+        snapshot_reversed._reversed = snapshot
+
+        # fix caching!
+        snapshot_reversed.idx[self.storage] = reversed_idx
+        self.cache[reversed_idx] = snapshot_reversed
 
         return snapshot
 
@@ -85,7 +93,13 @@ class SnapshotStore(ObjectStore):
         else:
             self.save_variable('snapshot_momentum_idx', idx, -1)
 
-        self.save_variable('snapshot_momentum_reversed', idx, int(snapshot.reversed))
+        if snapshot._reversed is not None:
+            storage.snapshots.save(snapshot._reversed)
+            self.save_variable('snapshot_reversed_idx', idx, snapshot._reversed.idx[storage])
+        else:
+            self.save_variable('snapshot_reversed_idx', idx, -1)
+
+        self.save_variable('snapshot_momentum_reversed', idx, int(snapshot.is_reversed))
 
 
     def configuration_idx(self, idx):
@@ -120,6 +134,22 @@ class SnapshotStore(ObjectStore):
         '''
         return int(self.load_variable('snapshot_momentum_idx', idx))
 
+    def reversed_idx(self, idx):
+        '''
+        Load snapshot index for the reversed snapshot with ID 'idx'
+        from the storage
+
+        Parameters
+        ----------
+        idx : int
+            index of the snapshot
+
+        Returns
+        -------
+        int
+            reversed snapshot indices
+        '''
+        return int(self.load_variable('snapshot_reversed_idx', idx))
 
     def momentum_reversed(self, idx):
         '''
@@ -155,6 +185,11 @@ class SnapshotStore(ObjectStore):
                 )
 
         self.init_variable('snapshot_momentum_reversed', 'bool', self.db, chunksizes=(1, ))
+
+        self.init_variable('snapshot_reversed_idx', 'index', self.db,
+                description="snapshot[snapshot] is the idx of the reversed snapshot index (0..n_snapshot-1) 'frame' of snapshot 'snapshot'.",
+                chunksizes=(1, )
+                )
 
 #=============================================================================================
 # COLLECTIVE VARIABLE UTILITY FUNCTIONS
