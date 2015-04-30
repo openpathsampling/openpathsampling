@@ -53,11 +53,15 @@ class MSTISNetwork(TISNetwork):
         self.outers = []
         self.movers = { } 
         self.outer_ensembles = []
+        states, interfaces, names, orderparams = zip(*trans_info)
+        all_states = paths.volume.join_volumes(states)
+        all_states.name = "All states"
         for (state, ifaces, name, op) in trans_info:
-            states, interfaces, names, orderparams = zip(*trans_info)
             state_index = states.index(state)
+            state.name = name
             other_states = states[:state_index]+states[state_index+1:]
             union_others = paths.volume.join_volumes(other_states)
+            union_others.name = "All states except " + str(name)
 
             self.from_state[state] = paths.RETISTransition(
                 stateA=state, 
@@ -68,8 +72,8 @@ class MSTISNetwork(TISNetwork):
             )
             self.outers.append(ifaces[-1])
             outer_ensemble = paths.TISEnsemble(
-                initial_states=state | union_others,
-                final_states=state | union_others,
+                initial_states=state,
+                final_states=all_states,
                 interface=ifaces[-1]
             )
             outer_ensemble.name = "outer " + str(state)
@@ -94,6 +98,9 @@ class MSTISNetwork(TISNetwork):
 
 
     def default_movers(self):
+        pass
+
+    def rate_matrix(self, storage):
         pass
 
 

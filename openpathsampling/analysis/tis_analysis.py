@@ -325,8 +325,9 @@ class TISTransition(Transition):
         }
 
     def __str__(self):
-        mystr = str(self.__class__.__name__) + str(self.name) + "\n"
-        mystr += str(self.stateA.name) + " -> " + str(self.stateB.name) + "\n"
+        mystr = str(self.__class__.__name__) + ": " + str(self.name) + "\n"
+        mystr += (str(self.stateA.name) + " -> " + str(self.stateA.name) 
+                  + " or " + str(self.stateB.name) + "\n")
         for iface in self.interfaces:
             mystr += "Interface: " + str(iface.name) + "\n"
         return mystr
