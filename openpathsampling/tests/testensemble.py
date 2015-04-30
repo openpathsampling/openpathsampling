@@ -1456,9 +1456,9 @@ class testBackwardPrependedTrajectoryEnsemble(EnsembleTest):
                             velocities=[1.0]*6)
 
         # sanity checks before running the suffixed version
-        #assert_equal(pseudo_minus(traj), True)
-        #for i in range(-1, -6):
-            #assert_equal(pseudo_minus.can_prepend(traj[i:]), True)
+        assert_equal(pseudo_minus(traj), True)
+        for i in range(-1, -6):
+            assert_equal(pseudo_minus.can_prepend(traj[i:]), True)
 
         logger.debug("alltraj " + str([id(i) for i in traj]))
         ens = BackwardPrependedTrajectoryEnsemble(pseudo_minus, traj[-3:])
@@ -1470,11 +1470,11 @@ class testBackwardPrependedTrajectoryEnsemble(EnsembleTest):
 
         assert_equal(ens.can_prepend(traj[-5:-3].reversed), True)
         assert_equal(len(ens._cached_trajectory), 5)
-        #assert_equal(ens._cache_can_prepend.trusted, True)
+        assert_equal(ens._cache_can_prepend.trusted, True)
 
         assert_equal(ens.can_prepend(traj[-6:-3].reversed), False)
         assert_equal(len(ens._cached_trajectory), 6)
-        #assert_equal(ens._cache_can_prepend.trusted, True)
+        assert_equal(ens._cache_can_prepend.trusted, True)
 
 class testMinusInterfaceEnsemble(EnsembleTest):
     def setUp(self):

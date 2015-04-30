@@ -47,6 +47,11 @@ class EnsembleCache(object):
     def check(self, trajectory=None, reset=None):
         """Checks and resets (if necessary) the ensemble cache.
         """
+        logger.debug("Checking cache....")
+        logger.debug("traj " + str([id(s) for s in trajectory]))
+        logger.debug("start_frame " + str(id(self.start_frame)))
+        logger.debug("prev_last " + str(id(self.prev_last_frame)))
+
         if trajectory is not None:
             # if the first frame has changed, we should reset
             if reset is None:
@@ -1426,7 +1431,10 @@ class WrappedEnsemble(Ensemble):
         self.trusted = None
         self._cache_can_append = EnsembleCache(+1)
         self._cache_call = EnsembleCache(+1)
-        self._cache_can_prepend = EnsembleCache(-1)
+        self._cache_can_prepend = EnsembleCache(+1) #TODO: this is weird
+        # cache_can_prepend has to think it is going forward because the
+        # frames given to it are from a forward growing trajectory... only
+        # later is everything turned around
 
     def __call__(self, trajectory, trusted=None):
         return self._new_ensemble(self._alter(trajectory), trusted)
@@ -1483,12 +1491,16 @@ class BackwardPrependedTrajectoryEnsemble(WrappedEnsemble):
 
     def _alter(self, trajectory):
         logger.debug("Starting BackwardPrepended._alter")
+        logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
         reset = self._cache_can_prepend.check(trajectory)
+        logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
+        logger.debug("traj    " + str([id(i) for i in trajectory]))
+        logger.debug("trajrev " + str([id(i) for i in trajectory.reversed]))
         #reset = False
         if not reset:
-            logger.debug("reset")
+            logger.debug("BackwardPrended was not reset")
             first_frame = trajectory[-1]
-            first_frame.reverse()
+            first_frame.reversed
             if self._cached_trajectory[0] != first_frame:
                 self._cached_trajectory.insert(0,first_frame)
         else:
