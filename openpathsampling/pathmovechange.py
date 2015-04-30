@@ -105,6 +105,21 @@ class PathMoveChange(object):
         if type(item) is int:
             return self.subchanges[item]
 
+        if type(item) is list:
+            # this is assumed to be a tree
+            if item[0] is self.mover:
+                if len(item) > 1:
+                    for ch in self.subchanges:
+                        r = ch[item[1]]
+                        if r is not None:
+                            return r
+                    return None
+                else:
+                    return self
+            else:
+                return None
+
+
     def __reversed__(self):
         for subchange in self.subchanges:
             for change in reversed(subchange):
@@ -122,75 +137,118 @@ class PathMoveChange(object):
         tree = self.keytree()
         return [leave for leave in tree if leave[1] is change ][0][0]
 
-    def _check_head_node(self, items):
-        if isinstance(items[0], paths.PathMover):
-            # a subtree of pathmovers
-            if self.mover is items[0]:
-                #print 'found head'
-                # found current head node, check, if children match in order
-                left = 0
-                submovers = [ch.mover for ch in self.subchanges]
-                subvalues = items[1]
-                if type(subvalues) is not list:
-                    subvalues = [subvalues]
+    @property
+    def submovers(self):
+        return [ch.mover for ch in self.subchanges]
 
-                for sub in zip(subvalues[0::2], subvalues[1::2]):
-                    if left >= len(self.subchanges):
-                        # no more subchanges to match
-                        return False
-                    if sub is None:
-                        # None is a placeholder so move token +1
-                        left = left + 1
-                    if type(sub) is dict:
-                        if sub[0] is None:
-                            while left < len(self.subchanges):
-                                if not [self.subchanges[left].mover, [sub[1]]] in self.subchanges[left]:
-                                    left = left + 1
-                                else:
-                                    left = left + 1
-                                    break
+    @staticmethod
+    def _check_tree(tree, branch, match):
+        WILDCATS = {
+            '*' : lambda s : slice(0,None),
+            '.' : lambda s : slice(1,2),
+            '?' : lambda s : slice(0,2),
+            ':' : lambda s : slice(*map(int, s.split(':')))
+        }
+        MATCH_ONE = ['.', '?', '*']
 
-                            if left == len(self.subchanges):
-                                return False
-                        elif sub[0] not in submovers[left:]:
-                            #print 'missing sub', sub.keys()[0], 'in', submovers[left:]
+#        print branch, 'in', tree
+
+        if branch[0] not in MATCH_ONE and not match(tree[0], branch[0]):
+            return False
+        else:
+            if len(branch) > 1:
+                sub = branch[1]
+                sub_branch = [branch[0]] + branch[2:]
+                if type(sub) is str:
+                    region = None
+                    for wild in WILDCATS:
+                        if wild in sub:
+                            region = WILDCATS[wild](sub)
+                            break
+
+                    if region is None:
+                        raise ValueError('Parse error. ONLY ' + str(WILDCATS.values()) + ' as wildcats allowed.')
+
+                    if region.start < len(tree):
+                        # check that there are enough children to match
+                        for left in range(*region.indices(len(tree))):
+
+                            sub_tree = [tree[0]] + tree[1+left:]
+                            if PathMoveChange._check_tree(sub_tree, sub_branch, match):
+                                return True
+
+                    return False
+                else:
+                    if len(tree) > 1:
+                        if not PathMoveChange._check_tree(tree[1], sub, match):
                             return False
                         else:
-                            idx = submovers.index(sub[0])
-                            left = idx + 1
-                            if not [sub[0], [sub[1]]] in self.subchanges[idx]:
-                                #print 'try', {sub.keys()[0] : sub.values()[0]}
-                                return False
+                            # go to next sub in branch
+                            if len(branch) > 2:
+                                if len(tree) > 2:
+                                    return PathMoveChange._check_tree([tree[0]] + tree[2:], sub_branch, match)
+                                else:
+                                    return False
+                    else:
+                        # still branch, but no more tree
+                        return False
 
-                    elif isinstance(sub, paths.PathMover):
-                        if sub not in submovers[left:]:
-                            return False
-                        idx = submovers.index(sub)
-                        left = idx + 1
+        return True
 
-                return True
+    @staticmethod
+    def _default_match(original, test):
+        if isinstance(test, paths.PathMoveChange):
+            return original is test
+        elif isinstance(test, paths.PathMover):
+            return original.mover is test
+        elif issubclass(test, paths.PathMover):
+            return original.mover.__class__ is test
+        else:
+            return False
 
-        elif items[0] is None or len(items) == 0:
-            # means empty tree and since nothing is in every tree return true
-            return True
+    def _check_head_node(self, items):
+        tree = self.tree()
+        return self._check_tree(tree, items, self._default_match)
+
 
     def __contains__(self, item):
         """
         Check if a pathmover, pathmovechange or a tree is in self
 
-        A node is either None or a PathMover
+        The tree structure is as follows
 
-        1. Subchanges are given using a dict { parent : child }
-        2. Several subchanges are given in a list. [child1, child2]
-        3. A single subchange can be given as a list of length 1 or a single mover.
-        4. None is a wildcat and matches everything
+        1. A tree consists of nodes
+        2. Each node can have zero, one or more children
+        3. Each child is a node itself
+
+        The tree structure in openpathsampling is expressed as
+
+        1. The tree structure is given as a nested list.
+        2. The first element in the list is the node
+        3. Element 2 to N are the children.
+        4. Children are always wrapped in brackets
+        5. An element can be a PathMover instance or PathMoveChange instance
+
+        node = [element, [child1], [child2], ... ]
+
+        A tree can be a subtree if the subtree (always starting from the top)
+        fits on top of the tree to match. Here child nodes are ignored as long
+        as the mask of the subtree fits.
+
+        In searching wildcats are allowed. This works
+
+        1. slice(start, end) means an a number of arbitrary children between
+            start and end-1
+        2. '*' means an arbitrary number of arbitrary children. Equal to slice(0, None)
+        3. None or '.' means ONE arbitrary child. Equal to slice(1,2)
+        4. '?' means ONE or NONE arbitrary child. Equal to slice(0,2)
 
         Examples
         --------
-        >>> tree1 = {mover1 : mover2}
-        >>> tree2 = {mover1 : [mover2, mover3]}
-        >>> tree3 = {mover1 : [mover2, {mover4 : [mover5]}] }
-        >>> tree4 = {}
+        >>> tree1 = [mover1, [mover2]]
+        >>> tree2 = [mover1, [mover2], [mover3]]
+        >>> tree3 = [mover1, [mover2], [mover4, [mover5]]]
+        >>> tree4 = []
 
         Notes
         -----
@@ -207,8 +265,7 @@ class PathMoveChange(object):
         elif isinstance(item, paths.PathMoveChange):
             return item in iter(self)
         elif type(item) is list:
-            if self._check_head_node(item):
-                return True
+            return self._check_head_node(item)
 
             # Disable checking for submoves for now
 
@@ -222,30 +279,16 @@ class PathMoveChange(object):
         else:
             raise ValueError('Only PathMovers or PathMoveChanges can be tested.')
 
+    def __str__(self):
+        return self.__class__.__name__[:-14] + '(' + str(self.idx.values()) + ')'
+
+    def __repr__(self):
+        return self.__class__.__name__[:-14] + '(' + str(self.idx.values()) + ')'
+
     def tree(self):
-        return {self : [ ch.tree() for ch in self.subchanges] }
+        return [self] + [ ch.tree() for ch in self.subchanges]
 
-    def movetree(self):
-        return {self.mover : [ ch.movetree() for ch in self.subchanges] }
-
-    def keytree(self, movepath=None):
-
-        if movepath is None:
-            movepath = [self.mover]
-
-        result = list()
-        result.append( ( movepath, self ) )
-        mp = []
-        for sub in self.subchanges:
-            subtree = sub.keytree()
-            result.extend([ ( movepath + [mp + m[0]], m[1] ) for m in subtree ])
-#            print subtree[-1][0]
-            mp = mp + subtree[-1][0]
-
-
-        return result
-
-    def map_tree(self, fnc, **kwargs):
+    def map_tree(self, fnc):
         """
         Apply a function to each node and return the tree
 
@@ -262,13 +305,25 @@ class PathMoveChange(object):
         tree (fnc(node, **kwargs))
             nested list of the results of the map
         """
+        return [fnc(self)] + [ ch.map_tree(fnc) for ch in self.subchanges]
 
-        if len(self.subchanges) > 1:
-            return { fnc(self, **kwargs) : [node.map_tree(fnc, **kwargs) for node in self.subchanges]}
-        elif len(self.subchanges) == 1:
-            return { fnc(self, **kwargs) : self.subchanges[0].map_tree(fnc, **kwargs)}
-        else:
-            return fnc(self, **kwargs)
+    def movetree(self):
+        return self.map_tree(lambda x : x.mover)
+
+    def keytree(self, movepath=None):
+
+        if movepath is None:
+            return self.keytree([self.mover])
+
+        result = list()
+        result.append( ( movepath, self ) )
+        mp = []
+        for sub in self.subchanges:
+            subtree = sub.keytree()
+            result.extend([ ( movepath + mp + [m[0]], m[1] ) for m in subtree ])
+            mp.extend([subtree[-1][0]])
+
+        return result
 
     def map_post_order(self, fnc, **kwargs):
         """

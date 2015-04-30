@@ -121,6 +121,9 @@ class PathMover(object):
         initialization_logging(logger=init_log, obj=self,
                                entries=['ensembles'])
 
+    def __repr__(self):
+        return self.__class__.__name__[:-5] + '(' + str(self.idx.values()) + ')'
+
     def __call__(self, sample_set):
         return sample_set
 
