@@ -55,13 +55,13 @@ class MSTISNetwork(TISNetwork):
         self.outer_ensembles = []
         states, interfaces, names, orderparams = zip(*trans_info)
         all_states = paths.volume.join_volumes(states)
-        all_states.name = "All states"
+        all_states.name = "all states"
         for (state, ifaces, name, op) in trans_info:
             state_index = states.index(state)
             state.name = name
             other_states = states[:state_index]+states[state_index+1:]
             union_others = paths.volume.join_volumes(other_states)
-            union_others.name = "All states except " + str(name)
+            union_others.name = "all states except " + str(name)
 
             self.from_state[state] = paths.RETISTransition(
                 stateA=state, 
@@ -89,9 +89,12 @@ class MSTISNetwork(TISNetwork):
         # default is only 1 MS outer, but in principle you could have
         # multiple distinct MS outer interfaces
         self.ms_outers = [paths.ensemble.join_ensembles(self.outer_ensembles)]
-        # TODO: set up repex
-
-        pass
+        self.movers['msouter_repex'] = [
+            paths.ReplicaExchangeMover(
+                ensembles=[trans.ensembles[-1], self.ms_outers[0]]
+            )
+            for trans in self.from_state.values()
+        ]
 
 
 #    def disallow(self, stateA, stateB):
