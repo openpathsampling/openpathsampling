@@ -277,7 +277,7 @@ class Momentum(object):
         Momentum()
             the deep copy with reversed velocities.
         """
-        return self.copy(subset=subset, reversed=reversed)
+        return self.copy(subset=subset, reversed=True)
 
 
 
@@ -505,6 +505,8 @@ class Snapshot(object):
         Returns a shallow copy of the instance itself. The contained
         configuration and momenta are not copied.
 
+        This will also lead to a new reversed copy when using reversed!
+
         Returns
         -------
         Snapshot()
@@ -518,6 +520,8 @@ class Snapshot(object):
         Returns a shallow reversed copy of the instance itself. The
         contained configuration and momenta are not copied and the momenta
         are marked reversed.
+
+        This will also lead to a new (non-)reversed copy!
 
         Returns
         -------
@@ -563,5 +567,5 @@ class Snapshot(object):
         So far the potential and kinetic energies are copied and are thus false but still useful!?!
         """
 
-        this = Snapshot(configuration=self.configuration.copy(subset), momentum=self.momentum.copy(subset), reversed=self.is_reversed)
+        this = Snapshot(configuration=self.configuration.copy(subset), momentum=self.momentum.copy(subset), is_reversed=self.is_reversed)
         return this
