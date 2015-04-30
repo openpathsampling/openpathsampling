@@ -391,7 +391,7 @@ class BackwardShootMover(ShootMover):
 
         # Run until one of the stoppers is triggered
         partial_trajectory = PathMover.engine.generate(
-            details.start_point.snapshot.reversed_copy(),
+            details.start_point.snapshot.reversed,
             running = [
                 paths.BackwardPrependedTrajectoryEnsemble(
                     ensemble,
