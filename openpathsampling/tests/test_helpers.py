@@ -90,7 +90,7 @@ class CalvinistDynamics(DynamicsEngine):
             self._current_snap = self.predestination[self.frame_index+1].copy()
             self.frame_index += 1
         else:
-            self._current_snap = self.predestination[self.frame_index-1].reversed_copy()
+            self._current_snap = self.predestination[self.frame_index-1].reversed
             self.frame_index -= 1
 
         return self._current_snap

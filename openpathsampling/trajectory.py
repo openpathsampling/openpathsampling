@@ -78,7 +78,7 @@ class Trajectory(list):
             the reversed trajectory
         '''
 
-        return Trajectory([snap.reversed_copy() for snap in reversed(self)])
+        return Trajectory([snap for snap in reversed(self)])
 
     def coordinates(self):
         """
@@ -252,8 +252,8 @@ class Trajectory(list):
             def next(self):
                 if self.idx > self.length:
                     self.idx -= 1
-                    obj = self.trajectory[self.idx]
-                    return obj
+                    snapshot = self.trajectory[self.idx]
+                    return snapshot.reversed
                 else:
                     raise StopIteration()
 
