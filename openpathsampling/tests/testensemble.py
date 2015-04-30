@@ -1516,11 +1516,12 @@ class testEnsembleSplit(EnsembleTest):
         self.outA = AllOutXEnsemble(vol1)
 
     def test_split(self):
-        raise SkipTest
+#        raise SkipTest
         print vol1
         traj1 = ttraj['upper_in_out_in_in']
         print [s for s in traj1]
         subtrajs_in_1 = self.inA.split(traj1)
+        print subtrajs_in_1
         assert_equal(len(subtrajs_in_1), 2)
         assert_equal(len(subtrajs_in_1[0]), 1)
         assert_equal(len(subtrajs_in_1[1]), 2)

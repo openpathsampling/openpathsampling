@@ -321,6 +321,10 @@ class Ensemble(object):
                         ensemble_list.append(slice(start,end))
                         pad = min(overlap, end - start - 1)
                         start = end - pad
+                    elif self(tt[0:len(tt)-1], trusted=False):
+                        ensemble_list.append(slice(start,end-1))
+                        pad = min(overlap, end - start - 1)
+                        start = end - pad
                     else:
                         start += 1
                     end = start + min_length
