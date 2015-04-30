@@ -1,5 +1,3 @@
-from openpathsampling import ops_object
-
 __author__ = 'jan-hendrikprinz'
 
 import openpathsampling as paths
@@ -250,11 +248,6 @@ class PathMoveChange(object):
         >>> tree3 = [mover1, [mover2], [mover4, [mover5]]]
         >>> tree4 = []
 
-        Notes
-        -----
-        TODO: Add other types of nodes. e.g. explicit PathMoveChange,
-        Boolean for .accepted
-
         Parameters
         ----------
         item : PathMover, PathMoveChange, PathMoveTree
@@ -277,7 +270,8 @@ class PathMoveChange(object):
             return False
 
         else:
-            raise ValueError('Only PathMovers or PathMoveChanges can be tested.')
+            raise ValueError('Only PathMovers or PathMoveChanges or trees ' +
+                             'can be tested.')
 
     def __str__(self):
         return self.__class__.__name__[:-14] + '(' + str(self.idx.values()) + ')'
