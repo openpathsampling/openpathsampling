@@ -246,14 +246,8 @@ class PathMover(object):
         else:
             return self.name
 
-
-@ops_object
-class CollapseMove(PathMover):
-    def __init__(self, inner_mover):
-        self.inner_mover = inner_mover
-
-    def move(self, globalstate):
-        return self.inner_mover.move(globalstate).closed
+    def set_of_submovers(self):
+        return []
 
 @ops_object
 class ShootMover(PathMover):
@@ -262,7 +256,7 @@ class ShootMover(PathMover):
     a sample from a specified ensemble 
     '''
 
-    def __init__(self, selector, ensembles=None, replicas='all'):
+    def __init__(self, selector, ensembles=None):
         super(ShootMover, self).__init__(ensembles=ensembles)
         self.selector = selector
         if hasattr(PathMover, 'engine') and hasattr(PathMover.engine, 'max_length_stopper'):
@@ -448,6 +442,9 @@ class RandomChoiceMover(PathMover):
 
         initialization_logging(init_log, self,
                                entries=['movers', 'weights'])
+
+    def set_of_submovers(self):
+        return [ [mover] for mover in self.movers ]
 
     @keep_selected_samples
     def move(self, globalstate):
@@ -644,7 +641,7 @@ class RestrictToLastSampleMover(PathMover):
 @ops_object
 class ReplicaIDChangeMover(PathMover):
     """
-    Changes the replica ID for a path.
+    Changes the replica ID for a sample.
     """
     def __init__(self, replica_pairs, ensembles=None):
         self.replica_pairs = make_list_of_pairs(replica_pairs)
@@ -1299,19 +1296,6 @@ class MoveDetails(Details):
         self.results=None
         super(MoveDetails, self).__init__(**kwargs)
 
-    # @staticmethod
-    # def initialization(sample):
-    #     return MoveDetails.initialization_from_scratch(sample.trajectory,
-    #                                                    sample.ensemble)
-    #
-    # @staticmethod
-    # def initialization_from_scratch(trajectory, ensemble):
-    #     details = MoveDetails()
-    #     details.inputs = []
-    #     details.trials = trajectory
-    #     details.ensemble = ensemble # might go to Change and not Details
-    #     details.results = trajectory
-    #     return details
 
 @ops_object
 class SampleDetails(Details):
