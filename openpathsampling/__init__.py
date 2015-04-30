@@ -25,7 +25,7 @@ from pathmover import (
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
-    CollapseMove, PathSimulatorMover, PathReversalSet,
+    PathSimulatorMover, PathReversalSet,
     NeighborEnsembleReplicaExchange
 )
 
