@@ -872,9 +872,9 @@ class SequentialEnsemble(Ensemble):
         # we overshoot
         logger.debug("*Traj slice " + str(subtraj_first) + " " + 
                      str(subtraj_final+1) + " / " + str(traj_final))
-        logger.debug("Ensemble " + str(ens.__class__.__name__))# + str(ens))
-        logger.debug("Can-app " + str(ens.can_append(subtraj, trusted=True)))
-        logger.debug("Call    " + str(ens(subtraj, trusted=True)))
+        #logger.debug("Ensemble " + str(ens.__class__.__name__))# + str(ens))
+        #logger.debug("Can-app " + str(ens.can_append(subtraj, trusted=True)))
+        #logger.debug("Call    " + str(ens(subtraj, trusted=True)))
         while ( (ens.can_append(subtraj, trusted=True) or 
                  ens(subtraj, trusted=True)
                 ) and subtraj_final < traj_final):
@@ -1511,6 +1511,9 @@ class BackwardPrependedTrajectoryEnsemble(WrappedEnsemble):
         logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
 
         return self._cached_trajectory
+
+    def can_append(self, trajectory, trusted=None):
+        raise RuntimeError("BackwardPrependedTrajectoryEnsemble.can_append is nonsense.")
 
 @ops_object
 class ForwardAppendedTrajectoryEnsemble(WrappedEnsemble):
