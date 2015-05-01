@@ -896,6 +896,9 @@ class SequentialEnsemble(Ensemble):
         subtraj = traj[slice(subtraj_first, subtraj_final)]
         logger.debug("*Traj slice " + str(subtraj_first) + " " + 
                      str(subtraj_final) + " / " + str(len(traj)))
+        logger.debug("Ensemble " + str(ens.__class__.__name__))# + str(ens))
+        logger.debug("Can-app " + str(ens.can_append(subtraj, trusted=True)))
+        logger.debug("Call    " + str(ens(subtraj, trusted=True)))
         while ( (ens.can_prepend(subtraj, trusted=True) or 
                  ens.check_reverse(subtraj, trusted=True)
                 ) and subtraj_first >= traj_first):
@@ -1065,7 +1068,12 @@ class SequentialEnsemble(Ensemble):
                 self.update_cache(cache, ens_num, first_ens, subtraj_final)
                 self.assign_frames(cache, None, None, None)
             else:
-                subtraj_final = len(trajectory)+cache.contents['subtraj_from']
+                logger.debug("len(traj)="+str(len(trajectory)) + 
+                             "cache_from="+str(cache.contents['subtraj_from']))
+                subtraj_from = cache.contents['subtraj_from']
+                if subtraj_from == None:
+                    subtraj_from = 0
+                subtraj_final = len(trajectory)+subtraj_from
                 ens_num = cache.contents['ens_num']
                 ens_final = cache.contents['ens_from']
 
@@ -1491,11 +1499,11 @@ class BackwardPrependedTrajectoryEnsemble(WrappedEnsemble):
 
     def _alter(self, trajectory):
         logger.debug("Starting BackwardPrepended._alter")
-        logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
+        #logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
         reset = self._cache_can_prepend.check(trajectory)
-        logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
-        logger.debug("traj    " + str([id(i) for i in trajectory]))
-        logger.debug("trajrev " + str([id(i) for i in trajectory.reversed]))
+        #logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
+        #logger.debug("traj    " + str([id(i) for i in trajectory]))
+        #logger.debug("trajrev " + str([id(i) for i in trajectory.reversed]))
         #reset = False
         if not reset:
             logger.debug("BackwardPrended was not reset")
@@ -1507,8 +1515,8 @@ class BackwardPrependedTrajectoryEnsemble(WrappedEnsemble):
             self._cached_trajectory = trajectory.reversed + self.add_trajectory
 
         #logger.debug("revtraj " + str([id(i) for i in revtraj]))
-        logger.debug("add     " + str([id(i) for i in self.add_trajectory]))
-        logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
+        #logger.debug("add     " + str([id(i) for i in self.add_trajectory]))
+        #logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
 
         return self._cached_trajectory
 

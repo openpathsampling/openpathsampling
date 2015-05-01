@@ -1043,32 +1043,26 @@ class testSequentialEnsembleCache(EnsembleCacheTest):
 
     def test_sequential_caching_can_prepend(self):
         cache = self.pseudo_minus._cache_can_prepend
-        print "5"
         assert_equal(self.pseudo_minus.can_prepend(self.traj[5:6]), True)
         assert_equal(cache.contents['ens_num'], 3)
         assert_equal(cache.contents['ens_from'], 4)
         assert_equal(cache.contents['subtraj_from'], -1)
-        print "4"
         assert_equal(self.pseudo_minus.can_prepend(self.traj[4:6]), True)
         assert_equal(cache.contents['ens_num'], 3)
         assert_equal(cache.contents['ens_from'], 4)
         assert_equal(cache.contents['subtraj_from'], -1)
-        print "3"
         assert_equal(self.pseudo_minus.can_prepend(self.traj[3:6]), True)
         assert_equal(cache.contents['ens_num'], 2)
         assert_equal(cache.contents['ens_from'], 4)
         assert_equal(cache.contents['subtraj_from'], -2)
-        print "2"
         assert_equal(self.pseudo_minus.can_prepend(self.traj[2:6]), True)
         assert_equal(cache.contents['ens_num'], 2)
         assert_equal(cache.contents['ens_from'], 4)
         assert_equal(cache.contents['subtraj_from'], -2)
-        print "1"
         assert_equal(self.pseudo_minus.can_prepend(self.traj[1:6]), True)
         assert_equal(cache.contents['ens_num'], 1)
         assert_equal(cache.contents['ens_from'], 4)
         assert_equal(cache.contents['subtraj_from'], -4)
-        print "0"
         assert_equal(self.pseudo_minus.can_prepend(self.traj[0:6]), False)
         assert_equal(cache.contents['ens_num'], 0)
         assert_equal(cache.contents['ens_from'], 4)
@@ -1440,7 +1434,7 @@ class testBackwardPrependedTrajectoryEnsemble(EnsembleTest):
         )
         assert_equal(ens.can_prepend(traj[-3:-2]), True)
         assert_equal(ens(traj[-3:-2]), True)
-        assert_equal(ens.can_append(traj[-4:-2]), False)
+        assert_equal(ens.can_prepend(traj[-4:-2]), False)
         assert_equal(ens(traj[-4:-2]), False)
 
     def test_caching_in_bkwdprep_seq(self):
