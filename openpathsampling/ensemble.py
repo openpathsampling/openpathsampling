@@ -48,7 +48,7 @@ class EnsembleCache(object):
         """Checks and resets (if necessary) the ensemble cache.
         """
         logger.debug("Checking cache....")
-        logger.debug("traj " + str([id(s) for s in trajectory]))
+        #logger.debug("traj " + str([id(s) for s in trajectory]))
         logger.debug("start_frame " + str(id(self.start_frame)))
         logger.debug("prev_last " + str(id(self.prev_last_frame)))
 
