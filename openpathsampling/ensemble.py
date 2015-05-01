@@ -896,9 +896,9 @@ class SequentialEnsemble(Ensemble):
         subtraj = traj[slice(subtraj_first, subtraj_final)]
         logger.debug("*Traj slice " + str(subtraj_first) + " " + 
                      str(subtraj_final) + " / " + str(len(traj)))
-        logger.debug("Ensemble " + str(ens.__class__.__name__))# + str(ens))
-        logger.debug("Can-app " + str(ens.can_append(subtraj, trusted=True)))
-        logger.debug("Call    " + str(ens(subtraj, trusted=True)))
+        #logger.debug("Ensemble " + str(ens.__class__.__name__))# + str(ens))
+        #logger.debug("Can-app " + str(ens.can_prepend(subtraj, trusted=True)))
+        #logger.debug("Call    " + str(ens(subtraj, trusted=True)))
         while ( (ens.can_prepend(subtraj, trusted=True) or 
                  ens.check_reverse(subtraj, trusted=True)
                 ) and subtraj_first >= traj_first):
