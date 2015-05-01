@@ -1452,33 +1452,29 @@ class testBackwardPrependedTrajectoryEnsemble(EnsembleTest):
             self.outX,
             self.inX & length1 
         ])
-        traj = make_1d_traj(ttraj['upper_in_out_in_in_out_in'])
+        traj = make_1d_traj(ttraj['upper_in_out_in_in_out_in'],
+                            velocities=[1.0]*6)
 
         # sanity checks before running the suffixed version
-        #assert_equal(pseudo_minus(traj), True)
-        #for i in range(-1, -6):
-            #assert_equal(pseudo_minus.can_prepend(traj[i:]), True)
+        assert_equal(pseudo_minus(traj), True)
+        for i in range(-1, -6):
+            assert_equal(pseudo_minus.can_prepend(traj[i:]), True)
 
         logger.debug("alltraj " + str([id(i) for i in traj]))
         ens = BackwardPrependedTrajectoryEnsemble(pseudo_minus, traj[-3:])
+        assert_equal(len(ens._cached_trajectory), 3)
+
         assert_equal(ens.can_prepend(traj[-4:-3].reversed), True)
-        #assert_equal(ens._cached_trajectory, traj[-4:])
-        #assert_equal(ens._cache_can_append.trusted, False)
+        assert_equal(len(ens._cached_trajectory), 4)
+        assert_equal(ens._cache_can_prepend.trusted, False)
 
         assert_equal(ens.can_prepend(traj[-5:-3].reversed), True)
-        #assert_equal(ens._cached_trajectory, traj[-5:])
-        #assert_equal(ens._cache_can_append.trusted, False)
+        assert_equal(len(ens._cached_trajectory), 5)
+        assert_equal(ens._cache_can_prepend.trusted, True)
 
         assert_equal(ens.can_prepend(traj[-6:-3].reversed), False)
-        #assert_equal(ens._cached_trajectory, traj[-6:])
-        #assert_equal(ens._cache_can_append.trusted, False)
-
-
-
-
-
-
-        pass
+        assert_equal(len(ens._cached_trajectory), 6)
+        assert_equal(ens._cache_can_prepend.trusted, True)
 
 class testMinusInterfaceEnsemble(EnsembleTest):
     def setUp(self):

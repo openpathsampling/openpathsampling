@@ -47,6 +47,11 @@ class EnsembleCache(object):
     def check(self, trajectory=None, reset=None):
         """Checks and resets (if necessary) the ensemble cache.
         """
+        logger.debug("Checking cache....")
+        logger.debug("traj " + str([id(s) for s in trajectory]))
+        logger.debug("start_frame " + str(id(self.start_frame)))
+        logger.debug("prev_last " + str(id(self.prev_last_frame)))
+
         if trajectory is not None:
             # if the first frame has changed, we should reset
             if reset is None:
@@ -867,9 +872,9 @@ class SequentialEnsemble(Ensemble):
         # we overshoot
         logger.debug("*Traj slice " + str(subtraj_first) + " " + 
                      str(subtraj_final+1) + " / " + str(traj_final))
-        logger.debug("Ensemble " + str(ens.__class__.__name__))# + str(ens))
-        logger.debug("Can-app " + str(ens.can_append(subtraj, trusted=True)))
-        logger.debug("Call    " + str(ens(subtraj, trusted=True)))
+        #logger.debug("Ensemble " + str(ens.__class__.__name__))# + str(ens))
+        #logger.debug("Can-app " + str(ens.can_append(subtraj, trusted=True)))
+        #logger.debug("Call    " + str(ens(subtraj, trusted=True)))
         while ( (ens.can_append(subtraj, trusted=True) or 
                  ens(subtraj, trusted=True)
                 ) and subtraj_final < traj_final):
@@ -1426,7 +1431,10 @@ class WrappedEnsemble(Ensemble):
         self.trusted = None
         self._cache_can_append = EnsembleCache(+1)
         self._cache_call = EnsembleCache(+1)
-        self._cache_can_prepend = EnsembleCache(-1)
+        self._cache_can_prepend = EnsembleCache(+1) #TODO: this is weird
+        # cache_can_prepend has to think it is going forward because the
+        # frames given to it are from a forward growing trajectory... only
+        # later is everything turned around
 
     def __call__(self, trajectory, trusted=None):
         return self._new_ensemble(self._alter(trajectory), trusted)
@@ -1479,18 +1487,33 @@ class BackwardPrependedTrajectoryEnsemble(WrappedEnsemble):
     def __init__(self, ensemble, add_trajectory):
         super(BackwardPrependedTrajectoryEnsemble, self).__init__(ensemble)
         self.add_trajectory = add_trajectory
+        self._cached_trajectory = paths.Trajectory(add_trajectory)
 
     def _alter(self, trajectory):
         logger.debug("Starting BackwardPrepended._alter")
+        logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
+        reset = self._cache_can_prepend.check(trajectory)
+        logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
+        logger.debug("traj    " + str([id(i) for i in trajectory]))
+        logger.debug("trajrev " + str([id(i) for i in trajectory.reversed]))
+        #reset = False
+        if not reset:
+            logger.debug("BackwardPrended was not reset")
+            first_frame = trajectory[-1]
+            first_frame.reversed
+            if self._cached_trajectory[0] != first_frame:
+                self._cached_trajectory.insert(0,first_frame)
+        else:
+            self._cached_trajectory = trajectory.reversed + self.add_trajectory
 
-        revtraj = trajectory.reversed
-        altered = revtraj + self.add_trajectory
-
-        logger.debug("revtraj " + str([id(i) for i in revtraj]))
+        #logger.debug("revtraj " + str([id(i) for i in revtraj]))
         logger.debug("add     " + str([id(i) for i in self.add_trajectory]))
-        logger.debug("altered " + str([id(i) for i in altered]))
+        logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
 
-        return altered
+        return self._cached_trajectory
+
+    def can_append(self, trajectory, trusted=None):
+        raise RuntimeError("BackwardPrependedTrajectoryEnsemble.can_append is nonsense.")
 
 @ops_object
 class ForwardAppendedTrajectoryEnsemble(WrappedEnsemble):
