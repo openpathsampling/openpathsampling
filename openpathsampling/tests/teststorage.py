@@ -201,7 +201,13 @@ class testStorage(object):
             store.snapshots.load(0)
         )
 
-        assert_equal(store2.snapshots.count(), 1)
+        # check if the reversed copy also works
+        compare_snapshot(
+            store2.snapshots.load(1),
+            store.snapshots.load(1)
+        )
+
+        assert_equal(store2.snapshots.count(), 2)
         assert_equal(store2.trajectories.count(), 0)
 
         store.close()
