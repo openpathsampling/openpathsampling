@@ -201,6 +201,7 @@ class PathSampling(PathSimulator):
             self.storage.sync()
 
         for step in range(nsteps):
+            logger.info("Beginning MC cycle " + str(step+1))
             movepath = self._mover.move(self.globalstate, step=step)
             samples = movepath.samples
             self.globalstate = self.globalstate.apply_samples(samples, step=step)
