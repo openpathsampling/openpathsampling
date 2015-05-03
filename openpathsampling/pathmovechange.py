@@ -675,6 +675,8 @@ class SamplePathMoveChange(PathMoveChange):
     def _get_finals(self):
         return [ sample for sample in self.generated if sample.accepted ]
 
+    def _get_trials(self):
+        return self.generated
 
 @ops_object
 class CollapsedPathMoveChange(SamplePathMoveChange):
@@ -718,7 +720,7 @@ class RandomChoicePathMoveChange(PathMoveChange):
         return self.subchange.samples
 
     def _get_trials(self):
-        return self.subchange.all_samples
+        return self.subchange.trials
 
     def apply_to(self, other):
         return self.subchange.apply_to(other)

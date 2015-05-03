@@ -157,23 +157,3 @@ class PathMoveChangeStore(ObjectStore):
             obj.generated = [ self.storage.samples[int(idx)] for idx in generated_idxs ]
 
         return obj
-
-
-#        print cls_name, subchanges_idxs
-
-#        if cls is pmc.SamplePathMoveChange:
-#            obj = cls(
-#                generated=[ self.storage.samples[int(idx)] for idx in generated_idxs ]
-#            )
-#        elif cls is pmc.EmptyPathMoveChange:
-#            obj = cls()
-#        elif issubclass(cls, pmc.SequentialPathMoveChange):
-#            obj = cls(
-#                subchanges=[ self.load(idx) for idx in subchanges_idxs ]
-#            )
-#        else:
-#            obj = cls(
-#                subchange=self.load(subchanges_idxs[0])
-#            )
-
-

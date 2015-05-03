@@ -1039,7 +1039,7 @@ class ReplicaExchangeMover(PathMover):
         setattr(details, 'ensembles', [ensemble1, ensemble2])
 
         path = paths.SamplePathMoveChange(
-            [trial1, trial2],
+            generated=[trial1, trial2],
             mover=self,
             details=details
         )
