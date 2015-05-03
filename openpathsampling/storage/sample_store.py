@@ -156,7 +156,11 @@ class SampleStore(ObjectStore):
 class SampleSetStore(ObjectStore):
 
     def __init__(self, storage):
-        super(SampleSetStore, self).__init__(storage, SampleSet, json=False)
+        super(SampleSetStore, self).__init__(storage, SampleSet, json=False, load_partial=True)
+
+        self.set_variable_partial_loading('movepath', self.update_movepath)
+
+    update_movepath = func_update_object('movepath', 'sampleset', 'movepath', 'pathmovechanges')
 
     def save(self, sample_set, idx=None):
         # Check if all samples are saved
@@ -167,7 +171,6 @@ class SampleSetStore(ObjectStore):
 
         self.storage.pathmovechanges.save(sample_set.movepath)
         self.save_object('sampleset_movepath', idx, sample_set.movepath)
-
 
     def sample_indices(self, idx):
         '''
@@ -215,6 +218,17 @@ class SampleSetStore(ObjectStore):
 
         return sample_set
 
+    def load_empty(self, idx):
+        values = self.storage.variables['sampleset_sample_idx'][idx]
+
+        # typecast to sample
+        samples = self.list_from_numpy(values, 'samples')
+        sample_set = SampleSet(samples, movepath=None)
+
+        del sample_set.movepath
+
+        return sample_set
+
     def _init(self, units=None):
         """
         Initialize the associated storage to allow for sampleset storage
@@ -229,3 +243,36 @@ class SampleSetStore(ObjectStore):
         )
 
         self.init_variable('sampleset_movepath_idx', 'index', chunksizes=(1, ))
+
+    def cache_all(self):
+        """Load all samples as fast as possible into the cache
+
+        """
+        if not self._cached_all:
+            idxs = range(len(self))
+            values = self.storage.variables['sampleset_sample_idx'][:]
+
+            # assume that these are cached!
+            all_samples = self.storage.samples
+
+
+            [ self.add_empty_to_cache(i,t,all_samples) for i,t in zip(
+                idxs,
+                values
+                ) ]
+
+            self._cached_all = True
+
+
+    def add_empty_to_cache(self, idx, sample_idxs, all_samples):
+        if idx not in self.cache:
+            obj = SampleSet(
+                    samples=[all_samples[sample_idx.tolist()] for sample_idx in sample_idxs],
+                    movepath=None
+                )
+            obj.idx[self.storage] = idx
+            obj._origin = self.storage
+
+            del obj.movepath
+
+            self.cache[idx] = obj
