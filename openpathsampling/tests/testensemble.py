@@ -1419,7 +1419,7 @@ class testBackwardPrependedTrajectoryEnsemble(EnsembleTest):
         self.outX = AllOutXEnsemble(vol)
 
     def test_bad_end_traj(self):
-        traj = make_1d_traj(ttraj['upper_in_in_in_out'])
+        traj = ttraj['upper_in_in_in_out']
         ens = BackwardPrependedTrajectoryEnsemble(
             SequentialEnsemble([self.inX]),
             traj[-2:]
@@ -1428,7 +1428,7 @@ class testBackwardPrependedTrajectoryEnsemble(EnsembleTest):
         assert_equal(ens(traj[-3:2]), False)
 
     def test_good_end_traj(self):
-        traj = make_1d_traj(ttraj['upper_out_in_in_in'])
+        traj = ttraj['upper_out_in_in_in']
         ens = BackwardPrependedTrajectoryEnsemble(
             SequentialEnsemble([self.inX]),
             traj[-2:]
@@ -1447,8 +1447,7 @@ class testBackwardPrependedTrajectoryEnsemble(EnsembleTest):
             self.outX,
             self.inX & length1 
         ])
-        traj = make_1d_traj(ttraj['upper_in_out_in_in_out_in'],
-                            velocities=[1.0]*6)
+        traj = ttraj['upper_in_out_in_in_out_in']
 
         # sanity checks before running the suffixed version
         assert_equal(pseudo_minus(traj), True)
