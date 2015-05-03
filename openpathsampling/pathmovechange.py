@@ -1,5 +1,3 @@
-from openpathsampling import ops_object
-
 __author__ = 'jan-hendrikprinz'
 
 import openpathsampling as paths
@@ -30,15 +28,22 @@ class PathMoveChange(object):
         spl = [' |  ' + p if p[0] == ' ' else ' +- ' + p for p in spl]
         return '\n'.join(spl)
 
-    def __init__(self, mover=None, details=None):
+    def __init__(self, subchanges=None, generated=None, mover=None, details=None):
         self._len = None
         self._collapsed = None
         self._finals = None
         self._trials = None
         self._accepted = None
         self.mover = mover
-        self.generated = list()
-        self.subchanges = list()
+        if subchanges is None:
+            self.subchanges = list()
+        else:
+            self.subchanges = subchanges
+
+        if generated is None:
+            self.generated = list()
+        else:
+            self.generated = generated
         self.details = details
 
     @property
@@ -661,15 +666,14 @@ class SamplePathMoveChange(PathMoveChange):
     """
     def __init__(self, generated, mover=None, details=None):
         super(SamplePathMoveChange, self).__init__(mover=mover, details=details)
-        self._trials = []
 
         if type(generated) is paths.Sample:
             generated = [generated]
 
-        self._trials.extend(generated)
+        self.generated = generated
 
     def _get_finals(self):
-        return [ sample for sample in self.trials if sample.accepted ]
+        return [ sample for sample in self.generated if sample.accepted ]
 
 
 @ops_object

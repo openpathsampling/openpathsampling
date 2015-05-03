@@ -247,6 +247,7 @@ class PathMover(object):
 @ops_object
 class CollapseMove(PathMover):
     def __init__(self, inner_mover):
+        super(CollapseMove, self).__init__()
         self.inner_mover = inner_mover
 
     def move(self, globalstate):
@@ -338,7 +339,7 @@ class ShootMover(PathMover):
 #        new_set = globalstate.apply([sample], accepted = details.accepted, move=self)
 
         path = paths.SamplePathMoveChange(
-                trials=[trial],
+                generated=[trial],
                 mover=self,
                 details=move_details
         )
@@ -1050,6 +1051,7 @@ class ReplicaExchangeMover(PathMover):
 @ops_object
 class FilterByReplica(PathMover):
     def __init__(self, mover, replicas):
+        super(FilterByReplica, self).__init__()
         if type(replicas) is not list:
             replicas = [replicas]
         self.replicas = replicas
@@ -1067,6 +1069,7 @@ class FilterByReplica(PathMover):
 @ops_object
 class FilterBySample(PathMover):
     def __init__(self, mover, selected_samples, use_all_samples=None):
+        super(FilterBySample, self).__init__()
         if type(selected_samples) is not list:
             selected_samples = [selected_samples]
         self.selected_samples = selected_samples
@@ -1178,8 +1181,6 @@ class PathSimulatorMover(PathMover):
     def move(self, globalstate, step=-1):
         return paths.PathSimulatorPathMoveChange(
             self.mover.move(globalstate),
-            self.pathsimulator,
-            step=step,
             mover=self
         )
 

@@ -1,275 +1,167 @@
-from object_storage import ObjectStore
-from openpathsampling.pathmovechange import PathMoveChange
-
-from object_storage import ObjectStore
-from openpathsampling.pathmovechange import PathMoveChange
+from openpathsampling.storage import ObjectStore
+from openpathsampling.pathmovechange import PathMoveChange, SamplePathMoveChange
 from openpathsampling.storage.object_storage import func_update_object
-
-import time
+from openpathsampling.todict import class_list
+import openpathsampling.pathmovechange as pmc
 
 class PathMoveChangeStore(ObjectStore):
     def __init__(self, storage):
-        super(PathMoveChangeStore, self).__init__(storage, PathMoveChange, json=False, load_partial=True)
-
-        self.set_variable_partial_loading('details', self.update_details)
-        self.set_variable_partial_loading('parent', self.update_parent)
-        self.set_variable_partial_loading('mover', self.update_mover)
-        self.set_variable_partial_loading('ensemble', self.update_ensemble)
-
-
-    def load_empty(self, idx):
-        trajectory_idx = int(self.storage.variables['pathmovechange_trajectory_idx'][idx])
-        replica_idx = int(self.storage.variables['pathmovechange_replica'][idx])
-        valid=self.load_variable('pathmovechange_valid', idx)
-        accepted=bool(self.load_variable('pathmovechange_accepted', idx))
-
-        obj = PathMoveChange(
-            trajectory=self.storage.trajectories[trajectory_idx],
-            replica=replica_idx,
-            valid=valid,
-            accepted=accepted,
+        super(PathMoveChangeStore, self).__init__(
+            storage,
+            PathMoveChange,
+            json=False,
+            load_partial=True
         )
 
+        self.set_variable_partial_loading('details', self.update_details)
+        self.set_variable_partial_loading('mover', self.update_mover)
+
+        self._cached_all = False
+
+    def load_empty(self, idx):
+
+        obj = self._load_partial(idx)
+
         del obj.details
-        del obj.ensemble
         del obj.mover
-        del obj.parent
 
         return obj
 
-    update_details = func_update_object('pathmovechange', 'details', '_details')
-    update_parent = func_update_object('pathmovechange', 'parent', 'trajectories')
-    update_mover = func_update_object('pathmovechange', 'mover', 'pathmovers')
-    update_ensemble = func_update_object('pathmovechange', 'ensemble', 'ensembles')
+    update_details = func_update_object('details', 'change', 'details', '_details')
+    update_mover = func_update_object('mover', 'change', 'pathmover', 'pathmovers')
+
 
     def save(self, pathmovechange, idx=None):
         if idx is not None:
-            self.storage.trajectories.save(pathmovechange.trajectory)
-            self.save_object('pathmovechange_trajectory', idx, pathmovechange.trajectory)
+            if len(pathmovechange.generated) > 0:
+                map(self.storage.samples.save, pathmovechange.generated)
 
-            self.storage.ensembles.save(pathmovechange.ensemble)
-            self.save_object('pathmovechange_ensemble', idx, pathmovechange.ensemble)
+            values = self.list_to_numpy(pathmovechange.generated, 'samples')
+            self.storage.variables['change_generated_idxs'][idx] = values
 
-            self.save_variable('pathmovechange_replica', idx, pathmovechange.replica)
-            self.save_object('pathmovechange_parent', idx, pathmovechange.parent)
-            self.save_object('pathmovechange_details', idx, pathmovechange.details)
-            self.save_variable('pathmovechange_valid', idx, pathmovechange.valid)
-            self.save_variable('pathmovechange_accepted', idx, pathmovechange.accepted)
-            self.save_object('pathmovechange_pathmover', idx, pathmovechange.mover)
+            if len(pathmovechange.subchanges) > 0:
+                map(self.storage.pathmovechanges.save, pathmovechange.subchanges)
+
+            values = self.list_to_numpy(pathmovechange.subchanges, 'pathmovechanges')
+            self.storage.variables['change_subchanges_idxs'][idx] = values
+
+            self.save_object('change_details', idx, pathmovechange.details)
+            self.save_object('change_pathmover', idx, pathmovechange.mover)
+
+            self.save_variable('change_cls', idx, pathmovechange.__class__.__name__)
 
     def load(self, idx):
         '''
-        Return a pathmovechange from the storage
+        Return a sample from the storage
 
         Parameters
         ----------
         idx : int
-            index of the pathmovechange
+            index of the sample
 
         Returns
         -------
-        pathmovechange : PathMoveChange
-            the pathmovechange
+        sample : Sample
+            the sample
         '''
-        trajectory_idx = int(self.storage.variables['pathmovechange_trajectory_idx'][idx])
-        ensemble_idx = int(self.storage.variables['pathmovechange_ensemble_idx'][idx])
-        replica_idx = int(self.storage.variables['pathmovechange_replica'][idx])
-        parent_idx = int(self.storage.variables['pathmovechange_parent_idx'][idx])
-        details_idx = int(self.storage.variables['pathmovechange_details_idx'][idx])
-        pathmover_idx = int(self.storage.variables['pathmovechange_pathmover_idx'][idx])
-        valid=self.load_variable('pathmovechange_valid', idx)
-        accepted=bool(self.load_variable('pathmovechange_accepted', idx))
 
+        obj = self._load_partial(idx)
 
-        obj = PathMoveChange(
-            trajectory=self.storage.trajectories[trajectory_idx],
-            replica=replica_idx,
-            ensemble=self.storage.ensembles[ensemble_idx],
-            valid=valid,
-            parent=self.storage.pathmovechanges[parent_idx],
-            details=self.storage._details[details_idx],
-            accepted=accepted,
-            mover=self.storage.pathmovers[pathmover_idx]
-        )
+        details_idx = int(self.storage.variables['change_details_idx'][idx])
+        pathmover_idx = int(self.storage.variables['change_pathmover_idx'][idx])
+
+        obj.mover = self.storage.pathmovers[pathmover_idx],
+        obj.details = self.storage._details[details_idx]
 
         return obj
-
-    def by_ensemble(self, ensemble):
-        return [ pathmovechange for pathmovechange in self.iterator() if pathmovechange.ensemble == ensemble ]
 
     def _init(self, units=None):
         super(PathMoveChangeStore, self)._init(units)
 
         # New short-hand definition
-        self.init_variable('pathmovechange_trials_idx', 'index', 'sampleset',
-            description="sampleset[sampleset][frame] is the sample index (0..nspanshots-1) of frame 'frame' of sampleset 'sampleset'.",
+        self.init_variable('change_details_idx', 'index', chunksizes=(1, ))
+        self.init_variable('change_pathmover_idx', 'index', chunksizes=(1, ))
+        self.init_variable('change_cls', 'str', chunksizes=(1, ))
+
+        self.init_variable('change_subchanges_idxs', 'index',
             variable_length = True,
-            chunksizes=(1024, )
+            chunksizes=(10240, )
         )
-        self.init_variable('pathmovechange_trials', 'index', chunksizes=(1, ))
-        self.init_variable('pathmovechange_ensemble_idx', 'index', chunksizes=(1, ))
-        self.init_variable('pathmovechange_replica', 'index', chunksizes=(1, ))
-        self.init_variable('pathmovechange_parent_idx', 'index', chunksizes=(1, ))
-        self.init_variable('pathmovechange_valid', 'index', chunksizes=(1, ))
-        self.init_variable('pathmovechange_details_idx', 'index', chunksizes=(1, ))
-        self.init_variable('pathmovechange_accepted', 'bool', chunksizes=(1, ))
-        self.init_variable('pathmovechange_pathmover_idx', 'index', chunksizes=(1, ))
 
-
-
-class PathMoveChangeStore(ObjectStore):
-    def __init__(self, storage):
-        super(PathMoveChangeStore, self).__init__(storage, PathMoveChange, has_uid=False, nestable=True, load_partial=True)
-        self.set_variable_partial_loading('details', self.update_details)
-
-    def load_empty(self, idx):
-        trajectory_idx = int(self.storage.variables['pathmovechange_trajectory_idx'][idx])
-        ensemble_idx = int(self.storage.variables['pathmovechange_ensemble_idx'][idx])
-        replica_idx = int(self.storage.variables['pathmovechange_replica'][idx])
-        step=self.load_variable('pathmovechange_step', idx)
-
-        if step < 0:
-            step = None
-
-
-        obj = PathMoveChange(
-            trajectory=self.storage.trajectories.load(trajectory_idx),
-            replica=replica_idx,
-            ensemble=self.storage.ensembles.load(ensemble_idx),
-            step=step
+        self.init_variable('change_generated_idxs', 'index',
+            variable_length = True,
+            chunksizes=(10240, )
         )
+
+    def all(self):
+        self.cache_all()
+        return self
+
+    def cache_all(self):
+        """Load all samples as fast as possible into the cache
+
+        """
+        if not self._cached_all:
+            idxs = range(len(self))
+
+            cls_names = self.load_variable('change_cls')[:]
+            generated_idxss = int(self.storage.variables['change_generated_idxs'][:])
+            subchanges_idxss = int(self.storage.variables['change_subchanges_idxs'][:])
+
+            [ self.add_empty_to_cache(i,c,g,s) for i,c,g,s in zip(
+                idxs,
+                cls_names,
+                generated_idxss,
+                subchanges_idxss) ]
+
+            self._cached_all = True
+
+
+    def add_empty_to_cache(self, idx, cls_name, generated_idxs, subchanges_idxs):
+
+        obj = self._load_partial(idx)
 
         del obj.details
+        del obj.mover
+
+        obj.idx[self.storage] = idx
+        obj._origin = self.storage
+
+        self.cache[idx] = obj
 
         return obj
 
-    @staticmethod
-    def update_details(obj):
-        storage = obj._origin
+    def _load_partial(self, idx):
+        generated_idxs = self.storage.variables['change_generated_idxs'][idx]
+        subchanges_idxs = self.storage.variables['change_subchanges_idxs'][idx]
 
-        idx = obj.idx[storage]
-        details_idx = int(storage.variables['pathmovechange_details_idx'][idx])
-        details = storage.movedetails.load(details_idx)
+        cls_name = self.storage.variables['change_cls'][idx]
+        cls = class_list[cls_name]
 
-        obj.details = details
+#        obj = cls.__new__(cls)
+#
+#        if len(generated_idxs) > 0:
+#            obj.generated = [ self.storage.samples[idx] for idx in generated_idxs ]
+#
+#        if len(subchanges_idxs) > 0:
+#            obj.subchanges = [ self[idx] for idx in subchanges_idxs ]
+#
+#        print cls_name, subchanges_idxs
 
-    def load(self, idx):
-        '''
-        Return a pathmovechange from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the pathmovechange
-
-        Returns
-        -------
-        pathmovechange : PathMoveChange
-            the pathmovechange
-        '''
-        trajectory_idx = int(self.storage.variables['pathmovechange_trajectory_idx'][idx])
-        ensemble_idx = int(self.storage.variables['pathmovechange_ensemble_idx'][idx])
-        replica_idx = int(self.storage.variables['pathmovechange_replica'][idx])
-        details_idx = int(self.storage.variables['pathmovechange_details_idx'][idx])
-        step=self.load_variable('pathmovechange_step', idx)
-
-
-        obj = PathMoveChange(
-            trajectory=self.storage.trajectories.load(trajectory_idx),
-            replica=replica_idx,
-            ensemble=self.storage.ensembles.load(ensemble_idx),
-            details=self.storage.movedetails.load(details_idx),
-            step=step
-        )
+        if cls is pmc.SamplePathMoveChange:
+            obj = cls(
+                generated=[ self.storage.samples[int(idx)] for idx in generated_idxs ]
+            )
+        elif cls is pmc.EmptyPathMoveChange:
+            obj = cls()
+        elif issubclass(cls, pmc.SequentialPathMoveChange):
+            obj = cls(
+                subchanges=[ self.load(idx) for idx in subchanges_idxs ]
+            )
+        else:
+            obj = cls(
+                subchange=self.load(subchanges_idxs[0])
+            )
 
         return obj
 
-    def by_ensemble(self, ensemble):
-        return [ pathmovechange for pathmovechange in self.iterator() if pathmovechange.ensemble == ensemble ]
-
-    def _init(self):
-        super(PathMoveChangeStore, self)._init()
-
-        # New short-hand definition
-        self.init_variable('pathmovechange_trajectory_idx', 'index', chunksizes=(1, ))
-        self.init_variable('pathmovechange_ensemble_idx', 'index', chunksizes=(1, ))
-        self.init_variable('pathmovechange_replica', 'index', chunksizes=(1, ))
-        self.init_variable('pathmovechange_details_idx', 'index', chunksizes=(1, ))
-        self.init_variable('pathmovechange_step', 'index', chunksizes=(1, ))
-
-class PathMoveChangeSetStore(ObjectStore):
-
-    def __init__(self, storage):
-        super(PathMoveChangeSetStore, self).__init__(storage, PathMoveChangeSet, json=False)
-
-    def save(self, pathmovechange_set, idx=None):
-        # Check if all pathmovechanges are saved
-        map(self.storage.pathmovechanges.save, pathmovechange_set)
-
-        values = self.list_to_numpy(pathmovechange_set, 'pathmovechange')
-        self.storage.variables['pathmovechangeset_pathmovechange_idx'][idx] = values
-
-        self.storage.pathmovechanges.save(pathmovechange_set.movepath)
-        self.save_object('pathmovechangeset_movepath', idx, pathmovechange_set.movepath)
-
-
-    def pathmovechange_indices(self, idx):
-        '''
-        Load pathmovechange indices for pathmovechange_set with ID 'idx' from the storage
-
-        Parameters
-        ----------
-        idx : int
-            ID of the pathmovechange_set
-
-        Returns
-        -------
-        list of int
-            list of pathmovechange indices
-        '''
-
-        # get the values
-        values = self.storage.variables['pathmovechangeset_pathmovechange_idx'][idx]
-
-        # typecast to integer
-        return self.list_from_numpy(values, 'index')
-
-    def load(self, idx):
-        '''
-        Return a pathmovechange_set from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the pathmovechange_set (counts from 0)
-
-        Returns
-        -------
-        pathmovechange_set
-            the pathmovechange_set
-        '''
-
-        movepath_idx = int(self.storage.variables['pathmovechangeset_movepath_idx'][idx])
-
-        values = self.storage.variables['pathmovechangeset_pathmovechange_idx'][idx]
-
-        # typecast to pathmovechange
-        pathmovechanges = self.list_from_numpy(values, 'pathmovechanges')
-        pathmovechange_set = PathMoveChangeSet(pathmovechanges, movepath=self.storage.pathmovechanges.load(movepath_idx))
-
-        return pathmovechange_set
-
-    def _init(self, units=None):
-        """
-        Initialize the associated storage to allow for pathmovechangeset storage
-
-        """
-        super(PathMoveChangeSetStore, self)._init()
-
-        self.init_variable('pathmovechangeset_pathmovechange_idx', 'index', 'pathmovechangeset',
-            description="pathmovechangeset[pathmovechangeset][frame] is the pathmovechange index (0..nspanshots-1) of frame 'frame' of pathmovechangeset 'pathmovechangeset'.",
-            variable_length = True,
-            chunksizes=(1024, )
-        )
-
-        self.init_variable('pathmovechangeset_movepath_idx', 'index', chunksizes=(1, ))

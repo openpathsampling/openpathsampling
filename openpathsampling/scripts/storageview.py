@@ -145,12 +145,12 @@ if __name__ == '__main__':
     for p_idx in range(0, storage.collectivevariables.count()):
         obj = storage.collectivevariables.load(p_idx)
         add = ''
-        values = obj(all_snapshot_traj)
-        found_values = [ (idx, value) for idx, value in enumerate(values) if value is not None ]
-        if len(found_values) > 0:
-            add = '{ %d : %f, ... } ' % (found_values[0][0], found_values[0][1] )
+#        values = obj(all_snapshot_traj)
+#        found_values = [ (idx, value) for idx, value in enumerate(values) if value is not None ]
+#        if len(found_values) > 0:
+#            add = '{ %d : %f, ... } ' % (found_values[0][0], found_values[0][1]._value )
 
-        nline(p_idx,obj.name, str(len(found_values)) + ' entries ' + add)
+#        nline(p_idx,obj.name, str(len(found_values)) + ' entries ' + add)
 
     headline("MovePaths")
 

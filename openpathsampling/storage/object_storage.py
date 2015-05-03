@@ -152,6 +152,9 @@ class ObjectStore(object):
                         return this.__dict__['idx']
 
                     if hasattr(cls, '_delayed_loading'):
+                        if item in dir(cls):
+                            return object.__getattribute__(this, item)
+
                         if item in cls._delayed_loading:
                             _loader = cls._delayed_loading[item]
 #                            print 'from', repr(self.storage), id(self), 'and not', repr(this), 'load', item

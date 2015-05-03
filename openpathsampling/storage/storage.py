@@ -66,6 +66,7 @@ class Storage(netcdf.Dataset):
         self.momentum = paths.storage.MomentumStore(storage)
         self.samples = paths.storage.SampleStore(storage)
         self.samplesets = paths.storage.SampleSetStore(storage)
+        self.pathmovechanges = paths.storage.PathMoveChangeStore(storage)
 
         self.collectivevariables = paths.storage.ObjectDictStore(storage, paths.CollectiveVariable, paths.Snapshot)
         self.cvs = self.collectivevariables
@@ -83,7 +84,6 @@ class Storage(netcdf.Dataset):
 
         self.volumes = paths.storage.ObjectStore(storage, paths.Volume, has_uid=True, nestable=True)
         self.ensembles = paths.storage.ObjectStore(storage, paths.Ensemble, has_uid=True, nestable=True)
-        self.pathmovechanges = paths.storage.ObjectStore(storage, paths.PathMoveChange, has_uid=False, nestable=True)
 
         self.transitions = paths.storage.ObjectStore(storage,
                                                     paths.TISTransition,
