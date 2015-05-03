@@ -25,6 +25,10 @@ if __name__ == '__main__':
         mode = 'a'
     )
 
+    storage.samples.cache_all()
+    storage.samplesets.cache_all()
+    storage.pathmovechanges.cache_all()
+
     class ReadableObjectJSON(paths.todict.ObjectJSON):
         def __init__(self, unit_system = None, class_list = None):
             super(ReadableObjectJSON, self).__init__(unit_system, class_list)

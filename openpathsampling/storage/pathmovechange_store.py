@@ -14,7 +14,7 @@ class PathMoveChangeStore(ObjectStore):
         )
 
         self.set_variable_partial_loading('details', self.update_details)
-        self.set_variable_partial_loading('mover', self.update_mover)
+#        self.set_variable_partial_loading('mover', self.update_mover)
 
         self._cached_all = False
 
@@ -23,7 +23,7 @@ class PathMoveChangeStore(ObjectStore):
         obj = self._load_partial(idx)
 
         del obj.details
-        del obj.mover
+#        del obj.mover
 
         return obj
 
@@ -68,9 +68,6 @@ class PathMoveChangeStore(ObjectStore):
         obj = self._load_partial(idx)
 
         details_idx = int(self.storage.variables['change_details_idx'][idx])
-        pathmover_idx = int(self.storage.variables['change_pathmover_idx'][idx])
-
-        obj.mover = self.storage.pathmovers[pathmover_idx],
         obj.details = self.storage._details[details_idx]
 
         return obj
@@ -104,64 +101,79 @@ class PathMoveChangeStore(ObjectStore):
         if not self._cached_all:
             idxs = range(len(self))
 
-            cls_names = self.load_variable('change_cls')[:]
-            generated_idxss = int(self.storage.variables['change_generated_idxs'][:])
-            subchanges_idxss = int(self.storage.variables['change_subchanges_idxs'][:])
+            cls_names = self.storage.variables['change_cls'][:]
+            generated_idxss = self.storage.variables['change_generated_idxs'][:]
+            subchanges_idxss = self.storage.variables['change_subchanges_idxs'][:]
+            mover_idxs = self.storage.variables['change_pathmover_idx'][:]
 
-            [ self.add_empty_to_cache(i,c,g,s) for i,c,g,s in zip(
+            [ self.add_empty_to_cache(i,c,g,m) for i,c,g,m in zip(
                 idxs,
                 cls_names,
                 generated_idxss,
+                mover_idxs) ]
+
+            [ self._load_partial_subchanges(c,s) for c,s in zip(
+                self,
                 subchanges_idxss) ]
 
             self._cached_all = True
 
 
-    def add_empty_to_cache(self, idx, cls_name, generated_idxs, subchanges_idxs):
+    def add_empty_to_cache(self, idx, cls_name, generated_idxs, mover_idx):
 
-        obj = self._load_partial(idx)
+        if idx not in self.cache:
+            obj = self._load_partial_generated(cls_name, generated_idxs, mover_idx)
+            obj.idx[self.storage] = idx
+            obj._origin = self.storage
 
-        del obj.details
-        del obj.mover
+            self.cache[idx] = obj
+            del obj.details
+#            del obj.mover
 
-        obj.idx[self.storage] = idx
-        obj._origin = self.storage
 
-        self.cache[idx] = obj
-
-        return obj
 
     def _load_partial(self, idx):
         generated_idxs = self.storage.variables['change_generated_idxs'][idx]
         subchanges_idxs = self.storage.variables['change_subchanges_idxs'][idx]
+        mover_idx = self.storage.variables['change_pathmover_idx'][idx]
 
         cls_name = self.storage.variables['change_cls'][idx]
-        cls = class_list[cls_name]
 
-#        obj = cls.__new__(cls)
-#
-#        if len(generated_idxs) > 0:
-#            obj.generated = [ self.storage.samples[idx] for idx in generated_idxs ]
-#
-#        if len(subchanges_idxs) > 0:
-#            obj.subchanges = [ self[idx] for idx in subchanges_idxs ]
-#
-#        print cls_name, subchanges_idxs
+        obj = self._load_partial_generated(cls_name, generated_idxs, mover_idx)
+        return self._load_partial_subchanges(obj, subchanges_idxs)
 
-        if cls is pmc.SamplePathMoveChange:
-            obj = cls(
-                generated=[ self.storage.samples[int(idx)] for idx in generated_idxs ]
-            )
-        elif cls is pmc.EmptyPathMoveChange:
-            obj = cls()
-        elif issubclass(cls, pmc.SequentialPathMoveChange):
-            obj = cls(
-                subchanges=[ self.load(idx) for idx in subchanges_idxs ]
-            )
-        else:
-            obj = cls(
-                subchange=self.load(subchanges_idxs[0])
-            )
+    def _load_partial_subchanges(self, obj, subchanges_idxs):
+        if len(subchanges_idxs) > 0:
+            obj.subchanges = [ self.load(int(idx)) for idx in subchanges_idxs ]
 
         return obj
+
+    def _load_partial_generated(self, cls_name, generated_idxs, mover_idx):
+        cls = class_list[cls_name]
+        obj = cls.__new__(cls)
+        PathMoveChange.__init__(obj, mover=self.storage.pathmovers[int(mover_idx)])
+
+        if len(generated_idxs) > 0:
+            obj.generated = [ self.storage.samples[int(idx)] for idx in generated_idxs ]
+
+        return obj
+
+
+#        print cls_name, subchanges_idxs
+
+#        if cls is pmc.SamplePathMoveChange:
+#            obj = cls(
+#                generated=[ self.storage.samples[int(idx)] for idx in generated_idxs ]
+#            )
+#        elif cls is pmc.EmptyPathMoveChange:
+#            obj = cls()
+#        elif issubclass(cls, pmc.SequentialPathMoveChange):
+#            obj = cls(
+#                subchanges=[ self.load(idx) for idx in subchanges_idxs ]
+#            )
+#        else:
+#            obj = cls(
+#                subchange=self.load(subchanges_idxs[0])
+#            )
+
 

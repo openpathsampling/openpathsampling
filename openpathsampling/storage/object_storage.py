@@ -1178,8 +1178,9 @@ def loadidx(func):
         obj.idx[self.storage] = n_idx
 
         if self.has_uid:
-            # get the name of the object
-            setattr(obj, '_uid', self.get_name(idx))
+            if not hasattr(obj, '_uid'):
+                # get the name of the object
+                setattr(obj, '_uid', self.get_name(idx))
 
         return obj
     return inner
