@@ -1126,8 +1126,6 @@ def savecache(func):
             # name afterwards from cache
             self.cache[obj._uid] = obj
 
-
-
     return inner
 
 #=============================================================================
