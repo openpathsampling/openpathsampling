@@ -2,7 +2,7 @@ from object_storage import ObjectStore
 from openpathsampling.pathmovechange import PathMoveChange
 
 from object_storage import ObjectStore
-from openpathsampling.pathmovechange import PathMoveChangeSet, PathMoveChange
+from openpathsampling.pathmovechange import PathMoveChange
 from openpathsampling.storage.object_storage import func_update_object
 
 import time

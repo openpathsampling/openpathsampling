@@ -1077,8 +1077,6 @@ class FilterBySample(PathMover):
     def move(self, globalstate):
         return paths.FilterSamplesPathMoveChange(
             self.mover.move(globalstate),
-            selected_samples=self.selected_samples,
-            use_all_samples=self.use_all_samples,
             mover=self
         )
 
