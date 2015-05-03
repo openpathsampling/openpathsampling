@@ -1139,7 +1139,7 @@ def loadidx(func):
     Decorator for load functions that add the basic indexing handling
     """
     def inner(self, idx, *args, **kwargs):
-        if type(idx) is not str and idx < 0:
+        if type(idx) is not str and int(idx) < 0:
             return None
 
         n_idx = idx
@@ -1152,6 +1152,9 @@ def loadidx(func):
                 # load by name only in named storages
                 raise ValueError('Load by name (str) is only supported in named storages')
                 pass
+
+        # turn into python int if it was a numpy int (in some rare cases!)
+        n_idx = int(n_idx)
 
         # ATTENTION HERE!
         # Note that the wrapped function ho self as first parameter. This is because we are wrapping a bound
