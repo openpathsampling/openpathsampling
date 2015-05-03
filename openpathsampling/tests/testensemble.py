@@ -1,6 +1,6 @@
 from nose.tools import assert_equal, assert_not_equal, raises
 from nose.plugins.skip import SkipTest
-from test_helpers import CallIdentity, prepend_exception_message
+from test_helpers import CallIdentity, prepend_exception_message, make_1d_traj
 
 import openpathsampling as paths
 from openpathsampling.ensemble import *
@@ -82,7 +82,7 @@ def setUp():
     global lower, upper, op, vol1, vol2, vol3, ttraj
     lower = 0.1
     upper = 0.5
-    op = CallIdentity()
+    op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
     vol1 = paths.LambdaVolume(op, lower, upper)
     vol2 = paths.LambdaVolume(op, -0.1, 0.7)
     vol3 = paths.LambdaVolume(op, 2.0, 2.5)
@@ -103,7 +103,8 @@ def setUp():
 
     # make the tests from lists into trajectories
     for test in ttraj.keys():
-        ttraj[test] = paths.Trajectory(ttraj[test])
+        ttraj[test] = make_1d_traj(coordinates=ttraj[test],
+                                   velocities=[1.0]*len(ttraj[test]))
 
 def in_out_parser(testname):
     allowed_parts = ['in', 'out']
