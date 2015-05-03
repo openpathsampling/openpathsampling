@@ -142,6 +142,7 @@ class SampleStore(ObjectStore):
                 accepted=accepted
             )
         obj.idx[self.storage] = idx
+        obj._origin = self.storage
 
         del obj.details
         del obj.ensemble

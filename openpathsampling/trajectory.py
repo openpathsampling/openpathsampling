@@ -433,7 +433,7 @@ class Trajectory(list):
         set of Snapshot()
             the set of common snapshots
         """
-        return set([snap.configuration for snap in self]) & set(list([snap.configuration for snap in self]))
+        return set([snap.configuration for snap in self]) & set([snap.configuration for snap in other])
 
     def shared_subtrajectory(self, other):
         """
