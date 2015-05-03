@@ -185,6 +185,9 @@ class SampleSet(object):
         '''
         for sample in self:
             # TODO: Replace by using .valid which means that it is in the ensemble
+            # and does the same testing but with caching so the .valid might
+            # fail in case of some bad hacks. Since we check anyway, let's just
+
             #assert(sample.valid)
             assert(sample.ensemble(sample.trajectory))
 
@@ -347,7 +350,6 @@ class Sample(object):
                  ensemble=None,
                  accepted=True,
                  details=None,
-                 valid=None,
                  parent=None,
                  mover=None,
                  step=-1
@@ -360,14 +362,6 @@ class Sample(object):
         self.step = step
         self.details = details
         self.mover = mover
-        if valid is None:
-            # valid? figure it out
-            if self.trajectory is None:
-                self.valid = True
-            else:
-                self.valid = self.ensemble(self.trajectory)
-        else:
-            self.valid = valid
 
     def __call__(self):
         return self.trajectory
@@ -378,6 +372,27 @@ class Sample(object):
         mystr += "Trajectory: "+str(self.trajectory)+"\n"
         mystr += "Ensemble: "+repr(self.ensemble)+"\n"
         return mystr
+
+    @property
+    def valid(self):
+        """Returns true if a sample is in its ensemble
+
+        Returns
+        -------
+        bool
+            `True` if the trajectory is in the ensemble `False` otherwise
+        """
+        if self._valid is None:
+            if self.trajectory is None:
+                self._valid = True
+            else:
+                if self.ensemble is not None:
+                    self._valid = self.ensemble(self.trajectory)
+                else:
+                    # no ensemble means ALL ???
+                    self._valid = True
+
+        return self._valid
 
     def __repr__(self):
         return '<Sample @ ' + str(hex(id(self))) + '>'

@@ -19,13 +19,11 @@ class SampleStore(ObjectStore):
     def load_empty(self, idx):
         trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
         replica_idx = int(self.storage.variables['sample_replica'][idx])
-        valid=self.load_variable('sample_valid', idx)
         accepted=bool(self.load_variable('sample_accepted', idx))
 
         obj = Sample(
             trajectory=self.storage.trajectories[trajectory_idx],
             replica=replica_idx,
-            valid=valid,
             accepted=accepted,
         )
 
@@ -52,7 +50,6 @@ class SampleStore(ObjectStore):
             self.save_variable('sample_replica', idx, sample.replica)
             self.save_object('sample_parent', idx, sample.parent)
             self.save_object('sample_details', idx, sample.details)
-            self.save_variable('sample_valid', idx, sample.valid)
             self.save_variable('sample_accepted', idx, sample.accepted)
             self.save_object('sample_pathmover', idx, sample.mover)
 
@@ -76,7 +73,6 @@ class SampleStore(ObjectStore):
         parent_idx = int(self.storage.variables['sample_parent_idx'][idx])
         details_idx = int(self.storage.variables['sample_details_idx'][idx])
         pathmover_idx = int(self.storage.variables['sample_pathmover_idx'][idx])
-        valid=self.load_variable('sample_valid', idx)
         accepted=bool(self.load_variable('sample_accepted', idx))
 
 
@@ -84,7 +80,6 @@ class SampleStore(ObjectStore):
             trajectory=self.storage.trajectories[trajectory_idx],
             replica=replica_idx,
             ensemble=self.storage.ensembles[ensemble_idx],
-            valid=valid,
             parent=self.storage.samples[parent_idx],
             details=self.storage._details[details_idx],
             accepted=accepted,
@@ -104,7 +99,6 @@ class SampleStore(ObjectStore):
         self.init_variable('sample_ensemble_idx', 'index', chunksizes=(1, ))
         self.init_variable('sample_replica', 'index', chunksizes=(1, ))
         self.init_variable('sample_parent_idx', 'index', chunksizes=(1, ))
-        self.init_variable('sample_valid', 'index', chunksizes=(1, ))
         self.init_variable('sample_details_idx', 'index', chunksizes=(1, ))
         self.init_variable('sample_accepted', 'bool', chunksizes=(1, ))
         self.init_variable('sample_pathmover_idx', 'index', chunksizes=(1, ))
@@ -121,24 +115,21 @@ class SampleStore(ObjectStore):
             idxs = range(len(self))
             trajectory_idxs = self.storage.variables['sample_trajectory_idx'][:]
             replica_idxs = self.storage.variables['sample_replica'][:]
-            valids = self.storage.variables['sample_valid'][:]
             accepteds = self.storage.variables['sample_accepted'][:]
 
-            [ self.add_empty_to_cache(i,t,r,v,a) for i,t,r,v,a in zip(
+            [ self.add_empty_to_cache(i,t,r,a) for i,t,r,a in zip(
                 idxs,
                 trajectory_idxs,
                 replica_idxs,
-                valids,
                 accepteds) ]
 
             self._cached_all = True
 
 
-    def add_empty_to_cache(self, idx, trajectory_idx, replica_idx, valid, accepted):
+    def add_empty_to_cache(self, idx, trajectory_idx, replica_idx, accepted):
         obj = Sample(
                 trajectory=self.storage.trajectories[int(trajectory_idx)],
                 replica=replica_idx,
-                valid=valid,
                 accepted=accepted
             )
         obj.idx[self.storage] = idx

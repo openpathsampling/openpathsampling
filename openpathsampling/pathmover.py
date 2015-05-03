@@ -324,7 +324,6 @@ class ShootMover(PathMover):
             replica=replica,
             trajectory=sample_details.trial,
             ensemble=dynamics_ensemble,
-            valid=valid,
             accepted=accepted,
             parent=rep_sample,
             details=sample_details,
@@ -676,7 +675,6 @@ class ReplicaIDChangeMover(PathMover):
             replica=rep_to,
             ensemble=rep_sample.ensemble,
             trajectory=rep_sample.trajectory,
-            valid=rep_sample.valid,
             accepted=True,
             parent=rep_sample,
             mover=self
@@ -688,7 +686,6 @@ class ReplicaIDChangeMover(PathMover):
             trajectory=None,
             ensemble=rep_sample.ensemble,
             accepted=True,
-            valid=True,
             parent=None,
             mover=self
         )
@@ -766,7 +763,6 @@ class EnsembleHopMover(PathMover):
             replica=replica,
             trajectory=trajectory,
             ensemble=ens_to,
-            valid=valid,
             accepted=valid,
             details=sample_details,
             mover=self,
@@ -888,7 +884,6 @@ class RandomSubtrajectorySelectMover(PathMover):
             replica=replica,
             trajectory=subtraj,
             ensemble=self.subensemble,
-            valid=self.subensemble(subtraj),
             accepted=True,
             parent=rep_sample,
             mover=self
@@ -957,7 +952,6 @@ class PathReversalMover(PathMover):
             replica=replica,
             trajectory=reversed_trajectory,
             ensemble=ensemble,
-            valid=valid,
             accepted=valid,
             details=sample_details,
             mover=self,
@@ -1023,7 +1017,6 @@ class ReplicaExchangeMover(PathMover):
             replica=replica1,
             trajectory=trajectory1,
             ensemble=ensemble2,
-            valid=from1to2,
             accepted=accepted,
             parent=s1,
             details = SampleDetails(),
@@ -1033,7 +1026,6 @@ class ReplicaExchangeMover(PathMover):
             replica=replica2,
             trajectory=trajectory2,
             ensemble=ensemble1,
-            valid=from2to1,
             accepted=accepted,
             parent=s2,
             details=SampleDetails(),
