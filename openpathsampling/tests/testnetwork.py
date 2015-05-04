@@ -88,9 +88,13 @@ class testMSTISNetwork(object):
         assert_equal(ensC0(self.traj['AC']), False)
         assert_equal(ensC0(self.traj['BB']), False)
 
-
-        pass
-
     def test_ms_outers(self):
         for traj_label in ['AB', 'BA', 'AC', 'CA', 'BC', 'CB']:
             assert_equal(self.mstis.ms_outers[0](self.traj[traj_label]), True)
+
+    def test_sampling_ensembles(self):
+        assert_equal(len(self.mstis.from_state[self.stateA].ensembles), 2)
+        assert_equal(len(self.mstis.from_state[self.stateB].ensembles), 2)
+        assert_equal(len(self.mstis.from_state[self.stateC].ensembles), 2)
+
+
