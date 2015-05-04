@@ -5,6 +5,17 @@ import simtk.unit as u
 import numpy as np
 import openpathsampling as paths
 
+import sys
+def refresh_output(output_str):
+    try:
+        import IPython.display
+        IPython.display.clear_output(wait=True)
+    except ImportError:
+        pass
+    print(output_str)
+    sys.stdout.flush()
+
+
 
 def updateunits(func):
     def inner(self, *args, **kwargs):
