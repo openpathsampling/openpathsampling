@@ -156,7 +156,7 @@ if __name__ == '__main__':
 
         pth = mm.move(tt)
 
-        storage.samples.save(pth)
+        storage.results.save(pth)
 
         print pth.details.json
 

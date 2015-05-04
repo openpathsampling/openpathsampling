@@ -296,7 +296,6 @@ class ShootMover(PathMover):
         setattr(sample_details, 'start_point', self.selector.pick(trajectory) )
         sample_details.start = trajectory
 
-
         self._generate(sample_details, dynamics_ensemble)
 
         valid = dynamics_ensemble(sample_details.trial)
@@ -319,8 +318,6 @@ class ShootMover(PathMover):
         else:
             sample_details.acceptance_probability = 0.0
 
-
-
         trial = paths.Sample(
             replica=replica,
             trajectory=sample_details.trial,
@@ -339,7 +336,7 @@ class ShootMover(PathMover):
 #        new_set = globalstate.apply([sample], accepted = details.accepted, move=self)
 
         path = paths.SamplePathMoveChange(
-                generated=[trial],
+                samples=[trial],
                 mover=self,
                 details=move_details
         )
@@ -496,7 +493,7 @@ class ConditionalMover(PathMover):
         subglobal = globalstate
 
         ifclause = self.if_mover.move(subglobal)
-        samples = ifclause.samples
+        samples = ifclause.results
         subglobal = subglobal.apply_samples(samples)
 
         if ifclause.accepted:
@@ -542,7 +539,7 @@ class SequentialMover(PathMover):
 
             # Run the sub mover
             movepath = mover.move(subglobal)
-            samples = movepath.samples
+            samples = movepath.results
             subglobal = subglobal.apply_samples(samples)
             pathmovechanges.append(movepath)
 
@@ -579,7 +576,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
                        )
             # Run the sub mover
             movepath = mover.move(subglobal)
-            samples = movepath.samples
+            samples = movepath.results
             subglobal = subglobal.apply_samples(samples)
             pathmovechanges.append(movepath)
             if not movepath.accepted:
@@ -617,7 +614,7 @@ class ConditionalSequentialMover(SequentialMover):
 
             # Run the sub mover
             movepath = mover.move(subglobal)
-            samples = movepath.samples
+            samples = movepath.results
             subglobal = subglobal.apply_samples(samples)
             pathmovechanges.append(movepath)
 
@@ -1039,7 +1036,7 @@ class ReplicaExchangeMover(PathMover):
         setattr(details, 'ensembles', [ensemble1, ensemble2])
 
         path = paths.SamplePathMoveChange(
-            generated=[trial1, trial2],
+            samples=[trial1, trial2],
             mover=self,
             details=details
         )

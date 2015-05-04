@@ -135,7 +135,7 @@ class Bootstrapping(PathSimulator):
                        )
 
             movepath = bootstrapmove.move(self.globalstate)
-            samples = movepath.samples
+            samples = movepath.results
 #            logger.debug("SAMPLES:")
 #            for sample in samples:
 #                logger.debug("(" + str(sample.replica)
@@ -202,7 +202,7 @@ class PathSampling(PathSimulator):
 
         for step in range(nsteps):
             movepath = self._mover.move(self.globalstate, step=step)
-            samples = movepath.samples
+            samples = movepath.results
             self.globalstate = self.globalstate.apply_samples(samples, step=step)
             self.globalstate.movepath = movepath
             if self.storage is not None:

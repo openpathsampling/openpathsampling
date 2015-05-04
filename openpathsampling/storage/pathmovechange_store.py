@@ -1,8 +1,7 @@
 from openpathsampling.storage import ObjectStore
-from openpathsampling.pathmovechange import PathMoveChange, SamplePathMoveChange
+from openpathsampling.pathmovechange import PathMoveChange
 from openpathsampling.storage.object_storage import func_update_object
 from openpathsampling.todict import class_list
-import openpathsampling.pathmovechange as pmc
 
 class PathMoveChangeStore(ObjectStore):
     def __init__(self, storage):
@@ -21,9 +20,7 @@ class PathMoveChangeStore(ObjectStore):
     def load_empty(self, idx):
 
         obj = self._load_partial(idx)
-
         del obj.details
-#        del obj.mover
 
         return obj
 
@@ -33,11 +30,11 @@ class PathMoveChangeStore(ObjectStore):
 
     def save(self, pathmovechange, idx=None):
         if idx is not None:
-            if len(pathmovechange.generated) > 0:
-                map(self.storage.samples.save, pathmovechange.generated)
+            if len(pathmovechange.samples) > 0:
+                map(self.storage.samples.save, pathmovechange.samples)
 
-            values = self.list_to_numpy(pathmovechange.generated, 'samples')
-            self.storage.variables['change_generated_idxs'][idx] = values
+            values = self.list_to_numpy(pathmovechange.samples, 'samples')
+            self.storage.variables['change_samples_idxs'][idx] = values
 
             if len(pathmovechange.subchanges) > 0:
                 map(self.storage.pathmovechanges.save, pathmovechange.subchanges)
@@ -85,7 +82,7 @@ class PathMoveChangeStore(ObjectStore):
             chunksizes=(10240, )
         )
 
-        self.init_variable('change_generated_idxs', 'index',
+        self.init_variable('change_samples_idxs', 'index',
             variable_length = True,
             chunksizes=(10240, )
         )
@@ -102,14 +99,14 @@ class PathMoveChangeStore(ObjectStore):
             idxs = range(len(self))
 
             cls_names = self.storage.variables['change_cls'][:]
-            generated_idxss = self.storage.variables['change_generated_idxs'][:]
+            samples_idxss = self.storage.variables['change_samples_idxs'][:]
             subchanges_idxss = self.storage.variables['change_subchanges_idxs'][:]
             mover_idxs = self.storage.variables['change_pathmover_idx'][:]
 
             [ self.add_empty_to_cache(i,c,g,m) for i,c,g,m in zip(
                 idxs,
                 cls_names,
-                generated_idxss,
+                samples_idxss,
                 mover_idxs) ]
 
             [ self._load_partial_subchanges(c,s) for c,s in zip(
@@ -119,10 +116,10 @@ class PathMoveChangeStore(ObjectStore):
             self._cached_all = True
 
 
-    def add_empty_to_cache(self, idx, cls_name, generated_idxs, mover_idx):
+    def add_empty_to_cache(self, idx, cls_name, samples_idxs, mover_idx):
 
         if idx not in self.cache:
-            obj = self._load_partial_generated(cls_name, generated_idxs, mover_idx)
+            obj = self._load_partial_samples(cls_name, samples_idxs, mover_idx)
             obj.idx[self.storage] = idx
             obj._origin = self.storage
 
@@ -133,13 +130,13 @@ class PathMoveChangeStore(ObjectStore):
 
 
     def _load_partial(self, idx):
-        generated_idxs = self.storage.variables['change_generated_idxs'][idx]
+        samples_idxs = self.storage.variables['change_samples_idxs'][idx]
         subchanges_idxs = self.storage.variables['change_subchanges_idxs'][idx]
         mover_idx = self.storage.variables['change_pathmover_idx'][idx]
 
         cls_name = self.storage.variables['change_cls'][idx]
 
-        obj = self._load_partial_generated(cls_name, generated_idxs, mover_idx)
+        obj = self._load_partial_samples(cls_name, samples_idxs, mover_idx)
         return self._load_partial_subchanges(obj, subchanges_idxs)
 
     def _load_partial_subchanges(self, obj, subchanges_idxs):
@@ -148,12 +145,12 @@ class PathMoveChangeStore(ObjectStore):
 
         return obj
 
-    def _load_partial_generated(self, cls_name, generated_idxs, mover_idx):
+    def _load_partial_samples(self, cls_name, samples_idxs, mover_idx):
         cls = class_list[cls_name]
         obj = cls.__new__(cls)
         PathMoveChange.__init__(obj, mover=self.storage.pathmovers[int(mover_idx)])
 
-        if len(generated_idxs) > 0:
-            obj.generated = [ self.storage.samples[int(idx)] for idx in generated_idxs ]
+        if len(samples_idxs) > 0:
+            obj.samples = [ self.storage.samples[int(idx)] for idx in samples_idxs ]
 
         return obj
