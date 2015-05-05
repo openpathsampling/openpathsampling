@@ -1689,10 +1689,52 @@ class TISEnsemble(SequentialEnsemble):
         ])
 
     def trajectory_summary(self, trajectory):
-        pass
+        initial_state_i = None
+        final_state_i = None
+        for state_i in range(len(self.initial_states)):
+            if self.initial_states[state_i](trajectory[0]):
+                initial_state_i = state_i
+                break
+        all_states = self.initial_states + self.final_states
+        for state_i in range(len(all_states)):
+            if all_states[state_i](trajectory[-1]):
+                final_state_i = state_i
+                break
+
+        if self.orderparameter is not None:
+            lambda_traj = self.orderparameter(trajectory)
+            min_lambda = min(lambda_traj)
+            max_lambda = max(lambda_traj)
+        else:
+            min_lambda = None
+            max_lambda = None
+
+        return {
+            'initial_state' : initial_state_i,
+            'final_state' : final_state_i,
+            'max_lambda' : max_lambda,
+            'min_lambda' : min_lambda
+        }
+
 
     def trajectory_summary_str(self, trajectory):
-        pass
+        summ = self.trajectory_summary(trajectory)
+        all_states = self.initial_states + self.final_states
+        init_st = str(self.initial_state(summ['initial_state']))
+        fin_st = str(all_states(summ['final_state']))
+        if self.orderparameter is not None:
+            opname = self.orderparameter.name
+        else:
+            opname = "None"
+        min_l = str(summ['min_lambda'])
+        max_l = str(summ['max_lambda'])
+        mystr = (
+            "initial_state=" + init_st + " " +
+            "final_state=" + fin_st + " " +
+            "min_lambda=" + min_l + " " +
+            "max_lambda=" + max_l + " "
+        )
+        return mystr
 
 
 class EnsembleFactory():
