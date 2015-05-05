@@ -1721,8 +1721,18 @@ class TISEnsemble(SequentialEnsemble):
         summ = self.trajectory_summary(trajectory)
         all_states = self.initial_states + self.final_states
         # TODO: remove the .name from this when string returns correctly
-        init_st = str(self.initial_states[summ['initial_state']].name)
-        fin_st = str(all_states[summ['final_state']].name)
+        init_st_i = summ['initial_state']
+        fin_st_i = summ['final_state']
+        # TODO: how can we have None?
+        if init_st_i == None:
+            init_st = "None"
+        else:
+            init_st = str(self.initial_states[summ['initial_state']].name)
+        if fin_st_i == None:
+            fin_st = "None"
+        else:
+            fin_st = str(all_states[summ['final_state']].name)
+
         if self.orderparameter is not None:
             opname = self.orderparameter.name
         else:

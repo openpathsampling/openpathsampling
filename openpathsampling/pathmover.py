@@ -298,6 +298,8 @@ class ShootMover(PathMover):
 
         self._generate(sample_details, dynamics_ensemble)
 
+        logger.info("Trial trajectory: " +
+                    dynamics_ensemble.trajectory_summary_str(sample_details.trial))
         valid = dynamics_ensemble(sample_details.trial)
         accepted = False
 
@@ -456,6 +458,7 @@ class RandomChoiceMover(PathMover):
             prob += self.weights[idx]
 
         logger_str = "RandomChoiceMover ({name}) selecting mover index {idx} ({mtype})"
+        logger_str = "{name} (RandomChoiceMover) selecting {mtype} (index {idx})"
         logger.info(logger_str.format(name=self.name, idx=idx, mtype=self.movers[idx].name))
 
         mover = self.movers[idx]
