@@ -61,34 +61,6 @@ class PathMoveChange(object):
             # TODO: might raise exception
             return None
 
-    @property
-    def opened(self):
-        """
-        Return the full PathMoveChange object
-
-        Notes
-        -----
-        The full Movepath can only be returned if it has been generated and
-        is still in memory. A collapsed Movepath that is loaded does NOT
-        contain the full information anymore. This is the whole purpose of
-        only storing essential information.
-        """
-        return self
-
-    @property
-    def closed(self):
-        """
-        Return a closed PathMoveChange object copy
-
-        This will return a PathMoveChange object that will still know the used
-        mover and all relevant samples. All underlying information about the
-        move is hidden and will not be stored
-        """
-        obj = CollapsedPathMoveChange(samples=self.collapsed_samples, mover=self.mover)
-        obj._subchange = self
-
-        return obj
-
     def __iter__(self):
         yield self
         for subchange in self.subchanges:
@@ -419,62 +391,6 @@ class PathMoveChange(object):
 
         return output
 
-    def reduced(self, selected_samples = None, use_all_samples=False):
-        """
-        Reduce the underlying PathMoveChange to a subset of relevant samples
-
-        This can be used to reduce a PathMoveChange (and everything below) to
-        a subchange that only uses specific samples that can be picked
-        from the list of all returned samples. Note that this can be
-        problematic since a move might not return a different number of
-        samples each time it is run.
-
-        Parameters
-        ----------
-        selected_samples : list of int
-            list of integer indices to be kept from the list of returned
-            samples in this subchange. Slicing is not allowed, but negative
-            indices are and conforms to the usual python convention (-1
-            is the last samples, etc.)
-        use_all_samples : bool
-            if `True` the selected samples will be chosen from the list of
-            all created samples (accepted and rejected ones), otherwise only
-            the accepted ones will be chosen from. This is the default and
-            corresponds to chose from `.samples`
-        """
-
-        # @DWHS do we want to allow also to select rejected samples? Meaning,
-        # that we could allow the user to pick samples from .all_samples
-        # or .samples
-
-        # the check for collapsed_samples makes sure that at least the
-        # relevant ones are present
-
-        if selected_samples is None:
-            # this case corresponds to .closed
-            return self.closed
-
-        if use_all_samples:
-            # choose all generated samples
-            sample_set = self.all_samples
-        else:
-            # chose only accepted ones!
-            sample_set = self.results
-
-        # allow for negative indices to be picked, e.g. -1 is the last sample
-        if len(selected_samples) > 0:
-            selected_samples = [ idx % len(sample_set) if idx < 0 else idx for idx in selected_samples]
-
-        samples = [
-            samp for idx, samp in enumerate(sample_set)
-            if idx in selected_samples or samp in self.collapsed_samples
-        ]
-
-        obj = CollapsedPathMoveChange(samples=samples, mover=self.mover)
-        obj._subchange = self
-
-        return obj
-
     @property
     def collapsed_samples(self):
         """
@@ -693,35 +609,6 @@ class RejectedSamplePathMoveChange(SamplePathMoveChange):
 
     def _get_results(self):
         return []
-
-
-@ops_object
-class CollapsedPathMoveChange(SamplePathMoveChange):
-    """
-    Represent a collapsed PathMoveChange that has potential hidden sub moves
-    """
-    @property
-    def opened(self):
-        if hasattr(self, '_subchange') and self._subchange is not None:
-            return self._subchange
-        else:
-            return self
-
-    def closed(self):
-        return self
-
-    @property
-    def collapsed_samples(self):
-        if self._collapsed is None:
-            self._collapsed = self.trials
-
-        return self._collapsed
-
-    def __str__(self):
-        if self.mover is not None:
-            return '%s [collapsed] : %d samples' % (self.mover.cls, len(self.trials)) + ' ' + str(self.trials) + ''
-        else:
-            return '%s [collapsed] : %d samples' % ('CollapsedMove', len(self.trials)) + ' ' + str(self.trials) + ''
 
 
 @ops_object
