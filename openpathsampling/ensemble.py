@@ -1720,8 +1720,9 @@ class TISEnsemble(SequentialEnsemble):
     def trajectory_summary_str(self, trajectory):
         summ = self.trajectory_summary(trajectory)
         all_states = self.initial_states + self.final_states
-        init_st = str(self.initial_state(summ['initial_state']))
-        fin_st = str(all_states(summ['final_state']))
+        # TODO: remove the .name from this when string returns correctly
+        init_st = str(self.initial_states[summ['initial_state']].name)
+        fin_st = str(all_states[summ['final_state']].name)
         if self.orderparameter is not None:
             opname = self.orderparameter.name
         else:
