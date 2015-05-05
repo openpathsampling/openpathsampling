@@ -51,7 +51,6 @@ class SampleSet(object):
         else:
             self.movepath = movepath
 
-
     def __getitem__(self, key):
         if isinstance(key, paths.Ensemble):
             return random.choice(self.ensemble_dict[key])
@@ -348,13 +347,13 @@ class Sample(object):
                  replica=None,
                  trajectory=None,
                  ensemble=None,
-                 accepted=True,
+                 bias=1.0,
                  details=None,
                  parent=None,
                  mover=None,
                  step=-1
                  ):
-        self.accepted = accepted
+        self.bias = bias
         self.replica = replica
         self.ensemble = ensemble
         self.trajectory = trajectory
@@ -397,11 +396,6 @@ class Sample(object):
     def __repr__(self):
         return '<Sample @ ' + str(hex(id(self))) + '>'
 
-    @staticmethod
-    def set_time(step, samples):
-        for sample in samples:
-            sample.step = step
-
     def copy_reset(self):
         '''
         Copy of Sample with initialization move details.
@@ -427,14 +421,11 @@ class Sample(object):
             ensemble=ensemble
         )
         return result
-        
+
 
     @property
-    def acceptance_probability(self):
+    def acceptance(self):
         if not self.valid:
             return 0.0
 
-        if hasattr(self.details) and self.details is not None and hasattr(self.details, 'selection_probability'):
-            return self.details.selection_probability
-
-        return 1.0
+        return self.bias

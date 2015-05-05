@@ -19,12 +19,12 @@ class SampleStore(ObjectStore):
     def load_empty(self, idx):
         trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
         replica_idx = int(self.storage.variables['sample_replica'][idx])
-        accepted=bool(self.load_variable('sample_accepted', idx))
+        bias=float(self.load_variable('sample_bias', idx))
 
         obj = Sample(
             trajectory=self.storage.trajectories[trajectory_idx],
             replica=replica_idx,
-            accepted=accepted,
+            bias=bias,
         )
 
         del obj.details
@@ -50,7 +50,7 @@ class SampleStore(ObjectStore):
             self.save_variable('sample_replica', idx, sample.replica)
             self.save_object('sample_parent', idx, sample.parent)
             self.save_object('sample_details', idx, sample.details)
-            self.save_variable('sample_accepted', idx, sample.accepted)
+            self.save_variable('sample_bias', idx, sample.bias)
             self.save_object('sample_pathmover', idx, sample.mover)
 
     def load(self, idx):
@@ -73,7 +73,7 @@ class SampleStore(ObjectStore):
         parent_idx = int(self.storage.variables['sample_parent_idx'][idx])
         details_idx = int(self.storage.variables['sample_details_idx'][idx])
         pathmover_idx = int(self.storage.variables['sample_pathmover_idx'][idx])
-        accepted=bool(self.load_variable('sample_accepted', idx))
+        bias=float(self.load_variable('sample_bias', idx))
 
 
         obj = Sample(
@@ -82,7 +82,7 @@ class SampleStore(ObjectStore):
             ensemble=self.storage.ensembles[ensemble_idx],
             parent=self.storage.samples[parent_idx],
             details=self.storage._details[details_idx],
-            accepted=accepted,
+            bias=bias,
             mover=self.storage.pathmovers[pathmover_idx]
         )
 
@@ -100,7 +100,7 @@ class SampleStore(ObjectStore):
         self.init_variable('sample_replica', 'index', chunksizes=(1, ))
         self.init_variable('sample_parent_idx', 'index', chunksizes=(1, ))
         self.init_variable('sample_details_idx', 'index', chunksizes=(1, ))
-        self.init_variable('sample_accepted', 'bool', chunksizes=(1, ))
+        self.init_variable('sample_bias', 'float', chunksizes=(1, ))
         self.init_variable('sample_pathmover_idx', 'index', chunksizes=(1, ))
 
     def all(self):
@@ -115,22 +115,22 @@ class SampleStore(ObjectStore):
             idxs = range(len(self))
             trajectory_idxs = self.storage.variables['sample_trajectory_idx'][:]
             replica_idxs = self.storage.variables['sample_replica'][:]
-            accepteds = self.storage.variables['sample_accepted'][:]
+            biass = self.storage.variables['sample_bias'][:]
 
             [ self.add_empty_to_cache(i,t,r,a) for i,t,r,a in zip(
                 idxs,
                 trajectory_idxs,
                 replica_idxs,
-                accepteds) ]
+                biass) ]
 
             self._cached_all = True
 
 
-    def add_empty_to_cache(self, idx, trajectory_idx, replica_idx, accepted):
+    def add_empty_to_cache(self, idx, trajectory_idx, replica_idx, bias):
         obj = Sample(
                 trajectory=self.storage.trajectories[int(trajectory_idx)],
                 replica=replica_idx,
-                accepted=accepted
+                bias=bias
             )
         obj.idx[self.storage] = idx
         obj._origin = self.storage

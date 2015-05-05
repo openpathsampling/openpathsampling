@@ -21,7 +21,8 @@ from collectivevariable import CV_Function, CV_MD_Function, CV_Featurizer, \
     CV_Volume, CollectiveVariable
 
 from pathmover import (
-    BackwardShootMover, MinusMover, RandomChoiceMover, ForwardShootMover, PathMover, PathMoverFactory, PathReversalMover,
+    BackwardShootMover, MinusMover, RandomChoiceMover, ForwardShootMover,
+    PathMover, PathMoverFactory, PathReversalMover,
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
@@ -69,5 +70,6 @@ from pathmovechange import (EmptyPathMoveChange, ConditionalSequentialPathMoveCh
                       RandomChoicePathMoveChange, SamplePathMoveChange,
                       SequentialPathMoveChange,  KeepLastSamplePathMoveChange,
                       CollapsedPathMoveChange, FilterSamplesPathMoveChange,
-                      PathSimulatorPathMoveChange
+                      PathSimulatorPathMoveChange, AcceptedSamplePathMoveChange,
+                      RejectedSamplePathMoveChange
                      )

@@ -677,6 +677,25 @@ class SamplePathMoveChange(PathMoveChange):
         return self.samples
 
 @ops_object
+class AcceptedSamplePathMoveChange(SamplePathMoveChange):
+
+    def _get_trials(self):
+        return self.samples
+
+    def _get_results(self):
+        return self.samples
+
+@ops_object
+class RejectedSamplePathMoveChange(SamplePathMoveChange):
+
+    def _get_trials(self):
+        return self.samples
+
+    def _get_results(self):
+        return []
+
+
+@ops_object
 class CollapsedPathMoveChange(SamplePathMoveChange):
     """
     Represent a collapsed PathMoveChange that has potential hidden sub moves
