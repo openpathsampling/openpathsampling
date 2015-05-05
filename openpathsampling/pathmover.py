@@ -322,7 +322,6 @@ class ShootMover(PathMover):
             replica=replica,
             trajectory=sample_details.trial,
             ensemble=dynamics_ensemble,
-            accepted=accepted,
             parent=rep_sample,
             details=sample_details,
             mover=self
@@ -758,7 +757,6 @@ class EnsembleHopMover(PathMover):
             replica=replica,
             trajectory=trajectory,
             ensemble=ens_to,
-            accepted=valid,
             details=sample_details,
             mover=self,
             parent=rep_sample
@@ -879,7 +877,6 @@ class RandomSubtrajectorySelectMover(PathMover):
             replica=replica,
             trajectory=subtraj,
             ensemble=self.subensemble,
-            accepted=True,
             parent=rep_sample,
             mover=self
         )
@@ -947,7 +944,6 @@ class PathReversalMover(PathMover):
             replica=replica,
             trajectory=reversed_trajectory,
             ensemble=ensemble,
-            accepted=valid,
             details=sample_details,
             mover=self,
             parent=rep_sample
@@ -1012,7 +1008,6 @@ class ReplicaExchangeMover(PathMover):
             replica=replica1,
             trajectory=trajectory1,
             ensemble=ensemble2,
-            accepted=accepted,
             parent=s1,
             details = SampleDetails(),
             mover=self
@@ -1021,7 +1016,6 @@ class ReplicaExchangeMover(PathMover):
             replica=replica2,
             trajectory=trajectory2,
             ensemble=ensemble1,
-            accepted=accepted,
             parent=s2,
             details=SampleDetails(),
             mover=self
@@ -1267,7 +1261,7 @@ class SampleGenerator(PathMover):
 
     def move(self, globalstate):
         # we use self.ensembles to pick the samples we want to use
-        samples = [ globalstate[ens] for ens in self.ensembles ]
+        samples = [ self.select_sample(globalstate, ens) for ens in self.ensembles ]
 
         # pass these samples to the generator
         trials = self._generate(*samples)
@@ -1278,11 +1272,13 @@ class SampleGenerator(PathMover):
         # and return a PMC
         if accepted:
             return paths.AcceptedSamplePathMoveChange(
+                samples=trials,
                 mover = self,
                 details = details
             )
         else:
             return paths.RejectedSamplePathMoveChange(
+                samples=trials,
                 mover = self,
                 details = details
             )
@@ -1312,7 +1308,7 @@ class ShootingGenerator(SampleGenerator):
         replica = trial.replica
 
         initial_point = self.selector.pick(initial_trajectory)
-        trial_point = self._shoot(initial_point)
+        trial_point = self._shoot(initial_point, dynamics_ensemble)
 
         bias = initial_point.sum_bias / trial_point.sum_bias
 
@@ -1473,22 +1469,18 @@ class ReversalGenerator(SampleGenerator):
 
 class ExtendingGenerator(SampleGenerator):
 
-    def __init__(self, ensemble=None):
-        super(ExtendingGenerator, self).__init__()
-        self.ensemble = ensemble
+    def __init__(self, ensemble, extend_ensemble):
+        super(ExtendingGenerator, self).__init__(
+            in_ensembles=[ensemble],
+            out_ensembles=[extend_ensemble]
+        )
+        self.extend_ensemble = extend_ensemble
 
     def __call__(self, trial):
-
         initial_trajectory = trial.trajectory
 
-        if self.ensemble is None:
-            dynamics_ensemble = trial.ensemble
-        else:
-            dynamics_ensemble = self.ensemble
-
         replica = trial.replica
-
-        trial_trajectory = self._extend(initial_trajectory, dynamics_ensemble)
+        trial_trajectory = self._extend(initial_trajectory, self.extend_ensemble)
 
         trial_details = paths.SampleDetails(
         )
@@ -1500,7 +1492,7 @@ class ExtendingGenerator(SampleGenerator):
         trial = paths.Sample(
             replica=replica,
             trajectory=trial_trajectory,
-            ensemble=dynamics_ensemble,
+            ensemble=self.extend_ensemble,
             parent=trial,
             details=trial_details,
             mover=self,
@@ -1583,6 +1575,7 @@ class Details(object):
                 mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
         return mystr
 
+
 @ops_object
 class MoveDetails(Details):
     '''Details of the move as applied to a given replica
@@ -1627,19 +1620,6 @@ class MoveDetails(Details):
         self.results=None
         super(MoveDetails, self).__init__(**kwargs)
 
-    # @staticmethod
-    # def initialization(sample):
-    #     return MoveDetails.initialization_from_scratch(sample.trajectory,
-    #                                                    sample.ensemble)
-    #
-    # @staticmethod
-    # def initialization_from_scratch(trajectory, ensemble):
-    #     details = MoveDetails()
-    #     details.inputs = []
-    #     details.trials = trajectory
-    #     details.ensemble = ensemble # might go to Change and not Details
-    #     details.results = trajectory
-    #     return details
 
 @ops_object
 class SampleDetails(Details):
