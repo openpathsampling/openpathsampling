@@ -26,7 +26,7 @@ from pathmover import (
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
-    CollapseMove, PathSimulatorMover, PathReversalSet,
+    PathSimulatorMover, PathReversalSet,
     NeighborEnsembleReplicaExchange
 )
 
@@ -60,16 +60,18 @@ from toy_dynamics.toy_engine import ToyEngine
 from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
     LeapfrogVerletIntegrator
 
-from analysis.tis_analysis import TISTransition, RETISTransition, Transition, \
-    TPSTransition
+from analysis.tis_analysis import (
+    TISTransition, RETISTransition, Transition, TPSTransition
+)
 
 from pathmover import Details, MoveDetails, SampleDetails
 
-from pathmovechange import (EmptyPathMoveChange, ConditionalSequentialPathMoveChange,
-                      PathMoveChange, PartialAcceptanceSequentialPathMoveChange,
-                      RandomChoicePathMoveChange, SamplePathMoveChange,
-                      SequentialPathMoveChange,  KeepLastSamplePathMoveChange,
-                      CollapsedPathMoveChange, FilterSamplesPathMoveChange,
-                      PathSimulatorPathMoveChange, AcceptedSamplePathMoveChange,
-                      RejectedSamplePathMoveChange
-                     )
+from pathmovechange import (
+    EmptyPathMoveChange, ConditionalSequentialPathMoveChange,
+    PathMoveChange, PartialAcceptanceSequentialPathMoveChange,
+    RandomChoicePathMoveChange, SamplePathMoveChange,
+    SequentialPathMoveChange,  KeepLastSamplePathMoveChange,
+    FilterSamplesPathMoveChange,
+    PathSimulatorPathMoveChange, AcceptedSamplePathMoveChange,
+    RejectedSamplePathMoveChange
+)
