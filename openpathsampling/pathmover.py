@@ -327,7 +327,7 @@ class SampleGenerator(PathMover):
 ###############################################################################
 
 class ShootGenerator(SampleGenerator):
-    def __init__(self, selector, ensemble):
+    def __init__(self, selector, ensemble, replicas=None):
         super(ShootGenerator, self).__init__(
             in_ensembles=[ensemble],
             out_ensembles=[ensemble]
@@ -996,8 +996,8 @@ class ReplicaIDChangeMover(PathMover):
         setattr(details, 'rep_from', mypair[0])
         setattr(details, 'rep_to', mypair[1])
 
-        return paths.SamplePathMoveChange(
-            [new_sample],
+        return paths.AcceptedSamplePathMoveChange(
+            samples=[new_sample],
             mover=self,
             details=details
         )
@@ -1077,13 +1077,18 @@ class EnsembleHopMover(PathMover):
         else:
             setattr(details, 'result_ensemble', ens_from)
 
-        path = paths.SamplePathMoveChange(
-            [trial],
-            mover=self,
-            details=details
-        )
-
-        return path
+        if valid:
+            return paths.AcceptedSamplePathMoveChange(
+                samples=[trial],
+                mover=self,
+                details=details
+            )
+        else:
+            return paths.RejectedSamplePathMoveChange(
+                samples=[trial],
+                mover=self,
+                details=details
+            )
 
 #TODO: REMOVE if possible
 @ops_object
