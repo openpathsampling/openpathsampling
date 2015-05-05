@@ -162,6 +162,23 @@ class Ensemble(object):
     def check(self, trajectory):
         return self(trajectory, trusted = False)
 
+    def trajectory_summary(self, trajectory):
+        """
+        Return dict with info on how this ensemble "sees" the trajectory.
+        """
+        return { }
+
+    def trajectory_summary_str(self, trajectory):
+        """
+        Returns a string with the results of the trajectory_summary function.
+        """
+        summ = self.trajectory_summary(trajectory)
+        if summ == { }:
+            return "No summary available"
+        else:
+            return str(summ)
+
+
     def oom_matrix(self, oom):
         """
         Return the oom representation where the OOM is based on a set of volumes
@@ -1637,9 +1654,13 @@ class TISEnsemble(SequentialEnsemble):
         Volume(s) that only the last frame may be in
     interface : Volume
         Volume which the trajectory must exit to be accepted
+    orderparameter : CollectiveVariable
+        CV to be used as order parameter for this
     """
-    def __init__(self, initial_states, final_states, interface):
+    def __init__(self, initial_states, final_states, interface,
+                 orderparameter=None):
         # regularize to list of volumes
+        # without orderparameter, some info can't be obtained
         try:
             n_initial_states = len(initial_states)
         except TypeError:
@@ -1656,6 +1677,7 @@ class TISEnsemble(SequentialEnsemble):
         self.final_states = final_states
         self.interface = interface
         self.name = interface.name
+        self.orderparameter = orderparameter
 
         volume_a = paths.volume.join_volumes(initial_states)
         volume_b = paths.volume.join_volumes(final_states)
@@ -1665,6 +1687,12 @@ class TISEnsemble(SequentialEnsemble):
             AllOutXEnsemble(volume_a | volume_b) & PartOutXEnsemble(interface),
             AllInXEnsemble(volume_a | volume_b) & LengthEnsemble(1)
         ])
+
+    def trajectory_summary(self, trajectory):
+        pass
+
+    def trajectory_summary_str(self, trajectory):
+        pass
 
 
 class EnsembleFactory():
@@ -1731,11 +1759,11 @@ class EnsembleFactory():
 
 
     @staticmethod
-    def TISEnsembleSet(volume_a, volume_b, volumes_x, trusted=True):
+    def TISEnsembleSet(volume_a, volume_b, volumes_x, orderparameter):
         myset = []
         for vol in volumes_x:
             myset.append(
-                paths.TISEnsemble(volume_a, volume_b, vol)
+                paths.TISEnsemble(volume_a, volume_b, vol, orderparameter)
             )
         return myset
 
