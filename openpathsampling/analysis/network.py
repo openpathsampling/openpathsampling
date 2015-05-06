@@ -95,9 +95,51 @@ class MSTISNetwork(TISNetwork):
             )
             for trans in self.from_state.values()
         ]
+        self.movers['msouter_pathreversal'] = [
+            paths.PathReversalMover(
+                ensembles=[self.ms_outers[0]]
+            )
+        ]
+        self.movers['msouter_shooting'] = [
+            paths.OneWayShootingMover(
+                sel=paths.UniformSelector(),
+                ensembles=[self.ms_outers[0]]
+            )
+        ]
+
 
 
 #    def disallow(self, stateA, stateB):
+
+    def build_movers(self):
+        shooting_chooser = paths.RandomChoiceMover(
+            movers=self.movers['shooting'] + self.movers['msouter_shooting'],
+            name="ShootingChooser"
+        )
+        repex_chooser = paths.RandomChoiceMover(
+            movers=self.movers['repex'],
+            name="RepExChooser"
+        )
+        rev_chooser = paths.RandomChoiceMover(
+            movers=(self.movers['pathreversal'] + 
+                    self.movers['msouter_pathreversal']),
+            name="ReversalChooser"
+        )
+        minus_chooser = paths.RandomChoiceMover(
+            movers=self.movers['minus'],
+            name="MinusChooser"
+        )
+        msouter_chooser = paths.RandomChoiceMover(
+            movers=self.movers['msouter_repex'],
+            name="MSOuterRepexChooser"
+        )
+        root_mover = paths.RandomChoiceMover(
+            movers=[shooting_chooser, repex_chooser, rev_chooser,
+                    minus_chooser, msouter_chooser],
+            weights=None
+        )
+
+
 
 
     def default_movers(self):
