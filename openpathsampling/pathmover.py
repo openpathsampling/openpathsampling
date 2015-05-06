@@ -1012,13 +1012,13 @@ class ReplicaExchangeMover(PathMover):
         replica2 = s2.replica
 
         from1to2 = ensemble2(trajectory1)
-        logger.debug("trajectory " + repr(trajectory1) +
-                     " into ensemble " + repr(ensemble2) +
-                     " : " + str(from1to2))
+        logger.info("trajectory " + repr(trajectory1) +
+                    " into ensemble " + repr(ensemble2) +
+                    " : " + str(from1to2))
         from2to1 = ensemble1(trajectory2)
-        logger.debug("trajectory " + repr(trajectory2) +
-                     " into ensemble " + repr(ensemble1) +
-                     " : " + str(from2to1))
+        logger.info("trajectory " + repr(trajectory2) +
+                    " into ensemble " + repr(ensemble1) +
+                    " : " + str(from2to1))
 
         accepted = from1to2 and from2to1
 
