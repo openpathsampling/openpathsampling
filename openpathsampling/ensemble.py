@@ -162,6 +162,23 @@ class Ensemble(object):
     def check(self, trajectory):
         return self(trajectory, trusted = False)
 
+    def trajectory_summary(self, trajectory):
+        """
+        Return dict with info on how this ensemble "sees" the trajectory.
+        """
+        return { }
+
+    def trajectory_summary_str(self, trajectory):
+        """
+        Returns a string with the results of the trajectory_summary function.
+        """
+        summ = self.trajectory_summary(trajectory)
+        if summ == { }:
+            return "No summary available"
+        else:
+            return str(summ)
+
+
     def oom_matrix(self, oom):
         """
         Return the oom representation where the OOM is based on a set of volumes
@@ -1637,9 +1654,13 @@ class TISEnsemble(SequentialEnsemble):
         Volume(s) that only the last frame may be in
     interface : Volume
         Volume which the trajectory must exit to be accepted
+    orderparameter : CollectiveVariable
+        CV to be used as order parameter for this
     """
-    def __init__(self, initial_states, final_states, interface):
+    def __init__(self, initial_states, final_states, interface,
+                 orderparameter=None):
         # regularize to list of volumes
+        # without orderparameter, some info can't be obtained
         try:
             n_initial_states = len(initial_states)
         except TypeError:
@@ -1656,6 +1677,7 @@ class TISEnsemble(SequentialEnsemble):
         self.final_states = final_states
         self.interface = interface
         self.name = interface.name
+        self.orderparameter = orderparameter
 
         volume_a = paths.volume.join_volumes(initial_states)
         volume_b = paths.volume.join_volumes(final_states)
@@ -1665,6 +1687,65 @@ class TISEnsemble(SequentialEnsemble):
             AllOutXEnsemble(volume_a | volume_b) & PartOutXEnsemble(interface),
             AllInXEnsemble(volume_a | volume_b) & LengthEnsemble(1)
         ])
+
+    def trajectory_summary(self, trajectory):
+        initial_state_i = None
+        final_state_i = None
+        for state_i in range(len(self.initial_states)):
+            if self.initial_states[state_i](trajectory[0]):
+                initial_state_i = state_i
+                break
+        all_states = self.initial_states + self.final_states
+        for state_i in range(len(all_states)):
+            if all_states[state_i](trajectory[-1]):
+                final_state_i = state_i
+                break
+
+        if self.orderparameter is not None:
+            lambda_traj = self.orderparameter(trajectory)
+            min_lambda = min(lambda_traj)
+            max_lambda = max(lambda_traj)
+        else:
+            min_lambda = None
+            max_lambda = None
+
+        return {
+            'initial_state' : initial_state_i,
+            'final_state' : final_state_i,
+            'max_lambda' : max_lambda,
+            'min_lambda' : min_lambda
+        }
+
+
+    def trajectory_summary_str(self, trajectory):
+        summ = self.trajectory_summary(trajectory)
+        all_states = self.initial_states + self.final_states
+        # TODO: remove the .name from this when string returns correctly
+        init_st_i = summ['initial_state']
+        fin_st_i = summ['final_state']
+        # TODO: how can we have None?
+        if init_st_i == None:
+            init_st = "None"
+        else:
+            init_st = str(self.initial_states[summ['initial_state']].name)
+        if fin_st_i == None:
+            fin_st = "None"
+        else:
+            fin_st = str(all_states[summ['final_state']].name)
+
+        if self.orderparameter is not None:
+            opname = self.orderparameter.name
+        else:
+            opname = "None"
+        min_l = str(summ['min_lambda'])
+        max_l = str(summ['max_lambda'])
+        mystr = (
+            "initial_state=" + init_st + " " +
+            "final_state=" + fin_st + " " +
+            "min_lambda=" + min_l + " " +
+            "max_lambda=" + max_l + " "
+        )
+        return mystr
 
 
 class EnsembleFactory():
@@ -1731,11 +1812,11 @@ class EnsembleFactory():
 
 
     @staticmethod
-    def TISEnsembleSet(volume_a, volume_b, volumes_x, trusted=True):
+    def TISEnsembleSet(volume_a, volume_b, volumes_x, orderparameter):
         myset = []
         for vol in volumes_x:
             myset.append(
-                paths.TISEnsemble(volume_a, volume_b, vol)
+                paths.TISEnsemble(volume_a, volume_b, vol, orderparameter)
             )
         return myset
 

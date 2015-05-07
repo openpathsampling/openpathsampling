@@ -84,8 +84,11 @@ def setUp():
     upper = 0.5
     op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
     vol1 = paths.LambdaVolume(op, lower, upper)
+    vol1.name = "stateA"
     vol2 = paths.LambdaVolume(op, -0.1, 0.7)
+    vol2.name = "interface0"
     vol3 = paths.LambdaVolume(op, 2.0, 2.5)
+    vol3.name = "stateB"
     # we use the following codes to describe trajectories:
     # in : in the state
     # out : out of the state
@@ -857,6 +860,26 @@ and
   len(x) = 1
 )
 ]""")
+
+class testTISEnsemble(EnsembleTest):
+    def setUp(self):
+        self.tis = TISEnsemble(vol1, vol3, vol2, op) 
+        self.traj = ttraj['upper_in_out_cross_out_in']
+        self.minl = min(op(self.traj))
+        self.maxl = max(op(self.traj))
+
+    def test_tis_trajectory_summary(self):
+        summ = self.tis.trajectory_summary(self.traj)
+        assert_equal(summ['initial_state'], 0)
+        assert_equal(summ['final_state'], 0)
+        assert_equal(summ['max_lambda'], self.maxl)
+        assert_equal(summ['min_lambda'], self.minl)
+
+    def test_tis_trajectory_summary_str(self):
+        mystr = self.tis.trajectory_summary_str(self.traj)
+        teststr = ("initial_state=stateA final_state=stateA min_lambda=" +
+                   str(self.minl) + " max_lambda=" + str(self.maxl) + " ")
+        assert_equal(mystr, teststr)
 
 class EnsembleCacheTest(EnsembleTest):
     def _was_cache_reset(self, cache):
