@@ -2,7 +2,11 @@ import svgwrite
 import os
 
 import openpathsampling as paths
+import networkx as nx
 
+import matplotlib.pyplot as plt
+import StringIO
+from matplotlib.figure import Figure
 
 class TreeRenderer(object):
     def __init__(self):
@@ -371,11 +375,11 @@ class MoveTreeBuilder(object):
         self.ens_x = [None] * len(ensembles)
         self.repl_x = [None] * len(ensembles)
 
-        for sset in storage.sampleset:
+        for sset in storage.samplesets[0:2]:
             path = sset.movepath
             # level_y = dict()
 
-            for level, sub in path.traverse_bfs_level(lambda this: tuple(
+            for level, sub in path.level_post_order(lambda this: tuple(
                     [this, old_sset.apply_samples(this.samples)])):
                 self.t_count += 1
 
@@ -438,6 +442,120 @@ class MoveTreeBuilder(object):
         self.renderer.shift_y = -0.5
         self.renderer.height = 1.0 * self.t_count + 1.0
         self.renderer.width = 1.0 * len(ensembles) + 20.5
+
+
+    def mover(self, pathmover, ensembles, clear=True):
+
+        storage = self.storage
+
+        if clear:
+            self.renderer.clear()
+        level_y = dict()
+
+        self.t_count = 1
+
+        self.ens_x = [None] * len(ensembles)
+        self.repl_x = [None] * len(ensembles)
+
+        path = pathmover
+
+        for level, sub in path.level_post_order(lambda this: tuple(
+                [this, None])):
+            self.t_count += 1
+
+            sub_mp, sub_set = sub
+
+            if sub_mp.__class__ is paths.SamplePathMoveChange:
+                self.renderer.add(
+                    self.renderer.block(-8.0 + level, self.t_count, 'blue'))
+                self.renderer.add(
+                    self.renderer.label(
+                        -8.0 + level, self.t_count, 3,
+                        sub_mp.mover.__class__.__name__[:-5],
+                        align='start', color='black')
+                )
+            else:
+                self.renderer.add(
+                    self.renderer.block(-8.0 + level, self.t_count,
+                                        'green'))
+                self.renderer.add(
+                    self.renderer.label(-8.0 + level, self.t_count, 3,
+                                        sub_mp.__class__.__name__[:-5],
+                                        align='start', color='black')
+                )
+
+            if level + 1 in level_y \
+                    and level_y[level + 1] == self.t_count - 1:
+                self.renderer.add(
+                    self.renderer.v_connection(-7.0 + level, self.t_count,
+                                               self.t_count - 1, 'black')
+                )
+                del level_y[level + 1]
+
+            if level in level_y and level_y[level]:
+                self.renderer.add(
+                    self.renderer.v_connection(-8.0 + level, self.t_count,
+                                               level_y[level], 'black')
+                )
+
+            level_y[level] = self.t_count
+
+            self.render_ensemble_mover_line(ensembles, sub_mp, color='gray')
+#            self.render_replica_line(len(ensembles), sub_set, color='gray')
+
+        self.t_count += 1
+
+#        self.render_ensemble_line(ensembles, sset)
+#        self.render_replica_line(len(ensembles), sset)
+
+#        self.renderer.add(self.renderer.block(-8.0, self.t_count, 'black'))
+#        self.renderer.add(
+#            self.renderer.label(-8.0, self.t_count, 3,
+#                                'storage.sampleset[%d]' % sset.idx[storage],
+#                                align='start', color='black')
+#        )
+
+        self.t_count += 1
+
+        self.renderer.shift_x = - 9.0
+        self.renderer.shift_y = -0.5
+        self.renderer.height = 1.0 * self.t_count + 1.0
+        self.renderer.width = 1.0 * len(ensembles) + 20.5
+
+    def render_ensemble_mover_line(self, ensembles, mover, yp=None, color='black'):
+        if yp is None:
+            yp = self.t_count
+
+        storage = self.storage
+        for ens_idx, ens in enumerate(ensembles):
+            print mover.ensembles
+            if mover.ensembles is None or ens in mover.ensembles or (type(ens) is paths.ReplicaExchangeMover and ens in mover.ensembles[0]):
+                txt = str(ens.idx[storage])
+
+                my_color = color
+
+#                if traj_idx in self.ens_x:
+#                    self.renderer.add(
+#                        self.renderer.v_hook(self.traj_ens_x[traj_idx],
+#                                             self.traj_ens_y[traj_idx], ens_idx,
+#                                             self.t_count, 'black'))
+#                    if self.traj_ens_x[traj_idx] != ens_idx:
+#                        my_color = 'red'
+#                else:
+#                    if len(self.ens_x) > 0:
+#                        my_color = 'red'
+
+#                if my_color != 'gray':
+                self.renderer.add(
+                    self.renderer.connector(ens_idx, yp, my_color, txt))
+
+#        for ens_idx, ens in enumerate(ensembles):
+#            samp_ens = [samp for samp in sset if samp.ensemble is ens]
+#            if len(samp_ens) > 0:
+#                traj_idx = samp_ens[0].trajectory.idx[storage]
+#                self.ens_x[ens_idx] = traj_idx
+#                self.traj_ens_x[traj_idx] = ens_idx
+#                self.traj_ens_y[traj_idx] = self.t_count
 
     def render_ensemble_line(self, ensembles, sset, yp=None, color='black'):
         if yp is None:
@@ -737,3 +855,102 @@ class PathTreeBuilder(object):
             matrix[py - min_y][px - min_x] = s
 
         return matrix
+
+
+class SVGDiGraph(nx.DiGraph):
+  def _repr_svg_(self):
+     plt.ioff() # turn off interactive mode
+     fig=plt.figure(figsize=(2,2))
+     ax = fig.add_subplot(111)
+     nx.draw_shell(self, ax=ax)
+     output = StringIO.StringIO()
+     fig.savefig(output,format='svg')
+     plt.ion() # turn on interactive mode
+     return output.getvalue()
+
+class MoverTreeX(object):
+    """Class to create a networkX based representation of a pathmover and change
+
+    """
+    def __init__(self):
+        self.network = None
+
+    def mover(self, pathmover, change=None):
+        G=nx.DiGraph()
+
+        node_list = dict()
+
+
+        if change is not None:
+
+        for idx, data in enumerate(pathmover.level_post_order(lambda this: this)):
+            level, node = data
+            node_list[node] = idx
+            G.add_node(idx, name=node.name, ensembles=node)
+
+        for idx, data in enumerate(pathmover.level_post_order(lambda this: this)):
+            level, node = data
+            subnodes = node.submovers
+            for subnode in subnodes:
+                G.add_edge(node_list[node], node_list[subnode])
+
+
+        pos = nx.spring_layout(G)
+
+        for idx, data in enumerate(pathmover.level_post_order(lambda this: this)):
+            level, node = data
+            nx.draw_networkx_nodes(G,pos,
+                       nodelist=[idx],
+                       node_color='r',
+                       node_size=500,
+                   alpha=0.8)
+
+#        plt.title("draw_networkx")
+
+        plt.axis('off')
+        plt.show()
+
+        return G
+#        A = nx.to_agraph(G)
+#        A.layout('dot', args='-Nfontsize=10 -Nwidth=".2" -Nheight=".2" -Nmargin=0 -Gfontsize=8')
+#        A.draw('test.png')
+
+#        pos=nx.layout(G)
+#        nx.draw(G,pos,with_labels=False,arrows=False)
+
+        # # nodes
+        # nx.draw_networkx_nodes(G,pos,
+        #                        nodelist=[0,1,2,3],
+        #                        node_color='r',
+        #                        node_size=500,
+        #                    alpha=0.8)
+        # nx.draw_networkx_nodes(G,pos,
+        #                        nodelist=[4,5,6,7],
+        #                        node_color='b',
+        #                        node_size=500,
+        #                    alpha=0.8)
+        #
+        # # edges
+        # nx.draw_networkx_edges(G,pos,width=1.0,alpha=0.5)
+        # nx.draw_networkx_edges(G,pos,
+        #                        edgelist=[(0,1),(1,2),(2,3),(3,0)],
+        #                        width=8,alpha=0.5,edge_color='r')
+        # nx.draw_networkx_edges(G,pos,
+        #                        edgelist=[(4,5),(5,6),(6,7),(7,4)],
+        #                        width=8,alpha=0.5,edge_color='b')
+        #
+        #
+        # # some math labels
+        # labels={}
+        # labels[0]=r'$a$'
+        # labels[1]=r'$b$'
+        # labels[2]=r'$c$'
+        # labels[3]=r'$d$'
+        # labels[4]=r'$\alpha$'
+        # labels[5]=r'$\beta$'
+        # labels[6]=r'$\gamma$'
+        # labels[7]=r'$\delta$'
+        # nx.draw_networkx_labels(G,pos,labels,font_size=16)
+
+    def to_svg(self):
+        return self.network
