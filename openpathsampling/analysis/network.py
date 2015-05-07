@@ -50,34 +50,10 @@ class MSTISNetwork(TISNetwork):
     def __init__(self, trans_info):
         self.trans_info = trans_info
         if not hasattr(self, "from_state"):
-            states, interfaces, names, orderparams = zip(*trans_info)
-            all_states = paths.volume.join_volumes(states)
-            all_states.name = "all states"
             self.from_state = {}
             self.outer_ensembles = []
             self.outers = []
-            for (state, ifaces, name, op) in trans_info:
-                state_index = states.index(state)
-                state.name = name
-                other_states = states[:state_index]+states[state_index+1:]
-                union_others = paths.volume.join_volumes(other_states)
-                union_others.name = "all states except " + str(name)
-
-                self.from_state[state] = paths.RETISTransition(
-                    stateA=state, 
-                    stateB=union_others,
-                    interfaces=ifaces[:-1],
-                    name="Out "+name,
-                    orderparameter=op
-                )
-                self.outers.append(ifaces[-1])
-                outer_ensemble = paths.TISEnsemble(
-                    initial_states=state,
-                    final_states=all_states,
-                    interface=ifaces[-1]
-                )
-                outer_ensemble.name = "outer " + str(state)
-                self.outer_ensembles.append(outer_ensemble)
+            self.build_from_state_transitions(trans_info)
 
 
         # get the movers from all of our sampling-based transitions
@@ -88,7 +64,33 @@ class MSTISNetwork(TISNetwork):
 
 #    def disallow(self, stateA, stateB):
 
-    #def build_from_state_transitions(self):
+    def build_from_state_transitions(self, trans_info):
+        states, interfaces, names, orderparams = zip(*trans_info)
+        all_states = paths.volume.join_volumes(states)
+        all_states.name = "all states"
+        for (state, ifaces, name, op) in trans_info:
+            state_index = states.index(state)
+            state.name = name
+            other_states = states[:state_index]+states[state_index+1:]
+            union_others = paths.volume.join_volumes(other_states)
+            union_others.name = "all states except " + str(name)
+
+            self.from_state[state] = paths.RETISTransition(
+                stateA=state, 
+                stateB=union_others,
+                interfaces=ifaces[:-1],
+                name="Out "+name,
+                orderparameter=op
+            )
+            self.outers.append(ifaces[-1])
+            outer_ensemble = paths.TISEnsemble(
+                initial_states=state,
+                final_states=all_states,
+                interface=ifaces[-1]
+            )
+            outer_ensemble.name = "outer " + str(state)
+            self.outer_ensembles.append(outer_ensemble)
+
 
     def build_movers(self):
         for label in ['shooting', 'pathreversal', 'minus', 'repex']:
