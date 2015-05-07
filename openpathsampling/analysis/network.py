@@ -60,13 +60,33 @@ class MSTISNetwork(TISNetwork):
             self.movers = { }
             self.build_movers()
 
-        # TODO: add building of analysis transitions (not to be saved)
+        # set up analysis transitions (not to be saved)
+        self.analysis_transitions = { }
+        for stateA in self.from_state.keys():
+            state_index = self.states.index(stateA)
+            fromA = self.from_state[stateA]
+            other_states = self.states[:state_index]+self.states[state_index+1:]
+            for stateB in other_states:
+                trans = paths.RETISTransition(
+                    stateA=stateA,
+                    stateB=stateB,
+                    interfaces=fromA.interfaces,
+                    name=str(stateA) + "->" + str(stateB),
+                    orderparameter=fromA.orderparameter
+                )
+                # override created stuff
+                trans.ensembles = fromA.ensembles
+                trans.movers = fromA.movers
+                self.analysis_transitions[(stateA, stateB)] = trans
+
+
 
 
 #    def disallow(self, stateA, stateB):
 
     def build_from_state_transitions(self, trans_info):
         states, interfaces, names, orderparams = zip(*trans_info)
+        self.states = states
         all_states = paths.volume.join_volumes(states)
         all_states.name = "all states"
         for (state, ifaces, name, op) in trans_info:
@@ -148,7 +168,7 @@ class MSTISNetwork(TISNetwork):
             0.2 / len(shooting_chooser.movers),
             len(self.outer_ensembles)
         ]
-        root_mover = paths.RandomChoiceMover(
+        self.root_mover = paths.RandomChoiceMover(
             movers=[shooting_chooser, repex_chooser, rev_chooser,
                     minus_chooser, msouter_chooser],
             weights=weights
@@ -156,7 +176,7 @@ class MSTISNetwork(TISNetwork):
 
 
     def default_movers(self):
-        pass
+        return self.root_mover
 
     def rate_matrix(self, storage):
         pass
