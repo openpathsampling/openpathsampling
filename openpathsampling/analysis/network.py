@@ -55,11 +55,12 @@ class MSTISNetwork(TISNetwork):
             self.outers = []
             self.build_from_state_transitions(trans_info)
 
-
         # get the movers from all of our sampling-based transitions
         if not hasattr(self, "movers"):
             self.movers = { }
             self.build_movers()
+
+        # TODO: add building of analysis transitions (not to be saved)
 
 
 #    def disallow(self, stateA, stateB):
@@ -140,13 +141,18 @@ class MSTISNetwork(TISNetwork):
             movers=self.movers['msouter_repex'],
             name="MSOuterRepexChooser"
         )
+        weights = [
+            len(shooting_chooser.movers),
+            len(repex_chooser.movers) / 2,
+            len(rev_chooser.movers) / 2,
+            0.2 / len(shooting_chooser.movers),
+            len(self.outer_ensembles)
+        ]
         root_mover = paths.RandomChoiceMover(
             movers=[shooting_chooser, repex_chooser, rev_chooser,
                     minus_chooser, msouter_chooser],
-            weights=None
+            weights=weights
         )
-
-
 
 
     def default_movers(self):
