@@ -31,7 +31,7 @@ class ToyPlot(object):
         self.X, self.Y = np.meshgrid(range_x, range_y)
         pylab.rcParams['figure.figsize'] = 9, 6
         self.repcolordict = {0 : 'k-', 1 : 'r-', 2 : 'g-', 3 : 'b-', 
-                             4 : 'r-', 5 : 'k-'}
+                             4 : 'r-'}
 
         self.contour_range = np.arange(0.0, 1.5, 0.1)
 
@@ -100,7 +100,7 @@ class ToyPlot(object):
                     zorder=1)
         for traj in trajectories:
             plt.plot(traj.xyz()[:,0,0], traj.xyz()[:,0,1],
-                     self.repcolordict[trajectories.index(traj)],
+                     self.repcolordict[trajectories.index(traj) % 5],
                      zorder=2)
 
     def reset(self):
