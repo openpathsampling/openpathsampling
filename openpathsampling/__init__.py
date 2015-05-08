@@ -9,7 +9,8 @@ from ensemble import (
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble,
     SequentialEnsemble, IntersectionEnsemble, UnionEnsemble,
     SymmetricDifferenceEnsemble, RelativeComplementEnsemble,
-    SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble
+    SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble,
+    OptionalEnsemble
 )
 
 from snapshot import Snapshot, Configuration, Momentum
