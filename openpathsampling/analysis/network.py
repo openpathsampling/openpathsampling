@@ -178,6 +178,12 @@ class MSTISNetwork(TISNetwork):
     def default_movers(self):
         return self.root_mover
 
+    def __str__(self):
+        mystr = "Multiple State TIS Network:\n"
+        for state in self.from_state.keys():
+            mystr += str(self.from_state[state])
+        return mystr
+
     def rate_matrix(self, storage):
         pass
 
