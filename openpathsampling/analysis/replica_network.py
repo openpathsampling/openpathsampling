@@ -2,9 +2,24 @@ import networkx as nx
 
 class ReplicaNetwork(object):
 
-    def __init__(self, replicas, storage=None):
+    def __init__(self, repex_movers=None, ensembles=None, storage=None):
         self.analysis = { } 
-        self.replicas = replicas
+        if repex_movers is None and ensembles is None:
+            raise RuntimeError("Must define either repex_movers or ensembles")
+        if ensembles is None:
+            tmp_ensembles = []
+            for mover in repex_movers:
+                tmp_ensembles.extend(mover.ensembles)
+            sort_ens = sorted(tmp_ensembles):
+            ensembles = [sort_ens[0]]
+            for ens in sort_ens[1:]:
+                if ens != ensembles[-1]:
+                    ensembles.append(ens)
+            
+
+        self.repex_movers = repex_movers
+        self.ensembles = ensembles
+
         self.storage = storage
 
     def check_storage(self, storage):
