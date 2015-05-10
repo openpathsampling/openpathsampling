@@ -64,7 +64,7 @@ from analysis.tis_analysis import TISTransition, RETISTransition, Transition, \
 
 from analysis.replica_network import (
     ReplicaNetwork, trace_ensembles_for_replica,
-    trace_replicas_for_ensemble
+    trace_replicas_for_ensemble, condense_repeats
 )
 
 from pathmover import Details, MoveDetails, SampleDetails
