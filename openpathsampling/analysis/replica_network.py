@@ -26,6 +26,8 @@ class ReplicaNetwork(object):
 
         self.repex_movers = repex_movers
         self.ensembles = ensembles
+        self.all_ensembles = []
+        self.all_replicas = []
 
         self.storage = storage
 
@@ -39,15 +41,23 @@ class ReplicaNetwork(object):
             if storage != self.storage:
                 self.analysis = { }
                 self.traces = { } 
+                self.all_replicas = []
+                self.all_ensembles = []
             self.storage = storage
         if self.storage == None:
             raise RuntimeError("No storage given for analysis")
+        if self.all_replicas == [] or self.all_ensembles == []:
+            reps_ens = get_all_ensembles_and_replicas(storage)
+            self.all_replicas = reps_ens['replicas']
+            self.all_ensembles = reps_ens['ensembles']
+
 
     def analyze_exchanges(self, storage, force=False):
         self.check_storage(storage)
         if force == False and self.analysis != { }:
             return self.analysis
-
+        # TODO: this generates two matrices: naccepted and ntrials. Each
+        # should be represented as a sparse upper triangular matrix.
         pass
 
     def analyze_traces(self, storage, force=False):
@@ -55,28 +65,54 @@ class ReplicaNetwork(object):
         if force == False and self.traces != { }:
             return self.traces
         for ensemble in [s.ensemble for s in self.storage.sampleset[0]]:
-            self.traces[ensemble] = trace_replicas_for_ensemble(ensemble,
-                                                                self.storage)
+            self.traces[ensemble] = condense_repeats(
+                trace_replicas_for_ensemble(ensemble, self.storage)
+            )
         for replica in [s.replica for s in self.storage.sampleset[0]]:
-            self.traces[replica] = trace_ensembles_for_replica(replica,
-                                                               self.storage)
+            self.traces[replica] = condense_repeats(
+                trace_ensembles_for_replica(replica, self.storage)
+            )
         return self.traces
 
+    def transition_matrix(self, storage=None, index_order=None, force=False):
+        (nacc, ntry) = self.analysis_exchanges(storage, force)
+        # TODO: convert it to a pandas dataframe and return it
+
+
     def diagram(self, storage=None, force=False):
-        self.check_storage(storage)
-        pass
+        (nacc, ntry) = self.analysis_exchanges(storage, force)
+        # TODO: make this into a networkx diagram. It would be really nice
+        # if a given interface set could be forced to be collinear
 
     def flow(self, bottom, top, storage=None, force=False):
-        self.check_storage(storage)
         traces = self.analyze_traces(storage, force)
         pass
 
     def one_way_trips(self, bottom, top, storage=None, force=False):
+        traces = self.analyze_traces(storage, force)
         pass
 
     def round_trips(self, bottom, top, storage=None, force=False):
-        self.check_storage(storage)
+        traces = self.analyze_traces(storage, force)
         pass
+
+def get_all_ensembles_and_replicas(storage, first_sampleset=True):
+    if first_sampleset:
+        ensembles = [s.ensemble for s in storage.sampleset[0]]
+        replicas = [s.replica for s in storage.sampleset[0]]
+    else:
+        # This approach uses dicts so we don't have to hunt for the key; the
+        # value assigned is arbitrarily 1. Still has to loop over
+        # nsets*nsamples, but that's better than nsets*nsamples*nensembles
+        ensembles_dict = {}
+        replicas_dict = {}
+        for sset in storage.sampleset:
+            for s in sset:
+                ensembles[s.ensemble] = 1
+                replicas[s.replica] = 1
+        ensembles = ensembles_dict.keys()
+        replicas = replicas_dict.keys()
+    return { 'ensembles' : ensembles, 'replicas' : replicas }
 
 
 def trace_ensembles_for_replica(replica, storage):
