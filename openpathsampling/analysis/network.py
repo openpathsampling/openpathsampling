@@ -1,4 +1,5 @@
 import openpathsampling as paths
+from openpathsampling.todict import ops_object
 
 class TransitionNetwork(object):
     def __init__(self):
@@ -38,6 +39,7 @@ def get_movers_from_transitions(label, transitions):
         movers += trans.movers[label]
     return movers
 
+@ops_object
 class MSTISNetwork(TISNetwork):
     """
     Multiple state transition interface sampling network.
@@ -47,6 +49,28 @@ class MSTISNetwork(TISNetwork):
     which go to any final state. Second, there are analysis transitions.
     These are based on ensembles which go to a specific final state.
     """
+    def to_dict(self):
+        ret_dict = { 
+            'from_state' : self.from_state,
+            'movers' : self.movers,
+            'outer_ensembles' : self.outer_ensembles,
+            'outers' : self.outers,
+            'states' : self.states,
+            'trans_info' : self.trans_info
+        }
+        return ret_dict
+
+    @staticmethod
+    def from_dict(dct):
+        network = MSTISNetwork(dct['trans_info'])
+        network.from_state = dct['from_state']
+        network.movers = dct['movers']
+        network.outer_ensembles = dct['outer_ensembles']
+        network.outers = dct['outers']
+        network.states = dct['states']
+        network.build_analysis_transitions()
+        return network
+
     def __init__(self, trans_info):
         self.trans_info = trans_info
         if not hasattr(self, "from_state"):
@@ -60,6 +84,9 @@ class MSTISNetwork(TISNetwork):
             self.movers = { }
             self.build_movers()
 
+        self.build_analysis_transitions()
+
+    def build_analysis_transitions(self):
         # set up analysis transitions (not to be saved)
         self.analysis_transitions = { }
         for stateA in self.from_state.keys():
