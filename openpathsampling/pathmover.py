@@ -297,7 +297,7 @@ class SampleGenerator(PathMover):
         samples = [ self.select_sample(globalstate, ens) for ens in self.ensembles ]
 
         # pass these samples to the generator
-        trials = self._generate(*samples)
+        trials = self(*samples)
 
         # accept/reject
         accepted, details = self._accept(trials)
@@ -519,10 +519,24 @@ class RandomSubtrajectorySelectGenerator(SampleGenerator):
 
     If there are no subtrajectories which satisfy the subensemble, this
     returns the zero-length trajectory.
+
+    Parameters
+    ----------
+    subensemble : Ensemble
+        the subensemble to be searched for
+    n_l : int
+        the number of
+    ensembles : list of Ensembles or None
+        the set of allows samples to chose from
+
+    Attribues
+    ---------
+
+
     '''
-    def __init__(self, subensemble, n_l, ensemble=None):
+    def __init__(self, subensemble, n_l, ensembles=None):
         super(RandomSubtrajectorySelectGenerator, self).__init__(
-            in_ensembles=[ensemble],
+            in_ensembles=ensembles,
             out_ensembles=[subensemble]
         )
         self.n_l = n_l
