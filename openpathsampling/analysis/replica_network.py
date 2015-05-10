@@ -10,11 +10,18 @@ class ReplicaNetwork(object):
             tmp_ensembles = []
             for mover in repex_movers:
                 tmp_ensembles.extend(mover.ensembles)
-            sort_ens = sorted(tmp_ensembles):
+            sort_ens = sorted(tmp_ensembles)
             ensembles = [sort_ens[0]]
             for ens in sort_ens[1:]:
                 if ens != ensembles[-1]:
                     ensembles.append(ens)
+
+        if repex_movers is None:
+            repex_movers = []
+            for mover in storage.pathmovers:
+                if isinstance(mover, paths.ReplicaExchangeMover):
+                    pass
+
             
 
         self.repex_movers = repex_movers
@@ -52,8 +59,17 @@ class ReplicaNetwork(object):
         pass
 
 
-def trace_interfaces_for_replica(replica, storage):
-    pass
+def trace_ensembles_for_replica(replica, storage):
+    trace = []
+    for sset in storage.samplesets:
+        trace.append(sset[replica].ensemble)
+    return trace
 
-def trace_replicas_for_interface(interface, storage):
+def trace_replicas_for_ensemble(ensemble, storage):
+    trace = []
+    for sset in storage.samplesets:
+        trace.append(sset[ensemble].replica)
+    return trace
+
+def condense_repeats(ll):
     pass
