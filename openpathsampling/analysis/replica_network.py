@@ -1,12 +1,22 @@
+import openpathsampling as paths
 import networkx as nx
+
 
 class ReplicaNetwork(object):
 
     def __init__(self, repex_movers=None, ensembles=None, storage=None):
         self.analysis = { } 
         self.traces = { } 
-        if repex_movers is None and ensembles is None:
+        self.all_ensembles = []
+        self.all_replicas = []
+        if repex_movers is None and ensembles is None and storage is None:
             raise RuntimeError("Must define either repex_movers or ensembles")
+        self.storage = storage
+        if self.storage is not None:
+            self.check_storage(self.storage)
+        if repex_movers is None and ensembles is None:
+            ensembles = self.all_ensembles
+
         if ensembles is None:
             tmp_ensembles = []
             for mover in repex_movers:
@@ -26,10 +36,7 @@ class ReplicaNetwork(object):
 
         self.repex_movers = repex_movers
         self.ensembles = ensembles
-        self.all_ensembles = []
-        self.all_replicas = []
 
-        self.storage = storage
 
     def check_storage(self, storage):
         """Checks whether we have a valid storage to look at.
@@ -64,11 +71,11 @@ class ReplicaNetwork(object):
         self.check_storage(storage)
         if force == False and self.traces != { }:
             return self.traces
-        for ensemble in [s.ensemble for s in self.storage.sampleset[0]]:
+        for ensemble in [s.ensemble for s in self.storage.samplesets[0]]:
             self.traces[ensemble] = condense_repeats(
                 trace_replicas_for_ensemble(ensemble, self.storage)
             )
-        for replica in [s.replica for s in self.storage.sampleset[0]]:
+        for replica in [s.replica for s in self.storage.samplesets[0]]:
             self.traces[replica] = condense_repeats(
                 trace_ensembles_for_replica(replica, self.storage)
             )
@@ -98,8 +105,8 @@ class ReplicaNetwork(object):
 
 def get_all_ensembles_and_replicas(storage, first_sampleset=True):
     if first_sampleset:
-        ensembles = [s.ensemble for s in storage.sampleset[0]]
-        replicas = [s.replica for s in storage.sampleset[0]]
+        ensembles = [s.ensemble for s in storage.samplesets[0]]
+        replicas = [s.replica for s in storage.samplesets[0]]
     else:
         # This approach uses dicts so we don't have to hunt for the key; the
         # value assigned is arbitrarily 1. Still has to loop over
