@@ -650,8 +650,9 @@ class PathTreeBuilder(object):
         self.storage = storage
         self.renderer = TreeRenderer()
         self.op = op
+        self.show_redundant = False
         if states is None:
-            states = {}
+            states = []
         self.states = states
 
     @staticmethod
@@ -686,9 +687,9 @@ class PathTreeBuilder(object):
         lightcolor = "gray"
 
         first = True
-        draw_okay = False
 
         for sample in samples:
+            draw_okay = False
             if first is True:
                 first = False
                 color = 'black'
@@ -790,8 +791,8 @@ class PathTreeBuilder(object):
                 for pos, snapshot in enumerate(sample.trajectory):
                     conf = snapshot
                     if not conf in p_y:
-                        p_y[conf] = t_count
                         p_x[conf] = shift + pos
+                        p_y[conf] = t_count
 
                         pos_x = p_x[conf]
                         pos_y = p_y[conf]
@@ -802,10 +803,9 @@ class PathTreeBuilder(object):
                         else:
                             self.renderer.add(
                                 self.renderer.block(pos_x, pos_y, color, ""))
-
-                    elif False:
-                        pos_x = p_x[conf]
-                        pos_y = p_y[conf]
+                    elif self.show_redundant:
+                        pos_y = t_count
+                        pos_x = shift + pos
                         if self.op is not None:
                             self.renderer.add(
                                 self.renderer.block(pos_x, pos_y, 'gray',
