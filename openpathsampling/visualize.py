@@ -4,8 +4,12 @@ import os
 import openpathsampling as paths
 import networkx as nx
 
+
+import json
 import matplotlib.pyplot as plt
 import StringIO
+from networkx.readwrite import json_graph
+from IPython.display import HTML
 from matplotlib.figure import Figure
 
 class TreeRenderer(object):
@@ -528,7 +532,6 @@ class MoveTreeBuilder(object):
 
         storage = self.storage
         for ens_idx, ens in enumerate(ensembles):
-            print mover.ensembles
             if mover.ensembles is None or ens in mover.ensembles or (type(ens) is paths.ReplicaExchangeMover and ens in mover.ensembles[0]):
                 txt = str(ens.idx[storage])
 
@@ -868,89 +871,152 @@ class SVGDiGraph(nx.DiGraph):
      plt.ion() # turn on interactive mode
      return output.getvalue()
 
-class MoverTreeX(object):
+class MoveTreeNX(object):
     """Class to create a networkX based representation of a pathmover and change
 
     """
-    def __init__(self):
-        self.network = None
+    def __init__(self, pathmover):
+        self.pathmover = pathmover
+        self._G = None
 
-    def mover(self, pathmover, change=None):
-        G=nx.DiGraph()
+    @property
+    def _enumeration(self):
+        return enumerate(self.pathmover.level_post_order(lambda this: this))
 
-        node_list = dict()
+    @property
+    def G(self):
+        if self._G is None:
+            G = nx.DiGraph()
 
+            node_list = dict()
 
-        if change is not None:
+            for idx, data in self._enumeration:
+                level, node = data
+                node_list[node] = idx
+                G.add_node(idx, name=node.name)
 
-        for idx, data in enumerate(pathmover.level_post_order(lambda this: this)):
-            level, node = data
-            node_list[node] = idx
-            G.add_node(idx, name=node.name, ensembles=node)
+            for idx, data in self._enumeration:
+                level, node = data
+                subnodes = node.submovers
+                for subnode in subnodes:
+                    G.add_edge(node_list[node], node_list[subnode])
 
-        for idx, data in enumerate(pathmover.level_post_order(lambda this: this)):
-            level, node = data
-            subnodes = node.submovers
-            for subnode in subnodes:
-                G.add_edge(node_list[node], node_list[subnode])
+            self._G = G
 
+        return self._G
 
+    def draw(self):
+        G = self.G
         pos = nx.spring_layout(G)
 
-        for idx, data in enumerate(pathmover.level_post_order(lambda this: this)):
+        for idx, data in self._enumeration:
             level, node = data
-            nx.draw_networkx_nodes(G,pos,
-                       nodelist=[idx],
-                       node_color='r',
-                       node_size=500,
-                   alpha=0.8)
-
-#        plt.title("draw_networkx")
+            nx.draw_networkx_nodes(
+                G,
+                pos,
+                nodelist=[idx],
+                node_color='r',
+                node_size=500,
+                alpha=0.8
+            )
 
         plt.axis('off')
         plt.show()
 
         return G
-#        A = nx.to_agraph(G)
-#        A.layout('dot', args='-Nfontsize=10 -Nwidth=".2" -Nheight=".2" -Nmargin=0 -Gfontsize=8')
-#        A.draw('test.png')
 
-#        pos=nx.layout(G)
-#        nx.draw(G,pos,with_labels=False,arrows=False)
+    @property
+    def json_tree(self):
+        data = json_graph.tree_data(self.G,len(self.G)-1)
+        return json.dumps(data)
 
-        # # nodes
-        # nx.draw_networkx_nodes(G,pos,
-        #                        nodelist=[0,1,2,3],
-        #                        node_color='r',
-        #                        node_size=500,
-        #                    alpha=0.8)
-        # nx.draw_networkx_nodes(G,pos,
-        #                        nodelist=[4,5,6,7],
-        #                        node_color='b',
-        #                        node_size=500,
-        #                    alpha=0.8)
-        #
-        # # edges
-        # nx.draw_networkx_edges(G,pos,width=1.0,alpha=0.5)
-        # nx.draw_networkx_edges(G,pos,
-        #                        edgelist=[(0,1),(1,2),(2,3),(3,0)],
-        #                        width=8,alpha=0.5,edge_color='r')
-        # nx.draw_networkx_edges(G,pos,
-        #                        edgelist=[(4,5),(5,6),(6,7),(7,4)],
-        #                        width=8,alpha=0.5,edge_color='b')
-        #
-        #
-        # # some math labels
-        # labels={}
-        # labels[0]=r'$a$'
-        # labels[1]=r'$b$'
-        # labels[2]=r'$c$'
-        # labels[3]=r'$d$'
-        # labels[4]=r'$\alpha$'
-        # labels[5]=r'$\beta$'
-        # labels[6]=r'$\gamma$'
-        # labels[7]=r'$\delta$'
-        # nx.draw_networkx_labels(G,pos,labels,font_size=16)
+    @property
+    def json_node_link(self):
+        data = json_graph.node_link_data(self.G)
+        return json.dumps(data)
 
-    def to_svg(self):
-        return self.network
+    def d3vis(self):
+        return '''
+        <style>
+
+        .node circle {
+          fill: #fff;
+          stroke: steelblue;
+          stroke-width: 1.5px;
+        }
+
+        .node {
+          font: 10px sans-serif;
+          stroke: black;
+          stroke-width:0.35px;
+        }
+
+        .link {
+          fill: none;
+          stroke: #ccc;
+          stroke-width: 1.5px;
+        }
+
+        </style>
+        <div><svg id="d3-circ-tree-svg"></svg></div>
+        ''' + '<script>var graph = ' + self.json_tree + ';</script>' + \
+        '''
+        <script src="http://d3js.org/d3.v3.min.js"></script>
+
+        <script>
+
+//        require.config({paths: {d3: "http://d3js.org/d3.v3.min"}});
+
+//        require(["d3"], function(d3) {
+
+            var diameter = 800;
+            var padding = 100;
+
+            var tree = d3.layout.tree()
+                .size([360, diameter / 2 - 120])
+                .separation(function(a, b) { return (a.parent == b.parent ? 1 : 2) / a.depth; });
+
+            var nodes = tree.nodes(graph),
+                links = tree.links(nodes);
+
+            var diagonal = d3.svg.diagonal.radial()
+                .projection(function(d) { return [d.y, d.x / 360 * Math.PI]; });
+
+            var vertical = d3.svg.diagonal.radial()
+                .projection(function(d) { return [-d.x, -d.y / 360 * Math.PI]; });
+
+            var svg = d3.select("#d3-circ-tree-svg")
+                .attr("width", (diameter + padding))
+                .attr("height", (diameter + padding) / 2)
+              .append("g")
+                .attr("transform", "translate(" + (diameter + padding) / 2 + "," + (0*(diameter + padding) / 2 + 50) + ")rotate(90)");
+
+            var link = svg.selectAll(".link")
+              .data(links)
+              .enter().append("path")
+              .attr("class", "link")
+              .attr("d", diagonal);
+
+            link.append("circle")
+              .attr("r", 4.5);
+
+            var node = svg.selectAll(".node")
+              .data(nodes)
+            .enter().append("g")
+              .attr("class", "node")
+              .attr("transform", function(d) { return "rotate(" + (d.x / 2 - 90) + ")translate(" + d.y + ")"; })
+
+            node.append("circle")
+              .attr("r", 4.5);
+
+            node.append("text")
+              .attr("dy", ".31em")
+              .attr("text-anchor", function(d) { return d.x < 180 ? "start" : "end"; })
+              .attr("transform", function(d) { return d.x < 180 ? "translate(8)" : "rotate(180)translate(-8)"; })
+              .text(function(d) { return d.name; });
+
+            d3.select(self.frameElement).style("height", diameter + 50 + "px");
+//        });
+
+        </script>
+        '''

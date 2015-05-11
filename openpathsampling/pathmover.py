@@ -127,16 +127,16 @@ class PathMover(object):
 
     def __iter__(self):
         yield self
-        for submove in self.submoves:
+        for submove in self.submovers:
             for change in submove:
                 yield change
 
     def __getitem__(self, item):
         if type(item) is int:
-            return self.submoves[item]
+            return self.submovers[item]
 
     def __reversed__(self):
-        for submove in self.submoves:
+        for submove in self.submovers:
             for change in reversed(submove):
                 yield change
 
@@ -159,13 +159,13 @@ class PathMover(object):
                 #print 'found head'
                 # found current head node, check, if children match in order
                 left = 0
-                submovers = [ch.mover for ch in self.submoves]
+                submovers = [ch.mover for ch in self.submovers]
                 subvalues = items[1]
                 if type(subvalues) is not list:
                     subvalues = [subvalues]
 
                 for sub in zip(subvalues[0::2], subvalues[1::2]):
-                    if left >= len(self.submoves):
+                    if left >= len(self.submovers):
                         # no more submoves to match
                         return False
                     if sub is None:
@@ -173,14 +173,14 @@ class PathMover(object):
                         left = left + 1
                     if type(sub) is dict:
                         if sub[0] is None:
-                            while left < len(self.submoves):
-                                if not [self.submoves[left].mover, [sub[1]]] in self.submoves[left]:
+                            while left < len(self.submovers):
+                                if not [self.submovers[left].mover, [sub[1]]] in self.submovers[left]:
                                     left = left + 1
                                 else:
                                     left = left + 1
                                     break
 
-                            if left == len(self.submoves):
+                            if left == len(self.submovers):
                                 return False
                         elif sub[0] not in submovers[left:]:
                             #print 'missing sub', sub.keys()[0], 'in', submovers[left:]
@@ -188,7 +188,7 @@ class PathMover(object):
                         else:
                             idx = submovers.index(sub[0])
                             left = idx + 1
-                            if not [sub[0], [sub[1]]] in self.submoves[idx]:
+                            if not [sub[0], [sub[1]]] in self.submovers[idx]:
                                 #print 'try', {sub.keys()[0] : sub.values()[0]}
                                 return False
 
@@ -241,7 +241,7 @@ class PathMover(object):
             # Disable checking for submoves for now
 
             # the head node did not fit so continue trying subnodes
-#            for sub in self.submoves:
+#            for sub in self.submovers:
 #                if item in sub:
 #                    return True
 
@@ -251,10 +251,10 @@ class PathMover(object):
             raise ValueError('Only PathMovers or PathMoveChanges can be tested.')
 
     def tree(self):
-        return {self : [ ch.tree() for ch in self.submoves] }
+        return {self : [ ch.tree() for ch in self.submovers] }
 
     def movetree(self):
-        return {self.mover : [ ch.movetree() for ch in self.submoves] }
+        return {self.mover : [ ch.movetree() for ch in self.submovers] }
 
     def keytree(self, movepath=None):
 
@@ -264,7 +264,7 @@ class PathMover(object):
         result = list()
         result.append( ( movepath, self ) )
         mp = []
-        for sub in self.submoves:
+        for sub in self.submovers:
             subtree = sub.keytree()
             result.extend([ ( movepath + [mp + m[0]], m[1] ) for m in subtree ])
 #            print subtree[-1][0]
@@ -291,10 +291,10 @@ class PathMover(object):
             nested list of the results of the map
         """
 
-        if len(self.submoves) > 1:
-            return { fnc(self, **kwargs) : [node.map_tree(fnc, **kwargs) for node in self.submoves]}
-        elif len(self.submoves) == 1:
-            return { fnc(self, **kwargs) : self.submoves[0].map_tree(fnc, **kwargs)}
+        if len(self.submovers) > 1:
+            return { fnc(self, **kwargs) : [node.map_tree(fnc, **kwargs) for node in self.submovers]}
+        elif len(self.submovers) == 1:
+            return { fnc(self, **kwargs) : self.submovers[0].map_tree(fnc, **kwargs)}
         else:
             return fnc(self, **kwargs)
 
@@ -361,7 +361,7 @@ class PathMover(object):
         """
 
         output = list()
-        for mp in self.submoves:
+        for mp in self.submovers:
             output.extend(mp.level_post_order(fnc, level + 1, **kwargs))
         output.append((level, fnc(self, **kwargs)))
 
@@ -431,7 +431,7 @@ class PathMover(object):
         output = list()
         output.append((level, fnc(self, **kwargs)))
 
-        for mp in self.submoves:
+        for mp in self.submovers:
             output.extend(mp.level_pre_order(fnc, level + 1, **kwargs))
 
         return output
