@@ -383,7 +383,7 @@ class MoveTreeBuilder(object):
             path = sset.movepath
             # level_y = dict()
 
-            for level, sub in path.level_post_order(lambda this: tuple(
+            for level, sub in path.depth_post_order(lambda this: tuple(
                     [this, old_sset.apply_samples(this.samples)])):
                 self.t_count += 1
 
@@ -463,7 +463,7 @@ class MoveTreeBuilder(object):
 
         path = pathmover
 
-        for level, sub in path.level_post_order(lambda this: tuple(
+        for level, sub in path.depth_post_order(lambda this: tuple(
                 [this, None])):
             self.t_count += 1
 
@@ -893,7 +893,7 @@ class MoveTreeNX(object):
 
     @property
     def _enumeration(self):
-        return enumerate(self.pathmover.level_post_order(lambda this: this))
+        return enumerate(self.pathmover.depth_post_order(lambda this: this))
 
     @property
     def G(self):

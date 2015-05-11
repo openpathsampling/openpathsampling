@@ -2,9 +2,10 @@ __author__ = 'jan-hendrikprinz'
 
 import openpathsampling as paths
 from openpathsampling.todict import ops_object
+from treelogic import TreeMixin
 
 @ops_object
-class PathMoveChange(object):
+class PathMoveChange(TreeMixin):
     '''
     A class that described the concrete realization of a PathMove.
 
@@ -21,12 +22,6 @@ class PathMoveChange(object):
         an object that contains MoveType specific attributes and information.
         E.g. for a RandomChoiceMover which Mover was selected.
     '''
-
-    @staticmethod
-    def _indent(s):
-        spl = s.split('\n')
-        spl = [' |  ' + p if p[0] == ' ' else ' +- ' + p for p in spl]
-        return '\n'.join(spl)
 
     def __init__(self, subchanges=None, samples=None, mover=None, details=None):
         self._len = None
@@ -46,6 +41,15 @@ class PathMoveChange(object):
             self.samples = samples
         self.details = details
 
+    # hook for TreeMixin
+    @property
+    def _subnodes(self):
+        return self.subchanges
+
+    @property
+    def submovers(self):
+        return [ch.mover for ch in self.subchanges]
+
     @property
     def subchange(self):
         """
@@ -61,123 +65,6 @@ class PathMoveChange(object):
             # TODO: might raise exception
             return None
 
-    def __iter__(self):
-        yield self
-        for subchange in self.subchanges:
-            for change in subchange:
-                yield change
-
-    def __getitem__(self, item):
-        """
-        Return the n-th subchange
-
-        Returns
-        -------
-        PathMoveChange
-            the n-th subchange if this PathMoveChange uses underlying changes
-        """
-        if type(item) is int:
-            return self.subchanges[item]
-
-        if type(item) is list:
-            # this is assumed to be a tree
-            if item[0] is self.mover:
-                if len(item) > 1:
-                    for ch in self.subchanges:
-                        r = ch[item[1]]
-                        if r is not None:
-                            return r
-                    return None
-                else:
-                    return self
-            else:
-                return None
-
-
-    def __reversed__(self):
-        for subchange in self.subchanges:
-            for change in reversed(subchange):
-                yield change
-
-        yield self
-
-    def __len__(self):
-        """
-        Returns the total number of Changes mad in a move.
-
-        Returns
-        -------
-        int
-            the number of (Sub)PathMoveChanges in this PathMoveChange
-
-        """
-        if self._len is None:
-            self._len = len(list(iter(self)))
-
-        return self._len
-
-    def key(self, change):
-        tree = self.keytree()
-        return [leave for leave in tree if leave[1] is change ][0][0]
-
-    @property
-    def submovers(self):
-        return [ch.mover for ch in self.subchanges]
-
-    @staticmethod
-    def _check_tree(tree, branch, match):
-        WILDCATS = {
-            '*' : lambda s : slice(0,None),
-            '.' : lambda s : slice(1,2),
-            '?' : lambda s : slice(0,2),
-            ':' : lambda s : slice(*map(int, s.split(':')))
-        }
-        MATCH_ONE = ['.', '?', '*']
-
-#        print branch, 'in', tree
-
-        if branch[0] not in MATCH_ONE and not match(tree[0], branch[0]):
-            return False
-        else:
-            if len(branch) > 1:
-                sub = branch[1]
-                sub_branch = [branch[0]] + branch[2:]
-                if type(sub) is str:
-                    region = None
-                    for wild in WILDCATS:
-                        if wild in sub:
-                            region = WILDCATS[wild](sub)
-                            break
-
-                    if region is None:
-                        raise ValueError('Parse error. ONLY ' + str(WILDCATS.values()) + ' as wildcats allowed.')
-
-                    if region.start < len(tree):
-                        # check that there are enough children to match
-                        for left in range(*region.indices(len(tree))):
-
-                            sub_tree = [tree[0]] + tree[1+left:]
-                            if PathMoveChange._check_tree(sub_tree, sub_branch, match):
-                                return True
-
-                    return False
-                else:
-                    if len(tree) > 1:
-                        if not PathMoveChange._check_tree(tree[1], sub, match):
-                            return False
-                        else:
-                            # go to next sub in branch
-                            if len(branch) > 2:
-                                if len(tree) > 2:
-                                    return PathMoveChange._check_tree([tree[0]] + tree[2:], sub_branch, match)
-                                else:
-                                    return False
-                    else:
-                        # still branch, but no more tree
-                        return False
-
-        return True
-
     @staticmethod
     def _default_match(original, test):
         if isinstance(test, paths.PathMoveChange):
@@ -188,11 +75,6 @@ class PathMoveChange(object):
             return original.mover.__class__ is test
         else:
             return False
-
-    def _check_head_node(self, items):
-        tree = self.tree()
-        return self._check_tree(tree, items, self._default_match)
-
 
     def __contains__(self, item):
         """
@@ -243,17 +125,7 @@ class PathMoveChange(object):
         elif isinstance(item, paths.PathMoveChange):
             return item in iter(self)
         elif type(item) is list:
-            return self._check_head_node(item)
-
-            # Disable checking for submoves for now
-
-            # the head node did not fit so continue trying subnodes
-#            for sub in self.subchanges:
-#                if item in sub:
-#                    return True
-
-            return False
-
+            super(PathMoveChange, self).__contains__(self, item)
         else:
             raise ValueError('Only PathMovers or PathMoveChanges or trees ' +
                              'can be tested.')
@@ -264,183 +136,11 @@ class PathMoveChange(object):
     def __repr__(self):
         return self.__class__.__name__[:-14] + '(' + str(self.idx.values()) + ')'
 
-    def tree(self):
-        return [self] + [ ch.tree() for ch in self.subchanges]
-
-    def map_tree(self, fnc):
-        """
-        Apply a function to each node and return the tree
-
-        Parameters
-        ----------
-        fnc : function(pathmovechange, args, kwargs)
-            the function run at each pathmovechange node. It is given the node
-            and the optional (fixed) parameters
-        kwargs : named arguments
-            optional arguments added to the function
-
-        Returns
-        -------
-        tree (fnc(node, **kwargs))
-            nested list of the results of the map
-        """
-        return [fnc(self)] + [ ch.map_tree(fnc) for ch in self.subchanges]
-
     def movetree(self):
         return self.map_tree(lambda x : x.mover)
 
-    def keytree(self, movepath=None):
-
-        if movepath is None:
-            return self.keytree([self.mover])
-
-        result = list()
-        result.append( ( movepath, self ) )
-        mp = []
-        for sub in self.subchanges:
-            subtree = sub.keytree()
-            result.extend([ ( movepath + mp + [m[0]], m[1] ) for m in subtree ])
-            mp.extend([subtree[-1][0]])
-
-        return result
-
-    def map_post_order(self, fnc, **kwargs):
-        """
-        Traverse the tree of pathmovechanges in post-order applying a function
-
-        This maps the underlying tree of pathmovechanges and applies the
-        given function at each node returning a list of the results. Post-order
-        will result in the order in which samples are generated. That means
-        that subchanges are called first BEFORE the node itself is evaluated.
-
-        Parameters
-        ----------
-        fnc : function(pathmovechange, args, kwargs)
-            the function run at each pathmovechange node. It is given the node
-            and the optional (fixed) parameters
-        kwargs : named arguments
-            optional arguments added to the function
-
-        Returns
-        -------
-        list (fnc(node, **kwargs))
-            flattened list of the results of the map
-
-        Notes
-        -----
-        This uses the same order as `reversed()`
-
-        See also
-        --------
-        map_pre_order, map_post_order, level_pre_order, level_post_order
-        """
-        return [ fnc(node, **kwargs) for node in reversed(self) ]
-
-    def level_post_order(self, fnc, level=0, **kwargs):
-        """
-        Traverse the tree of pathmovechanges in post-order applying a function
-
-        This maps the underlying tree of pathmovechanges and applies the
-        given function at each node returning a list of the results. Post-order
-        will result in the order in which samples are generated. That means
-        that subchanges are called first BEFORE the node itself is evaluated.
-
-        Parameters
-        ----------
-        fnc : function(pathmovechange, args, kwargs)
-            the function run at each pathmovechange node. It is given the node
-            and the optional parameters
-        level : int
-            the initial level
-        kwargs : named arguments
-            optional arguments added to the function
-
-        Returns
-        -------
-        list of tuple(level, func(node, **kwargs))
-            flattened list of tuples of results of the map. First part of
-            the tuple is the level, second part is the function result.
-
-        See also
-        --------
-        map_pre_order, map_post_order, level_pre_order, level_post_order
-        """
-
-        output = list()
-        for mp in self.subchanges:
-            output.extend(mp.level_post_order(fnc, level + 1, **kwargs))
-        output.append((level, fnc(self, **kwargs)))
-
-        return output
-
-    def map_pre_order(self, fnc, **kwargs):
-        """
-        Traverse the tree of pathmovechanges in pre-order applying a function
-
-        This maps the underlying tree of pathmovechanges and applies the
-        given function at each node returning a list of the results. Pre-order
-        means that subchanges are called AFTER the node itself is evaluated.
-
-        Parameters
-        ----------
-        fnc : function(pathmovechange, args, kwargs)
-            the function run at each pathmovechange node. It is given the node
-            and the optional parameters
-        kwargs : named arguments
-            optional arguments added to the function
-
-        Returns
-        -------
-        list (fnc(node, **kwargs))
-            flattened list of the results of the map
-
-        Notes
-        -----
-        This uses the same order as `iter()`
-
-        See also
-        --------
-        map_pre_order, map_post_order, level_pre_order, level_post_order
-        """
-        return [ fnc(node, **kwargs) for node in iter(self) ]
-
-    def level_pre_order(self, fnc, level=0, **kwargs):
-        """
-        Traverse the tree of pathmovechanges in pre-order applying a function
-
-        This maps the underlying tree of pathmovechanges and applies the
-        given function at each node returning a list of the results. Pre-order
-        means that subchanges are called AFTER the node itself is evaluated.
-
-        Parameters
-        ----------
-        fnc : function(pathmovechange, args, kwargs)
-            the function run at each pathmovechange node. It is given the node
-            and the optional parameters
-        level : int
-            the initial level
-        kwargs : named arguments
-            optional arguments added to the function
-
-        Returns
-        -------
-        list of tuple(level, fnc(node, **kwargs))
-            flattened list of tuples of results of the map. First part of
-            the tuple is the level, second part is the function result.
-
-
-        See also
-        --------
-        map_pre_order, map_post_order, level_pre_order, level_post_order
-        """
-
-        output = list()
-        output.append((level, fnc(self, **kwargs)))
-
-        for mp in self.subchanges:
-            output.extend(mp.level_pre_order(fnc, level + 1, **kwargs))
-
-        return output
+    def identifier(self):
+        return self.mover
 
     @property
     def collapsed_samples(self):
