@@ -27,21 +27,6 @@ class TreeMixin(object):
             # TODO: might raise exception
             return None
 
-    @property
-    def subchange(self):
-        """
-        Return the single/only sub-pathmovechange if there is only one.
-
-        Returns
-        -------
-        PathMoveChange
-        """
-        if len(self.subnodes) == 1:
-            return self.subnodes[0]
-        else:
-            # TODO: might raise exception
-            return None
-
     def __iter__(self):
         yield self
         for subchange in self.subnodes:
