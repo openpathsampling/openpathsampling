@@ -43,9 +43,22 @@ class ObjectJSON(object):
         elif type(obj) is list:
             return [self.simplify(o, base_type) for o in obj]
         elif type(obj) is tuple:
-            return tuple([self.simplify(o, base_type) for o in obj])
+            return { '_tuple' : [self.simplify(o, base_type) for o in obj] }
         elif type(obj) is dict:
-            result = {key : self.simplify(o, base_type) for key, o in obj.iteritems() if type(key) is str and key not in self.excluded_keys }
+            ### we want to support storable objects as keys so we need to wrap
+            ### dicts with care and store them using tuples
+
+            result = { '_dict' : [
+                self.simplify(
+                    tuple([
+                        self.simplify(key),
+                        self.simplify(o, base_type)
+                    ])
+                )
+                for key, o in obj.iteritems()
+                if key not in self.excluded_keys
+            ]}
+
             return result
         elif type(obj) is slice:
             return { '_slice' : [obj.start, obj.stop, obj.step]}
@@ -68,10 +81,13 @@ class ObjectJSON(object):
                     return self.class_list[obj['_cls']].from_dict(attributes)
                 else:
                     raise ValueError('Cannot create obj of class "' + obj['_cls']+ '". Class is not registered as creatable!')
-            else:
-                return {key : self.build(o) for key, o in obj.iteritems()}
-        elif type(obj) is tuple:
-            return tuple([self.build(o) for o in obj])
+            elif '_tuple' in obj:
+                return tuple([self.build(o) for o in obj['_tuple']])
+            elif '_dict' in obj:
+                return {
+                    self.build(key) : self.build(o)
+                    for key, o in self.buil(obj)
+                }
         elif type(obj) is list:
             return [self.build(o) for o in obj]
         else:

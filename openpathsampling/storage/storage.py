@@ -88,6 +88,7 @@ class Storage(netcdf.Dataset):
         self.transitions = paths.storage.ObjectStore(storage,
                                                     paths.TISTransition,
                                                     has_uid=True)
+
         self.networks = paths.storage.ObjectStore(storage,
                                                   paths.MSTISNetwork,
                                                   has_uid=True
