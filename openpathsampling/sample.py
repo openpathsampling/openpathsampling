@@ -81,6 +81,17 @@ class SampleSet(object):
             del self[dead_to_me]
         self.append(value)
 
+    def __eq__(self, other):
+        if len(self.samples) == len(other.samples):
+            return True
+            for samp1, samp2 in zip(self.samples,other.samples):
+                if samp1 is not samp2:
+                    return False
+
+            return True
+        else:
+            return False
+
     def __delitem__(self, sample):
         self.ensemble_dict[sample.ensemble].remove(sample)
         self.replica_dict[sample.replica].remove(sample)
