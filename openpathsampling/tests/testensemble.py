@@ -84,8 +84,11 @@ def setUp():
     upper = 0.5
     op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
     vol1 = paths.LambdaVolume(op, lower, upper)
+    vol1.name = "stateA"
     vol2 = paths.LambdaVolume(op, -0.1, 0.7)
+    vol2.name = "interface0"
     vol3 = paths.LambdaVolume(op, 2.0, 2.5)
+    vol3.name = "stateB"
     # we use the following codes to describe trajectories:
     # in : in the state
     # out : out of the state
@@ -97,7 +100,7 @@ def setUp():
                  "abaa", "abba", "abaab", "ababa", "abbab", "ac", "bc",
                  "abaaba", "aobab", "abab", "abcbababcba", "aca", "abc",
                  "acaca", "acac", "caca", "aaca", "baca", "aaba", "aab",
-                 "aabbaa"
+                 "aabbaa", "abbb", "aaab"
                 ]
     ttraj = build_trajdict(trajtypes, lower, upper)
 
@@ -858,6 +861,26 @@ and
 )
 ]""")
 
+class testTISEnsemble(EnsembleTest):
+    def setUp(self):
+        self.tis = TISEnsemble(vol1, vol3, vol2, op) 
+        self.traj = ttraj['upper_in_out_cross_out_in']
+        self.minl = min(op(self.traj))
+        self.maxl = max(op(self.traj))
+
+    def test_tis_trajectory_summary(self):
+        summ = self.tis.trajectory_summary(self.traj)
+        assert_equal(summ['initial_state'], 0)
+        assert_equal(summ['final_state'], 0)
+        assert_equal(summ['max_lambda'], self.maxl)
+        assert_equal(summ['min_lambda'], self.minl)
+
+    def test_tis_trajectory_summary_str(self):
+        mystr = self.tis.trajectory_summary_str(self.traj)
+        teststr = ("initial_state=stateA final_state=stateA min_lambda=" +
+                   str(self.minl) + " max_lambda=" + str(self.maxl) + " ")
+        assert_equal(mystr, teststr)
+
 class EnsembleCacheTest(EnsembleTest):
     def _was_cache_reset(self, cache):
         return cache.contents == { }
@@ -1044,32 +1067,26 @@ class testSequentialEnsembleCache(EnsembleCacheTest):
 
     def test_sequential_caching_can_prepend(self):
         cache = self.pseudo_minus._cache_can_prepend
-        print "5"
         assert_equal(self.pseudo_minus.can_prepend(self.traj[5:6]), True)
         assert_equal(cache.contents['ens_num'], 3)
         assert_equal(cache.contents['ens_from'], 4)
         assert_equal(cache.contents['subtraj_from'], -1)
-        print "4"
         assert_equal(self.pseudo_minus.can_prepend(self.traj[4:6]), True)
         assert_equal(cache.contents['ens_num'], 3)
         assert_equal(cache.contents['ens_from'], 4)
         assert_equal(cache.contents['subtraj_from'], -1)
-        print "3"
         assert_equal(self.pseudo_minus.can_prepend(self.traj[3:6]), True)
         assert_equal(cache.contents['ens_num'], 2)
         assert_equal(cache.contents['ens_from'], 4)
         assert_equal(cache.contents['subtraj_from'], -2)
-        print "2"
         assert_equal(self.pseudo_minus.can_prepend(self.traj[2:6]), True)
         assert_equal(cache.contents['ens_num'], 2)
         assert_equal(cache.contents['ens_from'], 4)
         assert_equal(cache.contents['subtraj_from'], -2)
-        print "1"
         assert_equal(self.pseudo_minus.can_prepend(self.traj[1:6]), True)
         assert_equal(cache.contents['ens_num'], 1)
         assert_equal(cache.contents['ens_from'], 4)
         assert_equal(cache.contents['subtraj_from'], -4)
-        print "0"
         assert_equal(self.pseudo_minus.can_prepend(self.traj[0:6]), False)
         assert_equal(cache.contents['ens_num'], 0)
         assert_equal(cache.contents['ens_from'], 4)
@@ -1364,6 +1381,117 @@ class testOptionalEnsemble(EnsembleTest):
         inX = AllInXEnsemble(vol1)
         opt_inX = OptionalEnsemble(inX)
         assert_equal(opt_inX.__str__(), "{"+inX.__str__()+"} (OPTIONAL)")
+
+class testForwardAppendedTrajectoryEnsemble(EnsembleTest):
+    def setUp(self):
+        self.inX = AllInXEnsemble(vol1)
+
+    def test_bad_start_traj(self):
+        traj = ttraj['upper_out_in_in_in']
+        ens = ForwardAppendedTrajectoryEnsemble(
+            SequentialEnsemble([self.inX]),
+            traj[0:2]
+        )
+        assert_equal(ens.can_append(traj[0:3]), False)
+        assert_equal(ens(traj[0:3]), False)
+
+    def test_good_start_traj(self):
+        traj = ttraj['upper_in_in_in']
+        ens = ForwardAppendedTrajectoryEnsemble(
+            SequentialEnsemble([self.inX]),
+            traj[0:2]
+        )
+        assert_equal(ens.can_append(traj[2:3]), True)
+        assert_equal(ens(traj[2:3]), True)
+
+
+    def test_caching_in_fwdapp_seq(self):
+        inX = AllInXEnsemble(vol1)
+        outX = AllOutXEnsemble(vol1)
+        length1 = LengthEnsemble(1)
+        pseudo_minus = SequentialEnsemble([
+            inX & length1,
+            outX,
+            inX,
+            outX,
+            inX & length1 
+        ])
+        traj = ttraj['upper_in_out_in_in_out_in']
+        ens = ForwardAppendedTrajectoryEnsemble(pseudo_minus, traj[0:2])
+        assert_equal(ens.can_append(traj[2:3]), True)
+        assert_equal(ens._cached_trajectory, traj[0:3])
+        assert_equal(ens._cache_can_append.trusted, False)
+
+        assert_equal(ens.can_append(traj[2:4]), True)
+        assert_equal(ens._cached_trajectory, traj[0:4])
+        assert_equal(ens._cache_can_append.trusted, True)
+
+        assert_equal(ens.can_append(traj[2:5]), True)
+        assert_equal(ens._cached_trajectory, traj[0:5])
+        assert_equal(ens._cache_can_append.trusted, True)
+
+        assert_equal(ens.can_append(traj[2:6]), False)
+        assert_equal(ens._cached_trajectory, traj[0:6])
+        assert_equal(ens._cache_can_append.trusted, True)
+
+class testBackwardPrependedTrajectoryEnsemble(EnsembleTest):
+    def setUp(self):
+        xval = paths.CV_Function("x", lambda s : s.xyz[0][0])
+        vol = paths.LambdaVolume(xval, 0.1, 0.5)
+        self.inX = AllInXEnsemble(vol)
+        self.outX = AllOutXEnsemble(vol)
+
+    def test_bad_end_traj(self):
+        traj = ttraj['upper_in_in_in_out']
+        ens = BackwardPrependedTrajectoryEnsemble(
+            SequentialEnsemble([self.inX]),
+            traj[-2:]
+        )
+        assert_equal(ens.can_prepend(traj[-3:2]), False)
+        assert_equal(ens(traj[-3:2]), False)
+
+    def test_good_end_traj(self):
+        traj = ttraj['upper_out_in_in_in']
+        ens = BackwardPrependedTrajectoryEnsemble(
+            SequentialEnsemble([self.inX]),
+            traj[-2:]
+        )
+        assert_equal(ens.can_prepend(traj[-3:-2]), True)
+        assert_equal(ens(traj[-3:-2]), True)
+        assert_equal(ens.can_prepend(traj[-4:-2]), False)
+        assert_equal(ens(traj[-4:-2]), False)
+
+    def test_caching_in_bkwdprep_seq(self):
+        length1 = LengthEnsemble(1)
+        pseudo_minus = SequentialEnsemble([
+            self.inX & length1,
+            self.outX,
+            self.inX,
+            self.outX,
+            self.inX & length1 
+        ])
+        traj = ttraj['upper_in_out_in_in_out_in']
+
+        # sanity checks before running the suffixed version
+        assert_equal(pseudo_minus(traj), True)
+        for i in range(-1, -6):
+            assert_equal(pseudo_minus.can_prepend(traj[i:]), True)
+
+        logger.debug("alltraj " + str([id(i) for i in traj]))
+        ens = BackwardPrependedTrajectoryEnsemble(pseudo_minus, traj[-3:])
+        assert_equal(len(ens._cached_trajectory), 3)
+
+        assert_equal(ens.can_prepend(traj[-4:-3].reversed), True)
+        assert_equal(len(ens._cached_trajectory), 4)
+        assert_equal(ens._cache_can_prepend.trusted, False)
+
+        assert_equal(ens.can_prepend(traj[-5:-3].reversed), True)
+        assert_equal(len(ens._cached_trajectory), 5)
+        assert_equal(ens._cache_can_prepend.trusted, True)
+
+        assert_equal(ens.can_prepend(traj[-6:-3].reversed), False)
+        assert_equal(len(ens._cached_trajectory), 6)
+        assert_equal(ens._cache_can_prepend.trusted, True)
 
 class testMinusInterfaceEnsemble(EnsembleTest):
     def setUp(self):
