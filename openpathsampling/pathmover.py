@@ -1202,8 +1202,6 @@ class RandomSubtrajectorySelectMover(PathMover):
             replica=replica,
             trajectory=subtraj,
             ensemble=self.subensemble,
-            valid=self.subensemble(subtraj),
-            accepted=True,
             parent=rep_sample,
             mover=self
         )
@@ -1271,8 +1269,6 @@ class PathReversalMover(PathMover):
             replica=replica,
             trajectory=reversed_trajectory,
             ensemble=ensemble,
-            valid=valid,
-            accepted=valid,
             details=sample_details,
             mover=self,
             parent=rep_sample
@@ -1337,8 +1333,6 @@ class ReplicaExchangeMover(PathMover):
             replica=replica1,
             trajectory=trajectory1,
             ensemble=ensemble2,
-            valid=from1to2,
-            accepted=accepted,
             parent=s1,
             details = SampleDetails(),
             mover=self
@@ -1347,8 +1341,6 @@ class ReplicaExchangeMover(PathMover):
             replica=replica2,
             trajectory=trajectory2,
             ensemble=ensemble1,
-            valid=from2to1,
-            accepted=accepted,
             parent=s2,
             details=SampleDetails(),
             mover=self
