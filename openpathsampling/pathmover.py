@@ -298,6 +298,8 @@ class ShootMover(PathMover):
 
         self._generate(sample_details, dynamics_ensemble)
 
+        logger.info("Trial trajectory: " +
+                    dynamics_ensemble.trajectory_summary_str(sample_details.trial))
         valid = dynamics_ensemble(sample_details.trial)
         accepted = False
 
@@ -453,6 +455,7 @@ class RandomChoiceMover(PathMover):
             prob += self.weights[idx]
 
         logger_str = "RandomChoiceMover ({name}) selecting mover index {idx} ({mtype})"
+        logger_str = "{name} (RandomChoiceMover) selecting {mtype} (index {idx})"
         logger.info(logger_str.format(name=self.name, idx=idx, mtype=self.movers[idx].name))
 
         mover = self.movers[idx]
@@ -1001,13 +1004,13 @@ class ReplicaExchangeMover(PathMover):
         replica2 = s2.replica
 
         from1to2 = ensemble2(trajectory1)
-        logger.debug("trajectory " + repr(trajectory1) +
-                     " into ensemble " + repr(ensemble2) +
-                     " : " + str(from1to2))
+        logger.info("trajectory " + repr(trajectory1) +
+                    " into ensemble " + repr(ensemble2) +
+                    " : " + str(from1to2))
         from2to1 = ensemble1(trajectory2)
-        logger.debug("trajectory " + repr(trajectory2) +
-                     " into ensemble " + repr(ensemble1) +
-                     " : " + str(from2to1))
+        logger.info("trajectory " + repr(trajectory2) +
+                    " into ensemble " + repr(ensemble1) +
+                    " : " + str(from2to1))
 
         accepted = from1to2 and from2to1
 

@@ -294,14 +294,15 @@ class TISTransition(Transition):
         # ones here
 
         # build ensembles if we don't already have them
+        self.orderparameter = orderparameter
         if not hasattr(self, "ensembles"):
-            self.build_ensembles(self.stateA, self.stateB, self.interfaces)
+            self.build_ensembles(self.stateA, self.stateB, 
+                                 self.interfaces, self.orderparameter)
 
         # build movers if we don't already have them
         if self.movers == {}:
             self.build_movers()
 
-        self.orderparameter = orderparameter
         self.default_orderparameter = self.orderparameter
 
         self.total_crossing_probability_method="wham" 
@@ -349,9 +350,9 @@ class TISTransition(Transition):
         mytrans.ensembles = dct['ensembles']
         return mytrans
 
-    def build_ensembles(self, stateA, stateB, interfaces):
+    def build_ensembles(self, stateA, stateB, interfaces, orderparameter):
         self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
-            stateA, stateB, self.interfaces
+            stateA, stateB, self.interfaces, orderparameter
         )
         for ensemble in self.ensembles:
             ensemble.name = "I'face "+str(self.ensembles.index(ensemble))
