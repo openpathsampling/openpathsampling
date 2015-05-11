@@ -25,6 +25,10 @@ if __name__ == '__main__':
         mode = 'a'
     )
 
+    storage.samples.cache_all()
+    storage.samplesets.cache_all()
+    storage.pathmovechanges.cache_all()
+
     class ReadableObjectJSON(paths.todict.ObjectJSON):
         def __init__(self, unit_system = None, class_list = None):
             super(ReadableObjectJSON, self).__init__(unit_system, class_list)
@@ -145,12 +149,12 @@ if __name__ == '__main__':
     for p_idx in range(0, storage.collectivevariables.count()):
         obj = storage.collectivevariables.load(p_idx)
         add = ''
-        values = obj(all_snapshot_traj)
-        found_values = [ (idx, value) for idx, value in enumerate(values) if value is not None ]
-        if len(found_values) > 0:
-            add = '{ %d : %f, ... } ' % (found_values[0][0], found_values[0][1] )
+#        values = obj(all_snapshot_traj)
+#        found_values = [ (idx, value) for idx, value in enumerate(values) if value is not None ]
+#        if len(found_values) > 0:
+#            add = '{ %d : %f, ... } ' % (found_values[0][0], found_values[0][1]._value )
 
-        nline(p_idx,obj.name, str(len(found_values)) + ' entries ' + add)
+#        nline(p_idx,obj.name, str(len(found_values)) + ' entries ' + add)
 
     headline("MovePaths")
 
@@ -163,7 +167,7 @@ if __name__ == '__main__':
 
     for p_idx in range(0, storage.samplesets.count()):
         obj = storage.samplesets.load(p_idx)
-        nline(p_idx, str(len(obj.samples)) + ' sample(s)', [storage.idx(sample) for sample in obj.samples ])
+        nline(p_idx, str(len(obj.results)) + ' sample(s)', [storage.idx(sample) for sample in obj.results ])
         print indent(str(obj.movepath),16)
 
 

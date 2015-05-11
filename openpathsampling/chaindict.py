@@ -432,8 +432,6 @@ class MultiStore(Store):
         if len(self.storages) != len(self.cod_stores):
             self.update_nod_stores()
 
-
-
         if len(self.cod_stores) == 0:
             return [None] * len(items)
 
@@ -449,8 +447,6 @@ class MultiStore(Store):
             else:
                 output = [None if item is None or result is None else item
                      for item, result in zip(output, results) ]
-
-#        print output
 
         return output
 

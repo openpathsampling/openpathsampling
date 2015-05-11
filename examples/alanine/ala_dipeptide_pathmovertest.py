@@ -189,8 +189,8 @@ use PartOutXEnsemble as we typically do with TIS paths.
     print third_set[0].__dict__
     print third_set.__dict__
 
-    print second_path.samples
-    print first_path.samples
+    print second_path.results
+    print first_path.results
 
 
     mover3 = CollapseMove(SequentialMover([
@@ -204,7 +204,7 @@ use PartOutXEnsemble as we typically do with TIS paths.
 
     third_path = mover3.move(third_set)
 
-    print third_path.samples
+    print third_path.results
     print str(third_path)
     print str(third_path.opened)
     print len(third_path)
