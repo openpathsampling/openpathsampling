@@ -778,6 +778,7 @@ class RandomChoiceMover(PathMover):
             prob += self.weights[idx]
 
         logger_str = "RandomChoiceMover ({name}) selecting mover index {idx} ({mtype})"
+        logger_str = "{name} (RandomChoiceMover) selecting {mtype} (index {idx})"
         logger.info(logger_str.format(name=self.name, idx=idx, mtype=self.movers[idx].name))
 
         mover = self.movers[idx]
@@ -1152,6 +1153,220 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
             details=details
         )
         return path
+
+
+@ops_object
+class RandomSubtrajectorySelectMover(PathMover):
+    '''
+    Samples a random subtrajectory satisfying the given subensemble.
+
+    If there are no subtrajectories which satisfy the subensemble, this
+    returns the zero-length trajectory.
+    '''
+    def __init__(self, subensemble, n_l=None, ensembles=None):
+        super(RandomSubtrajectorySelectMover, self).__init__(ensembles=ensembles)
+        self.n_l=n_l
+        self.subensemble = subensemble
+
+    def _choose(self, trajectory_list):
+        return random.choice(trajectory_list)
+
+    @keep_selected_samples
+    def move(self, globalstate):
+        rep_sample = self.select_sample(globalstate)
+        trajectory = rep_sample.trajectory
+        replica = rep_sample.replica
+        logger.debug("Working with replica " + str(replica) + " (" + str(trajectory) + ")")
+
+
+        subtrajs = self.subensemble.split(trajectory)
+        logger.debug("Found "+str(len(subtrajs))+" subtrajectories.")
+
+#        if self.n_l is None:
+#            length_req = lambda x: x > 0
+#        else:
+#            length_req = lambda x: x==self.n_l
+
+#        if length_req(len(subtrajs)):
+
+        if (self.n_l is None and len(subtrajs) > 0) or \
+            (self.n_l is not None and len(subtrajs) == self.n_l):
+            subtraj = self._choose(subtrajs)
+        else:
+            # return zero-length trajectory otherwise
+            subtraj = paths.Trajectory([])
+
+        sample_details = SampleDetails()
+
+        sample = paths.Sample(
+            replica=replica,
+            trajectory=subtraj,
+            ensemble=self.subensemble,
+            valid=self.subensemble(subtraj),
+            accepted=True,
+            parent=rep_sample,
+            mover=self
+        )
+
+        details = MoveDetails()
+        details.inputs = [rep_sample]
+        details.trials = [sample]
+
+        path = paths.SamplePathMoveChange(
+            [sample],
+            mover=self,
+            details=details
+        )
+
+        return path
+
+@ops_object
+class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
+    '''
+    Samples the first subtrajectory satifying the given subensemble.
+
+    If there are no subtrajectories which satisfy the ensemble, this returns
+    the zero-length trajectory.
+    '''
+    def _choose(self, trajectory_list):
+        return trajectory_list[0]
+
+@ops_object
+class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
+    '''
+    Samples the final subtrajectory satifying the given subensemble.
+
+    If there are no subtrajectories which satisfy the ensemble, this returns
+    the zero-length trajectory.
+    '''
+    def _choose(self, trajectory_list):
+        return trajectory_list[-1]
+
+@ops_object
+class PathReversalMover(PathMover):
+
+    @keep_selected_samples
+    def move(self, globalstate):
+        rep_sample = self.select_sample(globalstate, self.ensembles)
+
+        trajectory = rep_sample.trajectory
+        ensemble = rep_sample.ensemble
+        replica = rep_sample.replica
+
+
+        reversed_trajectory = trajectory.reversed
+
+        valid = ensemble(reversed_trajectory)
+        logger.info("PathReversal move accepted: "+str(valid))
+
+        acceptance_probability = 0.0
+
+        if valid:
+            acceptance_probability = 1.0
+
+        sample_details = SampleDetails()
+        sample_details.acceptance_probability = acceptance_probability
+
+        trial = paths.Sample(
+            replica=replica,
+            trajectory=reversed_trajectory,
+            ensemble=ensemble,
+            valid=valid,
+            accepted=valid,
+            details=sample_details,
+            mover=self,
+            parent=rep_sample
+        )
+
+        details = MoveDetails()
+        details.inputs = [rep_sample]
+        details.trials = [trial]
+
+        path = paths.SamplePathMoveChange(
+            [trial],
+            mover=self,
+            details=details
+        )
+
+        return path
+
+@ops_object
+class ReplicaExchangeMover(PathMover):
+    def __init__(self, bias=None, ensembles=None):
+        replicas = 'all'
+        ensembles = make_list_of_pairs(ensembles)
+        # either replicas or ensembles must be a list of pairs; more
+        # complicated filtering can be done with a wrapper class
+        super(ReplicaExchangeMover, self).__init__(ensembles=ensembles)
+        # TODO: add support for bias; cf EnsembleHopMover
+        self.bias = bias
+        initialization_logging(logger=init_log, obj=self,
+                               entries=['bias'])
+
+    @keep_selected_samples
+    def move(self, globalstate):
+        if self.ensembles is not None:
+            [ens1, ens2] = random.choice(self.ensembles)
+            s1 = self.select_sample(globalstate, ens1)
+            s2 = self.select_sample(globalstate, ens2)
+        else:
+            [rep1, rep2] = random.choice(self.replicas)
+            s1 = globalstate[rep1]
+            s2 = globalstate[rep2]
+
+        # convert sample to the language used here before
+        trajectory1 = s1.trajectory
+        trajectory2 = s2.trajectory
+        ensemble1 = s1.ensemble
+        ensemble2 = s2.ensemble
+        replica1 = s1.replica
+        replica2 = s2.replica
+
+        from1to2 = ensemble2(trajectory1)
+        logger.info("trajectory " + repr(trajectory1) +
+                    " into ensemble " + repr(ensemble2) +
+                    " : " + str(from1to2))
+        from2to1 = ensemble1(trajectory2)
+        logger.info("trajectory " + repr(trajectory2) +
+                    " into ensemble " + repr(ensemble1) +
+                    " : " + str(from2to1))
+
+        accepted = from1to2 and from2to1
+
+        trial1 = paths.Sample(
+            replica=replica1,
+            trajectory=trajectory1,
+            ensemble=ensemble2,
+            valid=from1to2,
+            accepted=accepted,
+            parent=s1,
+            details = SampleDetails(),
+            mover=self
+        )
+        trial2 = paths.Sample(
+            replica=replica2,
+            trajectory=trajectory2,
+            ensemble=ensemble1,
+            valid=from2to1,
+            accepted=accepted,
+            parent=s2,
+            details=SampleDetails(),
+            mover=self
+        )
+
+        details = MoveDetails()
+        details.inputs = [s1, s2]
+        details.trials = [trial1, trial2]
+        setattr(details, 'ensembles', [ensemble1, ensemble2])
+
+        path = paths.SamplePathMoveChange(
+            [trial1, trial2],
+            mover=self,
+            details=details
+        )
+
+        return path
+
 
 # TODO: Turn Filter into real mover with own movechange ?
 @ops_object
