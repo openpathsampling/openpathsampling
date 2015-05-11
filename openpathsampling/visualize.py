@@ -753,7 +753,7 @@ class PathTreeBuilder(object):
                             color = lightcolor
                             font_color = lightcolor
                         self.renderer.add(
-                            self.renderer.v_connection(shift + new_index + 1,
+                            self.renderer.v_connection(shift + new_index,
                                                        p_y[old_conf], t_count,
                                                        color)
                         )
@@ -769,8 +769,9 @@ class PathTreeBuilder(object):
                         if not accepted:
                             color = lightcolor
                             font_color = lightcolor
+
                         self.renderer.add(
-                            self.renderer.v_connection(shift + new_index,
+                            self.renderer.v_connection(shift + new_index + 1,
                                                        p_y[old_conf], t_count,
                                                        color)
                         )
@@ -801,6 +802,17 @@ class PathTreeBuilder(object):
                         else:
                             self.renderer.add(
                                 self.renderer.block(pos_x, pos_y, color, ""))
+
+                    elif False:
+                        pos_x = p_x[conf]
+                        pos_y = p_y[conf]
+                        if self.op is not None:
+                            self.renderer.add(
+                                self.renderer.block(pos_x, pos_y, 'gray',
+                                                    self.op(snapshot)))
+                        else:
+                            self.renderer.add(
+                                self.renderer.block(pos_x, pos_y, 'gray', ""))
 
                 t_count += 1
 
