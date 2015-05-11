@@ -95,7 +95,7 @@ class ReplicaNetwork(object):
         traces = self.analyze_traces(storage, force)
         n_up = { ens : 0 for ens in self.all_ensembles }
         n_visit = { ens : 0 for ens in self.all_ensembles } 
-        for replica in all_replicas:
+        for replica in self.all_replicas:
             trace = self.traces[replica]
             direction = 0
             for (loc, count) in trace:
