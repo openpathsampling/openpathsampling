@@ -93,10 +93,23 @@ class ReplicaNetwork(object):
 
     def flow(self, bottom, top, storage=None, force=False):
         traces = self.analyze_traces(storage, force)
-        directions = { rep : 0 for rep in self.all_replicas }
         n_up = { ens : 0 for ens in self.all_ensembles }
         n_visit = { ens : 0 for ens in self.all_ensembles } 
-        pass
+        for replica in all_replicas:
+            trace = self.traces[replica]
+            direction = 0
+            for (loc, count) in trace:
+                if loc == top:
+                    direction = -1
+                elif loc == bottom:
+                    direction = +1
+                if direction != 0:
+                    n_visit[loc] += count
+                if direction == 1:
+                    n_up[loc] += count
+        self._flow_up = n_up
+        self._flow_count = n_visit
+        return {e : float(n_up[e])/n_visit[e] for e in self.all_ensembles}
 
     def trips(self, bottom, top, storage=None, force=False):
         traces = self.analyze_traces(storage, force)
