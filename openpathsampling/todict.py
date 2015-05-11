@@ -48,16 +48,21 @@ class ObjectJSON(object):
             ### we want to support storable objects as keys so we need to wrap
             ### dicts with care and store them using tuples
 
-            result = { '_dict' : [
-                self.simplify(
-                    tuple([
-                        self.simplify(key),
-                        self.simplify(o, base_type)
-                    ])
-                )
-                for key, o in obj.iteritems()
-                if key not in self.excluded_keys
-            ]}
+            simple = [ key for key in obj.keys() if type(key) is str or type(key) is int ]
+
+            if len(simple) < len(obj):
+                # other keys than int or str
+                result = { '_dict' : [
+                    self.simplify(tuple([key, o]))
+                    for key, o in obj.iteritems()
+                    if key not in self.excluded_keys
+                ]}
+            else:
+                # simple enough, do it the old way
+                result = { key : self.simplify(o)
+                    for key, o in obj.iteritems()
+                    if key not in self.excluded_keys
+                }
 
             return result
         elif type(obj) is slice:
@@ -74,7 +79,7 @@ class ObjectJSON(object):
             elif '_slice' in obj:
                 return slice(*obj['_slice'])
             elif '_numpy' in obj:
-                return np.frombuffer(base64.decodestring(obj['_data']), dtype=np.dtype(obj['_dtype'])).reshape(tuple(obj['_numpy']))
+                return np.frombuffer(base64.decodestring(obj['_data']), dtype=np.dtype(obj['_dtype'])).reshape(self.build(obj['_numpy']))
             elif '_cls' in obj and '_dict' in obj:
                 if obj['_cls'] in self.class_list:
                     attributes = self.build(obj['_dict'])
@@ -86,7 +91,12 @@ class ObjectJSON(object):
             elif '_dict' in obj:
                 return {
                     self.build(key) : self.build(o)
-                    for key, o in self.buil(obj)
+                    for key, o in self.build(obj['_dict'])
+                }
+            else:
+                return {
+                    key : self.build(o)
+                    for key, o in obj.iteritems()
                 }
         elif type(obj) is list:
             return [self.build(o) for o in obj]
