@@ -93,15 +93,52 @@ class ReplicaNetwork(object):
 
     def flow(self, bottom, top, storage=None, force=False):
         traces = self.analyze_traces(storage, force)
+        directions = { rep : 0 for rep in self.all_replicas }
+        n_up = { ens : 0 for ens in self.all_ensembles }
+        n_visit = { ens : 0 for ens in self.all_ensembles } 
         pass
 
-    def one_way_trips(self, bottom, top, storage=None, force=False):
+    def trips(self, bottom, top, storage=None, force=False):
         traces = self.analyze_traces(storage, force)
-        pass
+        down_trips = []
+        up_trips = []
+        round_trips = []
+        direction = None
+        trip_counter = 0
+        first_direction = None
+        for replica in self.all_replicas:
+            trace = traces[replica]
+            local_down = []
+            local_up = []
+            for (loc, count) in trace:
+                if loc == top and direction != +1:
+                    direction = +1
+                    if trip_counter > 0:
+                        local_up.append(trip_counter)
+                    trip_counter = 0
+                elif loc == bottom and direction != -1:
+                    direction = -1
+                    if trip_counter > 0:
+                        local_down.append(trip_counter)
+                    trip_counter = 0
+                if direction is not None:
+                    if first_direction is None:
+                        first_direction = direction
+                    trip_counter += count
 
-    def round_trips(self, bottom, top, storage=None, force=False):
-        traces = self.analyze_traces(storage, force)
-        pass
+            if first_direction == 1:
+                rt_pairs = zip(local_down, local_up)
+            elif first_direction == -1:
+                rt_pairs = zip(local_up, local_down)
+            else:
+                raise RuntimeWarning(
+                    "No first direction identified: Are there no 1-way trips?"
+                )
+            down_trips.extend(local_down)
+            up_trips.extend(local_up)
+            round_trips.extend([sum(pair) for pair in rt_pairs])
+
+        return {'down' : down_trips, 'up' : up_trips, 'round' : round_trips}
 
 def get_all_ensembles_and_replicas(storage, first_sampleset=True):
     if first_sampleset:
