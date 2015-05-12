@@ -60,6 +60,10 @@ class ReplicaNetwork(object):
 
 
     def analyze_exchanges(self, storage, force=False):
+        # TODO: convert this into something that yields ((repA, repB),
+        # accepted): separate obtaining those tuples from adding up the
+        # number of trials and acceptances -- this will make the rest of the
+        # code usable for non-OPS purposes
         self.check_storage(storage)
         if force == False and self.analysis != { }:
             return (self.analysis['n_trials'], self.analysis['n_accepted'])
@@ -72,9 +76,15 @@ class ReplicaNetwork(object):
                         ens1 = delta.trials[0].ensemble
                         ens2 = delta.trials[1].ensemble
                     else:
-                        raise RuntimeWarning(
-                            "RepEx mover with more than 2 trials"
-                        )
+                        print "RepEx mover with n_trials != 2"
+                        try:
+                            # TODO: this hack for minus should not be
+                            # necessary; although we may have to hack minus
+                            # to be cleaner
+                            ens1 = delta.mover.innermost_ensemble
+                            ens2 = delta.mover.minus_ensemble
+                        except:
+                            raise RuntimeWarning("RepEx mover with n_trials != 2")
                     try:
                         self.analysis['n_trials'][(ens1, ens2)] += 1
                     except KeyError:
@@ -103,8 +113,10 @@ class ReplicaNetwork(object):
 
     def transition_matrix(self, storage=None, index_order=None, force=False):
         (n_try, n_acc) = self.analysis_exchanges(storage, force)
-
         # TODO: convert it to a pandas dataframe and return it
+
+    def mixing_statistics(self, storage=None, index_order=None, force=False):
+        (n_try, n_acc) = self.analysis_exchanges(storage, force)
 
 
     def diagram(self, storage=None, force=False):
@@ -137,11 +149,11 @@ class ReplicaNetwork(object):
         down_trips = []
         up_trips = []
         round_trips = []
-        direction = None
-        trip_counter = 0
-        first_direction = None
         for replica in self.all_replicas:
             trace = traces[replica]
+            direction = None
+            trip_counter = 0
+            first_direction = None
             local_down = []
             local_up = []
             for (loc, count) in trace:
@@ -195,12 +207,14 @@ def get_all_ensembles_and_replicas(storage, first_sampleset=True):
 
 def trace_ensembles_for_replica(replica, storage):
     trace = []
+    storage.samples.cache_all()
     for sset in storage.samplesets:
         trace.append(sset[replica].ensemble)
     return trace
 
 def trace_replicas_for_ensemble(ensemble, storage):
     trace = []
+    storage.samples.cache_all()
     for sset in storage.samplesets:
         trace.append(sset[ensemble].replica)
     return trace
