@@ -1517,11 +1517,11 @@ class testEnsembleSplit(EnsembleTest):
 
     def test_split(self):
 #        raise SkipTest
-        print vol1
         traj1 = ttraj['upper_in_out_in_in']
         print [s for s in traj1]
         subtrajs_in_1 = self.inA.split(traj1)
         print subtrajs_in_1
+        print [[s for s in t] for t in subtrajs_in_1]
         assert_equal(len(subtrajs_in_1), 2)
         assert_equal(len(subtrajs_in_1[0]), 1)
         assert_equal(len(subtrajs_in_1[1]), 2)
@@ -1531,6 +1531,7 @@ class testEnsembleSplit(EnsembleTest):
         traj2 = ttraj['upper_in_out_in_in_out_in']
         print [s for s in traj2]
         subtrajs_in_2 = self.inA.split(traj2)
+        print [[s for s in t] for t in subtrajs_in_2]
         assert_equal(len(subtrajs_in_2), 3)
         assert_equal(len(subtrajs_in_2[0]), 1)
         assert_equal(len(subtrajs_in_2[1]), 2)
@@ -1539,5 +1540,3 @@ class testEnsembleSplit(EnsembleTest):
         assert_equal(len(subtrajs_out_2), 2)
         assert_equal(len(subtrajs_out_2[0]), 1)
         assert_equal(len(subtrajs_out_2[1]), 1)
-
-
