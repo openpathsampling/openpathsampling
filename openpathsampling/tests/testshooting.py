@@ -7,7 +7,7 @@ from openpathsampling.tests.test_helpers import (assert_equal_array_array,
                           CalvinistDynamics
                          )
 from openpathsampling.shooting import *
-from openpathsampling.pathmover import PathMover, ForwardShootMover, BackwardShootMover
+from openpathsampling.pathmover import ForwardShootMover, BackwardShootMover, SampleGenerator
 from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.sample import Sample, SampleSet
 
@@ -18,7 +18,7 @@ class SelectorTest(object):
         self.dyn = CalvinistDynamics([-0.5, -0.4, -0.3, -0.2, -0.1,
                                       0.1, 0.2, 0.3, 0.4, 0.5])
                                       #0.5, 0.4, 0.3, 0.2, 0.1])
-        PathMover.engine = self.dyn
+        SampleGenerator.engine = self.dyn
         self.dyn.initialized = True
         self.ens = LengthEnsemble(5)
         self.gs = SampleSet(Sample(
@@ -39,7 +39,7 @@ class testFirstFrameSelector(SelectorTest):
         assert_equal(snap.coordinates[0][0], -0.5)
 
     def test_shooting_move(self):
-        self.shooter = ForwardShootMover(FirstFrameSelector(), replicas=[0])
+        self.shooter = ForwardShootMover(FirstFrameSelector(), ensemble=self.ens)
         change = self.shooter.move(self.gs)
         samples = change.trials
         assert_equal(len(samples), 1)
@@ -61,7 +61,7 @@ class testFinalFrameSelector(SelectorTest):
         assert_equal(snap.coordinates[0][0], 0.5)
 
     def test_shooting_move(self):
-        self.shooter = BackwardShootMover(FinalFrameSelector(), replicas=[0])
+        self.shooter = BackwardShootMover(FinalFrameSelector(), ensemble=self.ens)
         change = self.shooter.move(self.gs)
         samples = change.trials
         assert_equal(change.accepted, True)

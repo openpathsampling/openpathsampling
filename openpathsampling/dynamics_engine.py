@@ -84,6 +84,8 @@ class DynamicsEngine(object):
         # this and n_atoms are the only general options we need and register
         if hasattr(self, 'n_frames_max'):
             self.max_length_stopper = paths.LengthEnsemble(slice(0, self.n_frames_max + 1))
+        else:
+            self.max_length_stopper = paths.FullEnsemble()
 
     def _register_options(self, options = None):
         """

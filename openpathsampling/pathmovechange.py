@@ -298,7 +298,7 @@ class SamplePathMoveChange(PathMoveChange):
         self.samples = samples
 
     def _get_results(self):
-        return [ sample for sample in self.samples if sample.accepted ]
+        return []
 
     def _get_trials(self):
         return self.samples
@@ -331,7 +331,7 @@ class RandomChoicePathMoveChange(PathMoveChange):
         self.subchanges = [subchange]
 
     def _get_results(self):
-        return self.subchange.samples
+        return self.subchange.results
 
     def _get_trials(self):
         return self.subchange.trials
