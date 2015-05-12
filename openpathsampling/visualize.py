@@ -690,6 +690,8 @@ class PathTreeBuilder(object):
 
         for sample in samples:
             draw_okay = False
+            mover_type = type(sample.mover)
+
             if first is True:
                 first = False
                 color = 'black'
@@ -724,17 +726,16 @@ class PathTreeBuilder(object):
                                         color='black')
                 )
 
-            elif hasattr(sample.details, 'start_point'):
+            elif mover_type is paths.ForwardShootMover or mover_type is paths.BackwardShootMover:
                 # ShootingMove
-                old_traj = sample.details.start_point.trajectory
-                old_index = sample.details.start_point.index
+                old_traj = sample.details.initial_point.trajectory
+                old_index = sample.details.initial_point.index
                 old_conf = old_traj[old_index]
 
-                new_traj = sample.details.final_point.trajectory
-                new_index = sample.details.final_point.index
+                new_traj = sample.details.trial_point.trajectory
+                new_index = sample.details.trial_point.index
                 new_conf = new_traj[new_index]
 
-                accepted = sample.accepted
 
                 if sample.trajectory is new_traj or self.rejected:
 
@@ -746,15 +747,11 @@ class PathTreeBuilder(object):
                     font_color = "black"
 
                     draw_okay = False
-                    mover_type = type(sample.mover)
 
                     if mover_type is paths.BackwardShootMover:
                         color = "green"
-                        if not accepted:
-                            color = lightcolor
-                            font_color = lightcolor
                         self.renderer.add(
-                            self.renderer.v_connection(shift + new_index,
+                            self.renderer.v_connection(shift + new_index + 1,
                                                        p_y[old_conf], t_count,
                                                        color)
                         )
@@ -767,12 +764,9 @@ class PathTreeBuilder(object):
 
                     elif mover_type is paths.ForwardShootMover:
                         color = "red"
-                        if not accepted:
-                            color = lightcolor
-                            font_color = lightcolor
 
                         self.renderer.add(
-                            self.renderer.v_connection(shift + new_index + 1,
+                            self.renderer.v_connection(shift + new_index,
                                                        p_y[old_conf], t_count,
                                                        color)
                         )
@@ -784,8 +778,6 @@ class PathTreeBuilder(object):
                         )
                         draw_okay = True
 
-                    if not accepted:
-                        color = lightcolor
 
             if draw_okay:
                 for pos, snapshot in enumerate(sample.trajectory):
@@ -798,8 +790,14 @@ class PathTreeBuilder(object):
                         pos_y = p_y[conf]
                         if self.op is not None:
                             self.renderer.add(
-                                self.renderer.block(pos_x, pos_y, color,
-                                                    self.op(snapshot)))
+                                self.renderer.block(
+                                    pos_x,
+                                    pos_y,
+                                    color,
+                                    self.op(snapshot),
+                                    extend_left = pos > 0,
+                                    extend_right = pos < len(sample.trajectory) - 1
+                                ))
                         else:
                             self.renderer.add(
                                 self.renderer.block(pos_x, pos_y, color, ""))

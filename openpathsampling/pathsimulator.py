@@ -136,6 +136,7 @@ class Bootstrapping(PathSimulator):
 
             movepath = bootstrapmove.move(self.globalstate)
             samples = movepath.results
+            print len(samples)
 #            logger.debug("SAMPLES:")
 #            for sample in samples:
 #                logger.debug("(" + str(sample.replica)

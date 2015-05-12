@@ -466,7 +466,7 @@ class KeepLastSamplePathMoveChange(PathMoveChange):
         self.subchanges = [subchange]
 
     def _get_results(self):
-        samples = self.subchange.samples
+        samples = self.subchange.results
         if len(samples) > 1:
             samples = [samples[-1]]
 
@@ -491,7 +491,7 @@ class PathSimulatorPathMoveChange(PathMoveChange):
         self.subchanges = [subchange]
 
     def _get_results(self):
-        return self.subchange.samples
+        return self.subchange.results
 
     def _get_trials(self):
         return self.subchange.trials
