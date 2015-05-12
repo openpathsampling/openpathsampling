@@ -1,8 +1,9 @@
 import openpathsampling as paths
-import networkx as nx
+import numpy as np
+import pandas as pd
 import scipy.sparse
 from scipy.sparse.csgraph import reverse_cuthill_mckee
-import numpy as np
+import networkx as nx
 
 
 
@@ -128,10 +129,10 @@ class ReplicaNetwork(object):
 
 
     def transition_matrix(self, storage=None, index_order=None, force=False):
-        (n_try, n_acc) = self.analysis_exchanges(storage, force)
+        (n_try, n_acc) = self.analyze_exchanges(storage, force)
         ensemble_to_number = self.initial_order(index_order)
-        number_to_ensemble = {self.ensemble_to_number[k] : k for 
-                              k in self.ensemble_to_number.keys()}
+        number_to_ensemble = {ensemble_to_number[k] : k for 
+                              k in ensemble_to_number.keys()}
         n_ensembles = len(ensemble_to_number)
         data = [float(n_acc[k]) / n_try[k] for k in n_try.keys()]
         ens_i, ens_j = zip(*n_try.keys())
@@ -141,10 +142,11 @@ class ReplicaNetwork(object):
             (data, (i, j)), 
             shape=(n_ensembles, n_ensembles)
         )
-        # TODO clean these up
+        # TODO clean these up: maybe move labels to elsewhere?
         sset0 = storage.samplesets[0]
         labels = {k : sset0[number_to_ensemble[k]].replica 
                   for k in number_to_ensemble.keys()}
+
         df = self.reorder_matrix(acc_matrix, labels, index_order)
         return df
         # TODO: convert it to a pandas dataframe and return it
@@ -153,19 +155,21 @@ class ReplicaNetwork(object):
     def reorder_matrix(self, matrix, number_to_label, index_order):
         """ matrix must be a coo_matrix (I think): do other have same `data`
         attrib?"""
+        n_ensembles = len(number_to_label)
         if index_order == None:
             # reorder based on RCM from scipy.sparse.csgraph
             rcm_perm = reverse_cuthill_mckee(matrix.tocsr())
-            perm_i = [rcm_perm[ii] for ii in i]
-            perm_j = [rcm_perm[jj] for jj in j]
+            perm_i = [rcm_perm[ii] for ii in matrix.row]
+            perm_j = [rcm_perm[jj] for jj in matrix.col]
 
             new_matrix = scipy.sparse.coo_matrix(
                 (matrix.data, (perm_i, perm_j)), 
                 shape=(n_ensembles, n_ensembles)
             )
-            reordered_labels = [labels[k] for k in rcm_perm]
+            reordered_labels = [number_to_label[k] for k in rcm_perm]
         else:
-            reordered_labels = [labels[k] for k in labels.keys()]
+            reordered_labels = [number_to_label[k] 
+                                for k in number_to_label.keys()]
             new_matrix = acc_matrix
 
         reordered = pd.DataFrame(new_matrix.todense())
@@ -176,12 +180,12 @@ class ReplicaNetwork(object):
 
 
     def mixing_matrix(self, storage=None, index_order=None, force=False):
-        (n_try, n_acc) = self.analysis_exchanges(storage, force)
+        (n_try, n_acc) = self.analyze_exchanges(storage, force)
         # TODO: if the transition matrix works, this just involves
         # modifying the input i, j, data
 
     def diagram(self, storage=None, force=False):
-        (nacc, ntry) = self.analysis_exchanges(storage, force)
+        (nacc, ntry) = self.analyze_exchanges(storage, force)
         # TODO: make this into a networkx diagram. It would be really nice
         # if a given interface set could be forced to be collinear
 
