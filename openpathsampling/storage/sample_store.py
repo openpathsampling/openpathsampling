@@ -129,8 +129,8 @@ class SampleStore(ObjectStore):
     def add_empty_to_cache(self, idx, trajectory_idx, replica_idx, bias):
         obj = Sample(
                 trajectory=self.storage.trajectories[int(trajectory_idx)],
-                replica=replica_idx,
-                bias=bias
+                replica=int(replica_idx),
+                bias=float(bias)
             )
         obj.idx[self.storage] = idx
         obj._origin = self.storage
