@@ -344,13 +344,21 @@ class Ensemble(object):
 
             while start <= length - min_length and end <= length:
                 tt = trajectory[start:end]
-#                print start,end
-                if self.can_append(tt) and end<length:
+                if self.can_append(tt) and end < length:
                     end += 1
                 else:
                     if self(tt, trusted=False):
                         ensemble_list.append(slice(start,end))
                         pad = min(overlap, end - start - 1)
+                        start = end - pad
+                        if end == length:
+                            # This means we have reached the end and should stop
+                            # All other possible subtraj can only be contained
+                            # in already existing ones
+                            start = length
+                    elif self(tt[0:len(tt)-1], trusted=False):
+                        ensemble_list.append(slice(start,end-1))
+                        pad = min(overlap, end - start - 2)
                         start = end - pad
                     else:
                         start += 1
