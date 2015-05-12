@@ -265,9 +265,6 @@ class SampleGenerator(PathMover):
         shoot_str = "MC in {cls} using samples {trials} and ensembles {ens}"
         logger.info(shoot_str.format(cls=cls.__name__, trials=trials, ens=ensembles
                                     ))
-
-        print trials, ensembles
-
         trial_dict = dict()
         for trial in trials:
             trial_dict[trial.ensemble] = trial
@@ -286,7 +283,6 @@ class SampleGenerator(PathMover):
 
         rand = random.random()
 
-        print rand, probability
 
         if rand > probability:
             # rejected
@@ -296,8 +292,6 @@ class SampleGenerator(PathMover):
             total_acceptance = probability,
             random_value = rand
         )
-
-        print 'Accepted', accepted
 
         return accepted, details
 
@@ -313,14 +307,11 @@ class SampleGenerator(PathMover):
         super(SampleGenerator, self).__init__(ensembles)
 
     def move(self, globalstate):
-        print self.__class__.__name__
         # 1. pick a set of ensembles (in case we allow to pick several ones)
         ensembles = self._ensemble_selector()
 
         # 2. pick samples from these ensembles
         samples = [ self.select_sample(globalstate, ens) for ens in ensembles ]
-
-        print [samp.ensemble for samp in samples]
 
         # 3. pass these samples to the generator
         trials = self(*samples)
@@ -1551,7 +1542,6 @@ class MoveDetails(Details):
     '''
 
     def __init__(self, **kwargs):
-        print kwargs
         self.inputs=None
         self.trials=None
         self.results=None

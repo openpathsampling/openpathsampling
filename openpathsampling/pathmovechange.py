@@ -272,11 +272,9 @@ class EmptyPathMoveChange(PathMoveChange):
     def __str__(self):
         return ''
 
-    @property
     def _get_trials(self):
         return []
 
-    @property
     def _get_results(self):
         return []
 

@@ -27,7 +27,14 @@ from pathmover import (
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
     PathSimulatorMover, PathReversalSet,
-    NeighborEnsembleReplicaExchange
+    NeighborEnsembleReplicaExchange, SampleGenerator,
+    FinalSubtrajectorySelectMover, BackwardExtendGenerator,
+    BackwardShootGenerator,
+    ExtendingGenerator, FilterBySample, FirstSubtrajectorySelectMover,
+    ForceEnsembleChangeMover, ForwardExtendGenerator, ForwardShootGenerator,
+    MultipleSetMinusMover, OneWayShootingMover, PathReversalGenerator,
+    RandomSubtrajectorySelectGenerator, RandomSubtrajectorySelectMover,
+    ReplicaExchangeGenerator, ShootGenerator, ShootMover
 )
 
 
