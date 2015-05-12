@@ -1122,7 +1122,7 @@ class OneWayShootingMover(RandomChoiceMover):
         self.selector = selector
 
 @ops_object
-class MinusMover(ConditionalSequentialMover):
+class MinusMover(ConditionalSequentialMover, ReplicaExchangeMover):
     '''
     Instance of a MinusMover.
 
@@ -1130,6 +1130,13 @@ class MinusMover(ConditionalSequentialMover):
     paths between the innermost regular TIS interface ensemble and the minus
     interface ensemble. This is particularly useful for improving sampling
     of path space.
+
+    Note that the inheritance from ReplicaExchangeMover is only to assist
+    with `isinstance` in later analysis. Since the only two functions here
+    are `.__init__() and `.move()`, both of which exist in both parent
+    classes, the calls to `super` will use the version in
+    ConditionalSequentalMover. However, analysis routines will see
+    `isinstance(minus, ReplicaExchangeMover)` as True.
     '''
     def __init__(self, minus_ensemble, innermost_ensemble, 
                  ensembles=None):
