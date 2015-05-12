@@ -596,8 +596,16 @@ class RETISTransition(TISTransition):
     @property
     def minus_move_flux(self, storage):
         minus_moves = (d for d in storage.pathmovechanges 
-                       if self.movers['minus'] in d)
-
+                       if self.movers['minus'][0] in d)
+        for move in minus_moves:
+            minus_samp = [s for s in move.samples 
+                          if s.ensemble==self.minus_ensemble][0]
+            traj = minus_samp.trajectory
+            inX = paths.AllInXEnsemble(self.minus_ensemble.innermost_vol)
+            outX = paths.AllOutXEnsemble(self.minus_ensemble.innermost_vol)
+            in_parts = inX.split(traj)
+            out_parts = outX.split(traj)
+        
         # 1. get the samples in the minus ensemble
         # 2. summarize_trajectory for each
         # 3. calculate the flux
