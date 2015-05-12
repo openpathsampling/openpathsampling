@@ -1433,6 +1433,11 @@ class PathSimulatorMover(PathMover):
         self.pathsimulator = pathsimulator
 
     def move(self, globalstate, step=-1):
+
+        details = MoveDetails(
+            step=step
+        )
+
         return paths.PathSimulatorPathMoveChange(
             self.mover.move(globalstate),
             mover=self
