@@ -39,7 +39,7 @@ class testFirstFrameSelector(SelectorTest):
         assert_equal(snap.coordinates[0][0], -0.5)
 
     def test_shooting_move(self):
-        self.shooter = ForwardShootMover(FirstFrameSelector(), ensemble=self.ens)
+        self.shooter = ForwardShootMover(FirstFrameSelector(), ensembles=self.ens)
         change = self.shooter.move(self.gs)
         samples = change.trials
         assert_equal(len(samples), 1)
@@ -61,7 +61,7 @@ class testFinalFrameSelector(SelectorTest):
         assert_equal(snap.coordinates[0][0], 0.5)
 
     def test_shooting_move(self):
-        self.shooter = BackwardShootMover(FinalFrameSelector(), ensemble=self.ens)
+        self.shooter = BackwardShootMover(FinalFrameSelector(), ensembles=self.ens)
         change = self.shooter.move(self.gs)
         samples = change.trials
         assert_equal(change.accepted, True)
