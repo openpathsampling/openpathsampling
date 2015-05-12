@@ -177,19 +177,6 @@ class SampleSet(object):
         '''Returns the list of ensembles in this SampleSet'''
         return self.ensemble_dict.keys()
 
-    def save_samples(self, storage):
-        """
-        Save all samples in the current GlobalState object. This should be
-        called after a move has generated a new object since then all
-        samples will get a timestamp that is associated with this
-
-        Parameters
-        ==========
-        storage : Storage()
-            the underlying netcdf file to be used for storage
-        """
-        map(storage.results.save, self.samples)
-
     def sanity_check(self):
         '''Checks that the sample trajectories satisfy their ensembles
         '''

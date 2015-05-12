@@ -297,6 +297,8 @@ class SampleGenerator(PathMover):
             random_value = rand
         )
 
+        print 'Accepted', accepted
+
         return accepted, details
 
     def submovers(self):
@@ -309,7 +311,6 @@ class SampleGenerator(PathMover):
 
     def __init__(self, ensembles=None):
         super(SampleGenerator, self).__init__(ensembles)
-        self.acceptor = SampleGenerator.Metropolis
 
     def move(self, globalstate):
         print self.__class__.__name__
@@ -345,7 +346,7 @@ class SampleGenerator(PathMover):
         return args
 
     def _accept(self, trials):
-        return self.acceptor(trials, self.out_ensembles)
+        return self.Metropolis(trials, self.out_ensembles)
 
 
 ###############################################################################
@@ -353,9 +354,9 @@ class SampleGenerator(PathMover):
 ###############################################################################
 
 class ShootGenerator(SampleGenerator):
-    def __init__(self, selector, ensemble, replicas=None):
+    def __init__(self, selector, ensembles, replicas=None):
         # TODO: Remove replicas
-        super(ShootGenerator, self).__init__(ensemble)
+        super(ShootGenerator, self).__init__(ensembles)
         self.selector = selector
 
     def _ensemble_selector(self):
@@ -702,9 +703,9 @@ class PathReversalMover(PathReversalGenerator):
 
 class ExtendingGenerator(SampleGenerator):
 
-    def __init__(self, extend_ensemble, ensemble=None):
+    def __init__(self, extend_ensemble, ensembles=None):
         super(ExtendingGenerator, self).__init__(
-            ensemble
+            ensembles
         )
         self.extend_ensemble = extend_ensemble
 
