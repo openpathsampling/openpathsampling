@@ -110,6 +110,11 @@ class PathMoveChange(TreeMixin):
 
         Examples
         --------
+        >>> mover1 = 1
+        >>> mover2 = 2
+        >>> mover3 = 3
+        >>> mover4 = 4
+        >>> mover5 = 5
         >>> tree1 = [mover1, [mover2]]
         >>> tree2 = [mover1, [mover2], [mover3]]
         >>> tree3 = [mover1, [mover2], [mover4, [mover5]]]
@@ -125,13 +130,10 @@ class PathMoveChange(TreeMixin):
         elif isinstance(item, paths.PathMoveChange):
             return item in iter(self)
         elif type(item) is list:
-            super(PathMoveChange, self).__contains__(self, item)
+            super(PathMoveChange, self).__contains__(item)
         else:
             raise ValueError('Only PathMovers or PathMoveChanges or trees ' +
                              'can be tested.')
-
-    def __str__(self):
-        return self.__class__.__name__[:-14] + '(' + str(self.idx.values()) + ')'
 
     def __repr__(self):
         return self.__class__.__name__[:-14] + '(' + str(self.idx.values()) + ')'
