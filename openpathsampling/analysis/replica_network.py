@@ -62,6 +62,7 @@ class ReplicaNetwork(object):
             reps_ens = get_all_ensembles_and_replicas(storage)
             self.all_replicas = reps_ens['replicas']
             self.all_ensembles = reps_ens['ensembles']
+        return self.storage
 
 
     def analyze_exchanges(self, storage, force=False):
@@ -69,7 +70,7 @@ class ReplicaNetwork(object):
         # accepted): separate obtaining those tuples from adding up the
         # number of trials and acceptances -- this will make the rest of the
         # code usable for non-OPS purposes
-        self.check_storage(storage)
+        storage = self.check_storage(storage)
         if force == False and self.analysis != { }:
             return (self.analysis['n_trials'], self.analysis['n_accepted'])
         self.analysis['n_trials'] = {}
@@ -128,30 +129,6 @@ class ReplicaNetwork(object):
         return ensemble_to_number
 
 
-    def transition_matrix(self, storage=None, index_order=None, force=False):
-        (n_try, n_acc) = self.analyze_exchanges(storage, force)
-        ensemble_to_number = self.initial_order(index_order)
-        number_to_ensemble = {ensemble_to_number[k] : k for 
-                              k in ensemble_to_number.keys()}
-        n_ensembles = len(ensemble_to_number)
-        data = [float(n_acc[k]) / n_try[k] for k in n_try.keys()]
-        ens_i, ens_j = zip(*n_try.keys())
-        i = [ensemble_to_number[e] for e in ens_i]
-        j = [ensemble_to_number[e] for e in ens_j]
-        acc_matrix = scipy.sparse.coo_matrix(
-            (data, (i, j)), 
-            shape=(n_ensembles, n_ensembles)
-        )
-        # TODO clean these up: maybe move labels to elsewhere?
-        sset0 = storage.samplesets[0]
-        labels = {k : sset0[number_to_ensemble[k]].replica 
-                  for k in number_to_ensemble.keys()}
-
-        df = self.reorder_matrix(acc_matrix, labels, index_order)
-        return df
-        # TODO: convert it to a pandas dataframe and return it
-
-
     def reorder_matrix(self, matrix, number_to_label, index_order):
         """ matrix must be a coo_matrix (I think): do other have same `data`
         attrib?"""
@@ -179,11 +156,53 @@ class ReplicaNetwork(object):
         return reordered
 
 
+    def transition_matrix(self, storage=None, index_order=None, force=False):
+        (n_try, n_acc) = self.analyze_exchanges(storage, force)
+        ensemble_to_number = self.initial_order(index_order)
+        number_to_ensemble = {ensemble_to_number[k] : k for 
+                              k in ensemble_to_number.keys()}
+        n_ensembles = len(ensemble_to_number)
+        data = [float(n_acc[k]) / n_try[k] for k in n_try.keys()]
+        ens_i, ens_j = zip(*n_try.keys())
+        i = [ensemble_to_number[e] for e in ens_i]
+        j = [ensemble_to_number[e] for e in ens_j]
+        acc_matrix = scipy.sparse.coo_matrix(
+            (data, (i, j)), 
+            shape=(n_ensembles, n_ensembles)
+        )
+        # TODO clean these up: maybe move labels to elsewhere?
+        sset0 = self.storage.samplesets[0]
+        labels = {k : sset0[number_to_ensemble[k]].replica 
+                  for k in number_to_ensemble.keys()}
+
+        df = self.reorder_matrix(acc_matrix, labels, index_order)
+        return df
+
 
     def mixing_matrix(self, storage=None, index_order=None, force=False):
         (n_try, n_acc) = self.analyze_exchanges(storage, force)
-        # TODO: if the transition matrix works, this just involves
-        # modifying the input i, j, data
+        ensemble_to_number = self.initial_order(index_order)
+        number_to_ensemble = {ensemble_to_number[k] : k for 
+                              k in ensemble_to_number.keys()}
+        n_ensembles = len(ensemble_to_number)
+        data = [float(n_acc[k]) * 0.5 / n_try[k] for k in n_try.keys()]
+        ens_i, ens_j = zip(*n_try.keys())
+        i = [ensemble_to_number[e] for e in ens_i]
+        j = [ensemble_to_number[e] for e in ens_j]
+        ij = i+j
+        ji = j+i
+        data += data
+        acc_matrix = scipy.sparse.coo_matrix(
+            (data, (ij, ji)), 
+            shape=(n_ensembles, n_ensembles)
+        )
+        # TODO clean these up: maybe move labels to elsewhere?
+        sset0 = self.storage.samplesets[0]
+        labels = {k : sset0[number_to_ensemble[k]].replica 
+                  for k in number_to_ensemble.keys()}
+
+        df = self.reorder_matrix(acc_matrix, labels, index_order)
+        return df
 
     def diagram(self, storage=None, force=False):
         (nacc, ntry) = self.analyze_exchanges(storage, force)
