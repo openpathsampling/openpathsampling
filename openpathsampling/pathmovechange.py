@@ -260,6 +260,23 @@ class PathMoveChange(TreeMixin):
         else:
             return 'SampleMove : %s : %s :[]' % (self.mover.cls, self.accepted)
 
+    def canonical_mover(self):
+        pmc = self
+        while pmc.subchange is not None:
+            pmc = pmc.subchange
+
+        return pmc.mover
+
+    @property
+    def description(self):
+        subs = self.subchanges
+        if len(subs) == 0:
+            return str(self.mover)
+        elif len(subs) == 1:
+            return subs[0].description
+        else:
+            return ':'.join([sub.description for sub in subs])
+
 
 @ops_object
 class EmptyPathMoveChange(PathMoveChange):

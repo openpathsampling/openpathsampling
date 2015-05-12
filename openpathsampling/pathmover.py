@@ -1440,7 +1440,8 @@ class PathSimulatorMover(PathMover):
 
         return paths.PathSimulatorPathMoveChange(
             self.mover.move(globalstate),
-            mover=self
+            mover=self,
+            details=details
         )
 
     @property
