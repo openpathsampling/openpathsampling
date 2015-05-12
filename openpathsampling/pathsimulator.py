@@ -201,6 +201,10 @@ class PathSampling(PathSimulator):
             self.storage.sync()
 
         for step in range(nsteps):
+            logger.info("Beginning MC cycle " + str(step+1))
+            paths.tools.refresh_output(
+                "Working on Monte Carlo cycle step " + str(step+1) + ".\n"
+            )
             movepath = self._mover.move(self.globalstate, step=step)
             samples = movepath.samples
             self.globalstate = self.globalstate.apply_samples(samples, step=step)
@@ -220,4 +224,7 @@ class PathSampling(PathSimulator):
                     #self.storage.sync()
 
         self.sync_storage()
+        paths.tools.refresh_output(
+            "DONE! Completed " + str(step+1) + " Monte Carlo cycles.\n"
+        )
 

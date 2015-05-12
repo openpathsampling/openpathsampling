@@ -47,6 +47,11 @@ class EnsembleCache(object):
     def check(self, trajectory=None, reset=None):
         """Checks and resets (if necessary) the ensemble cache.
         """
+        logger.debug("Checking cache....")
+        #logger.debug("traj " + str([id(s) for s in trajectory]))
+        logger.debug("start_frame " + str(id(self.start_frame)))
+        logger.debug("prev_last " + str(id(self.prev_last_frame)))
+
         if trajectory is not None:
             # if the first frame has changed, we should reset
             if reset is None:
@@ -76,8 +81,8 @@ class EnsembleCache(object):
         else:
             reset = True
 
+        self.trusted = not reset 
         self.last_length = len(trajectory)
-        self.trusted = (self.last_length == 1)
         if reset:
             logger.debug("Resetting cache " + str(self))
             if self.direction > 0:
@@ -101,8 +106,7 @@ class EnsembleCache(object):
         elif self.direction < 0:
             self.prev_last_frame = trajectory[0]
         else:
-            raise RuntimeWarning("EnsembleCache.direction = " + 
-                                 str(self.direction) + " invalid.")
+            self.bad_direction_error()
 
         return reset
 
@@ -161,6 +165,23 @@ class Ensemble(object):
 
     def check(self, trajectory):
         return self(trajectory, trusted = False)
+
+    def trajectory_summary(self, trajectory):
+        """
+        Return dict with info on how this ensemble "sees" the trajectory.
+        """
+        return { }
+
+    def trajectory_summary_str(self, trajectory):
+        """
+        Returns a string with the results of the trajectory_summary function.
+        """
+        summ = self.trajectory_summary(trajectory)
+        if summ == { }:
+            return "No summary available"
+        else:
+            return str(summ)
+
 
     def oom_matrix(self, oom):
         """
@@ -773,6 +794,7 @@ class SequentialEnsemble(Ensemble):
                      " | ens_from " + str(ens_from) +
                      " | subtraj_from " + str(subtraj_from)
                     )
+        logger.debug("Cache is Trusted: " + str(cache.trusted))
 
     def assign_frames(self, cache, ens_num, subtraj_first=None, subtraj_final=None):
         if ens_num is None:
@@ -875,9 +897,9 @@ class SequentialEnsemble(Ensemble):
         # we overshoot
         logger.debug("*Traj slice " + str(subtraj_first) + " " + 
                      str(subtraj_final+1) + " / " + str(traj_final))
-        logger.debug("Ensemble " + str(ens.__class__.__name__) + str(ens))
-        logger.debug("Can-app " + str(ens.can_append(subtraj, trusted=True)))
-        logger.debug("Call    " + str(ens(subtraj, trusted=True)))
+        #logger.debug("Ensemble " + str(ens.__class__.__name__))# + str(ens))
+        #logger.debug("Can-app " + str(ens.can_append(subtraj, trusted=True)))
+        #logger.debug("Call    " + str(ens(subtraj, trusted=True)))
         while ( (ens.can_append(subtraj, trusted=True) or 
                  ens(subtraj, trusted=True)
                 ) and subtraj_final < traj_final):
@@ -899,6 +921,9 @@ class SequentialEnsemble(Ensemble):
         subtraj = traj[slice(subtraj_first, subtraj_final)]
         logger.debug("*Traj slice " + str(subtraj_first) + " " + 
                      str(subtraj_final) + " / " + str(len(traj)))
+        #logger.debug("Ensemble " + str(ens.__class__.__name__))# + str(ens))
+        #logger.debug("Can-app " + str(ens.can_prepend(subtraj, trusted=True)))
+        #logger.debug("Call    " + str(ens(subtraj, trusted=True)))
         while ( (ens.can_prepend(subtraj, trusted=True) or 
                  ens.check_reverse(subtraj, trusted=True)
                 ) and subtraj_first >= traj_first):
@@ -949,6 +974,9 @@ class SequentialEnsemble(Ensemble):
         logger.debug(
             "Beginning can_append with subtraj_first=" + str(subtraj_first)
             + "; ens_first=" + str(ens_first) + "; ens_num=" + str(ens_num)
+        )
+        logger.debug(
+            "Can-append sees a trusted cache: " + str(cache.trusted)
         )
         for i in range(len(self.ensembles)):
             ens = self.ensembles[i]
@@ -1065,7 +1093,12 @@ class SequentialEnsemble(Ensemble):
                 self.update_cache(cache, ens_num, first_ens, subtraj_final)
                 self.assign_frames(cache, None, None, None)
             else:
-                subtraj_final = len(trajectory)+cache.contents['subtraj_from']
+                logger.debug("len(traj)="+str(len(trajectory)) + 
+                             "cache_from="+str(cache.contents['subtraj_from']))
+                subtraj_from = cache.contents['subtraj_from']
+                if subtraj_from == None:
+                    subtraj_from = 0
+                subtraj_final = len(trajectory)+subtraj_from
                 ens_num = cache.contents['ens_num']
                 ens_final = cache.contents['ens_from']
 
@@ -1429,6 +1462,12 @@ class WrappedEnsemble(Ensemble):
         # a property for _new_ensemble
         self._new_ensemble = self.ensemble
         self.trusted = None
+        self._cache_can_append = EnsembleCache(+1)
+        self._cache_call = EnsembleCache(+1)
+        self._cache_can_prepend = EnsembleCache(+1) #TODO: this is weird
+        # cache_can_prepend has to think it is going forward because the
+        # frames given to it are from a forward growing trajectory... only
+        # later is everything turned around
 
     def __call__(self, trajectory, trusted=None):
         return self._new_ensemble(self._alter(trajectory), trusted)
@@ -1436,11 +1475,11 @@ class WrappedEnsemble(Ensemble):
     def _alter(self, trajectory):
         return trajectory
         
-    def can_append(self, trajectory, trusted=False):
+    def can_append(self, trajectory, trusted=None):
         return self._new_ensemble.can_append(self._alter(trajectory),
                                              self.trusted)
 
-    def can_prepend(self, trajectory, trusted=False):
+    def can_prepend(self, trajectory, trusted=None):
         return self._new_ensemble.can_prepend(self._alter(trajectory))
 
 @ops_object
@@ -1481,10 +1520,33 @@ class BackwardPrependedTrajectoryEnsemble(WrappedEnsemble):
     def __init__(self, ensemble, add_trajectory):
         super(BackwardPrependedTrajectoryEnsemble, self).__init__(ensemble)
         self.add_trajectory = add_trajectory
+        self._cached_trajectory = paths.Trajectory(add_trajectory)
 
     def _alter(self, trajectory):
-#        print [ s.idx for s in trajectory.reversed + self.add_traj]
-        return trajectory.reversed + self.add_trajectory
+        logger.debug("Starting BackwardPrepended._alter")
+        #logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
+        reset = self._cache_can_prepend.check(trajectory)
+        #logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
+        #logger.debug("traj    " + str([id(i) for i in trajectory]))
+        #logger.debug("trajrev " + str([id(i) for i in trajectory.reversed]))
+        #reset = False
+        if not reset:
+            logger.debug("BackwardPrended was not reset")
+            first_frame = trajectory[-1]
+            first_frame.reversed
+            if self._cached_trajectory[0] != first_frame:
+                self._cached_trajectory.insert(0,first_frame)
+        else:
+            self._cached_trajectory = trajectory.reversed + self.add_trajectory
+
+        #logger.debug("revtraj " + str([id(i) for i in revtraj]))
+        #logger.debug("add     " + str([id(i) for i in self.add_trajectory]))
+        #logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
+
+        return self._cached_trajectory
+
+    def can_append(self, trajectory, trusted=None):
+        raise RuntimeError("BackwardPrependedTrajectoryEnsemble.can_append is nonsense.")
 
 @ops_object
 class ForwardAppendedTrajectoryEnsemble(WrappedEnsemble):
@@ -1496,9 +1558,34 @@ class ForwardAppendedTrajectoryEnsemble(WrappedEnsemble):
     def __init__(self, ensemble, add_trajectory):
         super(ForwardAppendedTrajectoryEnsemble, self).__init__(ensemble)
         self.add_trajectory = add_trajectory
+        self._cached_trajectory = paths.Trajectory(add_trajectory)
 
     def _alter(self, trajectory):
-        return self.add_trajectory + trajectory
+        logger.debug("Starting _alter")
+        reset = self._cache_can_append.check(trajectory)
+        if not reset:
+            final_frame = trajectory[-1]
+            if self._cached_trajectory[-1] != final_frame:
+                self._cached_trajectory.append(final_frame)
+        else: 
+            logger.debug("doing it oldstyle")
+            self._cached_trajectory = self.add_trajectory + trajectory
+
+        # DEBUG 
+        #logger.debug("add   " + str([i for i in self.add_trajectory]))
+        #logger.debug("traj  " + str([i for i in trajectory]))
+        #logger.debug("cache " + str([i for i in self._cached_trajectory]))
+        #oldstyle = self.add_trajectory + trajectory
+        #for (t,b) in zip(self._cached_trajectory,
+                         #self.add_trajectory+trajectory):
+            #logger.debug(str(t) + " ?=? " + str(b))
+            #assert(t == b)
+        #assert(len(self._cached_trajectory) == len(oldstyle))
+
+        return self._cached_trajectory
+
+    def can_prepend(self, trajectory, trusted=None):
+        raise RuntimeError("ForwardAppendedTrajectoryEnsemble.can_prepend is nonsense.")
 
 @ops_object
 class ReversedTrajectoryEnsemble(WrappedEnsemble):
@@ -1645,9 +1732,13 @@ class TISEnsemble(SequentialEnsemble):
         Volume(s) that only the last frame may be in
     interface : Volume
         Volume which the trajectory must exit to be accepted
+    orderparameter : CollectiveVariable
+        CV to be used as order parameter for this
     """
-    def __init__(self, initial_states, final_states, interface):
+    def __init__(self, initial_states, final_states, interface,
+                 orderparameter=None):
         # regularize to list of volumes
+        # without orderparameter, some info can't be obtained
         try:
             n_initial_states = len(initial_states)
         except TypeError:
@@ -1664,6 +1755,7 @@ class TISEnsemble(SequentialEnsemble):
         self.final_states = final_states
         self.interface = interface
         self.name = interface.name
+        self.orderparameter = orderparameter
 
         volume_a = paths.volume.join_volumes(initial_states)
         volume_b = paths.volume.join_volumes(final_states)
@@ -1673,6 +1765,65 @@ class TISEnsemble(SequentialEnsemble):
             AllOutXEnsemble(volume_a | volume_b) & PartOutXEnsemble(interface),
             AllInXEnsemble(volume_a | volume_b) & LengthEnsemble(1)
         ])
+
+    def trajectory_summary(self, trajectory):
+        initial_state_i = None
+        final_state_i = None
+        for state_i in range(len(self.initial_states)):
+            if self.initial_states[state_i](trajectory[0]):
+                initial_state_i = state_i
+                break
+        all_states = self.initial_states + self.final_states
+        for state_i in range(len(all_states)):
+            if all_states[state_i](trajectory[-1]):
+                final_state_i = state_i
+                break
+
+        if self.orderparameter is not None:
+            lambda_traj = self.orderparameter(trajectory)
+            min_lambda = min(lambda_traj)
+            max_lambda = max(lambda_traj)
+        else:
+            min_lambda = None
+            max_lambda = None
+
+        return {
+            'initial_state' : initial_state_i,
+            'final_state' : final_state_i,
+            'max_lambda' : max_lambda,
+            'min_lambda' : min_lambda
+        }
+
+
+    def trajectory_summary_str(self, trajectory):
+        summ = self.trajectory_summary(trajectory)
+        all_states = self.initial_states + self.final_states
+        # TODO: remove the .name from this when string returns correctly
+        init_st_i = summ['initial_state']
+        fin_st_i = summ['final_state']
+        # TODO: how can we have None?
+        if init_st_i == None:
+            init_st = "None"
+        else:
+            init_st = str(self.initial_states[summ['initial_state']].name)
+        if fin_st_i == None:
+            fin_st = "None"
+        else:
+            fin_st = str(all_states[summ['final_state']].name)
+
+        if self.orderparameter is not None:
+            opname = self.orderparameter.name
+        else:
+            opname = "None"
+        min_l = str(summ['min_lambda'])
+        max_l = str(summ['max_lambda'])
+        mystr = (
+            "initial_state=" + init_st + " " +
+            "final_state=" + fin_st + " " +
+            "min_lambda=" + min_l + " " +
+            "max_lambda=" + max_l + " "
+        )
+        return mystr
 
 
 class EnsembleFactory():
@@ -1739,11 +1890,11 @@ class EnsembleFactory():
 
 
     @staticmethod
-    def TISEnsembleSet(volume_a, volume_b, volumes_x, trusted=True):
+    def TISEnsembleSet(volume_a, volume_b, volumes_x, orderparameter):
         myset = []
         for vol in volumes_x:
             myset.append(
-                paths.TISEnsemble(volume_a, volume_b, vol)
+                paths.TISEnsemble(volume_a, volume_b, vol, orderparameter)
             )
         return myset
 
