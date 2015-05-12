@@ -342,7 +342,7 @@ class TreeRenderer(object):
 
 
 class MoveTreeBuilder(object):
-    def __init__(self, storage, op=None, states=None):
+    def __init__(self, storage=None, op=None, states=None):
         self.rejected = False
         self.p_x = dict()
         self.p_y = dict()
@@ -533,7 +533,7 @@ class MoveTreeBuilder(object):
         storage = self.storage
         for ens_idx, ens in enumerate(ensembles):
             if mover.ensembles is None or ens in mover.ensembles or (type(ens) is paths.ReplicaExchangeMover and ens in mover.ensembles[0]):
-                txt = str(ens.idx[storage])
+                txt = chr(ens_idx + 65)
 
                 my_color = color
 
@@ -980,7 +980,7 @@ class MoveTreeNX(object):
 //        require.config({paths: {d3: "http://d3js.org/d3.v3.min"}});
 
 //        require(["d3"], function(d3) {
-
+        (function() {
             var diameter = 800;
             var padding = 100;
 
@@ -1029,6 +1029,7 @@ class MoveTreeNX(object):
 
             d3.select(self.frameElement).style("height", diameter + 50 + "px");
 //        });
+        })();
 
         </script>
         '''

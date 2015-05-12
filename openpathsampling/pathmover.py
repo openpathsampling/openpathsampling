@@ -274,7 +274,7 @@ class SampleGenerator(PathMover):
     engine = None
 
     @staticmethod
-    def MCAcceptor(trials, ensembles):
+    def Metropolis(trials, ensembles):
         trial_dict = dict()
         for trial in trials:
             trial_dict[trial.ensemble] = trial
@@ -313,7 +313,7 @@ class SampleGenerator(PathMover):
     def __init__(self, in_ensembles, out_ensembles):
         super(SampleGenerator, self).__init__(in_ensembles)
         self.out_ensembles = out_ensembles
-        self.acceptor = SampleGenerator.MCAcceptor
+        self.acceptor = SampleGenerator.Metropolis
 
     def move(self, globalstate):
         # we use self.ensembles to pick the samples we want to use
