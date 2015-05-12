@@ -62,10 +62,30 @@ class ReplicaNetwork(object):
     def analyze_exchanges(self, storage, force=False):
         self.check_storage(storage)
         if force == False and self.analysis != { }:
-            return self.analysis
-        # TODO: this generates two matrices: naccepted and ntrials. Each
-        # should be represented as a sparse upper triangular matrix.
-        pass
+            return (self.analysis['n_trials'], self.analysis['n_accepted'])
+        self.analysis['n_trials'] = {}
+        self.analysis['n_accepted'] = {}
+        for pmc in storage.pathmovechanges:
+            for delta in pmc:
+                if isinstance(delta.mover, paths.ReplicaExchangeMover):
+                    if len(delta.trials) == 2:
+                        ens1 = delta.trials[0].ensemble
+                        ens2 = delta.trials[1].ensemble
+                    else:
+                        raise RuntimeWarning(
+                            "RepEx mover with more than 2 trials"
+                        )
+                    try:
+                        self.analysis['n_trials'][(ens1, ens2)] += 1
+                    except KeyError:
+                        self.analysis['n_trials'][(ens1, ens2)] = 1
+                    if delta.accepted:
+                        try:
+                            self.analysis['n_accepted'][(ens1, ens2)] += 1
+                        except KeyError:
+                            self.analysis['n_accepted'][(ens1, ens2)] = 1
+
+        return (self.analysis['n_trials'], self.analysis['n_accepted'])
 
     def analyze_traces(self, storage, force=False):
         self.check_storage(storage)
@@ -82,7 +102,8 @@ class ReplicaNetwork(object):
         return self.traces
 
     def transition_matrix(self, storage=None, index_order=None, force=False):
-        (nacc, ntry) = self.analysis_exchanges(storage, force)
+        (n_try, n_acc) = self.analysis_exchanges(storage, force)
+
         # TODO: convert it to a pandas dataframe and return it
 
 
