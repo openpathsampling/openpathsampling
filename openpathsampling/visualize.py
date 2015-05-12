@@ -1,6 +1,8 @@
 import svgwrite
 import os
 
+import svgwrite.mixins
+
 import openpathsampling as paths
 import networkx as nx
 
@@ -41,7 +43,7 @@ class TreeRenderer(object):
 
     def __getattr__(self, item):
         if item in ['block', 'shade', 'v_connection', 'h_connection', 'label',
-                    'connector', 'v_hook']:
+                    'connector', 'v_hook', 'vertical_label', 'text']:
             # This will delay the execution of the draw commands until
             # we know where to draw
             return self._delay(object.__getattribute__(self, 'draw_' + item))
@@ -160,6 +162,30 @@ class TreeRenderer(object):
 
         return ret
 
+    def draw_text(self, x, y, color="blue", text="", align="middle",
+                padding=None,
+    ):
+        document = self.document
+        if padding is None:
+            padding = self.horizontal_gap
+
+        self._pad(self._xy(x - 0.5, y), self._wh(1.0, 5.0))
+
+        ret = list()
+
+        ret.append(document.text(
+            text=str(text)[:4],
+            insert=self._xb(x, y),
+            text_anchor=align,
+            font_size=self._h(self.font_size),
+            alignment_baseline='middle',
+            font_family=self.font_family,
+            fill=color,
+            transform='rotate(90deg)'
+        ))
+
+        return ret
+
     def draw_shade(self, x, y, w, color, stroke_width=None):
         document = self.document
         if stroke_width is None:
@@ -271,6 +297,30 @@ class TreeRenderer(object):
             font_family=self.font_family,
             fill=color
         )]
+
+    def draw_vertical_label(self, x, y, w, text, align="middle", color="black",
+                   shift=0.0):
+        document = self.document
+
+        self._pad(
+            self._xy(x + shift * self._text_align_to_int(align), y),
+            self._wh(w * self._text_align_to_int(align), 0.6)
+        )
+
+        return [document.text(
+            text=str(text),
+            insert=(0,0),
+            text_anchor=align,
+            font_size=self._h(self.font_size),
+            alignment_baseline='middle',
+            font_family=self.font_family,
+            fill=color,
+            transform='translate(' +
+                ' '.join(map(str, self._xb(x + shift * self._text_align_to_int(align), y))) +
+                ')rotate(270)'
+        )]
+
+
 
     def to_document(self):
 
@@ -463,11 +513,25 @@ class MoveTreeBuilder(object):
 
         path = pathmover
 
-        for level, sub in path.depth_post_order(lambda this: tuple(
+        self.render_ensemble_mover_head(ensembles, 5)
+
+        self.t_count = 5
+
+        total = len(path)
+
+        for ens_idx, ens in enumerate(ensembles):
+            self.renderer.add(
+                self.renderer.v_hook( ens_idx, self.t_count, ens_idx,
+                                           self.t_count + total + 1, 'gray')
+            )
+
+        for level, sub in path.depth_pre_order(lambda this: tuple(
                 [this, None])):
             self.t_count += 1
 
             sub_mp, sub_set = sub
+
+            name = sub_mp.name
 
             if sub_mp.__class__ is paths.SamplePathMoveChange:
                 self.renderer.add(
@@ -488,19 +552,37 @@ class MoveTreeBuilder(object):
                                         align='start', color='black')
                 )
 
-            if level + 1 in level_y \
-                    and level_y[level + 1] == self.t_count - 1:
-                self.renderer.add(
-                    self.renderer.v_connection(-7.0 + level, self.t_count,
-                                               self.t_count - 1, 'black')
-                )
-                del level_y[level + 1]
+            if False:
+                if level + 1 in level_y \
+                        and level_y[level + 1] == self.t_count - 1:
+                    self.renderer.add(
+                        self.renderer.v_connection(-7.0 + level, self.t_count,
+                                                   self.t_count - 1, 'orange')
+                    )
+                    del level_y[level + 1]
 
-            if level in level_y and level_y[level]:
-                self.renderer.add(
-                    self.renderer.v_connection(-8.0 + level, self.t_count,
-                                               level_y[level], 'black')
-                )
+                if level in level_y and level_y[level]:
+                    self.renderer.add(
+                        self.renderer.v_connection(-8.0 + level, self.t_count,
+                                                   level_y[level], 'black')
+                    )
+
+            if True:
+                if level - 1 in level_y \
+                        and level_y[level - 1] == self.t_count - 1:
+                    self.renderer.add(
+                        self.renderer.v_connection(-8.0 + level, self.t_count,
+                                                   self.t_count - 1, 'black')
+                    )
+                if level + 1 in level_y:
+                    del level_y[level + 1]
+
+                if level in level_y and level_y[level]:
+                    self.renderer.add(
+                        self.renderer.v_connection(-8.0 + level, self.t_count,
+                                                   level_y[level], 'black')
+                    )
+
 
             level_y[level] = self.t_count
 
@@ -526,31 +608,45 @@ class MoveTreeBuilder(object):
         self.renderer.height = 1.0 * self.t_count + 1.0
         self.renderer.width = 1.0 * len(ensembles) + 20.5
 
+    def render_ensemble_mover_head(self, ensembles, yp=None):
+        for ens_idx, ens in enumerate(ensembles):
+            txt = chr(ens_idx + 65)
+
+            label = ens.name if hasattr(ens, 'name') else ens.__class__.__name__[:-8]
+
+            self.renderer.add(
+                self.renderer.vertical_label(
+                    ens_idx, yp, 5, '[' + txt + '] ' + label,
+                    align='start'
+                )
+            )
+
     def render_ensemble_mover_line(self, ensembles, mover, yp=None, color='black'):
         if yp is None:
             yp = self.t_count
 
         storage = self.storage
         for ens_idx, ens in enumerate(ensembles):
-            if mover.ensembles is None or ens in mover.ensembles or (type(ens) is paths.ReplicaExchangeMover and ens in mover.ensembles[0]):
-                txt = chr(ens_idx + 65)
-
-                my_color = color
-
-#                if traj_idx in self.ens_x:
-#                    self.renderer.add(
-#                        self.renderer.v_hook(self.traj_ens_x[traj_idx],
-#                                             self.traj_ens_y[traj_idx], ens_idx,
-#                                             self.t_count, 'black'))
-#                    if self.traj_ens_x[traj_idx] != ens_idx:
-#                        my_color = 'red'
-#                else:
-#                    if len(self.ens_x) > 0:
-#                        my_color = 'red'
-
-#                if my_color != 'gray':
+            txt = chr(ens_idx + 65)
+            show = False
+            in_ens = mover.in_ensembles
+            out_ens = mover.out_ensembles
+            if in_ens is None or None in in_ens or ens in in_ens:
                 self.renderer.add(
-                    self.renderer.connector(ens_idx, yp, my_color, txt))
+                    self.renderer.connector(ens_idx, yp - 0.12, 'green', ''))
+
+                show = True
+
+            if out_ens is None or None in out_ens or ens in out_ens:
+                self.renderer.add(
+                    self.renderer.connector(ens_idx, yp + 0.12, 'red', ''))
+
+                show = True
+
+            if show:
+                self.renderer.add(
+                    self.renderer.block(ens_idx, yp, 'rgb(200,200,200)', txt))
+
 
 #        for ens_idx, ens in enumerate(ensembles):
 #            samp_ens = [samp for samp in sset if samp.ensemble is ens]
