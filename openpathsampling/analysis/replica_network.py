@@ -159,8 +159,9 @@ class ReplicaNetwork(object):
         if index_order == None:
             # reorder based on RCM from scipy.sparse.csgraph
             rcm_perm = reverse_cuthill_mckee(matrix.tocsr())
-            perm_i = [rcm_perm[ii] for ii in matrix.row]
-            perm_j = [rcm_perm[jj] for jj in matrix.col]
+            rev_perm_dict = {k : rcm_perm.tolist().index(k) for k in rcm_perm}
+            perm_i = [rev_perm_dict[ii] for ii in matrix.row]
+            perm_j = [rev_perm_dict[jj] for jj in matrix.col]
 
             new_matrix = scipy.sparse.coo_matrix(
                 (matrix.data, (perm_i, perm_j)), 
