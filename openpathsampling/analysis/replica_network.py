@@ -1,5 +1,9 @@
 import openpathsampling as paths
 import networkx as nx
+import scipy.sparse
+from scipy.sparse.csgraph import reverse_cuthill_mckee
+import numpy as np
+
 
 
 class ReplicaNetwork(object):
@@ -111,13 +115,70 @@ class ReplicaNetwork(object):
             )
         return self.traces
 
+    def initial_order(self, index_order):
+        # dictionaries to be used to translate between orderings (these are
+        # the defaults)
+        if index_order == None:
+            ensemble_to_number = {ens : self.all_ensembles.index(ens) 
+                                  for ens in self.all_ensembles}
+        else:
+            ensemble_to_number = {ens : index_order.index(ens) 
+                                  for ens in index_order}
+        return ensemble_to_number
+
+
     def transition_matrix(self, storage=None, index_order=None, force=False):
         (n_try, n_acc) = self.analysis_exchanges(storage, force)
+        ensemble_to_number = self.initial_order(index_order)
+        number_to_ensemble = {self.ensemble_to_number[k] : k for 
+                              k in self.ensemble_to_number.keys()}
+        n_ensembles = len(ensemble_to_number)
+        data = [float(n_acc[k]) / n_try[k] for k in n_try.keys()]
+        ens_i, ens_j = zip(*n_try.keys())
+        i = [ensemble_to_number[e] for e in ens_i]
+        j = [ensemble_to_number[e] for e in ens_j]
+        acc_matrix = scipy.sparse.coo_matrix(
+            (data, (i, j)), 
+            shape=(n_ensembles, n_ensembles)
+        )
+        # TODO clean these up
+        sset0 = storage.samplesets[0]
+        labels = {k : sset0[number_to_ensemble[k]].replica 
+                  for k in number_to_ensemble.keys()}
+        df = self.reorder_matrix(acc_matrix, labels, index_order)
+        return df
         # TODO: convert it to a pandas dataframe and return it
 
-    def mixing_statistics(self, storage=None, index_order=None, force=False):
-        (n_try, n_acc) = self.analysis_exchanges(storage, force)
 
+    def reorder_matrix(self, matrix, number_to_label, index_order):
+        """ matrix must be a coo_matrix (I think): do other have same `data`
+        attrib?"""
+        if index_order == None:
+            # reorder based on RCM from scipy.sparse.csgraph
+            rcm_perm = reverse_cuthill_mckee(matrix.tocsr())
+            perm_i = [rcm_perm[ii] for ii in i]
+            perm_j = [rcm_perm[jj] for jj in j]
+
+            new_matrix = scipy.sparse.coo_matrix(
+                (matrix.data, (perm_i, perm_j)), 
+                shape=(n_ensembles, n_ensembles)
+            )
+            reordered_labels = [labels[k] for k in rcm_perm]
+        else:
+            reordered_labels = [labels[k] for k in labels.keys()]
+            new_matrix = acc_matrix
+
+        reordered = pd.DataFrame(new_matrix.todense())
+        reordered.index = reordered_labels
+        reordered.columns = reordered_labels
+        return reordered
+
+
+
+    def mixing_matrix(self, storage=None, index_order=None, force=False):
+        (n_try, n_acc) = self.analysis_exchanges(storage, force)
+        # TODO: if the transition matrix works, this just involves
+        # modifying the input i, j, data
 
     def diagram(self, storage=None, force=False):
         (nacc, ntry) = self.analysis_exchanges(storage, force)
