@@ -207,7 +207,6 @@ class PathMover(TreeMixin):
                      + ")")
         return selected
 
-    @keep_selected_samples
     def move(self, globalstate):
         '''
         Run the generation starting with the initial trajectory specified.
@@ -296,6 +295,10 @@ class SampleGenerator(PathMover):
         )
 
         return accepted, details
+
+    def submovers(self):
+        # Generators do not have submovers!
+        return []
 
     def _ensemble_selector(self):
         # Default is that the list of ensembles is in self.ensembles
@@ -487,10 +490,15 @@ class ReplicaExchangeGenerator(SampleGenerator):
         initialization_logging(logger=init_log, obj=self,
                                entries=['bias'])
 
-    def _ensemble_selector(self, globalstate):
+    def _ensemble_selector(self):
         list_of_ensemble_pairs = make_list_of_pairs(self.ensembles)
         selected = random.choice(list_of_ensemble_pairs)
         return selected
+
+    def in_ensembles(self):
+        list_of_ensemble_pairs = make_list_of_pairs(self.ensembles)
+        ensembles = list(set([item for sublist in list_of_ensemble_pairs for item in sublist]))
+        return ensembles
 
     def __call__(self, sample1, sample2):
         # convert sample to the language used here before
@@ -559,14 +567,21 @@ class RandomSubtrajectorySelectGenerator(SampleGenerator):
 
 
     '''
-    def __init__(self, subensemble, n_l, ensembles=None):
+    def __init__(self, sub_ensemble, n_l, ensembles=None):
         super(RandomSubtrajectorySelectGenerator, self).__init__(
             ensembles
         )
         self.n_l = n_l
-        self.subensemble = subensemble
+        self.subensemble = sub_ensemble
 
-    def
+    def _ensemble_selector(self):
+        return [ self.ensembles ]
+
+    def in_ensembles(self):
+        return [ self.ensembles ]
+
+    def out_ensembles(self):
+        return [ self.subensemble ]
 
     def _choose(self, trajectory_list):
         return random.choice(trajectory_list)
@@ -636,10 +651,12 @@ class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
 ###############################################################################
 
 class PathReversalGenerator(SampleGenerator):
-    def __init__(self, ensemble):
-        super(PathReversalGenerator, self).__init__(
-            in_ensembles=[ensemble],
-            out_ensembles=[ensemble])
+
+    def _ensemble_selector(self):
+        return [ self.ensembles ]
+
+    def in_ensembles(self):
+        return [ self.ensembles ]
 
     def __call__(self, trial):
         trajectory = trial.trajectory
@@ -674,12 +691,20 @@ class PathReversalMover(PathReversalGenerator):
 
 class ExtendingGenerator(SampleGenerator):
 
-    def __init__(self, ensemble, extend_ensemble):
+    def __init__(self, extend_ensemble, ensemble=None):
         super(ExtendingGenerator, self).__init__(
-            in_ensembles=[ensemble],
-            out_ensembles=[extend_ensemble]
+            ensemble
         )
         self.extend_ensemble = extend_ensemble
+
+    def _ensemble_selector(self):
+        return [ self.ensembles ]
+
+    def in_ensembles(self):
+        return [ self.ensembles ]
+
+    def out_ensembles(self):
+        return [ self.extend_ensemble ]
 
     def __call__(self, trial):
         initial_trajectory = trial.trajectory
@@ -806,7 +831,6 @@ class RandomChoiceMover(PathMover):
             idx += 1
             prob += self.weights[idx]
 
-        logger_str = "RandomChoiceMover ({name}) selecting mover index {idx} ({mtype})"
         logger_str = "{name} (RandomChoiceMover) selecting {mtype} (index {idx})"
         logger.info(logger_str.format(name=self.name, idx=idx, mtype=self.movers[idx].name))
 
@@ -890,8 +914,6 @@ class SequentialMover(PathMover):
     def move(self, globalstate):
         logger.debug("Starting sequential move")
 
-#        subglobal = SampleSet(self.legal_sample_set(globalstate))
-
         subglobal = globalstate
         pathmovechanges = []
 
@@ -956,8 +978,6 @@ class ConditionalSequentialMover(SequentialMover):
     def move(self, globalstate):
         logger.debug("Starting conditional sequential move")
 
-#        subglobal = SampleSet(self.legal_sample_set(globalstate))
-
         subglobal = globalstate
         pathmovechanges = []
 
@@ -974,7 +994,6 @@ class ConditionalSequentialMover(SequentialMover):
                 break
 
         return paths.ConditionalSequentialPathMoveChange(pathmovechanges, mover=self)
-
 
 @ops_object
 class RestrictToLastSampleMover(PathMover):
@@ -1539,10 +1558,11 @@ def NeighborEnsembleReplicaExchange(ensemble_list):
     return movers
 
 def PathReversalSet(l):
-    if isinstance(l[0], paths.Ensemble):
-        return [PathReversalMover(ensembles=[item]) for item in l]
-    else:
-        return [PathReversalMover(replicas=[item]) for item in l]
+    # TODO: Check if replica can be removed here
+#    if isinstance(l[0], paths.Ensemble):
+    return [PathReversalMover(ensembles=[item]) for item in l]
+#    else:
+#        return [PathReversalMover(replicas=[item]) for item in l]
 
 
 class PathMoverFactory(object):

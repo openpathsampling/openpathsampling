@@ -260,7 +260,7 @@ class testReplicaExchangeMover(object):
 
         assert_equal(len(repex_change.results), 0) # since rejected
 
-        samples_A0B1_ens = repex_change.all_samples
+        samples_A0B1_ens = repex_change.trials
         assert_equal(len(samples_A0B1_ens), 2)
         assert_equal(repex_change.accepted, False)
 
@@ -437,7 +437,7 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
         assert_equal(len(samples), 3)
         for subchange in change:
             assert_equal(subchange.accepted, True)
-        assert_equal(len(change.all_samples,),3)
+        assert_equal(len(change.trials,),3)
         gs = gs + change
         assert_equal(gs[0].ensemble, self.tps)
 
@@ -449,7 +449,7 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
         # returns zero sample since even the first is rejected
         # the first one is still stored
         assert_equal(len(samples), 0)
-        allsamp = change.all_samples
+        allsamp = change.trials
         assert_equal(len(allsamp), 1)
         assert_equal(change[0].accepted, False)
         gs = gs + change
@@ -463,7 +463,7 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
         # @see above, this should return 2 samples. Important the third is
         # still run!
         assert_equal(len(samples), 2)
-        allsamp = change.all_samples
+        allsamp = change.trials
         assert_equal(len(allsamp), 3)
 
         assert_equal(change[0].accepted, True)
@@ -497,7 +497,7 @@ class testConditionalSequentialMover(testSequentialMover):
         samples = change.results
         # should be zero since the move is completely rejected
         assert_equal(len(samples), 0)
-        allsamp = change.all_samples
+        allsamp = change.trials
         assert_equal(len(allsamp), 1)
         assert_equal(change[0].accepted, False)
         gs = gs + change
@@ -510,7 +510,7 @@ class testConditionalSequentialMover(testSequentialMover):
         samples = change.results
         # number of accepted samples is 0 for this type of mover
         assert_equal(len(samples), 0)
-        allsamp = change.all_samples
+        allsamp = change.trials
         assert_equal(len(allsamp), 3)
 
         # check here if last actual samples was false
@@ -775,7 +775,7 @@ class testMinusMover(object):
         gs = SampleSet([samp_other_ensemble, self.minus_sample])
         
         change = self.mover.move(gs).opened
-        samples = change.all_samples
+        samples = change.trials
         assert_equal(self.innermost(innermost_other_ensemble), False)
         assert_equal(len(samples), 3) # stop after failed repex
         assert_equal(change[0].accepted, True)
@@ -791,7 +791,7 @@ class testMinusMover(object):
         gs = SampleSet([samp_crosses_to_state, self.minus_sample])
         
         change = self.mover.move(gs).opened
-        samples = change.all_samples
+        samples = change.trials
         assert_equal(self.innermost(innermost_crosses_to_state), True)
         assert_equal(len(samples), 3) # stop after failed repex
         assert_subchanges_set_accepted(change, [True, False, False])
@@ -815,7 +815,7 @@ class testMinusMover(object):
         assert_equal(self.minus(minus_crosses_to_state), True)
 
         change = self.mover.move(gs).opened
-        samples = change.all_samples
+        samples = change.trials
         assert_equal(len(samples), 3) # stop after failed repex
         assert_subchanges_set_accepted(change, [True, False, False])
 
@@ -832,7 +832,7 @@ class testMinusMover(object):
 
         gs = SampleSet([self.minus_sample, samp_bad_extension])
         change = self.mover.move(gs).opened
-        samples = change.all_samples
+        samples = change.trials
         assert_equal(len(samples), 5) # reject the last one
         print [ s.accepted for s in change.subchanges]
         print [ s.mover for s in change.subchanges]

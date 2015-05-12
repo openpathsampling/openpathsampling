@@ -160,7 +160,6 @@ class PathMoveChange(TreeMixin):
 
         See also
         --------
-        PathMoveChange.closed
         PathMoveChange.reduced()
 
         """
@@ -177,33 +176,6 @@ class PathMoveChange(TreeMixin):
 
     @property
     def trials(self):
-        """
-        A list of all samples generated for this move.
-
-        This contains accepted, rejected as well as samples that are
-        redundant at the end because they we will be replaced by other
-        samples already within the move
-
-        Returns
-        -------
-        list of Sample
-            the ordered list of all generated samples
-
-        Notes
-        -----
-        E.g. Imagine a Sequential move that creates 20 trials to replace
-        sample in ensemble 1. This will return all 20 samples although
-        at most one sample is necessary to represent the full move, i.e. the
-        last accepted one.
-
-        """
-        if self._trials is None:
-            self._trials = self._get_trials()
-
-        return self._trials
-
-    @property
-    def all_samples(self):
         """
         Returns a list of all samples generated during the PathMove.
 
@@ -248,25 +220,6 @@ class PathMoveChange(TreeMixin):
         Returns a list of all samples that are accepted in this move
 
         This contains unnecessary, but accepted samples, too.
-        """
-        if self._results is None:
-            self._results = self._get_results()
-
-        return self._results
-
-    @property
-    def finals(self):
-        """
-        Returns a list of all final samples that are accepted in this move
-
-        This contains unnecessary, but accepted samples, too.
-
-        Notes
-        -----
-        E.g. in case of a Sequential move that shoots 20 times in ensemble 1.
-        This will return all accepted samples which is between 0 and 20,
-        although only the last accepted is relevant for the whole change.
-
         """
         if self._results is None:
             self._results = self._get_results()
@@ -318,8 +271,13 @@ class EmptyPathMoveChange(PathMoveChange):
         return ''
 
     @property
-    def all_samples(self):
+    def _get_trials(self):
         return []
+
+    @property
+    def _get_results(self):
+        return []
+
 
 @ops_object
 class SamplePathMoveChange(PathMoveChange):
@@ -361,7 +319,6 @@ class RejectedSamplePathMoveChange(SamplePathMoveChange):
     def _get_results(self):
         return []
 
-
 @ops_object
 class RandomChoicePathMoveChange(PathMoveChange):
     """
@@ -395,24 +352,16 @@ class SequentialPathMoveChange(PathMoveChange):
         super(SequentialPathMoveChange, self).__init__(mover=mover, details=details)
         self.subchanges = subchanges
 
-    def to_dict(self):
-        return {
-            'subchanges' : self.subchanges,
-            'mover' : self.mover,
-            'details' : self.details
-        }
-
     def _get_results(self):
         samples = []
         for subchange in self.subchanges:
             samples = samples + subchange.results
         return samples
 
-    @property
-    def all_samples(self):
+    def _get_trials(self):
         samples = []
         for subchange in self.subchanges:
-            samples = samples + subchange.all_samples
+            samples = samples + subchange.trials
         return samples
 
     def __str__(self):
