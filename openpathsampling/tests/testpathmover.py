@@ -138,7 +138,7 @@ class testShootingMover(object):
 
 class testForwardShootMover(testShootingMover):
     def test_move(self):
-        mover = ForwardShootMover(UniformSelector(), ensemble=self.tps)
+        mover = ForwardShootMover(UniformSelector(), ensembles=self.tps)
         self.dyn.initialized = True
         change = mover.move(self.init_samp)
         newsamp = self.init_samp + change
@@ -149,7 +149,7 @@ class testForwardShootMover(testShootingMover):
 
 class testBackwardShootMover(testShootingMover):
     def test_move(self):
-        mover = BackwardShootMover(UniformSelector(), ensemble=self.tps)
+        mover = BackwardShootMover(UniformSelector(), ensembles=self.tps)
         self.dyn.initialized = True
         change = mover.move(self.init_samp)
         newsamp = self.init_samp + change
@@ -595,6 +595,7 @@ class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
         change = mover.move(self.gs)
         samples = change.results
         assert_equal(len(samples), 0)
+        print change.samples
         assert_equal(len(change.samples), 0)
 
 class testFirstSubtrajectorySelectMover(SubtrajectorySelectTester):

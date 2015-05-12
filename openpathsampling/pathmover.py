@@ -372,7 +372,7 @@ class SampleGenerator(PathMover):
 ###############################################################################
 
 class ShootGenerator(SampleGenerator):
-    def __init__(self, selector, ensembles, replicas=None):
+    def __init__(self, selector, ensembles=None, replicas=None):
         # TODO: Remove replicas
         super(ShootGenerator, self).__init__(ensembles)
         self.selector = selector
@@ -583,7 +583,7 @@ class RandomSubtrajectorySelectGenerator(SampleGenerator):
 
 
     '''
-    def __init__(self, subensemble, n_l, ensembles=None):
+    def __init__(self, subensemble, n_l=None, ensembles=None):
         super(RandomSubtrajectorySelectGenerator, self).__init__(
             ensembles
         )
@@ -613,22 +613,22 @@ class RandomSubtrajectorySelectGenerator(SampleGenerator):
         if (self.n_l is None and len(subtrajs) > 0) or \
             (self.n_l is not None and len(subtrajs) == self.n_l):
             subtraj = self._choose(subtrajs)
+
+            bias = 1.0
+
+            trial = paths.Sample(
+                replica=replica,
+                trajectory=subtraj,
+                ensemble=self.subensemble,
+                parent=trial,
+                mover=self,
+                bias=bias
+            )
+
+            trials = [trial]
         else:
-            # return zero-length trajectory otherwise
-            subtraj = paths.Trajectory([])
+            trials = []
 
-        bias = 1.0
-
-        trial = paths.Sample(
-            replica=replica,
-            trajectory=subtraj,
-            ensemble=self.subensemble,
-            parent=trial,
-            mover=self,
-            bias=bias
-        )
-
-        trials = [trial]
         return trials
 
 @ops_object
