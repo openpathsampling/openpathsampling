@@ -5,6 +5,9 @@ import scipy.sparse
 from scipy.sparse.csgraph import reverse_cuthill_mckee
 import networkx as nx
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 
 class ReplicaNetwork(object):
@@ -19,27 +22,29 @@ class ReplicaNetwork(object):
         self.storage = storage
         if self.storage is not None:
             self.check_storage(self.storage)
+
         if repex_movers is None and ensembles is None:
             ensembles = self.all_ensembles
 
-        if ensembles is None:
-            tmp_ensembles = []
-            for mover in repex_movers:
-                tmp_ensembles.extend(mover.ensembles)
-            sort_ens = sorted(tmp_ensembles)
-            ensembles = [sort_ens[0]]
-            for ens in sort_ens[1:]:
-                if ens != ensembles[-1]:
-                    ensembles.append(ens)
+        # TODO: add support for repex_mover and ensembles
+        #if ensembles is None:
+        #    tmp_ensembles = []
+        #    for mover in repex_movers:
+        #        tmp_ensembles.extend(mover.ensembles)
+        #    sort_ens = sorted(tmp_ensembles)
+        #    ensembles = [sort_ens[0]]
+        #    for ens in sort_ens[1:]:
+        #        if ens != ensembles[-1]:
+        #            ensembles.append(ens)
 
-        if repex_movers is None:
-            repex_movers = []
-            for mover in storage.pathmovers:
-                if isinstance(mover, paths.ReplicaExchangeMover):
-                    pass
+        #if repex_movers is None:
+        #    repex_movers = []
+        #    for mover in storage.pathmovers:
+        #        if isinstance(mover, paths.ReplicaExchangeMover):
+        #            pass
 
 
-        self.repex_movers = repex_movers
+        #self.repex_movers = repex_movers
         self.ensembles = ensembles
 
 
@@ -262,9 +267,9 @@ class ReplicaNetwork(object):
             elif first_direction == -1:
                 rt_pairs = zip(local_up, local_down)
             else:
-                raise RuntimeWarning(
-                    "No first direction identified: Are there no 1-way trips?"
-                )
+                warnstr = "No first direction for replica "+str(replica)+": "
+                warnstr += "Are there no 1-way trips?"
+                logger.warn(warnstr)
             down_trips.extend(local_down)
             up_trips.extend(local_up)
             round_trips.extend([sum(pair) for pair in rt_pairs])
