@@ -181,6 +181,7 @@ class ReplicaNetwork(object):
                   for k in number_to_ensemble.keys()}
 
         df = self.reorder_matrix(acc_matrix, labels, index_order)
+        self.acceptance_matrix = acc_matrix
         return df
 
 
@@ -197,7 +198,7 @@ class ReplicaNetwork(object):
         ij = i+j
         ji = j+i
         data += data
-        acc_matrix = scipy.sparse.coo_matrix(
+        mix_matrix = scipy.sparse.coo_matrix(
             (data, (ij, ji)), 
             shape=(n_ensembles, n_ensembles)
         )
@@ -206,7 +207,8 @@ class ReplicaNetwork(object):
         labels = {k : sset0[number_to_ensemble[k]].replica 
                   for k in number_to_ensemble.keys()}
 
-        df = self.reorder_matrix(acc_matrix, labels, index_order)
+        df = self.reorder_matrix(mix_matrix, labels, index_order)
+        self.mix_matrix = mix_matrix
         return df
 
     def diagram(self, storage=None, force=False):
