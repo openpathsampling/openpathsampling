@@ -1,14 +1,15 @@
-from nose.tools import assert_equal, assert_not_equal, raises
+from nose.tools import assert_equal, assert_not_equal, assert_items_equal, raises
 from nose.plugins.skip import SkipTest
 from test_helpers import CallIdentity, prepend_exception_message, make_1d_traj
 
 
 import openpathsampling as paths
-from openpathsampling.ensemble import *
+from openpathsampling.analysis.tis_analysis import *
 
 import logging
 logging.getLogger('opentis.analysis.tis_analysis').setLevel(logging.DEBUG)
 logging.getLogger('opentis.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 
 class testTISTransition(object):
     def setup(self):
@@ -39,6 +40,30 @@ class testSummarizeTrajectoryVolumes(object):
             pretraj.append({"a" : 0.3, "b" : 2.2, "i" : 0.6, "x" : 1.0}[l])
         return make_1d_traj(coordinates=pretraj, velocities=[1.0]*len(pretraj))
 
-    def test_summary_trajectory_volumes(self):
-        pass
+    def test_summarize_trajectory_volumes(self):
+        voldict = {"A" : self.stateA, "B" : self.stateB, 
+                   "I" : self.interstitial, "X" : self.outInterface}
+        assert_items_equal(
+            summarize_trajectory_volumes(self._make_traj("abix"), voldict), 
+            [("A", 1), ("B", 1), ("I", 1), ("X", 1)]
+        )
+        assert_items_equal(
+            summarize_trajectory_volumes(self._make_traj("aiiibbxxbx"), 
+                                         voldict), 
+            [("A", 1), ("I", 3), ("B", 2), ("X", 2), ("B", 1), ("X", 1)]
+        )
+
+    def test_summarize_trajectory_volumes_with_nonevol(self):
+        voldict = {"A" : self.stateA, "B" : self.stateB, 
+                   "I" : self.interstitial}
+        assert_items_equal(
+            summarize_trajectory_volumes(self._make_traj("abix"), voldict), 
+            [("A", 1), ("B", 1), ("I", 1), (None, 1)]
+        )
+        assert_items_equal(
+            summarize_trajectory_volumes(self._make_traj("aiiibbxxbx"), 
+                                         voldict), 
+            [("A", 1), ("I", 3), ("B", 2), (None, 2), ("B", 1), (None, 1)]
+        )
+
 

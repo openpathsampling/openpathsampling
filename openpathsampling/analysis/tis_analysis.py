@@ -640,6 +640,7 @@ class RETISTransition(TISTransition):
         return root_mover
 
 
+# TODO: move this to trajectory.summarize_volumes(label_dict)?
 def summarize_trajectory_volumes(trajectory, label_dict):
     """Summarize trajectory based on number of continuous frames in volumes.
 
@@ -665,14 +666,15 @@ def summarize_trajectory_volumes(trajectory, label_dict):
     for frame in trajectory:
         in_state = []
         for key in label_dict.keys():
-            if label_dict[key](frame):
+            vol = label_dict[key]
+            if vol(frame):
                 in_state.append(key)
-        if len(key) > 1:
+        if len(in_state) > 1:
             raise RuntimeError("Volumes given to summarize_trajectory not disjoint")
-        if len(key) == 0:
+        if len(in_state) == 0:
             current_vol = None
         else:
-            current_vol = key
+            current_vol = in_state[0]
         
         if last_vol == current_vol:
             count += 1
@@ -681,6 +683,7 @@ def summarize_trajectory_volumes(trajectory, label_dict):
                 segment_labels.append( (last_vol, count) )
             last_vol = current_vol
             count = 1
+    segment_labels.append( (last_vol, count) )
     return segment_labels
 
 
