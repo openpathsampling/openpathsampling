@@ -34,7 +34,8 @@ from pathmover import (
     ForceEnsembleChangeMover, ForwardExtendGenerator, ForwardShootGenerator,
     MultipleSetMinusMover, OneWayShootingMover, PathReversalGenerator,
     RandomSubtrajectorySelectGenerator, RandomSubtrajectorySelectMover,
-    ReplicaExchangeGenerator, ShootGenerator, ShootMover
+    ReplicaExchangeGenerator, ShootGenerator, ShootMover, WrappedMover,
+    BackwardExtendMover, EnsembleFilterMover, ForwardExtendMover
 )
 
 
@@ -80,5 +81,6 @@ from pathmovechange import (
     SequentialPathMoveChange,  KeepLastSamplePathMoveChange,
     FilterSamplesPathMoveChange,
     PathSimulatorPathMoveChange, AcceptedSamplePathMoveChange,
-    RejectedSamplePathMoveChange
+    RejectedSamplePathMoveChange, SubPathMoveChange,
+    FilterByEnsemblePathMoveChange
 )

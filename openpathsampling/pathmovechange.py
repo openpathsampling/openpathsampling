@@ -337,29 +337,6 @@ class RejectedSamplePathMoveChange(SamplePathMoveChange):
         return []
 
 @ops_object
-class RandomChoicePathMoveChange(PathMoveChange):
-    """
-    A PathMoveChange that represents the application of a mover chosen randomly
-    """
-    def __init__(self, subchange, mover=None, details=None):
-        super(RandomChoicePathMoveChange, self).__init__(mover=mover, details=details)
-        self.subchanges = [subchange]
-
-    def _get_results(self):
-        return self.subchange.results
-
-    def _get_trials(self):
-        return self.subchange.trials
-
-    def apply_to(self, other):
-        return self.subchange.apply_to(other)
-
-    def __str__(self):
-        return 'RandomChoice :\n' + PathMoveChange._indent(str(self.subchange))
-
-
-
-@ops_object
 class SequentialPathMoveChange(PathMoveChange):
     """
     SequentialPathMoveChange has no own samples, only inferred Sampled from the
@@ -431,37 +408,76 @@ class ConditionalSequentialPathMoveChange(SequentialPathMoveChange):
                PathMoveChange._indent( '\n'.join(map(str, self.subchanges)))
 
 @ops_object
-class FilterSamplesPathMoveChange(PathMoveChange):
+class SubPathMoveChange(PathMoveChange):
+    """
+    A helper PathMoveChange that represents the application of a submover.
+
+    The raw implementation delegates all to the subchange
+    """
+    def __init__(self, subchange, mover=None, details=None):
+        super(SubPathMoveChange, self).__init__(mover=mover, details=details)
+        self.subchanges = [subchange]
+
+    def _get_results(self):
+        return self.subchange.results
+
+    def _get_trials(self):
+        return self.subchange.trials
+
+    def apply_to(self, other):
+        return self.subchange.apply_to(other)
+
+    def __str__(self):
+        # Defaults to use the name of the used mover
+        return self.mover.__class__.__name__[:-5] + ' :\n' + PathMoveChange._indent(str(self.subchange))
+
+@ops_object
+class RandomChoicePathMoveChange(SubPathMoveChange):
+    """
+    A PathMoveChange that represents the application of a mover chosen randomly
+    """
+
+class FilterByEnsemblePathMoveChange(SubPathMoveChange):
+    """
+    A PathMoveChange that filters out all samples not in specified ensembles
+    """
+
+    def _get_results(self):
+        all_samples = self.subchange.results
+
+        filtered_samples = filter(
+            lambda s : s.ensemble in self.mover.ensembles,
+            all_samples
+        )
+
+        return filtered_samples
+
+    def __str__(self):
+        return 'FilterMove : allow only ensembles [%s] from sub moves : %s : %d samples\n' % \
+               (str(self.mover.ensembles), self.accepted, len(self.results)) + \
+               PathMoveChange._indent( str(self.subchange) )
+
+
+@ops_object
+class FilterSamplesPathMoveChange(SubPathMoveChange):
     """
     A PathMoveChange that keeps a selection of the underlying samples
     """
 
-    def __init__(self, subchange, mover=None, details=None):
-        super(FilterSamplesPathMoveChange, self).__init__(mover=mover, details=details)
-        self.subchanges = [subchange]
-
     def _get_results(self):
-        if self.mover.use_all_samples:
-            # choose all generated samples
-            sample_set = self.trials
-        else:
-            # chose only accepted ones!
-            sample_set = self.results
+        sample_set = self.subchange.results
 
         # allow for negative indices to be picked, e.g. -1 is the last sample
         samples = [ idx % len(sample_set) for idx in self.mover.selected_samples]
 
         return samples
 
-    def _get_trials(self):
-        return self.subchange.trials
-
     def __str__(self):
         return 'FilterMove : pick samples [%s] from sub moves : %s : %d samples\n' % \
                (str(self.selected_samples), self.accepted, len(self.results)) + \
                PathMoveChange._indent( str(self.subchange) )
 
-@ops_object
+@SubPathMoveChange
 class KeepLastSamplePathMoveChange(PathMoveChange):
     """
     A PathMoveChange that only keeps the last generated sample.
@@ -476,9 +492,6 @@ class KeepLastSamplePathMoveChange(PathMoveChange):
     -----
     Does the same as `FilterSamplesPathMoveChange(subchange, [-1], False)`
     """
-    def __init__(self, subchange, mover=None, details=None):
-        super(KeepLastSamplePathMoveChange, self).__init__(mover=mover, details=details)
-        self.subchanges = [subchange]
 
     def _get_results(self):
         samples = self.subchange.results
@@ -487,29 +500,16 @@ class KeepLastSamplePathMoveChange(PathMoveChange):
 
         return samples
 
-    def _get_trials(self):
-        return self.subchange.trials
-
     def __str__(self):
         return 'Restrict to last sample : %s : %d samples\n' % \
                (self.accepted, len(self.results)) + \
                PathMoveChange._indent( str(self.subchange) )
 
 @ops_object
-class PathSimulatorPathMoveChange(PathMoveChange):
+class PathSimulatorPathMoveChange(SubPathMoveChange):
     """
     A PathMoveChange that just wraps a subchange and references a PathSimulator
     """
-
-    def __init__(self, subchange, mover=None, details=None):
-        super(PathSimulatorPathMoveChange, self).__init__(mover=mover, details=details)
-        self.subchanges = [subchange]
-
-    def _get_results(self):
-        return self.subchange.results
-
-    def _get_trials(self):
-        return self.subchange.trials
 
     def __str__(self):
         return 'PathSimulatorStep : %s : Step # %d with %d samples\n' % \
