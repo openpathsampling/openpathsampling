@@ -1419,6 +1419,7 @@ class WrappedMover(PathMover):
         super(WrappedMover, self).__init__(ensembles)
         self.mover = mover
 
+    @property
     def submovers(self):
         return [self.mover]
 
@@ -1443,6 +1444,13 @@ class EnsembleFilterMover(WrappedMover):
             mover=self
         )
         return change
+
+    def _get_in_ensembles(self):
+        return self.ensembles
+
+    def _get_out_ensembles(self):
+        return self.ensembles
+
 
 @ops_object
 class OneWayShootingMover(RandomChoiceMover):
