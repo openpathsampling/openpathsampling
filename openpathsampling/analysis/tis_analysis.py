@@ -640,7 +640,7 @@ class RETISTransition(TISTransition):
         return root_mover
 
 
-def summarize_trajectory(trajectory, label_dict):
+def summarize_trajectory_volumes(trajectory, label_dict):
     """Summarize trajectory based on number of continuous frames in volumes.
 
     This uses a dictionary of disjoint volumes: the volumes must be disjoint
