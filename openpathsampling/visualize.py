@@ -9,8 +9,6 @@ import json
 import matplotlib.pyplot as plt
 import StringIO
 from networkx.readwrite import json_graph
-from IPython.display import HTML
-from matplotlib.figure import Figure
 
 class TreeRenderer(object):
     def __init__(self):

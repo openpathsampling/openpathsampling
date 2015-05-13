@@ -22,6 +22,7 @@ requirements:
     - jinja2
     - mdtraj
     - svgwrite
+    - networkx
 
   run:
     - python
@@ -37,6 +38,7 @@ requirements:
     - jinja2
     - mdtraj
     - svgwrite
+    - networkx
 
 about:
   home: https://github.com/choderalab/openpathsampling
