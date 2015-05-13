@@ -731,12 +731,14 @@ class testMinusMover(object):
         for i in range(100):
             change = self.mover.move(gs)
             samples = change.results
-            assert_equal(len(samples), 5)
-            s_inner = [s for s in samples if s.ensemble==self.innermost]
-            s_minus = [s for s in samples if s.ensemble==self.minus]
-            s_sub = [s for s in samples if s.ensemble==self.minus._segment_ensemble]
+            sub_samples = change.subchange.results
+            assert_equal(len(samples), 2)
+            assert_equal(len(sub_samples), 4)
+            s_inner = [s for s in sub_samples if s.ensemble==self.innermost]
+            s_minus = [s for s in sub_samples if s.ensemble==self.minus]
+            s_sub = [s for s in sub_samples if s.ensemble==self.minus._segment_ensemble]
             assert_equal(len(s_inner), 1)
-            assert_equal(len(s_minus), 2)
+            assert_equal(len(s_minus), 1)
             assert_equal(len(s_sub), 2)
 
             for c in change:
@@ -781,8 +783,8 @@ class testMinusMover(object):
         samples = change.trials
         assert_equal(self.innermost(innermost_other_ensemble), False)
         assert_equal(len(samples), 3) # stop after failed repex
-        assert_equal(change[0].accepted, True)
-        assert_equal(change[1].accepted, False)
+        assert_equal(change.subchange[0].accepted, True)
+        assert_equal(change.subchange[1].accepted, False)
 
     def test_repex_fails_innermost_crosses_state(self):
         innermost_crosses_to_state = make_1d_traj([-0.11, 0.5, 1.8])
@@ -797,7 +799,7 @@ class testMinusMover(object):
         samples = change.trials
         assert_equal(self.innermost(innermost_crosses_to_state), True)
         assert_equal(len(samples), 3) # stop after failed repex
-        assert_subchanges_set_accepted(change, [True, False, False])
+        assert_subchanges_set_accepted(change.subchange, [True, False, False])
 
     def test_repex_fails_minus_crosses_to_state(self):
         minus_crosses_to_state = make_1d_traj(
@@ -820,7 +822,7 @@ class testMinusMover(object):
         change = self.mover.move(gs)
         samples = change.trials
         assert_equal(len(samples), 3) # stop after failed repex
-        assert_subchanges_set_accepted(change, [True, False, False])
+        assert_subchanges_set_accepted(change.subchange, [True, False, False])
 
     def test_extension_fails(self):
         innermost_bad_extension = [-0.25, 0.1, 0.5, 0.1, -0.25]
@@ -835,17 +837,15 @@ class testMinusMover(object):
 
         gs = SampleSet([self.minus_sample, samp_bad_extension])
         change = self.mover.move(gs)
+        print change
         samples = change.trials
-        assert_equal(len(samples), 5) # reject the last one
-        print 'Result'
-        print [ s.mover for s in change.subchanges]
-        print [ s.accepted for s in change.subchanges]
-        print [ s.samples for s in change.subchanges]
-        print [ s.results for s in change.subchanges]
-        print [ s.trials for s in change.subchanges]
-        print [ s.__class__.__name__ for s in change.subchanges]
+        assert_equal(change.accepted, False) # whole minus has failed
+        assert_equal(len(samples), 4)
 
-        assert_subchanges_set_accepted(change, [True] * 3 + [False])
+        assert_subchanges_set_accepted(change.subchange, [True] * 2 + [False])
+        # first two work and the extention fails
         # this only happens due to length
-        assert_equal(len(change[-1][0].trials[0].trajectory),
-                     len(traj_bad_extension)+self.dyn.n_frames_max-1)
+        assert_equal(
+            len(change.subchange[-1][0].trials[0].trajectory),
+            len(traj_bad_extension)+self.dyn.n_frames_max-1
+        )

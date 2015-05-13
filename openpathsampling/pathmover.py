@@ -851,7 +851,7 @@ class ExtendingGenerator(SampleGenerator):
 
 
 class ForwardExtendGenerator(ExtendingGenerator):
-    def _shoot(self, initial_trajectory, ensemble):
+    def _extend(self, initial_trajectory, ensemble):
         shoot_str = "Extending {sh_dir} from frame {fnum} in [0:{maxt}]"
         logger.info(shoot_str.format(fnum=len(initial_trajectory)-1,
                                      maxt=len(initial_trajectory)-1,
@@ -866,7 +866,7 @@ class ForwardExtendGenerator(ExtendingGenerator):
                     ensemble,
                     initial_trajectory[:-1]
                 ).can_append,
-                self._length_stopper.can_append
+                self.engine.max_length_stopper.can_append
             ]
         )
 
@@ -876,7 +876,7 @@ class ForwardExtendGenerator(ExtendingGenerator):
 
 @ops_object
 class BackwardExtendGenerator(ExtendingGenerator):
-    def _shoot(self, initial_trajectory, ensemble):
+    def _extend(self, initial_trajectory, ensemble):
         shoot_str = "Extending {sh_dir} from frame {fnum} in [0:{maxt}]"
         logger.info(shoot_str.format(fnum=0,
                                      maxt=len(initial_trajectory)-1,
@@ -891,7 +891,7 @@ class BackwardExtendGenerator(ExtendingGenerator):
                     ensemble,
                     initial_trajectory[1:]
                 ).can_prepend,
-                self._length_stopper.can_prepend
+                self.engine.max_length_stopper.can_append
             ]
         )
 
@@ -1497,8 +1497,8 @@ class MinusMover(WrappedMover):
         repex = ReplicaExchangeMover(ensembles=[[segment, innermost_ensemble]])
 
         extension_mover = RandomChoiceMover([
-            ForwardExtendMover(segment, minus_ensemble),
-            BackwardExtendMover(segment, minus_ensemble)
+            ForwardExtendMover(minus_ensemble, segment),
+            BackwardExtendMover(minus_ensemble, segment)
         ])
 
         extension_mover.name = "MinusExtensionDirectionChooser"
