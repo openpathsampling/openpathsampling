@@ -598,22 +598,13 @@ class RETISTransition(TISTransition):
         if not force and self._flux != None:
             return self._flux
 
+        self.minus_count_sides = { "in" : [], "out" : [] }
         minus_moves = (d for d in storage.pathmovechanges 
                        if self.movers['minus'][0] in d and d.accepted)
-        minus_state = self.minus_ensemble.state_vol
-        minus_innermost = self.minus_ensemble.innermost_vol
-        minus_interstitial = minus_innermost & ~minus_state
-        self.minus_count_sides = { "in" : [], "out" : [] }
-        vol_dict = { 
-            "A" : minus_state,
-            "X" : ~minus_innermost,
-            "I" : minus_interstitial
-        }
         for move in minus_moves:
             minus_samp = [s for s in move.samples 
                           if s.ensemble==self.minus_ensemble][0]
             minus_trajectory = minus_samp.trajectory
-            #summary = summarize_trajectory_volumes(minus_trajectory, vol_dict)
             minus_summ = minus_sides_summary(minus_trajectory,
                                              self.minus_ensemble)
             for key in self.minus_count_sides.keys():

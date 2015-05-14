@@ -80,9 +80,16 @@ class testMinusSidesSummary(object):
         self.outInterface = ~vol2 & ~vol3
         self.stateB = vol3
 
+        # n_l = 2 tests
         self.traj_axaxa = self._make_traj("axxxxaaaaaxxxa")
         self.traj_aixiaixia = self._make_traj("aiixxxiaaaaaixiia")
         self.traj_aixixiaxia = self._make_traj("aiixxiixxxiaaaaaxxxiia")
+
+        # n_l = 4 tests
+        self.traj_axaxaxaxa = self._make_traj("axaaxxaaaxxxaaaaxxxxa")
+        self.traj_aixixiaixaxiaixia = self._make_traj(
+            "aixiixxiaaiixxaxiiaaaiixxxiiia"
+        )
 
 
 
@@ -95,25 +102,38 @@ class testMinusSidesSummary(object):
 
     def test_normal_minus(self):
         minus = paths.MinusInterfaceEnsemble(self.stateA, self.stateA)
-        assert_equal(
-            minus_sides_summary(self.traj_axaxa, minus),
-            { "in" : [5], "out" : [4]}
-        )
-        assert_not_equal(
-            minus_sides_summary(self.traj_axaxa, minus),
-            { "in" : [5], "out" : [3]}
-        )
-        pass
+        assert_equal(minus_sides_summary(self.traj_axaxa, minus),
+                     {"in" : [5], "out" : [4]})
+        assert_not_equal(minus_sides_summary(self.traj_axaxa, minus),
+                         {"in" : [5], "out" : [3]})
+        assert_equal(minus_sides_summary(self.traj_aixiaixia, minus), 
+                     {"in" : [5], "out" : [6] })
+        assert_equal(minus_sides_summary(self.traj_aixixiaxia, minus), 
+                     {"in" : [5], "out" : [10] })
 
     def test_minus_with_interstitial(self):
         minus = paths.MinusInterfaceEnsemble(self.stateA, self.innermost)
-        pass
+        assert_equal(minus_sides_summary(self.traj_axaxa, minus),
+                     {"in" : [5], "out" : [4]})
+        assert_equal(minus_sides_summary(self.traj_aixiaixia, minus), 
+                     {"in" : [6], "out" : [4] })
+        assert_equal(minus_sides_summary(self.traj_aixixiaxia, minus), 
+                     {"in" : [5], "out" : [8] })
 
     def test_minus_with_multiple_excursion(self):
-        minus = paths.MinusInterfaceEnsemble(self.stateA, self.stateA, n_l=4)
-        pass
+        minus = paths.MinusInterfaceEnsemble(self.stateA, self.stateA,
+                                             n_l=4)
+        assert_equal(minus_sides_summary(self.traj_axaxaxaxa, minus),
+                     {"in" : [2, 3, 4], "out" : [1, 2, 3]})
+        assert_equal(minus_sides_summary(self.traj_aixixiaixaxiaixia, minus),
+                     {"in" : [2, 1, 3], "out" : [7, 4, 3]})
 
     def test_minus_with_interstitial_and_multiple_excursion(self):
         minus = paths.MinusInterfaceEnsemble(self.stateA, self.innermost, n_l=4)
+        assert_equal(minus_sides_summary(self.traj_axaxaxaxa, minus),
+                     {"in" : [2, 3, 4], "out" : [1, 2, 3]})
+        assert_equal(minus_sides_summary(self.traj_aixixiaixaxiaixia, minus),
+                     {"in" : [4, 1, 5], "out" : [6, 2, 3]})
+        assert_not_equal(minus_sides_summary(self.traj_aixixiaixaxiaixia, minus),
+                     {"in" : [1, 4, 5], "out" : [6, 2, 3]})
 
-        pass
