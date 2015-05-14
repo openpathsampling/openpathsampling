@@ -1,5 +1,6 @@
 from histogram import Histogram, histograms_to_pandas_dataframe
 from wham import WHAM
+import numpy as np
 from lookup_function import LookupFunction
 import openpathsampling as paths
 from openpathsampling.todict import ops_object
@@ -593,23 +594,35 @@ class RETISTransition(TISTransition):
         # round_trips
         pass
 
-    @property
-    def minus_move_flux(self, storage):
+    def minus_move_flux(self, storage, force=False):
+        if not force and self._flux != None:
+            return self._flux
+
         minus_moves = (d for d in storage.pathmovechanges 
-                       if self.movers['minus'][0] in d)
+                       if self.movers['minus'][0] in d and d.accepted)
+        minus_state = self.minus_ensemble.state_vol
+        minus_innermost = self.minus_ensemble.innermost_vol
+        minus_interstitial = minus_innermost & ~minus_state
+        self.minus_count_sides = { "in" : [], "out" : [] }
+        vol_dict = { 
+            "A" : minus_state,
+            "X" : ~minus_innermost,
+            "I" : minus_interstitial
+        }
         for move in minus_moves:
             minus_samp = [s for s in move.samples 
                           if s.ensemble==self.minus_ensemble][0]
-            traj = minus_samp.trajectory
-            inX = paths.AllInXEnsemble(self.minus_ensemble.innermost_vol)
-            outX = paths.AllOutXEnsemble(self.minus_ensemble.innermost_vol)
-            in_parts = inX.split(traj)
-            out_parts = outX.split(traj)
-        
-        # 1. get the samples in the minus ensemble
-        # 2. summarize_trajectory for each
-        # 3. calculate the flux
-        pass
+            minus_trajectory = minus_samp.trajectory
+            summary = summarize_trajectory_volumes(minus_trajectory, vol_dict)
+            minus_summ = minus_sides_summary(summary)
+            for key in self.minus_count_sides.keys():
+                self.minus_count_sides[key].extend(minus_summ[key])
+       
+        t_in_avg = np.array(self.minus_count_sides['in']).mean()
+        t_out_avg = np.array(self.minus_count_sides['out']).mean()
+        self._flux = 1.0 / (t_in_avg + t_out_avg)
+        return self._flux
+
 
     @property
     def rate(self, flux=None, flux_error=None, force=False):
@@ -686,6 +699,28 @@ def summarize_trajectory_volumes(trajectory, label_dict):
     segment_labels.append( (last_vol, count) )
     return segment_labels
 
+
+# TODO: test this with manufactured summaries that have interstitials and
+# multiple excursions
+def minus_sides_summary(summary):
+    # this is a per-trajectory loop
+    count_sides = {"in" : [], "out" : []}
+    side=None
+    local_count = 0
+    # strip off the beginning and ending in A
+    for (label, count) in summary[1:-1]:
+        if label == "X" and side != "out":
+            if side == "in":
+                count_sides["in"].append(local_count)
+            side = "out"
+            local_count = 0
+        elif label == "A" and side != "in":
+            if side == "out":
+                count_sides["out"].append(local_count)
+            side = "in"
+            local_count = 0
+        local_count += count
+    return count_sides
 
 
         
