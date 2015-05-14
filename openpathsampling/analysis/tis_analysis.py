@@ -485,22 +485,51 @@ class TISTransition(Transition):
 
         return ctp
 
-    def rate(self, flux=None, flux_error=None, force=False):
+    def rate(self, storage, flux=None, outer_ensemble=None, error=None,
+             force=False):
         """Calculate the rate for this transition.
 
         For TIS transitions, this requires the result of an external
         calculation of the flux.
+
+        Parameters
+        ==========
+        storage : openpathsampling.storage.Storage
+        flux : float
+        outer_ensemble : openpathsampling.TISEnsemble
+        error : list(3) or None
         """
+        # get the flux
         if flux is not None:
             self._flux = flux
 
         if self._flux is None:
             raise ValueError("No flux available to TISTransition. Cannot calculate rate")
         
-        tcp = self.total_crossing_probability(force=force)
-        #ctp = self.conditional_transition_probability(force=force)
-        #conditional_transition_probability
-        pass
+        flux = self._flux
+
+        # get the total crossing probability
+        if not force and hasattr(self, 'tcp'):
+            tcp = self.tcp
+        else:
+            tcp = self.total_crossing_probability(storage=storage, force=force)
+
+        # get the conditional transition probability
+        if outer_ensemble is None:
+            outer_ensemble = self.ensembles[-1]
+        outer_cross_prob = self.histograms['max_lambda'][outer_ensemble]
+        lambda_bin = -1
+        while (outer_cross_prob.reverse_cumulative()[lambda_bin+1] == 1.0):
+            lambda_bin += 1
+
+        outer_cross_lambda = outer_cross_prob.bins[lambda_bin]
+
+        ctp = self.conditional_transition_probability(storage,
+                                                      outer_ensemble,
+                                                      force=force)
+        outer_tcp = tcp(outer_cross_lambda)
+        print flux, outer_tcp, ctp
+        return flux*outer_tcp*ctp
 
     def default_movers(self, engine):
         """Create reasonable default movers for a `PathSampling` pathsimulator"""
@@ -616,13 +645,18 @@ class RETISTransition(TISTransition):
         return self._flux
 
 
-    @property
-    def rate(self, flux=None, flux_error=None, force=False):
-        tcp = self.total_crossing_probability()
+    def rate(self, storage, flux=None, outer_ensemble=None, error=None,
+             force=False):
         if flux is None:
-            (flux, flux_error) = self.minus_move_flux
+            flux = self.minus_move_flux(storage)
 
-        pass
+        return super(RETISTransition, self).rate(
+            storage=storage, 
+            flux=flux, 
+            outer_ensemble=outer_ensemble,
+            error=error,
+            force=force
+        )
 
     def default_movers(self, engine):
         """Create reasonable default movers for a `PathSampling` pathsimulator
