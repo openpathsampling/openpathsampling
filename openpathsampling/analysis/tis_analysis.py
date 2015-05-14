@@ -485,8 +485,8 @@ class TISTransition(Transition):
 
         return ctp
 
-    def rate(self, storage, flux=None, outer_ensemble=None, error=None,
-             force=False):
+    def rate(self, storage, flux=None, outer_ensemble=None,
+             outer_lambda=None, error=None, force=False):
         """Calculate the rate for this transition.
 
         For TIS transitions, this requires the result of an external
@@ -518,17 +518,17 @@ class TISTransition(Transition):
         if outer_ensemble is None:
             outer_ensemble = self.ensembles[-1]
         outer_cross_prob = self.histograms['max_lambda'][outer_ensemble]
-        lambda_bin = -1
-        while (outer_cross_prob.reverse_cumulative()[lambda_bin+1] == 1.0):
-            lambda_bin += 1
-
-        outer_cross_lambda = outer_cross_prob.bins[lambda_bin]
+        if outer_lambda is None:
+            lambda_bin = -1
+            while (outer_cross_prob.reverse_cumulative()[lambda_bin+1] == 1.0):
+                lambda_bin += 1
+            outer_lambda = outer_cross_prob.bins[lambda_bin]
 
         ctp = self.conditional_transition_probability(storage,
                                                       outer_ensemble,
                                                       force=force)
-        outer_tcp = tcp(outer_cross_lambda)
-        print flux, outer_tcp, ctp
+        outer_tcp = tcp(outer_lambda)
+        #print flux, outer_tcp, ctp
         return flux*outer_tcp*ctp
 
     def default_movers(self, engine):
@@ -645,8 +645,8 @@ class RETISTransition(TISTransition):
         return self._flux
 
 
-    def rate(self, storage, flux=None, outer_ensemble=None, error=None,
-             force=False):
+    def rate(self, storage, flux=None, outer_ensemble=None,
+             outer_lambda=None, error=None, force=False):
         if flux is None:
             flux = self.minus_move_flux(storage)
 
@@ -654,6 +654,7 @@ class RETISTransition(TISTransition):
             storage=storage, 
             flux=flux, 
             outer_ensemble=outer_ensemble,
+            outer_lambda=outer_lambda,
             error=error,
             force=force
         )
