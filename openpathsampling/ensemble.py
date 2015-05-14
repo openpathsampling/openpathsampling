@@ -1672,6 +1672,8 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
     References
     ----------
+    T.S. van Erp. Phys. Rev. Lett.
+
     D.W.H. Swenson and P.G. Bolhuis. J. Chem. Phys. 141, 044101 (2014). 
     doi:10.1063/1.4890037
     '''

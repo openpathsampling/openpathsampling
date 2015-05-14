@@ -613,8 +613,9 @@ class RETISTransition(TISTransition):
             minus_samp = [s for s in move.samples 
                           if s.ensemble==self.minus_ensemble][0]
             minus_trajectory = minus_samp.trajectory
-            summary = summarize_trajectory_volumes(minus_trajectory, vol_dict)
-            minus_summ = minus_sides_summary(summary)
+            #summary = summarize_trajectory_volumes(minus_trajectory, vol_dict)
+            minus_summ = minus_sides_summary(minus_trajectory,
+                                             self.minus_ensemble)
             for key in self.minus_count_sides.keys():
                 self.minus_count_sides[key].extend(minus_summ[key])
        
@@ -702,7 +703,18 @@ def summarize_trajectory_volumes(trajectory, label_dict):
 
 # TODO: test this with manufactured summaries that have interstitials and
 # multiple excursions
-def minus_sides_summary(summary):
+def minus_sides_summary(trajectory, minus_ensemble):
+    # note: while this could be refactored so vol_dict is external, I don't
+    # think this hurts speed very much, and it it really useful for testing
+    minus_state = minus_ensemble.state_vol
+    minus_innermost = minus_ensemble.innermost_vol
+    minus_interstitial = minus_innermost & ~minus_state
+    vol_dict = { 
+        "A" : minus_state,
+        "X" : ~minus_innermost,
+        "I" : minus_interstitial
+    }
+    summary = summarize_trajectory_volumes(trajectory, vol_dict)
     # this is a per-trajectory loop
     count_sides = {"in" : [], "out" : []}
     side=None
