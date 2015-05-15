@@ -108,7 +108,7 @@ class OPSNamed(OPSObject):
         if self._name is None:
             self._name = name
         else:
-            raise ValueError('Objects cannot be renamed! Is already named "' + self._name + '"')
+            raise ValueError('Objects cannot be renamed to "%s", it is already named "%s"' % ( name, self._name))
 
     def named(self, name):
         """Create a shallow copy with a new given name.

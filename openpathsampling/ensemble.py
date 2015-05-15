@@ -1761,7 +1761,7 @@ class TISEnsemble(SequentialEnsemble):
         self.initial_states = initial_states
         self.final_states = final_states
         self.interface = interface
-        self.name = interface.name
+#        self.name = interface.name
         self.orderparameter = orderparameter
 
     def trajectory_summary(self, trajectory):

@@ -3,7 +3,13 @@ from openpathsampling.collectivevariable import CollectiveVariable
 
 class ObjectDictStore(ObjectStore):
     def __init__(self, storage, cls, key_class):
-        super(ObjectDictStore, self).__init__(storage, cls, has_uid=True, json=True)
+        super(ObjectDictStore, self).__init__(
+            storage,
+            cls,
+            has_uid=True,
+            json=True,
+            has_name=True
+        )
         self.key_class = key_class
 
     def save(self, objectdict, idx=None):

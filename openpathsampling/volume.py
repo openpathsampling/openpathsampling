@@ -529,8 +529,8 @@ class VolumeFactory(object):
         myset = []
         for (min_i, max_i) in zip(minvals, maxvals):
             volume = LambdaVolume(op, min_i, max_i)
-            name = str(min_i) + "<" + op.name + "<" + str(max_i)
-            volume.name = name
+#            name = str(min_i) + "<" + op.name + "<" + str(max_i)
+#            volume.name = name
             myset.append(volume)
         return myset
 

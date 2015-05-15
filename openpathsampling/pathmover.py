@@ -8,12 +8,11 @@ import numpy as np
 import random
 
 import openpathsampling as paths
-from openpathsampling.todict import OPSNamed
+from openpathsampling.todict import OPSNamed, OPSObject
 
 import logging
 from ops_logging import initialization_logging
 
-from openpathsampling.todict import OPSNamed
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -1563,7 +1562,7 @@ class PathMoverFactory(object):
 
 
 
-class Details(object):
+class Details(OPSObject):
     '''Details of an object. Can contain any data
     '''
 

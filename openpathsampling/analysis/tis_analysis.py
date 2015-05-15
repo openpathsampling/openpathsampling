@@ -532,18 +532,18 @@ class TISTransition(Transition):
     def default_movers(self, engine):
         """Create reasonable default movers for a `PathSampling` pathsimulator"""
         shoot_sel = paths.RandomChoiceMover(
-            movers=self.movers['shooting'],
-            name="ShootingChooser"
+            movers=self.movers['shooting']
         )
+        shoot_sel.name = "ShootingChooser"
         pathrev_sel = paths.RandomChoiceMover(
-            movers=self.movers['pathreversal'],
-            name="ReversalChooser"
+            movers=self.movers['pathreversal']
         )
+        pathrev_sel.name = "ReversalChooser"
         root_mover = paths.RandomChoiceMover(
             movers=[shoot_sel, pathrev_sel], 
-            weights=[1.0, 0.5],
-            name="RootMover"
+            weights=[1.0, 0.5]
         )
+        root_mover.name = "RootMover"
         return root_mover
 
 class RETISTransition(TISTransition):
@@ -662,18 +662,18 @@ class RETISTransition(TISTransition):
         Extends `TISTransition.default_movers`.
         """
         repex_sel = paths.RandomChoiceMover(
-            movers=self.movers['repex'],
-            name="ReplicaExchange"
+            movers=self.movers['repex']
         )
+        repex_sel.name = "ReplicaExchange"
         tis_root_mover = super(RETISTransition, self).default_movers(engine)
         minus = self.movers['minus']
         movers = tis_root_mover.movers + [repex_sel] + minus
         weights = tis_root_mover.weights + [0.5, 0.2 / len(self.ensembles)]
         root_mover = paths.RandomChoiceMover(
             movers=movers,
-            weights=weights,
-            name="RootMover"
+            weights=weights
         )
+        root_mover.name = "RootMover"
         return root_mover
 
 
