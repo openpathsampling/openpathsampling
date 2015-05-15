@@ -234,7 +234,8 @@ class ReplicaNetwork(object):
                     n_up[loc] += count
         self._flow_up = n_up
         self._flow_count = n_visit
-        return {e : float(n_up[e])/n_visit[e] for e in self.all_ensembles}
+        return {e : float(n_up[e])/n_visit[e] if n_visit[e] > 0 else 0.0
+                for e in self.all_ensembles}
 
     def trips(self, bottom, top, storage=None, force=False):
         traces = self.analyze_traces(storage, force)
