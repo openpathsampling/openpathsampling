@@ -1,8 +1,9 @@
-'''
+"""
 Created on 19.07.2014
 
 @author: Jan-Hendrik Prinz
-'''
+@author: David W. H. Swenson
+"""
 
 import numpy as np
 import random
@@ -19,17 +20,17 @@ logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 def make_list_of_pairs(l):
-    '''
+    """
     Converts input from several possible formats into a list of pairs: used
     to clean input for swap-like moves.
 
-    Allowed input formats: 
+    Allowed input formats:
     * flat list of length 2N
     * list of pairs
     * None (returns None)
 
     Anything else will lead to a ValueError or AssertionError
-    '''
+    """
     if l is None:
         return None
 
@@ -273,7 +274,7 @@ class PathMover(TreeMixin):
         return selected
 
     def move(self, globalstate):
-        '''
+        """
         Run the generation starting with the initial globalstate specified.
 
         Parameters
@@ -287,7 +288,7 @@ class PathMover(TreeMixin):
             the PathMoveChange instance describing the change from the old to
             the new SampleSet
 
-        '''
+        """
 
         return paths.EmptyPathMoveChange() # pragma: no cover
 
@@ -659,7 +660,7 @@ class ReplicaExchangeMover(ReplicaExchangeGenerator):
 
 @ops_object
 class RandomSubtrajectorySelectGenerator(SampleGenerator):
-    '''
+    """
     Samples a random subtrajectory satisfying the given subensemble.
 
     If there are no subtrajectories which satisfy the subensemble, this
@@ -678,7 +679,7 @@ class RandomSubtrajectorySelectGenerator(SampleGenerator):
     ---------
 
 
-    '''
+    """
     def __init__(self, subensemble, n_l=None, ensembles=None):
         super(RandomSubtrajectorySelectGenerator, self).__init__(
             ensembles
@@ -729,32 +730,32 @@ class RandomSubtrajectorySelectGenerator(SampleGenerator):
 
 @ops_object
 class RandomSubtrajectorySelectMover(RandomSubtrajectorySelectGenerator):
-    '''
+    """
     Samples a random subtrajectory satisfying the given subensemble.
 
     If there are no subtrajectories which satisfy the subensemble, this
     returns the zero-length trajectory.
-    '''
+    """
 
 @ops_object
 class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
-    '''
+    """
     Samples the first subtrajectory satifying the given subensemble.
 
     If there are no subtrajectories which satisfy the ensemble, this returns
     the zero-length trajectory.
-    '''
+    """
     def _choose(self, trajectory_list):
         return trajectory_list[0]
 
 @ops_object
 class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
-    '''
+    """
     Samples the final subtrajectory satifying the given subensemble.
 
     If there are no subtrajectories which satisfy the ensemble, this returns
     the zero-length trajectory.
-    '''
+    """
     def _choose(self, trajectory_list):
         return trajectory_list[-1]
 
@@ -911,7 +912,7 @@ class BackwardExtendMover(BackwardExtendGenerator):
 
 @ops_object
 class RandomChoiceMover(PathMover):
-    '''
+    """
     Chooses a random mover from its movers list, and runs that move. Returns
     the number of samples the submove return.
 
@@ -925,7 +926,7 @@ class RandomChoiceMover(PathMover):
         the PathMovers to choose from
     weights : list of floats
         the relative weight of each PathMover (does not need to be normalized)
-    '''
+    """
     def __init__(self, movers, ensembles=None,  weights=None, name=None):
         super(RandomChoiceMover, self).__init__(ensembles=ensembles)
 
@@ -981,13 +982,13 @@ class RandomChoiceMover(PathMover):
 
 @ops_object
 class ConditionalMover(PathMover):
-    '''
+    """
     An if-then-else structure for PathMovers.
 
     Returns a SequentialPathMoveChange of the if_move movepath and the then_move
     movepath (if if_move is accepted) or the else_move movepath (if if_move
     is rejected).
-    '''
+    """
     def __init__(self, if_mover, then_mover, else_mover, ensembles=None):
         super(ConditionalMover, self).__init__(ensembles=ensembles)
         self.if_mover = if_mover
@@ -1029,14 +1030,14 @@ class ConditionalMover(PathMover):
 
 @ops_object
 class SequentialMover(PathMover):
-    '''
+    """
     Performs each of the moves in its movers list. Returns all samples
     generated, in the order of the mover list.
 
     For example, this would be used to create a move that does a sequence of
     replica exchanges in a given order, regardless of whether the moves
     succeed or fail.
-    '''
+    """
     def __init__(self, movers, ensembles=None):
         super(SequentialMover, self).__init__(ensembles=ensembles)
         self.movers = movers
@@ -1071,7 +1072,7 @@ class SequentialMover(PathMover):
 
 @ops_object
 class PartialAcceptanceSequentialMover(SequentialMover):
-    '''
+    """
     Performs each move in its movers list until complete or until one is not
     accepted. If any move is not accepted, further moves are not attempted,
     but the previous accepted samples remain accepted.
@@ -1080,7 +1081,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     which starts with a shooting move, followed by an EnsembleHop/Replica
     promotion ConditionalSequentialMover. Even if the EnsembleHop fails, the
     accepted shooting move should be accepted.
-    '''
+    """
     def move(self, globalstate):
         logger.debug("==== BEGINNING " + self.name + " ====")
         subglobal = paths.SampleSet(self.legal_sample_set(globalstate))
@@ -1104,7 +1105,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
 
 @ops_object
 class ConditionalSequentialMover(SequentialMover):
-    '''
+    """
     Performs each move in its movers list until complete or until one is not
     accepted. If any move in not accepted, all previous samples are updated
     to have set their acceptance to False.
@@ -1115,7 +1116,7 @@ class ConditionalSequentialMover(SequentialMover):
 
     ConditionalSequentialMover only works if there is a *single* active
     sample per replica.
-    '''
+    """
     def move(self, globalstate):
         logger.debug("Starting conditional sequential move")
 
@@ -1316,12 +1317,12 @@ class EnsembleHopMover(PathMover):
 #TODO: REMOVE if possible
 @ops_object
 class ForceEnsembleChangeMover(EnsembleHopMover):
-    '''
+    """
     Force an ensemble change in the sample.
 
     This should only be used as part of other moves, since this can create
     samples which are not valid.
-    '''
+    """
     def __init__(self, ensembles=None):
         # no bias allowed
         super(ForceEnsembleChangeMover, self).__init__(ensembles=ensembles)
@@ -1454,7 +1455,7 @@ class EnsembleFilterMover(WrappedMover):
 
 @ops_object
 class OneWayShootingMover(RandomChoiceMover):
-    '''
+    """
     OneWayShootingMover is a special case of a RandomChoiceMover which
     combines gives a 50/50 chance of selecting either a ForwardShootMover or
     a BackwardShootMover. Both submovers use the same shooting point
@@ -1467,7 +1468,7 @@ class OneWayShootingMover(RandomChoiceMover):
     ensembles : list of Ensemble or None
         valid ensembles; None implies all ensembles are allowed (no
         restriction)
-    '''
+    """
     def __init__(self, selector, ensembles=None):
         movers = [
             ForwardShootMover(selector, ensembles),
@@ -1480,14 +1481,14 @@ class OneWayShootingMover(RandomChoiceMover):
 
 @ops_object
 class MinusMover(WrappedMover):
-    '''
+    """
     Instance of a MinusMover.
 
     The minus move combines a replica exchange with path extension to swap
     paths between the innermost regular TIS interface ensemble and the minus
     interface ensemble. This is particularly useful for improving sampling
     of path space.
-    '''
+    """
     def __init__(self, minus_ensemble, innermost_ensemble, ensembles=None):
         segment = minus_ensemble._segment_ensemble
         subtrajectory_selector = RandomChoiceMover([
@@ -1594,8 +1595,8 @@ class PathMoverFactory(object):
 
 @ops_object
 class Details(object):
-    '''Details of an object. Can contain any data
-    '''
+    """Details of an object. Can contain any data
+    """
 
     def __init__(self, **kwargs):
         for key, value in kwargs.iteritems():
@@ -1612,7 +1613,7 @@ class Details(object):
 
 @ops_object
 class MoveDetails(Details):
-    '''Details of the move as applied to a given replica
+    """Details of the move as applied to a given replica
 
     Attributes
     ----------
@@ -1646,7 +1647,7 @@ class MoveDetails(Details):
     to a list of samples. Since trial, accepted are move related
     to the shooting and not necessarily dependent on a replica or
     initial ensemble.
-    '''
+    """
 
     def __init__(self, **kwargs):
         self.inputs=None
@@ -1657,13 +1658,13 @@ class MoveDetails(Details):
 
 @ops_object
 class SampleDetails(Details):
-    '''Details of a sample
+    """Details of a sample
 
     Attributes
     ----------
     selection_probability : float
         the chance that a sample will be accepted due to asymmetrical proposal
-    '''
+    """
 
     def __init__(self, **kwargs):
         self.selection_probability=1.0
