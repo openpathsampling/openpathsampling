@@ -13,6 +13,19 @@ class TreeMixin(object):
 
     @staticmethod
     def _indent(s):
+        """
+        Helper function to print indented subtrees
+
+        Parameters
+        ----------
+        s : str
+            string representation of a tree to be indented
+
+        Returns
+        -------
+        str
+            the indented representation
+        """
         spl = s.split('\n')
         spl = [' |  ' + p if p[0] == ' ' else ' +- ' + p for p in spl]
         return '\n'.join(spl)
@@ -22,6 +35,14 @@ class TreeMixin(object):
         return []
 
     def __iter__(self):
+        """
+        Traverse the whole tree in pre-order
+
+        Returns
+        -------
+        Iterator
+            an iterator that traverses the tree in pre-order
+        """
         yield self
         for subchange in self._subnodes:
             for change in subchange:
@@ -55,6 +76,14 @@ class TreeMixin(object):
 
 
     def __reversed__(self):
+        """
+        Traverse the whole tree in post-order
+
+        Returns
+        -------
+        Iterator
+            an iterator that traverses the tree in post-order
+        """
         for subchange in self._subnodes:
             for change in reversed(subchange):
                 yield change
@@ -138,6 +167,30 @@ class TreeMixin(object):
 
     @staticmethod
     def _default_match(original, test):
+        """
+        A function determining the way single nodes are matched
+
+        This function is used to test for __contains__
+
+        Parameters
+        ----------
+        original : node
+            the original node to be tested
+        test : node-like
+            the object a node should be tested for
+
+        Returns
+        -------
+        bool
+            True if the original is of type test. This depends on the
+            actual implementation
+
+        Notes
+        -----
+        Default is to test for equality `original == test`, often we might
+        also allow for testing of classes, subclasses, e.g.
+        [1,2,3] as a node could be tested for list and return True
+        """
         if original == test:
             return True
         else:
@@ -196,7 +249,8 @@ class TreeMixin(object):
         if type(item) is list:
             return self._check_head_node(item)
 
-            # Disable checking for submoves for now
+            # Disable checking for submoves for now. I think we will not
+            # use this ?!?
 
             # the head node did not fit so continue trying subnodes
 #            for sub in self.subnodes:
