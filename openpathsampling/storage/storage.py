@@ -82,8 +82,8 @@ class Storage(netcdf.Dataset):
 
         # nestable objects
 
-        self.volumes = paths.storage.ObjectStore(storage, paths.Volume, has_uid=True, nestable=True)
-        self.ensembles = paths.storage.ObjectStore(storage, paths.Ensemble, has_uid=True, nestable=True)
+        self.volumes = paths.storage.ObjectStore(storage, paths.Volume, has_uid=True, nestable=True, has_name=True)
+        self.ensembles = paths.storage.ObjectStore(storage, paths.Ensemble, has_uid=True, nestable=True, has_name=True)
 
         self.transitions = paths.storage.ObjectStore(storage,
                                                     paths.TISTransition,
