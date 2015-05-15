@@ -153,7 +153,7 @@ class ReplicaNetwork(object):
         else:
             reordered_labels = [number_to_label[k] 
                                 for k in number_to_label.keys()]
-            new_matrix = acc_matrix
+            new_matrix = matrix
 
         reordered = pd.DataFrame(new_matrix.todense())
         reordered.index = reordered_labels
