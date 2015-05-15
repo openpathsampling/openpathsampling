@@ -167,7 +167,8 @@ class ReplicaNetwork(object):
         number_to_ensemble = {ensemble_to_number[k] : k for 
                               k in ensemble_to_number.keys()}
         n_ensembles = len(ensemble_to_number)
-        data = [float(n_acc[k]) / n_try[k] for k in n_try.keys()]
+        data = [float(n_acc[k]) / n_try[k] if n_try[k] > 0 else 0
+                for k in n_try.keys()]
         ens_i, ens_j = zip(*n_try.keys())
         i = [ensemble_to_number[e] for e in ens_i]
         j = [ensemble_to_number[e] for e in ens_j]
@@ -191,7 +192,8 @@ class ReplicaNetwork(object):
         number_to_ensemble = {ensemble_to_number[k] : k for 
                               k in ensemble_to_number.keys()}
         n_ensembles = len(ensemble_to_number)
-        data = [float(n_acc[k]) * 0.5 / n_try[k] for k in n_try.keys()]
+        data = [float(n_acc[k]) * 0.5 / n_try[k] if n_try[k] > 0 else 0
+                for k in n_try.keys()]
         ens_i, ens_j = zip(*n_try.keys())
         i = [ensemble_to_number[e] for e in ens_i]
         j = [ensemble_to_number[e] for e in ens_j]
