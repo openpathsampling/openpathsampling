@@ -322,9 +322,14 @@ class ReplicaNetworkGraph(object):
                 n_accs_adj[k] = n_acc[k]
             except KeyError:
                 n_accs_adj[k] = 0
+
+        largest_weight = max(n_accs_adj.values())
         
         for entry in n_try.keys():
-            self.graph.add_edge(entry[0], entry[1], weight=n_accs_adj[entry])
+            self.graph.add_edge(
+                entry[0], entry[1], 
+                weight=float(n_accs_adj[entry])/largest_weight
+            )
         
         self.weights = [10*self.graph[u][v]['weight'] 
                         for u,v in self.graph.edges()]
