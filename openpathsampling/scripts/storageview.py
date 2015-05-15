@@ -30,8 +30,8 @@ if __name__ == '__main__':
     storage.pathmovechanges.cache_all()
 
     class ReadableObjectJSON(paths.todict.ObjectJSON):
-        def __init__(self, unit_system = None, class_list = None):
-            super(ReadableObjectJSON, self).__init__(unit_system, class_list)
+        def __init__(self, unit_system = None):
+            super(ReadableObjectJSON, self).__init__(unit_system)
             self.excluded_keys = ['name', 'idx', 'json', 'identifier']
             self.storage = storage
 

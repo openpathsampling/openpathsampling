@@ -1,4 +1,4 @@
-from openpathsampling.todict import ops_object
+from openpathsampling.todict import OPSNamed
 import openpathsampling as paths
 
 from openpathsampling.pathmover import PathMover
@@ -8,14 +8,14 @@ from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-@ops_object
-class PathSimulator(object):
+class PathSimulator(OPSNamed):
 
     calc_name = "PathSimulator"
 
     _excluded_attr = ['globalstate']
 
     def __init__(self, storage, engine=None):
+        super(PathSimulator, self).__init__()
         self.storage = storage
         self.engine = engine
         self.save_frequency = 1
@@ -35,7 +35,7 @@ class PathSimulator(object):
     def run(self, nsteps):
         logger.warning("Running an empty pathsimulator? Try a subclass, maybe!")
 
-@ops_object
+
 class BootstrapPromotionMove(PathMover):
     '''
     Bootstrap promotion is the combination of an EnsembleHop (to the next
@@ -84,7 +84,7 @@ class BootstrapPromotionMove(PathMover):
         return mover.move(globalstate)
 
 
-@ops_object
+
 class Bootstrapping(PathSimulator):
     """Creates a SampleSet with one sample per ensemble.
     
@@ -163,7 +163,7 @@ class Bootstrapping(PathSimulator):
 
             self.globalstate.sanity_check()
 
-@ops_object
+
 class PathSampling(PathSimulator):
     """
     General path sampling code. 

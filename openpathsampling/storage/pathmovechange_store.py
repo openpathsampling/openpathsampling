@@ -70,7 +70,7 @@ class PathMoveChangeStore(ObjectStore):
         return obj
 
     def _init(self, units=None):
-        super(PathMoveChangeStore, self)._init(units)
+        super(PathMoveChangeStore, self)._init()
 
         # New short-hand definition
         self.init_variable('change_details_idx', 'index', chunksizes=(1, ))
