@@ -122,6 +122,8 @@ class OPSNamed(OPSObject):
         """
         copied_object = copy.copy(self)
         copied_object._name = name
+        if hasattr(copied_object, 'idx'):
+            copied_object.idx = dict()
 
         return copied_object
 
