@@ -296,6 +296,51 @@ def get_all_ensembles_and_replicas(storage, first_sampleset=True):
         replicas = replicas_dict.keys()
     return { 'ensembles' : ensembles, 'replicas' : replicas }
 
+class ReplicaNetworkGraph(object):
+    def __init__(self, repx_network, storage=None):
+        if storage is None:
+            storage = repx_network.storage
+        (n_try, n_acc) = repx_network.analyze_exchanges(storage)
+        self.graph = nx.Graph()
+        
+        for entry in n_try.keys():
+            self.graph.add_edge(entry[0], entry[1], 
+                                weight=(float(n_acc[entry])/n_try[entry]))
+        
+        self.weights = [10*self.graph[u][v]['weight'] 
+                        for u,v in self.graph.edges()]
+        
+
+    def draw(self, layout="graphviz"):
+        if layout == "graphviz":
+            pos = nx.graphviz_layout(self.graph)
+        elif layout == "spring":
+            pos = nx.spring_layout(self.graph)
+        elif layout == "spectral":
+            pos=nx.spectral_layout(self.graph)
+        elif layout == "circular":
+            pos=nx.circular_layout(self.graph)
+
+        normal = []
+        msouter = []
+        minus = []
+        for node in self.graph.nodes():
+            if isinstance(node, paths.TISEnsemble):
+                normal.append(node)
+            elif isinstance(node, paths.MinusInterfaceEnsemble):
+                minus.append(node)
+            else:
+                msouter.append(node)
+        
+        nx.draw_networkx_nodes(self.graph, pos, nodelist=normal, 
+                               node_color='r', node_size=500)
+        nx.draw_networkx_nodes(self.graph, pos, nodelist=minus, 
+                               node_color='b', node_size=500)
+        nx.draw_networkx_nodes(self.graph, pos, nodelist=msouter, 
+                               node_color='g', node_size=500)
+
+        nx.draw_networkx_edges(self.graph, pos, width=self.weights)
+
 
 def trace_ensembles_for_replica(replica, storage):
     trace = []
