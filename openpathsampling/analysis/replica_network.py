@@ -167,8 +167,13 @@ class ReplicaNetwork(object):
         number_to_ensemble = {ensemble_to_number[k] : k for 
                               k in ensemble_to_number.keys()}
         n_ensembles = len(ensemble_to_number)
-        data = [float(n_acc[k]) / n_try[k] if n_try[k] > 0 else 0
-                for k in n_try.keys()]
+        data = []
+        for k in n_try.keys():
+            try:
+                n_acc_k = n_acc[k]
+            except KeyError:
+                n_acc_k = 0
+            data.append(float(n_acc_k) / n_try[k])
         ens_i, ens_j = zip(*n_try.keys())
         i = [ensemble_to_number[e] for e in ens_i]
         j = [ensemble_to_number[e] for e in ens_j]
@@ -192,8 +197,13 @@ class ReplicaNetwork(object):
         number_to_ensemble = {ensemble_to_number[k] : k for 
                               k in ensemble_to_number.keys()}
         n_ensembles = len(ensemble_to_number)
-        data = [float(n_acc[k]) * 0.5 / n_try[k] if n_try[k] > 0 else 0
-                for k in n_try.keys()]
+        data = []
+        for k in n_try.keys():
+            try:
+                n_acc_k = n_acc[k]
+            except KeyError:
+                n_acc_k = 0
+            data.append(float(n_acc_k) * 0.5 / n_try[k])
         ens_i, ens_j = zip(*n_try.keys())
         i = [ensemble_to_number[e] for e in ens_i]
         j = [ensemble_to_number[e] for e in ens_j]
@@ -267,6 +277,7 @@ class ReplicaNetwork(object):
                         first_direction = direction
                     trip_counter += count
 
+            rt_pairs = []
             if first_direction == 1:
                 rt_pairs = zip(local_down, local_up)
             elif first_direction == -1:
@@ -305,10 +316,15 @@ class ReplicaNetworkGraph(object):
             storage = repx_network.storage
         (n_try, n_acc) = repx_network.analyze_exchanges(storage)
         self.graph = nx.Graph()
+        n_accs_adj = {}
+        for k in n_try.keys():
+            try:
+                n_accs_adj[k] = n_acc[k]
+            except KeyError:
+                n_accs_adj[k] = 0
         
         for entry in n_try.keys():
-            self.graph.add_edge(entry[0], entry[1], 
-                                weight=(float(n_acc[entry])/n_try[entry]))
+            self.graph.add_edge(entry[0], entry[1], weight=n_accs_adj[entry])
         
         self.weights = [10*self.graph[u][v]['weight'] 
                         for u,v in self.graph.edges()]
