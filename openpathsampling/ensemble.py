@@ -4,7 +4,7 @@ Created on 03.09.2014
 @author: jan-hendrikprinz, David W.H. Swenson
 '''
 
-from openpathsampling.todict import OPSObject
+from openpathsampling.todict import OPSNamed
 
 import openpathsampling as paths
 
@@ -110,7 +110,7 @@ class EnsembleCache(object):
 
         return reset
 
-class Ensemble(OPSObject):
+class Ensemble(OPSNamed):
     '''
     Path ensemble object.
 
@@ -564,7 +564,7 @@ class NegatedEnsemble(Ensemble):
         return True
 
     def __str__(self):
-        return 'not ' + str(self.ensemble2)
+        return 'not ' + str(self.ensemble)
 
 
 class EnsembleCombination(Ensemble):
@@ -1598,7 +1598,7 @@ class AppendedNameEnsemble(WrappedEnsemble):
     '''
     def __init__(self, ensemble, label):
         self.label = label
-        super(AppendedNameEnsemble, self).__init(ensemble)
+        super(AppendedNameEnsemble, self).__init__(ensemble)
 
     def __str__(self):
         return self.ensemble.__str__() + " " + self.label
@@ -1749,12 +1749,6 @@ class TISEnsemble(SequentialEnsemble):
             n_final_states = 1
             final_states = [final_states]
 
-        self.initial_states = initial_states
-        self.final_states = final_states
-        self.interface = interface
-        self.name = interface.name
-        self.orderparameter = orderparameter
-
         volume_a = paths.volume.join_volumes(initial_states)
         volume_b = paths.volume.join_volumes(final_states)
 
@@ -1763,6 +1757,12 @@ class TISEnsemble(SequentialEnsemble):
             AllOutXEnsemble(volume_a | volume_b) & PartOutXEnsemble(interface),
             AllInXEnsemble(volume_a | volume_b) & LengthEnsemble(1)
         ])
+
+        self.initial_states = initial_states
+        self.final_states = final_states
+        self.interface = interface
+        self.name = interface.name
+        self.orderparameter = orderparameter
 
     def trajectory_summary(self, trajectory):
         initial_state_i = None

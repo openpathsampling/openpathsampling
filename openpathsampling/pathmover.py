@@ -8,12 +8,12 @@ import numpy as np
 import random
 
 import openpathsampling as paths
-from openpathsampling.todict import OPSObject
+from openpathsampling.todict import OPSNamed
 
 import logging
 from ops_logging import initialization_logging
 
-from openpathsampling.todict import OPSObject
+from openpathsampling.todict import OPSNamed
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -71,7 +71,7 @@ def keep_selected_samples(func):
     return wrapper
 
 
-class PathMover(OPSObject):
+class PathMover(OPSNamed):
     """
     A PathMover is the description of how to generate a new path from an old
     one.
@@ -114,7 +114,7 @@ class PathMover(OPSObject):
 
     def __init__(self,  ensembles=None):
         super(PathMover, self).__init__()
-        self.name = self.__class__.__name__
+#        self.name = self.__class__.__name__
 
         if ensembles is not None and type(ensembles) is not list:
             ensembles = [ensembles]
@@ -745,11 +745,8 @@ class RandomChoiceMover(PathMover):
     weights : list of floats
         the relative weight of each PathMover (does not need to be normalized)
     '''
-    def __init__(self, movers, ensembles=None,  weights=None, name=None):
+    def __init__(self, movers, ensembles=None,  weights=None):
         super(RandomChoiceMover, self).__init__(ensembles=ensembles)
-
-        if name is not None:
-            self.name = name
 
         self.movers = movers
 
@@ -774,7 +771,6 @@ class RandomChoiceMover(PathMover):
             idx += 1
             prob += self.weights[idx]
 
-        logger_str = "RandomChoiceMover ({name}) selecting mover index {idx} ({mtype})"
         logger_str = "{name} (RandomChoiceMover) selecting {mtype} (index {idx})"
         logger.info(logger_str.format(name=self.name, idx=idx, mtype=self.movers[idx].name))
 

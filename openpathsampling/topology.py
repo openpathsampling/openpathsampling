@@ -1,4 +1,4 @@
-from openpathsampling.todict import OPSObject
+from openpathsampling.todict import OPSNamed
 
 import mdtraj as md
 import numpy as np
@@ -6,7 +6,7 @@ import pandas as pd
 #from simtk import unit as units
 #import simtk.openmm
 
-class Topology(OPSObject):
+class Topology(OPSNamed):
     '''
     Topology is the object that contains all information about the structure
     of the system to be simulated.

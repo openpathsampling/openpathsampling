@@ -4,13 +4,13 @@
 
 import openpathsampling as paths
 import chaindict as cd
-from openpathsampling.todict import OPSObject
+from openpathsampling.todict import OPSNamed
 import marshal
 import base64
 import types
 import opcode
 
-class CollectiveVariable(cd.Wrap, OPSObject):
+class CollectiveVariable(cd.Wrap, OPSNamed):
     """
     Wrapper for a function that maps a snapshot or an iterable of snapshots
     (like Trajectory) to a number or vector.
@@ -57,7 +57,6 @@ class CollectiveVariable(cd.Wrap, OPSObject):
             print type(name), len(name)
             raise ValueError('name must be a non-empty string')
 
-        self.name = name
         self.dimensions = dimensions
 
         self.single_dict = cd.ExpandSingle()
@@ -66,6 +65,9 @@ class CollectiveVariable(cd.Wrap, OPSObject):
         self.store_dict = cd.MultiStore('collectivevariables', name,
                                         dimensions, self)
         self.cache_dict = cd.ChainDict()
+
+        OPSNamed.__init__(self, name)
+
         if hasattr(self, '_eval'):
             self.expand_dict = cd.UnwrapTuple()
             self.func_dict = cd.Function(None)

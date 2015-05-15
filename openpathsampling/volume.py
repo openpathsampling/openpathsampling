@@ -5,7 +5,7 @@ Created on 03.09.2014
 '''
 
 import range_logic
-from openpathsampling.todict import OPSObject
+from openpathsampling.todict import OPSNamed
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
@@ -19,7 +19,7 @@ def join_volumes(volume_list):
     return volume
 
 
-class Volume(OPSObject):
+class Volume(OPSNamed):
     """
     A Volume describes a set of snapshots 
     """
@@ -224,9 +224,9 @@ class LambdaVolume(Volume):
         self.collectivevariable = collectivevariable
         self.lambda_min = float(lambda_min)
         self.lambda_max = float(lambda_max)
-        self.name = (str(self.lambda_min) + "<" +
-                     str(self.collectivevariable.name) + "<" +
-                     str(self.lambda_max))
+#        self.name = (str(self.lambda_min) + "<" +
+#                     str(self.collectivevariable.name) + "<" +
+#                     str(self.lambda_max))
         
     # Typically, the logical combinations are only done once. Because of
     # this, it is worth passing these through a check to speed up the logic.

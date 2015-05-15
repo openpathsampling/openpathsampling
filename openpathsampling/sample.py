@@ -1,7 +1,7 @@
 import random
 
 import openpathsampling as paths
-from openpathsampling.todict import OPSObject
+from openpathsampling.todict import OPSNamed
 
 class SampleKeyError(Exception):
     def __init__(self, key, sample, sample_key):
@@ -11,7 +11,7 @@ class SampleKeyError(Exception):
         self.msg = (str(self.key) + " does not match " + str(self.sample_key)
                     + " from " + str(self.sample))
 
-class SampleSet(OPSObject):
+class SampleSet(OPSNamed):
     '''
     SampleSet is essentially a list of samples, with a few conveniences.  It
     can be treated as a list of samples (using, e.g., .append), or as a

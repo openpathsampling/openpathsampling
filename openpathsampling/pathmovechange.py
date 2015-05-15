@@ -1,9 +1,9 @@
 __author__ = 'jan-hendrikprinz'
 
 import openpathsampling as paths
-from openpathsampling.todict import OPSObject
+from openpathsampling.todict import OPSNamed
 
-class PathMoveChange(OPSObject):
+class PathMoveChange(OPSNamed):
     #TODO: this docstring is false
     '''
     PathMoveChange is essentially a list of samples, with a few conveniences.  It

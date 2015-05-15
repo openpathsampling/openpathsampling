@@ -3,7 +3,7 @@ from wham import WHAM
 import numpy as np
 from lookup_function import LookupFunction
 import openpathsampling as paths
-from openpathsampling.todict import OPSObject
+from openpathsampling.todict import OPSNamed
 import sys
 
 import inspect
@@ -83,7 +83,7 @@ class Histogrammer(object):
         self._hist_args = val
         self.empty_hist = Histogram(**self._hist_args)
 
-class Transition(OPSObject):
+class Transition(OPSNamed):
     """
     Describes (in general) a transition between two states.
     """
@@ -546,7 +546,6 @@ class TISTransition(Transition):
         )
         return root_mover
 
-@ops_object
 class RETISTransition(TISTransition):
     """Transition class for RETIS."""
     def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
@@ -757,6 +756,3 @@ def minus_sides_summary(trajectory, minus_ensemble):
             local_count = 0
         local_count += count
     return count_sides
-
-
-        

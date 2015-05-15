@@ -7,8 +7,6 @@ import openpathsampling as paths
 import inspect
 import copy
 
-
-
 class OPSObject(object):
     """Mixin that allows an object to carry a .name property that can be saved
 
@@ -17,14 +15,13 @@ class OPSObject(object):
     before. This means that you cannot name an object, after is has been saved.
     """
 
-    def __init__(self, name=None):
-        self._name = name
-
+    @staticmethod
     def _subclasses(cls):
         return cls.__subclasses__() + [g for s in cls.__subclasses__()
                                        for g in OPSObject._subclasses(s)]
 
-    def objects(self):
+    @staticmethod
+    def objects():
         """
         Returns a dictionary of all subclasses
         """
@@ -87,17 +84,31 @@ class OPSObject(object):
 
         return obj
 
+class OPSNamed(OPSObject):
+    """Mixin that allows an object to carry a .name property that can be saved
+
+    It is not allowed to rename object once it has been given a name. Also
+    storage usually sets the name to empty if an object has not been named
+    before. This means that you cannot name an object, after is has been saved.
+    """
+
+    def __init__(self, name=None):
+        super(OPSNamed, self).__init__()
+        self._name = name
 
     @property
     def name(self):
-        return self._name
+        if self._name is None or self._name == '':
+            return '[None]'
+        else:
+            return self._name
 
     @name.setter
     def name(self, name):
         if self._name is None:
             self._name = name
         else:
-            raise('Objects cannot be renamed!')
+            raise ValueError('Objects cannot be renamed! Is already named "' + self._name + '"')
 
     def named(self, name):
         """Create a shallow copy with a new given name.
@@ -121,13 +132,10 @@ class ObjectJSON(object):
 
     allow_marshal = True
 
-    def __init__(self, unit_system = None, class_list = None):
+    def __init__(self, unit_system = None):
         self.excluded_keys = []
         self.unit_system = unit_system
-        if class_list is not None:
-            self.class_list = class_list
-        else:
-            self.class_list = paths.todict.class_list
+        self.class_list = paths.OPSNamed.objects()
 
     def simplify_object(self, obj, base_type = ''):
         return { '_cls' : obj.__class__.__name__, '_dict' : self.simplify(obj.to_dict(), obj.base_cls_name) }
@@ -186,15 +194,15 @@ class ObjectJSON(object):
             return obj
 
     def unitsytem_to_list(self, unit_system):
-        '''
+        """
         Turn a simtk.UnitSystem() into a list of strings representing the unitsystem for serialization
-        '''
+        """
         return [ u.name  for u in unit_system.units ]
 
     def unit_system_from_list(self, unit_system_list):
-        '''
+        """
         Create a simtk.UnitSystem() from a serialialized list of strings representing the unitsystem
-        '''
+        """
         return units.UnitSystem([ getattr(units, unit_name).iter_base_or_scaled_units().next()[0] for unit_name in unit_system_list])
 
     def unit_to_symbol(self, unit):
@@ -230,12 +238,6 @@ class ObjectJSON(object):
     def from_json(self, json_string):
         simplified = yaml.load(json_string)
         return self.build(simplified)
-
-    def topology_to_json(self, topology):
-        return self.to_json(self.topology_to_dict(topology))
-
-    def topology_from_json(self, json_string):
-        return self.topology_from_dict(self.from_json(json_string))
 
     def unit_to_json(self, unit):
         simple = self.unit_to_dict(unit)

@@ -18,7 +18,6 @@ class ObjectDictStore(ObjectStore):
             the index
         """
         storage = self.storage
-
         var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
 
         if var_name + '_value' not in self.storage.variables:
@@ -126,9 +125,3 @@ class ObjectDictStore(ObjectStore):
 
         """
         super(ObjectDictStore, self)._init()
-
-        self.init_variable(
-            self.idx_dimension + '_name',
-            'str',
-            self.idx_dimension, chunksizes=(1, )
-        )

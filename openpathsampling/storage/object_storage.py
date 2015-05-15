@@ -56,7 +56,7 @@ class ObjectStore(object):
 
     def __init__(self, storage, content_class, has_uid=False, json=True,
                  dimension_units=None, enable_caching=True, load_partial=False,
-                 nestable=False):
+                 nestable=False, has_name=False):
         """
 
         Parameters
@@ -121,6 +121,7 @@ class ObjectStore(object):
         self.db = content_class.__name__.lower()
         self.cache = dict()
         self.has_uid = has_uid
+        self.has_name = has_name
         self.json = json
         self.simplifier = paths.storage.StorableObjectJSON(storage)
         self.identifier = self.db + '_uid'
@@ -639,6 +640,11 @@ class ObjectStore(object):
         if self.has_uid:
             self.init_variable(self.db + "_uid", 'str',
                 description='A unique identifier',
+                chunksizes=tuple([10240]))
+
+        if self.has_name:
+            self.init_variable(self.db + "_name", 'str',
+                description='A name',
                 chunksizes=tuple([10240]))
 
         if self.json:
@@ -1177,7 +1183,11 @@ def loadidx(func):
             # get the name of the object
             setattr(obj, '_uid', self.get_name(idx))
 
+        if self.has_name and hasattr(obj, '_name'):
+            setattr(obj, '_name', self.storage.variables[self.db + '_name'][idx])
+
         return obj
+
     return inner
 
 def saveidx(func):
@@ -1209,6 +1219,13 @@ def saveidx(func):
 
         if self.has_uid and hasattr(obj, '_uid') and obj._uid != '':
             self.storage.variables[self.identifier][idx] = obj._uid
+
+        if self.has_uid and hasattr(obj, '_name'):
+            if obj._name is None:
+                # set name of object to empty string
+                obj._name = ""
+
+            self.storage.variables[self.db + '_name'][idx] = obj._name
 
     return inner
 

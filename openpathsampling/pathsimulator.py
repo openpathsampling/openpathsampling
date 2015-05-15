@@ -1,4 +1,4 @@
-from openpathsampling.todict import OPSObject
+from openpathsampling.todict import OPSNamed
 import openpathsampling as paths
 
 from openpathsampling.pathmover import PathMover
@@ -8,7 +8,7 @@ from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-class PathSimulator(OPSObject):
+class PathSimulator(OPSNamed):
 
     calc_name = "PathSimulator"
 

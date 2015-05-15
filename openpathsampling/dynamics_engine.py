@@ -7,7 +7,7 @@ Created on 01.07.2014
 
 import simtk.unit as u
 import openpathsampling as paths
-from openpathsampling.todict import OPSObject
+from openpathsampling.todict import OPSNamed
 
 
 import logging
@@ -24,7 +24,7 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 #=============================================================================
 
 
-class DynamicsEngine(OPSObject):
+class DynamicsEngine(OPSNamed):
     '''
     Wraps simulation tool (parameters, storage, etc.)
 
