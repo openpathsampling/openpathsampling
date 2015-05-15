@@ -14,7 +14,7 @@ class PathMoveChange(TreeMixin):
     mover : PathMover
         The mover that generated this PathMoveChange
     generated : list of Sample
-        A list of newly generated samples by this perticular move.
+        A list of newly generated samples by this particular move.
         Only used by node movers like RepEx or Shooters
     subchanges : list of PathMoveChanges
         the PathMoveChanges created by submovers
@@ -118,19 +118,6 @@ class PathMoveChange(TreeMixin):
         return self._collapsed
 
     @property
-    def trials(self):
-        """
-        Returns a list of all samples generated during the PathMove.
-
-        This includes all accepted and rejected samples (which does NOT
-        include hidden samples yet)
-
-        """
-        if self._trials is None:
-            self._trials = self._get_trials()
-        return self._trials
-
-    @property
     def accepted(self):
         """
         Returns if this particular move was accepted.
@@ -146,7 +133,10 @@ class PathMoveChange(TreeMixin):
         """
         This allows to use `+` to create SequentialPMCs
         """
-        return SequentialPathMoveChange([self, other])
+        if isinstance(other, PathMoveChange):
+            return SequentialPathMoveChange([self, other])
+        else:
+            raise ValueError('Only PathMoveChanges can be combined')
 
     @property
     def results(self):
@@ -154,6 +144,11 @@ class PathMoveChange(TreeMixin):
         Returns a list of all samples that are accepted in this move
 
         This contains unnecessary, but accepted samples, too.
+
+        Returns
+        -------
+        list of Samples
+            the list of samples that should be applied to the SampleSet
         """
         if self._results is None:
             self._results = self._get_results()
@@ -172,6 +167,19 @@ class PathMoveChange(TreeMixin):
             the list of accepted samples for this move
         """
         return []
+
+    @property
+    def trials(self):
+        """
+        Returns a list of all samples generated during the PathMove.
+
+        This includes all accepted and rejected samples (which does NOT
+        include hidden samples yet)
+
+        """
+        if self._trials is None:
+            self._trials = self._get_trials()
+        return self._trials
 
     def _get_trials(self):
         """
@@ -237,6 +245,22 @@ class SamplePathMoveChange(PathMoveChange):
     as leaves and on the lowest level consist only of `SamplePathMoveChange`
     """
     def __init__(self, samples, mover=None, details=None):
+        """
+        Parameters
+        ----------
+        samples : list of Samples
+            a list of trial samples that are used in this change
+        mover : PathMover
+            the generating PathMover
+        details : Details
+            a details object containing specifics about the change
+
+        Attributes
+        ----------
+        samples
+        mover
+        details
+        """
         super(SamplePathMoveChange, self).__init__(mover=mover, details=details)
 
         if type(samples) is paths.Sample:
@@ -252,7 +276,12 @@ class SamplePathMoveChange(PathMoveChange):
 
 @ops_object
 class AcceptedSamplePathMoveChange(SamplePathMoveChange):
+    """
+    Represents an accepted SamplePMC
 
+    This will return the trial samples also as its result, hence it is
+    accepted.
+    """
     def _get_trials(self):
         return self.samples
 
@@ -261,6 +290,12 @@ class AcceptedSamplePathMoveChange(SamplePathMoveChange):
 
 @ops_object
 class RejectedSamplePathMoveChange(SamplePathMoveChange):
+    """
+    Represents an rejected SamplePMC
+
+    This will return no samples also as its result, hence it is
+    rejected.
+    """
 
     def _get_trials(self):
         return self.samples
@@ -275,6 +310,20 @@ class SequentialPathMoveChange(PathMoveChange):
     underlying MovePaths
     """
     def __init__(self, subchanges, mover=None, details=None):
+        """
+        Parameters
+        ----------
+        subchanges : list of PathMoveChanges
+            a list of PathMoveChanges to be applied in sequence
+        mover
+        details
+
+        Attributes
+        ----------
+        subchanges
+        mover
+        details
+        """
         super(SequentialPathMoveChange, self).__init__(mover=mover, details=details)
         self.subchanges = subchanges
 
@@ -347,6 +396,20 @@ class SubPathMoveChange(PathMoveChange):
     The raw implementation delegates all to the subchange
     """
     def __init__(self, subchange, mover=None, details=None):
+        """
+        Parameters
+        ----------
+        subchange : PathMoveChange
+            the actual subchange used by this wrapper PMC
+        mover
+        details
+
+        Attributes
+        ----------
+        subchange
+        mover
+        details
+        """
         super(SubPathMoveChange, self).__init__(mover=mover, details=details)
         self.subchanges = [subchange]
 
@@ -368,6 +431,9 @@ class RandomChoicePathMoveChange(SubPathMoveChange):
     """
     A PathMoveChange that represents the application of a mover chosen randomly
     """
+
+    # This class is empty since all of the decision is specified by the mover
+    # and it requires no additional logic to decide if it is accepted.
 
 class FilterByEnsemblePathMoveChange(SubPathMoveChange):
     """
@@ -423,6 +489,10 @@ class KeepLastSamplePathMoveChange(PathMoveChange):
     Notes
     -----
     Does the same as `FilterSamplesPathMoveChange(subchange, [-1], False)`
+
+    I think we should try to not use this. It would be better to make submoves
+    and finally filter by relevant ensembles. Much like running a function
+    with local variables/local ensembles.
     """
 
     def _get_results(self):
