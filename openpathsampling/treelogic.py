@@ -77,7 +77,7 @@ class TreeMixin(object):
         return self._len
 
     def key(self, change):
-        tree = self.keytree()
+        tree = self.keylist()
         return [leave for leave in tree if leave[1] is change ][0][0]
 
     @classmethod
@@ -145,7 +145,7 @@ class TreeMixin(object):
 
     def __contains__(self, item):
         """
-        Check if a pathmover, pathmovechange or a tree is in self
+        Check if a node or a tree is in self
 
         The tree structure is as follows
 
@@ -155,11 +155,10 @@ class TreeMixin(object):
 
         The tree structure in openpathsampling is expressed as
 
-        1. The tree structure is given as a nested list.
+        1. The tree structure is given as a nested list of lists ...
         2. The first element in the list is the node
         3. Element 2 to N are the children.
         4. Children are always wrapped in brackets
-        5. An element can be a PathMover instance or PathMoveChange instance
 
         node = [element, [child1], [child2], ... ]
 
@@ -167,13 +166,14 @@ class TreeMixin(object):
         fits on top of the tree to match. Here child nodes are ignored as long
         as the mask of the subtree fits.
 
-        In searching wildcats are allowed. This works
+        In searching wildcats are allowed. This works as
 
-        1. slice(start, end) means an a number of arbitrary children between
+        1. slice(start, end) means a number of arbitrary children between
             start and end-1
         2. '*' means an arbitrary number of arbitrary children. Equal to slice(0, None)
         3. None or '.' means ONE arbitrary child. Equal to slice(1,2)
         4. '?' means ONE or NONE arbitrary child. Equal to slice(0,2)
+        5. 'n:m' is equal to slice(n,m), e.g. '0:3'
 
         Examples
         --------
@@ -184,7 +184,13 @@ class TreeMixin(object):
 
         Parameters
         ----------
-        item : PathMover, PathMoveChange, PathMoveTree
+        item : node or tree
+            the node or tree to be checked
+
+        Returns
+        -------
+        bool
+            True if the node is in the tree or if the subtree is in the tree
 
         """
         if type(item) is list:
@@ -196,20 +202,32 @@ class TreeMixin(object):
 #            for sub in self.subnodes:
 #                if item in sub:
 #                    return True
+        else:
+            for x in self:
+                if self._default_match(x, item):
+                    return True
 
         return False
 
     def tree(self):
+        """
+        Return the object as a tree structure of nested lists of nodes
+
+        Returns
+        -------
+        nested list of nodes
+            the tree in nested list format
+        """
         return [self] + [ ch.tree() for ch in self._subnodes]
 
     def map_tree(self, fnc):
         """
-        Apply a function to each node and return the tree
+        Apply a function to each node and return a nested tree of results
 
         Parameters
         ----------
-        fnc : function(pathmovechange, args, kwargs)
-            the function run at each pathmovechange node. It is given the node
+        fnc : function(node, args, kwargs)
+            the function run at each node node. It is given the node
             and the optional (fixed) parameters
         kwargs : named arguments
             optional arguments added to the function
@@ -223,16 +241,37 @@ class TreeMixin(object):
 
     @property
     def identifier(self):
+        """
+        A unique identifier to build the unique key for a position in a tree
+
+        Returns
+        -------
+        hashable object
+            the unique (hashable) key to identify each node
+
+        Notes
+        -----
+        This is often specific to the node type and hence overridden by the
+        target tree
+        """
         return hex(id(self))
 
-    def keytree(self):
+    def keylist(self):
+        """
+        Return a list of key : subtree tuples
+
+        Returns
+        -------
+        list of tuple(key, subtree)
+            A list of all subtrees with their respective keys
+        """
         path = [self.identifier]
 
         result = list()
         result.append( ( path, self ) )
         mp = []
         for sub in self._subnodes:
-            subtree = sub.keytree()
+            subtree = sub.keylist()
             result.extend([ ( path + mp + [m[0]], m[1] ) for m in subtree ])
             mp.extend([subtree[-1][0]])
 

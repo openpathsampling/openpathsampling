@@ -76,65 +76,6 @@ class PathMoveChange(TreeMixin):
         else:
             return False
 
-    def __contains__(self, item):
-        """
-        Check if a pathmover, pathmovechange or a tree is in self
-
-        The tree structure is as follows
-
-        1. A tree consists of nodes
-        2. Each node can have zero, one or more children
-        3. Each child is a node itself
-
-        The tree structure in openpathsampling is expressed as
-
-        1. The tree structure is given as a nested list.
-        2. The first element in the list is the node
-        3. Element 2 to N are the children.
-        4. Children are always wrapped in brackets
-        5. An element can be a PathMover instance or PathMoveChange instance
-
-        node = [element, [child1], [child2], ... ]
-
-        A tree can be a subtree if the subtree (always starting from the top)
-        fits on top of the tree to match. Here child nodes are ignored as long
-        as the mask of the subtree fits.
-
-        In searching wildcats are allowed. This works
-
-        1. slice(start, end) means an a number of arbitrary children between
-            start and end-1
-        2. '*' means an arbitrary number of arbitrary children. Equal to slice(0, None)
-        3. None or '.' means ONE arbitrary child. Equal to slice(1,2)
-        4. '?' means ONE or NONE arbitrary child. Equal to slice(0,2)
-
-        Examples
-        --------
-        >>> mover1 = 1
-        >>> mover2 = 2
-        >>> mover3 = 3
-        >>> mover4 = 4
-        >>> mover5 = 5
-        >>> tree1 = [mover1, [mover2]]
-        >>> tree2 = [mover1, [mover2], [mover3]]
-        >>> tree3 = [mover1, [mover2], [mover4, [mover5]]]
-        >>> tree4 = []
-
-        Parameters
-        ----------
-        item : PathMover, PathMoveChange, PathMoveTree
-
-        """
-        if isinstance(item, paths.PathMover):
-            return item in self.map_post_order(lambda x : x.mover)
-        elif isinstance(item, paths.PathMoveChange):
-            return item in iter(self)
-        elif type(item) is list:
-            super(PathMoveChange, self).__contains__(item)
-        else:
-            raise ValueError('Only PathMovers or PathMoveChanges or trees ' +
-                             'can be tested.')
-
     def __repr__(self):
         return self.__class__.__name__[:-14] + '(' + str(self.idx.values()) + ')'
 
@@ -202,19 +143,10 @@ class PathMoveChange(TreeMixin):
         return self._accepted
 
     def __add__(self, other):
+        """
+        This allows to use `+` to create SequentialPMCs
+        """
         return SequentialPathMoveChange([self, other])
-
-    def apply_to(self, other):
-        """
-        Standard is to apply the list of samples contained
-        """
-
-        new_sample_set = paths.SampleSet(other).apply_samples(self.results)
-        new_sample_set.movepath = self
-        return new_sample_set
-
-    def __call__(self, other):
-        return self.apply_to(other)
 
     @property
     def results(self):

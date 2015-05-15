@@ -223,9 +223,17 @@ class SampleSet(object):
         """
         Add the move path to the Sample and return the new sample set
         """
-        new_set = other.apply_to(self)
-        new_set.movepath = other
-        return new_set
+        if isinstance(other, paths.PathMoveChange):
+            return self.apply_samples(other.results)
+        elif type(other) is list:
+            okay = True
+            for samp in other:
+                if not isinstance(samp, paths.Sample):
+                    okay = False
+
+            return self.apply_samples(other)
+        else:
+            raise ValueError('Only lists of Sample or PathMoveChanges allowed.')
 
     @staticmethod
     def map_trajectory_to_ensembles(trajectory, ensembles):
