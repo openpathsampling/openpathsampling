@@ -14,3 +14,4 @@ ipython-notebook
 matplotlib
 svgwrite
 networkx
+pygraphviz
