@@ -5,6 +5,114 @@ from simtk import unit as units
 import yaml
 import openpathsampling as paths
 import inspect
+import copy
+
+
+
+class OPSObject(object):
+    """Mixin that allows an object to carry a .name property that can be saved
+
+    It is not allowed to rename object once it has been given a name. Also
+    storage usually sets the name to empty if an object has not been named
+    before. This means that you cannot name an object, after is has been saved.
+    """
+
+    def __init__(self, name=None):
+        self._name = name
+
+    def _subclasses(cls):
+        return cls.__subclasses__() + [g for s in cls.__subclasses__()
+                                       for g in OPSObject._subclasses(s)]
+
+    def objects(self):
+        """
+        Returns a dictionary of all subclasses
+        """
+        subclasses = OPSObject._subclasses(OPSObject)
+
+        return { subclass.__name__ : subclass for subclass in subclasses }
+
+    @classmethod
+    def args(cls):
+        try:
+            args = inspect.getargspec(cls.__init__)
+        except TypeError:
+            return []
+        return args[0]
+
+    _excluded_attr = []
+    _exclude_private_attr = True
+    _restore_non_initial_attr = True
+    _restore_name = True
+
+    def to_dict(self):
+        excluded_keys = ['idx', 'json', 'identifier']
+        return {
+            key: value for key, value in self.__dict__.iteritems()
+            if key not in excluded_keys
+            and key not in self._excluded_attr
+            and not (key.startswith('_') and self._exclude_private_attr)
+        }
+
+    @classmethod
+    def from_dict(cls, dct = None):
+        if dct is None:
+            dct={}
+        try:
+            init_dct = dct
+            non_init_dct = {}
+            if hasattr(cls, 'args'):
+                args = cls.args()
+                init_dct = {key: dct[key] for key in dct if key in args}
+                non_init_dct = {key: dct[key] for key in dct if key not in args}
+
+            obj = cls(**init_dct)
+
+            if cls._restore_non_initial_attr:
+                if len(non_init_dct) > 0:
+                    for key, value in non_init_dct.iteritems():
+                        setattr(obj, key, value)
+            else:
+                if cls._restore_name:
+                    if 'name' in dct:
+                        obj.name = dct['name']
+
+        except TypeError as e:
+            print dct
+            print cls.__name__
+            print e
+            print args
+            print init_dct
+            print non_init_dct
+
+        return obj
+
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        if self._name is None:
+            self._name = name
+        else:
+            raise('Objects cannot be renamed!')
+
+    def named(self, name):
+        """Create a shallow copy with a new given name.
+
+        This is the preferred way to work with names.
+
+        Example
+        -------
+        >>> import openpathsampling as p
+        >>> full = p.FullVolume().named('myFullVolume')
+        """
+        copied_object = copy.copy(self)
+        copied_object._name = name
+
+        return copied_object
 
 class ObjectJSON(object):
     """
@@ -135,83 +243,3 @@ class ObjectJSON(object):
 
     def unit_from_json(self, json_string):
         return self.unit_from_dict(self.from_json(json_string))
-
-# Register a class to be creatable. Basically just a dict to match a classname to the actual class
-# This is mainly for security so that we do not have to use globals to find classes
-
-class_list = dict()
-
-def ops_object(super_class):
-    class_list[super_class.__name__] = super_class
-
-    if not hasattr(super_class, 'args'):
-        def args(cls):
-            try:
-                args = inspect.getargspec(cls.__init__)
-            except TypeError:
-                return []
-            return args[0]
-
-        super_class.args = classmethod(args)
-
-    super_class.creatable = True
-    if not hasattr(super_class, '_excluded_attr'):
-        super_class._excluded_attr = []
-
-    if not hasattr(super_class, '_exclude_private_attr'):
-        super_class._exclude_private_attr = True
-
-    if not hasattr(super_class, '_restore_non_initial_attr'):
-        super_class._restore_non_initial_attr = True
-
-    if not hasattr(super_class, '_restore_name'):
-        super_class._restore_name = True
-
-    if not hasattr(super_class, 'to_dict'):
-        def _to_dict(self):
-            excluded_keys = ['idx', 'json', 'identifier']
-            return {
-                key: value for key, value in self.__dict__.iteritems()
-                if key not in excluded_keys
-                and key not in self._excluded_attr
-                and not (key.startswith('_') and self._exclude_private_attr)
-            }
-
-        super_class.to_dict = _to_dict
-
-    if not hasattr(super_class, 'from_dict'):
-        def _from_dict(cls, dct = None):
-            if dct is None:
-                dct={}
-            try:
-                init_dct = dct
-                non_init_dct = {}
-                if hasattr(cls, 'args'):
-                    args = cls.args()
-                    init_dct = {key: dct[key] for key in dct if key in args}
-                    non_init_dct = {key: dct[key] for key in dct if key not in args}
-
-                obj = cls(**init_dct)
-
-                if super_class._restore_non_initial_attr:
-                    if len(non_init_dct) > 0:
-                        for key, value in non_init_dct.iteritems():
-                            setattr(obj, key, value)
-                else:
-                    if super_class._restore_name:
-                        if 'name' in dct:
-                            obj.name = dct['name']
-
-            except TypeError as e:
-                print dct
-                print cls.__name__
-                print e
-                print args
-                print init_dct
-                print non_init_dct
-
-            return obj
-
-        super_class.from_dict = classmethod(_from_dict)
-
-    return super_class

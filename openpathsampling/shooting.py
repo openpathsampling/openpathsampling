@@ -1,7 +1,7 @@
 import math
 import numpy as np
 
-from openpathsampling.todict import ops_object
+from openpathsampling.todict import OPSObject
 import logging
 from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
@@ -20,8 +20,7 @@ init_log = logging.getLogger('openpathsampling.initialization')
 #  
 #############################################################################
 
-@ops_object
-class ShootingPoint(object):
+class ShootingPoint(OPSObject):
 
     def __init__(self, selector, trajectory, index, f = None, sum_bias = None):
         '''
@@ -45,6 +44,7 @@ class ShootingPoint(object):
         -----
         '''
 
+        super(ShootingPoint, self).__init__()
         self.selector = selector
         self.trajectory = trajectory
         self.index = index
@@ -96,10 +96,9 @@ class ShootingPoint(object):
             'sum_bias' : self._sum_bias
         }
 
-@ops_object
-class ShootingPointSelector(object):
+class ShootingPointSelector(OPSObject):
     def __init__(self):
-        pass
+        super(ShootingPointSelector, self).__init__()
 
     @property
     def identifier(self):
@@ -108,7 +107,7 @@ class ShootingPointSelector(object):
         else:
             return None
 
-    def f(self, snapshot, trajectory=None):
+    def f(self, snapshot, trajectory):
         '''
         Returns the unnormalized proposal probability of a snapshot
         
@@ -170,7 +169,6 @@ class ShootingPointSelector(object):
 
         return point
 
-@ops_object
 class GaussianBiasSelector(ShootingPointSelector):
     def __init__(self, collectivevariable, alpha = 1.0, l0 = 0.5):
         '''
@@ -181,10 +179,9 @@ class GaussianBiasSelector(ShootingPointSelector):
         self.alpha = alpha
         self.l0 = l0
 
-    def f(self, snapshot, trajectory=None):
+    def f(self, snapshot, trajectory):
         return math.exp(-self.alpha*(self.collectivevariable(snapshot) - self.l0)**2)
 
-@ops_object
 class UniformSelector(ShootingPointSelector):
     """
     Selects random frame in range `pad_start` to `len(trajectory-pad_end`.
@@ -218,7 +215,7 @@ class UniformSelector(ShootingPointSelector):
         point = ShootingPoint(self, trajectory, idx, f = 1.0, sum_bias= self.sum_bias(trajectory))
         
         return point
-@ops_object
+
 class FinalFrameSelector(ShootingPointSelector):
     '''
     Pick final trajectory frame as shooting point.
@@ -235,7 +232,6 @@ class FinalFrameSelector(ShootingPointSelector):
         point = ShootingPoint(self, trajectory, len(trajectory)-1, f=1.0, sum_bias=1.0)
         return point
 
-@ops_object
 class FirstFrameSelector(ShootingPointSelector):
     '''
     Pick first trajectory frame as shooting point.

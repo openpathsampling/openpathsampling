@@ -17,7 +17,7 @@ import numpy
 import simtk.unit as u
 
 import openpathsampling as paths
-import openpathsampling.todict
+from openpathsampling.todict import ObjectJSON
 
 #=============================================================================================
 # SOURCE CONTROL
@@ -532,7 +532,7 @@ class Storage(netcdf.Dataset):
                         new_storage.variables[variable][idx] = self.variables[variable][idx]
 
 
-class StorableObjectJSON(paths.todict.ObjectJSON):
+class StorableObjectJSON(ObjectJSON):
     def __init__(self, storage, unit_system = None, class_list = None):
         super(StorableObjectJSON, self).__init__(unit_system, class_list)
         self.excluded_keys = ['idx', 'json', 'identifier']
