@@ -27,6 +27,8 @@ class ReplicaNetwork(object):
             ensembles = self.all_ensembles
 
         # TODO: add support for repex_mover and ensembles
+        # Currently we analyze everything in storage; this would allow us to
+        # limit that analysis to a subset of moves
         #if ensembles is None:
         #    tmp_ensembles = []
         #    for mover in repex_movers:
@@ -107,6 +109,7 @@ class ReplicaNetwork(object):
                             self.analysis['n_accepted'][(ens1, ens2)] = 1
 
         return (self.analysis['n_trials'], self.analysis['n_accepted'])
+
 
     def analyze_traces(self, storage, force=False):
         self.check_storage(storage)
