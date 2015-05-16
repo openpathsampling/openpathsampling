@@ -15,6 +15,7 @@ class ReplicaNetwork(object):
     def __init__(self, repex_movers=None, ensembles=None, storage=None):
         self.analysis = { } 
         self.traces = { } 
+        self.transitions = { }
         self.all_ensembles = []
         self.all_replicas = []
         if repex_movers is None and ensembles is None and storage is None:
@@ -82,6 +83,9 @@ class ReplicaNetwork(object):
             return (self.analysis['n_trials'], self.analysis['n_accepted'])
         self.analysis['n_trials'] = {}
         self.analysis['n_accepted'] = {}
+
+        # the approach implemented here loops over all moves, finds moves
+        # that are replica exchanges (using isinstance) and 
         for pmc in storage.pathmovechanges:
             for delta in pmc:
                 if isinstance(delta.mover, paths.ReplicaExchangeMover):
@@ -93,7 +97,7 @@ class ReplicaNetwork(object):
                         try:
                             # TODO: this hack for minus should not be
                             # necessary; although we may have to hack minus
-                            # to be cleaner
+                            # to be cleaner -- failed minus has no trial
                             ens1 = delta.mover.innermost_ensemble
                             ens2 = delta.mover.minus_ensemble
                         except:
@@ -197,6 +201,8 @@ class ReplicaNetwork(object):
     def mixing_matrix(self, storage=None, index_order=None, force=False):
         (n_try, n_acc) = self.analyze_exchanges(storage, force)
         ensemble_to_number = self.initial_order(index_order)
+        # TODO: all of these translation dictionaries should be set by
+        # self.initial_order
         number_to_ensemble = {ensemble_to_number[k] : k for 
                               k in ensemble_to_number.keys()}
         n_ensembles = len(ensemble_to_number)
@@ -226,10 +232,22 @@ class ReplicaNetwork(object):
         self.mix_matrix = mix_matrix
         return df
 
-    def diagram(self, storage=None, force=False):
-        (nacc, ntry) = self.analyze_exchanges(storage, force)
-        # TODO: make this into a networkx diagram. It would be really nice
-        # if a given interface set could be forced to be collinear
+
+    def transitions_from_traces(self, storage=None, force=False):
+        traces = self.analyze_traces(storage, force)
+        transitions = {}
+        for replica in [s.replica for s in self.storage.samplesets[0]]:
+            trace = traces[replica]
+            hops = [(trace[i][0], trace[i+1][0]) for i in range(len(trace)-1)]
+
+            for hop in hops:
+                try:
+                    transitions[hop] += 1
+                except KeyError:
+                    transitions[hop] = 1
+        self.transitions = transitions
+        return transitions
+
 
     def flow(self, bottom, top, storage=None, force=False):
         traces = self.analyze_traces(storage, force)
@@ -395,4 +413,5 @@ def condense_repeats(ll):
                 vals.append((old, count))
             count = 1
             old = e
+    vals.append((old, count))
     return vals
