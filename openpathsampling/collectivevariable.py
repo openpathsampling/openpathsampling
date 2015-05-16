@@ -66,7 +66,9 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
                                         dimensions, self)
         self.cache_dict = cd.ChainDict()
 
-        OPSNamed.__init__(self, name)
+        OPSNamed.__init__(self)
+
+        self.name = name
 
         if hasattr(self, '_eval'):
             self.expand_dict = cd.UnwrapTuple()
