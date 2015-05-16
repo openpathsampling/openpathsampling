@@ -1223,7 +1223,7 @@ def saveidx(func):
         if self.has_uid and hasattr(obj, '_name'):
             if obj._name is None:
                 # set name of object to empty string
-                obj._name = ""
+                obj.fix_name()
 
             self.storage.variables[self.db + '_name'][idx] = obj._name
 

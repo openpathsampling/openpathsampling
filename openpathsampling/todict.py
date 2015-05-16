@@ -101,6 +101,9 @@ class OPSNamed(OPSObject):
     def default_name(self):
         return '[' + self.__class__.__name__ + ']'
 
+    def fix_name(self):
+        self._name_fixed = True
+
     @property
     def name(self):
         # We keep the destinction between '' and None to find out if a user or

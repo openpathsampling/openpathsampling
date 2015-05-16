@@ -224,10 +224,7 @@ class LambdaVolume(Volume):
         self.collectivevariable = collectivevariable
         self.lambda_min = float(lambda_min)
         self.lambda_max = float(lambda_max)
-#        self.name = (str(self.lambda_min) + "<" +
-#                     str(self.collectivevariable.name) + "<" +
-#                     str(self.lambda_max))
-        
+
     # Typically, the logical combinations are only done once. Because of
     # this, it is worth passing these through a check to speed up the logic.
 
@@ -236,6 +233,13 @@ class LambdaVolume(Volume):
     # extra info the subclass carries) and range_and/or/sub, so that they
     # return the correct behavior for the new subclass. Everything else
     # comes for free.
+
+    @property
+    def default_name(self):
+        return (str(self.lambda_min) + "<" +
+                     str(self.collectivevariable.name) + "<" +
+                     str(self.lambda_max))
+
     def _copy_with_new_range(self, lmin, lmax):
         """Shortcut to make a LambdaVolume with all parameters the same as
         this one except the range. This is useful for the range logic when
@@ -529,8 +533,6 @@ class VolumeFactory(object):
         myset = []
         for (min_i, max_i) in zip(minvals, maxvals):
             volume = LambdaVolume(op, min_i, max_i)
-#            name = str(min_i) + "<" + op.name + "<" + str(max_i)
-#            volume.name = name
             myset.append(volume)
         return myset
 
