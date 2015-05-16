@@ -1408,7 +1408,12 @@ class WrappedMover(PathMover):
         return self.mover.out_ensembles
 
     def move(self, globalstate):
-        return self.mover.move(globalstate)
+        subchange = self.mover.move(globalstate)
+        change = paths.SubPathMoveChange(
+            subchange=subchange,
+            mover=self
+        )
+        return change
 
 
 class EnsembleFilterMover(WrappedMover):

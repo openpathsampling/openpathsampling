@@ -122,7 +122,7 @@ class Transition(OPSNamed):
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, indentation):
-        line = ("* "*indentation + str(move_name) + 
+        line = ("* "*indentation + str(move_name) +
                 " ran " + str(float(n_trials)/n_total_trials*100) + 
                 "% of the cycles with acceptance " + str(n_accepted) + "/" + 
                 str(n_trials) + " (" + str(float(n_accepted) / n_trials) + 
@@ -130,7 +130,8 @@ class Transition(OPSNamed):
         return line
 
     def move_acceptance(self, storage):
-        for delta in storage.pathmovechanges:
+        for step in storage.steps:
+            delta = step.change
             for m in delta:
                 acc = 1 if m.accepted else 0
                 key = (m.mover, str(delta.key(m)))
@@ -174,19 +175,21 @@ class Transition(OPSNamed):
             except KeyError:
                 my_movers[key] = [key]
 
+
         stats = { } 
         for groupname in my_movers.keys():
             stats[groupname] = [0, 0]
 
         if self._mover_acceptance == { }:
             self.move_acceptance(storage)
-        
-        tot_trials = len(storage.pathmovechanges)
+
+        tot_trials = len(storage.steps)
         for groupname in my_movers.keys():
             group = my_movers[groupname]
             for mover in group:
                 key_iter = (k for k in self._mover_acceptance.keys()
                             if k[0] == mover)
+
                 for k in key_iter:
                     stats[groupname][0] += self._mover_acceptance[k][0]
                     stats[groupname][1] += self._mover_acceptance[k][1]
@@ -625,10 +628,11 @@ class RETISTransition(TISTransition):
             return self._flux
 
         self.minus_count_sides = { "in" : [], "out" : [] }
-        minus_moves = (d for d in storage.pathmovechanges 
-                       if self.movers['minus'][0] in d and d.accepted)
+        minus_moves = (d.change for d in storage.steps
+                       if self.movers['minus'][0] in
+                       d.change and d.change.accepted)
         for move in minus_moves:
-            minus_samp = [s for s in move.samples 
+            minus_samp = [s for s in move.results
                           if s.ensemble==self.minus_ensemble][0]
             minus_trajectory = minus_samp.trajectory
             minus_summ = minus_sides_summary(minus_trajectory,

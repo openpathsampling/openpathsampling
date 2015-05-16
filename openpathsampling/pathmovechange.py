@@ -82,6 +82,7 @@ class PathMoveChange(TreeMixin, OPSObject):
     def movetree(self):
         return self.map_tree(lambda x : x.mover)
 
+    @property
     def identifier(self):
         return self.mover
 

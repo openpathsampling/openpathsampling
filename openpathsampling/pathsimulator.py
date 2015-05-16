@@ -184,7 +184,9 @@ class Bootstrapping(PathSimulator):
                         + "  failsteps = " + str(failsteps)
                        )
             paths.tools.refresh_output(
-                "Working on Bootstrapping cycle step " + str(step+1) + ".\n"
+                ("Working on Bootstrapping cycle step %d" +
+                " in ensemble %d/%d .\n") %
+                ( step+1, ens_num + 1, len(self.ensembles) )
             )
 
             movepath = bootstrapmove.move(self.globalstate)
@@ -217,15 +219,17 @@ class Bootstrapping(PathSimulator):
 #                             + "," + repr(sample.ensemble)
 #                            )
 
+            if self.storage is not None:
+                self.storage.steps.save(mcstep)
+
+            self.globalstate = new_sampleset
+
             old_ens_num = ens_num
             ens_num = len(self.globalstate)-1
             if ens_num == old_ens_num:
                 failsteps += 1
 
-            if self.storage is not None:
-                self.storage.steps.save(mcstep)
 
-            self.globalstate = new_sampleset
 
             step += 1
 
