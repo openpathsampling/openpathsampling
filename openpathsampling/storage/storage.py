@@ -98,7 +98,8 @@ class Storage(netcdf.Dataset):
                    'cvs', 'pathmovers', 'shootingpoints',
                    'shootingpointselectors', 'engines',
                    'pathsimulators', 'volumes', 'ensembles',
-                   'pathmovechanges', 'transitions', '_details'
+                   'pathmovechanges', 'transitions', '_details',
+                   'steps'
                   ]}
 
     @property

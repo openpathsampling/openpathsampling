@@ -472,8 +472,8 @@ class FilterSamplesPathMoveChange(SubPathMoveChange):
                (str(self.mover.selected_samples), self.accepted, len(self.results)) + \
                PathMoveChange._indent( str(self.subchange) )
 
-@SubPathMoveChange
-class KeepLastSamplePathMoveChange(PathMoveChange):
+
+class KeepLastSamplePathMoveChange(SubPathMoveChange):
     """
     A PathMoveChange that only keeps the last generated sample.
 

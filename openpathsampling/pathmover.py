@@ -9,7 +9,7 @@ import numpy as np
 import random
 
 import openpathsampling as paths
-from openpathsampling.todict import OPSNamed
+from openpathsampling.todict import OPSNamed, OPSObject
 
 import logging
 from ops_logging import initialization_logging
@@ -385,8 +385,6 @@ class SampleGenerator(PathMover):
     def move(self, globalstate):
         # 1. pick a set of ensembles (in case we allow to pick several ones)
         ensembles = self._ensemble_selector(globalstate)
-
-        print ensembles
 
         # 2. pick samples from these ensembles
         samples = [ self.select_sample(globalstate, ens) for ens in ensembles ]
@@ -1581,7 +1579,7 @@ class PathMoverFactory(object):
 
 
 
-class Details(object):
+class Details(OPSObject):
     """Details of an object. Can contain any data
     """
 
