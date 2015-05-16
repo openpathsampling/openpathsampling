@@ -9,7 +9,7 @@ import numpy as np
 import random
 
 import openpathsampling as paths
-from openpathsampling.todict import ops_object
+from openpathsampling.todict import OPSNamed
 
 import logging
 from ops_logging import initialization_logging
@@ -58,8 +58,8 @@ def make_list_of_pairs(l):
     # part to work.
     return outlist
 
-@ops_object
-class PathMover(TreeMixin):
+
+class PathMover(TreeMixin, OPSNamed):
     """
     A PathMover is the description of a move in replica space.
     
@@ -106,7 +106,7 @@ class PathMover(TreeMixin):
     """
 
     def __init__(self,  ensembles=None):
-        self.name = self.__class__.__name__
+        OPSNamed.__init__(self)
 
         # we keep ensembles totally arbitrary. Each mover know what to do
         self.ensembles = ensembles
@@ -540,7 +540,7 @@ class ForwardShootGenerator(ShootGenerator):
 
         return trial_point
 
-@ops_object
+
 class BackwardShootGenerator(ShootGenerator):
     """A Backward shooting generator
     """
@@ -575,20 +575,20 @@ class BackwardShootGenerator(ShootGenerator):
 
 # TODO: This doubling might be superfluous
 
-@ops_object
+
 class ShootMover(ShootGenerator):
     """
     A pathmover that implements a general shooting algorithm that generates
     a sample from a specified ensemble
     """
 
-@ops_object
+
 class ForwardShootMover(ForwardShootGenerator):
     """
     A pathmover that implements the forward shooting algorithm
     """
 
-@ops_object
+
 class BackwardShootMover(BackwardShootGenerator):
     """
     A pathmover that implements the backward shooting algorithm
@@ -650,7 +650,7 @@ class ReplicaExchangeGenerator(SampleGenerator):
 
         return [trial1, trial2]
 
-@ops_object
+
 class ReplicaExchangeMover(ReplicaExchangeGenerator):
     pass
 
@@ -658,7 +658,7 @@ class ReplicaExchangeMover(ReplicaExchangeGenerator):
 # SUBTRAJECTORY GENERATORS
 ###############################################################################
 
-@ops_object
+
 class RandomSubtrajectorySelectGenerator(SampleGenerator):
     """
     Samples a random subtrajectory satisfying the given subensemble.
@@ -728,7 +728,7 @@ class RandomSubtrajectorySelectGenerator(SampleGenerator):
 
         return trials
 
-@ops_object
+
 class RandomSubtrajectorySelectMover(RandomSubtrajectorySelectGenerator):
     """
     Samples a random subtrajectory satisfying the given subensemble.
@@ -737,7 +737,7 @@ class RandomSubtrajectorySelectMover(RandomSubtrajectorySelectGenerator):
     returns the zero-length trajectory.
     """
 
-@ops_object
+
 class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
     """
     Samples the first subtrajectory satifying the given subensemble.
@@ -748,7 +748,7 @@ class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
     def _choose(self, trajectory_list):
         return trajectory_list[0]
 
-@ops_object
+
 class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
     """
     Samples the final subtrajectory satifying the given subensemble.
@@ -794,7 +794,7 @@ class PathReversalGenerator(SampleGenerator):
 
         return [trial]
 
-@ops_object
+
 class PathReversalMover(PathReversalGenerator):
     pass
 
@@ -875,7 +875,7 @@ class ForwardExtendGenerator(ExtendingGenerator):
 
         return trial_trajectory
 
-@ops_object
+
 class BackwardExtendGenerator(ExtendingGenerator):
     def _extend(self, initial_trajectory, ensemble):
         shoot_str = "Extending {sh_dir} from frame {fnum} in [0:{maxt}]"
@@ -899,18 +899,18 @@ class BackwardExtendGenerator(ExtendingGenerator):
         trial_trajectory = partial_trajectory.reversed + initial_trajectory[1:]
         return trial_trajectory
 
-@ops_object
+
 class ForwardExtendMover(ForwardExtendGenerator):
     """Creates a new sample by extending forward to a new ensemble
     """
 
-@ops_object
+
 class BackwardExtendMover(BackwardExtendGenerator):
     """Creates a new sample by extending backward to a new ensemble
     """
 
 
-@ops_object
+
 class RandomChoiceMover(PathMover):
     """
     Chooses a random mover from its movers list, and runs that move. Returns
@@ -980,7 +980,7 @@ class RandomChoiceMover(PathMover):
 
         return path
 
-@ops_object
+
 class ConditionalMover(PathMover):
     """
     An if-then-else structure for PathMovers.
@@ -1028,7 +1028,7 @@ class ConditionalMover(PathMover):
         return paths.SequentialPathMoveChange([ifclause, resultclause], mover=self)
 
 
-@ops_object
+
 class SequentialMover(PathMover):
     """
     Performs each of the moves in its movers list. Returns all samples
@@ -1070,7 +1070,7 @@ class SequentialMover(PathMover):
 
         return paths.SequentialPathMoveChange(pathmovechanges, mover=self)
 
-@ops_object
+
 class PartialAcceptanceSequentialMover(SequentialMover):
     """
     Performs each move in its movers list until complete or until one is not
@@ -1103,7 +1103,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
         return paths.PartialAcceptanceSequentialPathMoveChange(pathmovechanges, mover=self)
 
 
-@ops_object
+
 class ConditionalSequentialMover(SequentialMover):
     """
     Performs each move in its movers list until complete or until one is not
@@ -1137,7 +1137,7 @@ class ConditionalSequentialMover(SequentialMover):
 
         return paths.ConditionalSequentialPathMoveChange(pathmovechanges, mover=self)
 
-@ops_object
+
 class RestrictToLastSampleMover(PathMover):
     def __init__(self, mover):
         super(RestrictToLastSampleMover, self).__init__()
@@ -1155,7 +1155,7 @@ class RestrictToLastSampleMover(PathMover):
         return paths.KeepLastSamplePathMoveChange(movepath, mover=self)
 
 
-@ops_object
+
 class ReplicaIDChangeMover(PathMover):
     """
     Changes the replica ID for a path.
@@ -1217,7 +1217,7 @@ class ReplicaIDChangeMover(PathMover):
             details=details
         )
 
-@ops_object
+
 class EnsembleHopMover(PathMover):
     def __init__(self, bias=None, ensembles=None):
         # TODO: maybe allow a version of this with a single ensemble and ANY
@@ -1315,7 +1315,7 @@ class EnsembleHopMover(PathMover):
             )
 
 #TODO: REMOVE if possible
-@ops_object
+
 class ForceEnsembleChangeMover(EnsembleHopMover):
     """
     Force an ensemble change in the sample.
@@ -1370,7 +1370,7 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
 
 # TODO: Filter moves are not used at all, do we need these?
 # TODO: Turn Filter into real mover with own movechange ?
-@ops_object
+
 class FilterByReplica(PathMover):
 
     def __init__(self, mover, replicas):
@@ -1388,7 +1388,7 @@ class FilterByReplica(PathMover):
         )
         return self.mover.move(filtered_gs)
 
-@ops_object
+
 class FilterBySample(PathMover):
     def __init__(self, mover, selected_samples):
         super(FilterBySample, self).__init__()
@@ -1403,7 +1403,7 @@ class FilterBySample(PathMover):
             mover=self
         )
 
-@ops_object
+
 class WrappedMover(PathMover):
     """Mover that delegates to a single submover
     """
@@ -1433,7 +1433,7 @@ class WrappedMover(PathMover):
     def move(self, globalstate):
         return self.mover.move(globalstate)
 
-@ops_object
+
 class EnsembleFilterMover(WrappedMover):
     """Mover that return only samples from specified ensembles
     """
@@ -1453,7 +1453,7 @@ class EnsembleFilterMover(WrappedMover):
         return self.ensembles
 
 
-@ops_object
+
 class OneWayShootingMover(RandomChoiceMover):
     """
     OneWayShootingMover is a special case of a RandomChoiceMover which
@@ -1479,7 +1479,7 @@ class OneWayShootingMover(RandomChoiceMover):
         )
         self.selector = selector
 
-@ops_object
+
 class MinusMover(WrappedMover):
     """
     Instance of a MinusMover.
@@ -1529,7 +1529,7 @@ class MinusMover(WrappedMover):
 
         super(MinusMover, self).__init__(mover)
 
-@ops_object
+
 class PathSimulatorMover(WrappedMover):
     """
     This just wraps a mover and references the used pathsimulator
@@ -1550,7 +1550,7 @@ class PathSimulatorMover(WrappedMover):
             details=details
         )
 
-@ops_object
+
 class MultipleSetMinusMover(RandomChoiceMover):
     pass
 
@@ -1593,7 +1593,7 @@ class PathMoverFactory(object):
         pass
 
 
-@ops_object
+
 class Details(object):
     """Details of an object. Can contain any data
     """
@@ -1611,7 +1611,7 @@ class Details(object):
         return mystr
 
 
-@ops_object
+
 class MoveDetails(Details):
     """Details of the move as applied to a given replica
 
@@ -1656,7 +1656,7 @@ class MoveDetails(Details):
         super(MoveDetails, self).__init__(**kwargs)
 
 
-@ops_object
+
 class SampleDetails(Details):
     """Details of a sample
 

@@ -1,11 +1,10 @@
 __author__ = 'jan-hendrikprinz'
 
 import openpathsampling as paths
-from openpathsampling.todict import ops_object
+from openpathsampling.todict import OPSObject
 from treelogic import TreeMixin
 
-@ops_object
-class PathMoveChange(TreeMixin):
+class PathMoveChange(TreeMixin, OPSObject):
     '''
     A class that described the concrete realization of a PathMove.
 
@@ -24,6 +23,7 @@ class PathMoveChange(TreeMixin):
     '''
 
     def __init__(self, subchanges=None, samples=None, mover=None, details=None):
+        OPSObject.__init__(self)
         self._len = None
         self._collapsed = None
         self._results = None
@@ -218,7 +218,7 @@ class PathMoveChange(TreeMixin):
             return ':'.join([sub.description for sub in subs])
 
 
-@ops_object
+
 class EmptyPathMoveChange(PathMoveChange):
     """
     A PathMoveChange representing no changes
@@ -236,7 +236,7 @@ class EmptyPathMoveChange(PathMoveChange):
         return []
 
 
-@ops_object
+
 class SamplePathMoveChange(PathMoveChange):
     """
     A PathMoveChange representing the application of samples.
@@ -274,7 +274,7 @@ class SamplePathMoveChange(PathMoveChange):
     def _get_trials(self):
         return self.samples
 
-@ops_object
+
 class AcceptedSamplePathMoveChange(SamplePathMoveChange):
     """
     Represents an accepted SamplePMC
@@ -288,7 +288,7 @@ class AcceptedSamplePathMoveChange(SamplePathMoveChange):
     def _get_results(self):
         return self.samples
 
-@ops_object
+
 class RejectedSamplePathMoveChange(SamplePathMoveChange):
     """
     Represents an rejected SamplePMC
@@ -303,7 +303,7 @@ class RejectedSamplePathMoveChange(SamplePathMoveChange):
     def _get_results(self):
         return []
 
-@ops_object
+
 class SequentialPathMoveChange(PathMoveChange):
     """
     SequentialPathMoveChange has no own samples, only inferred Sampled from the
@@ -344,7 +344,7 @@ class SequentialPathMoveChange(PathMoveChange):
                (self.accepted, len(self.results)) + \
                PathMoveChange._indent('\n'.join(map(str, self.subchanges)))
 
-@ops_object
+
 class PartialAcceptanceSequentialPathMoveChange(SequentialPathMoveChange):
     """
     PartialAcceptanceSequentialMovePath has no own samples, only inferred
@@ -366,7 +366,7 @@ class PartialAcceptanceSequentialPathMoveChange(SequentialPathMoveChange):
                (self.accepted, len(self.results)) + \
                PathMoveChange._indent('\n'.join(map(str, self.subchanges)))
 
-@ops_object
+
 class ConditionalSequentialPathMoveChange(SequentialPathMoveChange):
     """
     ConditionalSequentialMovePath has no own samples, only inferred Samples
@@ -388,7 +388,7 @@ class ConditionalSequentialPathMoveChange(SequentialPathMoveChange):
                (self.accepted, len(self.results)) + \
                PathMoveChange._indent( '\n'.join(map(str, self.subchanges)))
 
-@ops_object
+
 class SubPathMoveChange(PathMoveChange):
     """
     A helper PathMoveChange that represents the application of a submover.
@@ -426,7 +426,7 @@ class SubPathMoveChange(PathMoveChange):
         # Defaults to use the name of the used mover
         return self.mover.__class__.__name__[:-5] + ' :\n' + PathMoveChange._indent(str(self.subchange))
 
-@ops_object
+
 class RandomChoicePathMoveChange(SubPathMoveChange):
     """
     A PathMoveChange that represents the application of a mover chosen randomly
@@ -456,7 +456,7 @@ class FilterByEnsemblePathMoveChange(SubPathMoveChange):
                PathMoveChange._indent( str(self.subchange) )
 
 
-@ops_object
+
 class FilterSamplesPathMoveChange(SubPathMoveChange):
     """
     A PathMoveChange that keeps a selection of the underlying samples
@@ -472,7 +472,7 @@ class FilterSamplesPathMoveChange(SubPathMoveChange):
 
     def __str__(self):
         return 'FilterMove : pick samples [%s] from sub moves : %s : %d samples\n' % \
-               (str(self.selected_samples), self.accepted, len(self.results)) + \
+               (str(self.mover.selected_samples), self.accepted, len(self.results)) + \
                PathMoveChange._indent( str(self.subchange) )
 
 @SubPathMoveChange
@@ -507,7 +507,7 @@ class KeepLastSamplePathMoveChange(PathMoveChange):
                (self.accepted, len(self.results)) + \
                PathMoveChange._indent( str(self.subchange) )
 
-@ops_object
+
 class PathSimulatorPathMoveChange(SubPathMoveChange):
     """
     A PathMoveChange that just wraps a subchange and references a PathSimulator
