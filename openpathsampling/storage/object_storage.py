@@ -374,7 +374,7 @@ class ObjectStore(object):
 
     def find(self, name):
         """
-        Return indices for all objects with a given name
+        Return all objects with a given name
         """
         if self.has_name:
             if name in self.cache:
@@ -384,9 +384,22 @@ class ObjectStore(object):
 
         return []
 
-    def find_first(self, name):
+    def find_indices(self, name):
         """
         Return indices for all objects with a given name
+        """
+        if self.has_name:
+            if name in self.cache:
+                self.update_name_cache()
+
+            return self.cache[name]
+
+        return []
+
+
+    def find_first(self, name):
+        """
+        Return first object with a given name
         """
         if self.has_name:
             if name in self.cache:
