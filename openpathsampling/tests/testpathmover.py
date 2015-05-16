@@ -620,39 +620,39 @@ class testFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
         assert_equal(self.ensemble(samples[0].trajectory), False)
         assert_equal(samples[0].trajectory, self.subtraj2)
 
-class testForceEnsembleChangeMover(object):
-    def setup(self):
-        traj = Trajectory([-0.5, 0.7, 1.1])
-        op = CallIdentity()
-        volA = LambdaVolume(op, -100, 0.0)
-        volB = LambdaVolume(op, 1.0, 100)
-        volX = LambdaVolume(op, -100, 0.25)
-        self.tis = paths.TISEnsemble(volA, volB, volX)
-        self.len3 = LengthEnsemble(3)
-        self.len2 = LengthEnsemble(2)
-        self.gs = SampleSet(Sample(
-            trajectory=traj,
-            ensemble=self.tis,
-            replica=0
-        ))
-
-    def test_in_ensemble(self):
-        mover = ForceEnsembleChangeMover(ensembles=[[self.tis, self.len3]])
-        change = mover.move(self.gs)
-        samples = change.results
-        assert_equal(change.details.initial_ensemble(samples[0].trajectory),
-                     True)
-        assert_equal(samples[0].ensemble(samples[0].trajectory), True)
-        assert_equal(samples[0].ensemble, self.len3)
-
-    def test_not_in_ensemble(self):
-        mover = ForceEnsembleChangeMover(ensembles=[[self.tis, self.len2]])
-        change = mover.move(self.gs)
-        samples = change.results
-        assert_equal(change.details.initial_ensemble(samples[0].trajectory),
-                     True)
-        assert_equal(samples[0].ensemble, self.len2)
-        assert_equal(samples[0].ensemble(samples[0].trajectory), False)
+# class testForceEnsembleChangeMover(object):
+#     def setup(self):
+#         traj = Trajectory([-0.5, 0.7, 1.1])
+#         op = CallIdentity()
+#         volA = LambdaVolume(op, -100, 0.0)
+#         volB = LambdaVolume(op, 1.0, 100)
+#         volX = LambdaVolume(op, -100, 0.25)
+#         self.tis = paths.TISEnsemble(volA, volB, volX)
+#         self.len3 = LengthEnsemble(3)
+#         self.len2 = LengthEnsemble(2)
+#         self.gs = SampleSet(Sample(
+#             trajectory=traj,
+#             ensemble=self.tis,
+#             replica=0
+#         ))
+#
+#     def test_in_ensemble(self):
+#         mover = ForceEnsembleChangeMover(ensembles=[[self.tis, self.len3]])
+#         change = mover.move(self.gs)
+#         samples = change.results
+#         assert_equal(change.details.initial_ensemble(samples[0].trajectory),
+#                      True)
+#         assert_equal(samples[0].ensemble(samples[0].trajectory), True)
+#         assert_equal(samples[0].ensemble, self.len3)
+#
+#     def test_not_in_ensemble(self):
+#         mover = ForceEnsembleChangeMover(ensembles=[[self.tis, self.len2]])
+#         change = mover.move(self.gs)
+#         samples = change.results
+#         assert_equal(change.details.initial_ensemble(samples[0].trajectory),
+#                      True)
+#         assert_equal(samples[0].ensemble, self.len2)
+#         assert_equal(samples[0].ensemble(samples[0].trajectory), False)
 
 class testMinusMover(object):
     def setup(self):

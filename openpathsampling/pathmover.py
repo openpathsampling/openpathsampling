@@ -366,7 +366,7 @@ class SampleGenerator(PathMover):
         # Generators do not have submovers!
         return []
 
-    def _ensemble_selector(self):
+    def _ensemble_selector(self, globalstate):
         """Function to determine which ensembles to pick samples from
 
         Returns
@@ -384,7 +384,9 @@ class SampleGenerator(PathMover):
 
     def move(self, globalstate):
         # 1. pick a set of ensembles (in case we allow to pick several ones)
-        ensembles = self._ensemble_selector()
+        ensembles = self._ensemble_selector(globalstate)
+
+        print ensembles
 
         # 2. pick samples from these ensembles
         samples = [ self.select_sample(globalstate, ens) for ens in ensembles ]
@@ -460,7 +462,7 @@ class ShootGenerator(EngineGenerator):
         super(ShootGenerator, self).__init__(ensembles)
         self.selector = selector
 
-    def _ensemble_selector(self):
+    def _ensemble_selector(self, globalstate):
         # return a single ensemble
         return [ self.ensembles ]
 
@@ -613,7 +615,7 @@ class ExtendingGenerator(EngineGenerator):
         )
         self.extend_ensemble = extend_ensemble
 
-    def _ensemble_selector(self):
+    def _ensemble_selector(self, globalstate):
         return [ self.ensembles ]
 
     def _get_in_ensembles(self):
@@ -726,7 +728,7 @@ class ReplicaExchangeGenerator(SampleGenerator):
         initialization_logging(logger=init_log, obj=self,
                                entries=['bias'])
 
-    def _ensemble_selector(self):
+    def _ensemble_selector(self, globalstate):
         list_of_ensemble_pairs = make_list_of_pairs(self.ensembles)
         selected = random.choice(list_of_ensemble_pairs)
         return selected
@@ -805,7 +807,7 @@ class RandomSubtrajectorySelectGenerator(SampleGenerator):
         self.n_l = n_l
         self.subensemble = subensemble
 
-    def _ensemble_selector(self):
+    def _ensemble_selector(self, globalstate):
         return [ self.ensembles ]
 
     def _get_in_ensembles(self):
@@ -883,7 +885,7 @@ class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
 
 class PathReversalGenerator(SampleGenerator):
 
-    def _ensemble_selector(self):
+    def _ensemble_selector(self, globalstate):
         return [ self.ensembles ]
 
     def _get_in_ensembles(self):
@@ -915,6 +917,128 @@ class PathReversalGenerator(SampleGenerator):
 
 class PathReversalMover(PathReversalGenerator):
     pass
+
+
+class EnsembleHopGenerator(SampleGenerator):
+    def __init__(self, bias=None, ensembles=None):
+        """
+        Parameters
+        ----------
+        bias : float, dict or None (default)
+            gives the bias of accepting (not proposing) a hop. A float will
+            be the acceptance for all possible attempts. If a dict is given,
+            then it contains a list of ensembles and a matrix. None means
+            no bias
+        ensembles : list of ensemble pairs
+            the list of possible hop attempts
+
+        Notes
+        -----
+        The bias dict has the following form :
+            { 'ensembles' : [ens_1, ens_2, ens_n],
+              'values' : np.array((n,n))
+              }
+        The numpy array contains all the acceptance probabilties. If possible
+        a HopMover should (as all movers) be used for only a specific hop and
+        not multiple ones.
+        """
+        # TODO: maybe allow a version of this with a single ensemble and ANY
+        # ensemble can hop to that? messy to code; maybe same idea under
+        # another name
+        ensembles = make_list_of_pairs(ensembles)
+        super(EnsembleHopGenerator, self).__init__(ensembles=ensembles)
+        # ensembles -- another version might take a value for each ensemble,
+        # and use the ratio; this latter is better for CITIS
+        self.bias = bias
+        initialization_logging(
+            logger=init_log,
+            obj=self,
+            entries=['bias']
+        )
+
+    def _ensemble_selector(self, globalstate):
+        # Picks a random initial ensemble from all possible ones
+        # ensemble hops are in the order [from, to]
+        initial_ensembles = [pair[0] for pair in self.ensembles]
+        logger.debug("initial_ensembles: " + str(initial_ensembles))
+        legal_ensembles = [
+            s.ensemble
+            for s in self.legal_sample_set(globalstate, initial_ensembles)
+        ]
+        logger.debug("globalstate ensembles" +
+                     str([s.ensemble for s in globalstate]))
+        logger.debug("self.ensembles: " + str(self.ensembles))
+        logger.debug("Legal Ensembles: " + str(legal_ensembles))
+        return [ random.choice(legal_ensembles) ]
+
+    @property
+    def submovers(self):
+        return []
+
+    def _get_in_ensembles(self):
+        return [pair[0] for pair in self.ensembles]
+
+    def _get_out_ensembles(self):
+        return [pair[1] for pair in self.ensembles]
+
+    def __call__(self, rep_sample):
+        ens_from = rep_sample.ensemble
+
+        # pick a random hop to an allowed final ensemble
+        legal_pairs = [pair for pair in self.ensembles
+                       if pair[0] is ens_from]
+        logger.debug("Legal pairs: " + str(legal_pairs))
+        ens_pair = random.choice(legal_pairs)
+        ens_to = ens_pair[1]
+
+        logger.debug("Selected sample: " + repr(rep_sample))
+        replica = rep_sample.replica
+
+        logger.info("Attempting ensemble hop from {e1} to {e2} replica ID {rid}".format(
+            e1=repr(ens_from), e2=repr(ens_to), rid=repr(replica)))
+
+        trajectory = rep_sample.trajectory
+        logger.debug("  selected replica: " + str(replica))
+        logger.debug("  initial ensemble: " + repr(rep_sample.ensemble))
+
+        logger.info("Hop starts from legal ensemble: "+str(ens_from(trajectory)))
+        logger.info("Hop ends in legal ensemble: "+str(ens_to(trajectory)))
+
+        sample_details = SampleDetails()
+
+        if type(self.bias) is float:
+            bias = self.bias
+        elif type(self.bias) is dict:
+            # special dict
+            ens = self.bias['ensembles']
+            e1 = ens.index(ens_from)
+            e2 = ens.index(ens_to)
+            bias = float(self.bias['values'][e1,e2])
+        else:
+            bias = 1.0
+
+        trial = paths.Sample(
+            replica=replica,
+            trajectory=trajectory,
+            ensemble=ens_to,
+            details=sample_details,
+            mover=self,
+            parent=rep_sample,
+            bias=bias
+        )
+
+        details = MoveDetails()
+        setattr(details, 'initial_ensemble', ens_from)
+        setattr(details, 'trial_ensemble', ens_to)
+        setattr(details, 'bias', bias)
+
+        return [trial]
+
+
+class EnsembleHopMover(EnsembleHopGenerator):
+    """
+    A Mover describing a trial change of ensembles
+    """
 
 
 class RandomChoiceMover(PathMover):
@@ -1222,157 +1346,6 @@ class ReplicaIDChangeMover(PathMover):
             mover=self,
             details=details
         )
-
-
-class EnsembleHopMover(PathMover):
-    def __init__(self, bias=None, ensembles=None):
-        # TODO: maybe allow a version of this with a single ensemble and ANY
-        # ensemble can hop to that? messy to code; maybe same idea under
-        # another name
-        ensembles = make_list_of_pairs(ensembles)
-        super(EnsembleHopMover, self).__init__(ensembles=ensembles)
-        # TODO: add support for bias: should be a list, one per pair of
-        # ensembles -- another version might take a value for each ensemble,
-        # and use the ratio; this latter is better for CITIS
-        self.bias = bias
-        initialization_logging(logger=init_log, obj=self,
-                               entries=['bias'])
-
-    def select_ensemble_pair(self, globalstate):
-        # ensemble hops are in the order [from, to]
-        initial_ensembles = [pair[0] for pair in self.ensembles]
-        logger.debug("initial_ensembles: " + str(initial_ensembles))
-        legal_ensembles = [
-            s.ensemble
-            for s in self.legal_sample_set(globalstate, initial_ensembles)
-        ]
-        logger.debug("globalstate ensembles" +
-                     str([s.ensemble for s in globalstate]))
-        logger.debug("self.ensembles: " + str(self.ensembles))
-        logger.debug("Legal Ensembles: " + str(legal_ensembles))
-        legal_pairs = [pair for pair in self.ensembles
-                       if pair[0] in legal_ensembles]
-        logger.debug("Legal pairs: " + str(legal_pairs))
-        ens_pair = random.choice(legal_pairs)
-        return ens_pair
-
-    @property
-    def submovers(self):
-        return []
-
-    def _get_in_ensembles(self):
-        return [pair[0] for pair in self.ensembles]
-
-    def _get_out_ensembles(self):
-        return [pair[1] for pair in self.ensembles]
-
-    def move(self, globalstate):
-        ens_pair = self.select_ensemble_pair(globalstate)
-        ens_from = ens_pair[0]
-        ens_to = ens_pair[1]
-
-        rep_sample = self.select_sample(globalstate, ens_from)
-        logger.debug("Selected sample: " + repr(rep_sample))
-        replica = rep_sample.replica
-
-        logger.info("Attempting ensemble hop from {e1} to {e2} replica ID {rid}".format(
-            e1=repr(ens_from), e2=repr(ens_to), rid=repr(replica)))
-
-        trajectory = rep_sample.trajectory
-        logger.debug("  selected replica: " + str(replica))
-        logger.debug("  initial ensemble: " + repr(rep_sample.ensemble))
-
-        valid = ens_to(trajectory)
-        logger.info("Hop starts from legal ensemble: "+str(ens_from(trajectory)))
-        logger.info("Hop ends in legal ensemble: "+str(ens_to(trajectory)))
-
-        sample_details = SampleDetails()
-
-        trial = paths.Sample(
-            replica=replica,
-            trajectory=trajectory,
-            ensemble=ens_to,
-            details=sample_details,
-            mover=self,
-            parent=rep_sample
-        )
-
-        details = MoveDetails()
-        details.inputs = [rep_sample]
-        setattr(details, 'initial_ensemble', ens_from)
-        setattr(details, 'trial_ensemble', ens_to)
-
-        if valid:
-            setattr(details, 'result_ensemble', ens_to)
-        else:
-            setattr(details, 'result_ensemble', ens_from)
-
-        if valid:
-            return paths.AcceptedSamplePathMoveChange(
-                samples=[trial],
-                mover=self,
-                details=details
-            )
-        else:
-            return paths.RejectedSamplePathMoveChange(
-                samples=[trial],
-                mover=self,
-                details=details
-            )
-
-#TODO: REMOVE if possible
-
-class ForceEnsembleChangeMover(EnsembleHopMover):
-    """
-    Force an ensemble change in the sample.
-
-    This should only be used as part of other moves, since this can create
-    samples which are not valid.
-    """
-    def __init__(self, ensembles=None):
-        # no bias allowed
-        super(ForceEnsembleChangeMover, self).__init__(ensembles=ensembles)
-
-    def _get_in_ensembles(self):
-        return [pair[0] for pair in self.ensembles]
-
-    def _get_out_ensembles(self):
-        return [pair[1] for pair in self.ensembles]
-
-    def move(self, globalstate):
-        ens_pair = self.select_ensemble_pair(globalstate)
-        ens_from = ens_pair[0]
-        ens_to = ens_pair[1]
-        rep_sample = self.select_sample(globalstate, ens_from)
-        logger.debug("Selected sample: " + repr(rep_sample))
-
-        replica = rep_sample.replica
-        trajectory = rep_sample.trajectory
-
-        sample_details = SampleDetails()
-
-        sample = paths.Sample(
-            trajectory=trajectory,
-            ensemble=ens_to,
-            replica=replica,
-            details=sample_details,
-            mover=self,
-            parent=rep_sample
-        )
-
-        details = MoveDetails()
-        details.accepted = True
-        details.inputs = [rep_sample]
-        setattr(details, 'initial_ensemble', ens_from)
-        setattr(details, 'trial_ensemble', ens_to)
-        setattr(details, 'result_ensemble', ens_to)
-
-        path = paths.AcceptedSamplePathMoveChange(
-            [sample],
-            mover=self,
-            details=details
-        )
-        return path
 
 # TODO: Filter moves are not used at all, do we need these?
 # TODO: Turn Filter into real mover with own movechange ?

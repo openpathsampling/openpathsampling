@@ -31,7 +31,7 @@ from pathmover import (
     FinalSubtrajectorySelectMover, BackwardExtendGenerator,
     BackwardShootGenerator, EngineGenerator,
     ExtendingGenerator, FilterBySample, FirstSubtrajectorySelectMover,
-    ForceEnsembleChangeMover, ForwardExtendGenerator, ForwardShootGenerator,
+    ForwardExtendGenerator, ForwardShootGenerator,
     MultipleSetMinusMover, OneWayShootingMover, PathReversalGenerator,
     RandomSubtrajectorySelectGenerator, RandomSubtrajectorySelectMover,
     ReplicaExchangeGenerator, ShootGenerator, ShootMover, WrappedMover,
