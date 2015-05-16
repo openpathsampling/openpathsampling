@@ -1,5 +1,6 @@
 from openpathsampling.todict import OPSNamed, OPSObject
 import openpathsampling as paths
+import openpathsampling.tools
 
 from openpathsampling.pathmover import PathMover
 
@@ -165,32 +166,50 @@ class Bootstrapping(PathSimulator):
                                                ensembles=self.ensembles
                                               )
 
+        self.root = self.globalstate
+
     def run(self, nsteps):
         bootstrapmove = self._bootstrapmove
 
         ens_num = len(self.globalstate)-1
         failsteps = 0
-        step_num = 0
+        step = 0
         # if we fail nsteps times in a row, kill the job
 
         old_ens = self.globalstate[0].ensemble
 
         while ens_num < len(self.ensembles) - 1 and failsteps < nsteps:
-            logger.info("Step: " + str(step_num)
+            logger.info("Step: " + str(step)
                         + "   Ensemble: " + str(ens_num)
                         + "  failsteps = " + str(failsteps)
                        )
+            paths.tools.refresh_output(
+                "Working on Bootstrapping cycle step " + str(step+1) + ".\n"
+            )
 
             movepath = bootstrapmove.move(self.globalstate)
             samples = movepath.results
+            new_sampleset = self.globalstate.apply_samples(samples)
+
+#            samples = movepath.results
 #            logger.debug("SAMPLES:")
 #            for sample in samples:
 #                logger.debug("(" + str(sample.replica)
 #                             + "," + str(sample.trajectory)
 #                             + "," + repr(sample.ensemble)
 #                            )
-            self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
-            self.globalstate.movepath = movepath
+
+
+            mcstep = MCStep(
+                simulation=self,
+                step=step,
+                pre=self.globalstate,
+                post=new_sampleset,
+                change=movepath,
+                root=self.root
+            )
+
+
 #            logger.debug("GLOBALSTATE:")
 #            for sample in self.globalstate:
 #                logger.debug("(" + str(sample.replica)
@@ -204,11 +223,15 @@ class Bootstrapping(PathSimulator):
                 failsteps += 1
 
             if self.storage is not None:
-#                self.globalstate.save_samples(self.storage)
-                self.globalstate.save(self.storage)
-            step_num += 1
+                self.storage.steps.save(mcstep)
 
-            self.globalstate.sanity_check()
+            self.globalstate = new_sampleset
+
+            step += 1
+
+            if step % self.save_frequency == 0:
+                self.globalstate.sanity_check()
+                self.sync_storage()
 
 
 class PathSampling(PathSimulator):
@@ -236,11 +259,13 @@ class PathSampling(PathSimulator):
                 samples.append(sample.copy_reset())
 
         self.globalstate = paths.SampleSet(samples)
+        self.root = self.globalstate
 
         initialization_logging(init_log, self, 
                                ['root_mover', 'globalstate'])
 
         self._mover = paths.PathSimulatorMover(self.root_mover, self)
+
 
     def run(self, nsteps):
         # TODO: change so we can start from some arbitrary step number
@@ -252,6 +277,10 @@ class PathSampling(PathSimulator):
             self.globalstate.save(self.storage)
             self.storage.sync()
 
+        mcstep = None
+
+        step = 0
+
         for step in range(nsteps):
             logger.info("Beginning MC cycle " + str(step+1))
             paths.tools.refresh_output(
@@ -259,24 +288,30 @@ class PathSampling(PathSimulator):
             )
             movepath = self._mover.move(self.globalstate, step=step)
             samples = movepath.results
-            self.globalstate = self.globalstate.apply_samples(samples, step=step)
-            self.globalstate.movepath = movepath
+            new_sampleset = self.globalstate.apply_samples(samples, step=step)
+
+            mcstep = MCStep(
+                simulation=self,
+                step=step,
+                pre=self.globalstate,
+                post=new_sampleset,
+                change=movepath,
+                root=self.root
+            )
+
             if self.storage is not None:
-                self.globalstate.save(self.storage)
+                self.storage.steps.save(mcstep)
 
             if step % self.save_frequency == 0:
                 self.globalstate.sanity_check()
                 self.sync_storage()
-                #if self.storage is not None:
-                    # Note: This saves all collectivevariables, but does
-                    # this with removing computed values for not saved
-                    # collectivevariables We assume that this is the right
-                    # cause of action for this case.
-                    #self.storage.cv.sync()
-                    #self.storage.sync()
+
+            self.globalstate = new_sampleset
+
 
         self.sync_storage()
         paths.tools.refresh_output(
-            "DONE! Completed " + str(step+1) + " Monte Carlo cycles.\n"
+            "DONE! Completed " + str(nsteps+1) + " Monte Carlo cycles.\n"
         )
 
+        return mcstep

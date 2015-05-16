@@ -419,9 +419,6 @@ class SubPathMoveChange(PathMoveChange):
     def _get_trials(self):
         return self.subchange.trials
 
-    def apply_to(self, other):
-        return self.subchange.apply_to(other)
-
     def __str__(self):
         # Defaults to use the name of the used mover
         return self.mover.__class__.__name__[:-5] + ' :\n' + PathMoveChange._indent(str(self.subchange))
