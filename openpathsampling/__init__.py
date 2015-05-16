@@ -72,6 +72,12 @@ from analysis.tis_analysis import (
     TISTransition, RETISTransition, Transition, TPSTransition
 )
 
+from analysis.replica_network import (
+    ReplicaNetwork, trace_ensembles_for_replica,
+    trace_replicas_for_ensemble, condense_repeats,
+    ReplicaNetworkGraph
+)
+
 from pathmover import Details, MoveDetails, SampleDetails
 
 from pathmovechange import (
