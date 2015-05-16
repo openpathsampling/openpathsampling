@@ -1283,7 +1283,10 @@ def loadidx(func):
             setattr(obj, '_uid', self.get_uid(idx))
 
         if self.has_name and hasattr(obj, '_name'):
-            setattr(obj, '_name', self.storage.variables[self.db + '_name'][idx])
+            setattr(obj, '_name',
+                    self.storage.variables[self.db + '_name'][idx])
+            # make sure that you cannot change the name of loaded objects
+            obj.fix_name()
 
         return obj
 
