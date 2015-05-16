@@ -375,6 +375,18 @@ class ObjectStore(object):
     def find(self, name):
         """
         Return all objects with a given name
+
+        Parameters
+        ----------
+        name : str
+            the name to be searched for
+
+        Returns
+        -------
+        list of objects
+            a list of found objects, can be empty [] if no objects with
+            that name exist
+
         """
         if self.has_name:
             if name in self.cache:
@@ -387,6 +399,18 @@ class ObjectStore(object):
     def find_indices(self, name):
         """
         Return indices for all objects with a given name
+
+        Parameters
+        ----------
+        name : str
+            the name to be searched for
+
+        Returns
+        -------
+        list of int
+            a list of indices in the storage for all found objects,
+            can be empty [] if no objects with that name exist
+
         """
         if self.has_name:
             if name in self.cache:
@@ -400,6 +424,18 @@ class ObjectStore(object):
     def find_first(self, name):
         """
         Return first object with a given name
+
+        Parameters
+        ----------
+        name : str
+            the name to be searched for
+
+        Returns
+        -------
+        object of None
+            the first found object, can be None if no object with the given
+            name exists
+
         """
         if self.has_name:
             if name in self.cache:
@@ -408,7 +444,7 @@ class ObjectStore(object):
             if len(self.cache[name]) > 0:
                 return self[self.cache[name][0]]
 
-        return []
+        return None
 
 
     def __iter__(self):
