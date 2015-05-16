@@ -29,7 +29,7 @@ from pathmover import (
     PathSimulatorMover, PathReversalSet,
     NeighborEnsembleReplicaExchange, SampleGenerator,
     FinalSubtrajectorySelectMover, BackwardExtendGenerator,
-    BackwardShootGenerator,
+    BackwardShootGenerator, EngineGenerator,
     ExtendingGenerator, FilterBySample, FirstSubtrajectorySelectMover,
     ForceEnsembleChangeMover, ForwardExtendGenerator, ForwardShootGenerator,
     MultipleSetMinusMover, OneWayShootingMover, PathReversalGenerator,

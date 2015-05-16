@@ -90,6 +90,9 @@ class DynamicsEngine(OPSNamed):
         else:
             self.max_length_stopper = paths.FullEnsemble()
 
+        # as default set a newly generated engine as the default engine
+        self.set_as_default()
+
     def _register_options(self, options = None):
         """
         This will register all variables in the options dict as a member variable if
@@ -182,6 +185,9 @@ class DynamicsEngine(OPSNamed):
             'options' : self.options,
             'template' : self.template
         }
+
+    def set_as_default(self):
+        paths.EngineGenerator.engine = self
 
     @property
     def default_options(self):
