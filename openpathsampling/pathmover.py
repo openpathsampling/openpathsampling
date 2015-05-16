@@ -1480,7 +1480,7 @@ class OneWayShootingMover(RandomChoiceMover):
         self.selector = selector
 
 
-class MinusMover(WrappedMover):
+class MinusMover(WrappedMover, ReplicaExchangeMover):
     """
     Instance of a MinusMover.
 
@@ -1495,7 +1495,7 @@ class MinusMover(WrappedMover):
     classes, the calls to `super` will use the version in
     ConditionalSequentalMover. However, analysis routines will see
     `isinstance(minus, ReplicaExchangeMover)` as True.
-    '''
+    """
     def __init__(self, minus_ensemble, innermost_ensemble, 
                  ensembles=None):
         segment = minus_ensemble._segment_ensemble
