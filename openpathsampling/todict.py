@@ -94,7 +94,7 @@ class OPSNamed(OPSObject):
 
     def __init__(self):
         super(OPSNamed, self).__init__()
-        self._name = None
+        self._name = ''
         self._name_fixed = False
 
     @property
@@ -106,10 +106,7 @@ class OPSNamed(OPSObject):
 
     @property
     def name(self):
-        # We keep the destinction between '' and None to find out if a user or
-        # the storage has already fixed the name or if it is fresh from the
-        # constructor
-        if self._name is None or self._name == '':
+        if self._name == '':
             return self.default_name
         else:
             return self._name
