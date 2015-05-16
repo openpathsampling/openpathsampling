@@ -1,4 +1,4 @@
-from openpathsampling.todict import OPSNamed
+from openpathsampling.todict import OPSNamed, OPSObject
 import openpathsampling as paths
 
 from openpathsampling.pathmover import PathMover
@@ -8,10 +8,49 @@ from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
+class MCStep(OPSObject):
+    """
+    A monte-carlo step in the main PathSimulation loop
+
+    It references all objects created and used in a MC step. The used mover,
+    and simulator as well as the initial and final sampleset, the step
+    number and the generated pathmovechange.
+
+    Attributes
+    ----------
+    simulation : PathSimulation
+        the running pathsimulation responsible for generating the step
+    step : int
+        the step number counting from the root sampleset
+    pre : SampleSet
+        the initial (pre) sampleset
+    post : SampleSet
+        the final (post) sampleset
+    change : PathMoveChange
+        the pathmovechange describing the transition from pre to post
+    root : SampleSet
+        the first sampleset at step 0.
+    """
+    def __init__(self,
+                 simulation=None,
+                 step=-1,
+                 pre=None,
+                 post=None,
+                 change=None,
+                 root=None,
+                 ):
+
+        super(MCStep, self).__init__()
+        self.simulation = simulation
+        self.pre = pre
+        self.post = post
+        self.change = change
+        self.root = root
+        self.step = step
+
 class PathSimulator(OPSNamed):
 
     calc_name = "PathSimulator"
-
     _excluded_attr = ['globalstate']
 
     def __init__(self, storage, engine=None):
@@ -48,7 +87,6 @@ class BootstrapPromotionMove(PathMover):
         self.bias = bias
         initialization_logging(logger=init_log, obj=self,
                                entries=['bias', 'shooters'])
-
 
         ens_pairs = [[self.ensembles[i], self.ensembles[i+1]]
                      for i in range(len(self.ensembles)-1)]
@@ -94,13 +132,22 @@ class Bootstrapping(PathSimulator):
 
     calc_name = "Bootstrapping"
 
-    def __init__(self, storage, engine=None, movers=None, trajectory=None,
-                 ensembles=None):
+    def __init__(
+            self,
+            storage,
+            engine=None,
+            movers=None,
+            trajectory=None,
+            ensembles=None
+    ):
         super(Bootstrapping, self).__init__(storage, engine)
         self.ensembles = ensembles
 
-        sample = paths.Sample(replica=0, trajectory=trajectory,
-                        ensemble=self.ensembles[0])
+        sample = paths.Sample(
+            replica=0,
+            trajectory=trajectory,
+            ensemble=self.ensembles[0]
+        )
 
         self.globalstate = paths.SampleSet([sample])
         if self.storage is not None:
@@ -173,8 +220,13 @@ class PathSampling(PathSimulator):
     """
 
     calc_name = "PathSampling"
-    def __init__(self, storage, engine=None, root_mover=None,
-                 globalstate=None):
+    def __init__(
+            self,
+            storage,
+            engine=None,
+            root_mover=None,
+            globalstate=None
+    ):
         super(PathSampling, self).__init__(storage, engine)
         self.root_mover = root_mover
 #        self.root_mover.name = "PathSamplingRoot"
