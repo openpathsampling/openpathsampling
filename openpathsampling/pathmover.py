@@ -1440,7 +1440,6 @@ class OneWayShootingMover(RandomChoiceMover):
         )
         self.selector = selector
 
-@ops_object
 class MinusMover(ConditionalSequentialMover, ReplicaExchangeMover):
     '''
     Instance of a MinusMover.
