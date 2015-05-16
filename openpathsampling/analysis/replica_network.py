@@ -138,13 +138,16 @@ class ReplicaNetwork(object):
         else:
             ensemble_to_number = {ens : index_order.index(ens) 
                                   for ens in index_order}
+        self.ensemble_to_number = ensemble_to_number
+        self.number_to_ensemble = {ensemble_to_number[k] : k 
+                                   for k in ensemble_to_number.keys()}
+        self.n_ensembles = len(self.ensemble_to_number)
         return ensemble_to_number
 
 
     def reorder_matrix(self, matrix, number_to_label, index_order):
         """ matrix must be a coo_matrix (I think): do other have same `data`
         attrib?"""
-        n_ensembles = len(number_to_label)
         if index_order == None:
             # reorder based on RCM from scipy.sparse.csgraph
             rcm_perm = reverse_cuthill_mckee(matrix.tocsr())
@@ -154,7 +157,7 @@ class ReplicaNetwork(object):
 
             new_matrix = scipy.sparse.coo_matrix(
                 (matrix.data, (perm_i, perm_j)), 
-                shape=(n_ensembles, n_ensembles)
+                shape=(self.n_ensembles, self.n_ensembles)
             )
             reordered_labels = [number_to_label[k] for k in rcm_perm]
         else:
@@ -168,12 +171,12 @@ class ReplicaNetwork(object):
         return reordered
 
 
+    # TODO: separate building of matrix sparse dict from the rest
     def transition_matrix(self, storage=None, index_order=None, force=False):
         (n_try, n_acc) = self.analyze_exchanges(storage, force)
-        ensemble_to_number = self.initial_order(index_order)
-        number_to_ensemble = {ensemble_to_number[k] : k for 
-                              k in ensemble_to_number.keys()}
-        n_ensembles = len(ensemble_to_number)
+        self.initial_order(index_order)
+        
+        # only this part should be self_make_transition_matrix()
         data = []
         for k in n_try.keys():
             try:
@@ -182,16 +185,17 @@ class ReplicaNetwork(object):
                 n_acc_k = 0
             data.append(float(n_acc_k) / n_try[k])
         ens_i, ens_j = zip(*n_try.keys())
-        i = [ensemble_to_number[e] for e in ens_i]
-        j = [ensemble_to_number[e] for e in ens_j]
+        i = [self.ensemble_to_number[e] for e in ens_i]
+        j = [self.ensemble_to_number[e] for e in ens_j]
         acc_matrix = scipy.sparse.coo_matrix(
             (data, (i, j)), 
-            shape=(n_ensembles, n_ensembles)
+            shape=(self.n_ensembles, self.n_ensembles)
         )
+
         # TODO clean these up: maybe move labels to elsewhere?
         sset0 = self.storage.samplesets[0]
-        labels = {k : sset0[number_to_ensemble[k]].replica 
-                  for k in number_to_ensemble.keys()}
+        labels = {k : sset0[self.number_to_ensemble[k]].replica 
+                  for k in self.number_to_ensemble.keys()}
 
         df = self.reorder_matrix(acc_matrix, labels, index_order)
         self.acceptance_matrix = acc_matrix
@@ -200,12 +204,7 @@ class ReplicaNetwork(object):
 
     def mixing_matrix(self, storage=None, index_order=None, force=False):
         (n_try, n_acc) = self.analyze_exchanges(storage, force)
-        ensemble_to_number = self.initial_order(index_order)
-        # TODO: all of these translation dictionaries should be set by
-        # self.initial_order
-        number_to_ensemble = {ensemble_to_number[k] : k for 
-                              k in ensemble_to_number.keys()}
-        n_ensembles = len(ensemble_to_number)
+        self.initial_order(index_order)
         data = []
         for k in n_try.keys():
             try:
@@ -214,19 +213,19 @@ class ReplicaNetwork(object):
                 n_acc_k = 0
             data.append(float(n_acc_k) * 0.5 / n_try[k])
         ens_i, ens_j = zip(*n_try.keys())
-        i = [ensemble_to_number[e] for e in ens_i]
-        j = [ensemble_to_number[e] for e in ens_j]
+        i = [self.ensemble_to_number[e] for e in ens_i]
+        j = [self.ensemble_to_number[e] for e in ens_j]
         ij = i+j
         ji = j+i
         data += data
         mix_matrix = scipy.sparse.coo_matrix(
             (data, (ij, ji)), 
-            shape=(n_ensembles, n_ensembles)
+            shape=(self.n_ensembles, self.n_ensembles)
         )
         # TODO clean these up: maybe move labels to elsewhere?
         sset0 = self.storage.samplesets[0]
-        labels = {k : sset0[number_to_ensemble[k]].replica 
-                  for k in number_to_ensemble.keys()}
+        labels = {k : sset0[self.number_to_ensemble[k]].replica 
+                  for k in self.number_to_ensemble.keys()}
 
         df = self.reorder_matrix(mix_matrix, labels, index_order)
         self.mix_matrix = mix_matrix
@@ -387,6 +386,8 @@ class ReplicaNetworkGraph(object):
         nx.draw_networkx_edges(self.graph, pos, width=self.weights)
 
 
+# TODO: convert these into functions that do the trace for all
+# replicas/ensembles in one loop
 def trace_ensembles_for_replica(replica, storage):
     trace = []
     storage.samples.cache_all()
