@@ -92,40 +92,50 @@ class OPSNamed(OPSObject):
     before. This means that you cannot name an object, after is has been saved.
     """
 
-    def __init__(self, name=None):
+    def __init__(self):
         super(OPSNamed, self).__init__()
-        self._name = name
+        self._name = None
+        self._name_fixed = False
+
+    @property
+    def default_name(self):
+        return '[' + self.__class__.__name__ + ']'
 
     @property
     def name(self):
+        # We keep the destinction between '' and None to find out if a user or
+        # the storage has already fixed the name or if it is fresh from the
+        # constructor
         if self._name is None or self._name == '':
-            return '[None]'
+            return self.default_name
         else:
             return self._name
 
     @name.setter
     def name(self, name):
-        if self._name is None:
-            self._name = name
+        if self._name_fixed:
+            raise ValueError('Objects cannot be renamed to "%s" after is has been saved, it is already named "%s"' % ( name, self._name))
         else:
-            raise ValueError('Objects cannot be renamed to "%s", it is already named "%s"' % ( name, self._name))
+            self._name = name
 
     def named(self, name):
-        """Create a shallow copy with a new given name.
+        """Set the name
 
-        This is the preferred way to work with names.
+        This is only for syntactic sugar and allow for chained generation
 
         Example
         -------
         >>> import openpathsampling as p
         >>> full = p.FullVolume().named('myFullVolume')
         """
-        copied_object = copy.copy(self)
-        copied_object._name = name
-        if hasattr(copied_object, 'idx'):
-            copied_object.idx = dict()
+#        copied_object = copy.copy(self)
+#        copied_object._name = name
+#        if hasattr(copied_object, 'idx'):
+#            copied_object.idx = dict()
 
-        return copied_object
+        self._name = name
+
+        return self
 
 class ObjectJSON(object):
     """
