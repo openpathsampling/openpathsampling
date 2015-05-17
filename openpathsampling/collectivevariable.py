@@ -94,13 +94,14 @@ class CollectiveVariable(cd.Wrap):
         storage : Storage()
             the storage for which the cache should be copied
         """
-        if storage in self.store_dict.cod_stores:
-            stored = {
-                key: value for key, value in self.cache_dict
-                if type(key) is tuple or storage in key.idx
-            }
-            self.store_dict.cod_stores[storage].post.update(stored)
-            self.store_dict.cod_stores[storage].update(stored)
+        if hasattr(self, 'store_dict'):
+            if storage in self.store_dict.cod_stores:
+                stored = {
+                    key: value for key, value in self.cache_dict
+                    if type(key) is tuple or storage in key.idx
+                }
+                self.store_dict.cod_stores[storage].post.update(stored)
+                self.store_dict.cod_stores[storage].update(stored)
 
     def sync(self, storage):
         """
@@ -111,9 +112,10 @@ class CollectiveVariable(cd.Wrap):
         storage : Storage or None
             the store to be used, otherwise all underlying storages are synced
         """
-        self.store_dict.update_nod_stores()
-        if storage in self.store_dict.cod_stores:
-            self.store_dict.cod_stores[storage].sync()
+        if hasattr(self, 'store_dict'):
+            self.store_dict.update_nod_stores()
+            if storage in self.store_dict.cod_stores:
+                self.store_dict.cod_stores[storage].sync()
 
     def _pre_item(self, items):
         item_type = self.store_dict._basetype(items)

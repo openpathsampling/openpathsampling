@@ -24,8 +24,6 @@ class ObjectDictStore(ObjectStore):
         if var_name + '_value' not in self.storage.variables:
             self.init_variable(var_name + '_value', 'float', (self.key_class.__name__.lower()))
 
-#        storage.variables[self.idx_dimension + '_name'][idx] = objectdict.name
-
         self.save_json(self.idx_dimension + '_json', idx, objectdict)
 
         # this will copy the cache from an op and store it
