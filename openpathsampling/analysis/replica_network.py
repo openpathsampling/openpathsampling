@@ -89,6 +89,13 @@ class ReplicaNetwork(object):
             # repex. So we either stop after we found a minus or (if we assume
             # only a single repex, just test the head node)
 
+            # best would be to test every submove if it attempted to switch ensembles
+            # this means check if len(.trials) == 2 and if both trials have different
+            # samples and their ensembles have been swapped with resp to their parents
+
+            # even better would be to mark certain movers as swapping movers
+            # using a pseudo class / mixin that does nothing.
+
             if True:
                 # this only works if the whole move is the repex
                 if len(pmc.trials) == 2:

@@ -303,6 +303,18 @@ class PathMover(TreeMixin, OPSNamed):
             return self.name
 
 ###############################################################################
+# MOVER TYPES
+###############################################################################
+
+class MoverType(object):
+    pass
+
+class SwappingMover(MoverType):
+    """
+    A mover that swaps samples from ensembles in some way. Relevant for mixing
+    """
+
+###############################################################################
 # GENERATORS
 ###############################################################################
 
@@ -720,7 +732,7 @@ class BackwardExtendMover(BackwardExtendGenerator):
 # REPLICA EXCHANGE GENERATORS
 ###############################################################################
 
-class ReplicaExchangeGenerator(SampleGenerator):
+class ReplicaExchangeGenerator(SampleGenerator, SwappingMover):
     def __init__(self, bias=None, ensembles=None):
         # either replicas or ensembles must be a list of pairs; more
         # complicated filtering can be done with a wrapper class
@@ -1465,7 +1477,7 @@ class OneWayShootingMover(RandomChoiceMover):
         self.selector = selector
 
 
-class MinusMover(WrappedMover):
+class MinusMover(WrappedMover, SwappingMover):
     """
     Instance of a MinusMover.
 
