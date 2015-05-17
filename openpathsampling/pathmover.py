@@ -1392,7 +1392,6 @@ class WrappedMover(PathMover):
             the submover to be delegated to
         ensembles : nested list of Ensemble or None
             the ensemble specification
-
         """
         super(WrappedMover, self).__init__(ensembles)
         self.mover = mover
@@ -1472,7 +1471,7 @@ class MinusMover(WrappedMover):
     of path space.
 
     Note that the inheritance from ReplicaExchangeMover is only to assist
-    with `isinstance` in later analysis. Since the only two functions here
+    with `isinstance` in later anealysis. Since the only two functions here
     are `.__init__() and `.move()`, both of which exist in both parent
     classes, the calls to `super` will use the version in
     ConditionalSequentalMover. However, analysis routines will see

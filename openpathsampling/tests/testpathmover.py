@@ -780,12 +780,14 @@ class testMinusMover(object):
         gs = SampleSet([samp_other_ensemble, self.minus_sample])
         
         change = self.mover.move(gs)
-        samples = change.trials
+        assert_equal(len(change.trials), 1)
+
         sub = change.subchange.subchange
         assert_equal(self.innermost(innermost_other_ensemble), False)
-        assert_equal(len(samples), 3) # stop after failed repex
         assert_equal(sub[0].accepted, True)
         assert_equal(sub[1].accepted, False)
+        assert_equal(len(sub.trials), 3) # stop after failed repex
+        # only one sample which is not a segment
 
     def test_repex_fails_innermost_crosses_state(self):
         innermost_crosses_to_state = make_1d_traj([-0.11, 0.5, 1.8])
@@ -797,11 +799,11 @@ class testMinusMover(object):
         gs = SampleSet([samp_crosses_to_state, self.minus_sample])
         
         change = self.mover.move(gs)
-        samples = change.trials
-        sub = change.subchange.subchange
+        assert_equal(len(change.trials), 1) # stop after failed repex
 
+        sub = change.subchange.subchange
         assert_equal(self.innermost(innermost_crosses_to_state), True)
-        assert_equal(len(samples), 3) # stop after failed repex
+        assert_equal(len(sub.trials), 3) # stop after failed repex
         assert_subchanges_set_accepted(sub, [True, False, False])
 
     def test_repex_fails_minus_crosses_to_state(self):
@@ -823,9 +825,9 @@ class testMinusMover(object):
         assert_equal(self.minus(minus_crosses_to_state), True)
 
         change = self.mover.move(gs)
-        samples = change.trials
         sub = change.subchange.subchange
-        assert_equal(len(samples), 3) # stop after failed repex
+        assert_equal(len(sub.trials), 3)  # stop after failed repex
+        assert_equal(len(change.trials), 1)
         assert_subchanges_set_accepted(sub, [True, False, False])
 
     def test_extension_fails(self):
@@ -841,12 +843,13 @@ class testMinusMover(object):
 
         gs = SampleSet([self.minus_sample, samp_bad_extension])
         change = self.mover.move(gs)
-        print change
-        samples = change.trials
         assert_equal(change.accepted, False) # whole minus has failed
-        assert_equal(len(samples), 4)
 
         sub = change.subchange.subchange
+        assert_equal(len(sub.trials), 4)
+
+        # after filtering there are only 2 trials
+        assert_equal(len(change.trials), 2)
 
         assert_subchanges_set_accepted(sub, [True] * 2 + [False])
         # first two work and the extention fails
