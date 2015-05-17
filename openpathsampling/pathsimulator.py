@@ -35,18 +35,16 @@ class MCStep(OPSObject):
     def __init__(self,
                  simulation=None,
                  step=-1,
-                 pre=None,
-                 post=None,
-                 change=None,
-                 root=None,
+                 previous=None,
+                 active=None,
+                 change=None
                  ):
 
         super(MCStep, self).__init__()
         self.simulation = simulation
-        self.pre = pre
-        self.post = post
+        self.previous = previous
+        self.active = active
         self.change = change
-        self.root = root
         self.step = step
 
 class PathSimulator(OPSNamed):
@@ -168,25 +166,38 @@ class Bootstrapping(PathSimulator):
 
         self.root = self.globalstate
 
+        self.step = 0
+
+        mcstep = MCStep(
+            simulation=self,
+            step=self.step,
+            previous=None,
+            active=self.globalstate,
+            change=paths.EmptyPathMoveChange()
+        )
+
+        if self.storage is not None:
+            self.storage.steps.save(mcstep)
+            self.storage.sync()
+
+
     def run(self, nsteps):
         bootstrapmove = self._bootstrapmove
 
         ens_num = len(self.globalstate)-1
         failsteps = 0
-        step = 0
         # if we fail nsteps times in a row, kill the job
 
-        old_ens = self.globalstate[0].ensemble
-
         while ens_num < len(self.ensembles) - 1 and failsteps < nsteps:
-            logger.info("Step: " + str(step)
+            self.step += 1
+            logger.info("Step: " + str(self.step)
                         + "   Ensemble: " + str(ens_num)
                         + "  failsteps = " + str(failsteps)
                        )
             paths.tools.refresh_output(
                 ("Working on Bootstrapping cycle step %d" +
                 " in ensemble %d/%d .\n") %
-                ( step+1, ens_num + 1, len(self.ensembles) )
+                ( self.step, ens_num + 1, len(self.ensembles) )
             )
 
             movepath = bootstrapmove.move(self.globalstate)
@@ -204,11 +215,10 @@ class Bootstrapping(PathSimulator):
 
             mcstep = MCStep(
                 simulation=self,
-                step=step,
-                pre=self.globalstate,
-                post=new_sampleset,
-                change=movepath,
-                root=self.root
+                step=self.step,
+                previous=self.globalstate,
+                active=new_sampleset,
+                change=movepath
             )
 
 
@@ -229,11 +239,7 @@ class Bootstrapping(PathSimulator):
             if ens_num == old_ens_num:
                 failsteps += 1
 
-
-
-            step += 1
-
-            if step % self.save_frequency == 0:
+            if self.step % self.save_frequency == 0:
                 self.globalstate.sanity_check()
                 self.sync_storage()
 
@@ -256,7 +262,8 @@ class PathSampling(PathSimulator):
     ):
         super(PathSampling, self).__init__(storage, engine)
         self.root_mover = root_mover
-#        self.root_mover.name = "PathSamplingRoot"
+        self.root_mover.name = "PathSamplingRoot"
+
         samples = []
         if globalstate is not None:
             for sample in globalstate:
@@ -270,43 +277,47 @@ class PathSampling(PathSimulator):
 
         self._mover = paths.PathSimulatorMover(self.root_mover, self)
 
+        self.step = 0
+
+        mcstep = MCStep(
+            simulation=self,
+            step=self.step,
+            previous=None,
+            active=self.globalstate,
+            change=paths.EmptyPathMoveChange()
+        )
+
+        if self.storage is not None:
+            self.storage.steps.save(mcstep)
+            self.storage.sync()
 
     def run(self, nsteps):
         # TODO: change so we can start from some arbitrary step number
-    
-        self.globalstate = self.globalstate.apply_samples(self.globalstate,
-                                                          step=-1)
-
-        if self.storage is not None:
-            self.globalstate.save(self.storage)
-            self.storage.sync()
 
         mcstep = None
 
-        step = 0
-
-        for step in range(nsteps):
-            logger.info("Beginning MC cycle " + str(step+1))
+        for nn in range(nsteps):
+            self.step += 1
+            logger.info("Beginning MC cycle " + str(self.step))
             paths.tools.refresh_output(
-                "Working on Monte Carlo cycle step " + str(step+1) + ".\n"
+                "Working on Monte Carlo cycle step " + str(self.step) + ".\n"
             )
-            movepath = self._mover.move(self.globalstate, step=step)
+            movepath = self._mover.move(self.globalstate, step=self.step)
             samples = movepath.results
-            new_sampleset = self.globalstate.apply_samples(samples, step=step)
+            new_sampleset = self.globalstate.apply_samples(samples)
 
             mcstep = MCStep(
                 simulation=self,
-                step=step,
-                pre=self.globalstate,
-                post=new_sampleset,
-                change=movepath,
-                root=self.root
+                step=self.step,
+                previous=self.globalstate,
+                active=new_sampleset,
+                change=movepath
             )
 
             if self.storage is not None:
                 self.storage.steps.save(mcstep)
 
-            if step % self.save_frequency == 0:
+            if self.step % self.save_frequency == 0:
                 self.globalstate.sanity_check()
                 self.sync_storage()
 
