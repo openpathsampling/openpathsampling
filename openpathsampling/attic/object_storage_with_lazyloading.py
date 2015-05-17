@@ -328,7 +328,7 @@ class ObjectStorage(object):
 
         self.save_json(self.idx_dimension + '_json', idx, obj)
 
-    def get_name(self, idx):
+    def get_uid(self, idx):
         if self.named:
             return self.storage.variables[self.db + '_uid'][idx]
         else:

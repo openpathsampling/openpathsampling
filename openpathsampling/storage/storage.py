@@ -17,7 +17,7 @@ import numpy
 import simtk.unit as u
 
 import openpathsampling as paths
-import openpathsampling.todict
+from openpathsampling.todict import ObjectJSON
 
 #=============================================================================================
 # SOURCE CONTROL
@@ -72,22 +72,22 @@ class Storage(netcdf.Dataset):
 
         # normal objects
 
-        self.pathmovers = paths.storage.ObjectStore(storage, paths.PathMover, has_uid=True)
+        self.pathmovers = paths.storage.ObjectStore(storage, paths.PathMover, has_uid=True, has_name=True)
         self._details = paths.storage.ObjectStore(storage, paths.Details, has_uid=False)
         self.shootingpoints = paths.storage.ObjectStore(storage, paths.ShootingPoint, has_uid=False)
-        self.shootingpointselectors = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, has_uid=False)
-        self.engines = paths.storage.ObjectStore(storage, paths.DynamicsEngine, has_uid=True)
-        self.pathsimulators = paths.storage.ObjectStore(storage, paths.PathSimulator, has_uid=True)
+        self.shootingpointselectors = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, has_uid=False, has_name=True)
+        self.engines = paths.storage.ObjectStore(storage, paths.DynamicsEngine, has_uid=True, has_name=True)
+        self.pathsimulators = paths.storage.ObjectStore(storage, paths.PathSimulator, has_uid=True, has_name=True)
 
         # nestable objects
 
-        self.volumes = paths.storage.ObjectStore(storage, paths.Volume, has_uid=True, nestable=True)
-        self.ensembles = paths.storage.ObjectStore(storage, paths.Ensemble, has_uid=True, nestable=True)
-        self.pathmovechanges = paths.storage.ObjectStore(storage, paths.PathMoveChange, has_uid=False, nestable=True)
+        self.volumes = paths.storage.ObjectStore(storage, paths.Volume, has_uid=True, nestable=True, has_name=True)
+        self.ensembles = paths.storage.ObjectStore(storage, paths.Ensemble, has_uid=True, nestable=True, has_name=True)
+        self.pathmovechanges = paths.storage.ObjectStore(storage, paths.PathMoveChange, has_uid=False, nestable=True, has_name=True)
 
         self.transitions = paths.storage.ObjectStore(storage,
                                                     paths.TISTransition,
-                                                    has_uid=True)
+                                                    has_uid=True, has_name=True)
 
         self.query = paths.storage.QueryStore(storage)
 
@@ -97,7 +97,7 @@ class Storage(netcdf.Dataset):
                    'cvs', 'pathmovers', 'shootingpoints',
                    'shootingpointselectors', 'engines',
                    'pathsimulators', 'volumes', 'ensembles',
-                   'pathmovechanges', 'transitions' ,'_details'
+                   'pathmovechanges', 'transitions', '_details'
                   ]}
 
     @property
@@ -532,9 +532,9 @@ class Storage(netcdf.Dataset):
                         new_storage.variables[variable][idx] = self.variables[variable][idx]
 
 
-class StorableObjectJSON(paths.todict.ObjectJSON):
-    def __init__(self, storage, unit_system = None, class_list = None):
-        super(StorableObjectJSON, self).__init__(unit_system, class_list)
+class StorableObjectJSON(ObjectJSON):
+    def __init__(self, storage, unit_system = None):
+        super(StorableObjectJSON, self).__init__(unit_system)
         self.excluded_keys = ['idx', 'json', 'identifier']
         self.storage = storage
 
@@ -557,8 +557,8 @@ class StorableObjectJSON(paths.todict.ObjectJSON):
                 if obj['_storage'] == 'self':
                     return self.storage
             if '_cls' in obj and '_idx' in obj:
-                if obj['_cls'] in paths.todict.class_list:
-                    base_cls = paths.todict.class_list[obj['_cls']]
+                if obj['_cls'] in self.class_list:
+                    base_cls = self.class_list[obj['_cls']]
                     result = self.storage.load(base_cls, obj['_idx'])
                 else:
                     result = self.storage.load(obj['_cls'], obj['_idx'])
