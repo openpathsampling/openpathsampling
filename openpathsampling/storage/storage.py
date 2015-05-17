@@ -89,6 +89,11 @@ class Storage(netcdf.Dataset):
                                                     paths.TISTransition,
                                                     has_uid=True, has_name=True)
 
+        self.networks = paths.storage.ObjectStore(storage,
+                                                  paths.MSTISNetwork,
+                                                  has_uid=True
+                                                 )
+
         self.query = paths.storage.QueryStore(storage)
 
         self._objects = { name : getattr(self, name) for name in
@@ -97,7 +102,7 @@ class Storage(netcdf.Dataset):
                    'cvs', 'pathmovers', 'shootingpoints',
                    'shootingpointselectors', 'engines',
                    'pathsimulators', 'volumes', 'ensembles',
-                   'pathmovechanges', 'transitions', '_details'
+                   'pathmovechanges', 'transitions', 'networks', '_details'
                   ]}
 
     @property

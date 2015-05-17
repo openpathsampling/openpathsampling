@@ -25,13 +25,15 @@ class CallableVolume(object):
 
 class ToyPlot(object):
     def __init__(self):
-        range_x = np.arange(-1.1, 1.1, 0.05)
-        range_y = np.arange(-1.1, 0.9, 0.05)
+        range_x = np.arange(-1.1, 1.1, 0.01)
+        range_y = np.arange(-1.1, 1.1, 0.01)
         self.extent = [range_x[0], range_x[-1], range_y[0], range_y[-1]]
         self.X, self.Y = np.meshgrid(range_x, range_y)
         pylab.rcParams['figure.figsize'] = 9, 6
         self.repcolordict = {0 : 'k-', 1 : 'r-', 2 : 'g-', 3 : 'b-', 
-                             4 : 'r-', 5 : 'k-'}
+                             4 : 'r-'}
+
+        self.contour_range = np.arange(0.0, 1.5, 0.1)
 
         self._states = None
         self._pes = None
@@ -46,9 +48,9 @@ class ToyPlot(object):
     def add_states(self, states):
         if self._states is None:
             state = states[0]
-            self._states = np.vectorize(CallableVolume(state))(self.X, self.Y)
+            self._states = np.vectorize(CallableVolume(state))(self.X, -self.Y)
             for state in states[1:]:
-                self._states += np.vectorize(CallableVolume(state))(self.X, self.Y)
+                self._states += np.vectorize(CallableVolume(state))(self.X, -self.Y)
 
     def add_interfaces(self, ifaces):
         if self._interfaces is None:
@@ -83,7 +85,7 @@ class ToyPlot(object):
                        aspect='auto')
         if self._pes is not None:
             plt.contour(self.X, self.Y, self._pes, 
-                        levels=np.arange(0.0, 1.5, 0.1), colors='k')
+                        levels=self.contour_range, colors='k')
         if self._interfaces is not None:
             for iface in self._interfaces:
                 plt.contour(self.X, self.Y, iface, 
@@ -98,7 +100,7 @@ class ToyPlot(object):
                     zorder=1)
         for traj in trajectories:
             plt.plot(traj.xyz()[:,0,0], traj.xyz()[:,0,1],
-                     self.repcolordict[trajectories.index(traj)],
+                     self.repcolordict[trajectories.index(traj) % 5],
                      zorder=2)
 
     def reset(self):

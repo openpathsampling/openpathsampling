@@ -281,6 +281,31 @@ class SampleSet(OPSNamed):
             ]
         )
 
+    @staticmethod
+    def relabel_replicas_per_ensemble(ssets):
+        """
+        Return a SampleSet with one trajectory ID per ensemble in the given ssets.
+
+        This is used if you create several sample sets (e.g., from
+        bootstrapping different transitions) which have the same trajectory
+        ID associated with different ensembles.
+        """
+        if type(ssets) is SampleSet:
+            ssets = [ssets]
+        samples = []
+        repid = 0
+        for sset in ssets:
+            for s in sset:
+                samples.append(Sample(
+                    replica=repid,
+                    trajectory=s.trajectory,
+                    ensemble=s.ensemble,
+                    step=s.step
+                ))
+                repid += 1
+        return SampleSet(samples)
+        
+
 
 
     # @property

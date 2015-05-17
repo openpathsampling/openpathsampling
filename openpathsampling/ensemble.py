@@ -15,6 +15,16 @@ init_log = logging.getLogger('openpathsampling.initialization')
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
+def join_ensembles(ensemble_list):
+    ensemble = None
+    for ens in ensemble_list:
+        if ensemble is None:
+            ensemble = ens
+        else:
+            ensemble = ensemble | ens
+    return ensemble
+
+
 # note: the cache is not storable, because that would just be silly!
 class EnsembleCache(object):
     """Object used by ensembles to enable fast algorithms for basic functions.

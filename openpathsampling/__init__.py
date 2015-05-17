@@ -9,7 +9,8 @@ from ensemble import (
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble,
     SequentialEnsemble, IntersectionEnsemble, UnionEnsemble,
     SymmetricDifferenceEnsemble, RelativeComplementEnsemble,
-    SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble
+    SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble,
+    OptionalEnsemble
 )
 
 from snapshot import Snapshot, Configuration, Momentum
@@ -26,7 +27,7 @@ from pathmover import (
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
     CollapseMove, PathSimulatorMover, PathReversalSet,
-    NeighborEnsembleReplicaExchange
+    NeighborEnsembleReplicaExchange, OneWayShootingMover
 )
 
 
@@ -61,6 +62,10 @@ from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
 
 from analysis.tis_analysis import TISTransition, RETISTransition, Transition, \
     TPSTransition
+
+from analysis.network import (
+    MSTISNetwork
+)
 
 from analysis.replica_network import (
     ReplicaNetwork, trace_ensembles_for_replica,
