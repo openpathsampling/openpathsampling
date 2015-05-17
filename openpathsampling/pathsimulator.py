@@ -57,6 +57,7 @@ class PathSimulator(OPSNamed):
         self.storage = storage
         self.engine = engine
         self.save_frequency = 1
+        self.step = 0
         initialization_logging(
             logger=init_log, obj=self,
             entries=['storage', 'engine']
@@ -73,6 +74,18 @@ class PathSimulator(OPSNamed):
     def run(self, nsteps):
         logger.warning("Running an empty pathsimulator? Try a subclass, maybe!")
 
+    def save_initial(self):
+        mcstep = MCStep(
+            simulation=self,
+            step=self.step,
+            previous=None,
+            active=self.globalstate,
+            change=paths.EmptyPathMoveChange()
+        )
+
+        if self.storage is not None:
+            self.storage.steps.save(mcstep)
+            self.storage.sync()
 
 class BootstrapPromotionMove(PathMover):
     '''
@@ -166,22 +179,10 @@ class Bootstrapping(PathSimulator):
 
         self.root = self.globalstate
 
-        self.step = 0
-
-        mcstep = MCStep(
-            simulation=self,
-            step=self.step,
-            previous=None,
-            active=self.globalstate,
-            change=paths.EmptyPathMoveChange()
-        )
-
-        if self.storage is not None:
-            self.storage.steps.save(mcstep)
-            self.storage.sync()
-
-
     def run(self, nsteps):
+        if self.step == 0:
+            self.save_initial()
+
         bootstrapmove = self._bootstrapmove
 
         ens_num = len(self.globalstate)-1
@@ -262,7 +263,7 @@ class PathSampling(PathSimulator):
     ):
         super(PathSampling, self).__init__(storage, engine)
         self.root_mover = root_mover
-        self.root_mover.name = "PathSamplingRoot"
+#        self.root_mover.name = "PathSamplingRoot"
 
         samples = []
         if globalstate is not None:
@@ -277,22 +278,9 @@ class PathSampling(PathSimulator):
 
         self._mover = paths.PathSimulatorMover(self.root_mover, self)
 
-        self.step = 0
-
-        mcstep = MCStep(
-            simulation=self,
-            step=self.step,
-            previous=None,
-            active=self.globalstate,
-            change=paths.EmptyPathMoveChange()
-        )
-
-        if self.storage is not None:
-            self.storage.steps.save(mcstep)
-            self.storage.sync()
-
     def run(self, nsteps):
-        # TODO: change so we can start from some arbitrary step number
+        if self.step == 0:
+            self.save_initial()
 
         mcstep = None
 
