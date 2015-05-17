@@ -148,6 +148,7 @@ if __name__ == '__main__':
 
     for p_idx in range(0, storage.collectivevariables.count()):
         obj = storage.collectivevariables.load(p_idx)
+        nline(p_idx,obj.name, '')
         add = ''
 #        values = obj(all_snapshot_traj)
 #        found_values = [ (idx, value) for idx, value in enumerate(values) if value is not None ]
@@ -156,12 +157,12 @@ if __name__ == '__main__':
 
 #        nline(p_idx,obj.name, str(len(found_values)) + ' entries ' + add)
 
-    headline("MovePaths")
+    headline("MCSteps")
 
-    for p_idx in range(0, storage.pathmovechanges.count()):
-        obj = storage.pathmovechanges.load(p_idx)
+    for p_idx in range(0, storage.steps.count()):
+        obj = storage.steps.load(p_idx)
         nline(p_idx, '', '')
-        print indent(str(obj),16)
+        print indent(str(obj.change),16)
 
     headline("SampleSets")
 
@@ -200,7 +201,7 @@ if __name__ == '__main__':
         old_idx = -2
         count = 0
         for idx in traj:
-            if idx == old_idx + 1 or idx == old_idx - 1:
+            if idx/2 == old_idx/2 + 1 or idx/2 == old_idx/2 - 1:
                 count += 1
             else:
                 if count > 1:
@@ -214,7 +215,7 @@ if __name__ == '__main__':
         if count > 1:
             s += " <" + str(count - 1) + "> "
         if count > 0:
-            s += " " + str(old_idx)
+            s += " " + str(old_idx/2)+ ('-' if old_idx % 2 == 0 else '+')
 
         return s
 

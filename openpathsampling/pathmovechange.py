@@ -438,6 +438,9 @@ class FilterByEnsemblePathMoveChange(SubPathMoveChange):
     A PathMoveChange that filters out all samples not in specified ensembles
     """
 
+    # TODO: Question: filter out also trials not in the ensembles? I think so,
+    # because we are only interested in trials that could be relevant, right?
+
     def _get_results(self):
         all_samples = self.subchange.results
 
@@ -447,6 +450,17 @@ class FilterByEnsemblePathMoveChange(SubPathMoveChange):
         )
 
         return filtered_samples
+
+    def _get_trials(self):
+        all_samples = self.subchange.trials
+
+        filtered_samples = filter(
+            lambda s : s.ensemble in self.mover.ensembles,
+            all_samples
+        )
+
+        return filtered_samples
+
 
     def __str__(self):
         return 'FilterMove : allow only ensembles [%s] from sub moves : %s : %d samples\n' % \

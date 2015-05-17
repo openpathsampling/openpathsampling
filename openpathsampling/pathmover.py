@@ -1462,7 +1462,7 @@ class OneWayShootingMover(RandomChoiceMover):
         self.selector = selector
 
 
-class MinusMover(WrappedMover, ReplicaExchangeMover):
+class MinusMover(WrappedMover):
     """
     Instance of a MinusMover.
 
