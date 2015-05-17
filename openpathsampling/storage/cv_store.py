@@ -54,12 +54,12 @@ class ObjectDictStore(ObjectStore):
         CollectiveVariable.sync
 
         """
-        if objectdict.store_cache:
-            if objectdict is None:
-                for obj in self:
-                    self.sync(obj)
-                return
+        if objectdict is None:
+            for obj in self:
+                self.sync(obj)
+            return
 
+        if objectdict.store_cache:
             objectdict.sync(storage=self.storage)
 
     def set_value(self, objectdict, position, value):

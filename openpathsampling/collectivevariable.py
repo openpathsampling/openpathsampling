@@ -9,6 +9,7 @@ import marshal
 import base64
 import types
 import opcode
+import __builtin__
 
 @ops_object
 class CollectiveVariable(cd.Wrap):
@@ -123,7 +124,10 @@ class CollectiveVariable(cd.Wrap):
                 self.store_dict.cod_stores[storage].sync()
 
     def _pre_item(self, items):
-        item_type = self.store_dict._basetype(items)
+        if self.store_cache:
+            item_type = self.store_dict._basetype(items)
+        else:
+            item_type = type(items)
 
         if item_type is paths.Snapshot:
             return items
@@ -303,7 +307,7 @@ class CV_Function(CollectiveVariable):
                     global_vars = CV_Function._find_var(f, opcode.opmap['LOAD_GLOBAL'])
                     import_vars = CV_Function._find_var(f, opcode.opmap['IMPORT_NAME'])
 
-                    builtins = dir(__builtins__)
+                    builtins = dir(__builtin__)
 
                     global_vars = [
                         var for var in global_vars if var not in builtins
