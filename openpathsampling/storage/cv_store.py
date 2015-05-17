@@ -24,16 +24,17 @@ class ObjectDictStore(ObjectStore):
         """
         storage = self.storage
 
-        var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
+        if objectdict.store_cache:
+            var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
 
-        if var_name + '_value' not in self.storage.variables:
-            self.init_variable(var_name + '_value', 'float', (self.key_class.__name__.lower()))
+            if var_name + '_value' not in storage.variables:
+                self.init_variable(var_name + '_value', 'float', (self.key_class.__name__.lower()))
 
         self.save_json(self.idx_dimension + '_json', idx, objectdict)
 
         # this will copy the cache from an op and store it if it is stored
         if objectdict.store_cache:
-            objectdict.flush_cache(self.storage)
+            objectdict.flush_cache(storage)
             self.sync(objectdict)
 
     def sync(self, objectdict=None):
