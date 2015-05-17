@@ -61,13 +61,13 @@ class MSTISNetwork(TISNetwork):
 
     @staticmethod
     def from_dict(dct):
-        network = MSTISNetwork(dct['trans_info'])
+        network = MSTISNetwork.__new__(MSTISNetwork)
         network.from_state = dct['from_state']
         network.movers = dct['movers']
         network.outer_ensembles = dct['outer_ensembles']
         network.outers = dct['outers']
         network.states = dct['states']
-        network.build_analysis_transitions()
+        network.__init__(dct['trans_info'])
         return network
 
     def __init__(self, trans_info):
