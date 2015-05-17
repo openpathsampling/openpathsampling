@@ -1,7 +1,7 @@
 import openpathsampling as paths
-from openpathsampling.todict import ops_object
+from openpathsampling.todict import OPSNamed
 
-class TransitionNetwork(object):
+class TransitionNetwork(OPSNamed):
     def __init__(self):
         pass
 
@@ -39,7 +39,6 @@ def get_movers_from_transitions(label, transitions):
         movers += trans.movers[label]
     return movers
 
-@ops_object
 class MSTISNetwork(TISNetwork):
     """
     Multiple state transition interface sampling network.
@@ -169,25 +168,25 @@ class MSTISNetwork(TISNetwork):
 
         shooting_chooser = paths.RandomChoiceMover(
             movers=self.movers['shooting'] + self.movers['msouter_shooting'],
-            name="ShootingChooser"
         )
+        shooting_chooser.name = "ShootingChooser"
         repex_chooser = paths.RandomChoiceMover(
             movers=self.movers['repex'],
-            name="RepExChooser"
         )
+        repex_chooser.name = "RepExChooser"
         rev_chooser = paths.RandomChoiceMover(
             movers=(self.movers['pathreversal'] + 
                     self.movers['msouter_pathreversal']),
-            name="ReversalChooser"
         )
+        rev_chooser.name = "ReversalChooser"
         minus_chooser = paths.RandomChoiceMover(
             movers=self.movers['minus'],
-            name="MinusChooser"
         )
+        minus_chooser.name = "MinusChooser"
         msouter_chooser = paths.RandomChoiceMover(
             movers=self.movers['msouter_repex'],
-            name="MSOuterRepexChooser"
         )
+        msouter_chooser.name = "MSOuterRepexChooser"
         weights = [
             len(shooting_chooser.movers),
             len(repex_chooser.movers) / 2,
