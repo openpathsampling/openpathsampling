@@ -303,12 +303,22 @@ class CV_Function(CollectiveVariable):
                     global_vars = CV_Function._find_var(f, opcode.opmap['LOAD_GLOBAL'])
                     import_vars = CV_Function._find_var(f, opcode.opmap['IMPORT_NAME'])
 
+                    builtins = dir(__builtins__)
+
+                    global_vars = [
+                        var for var in global_vars if var not in builtins
+                    ]
+
                     if len(global_vars) > 0:
                         print 'Not good. Your function relies on globally set variables ' + \
                               'and these cannot be saved!'
                         print 'requires the following globals to be set:', global_vars
                         print 'Check, if you can replace these by constants or variables ' + \
                               'that are defined within the function itself'
+
+                        print [ obj._idx for obj in global_vars if hasattr(obj, '_idx')]
+
+                        print [ obj for obj in global_vars ]
 
                     not_allowed_modules = [ module for module in import_vars
                                             if module not in CV_Function.allowed_modules]
