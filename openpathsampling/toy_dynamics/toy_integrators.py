@@ -1,9 +1,12 @@
 import math
 import numpy as np
-from openpathsampling.todict import ops_object
+from openpathsampling.todict import OPSNamed
 
-@ops_object
-class LeapfrogVerletIntegrator(object):
+class ToyIntegrator(OPSNamed):
+    def __init__(self):
+        super(OPSNamed, self).__init__()
+
+class LeapfrogVerletIntegrator(ToyIntegrator):
     """Leapfrog Integrator. Not for actual use; but the momentum and
     position update functions are used in other integrators, so we inherit
     from this.
@@ -12,6 +15,7 @@ class LeapfrogVerletIntegrator(object):
     dd = None
 
     def __init__(self, dt):
+        super(LeapfrogVerletIntegrator, self).__init__()
         self.dt = dt
 
     def _momentum_update(self, sys, mydt):
@@ -25,7 +29,6 @@ class LeapfrogVerletIntegrator(object):
         self._momentum_update(sys, self.dt)
         self._position_update(sys, 0.5*self.dt)
 
-@ops_object
 class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
     """ Langevin integrator for simple toy models
 
@@ -42,12 +45,12 @@ class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
     """
 
     def __init__(self, dt, temperature, gamma):
+        super(LangevinBAOABIntegrator, self).__init__(dt)
         self._beta = 1.0 / temperature
         self._c1 = math.exp(-gamma*dt)
         self._c2 = (1.0-self._c1)/gamma
         self._c3 = math.sqrt((1.0 - self._c1*self._c1) / self._beta)
 
-        self.dt = dt
         self.temperature = temperature
         self.gamma = gamma
 
