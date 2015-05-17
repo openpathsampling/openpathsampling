@@ -328,6 +328,15 @@ class TISTransition(Transition):
             )
         }
 
+    def __str__(self):
+        mystr = str(self.__class__.__name__) + ": " + str(self.name) + "\n"
+        mystr += (str(self.stateA.name) + " -> " + str(self.stateA.name) 
+                  + " or " + str(self.stateB.name) + "\n")
+        for iface in self.interfaces:
+            mystr += "Interface: " + str(iface.name) + "\n"
+        return mystr
+
+
     def to_dict(self):
         ret_dict = {
             'stateA' : self.stateA,
@@ -660,6 +669,23 @@ class RETISTransition(TISTransition):
             error=error,
             force=force
         )
+
+    def populate_minus_ensemble(self, partial_traj, minus_replica_id, engine):
+        last_frame = partial_traj[-1]
+        if not self.minus_ensemble._segment_ensemble(partial_traj):
+            raise RuntimeError(
+                "Invalid input trajectory for minus extension. (Not A-to-A?)"
+            )
+        extension = engine.generate(last_frame,
+                                    [self.minus_ensemble.can_append])
+        first_minus = paths.Trajectory(partial_traj + extension[1:])
+        minus_samp = paths.Sample(
+            replica=minus_replica_id,
+            trajectory=first_minus,
+            ensemble=self.minus_ensemble
+        )
+        return minus_samp
+        pass
 
     def default_movers(self, engine):
         """Create reasonable default movers for a `PathSampling` pathsimulator

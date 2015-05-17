@@ -90,6 +90,11 @@ class Storage(netcdf.Dataset):
         # special objects
         # TODO: remove query? Not really needed, is it?
 
+        self.networks = paths.storage.ObjectStore(storage,
+                                                  paths.MSTISNetwork,
+                                                  has_uid=True
+                                                 )
+
         self.query = paths.storage.QueryStore(storage)
 
         self._objects = { name : getattr(self, name) for name in
@@ -98,6 +103,7 @@ class Storage(netcdf.Dataset):
                    'cvs', 'pathmovers', 'shootingpoints',
                    'shootingpointselectors', 'engines',
                    'pathsimulators', 'volumes', 'ensembles',
+                   'pathmovechanges', 'transitions', 'networks', '_details'
                    'pathmovechanges', 'transitions', '_details',
                    'steps'
                   ]}
