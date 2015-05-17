@@ -52,7 +52,7 @@ class CollectiveVariable(cd.Wrap):
 
     """
 
-    def __init__(self, name, dimensions=1):
+    def __init__(self, name, dimensions=1, has_eval=True, store_cache=True):
         if (type(name) is not str and type(name) is not unicode) or len(
                 name) == 0:
             print type(name), len(name)
@@ -64,24 +64,29 @@ class CollectiveVariable(cd.Wrap):
         self.single_dict = cd.ExpandSingle()
         self.pre_dict = cd.Transform(self._pre_item)
         self.multi_dict = cd.ExpandMulti()
-        self.store_dict = cd.MultiStore('collectivevariables', name,
-                                        dimensions, self)
         self.cache_dict = cd.ChainDict()
-        if hasattr(self, '_eval'):
+
+        self.store_cache = store_cache
+
+        if has_eval:
             self.expand_dict = cd.UnwrapTuple()
             self.func_dict = cd.Function(None)
 
             self.func_dict._eval = self._eval
 
-            super(CollectiveVariable, self).__init__(
-                post=self.func_dict + self.expand_dict + self.cache_dict +
-                     self.store_dict + self.multi_dict + self.single_dict + self.pre_dict
-            )
-
+            post = self.func_dict + self.expand_dict + self.cache_dict
         else:
-            super(CollectiveVariable, self).__init__(
-                post=self.cache_dict + self.store_dict + self.multi_dict + self.single_dict + self.pre_dict
-            )
+            post = self.cache_dict
+
+        if store_cache:
+            self.store_dict = cd.MultiStore('collectivevariables', name,
+                                        dimensions, self)
+
+            post = post + self.store_dict
+
+        post = post + self.multi_dict + self.single_dict + self.pre_dict
+
+        super(CollectiveVariable, self).__init__(post=post)
 
         self._stored = False
 
@@ -122,7 +127,7 @@ class CollectiveVariable(cd.Wrap):
 
         if item_type is paths.Snapshot:
             return items
-        elif item_type is paths.Trajectory:
+        elif item_type is paths.Sample or item_type is paths.Trajectory:
             if len(items) == 0:
                 return []
             elif len(items) == 1:
@@ -164,7 +169,7 @@ class CV_Volume(CollectiveVariable):
     volume
     """
 
-    def __init__(self, name, volume):
+    def __init__(self, name, volume, store_cache=True):
         """
         Parameters
         ----------
@@ -175,7 +180,11 @@ class CV_Volume(CollectiveVariable):
 
         """
 
-        super(CV_Volume, self).__init__(name)
+        super(CV_Volume, self).__init__(
+            name,
+            dimensions=1,
+            store_cache=store_cache
+        )
         self.volume = volume
 
     _compare_keys = ['name', 'volume']
@@ -188,13 +197,15 @@ class CV_Volume(CollectiveVariable):
         return {
             'name': self.name,
             'volume': self.volume,
+            'store_cache' : self.store_cache
         }
 
     @staticmethod
     def from_dict(dct):
         return CV_Volume(
             name=dct['name'],
-            volume=dct['volume']
+            volume=dct['volume'],
+            store_cache=dct['store_cache']
         )
 
 
@@ -213,7 +224,7 @@ class CV_Function(CollectiveVariable):
     allow_marshal = True
     allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy']
 
-    def __init__(self, name, fcn, dimensions=1, **kwargs):
+    def __init__(self, name, fcn, dimensions=1, store_cache=True, **kwargs):
         """
         Parameters
         ----------
@@ -254,7 +265,11 @@ class CV_Function(CollectiveVariable):
         We will also check if non-standard modules are importet, which are now
         numpy, math, msmbuilder and mdtraj
         """
-        super(CV_Function, self).__init__(name, dimensions=dimensions)
+        super(CV_Function, self).__init__(
+            name,
+            dimensions=dimensions,
+            store_cache=store_cache
+        )
         self.callable_fcn = fcn
         self.kwargs = kwargs
         return
@@ -322,7 +337,8 @@ class CV_Function(CollectiveVariable):
             'name': self.name,
             'fcn': fcn,
             'dimensions': self.dimensions,
-            'kwargs': self.kwargs
+            'kwargs': self.kwargs,
+            'store_cache' : self.store_cache
         }
 
     @classmethod
@@ -346,6 +362,7 @@ class CV_Function(CollectiveVariable):
             name=dct['name'],
             fcn=f,
             dimensions=dct['dimensions'],
+            store_cache=dct['store_cache'],
             **dct['kwargs']
         )
 
@@ -404,7 +421,7 @@ class CV_Class(CollectiveVariable):
 
     _allowed_modules = [ 'msmbuilder' ]
 
-    def __init__(self, name, cls, dimensions=1, **kwargs):
+    def __init__(self, name, cls, dimensions=1, store_cache=True, **kwargs):
         """
         Parameters
         ----------
@@ -424,7 +441,11 @@ class CV_Class(CollectiveVariable):
         classes from msmbuilder.
         """
 
-        super(CV_Class, self).__init__(name, dimensions=dimensions)
+        super(CV_Class, self).__init__(
+            name,
+            dimensions=dimensions,
+            store_cache=store_cache
+        )
         self.callable_cls = cls
         self.kwargs = kwargs
         self._instance = cls(**kwargs)
@@ -457,6 +478,7 @@ class CV_Class(CollectiveVariable):
             'name': self.name,
             'cls': cls,
             'dimensions': self.dimensions,
+            'store_cache' : self.store_cache,
             'kwargs': self.kwargs
         }
 
@@ -476,6 +498,7 @@ class CV_Class(CollectiveVariable):
             name=dct['name'],
             cls=c,
             dimensions=dct['dimensions'],
+            store_cache=dct['store_cache'],
             **dct['kwargs']
         )
 
@@ -516,7 +539,7 @@ class CV_MD_Function(CV_Function):
     >>> print psi_orderparam( traj )
     """
 
-    def __init__(self, name, fcn, dimensions=1, **kwargs):
+    def __init__(self, name, fcn, dimensions=1, store_cache=True, **kwargs):
         """
         Parameters
         ----------
@@ -528,7 +551,11 @@ class CV_MD_Function(CV_Function):
 
         """
         super(CV_MD_Function, self).__init__(
-            name, fcn, dimensions=dimensions, **kwargs
+            name,
+            fcn,
+            dimensions=dimensions,
+            store_cache=store_cache,
+            **kwargs
         )
         self._topology = None
 
@@ -553,7 +580,7 @@ class CV_Featurizer(CV_Class):
     cls
     """
 
-    def __init__(self, name, featurizer, **kwargs):
+    def __init__(self, name, featurizer, store_cache, **kwargs):
         """
 
         Parameters
@@ -582,9 +609,9 @@ class CV_Featurizer(CV_Class):
             name,
             cls=featurizer,
             dimensions=self._feat.n_features,
+            store_cache=store_cache
             **self.kwargs
         )
-
 
     _compare_keys = ['name']
     _allowed_modules = ['msmbuilder']

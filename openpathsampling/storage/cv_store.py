@@ -3,7 +3,12 @@ from openpathsampling.collectivevariable import CollectiveVariable
 
 class ObjectDictStore(ObjectStore):
     def __init__(self, storage, cls, key_class):
-        super(ObjectDictStore, self).__init__(storage, cls, has_uid=True, json=True)
+        super(ObjectDictStore, self).__init__(
+            storage,
+            cls,
+            has_uid=True,
+            json=True
+        )
         self.key_class = key_class
 
     def save(self, objectdict, idx=None):
@@ -26,9 +31,10 @@ class ObjectDictStore(ObjectStore):
 
         self.save_json(self.idx_dimension + '_json', idx, objectdict)
 
-        # this will copy the cache from an op and store it
-        objectdict.flush_cache(self.storage)
-        self.sync(objectdict)
+        # this will copy the cache from an op and store it if it is stored
+        if objectdict.store_cache:
+            objectdict.flush_cache(self.storage)
+            self.sync(objectdict)
 
     def sync(self, objectdict=None):
         """
@@ -47,12 +53,13 @@ class ObjectDictStore(ObjectStore):
         CollectiveVariable.sync
 
         """
-        if objectdict is None:
-            for obj in self:
-                self.sync(obj)
-            return
+        if objectdict.store_cache:
+            if objectdict is None:
+                for obj in self:
+                    self.sync(obj)
+                return
 
-        objectdict.sync(storage=self.storage)
+            objectdict.sync(storage=self.storage)
 
     def set_value(self, objectdict, position, value):
         storage = self.storage
@@ -116,9 +123,6 @@ class ObjectDictStore(ObjectStore):
         wrong parameters!
         """
 
-        storage = self.storage
-
-#        name = storage.variables[self.idx_dimension + '_name'][idx]
         op = self.load_json(self.idx_dimension + '_json', idx)
 
         return op
