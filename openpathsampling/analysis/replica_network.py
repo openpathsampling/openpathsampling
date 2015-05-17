@@ -96,6 +96,38 @@ class ReplicaNetwork(object):
             # even better would be to mark certain movers as swapping movers
             # using a pseudo class / mixin that does nothing.
 
+            # or we just check using parent and ensemble where we have switches
+            # count trials and results separate and voila.
+            # Each sample in post needs a parent in pre. Compare if they have the
+            # same ensemble. If not count a swap
+
+            # We have to differentiate between checking for moving between states in
+            # one MC step and effective overlap of ensembles. How often is
+            # ensemble1(samp2) True meaning samp2 fits into ensemble1.
+
+            if False:
+                # This counts how often a sample has been moved between ensembles.
+                # Makes only sense if number of samples per set is constant and so
+                # is the number of ensembles
+                for sample in step.change.trials:
+                    ancestor = sample.find_ancestor_among(step.previous)
+                    if ancestor is not None:
+                        ens1 = ancestor.ensemble
+                        ens2 = sample.ensemble
+
+                        try:
+                            self.analysis['n_trials'][(ens1, ens2)] += 1
+                        except KeyError:
+                            self.analysis['n_trials'][(ens1, ens2)] = 1
+
+                        if sample in step.change.results:
+                            try:
+                                self.analysis['n_accepted'][(ens1, ens2)] += 1
+                            except KeyError:
+                                self.analysis['n_accepted'][(ens1, ens2)] = 1
+
+
+
             if True:
                 # this only works if the whole move is the repex
                 if len(pmc.trials) == 2:
@@ -114,7 +146,7 @@ class ReplicaNetwork(object):
                             self.analysis['n_accepted'][(ens1, ens2)] = 1
             else:
                 for delta in pmc:
-                    if isinstance(delta.mover, paths.ReplicaExchangeMover):
+                    if isinstance(delta.mover, paths.SwappingMover):
                         if len(delta.trials) == 2:
                             ens1 = delta.trials[0].ensemble
                             ens2 = delta.trials[1].ensemble
