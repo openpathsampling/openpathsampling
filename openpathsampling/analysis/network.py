@@ -1,6 +1,8 @@
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
 
+from tis_analysis import Histogrammer, max_lambdas
+
 class TransitionNetwork(OPSNamed):
     def __init__(self):
         pass
@@ -83,11 +85,14 @@ class MSTISNetwork(TISNetwork):
             self.movers = { }
             self.build_movers()
 
+        # by default, we set assign these values to all ensembles
+        self.hist_args = {}
+
         self.build_analysis_transitions()
 
     def build_analysis_transitions(self):
         # set up analysis transitions (not to be saved)
-        self.analysis_transitions = { }
+        self.transitions = { }
         for stateA in self.from_state.keys():
             state_index = self.states.index(stateA)
             fromA = self.from_state[stateA]
@@ -103,7 +108,7 @@ class MSTISNetwork(TISNetwork):
                 # override created stuff
                 trans.ensembles = fromA.ensembles
                 trans.movers = fromA.movers
-                self.analysis_transitions[(stateA, stateB)] = trans
+                self.transitions[(stateA, stateB)] = trans
 
 
 
@@ -210,8 +215,19 @@ class MSTISNetwork(TISNetwork):
             mystr += str(self.from_state[state])
         return mystr
 
-    def rate_matrix(self, storage):
-        pass
+
+    def rate_matrix(self, storage, force=False):
+        # for each transition in from_state:
+        # 1. Calculate the flux and the TCP
+        for state in self.from_state.keys():
+            transition = self.from_state[state]
+            # set up the hist_args if necessary
+            for histname in self.ensemble_histogram_info.keys():
+                trans_hist = transition.ensemble_histogram_info[histname]
+                if trans_hist.hist_args == {}:
+                    trans_hist.hist_args = self.hist_args[histname]
+        
+            transition.total_crossing_probability(storage)
 
 
 #def multiple_set_minus_switching(mistis, storage):
