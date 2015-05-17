@@ -1071,8 +1071,8 @@ class MoveTreeNX(object):
 
 //        require(["d3"], function(d3) {
         (function() {
-            var diameter = 800;
-            var padding = 100;
+            var diameter = 1200;
+            var padding = 0;
 
             var tree = d3.layout.tree()
                 .size([360, diameter / 2 - 120])

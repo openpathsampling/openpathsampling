@@ -118,6 +118,10 @@ class PathMover(TreeMixin, OPSNamed):
         initialization_logging(logger=init_log, obj=self,
                                entries=['ensembles'])
 
+    @property
+    def default_name(self):
+        return self.__class__.__name__[:-5]
+
     # +-------------------------------------------------------------------------
     # | tree implementation overrides
     # +-------------------------------------------------------------------------

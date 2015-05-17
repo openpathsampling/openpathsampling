@@ -61,7 +61,7 @@ def max_lambdas(sample, orderparameter):
 
 def sampleset_sample_generator(storage):
     for step in storage.steps:
-        sset = step.post # take the sampleset after the move
+        sset = step.active # take the sampleset after the move
         for sample in sset:
             yield sample
 

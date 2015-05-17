@@ -137,11 +137,11 @@ class ReplicaNetwork(object):
         self.check_storage(storage)
         if force == False and self.traces != { }:
             return self.traces
-        for ensemble in [s.ensemble for s in self.storage.samplesets[0]]:
+        for ensemble in [s.ensemble for s in self.storage.steps[0].active]:
             self.traces[ensemble] = condense_repeats(
                 trace_replicas_for_ensemble(ensemble, self.storage)
             )
-        for replica in [s.replica for s in self.storage.samplesets[0]]:
+        for replica in [s.replica for s in self.storage.steps[0].active]:
             self.traces[replica] = condense_repeats(
                 trace_ensembles_for_replica(replica, self.storage)
             )
@@ -207,7 +207,7 @@ class ReplicaNetwork(object):
             shape=(n_ensembles, n_ensembles)
         )
         # TODO clean these up: maybe move labels to elsewhere?
-        sset0 = self.storage.samplesets[0]
+        sset0 = self.storage.steps[0].active
         labels = {k : sset0[number_to_ensemble[k]].replica 
                   for k in number_to_ensemble.keys()}
 
@@ -240,7 +240,7 @@ class ReplicaNetwork(object):
             shape=(n_ensembles, n_ensembles)
         )
         # TODO clean these up: maybe move labels to elsewhere?
-        sset0 = self.storage.samplesets[0]
+        sset0 = self.storage.steps[0].active
         labels = {k : sset0[number_to_ensemble[k]].replica 
                   for k in number_to_ensemble.keys()}
 
@@ -319,8 +319,8 @@ class ReplicaNetwork(object):
 
 def get_all_ensembles_and_replicas(storage, first_sampleset=True):
     if first_sampleset:
-        ensembles = [s.ensemble for s in storage.samplesets[0]]
-        replicas = [s.replica for s in storage.samplesets[0]]
+        ensembles = [s.ensemble for s in storage.steps[0].active]
+        replicas = [s.replica for s in storage.steps[0].active]
     else:
         # This approach uses dicts so we don't have to hunt for the key; the
         # value assigned is arbitrarily 1. Still has to loop over
@@ -394,14 +394,16 @@ class ReplicaNetworkGraph(object):
 def trace_ensembles_for_replica(replica, storage):
     trace = []
     storage.samples.cache_all()
-    for sset in storage.samplesets:
+    for step in storage.steps:
+        sset = step.active
         trace.append(sset[replica].ensemble)
     return trace
 
 def trace_replicas_for_ensemble(ensemble, storage):
     trace = []
     storage.samples.cache_all()
-    for sset in storage.samplesets:
+    for step in storage.steps:
+        sset = step.active
         trace.append(sset[ensemble].replica)
     return trace
 
