@@ -187,6 +187,8 @@ class Bootstrapping(PathSimulator):
 
         bootstrapmove = self._bootstrapmove
 
+        cvs = list(self.storage.cvs)
+
         ens_num = len(self.globalstate)-1
         failsteps = 0
         # if we fail nsteps times in a row, kill the job
@@ -231,6 +233,12 @@ class Bootstrapping(PathSimulator):
 #                             + "," + str(sample.trajectory)
 #                             + "," + repr(sample.ensemble)
 #                            )
+
+            # compute all cvs now
+            for sample in movepath.trials:
+                for cv in cvs:
+                    cv(sample.trajectory)
+
 
             if self.storage is not None:
                 self.storage.steps.save(mcstep)
@@ -286,6 +294,8 @@ class PathSampling(PathSimulator):
 
         mcstep = None
 
+        cvs = list(self.storage.cvs)
+
         for nn in range(nsteps):
             self.step += 1
             logger.info("Beginning MC cycle " + str(self.step))
@@ -304,6 +314,11 @@ class PathSampling(PathSimulator):
                 change=movepath
             )
 
+            # compute all cvs now
+            for sample in movepath.trials:
+                for cv in cvs:
+                    cv(sample.trajectory)
+
             if self.storage is not None:
                 self.storage.steps.save(mcstep)
 
@@ -312,7 +327,6 @@ class PathSampling(PathSimulator):
                 self.sync_storage()
 
             self.globalstate = new_sampleset
-
 
         self.sync_storage()
         paths.tools.refresh_output(

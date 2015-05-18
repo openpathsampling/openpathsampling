@@ -189,7 +189,7 @@ class Transition(OPSNamed):
             group = my_movers[groupname]
             for mover in group:
                 key_iter = (k for k in self._mover_acceptance.keys()
-                            if k[0] == mover)
+                            if k[0] is mover)
 
                 for k in key_iter:
                     stats[groupname][0] += self._mover_acceptance[k][0]
@@ -403,7 +403,7 @@ class TISTransition(Transition):
                 self.histograms[hist] = {}
             self.histograms[hist][ensemble] = Histogram(**(hist_info.hist_args))
 
-        in_ens_samples = (s for s in samples if s.ensemble == ensemble)
+        in_ens_samples = (s for s in samples if s.ensemble is ensemble)
         hist_data = {}
         buflen = -1
         sample_buf = []
@@ -634,7 +634,7 @@ class RETISTransition(TISTransition):
         pass
 
     def minus_move_flux(self, storage, force=False):
-        if not force and self._flux != None:
+        if not force and self._flux is not None:
             return self._flux
 
         self.minus_count_sides = { "in" : [], "out" : [] }
@@ -643,7 +643,7 @@ class RETISTransition(TISTransition):
                        d.change and d.change.accepted)
         for move in minus_moves:
             minus_samp = [s for s in move.results
-                          if s.ensemble==self.minus_ensemble][0]
+                          if s.ensemble is self.minus_ensemble][0]
             minus_trajectory = minus_samp.trajectory
             minus_summ = minus_sides_summary(minus_trajectory,
                                              self.minus_ensemble)
@@ -744,7 +744,7 @@ def summarize_trajectory_volumes(trajectory, label_dict):
         else:
             current_vol = in_state[0]
         
-        if last_vol == current_vol:
+        if last_vol is current_vol:
             count += 1
         else:
             if count > 0:
