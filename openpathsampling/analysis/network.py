@@ -1,5 +1,6 @@
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
+import pandas as pd
 
 from tis_analysis import Histogrammer, max_lambdas
 

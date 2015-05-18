@@ -438,7 +438,7 @@ class TISTransition(Transition):
         hist = self.histograms['crossing_probability'][ensemble]
         return hist.reverse_cumulative()
 
-    def total_crossing_probability(self, method="wham", storage=None, force=False, nblocks=1):
+    def total_crossing_probability(self, storage=None, method="wham", force=False, nblocks=1):
         """Return the total crossing probability using `method`"""
         if method == "wham":
             run_ensembles = False
