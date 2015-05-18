@@ -87,12 +87,12 @@ class MSTISNetwork(TISNetwork):
 
         # by default, we set assign these values to all ensembles
         self.hist_args = {}
+        self.transitions = { }
 
-        self.build_analysis_transitions()
+        #self.build_analysis_transitions()
 
     def build_analysis_transitions(self):
         # set up analysis transitions (not to be saved)
-        self.transitions = { }
         for stateA in self.from_state.keys():
             state_index = self.states.index(stateA)
             fromA = self.from_state[stateA]
@@ -229,22 +229,23 @@ class MSTISNetwork(TISNetwork):
         
             transition.total_crossing_probability(storage=storage)
             for stateB in self.from_state.keys():
-                # TODO: make all of this into a retis.copy() 
-                transitionAB = paths.RETISTransition(
-                    stateA=stateA, 
-                    stateB=stateB,
-                    interfaces=transition.interfaces,
-                    orderparameter=transition.orderparameter,
-                    name=str(stateA.name)+"->"+str(stateB.name)
-                )
-                transitionAB.ensembles = transition.ensembles
-                transitionAB.minus_ensemble = transition.minus_ensemble
-                transitionAB.movers = transition.movers
-                transitionAB.histograms = transition.histograms
-                transitionAB._flux = transition._flux
-                transitionAB.tcp = transition.tcp
-                transitionAB.ensemble_histogram_info = transition.ensemble_histogram_info
-                self.transitions[(stateA, stateB)] = transitionAB
+                if stateA != stateB:
+                    # TODO: make all of this into a retis.copy() 
+                    transitionAB = paths.RETISTransition(
+                        stateA=stateA, 
+                        stateB=stateB,
+                        interfaces=transition.interfaces,
+                        orderparameter=transition.orderparameter,
+                        name=str(stateA.name)+"->"+str(stateB.name)
+                    )
+                    transitionAB.ensembles = transition.ensembles
+                    transitionAB.minus_ensemble = transition.minus_ensemble
+                    transitionAB.movers = transition.movers
+                    transitionAB.histograms = transition.histograms
+                    transitionAB._flux = transition._flux
+                    transitionAB.tcp = transition.tcp
+                    transitionAB.ensemble_histogram_info = transition.ensemble_histogram_info
+                    self.transitions[(stateA, stateB)] = transitionAB
 
         for trans in self.transitions.values():
             rate = trans.rate(storage)

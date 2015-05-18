@@ -646,6 +646,10 @@ class RETISTransition(TISTransition):
             for key in self.minus_count_sides.keys():
                 self.minus_count_sides[key].extend(minus_summ[key])
        
+        for key in self.minus_count_sides.keys():
+            if len(self.minus_count_sides[key]) == 0:
+                logger.warn("No instances of "+str(key)+" for minus move.")
+
         t_in_avg = np.array(self.minus_count_sides['in']).mean()
         t_out_avg = np.array(self.minus_count_sides['out']).mean()
         self._flux = 1.0 / (t_in_avg + t_out_avg)
