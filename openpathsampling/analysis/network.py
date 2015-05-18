@@ -229,6 +229,7 @@ class MSTISNetwork(TISNetwork):
         
             transition.total_crossing_probability(storage=storage)
             for stateB in self.from_state.keys():
+                # TODO: make all of this into a retis.copy() 
                 transitionAB = paths.RETISTransition(
                     stateA=stateA, 
                     stateB=stateB,
@@ -236,11 +237,20 @@ class MSTISNetwork(TISNetwork):
                     orderparameter=transition.orderparameter,
                     name=str(stateA.name)+"->"+str(stateB.name)
                 )
+                transitionAB.ensembles = transition.ensembles
+                transitionAB.minus_ensemble = transition.minus_ensemble
+                transitionAB.movers = transition.movers
                 transitionAB.histograms = transition.histograms
                 transitionAB._flux = transition._flux
                 transitionAB.tcp = transition.tcp
                 transitionAB.ensemble_histogram_info = transition.ensemble_histogram_info
                 self.transitions[(stateA, stateB)] = transitionAB
+
+        for trans in self.transitions.values():
+            rate = trans.rate(storage)
+            print trans.stateA.name, trans.stateB.name, 
+            print trans._flux, trans.tcp(0.16), trans.ctp[trans.ensembles[-1]],
+            print rate
 
 
 

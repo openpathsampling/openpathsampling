@@ -536,7 +536,8 @@ class TISTransition(Transition):
                                                       force=force)
         outer_tcp = tcp(outer_lambda)
         #print flux, outer_tcp, ctp
-        return flux*outer_tcp*ctp
+        self._rate = flux*outer_tcp*ctp
+        return self._rate
 
     def default_movers(self, engine):
         """Create reasonable default movers for a `PathSampling` pathsimulator"""
