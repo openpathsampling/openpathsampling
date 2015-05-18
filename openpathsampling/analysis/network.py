@@ -219,8 +219,8 @@ class MSTISNetwork(TISNetwork):
     def rate_matrix(self, storage, force=False):
         # for each transition in from_state:
         # 1. Calculate the flux and the TCP
-        for state in self.from_state.keys():
-            transition = self.from_state[state]
+        for stateA in self.from_state.keys():
+            transition = self.from_state[stateA]
             # set up the hist_args if necessary
             for histname in self.hist_args.keys():
                 trans_hist = transition.ensemble_histogram_info[histname]
@@ -228,6 +228,20 @@ class MSTISNetwork(TISNetwork):
                     trans_hist.hist_args = self.hist_args[histname]
         
             transition.total_crossing_probability(storage=storage)
+            for stateB in self.from_state.keys():
+                transitionAB = paths.RETISTransition(
+                    stateA=stateA, 
+                    stateB=stateB,
+                    interfaces=transition.interfaces,
+                    orderparameter=transition.orderparameter,
+                    name=str(stateA.name)+"->"+str(stateB.name)
+                )
+                transitionAB.histograms = transition.histograms
+                transitionAB._flux = transition._flux
+                transitionAB.tcp = transition.tcp
+                transitionAB.ensemble_histogram_info = transition.ensemble_histogram_info
+                self.transitions[(stateA, stateB)] = transitionAB
+
 
 
 #def multiple_set_minus_switching(mistis, storage):
