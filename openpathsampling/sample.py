@@ -153,7 +153,7 @@ class SampleSet(OPSNamed):
             # also acts as .append() if given a single sample
             self.append(samples)
 
-    def apply_samples(self, samples, step=None, copy=True):
+    def apply_samples(self, samples, copy=True):
         '''Updates the SampleSet based on a list of samples, by setting them
         by replica in the order given in the argument list.'''
         if type(samples) is Sample:
@@ -166,7 +166,6 @@ class SampleSet(OPSNamed):
             if type(sample) is not paths.Sample:
                 raise ValueError('No SAMPLE!')
             # TODO: should time be a property of Sample or SampleSet?
-            sample.step = step
             newset[sample.replica] = sample
         return newset
 
@@ -271,8 +270,7 @@ class SampleSet(OPSNamed):
                 Sample(
                     replica=s.replica,
                     ensemble=translation[s.ensemble],
-                    trajectory=s.trajectory,
-                    step=s.step
+                    trajectory=s.trajectory
                 )
                 for s in sset
             ]
@@ -296,8 +294,7 @@ class SampleSet(OPSNamed):
                 samples.append(Sample(
                     replica=repid,
                     trajectory=s.trajectory,
-                    ensemble=s.ensemble,
-                    step=s.step
+                    ensemble=s.ensemble
                 ))
                 repid += 1
         return SampleSet(samples)
@@ -382,15 +379,13 @@ class Sample(object):
                  bias=1.0,
                  details=None,
                  parent=None,
-                 mover=None,
-                 step=-1
+                 mover=None
                  ):
         self.bias = bias
         self.replica = replica
         self.ensemble = ensemble
         self.trajectory = trajectory
         self.parent = parent
-        self.step = step
         self.details = details
         self.mover = mover
 
@@ -398,8 +393,7 @@ class Sample(object):
         return self.trajectory
 
     def __str__(self):
-        mystr = "Step: "+str(self.step)+"\n"
-        mystr += "Replica: "+str(self.replica)+"\n"
+        mystr  = "Replica: "+str(self.replica)+"\n"
         mystr += "Trajectory: "+str(self.trajectory)+"\n"
         mystr += "Ensemble: "+repr(self.ensemble)+"\n"
         return mystr

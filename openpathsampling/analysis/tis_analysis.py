@@ -483,7 +483,7 @@ class TISTransition(Transition):
         n_acc = 0
         n_try = 0
         for samp in samples:
-            if samp.ensemble == ensemble:
+            if samp.ensemble is ensemble:
                 if self.stateB(samp.trajectory[-1]):
                     n_acc += 1
                 n_try += 1

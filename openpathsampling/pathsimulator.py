@@ -34,7 +34,7 @@ class MCStep(OPSObject):
     """
     def __init__(self,
                  simulation=None,
-                 step=-1,
+                 step_number=-1,
                  previous=None,
                  active=None,
                  change=None
@@ -45,7 +45,7 @@ class MCStep(OPSObject):
         self.previous = previous
         self.active = active
         self.change = change
-        self.step = step
+        self.step_number = step_number
 
 class PathSimulator(OPSNamed):
 
@@ -63,6 +63,8 @@ class PathSimulator(OPSNamed):
             entries=['storage', 'engine']
         )
 
+        self.globalstate = None
+
     def set_replicas(self, samples):
         self.globalstate = paths.SampleSet(samples)
 
@@ -77,7 +79,7 @@ class PathSimulator(OPSNamed):
     def save_initial(self):
         mcstep = MCStep(
             simulation=self,
-            step=self.step,
+            step_number=self.step,
             previous=None,
             active=self.globalstate,
             change=paths.EmptyPathMoveChange()
@@ -216,7 +218,7 @@ class Bootstrapping(PathSimulator):
 
             mcstep = MCStep(
                 simulation=self,
-                step=self.step,
+                step_number=self.step,
                 previous=self.globalstate,
                 active=new_sampleset,
                 change=movepath
@@ -296,7 +298,7 @@ class PathSampling(PathSimulator):
 
             mcstep = MCStep(
                 simulation=self,
-                step=self.step,
+                step_number=self.step,
                 previous=self.globalstate,
                 active=new_sampleset,
                 change=movepath

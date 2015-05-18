@@ -1,6 +1,5 @@
 from openpathsampling.storage import ObjectStore
 from openpathsampling.pathsimulator import MCStep
-from openpathsampling.todict import OPSObject
 
 class MCStepStore(ObjectStore):
     def __init__(self, storage):
@@ -11,28 +10,15 @@ class MCStepStore(ObjectStore):
             load_partial=False
         )
 
-#        self.set_variable_partial_loading('details', self.update_details)
-#        self.set_variable_partial_loading('mover', self.update_mover)
-
         self._cached_all = False
-
-        self.class_list = OPSObject.objects()
 
     def save(self, mcstep, idx=None):
         if idx is not None:
-            values = self.list_to_numpy(mcstep.samples, 'samples')
-            self.storage.variables['change_samples_idxs'][idx] = values
-
-            if len(mcstep.subchanges) > 0:
-                map(self.storage.mcsteps.save, mcstep.subchanges)
-
-            values = self.list_to_numpy(mcstep.subchanges, 'mcsteps')
-            self.storage.variables['change_subchanges_idxs'][idx] = values
-
-            self.save_object('change_details', idx, mcstep.details)
-            self.save_object('change_pathmover', idx, mcstep.mover)
-
-            self.save_variable('change_cls', idx, mcstep.__class__.__name__)
+            self.save_object('mcstep_change', idx, mcstep.change)
+            self.save_object('mcstep_active', idx, mcstep.active)
+            self.save_object('mcstep_previous', idx, mcstep.previous)
+            self.save_object('mcstep_simulation', idx, mcstep.simulation)
+            self.save_object('mcstep_step', idx, mcstep.step_number)
 
     def load(self, idx):
         '''
@@ -49,30 +35,32 @@ class MCStepStore(ObjectStore):
             the sample
         '''
 
-        obj = self._load_partial(idx)
+        storage = self.storage
 
-        details_idx = int(self.storage.variables['change_details_idx'][idx])
-        obj.details = self.storage._details[details_idx]
+        previous_idx = self.storage.variables['mcstep_previous_idx'][idx]
+        active_idx = self.storage.variables['mcstep_active_idx'][idx]
+        simulation_idx = self.storage.variables['mcstep_simulation_idx'][idx]
+        change_idx = self.storage.variables['mcstep_simulation_idx'][idx]
 
-        return obj
+        step = self.storage.variables['mcstep_step'][idx]
+
+        return MCStep(
+            step_number=step,
+            previous=storage.samplesets[previous_idx],
+            active=storage.samplesets[active_idx],
+            simulation=storage.samplesets[simulation_idx],
+            change=storage.samplesets[change_idx]
+        )
 
     def _init(self, units=None):
-        super(PathMoveChangeStore, self)._init()
+        super(MCStepStore, self)._init()
 
         # New short-hand definition
-        self.init_variable('change_details_idx', 'index', chunksizes=(1, ))
-        self.init_variable('change_pathmover_idx', 'index', chunksizes=(1, ))
-        self.init_variable('change_cls', 'str', chunksizes=(1, ))
-
-        self.init_variable('change_subchanges_idxs', 'index',
-            variable_length = True,
-            chunksizes=(10240, )
-        )
-
-        self.init_variable('change_samples_idxs', 'index',
-            variable_length = True,
-            chunksizes=(10240, )
-        )
+        self.init_variable('mcstep_change_idx', 'index', chunksizes=(1, ))
+        self.init_variable('mcstep_active_idx', 'index', chunksizes=(1, ))
+        self.init_variable('mcstep_previous_idx', 'index', chunksizes=(1, ))
+        self.init_variable('mcstep_simulation_idx', 'index', chunksizes=(1, ))
+        self.init_variable('mcstep_step', 'int', chunksizes=(1, ))
 
     def all(self):
         self.cache_all()
@@ -85,56 +73,37 @@ class MCStepStore(ObjectStore):
         if not self._cached_all:
             idxs = range(len(self))
 
-            cls_names = self.storage.variables['change_cls'][:]
-            samples_idxss = self.storage.variables['change_samples_idxs'][:]
-            subchanges_idxss = self.storage.variables['change_subchanges_idxs'][:]
-            mover_idxs = self.storage.variables['change_pathmover_idx'][:]
+            storage = self.storage
 
-            [ self.add_empty_to_cache(i,c,g,m) for i,c,g,m in zip(
+            steps = storage.variables['change_cls'][:]
+            previous_idxs = storage.variables['change_samples_idxs'][:]
+            active_idxs = storage.variables['change_subchanges_idxs'][:]
+            simulation_idxs = storage.variables['change_pathmover_idx'][:]
+            change_idxs = storage.variables['']
+
+            [ self.add_to_cache(i, n, p, a, s, c) for i, n, p, a, s, c in zip(
                 idxs,
-                cls_names,
-                samples_idxss,
-                mover_idxs) ]
-
-            [ self._load_partial_subchanges(c,s) for c,s in zip(
-                self,
-                subchanges_idxss) ]
+                steps,
+                previous_idxs,
+                active_idxs,
+                simulation_idxs,
+                change_idxs) ]
 
             self._cached_all = True
 
 
-    def add_empty_to_cache(self, idx, cls_name, samples_idxs, mover_idx):
-
+    def add_to_cache(self, idx, step, previous_idx,
+                     active_idx, simulation_idx, change_idx):
         if idx not in self.cache:
-            obj = self._load_partial_samples(cls_name, samples_idxs, mover_idx)
+
+            storage = self.storage
+            obj = MCStep(
+                step_number=step,
+                previous=storage.samplesets[previous_idx],
+                active=storage.samplesets[active_idx],
+                simulation=storage.samplesets[simulation_idx],
+                change=storage.samplesets[change_idx]
+            )
             obj.idx[self.storage] = idx
-            obj._origin = self.storage
 
             self.cache[idx] = obj
-            del obj.details
-
-    def _load_partial(self, idx):
-        samples_idxs = self.storage.variables['change_samples_idxs'][idx]
-        subchanges_idxs = self.storage.variables['change_subchanges_idxs'][idx]
-        mover_idx = self.storage.variables['change_pathmover_idx'][idx]
-
-        cls_name = self.storage.variables['change_cls'][idx]
-
-        obj = self._load_partial_samples(cls_name, samples_idxs, mover_idx)
-        return self._load_partial_subchanges(obj, subchanges_idxs)
-
-    def _load_partial_subchanges(self, obj, subchanges_idxs):
-        if len(subchanges_idxs) > 0:
-            obj.subchanges = [ self.load(int(idx)) for idx in subchanges_idxs ]
-
-        return obj
-
-    def _load_partial_samples(self, cls_name, samples_idxs, mover_idx):
-        cls = self.class_list[cls_name]
-        obj = cls.__new__(cls)
-        PathMoveChange.__init__(obj, mover=self.storage.pathmovers[int(mover_idx)])
-
-        if len(samples_idxs) > 0:
-            obj.samples = [ self.storage.samples[int(idx)] for idx in samples_idxs ]
-
-        return obj
