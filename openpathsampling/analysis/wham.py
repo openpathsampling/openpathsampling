@@ -172,7 +172,10 @@ class WHAM(object):
         for val in crossing_prob:
             # absolute to keep if from breaking; only a problem if there
             # isn't actually enough data, though
-            self.lnZ.append(math.log(abs(scaling)*val))
+            if abs(scaling)*val > 0:
+                self.lnZ.append(math.log(abs(scaling)*val))
+            else:
+                self.lnZ.append(1e-16)
             scaled.append(scaling*val)
             scaling *= val
 

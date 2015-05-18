@@ -222,12 +222,12 @@ class MSTISNetwork(TISNetwork):
         for state in self.from_state.keys():
             transition = self.from_state[state]
             # set up the hist_args if necessary
-            for histname in self.ensemble_histogram_info.keys():
+            for histname in self.hist_args.keys():
                 trans_hist = transition.ensemble_histogram_info[histname]
                 if trans_hist.hist_args == {}:
                     trans_hist.hist_args = self.hist_args[histname]
         
-            transition.total_crossing_probability(storage)
+            transition.total_crossing_probability(storage=storage)
 
 
 #def multiple_set_minus_switching(mistis, storage):

@@ -57,7 +57,7 @@ def pathlength(sample):
     return len(sample.trajectory)
 
 def max_lambdas(sample, orderparameter):
-    return max([orderparameter(frame) for frame in sample.trajectory])
+    return max(orderparameter(sample.trajectory))
 
 def sampleset_sample_generator(storage):
     for sset in storage.samplesets:
