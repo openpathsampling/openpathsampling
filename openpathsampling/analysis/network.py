@@ -220,6 +220,8 @@ class MSTISNetwork(TISNetwork):
     def rate_matrix(self, storage, force=False):
         # for each transition in from_state:
         # 1. Calculate the flux and the TCP
+        self._rate_matrix = pd.DataFrame(columns=self.states,
+                                         index=self.states)
         for stateA in self.from_state.keys():
             transition = self.from_state[stateA]
             # set up the hist_args if necessary
@@ -248,11 +250,15 @@ class MSTISNetwork(TISNetwork):
                     transitionAB.ensemble_histogram_info = transition.ensemble_histogram_info
                     self.transitions[(stateA, stateB)] = transitionAB
 
+
         for trans in self.transitions.values():
             rate = trans.rate(storage)
-            print trans.stateA.name, trans.stateB.name, 
-            print trans._flux, trans.tcp(0.16), trans.ctp[trans.ensembles[-1]],
-            print rate
+            self._rate_matrix.set_value(trans.stateA, trans.stateB, rate)
+            #print trans.stateA.name, trans.stateB.name, 
+            #print rate
+
+        return self._rate_matrix
+
 
 
 
