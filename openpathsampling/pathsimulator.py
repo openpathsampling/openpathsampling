@@ -182,14 +182,16 @@ class Bootstrapping(PathSimulator):
         self.root = self.globalstate
 
     def run(self, nsteps):
-        if self.step == 0:
-            self.save_initial()
-
         bootstrapmove = self._bootstrapmove
 
         cvs = list(self.storage.cvs)
+        n_samples = len(self.storage.snapshots)
 
         ens_num = len(self.globalstate)-1
+
+        if self.step == 0:
+            self.save_initial()
+
         failsteps = 0
         # if we fail nsteps times in a row, kill the job
 
@@ -235,9 +237,10 @@ class Bootstrapping(PathSimulator):
 #                            )
 
             # compute all cvs now
-            for sample in movepath.trials:
-                for cv in cvs:
-                    cv(sample.trajectory)
+            for cv in cvs:
+                n_len = len(self.storage.snapshots)
+                cv(self.storage.snapshots[n_samples:n_len])
+                n_samples = n_len
 
 
             if self.storage is not None:
@@ -289,12 +292,13 @@ class PathSampling(PathSimulator):
         self._mover = paths.PathSimulatorMover(self.root_mover, self)
 
     def run(self, nsteps):
-        if self.step == 0:
-            self.save_initial()
-
         mcstep = None
 
+        n_samples = len(self.storage.snapshots)
         cvs = list(self.storage.cvs)
+
+        if self.step == 0:
+            self.save_initial()
 
         for nn in range(nsteps):
             self.step += 1
@@ -315,9 +319,10 @@ class PathSampling(PathSimulator):
             )
 
             # compute all cvs now
-            for sample in movepath.trials:
-                for cv in cvs:
-                    cv(sample.trajectory)
+            for cv in cvs:
+                n_len = len(self.storage.snapshots)
+                cv(self.storage.snapshots[n_samples:n_len])
+                n_samples = n_len
 
             if self.storage is not None:
                 self.storage.steps.save(mcstep)

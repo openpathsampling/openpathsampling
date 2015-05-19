@@ -57,7 +57,7 @@ def pathlength(sample):
     return len(sample.trajectory)
 
 def max_lambdas(sample, orderparameter):
-    return max([orderparameter(frame) for frame in sample.trajectory])
+    return max(orderparameter(sample.trajectory))
 
 def sampleset_sample_generator(storage):
     for step in storage.steps:
@@ -731,11 +731,17 @@ def summarize_trajectory_volumes(trajectory, label_dict):
     last_vol = None
     count = 0
     segment_labels = []
-    for frame in trajectory:
+
+    # this trick avoids loading all snapshot objects!
+    vol_list = [
+        { key : vol(frame) for key, vol in label_dict.iteritems() }
+        for frame in list.__iter__(trajectory)
+    ]
+
+    for frame in vol_list:
         in_state = []
         for key in label_dict.keys():
-            vol = label_dict[key]
-            if vol(frame):
+            if frame[key]:
                 in_state.append(key)
         if len(in_state) > 1:
             raise RuntimeError("Volumes given to summarize_trajectory not disjoint")

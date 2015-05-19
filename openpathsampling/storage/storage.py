@@ -67,6 +67,7 @@ class Storage(netcdf.Dataset):
         self.samples = paths.storage.SampleStore(storage)
         self.samplesets = paths.storage.SampleSetStore(storage)
         self.pathmovechanges = paths.storage.PathMoveChangeStore(storage)
+        self.steps = paths.storage.MCStepStore(storage)
 
         self.collectivevariables = paths.storage.ObjectDictStore(storage, paths.CollectiveVariable, paths.Snapshot)
         self.cvs = self.collectivevariables
@@ -79,7 +80,6 @@ class Storage(netcdf.Dataset):
         self.shootingpointselectors = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, has_uid=False, has_name=True)
         self.engines = paths.storage.ObjectStore(storage, paths.DynamicsEngine, has_uid=True, has_name=True)
         self.pathsimulators = paths.storage.ObjectStore(storage, paths.PathSimulator, has_uid=True, has_name=True)
-        self.steps = paths.storage.ObjectStore(storage, paths.MCStep, has_uid=True)
         self.transitions = paths.storage.ObjectStore(storage, paths.TISTransition, has_uid=True, has_name=True)
 
         # nestable objects
