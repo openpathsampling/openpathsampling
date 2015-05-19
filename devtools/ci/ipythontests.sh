@@ -7,6 +7,7 @@ python ipynbtest.py "alanine.ipynb" || testfail=1
 python ipynbtest.py "sliced_sequential_ensembles.ipynb" || testfail=1
 python ipynbtest.py "toy_bootstrapping.ipynb" || testfail=1
 python ipynbtest.py "toy_tis.ipynb" || testfail=1
+python ipynbtest.py "toy_analysis.ipynb" || testfail=1
 python ipynbtest.py "repex_networks.ipynb" || testfail=1
 python ipynbtest.py "multistate_system_setup.ipynb" || testfail=1
 python ipynbtest.py "langevin_integrator_check.ipynb" || testfail=1
