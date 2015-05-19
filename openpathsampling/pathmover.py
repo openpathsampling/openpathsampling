@@ -840,6 +840,9 @@ class StateSwapGenerator(SampleGenerator):
 class ReplicaExchangeMover(ReplicaExchangeGenerator):
     pass
 
+class StateSwapMover(StateSwapGenerator):
+    pass
+
 ###############################################################################
 # SUBTRAJECTORY GENERATORS
 ###############################################################################

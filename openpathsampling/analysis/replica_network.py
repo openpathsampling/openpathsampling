@@ -8,8 +8,6 @@ import networkx as nx
 import logging
 logger = logging.getLogger(__name__)
 
-
-
 class ReplicaNetwork(object):
 
     def __init__(self, repex_movers=None, ensembles=None, storage=None):
@@ -146,7 +144,7 @@ class ReplicaNetwork(object):
                             self.analysis['n_accepted'][(ens1, ens2)] = 1
             else:
                 for delta in pmc:
-                    if isinstance(delta.mover, paths.SwappingMover):
+                    if isinstance(delta.mover, paths.ReplicaExchangeMover):
                         if len(delta.trials) == 2:
                             ens1 = delta.trials[0].ensemble
                             ens2 = delta.trials[1].ensemble
