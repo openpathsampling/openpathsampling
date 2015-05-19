@@ -111,8 +111,8 @@ class WHAM(object):
             self.sum_hist.remove(0.0)
             self.keys.remove(deadkey)
 
-        #print self.keys
-        #print self.sum_hist
+        logger.debug("keys="+str(self.keys))
+        logger.debug("sum_hist="+str(self.sum_hist))
         #print self.nt
         #print math.fsum(self.nt), math.fsum(self.sum_hist)
 
@@ -178,8 +178,10 @@ class WHAM(object):
                 self.lnZ.append(1e-16)
             scaled.append(scaling*val)
             scaling *= val
+        if self.lnZ == [0.0]*len(self.lnZ):
+            self.lnZ = [1.0]*len(self.lnZ)
+        logger.debug("guess_lnZ: "+str(self.lnZ))
 
-        return
 
     # wham iterations; returns the WHAM lnZ weights
     def generate_lnZ(self):
