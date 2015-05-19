@@ -394,6 +394,15 @@ class MultiStore(Store):
 
         [store.sync() for store in self.cod_stores.values()]
 
+    def cache_all(self):
+        if len(self.storages) != len(self.cod_stores):
+            self.update_nod_stores()
+
+        if len(self.cod_stores) == 0:
+            return None
+
+        [store.cache_all() for store in self.cod_stores.values()]
+
     def add_nod_store(self, storage):
         self.cod_stores[storage] = BufferedStore(
             self.name, self.dimensions, getattr(storage, self.store_name),
