@@ -266,9 +266,21 @@ class MSTISNetwork(TISNetwork):
 
 class MISTISNetwork(TISNetwork):
     def __init__(self, transitions):
+        self.transitions = transitions
         pass
+
+    def build_movers(self):
+        for label in ['shooting', 'pathreversal', 'repex']:
+            self.movers[label] = get_movers_from_transitions(
+                label=label,
+                transitions=self.from_state.values()
+            )
+        # put together the MS outer movers for MISTIS
+        # put together the multiple set minus movers for MISTIS
+
 
 
     def default_movers(self):
         pass
+
 
