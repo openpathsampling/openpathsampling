@@ -220,7 +220,6 @@ class PathMoveChange(TreeMixin, OPSObject):
             return ':'.join([sub.description for sub in subs])
 
 
-
 class EmptyPathMoveChange(PathMoveChange):
     """
     A PathMoveChange representing no changes

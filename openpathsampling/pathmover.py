@@ -732,7 +732,7 @@ class BackwardExtendMover(BackwardExtendGenerator):
 # REPLICA EXCHANGE GENERATORS
 ###############################################################################
 
-class ReplicaExchangeGenerator(SampleGenerator, SwappingMover):
+class ReplicaExchangeGenerator(SampleGenerator):
     def __init__(self, bias=None, ensembles=None):
         # either replicas or ensembles must be a list of pairs; more
         # complicated filtering can be done with a wrapper class
@@ -784,6 +784,58 @@ class ReplicaExchangeGenerator(SampleGenerator, SwappingMover):
 
         return [trial1, trial2]
 
+class StateSwapGenerator(SampleGenerator):
+    def __init__(self, bias=None, ensembles=None):
+        # either replicas or ensembles must be a list of pairs; more
+        # complicated filtering can be done with a wrapper class
+        super(StateSwapGenerator, self).__init__(ensembles)
+        self.bias = bias
+        initialization_logging(logger=init_log, obj=self,
+                               entries=['bias'])
+
+    def _ensemble_selector(self, globalstate):
+        list_of_ensemble_pairs = make_list_of_pairs(self.ensembles)
+        selected = random.choice(list_of_ensemble_pairs)
+        return selected
+
+    def __call__(self, sample1, sample2):
+        # convert sample to the language used here before
+
+        # it is almost a RepEx move but the two trajectories are reversed
+        trajectory1 = sample1.trajectory.reversed
+        trajectory2 = sample2.trajectory.reversed
+        ensemble1 = sample1.ensemble
+        ensemble2 = sample2.ensemble
+        replica1 = sample1.replica
+        replica2 = sample2.replica
+
+        from1to2 = ensemble2(trajectory1)
+        logger.debug("trajectory " + repr(trajectory1) +
+                     " into ensemble " + repr(ensemble2) +
+                     " : " + str(from1to2))
+        from2to1 = ensemble1(trajectory2)
+        logger.debug("trajectory " + repr(trajectory2) +
+                     " into ensemble " + repr(ensemble1) +
+                     " : " + str(from2to1))
+
+        trial1 = paths.Sample(
+            replica=replica1,
+            trajectory=trajectory1,
+            ensemble=ensemble2,
+            parent=sample1,
+            details=SampleDetails(),
+            mover=self
+        )
+        trial2 = paths.Sample(
+            replica=replica2,
+            trajectory=trajectory2,
+            ensemble=ensemble1,
+            parent=sample2,
+            details=SampleDetails(),
+            mover=self
+        )
+
+        return [trial1, trial2]
 
 class ReplicaExchangeMover(ReplicaExchangeGenerator):
     pass
@@ -1477,7 +1529,7 @@ class OneWayShootingMover(RandomChoiceMover):
         self.selector = selector
 
 
-class MinusMover(WrappedMover, SwappingMover):
+class MinusMover(WrappedMover):
     """
     Instance of a MinusMover.
 
