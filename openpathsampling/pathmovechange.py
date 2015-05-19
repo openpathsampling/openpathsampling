@@ -201,12 +201,13 @@ class PathMoveChange(TreeMixin, OPSObject):
         else:
             return 'SampleMove : %s : %s :[]' % (self.mover.cls, self.accepted)
 
-    def canonical_mover(self):
+    @property
+    def canonical(self):
         pmc = self
         while pmc.subchange is not None:
             pmc = pmc.subchange
 
-        return pmc.mover
+        return pmc
 
     @property
     def description(self):
