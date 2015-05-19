@@ -213,21 +213,6 @@ class Transition(OPSNamed):
         return self.ensembles
 
 
-    def calculate_mover_acceptance(self, storage, movers=None):
-        # regularlize format of movers argument:
-        if movers is None:
-            movers = self.all_movers
-        try:
-            nmovers = len(movers)
-        except TypeError:
-            nmovers = 1
-            movers = [movers]
-
-        for movechange in storage.movepath:
-            pass
-        pass
-
-
     def to_dict(self):
         return {
             'stateA' : self.stateA,
@@ -306,7 +291,6 @@ class TISTransition(Transition):
 
         self.total_crossing_probability_method="wham" 
         self.histograms = {}
-        self._ensemble_histograms = {}
         # caches for the results of our calculation
         self._flux = None
         self._rate = None
@@ -323,6 +307,22 @@ class TISTransition(Transition):
                 hist_args={}
             )
         }
+
+    def copy(self, with_results=True):
+        copy = self.from_dict(self.to_dict())
+        copy.default_orderparameter = self.default_orderparameter
+        copy.total_crossing_probability_method = self.total_crossing_probability_method
+        copy.ensemble_histogram_info = self.ensemble_histogram_info
+        copy.histograms = self.histograms
+        copy._flux = self._flux
+        copy._rate = self._rate
+        if hasattr(self, "tcp"):
+            copy.tcp = self.tcp
+        if hasattr(self, "ctp"):
+            copy.ctp = self.ctp
+        return copy
+
+
 
     def __str__(self):
         mystr = str(self.__class__.__name__) + ": " + str(self.name) + "\n"

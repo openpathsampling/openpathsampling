@@ -230,24 +230,28 @@ class MSTISNetwork(TISNetwork):
                 if trans_hist.hist_args == {}:
                     trans_hist.hist_args = self.hist_args[histname]
         
-            transition.total_crossing_probability(storage=storage)
+            transition.total_crossing_probability(storage=storage,
+                                                  force=force)
+            transition.minus_move_flux(storage=storage, force=force)
             for stateB in self.from_state.keys():
                 if stateA != stateB:
+                    transitionAB = transition.copy()
+                    transitionAB.stateB = stateB
                     # TODO: make all of this into a retis.copy() 
-                    transitionAB = paths.RETISTransition(
-                        stateA=stateA, 
-                        stateB=stateB,
-                        interfaces=transition.interfaces,
-                        orderparameter=transition.orderparameter,
-                        name=str(stateA.name)+"->"+str(stateB.name)
-                    )
-                    transitionAB.ensembles = transition.ensembles
-                    transitionAB.minus_ensemble = transition.minus_ensemble
-                    transitionAB.movers = transition.movers
-                    transitionAB.histograms = transition.histograms
-                    transitionAB._flux = transition._flux
-                    transitionAB.tcp = transition.tcp
-                    transitionAB.ensemble_histogram_info = transition.ensemble_histogram_info
+                    #transitionAB = paths.RETISTransition(
+                    #    stateA=stateA, 
+                    #    stateB=stateB,
+                    #    interfaces=transition.interfaces,
+                    #    orderparameter=transition.orderparameter,
+                    #    name=str(stateA.name)+"->"+str(stateB.name)
+                    #)
+                    #transitionAB.ensembles = transition.ensembles
+                    #transitionAB.minus_ensemble = transition.minus_ensemble
+                    #transitionAB.movers = transition.movers
+                    #transitionAB.histograms = transition.histograms
+                    #transitionAB._flux = transition._flux
+                    #transitionAB.tcp = transition.tcp
+                    #transitionAB.ensemble_histogram_info = transition.ensemble_histogram_info
                     self.transitions[(stateA, stateB)] = transitionAB
 
 
