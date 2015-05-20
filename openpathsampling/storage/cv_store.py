@@ -64,9 +64,8 @@ class ObjectDictStore(ObjectStore):
             objectdict.sync(storage=self.storage)
 
     def cache_all(self):
-        cvs = list(self)
-        for cv in cvs:
-            cv.cache_all(self)
+        for cv in self:
+            cv.cache_all(self.storage)
 
     def set_value(self, objectdict, position, value):
         storage = self.storage

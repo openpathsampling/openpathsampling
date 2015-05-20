@@ -58,6 +58,8 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
             print type(name), len(name)
             raise ValueError('name must be a non-empty string')
 
+        OPSNamed.__init__(self)
+
         self.dimensions = dimensions
 
         self.single_dict = cd.ExpandSingle()
@@ -65,12 +67,7 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
         self.multi_dict = cd.ExpandMulti()
         self.cache_dict = cd.ChainDict()
 
-        OPSNamed.__init__(self)
-
         self.name = name
-
-        if hasattr(self, '_eval'):
-
         self.store_cache = store_cache
 
         if has_eval:
@@ -136,9 +133,10 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
         storage : Storage or None
             the store to be used, otherwise all underlying storages are synced
         """
-        self.store_dict.update_nod_stores()
-        if storage in self.store_dict.cod_stores:
-            self.store_dict.cod_stores[storage].cache_all()
+        if hasattr(self, 'store_dict'):
+            self.store_dict.update_nod_stores()
+            if storage in self.store_dict.cod_stores:
+                self.store_dict.cod_stores[storage].cache_all()
 
     def _pre_item(self, items):
         if self.store_cache:
@@ -239,7 +237,7 @@ class CV_Function(CollectiveVariable):
     """
 
     allow_marshal = True
-    _allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy']
+    _allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy', 'pandas']
 
     def __init__(self, name, fcn, dimensions=1, store_cache=True, **kwargs):
         """
@@ -270,7 +268,7 @@ class CV_Function(CollectiveVariable):
 
         What we can do, is analyse your function and determine which variables
         (if at all these are) and inform you, if you might run into trouble.
-        To avoid problem you should try to:
+        To avoid problems you should try to:
         1. import necessary modules inside of your function
         2. create constants inside your function
 
@@ -279,8 +277,8 @@ class CV_Function(CollectiveVariable):
         >>>     indices = [4,6,8,10]
         >>>     return md.compute_dihedrals(Trajectory([snapshot]).md(), [indices=indices])
 
-        We will also check if non-standard modules are importet, which are now
-        numpy, math, msmbuilder and mdtraj
+        We will also check if non-standard modules are imported, which are now
+        numpy, math, msmbuilder, pandas and mdtraj
         """
         super(CV_Function, self).__init__(
             name,
@@ -289,7 +287,6 @@ class CV_Function(CollectiveVariable):
         )
         self.callable_fcn = fcn
         self.kwargs = kwargs
-        return
 
     @staticmethod
     def _find_var(code, op):
@@ -299,7 +296,7 @@ class CV_Function(CollectiveVariable):
         while i < len(opcodes):
             if ord(opcodes[i]) == op:
                 ret.append((i, ord(opcodes[i+1]) + ord(opcodes[i+2]) * 256))
-            if opcodes[i] < opcode.HAVE_ARGUMENT: #90, as mentioned earlier
+            if opcodes[i] < opcode.HAVE_ARGUMENT:
                 i += 1
             else:
                 i += 3
@@ -606,7 +603,7 @@ class CV_Featurizer(CV_Class):
     cls
     """
 
-    def __init__(self, name, featurizer, store_cache, **kwargs):
+    def __init__(self, name, featurizer, store_cache=True, **kwargs):
         """
 
         Parameters
@@ -635,7 +632,7 @@ class CV_Featurizer(CV_Class):
             name,
             cls=featurizer,
             dimensions=self._feat.n_features,
-            store_cache=store_cache
+            store_cache=store_cache,
             **self.kwargs
         )
 
