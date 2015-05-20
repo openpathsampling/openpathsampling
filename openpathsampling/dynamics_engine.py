@@ -187,7 +187,7 @@ class DynamicsEngine(OPSNamed):
         }
 
     def set_as_default(self):
-        paths.EngineGenerator.engine = self
+        paths.EngineGeneratingMover.engine = self
 
     @property
     def default_options(self):

@@ -27,16 +27,16 @@ from pathmover import (
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
-    PathSimulatorMover, PathReversalSet, StateSwapGenerator,
-    NeighborEnsembleReplicaExchange, SampleGenerator, StateSwapMover,
-    FinalSubtrajectorySelectMover, BackwardExtendGenerator,
-    BackwardShootGenerator, EngineGenerator, SwappingMover,
-    ExtendingGenerator, FilterBySample, FirstSubtrajectorySelectMover,
-    ForwardExtendGenerator, ForwardShootGenerator,
-    MultipleSetMinusMover, OneWayShootingMover, PathReversalGenerator,
-    RandomSubtrajectorySelectGenerator, RandomSubtrajectorySelectMover,
-    ReplicaExchangeGenerator, ShootGenerator, ShootMover, WrappedMover,
-    BackwardExtendMover, EnsembleFilterMover, ForwardExtendMover
+    PathSimulatorMover, PathReversalSet, StateSwapGeneratingMover,
+    NeighborEnsembleReplicaExchange, SampleGeneratingMover, StateSwapMover,
+    FinalSubtrajectorySelectMover, BackwardExtendGeneratingMover,
+    BackwardShootGeneratingMover, EngineGeneratingMover, SwappingMover,
+    ExtendingGeneratingMover, FilterBySample, FirstSubtrajectorySelectMover,
+    ForwardExtendGeneratingMover, ForwardShootGeneratingMover,
+    MultipleSetMinusMover, OneWayShootingMover, PathReversalGeneratingMover,
+    RandomSubtrajectorySelectGeneratingMover, RandomSubtrajectorySelectMover,
+    ReplicaExchangeGeneratingMover, ShootGeneratingMover, ShootMover,
+    WrappedMover, BackwardExtendMover, EnsembleFilterMover, ForwardExtendMover
 )
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
