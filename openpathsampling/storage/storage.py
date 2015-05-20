@@ -80,7 +80,8 @@ class Storage(netcdf.Dataset):
         self.shootingpointselectors = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, has_uid=False, has_name=True)
         self.engines = paths.storage.ObjectStore(storage, paths.DynamicsEngine, has_uid=True, has_name=True)
         self.pathsimulators = paths.storage.ObjectStore(storage, paths.PathSimulator, has_uid=True, has_name=True)
-        self.transitions = paths.storage.ObjectStore(storage, paths.TISTransition, has_uid=True, has_name=True)
+        self.transitions = paths.storage.ObjectStore(storage, paths.Transition, has_uid=True, has_name=True)
+        self.networks = paths.storage.ObjectStore(storage, paths.TransitionNetwork, has_uid=True, has_name=True)
 
         # nestable objects
 
@@ -90,10 +91,6 @@ class Storage(netcdf.Dataset):
         # special objects
         # TODO: remove query? Not really needed, is it?
 
-        self.networks = paths.storage.ObjectStore(storage,
-                                                  paths.MSTISNetwork,
-                                                  has_uid=True
-                                                 )
 
         self.query = paths.storage.QueryStore(storage)
 

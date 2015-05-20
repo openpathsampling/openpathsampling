@@ -73,7 +73,7 @@ from analysis.tis_analysis import (
 )
 
 from analysis.network import (
-    MSTISNetwork
+    MSTISNetwork, TransitionNetwork
 )
 
 from analysis.replica_network import (
