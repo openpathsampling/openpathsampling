@@ -21,7 +21,7 @@ class MCStep(OPSObject):
     ----------
     simulation : PathSimulation
         the running pathsimulation responsible for generating the step
-    step_number : int
+    mccycle : int
         the step number counting from the root sampleset
     previous : SampleSet
         the initial (pre) sampleset
@@ -32,7 +32,7 @@ class MCStep(OPSObject):
     """
     def __init__(self,
                  simulation=None,
-                 step_number=-1,
+                 mccycle=-1,
                  previous=None,
                  active=None,
                  change=None
@@ -43,7 +43,7 @@ class MCStep(OPSObject):
         self.previous = previous
         self.active = active
         self.change = change
-        self.step_number = step_number
+        self.mccycle = mccycle
 
 class PathSimulator(OPSNamed):
 
@@ -92,7 +92,7 @@ class PathSimulator(OPSNamed):
         """
         mcstep = MCStep(
             simulation=self,
-            step_number=self.step,
+            mccycle=self.step,
             previous=None,
             active=self.globalstate,
             change=paths.EmptyPathMoveChange()
@@ -267,7 +267,7 @@ class Bootstrapping(PathSimulator):
 
             mcstep = MCStep(
                 simulation=self,
-                step_number=self.step,
+                mccycle=self.step,
                 previous=self.globalstate,
                 active=new_sampleset,
                 change=movepath
@@ -378,7 +378,7 @@ class PathSampling(PathSimulator):
 
             mcstep = MCStep(
                 simulation=self,
-                step_number=self.step,
+                mccycle=self.step,
                 previous=self.globalstate,
                 active=new_sampleset,
                 change=movepath

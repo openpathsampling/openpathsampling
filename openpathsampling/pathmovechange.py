@@ -80,6 +80,14 @@ class PathMoveChange(TreeMixin, OPSObject):
         return self.__class__.__name__[:-14] + '(' + str(self.idx.values()) + ')'
 
     def movetree(self):
+        """
+        Return a tree with the movers of each node
+
+        Notes
+        -----
+        This is equivalent to
+        `tree.map_tree(lambda x : x.mover)`
+        """
         return self.map_tree(lambda x : x.mover)
 
     @property
@@ -102,10 +110,6 @@ class PathMoveChange(TreeMixin, OPSObject):
         will be replaced by #2 which will be replaced by #3. So this function
         will return only the last sample.
 
-        See also
-        --------
-        PathMoveChange.reduced()
-
         """
         if self._collapsed is None:
             s = paths.SampleSet([]).apply_samples(self.results)
@@ -124,6 +128,12 @@ class PathMoveChange(TreeMixin, OPSObject):
         Returns if this particular move was accepted.
 
         Mainly used for rejected samples.
+
+        Notes
+        -----
+        Acceptance is determined from the number of resulting samples. If at
+        least one sample is returned then this move will change the sampleset
+        and is considered an accepted change.
         """
         if self._accepted is None:
             self._accepted = len(self.results) > 0
@@ -133,6 +143,12 @@ class PathMoveChange(TreeMixin, OPSObject):
     def __add__(self, other):
         """
         This allows to use `+` to create SequentialPMCs
+
+        Notes
+        -----
+        You can also use this to apply several changes
+        >>> new_sset = old_sset + change1 + change2
+        >>> new_sset = old_sset + (change1 + change2)
         """
         if isinstance(other, PathMoveChange):
             return SequentialPathMoveChange([self, other])
@@ -192,6 +208,10 @@ class PathMoveChange(TreeMixin, OPSObject):
         -------
         list of Sample
             the list of all samples generated for this move
+
+        Notes
+        -----
+        This function needs to be implemented for custom changes
         """
         return []
 
@@ -203,6 +223,25 @@ class PathMoveChange(TreeMixin, OPSObject):
 
     @property
     def canonical(self):
+        """
+        Return the first non single-subchange
+
+        Notes
+        -----
+        Usually a mover that returns a single subchange is for deciding what to
+        do rather than describing what is actually happening. This property
+        returns the first mover that is not one of these delegating movers and
+        contains information of what has been done in this move.
+
+        What you are usually interested in is `.canonical.mover` to get the
+        relevant mover.
+
+        Examples
+        --------
+        >>> a = OnewayShootingMover()
+        >>> change = a.move(sset)
+        >>> change.canonical.mover  # returns either Forward or Backward
+        """
         pmc = self
         while pmc.subchange is not None:
             pmc = pmc.subchange
@@ -211,6 +250,9 @@ class PathMoveChange(TreeMixin, OPSObject):
 
     @property
     def description(self):
+        """
+        Return a compact representation of the change
+        """
         subs = self.subchanges
         if len(subs) == 0:
             return str(self.mover)

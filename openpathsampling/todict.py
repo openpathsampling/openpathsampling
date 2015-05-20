@@ -5,7 +5,6 @@ from simtk import unit as units
 import yaml
 import openpathsampling as paths
 import inspect
-import copy
 
 class OPSObject(object):
     """Mixin that allows an object to carry a .name property that can be saved

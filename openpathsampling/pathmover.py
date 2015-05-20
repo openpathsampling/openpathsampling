@@ -50,9 +50,9 @@ def make_list_of_pairs(l):
         outlist = l
     else:
         assert len(l) % 2 == 0, "Flattened list: length not divisible by 2"
-        outlist = [ [a, b] 
-                   for (a, b) in zip(l[slice(0,None,2)], l[slice(1,None,2)])
-                  ]
+        outlist = [
+            [a, b] for (a, b) in zip(l[slice(0, None, 2)], l[slice(1, None,2 )])
+        ]
     # Note that one thing we don't check is whether the items are of the
     # same type. That might be worth doing someday; for now, we trust that
     # part to work.
@@ -145,17 +145,22 @@ class PathMover(TreeMixin, OPSNamed):
 
     @property
     def submovers(self):
-        return []
+        """
+        Returns a list of submovers
 
-    def __call__(self, sample_set):
-        return sample_set
+        Returns
+        -------
+        list of openpathsampling.PathMover
+            the list of sub-movers
+        """
+        return []
 
     @staticmethod
     def _flatten(ensembles):
         if type(ensembles) is list:
-            return [ s for ens in ensembles for s in PathMover._flatten(ens) ]
+            return [s for ens in ensembles for s in PathMover._flatten(ens)]
         else:
-            return [ ensembles ]
+            return [ensembles]
 
     @property
     def in_ensembles(self):
@@ -229,8 +234,8 @@ class PathMover(TreeMixin, OPSNamed):
         for rep in reps:
             rep_samples.extend(globalstate.all_from_replica(rep))
 
-        #logger.debug("ensembles = " + str([ensembles]))
-        #logger.debug("self.ensembles = " + str(self.ensembles))
+        # logger.debug("ensembles = " + str([ensembles]))
+        # logger.debug("self.ensembles = " + str(self.ensembles))
         if ensembles is None:
             if self.ensembles is None:
                 ensembles = 'all'
@@ -244,9 +249,9 @@ class PathMover(TreeMixin, OPSNamed):
             if type(ensembles) is not list:
                 ensembles = [ensembles]
             for ens in ensembles:
-                #try:
-                    #ens_samples.extend(globalstate.all_from_ensemble(ens[0]))
-                #except TypeError:
+                # try:
+                #     ens_samples.extend(globalstate.all_from_ensemble(ens[0]))
+                # except TypeError:
                 ens_samples.extend(globalstate.all_from_ensemble(ens))
             legal_samples = list(set(rep_samples) & set(ens_samples))
 
@@ -261,7 +266,7 @@ class PathMover(TreeMixin, OPSNamed):
         Samples are not reproducible when applied to a SampleSet!
         """
         if replicas is None:
-            replicas='all'
+            replicas = 'all'
 
         logger.debug("replicas: "+str(replicas)+" ensembles: "+repr(ensembles))
         legal = self.legal_sample_set(globalstate, ensembles, replicas)
@@ -294,13 +299,14 @@ class PathMover(TreeMixin, OPSNamed):
 
         """
 
-        return paths.EmptyPathMoveChange() # pragma: no cover
+        return paths.EmptyPathMoveChange()  # pragma: no cover
 
     def __str__(self):
         if self.name == self.__class__.__name__:
             return self.__repr__()
         else:
             return self.name
+
 
 ###############################################################################
 # MOVER TYPES
@@ -314,6 +320,7 @@ class SwappingMover(MoverType):
     A mover that swaps samples from ensembles in some way. Relevant for mixing
     """
 
+
 ###############################################################################
 # GENERATORS
 ###############################################################################
@@ -322,7 +329,7 @@ class SampleGenerator(PathMover):
     engine = None
 
     @classmethod
-    def Metropolis(cls, trials):
+    def metropolis(cls, trials):
         """Implements the Metropolis acceptance for a list of trial samples
 
         The Metropolis uses the .bias for each sample and checks of samples
@@ -332,14 +339,14 @@ class SampleGenerator(PathMover):
 
         Parameters
         ----------
-        trials : list of Sample
+        trials : list of openpathsampling.Sample
             the list of all samples to be applied in a change.
 
         Returns
         -------
         bool
             True if the trial is accepted, False otherwise
-        details
+        details : openpathsampling.MoveDetails
             Returns a MoveDetails object that contains information about the
             decision, i.e. total acceptance and random number
 
@@ -365,14 +372,13 @@ class SampleGenerator(PathMover):
 
         rand = random.random()
 
-
         if rand > probability:
             # rejected
             accepted = False
 
         details = paths.MoveDetails(
-            total_acceptance = probability,
-            random_value = rand
+            total_acceptance=probability,
+            random_value=rand
         )
 
         return accepted, details
@@ -403,7 +409,7 @@ class SampleGenerator(PathMover):
         ensembles = self._ensemble_selector(globalstate)
 
         # 2. pick samples from these ensembles
-        samples = [ self.select_sample(globalstate, ens) for ens in ensembles ]
+        samples = [self.select_sample(globalstate, ens) for ens in ensembles]
 
         # 3. pass these samples to the generator
         trials = self(*samples)
@@ -415,14 +421,14 @@ class SampleGenerator(PathMover):
         if accepted:
             return paths.AcceptedSamplePathMoveChange(
                 samples=trials,
-                mover = self,
-                details = details
+                mover=self,
+                details=details
             )
         else:
             return paths.RejectedSamplePathMoveChange(
                 samples=trials,
-                mover = self,
-                details = details
+                mover=self,
+                details=details
             )
 
     def __call__(self, *args):
@@ -443,7 +449,7 @@ class SampleGenerator(PathMover):
         Defaults to calling the Metropolis acceptance criterion for all returned
         trial samples. Means all samples most be valid and accepted.
         """
-        return self.Metropolis(trials)
+        return self.metropolis(trials)
 
 
 ###############################################################################
@@ -600,10 +606,8 @@ class BackwardShootGenerator(ShootGenerator):
 
 class ShootMover(ShootGenerator):
     """
-    A pathmover that implements a general shooting algorithm that generates
-    a sample from a specified ensemble
+    A pathmover that implements a general shooting algorithm
     """
-
 
 class ForwardShootMover(ForwardShootGenerator):
     """
@@ -622,21 +626,36 @@ class BackwardShootMover(BackwardShootGenerator):
 ###############################################################################
 
 class ExtendingGenerator(EngineGenerator):
+    """
+    Sample Generator that creates Samples using extensions
 
+    Extending will create samples in a super ensemble from samples
+    in a smaller ensemble by forward or backward extending the original
+    sample until it is in the target ensemble. This requires the the target
+    ensemble is reachable from the initial ensemble
+    """
     def __init__(self, extend_ensemble, ensembles=None):
+        """
+        Parameters
+        ----------
+        extend_ensemble : openpathsampling.Ensemble
+            the target ensemble
+        ensembles : openpathsampling.Ensemble
+            the initial ensemble to be started from
+        """
         super(ExtendingGenerator, self).__init__(
             ensembles
         )
         self.extend_ensemble = extend_ensemble
 
     def _ensemble_selector(self, globalstate):
-        return [ self.ensembles ]
+        return [self.ensembles]
 
     def _get_in_ensembles(self):
-        return [ self.ensembles ]
+        return [self.ensembles]
 
     def _get_out_ensembles(self):
-        return [ self.extend_ensemble ]
+        return [self.extend_ensemble]
 
     def __call__(self, trial):
         initial_trajectory = trial.trajectory
@@ -670,6 +689,9 @@ class ExtendingGenerator(EngineGenerator):
 
 
 class ForwardExtendGenerator(ExtendingGenerator):
+    """
+    A Sample Generator implementing Forward Extension
+    """
     def _extend(self, initial_trajectory, ensemble):
         shoot_str = "Extending {sh_dir} from frame {fnum} in [0:{maxt}]"
         logger.info(shoot_str.format(fnum=len(initial_trajectory)-1,
@@ -695,6 +717,9 @@ class ForwardExtendGenerator(ExtendingGenerator):
 
 
 class BackwardExtendGenerator(ExtendingGenerator):
+    """
+    A Sample Generator implementing Backward Extension
+    """
     def _extend(self, initial_trajectory, ensemble):
         shoot_str = "Extending {sh_dir} from frame {fnum} in [0:{maxt}]"
         logger.info(shoot_str.format(fnum=0,
@@ -733,7 +758,18 @@ class BackwardExtendMover(BackwardExtendGenerator):
 ###############################################################################
 
 class ReplicaExchangeGenerator(SampleGenerator):
+    """
+    A Sample Generator implementing a standard Replica Exchange
+    """
+
     def __init__(self, bias=None, ensembles=None):
+        """
+        Parameters
+        ----------
+        bias : list of float
+            bias is not used yet
+        ensembles : list of openpathsampling.Ensemble
+        """
         # either replicas or ensembles must be a list of pairs; more
         # complicated filtering can be done with a wrapper class
         super(ReplicaExchangeGenerator, self).__init__(ensembles)
