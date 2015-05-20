@@ -16,7 +16,6 @@ import openpathsampling as paths
 #=============================================================================================
 
 
-
 class Trajectory(list):
     """
     Simulation trajectory. Essentially a python list of snapshots
@@ -64,6 +63,26 @@ class Trajectory(list):
 
     def __repr__(self):
         return 'Trajectory[' + str(len(self)) + ']'
+
+    def map(self, fnc, allow_fast=True):
+        """
+        This runs a function and tries to be fast.
+
+        Fast here means that functions that are purely based on CVs can be
+        evaluated without actually loading the real Snapshot object. This
+        functions tries to do that and if it fails it does it the usual way
+        and creates the snapshot object. This bears the possibility that
+        the function uses the fake snapshots and returns a non-sense value.
+        It is up to the user to make sure this will not happen.
+        """
+
+        if allow_fast:
+            try:
+                return [fnc(frame) for frame in list.__iter__(self)]
+            except:
+                return self.map(fnc, allow_fast=False)
+
+        return [fnc(frame) for frame in self]
 
     @property
     def reversed(self):

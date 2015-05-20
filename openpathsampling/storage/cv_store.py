@@ -7,7 +7,8 @@ class ObjectDictStore(ObjectStore):
             storage,
             cls,
             has_uid=True,
-            json=True
+            json=True,
+            has_name=True
         )
         self.key_class = key_class
 
@@ -61,6 +62,11 @@ class ObjectDictStore(ObjectStore):
 
         if objectdict.store_cache:
             objectdict.sync(storage=self.storage)
+
+    def cache_all(self):
+        cvs = list(self)
+        for cv in cvs:
+            cv.cache_all(self)
 
     def set_value(self, objectdict, position, value):
         storage = self.storage
@@ -128,15 +134,9 @@ class ObjectDictStore(ObjectStore):
 
         return op
 
-    def _init(self):
+    def _init(self, **kwargs):
         """
         Initialize the associated storage to allow for ensemble storage
 
         """
         super(ObjectDictStore, self)._init()
-
-        self.init_variable(
-            self.idx_dimension + '_name',
-            'str',
-            self.idx_dimension, chunksizes=(1, )
-        )

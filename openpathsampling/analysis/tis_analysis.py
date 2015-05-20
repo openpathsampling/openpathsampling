@@ -3,7 +3,7 @@ from wham import WHAM
 import numpy as np
 from lookup_function import LookupFunction
 import openpathsampling as paths
-from openpathsampling.todict import ops_object
+from openpathsampling.todict import OPSNamed
 import sys
 
 import inspect
@@ -57,10 +57,11 @@ def pathlength(sample):
     return len(sample.trajectory)
 
 def max_lambdas(sample, orderparameter):
-    return max([orderparameter(frame) for frame in sample.trajectory])
+    return max(orderparameter(sample.trajectory))
 
 def sampleset_sample_generator(storage):
-    for sset in storage.samplesets:
+    for step in storage.steps:
+        sset = step.active # take the sampleset after the move
         for sample in sset:
             yield sample
 
@@ -83,12 +84,12 @@ class Histogrammer(object):
         self._hist_args = val
         self.empty_hist = Histogram(**self._hist_args)
 
-@ops_object
-class Transition(object):
+class Transition(OPSNamed):
     """
     Describes (in general) a transition between two states.
     """
     def __init__(self, stateA, stateB):
+        super(Transition, self).__init__()
         self.movers = {}
         self.stateA = stateA
         self.stateB = stateB
@@ -122,7 +123,7 @@ class Transition(object):
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, indentation):
-        line = ("* "*indentation + str(move_name) + 
+        line = ("* "*indentation + str(move_name) +
                 " ran " + str(float(n_trials)/n_total_trials*100) + 
                 "% of the cycles with acceptance " + str(n_accepted) + "/" + 
                 str(n_trials) + " (" + str(float(n_accepted) / n_trials) + 
@@ -130,7 +131,8 @@ class Transition(object):
         return line
 
     def move_acceptance(self, storage):
-        for delta in storage.pathmovechanges:
+        for step in storage.steps:
+            delta = step.change
             for m in delta:
                 acc = 1 if m.accepted else 0
                 key = (m.mover, str(delta.key(m)))
@@ -174,19 +176,21 @@ class Transition(object):
             except KeyError:
                 my_movers[key] = [key]
 
+
         stats = { } 
         for groupname in my_movers.keys():
             stats[groupname] = [0, 0]
 
         if self._mover_acceptance == { }:
             self.move_acceptance(storage)
-        
-        tot_trials = len(storage.pathmovechanges)
+
+        tot_trials = len(storage.steps)
         for groupname in my_movers.keys():
             group = my_movers[groupname]
             for mover in group:
                 key_iter = (k for k in self._mover_acceptance.keys()
-                            if k[0] == mover)
+                            if k[0] is mover)
+
                 for k in key_iter:
                     stats[groupname][0] += self._mover_acceptance[k][0]
                     stats[groupname][1] += self._mover_acceptance[k][1]
@@ -235,14 +239,13 @@ class Transition(object):
             'movers' : self.movers
         }
 
-    @staticmethod
-    def from_dict(dct):
+    @classmethod
+    def from_dict(cls, dct):
         return Transition(
             stateA=dct['stateA'],
             stateB=dct['stateB']
         )
 
-@ops_object
 class TPSTransition(Transition):
     """
     Transition using TPS ensembles
@@ -254,7 +257,6 @@ class TPSTransition(Transition):
         self.movers['pathreversal'] = []
         #self.ensembles = [paths.TPSEnsemble(stateA, stateB)]
 
-@ops_object
 class TISTransition(Transition):
     """
     Transition using TIS ensembles.
@@ -326,6 +328,15 @@ class TISTransition(Transition):
             )
         }
 
+    def __str__(self):
+        mystr = str(self.__class__.__name__) + ": " + str(self.name) + "\n"
+        mystr += (str(self.stateA.name) + " -> " + str(self.stateA.name) 
+                  + " or " + str(self.stateB.name) + "\n")
+        for iface in self.interfaces:
+            mystr += "Interface: " + str(iface.name) + "\n"
+        return mystr
+
+
     def to_dict(self):
         ret_dict = {
             'stateA' : self.stateA,
@@ -338,8 +349,8 @@ class TISTransition(Transition):
         }
         return ret_dict
 
-    @staticmethod
-    def from_dict(dct):
+    @classmethod
+    def from_dict(cls, dct):
         mytrans = paths.TISTransition(
             stateA=dct['stateA'],
             stateB=dct['stateB'],
@@ -392,7 +403,7 @@ class TISTransition(Transition):
                 self.histograms[hist] = {}
             self.histograms[hist][ensemble] = Histogram(**(hist_info.hist_args))
 
-        in_ens_samples = (s for s in samples if s.ensemble == ensemble)
+        in_ens_samples = (s for s in samples if s.ensemble is ensemble)
         hist_data = {}
         buflen = -1
         sample_buf = []
@@ -472,7 +483,7 @@ class TISTransition(Transition):
         n_acc = 0
         n_try = 0
         for samp in samples:
-            if samp.ensemble == ensemble:
+            if samp.ensemble is ensemble:
                 if self.stateB(samp.trajectory[-1]):
                     n_acc += 1
                 n_try += 1
@@ -534,21 +545,20 @@ class TISTransition(Transition):
     def default_movers(self, engine):
         """Create reasonable default movers for a `PathSampling` pathsimulator"""
         shoot_sel = paths.RandomChoiceMover(
-            movers=self.movers['shooting'],
-            name="ShootingChooser"
+            movers=self.movers['shooting']
         )
+        shoot_sel.name = "ShootingChooser"
         pathrev_sel = paths.RandomChoiceMover(
-            movers=self.movers['pathreversal'],
-            name="ReversalChooser"
+            movers=self.movers['pathreversal']
         )
+        pathrev_sel.name = "ReversalChooser"
         root_mover = paths.RandomChoiceMover(
             movers=[shoot_sel, pathrev_sel], 
-            weights=[1.0, 0.5],
-            name="RootMover"
+            weights=[1.0, 0.5]
         )
+        root_mover.name = "RootMover"
         return root_mover
 
-@ops_object
 class RETISTransition(TISTransition):
     """Transition class for RETIS."""
     def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
@@ -582,8 +592,8 @@ class RETISTransition(TISTransition):
         }
         return ret_dict
 
-    @staticmethod
-    def from_dict(dct):
+    @classmethod
+    def from_dict(cls, dct):
         mytrans = RETISTransition(
             stateA=dct['stateA'],
             stateB=dct['stateB'],
@@ -624,15 +634,16 @@ class RETISTransition(TISTransition):
         pass
 
     def minus_move_flux(self, storage, force=False):
-        if not force and self._flux != None:
+        if not force and self._flux is not None:
             return self._flux
 
         self.minus_count_sides = { "in" : [], "out" : [] }
-        minus_moves = (d for d in storage.pathmovechanges 
-                       if self.movers['minus'][0] in d and d.accepted)
+        minus_moves = (d.change for d in storage.steps
+                       if self.movers['minus'][0] in
+                       d.change and d.change.accepted)
         for move in minus_moves:
-            minus_samp = [s for s in move.samples 
-                          if s.ensemble==self.minus_ensemble][0]
+            minus_samp = [s for s in move.results
+                          if s.ensemble is self.minus_ensemble][0]
             minus_trajectory = minus_samp.trajectory
             minus_summ = minus_sides_summary(minus_trajectory,
                                              self.minus_ensemble)
@@ -659,24 +670,41 @@ class RETISTransition(TISTransition):
             force=force
         )
 
+    def populate_minus_ensemble(self, partial_traj, minus_replica_id, engine):
+        last_frame = partial_traj[-1]
+        if not self.minus_ensemble._segment_ensemble(partial_traj):
+            raise RuntimeError(
+                "Invalid input trajectory for minus extension. (Not A-to-A?)"
+            )
+        extension = engine.generate(last_frame,
+                                    [self.minus_ensemble.can_append])
+        first_minus = paths.Trajectory(partial_traj + extension[1:])
+        minus_samp = paths.Sample(
+            replica=minus_replica_id,
+            trajectory=first_minus,
+            ensemble=self.minus_ensemble
+        )
+        return minus_samp
+        pass
+
     def default_movers(self, engine):
         """Create reasonable default movers for a `PathSampling` pathsimulator
         
         Extends `TISTransition.default_movers`.
         """
         repex_sel = paths.RandomChoiceMover(
-            movers=self.movers['repex'],
-            name="ReplicaExchange"
+            movers=self.movers['repex']
         )
+        repex_sel.name = "ReplicaExchange"
         tis_root_mover = super(RETISTransition, self).default_movers(engine)
         minus = self.movers['minus']
         movers = tis_root_mover.movers + [repex_sel] + minus
         weights = tis_root_mover.weights + [0.5, 0.2 / len(self.ensembles)]
         root_mover = paths.RandomChoiceMover(
             movers=movers,
-            weights=weights,
-            name="RootMover"
+            weights=weights
         )
+        root_mover.name = "RootMover"
         return root_mover
 
 
@@ -703,11 +731,17 @@ def summarize_trajectory_volumes(trajectory, label_dict):
     last_vol = None
     count = 0
     segment_labels = []
-    for frame in trajectory:
+
+    # this trick avoids loading all snapshot objects!
+    vol_list = [
+        { key : vol(frame) for key, vol in label_dict.iteritems() }
+        for frame in list.__iter__(trajectory)
+    ]
+
+    for frame in vol_list:
         in_state = []
         for key in label_dict.keys():
-            vol = label_dict[key]
-            if vol(frame):
+            if frame[key]:
                 in_state.append(key)
         if len(in_state) > 1:
             raise RuntimeError("Volumes given to summarize_trajectory not disjoint")
@@ -716,7 +750,7 @@ def summarize_trajectory_volumes(trajectory, label_dict):
         else:
             current_vol = in_state[0]
         
-        if last_vol == current_vol:
+        if last_vol is current_vol:
             count += 1
         else:
             if count > 0:
@@ -759,6 +793,3 @@ def minus_sides_summary(trajectory, minus_ensemble):
             local_count = 0
         local_count += count
     return count_sides
-
-
-        

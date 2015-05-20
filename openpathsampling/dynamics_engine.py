@@ -7,6 +7,7 @@ Created on 01.07.2014
 
 import simtk.unit as u
 import openpathsampling as paths
+from openpathsampling.todict import OPSNamed
 
 
 import logging
@@ -23,7 +24,7 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 #=============================================================================
 
 
-class DynamicsEngine(object):
+class DynamicsEngine(OPSNamed):
     '''
     Wraps simulation tool (parameters, storage, etc.)
 
@@ -57,6 +58,8 @@ class DynamicsEngine(object):
         initialized.
         '''
 
+        super(DynamicsEngine, self).__init__()
+
         self.initialized = False
         self.running = dict()
 
@@ -84,6 +87,11 @@ class DynamicsEngine(object):
         # this and n_atoms are the only general options we need and register
         if hasattr(self, 'n_frames_max'):
             self.max_length_stopper = paths.LengthEnsemble(slice(0, self.n_frames_max + 1))
+        else:
+            self.max_length_stopper = paths.FullEnsemble()
+
+        # as default set a newly generated engine as the default engine
+        self.set_as_default()
 
     def _register_options(self, options = None):
         """
@@ -177,6 +185,9 @@ class DynamicsEngine(object):
             'options' : self.options,
             'template' : self.template
         }
+
+    def set_as_default(self):
+        paths.EngineGeneratingMover.engine = self
 
     @property
     def default_options(self):
@@ -310,3 +321,5 @@ class DynamicsEngine(object):
         else:
             raise RuntimeWarning("Can't generate from an uninitialized system!")
 
+    def generate_next_frame(self):
+        raise NotImplementedError('Next frame generation must be implemented!')

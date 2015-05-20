@@ -1,18 +1,17 @@
 ###############################################################
-# | CLASS Order Parameter
+#| CLASS Order Parameter
 ###############################################################
 
 import openpathsampling as paths
 import chaindict as cd
-from openpathsampling.todict import ops_object
+from openpathsampling.todict import OPSNamed
 import marshal
 import base64
 import types
 import opcode
 import __builtin__
 
-@ops_object
-class CollectiveVariable(cd.Wrap):
+class CollectiveVariable(cd.Wrap, OPSNamed):
     """
     Wrapper for a function that maps a snapshot or an iterable of snapshots
     (like Trajectory) to a number or vector.
@@ -59,13 +58,18 @@ class CollectiveVariable(cd.Wrap):
             print type(name), len(name)
             raise ValueError('name must be a non-empty string')
 
-        self.name = name
         self.dimensions = dimensions
 
         self.single_dict = cd.ExpandSingle()
         self.pre_dict = cd.Transform(self._pre_item)
         self.multi_dict = cd.ExpandMulti()
         self.cache_dict = cd.ChainDict()
+
+        OPSNamed.__init__(self)
+
+        self.name = name
+
+        if hasattr(self, '_eval'):
 
         self.store_cache = store_cache
 
@@ -123,6 +127,19 @@ class CollectiveVariable(cd.Wrap):
             if storage in self.store_dict.cod_stores:
                 self.store_dict.cod_stores[storage].sync()
 
+    def cache_all(self, storage):
+        """
+        Sync this collective variable with attached storages
+
+        Parameters
+        ----------
+        storage : Storage or None
+            the store to be used, otherwise all underlying storages are synced
+        """
+        self.store_dict.update_nod_stores()
+        if storage in self.store_dict.cod_stores:
+            self.store_dict.cod_stores[storage].cache_all()
+
     def _pre_item(self, items):
         if self.store_cache:
             item_type = self.store_dict._basetype(items)
@@ -162,8 +179,6 @@ class CollectiveVariable(cd.Wrap):
             return not self.__eq__(other)
         return NotImplemented
 
-
-@ops_object
 class CV_Volume(CollectiveVariable):
     """ Make `Volume` into `CollectiveVariable`: maps to 0.0 or 1.0
 
@@ -204,16 +219,14 @@ class CV_Volume(CollectiveVariable):
             'store_cache' : self.store_cache
         }
 
-    @staticmethod
-    def from_dict(dct):
+    @classmethod
+    def from_dict(cls, dct):
         return CV_Volume(
             name=dct['name'],
             volume=dct['volume'],
             store_cache=dct['store_cache']
         )
 
-
-@ops_object
 class CV_Function(CollectiveVariable):
     """Make any function `fcn` into a `CollectiveVariable`.
 
@@ -226,7 +239,7 @@ class CV_Function(CollectiveVariable):
     """
 
     allow_marshal = True
-    allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy']
+    _allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy']
 
     def __init__(self, name, fcn, dimensions=1, store_cache=True, **kwargs):
         """
@@ -325,7 +338,7 @@ class CV_Function(CollectiveVariable):
                         print [ obj for obj in global_vars ]
 
                     not_allowed_modules = [ module for module in import_vars
-                                            if module not in CV_Function.allowed_modules]
+                                            if module not in CV_Function._allowed_modules]
 
                     if len(not_allowed_modules) > 0:
                         print 'requires the following modules to be installed:', import_vars
@@ -340,7 +353,7 @@ class CV_Function(CollectiveVariable):
 
             elif not is_local:
                 # save the external class, e.g. msmbuilder featurizer
-                if f_module.split('.')[0] in self.allowed_modules:
+                if f_module.split('.')[0] in self._allowed_modules:
                     # only store the function and the module
                     fcn = {
                         '_module': self.callable_fcn.__module__,
@@ -368,7 +381,7 @@ class CV_Function(CollectiveVariable):
             elif '_module' in f_dict:
                 module = f_dict['_module']
                 packages = module.split('.')
-                if packages[0] in cls.allowed_modules:
+                if packages[0] in cls._allowed_modules:
                     imp = __import__(module)
                     f = getattr(imp, f_dict['_name'])
 
@@ -406,7 +419,6 @@ class CV_Function(CollectiveVariable):
         return [self.callable_fcn(snap, **self.kwargs) for snap in trajectory]
 
 
-@ops_object
 class CV_Class(CollectiveVariable):
     """Make any callable class `cls` into an `CollectiveVariable`.
 
@@ -504,7 +516,7 @@ class CV_Class(CollectiveVariable):
             if '_module' in c_dict:
                 module = c_dict['_module']
                 packages = module.split('.')
-                if packages[0] in cls.allowed_modules:
+                if packages[0] in cls._allowed_modules:
                     imp = __import__(module)
                     c = getattr(imp, c_dict['_name'])
 
@@ -533,7 +545,7 @@ class CV_Class(CollectiveVariable):
         return NotImplemented
 
 
-@ops_object
+
 class CV_MD_Function(CV_Function):
     """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
 
@@ -583,7 +595,7 @@ class CV_MD_Function(CV_Function):
         return self.callable_fcn(t, **self.kwargs)
 
 
-@ops_object
+
 class CV_Featurizer(CV_Class):
     """
     An CollectiveVariable that uses an MSMBuilder3 featurizer as the logic
