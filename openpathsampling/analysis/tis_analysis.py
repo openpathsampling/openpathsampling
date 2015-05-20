@@ -1,8 +1,9 @@
 from histogram import Histogram, histograms_to_pandas_dataframe
 from wham import WHAM
+import numpy as np
 from lookup_function import LookupFunction
 import openpathsampling as paths
-from openpathsampling.todict import ops_object
+from openpathsampling.todict import OPSNamed
 import sys
 
 import inspect
@@ -82,12 +83,12 @@ class Histogrammer(object):
         self._hist_args = val
         self.empty_hist = Histogram(**self._hist_args)
 
-@ops_object
-class Transition(object):
+class Transition(OPSNamed):
     """
     Describes (in general) a transition between two states.
     """
     def __init__(self, stateA, stateB):
+        super(Transition, self).__init__()
         self.movers = {}
         self.stateA = stateA
         self.stateB = stateB
@@ -241,7 +242,6 @@ class Transition(object):
             stateB=dct['stateB']
         )
 
-@ops_object
 class TPSTransition(Transition):
     """
     Transition using TPS ensembles
@@ -253,7 +253,6 @@ class TPSTransition(Transition):
         self.movers['pathreversal'] = []
         #self.ensembles = [paths.TPSEnsemble(stateA, stateB)]
 
-@ops_object
 class TISTransition(Transition):
     """
     Transition using TIS ensembles.
@@ -324,6 +323,15 @@ class TISTransition(Transition):
                 hist_args={}
             )
         }
+
+    def __str__(self):
+        mystr = str(self.__class__.__name__) + ": " + str(self.name) + "\n"
+        mystr += (str(self.stateA.name) + " -> " + str(self.stateA.name) 
+                  + " or " + str(self.stateB.name) + "\n")
+        for iface in self.interfaces:
+            mystr += "Interface: " + str(iface.name) + "\n"
+        return mystr
+
 
     def to_dict(self):
         ret_dict = {
@@ -484,41 +492,69 @@ class TISTransition(Transition):
 
         return ctp
 
-    def rate(self, flux=None, flux_error=None, force=False):
+    def rate(self, storage, flux=None, outer_ensemble=None,
+             outer_lambda=None, error=None, force=False):
         """Calculate the rate for this transition.
 
         For TIS transitions, this requires the result of an external
         calculation of the flux.
+
+        Parameters
+        ==========
+        storage : openpathsampling.storage.Storage
+        flux : float
+        outer_ensemble : openpathsampling.TISEnsemble
+        error : list(3) or None
         """
+        # get the flux
         if flux is not None:
             self._flux = flux
 
         if self._flux is None:
             raise ValueError("No flux available to TISTransition. Cannot calculate rate")
         
-        tcp = self.total_crossing_probability(force=force)
-        #ctp = self.conditional_transition_probability(force=force)
-        #conditional_transition_probability
-        pass
+        flux = self._flux
+
+        # get the total crossing probability
+        if not force and hasattr(self, 'tcp'):
+            tcp = self.tcp
+        else:
+            tcp = self.total_crossing_probability(storage=storage, force=force)
+
+        # get the conditional transition probability
+        if outer_ensemble is None:
+            outer_ensemble = self.ensembles[-1]
+        outer_cross_prob = self.histograms['max_lambda'][outer_ensemble]
+        if outer_lambda is None:
+            lambda_bin = -1
+            while (outer_cross_prob.reverse_cumulative()[lambda_bin+1] == 1.0):
+                lambda_bin += 1
+            outer_lambda = outer_cross_prob.bins[lambda_bin]
+
+        ctp = self.conditional_transition_probability(storage,
+                                                      outer_ensemble,
+                                                      force=force)
+        outer_tcp = tcp(outer_lambda)
+        #print flux, outer_tcp, ctp
+        return flux*outer_tcp*ctp
 
     def default_movers(self, engine):
         """Create reasonable default movers for a `PathSampling` pathsimulator"""
         shoot_sel = paths.RandomChoiceMover(
-            movers=self.movers['shooting'],
-            name="ShootingChooser"
+            movers=self.movers['shooting']
         )
+        shoot_sel.name = "ShootingChooser"
         pathrev_sel = paths.RandomChoiceMover(
-            movers=self.movers['pathreversal'],
-            name="ReversalChooser"
+            movers=self.movers['pathreversal']
         )
+        pathrev_sel.name = "ReversalChooser"
         root_mover = paths.RandomChoiceMover(
             movers=[shoot_sel, pathrev_sel], 
-            weights=[1.0, 0.5],
-            name="RootMover"
+            weights=[1.0, 0.5]
         )
+        root_mover.name = "RootMover"
         return root_mover
 
-@ops_object
 class RETISTransition(TISTransition):
     """Transition class for RETIS."""
     def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
@@ -593,22 +629,57 @@ class RETISTransition(TISTransition):
         # round_trips
         pass
 
-    @property
-    def minus_move_flux(self, storage):
+    def minus_move_flux(self, storage, force=False):
+        if not force and self._flux != None:
+            return self._flux
+
+        self.minus_count_sides = { "in" : [], "out" : [] }
         minus_moves = (d for d in storage.pathmovechanges 
-                       if self.movers['minus'] in d)
+                       if self.movers['minus'][0] in d and d.accepted)
+        for move in minus_moves:
+            minus_samp = [s for s in move.samples 
+                          if s.ensemble==self.minus_ensemble][0]
+            minus_trajectory = minus_samp.trajectory
+            minus_summ = minus_sides_summary(minus_trajectory,
+                                             self.minus_ensemble)
+            for key in self.minus_count_sides.keys():
+                self.minus_count_sides[key].extend(minus_summ[key])
+       
+        t_in_avg = np.array(self.minus_count_sides['in']).mean()
+        t_out_avg = np.array(self.minus_count_sides['out']).mean()
+        self._flux = 1.0 / (t_in_avg + t_out_avg)
+        return self._flux
 
-        # 1. get the samples in the minus ensemble
-        # 2. summarize_trajectory for each
-        # 3. calculate the flux
-        pass
 
-    @property
-    def rate(self, flux=None, flux_error=None, force=False):
-        tcp = self.total_crossing_probability()
+    def rate(self, storage, flux=None, outer_ensemble=None,
+             outer_lambda=None, error=None, force=False):
         if flux is None:
-            (flux, flux_error) = self.minus_move_flux
+            flux = self.minus_move_flux(storage)
 
+        return super(RETISTransition, self).rate(
+            storage=storage, 
+            flux=flux, 
+            outer_ensemble=outer_ensemble,
+            outer_lambda=outer_lambda,
+            error=error,
+            force=force
+        )
+
+    def populate_minus_ensemble(self, partial_traj, minus_replica_id, engine):
+        last_frame = partial_traj[-1]
+        if not self.minus_ensemble._segment_ensemble(partial_traj):
+            raise RuntimeError(
+                "Invalid input trajectory for minus extension. (Not A-to-A?)"
+            )
+        extension = engine.generate(last_frame,
+                                    [self.minus_ensemble.can_append])
+        first_minus = paths.Trajectory(partial_traj + extension[1:])
+        minus_samp = paths.Sample(
+            replica=minus_replica_id,
+            trajectory=first_minus,
+            ensemble=self.minus_ensemble
+        )
+        return minus_samp
         pass
 
     def default_movers(self, engine):
@@ -617,22 +688,23 @@ class RETISTransition(TISTransition):
         Extends `TISTransition.default_movers`.
         """
         repex_sel = paths.RandomChoiceMover(
-            movers=self.movers['repex'],
-            name="ReplicaExchange"
+            movers=self.movers['repex']
         )
+        repex_sel.name = "ReplicaExchange"
         tis_root_mover = super(RETISTransition, self).default_movers(engine)
         minus = self.movers['minus']
         movers = tis_root_mover.movers + [repex_sel] + minus
         weights = tis_root_mover.weights + [0.5, 0.2 / len(self.ensembles)]
         root_mover = paths.RandomChoiceMover(
             movers=movers,
-            weights=weights,
-            name="RootMover"
+            weights=weights
         )
+        root_mover.name = "RootMover"
         return root_mover
 
 
-def summarize_trajectory(trajectory, label_dict):
+# TODO: move this to trajectory.summarize_volumes(label_dict)?
+def summarize_trajectory_volumes(trajectory, label_dict):
     """Summarize trajectory based on number of continuous frames in volumes.
 
     This uses a dictionary of disjoint volumes: the volumes must be disjoint
@@ -657,14 +729,15 @@ def summarize_trajectory(trajectory, label_dict):
     for frame in trajectory:
         in_state = []
         for key in label_dict.keys():
-            if label_dict[key](frame):
+            vol = label_dict[key]
+            if vol(frame):
                 in_state.append(key)
-        if len(key) > 1:
+        if len(in_state) > 1:
             raise RuntimeError("Volumes given to summarize_trajectory not disjoint")
-        if len(key) == 0:
+        if len(in_state) == 0:
             current_vol = None
         else:
-            current_vol = key
+            current_vol = in_state[0]
         
         if last_vol == current_vol:
             count += 1
@@ -673,8 +746,39 @@ def summarize_trajectory(trajectory, label_dict):
                 segment_labels.append( (last_vol, count) )
             last_vol = current_vol
             count = 1
+    segment_labels.append( (last_vol, count) )
     return segment_labels
 
 
-
-        
+# TODO: test this with manufactured summaries that have interstitials and
+# multiple excursions
+def minus_sides_summary(trajectory, minus_ensemble):
+    # note: while this could be refactored so vol_dict is external, I don't
+    # think this hurts speed very much, and it it really useful for testing
+    minus_state = minus_ensemble.state_vol
+    minus_innermost = minus_ensemble.innermost_vol
+    minus_interstitial = minus_innermost & ~minus_state
+    vol_dict = { 
+        "A" : minus_state,
+        "X" : ~minus_innermost,
+        "I" : minus_interstitial
+    }
+    summary = summarize_trajectory_volumes(trajectory, vol_dict)
+    # this is a per-trajectory loop
+    count_sides = {"in" : [], "out" : []}
+    side=None
+    local_count = 0
+    # strip off the beginning and ending in A
+    for (label, count) in summary[1:-1]:
+        if label == "X" and side != "out":
+            if side == "in":
+                count_sides["in"].append(local_count)
+            side = "out"
+            local_count = 0
+        elif label == "A" and side != "in":
+            if side == "out":
+                count_sides["out"].append(local_count)
+            side = "in"
+            local_count = 0
+        local_count += count
+    return count_sides

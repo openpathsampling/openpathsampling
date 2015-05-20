@@ -1,4 +1,4 @@
-from nose.tools import assert_equal, assert_not_equal, raises
+from nose.tools import assert_equal, assert_not_equal, assert_items_equal, raises
 from nose.plugins.skip import SkipTest
 from test_helpers import CallIdentity, prepend_exception_message, make_1d_traj
 
@@ -83,12 +83,9 @@ def setUp():
     lower = 0.1
     upper = 0.5
     op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
-    vol1 = paths.LambdaVolume(op, lower, upper)
-    vol1.name = "stateA"
-    vol2 = paths.LambdaVolume(op, -0.1, 0.7)
-    vol2.name = "interface0"
-    vol3 = paths.LambdaVolume(op, 2.0, 2.5)
-    vol3.name = "stateB"
+    vol1 = paths.LambdaVolume(op, lower, upper).named('stateA')
+    vol2 = paths.LambdaVolume(op, -0.1, 0.7).named('interface0')
+    vol3 = paths.LambdaVolume(op, 2.0, 2.5).named('stateB')
     # we use the following codes to describe trajectories:
     # in : in the state
     # out : out of the state

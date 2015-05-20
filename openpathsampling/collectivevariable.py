@@ -1,17 +1,16 @@
 ###############################################################
-# | CLASS Order Parameter
+#| CLASS Order Parameter
 ###############################################################
 
 import openpathsampling as paths
 import chaindict as cd
-from openpathsampling.todict import ops_object
+from openpathsampling.todict import OPSNamed
 import marshal
 import base64
 import types
 import opcode
 
-@ops_object
-class CollectiveVariable(cd.Wrap):
+class CollectiveVariable(cd.Wrap, OPSNamed):
     """
     Wrapper for a function that maps a snapshot or an iterable of snapshots
     (like Trajectory) to a number or vector.
@@ -58,7 +57,6 @@ class CollectiveVariable(cd.Wrap):
             print type(name), len(name)
             raise ValueError('name must be a non-empty string')
 
-        self.name = name
         self.dimensions = dimensions
 
         self.single_dict = cd.ExpandSingle()
@@ -67,6 +65,11 @@ class CollectiveVariable(cd.Wrap):
         self.store_dict = cd.MultiStore('collectivevariables', name,
                                         dimensions, self)
         self.cache_dict = cd.ChainDict()
+
+        OPSNamed.__init__(self)
+
+        self.name = name
+
         if hasattr(self, '_eval'):
             self.expand_dict = cd.UnwrapTuple()
             self.func_dict = cd.Function(None)
@@ -151,8 +154,6 @@ class CollectiveVariable(cd.Wrap):
             return not self.__eq__(other)
         return NotImplemented
 
-
-@ops_object
 class CV_Volume(CollectiveVariable):
     """ Make `Volume` into `CollectiveVariable`: maps to 0.0 or 1.0
 
@@ -195,8 +196,6 @@ class CV_Volume(CollectiveVariable):
             volume=dct['volume']
         )
 
-
-@ops_object
 class CV_Function(CollectiveVariable):
     """Make any function `fcn` into a `CollectiveVariable`.
 
@@ -373,7 +372,6 @@ class CV_Function(CollectiveVariable):
         return [self.callable_fcn(snap, **self.kwargs) for snap in trajectory]
 
 
-@ops_object
 class CV_Class(CollectiveVariable):
     """Make any callable class `cls` into an `CollectiveVariable`.
 
@@ -494,7 +492,7 @@ class CV_Class(CollectiveVariable):
         return NotImplemented
 
 
-@ops_object
+
 class CV_MD_Function(CV_Function):
     """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
 
@@ -540,7 +538,7 @@ class CV_MD_Function(CV_Function):
         return self.callable_fcn(t, **self.kwargs)
 
 
-@ops_object
+
 class CV_Featurizer(CV_Class):
     """
     An CollectiveVariable that uses an MSMBuilder3 featurizer as the logic
