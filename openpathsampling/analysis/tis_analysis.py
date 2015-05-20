@@ -708,55 +708,6 @@ class RETISTransition(TISTransition):
         return root_mover
 
 
-# TODO: move this to trajectory.summarize_volumes(label_dict)?
-def summarize_trajectory_volumes(trajectory, label_dict):
-    """Summarize trajectory based on number of continuous frames in volumes.
-
-    This uses a dictionary of disjoint volumes: the volumes must be disjoint
-    so that every frame can be mapped to one volume. If the frame maps to
-    none of the given volumes, it returns the label None.
-
-    Parameters
-    ----------
-    trajectory : Trajectory
-        input trajectory
-    label_dict : dict
-        dictionary with labels for keys and volumes for values
-
-    Returns
-    -------
-    list of tuple
-        format is (label, number_of_frames)
-    """
-    last_vol = None
-    count = 0
-    segment_labels = []
-    for frame in trajectory:
-        in_state = []
-        for key in label_dict.keys():
-            vol = label_dict[key]
-            if vol(frame):
-                in_state.append(key)
-        if len(in_state) > 1:
-            raise RuntimeError("Volumes given to summarize_trajectory not disjoint")
-        if len(in_state) == 0:
-            current_vol = None
-        else:
-            current_vol = in_state[0]
-        
-        if last_vol == current_vol:
-            count += 1
-        else:
-            if count > 0:
-                segment_labels.append( (last_vol, count) )
-            last_vol = current_vol
-            count = 1
-    segment_labels.append( (last_vol, count) )
-    return segment_labels
-
-
-# TODO: test this with manufactured summaries that have interstitials and
-# multiple excursions
 def minus_sides_summary(trajectory, minus_ensemble):
     # note: while this could be refactored so vol_dict is external, I don't
     # think this hurts speed very much, and it it really useful for testing
@@ -768,7 +719,7 @@ def minus_sides_summary(trajectory, minus_ensemble):
         "X" : ~minus_innermost,
         "I" : minus_interstitial
     }
-    summary = summarize_trajectory_volumes(trajectory, vol_dict)
+    summary = trajectory.summarize_by_volumes(vol_dict)
     # this is a per-trajectory loop
     count_sides = {"in" : [], "out" : []}
     side=None
