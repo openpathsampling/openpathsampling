@@ -48,7 +48,7 @@ class MCStep(OPSObject):
 class PathSimulator(OPSNamed):
 
     calc_name = "PathSimulator"
-    _excluded_attr = ['globalstate']
+    _excluded_attr = ['globalstate', 'step', 'save_frequency']
 
     def __init__(self, storage, engine=None):
         super(PathSimulator, self).__init__()
@@ -63,18 +63,33 @@ class PathSimulator(OPSNamed):
 
         self.globalstate = None
 
+    # TODO: Remove, is not used
     def set_replicas(self, samples):
         self.globalstate = paths.SampleSet(samples)
 
     def sync_storage(self):
+        """
+        Will sync all collective variables and the storage to disk
+        """
         if self.storage is not None:
             self.storage.cvs.sync()
             self.storage.sync()
 
     def run(self, nsteps):
+        """
+        Run the simulator for a number of steps
+
+        Parameters
+        ----------
+        nsteps : int
+            number of step to be run
+        """
         logger.warning("Running an empty pathsimulator? Try a subclass, maybe!")
 
     def save_initial(self):
+        """
+        Save the initial state as an MCStep to the storage
+        """
         mcstep = MCStep(
             simulation=self,
             step_number=self.step,
@@ -94,6 +109,22 @@ class BootstrapPromotionMove(PathMover):
     '''
     def __init__(self, bias=None, shooters=None,
                  ensembles=None):
+        """
+        Parameters
+        ----------
+        bias : None
+            not used yet, only for API consistency and later implementation
+        shooters : list of ShootingMovers
+            list of ShootingMovers for each ensemble
+        ensembles : list of Ensembles
+            list of ensembles the move should act on
+
+        Notes
+        -----
+        The bootstrapping will use the ensembles sequentially so it requires
+        that all ensembles have a reasonable overlab using shooting moves.
+
+        """
         super(BootstrapPromotionMove, self).__init__(ensembles=ensembles)
         self.shooters = shooters
         self.bias = bias
@@ -152,6 +183,21 @@ class Bootstrapping(PathSimulator):
             trajectory=None,
             ensembles=None
     ):
+        """
+        Parameters
+        ----------
+        storage : openpathsampling.storage.Storage
+            the storage all results should be stored in
+        engine : openpathsampling.DynamicsEngine
+            the dynamics engine to be used
+        movers : list of openpathsampling.PathMover
+            list of shooters to be used in the BootstrapPromotionMove
+        trajectory : openpathsampling.Trajectory
+            an initial trajectory to be started from
+        ensembles : nested list of openpathsampling.Ensemble
+            the ensembles this move should act on
+        """
+        # TODO: Change input from trajectory to sample
         super(Bootstrapping, self).__init__(storage, engine)
         self.ensembles = ensembles
 
@@ -281,6 +327,18 @@ class PathSampling(PathSimulator):
             root_mover=None,
             globalstate=None
     ):
+        """
+        Parameters
+        ----------
+        storage : openpathsampling.storage.Storage
+            the storage where all results should be stored in
+        engine : openpathsampling.DynamicsEngine
+            the engine to be used with shooting moves
+        root_mover : openpathsampling.PathMover
+            the mover used for the pathsampling cycle
+        globalstate : openpathsampling.SampleSet
+            the initial SampleSet for the Simulator
+        """
         super(PathSampling, self).__init__(storage, engine)
         self.root_mover = root_mover
 #        self.root_mover.name = "PathSamplingRoot"
