@@ -184,8 +184,9 @@ class Bootstrapping(PathSimulator):
     def run(self, nsteps):
         bootstrapmove = self._bootstrapmove
 
-        cvs = list(self.storage.cvs)
-        n_samples = len(self.storage.snapshots)
+        if self.storage is not None:
+            cvs = list(self.storage.cvs)
+            n_samples = len(self.storage.snapshots)
 
         ens_num = len(self.globalstate)-1
 
@@ -236,14 +237,15 @@ class Bootstrapping(PathSimulator):
 #                             + "," + repr(sample.ensemble)
 #                            )
 
-            # compute all cvs now
-            for cv in cvs:
-                n_len = len(self.storage.snapshots)
-                cv(self.storage.snapshots[n_samples:n_len])
-                n_samples = n_len
 
 
             if self.storage is not None:
+                # compute all cvs now
+                for cv in cvs:
+                    n_len = len(self.storage.snapshots)
+                    cv(self.storage.snapshots[n_samples:n_len])
+                    n_samples = n_len
+
                 self.storage.steps.save(mcstep)
 
             self.globalstate = new_sampleset
@@ -257,6 +259,13 @@ class Bootstrapping(PathSimulator):
                 self.globalstate.sanity_check()
                 self.sync_storage()
 
+        self.sync_storage()
+
+        paths.tools.refresh_output(
+                ("DONE! Completed Bootstrapping cycle step %d" +
+                " in ensemble %d/%d .\n") %
+                ( self.step, ens_num + 1, len(self.ensembles) )
+            )
 
 class PathSampling(PathSimulator):
     """
@@ -294,8 +303,9 @@ class PathSampling(PathSimulator):
     def run(self, nsteps):
         mcstep = None
 
-        n_samples = len(self.storage.snapshots)
-        cvs = list(self.storage.cvs)
+        if self.storage is not None:
+            n_samples = len(self.storage.snapshots)
+            cvs = list(self.storage.cvs)
 
         if self.step == 0:
             self.save_initial()
@@ -318,13 +328,13 @@ class PathSampling(PathSimulator):
                 change=movepath
             )
 
-            # compute all cvs now
-            for cv in cvs:
-                n_len = len(self.storage.snapshots)
-                cv(self.storage.snapshots[n_samples:n_len])
-                n_samples = n_len
 
             if self.storage is not None:
+                for cv in cvs:
+                    n_len = len(self.storage.snapshots)
+                    cv(self.storage.snapshots[n_samples:n_len])
+                    n_samples = n_len
+
                 self.storage.steps.save(mcstep)
 
             if self.step % self.save_frequency == 0:
@@ -335,7 +345,5 @@ class PathSampling(PathSimulator):
 
         self.sync_storage()
         paths.tools.refresh_output(
-            "DONE! Completed " + str(nsteps+1) + " Monte Carlo cycles.\n"
+            "DONE! Completed " + str(self.step) + " Monte Carlo cycles.\n"
         )
-
-        return mcstep
