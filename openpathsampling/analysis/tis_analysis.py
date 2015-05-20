@@ -239,8 +239,8 @@ class Transition(OPSNamed):
             'movers' : self.movers
         }
 
-    @staticmethod
-    def from_dict(dct):
+    @classmethod
+    def from_dict(cls, dct):
         return Transition(
             stateA=dct['stateA'],
             stateB=dct['stateB']
@@ -349,8 +349,8 @@ class TISTransition(Transition):
         }
         return ret_dict
 
-    @staticmethod
-    def from_dict(dct):
+    @classmethod
+    def from_dict(cls, dct):
         mytrans = paths.TISTransition(
             stateA=dct['stateA'],
             stateB=dct['stateB'],
@@ -592,8 +592,8 @@ class RETISTransition(TISTransition):
         }
         return ret_dict
 
-    @staticmethod
-    def from_dict(dct):
+    @classmethod
+    def from_dict(cls, dct):
         mytrans = RETISTransition(
             stateA=dct['stateA'],
             stateB=dct['stateB'],

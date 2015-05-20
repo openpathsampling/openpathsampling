@@ -202,8 +202,8 @@ class CV_Volume(CollectiveVariable):
             'volume': self.volume,
         }
 
-    @staticmethod
-    def from_dict(dct):
+    @classmethod
+    def from_dict(cls, dct):
         return CV_Volume(
             name=dct['name'],
             volume=dct['volume']
