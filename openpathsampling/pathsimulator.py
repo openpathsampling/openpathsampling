@@ -21,16 +21,14 @@ class MCStep(OPSObject):
     ----------
     simulation : PathSimulation
         the running pathsimulation responsible for generating the step
-    step : int
+    step_number : int
         the step number counting from the root sampleset
-    pre : SampleSet
+    previous : SampleSet
         the initial (pre) sampleset
-    post : SampleSet
+    active : SampleSet
         the final (post) sampleset
     change : PathMoveChange
         the pathmovechange describing the transition from pre to post
-    root : SampleSet
-        the first sampleset at step 0.
     """
     def __init__(self,
                  simulation=None,
