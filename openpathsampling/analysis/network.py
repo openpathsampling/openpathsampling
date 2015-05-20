@@ -261,6 +261,13 @@ class MSTISNetwork(TISNetwork):
         """
         Calculate the matrix of all rates.
 
+        Parameters
+        ----------
+        storage : Storage
+            object containing storage to be analyzed
+        force : bool (False)
+            if True, cached results are overwritten
+
         Returns
         -------
         pandas.DataFrame

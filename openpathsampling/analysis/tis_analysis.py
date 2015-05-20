@@ -295,6 +295,7 @@ class TISTransition(Transition):
         self._flux = None
         self._rate = None
 
+        self.hist_args = {} # shortcut to ensemble_histogram_info[].hist_args
         self.ensemble_histogram_info = {
             'max_lambda' : Histogrammer(
                 f=max_lambdas,
@@ -308,10 +309,12 @@ class TISTransition(Transition):
             )
         }
 
+    # TODO: replace with copy.copy()
     def copy(self, with_results=True):
         copy = self.from_dict(self.to_dict())
         copy.default_orderparameter = self.default_orderparameter
         copy.total_crossing_probability_method = self.total_crossing_probability_method
+        copy.hist_args = self.hist_args
         copy.ensemble_histogram_info = self.ensemble_histogram_info
         copy.histograms = self.histograms
         copy._flux = self._flux
@@ -395,6 +398,9 @@ class TISTransition(Transition):
 
         for hist in run_it:
             hist_info = self.ensemble_histogram_info[hist]
+            if hist_info.hist_args == {} and self.hist_args[hist] != {}:
+                hist_info.hist_args = self.hist_args[hist]
+
             if hist not in self.histograms.keys():
                 self.histograms[hist] = {}
             self.histograms[hist][ensemble] = Histogram(**(hist_info.hist_args))

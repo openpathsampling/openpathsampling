@@ -311,8 +311,6 @@ class Trajectory(list):
 
         Parameters
         ----------
-        trajectory : Trajectory
-            input trajectory
         label_dict : dict
             dictionary with labels for keys and volumes for values
 
