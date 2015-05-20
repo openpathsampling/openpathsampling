@@ -120,7 +120,7 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
 
     def cache_all(self, storage):
         """
-        Sync this collectivevariable with attached storages
+        Sync this collective variable with attached storages
 
         Parameters
         ----------
@@ -130,9 +130,6 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
         self.store_dict.update_nod_stores()
         if storage in self.store_dict.cod_stores:
             self.store_dict.cod_stores[storage].cache_all()
-
-
-
 
     def _pre_item(self, items):
         item_type = self.store_dict._basetype(items)
