@@ -64,7 +64,7 @@ from analysis.tis_analysis import TISTransition, RETISTransition, Transition, \
     TPSTransition
 
 from analysis.network import (
-    MSTISNetwork
+    MSTISNetwork, MISTISNetwork
 )
 
 from analysis.replica_network import (
