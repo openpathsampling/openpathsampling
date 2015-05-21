@@ -112,7 +112,7 @@ class SampleSet(OPSNamed):
         return len(self.samples)
 
     def __contains__(self, item):
-        return (item in self.samples)
+        return item in self.samples
 
     def all_from_ensemble(self, ensemble):
         try:
@@ -146,10 +146,10 @@ class SampleSet(OPSNamed):
     def extend(self, samples):
         # note that this works whether the parameter samples is a list of
         # samples or a SampleSet!
-        try:
+        if type(samples) is not paths.Sample and hasattr(samples, '__iter__'):
             for sample in samples:
                 self.append(sample)
-        except TypeError:
+        else:
             # also acts as .append() if given a single sample
             self.append(samples)
 
