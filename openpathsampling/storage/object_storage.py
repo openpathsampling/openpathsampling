@@ -56,7 +56,7 @@ class ObjectStore(object):
 
     def __init__(self, storage, content_class, has_uid=False, json=True,
                  dimension_units=None, enable_caching=True, load_partial=False,
-                 nestable=False):
+                 nestable=False, has_name=False):
         """
 
         Parameters
@@ -121,11 +121,13 @@ class ObjectStore(object):
         self.db = content_class.__name__.lower()
         self.cache = dict()
         self.has_uid = has_uid
+        self.has_name = has_name
         self.json = json
         self.simplifier = paths.storage.StorableObjectJSON(storage)
         self.identifier = self.db + '_uid'
         self._free = set()
         self._cached_all = False
+        self._names_loaded = False
 
         if dimension_units is not None:
             self.dimension_units = dimension_units
@@ -355,9 +357,95 @@ class ObjectStore(object):
         Update the internal cache with all stored names in the store.
         This allows to load by name for named objects
         """
-        if self.has_uid:
-            for idx, name in enumerate(self.storage.variables[self.db + "_uid"][:]):
-                self.cache[name] = idx
+        if self.has_name:
+            if not self._names_loaded:
+                for idx, name in enumerate(self.storage.variables[self.db + "_name"][:]):
+                    self._update_name_in_cache(name, idx)
+
+                self._names_loaded = True
+
+    def _update_name_in_cache(self, name, idx):
+        if name != '':
+            if name not in self.cache:
+                self.cache[name] = [idx]
+            else:
+                if idx not in self.cache[name]:
+                    self.cache[name].append(idx)
+
+    def find(self, name):
+        """
+        Return all objects with a given name
+
+        Parameters
+        ----------
+        name : str
+            the name to be searched for
+
+        Returns
+        -------
+        list of objects
+            a list of found objects, can be empty [] if no objects with
+            that name exist
+
+        """
+        if self.has_name:
+            if name in self.cache:
+                self.update_name_cache()
+
+            return self[self.cache[name]]
+
+        return []
+
+    def find_indices(self, name):
+        """
+        Return indices for all objects with a given name
+
+        Parameters
+        ----------
+        name : str
+            the name to be searched for
+
+        Returns
+        -------
+        list of int
+            a list of indices in the storage for all found objects,
+            can be empty [] if no objects with that name exist
+
+        """
+        if self.has_name:
+            if name in self.cache:
+                self.update_name_cache()
+
+            return self.cache[name]
+
+        return []
+
+
+    def find_first(self, name):
+        """
+        Return first object with a given name
+
+        Parameters
+        ----------
+        name : str
+            the name to be searched for
+
+        Returns
+        -------
+        object of None
+            the first found object, can be None if no object with the given
+            name exists
+
+        """
+        if self.has_name:
+            if name in self.cache:
+                self.update_name_cache()
+
+            if len(self.cache[name]) > 0:
+                return self[self.cache[name][0]]
+
+        return None
+
 
     def __iter__(self):
         """
@@ -518,7 +606,7 @@ class ObjectStore(object):
 
         self.save_json(self.idx_dimension + '_json', idx, obj)
 
-    def get_name(self, idx):
+    def get_uid(self, idx):
         """
         Return the name of and object with given integer index
 
@@ -639,6 +727,11 @@ class ObjectStore(object):
         if self.has_uid:
             self.init_variable(self.db + "_uid", 'str',
                 description='A unique identifier',
+                chunksizes=tuple([10240]))
+
+        if self.has_name:
+            self.init_variable(self.db + "_name", 'str',
+                description='A name',
                 chunksizes=tuple([10240]))
 
         if self.json:
@@ -1072,21 +1165,34 @@ def loadcache(func):
                 # this happens when we want to load by name (str)
                 # and we need to actually load it
                 n_idx = cc
+            elif type(cc) is list:
+                logger.debug('Found IDX #' + str(idx) + ' in cache under positions #' + str(cc) + '. Loading first.')
+                n_idx = cc[0]
+
             else:
                 logger.debug('Found IDX #' + str(idx) + ' in cache. Not loading!')
 
                 # we have a real object (hopefully) and just return from cache
-                return self.cache[idx]
+                n_idx = idx
+
+            if n_idx in self.cache:
+                # return from cache
+                return self.cache[n_idx]
+
 
         elif type(idx) is str:
             # we want to load by name and it was not in cache.
-            if self.has_uid:
+            if self.has_name:
                 # since it is not found in the cache before. Refresh the cache
                 self.update_name_cache()
 
                 # and give it another shot
                 if idx in self.cache:
-                    n_idx = self.cache[idx]
+                    if len(self.cache[idx]) > 1:
+                        logger.debug('Found name "%s" multiple (%d) times in storage! Loading first!' % (idx, len(self.cache[idx])))
+                        n_idx = self.cache[idx][0]
+                    else:
+                        n_idx = self.cache[idx][0]
                 else:
                     raise ValueError('str "' + idx + '" not found in storage')
             else:
@@ -1103,8 +1209,8 @@ def loadcache(func):
             self.cache[obj.idx[self.storage]] = obj
 
             # finally store the name of a named object in cache
-            if self.has_uid and hasattr(obj, '_uid') and obj._uid != '':
-                self.cache[obj._uid] = obj
+            if self.has_name and obj._name != '':
+                self._update_name_in_cache(obj._name, n_idx)
 
         return obj
     return inner
@@ -1119,14 +1225,12 @@ def savecache(func):
         func(obj, idx, *args, **kwargs)
         idx = obj.idx[self.storage]
 
-        # store the ID in the cache
+        # store the name in the cache
         self.cache[idx] = obj
-        if self.has_uid and hasattr(obj, '_uid') and obj._uid != '':
+        if self.has_name and obj._name != '':
             # and also the name, if it has one so we can load by
             # name afterwards from cache
-            self.cache[obj._uid] = obj
-
-
+                self._update_name_in_cache(obj._name, idx)
 
     return inner
 
@@ -1146,8 +1250,9 @@ def loadidx(func):
 
         if type(idx) is str:
             # we want to load by name and it was not in cache
-            if self.has_uid:
-                n_idx = self.load_by_name(idx)
+            if self.has_name:
+                raise ValueError('Load by name without caching is not supported')
+#                n_idx = self.load_by_name(idx)
             else:
                 # load by name only in named storages
                 raise ValueError('Load by name (str) is only supported in named storages')
@@ -1175,9 +1280,16 @@ def loadidx(func):
 
         if self.has_uid:
             # get the name of the object
-            setattr(obj, '_uid', self.get_name(idx))
+            setattr(obj, '_uid', self.get_uid(idx))
+
+        if self.has_name and hasattr(obj, '_name'):
+            setattr(obj, '_name',
+                    self.storage.variables[self.db + '_name'][idx])
+            # make sure that you cannot change the name of loaded objects
+            obj.fix_name()
 
         return obj
+
     return inner
 
 def saveidx(func):
@@ -1209,6 +1321,13 @@ def saveidx(func):
 
         if self.has_uid and hasattr(obj, '_uid') and obj._uid != '':
             self.storage.variables[self.identifier][idx] = obj._uid
+
+        if self.has_uid and hasattr(obj, '_name'):
+            if obj._name is None:
+                # set name of object to empty string
+                obj.fix_name()
+
+            self.storage.variables[self.db + '_name'][idx] = obj._name
 
     return inner
 
