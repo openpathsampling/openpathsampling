@@ -5,6 +5,7 @@
 import openpathsampling as paths
 import chaindict as cd
 from openpathsampling.todict import OPSNamed
+import simtk.unit as u
 import marshal
 import base64
 import types
@@ -25,6 +26,9 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
         The number of dimensions of the output order parameter. So far this
         is not used and will be necessary or useful when storage is
         available
+    template : openpathsampling.Snapshot
+        a test snapshot that is used to determine the basic output structure
+        of the function.
 
     Attributes
     ----------
@@ -34,7 +38,6 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
         The ChainDict that takes care of using only a single element instead of
         an iterable. In the case of a single object. It will be wrapped in a list
         and later only the single element will be returned
-
     pre_dict : ChainDict
         The ChainDict that will convert all possible input types into parsable
         lists of snapshots, like Trajectory, etc.
@@ -52,7 +55,17 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
 
     """
 
-    def __init__(self, name, dimensions=1, has_eval=True, store_cache=True):
+    def __init__(
+            self,
+            name,
+            template=None,
+            dimensions=None,
+            unit=None,
+            has_fnc=True,
+            fnc_uses_lists=False,
+            fnc_is_numeric=True,
+            store_cache=True
+    ):
         if (type(name) is not str and type(name) is not unicode) or len(
                 name) == 0:
             print type(name), len(name)
@@ -60,29 +73,39 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
 
         OPSNamed.__init__(self)
 
-        self.dimensions = dimensions
+        self.name = name
+        self.template = template
+        self.has_fnc = has_fnc
+
+        if self.template is not None:
+            self._init_from_template(self.template)
+        else:
+            self.dimensions = dimensions
+            self.unit = unit
+            self.fnc_uses_lists = fnc_uses_lists
+            self.fnc_is_numeric = fnc_is_numeric
 
         self.single_dict = cd.ExpandSingle()
         self.pre_dict = cd.Transform(self._pre_item)
         self.multi_dict = cd.ExpandMulti()
         self.cache_dict = cd.ChainDict()
 
-        self.name = name
         self.store_cache = store_cache
 
-        if has_eval:
+        if self.has_fnc:
             self.expand_dict = cd.UnwrapTuple()
-            self.func_dict = cd.Function(None)
-
-            self.func_dict._eval = self._eval
+            self.func_dict = cd.Function(
+                self._eval,
+                fnc_uses_lists=self.fnc_uses_lists
+            )
 
             post = self.func_dict + self.expand_dict + self.cache_dict
         else:
             post = self.cache_dict
 
         if store_cache:
-            self.store_dict = cd.MultiStore('collectivevariables', name,
-                                        dimensions, self)
+            self.store_dict = cd.MultiStore('collectivevariables', self.name,
+                                        self.dimensions, self)
 
             post = post + self.store_dict
 
@@ -91,6 +114,129 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
         super(CollectiveVariable, self).__init__(post=post)
 
         self._stored = False
+
+    @property
+    def template_value(self):
+        """
+        Return the value of the template.
+
+        This is mainly for sanity checking and testing
+        """
+        if self.template is not None:
+            return self[self.template]
+        else:
+            return None
+
+    def _eval(self, items):
+        return items
+
+    def _init_from_template(self, template):
+        if self.has_fnc:
+            eval_single = True
+            value_single = None
+            eval_list = True
+            value_list = None
+            eval_multi = True
+            value_multi = None
+            fnc_uses_lists = None
+            try:
+                # try use single item
+                value_single = self._eval(template)
+            except:
+                eval_single = False
+
+            try:
+                # try use list item
+                value_list = self._eval([template])
+            except:
+                eval_list = False
+
+            try:
+                # try use multi list items
+                value_multi = self._eval([template, template])
+            except:
+                eval_multi = False
+
+            if not eval_multi and not eval_list and not eval_single:
+                # who knows what happened (after loading), since we
+                # cannot use the function we disable the function
+                self.has_fnc = False
+                pass
+
+            if eval_list is not False and eval_multi is not False:
+                # check if results are the same
+                if type(eval_list) is list and len(value_list) == 1:
+                    if type(eval_multi) is list and len(value_multi) == 2:
+                        if value_list[0] == value_multi[0] \
+                        and value_list[0] == value_multi[1]:
+                                fnc_uses_lists = True
+                        else:
+                            if eval_single is False:
+                                fnc_uses_lists = True
+                            else:
+                                fnc_uses_lists = False
+                    else:
+                        if eval_single:
+                            fnc_uses_lists = False
+            else:
+                if eval_single:
+                    fnc_uses_lists = False
+
+            if fnc_uses_lists is None:
+#                raise ValueError('Cannot determine of function uses lists or single.')
+                # no idea what that function does, but it does not work as
+                # expected so we disable it
+                self.has_fnc = False
+
+            # Determine if storable or not. Means values must be numeric
+            # or a list of numeric values
+
+            if fnc_uses_lists:
+                test_value = value_list[0]
+            else:
+                test_value = value_single
+
+            dimensions = 1
+            is_numeric = True
+            unit = None
+
+            test_type = test_value
+
+            if type(test_type) is u.Quantity:
+                # could be Quantity([..])
+                unit = test_type.unit
+                test_type = test_type._value
+
+            if hasattr(test_value, '__len__'):
+                dimensions = len(test_value)
+                test_type = test_value[0]
+                if type(test_type) is u.Quantity:
+                    for val in test_value:
+                        if type(val._value) is not type(test_value._value):
+                            # all values must be of same type
+                            is_numeric = False
+                else:
+                    for val in test_value:
+                        if type(val) is not type(test_value):
+                            # all values must be of same type
+                            is_numeric = False
+
+            if type(test_type) is u.Quantity:
+                # could also be [Quantity, ...]
+                unit = test_type.unit
+                test_type = test_type._value
+
+            try:
+                t_value = float(test_type)
+            except:
+                is_numeric = False
+
+            # we have determined the ouput type
+            self.is_numeric = is_numeric
+            self.dimensions = dimensions
+            self.fnc_uses_lists = fnc_uses_lists
+            self.unit = unit
+
 
     def flush_cache(self, storage):
         """
@@ -200,7 +346,8 @@ class CV_Volume(CollectiveVariable):
         super(CV_Volume, self).__init__(
             name,
             dimensions=1,
-            store_cache=store_cache
+            store_cache=store_cache,
+            fnc_uses_lists=True
         )
         self.volume = volume
 
@@ -239,13 +386,25 @@ class CV_Function(CollectiveVariable):
     allow_marshal = True
     _allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy', 'pandas']
 
-    def __init__(self, name, fcn, dimensions=1, store_cache=True, **kwargs):
+    def __init__(
+            self,
+            name,
+            fcn,
+            template=None,
+            dimensions=None,
+            store_cache=None,
+            fnc_uses_lists=False,
+            **kwargs
+    ):
         """
         Parameters
         ----------
         name : str
         fcn : function
             The function to be used, can almost be an arbitrary function.
+        template : openpathsampling.Snapshot
+            an example single item input to test the function and
+            determine the return type
         kwargs :
             named arguments which should be given to `fcn` (for example, the
             atoms which define a specific distance/angle). Finally
@@ -282,8 +441,10 @@ class CV_Function(CollectiveVariable):
         """
         super(CV_Function, self).__init__(
             name,
+            template=template,
             dimensions=dimensions,
-            store_cache=store_cache
+            store_cache=store_cache,
+            fnc_uses_lists=fnc_uses_lists
         )
         self.callable_fcn = fcn
         self.kwargs = kwargs
@@ -411,9 +572,9 @@ class CV_Function(CollectiveVariable):
         return NotImplemented
 
     def _eval(self, items):
-        trajectory = paths.Trajectory(items)
-
-        return [self.callable_fcn(snap, **self.kwargs) for snap in trajectory]
+        # trajectory = paths.Trajectory(items)
+        # return [self.callable_fcn(snap, **self.kwargs) for snap in trajectory]
+        return self.callable_fcn(items, **self.kwargs)
 
 
 class CV_Class(CollectiveVariable):
@@ -444,7 +605,14 @@ class CV_Class(CollectiveVariable):
 
     _allowed_modules = [ 'msmbuilder' ]
 
-    def __init__(self, name, cls, dimensions=1, store_cache=True, **kwargs):
+    def __init__(
+            self,
+            name,
+            cls,
+            dimensions=1,
+            store_cache=True,
+            fnc_uses_lists=False,
+            **kwargs):
         """
         Parameters
         ----------
@@ -467,7 +635,8 @@ class CV_Class(CollectiveVariable):
         super(CV_Class, self).__init__(
             name,
             dimensions=dimensions,
-            store_cache=store_cache
+            store_cache=store_cache,
+            fnc_uses_lists=fnc_uses_lists
         )
         self.callable_cls = cls
         self.kwargs = kwargs
@@ -578,6 +747,7 @@ class CV_MD_Function(CV_Function):
             fcn,
             dimensions=dimensions,
             store_cache=store_cache,
+            fnc_uses_lists=True,
             **kwargs
         )
         self._topology = None
@@ -633,6 +803,7 @@ class CV_Featurizer(CV_Class):
             cls=featurizer,
             dimensions=self._feat.n_features,
             store_cache=store_cache,
+            fnc_uses_lists=True,
             **self.kwargs
         )
 

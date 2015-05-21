@@ -188,14 +188,8 @@ class Transform(ChainDict):
 class Function(ChainDict):
     def __init__(self, fnc, fnc_uses_lists=True):
         super(Function, self).__init__()
-        self._fnc = fnc
+        self._eval = fnc
         self.fnc_uses_lists = fnc_uses_lists
-
-    def _eval(self, items):
-        if hasattr(self, '_fnc'):
-            return self._fnc(items)
-        else:
-            return None
 
     def _contains(self, item):
         return False
@@ -229,10 +223,11 @@ class Function(ChainDict):
         return fnc
 
 class BufferedStore(Wrap):
-    def __init__(self, name, dimensions, store, scope=None):
+    def __init__(self, name, dimensions, store, scope=None, unit=None):
         self.storage = store.storage
-        self._store = Store(name, dimensions, store, scope)
+        self._store = Store(name, dimensions, store, scope, unit)
         self._cache = ChainDict()
+        self.unit = unit
 
         super(BufferedStore, self).__init__(
             post=self._store + self._cache
@@ -258,12 +253,13 @@ class BufferedStore(Wrap):
                 self._cache[[(storage.snapshots, idx)]] = [value]
 
 class Store(ChainDict):
-    def __init__(self, name, dimensions, store, scope=None):
+    def __init__(self, name, dimensions, store, scope=None, unit=None):
         super(Store, self).__init__()
         self.name = name
         self.dimensions = dimensions
         self.store = store
         self.key_class = store.content_class
+        self.unit = unit
 
         if scope is None:
             self.scope = self
@@ -361,11 +357,12 @@ class Store(ChainDict):
             return type(item)
 
 class MultiStore(Store):
-    def __init__(self, store_name, name, dimensions, scope):
+    def __init__(self, store_name, name, dimensions, scope, unit=None):
         super(Store, self).__init__()
         self.name = name
         self.dimensions = dimensions
         self.store_name = store_name
+        self.unit = unit
         self._storages = []
 
         if scope is None:
@@ -406,7 +403,7 @@ class MultiStore(Store):
     def add_nod_store(self, storage):
         self.cod_stores[storage] = BufferedStore(
             self.name, self.dimensions, getattr(storage, self.store_name),
-            self.scope
+            self.scope, unit=self.unit
         )
 
     def update_nod_stores(self):
