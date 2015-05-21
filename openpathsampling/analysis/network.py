@@ -267,7 +267,10 @@ class MSTISNetwork(TISNetwork):
 class MISTISNetwork(TISNetwork):
     def __init__(self, transitions):
         super(MISTISNetwork, self).__init__()
+        self.movers = {}
         self.transitions = transitions
+
+        self.build_movers()
 
     def build_movers(self):
         for label in ['shooting', 'pathreversal', 'repex']:
@@ -279,25 +282,24 @@ class MISTISNetwork(TISNetwork):
         initial_states = [trans.stateA for trans in self.transitions]
         final_states = [trans.stateB for trans in self.transitions]
 
+        self.ms_outers = []
         for initial in initial_states:
             # combining the minus interfaces
-            minus_interfaces = []
-            for t1 in [t for t in self.transitions if t.stateA==inital]:
-                minus_interfaces.append(t1.minus)
+            minus_ensembles = []
+            for t1 in [t for t in self.transitions if t.stateA==initial]:
+                minus_ensembles.append(t1.minus_ensemble)
 
             # combining the MS-outer interfaces
-            for t1 in [t for t in self.transitions if t.stateA==inital]:
+            for t1 in [t for t in self.transitions if t.stateA==initial]:
                 reverse_trans = None
                 for t2 in self.transitions:
                     if t2.stateA==t1.stateB and t2.stateB==t1.stateA:
                         reverse_trans = t2
                 if reverse_trans is not None:
-                    # put together the MS outer movers for MISTIS
-                    pass
+                    self.ms_outers.append(paths.ensemble.join_ensembles(
+                        t1.ensembles[-1], reverse_trans.ensembles[-1]
+                    ))
 
-
-
-        # put together the multiple set minus movers for MISTIS
 
 
 
