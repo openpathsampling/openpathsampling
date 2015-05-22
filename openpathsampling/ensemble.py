@@ -1664,7 +1664,7 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
     ----------
     state_vol : Volume
         The Volume which defines the state for this minus interface
-    innermost_vol : Volume
+    innermost_vols : list of Volume
         The Volume defining the innermost interface with which this minus
         interface does its replica exchange.
     n_l : integer (greater than one)
@@ -1690,22 +1690,28 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
     _excluded_attr = ['ensembles', 'min_overlap', 'max_overlap']
 
-    def __init__(self, state_vol, innermost_vol, n_l=2, greedy=False):
+    def __init__(self, state_vol, innermost_vols, n_l=2, greedy=False):
         if (n_l < 2):
             raise ValueError("The number of segments n_l must be at least 2")
 
         self.state_vol = state_vol
-        self.innermost_vol = innermost_vol
+        try:
+            len(innermost_vols)
+        except TypeError:
+            innermost_vols = [innermost_vols]
+
+        self.innermost_vols = innermost_vols
+        self.innermost_vol = paths.volume.join_volumes(self.innermost_vols)
         self.greedy = greedy
         inA = AllInXEnsemble(state_vol)
         outA = AllOutXEnsemble(state_vol)
-        outX = AllOutXEnsemble(innermost_vol)
-        inX = AllInXEnsemble(innermost_vol)
-        leaveX = PartOutXEnsemble(innermost_vol)
+        outX = AllOutXEnsemble(self.innermost_vol)
+        inX = AllInXEnsemble(self.innermost_vol)
+        leaveX = PartOutXEnsemble(self.innermost_vol)
         interstitial = outA & inX
         self._segment_ensemble = paths.TISEnsemble(
-            state_vol, state_vol, innermost_vol)
-        #interstitial = AllInXEnsemble(innermost_vol - state_vol)
+            state_vol, state_vol, self.innermost_vol)
+        #interstitial = AllInXEnsemble(self.innermost_vol - state_vol)
         start = [
             SingleFrameEnsemble(inA),
             OptionalEnsemble(interstitial),

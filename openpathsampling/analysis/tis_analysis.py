@@ -552,7 +552,7 @@ class RETISTransition(TISTransition):
 
         self.minus_ensemble = paths.MinusInterfaceEnsemble(
             state_vol=stateA, 
-            innermost_vol=interfaces[0]
+            innermost_vols=interfaces[0]
         )
 
         try:
