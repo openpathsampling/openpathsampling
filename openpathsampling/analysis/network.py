@@ -328,14 +328,22 @@ class MISTISNetwork(TISNetwork):
         initial_states = {trans.stateA : "1" for trans in self.transitions}.keys()
         final_states = {trans.stateB : "1" for trans in self.transitions}.keys()
 
+        # combining the minus interfaces
+        self.minus_ensembles = []
+        for initial in initial_states:
+            innermosts = []
+            for t1 in [t for t in self.transitions if t.stateA==initial]:
+                innermosts.append(t1.ensembles[0])
+            minus = paths.MinusInterfaceEnsemble(
+                state_vol=initial,
+                innermost_vols=innermosts
+            )
+            self.minus_ensembles.append(minus)
+
+
+        # combining the MS-outer interfaces
         self.ms_outers = []
         for initial in initial_states:
-            # combining the minus interfaces
-            minus_ensembles = []
-            for t1 in [t for t in self.transitions if t.stateA==initial]:
-                minus_ensembles.append(t1.minus_ensemble)
-
-            # combining the MS-outer interfaces
             transition_pair_dict = {}
             for t1 in [t for t in self.transitions if t.stateA==initial]:
                 reverse_trans = None
