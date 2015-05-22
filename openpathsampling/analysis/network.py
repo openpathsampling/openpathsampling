@@ -279,8 +279,10 @@ class MISTISNetwork(TISNetwork):
                 transitions=self.transitions
             )
 
-        initial_states = [trans.stateA for trans in self.transitions]
-        final_states = [trans.stateB for trans in self.transitions]
+        # use dictionaries so we only have one instance of each, even if the
+        # same state shows up in many transitions
+        initial_states = {trans.stateA : "1" for trans in self.transitions}.keys()
+        final_states = {trans.stateB : "1" for trans in self.transitions}.keys()
 
         self.ms_outers = []
         for initial in initial_states:
@@ -290,15 +292,22 @@ class MISTISNetwork(TISNetwork):
                 minus_ensembles.append(t1.minus_ensemble)
 
             # combining the MS-outer interfaces
+            transition_pair_dict = {}
             for t1 in [t for t in self.transitions if t.stateA==initial]:
                 reverse_trans = None
                 for t2 in self.transitions:
                     if t2.stateA==t1.stateB and t2.stateB==t1.stateA:
-                        reverse_trans = t2
-                if reverse_trans is not None:
-                    self.ms_outers.append(paths.ensemble.join_ensembles(
-                        t1.ensembles[-1], reverse_trans.ensembles[-1]
-                    ))
+                        transition_pair_dict[t1] = t2
+            for key in transition_pair_dict.keys():
+                value = transition_pair_dict[key]
+                if value in transition_pair_dict.keys():
+                    del transition_pair_dict[value]
+        self.transition_pairs = [(k, transition_pair_dict[k]) 
+                                 for k in transition_pair_dict.keys()]
+        for pair in self.transition_pairs:
+            self.ms_outers.append(paths.ensemble.join_ensembles(
+                [pair[0].ensembles[-1], pair[1].ensembles[-1]]
+            ))
 
 
 
