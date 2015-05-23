@@ -365,7 +365,7 @@ class Trajectory(list):
             `label_dict`, separated by the `delimiter`
         """
         summary = self.summarize_by_volumes(label_dict)
-        return "-".join([s[0] for s in summary])
+        return delimiter.join([str(s[0]) for s in summary])
 
 
 
