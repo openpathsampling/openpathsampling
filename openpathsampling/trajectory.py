@@ -301,7 +301,52 @@ class Trajectory(list):
     #=============================================================================================
     # PATH ENSEMBLE FUNCTIONS
     #=============================================================================================
-    
+        
+    def summarize_by_volumes(self, label_dict):
+        """Summarize trajectory based on number of continuous frames in volumes.
+
+        This uses a dictionary of disjoint volumes: the volumes must be disjoint
+        so that every frame can be mapped to one volume. If the frame maps to
+        none of the given volumes, it returns the label None.
+
+        Parameters
+        ----------
+        label_dict : dict
+            dictionary with labels for keys and volumes for values
+
+        Returns
+        -------
+        list of tuple
+            format is (label, number_of_frames)
+        """
+        last_vol = None
+        count = 0
+        segment_labels = []
+        for frame in self:
+            in_state = []
+            for key in label_dict.keys():
+                vol = label_dict[key]
+                if vol(frame):
+                    in_state.append(key)
+            if len(in_state) > 1:
+                raise RuntimeError("Volumes given to summarize_by_volumes not disjoint")
+            if len(in_state) == 0:
+                current_vol = None
+            else:
+                current_vol = in_state[0]
+            
+            if last_vol == current_vol:
+                count += 1
+            else:
+                if count > 0:
+                    segment_labels.append( (last_vol, count) )
+                last_vol = current_vol
+                count = 1
+        segment_labels.append( (last_vol, count) )
+        return segment_labels
+
+
+
     def pathHamiltonian(self):
         """
         Compute the generalized path Hamiltonian of the trajectory.

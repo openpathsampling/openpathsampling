@@ -170,6 +170,8 @@ class Histogram(object):
             cumul_hist.append(total)
 
         cumul_hist = np.array(cumul_hist)
+        if total == 0:
+            return 0
         if maximum is not None:
             cumul_hist *= maximum / total
             
@@ -187,6 +189,8 @@ class Histogram(object):
             cumul_hist.insert(0, total)
 
         cumul_hist = np.array(cumul_hist)
+        if total == 0:
+            return 0
         if maximum is not None:
             cumul_hist *= maximum / total
             
