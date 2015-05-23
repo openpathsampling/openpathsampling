@@ -18,6 +18,8 @@ class ReplicaNetwork(object):
         self.transitions = { }
         self.all_ensembles = []
         self.all_replicas = []
+        self.ensemble_to_number = {}
+        self.ensemble_to_string = {}
         if repex_movers is None and ensembles is None and storage is None:
             raise RuntimeError("Must define either repex_movers or ensembles")
         self.storage = storage
@@ -63,6 +65,8 @@ class ReplicaNetwork(object):
                 self.traces = { } 
                 self.all_replicas = []
                 self.all_ensembles = []
+                self.ensemble_to_number = {}
+                self.ensemble_to_string = {}
             self.storage = storage
         if self.storage == None:
             raise RuntimeError("No storage given for analysis")
@@ -70,7 +74,33 @@ class ReplicaNetwork(object):
             reps_ens = get_all_ensembles_and_replicas(storage)
             self.all_replicas = reps_ens['replicas']
             self.all_ensembles = reps_ens['ensembles']
+        if self.ensemble_to_number == {} or self.ensemble_to_string == {}:
+            # set the default labels here
+            sset0 = self.storage.samplesets[0]
+            labels = {e : str(sset0[e].replica) for e in self.all_ensembles}
+            self.set_labels(labels)
         return self.storage
+
+    def set_labels(self, ens2str=None):
+        """
+        Sets label dictionaries.
+        """
+        # ensemble_to_string : returns a string value for the ensemble
+        # ensemble_to_number : returns a non-neg int value (column order)
+        if self.ensemble_to_number == {}:
+            self.initial_order()
+        if ens2str == None:
+            ens2str = {k : str(ens2num[k]) for k in ens2num.keys()}
+        self.ensemble_to_string = ens2str
+        self.string_to_ensemble = {self.ensemble_to_string[k] : k 
+                                   for k in self.ensemble_to_string.keys()}
+        self.number_to_string = {
+            self.ensemble_to_number[k] : self.ensemble_to_string[k]
+            for k in self.ensemble_to_number.keys()
+        }
+        self.string_to_number = {self.number_to_string[k] : k 
+                                   for k in self.number_to_string.keys()}
+        self.n_ensembles = len(self.ensemble_to_number.keys())
 
 
     def analyze_exchanges(self, storage, force=False):
@@ -129,7 +159,7 @@ class ReplicaNetwork(object):
             )
         return self.traces
 
-    def initial_order(self, index_order):
+    def initial_order(self, index_order=None):
         # dictionaries to be used to translate between orderings (these are
         # the defaults)
         if index_order == None:
@@ -148,6 +178,7 @@ class ReplicaNetwork(object):
     def reorder_matrix(self, matrix, number_to_label, index_order):
         """ matrix must be a coo_matrix (I think): do other have same `data`
         attrib?"""
+        # TODO: replace need to number_to_label with self.number_to_string
         if index_order == None:
             # reorder based on RCM from scipy.sparse.csgraph
             rcm_perm = reverse_cuthill_mckee(matrix.tocsr())
