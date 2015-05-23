@@ -76,6 +76,7 @@ class ReplicaNetwork(object):
             self.all_ensembles = reps_ens['ensembles']
         if self.ensemble_to_number == {} or self.ensemble_to_string == {}:
             # set the default labels here
+            self.initial_order()
             sset0 = self.storage.samplesets[0]
             labels = {e : str(sset0[e].replica) for e in self.all_ensembles}
             self.set_labels(labels)
@@ -87,10 +88,12 @@ class ReplicaNetwork(object):
         """
         # ensemble_to_string : returns a string value for the ensemble
         # ensemble_to_number : returns a non-neg int value (column order)
-        if self.ensemble_to_number == {}:
-            self.initial_order()
-        if ens2str == None:
-            ens2str = {k : str(ens2num[k]) for k in ens2num.keys()}
+        if ens2str == None: 
+            if self.ensemble_to_string == {}:
+                ens2str = {k : str(self.ensemble_to_number[k]) 
+                           for k in self.ensemble_to_number.keys()}
+            else:
+                ens2str = self.ensemble_to_string
         self.ensemble_to_string = ens2str
         self.string_to_ensemble = {self.ensemble_to_string[k] : k 
                                    for k in self.ensemble_to_string.keys()}
@@ -102,6 +105,22 @@ class ReplicaNetwork(object):
                                    for k in self.number_to_string.keys()}
         self.n_ensembles = len(self.ensemble_to_number.keys())
 
+
+    def initial_order(self, index_order=None):
+        # dictionaries to be used to translate between orderings (these are
+        # the defaults)
+        if index_order == None:
+            ensemble_to_number = {ens : self.all_ensembles.index(ens) 
+                                  for ens in self.all_ensembles}
+        else:
+            ensemble_to_number = {ens : index_order.index(ens) 
+                                  for ens in index_order}
+        self.ensemble_to_number = ensemble_to_number
+        self.number_to_ensemble = {ensemble_to_number[k] : k 
+                                   for k in ensemble_to_number.keys()}
+        self.set_labels()
+        self.n_ensembles = len(self.ensemble_to_number)
+        return ensemble_to_number
 
     def analyze_exchanges(self, storage, force=False):
         # TODO: convert this into something that yields ((repA, repB),
@@ -159,26 +178,11 @@ class ReplicaNetwork(object):
             )
         return self.traces
 
-    def initial_order(self, index_order=None):
-        # dictionaries to be used to translate between orderings (these are
-        # the defaults)
-        if index_order == None:
-            ensemble_to_number = {ens : self.all_ensembles.index(ens) 
-                                  for ens in self.all_ensembles}
-        else:
-            ensemble_to_number = {ens : index_order.index(ens) 
-                                  for ens in index_order}
-        self.ensemble_to_number = ensemble_to_number
-        self.number_to_ensemble = {ensemble_to_number[k] : k 
-                                   for k in ensemble_to_number.keys()}
-        self.n_ensembles = len(self.ensemble_to_number)
-        return ensemble_to_number
 
 
-    def reorder_matrix(self, matrix, number_to_label, index_order):
+    def reorder_matrix(self, matrix, index_order):
         """ matrix must be a coo_matrix (I think): do other have same `data`
         attrib?"""
-        # TODO: replace need to number_to_label with self.number_to_string
         if index_order == None:
             # reorder based on RCM from scipy.sparse.csgraph
             rcm_perm = reverse_cuthill_mckee(matrix.tocsr())
@@ -190,10 +194,10 @@ class ReplicaNetwork(object):
                 (matrix.data, (perm_i, perm_j)), 
                 shape=(self.n_ensembles, self.n_ensembles)
             )
-            reordered_labels = [number_to_label[k] for k in rcm_perm]
+            reordered_labels = [self.number_to_string[k] for k in rcm_perm]
         else:
-            reordered_labels = [number_to_label[k] 
-                                for k in number_to_label.keys()]
+            reordered_labels = [self.number_to_string[k] 
+                                for k in self.number_to_string.keys()]
             new_matrix = matrix
 
         reordered = pd.DataFrame(new_matrix.todense())
@@ -223,12 +227,7 @@ class ReplicaNetwork(object):
             shape=(self.n_ensembles, self.n_ensembles)
         )
 
-        # TODO clean these up: maybe move labels to elsewhere?
-        sset0 = self.storage.samplesets[0]
-        labels = {k : sset0[self.number_to_ensemble[k]].replica 
-                  for k in self.number_to_ensemble.keys()}
-
-        df = self.reorder_matrix(acc_matrix, labels, index_order)
+        df = self.reorder_matrix(acc_matrix, index_order)
         self.acceptance_matrix = acc_matrix
         return df
 
@@ -253,12 +252,8 @@ class ReplicaNetwork(object):
             (data, (ij, ji)), 
             shape=(self.n_ensembles, self.n_ensembles)
         )
-        # TODO clean these up: maybe move labels to elsewhere?
-        sset0 = self.storage.samplesets[0]
-        labels = {k : sset0[self.number_to_ensemble[k]].replica 
-                  for k in self.number_to_ensemble.keys()}
 
-        df = self.reorder_matrix(mix_matrix, labels, index_order)
+        df = self.reorder_matrix(mix_matrix, index_order)
         self.mix_matrix = mix_matrix
         return df
 
