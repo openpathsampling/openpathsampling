@@ -648,6 +648,13 @@ class RETISTransition(TISTransition):
         t_in_avg = np.array(self.minus_count_sides['in']).mean()
         t_out_avg = np.array(self.minus_count_sides['out']).mean()
         self._flux = 1.0 / (t_in_avg + t_out_avg)
+        # TODO: get minus mover engine dt
+        # engine_dt_vals = [m.engine for m in self.movers['minus']]
+        # engine_dt = engine_dt_vals[0]
+        # for dt in engine_dt_vals:
+        #     if dt != engine_dt:
+        #         raise RuntimeWarning("Not all minus moves use same timestep!")
+        # self._flux = self._flux / engine_dt
         return self._flux
 
 
