@@ -205,13 +205,21 @@ class ReplicaNetwork(object):
         reordered.columns = reordered_labels
         return reordered
 
+    def matrix_and_dataframe(self, ens_i, ens_j, data, index_order=None):
+        self.initial_order(index_order)
+        i = [self.ensemble_to_number[e] for e in ens_i]
+        j = [self.ensemble_to_number[e] for e in ens_j]
+        matrix = scipy.sparse.coo_matrix(
+            (data, (i, j)), 
+            shape=(self.n_ensembles, self.n_ensembles)
+        )
+        df = self.reorder_matrix(matrix, index_order)
+        return (matrix, df)
 
-    # TODO: separate building of matrix sparse dict from the rest
+
+
     def transition_matrix(self, storage=None, index_order=None, force=False):
         (n_try, n_acc) = self.analyze_exchanges(storage, force)
-        self.initial_order(index_order)
-        
-        # only this part should be self_make_transition_matrix()
         data = []
         for k in n_try.keys():
             try:
@@ -220,21 +228,16 @@ class ReplicaNetwork(object):
                 n_acc_k = 0
             data.append(float(n_acc_k) / n_try[k])
         ens_i, ens_j = zip(*n_try.keys())
-        i = [self.ensemble_to_number[e] for e in ens_i]
-        j = [self.ensemble_to_number[e] for e in ens_j]
-        acc_matrix = scipy.sparse.coo_matrix(
-            (data, (i, j)), 
-            shape=(self.n_ensembles, self.n_ensembles)
-        )
 
-        df = self.reorder_matrix(acc_matrix, index_order)
-        self.acceptance_matrix = acc_matrix
+        # this part should be the same for all matrices
+        self.acceptance_matrix, df = self.matrix_and_dataframe(
+            ens_i, ens_j, data, index_order
+        )
         return df
 
 
     def mixing_matrix(self, storage=None, index_order=None, force=False):
         (n_try, n_acc) = self.analyze_exchanges(storage, force)
-        self.initial_order(index_order)
         data = []
         for k in n_try.keys():
             try:
@@ -242,19 +245,15 @@ class ReplicaNetwork(object):
             except KeyError:
                 n_acc_k = 0
             data.append(float(n_acc_k) * 0.5 / n_try[k])
-        ens_i, ens_j = zip(*n_try.keys())
-        i = [self.ensemble_to_number[e] for e in ens_i]
-        j = [self.ensemble_to_number[e] for e in ens_j]
-        ij = i+j
-        ji = j+i
+        ens_ii, ens_jj = zip(*n_try.keys())
+        # symmetrize
+        ens_i = ens_ii + ens_jj
+        ens_j = ens_jj + ens_ii
         data += data
-        mix_matrix = scipy.sparse.coo_matrix(
-            (data, (ij, ji)), 
-            shape=(self.n_ensembles, self.n_ensembles)
-        )
 
-        df = self.reorder_matrix(mix_matrix, index_order)
-        self.mix_matrix = mix_matrix
+        self.mix_matrix, df = self.matrix_and_dataframe(
+            ens_i, ens_j, data, index_order
+        )
         return df
 
 
