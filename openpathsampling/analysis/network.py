@@ -311,10 +311,31 @@ class MSTISNetwork(TISNetwork):
 class MISTISNetwork(TISNetwork):
     def __init__(self, transitions):
         super(MISTISNetwork, self).__init__()
-        self.movers = {}
         self.transitions = transitions
 
-        self.build_movers()
+        if not hasattr(self, 'movers'):
+            self.movers = {}
+            self.build_movers()
+
+    def to_dict(self):
+        ret_dict = {
+            'movers' : self.movers,
+            'minus_ensembles' : self.minus_ensembles,
+            'ms_outers' : self.ms_outers,
+            'transition_pairs' : self.transition_pairs,
+            'transitions' : self.transitions
+        }
+        return ret_dict
+
+    @staticmethod
+    def from_dict(dct):
+        network = MISTISNetwork.__new__(MISTISNetwork)
+        network.movers = dct['movers']
+        network.minus_ensembles = dct['minus_ensembles']
+        network.ms_outers = dct['ms_outers']
+        network.transition_pairs = dct['transition_pairs']
+        network.__init__(dct['transitions'])
+        return network
 
     def build_movers(self):
         for label in ['shooting', 'pathreversal', 'repex']:

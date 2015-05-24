@@ -93,6 +93,10 @@ class Storage(netcdf.Dataset):
                                                   paths.MSTISNetwork,
                                                   has_uid=True
                                                  )
+        self.networks = paths.storage.ObjectStore(storage,
+                                                  paths.MISTISNetwork,
+                                                  has_uid=True
+                                                 )
 
         self.query = paths.storage.QueryStore(storage)
 
