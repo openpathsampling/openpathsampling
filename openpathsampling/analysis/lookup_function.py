@@ -1,3 +1,4 @@
+import pandas as pd
 class LookupFunction(object):
     def __init__(self, ordinate, abscissa):
         self.pairs = { }
@@ -10,6 +11,10 @@ class LookupFunction(object):
 
     def values(self):
         return list([self.pairs[x] for x in self.sorted_ordinates])
+
+    def series(self):
+        # TODO: temp hack until I can get matplotlib to plot natively
+        return pd.Series(self.values(), self.keys())
 
     def __call__(self, value):
         # only a 1D implementation so far
@@ -41,8 +46,17 @@ class LookupFunction(object):
 
 
 
+class LookupFunctionGroup(LookupFunction):
+    def __init__(self, lookup_functions):
+        self.functions = lookup_functions
+        pass
 
+    def std(self):
+        pass
 
+    def __getitem__(self):
+        pass
 
-
+    def __setitem__(self):
+        pass
         
