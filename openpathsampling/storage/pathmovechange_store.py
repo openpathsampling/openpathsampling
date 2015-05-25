@@ -98,7 +98,7 @@ class PathMoveChangeStore(ObjectStore):
         return [ pathmovechange for pathmovechange in self.iterator() if pathmovechange.ensemble == ensemble ]
 
     def _init(self, units=None):
-        super(PathMoveChangeStore, self)._init(units)
+        super(PathMoveChangeStore, self)._init()
 
         # New short-hand definition
         self.init_variable('pathmovechange_trials_idx', 'index', 'sampleset',

@@ -3,7 +3,7 @@ from wham import WHAM
 import numpy as np
 from lookup_function import LookupFunction
 import openpathsampling as paths
-from openpathsampling.todict import ops_object
+from openpathsampling.todict import OPSNamed
 import sys
 
 import inspect
@@ -83,12 +83,12 @@ class Histogrammer(object):
         self._hist_args = val
         self.empty_hist = Histogram(**self._hist_args)
 
-@ops_object
-class Transition(object):
+class Transition(OPSNamed):
     """
     Describes (in general) a transition between two states.
     """
     def __init__(self, stateA, stateB):
+        super(Transition, self).__init__()
         self.movers = {}
         self.stateA = stateA
         self.stateB = stateB
@@ -242,7 +242,6 @@ class Transition(object):
             stateB=dct['stateB']
         )
 
-@ops_object
 class TPSTransition(Transition):
     """
     Transition using TPS ensembles
@@ -254,7 +253,6 @@ class TPSTransition(Transition):
         self.movers['pathreversal'] = []
         #self.ensembles = [paths.TPSEnsemble(stateA, stateB)]
 
-@ops_object
 class TISTransition(Transition):
     """
     Transition using TIS ensembles.
@@ -325,6 +323,15 @@ class TISTransition(Transition):
                 hist_args={}
             )
         }
+
+    def __str__(self):
+        mystr = str(self.__class__.__name__) + ": " + str(self.name) + "\n"
+        mystr += (str(self.stateA.name) + " -> " + str(self.stateA.name) 
+                  + " or " + str(self.stateB.name) + "\n")
+        for iface in self.interfaces:
+            mystr += "Interface: " + str(iface.name) + "\n"
+        return mystr
+
 
     def to_dict(self):
         ret_dict = {
@@ -534,21 +541,20 @@ class TISTransition(Transition):
     def default_movers(self, engine):
         """Create reasonable default movers for a `PathSampling` pathsimulator"""
         shoot_sel = paths.RandomChoiceMover(
-            movers=self.movers['shooting'],
-            name="ShootingChooser"
+            movers=self.movers['shooting']
         )
+        shoot_sel.name = "ShootingChooser"
         pathrev_sel = paths.RandomChoiceMover(
-            movers=self.movers['pathreversal'],
-            name="ReversalChooser"
+            movers=self.movers['pathreversal']
         )
+        pathrev_sel.name = "ReversalChooser"
         root_mover = paths.RandomChoiceMover(
             movers=[shoot_sel, pathrev_sel], 
-            weights=[1.0, 0.5],
-            name="RootMover"
+            weights=[1.0, 0.5]
         )
+        root_mover.name = "RootMover"
         return root_mover
 
-@ops_object
 class RETISTransition(TISTransition):
     """Transition class for RETIS."""
     def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
@@ -659,24 +665,41 @@ class RETISTransition(TISTransition):
             force=force
         )
 
+    def populate_minus_ensemble(self, partial_traj, minus_replica_id, engine):
+        last_frame = partial_traj[-1]
+        if not self.minus_ensemble._segment_ensemble(partial_traj):
+            raise RuntimeError(
+                "Invalid input trajectory for minus extension. (Not A-to-A?)"
+            )
+        extension = engine.generate(last_frame,
+                                    [self.minus_ensemble.can_append])
+        first_minus = paths.Trajectory(partial_traj + extension[1:])
+        minus_samp = paths.Sample(
+            replica=minus_replica_id,
+            trajectory=first_minus,
+            ensemble=self.minus_ensemble
+        )
+        return minus_samp
+        pass
+
     def default_movers(self, engine):
         """Create reasonable default movers for a `PathSampling` pathsimulator
         
         Extends `TISTransition.default_movers`.
         """
         repex_sel = paths.RandomChoiceMover(
-            movers=self.movers['repex'],
-            name="ReplicaExchange"
+            movers=self.movers['repex']
         )
+        repex_sel.name = "ReplicaExchange"
         tis_root_mover = super(RETISTransition, self).default_movers(engine)
         minus = self.movers['minus']
         movers = tis_root_mover.movers + [repex_sel] + minus
         weights = tis_root_mover.weights + [0.5, 0.2 / len(self.ensembles)]
         root_mover = paths.RandomChoiceMover(
             movers=movers,
-            weights=weights,
-            name="RootMover"
+            weights=weights
         )
+        root_mover.name = "RootMover"
         return root_mover
 
 
@@ -759,6 +782,3 @@ def minus_sides_summary(trajectory, minus_ensemble):
             local_count = 0
         local_count += count
     return count_sides
-
-
-        

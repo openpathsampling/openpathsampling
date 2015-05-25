@@ -5,8 +5,7 @@ Created on 03.09.2014
 '''
 
 import range_logic
-from openpathsampling.todict import ops_object
-import time
+from openpathsampling.todict import OPSNamed
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
@@ -19,11 +18,14 @@ def join_volumes(volume_list):
             volume = volume | vol
     return volume
 
-@ops_object
-class Volume(object):
+
+class Volume(OPSNamed):
     """
     A Volume describes a set of snapshots 
     """
+    def __init__(self):
+        super(Volume, self).__init__()
+
     def __call__(self, snapshot):
         '''
         Returns `True` if the given snapshot is part of the defined Region
@@ -83,7 +85,7 @@ class Volume(object):
     def __eq__(self, other):
         return str(self) == str(other)
 
-@ops_object
+
 class VolumeCombination(Volume):
     """
     Logical combination of volumes. 
@@ -107,32 +109,32 @@ class VolumeCombination(Volume):
     def to_dict(self):
         return { 'volume1' : self.volume1, 'volume2' : self.volume2 }
 
-@ops_object
+
 class UnionVolume(VolumeCombination):
     """ "Or" combination (union) of two volumes."""
     def __init__(self, volume1, volume2):
         super(UnionVolume, self).__init__(volume1, volume2, lambda a,b : a or b, str_fnc = '{0} or {1}')
 
-@ops_object
+
 class IntersectionVolume(VolumeCombination):
     """ "And" combination (intersection) of two volumes."""
     def __init__(self, volume1, volume2):
         super(IntersectionVolume, self).__init__(volume1, volume2, lambda a,b : a and b, str_fnc = '{0} and {1}')
 
-@ops_object
+
 class SymmetricDifferenceVolume(VolumeCombination):
     """ "Xor" combination of two volumes."""
     def __init__(self, volume1, volume2):
         super(SymmetricDifferenceVolume, self).__init__(volume1, volume2, lambda a,b : a ^ b, str_fnc = '{0} xor {1}')
 
-@ops_object
+
 class RelativeComplementVolume(VolumeCombination):
     """ "Subtraction" combination (relative complement) of two volumes."""
     def __init__(self, volume1, volume2):
         super(RelativeComplementVolume, self).__init__(volume1, volume2, lambda a,b : a and not b, str_fnc = '{0} and not {1}')
 
 
-@ops_object
+
 class NegatedVolume(Volume):
     """Negation (logical not) of a volume."""
     def __init__(self, volume):
@@ -145,7 +147,7 @@ class NegatedVolume(Volume):
     def __str__(self):
         return '(not ' + str(self.volume) + ')'
     
-@ops_object
+
 class EmptyVolume(Volume):
     """Empty volume: no snapshot can satisfy"""
     def __init__(self):
@@ -172,7 +174,7 @@ class EmptyVolume(Volume):
     def __str__(self):
         return 'empty'
 
-@ops_object
+
 class FullVolume(Volume):
     """Volume which all snapshots can satisfy."""
     def __init__(self):
@@ -199,7 +201,7 @@ class FullVolume(Volume):
     def __str__(self):
         return 'all'
 
-@ops_object
+
 class LambdaVolume(Volume):
     """
     Volume defined by a range of a collective variable `collectivevariable`.
@@ -222,10 +224,7 @@ class LambdaVolume(Volume):
         self.collectivevariable = collectivevariable
         self.lambda_min = float(lambda_min)
         self.lambda_max = float(lambda_max)
-        self.name = (str(self.lambda_min) + "<" +
-                     str(self.collectivevariable.name) + "<" +
-                     str(self.lambda_max))
-        
+
     # Typically, the logical combinations are only done once. Because of
     # this, it is worth passing these through a check to speed up the logic.
 
@@ -234,6 +233,13 @@ class LambdaVolume(Volume):
     # extra info the subclass carries) and range_and/or/sub, so that they
     # return the correct behavior for the new subclass. Everything else
     # comes for free.
+
+    @property
+    def default_name(self):
+        return (str(self.lambda_min) + "<" +
+                     str(self.collectivevariable.name) + "<" +
+                     str(self.lambda_max))
+
     def _copy_with_new_range(self, lmin, lmax):
         """Shortcut to make a LambdaVolume with all parameters the same as
         this one except the range. This is useful for the range logic when
@@ -333,7 +339,7 @@ class LambdaVolume(Volume):
     def __str__(self):
         return '{{x|{2}(x) in [{0}, {1}]}}'.format( self.lambda_min, self.lambda_max, self.collectivevariable.name)
 
-@ops_object
+
 class LambdaVolumePeriodic(LambdaVolume):
     """
     As with `LambdaVolume`, but for a periodic order parameter.
@@ -426,7 +432,7 @@ class LambdaVolumePeriodic(LambdaVolume):
                         self.lambda_min, self.lambda_max, 
                         self.collectivevariable.name)
 
-@ops_object
+
 class VoronoiVolume(Volume):
     '''
     Volume given by a Voronoi cell specified by a set of centers
@@ -527,8 +533,6 @@ class VolumeFactory(object):
         myset = []
         for (min_i, max_i) in zip(minvals, maxvals):
             volume = LambdaVolume(op, min_i, max_i)
-            name = str(min_i) + "<" + op.name + "<" + str(max_i)
-            volume.name = name
             myset.append(volume)
         return myset
 

@@ -16,7 +16,6 @@ import openpathsampling as paths
 #=============================================================================================
 
 
-
 class Trajectory(list):
     """
     Simulation trajectory. Essentially a python list of snapshots
