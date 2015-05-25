@@ -11,7 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 class ReplicaNetwork(object):
-
+    """
+    Analysis tool for networks of replica exchanges.
+    """
     def __init__(self, repex_movers=None, ensembles=None, storage=None):
         self.analysis = { } 
         self.traces = { } 
@@ -84,7 +86,13 @@ class ReplicaNetwork(object):
 
     def set_labels(self, ens2str=None):
         """
-        Sets label dictionaries.
+        Sets label dictionaries. Requires that you run self.initial_order
+        for something first.
+
+        Parameters
+        ----------
+        ens2str : dict of { Ensemble : string } pairs
+            conversion of Ensemble to string label
         """
         # ensemble_to_string : returns a string value for the ensemble
         # ensemble_to_number : returns a non-neg int value (column order)
@@ -107,6 +115,15 @@ class ReplicaNetwork(object):
 
 
     def initial_order(self, index_order=None):
+        """
+        Sets order-based dictionaries.
+
+        Parameters
+        ----------
+        index_order : list of Ensembles
+            the ensembles in the desired order. Defaults order in
+            self.all_ensembles
+        """
         # dictionaries to be used to translate between orderings (these are
         # the defaults)
         if index_order == None:
@@ -165,6 +182,11 @@ class ReplicaNetwork(object):
 
 
     def analyze_traces(self, storage, force=False):
+        """
+        Calculates all the traces (fixed replica or fixed ensemble).
+
+        Populates the dictionary at self.traces.
+        """
         self.check_storage(storage)
         if force == False and self.traces != { }:
             return self.traces
@@ -181,8 +203,8 @@ class ReplicaNetwork(object):
 
 
     def reorder_matrix(self, matrix, index_order):
-        """ matrix must be a coo_matrix (I think): do other have same `data`
-        attrib?"""
+        #""" matrix must be a coo_matrix (I think): do other have same `data`
+        #attrib?"""
         if index_order == None:
             # reorder based on RCM from scipy.sparse.csgraph
             rcm_perm = reverse_cuthill_mckee(matrix.tocsr())
@@ -215,7 +237,6 @@ class ReplicaNetwork(object):
         )
         df = self.reorder_matrix(matrix, index_order)
         return (matrix, df)
-
 
 
     def transition_matrix(self, storage=None, index_order=None, force=False):
