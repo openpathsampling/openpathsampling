@@ -1,20 +1,40 @@
 import pandas as pd
+import numpy as np
 class LookupFunction(object):
     def __init__(self, ordinate, abscissa):
         self.pairs = { }
         for (x,y) in zip(ordinate, abscissa):
             self.pairs[x] = y
-        self.sorted_ordinates = sorted(self.pairs.keys())
+        self.sorted_ordinates = np.array(sorted(self.pairs.keys()))
 
     def keys(self):
         return list(self.sorted_ordinates)
 
     def values(self):
-        return list([self.pairs[x] for x in self.sorted_ordinates])
+        return np.array([self.pairs[x] for x in self.sorted_ordinates])
+
+    @property
+    def x(self):
+        return self.sorted_ordinates
+
+
+    def __len__(self):
+        return len(self.sorted_ordinates)
+
+    # TODO: may need better array behaviors
+    def __array__(self, result=None):
+        return np.array(self.values())
+
+    def __array_wrap__(self, result, context=None):
+        return LookupFunction(self.values(), result)
+
+    def __array_prepare__(self, result, context=None):
+        return result
 
     def series(self):
         # TODO: temp hack until I can get matplotlib to plot natively
-        return pd.Series(self.values(), self.keys())
+        ser = pd.Series(self.values(), self.keys())
+        return ser
 
     def __call__(self, value):
         # only a 1D implementation so far
