@@ -527,7 +527,8 @@ class TISTransition(Transition):
         outer_cross_prob = self.histograms['max_lambda'][outer_ensemble]
         if outer_lambda is None:
             lambda_bin = -1
-            while (outer_cross_prob.reverse_cumulative()[lambda_bin+1] == 1.0):
+            outer_cp_vals = outer_cross_prob.reverse_cumulative().values()
+            while (outer_cp_vals[lambda_bin+1] == 1.0):
                 lambda_bin += 1
             outer_lambda = outer_cross_prob.bins[lambda_bin]
 

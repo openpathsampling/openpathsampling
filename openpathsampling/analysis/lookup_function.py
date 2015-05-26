@@ -6,12 +6,13 @@ class LookupFunction(object):
         for (x,y) in zip(ordinate, abscissa):
             self.pairs[x] = y
         self.sorted_ordinates = np.array(sorted(self.pairs.keys()))
+        self._values = np.array([self.pairs[x] for x in self.sorted_ordinates])
 
     def keys(self):
         return list(self.sorted_ordinates)
 
     def values(self):
-        return np.array([self.pairs[x] for x in self.sorted_ordinates])
+        return self._values
 
     @property
     def x(self):
@@ -20,6 +21,10 @@ class LookupFunction(object):
 
     def __len__(self):
         return len(self.sorted_ordinates)
+
+    def __iter__(self):
+        for val in self.values():
+            yield val
 
     # TODO: may need better array behaviors
     def __array__(self, result=None):
