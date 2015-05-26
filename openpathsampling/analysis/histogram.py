@@ -108,7 +108,17 @@ class Histogram(object):
             raise RuntimeError("Histogram.histogram called without data!")
         return self._histogram.copy()
 
-    def __call__(self):
+    def xvals(self, label):
+        if label == "m":
+            xvals = [0.5*(self.bins[i]+self.bins[i+1]) 
+                     for i in range(len(self.bins)-1)]
+        elif label == "r":
+            xvals = self.bins[1:]
+        elif label == "l":
+            xvals = self.bins[0:-1]
+        return xvals
+
+    def __call__(self, xvals="m"):
         """Return copy of histogram if it has already been built"""
         return self.histogram()
 
