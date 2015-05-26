@@ -31,7 +31,8 @@ class LookupFunction(object):
         return np.array(self.values())
 
     def __array_wrap__(self, result, context=None):
-        return LookupFunction(self.values(), result)
+        res_arr = np.ndarray.__array_wrap__(self._values, result, context)
+        return LookupFunction(self.sorted_ordinates, res_arr)
 
     def __array_prepare__(self, result, context=None):
         return result
@@ -77,6 +78,9 @@ class LookupFunctionGroup(LookupFunction):
         pass
 
     def std(self):
+        pass
+
+    def mean(self):
         pass
 
     def __getitem__(self):
