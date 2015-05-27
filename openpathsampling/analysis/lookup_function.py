@@ -1,6 +1,27 @@
 import pandas as pd
 import numpy as np
 class LookupFunction(object):
+    """
+    Interpolation between datapoints.
+
+    Parameters
+    ----------
+    ordinate : iterable of numbers
+        values for the ordinate
+    abscissa : iterable of numbers
+        values for the abscissa
+
+    Iteration and numpy ufuncs work on the values. Callable with any number.
+
+    Notes
+    -----
+        Largely, this class mimics an immutable dictionary, except instead
+        of implementing __getitem__, we use the __call__ function. If you
+        call a number that is in the dictionary, you get exactly that
+        number. If you call a number that it not in the dictionary, the get
+        the linear interpolation/extrapolation for that number based on the
+        dictionary values.
+    """
     def __init__(self, ordinate, abscissa):
         self.pairs = { }
         for (x,y) in zip(ordinate, abscissa):
@@ -9,13 +30,22 @@ class LookupFunction(object):
         self._values = np.array([self.pairs[x] for x in self.sorted_ordinates])
 
     def keys(self):
+        """
+        Return the (ordered) list of ordinates
+        """
         return list(self.sorted_ordinates)
 
     def values(self):
+        """
+        Return the list of values (ordered by ordinate)
+        """
         return self._values
 
     @property
     def x(self):
+        """
+        Property to return the ordinates
+        """
         return self.sorted_ordinates
 
 
@@ -38,6 +68,7 @@ class LookupFunction(object):
         return result
 
     def series(self):
+        """Return a pandas.Series representation of data points"""
         # TODO: temp hack until I can get matplotlib to plot natively
         ser = pd.Series(self.values(), self.keys())
         return ser
@@ -73,8 +104,37 @@ class LookupFunction(object):
 
 
 class LookupFunctionGroup(LookupFunction):
-    def __init__(self, lookup_functions, use_x="shared"):
-        self.functions = lookup_functions
+    """
+    Simple mean and std for a group of LookupFunctions.
+
+    The mean and std from this are, themselves, LookupFunctions, and so can
+    interpolate between included values. Calling the group acts as calling
+    the mean. __getitem__, __setitem__, and append act on the list of
+    functions.
+
+    Parameters
+    ----------
+    functions : list of LookupFunctions
+        the functions included
+    use_x : "shared" (default), "all", or list of numbers
+        the values to consider as the ordinates. If "shared", includes only
+        values which appear in all the functions. If "all", includes all
+        values which appear in any function. A list of numbers will use that
+        list as the ordinate values.
+
+    Notes
+    -----
+        The choice of `use_x` is very important for the calculation of the
+        mean and standard deviation: if you use "shared", then you only
+        calculate the mean/std at points where all functions have measured
+        values. If you use "all", you will include points which are
+        interpolated/extrapolated, instead of measured. In the current
+        implementation, there is no way to get a mean/std with different
+        numbers of contributions at each point, depending on whether the
+        point has a measurement or is an extrapolation.
+    """
+    def __init__(self, functions, use_x="shared"):
+        self.functions = functions
         self.shared_x = set(self.functions[0].x)
         self.all_x = set(self.functions[0].x)
         for fcn in self.functions:
@@ -100,6 +160,7 @@ class LookupFunctionGroup(LookupFunction):
 
     @property
     def std(self):
+        """Standard deviation."""
         std = []
         for val in self.x:
             std.append(
@@ -109,6 +170,7 @@ class LookupFunctionGroup(LookupFunction):
 
     @property
     def mean(self):
+        """Mean."""
         mean = []
         for val in self.x:
             mean.append(
