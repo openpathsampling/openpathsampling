@@ -203,6 +203,21 @@ class ReplicaNetwork(object):
 
 
     def reorder_matrix(self, matrix, index_order):
+        """Return dataframe with matrix row/columns in index_order.
+        
+        Parameters
+        ----------
+        matrix : a SciPy COO sparse matrix
+            input sparse matrix
+        index_order : list of ensembles or None
+            order to list ensembles. If None, defaults to reverse
+            Cuthill-McKee order.
+
+        Returns
+        -------
+        pandas.DataFrame
+            dataframe with rows/columns ordered as desired
+        """
         #""" matrix must be a coo_matrix (I think): do other have same `data`
         #attrib?"""
         if index_order == None:
@@ -228,6 +243,21 @@ class ReplicaNetwork(object):
         return reordered
 
     def matrix_and_dataframe(self, ens_i, ens_j, data, index_order=None):
+        """
+        Create sparse matrix and pandas.Dataframe from ensemble data.
+
+        Parameters
+        ----------
+        ens_i : list of ensembles
+            the "from" ensemble
+        ens_j : list of ensembles
+            the "to" ensemble
+        data : list of floats
+            the data for the transition ensA->ensB, such that 
+            matrix[ensA, ensB] = data[k] with ens_i[k]=ensA, ens_j[k]=ensB
+        index_order : order of ensembles for output
+            see `reorder_matrix`
+        """
         self.initial_order(index_order)
         i = [self.ensemble_to_number[e] for e in ens_i]
         j = [self.ensemble_to_number[e] for e in ens_j]
@@ -240,6 +270,23 @@ class ReplicaNetwork(object):
 
 
     def transition_matrix(self, storage=None, index_order=None, force=False):
+        """
+        Create the transition matrix.
+
+        Parameters
+        ----------
+        storage : paths.Storage
+            input data
+        index_order : list of ensembles or None
+            see `reorder_matrix`
+        force : bool (False)
+            if True, recalculate cached values
+
+        Returns
+        -------
+        pandas.DataFrame
+            transition matrix
+        """
         (n_try, n_acc) = self.analyze_exchanges(storage, force)
         data = []
         for k in n_try.keys():
@@ -258,6 +305,23 @@ class ReplicaNetwork(object):
 
 
     def mixing_matrix(self, storage=None, index_order=None, force=False):
+        """
+        Create the mixing matrix.
+
+        Parameters
+        ----------
+        storage : paths.Storage
+            input data
+        index_order : list of ensembles or None
+            see `reorder_matrix`
+        force : bool (False)
+            if True, recalculate cached values
+
+        Returns
+        -------
+        pandas.DataFrame
+            mixing matrix
+        """
         (n_try, n_acc) = self.analyze_exchanges(storage, force)
         data = []
         for k in n_try.keys():
@@ -279,6 +343,18 @@ class ReplicaNetwork(object):
 
 
     def transitions_from_traces(self, storage=None, force=False):
+        """
+        Calculate the transitions based on the trace of a given replica.
+
+        This gives results normalized to *all* move types.
+
+        Parameters
+        ----------
+        storage : paths.Storage
+            input data
+        force : bool (False)
+            if True, recalculate cached values
+        """
         traces = self.analyze_traces(storage, force)
         transitions = {}
         for replica in [s.replica for s in self.storage.samplesets[0]]:
@@ -295,6 +371,31 @@ class ReplicaNetwork(object):
 
 
     def flow(self, bottom, top, storage=None, force=False):
+        """
+        Replica "flow" between ensembles `bottom` and `top`.
+
+        Replica flow at a given ensemble measures the relative number of
+        visits from replicas which has last visiting the "top" ensemble and
+        those which had last visited the "bottom" ensemble. Ideal flow
+        should be a straight line from 1.0 at "bottom" to 0.0 at "top".
+
+        Parameters
+        ----------
+        bottom : paths.Ensemble
+            "bottom" ensemble for this flow calculation
+        top : paths.Ensemble
+            "top" ensemble for this flow calculation
+        storage : paths.Storage
+            input data
+        force : bool (False)
+            if True, recalculate cached values
+
+
+        Reference
+        ---------
+            Katzgraber, Trebst, Huse, and Troyer. J. Stat. Mech. 2006,
+            P03018 (2006). doi:10.1088/1742-5468/2006/03/P03018
+        """
         traces = self.analyze_traces(storage, force)
         n_up = { ens : 0 for ens in self.all_ensembles }
         n_visit = { ens : 0 for ens in self.all_ensembles } 
