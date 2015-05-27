@@ -73,19 +73,59 @@ class LookupFunction(object):
 
 
 class LookupFunctionGroup(LookupFunction):
-    def __init__(self, lookup_functions):
+    def __init__(self, lookup_functions, use_x="shared"):
         self.functions = lookup_functions
-        pass
-
-    def std(self):
-        pass
-
-    def mean(self):
-        pass
-
-    def __getitem__(self):
-        pass
-
-    def __setitem__(self):
-        pass
+        self.shared_x = set(self.functions[0].x)
+        self.all_x = set(self.functions[0].x)
+        for fcn in self.functions:
+            self.shared_x = self.shared_x & set(fcn.x)
+            self.all_x = self.all_x | set(fcn.x)
         
+        self.use_x = use_x
+
+
+    @property
+    def use_x(self):
+        return self._use_x
+
+    @use_x.setter
+    def use_x(self, use_x):
+        self._use_x = use_x
+        if use_x == "all":
+            self.sorted_ordinates = self.all_x
+        elif use_x == "shared":
+            self.sorted_ordinates = self.shared_x
+        else:
+            self.sorted_ordinates = use_x
+
+    @property
+    def std(self):
+        std = []
+        for val in self.x:
+            std.append(
+                np.array([fcn(val) for fcn in self.functions]).std()
+            )
+        return LookupFunction(self.x, std)
+
+    @property
+    def mean(self):
+        mean = []
+        for val in self.x:
+            mean.append(
+                np.array([fcn(val) for fcn in self.functions]).mean()
+            )
+        return LookupFunction(self.x, mean)
+
+    def __call__(self, value):
+        return  self.mean(value)
+
+
+    # TODO: 
+    def __getitem__(self, item):
+        pass
+
+    def __setitem__(self, item):
+        pass
+    
+    def append(self, item):
+        pass
