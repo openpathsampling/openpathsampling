@@ -41,7 +41,8 @@ class testLookupFunctionGroup(object):
 
     def test_mean_allx(self):
         self.group.use_x = "all"
-        raise SkipTest
+        assert_almost_equal(self.group.mean(1.5), 1.51)
+        assert_almost_equal(self.group(1.5), 1.51)
 
     def test_std_shared(self):
         self.group.use_x = "shared"
@@ -49,10 +50,19 @@ class testLookupFunctionGroup(object):
 
     def test_std_allx(self):
         self.group.use_x = "all"
-        raise SkipTest
+        assert_almost_equal(self.group.std(1.5), 0.12806248474865695)
 
     def test_getitem(self):
-        raise SkipTest
+        luf = self.group[0]
+        assert_items_equal(luf.x, [0.0, 1.0, 2.0, 3.0, 4.0])
+        assert_items_equal(luf, [0.1, 1.3, 1.8, 3.3, 4.2])
 
     def test_setitem(self):
-        raise SkipTest
+        luf = LookupFunction([0.0, 1.0, 2.0], [0.5, 1.5, 2.5])
+        self.group[3] = luf
+        assert_almost_equal(self.group(1.0), 1.16)
+
+    def test_append(self):
+        luf = LookupFunction([0.0, 1.0, 2.0], [0.5, 1.5, 2.5])
+        self.group.append(luf)
+        assert_almost_equal(self.group(1.0), 1.15)
