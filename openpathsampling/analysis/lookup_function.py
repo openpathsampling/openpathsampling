@@ -120,12 +120,14 @@ class LookupFunctionGroup(LookupFunction):
         return  self.mean(value)
 
 
-    # TODO: 
     def __getitem__(self, item):
-        pass
+        return self.functions[item]
 
-    def __setitem__(self, item):
-        pass
+    def __setitem__(self, item, value):
+        self.functions[item] = value
+
+    def __contains__(self, item):
+        return item in self.functions
     
     def append(self, item):
-        pass
+        self.functions.append(item)
