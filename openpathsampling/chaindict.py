@@ -137,7 +137,9 @@ class ExpandSingle(ChainDict):
     """
 
     def __getitem__(self, items):
-        if hasattr(items, '__iter__'):
+        if type(items) is tuple:
+            return self.post[[items]][0]
+        elif hasattr(items, '__iter__'):
             return self.post[items]
         else:
             return self.post[[items]][0]
@@ -246,6 +248,14 @@ class BufferedStore(Wrap):
                         and self.storage in item.idx:
                     self._cache._set(item, value)
                     self._store._set(item, value)
+
+    def cache_all(self):
+        all_values = self._store.store.get_list_value(self._store.scope, slice(None,None))
+        storage = self.storage
+        for idx, value in enumerate(all_values):
+            if value is not None:
+#                self._cache[storage.snapshots[idx]] = value
+                self._cache[[(storage.snapshots, idx)]] = [value]
 
 class Store(ChainDict):
     def __init__(self, name, dimensions, store, scope=None):
@@ -384,6 +394,15 @@ class MultiStore(Store):
 
         [store.sync() for store in self.cod_stores.values()]
 
+    def cache_all(self):
+        if len(self.storages) != len(self.cod_stores):
+            self.update_nod_stores()
+
+        if len(self.cod_stores) == 0:
+            return None
+
+        [store.cache_all() for store in self.cod_stores.values()]
+
     def add_nod_store(self, storage):
         self.cod_stores[storage] = BufferedStore(
             self.name, self.dimensions, getattr(storage, self.store_name),
@@ -432,8 +451,6 @@ class MultiStore(Store):
         if len(self.storages) != len(self.cod_stores):
             self.update_nod_stores()
 
-
-
         if len(self.cod_stores) == 0:
             return [None] * len(items)
 
@@ -449,8 +466,6 @@ class MultiStore(Store):
             else:
                 output = [None if item is None or result is None else item
                      for item, result in zip(output, results) ]
-
-#        print output
 
         return output
 
