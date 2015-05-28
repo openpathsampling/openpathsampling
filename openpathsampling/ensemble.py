@@ -131,9 +131,9 @@ class Ensemble(OPSNamed):
     Examples
     --------    
     >>> EnsembleFactory.TISEnsemble(
-    >>>     LambdaVolume(collectivevariable_A, 0.0, 0.02),
-    >>>     LambdaVolume(collectivevariable_A, 0.0, 0.02),
-    >>>     LambdaVolume(collectivevariable_A, 0.0, 0.08),
+    >>>     CVRangeVolume(collectivevariable_A, 0.0, 0.02),
+    >>>     CVRangeVolume(collectivevariable_A, 0.0, 0.02),
+    >>>     CVRangeVolume(collectivevariable_A, 0.0, 0.08),
     >>>     True
     >>>     )
 

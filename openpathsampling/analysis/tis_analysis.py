@@ -27,8 +27,8 @@ Goal: RETIS for a simple A->B transition (one direction) boils down to
 >>> orderparameter = paths.CV_Function("lambda", some_function)
 >>>
 >>> # from here, this is real code
->>> stateA = paths.LambdaVolume(orderparameter, min=-infinity, max=0.0)
->>> stateB = paths.LambdaVolume(orderparameter, min=1.0, max=infinity)
+>>> stateA = paths.CVRangeVolume(orderparameter, min=-infinity, max=0.0)
+>>> stateB = paths.CVRangeVolume(orderparameter, min=1.0, max=infinity)
 >>> interfaces = paths.VolumeSet(orderparameter, min=-infinity, max=[0.0, 0.1, 0.2])
 >>> transitionAB = paths.RETISTransition(stateA, stateB, orderparameter, interfaces, storage)
 >>> retis_calc = PathSampling(

@@ -20,7 +20,7 @@ from openpathsampling.sample import Sample, SampleSet
 
 from openpathsampling.shooting import UniformSelector
 
-from openpathsampling.volume import LambdaVolume
+from openpathsampling.volume import CVRangeVolume
 from test_helpers import CallIdentity
 from openpathsampling.trajectory import Trajectory
 from openpathsampling.ensemble import EnsembleFactory as ef
@@ -123,8 +123,8 @@ class testShootingMover(object):
         SampleGeneratingMover.engine = self.dyn
         op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
-        stateA = LambdaVolume(op, -100, 0.0)
-        stateB = LambdaVolume(op, 0.65, 100)
+        stateA = CVRangeVolume(op, -100, 0.0)
+        stateB = CVRangeVolume(op, 0.65, 100)
         self.tps = ef.A2BEnsemble(stateA, stateB)
         init_traj = make_1d_traj(
             coordinates=[-0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
@@ -173,9 +173,9 @@ class testPathReversalMover(object):
         op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
 
-        volA = LambdaVolume(op, -100, 0.0)
-        volB = LambdaVolume(op, 1.0, 100)
-        volX = LambdaVolume(op, -100, 0.25)
+        volA = CVRangeVolume(op, -100, 0.0)
+        volB = CVRangeVolume(op, 1.0, 100)
+        volX = CVRangeVolume(op, -100, 0.25)
         self.tis = paths.TISEnsemble(volA, volB, volX)
         self.move = PathReversalMover()
         self.op = op
@@ -238,10 +238,10 @@ class testReplicaExchangeMover(object):
         op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
 
-        state1 = LambdaVolume(op, -100, 0.0)
-        state2 = LambdaVolume(op, 1, 100)
-        volA = LambdaVolume(op, -100, 0.25)
-        volB = LambdaVolume(op, -100, 0.50)
+        state1 = CVRangeVolume(op, -100, 0.0)
+        state2 = CVRangeVolume(op, 1, 100)
+        volA = CVRangeVolume(op, -100, 0.25)
+        volB = CVRangeVolume(op, -100, 0.50)
         self.tisA = paths.TISEnsemble(state1, state2, volA)
         self.tisB = paths.TISEnsemble(state1, state2, volB)
         self.traj0 = make_1d_traj([-0.1, 0.2, 0.3, 0.1, -0.2])
@@ -304,9 +304,9 @@ class testRandomChoiceMover(object):
     def setup(self):
         traj = Trajectory([-0.5, 0.7, 1.1])
         op = CallIdentity()
-        volA = LambdaVolume(op, -100, 0.0)
-        volB = LambdaVolume(op, 1.0, 100)
-        volX = LambdaVolume(op, -100, 0.25)
+        volA = CVRangeVolume(op, -100, 0.0)
+        volB = CVRangeVolume(op, 1.0, 100)
+        volX = CVRangeVolume(op, -100, 0.25)
         self.tis = paths.TISEnsemble(volA, volB, volX)
         self.tps = ef.A2BEnsemble(volA, volB)
         self.len3 = LengthEnsemble(3)
@@ -343,9 +343,9 @@ class testSequentialMover(object):
     def setup(self):
         traj = Trajectory([-0.5, 0.7, 1.1])
         op = CallIdentity()
-        volA = LambdaVolume(op, -100, 0.0)
-        volB = LambdaVolume(op, 1.0, 100)
-        volX = LambdaVolume(op, -100, 0.25)
+        volA = CVRangeVolume(op, -100, 0.0)
+        volB = CVRangeVolume(op, 1.0, 100)
+        volX = CVRangeVolume(op, -100, 0.25)
         tis = paths.TISEnsemble(volA, volB, volX)
         tps = ef.A2BEnsemble(volA, volB)
         len3 = LengthEnsemble(3)
@@ -533,7 +533,7 @@ class SubtrajectorySelectTester(object):
 
     def setup(self):
         op = CallIdentity()
-        vol = paths.LambdaVolume(op, -0.5, 0.5)
+        vol = paths.CVRangeVolume(op, -0.5, 0.5)
         inX = paths.AllInXEnsemble(vol)
         outX = paths.AllOutXEnsemble(vol)
         self.ensemble = paths.SequentialEnsemble([
@@ -624,9 +624,9 @@ class testFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
 #     def setup(self):
 #         traj = Trajectory([-0.5, 0.7, 1.1])
 #         op = CallIdentity()
-#         volA = LambdaVolume(op, -100, 0.0)
-#         volB = LambdaVolume(op, 1.0, 100)
-#         volX = LambdaVolume(op, -100, 0.25)
+#         volA = CVRangeVolume(op, -100, 0.0)
+#         volB = CVRangeVolume(op, 1.0, 100)
+#         volX = CVRangeVolume(op, -100, 0.25)
 #         self.tis = paths.TISEnsemble(volA, volB, volX)
 #         self.len3 = LengthEnsemble(3)
 #         self.len2 = LengthEnsemble(2)
@@ -659,9 +659,9 @@ class testMinusMover(object):
         op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
 
-        volA = LambdaVolume(op, -100, 0.0)
-        volB = LambdaVolume(op, 1.0, 100)
-        volX = LambdaVolume(op, -100, 0.25)
+        volA = CVRangeVolume(op, -100, 0.0)
+        volB = CVRangeVolume(op, 1.0, 100)
+        volX = CVRangeVolume(op, -100, 0.25)
         self.dyn = CalvinistDynamics([
             # successful move: (backward extension then forward)
             -0.13, 0.13, 0.33, -0.11, -0.12, 0.12, 0.32, -0.131,

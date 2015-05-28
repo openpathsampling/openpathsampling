@@ -22,7 +22,7 @@ sys.path.append(os.path.abspath('../../'))
 from openpathsampling.collectivevariable import CV_Function, CV_Volume
 from openpathsampling.openmm_engine import OpenMMEngine
 from openpathsampling.snapshot import Snapshot
-from openpathsampling.volume import LambdaVolumePeriodic, VolumeFactory as vf
+from openpathsampling.volume import CVRangeVolumePeriodic, VolumeFactory as vf
 from openpathsampling.pathmover import PathMoverFactory as mf
 from openpathsampling.ensemble import EnsembleFactory as ef
 from openpathsampling.ensemble import (LengthEnsemble, SequentialEnsemble, AllOutXEnsemble,
@@ -91,8 +91,8 @@ if __name__=="__main__":
 
     # now we define our states and our interfaces
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
-    stateA = LambdaVolumePeriodic(psi, -120.0/degrees, -30.0/degrees)
-    stateB = LambdaVolumePeriodic(psi, 100/degrees, 180/degrees)
+    stateA = CVRangeVolumePeriodic(psi, -120.0/degrees, -30.0/degrees)
+    stateB = CVRangeVolumePeriodic(psi, 100/degrees, 180/degrees)
 
     engine.storate.volumes.save(stateA)
 
