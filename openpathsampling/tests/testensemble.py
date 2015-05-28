@@ -1431,7 +1431,7 @@ class testPrefixTrajectoryEnsemble(EnsembleTest):
         assert_equal(ens._cached_trajectory, traj[0:6])
         assert_equal(ens._cache_can_append.trusted, True)
 
-class testBackwardPrependedTrajectoryEnsemble(EnsembleTest):
+class testSuffixTrajectoryEnsemble(EnsembleTest):
     def setUp(self):
         xval = paths.CV_Function("x", lambda s : s.xyz[0][0])
         vol = paths.CVRangeVolume(xval, 0.1, 0.5)
@@ -1440,7 +1440,7 @@ class testBackwardPrependedTrajectoryEnsemble(EnsembleTest):
 
     def test_bad_end_traj(self):
         traj = ttraj['upper_in_in_in_out']
-        ens = BackwardPrependedTrajectoryEnsemble(
+        ens = SuffixTrajectoryEnsemble(
             SequentialEnsemble([self.inX]),
             traj[-2:]
         )
@@ -1449,7 +1449,7 @@ class testBackwardPrependedTrajectoryEnsemble(EnsembleTest):
 
     def test_good_end_traj(self):
         traj = ttraj['upper_out_in_in_in']
-        ens = BackwardPrependedTrajectoryEnsemble(
+        ens = SuffixTrajectoryEnsemble(
             SequentialEnsemble([self.inX]),
             traj[-2:]
         )
@@ -1475,7 +1475,7 @@ class testBackwardPrependedTrajectoryEnsemble(EnsembleTest):
             assert_equal(pseudo_minus.can_prepend(traj[i:]), True)
 
         logger.debug("alltraj " + str([id(i) for i in traj]))
-        ens = BackwardPrependedTrajectoryEnsemble(pseudo_minus, traj[-3:])
+        ens = SuffixTrajectoryEnsemble(pseudo_minus, traj[-3:])
         assert_equal(len(ens._cached_trajectory), 3)
 
         assert_equal(ens.can_prepend(traj[-4:-3].reversed), True)

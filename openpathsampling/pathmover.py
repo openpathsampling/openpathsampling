@@ -583,7 +583,7 @@ class BackwardShootGeneratingMover(ShootGeneratingMover):
         partial_trajectory = self.engine.generate(
             shooting_point.snapshot.reversed_copy(),
             running = [
-                paths.BackwardPrependedTrajectoryEnsemble(
+                paths.SuffixTrajectoryEnsemble(
                     ensemble,
                     shooting_point.trajectory[shooting_point.index + 1:]
                 ).can_prepend,
@@ -731,7 +731,7 @@ class BackwardExtendGeneratingMover(ExtendingGeneratingMover):
         partial_trajectory = self.engine.generate(
             initial_trajectory[0].reversed,
             running = [
-                paths.BackwardPrependedTrajectoryEnsemble(
+                paths.SuffixTrajectoryEnsemble(
                     ensemble,
                     initial_trajectory[1:]
                 ).can_prepend,
