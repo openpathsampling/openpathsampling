@@ -163,7 +163,7 @@ class PathMover(TreeMixin, OPSNamed):
             return [ensembles]
 
     @property
-    def in_ensembles(self):
+    def input_ensembles(self):
         """Return a list of possible used ensembles for this mover
 
         This list contains all Ensembles from which this mover might pick
@@ -183,7 +183,7 @@ class PathMover(TreeMixin, OPSNamed):
         return self._in_ensembles
 
     @property
-    def out_ensembles(self):
+    def output_ensembles(self):
         """Return a list of possible returned ensembles for this mover
 
         This list contains all Ensembles for which this mover might return
@@ -1183,10 +1183,10 @@ class RandomChoiceMover(PathMover):
         return self.movers
 
     def _get_in_ensembles(self):
-        return [ sub.in_ensembles for sub in self.submovers ]
+        return [ sub.input_ensembles for sub in self.submovers ]
 
     def _get_out_ensembles(self):
-        return [ sub.out_ensembles for sub in self.submovers ]
+        return [ sub.output_ensembles for sub in self.submovers ]
 
     def move(self, globalstate):
         rand = np.random.random() * sum(self.weights)
@@ -1237,10 +1237,10 @@ class ConditionalMover(PathMover):
         return [self.if_mover, self.then_mover, self.else_mover]
 
     def _get_in_ensembles(self):
-        return [ sub.in_ensembles for sub in self.submovers ]
+        return [ sub.input_ensembles for sub in self.submovers ]
 
     def _get_out_ensembles(self):
-        return [ sub.out_ensembles for sub in self.submovers ]
+        return [ sub.output_ensembles for sub in self.submovers ]
 
     def move(self, globalstate):
         subglobal = globalstate
@@ -1283,10 +1283,10 @@ class SequentialMover(PathMover):
         return self.movers
 
     def _get_in_ensembles(self):
-        return [ sub.in_ensembles for sub in self.submovers ]
+        return [ sub.input_ensembles for sub in self.submovers ]
 
     def _get_out_ensembles(self):
-        return [ sub.out_ensembles for sub in self.submovers ]
+        return [ sub.output_ensembles for sub in self.submovers ]
 
     def move(self, globalstate):
         logger.debug("Starting sequential move")
@@ -1383,7 +1383,7 @@ class RestrictToLastSampleMover(PathMover):
         return [self.mover]
 
     def _get_in_ensembles(self):
-        return [ sub.in_ensembles for sub in self.submovers ]
+        return [ sub.input_ensembles for sub in self.submovers ]
 
     def move(self, globalstate):
         movepath = self.mover.move(globalstate)
@@ -1508,10 +1508,10 @@ class WrappedMover(PathMover):
         return [self.mover]
 
     def _get_in_ensembles(self):
-        return self.mover.in_ensembles
+        return self.mover.input_ensembles
 
     def _get_out_ensembles(self):
-        return self.mover.out_ensembles
+        return self.mover.output_ensembles
 
     def move(self, globalstate):
         subchange = self.mover.move(globalstate)
