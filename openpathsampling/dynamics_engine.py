@@ -7,6 +7,7 @@ Created on 01.07.2014
 
 import simtk.unit as u
 import openpathsampling as paths
+from openpathsampling.todict import OPSNamed
 
 
 import logging
@@ -23,7 +24,7 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 #=============================================================================
 
 
-class DynamicsEngine(object):
+class DynamicsEngine(OPSNamed):
     '''
     Wraps simulation tool (parameters, storage, etc.)
 
@@ -56,6 +57,8 @@ class DynamicsEngine(object):
         created as well as the related Trajectory and Snapshot classes are
         initialized.
         '''
+
+        super(DynamicsEngine, self).__init__()
 
         self.initialized = False
         self.running = dict()
@@ -293,7 +296,7 @@ class DynamicsEngine(object):
                 # Store snapshot and add it to the trajectory. Stores also
                 # final frame the last time
 #                if self.storage is not None:
-#                    self.storage.snapshot.save(snapshot)
+#                    self.storage.snapshots.save(snapshot)
                 trajectory.append(snapshot)
                 
                 # Check if we should stop. If not, continue simulation
@@ -310,3 +313,5 @@ class DynamicsEngine(object):
         else:
             raise RuntimeWarning("Can't generate from an uninitialized system!")
 
+    def generate_next_frame(self):
+        raise NotImplementedError('Next frame generation must be implemented!')

@@ -61,7 +61,7 @@ def loadcache(func):
             # we want to load by name and it was not in cache
             if self.named:
                 # only do it, if we allow named objects
-                if not self._names_loaded:
+                if not self._uids_loaded:
                     # this only has to happen once, since afterwards we keep track of the name_cache
                     # this name cache shares just the normal cache but stores indices instead of objects
                     self.update_name_cache()
@@ -72,7 +72,7 @@ def loadcache(func):
             else:
                 raise ValueError('str "' + idx + '" as indices are only allowed in named storage')
 
-            n_idx = self.idx_from_name(idx)
+            n_idx = self.idx_from_uid(idx)
 
         obj = func(self, n_idx, *args, **kwargs)
 
@@ -84,7 +84,7 @@ def loadcache(func):
 
         if self.named and not hasattr(obj, 'name'):
             # get the name of the object
-            setattr(obj, 'name', self.get_name(idx))
+            setattr(obj, 'name', self.get_uid(idx))
 
         if self.named and hasattr(obj, 'name') and obj.name != '':
             self.cache[obj.name] = obj

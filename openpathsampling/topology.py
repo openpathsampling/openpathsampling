@@ -1,13 +1,12 @@
-from openpathsampling.todict import restores_as_full_object
+from openpathsampling.todict import OPSNamed
 
 import mdtraj as md
 import numpy as np
 import pandas as pd
-from simtk import unit as units
-import simtk.openmm
+#from simtk import unit as units
+#import simtk.openmm
 
-@restores_as_full_object
-class Topology(object):
+class Topology(OPSNamed):
     '''
     Topology is the object that contains all information about the structure
     of the system to be simulated.
@@ -21,6 +20,7 @@ class Topology(object):
     '''
 
     def __init__(self, n_atoms, n_spatial = 3):
+        super(Topology, self).__init__()
         self.n_atoms = n_atoms
         self.n_spatial = n_spatial
 
@@ -31,7 +31,6 @@ class Topology(object):
         )
 
 
-@restores_as_full_object
 class ToyTopology(Topology):
     '''
     Attributes
@@ -47,12 +46,10 @@ class ToyTopology(Topology):
     def subset(self, list_of_atoms):
         return self
 
-@restores_as_full_object
 class MDTrajTopology(Topology):
     def __init__(self, mdtraj_topology, subsets = None):
+        super(MDTrajTopology, self).__init__(int(mdtraj_topology.n_atoms), 3)
         self.md = mdtraj_topology
-        self.n_atoms = int(mdtraj_topology.n_atoms)
-        self.n_spatial = 3
         if subsets is None:
             self.subsets = {}
         else:

@@ -34,6 +34,10 @@ def items_equal(truth, beauty):
             return False
     return True
 
+def assert_items_almost_equal(truth, beauty, tol=10e-7):
+    for (t,b) in zip(truth, beauty):
+        assert_equal( (t-b)<tol, True)
+
 
 def assert_equal_array_array(truth, beauty):
     for (t_atom, b_atom) in zip(truth, beauty):
@@ -86,7 +90,7 @@ class CalvinistDynamics(DynamicsEngine):
             self._current_snap = self.predestination[self.frame_index+1].copy()
             self.frame_index += 1
         else:
-            self._current_snap = self.predestination[self.frame_index-1].reversed_copy()
+            self._current_snap = self.predestination[self.frame_index-1].reversed
             self.frame_index -= 1
 
         return self._current_snap

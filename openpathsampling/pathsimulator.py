@@ -1,4 +1,4 @@
-from openpathsampling.todict import restores_as_stub_object
+from openpathsampling.todict import OPSNamed
 import openpathsampling as paths
 
 from openpathsampling.pathmover import PathMover
@@ -8,14 +8,17 @@ from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-@restores_as_stub_object
-class Calculation(object):
+class PathSimulator(OPSNamed):
 
-    calc_name = "Calculation"
+    calc_name = "PathSimulator"
+
+    _excluded_attr = ['globalstate']
 
     def __init__(self, storage, engine=None):
+        super(PathSimulator, self).__init__()
         self.storage = storage
         self.engine = engine
+        self.save_frequency = 1
         initialization_logging(
             logger=init_log, obj=self,
             entries=['storage', 'engine']
@@ -24,20 +27,23 @@ class Calculation(object):
     def set_replicas(self, samples):
         self.globalstate = paths.SampleSet(samples)
 
+    def sync_storage(self):
+        if self.storage is not None:
+            self.storage.cvs.sync()
+            self.storage.sync()
+
     def run(self, nsteps):
-        logger.warning("Running an empty calculation? Try a subclass, maybe!")
+        logger.warning("Running an empty pathsimulator? Try a subclass, maybe!")
 
 
-@restores_as_stub_object
 class BootstrapPromotionMove(PathMover):
     '''
     Bootstrap promotion is the combination of an EnsembleHop (to the next
     ensemble up) with incrementing the replica ID.
     '''
     def __init__(self, bias=None, shooters=None,
-                 ensembles=None, replicas='all'):
-        super(BootstrapPromotionMove, self).__init__(ensembles=ensembles,
-                                                     replicas=replicas)
+                 ensembles=None):
+        super(BootstrapPromotionMove, self).__init__(ensembles=ensembles)
         self.shooters = shooters
         self.bias = bias
         initialization_logging(logger=init_log, obj=self,
@@ -78,33 +84,11 @@ class BootstrapPromotionMove(PathMover):
         return mover.move(globalstate)
 
 
-# TODO: Is this used anywhere? Or do we do this differently
-class InitializeSingleTrajectoryMover(PathMover):
-    def __init__(self, bias=None, shooters=None,
-                 ensembles=None, replicas='all'):
-        super(InitializeSingleTrajectoryMover, self).__init__(ensembles=ensembles,
-                                                     replicas=replicas)
-        self.shooters = shooters
-        self.bias = bias
-        initialization_logging(logger=init_log, obj=self,
-                               entries=['bias', 'shooters'])
 
-    def move(self, globalstate=None):
-        init_details = paths.MoveDetails()
-        init_details.accepted = True
-        init_details.acceptance_probability = 1.0
-        init_details.mover = self
-        init_details.inputs = []
-        init_details.trial = None
-        init_details.ensemble = None
-        sample = paths.Sample(replica=0, trajectory=None,
-                        ensemble=self.ensembles[0], details=init_details)
-
-@restores_as_stub_object
-class Bootstrapping(Calculation):
+class Bootstrapping(PathSimulator):
     """Creates a SampleSet with one sample per ensemble.
     
-    The ensembles for the Bootstrapping calculation must be one ensemble
+    The ensembles for the Bootstrapping pathsimulator must be one ensemble
     set, in increasing order. Replicas are named numerically.
     """
 
@@ -115,17 +99,8 @@ class Bootstrapping(Calculation):
         super(Bootstrapping, self).__init__(storage, engine)
         self.ensembles = ensembles
 
-        # this is stupid; must be a better way
-        init_details = paths.MoveDetails()
-        init_details.accepted = True
-        init_details.acceptance_probability = 1.0
-        init_details.mover = paths.PathMover()
-        init_details.mover.name = "Initialization (trajectory)"
-        init_details.inputs = []
-        init_details.trial = trajectory
-        init_details.ensemble = self.ensembles[0]
-        sample = paths.Sample(replica=0, trajectory=trajectory, 
-                        ensemble=self.ensembles[0], details=init_details)
+        sample = paths.Sample(replica=0, trajectory=trajectory,
+                        ensemble=self.ensembles[0])
 
         self.globalstate = paths.SampleSet([sample])
         if self.storage is not None:
@@ -138,14 +113,15 @@ class Bootstrapping(Calculation):
                                ['movers', 'ensembles'])
         init_log.info("Parameter: %s : %s", 'trajectory', str(trajectory))
 
-    def run(self, nsteps):
-        bootstrapmove = BootstrapPromotionMove(bias=None,
+        self._bootstrapmove = BootstrapPromotionMove(bias=None,
                                                shooters=self.movers,
-                                               ensembles=self.ensembles,
-                                               replicas='all'
+                                               ensembles=self.ensembles
                                               )
 
-        ens_num = 0
+    def run(self, nsteps):
+        bootstrapmove = self._bootstrapmove
+
+        ens_num = len(self.globalstate)-1
         failsteps = 0
         step_num = 0
         # if we fail nsteps times in a row, kill the job
@@ -153,29 +129,27 @@ class Bootstrapping(Calculation):
         old_ens = self.globalstate[0].ensemble
 
         while ens_num < len(self.ensembles) - 1 and failsteps < nsteps:
-            logger.info("Step: " + str(step_num) 
+            logger.info("Step: " + str(step_num)
                         + "   Ensemble: " + str(ens_num)
                         + "  failsteps = " + str(failsteps)
                        )
 
             movepath = bootstrapmove.move(self.globalstate)
             samples = movepath.samples
-            logger.debug("SAMPLES:")
-            for sample in samples:
-                logger.debug("(" + str(sample.replica)
-                             + "," + str(sample.trajectory)
-                             + "," + repr(sample.ensemble)
-                             + "," + str(sample.details.accepted)
-                            )
+#            logger.debug("SAMPLES:")
+#            for sample in samples:
+#                logger.debug("(" + str(sample.replica)
+#                             + "," + str(sample.trajectory)
+#                             + "," + repr(sample.ensemble)
+#                            )
             self.globalstate = self.globalstate.apply_samples(samples, step=step_num)
             self.globalstate.movepath = movepath
-            logger.debug("GLOBALSTATE:")
-            for sample in self.globalstate:
-                logger.debug("(" + str(sample.replica)
-                             + "," + str(sample.trajectory)
-                             + "," + repr(sample.ensemble)
-                             + "," + str(sample.details.accepted)
-                            )
+#            logger.debug("GLOBALSTATE:")
+#            for sample in self.globalstate:
+#                logger.debug("(" + str(sample.replica)
+#                             + "," + str(sample.trajectory)
+#                             + "," + repr(sample.ensemble)
+#                            )
 
             old_ens_num = ens_num
             ens_num = len(self.globalstate)-1
@@ -183,15 +157,14 @@ class Bootstrapping(Calculation):
                 failsteps += 1
 
             if self.storage is not None:
-                self.globalstate.save_samples(self.storage)
+#                self.globalstate.save_samples(self.storage)
                 self.globalstate.save(self.storage)
             step_num += 1
 
-        for sample in self.globalstate:
-            assert sample.ensemble(sample.trajectory) == True, "WTF?"
+            self.globalstate.sanity_check()
 
-@restores_as_stub_object
-class PathSampling(Calculation):
+
+class PathSampling(PathSimulator):
     """
     General path sampling code. 
     
@@ -206,15 +179,16 @@ class PathSampling(Calculation):
         self.root_mover = root_mover
 #        self.root_mover.name = "PathSamplingRoot"
         samples = []
-        for sample in globalstate:
-            samples.append(sample.copy_reset())
+        if globalstate is not None:
+            for sample in globalstate:
+                samples.append(sample.copy_reset())
 
         self.globalstate = paths.SampleSet(samples)
 
         initialization_logging(init_log, self, 
                                ['root_mover', 'globalstate'])
 
-        self._mover = paths.CalculationMover(self.root_mover, self)
+        self._mover = paths.PathSimulatorMover(self.root_mover, self)
 
     def run(self, nsteps):
         # TODO: change so we can start from some arbitrary step number
@@ -223,22 +197,34 @@ class PathSampling(Calculation):
                                                           step=-1)
 
         if self.storage is not None:
-            self.globalstate.save_samples(self.storage)
             self.globalstate.save(self.storage)
             self.storage.sync()
 
         for step in range(nsteps):
+            logger.info("Beginning MC cycle " + str(step+1))
+            paths.tools.refresh_output(
+                "Working on Monte Carlo cycle step " + str(step+1) + ".\n"
+            )
             movepath = self._mover.move(self.globalstate, step=step)
             samples = movepath.samples
             self.globalstate = self.globalstate.apply_samples(samples, step=step)
             self.globalstate.movepath = movepath
             if self.storage is not None:
-                self.globalstate.save_samples(self.storage)
                 self.globalstate.save(self.storage)
-                self.storage.sync()
 
-    def to_dict(self):
-        return {
-            'root_mover' : self.root_mover,
-#            'globalstate' : self.globalstate
-        }
+            if step % self.save_frequency == 0:
+                self.globalstate.sanity_check()
+                self.sync_storage()
+                #if self.storage is not None:
+                    # Note: This saves all collectivevariables, but does
+                    # this with removing computed values for not saved
+                    # collectivevariables We assume that this is the right
+                    # cause of action for this case.
+                    #self.storage.cv.sync()
+                    #self.storage.sync()
+
+        self.sync_storage()
+        paths.tools.refresh_output(
+            "DONE! Completed " + str(step+1) + " Monte Carlo cycles.\n"
+        )
+

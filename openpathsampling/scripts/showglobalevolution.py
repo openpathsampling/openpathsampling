@@ -4,7 +4,7 @@ import argparse
 import os
 from openpathsampling.storage import Storage
 
-from openpathsampling.orderparameter import OP_Function
+from openpathsampling.collectivevariable import CV_Function
 import mdtraj as md
 if __name__ == '__main__':
 
@@ -37,7 +37,7 @@ if __name__ == '__main__':
                                                      )
 
     psi_atoms = [6,8,14,16]
-    psi = OP_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
+    psi = CV_Function("psi", md.compute_dihedrals, trajdatafmt="mdtraj",
       indices=[psi_atoms])
 
 
@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
 
-    ensembles = map(storage.ensemble.load, range(storage.ensemble.count()))
+    ensembles = map(storage.ensembles.load, range(storage.ensembles.count()))
     ensembles_y = {ensemble : idx for idx, ensemble in enumerate(ensembles) if ensemble.name != ''}
 
     left = 100
@@ -147,9 +147,9 @@ if __name__ == '__main__':
     last_x = -1
 
 
-    for o_idx in range(0, storage.sample.count()):
+    for o_idx in range(0, storage.samples.count()):
 
-        sample = storage.sample.load(o_idx)
+        sample = storage.samples.load(o_idx)
         ensemble = sample.ensemble
         length = len(sample.details.final)
 

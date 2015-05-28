@@ -27,16 +27,24 @@ class SnapshotStore(ObjectStore):
             the loaded snapshot instance
         '''
 
-        snapshot = Snapshot()
 
         configuration_idx = self.configuration_idx(idx)
         momentum_idx = self.momentum_idx(idx)
         momentum_reversed = self.momentum_reversed(idx)
+        reversed_idx = self.reversed_idx(idx)
 
-        snapshot.configuration = self.storage.configuration.load(configuration_idx)
-        snapshot.momentum = self.storage.momentum.load(momentum_idx)
+        configuration = self.storage.configurations.load(configuration_idx)
+        momentum = self.storage.momentum.load(momentum_idx)
 
-        snapshot.reversed = momentum_reversed
+        snapshot = Snapshot(configuration=configuration, momentum=momentum, is_reversed=momentum_reversed, reversed_copy=None)
+        snapshot_reversed = Snapshot(configuration=configuration, momentum=momentum, is_reversed=not momentum_reversed, reversed_copy=None)
+
+        snapshot._reversed = snapshot_reversed
+        snapshot_reversed._reversed = snapshot
+
+        # fix caching!
+        snapshot_reversed.idx[self.storage] = reversed_idx
+        self.cache[reversed_idx] = snapshot_reversed
 
         return snapshot
 
@@ -46,15 +54,13 @@ class SnapshotStore(ObjectStore):
 
         Notes
         -----
-        Usually you want to use storage.snapshot.iterator() to get an
-        iterator over all snapshots
+        If you are interested in collectivevariables this is faster since it does not
+        load the snapshots. Otherwise storage.snapshots is fine to get an
+        iterator. Both should should be about the same speed.
         """
-        t = Trajectory()
-        count = self.count()
-        for snapshot_idx in range(0,count):
-            t.append(self.load(snapshot_idx))
-
-        return t
+        #TODO: Might think about replacing the iterator with this since it is
+        # faster for collectivevariables
+        return Trajectory([ (self, idx) for idx in range(len(self)) ])
 
     def save(self, snapshot, idx=None):
         """
@@ -76,7 +82,7 @@ class SnapshotStore(ObjectStore):
         storage = self.storage
 
         if snapshot.configuration is not None:
-            storage.configuration.save(snapshot.configuration)
+            storage.configurations.save(snapshot.configuration)
             self.save_variable('snapshot_configuration_idx', idx, snapshot.configuration.idx[storage])
         else:
             self.save_variable('snapshot_configuration_idx', idx, -1)
@@ -87,7 +93,13 @@ class SnapshotStore(ObjectStore):
         else:
             self.save_variable('snapshot_momentum_idx', idx, -1)
 
-        self.save_variable('snapshot_momentum_reversed', idx, int(snapshot.reversed))
+        if snapshot._reversed is not None:
+            storage.snapshots.save(snapshot._reversed)
+            self.save_variable('snapshot_reversed_idx', idx, snapshot._reversed.idx[storage])
+        else:
+            self.save_variable('snapshot_reversed_idx', idx, -1)
+
+        self.save_variable('snapshot_momentum_reversed', idx, int(snapshot.is_reversed))
 
 
     def configuration_idx(self, idx):
@@ -122,6 +134,22 @@ class SnapshotStore(ObjectStore):
         '''
         return int(self.load_variable('snapshot_momentum_idx', idx))
 
+    def reversed_idx(self, idx):
+        '''
+        Load snapshot index for the reversed snapshot with ID 'idx'
+        from the storage
+
+        Parameters
+        ----------
+        idx : int
+            index of the snapshot
+
+        Returns
+        -------
+        int
+            reversed snapshot indices
+        '''
+        return int(self.load_variable('snapshot_reversed_idx', idx))
 
     def momentum_reversed(self, idx):
         '''
@@ -158,8 +186,13 @@ class SnapshotStore(ObjectStore):
 
         self.init_variable('snapshot_momentum_reversed', 'bool', self.db, chunksizes=(1, ))
 
+        self.init_variable('snapshot_reversed_idx', 'index', self.db,
+                description="snapshot[snapshot] is the idx of the reversed snapshot index (0..n_snapshot-1) 'frame' of snapshot 'snapshot'.",
+                chunksizes=(1, )
+                )
+
 #=============================================================================================
-# ORDERPARAMETER UTILITY FUNCTIONS
+# COLLECTIVE VARIABLE UTILITY FUNCTIONS
 #=============================================================================================
 
     @property
@@ -238,7 +271,7 @@ class MomentumStore(ObjectStore):
             print 'Think about how to handle this. It should only be None if loaded lazy and in this case it will never be saved.'
 
         # Force sync to disk to avoid data loss.
-        storage.sync()
+        # storage.sync()
 
     def load(self, idx):
         '''
@@ -271,7 +304,8 @@ class MomentumStore(ObjectStore):
         del momentum.kinetic_energy
         return momentum
 
-    def update_velocities(self, obj):
+    @staticmethod
+    def update_velocities(obj):
         """
         Update/Load the velocities in the given obj from the attached storage
 
@@ -281,15 +315,16 @@ class MomentumStore(ObjectStore):
             The Momentum object to be updated
 
         """
-        storage = self.storage
+        storage = obj._origin
 
-        idx = obj.idx[self.storage]
+        idx = obj.idx[storage]
         v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
-        velocities = u.Quantity(v, self.storage.units["momentum_velocities"])
+        velocities = u.Quantity(v, storage.units["momentum_velocities"])
 
         obj.velocities = velocities
 
-    def update_kinetic_energy(self, obj):
+    @staticmethod
+    def update_kinetic_energy(obj):
         """
         Update/Load the kinetic_energy in the given obj from the attached storage
 
@@ -299,11 +334,11 @@ class MomentumStore(ObjectStore):
             The Momentum object to be updated
 
         """
-        storage = self.storage
+        storage = obj._origin
 
-        idx = obj.idx[self.storage]
+        idx = obj.idx[storage]
         T = storage.variables['momentum_kinetic'][idx]
-        kinetic_energy = u.Quantity(T, self.storage.units["momentum_kinetic"])
+        kinetic_energy = u.Quantity(T, storage.units["momentum_kinetic"])
 
         obj.kinetic_energy = kinetic_energy
 
@@ -402,7 +437,7 @@ class ConfigurationStore(ObjectStore):
         # log that topologies were different
 
         # Force sync to disk to avoid data loss.
-        storage.sync()
+        # storage.sync()
 
 
     def get(self, indices):
@@ -449,7 +484,8 @@ class ConfigurationStore(ObjectStore):
 
         return configuration
 
-    def update_coordinates(self, obj):
+    @staticmethod
+    def update_coordinates(obj):
         """
         Update/Load the coordinates in the given obj from the attached storage
 
@@ -459,7 +495,7 @@ class ConfigurationStore(ObjectStore):
             the Configuration object to be updated
 
         """
-        storage = self.storage
+        storage = obj._origin
         idx = obj.idx[storage]
 
         x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
@@ -467,7 +503,8 @@ class ConfigurationStore(ObjectStore):
 
         obj.coordinates = coordinates
 
-    def update_box_vectors(self, obj):
+    @staticmethod
+    def update_box_vectors(obj):
         """
         Update/Load the box_vectors in the given obj from the attached storage
 
@@ -477,7 +514,7 @@ class ConfigurationStore(ObjectStore):
             the Configuration object to be updated
 
         """
-        storage = self.storage
+        storage = obj._origin
         idx = obj.idx[storage]
 
         b = storage.variables['configuration_box_vectors'][idx]
@@ -485,7 +522,8 @@ class ConfigurationStore(ObjectStore):
 
         obj.box_vectors = box_vectors
 
-    def update_potential_energy(self, obj):
+    @staticmethod
+    def update_potential_energy(obj):
         """
         Update/Load the potential_energy in the given obj from the attached storage
 
@@ -495,7 +533,7 @@ class ConfigurationStore(ObjectStore):
             the Configuration object to be updated
 
         """
-        storage = self.storage
+        storage = obj._origin
         idx = obj.idx[storage]
 
         V = storage.variables['configuration_potential'][idx]

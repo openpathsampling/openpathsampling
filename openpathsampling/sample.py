@@ -1,7 +1,7 @@
 import random
 
 import openpathsampling as paths
-import copy
+from openpathsampling.todict import OPSNamed
 
 class SampleKeyError(Exception):
     def __init__(self, key, sample, sample_key):
@@ -11,7 +11,7 @@ class SampleKeyError(Exception):
         self.msg = (str(self.key) + " does not match " + str(self.sample_key)
                     + " from " + str(self.sample))
 
-class SampleSet(object):
+class SampleSet(OPSNamed):
     '''
     SampleSet is essentially a list of samples, with a few conveniences.  It
     can be treated as a list of samples (using, e.g., .append), or as a
@@ -42,12 +42,13 @@ class SampleSet(object):
     '''
 
     def __init__(self, samples, movepath=None):
+        super(SampleSet, self).__init__()
         self.samples = []
         self.ensemble_dict = {}
         self.replica_dict = {}
         self.extend(samples)
         if movepath is None:
-            self.movepath = paths.EmptyMovePath()
+            self.movepath = paths.EmptyPathMoveChange()
         else:
             self.movepath = movepath
 
@@ -81,6 +82,17 @@ class SampleSet(object):
         if dead_to_me is not None:
             del self[dead_to_me]
         self.append(value)
+
+    def __eq__(self, other):
+        if len(self.samples) == len(other.samples):
+            return True
+            for samp1, samp2 in zip(self.samples,other.samples):
+                if samp1 is not samp2:
+                    return False
+
+            return True
+        else:
+            return False
 
     def __delitem__(self, sample):
         self.ensemble_dict[sample.ensemble].remove(sample)
@@ -152,24 +164,8 @@ class SampleSet(object):
         else:
             newset = self
         for sample in samples:
-            # TODO: should time be a property of Sample or SampleSet?
-            sample.step = step
-            if sample.intermediate == False:
-                newset[sample.replica] = sample
-        return newset
-
-    def apply_intermediates(self, samples, step=None, copy=True):
-        '''Return updated SampleSet, including all intermediates.
-
-        Useful in SequentialMovers.
-        '''
-        if type(samples) is Sample:
-            samples = [samples]
-        if copy==True:
-            newset = SampleSet(self)
-        else:
-            newset = self
-        for sample in samples:
+            if type(sample) is not paths.Sample:
+                raise ValueError('No SAMPLE!')
             # TODO: should time be a property of Sample or SampleSet?
             sample.step = step
             newset[sample.replica] = sample
@@ -194,12 +190,14 @@ class SampleSet(object):
         storage : Storage()
             the underlying netcdf file to be used for storage
         """
-        map(storage.sample.save, self.samples)
+        map(storage.samples.save, self.samples)
 
     def sanity_check(self):
         '''Checks that the sample trajectories satisfy their ensembles
         '''
         for sample in self:
+            # TODO: Replace by using .valid which means that it is in the ensemble
+            #assert(sample.valid)
             assert(sample.ensemble(sample.trajectory))
 
     def consistency_check(self):
@@ -240,6 +238,75 @@ class SampleSet(object):
         new_set = other.apply_to(self)
         new_set.movepath = other
         return new_set
+
+    @staticmethod
+    def map_trajectory_to_ensembles(trajectory, ensembles):
+        """Return SampleSet mapping one trajectory to all ensembles.
+
+        One common approach to starting a simulation is to take a single
+        transition trajectory (which satisfies all ensembles) and use it as
+        the starting point for all ensembles.
+        """
+        return SampleSet(
+            [Sample.initial_sample(replica=ensembles.index(e),
+                                   trajectory=paths.Trajectory(trajectory), # copy
+                                   ensemble = e)
+            for e in ensembles]
+    )
+
+    @staticmethod
+    def translate_ensembles(sset, new_ensembles):
+        """Return SampleSet using `new_ensembles` as ensembles.
+
+        This replaces the samples in TODO
+
+        Note that this assumes that the mapping of old ensembles to new
+        ensembles is injective. If this is not true, then there is no unique
+        way to translate.
+        """
+        translation = {}
+        for ens1 in sset.ensemble_list():
+            for ens2 in new_ensembles:
+                if ens1.__str__() == ens2.__str__():
+                    translation[ens1] = ens2
+        return SampleSet(
+            [
+                Sample(
+                    replica=s.replica,
+                    ensemble=translation[s.ensemble],
+                    trajectory=s.trajectory,
+                    step=s.step
+                )
+                for s in sset
+            ]
+        )
+
+    @staticmethod
+    def relabel_replicas_per_ensemble(ssets):
+        """
+        Return a SampleSet with one trajectory ID per ensemble in the given ssets.
+
+        This is used if you create several sample sets (e.g., from
+        bootstrapping different transitions) which have the same trajectory
+        ID associated with different ensembles.
+        """
+        if type(ssets) is SampleSet:
+            ssets = [ssets]
+        samples = []
+        repid = 0
+        for sset in ssets:
+            for s in sset:
+                samples.append(Sample(
+                    replica=repid,
+                    trajectory=s.trajectory,
+                    ensemble=s.ensemble,
+                    step=s.step
+                ))
+                repid += 1
+        return SampleSet(samples)
+        
+
+
 
     # @property
     # def ensemble_dict(self):
@@ -311,13 +378,33 @@ class Sample(object):
         the Monte Carlo step number associated with this Sample
     """
 
-    def __init__(self, replica=None, trajectory=None, ensemble=None, intermediate=False, details=None, step=-1):
+    def __init__(self,
+                 replica=None,
+                 trajectory=None,
+                 ensemble=None,
+                 accepted=True,
+                 details=None,
+                 valid=None,
+                 parent=None,
+                 mover=None,
+                 step=-1
+                 ):
+        self.accepted = accepted
         self.replica = replica
         self.ensemble = ensemble
         self.trajectory = trajectory
-        self.intermediate = intermediate
-        self.details = details
+        self.parent = parent
         self.step = step
+        self.details = details
+        self.mover = mover
+        if valid is None:
+            # valid? figure it out
+            if self.trajectory is None:
+                self.valid = True
+            else:
+                self.valid = self.ensemble(self.trajectory)
+        else:
+            self.valid = valid
 
     def __call__(self):
         return self.trajectory
@@ -327,7 +414,6 @@ class Sample(object):
         mystr += "Replica: "+str(self.replica)+"\n"
         mystr += "Trajectory: "+str(self.trajectory)+"\n"
         mystr += "Ensemble: "+repr(self.ensemble)+"\n"
-        mystr += "Details: "+str(self.details)+"\n"
         return mystr
 
     def __repr__(self):
@@ -345,9 +431,32 @@ class Sample(object):
         result = Sample(
             replica=self.replica,
             trajectory=self.trajectory,
-            ensemble=self.ensemble,
-            details=paths.MoveDetails.initialization(self)
+            ensemble=self.ensemble
         )
         return result
 
+    @staticmethod
+    def initial_sample(replica, trajectory, ensemble):
+        """
+        Initial sample from scratch.
 
+        Used to create sample in a given ensemble when generating initial
+        conditions from trajectories.
+        """
+        result = Sample(
+            replica=replica,
+            trajectory=trajectory,
+            ensemble=ensemble
+        )
+        return result
+        
+
+    @property
+    def acceptance_probability(self):
+        if not self.valid:
+            return 0.0
+
+        if hasattr(self.details) and self.details is not None and hasattr(self.details, 'selection_probability'):
+            return self.details.selection_probability
+
+        return 1.0

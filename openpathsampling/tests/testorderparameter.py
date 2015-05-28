@@ -9,11 +9,11 @@ import numpy as np
 
 import openpathsampling.trajectory as trajectory
 from openpathsampling.storage import Storage
-import openpathsampling.orderparameter as op
+import openpathsampling.collectivevariable as op
 
 from msmbuilder.featurizer import AtomPairsFeaturizer
 
-class testOP_Function(object):
+class testCV_Function(object):
 
     def setUp(self):
         # setUp is just reading in some alanine dipeptide frames: this is an
@@ -36,28 +36,26 @@ class testOP_Function(object):
     def test_dihedral_op(self):
         """ Create a dihedral order parameter """
         psi_atoms = [6,8,14,16]
-        dihedral_op = op.OP_MD_Function("psi", md.compute_dihedrals,
+        dihedral_op = op.CV_MD_Function("psi", md.compute_dihedrals,
                                     indices=[psi_atoms])
 
-        mdtraj_version = self.storage.trajectory.load(0).md()
+        mdtraj_version = self.storage.trajectories.load(0).md()
         md_dihed = md.compute_dihedrals(mdtraj_version, indices=[psi_atoms])
-        traj = self.storage.trajectory.load(0)
+        traj = self.storage.trajectories.load(0)
 
         my_dihed =  dihedral_op( traj )
 
         np.testing.assert_allclose(md_dihed, my_dihed)
 
     def test_atom_pair_featurizer(self):
-        """ Create an atom pair orderparameter using MSMSBuilder3 """
+        """ Create an atom pair collectivevariable using MSMSBuilder3 """
 
         atom_pairs = [[0,1], [10,14]]
+        atom_pair_op = op.CV_Featurizer("atom_pairs", AtomPairsFeaturizer, pair_indices=atom_pairs)
 
-        atom_pair_featurizer = AtomPairsFeaturizer(atom_pairs)
-        atom_pair_op = op.OP_Featurizer("atom_pairs", atom_pair_featurizer)
-
-        mdtraj_version = self.storage.trajectory.load(0).md()
+        mdtraj_version = self.storage.trajectories.load(0).md()
         md_distances = md.compute_distances(mdtraj_version, atom_pairs)
-        traj = self.storage.trajectory.load(0)
+        traj = self.storage.trajectories.load(0)
 
         my_distances = atom_pair_op( traj )
 
