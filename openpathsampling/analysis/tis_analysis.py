@@ -57,11 +57,10 @@ def pathlength(sample):
     return len(sample.trajectory)
 
 def max_lambdas(sample, orderparameter):
-    return max(orderparameter(sample.trajectory))
+    return max([orderparameter(frame) for frame in sample.trajectory])
 
 def sampleset_sample_generator(storage):
-    for step in storage.steps:
-        sset = step.active # take the sampleset after the move
+    for sset in storage.samplesets:
         for sample in sset:
             yield sample
 
@@ -123,7 +122,7 @@ class Transition(OPSNamed):
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, indentation):
-        line = ("* "*indentation + str(move_name) +
+        line = ("* "*indentation + str(move_name) + 
                 " ran " + str(float(n_trials)/n_total_trials*100) + 
                 "% of the cycles with acceptance " + str(n_accepted) + "/" + 
                 str(n_trials) + " (" + str(float(n_accepted) / n_trials) + 
@@ -131,8 +130,7 @@ class Transition(OPSNamed):
         return line
 
     def move_acceptance(self, storage):
-        for step in storage.steps:
-            delta = step.change
+        for delta in storage.pathmovechanges:
             for m in delta:
                 acc = 1 if m.accepted else 0
                 key = (m.mover, str(delta.key(m)))
@@ -176,21 +174,19 @@ class Transition(OPSNamed):
             except KeyError:
                 my_movers[key] = [key]
 
-
         stats = { } 
         for groupname in my_movers.keys():
             stats[groupname] = [0, 0]
 
         if self._mover_acceptance == { }:
             self.move_acceptance(storage)
-
-        tot_trials = len(storage.steps)
+        
+        tot_trials = len(storage.pathmovechanges)
         for groupname in my_movers.keys():
             group = my_movers[groupname]
             for mover in group:
                 key_iter = (k for k in self._mover_acceptance.keys()
-                            if k[0] is mover)
-
+                            if k[0] == mover)
                 for k in key_iter:
                     stats[groupname][0] += self._mover_acceptance[k][0]
                     stats[groupname][1] += self._mover_acceptance[k][1]
@@ -239,8 +235,8 @@ class Transition(OPSNamed):
             'movers' : self.movers
         }
 
-    @classmethod
-    def from_dict(cls, dct):
+    @staticmethod
+    def from_dict(dct):
         return Transition(
             stateA=dct['stateA'],
             stateB=dct['stateB']
@@ -349,8 +345,8 @@ class TISTransition(Transition):
         }
         return ret_dict
 
-    @classmethod
-    def from_dict(cls, dct):
+    @staticmethod
+    def from_dict(dct):
         mytrans = paths.TISTransition(
             stateA=dct['stateA'],
             stateB=dct['stateB'],
@@ -403,7 +399,7 @@ class TISTransition(Transition):
                 self.histograms[hist] = {}
             self.histograms[hist][ensemble] = Histogram(**(hist_info.hist_args))
 
-        in_ens_samples = (s for s in samples if s.ensemble is ensemble)
+        in_ens_samples = (s for s in samples if s.ensemble == ensemble)
         hist_data = {}
         buflen = -1
         sample_buf = []
@@ -483,7 +479,7 @@ class TISTransition(Transition):
         n_acc = 0
         n_try = 0
         for samp in samples:
-            if samp.ensemble is ensemble:
+            if samp.ensemble == ensemble:
                 if self.stateB(samp.trajectory[-1]):
                     n_acc += 1
                 n_try += 1
@@ -592,8 +588,8 @@ class RETISTransition(TISTransition):
         }
         return ret_dict
 
-    @classmethod
-    def from_dict(cls, dct):
+    @staticmethod
+    def from_dict(dct):
         mytrans = RETISTransition(
             stateA=dct['stateA'],
             stateB=dct['stateB'],
@@ -634,16 +630,15 @@ class RETISTransition(TISTransition):
         pass
 
     def minus_move_flux(self, storage, force=False):
-        if not force and self._flux is not None:
+        if not force and self._flux != None:
             return self._flux
 
         self.minus_count_sides = { "in" : [], "out" : [] }
-        minus_moves = (d.change for d in storage.steps
-                       if self.movers['minus'][0] in
-                       d.change and d.change.accepted)
+        minus_moves = (d for d in storage.pathmovechanges 
+                       if self.movers['minus'][0] in d and d.accepted)
         for move in minus_moves:
-            minus_samp = [s for s in move.results
-                          if s.ensemble is self.minus_ensemble][0]
+            minus_samp = [s for s in move.samples 
+                          if s.ensemble==self.minus_ensemble][0]
             minus_trajectory = minus_samp.trajectory
             minus_summ = minus_sides_summary(minus_trajectory,
                                              self.minus_ensemble)
@@ -731,17 +726,11 @@ def summarize_trajectory_volumes(trajectory, label_dict):
     last_vol = None
     count = 0
     segment_labels = []
-
-    # this trick avoids loading all snapshot objects!
-    vol_list = [
-        { key : vol(frame) for key, vol in label_dict.iteritems() }
-        for frame in list.__iter__(trajectory)
-    ]
-
-    for frame in vol_list:
+    for frame in trajectory:
         in_state = []
         for key in label_dict.keys():
-            if frame[key]:
+            vol = label_dict[key]
+            if vol(frame):
                 in_state.append(key)
         if len(in_state) > 1:
             raise RuntimeError("Volumes given to summarize_trajectory not disjoint")
@@ -750,7 +739,7 @@ def summarize_trajectory_volumes(trajectory, label_dict):
         else:
             current_vol = in_state[0]
         
-        if last_vol is current_vol:
+        if last_vol == current_vol:
             count += 1
         else:
             if count > 0:

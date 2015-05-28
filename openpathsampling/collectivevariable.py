@@ -118,19 +118,6 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
         if storage in self.store_dict.cod_stores:
             self.store_dict.cod_stores[storage].sync()
 
-    def cache_all(self, storage):
-        """
-        Sync this collective variable with attached storages
-
-        Parameters
-        ----------
-        storage : Storage or None
-            the store to be used, otherwise all underlying storages are synced
-        """
-        self.store_dict.update_nod_stores()
-        if storage in self.store_dict.cod_stores:
-            self.store_dict.cod_stores[storage].cache_all()
-
     def _pre_item(self, items):
         item_type = self.store_dict._basetype(items)
 
@@ -202,8 +189,8 @@ class CV_Volume(CollectiveVariable):
             'volume': self.volume,
         }
 
-    @classmethod
-    def from_dict(cls, dct):
+    @staticmethod
+    def from_dict(dct):
         return CV_Volume(
             name=dct['name'],
             volume=dct['volume']
@@ -221,7 +208,7 @@ class CV_Function(CollectiveVariable):
     """
 
     allow_marshal = True
-    _allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy']
+    allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy']
 
     def __init__(self, name, fcn, dimensions=1, **kwargs):
         """
@@ -306,7 +293,7 @@ class CV_Function(CollectiveVariable):
                               'that are defined within the function itself'
 
                     not_allowed_modules = [ module for module in import_vars
-                                            if module not in CV_Function._allowed_modules]
+                                            if module not in CV_Function.allowed_modules]
 
                     if len(not_allowed_modules) > 0:
                         print 'requires the following modules to be installed:', import_vars
@@ -321,7 +308,7 @@ class CV_Function(CollectiveVariable):
 
             elif not is_local:
                 # save the external class, e.g. msmbuilder featurizer
-                if f_module.split('.')[0] in self._allowed_modules:
+                if f_module.split('.')[0] in self.allowed_modules:
                     # only store the function and the module
                     fcn = {
                         '_module': self.callable_fcn.__module__,
@@ -348,7 +335,7 @@ class CV_Function(CollectiveVariable):
             elif '_module' in f_dict:
                 module = f_dict['_module']
                 packages = module.split('.')
-                if packages[0] in cls._allowed_modules:
+                if packages[0] in cls.allowed_modules:
                     imp = __import__(module)
                     f = getattr(imp, f_dict['_name'])
 
@@ -477,7 +464,7 @@ class CV_Class(CollectiveVariable):
             if '_module' in c_dict:
                 module = c_dict['_module']
                 packages = module.split('.')
-                if packages[0] in cls._allowed_modules:
+                if packages[0] in cls.allowed_modules:
                     imp = __import__(module)
                     c = getattr(imp, c_dict['_name'])
 

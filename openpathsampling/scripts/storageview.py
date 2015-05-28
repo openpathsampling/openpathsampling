@@ -25,10 +25,6 @@ if __name__ == '__main__':
         mode = 'a'
     )
 
-    storage.samples.cache_all()
-    storage.samplesets.cache_all()
-    storage.pathmovechanges.cache_all()
-
     class ReadableObjectJSON(paths.todict.ObjectJSON):
         def __init__(self, unit_system = None):
             super(ReadableObjectJSON, self).__init__(unit_system)
@@ -148,27 +144,26 @@ if __name__ == '__main__':
 
     for p_idx in range(0, storage.collectivevariables.count()):
         obj = storage.collectivevariables.load(p_idx)
-        nline(p_idx,obj.name, '')
         add = ''
-#        values = obj(all_snapshot_traj)
-#        found_values = [ (idx, value) for idx, value in enumerate(values) if value is not None ]
-#        if len(found_values) > 0:
-#            add = '{ %d : %f, ... } ' % (found_values[0][0], found_values[0][1]._value )
+        values = obj(all_snapshot_traj)
+        found_values = [ (idx, value) for idx, value in enumerate(values) if value is not None ]
+        if len(found_values) > 0:
+            add = '{ %d : %f, ... } ' % (found_values[0][0], found_values[0][1] )
 
-#        nline(p_idx,obj.name, str(len(found_values)) + ' entries ' + add)
+        nline(p_idx,obj.name, str(len(found_values)) + ' entries ' + add)
 
-    headline("MCSteps")
+    headline("MovePaths")
 
-    for p_idx in range(0, storage.steps.count()):
-        obj = storage.steps.load(p_idx)
+    for p_idx in range(0, storage.pathmovechanges.count()):
+        obj = storage.pathmovechanges.load(p_idx)
         nline(p_idx, '', '')
-        print indent(str(obj.change),16)
+        print indent(str(obj),16)
 
     headline("SampleSets")
 
     for p_idx in range(0, storage.samplesets.count()):
         obj = storage.samplesets.load(p_idx)
-        nline(p_idx, str(len(obj)) + ' sample(s)', [storage.idx(sample) for sample in obj ])
+        nline(p_idx, str(len(obj.samples)) + ' sample(s)', [storage.idx(sample) for sample in obj.samples ])
         print indent(str(obj.movepath),16)
 
 
@@ -201,7 +196,7 @@ if __name__ == '__main__':
         old_idx = -2
         count = 0
         for idx in traj:
-            if idx/2 == old_idx/2 + 1 or idx/2 == old_idx/2 - 1:
+            if idx == old_idx + 1 or idx == old_idx - 1:
                 count += 1
             else:
                 if count > 1:
@@ -215,7 +210,7 @@ if __name__ == '__main__':
         if count > 1:
             s += " <" + str(count - 1) + "> "
         if count > 0:
-            s += " " + str(old_idx/2)+ ('-' if old_idx % 2 == 0 else '+')
+            s += " " + str(old_idx)
 
         return s
 

@@ -74,7 +74,7 @@ if __name__=="__main__":
     snap = engine.current_snapshot
     engine.storage.snapshots.save(snap, 0)
     engine.initialized = True
-    SampleGeneratingMover.engine = engine
+    PathMover.engine = engine
 
     # this generates an order parameter (callable) object named psi (so if
     # we call `psi(trajectory)` we get a list of the values of psi for each
@@ -189,8 +189,8 @@ use PartOutXEnsemble as we typically do with TIS paths.
     print third_set[0].__dict__
     print third_set.__dict__
 
-    print second_path.results
-    print first_path.results
+    print second_path.samples
+    print first_path.samples
 
 
     mover3 = CollapseMove(SequentialMover([
@@ -204,7 +204,7 @@ use PartOutXEnsemble as we typically do with TIS paths.
 
     third_path = mover3.move(third_set)
 
-    print third_path.results
+    print third_path.samples
     print str(third_path)
     print str(third_path.opened)
     print len(third_path)

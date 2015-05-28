@@ -5,6 +5,7 @@ from simtk import unit as units
 import yaml
 import openpathsampling as paths
 import inspect
+import copy
 
 class OPSObject(object):
     """Mixin that allows an object to carry a .name property that can be saved
@@ -51,9 +52,9 @@ class OPSObject(object):
         }
 
     @classmethod
-    def from_dict(cls, dct):
+    def from_dict(cls, dct = None):
         if dct is None:
-            dct = {}
+            dct={}
         try:
             init_dct = dct
             non_init_dct = {}

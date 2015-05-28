@@ -87,11 +87,6 @@ class DynamicsEngine(OPSNamed):
         # this and n_atoms are the only general options we need and register
         if hasattr(self, 'n_frames_max'):
             self.max_length_stopper = paths.LengthEnsemble(slice(0, self.n_frames_max + 1))
-        else:
-            self.max_length_stopper = paths.FullEnsemble()
-
-        # as default set a newly generated engine as the default engine
-        self.set_as_default()
 
     def _register_options(self, options = None):
         """
@@ -185,9 +180,6 @@ class DynamicsEngine(OPSNamed):
             'options' : self.options,
             'template' : self.template
         }
-
-    def set_as_default(self):
-        paths.EngineGeneratingMover.engine = self
 
     @property
     def default_options(self):
