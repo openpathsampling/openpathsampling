@@ -204,7 +204,7 @@ class MSTISNetwork(TISNetwork):
         )
 
 
-    def default_movers(self):
+    def default_scheme(self):
         return self.move_scheme
 
     def __str__(self):
@@ -224,6 +224,6 @@ class MISTISNetwork(TISNetwork):
         super(MISTISNetwork, self).__init__()
 
 
-    def default_movers(self):
+    def default_scheme(self):
         pass
 

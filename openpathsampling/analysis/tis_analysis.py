@@ -34,7 +34,7 @@ Goal: RETIS for a simple A->B transition (one direction) boils down to
 >>> retis_calc = PathSampling(
 >>>     storage=storage,
 >>>     engine=engine,
->>>     move_scheme=transitionAB.default_movers(engine),
+>>>     move_scheme=transitionAB.default_scheme(engine),
 >>>     globalstate=globalstate0
 >>> )
 >>> retis_calc.run(nsteps=10000)
@@ -542,7 +542,7 @@ class TISTransition(Transition):
         #print flux, outer_tcp, ctp
         return flux*outer_tcp*ctp
 
-    def default_movers(self, engine):
+    def default_scheme(self, engine):
         """Create reasonable default movers for a `PathSampling` pathsimulator"""
         shoot_sel = paths.RandomChoiceMover(
             movers=self.movers['shooting']
@@ -687,16 +687,16 @@ class RETISTransition(TISTransition):
         return minus_samp
         pass
 
-    def default_movers(self, engine):
+    def default_scheme(self, engine):
         """Create reasonable default movers for a `PathSampling` pathsimulator
         
-        Extends `TISTransition.default_movers`.
+        Extends `TISTransition.default_scheme`.
         """
         repex_sel = paths.RandomChoiceMover(
             movers=self.movers['repex']
         )
         repex_sel.name = "ReplicaExchange"
-        tis_move_scheme = super(RETISTransition, self).default_movers(engine)
+        tis_move_scheme = super(RETISTransition, self).default_scheme(engine)
         minus = self.movers['minus']
         movers = tis_move_scheme.movers + [repex_sel] + minus
         weights = tis_move_scheme.weights + [0.5, 0.2 / len(self.ensembles)]
