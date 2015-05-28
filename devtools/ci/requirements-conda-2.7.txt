@@ -13,4 +13,5 @@ ipython
 ipython-notebook
 matplotlib
 svgwrite
+psutil
 networkx
