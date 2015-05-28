@@ -21,7 +21,7 @@ class LookupFunction(object):
             x1 = xvals[0]
             x2 = xvals[1]
 
-        while (xvals[i] < value and i < nvals):
+        while (i < nvals and xvals[i] < value):
             i += 1
 
         if i == nvals:
