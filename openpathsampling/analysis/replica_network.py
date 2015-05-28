@@ -145,98 +145,33 @@ class ReplicaNetwork(object):
         storage = self.check_storage(storage)
         if force == False and self.analysis != { }:
             return (self.analysis['n_trials'], self.analysis['n_accepted'])
+        n_trials = 0
         self.analysis['n_trials'] = {}
         self.analysis['n_accepted'] = {}
+        prev = None
         for step in storage.steps:
             pmc = step.change
-            # TODO: @dwhswenson. Let's see if we can just test the outermost
-            # mover if it returned 2 trials. The ReplicaExchange is problematic
-            # since the inner RepEx of the minus only moves between segment and
-            # inner and not the minus. What we want is to treat the minus as a
-            # repex. So we either stop after we found a minus or (if we assume
-            # only a single repex, just test the head node)
 
-            # best would be to test every submove if it attempted to switch ensembles
-            # this means check if len(.trials) == 2 and if both trials have different
-            # samples and their ensembles have been swapped with resp to their parents
-
-            # even better would be to mark certain movers as swapping movers
-            # using a pseudo class / mixin that does nothing.
-
-            # or we just check using parent and ensemble where we have switches
-            # count trials and results separate and voila.
-            # Each sample in post needs a parent in pre. Compare if they have the
-            # same ensemble. If not count a swap
-
-            # We have to differentiate between checking for moving between states in
-            # one MC step and effective overlap of ensembles. How often is
-            # ensemble1(samp2) True meaning samp2 fits into ensemble1.
-
-            if False:
-                # This counts how often a sample has been moved between ensembles.
-                # Makes only sense if number of samples per set is constant and so
-                # is the number of ensembles
-                for sample in step.change.trials:
-                    ancestor = sample.find_ancestor_among(step.previous)
-                    if ancestor is not None:
-                        ens1 = ancestor.ensemble
-                        ens2 = sample.ensemble
-
-                        try:
-                            self.analysis['n_trials'][(ens1, ens2)] += 1
-                        except KeyError:
-                            self.analysis['n_trials'][(ens1, ens2)] = 1
-
-                        if sample in step.change.results:
-                            try:
-                                self.analysis['n_accepted'][(ens1, ens2)] += 1
-                            except KeyError:
-                                self.analysis['n_accepted'][(ens1, ens2)] = 1
-
-
-
-            if True:
-                # this only works if the whole move is the repex
-                if len(pmc.trials) == 2:
-                    ens1 = pmc.trials[0].ensemble
-                    ens2 = pmc.trials[1].ensemble
-
+            if pmc.canonical.mover is not None and pmc.canonical.mover.is_ensemble_change_mover:
+                n_trials += 1
+                hops = []
+                for old in prev.active:
+                    new = step.active
+                    if old.replica != new[old.ensemble].replica:
+                        # i.e., the prev and step have diff rep in same ens
+                        hops.append((old.ensemble, new[old.replica].ensemble))
+                for hop in hops:
                     try:
-                        self.analysis['n_trials'][(ens1, ens2)] += 1
+                        self.analysis['n_accepted'][hop] += 1
                     except KeyError:
-                        self.analysis['n_trials'][(ens1, ens2)] = 1
+                        self.analysis['n_accepted'][hop] = 1
 
-                    if pmc.accepted:
-                        try:
-                            self.analysis['n_accepted'][(ens1, ens2)] += 1
-                        except KeyError:
-                            self.analysis['n_accepted'][(ens1, ens2)] = 1
-            else:
-                for delta in pmc:
-                    if isinstance(delta.mover, paths.ReplicaExchangeMover):
-                        if len(delta.trials) == 2:
-                            ens1 = delta.trials[0].ensemble
-                            ens2 = delta.trials[1].ensemble
-                        else:
-                            print "RepEx mover with n_trials != 2", type(delta.mover)
-                            try:
-                                # TODO: this hack for minus should not be
-                                # necessary; although we may have to hack minus
-                                # to be cleaner
-                                ens1 = delta.mover.innermost_ensemble
-                                ens2 = delta.mover.minus_ensemble
-                            except:
-                                raise RuntimeWarning("RepEx mover with n_trials != 2")
-                        try:
-                            self.analysis['n_trials'][(ens1, ens2)] += 1
-                        except KeyError:
-                            self.analysis['n_trials'][(ens1, ens2)] = 1
-                        if delta.accepted:
-                            try:
-                                self.analysis['n_accepted'][(ens1, ens2)] += 1
-                            except KeyError:
-                                self.analysis['n_accepted'][(ens1, ens2)] = 1
+            prev = step
 
+        # TODO: n_trials no longer needs to be a dict, but other functions
+        # expect that in output, so we return it
+        for key in self.analysis['n_accepted'].keys():
+            self.analysis['n_trials'][key] = n_trials
         return (self.analysis['n_trials'], self.analysis['n_accepted'])
 
 
