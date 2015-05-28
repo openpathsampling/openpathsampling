@@ -13,6 +13,8 @@ class SampleStore(ObjectStore):
         self.set_variable_partial_loading('mover', self.update_mover)
         self.set_variable_partial_loading('ensemble', self.update_ensemble)
 
+        self._cached_all = False
+
 
     def load_empty(self, idx):
         trajectory_idx = int(self.storage.variables['sample_trajectory_idx'][idx])
@@ -106,6 +108,51 @@ class SampleStore(ObjectStore):
         self.init_variable('sample_details_idx', 'index', chunksizes=(1, ))
         self.init_variable('sample_accepted', 'bool', chunksizes=(1, ))
         self.init_variable('sample_pathmover_idx', 'index', chunksizes=(1, ))
+
+    def all(self):
+        self.cache_all()
+        return self
+
+    def cache_all(self):
+        """Load all samples as fast as possible into the cache
+
+        """
+        if not self._cached_all:
+            idxs = range(len(self))
+            trajectory_idxs = self.storage.variables['sample_trajectory_idx'][:]
+            replica_idxs = self.storage.variables['sample_replica'][:]
+            valids = self.storage.variables['sample_valid'][:]
+            accepteds = self.storage.variables['sample_accepted'][:]
+
+            [ self.add_empty_to_cache(i,t,r,v,a) for i,t,r,v,a in zip(
+                idxs,
+                trajectory_idxs,
+                replica_idxs,
+                valids,
+                accepteds) ]
+
+            self._cached_all = True
+
+
+    def add_empty_to_cache(self, idx, trajectory_idx, replica_idx, valid, accepted):
+        obj = Sample(
+                trajectory=self.storage.trajectories[int(trajectory_idx)],
+                replica=int(replica_idx),
+                valid=bool(valid),
+                accepted=bool(accepted)
+            )
+        obj.idx[self.storage] = idx
+        obj._origin = self.storage
+
+        del obj.details
+        del obj.ensemble
+        del obj.mover
+        del obj.parent
+
+        self.cache[idx] = obj
+
+        return obj
+
 
 class SampleSetStore(ObjectStore):
 

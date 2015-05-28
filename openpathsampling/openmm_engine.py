@@ -1,17 +1,12 @@
 import os
 import numpy as np
-#from openmmtools.integrators import VVVRIntegrator
-
 import simtk.unit as u
 from simtk.openmm.app import ForceField, PME, HBonds, PDBFile, Simulation
 
 import openpathsampling as paths
 from openpathsampling.storage import Storage
-from openpathsampling.todict import ops_object
-
 from openpathsampling.integrators import VVVRIntegrator
 
-@ops_object
 class OpenMMEngine(paths.DynamicsEngine):
     """OpenMM dynamics engine."""
 
@@ -255,7 +250,7 @@ class OpenMMEngine(paths.DynamicsEngine):
 #                        self.simulation.context.getPeriodicBoxVectors(snapshot.box_vectors)
 
             if snapshot.momentum is not None:
-                if self._current_snapshot is None or snapshot.momentum is not self._current_snapshot.momentum or snapshot.reversed != self._current_snapshot.reversed:
+                if self._current_snapshot is None or snapshot.momentum is not self._current_snapshot.momentum or snapshot.is_reversed != self._current_snapshot.is_reversed:
                     # new snapshot has a different momenta (different coordinates and reverse setting)
                     # so update. Note snapshot.velocities is different from snapshot.momenta.velocities!!!
                     # The first includes the reversal setting in the snapshot the second does not.

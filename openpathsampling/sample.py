@@ -1,7 +1,7 @@
 import random
 
 import openpathsampling as paths
-import copy
+from openpathsampling.todict import OPSNamed
 
 class SampleKeyError(Exception):
     def __init__(self, key, sample, sample_key):
@@ -11,7 +11,7 @@ class SampleKeyError(Exception):
         self.msg = (str(self.key) + " does not match " + str(self.sample_key)
                     + " from " + str(self.sample))
 
-class SampleSet(object):
+class SampleSet(OPSNamed):
     '''
     SampleSet is essentially a list of samples, with a few conveniences.  It
     can be treated as a list of samples (using, e.g., .append), or as a
@@ -42,6 +42,7 @@ class SampleSet(object):
     '''
 
     def __init__(self, samples, movepath=None):
+        super(SampleSet, self).__init__()
         self.samples = []
         self.ensemble_dict = {}
         self.replica_dict = {}
@@ -81,6 +82,17 @@ class SampleSet(object):
         if dead_to_me is not None:
             del self[dead_to_me]
         self.append(value)
+
+    def __eq__(self, other):
+        if len(self.samples) == len(other.samples):
+            return True
+            for samp1, samp2 in zip(self.samples,other.samples):
+                if samp1 is not samp2:
+                    return False
+
+            return True
+        else:
+            return False
 
     def __delitem__(self, sample):
         self.ensemble_dict[sample.ensemble].remove(sample)
@@ -268,6 +280,31 @@ class SampleSet(object):
                 for s in sset
             ]
         )
+
+    @staticmethod
+    def relabel_replicas_per_ensemble(ssets):
+        """
+        Return a SampleSet with one trajectory ID per ensemble in the given ssets.
+
+        This is used if you create several sample sets (e.g., from
+        bootstrapping different transitions) which have the same trajectory
+        ID associated with different ensembles.
+        """
+        if type(ssets) is SampleSet:
+            ssets = [ssets]
+        samples = []
+        repid = 0
+        for sset in ssets:
+            for s in sset:
+                samples.append(Sample(
+                    replica=repid,
+                    trajectory=s.trajectory,
+                    ensemble=s.ensemble,
+                    step=s.step
+                ))
+                repid += 1
+        return SampleSet(samples)
+        
 
 
 

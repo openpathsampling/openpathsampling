@@ -16,7 +16,6 @@ import openpathsampling as paths
 #=============================================================================================
 
 
-
 class Trajectory(list):
     """
     Simulation trajectory. Essentially a python list of snapshots
@@ -78,7 +77,7 @@ class Trajectory(list):
             the reversed trajectory
         '''
 
-        return Trajectory([snap.reversed_copy() for snap in reversed(self)])
+        return Trajectory([snap for snap in reversed(self)])
 
     def coordinates(self):
         """
@@ -102,6 +101,21 @@ class Trajectory(list):
                 output[frame_index,:,:] = self[frame_index].coordinates
             else:
                 output[frame_index,:,:] = self[frame_index].coordinates[self.atom_indices,:]
+
+        return output
+
+    def xyz(self):
+        n_frames = len(self)
+        n_atoms = self.n_atoms
+        n_spatial = self.spatial
+            
+        output = np.zeros([n_frames, n_atoms, n_spatial], np.float32)
+        
+        for frame_index in range(n_frames):      
+            if self.atom_indices is None:
+                output[frame_index,:,:] = self[frame_index].xyz
+            else:
+                output[frame_index,:,:] = self[frame_index].xyz[self.atom_indices,:]
 
         return output
     
@@ -237,8 +251,8 @@ class Trajectory(list):
             def next(self):
                 if self.idx > self.length:
                     self.idx -= 1
-                    obj = self.trajectory[self.idx]
-                    return obj
+                    snapshot = self.trajectory[self.idx]
+                    return snapshot.reversed
                 else:
                     raise StopIteration()
 
@@ -377,7 +391,7 @@ class Trajectory(list):
     # ANALYSIS FUNCTIONS
     #=============================================================================================
 
-    def correlation(self, other):
+    def is_correlated(self, other):
         """
         Checks if two trajectories share a common snapshot
 
@@ -392,19 +406,19 @@ class Trajectory(list):
             returns True if at least one snapshot appears in both trajectories
         """
 
-        if hasattr(self, 'idx') and hasattr(other, 'idx'):
-            shared_store = set(self.idx.keys()) & set(other.idx.keys())
-            # both are saved so use the snapshot idx as identifiers
-            if len(shared_store) > 0:
-                storage = list(shared_store)[0]
-                t1id = storage.trajectories.snapshot_indices(self.idx[storage])
-                t2id = storage.trajectories.snapshot_indices(other.idx[storage])
-                return bool(set(t1id) & set(t2id))
+        # if hasattr(self, 'idx') and hasattr(other, 'idx'):
+        #     shared_store = set(self.idx.keys()) & set(other.idx.keys())
+        #     # both are saved so use the snapshot idx as identifiers
+        #     if len(shared_store) > 0:
+        #         storage = list(shared_store)[0]
+        #         t1id = storage.trajectories.snapshot_indices(self.idx[storage])
+        #         t2id = storage.trajectories.snapshot_indices(other.idx[storage])
+        #         return bool(set(t1id) & set(t2id))
 
         # Use some fallback
-        return bool(self.shared_snapshots(other))
+        return bool(self.shared_configurations(other))
 
-    def shared_snapshots(self, other):
+    def shared_configurations(self, other):
         """
         Returns a set of shared snapshots
 
@@ -418,7 +432,7 @@ class Trajectory(list):
         set of Snapshot()
             the set of common snapshots
         """
-        return set(list(self)) & set(list(other))
+        return set([snap.configuration for snap in self]) & set([snap.configuration for snap in other])
 
     def shared_subtrajectory(self, other):
         """
@@ -434,8 +448,8 @@ class Trajectory(list):
         Trajectory
             the shared subtrajectory
         """
-        shared = self.shared_snapshots(other)
-        return Trajectory([ snap for snap in self if snap in shared])
+        shared = self.shared_configurations(other)
+        return Trajectory([ snap for snap in self if snap.configuration in shared])
 
     #=============================================================================================
     # UTILITY FUNCTIONS

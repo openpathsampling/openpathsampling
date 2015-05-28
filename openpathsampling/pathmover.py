@@ -8,10 +8,11 @@ import numpy as np
 import random
 
 import openpathsampling as paths
-from openpathsampling.todict import ops_object
+from openpathsampling.todict import OPSNamed, OPSObject
 
 import logging
 from ops_logging import initialization_logging
+
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -69,8 +70,7 @@ def keep_selected_samples(func):
     return wrapper
 
 
-@ops_object
-class PathMover(object):
+class PathMover(OPSNamed):
     """
     A PathMover is the description of how to generate a new path from an old
     one.
@@ -112,7 +112,8 @@ class PathMover(object):
     engine = None
 
     def __init__(self,  ensembles=None):
-        self.name = self.__class__.__name__
+        super(PathMover, self).__init__()
+#        self.name = self.__class__.__name__
 
         if ensembles is not None and type(ensembles) is not list:
             ensembles = [ensembles]
@@ -120,6 +121,321 @@ class PathMover(object):
 
         initialization_logging(logger=init_log, obj=self,
                                entries=['ensembles'])
+
+    @property
+    def submovers(self):
+        return []
+
+    def __iter__(self):
+        yield self
+        for submove in self.submovers:
+            for change in submove:
+                yield change
+
+    def __getitem__(self, item):
+        if type(item) is int:
+            return self.submovers[item]
+
+    def __reversed__(self):
+        for submove in self.submovers:
+            for change in reversed(submove):
+                yield change
+
+        yield self
+
+    def __len__(self):
+        if self._len is None:
+            self._len = len(list(iter(self)))
+
+        return self._len
+
+    def key(self, change):
+        tree = self.keytree()
+        return [leave for leave in tree if leave[1] is change ][0][0]
+
+    def _check_head_node(self, items):
+        if isinstance(items[0], paths.PathMover):
+            # a subtree of pathmovers
+            if self.mover is items[0]:
+                #print 'found head'
+                # found current head node, check, if children match in order
+                left = 0
+                submovers = [ch.mover for ch in self.submovers]
+                subvalues = items[1]
+                if type(subvalues) is not list:
+                    subvalues = [subvalues]
+
+                for sub in zip(subvalues[0::2], subvalues[1::2]):
+                    if left >= len(self.submovers):
+                        # no more submoves to match
+                        return False
+                    if sub is None:
+                        # None is a placeholder so move token +1
+                        left = left + 1
+                    if type(sub) is dict:
+                        if sub[0] is None:
+                            while left < len(self.submovers):
+                                if not [self.submovers[left].mover, [sub[1]]] in self.submovers[left]:
+                                    left = left + 1
+                                else:
+                                    left = left + 1
+                                    break
+
+                            if left == len(self.submovers):
+                                return False
+                        elif sub[0] not in submovers[left:]:
+                            #print 'missing sub', sub.keys()[0], 'in', submovers[left:]
+                            return False
+                        else:
+                            idx = submovers.index(sub[0])
+                            left = idx + 1
+                            if not [sub[0], [sub[1]]] in self.submovers[idx]:
+                                #print 'try', {sub.keys()[0] : sub.values()[0]}
+                                return False
+
+                    elif isinstance(sub, paths.PathMover):
+                        if sub not in submovers[left:]:
+                            return False
+                        idx = submovers.index(sub)
+                        left = idx + 1
+
+                return True
+
+        elif items[0] is None or len(items) == 0:
+            # means empty tree and since nothing is in every tree return true
+            return True
+
+    def __contains__(self, item):
+        """
+        Check if a pathmover, pathmovechange or a tree is in self
+
+        A node is either None or a PathMover
+
+        1. Subchanges are given using a dict { parent : child }
+        2. Several submoves are given in a list. [child1, child2]
+        3. A single submove can be given as a list of length 1 or a single mover.
+        4. None is a wildcat and matches everything
+
+        Examples
+        --------
+        >>> tree1 = {mover1 : mover2}
+        >>> tree2 = {mover1 : [mover2, mover3]}
+        >>> tree3 = {mover1 : [mover2, {mover4 : [mover5]}] }
+        >>> tree4 = {}
+
+        Notes
+        -----
+        TODO: Add other types of nodes. e.g. explicit PathMoveChange,
+        Boolean for .accepted
+
+        Parameters
+        ----------
+        item : PathMover, PathMoveChange, PathMoveTree
+
+        """
+        if isinstance(item, paths.PathMover):
+            return item in self.map_post_order(lambda x : x.mover)
+        elif type(item) is list:
+            if self._check_head_node(item):
+                return True
+
+            # Disable checking for submoves for now
+
+            # the head node did not fit so continue trying subnodes
+#            for sub in self.submovers:
+#                if item in sub:
+#                    return True
+
+            return False
+
+        else:
+            raise ValueError('Only PathMovers or PathMoveChanges can be tested.')
+
+    def tree(self):
+        return {self : [ ch.tree() for ch in self.submovers] }
+
+    def movetree(self):
+        return {self.mover : [ ch.movetree() for ch in self.submovers] }
+
+    def keytree(self, movepath=None):
+
+        if movepath is None:
+            movepath = [self.mover]
+
+        result = list()
+        result.append( ( movepath, self ) )
+        mp = []
+        for sub in self.submovers:
+            subtree = sub.keytree()
+            result.extend([ ( movepath + [mp + m[0]], m[1] ) for m in subtree ])
+#            print subtree[-1][0]
+            mp = mp + subtree[-1][0]
+
+
+        return result
+
+    def map_tree(self, fnc, **kwargs):
+        """
+        Apply a function to each node and return the tree
+
+        Parameters
+        ----------
+        fnc : function(pathmover, args, kwargs)
+            the function run at each pathmover node. It is given the node
+            and the optional (fixed) parameters
+        kwargs : named arguments
+            optional arguments added to the function
+
+        Returns
+        -------
+        tree (fnc(node, **kwargs))
+            nested list of the results of the map
+        """
+
+        if len(self.submovers) > 1:
+            return { fnc(self, **kwargs) : [node.map_tree(fnc, **kwargs) for node in self.submovers]}
+        elif len(self.submovers) == 1:
+            return { fnc(self, **kwargs) : self.submovers[0].map_tree(fnc, **kwargs)}
+        else:
+            return fnc(self, **kwargs)
+
+    def map_post_order(self, fnc, **kwargs):
+        """
+        Traverse the tree of pathmovers in post-order applying a function
+
+        This maps the underlying tree of pathmovers and applies the
+        given function at each node returning a list of the results. Post-order
+        will result in the order in which samples are generated. That means
+        that submoves are called first BEFORE the node itself is evaluated.
+
+        Parameters
+        ----------
+        fnc : function(pathmover, args, kwargs)
+            the function run at each pathmover node. It is given the node
+            and the optional (fixed) parameters
+        kwargs : named arguments
+            optional arguments added to the function
+
+        Returns
+        -------
+        list (fnc(node, **kwargs))
+            flattened list of the results of the map
+
+        Notes
+        -----
+        This uses the same order as `reversed()`
+
+        See also
+        --------
+        map_pre_order, map_post_order, level_pre_order, level_post_order
+        """
+        return [ fnc(node, **kwargs) for node in reversed(self) ]
+
+    def level_post_order(self, fnc, level=0, **kwargs):
+        """
+        Traverse the tree of pathmovers in post-order applying a function
+
+        This maps the underlying tree of pathmovers and applies the
+        given function at each node returning a list of the results. Post-order
+        will result in the order in which samples are generated. That means
+        that submoves are called first BEFORE the node itself is evaluated.
+
+        Parameters
+        ----------
+        fnc : function(pathmover, args, kwargs)
+            the function run at each pathmover node. It is given the node
+            and the optional parameters
+        level : int
+            the initial level
+        kwargs : named arguments
+            optional arguments added to the function
+
+        Returns
+        -------
+        list of tuple(level, func(node, **kwargs))
+            flattened list of tuples of results of the map. First part of
+            the tuple is the level, second part is the function result.
+
+        See also
+        --------
+        map_pre_order, map_post_order, level_pre_order, level_post_order
+        """
+
+        output = list()
+        for mp in self.submovers:
+            output.extend(mp.level_post_order(fnc, level + 1, **kwargs))
+        output.append((level, fnc(self, **kwargs)))
+
+        return output
+
+    def map_pre_order(self, fnc, **kwargs):
+        """
+        Traverse the tree of pathmovers in pre-order applying a function
+
+        This maps the underlying tree of pathmovers and applies the
+        given function at each node returning a list of the results. Pre-order
+        means that submoves are called AFTER the node itself is evaluated.
+
+        Parameters
+        ----------
+        fnc : function(pathmover, args, kwargs)
+            the function run at each pathmover node. It is given the node
+            and the optional parameters
+        kwargs : named arguments
+            optional arguments added to the function
+
+        Returns
+        -------
+        list (fnc(node, **kwargs))
+            flattened list of the results of the map
+
+        Notes
+        -----
+        This uses the same order as `iter()`
+
+        See also
+        --------
+        map_pre_order, map_post_order, level_pre_order, level_post_order
+        """
+        return [ fnc(node, **kwargs) for node in iter(self) ]
+
+    def level_pre_order(self, fnc, level=0, **kwargs):
+        """
+        Traverse the tree of pathmovers in pre-order applying a function
+
+        This maps the underlying tree of pathmovers and applies the
+        given function at each node returning a list of the results. Pre-order
+        means that submoves are called AFTER the node itself is evaluated.
+
+        Parameters
+        ----------
+        fnc : function(pathmover, args, kwargs)
+            the function run at each pathmover node. It is given the node
+            and the optional parameters
+        level : int
+            the initial level
+        kwargs : named arguments
+            optional arguments added to the function
+
+        Returns
+        -------
+        list of tuple(level, fnc(node, **kwargs))
+            flattened list of tuples of results of the map. First part of
+            the tuple is the level, second part is the function result.
+
+
+        See also
+        --------
+        map_pre_order, map_post_order, level_pre_order, level_post_order
+        """
+
+        output = list()
+        output.append((level, fnc(self, **kwargs)))
+
+        for mp in self.submovers:
+            output.extend(mp.level_pre_order(fnc, level + 1, **kwargs))
+
+        return output
 
     def __call__(self, sample_set):
         return sample_set
@@ -237,7 +553,13 @@ class PathMover(object):
         '''
         return 1.0 # pragma: no cover
 
-@ops_object
+    def __str__(self):
+        if self.name == self.__class__.__name__:
+            return self.__repr__()
+        else:
+            return self.name
+
+
 class CollapseMove(PathMover):
     def __init__(self, inner_mover):
         self.inner_mover = inner_mover
@@ -245,7 +567,6 @@ class CollapseMove(PathMover):
     def move(self, globalstate):
         return self.inner_mover.move(globalstate).closed
 
-@ops_object
 class ShootMover(PathMover):
     '''
     A pathmover that implements a general shooting algorithm that generates
@@ -291,6 +612,8 @@ class ShootMover(PathMover):
 
         self._generate(sample_details, dynamics_ensemble)
 
+        logger.info("Trial trajectory: " +
+                    dynamics_ensemble.trajectory_summary_str(sample_details.trial))
         valid = dynamics_ensemble(sample_details.trial)
         accepted = False
 
@@ -340,7 +663,6 @@ class ShootMover(PathMover):
         return path
 
 
-@ops_object
 class ForwardShootMover(ShootMover):
     '''
     A pathmover that implements the forward shooting algorithm
@@ -355,7 +677,7 @@ class ForwardShootMover(ShootMover):
 
         # Run until one of the stoppers is triggered
         partial_trajectory = PathMover.engine.generate(
-            details.start_point.snapshot.copy(),
+            details.start_point.snapshot,
             running = [
                 paths.ForwardAppendedTrajectoryEnsemble(
                     ensemble,
@@ -373,7 +695,6 @@ class ForwardShootMover(ShootMover):
         details.final_point = paths.ShootingPoint(self.selector, details.trial,
                                             shooting_point)
 
-@ops_object
 class BackwardShootMover(ShootMover):
     '''
     A pathmover that implements the backward shooting algorithm
@@ -387,7 +708,7 @@ class BackwardShootMover(ShootMover):
 
         # Run until one of the stoppers is triggered
         partial_trajectory = PathMover.engine.generate(
-            details.start_point.snapshot.reversed_copy(),
+            details.start_point.snapshot.reversed,
             running = [
                 paths.BackwardPrependedTrajectoryEnsemble(
                     ensemble,
@@ -406,7 +727,7 @@ class BackwardShootMover(ShootMover):
 
         pass
 
-@ops_object
+
 class RandomChoiceMover(PathMover):
     '''
     Chooses a random mover from its movers list, and runs that move. Returns
@@ -423,11 +744,8 @@ class RandomChoiceMover(PathMover):
     weights : list of floats
         the relative weight of each PathMover (does not need to be normalized)
     '''
-    def __init__(self, movers, ensembles=None,  weights=None, name=None):
+    def __init__(self, movers, ensembles=None,  weights=None):
         super(RandomChoiceMover, self).__init__(ensembles=ensembles)
-
-        if name is not None:
-            self.name = name
 
         self.movers = movers
 
@@ -439,6 +757,10 @@ class RandomChoiceMover(PathMover):
         initialization_logging(init_log, self,
                                entries=['movers', 'weights'])
 
+    @property
+    def submovers(self):
+        return self.movers
+
     @keep_selected_samples
     def move(self, globalstate):
         rand = np.random.random() * sum(self.weights)
@@ -448,7 +770,7 @@ class RandomChoiceMover(PathMover):
             idx += 1
             prob += self.weights[idx]
 
-        logger_str = "RandomChoiceMover ({name}) selecting mover index {idx} ({mtype})"
+        logger_str = "{name} (RandomChoiceMover) selecting {mtype} (index {idx})"
         logger.info(logger_str.format(name=self.name, idx=idx, mtype=self.movers[idx].name))
 
         mover = self.movers[idx]
@@ -466,7 +788,7 @@ class RandomChoiceMover(PathMover):
 
         return path
 
-@ops_object
+
 class ConditionalMover(PathMover):
     '''
     An if-then-else structure for PathMovers.
@@ -483,6 +805,10 @@ class ConditionalMover(PathMover):
         self.else_mover = else_mover
         initialization_logging(init_log, self,
                                ['if_mover', 'then_mover', 'else_mover'])
+
+    @property
+    def submovers(self):
+        return [self.if_mover, self.then_mover, self.else_mover]
 
     @keep_selected_samples
     def move(self, globalstate):
@@ -506,7 +832,6 @@ class ConditionalMover(PathMover):
         return paths.SequentialPathMoveChange([ifclause, resultclause], mover=self)
 
 
-@ops_object
 class SequentialMover(PathMover):
     '''
     Performs each of the moves in its movers list. Returns all samples
@@ -520,6 +845,10 @@ class SequentialMover(PathMover):
         super(SequentialMover, self).__init__(ensembles=ensembles)
         self.movers = movers
         initialization_logging(init_log, self, ['movers'])
+
+    @property
+    def submovers(self):
+        return self.movers
 
     @keep_selected_samples
     def move(self, globalstate):
@@ -541,7 +870,7 @@ class SequentialMover(PathMover):
 
         return paths.SequentialPathMoveChange(pathmovechanges, mover=self)
 
-@ops_object
+
 class PartialAcceptanceSequentialMover(SequentialMover):
     '''
     Performs each move in its movers list until complete or until one is not
@@ -582,7 +911,6 @@ class PartialAcceptanceSequentialMover(SequentialMover):
         return paths.PartialAcceptanceSequentialPathMoveChange(pathmovechanges, mover=self)
 
 
-@ops_object
 class ConditionalSequentialMover(SequentialMover):
     '''
     Performs each move in its movers list until complete or until one is not
@@ -620,7 +948,6 @@ class ConditionalSequentialMover(SequentialMover):
         return paths.ConditionalSequentialPathMoveChange(pathmovechanges, mover=self)
 
 
-@ops_object
 class RestrictToLastSampleMover(PathMover):
     def __init__(self, mover):
         super(RestrictToLastSampleMover, self).__init__()
@@ -631,7 +958,11 @@ class RestrictToLastSampleMover(PathMover):
         movepath = self.mover.move(globalstate)
         return paths.KeepLastSamplePathMoveChange(movepath, mover=self)
 
-@ops_object
+    @property
+    def submovers(self):
+        return [self.mover]
+
+
 class ReplicaIDChangeMover(PathMover):
     """
     Changes the replica ID for a path.
@@ -699,7 +1030,7 @@ class ReplicaIDChangeMover(PathMover):
             details=details
         )
 
-@ops_object
+
 class EnsembleHopMover(PathMover):
     def __init__(self, bias=None, ensembles=None):
         # TODO: maybe allow a version of this with a single ensemble and ANY
@@ -785,7 +1116,6 @@ class EnsembleHopMover(PathMover):
         return path
 
 
-@ops_object
 class ForceEnsembleChangeMover(EnsembleHopMover):
     '''
     Force an ensemble change in the sample.
@@ -834,7 +1164,6 @@ class ForceEnsembleChangeMover(EnsembleHopMover):
         return path
 
 
-@ops_object
 class RandomSubtrajectorySelectMover(PathMover):
     '''
     Samples a random subtrajectory satisfying the given subensemble.
@@ -899,7 +1228,7 @@ class RandomSubtrajectorySelectMover(PathMover):
 
         return path
 
-@ops_object
+
 class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
     '''
     Samples the first subtrajectory satifying the given subensemble.
@@ -910,7 +1239,7 @@ class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
     def _choose(self, trajectory_list):
         return trajectory_list[0]
 
-@ops_object
+
 class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
     '''
     Samples the final subtrajectory satifying the given subensemble.
@@ -921,7 +1250,7 @@ class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
     def _choose(self, trajectory_list):
         return trajectory_list[-1]
 
-@ops_object
+
 class PathReversalMover(PathMover):
 
     @keep_selected_samples
@@ -969,7 +1298,7 @@ class PathReversalMover(PathMover):
 
         return path
 
-@ops_object
+
 class ReplicaExchangeMover(PathMover):
     def __init__(self, bias=None, ensembles=None):
         replicas = 'all'
@@ -1002,13 +1331,13 @@ class ReplicaExchangeMover(PathMover):
         replica2 = s2.replica
 
         from1to2 = ensemble2(trajectory1)
-        logger.debug("trajectory " + repr(trajectory1) +
-                     " into ensemble " + repr(ensemble2) +
-                     " : " + str(from1to2))
+        logger.info("trajectory " + repr(trajectory1) +
+                    " into ensemble " + repr(ensemble2) +
+                    " : " + str(from1to2))
         from2to1 = ensemble1(trajectory2)
-        logger.debug("trajectory " + repr(trajectory2) +
-                     " into ensemble " + repr(ensemble1) +
-                     " : " + str(from2to1))
+        logger.info("trajectory " + repr(trajectory2) +
+                    " into ensemble " + repr(ensemble1) +
+                    " : " + str(from2to1))
 
         accepted = from1to2 and from2to1
 
@@ -1048,7 +1377,7 @@ class ReplicaExchangeMover(PathMover):
 
 
 # TODO: Turn Filter into real mover with own movechange ?
-@ops_object
+
 class FilterByReplica(PathMover):
     def __init__(self, mover, replicas):
         if type(replicas) is not list:
@@ -1065,7 +1394,7 @@ class FilterByReplica(PathMover):
         )
         return self.mover.move(filtered_gs)
 
-@ops_object
+
 class FilterBySample(PathMover):
     def __init__(self, mover, selected_samples, use_all_samples=None):
         if type(selected_samples) is not list:
@@ -1083,7 +1412,7 @@ class FilterBySample(PathMover):
             mover=self
         )
 
-@ops_object
+
 class OneWayShootingMover(RandomChoiceMover):
     '''
     OneWayShootingMover is a special case of a RandomChoiceMover which
@@ -1111,8 +1440,7 @@ class OneWayShootingMover(RandomChoiceMover):
         )
         self.selector = selector
 
-@ops_object
-class MinusMover(ConditionalSequentialMover):
+class MinusMover(ConditionalSequentialMover, ReplicaExchangeMover):
     '''
     Instance of a MinusMover.
 
@@ -1120,6 +1448,13 @@ class MinusMover(ConditionalSequentialMover):
     paths between the innermost regular TIS interface ensemble and the minus
     interface ensemble. This is particularly useful for improving sampling
     of path space.
+
+    Note that the inheritance from ReplicaExchangeMover is only to assist
+    with `isinstance` in later analysis. Since the only two functions here
+    are `.__init__() and `.move()`, both of which exist in both parent
+    classes, the calls to `super` will use the version in
+    ConditionalSequentalMover. However, analysis routines will see
+    `isinstance(minus, ReplicaExchangeMover)` as True.
     '''
     def __init__(self, minus_ensemble, innermost_ensemble, 
                  ensembles=None):
@@ -1168,7 +1503,7 @@ class MinusMover(ConditionalSequentialMover):
         result = super(MinusMover, self).move(globalstate).closed
         return result
 
-@ops_object
+
 class PathSimulatorMover(PathMover):
     """
     This just wraps a mover and references the used pathsimulator
@@ -1186,7 +1521,11 @@ class PathSimulatorMover(PathMover):
             mover=self
         )
 
-@ops_object
+    @property
+    def submovers(self):
+        return [self.mover]
+
+
 class MultipleSetMinusMover(RandomChoiceMover):
     pass
 
@@ -1209,10 +1548,14 @@ class PathMoverFactory(object):
     def OneWayShootingSet(selector_set, interface_set):
         if type(selector_set) is not list:
             selector_set = [selector_set]*len(interface_set)
-        mover_set = [
-            OneWayShootingMover(selector=selector, ensembles=[iface])
-            for (selector, iface) in zip(selector_set, interface_set)
-        ]
+
+        mover_set = []
+        for (selector, iface) in zip(selector_set, interface_set):
+            mover = OneWayShootingMover(selector=selector,
+                                        ensembles=[iface])
+            mover.name = "OneWayShootingMover " + str(iface.name)
+            mover_set.append(mover)
+
         return mover_set
 
     @staticmethod
@@ -1224,8 +1567,8 @@ class PathMoverFactory(object):
         pass
 
 
-@ops_object
-class Details(object):
+
+class Details(OPSObject):
     '''Details of an object. Can contain any data
     '''
 
@@ -1241,7 +1584,7 @@ class Details(object):
                 mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
         return mystr
 
-@ops_object
+
 class MoveDetails(Details):
     '''Details of the move as applied to a given replica
 
@@ -1299,7 +1642,7 @@ class MoveDetails(Details):
     #     details.results = trajectory
     #     return details
 
-@ops_object
+
 class SampleDetails(Details):
     '''Details of a sample
 
