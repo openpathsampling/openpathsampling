@@ -457,19 +457,17 @@ class SampleGeneratingMover(PathMover):
 ###############################################################################
 
 class EngineGeneratingMover(SampleGeneratingMover):
-    """Baseclass for GeneratingMovers that use an engine
-    """
-
-    engine = None
-
-class ShootGeneratingMover(EngineGeneratingMover):
-    """Main class for GeneratingMovers using ShootingMoves
+    """Main class for GeneratingMovers using engines
 
     Attributs
     ---------
     selector
+    direction
     """
-    def __init__(self, selector, ensembles=None):
+
+    engine = None
+
+    def __init__(self, selector, forward, target_ensemble, ensembles=None):
         """
         Parameters
         ----------
@@ -479,21 +477,33 @@ class ShootGeneratingMover(EngineGeneratingMover):
         ensembles : Ensemble of None
             the specific ensemble to be shot from or None if all are allowed
         """
-        super(ShootGeneratingMover, self).__init__(ensembles)
+        super(EngineGeneratingMover, self).__init__(ensembles)
+
         self.selector = selector
+        self.forward = forward
+        self.target_ensemble = target_ensemble
 
     def _ensemble_selector(self, globalstate):
         # return a single ensemble
         return [ self.ensembles ]
 
+    def _get_in_ensembles(self):
+        return [self.ensembles]
+
+    def _get_out_ensembles(self):
+        return [self.target_ensemble]
+
     def __call__(self, trial):
         initial_trajectory = trial.trajectory
 
-        dynamics_ensemble = trial.ensemble
         replica = trial.replica
 
         initial_point = self.selector.pick(initial_trajectory)
-        trial_point = self._shoot(initial_point, dynamics_ensemble)
+        trial_point = self._extend(
+            initial_point,
+            self.target_ensemble,
+            self.forward
+        )
 
         bias = initial_point.sum_bias / trial_point.sum_bias
 
@@ -505,7 +515,7 @@ class ShootGeneratingMover(EngineGeneratingMover):
         trial = paths.Sample(
             replica=replica,
             trajectory=trial_point.trajectory,
-            ensemble=dynamics_ensemble,
+            ensemble=self.target_ensemble,
             parent=trial,
             details=trial_details,
             mover=self,
@@ -516,98 +526,111 @@ class ShootGeneratingMover(EngineGeneratingMover):
 
         return trials
 
-    def _shoot(self, shooting_point, ensemble):
-        """Implementation of the shooting
+    def _extend(self, shooting_point, target_ensemble, forward=True):
+        """Implementation of the extension
 
         Parameters
         ----------
         shooting_point : ShootingPoint
             the initial shooting point instance containing a reference to the
             initial trajectory
-        ensemble : Ensemble
+        target_ensemble : Ensemble
             the ensemble for which the trajectory is to be created. This defines
             the stopping criterion
+        forward : bool
+            if true the extension direction is forward otherwise backward
 
         Returns
         -------
         ShootingPoint
             the final shooting point referencing the final trajectory
         """
-        return shooting_point
+        direction = 'forward' if forward else 'backward'
 
-
-class ForwardShootGeneratingMover(ShootGeneratingMover):
-    """A forward shooting sample generator
-    """
-    def _shoot(self, shooting_point, ensemble):
         shoot_str = "Shooting {sh_dir} from frame {fnum} in [0:{maxt}]"
-        logger.info(shoot_str.format(fnum=shooting_point.index,
-                                     maxt=len(shooting_point.trajectory)-1,
-                                     sh_dir="forward",
-                                    ))
+        logger.info(shoot_str.format(
+            fnum=shooting_point.index,
+            maxt=len(shooting_point.trajectory)-1,
+            sh_dir=direction
+        ))
 
         # Run until one of the stoppers is triggered
+        if forward:
+            old_part = shooting_point.trajectory[0:shooting_point.index]
+            stopper = paths.ForwardAppendedTrajectoryEnsemble(
+                target_ensemble,
+                old_part
+            ).can_append
+        else:
+            old_part = shooting_point.trajectory[shooting_point.index + 1:]
+            stopper = paths.BackwardPrependedTrajectoryEnsemble(
+                target_ensemble,
+                old_part
+            ).can_prepend
+
         partial_trajectory = self.engine.generate(
             shooting_point.snapshot.copy(),
-            running = [
-                paths.ForwardAppendedTrajectoryEnsemble(
-                    ensemble,
-                    shooting_point.trajectory[0:shooting_point.index]
-                ).can_append,
+            running=[
+                stopper,
                 self.engine.max_length_stopper.can_append
             ]
         )
 
-        trial_trajectory = shooting_point.trajectory[0:shooting_point.index] + partial_trajectory
-
-        trial_point = paths.ShootingPoint(
-            shooting_point.selector,
-            trial_trajectory,
-            shooting_point.index
-        )
-
-        return trial_point
-
-
-class BackwardShootGeneratingMover(ShootGeneratingMover):
-    """A Backward shooting generator
-    """
-    def _shoot(self, shooting_point, ensemble):
-        shoot_str = "Shooting {sh_dir} from frame {fnum} in [0:{maxt}]"
-        logger.info(shoot_str.format(fnum=shooting_point.index,
-                                     maxt=len(shooting_point.trajectory)-1,
-                                     sh_dir="backward",
-                                    ))
-
-        # Run until one of the stoppers is triggered
-        partial_trajectory = self.engine.generate(
-            shooting_point.snapshot.reversed_copy(),
-            running = [
-                paths.BackwardPrependedTrajectoryEnsemble(
-                    ensemble,
-                    shooting_point.trajectory[shooting_point.index + 1:]
-                ).can_prepend,
-                self.engine.max_length_stopper.can_append
-            ]
-        )
-
-        trial_trajectory = partial_trajectory.reversed + shooting_point.trajectory[shooting_point.index + 1:]
-
-        trial_point = paths.ShootingPoint(
-            shooting_point.selector,
-            trial_trajectory,
-            len(partial_trajectory) - 1
-        )
+        if forward:
+            trial_trajectory = old_part + partial_trajectory
+            trial_point = paths.ShootingPoint(
+                shooting_point.selector,
+                trial_trajectory,
+                shooting_point.index
+            )
+        else:
+            trial_trajectory = partial_trajectory.reversed + old_part
+            trial_point = paths.ShootingPoint(
+                shooting_point.selector,
+                trial_trajectory,
+                len(partial_trajectory) - 1
+            )
 
         return trial_point
 
-# TODO: This doubling might be superfluous
 
+class ForwardShootGeneratingMover(EngineGeneratingMover):
+    """A forward shooting sample generator
+    """
 
-class ShootMover(ShootGeneratingMover):
+    def __init__(self, selector, ensembles=None):
+        """
+        Parameters
+        ----------
+        selector : ShootingPointSelector
+            the shootingpoint selector to determine the shooting point in the
+            move
+        """
+        super(ForwardShootGeneratingMover, self).__init__(
+            selector=selector,
+            forward=True,
+            target_ensemble=None,
+            ensembles=ensembles
+        )
+
+class BackwardShootGeneratingMover(EngineGeneratingMover):
+    """A backward shooting sample generator
     """
-    A pathmover that implements a general shooting algorithm
-    """
+
+    def __init__(self, selector, ensembles=None):
+        """
+        Parameters
+        ----------
+        selector : ShootingPointSelector
+            the shootingpoint selector to determine the shooting point in the
+            move
+        """
+        super(BackwardShootGeneratingMover, self).__init__(
+            selector=selector,
+            forward=False,
+            target_ensemble=None,
+            ensembles=ensembles
+        )
 
 class ForwardShootMover(ForwardShootGeneratingMover):
     """
@@ -625,9 +648,9 @@ class BackwardShootMover(BackwardShootGeneratingMover):
 # EXTENDING GENERATORS
 ###############################################################################
 
-class ExtendingGeneratingMover(EngineGeneratingMover):
+class ForwardExtendGeneratingMover(EngineGeneratingMover):
     """
-    Sample GeneratingMover that creates Samples using extensions
+    A Sample GeneratingMover implementing Forward Extension
 
     Extending will create samples in a super ensemble from samples
     in a smaller ensemble by forward or backward extending the original
@@ -643,105 +666,37 @@ class ExtendingGeneratingMover(EngineGeneratingMover):
         ensembles : openpathsampling.Ensemble
             the initial ensemble to be started from
         """
-        super(ExtendingGeneratingMover, self).__init__(
-            ensembles
-        )
-        self.extend_ensemble = extend_ensemble
-
-    def _ensemble_selector(self, globalstate):
-        return [self.ensembles]
-
-    def _get_in_ensembles(self):
-        return [self.ensembles]
-
-    def _get_out_ensembles(self):
-        return [self.extend_ensemble]
-
-    def __call__(self, trial):
-        initial_trajectory = trial.trajectory
-
-        replica = trial.replica
-        trial_trajectory = self._extend(initial_trajectory, self.extend_ensemble)
-
-        trial_details = paths.SampleDetails(
+        super(ForwardExtendGeneratingMover, self).__init__(
+            selector=paths.FinalFrameSelector(),
+            ensembles=ensembles,
+            target_ensemble=extend_ensemble,
+            forward=True,
         )
 
-        # the actual bias would be 0.0 since we will never be able to do the
-        # reverse move. Since this is the opposite of subtraj we set both
-        # proposal bias for these to 100% which means no bias
-
-        trial = paths.Sample(
-            replica=replica,
-            trajectory=trial_trajectory,
-            ensemble=self.extend_ensemble,
-            parent=trial,
-            details=trial_details,
-            mover=self,
-            bias=1.0
-        )
-
-        trials = [trial]
-
-        return trials
-
-    def _extend(self, initial_trajectory, ensemble):
-        return initial_trajectory
-
-
-class ForwardExtendGeneratingMover(ExtendingGeneratingMover):
-    """
-    A Sample GeneratingMover implementing Forward Extension
-    """
-    def _extend(self, initial_trajectory, ensemble):
-        shoot_str = "Extending {sh_dir} from frame {fnum} in [0:{maxt}]"
-        logger.info(shoot_str.format(fnum=len(initial_trajectory)-1,
-                                     maxt=len(initial_trajectory)-1,
-                                     sh_dir="forward",
-                                    ))
-
-        # Run until one of the stoppers is triggered
-        partial_trajectory = self.engine.generate(
-            initial_trajectory[-1],
-            running = [
-                paths.ForwardAppendedTrajectoryEnsemble(
-                    ensemble,
-                    initial_trajectory[:-1]
-                ).can_append,
-                self.engine.max_length_stopper.can_append
-            ]
-        )
-
-        trial_trajectory = initial_trajectory + partial_trajectory[1:]
-
-        return trial_trajectory
-
-
-class BackwardExtendGeneratingMover(ExtendingGeneratingMover):
+class BackwardExtendGeneratingMover(EngineGeneratingMover):
     """
     A Sample GeneratingMover implementing Backward Extension
+
+    Extending will create samples in a super ensemble from samples
+    in a smaller ensemble by forward or backward extending the original
+    sample until it is in the target ensemble. This requires the the target
+    ensemble is reachable from the initial ensemble
     """
-    def _extend(self, initial_trajectory, ensemble):
-        shoot_str = "Extending {sh_dir} from frame {fnum} in [0:{maxt}]"
-        logger.info(shoot_str.format(fnum=0,
-                                     maxt=len(initial_trajectory)-1,
-                                     sh_dir="backward",
-                                    ))
-
-        # Run until one of the stoppers is triggered
-        partial_trajectory = self.engine.generate(
-            initial_trajectory[0].reversed,
-            running = [
-                paths.BackwardPrependedTrajectoryEnsemble(
-                    ensemble,
-                    initial_trajectory[1:]
-                ).can_prepend,
-                self.engine.max_length_stopper.can_append
-            ]
+    def __init__(self, extend_ensemble, ensembles=None):
+        """
+        Parameters
+        ----------
+        extend_ensemble : openpathsampling.Ensemble
+            the target ensemble
+        ensembles : openpathsampling.Ensemble
+            the initial ensemble to be started from
+        """
+        super(BackwardExtendGeneratingMover, self).__init__(
+            selector=paths.FirstFrameSelector(),
+            ensembles=ensembles,
+            target_ensemble=extend_ensemble,
+            forward=False,
         )
-
-        trial_trajectory = partial_trajectory.reversed + initial_trajectory[1:]
-        return trial_trajectory
-
 
 class ForwardExtendMover(ForwardExtendGeneratingMover):
     """Creates a new sample by extending forward to a new ensemble
