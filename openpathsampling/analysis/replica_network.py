@@ -147,27 +147,6 @@ class ReplicaNetwork(object):
             return (self.analysis['n_trials'], self.analysis['n_accepted'])
         self.analysis['n_trials'] = {}
         self.analysis['n_accepted'] = {}
-<<<<<<< HEAD
-
-        # the approach implemented here loops over all moves, finds moves
-        # that are replica exchanges (using isinstance) and 
-        for pmc in storage.pathmovechanges:
-            for delta in pmc:
-                if isinstance(delta.mover, paths.ReplicaExchangeMover):
-                    if len(delta.trials) == 2:
-                        ens1 = delta.trials[0].ensemble
-                        ens2 = delta.trials[1].ensemble
-                    else:
-                        print "RepEx mover with n_trials != 2"
-                        try:
-                            # TODO: this hack for minus should not be
-                            # necessary; although we may have to hack minus
-                            # to be cleaner -- failed minus has no trial
-                            ens1 = delta.mover.innermost_ensemble
-                            ens2 = delta.mover.minus_ensemble
-                        except:
-                            raise RuntimeWarning("RepEx mover with n_trials != 2")
-=======
         for step in storage.steps:
             pmc = step.change
             # TODO: @dwhswenson. Let's see if we can just test the outermost
@@ -222,7 +201,6 @@ class ReplicaNetwork(object):
                     ens1 = pmc.trials[0].ensemble
                     ens2 = pmc.trials[1].ensemble
 
->>>>>>> upstream/master
                     try:
                         self.analysis['n_trials'][(ens1, ens2)] += 1
                     except KeyError:
@@ -377,19 +355,6 @@ class ReplicaNetwork(object):
                 n_acc_k = 0
             data.append(float(n_acc_k) / n_try[k])
         ens_i, ens_j = zip(*n_try.keys())
-<<<<<<< HEAD
-=======
-        i = [ensemble_to_number[e] for e in ens_i]
-        j = [ensemble_to_number[e] for e in ens_j]
-        acc_matrix = scipy.sparse.coo_matrix(
-            (data, (i, j)), 
-            shape=(n_ensembles, n_ensembles)
-        )
-        # TODO clean these up: maybe move labels to elsewhere?
-        sset0 = self.storage.steps[0].active
-        labels = {k : sset0[number_to_ensemble[k]].replica 
-                  for k in number_to_ensemble.keys()}
->>>>>>> upstream/master
 
         # this part should be the same for all matrices
         self.acceptance_matrix, df = self.matrix_and_dataframe(
@@ -429,17 +394,6 @@ class ReplicaNetwork(object):
         ens_i = ens_ii + ens_jj
         ens_j = ens_jj + ens_ii
         data += data
-<<<<<<< HEAD
-=======
-        mix_matrix = scipy.sparse.coo_matrix(
-            (data, (ij, ji)), 
-            shape=(n_ensembles, n_ensembles)
-        )
-        # TODO clean these up: maybe move labels to elsewhere?
-        sset0 = self.storage.steps[0].active
-        labels = {k : sset0[number_to_ensemble[k]].replica 
-                  for k in number_to_ensemble.keys()}
->>>>>>> upstream/master
 
         self.mix_matrix, df = self.matrix_and_dataframe(
             ens_i, ens_j, data, index_order
