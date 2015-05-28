@@ -197,7 +197,7 @@ class MSTISNetwork(TISNetwork):
             0.2 / len(shooting_chooser.movers),
             len(self.outer_ensembles)
         ]
-        self.root_mover = paths.RandomChoiceMover(
+        self.move_scheme = paths.RandomChoiceMover(
             movers=[shooting_chooser, repex_chooser, rev_chooser,
                     minus_chooser, msouter_chooser],
             weights=weights
@@ -205,7 +205,7 @@ class MSTISNetwork(TISNetwork):
 
 
     def default_movers(self):
-        return self.root_mover
+        return self.move_scheme
 
     def __str__(self):
         mystr = "Multiple State TIS Network:\n"

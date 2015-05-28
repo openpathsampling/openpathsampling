@@ -34,7 +34,7 @@ Goal: RETIS for a simple A->B transition (one direction) boils down to
 >>> retis_calc = PathSampling(
 >>>     storage=storage,
 >>>     engine=engine,
->>>     root_mover=transitionAB.default_movers(engine),
+>>>     move_scheme=transitionAB.default_movers(engine),
 >>>     globalstate=globalstate0
 >>> )
 >>> retis_calc.run(nsteps=10000)
@@ -552,12 +552,12 @@ class TISTransition(Transition):
             movers=self.movers['pathreversal']
         )
         pathrev_sel.name = "ReversalChooser"
-        root_mover = paths.RandomChoiceMover(
+        move_scheme = paths.RandomChoiceMover(
             movers=[shoot_sel, pathrev_sel], 
             weights=[1.0, 0.5]
         )
-        root_mover.name = "RootMover"
-        return root_mover
+        move_scheme.name = "RootMover"
+        return move_scheme
 
 class RETISTransition(TISTransition):
     """Transition class for RETIS."""
@@ -696,16 +696,16 @@ class RETISTransition(TISTransition):
             movers=self.movers['repex']
         )
         repex_sel.name = "ReplicaExchange"
-        tis_root_mover = super(RETISTransition, self).default_movers(engine)
+        tis_move_scheme = super(RETISTransition, self).default_movers(engine)
         minus = self.movers['minus']
-        movers = tis_root_mover.movers + [repex_sel] + minus
-        weights = tis_root_mover.weights + [0.5, 0.2 / len(self.ensembles)]
-        root_mover = paths.RandomChoiceMover(
+        movers = tis_move_scheme.movers + [repex_sel] + minus
+        weights = tis_move_scheme.weights + [0.5, 0.2 / len(self.ensembles)]
+        move_scheme = paths.RandomChoiceMover(
             movers=movers,
             weights=weights
         )
-        root_mover.name = "RootMover"
-        return root_mover
+        move_scheme.name = "RootMover"
+        return move_scheme
 
 
 # TODO: move this to trajectory.summarize_volumes(label_dict)?
