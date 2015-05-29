@@ -61,28 +61,21 @@ class Transition(OPSNamed):
         return all_movers
 
     # TODO: @dwhs can this function be removed?
-    def _assign_sample(self, sample):
-        if sample.ensemble in self.all_ensembles:
-            try:
-                self._samples_by_ensemble[sample.ensemble].append(sample)
-            except KeyError:
-                self._samples_by_ensemble[sample.ensemble] = [sample]
-            try: 
-                self._samples_by_id[sample.replica].append(sample)
-            except KeyError:
-                self._samples_by_id[sample.replica] = [sample]
-
-    @property
-    def all_movers(self):
-        all_movers = []
-        for movetype in self.movers.keys():
-            all_movers += self.movers[movetype]
-        return all_movers
+    # def _assign_sample(self, sample):
+    #     if sample.ensemble in self.all_ensembles:
+    #         try:
+    #             self._samples_by_ensemble[sample.ensemble].append(sample)
+    #         except KeyError:
+    #             self._samples_by_ensemble[sample.ensemble] = [sample]
+    #         try:
+    #             self._samples_by_id[sample.replica].append(sample)
+    #         except KeyError:
+    #             self._samples_by_id[sample.replica] = [sample]
 
     # TODO: can this be removed? Only used in _assign_sample
-    @property
-    def all_ensembles(self):
-        return self.ensembles
+    # @property
+    # def all_ensembles(self):
+    #     return self.ensembles
 
 
     def to_dict(self):

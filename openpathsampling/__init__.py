@@ -36,7 +36,8 @@ from pathmover import (
     MultipleSetMinusMover, OneWayShootingMover, PathReversalGeneratingMover,
     RandomSubtrajectorySelectGeneratingMover, RandomSubtrajectorySelectMover,
     ReplicaExchangeGeneratingMover, ShootGeneratingMover, ShootMover,
-    SubPathMover, BackwardExtendMover, EnsembleFilterMover, ForwardExtendMover
+    SubPathMover, BackwardExtendMover, EnsembleFilterMover, ForwardExtendMover,
+    RandomSelectionMover, FirstAllowedMover, LastAllowedMover, OneWayExtendMover
 )
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
