@@ -1647,14 +1647,16 @@ class MinusMover(WrappedMover):
         ])
 
         extension_mover.name = "MinusExtensionDirectionChooser"
+        self.engine = extension_mover.movers[0].engine
+        if self.engine is not extension_mover.movers[1].engine:
+            raise RuntimeWarning("Forward and backward engines differ?!?!")
 
-        mover = \
-            EnsembleFilterMover(
-                    ConditionalSequentialMover([
-                    subtrajectory_selector,
-                    repex,
-                    extension_mover
-                ]),
+        mover = EnsembleFilterMover(
+            ConditionalSequentialMover([
+                subtrajectory_selector,
+                repex,
+                extension_mover
+            ]),
             ensembles=[minus_ensemble, innermost_ensemble]
         )
 
