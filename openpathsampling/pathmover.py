@@ -105,18 +105,15 @@ class PathMover(TreeMixin, OPSNamed):
 
     """
 
-    def __init__(self,  ensembles=None):
+    def __init__(self):
         OPSNamed.__init__(self)
-
-        # we keep ensembles totally arbitrary. Each mover know what to do
-        self.ensembles = ensembles
 
         self._in_ensembles = None
         self._out_ensembles = None
         self._len = None
 
-        initialization_logging(logger=init_log, obj=self,
-                               entries=['ensembles'])
+#        initialization_logging(logger=init_log, obj=self,
+#                               entries=['ensembles'])
 
     @property
     def default_name(self):
@@ -206,7 +203,7 @@ class PathMover(TreeMixin, OPSNamed):
     def _get_in_ensembles(self):
         """Function that computes the list of input ensembles
         """
-        return self.ensembles
+        return []
 
     def _get_out_ensembles(self):
         """Function that computes the list of output ensembles
@@ -328,6 +325,9 @@ class SwappingMover(MoverType):
 class SampleGeneratingMover(PathMover):
     engine = None
 
+    def __init__(self):
+        super(SampleGeneratingMover, self).__init__()
+
     @classmethod
     def metropolis(cls, trials):
         """Implements the Metropolis acceptance for a list of trial samples
@@ -388,7 +388,7 @@ class SampleGeneratingMover(PathMover):
         # GeneratingMovers do not have submovers!
         return []
 
-    def _ensemble_selector(self, globalstate):
+    def _called_ensembles(self):
         """Function to determine which ensembles to pick samples from
 
         Returns
@@ -399,14 +399,12 @@ class SampleGeneratingMover(PathMover):
         """
 
         # Default is that the list of ensembles is in self.ensembles
-        return self.ensembles
+        return []
 
-    def __init__(self, ensembles=None):
-        super(SampleGeneratingMover, self).__init__(ensembles)
 
     def move(self, globalstate):
         # 1. pick a set of ensembles (in case we allow to pick several ones)
-        ensembles = self._ensemble_selector(globalstate)
+        ensembles = self._called_ensembles()
 
         # 2. pick samples from these ensembles
         samples = [self.select_sample(globalstate, ens) for ens in ensembles]
@@ -465,26 +463,31 @@ class EngineGeneratingMover(SampleGeneratingMover):
 class ShootGeneratingMover(EngineGeneratingMover):
     """Main class for GeneratingMovers using ShootingMoves
 
-    Attributs
-    ---------
+    Attributes
+    ----------
     selector
+    ensemble
     """
-    def __init__(self, selector, ensembles=None):
+    def __init__(self, ensemble, selector):
         """
         Parameters
         ----------
         selector : ShootingPointSelector
             the shootingpoint selector to determine the shooting point in the
             move
-        ensembles : Ensemble of None
-            the specific ensemble to be shot from or None if all are allowed
+        ensemble : Ensemble
+            the specific ensemble to be shot from
         """
-        super(ShootGeneratingMover, self).__init__(ensembles)
+        super(ShootGeneratingMover, self).__init__()
         self.selector = selector
+        self.ensemble = ensemble
 
-    def _ensemble_selector(self, globalstate):
+    def _called_ensembles(self):
         # return a single ensemble
-        return [ self.ensembles ]
+        return [self.ensemble]
+
+    def _get_in_ensembles(self):
+        return [self.ensemble]
 
     def __call__(self, trial):
         initial_trajectory = trial.trajectory
@@ -634,7 +637,7 @@ class ExtendingGeneratingMover(EngineGeneratingMover):
     sample until it is in the target ensemble. This requires the the target
     ensemble is reachable from the initial ensemble
     """
-    def __init__(self, extend_ensemble, ensembles=None):
+    def __init__(self, ensemble, target_ensemble):
         """
         Parameters
         ----------
@@ -644,24 +647,24 @@ class ExtendingGeneratingMover(EngineGeneratingMover):
             the initial ensemble to be started from
         """
         super(ExtendingGeneratingMover, self).__init__(
-            ensembles
         )
-        self.extend_ensemble = extend_ensemble
+        self.ensemble = ensemble
+        self.target_ensemble = target_ensemble
 
-    def _ensemble_selector(self, globalstate):
-        return [self.ensembles]
+    def _called_ensembles(self):
+        return [self.ensemble]
 
     def _get_in_ensembles(self):
-        return [self.ensembles]
+        return [self.ensemble]
 
     def _get_out_ensembles(self):
-        return [self.extend_ensemble]
+        return [self.target_ensemble]
 
     def __call__(self, trial):
         initial_trajectory = trial.trajectory
 
         replica = trial.replica
-        trial_trajectory = self._extend(initial_trajectory, self.extend_ensemble)
+        trial_trajectory = self._extend(initial_trajectory, self.target_ensemble)
 
         trial_details = paths.SampleDetails(
         )
@@ -673,7 +676,7 @@ class ExtendingGeneratingMover(EngineGeneratingMover):
         trial = paths.Sample(
             replica=replica,
             trajectory=trial_trajectory,
-            ensemble=self.extend_ensemble,
+            ensemble=self.target_ensemble,
             parent=trial,
             details=trial_details,
             mover=self,
@@ -762,7 +765,7 @@ class ReplicaExchangeGeneratingMover(SampleGeneratingMover):
     A Sample GeneratingMover implementing a standard Replica Exchange
     """
 
-    def __init__(self, bias=None, ensembles=None):
+    def __init__(self, ensemble1, ensemble2, bias=None):
         """
         Parameters
         ----------
@@ -772,16 +775,17 @@ class ReplicaExchangeGeneratingMover(SampleGeneratingMover):
         """
         # either replicas or ensembles must be a list of pairs; more
         # complicated filtering can be done with a wrapper class
-        super(ReplicaExchangeGeneratingMover, self).__init__(ensembles)
+        super(ReplicaExchangeGeneratingMover, self).__init__()
         # TODO: add support for bias; cf EnsembleHopMover
         self.bias = bias
-        initialization_logging(logger=init_log, obj=self,
-                               entries=['bias'])
+        self.ensemble1 = ensemble1
+        self.ensemble2 = ensemble2
 
-    def _ensemble_selector(self, globalstate):
-        list_of_ensemble_pairs = make_list_of_pairs(self.ensembles)
-        selected = random.choice(list_of_ensemble_pairs)
-        return selected
+        initialization_logging(logger=init_log, obj=self,
+                               entries=['bias', 'ensemble1', 'ensemble2'])
+
+    def _called_ensembles(self):
+        return [self.ensemble1, self.ensemble2]
 
     def __call__(self, sample1, sample2):
         # convert sample to the language used here before
@@ -821,18 +825,19 @@ class ReplicaExchangeGeneratingMover(SampleGeneratingMover):
         return [trial1, trial2]
 
 class StateSwapGeneratingMover(SampleGeneratingMover):
-    def __init__(self, bias=None, ensembles=None):
+    def __init__(self, ensemble1, ensemble2, bias=None):
         # either replicas or ensembles must be a list of pairs; more
         # complicated filtering can be done with a wrapper class
-        super(StateSwapGeneratingMover, self).__init__(ensembles)
+        super(StateSwapGeneratingMover, self).__init__()
         self.bias = bias
-        initialization_logging(logger=init_log, obj=self,
-                               entries=['bias'])
+        self.ensemble1 = ensemble1
+        self.ensemble2 = ensemble2
 
-    def _ensemble_selector(self, globalstate):
-        list_of_ensemble_pairs = make_list_of_pairs(self.ensembles)
-        selected = random.choice(list_of_ensemble_pairs)
-        return selected
+        initialization_logging(logger=init_log, obj=self,
+                               entries=['bias', 'ensemble1', 'ensemble2'])
+
+    def _called_ensembles(self):
+        return [self.ensemble1, self.ensemble2]
 
     def __call__(self, sample1, sample2):
         # convert sample to the language used here before
@@ -905,21 +910,21 @@ class RandomSubtrajectorySelectGeneratingMover(SampleGeneratingMover):
 
 
     """
-    def __init__(self, subensemble, n_l=None, ensembles=None):
+    def __init__(self, ensemble, sub_ensemble, n_l=None):
         super(RandomSubtrajectorySelectGeneratingMover, self).__init__(
-            ensembles
         )
         self.n_l = n_l
-        self.subensemble = subensemble
+        self.ensemble = ensemble
+        self.sub_ensemble = sub_ensemble
 
-    def _ensemble_selector(self, globalstate):
-        return [ self.ensembles ]
+    def _called_ensembles(self):
+        return [ self.ensemble ]
 
     def _get_in_ensembles(self):
-        return [ self.ensembles ]
+        return [ self.ensemble ]
 
     def _get_out_ensembles(self):
-        return [ self.subensemble ]
+        return [ self.sub_ensemble ]
 
     def _choose(self, trajectory_list):
         return random.choice(trajectory_list)
@@ -929,7 +934,7 @@ class RandomSubtrajectorySelectGeneratingMover(SampleGeneratingMover):
         replica = trial.replica
         logger.debug("Working with replica " + str(replica) + " (" + str(initial_trajectory) + ")")
 
-        subtrajs = self.subensemble.split(initial_trajectory)
+        subtrajs = self.sub_ensemble.split(initial_trajectory)
         logger.debug("Found "+str(len(subtrajs))+" subtrajectories.")
 
         if (self.n_l is None and len(subtrajs) > 0) or \
@@ -941,7 +946,7 @@ class RandomSubtrajectorySelectGeneratingMover(SampleGeneratingMover):
             trial = paths.Sample(
                 replica=replica,
                 trajectory=subtraj,
-                ensemble=self.subensemble,
+                ensemble=self.sub_ensemble,
                 parent=trial,
                 mover=self,
                 bias=bias
@@ -990,11 +995,21 @@ class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
 
 class PathReversalGeneratingMover(SampleGeneratingMover):
 
-    def _ensemble_selector(self, globalstate):
-        return [ self.ensembles ]
+    def __init__(self, ensemble):
+        """
+        Parameters
+        ----------
+        ensemble : Ensemble
+            the specific ensemble to be shot from
+        """
+        super(PathReversalGeneratingMover, self).__init__()
+        self.ensemble = ensemble
+
+    def _called_ensembles(self):
+        return [ self.ensemble ]
 
     def _get_in_ensembles(self):
-        return [ self.ensembles ]
+        return [ self.ensemble ]
 
     def __call__(self, trial):
         trajectory = trial.trajectory
@@ -1025,7 +1040,7 @@ class PathReversalMover(PathReversalGeneratingMover):
 
 
 class EnsembleHopGeneratingMover(SampleGeneratingMover):
-    def __init__(self, bias=None, ensembles=None):
+    def __init__(self, ensemble, target_ensemble, bias=None):
         """
         Parameters
         ----------
@@ -1050,47 +1065,37 @@ class EnsembleHopGeneratingMover(SampleGeneratingMover):
         # TODO: maybe allow a version of this with a single ensemble and ANY
         # ensemble can hop to that? messy to code; maybe same idea under
         # another name
-        ensembles = make_list_of_pairs(ensembles)
-        super(EnsembleHopGeneratingMover, self).__init__(ensembles=ensembles)
+        super(EnsembleHopGeneratingMover, self).__init__()
         # ensembles -- another version might take a value for each ensemble,
         # and use the ratio; this latter is better for CITIS
+        self.ensemble = ensemble
+        self.target_ensemble = target_ensemble
         self.bias = bias
+
         initialization_logging(
             logger=init_log,
             obj=self,
             entries=['bias']
         )
 
-    def _ensemble_selector(self, globalstate):
-        # Picks a random initial ensemble from all possible ones
-        # ensemble hops are in the order [from, to]
-        initial_ensembles = [pair[0] for pair in self.ensembles]
-        logger.debug("initial_ensembles: " + str(initial_ensembles))
-        legal_ensembles = [
-            s.ensemble
-            for s in self.legal_sample_set(globalstate, initial_ensembles)
-        ]
-        logger.debug("globalstate ensembles" +
-                     str([s.ensemble for s in globalstate]))
-        logger.debug("self.ensembles: " + str(self.ensembles))
-        logger.debug("Legal Ensembles: " + str(legal_ensembles))
-        return [ random.choice(legal_ensembles) ]
+    def _called_ensembles(self):
+        return [ self.ensemble ]
 
     @property
     def submovers(self):
         return []
 
     def _get_in_ensembles(self):
-        return [pair[0] for pair in self.ensembles]
+        return [pair[0] for pair in self.ensemble]
 
     def _get_out_ensembles(self):
-        return [pair[1] for pair in self.ensembles]
+        return [pair[1] for pair in self.ensemble]
 
     def __call__(self, rep_sample):
         ens_from = rep_sample.ensemble
 
         # pick a random hop to an allowed final ensemble
-        legal_pairs = [pair for pair in self.ensembles
+        legal_pairs = [pair for pair in self.ensemble
                        if pair[0] is ens_from]
         logger.debug("Legal pairs: " + str(legal_pairs))
         ens_pair = random.choice(legal_pairs)
@@ -1162,18 +1167,13 @@ class RandomChoiceMover(PathMover):
     weights : list of floats
         the relative weight of each PathMover (does not need to be normalized)
     """
-    def __init__(self, movers, ensembles=None,  weights=None, name=None):
-        super(RandomChoiceMover, self).__init__(ensembles=ensembles)
 
-        if name is not None:
-            self.name = name
+    # TODO: remove name parameter in __init__
+    def __init__(self, movers, weights=None):
+        super(RandomChoiceMover, self).__init__()
 
         self.movers = movers
-
-        if weights is None:
-            self.weights = [1.0] * len(movers)
-        else:
-            self.weights = weights
+        self.weights = weights
 
         initialization_logging(init_log, self,
                                entries=['movers', 'weights'])
@@ -1189,12 +1189,17 @@ class RandomChoiceMover(PathMover):
         return [ sub.output_ensembles for sub in self.submovers ]
 
     def move(self, globalstate):
-        rand = np.random.random() * sum(self.weights)
+        if self.weights is None:
+            weights = [1.0] * len(self.movers)
+        else:
+            weights = self.weights
+
+        rand = np.random.random() * sum(weights)
         idx = 0
-        prob = self.weights[0]
-        while prob <= rand and idx < len(self.weights):
+        prob = weights[0]
+        while prob <= rand and idx < len(weights):
             idx += 1
-            prob += self.weights[idx]
+            prob += weights[idx]
 
         logger_str = "{name} (RandomChoiceMover) selecting {mtype} (index {idx})"
         logger.info(logger_str.format(name=self.name, idx=idx, mtype=self.movers[idx].name))
@@ -1205,7 +1210,7 @@ class RandomChoiceMover(PathMover):
         details.inputs = []
         details.choice = idx
         details.chosen_mover = mover
-        details.probability = self.weights[idx] / sum(self.weights)
+        details.probability = weights[idx] / sum(weights)
 
         path = paths.RandomChoicePathMoveChange(
             mover.move(globalstate),
@@ -1224,8 +1229,8 @@ class ConditionalMover(PathMover):
     movepath (if if_move is accepted) or the else_move movepath (if if_move
     is rejected).
     """
-    def __init__(self, if_mover, then_mover, else_mover, ensembles=None):
-        super(ConditionalMover, self).__init__(ensembles=ensembles)
+    def __init__(self, if_mover, then_mover, else_mover):
+        super(ConditionalMover, self).__init__()
         self.if_mover = if_mover
         self.then_mover = then_mover
         self.else_mover = else_mover
@@ -1273,8 +1278,8 @@ class SequentialMover(PathMover):
     replica exchanges in a given order, regardless of whether the moves
     succeed or fail.
     """
-    def __init__(self, movers, ensembles=None):
-        super(SequentialMover, self).__init__(ensembles=ensembles)
+    def __init__(self, movers):
+        super(SequentialMover, self).__init__()
         self.movers = movers
         initialization_logging(init_log, self, ['movers'])
 
@@ -1373,6 +1378,10 @@ class ConditionalSequentialMover(SequentialMover):
         return paths.ConditionalSequentialPathMoveChange(pathmovechanges, mover=self)
 
 
+# TODO: Restrict to last should not be used, but rather a filter by ensemble.
+# reason is that the order or samples is partially arbitrary and so the result
+# of this mover depends on the implementation of the preceeding mover!!!
+# Hence, it might cause hard to find errors!
 class RestrictToLastSampleMover(PathMover):
     def __init__(self, mover):
         super(RestrictToLastSampleMover, self).__init__()
@@ -1390,29 +1399,22 @@ class RestrictToLastSampleMover(PathMover):
         return paths.KeepLastSamplePathMoveChange(movepath, mover=self)
 
 
-
 class ReplicaIDChangeMover(PathMover):
     """
     Changes the replica ID for a path.
     """
-    def __init__(self, replica_pairs, ensembles=None):
-        self.replica_pairs = make_list_of_pairs(replica_pairs)
-        super(ReplicaIDChangeMover, self).__init__(ensembles=ensembles)
+    def __init__(self, replica_pair):
+        super(ReplicaIDChangeMover, self).__init__()
+        self.replica_pair = replica_pair
         initialization_logging(logger=init_log, obj=self,
                                entries=['replica_pairs'])
 
     def move(self, globalstate):
-        legal_from_rep = [rep[0] for rep in self.replica_pairs]
+        rep_from = self.replica_pair[0]
+        rep_to = self.replica_pair[1]
         rep_sample = self.select_sample(globalstate,
-                                        ensembles=self.ensembles,
-                                        replicas=legal_from_rep)
-
-        legal_pairs = [pair for pair in self.replica_pairs
-                       if pair[0]==rep_sample.replica]
-        mypair = random.choice(legal_pairs)
-
-        rep_from = mypair[0]
-        rep_to = mypair[1]
+                                        ensembles=None,
+                                        replicas=rep_from)
 
         logger.info("Creating new sample from replica ID " + str(rep_from)
                     + " and putting it in replica ID " + str(rep_to))
@@ -1443,8 +1445,8 @@ class ReplicaIDChangeMover(PathMover):
         details.inputs = [rep_sample]
         details.trials = [rep_sample]
         details.mover = self
-        setattr(details, 'rep_from', mypair[0])
-        setattr(details, 'rep_to', mypair[1])
+        setattr(details, 'rep_from', rep_from)
+        setattr(details, 'rep_to', rep_to)
 
         return paths.AcceptedSamplePathMoveChange(
             samples=[new_sample],
@@ -1452,46 +1454,11 @@ class ReplicaIDChangeMover(PathMover):
             details=details
         )
 
-# TODO: Filter moves are not used at all, do we need these?
-# TODO: Turn Filter into real mover with own movechange ?
 
-class FilterByReplica(PathMover):
-
-    def __init__(self, mover, replicas):
-        super(FilterByReplica, self).__init__()
-        if type(replicas) is not list:
-            replicas = [replicas]
-        self.replicas = replicas
-        self.mover = mover
-        # TODO: clean this up
-        pass
-
-    def move(self, globalstate):
-        filtered_gs = paths.SampleSet(
-            [s for s in globalstate if s.replica in self.replicas]
-        )
-        return self.mover.move(filtered_gs)
-
-
-class FilterBySample(PathMover):
-    def __init__(self, mover, selected_samples):
-        super(FilterBySample, self).__init__()
-        if type(selected_samples) is not list:
-            selected_samples = [selected_samples]
-        self.selected_samples = selected_samples
-        self.mover = mover
-
-    def move(self, globalstate):
-        return paths.FilterSamplesPathMoveChange(
-            self.mover.move(globalstate),
-            mover=self
-        )
-
-
-class WrappedMover(PathMover):
+class SubPathMover(PathMover):
     """Mover that delegates to a single submover
     """
-    def __init__(self, mover, ensembles=None):
+    def __init__(self, mover):
         """
         Parameters
         ----------
@@ -1500,7 +1467,7 @@ class WrappedMover(PathMover):
         ensembles : nested list of Ensemble or None
             the ensemble specification
         """
-        super(WrappedMover, self).__init__(ensembles)
+        super(SubPathMover, self).__init__()
         self.mover = mover
 
     @property
@@ -1522,9 +1489,21 @@ class WrappedMover(PathMover):
         return change
 
 
-class EnsembleFilterMover(WrappedMover):
+class EnsembleFilterMover(SubPathMover):
     """Mover that return only samples from specified ensembles
     """
+    def __init__(self, mover, ensembles):
+        """
+        Parameters
+        ----------
+        mover : PathMover
+            the submover to be delegated to
+        ensembles : nested list of Ensemble or None
+            the ensemble specification
+        """
+        super(SubPathMover, self).__init__()
+        self.ensembles = ensembles
+        self.mover = mover
 
     def move(self, globalstate):
         subchange = self.mover.move(globalstate)
@@ -1535,11 +1514,11 @@ class EnsembleFilterMover(WrappedMover):
         return change
 
     def _get_in_ensembles(self):
-        return self.ensembles
+        # only finter the output, not the input
+        return self.mover.input_ensembles
 
     def _get_out_ensembles(self):
         return self.ensembles
-
 
 
 class OneWayShootingMover(RandomChoiceMover):
@@ -1557,18 +1536,18 @@ class OneWayShootingMover(RandomChoiceMover):
         valid ensembles; None implies all ensembles are allowed (no
         restriction)
     """
-    def __init__(self, selector, ensembles=None):
+    def __init__(self, ensemble, selector):
         movers = [
-            ForwardShootMover(selector, ensembles),
-            BackwardShootMover(selector, ensembles)
+            ForwardShootMover(selector, ensemble),
+            BackwardShootMover(selector, ensemble)
         ]
         super(OneWayShootingMover, self).__init__(
-            movers=movers, ensembles=ensembles
+            movers=movers
         )
         self.selector = selector
 
 
-class MinusMover(WrappedMover):
+class MinusMover(SubPathMover):
     """
     Instance of a MinusMover.
 
@@ -1584,22 +1563,24 @@ class MinusMover(WrappedMover):
     ConditionalSequentalMover. However, analysis routines will see
     `isinstance(minus, ReplicaExchangeMover)` as True.
     """
-    def __init__(self, minus_ensemble, innermost_ensemble, 
-                 ensembles=None):
+    def __init__(self, minus_ensemble, innermost_ensemble):
         segment = minus_ensemble._segment_ensemble
-        subtrajectory_selector = RandomChoiceMover([
-            FirstSubtrajectorySelectMover(subensemble=segment,
+        sub_trajectory_selector = RandomChoiceMover([
+            FirstSubtrajectorySelectMover(sub_ensemble=segment,
                                           n_l=minus_ensemble.n_l,
-                                          ensembles=[minus_ensemble]
+                                          ensemble=minus_ensemble
                                          ),
-            FinalSubtrajectorySelectMover(subensemble=segment,
+            FinalSubtrajectorySelectMover(sub_ensemble=segment,
                                           n_l=minus_ensemble.n_l,
-                                          ensembles=[minus_ensemble]
+                                          ensemble=minus_ensemble
                                          ),
         ])
-        subtrajectory_selector.name = "MinusSubtrajectoryChooser"
+        sub_trajectory_selector.name = "MinusSubtrajectoryChooser"
 
-        repex = ReplicaExchangeMover(ensembles=[[segment, innermost_ensemble]])
+        repex = ReplicaExchangeMover(
+            ensemble1=segment,
+            ensemble2=innermost_ensemble
+        )
 
         extension_mover = RandomChoiceMover([
             ForwardExtendMover(minus_ensemble, segment),
@@ -1610,8 +1591,8 @@ class MinusMover(WrappedMover):
 
         mover = \
             EnsembleFilterMover(
-                    ConditionalSequentialMover([
-                    subtrajectory_selector,
+                ConditionalSequentialMover([
+                    sub_trajectory_selector,
                     repex,
                     extension_mover
                 ]),
@@ -1626,7 +1607,7 @@ class MinusMover(WrappedMover):
         super(MinusMover, self).__init__(mover)
 
 
-class PathSimulatorMover(WrappedMover):
+class PathSimulatorMover(SubPathMover):
     """
     This just wraps a mover and references the used pathsimulator
     """
@@ -1635,7 +1616,6 @@ class PathSimulatorMover(WrappedMover):
         self.pathsimulator = pathsimulator
 
     def move(self, globalstate, step=-1):
-
         details = MoveDetails(
             step=step
         )
@@ -1652,17 +1632,16 @@ class MultipleSetMinusMover(RandomChoiceMover):
 
 def NeighborEnsembleReplicaExchange(ensemble_list):
     movers = [
-        ReplicaExchangeMover(ensembles=[[ensemble_list[i], ensemble_list[i+1]]])
+        ReplicaExchangeMover(
+            ensemble1=ensemble_list[i],
+            ensemble2=ensemble_list[i+1]
+        )
         for i in range(len(ensemble_list)-1)
     ]
     return movers
 
-def PathReversalSet(l):
-    # TODO: Check if replica can be removed here
-#    if isinstance(l[0], paths.Ensemble):
-    return [PathReversalMover(ensembles=[item]) for item in l]
-#    else:
-#        return [PathReversalMover(replicas=[item]) for item in l]
+def PathReversalSet(ensembles):
+    return map(PathReversalMover, ensembles)
 
 
 class PathMoverFactory(object):
@@ -1673,8 +1652,10 @@ class PathMoverFactory(object):
 
         mover_set = []
         for (selector, iface) in zip(selector_set, interface_set):
-            mover = OneWayShootingMover(selector=selector,
-                                        ensembles=[iface])
+            mover = OneWayShootingMover(
+                selector=selector,
+                ensemble=iface
+            )
             mover.name = "OneWayShootingMover " + str(iface.name)
             mover_set.append(mover)
 
@@ -1687,7 +1668,6 @@ class PathMoverFactory(object):
     @staticmethod
     def NearestNeighborRepExSet():
         pass
-
 
 
 class Details(OPSObject):
@@ -1705,7 +1685,6 @@ class Details(OPSObject):
             if not isinstance(self.__dict__[key], paths.Ensemble):
                 mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
         return mystr
-
 
 
 class MoveDetails(Details):
@@ -1750,7 +1729,6 @@ class MoveDetails(Details):
         self.trials=None
         self.results=None
         super(MoveDetails, self).__init__(**kwargs)
-
 
 
 class SampleDetails(Details):
