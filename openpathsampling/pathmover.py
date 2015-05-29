@@ -1593,6 +1593,13 @@ class EnsembleFilterMover(SubPathMover):
         self.ensembles = ensembles
         self.mover = mover
 
+
+        if not set(self.mover.output_ensembles) & set(self.ensembles):
+            # little sanity check, if the underlying move will be removed by the
+            # filter throw a warning
+            raise ValueError('Your filter removes the underlying move completely. ' +
+                             'Please check your ensembles and submovers!')
+
     def move(self, globalstate):
         subchange = self.mover.move(globalstate)
         change = paths.FilterByEnsemblePathMoveChange(
