@@ -12,7 +12,6 @@ from test_helpers import (assert_equal_array_array, items_equal,
                           CallIdentity
                          )
 
-import openpathsampling as paths
 from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.pathmover import *
 
@@ -77,8 +76,8 @@ class testPathMover(object):
         self.l3 = LengthEnsemble(3)
         self.repsAll_ensNone = PathMover()
 #        self.reps12_ensNone = PathMover(replicas=[1, 2])
-        self.repsAll_ens1 = PathMover(ensembles=self.l1)
-        self.repsAll_ens12 = PathMover(ensembles=[self.l1, self.l2])
+        self.repsAll_ens1 = PathMover()
+        self.repsAll_ens12 = PathMover()
 #        self.reps1_ens2 = PathMover(replicas=1, ensembles=[self.l2])
         self.s1 = Sample(replica=1, ensemble=self.l2)
         self.s2 = Sample(replica=2, ensemble=self.l1)
@@ -87,16 +86,13 @@ class testPathMover(object):
         self.sset = SampleSet([self.s1, self.s2, self.s3, self.s4])
 
     def test_legal_sample_set(self):
-        assert_items_equal(self.repsAll_ensNone.legal_sample_set(self.sset),
-                           [self.s1, self.s2, self.s3, self.s4])
-#        assert_items_equal(self.reps12_ensNone.legal_sample_set(self.sset),
-#                           [self.s1, self.s2, self.s4])
-        assert_items_equal(self.repsAll_ens12.legal_sample_set(self.sset),
-                           [self.s1, self.s2, self.s3])
-        assert_items_equal(self.repsAll_ens1.legal_sample_set(self.sset),
-                           [self.s2, self.s3])
-#        assert_items_equal(self.reps1_ens2.legal_sample_set(self.sset),
-#                           [self.s1])
+#        assert_items_equal(self.repsAll_ensNone.legal_sample_set(self.sset),
+#                           [self.s1, self.s2, self.s3, self.s4])
+#        assert_items_equal(self.repsAll_ens12.legal_sample_set(self.sset),
+#                           [self.s1, self.s2, self.s3])
+#        assert_items_equal(self.repsAll_ens1.legal_sample_set(self.sset),
+#                           [self.s2, self.s3])
+
         assert_items_equal(
             self.repsAll_ensNone.legal_sample_set(self.sset, ensembles=self.l1),
             [self.s2, self.s3]
@@ -105,15 +101,6 @@ class testPathMover(object):
             self.repsAll_ensNone.legal_sample_set(self.sset, ensembles=[self.l1]),
             [self.s2, self.s3]
         )
-
-
-    def test_select_sample(self):
-#        assert_equal(self.reps1_ens2.select_sample(self.sset), self.s1)
-        selected = self.repsAll_ens1.select_sample(self.sset)
-        try:
-            assert_equal(selected, self.s2)
-        except AssertionError:
-            assert_equal(selected, self.s3)
 
 class testShootingMover(object):
     def setup(self):
@@ -138,7 +125,10 @@ class testShootingMover(object):
 
 class testForwardShootMover(testShootingMover):
     def test_move(self):
-        mover = ForwardShootMover(UniformSelector(), ensembles=self.tps)
+        mover = ForwardShootMover(
+            ensemble=self.tps,
+            selector=UniformSelector()
+        )
         self.dyn.initialized = True
         change = mover.move(self.init_samp)
         newsamp = self.init_samp + change
@@ -149,7 +139,10 @@ class testForwardShootMover(testShootingMover):
 
 class testBackwardShootMover(testShootingMover):
     def test_move(self):
-        mover = BackwardShootMover(UniformSelector(), ensembles=self.tps)
+        mover = BackwardShootMover(
+            ensemble=self.tps,
+            selector=UniformSelector()
+        )
         self.dyn.initialized = True
         change = mover.move(self.init_samp)
         newsamp = self.init_samp + change
@@ -160,7 +153,10 @@ class testBackwardShootMover(testShootingMover):
 
 class testOneWayShootingMover(testShootingMover):
     def test_mover_initialization(self):
-        mover = OneWayShootingMover(UniformSelector, ensembles=self.tps)
+        mover = OneWayShootingMover(
+            ensemble=self.tps,
+            selector=UniformSelector()
+        )
         assert_equal(len(mover.movers), 2)
         assert_equal(isinstance(mover, RandomChoiceMover), True)
         assert_equal(isinstance(mover, OneWayShootingMover), True)
@@ -177,7 +173,7 @@ class testPathReversalMover(object):
         volB = LambdaVolume(op, 1.0, 100)
         volX = LambdaVolume(op, -100, 0.25)
         self.tis = paths.TISEnsemble(volA, volB, volX)
-        self.move = PathReversalMover()
+        self.move = PathReversalMover(ensemble=self.tis)
         self.op = op
 
     def test_AXA_path(self):
@@ -254,7 +250,10 @@ class testReplicaExchangeMover(object):
         self.gs_A0B1 = SampleSet([self.sampA0, self.sampB1])
 
     def test_repex_ens_rej(self):
-        repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
+        repex_AB = ReplicaExchangeMover(
+            ensemble1=self.tisA,
+            ensemble2=self.tisB
+        )
         old_sset = self.gs_A0B1
         repex_change = repex_AB.move(old_sset)
         samples = repex_change.results
@@ -278,7 +277,10 @@ class testReplicaExchangeMover(object):
         assert_equal(B1[0].trajectory, self.traj0)
 
     def test_repex_ens_acc(self):
-        repex_12 = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
+        repex_12 = ReplicaExchangeMover(
+            ensemble1=self.tisA,
+            ensemble2=self.tisB
+        )
         old_sset = self.gs_B1A2
         samples_B2A1_rep = repex_12.move(old_sset)
         change = samples_B2A1_rep
@@ -313,8 +315,14 @@ class testRandomChoiceMover(object):
         self.init_samp = SampleSet([Sample(trajectory=traj,
                                            ensemble=self.len3, 
                                            replica=0)])
-        self.hop_to_tis = EnsembleHopMover(ensembles=[[self.len3, self.tis]])
-        self.hop_to_tps = EnsembleHopMover(ensembles=[[self.len3, self.tps]])
+        self.hop_to_tis = EnsembleHopMover(
+            ensemble=self.len3,
+            target_ensemble=self.tis
+        )
+        self.hop_to_tps = EnsembleHopMover(
+            ensemble=self.len3,
+            target_ensemble=self.tps
+        )
         self.mover = RandomChoiceMover([self.hop_to_tis, self.hop_to_tps])
 
     def test_random_choice(self):
@@ -350,22 +358,38 @@ class testSequentialMover(object):
         tps = ef.A2BEnsemble(volA, volB)
         len3 = LengthEnsemble(3)
         len2 = LengthEnsemble(2)
-        self.hop_to_tis = EnsembleHopMover(ensembles=[[tis, tis],
-                                                      [tps, tis],
-                                                      [len3, tis],
-                                                      [len2, tis]])
-        self.hop_to_tps = EnsembleHopMover(ensembles=[[tis, tps],
-                                                      [tps, tps],
-                                                      [len3, tps],
-                                                      [len2, tps]])
-        self.hop_to_len3 = EnsembleHopMover(ensembles=[[tis, len3],
-                                                       [tps, len3],
-                                                       [len3, len3],
-                                                       [len2, len3]]) 
-        self.hop_to_len2 = EnsembleHopMover(ensembles=[[tis, len2],
-                                                      [tps, len2],
-                                                      [len3, len2],
-                                                      [len2, len2]])
+        self.hop_to_tis = RandomAllowedChoiceMover(
+            map(lambda ens : EnsembleHopMover(*ens),
+                [[tis, tis],
+                 [tps, tis],
+                 [len3, tis],
+                 [len2, tis]]
+            )
+        )
+        self.hop_to_tps = RandomAllowedChoiceMover(
+            map(lambda ens : EnsembleHopMover(*ens),
+                [[tis, tps],
+                 [tps, tps],
+                 [len3, tps],
+                 [len2, tps]]
+            )
+        )
+        self.hop_to_len3 = RandomAllowedChoiceMover(
+            map(lambda ens : EnsembleHopMover(*ens),
+                [[tis, len3],
+                 [tps, len3],
+                 [len3, len3],
+                 [len2, len3]]
+            )
+        )
+        self.hop_to_len2 = RandomAllowedChoiceMover(
+            map(lambda ens : EnsembleHopMover(*ens),
+                [[tis, len2],
+                 [tps, len2],
+                 [len3, len2],
+                 [len2, len2]]
+            )
+        )
         self.init_sample = Sample(trajectory=traj,
                                   ensemble=len3,
                                   replica=0)
@@ -552,7 +576,7 @@ class SubtrajectorySelectTester(object):
         self.subtraj2 = Trajectory([0.0, 2.0, 0.0])
         self.gs = SampleSet(Sample(
             replica=0,
-            ensemble=self.subensemble,
+            ensemble=self.ensemble,
             trajectory=self.traj_with_3_subtrajs
         ))
 
@@ -566,7 +590,10 @@ class SubtrajectorySelectTester(object):
 
 class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
     def test_accepts_all(self):
-        mover = RandomSubtrajectorySelectMover(self.subensemble)
+        mover = RandomSubtrajectorySelectMover(
+            ensemble=self.ensemble,
+            sub_ensemble=self.subensemble
+        )
         found = {}
         for t in range(100):
             change = mover.move(self.gs)
@@ -589,7 +616,10 @@ class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
         raise SkipTest
 
     def test_nothing_allowed(self):
-        mover = RandomSubtrajectorySelectMover(self.subensemble)
+        mover = RandomSubtrajectorySelectMover(
+            ensemble=self.ensemble,
+            sub_ensemble=self.subensemble
+        )
         traj_with_no_subtrajs = Trajectory([0.0, 0.0, 0.0])
         self.gs[0].trajectory = traj_with_no_subtrajs
         change = mover.move(self.gs)
@@ -600,7 +630,10 @@ class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
 
 class testFirstSubtrajectorySelectMover(SubtrajectorySelectTester):
     def test_move(self):
-        mover = FirstSubtrajectorySelectMover(self.subensemble)
+        mover = FirstSubtrajectorySelectMover(
+            ensemble=self.ensemble,
+            sub_ensemble=self.subensemble
+        )
         change = mover.move(self.gs)
         samples = change.results
         assert_equal(len(samples), 1)
@@ -611,7 +644,10 @@ class testFirstSubtrajectorySelectMover(SubtrajectorySelectTester):
 
 class testFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
     def test_move(self):
-        mover = FinalSubtrajectorySelectMover(self.subensemble)
+        mover = FinalSubtrajectorySelectMover(
+            ensemble=self.ensemble,
+            sub_ensemble=self.subensemble
+        )
         change = mover.move(self.gs)
         samples = change.results
         assert_equal(len(samples), 1)
@@ -698,13 +734,15 @@ class testMinusMover(object):
         assert_equal(self.minus_sample.ensemble(self.minus_sample.trajectory),
                     True)
         first_subtraj = FirstSubtrajectorySelectMover(
-            subensemble=self.minus._segment_ensemble
+            ensemble=self.minus,
+            sub_ensemble=self.minus._segment_ensemble
         )
         change = first_subtraj.move(SampleSet(self.minus_sample))
         samples = change.results
         assert_equal(samples[0].ensemble(samples[0].trajectory), True)
         final_subtraj = FinalSubtrajectorySelectMover(
-            subensemble=self.minus._segment_ensemble
+            ensemble=self.minus,
+            sub_ensemble=self.minus._segment_ensemble
         )
         change = final_subtraj.move(SampleSet(self.minus_sample))
         samples = change.results

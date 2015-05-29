@@ -5,10 +5,6 @@ from lookup_function import LookupFunction
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
 
-import inspect
-
-import time 
-
 import logging
 logger = logging.getLogger(__name__)
 
@@ -54,7 +50,6 @@ class Transition(OPSNamed):
         self.stateA = stateA
         self.stateB = stateB
 
-
     @property
     def all_movers(self):
         """
@@ -65,6 +60,7 @@ class Transition(OPSNamed):
             all_movers += self.movers[movetype]
         return all_movers
 
+    # TODO: @dwhs can this function be removed?
     def _assign_sample(self, sample):
         if sample.ensemble in self.all_ensembles:
             try:
@@ -83,6 +79,7 @@ class Transition(OPSNamed):
             all_movers += self.movers[movetype]
         return all_movers
 
+    # TODO: can this be removed? Only used in _assign_sample
     @property
     def all_ensembles(self):
         return self.ensembles
@@ -338,6 +335,9 @@ class TISTransition(Transition):
         force : bool (False)
             if true, cached results are overwritten
         """
+
+        tcp = dict()
+
         if method == "wham":
             run_ensembles = False
             for ens in self.ensembles:
@@ -360,6 +360,9 @@ class TISTransition(Transition):
             tcp = wham.wham_bam_histogram()
         elif method == "mbar":
             pass
+        else:
+            raise ValueError("Only supported methods are 'wham' and 'mbar'. " + \
+                             "Whereas 'mbar' is not yet implemented!")
 
         self.tcp = LookupFunction(tcp.keys(), tcp.values())
         return self.tcp

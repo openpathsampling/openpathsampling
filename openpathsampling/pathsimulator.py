@@ -45,6 +45,7 @@ class MCStep(OPSObject):
         self.change = change
         self.mccycle = mccycle
 
+
 class PathSimulator(OPSNamed):
 
     calc_name = "PathSimulator"
@@ -102,11 +103,12 @@ class PathSimulator(OPSNamed):
             self.storage.steps.save(mcstep)
             self.storage.sync()
 
+
 class BootstrapPromotionMove(PathMover):
-    '''
+    """
     Bootstrap promotion is the combination of an EnsembleHop (to the next
     ensemble up) with incrementing the replica ID.
-    '''
+    """
     def __init__(self, bias=None, shooters=None,
                  ensembles=None):
         """
@@ -125,9 +127,10 @@ class BootstrapPromotionMove(PathMover):
         that all ensembles have a reasonable overlab using shooting moves.
 
         """
-        super(BootstrapPromotionMove, self).__init__(ensembles=ensembles)
+        super(BootstrapPromotionMove, self).__init__()
         self.shooters = shooters
         self.bias = bias
+        self.ensembles = ensembles
         initialization_logging(logger=init_log, obj=self,
                                entries=['bias', 'shooters'])
 
@@ -149,9 +152,12 @@ class BootstrapPromotionMove(PathMover):
                 paths.PartialAcceptanceSequentialMover(
                     movers=[
                         shoot,
-                        paths.EnsembleHopMover(ensembles=enss),
+                        paths.EnsembleHopMover(
+                            ensemble=enss[0],
+                            target_ensemble=enss[1]
+                        ),
                         paths.ReplicaIDChangeMover(
-                            replica_pairs=[rep_from, rep_to]
+                            replica_pair=[rep_from, rep_to]
                         )
                     ]
                 )
@@ -227,6 +233,9 @@ class Bootstrapping(PathSimulator):
 
     def run(self, nsteps):
         bootstrapmove = self._bootstrapmove
+
+        cvs = []
+        n_samples = 0
 
         if self.storage is not None:
             cvs = list(self.storage.cvs)
@@ -358,6 +367,9 @@ class PathSampling(PathSimulator):
 
     def run(self, nsteps):
         mcstep = None
+
+        cvs = list()
+        n_samples = 0
 
         if self.storage is not None:
             n_samples = len(self.storage.snapshots)
