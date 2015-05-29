@@ -4,7 +4,6 @@ import numpy as np
 from lookup_function import LookupFunction
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
-import sys
 
 import inspect
 
@@ -21,7 +20,8 @@ def max_lambdas(sample, orderparameter):
     return max(orderparameter(sample.trajectory))
 
 def sampleset_sample_generator(storage):
-    for sset in storage.samplesets:
+    for step in storage.steps:
+        sset = step.active # take the sampleset after the move
         for sample in sset:
             yield sample
 
@@ -54,7 +54,6 @@ class Transition(OPSNamed):
         self.stateA = stateA
         self.stateB = stateB
 
-        self._mover_acceptance = {}
 
     @property
     def all_movers(self):
@@ -77,87 +76,6 @@ class Transition(OPSNamed):
             except KeyError:
                 self._samples_by_id[sample.replica] = [sample]
 
-    def _move_summary_line(self, move_name, n_accepted, n_trials,
-                           n_total_trials, indentation):
-        line = ("* "*indentation + str(move_name) + 
-                " ran " + str(float(n_trials)/n_total_trials*100) + 
-                "% of the cycles with acceptance " + str(n_accepted) + "/" + 
-                str(n_trials) + " (" + str(float(n_accepted) / n_trials) + 
-                ") \n")
-        return line
-
-    def move_acceptance(self, storage):
-        for delta in storage.pathmovechanges:
-            for m in delta:
-                acc = 1 if m.accepted else 0
-                key = (m.mover, str(delta.key(m)))
-                try:
-                    self._mover_acceptance[key][0] += acc
-                    self._mover_acceptance[key][1] += 1
-                except KeyError:
-                    self._mover_acceptance[key] = [acc, 1]
-
-    def move_summary(self, storage, movers=None, output=sys.stdout, depth=0):
-        """
-        Provides a summary of the movers in `storage` based on this transition.
-
-        The summary includes the number of moves attempted and the
-        acceptance rate. In some cases, extra lines are printed for each of
-        the submoves.
-
-        Parameters
-        ----------
-        storage : Storage
-            The storage object
-        movers : None or string or list of PathMover
-            If None, provides a short summary of the keys in self.mover. If
-            a string, provides a short summary using that string as a key in
-            the `movers` dict. If a mover or list of movers, provides
-            summary for each of those movers.
-        output : file
-            file to direct output
-        depth : integer or None
-            depth of submovers to show: if integer, shows that many
-            submovers for each move; if None, shows all submovers
-        """
-        my_movers = { }
-        if movers is None:
-            movers = self.movers.keys()
-        if type(movers) is str:
-            movers = self.movers[movers]
-        for key in movers:
-            try:
-                my_movers[key] = self.movers[key]
-            except KeyError:
-                my_movers[key] = [key]
-
-        stats = { } 
-        for groupname in my_movers.keys():
-            stats[groupname] = [0, 0]
-
-        if self._mover_acceptance == { }:
-            self.move_acceptance(storage)
-        
-        tot_trials = len(storage.pathmovechanges)
-        for groupname in my_movers.keys():
-            group = my_movers[groupname]
-            for mover in group:
-                key_iter = (k for k in self._mover_acceptance.keys()
-                            if k[0] == mover)
-                for k in key_iter:
-                    stats[groupname][0] += self._mover_acceptance[k][0]
-                    stats[groupname][1] += self._mover_acceptance[k][1]
-
-        for groupname in my_movers.keys():
-            line = self._move_summary_line(
-                move_name=groupname, 
-                n_accepted=stats[groupname][0],
-                n_trials=stats[groupname][1], 
-                n_total_trials=tot_trials,
-                indentation=0
-            )
-            output.write(line)
-
     @property
     def all_movers(self):
         all_movers = []
@@ -177,8 +95,8 @@ class Transition(OPSNamed):
             'movers' : self.movers
         }
 
-    @staticmethod
-    def from_dict(dct):
+    @classmethod
+    def from_dict(cls, dct):
         return Transition(
             stateA=dct['stateA'],
             stateB=dct['stateB']
@@ -304,8 +222,8 @@ class TISTransition(Transition):
         }
         return ret_dict
 
-    @staticmethod
-    def from_dict(dct):
+    @classmethod
+    def from_dict(cls, dct):
         mytrans = paths.TISTransition(
             stateA=dct['stateA'],
             stateB=dct['stateB'],
@@ -360,7 +278,7 @@ class TISTransition(Transition):
                 self.histograms[hist] = {}
             self.histograms[hist][ensemble] = Histogram(**(hist_info.hist_args))
 
-        in_ens_samples = (s for s in samples if s.ensemble == ensemble)
+        in_ens_samples = (s for s in samples if s.ensemble is ensemble)
         hist_data = {}
         buflen = -1
         sample_buf = []
@@ -409,7 +327,7 @@ class TISTransition(Transition):
         return hist.reverse_cumulative()
 
     def total_crossing_probability(self, storage=None, method="wham", force=False):
-        """The total crossing probability using `method`
+        """Return the total crossing probability using `method`
         
         Parameters
         ----------
@@ -468,7 +386,7 @@ class TISTransition(Transition):
         n_acc = 0
         n_try = 0
         for samp in samples:
-            if samp.ensemble == ensemble:
+            if samp.ensemble is ensemble:
                 if self.stateB(samp.trajectory[-1]):
                     n_acc += 1
                 n_try += 1
@@ -516,7 +434,8 @@ class TISTransition(Transition):
         outer_cross_prob = self.histograms['max_lambda'][outer_ensemble]
         if outer_lambda is None:
             lambda_bin = -1
-            while (outer_cross_prob.reverse_cumulative()[lambda_bin+1] == 1.0):
+            outer_cp_vals = outer_cross_prob.reverse_cumulative().values()
+            while (outer_cp_vals[lambda_bin+1] == 1.0):
                 lambda_bin += 1
             outer_lambda = outer_cross_prob.bins[lambda_bin]
 
@@ -578,8 +497,8 @@ class RETISTransition(TISTransition):
         }
         return ret_dict
 
-    @staticmethod
-    def from_dict(dct):
+    @classmethod
+    def from_dict(cls, dct):
         mytrans = RETISTransition(
             stateA=dct['stateA'],
             stateB=dct['stateB'],
@@ -605,11 +524,12 @@ class RETISTransition(TISTransition):
             return self._flux
 
         self.minus_count_sides = { "in" : [], "out" : [] }
-        minus_moves = (d for d in storage.pathmovechanges 
-                       if self.movers['minus'][0] in d and d.accepted)
+        minus_moves = (d.change for d in storage.steps
+                       if self.movers['minus'][0] in
+                       d.change and d.change.accepted)
         for move in minus_moves:
-            minus_samp = [s for s in move.samples 
-                          if s.ensemble==self.minus_ensemble][0]
+            minus_samp = [s for s in move.results
+                          if s.ensemble is self.minus_ensemble][0]
             minus_trajectory = minus_samp.trajectory
             minus_summ = minus_sides_summary(minus_trajectory,
                                              self.minus_ensemble)
