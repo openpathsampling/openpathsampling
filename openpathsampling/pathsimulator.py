@@ -44,10 +44,65 @@ class MCStep(OPSObject):
         self.change = change
         self.mccycle = mccycle
 
+class MCObserver(object):
+    def __init__(self):
+        self.scope = None
+
+    def start(self):
+        pass
+
+    def pre(self):
+        pass
+
+    def post(self):
+        pass
+
+    def final(self):
+        pass
+
+class Reporter(MCObserver):
+    def __init__(self, start=None, pre=None, post=None, final=None):
+        super(Reporter, self).__init__()
+        self.fnc_pre = pre
+        self.fnc_final = final
+        self.fnc_start = start
+        self.fnc_post = post
+
+    def _write(self, s):
+        print s
+
+    def start(self):
+        self._write(
+            self.fnc_start(self.scope)
+        )
+
+    def final(self):
+        self._write(
+            self.fnc_final(self.scope)
+        )
+
+    def pre(self):
+        self._write(
+            self.fnc_pre(self.scope)
+        )
+
+    def post(self):
+        self._write(
+            self.fnc_post(self.scope)
+        )
+
+
+class InfoLoggingReporter(Reporter):
+    def _write(self, s):
+        logger.info(s)
+
+class IPythonReporter(Reporter):
+    def _write(self, s):
+        paths.tools.refresh_output(s)
+
 
 class PathSimulator(OPSNamed):
 
-    calc_name = "PathSimulator"
     _excluded_attr = ['globalstate', 'step', 'save_frequency']
 
     def __init__(self, storage, engine=None):
@@ -62,10 +117,14 @@ class PathSimulator(OPSNamed):
         )
 
         self.globalstate = None
+        self.last_mcstep = None
+        self._mover = None
+        self.observer = []
 
-    # TODO: Remove, is not used
-    def set_replicas(self, samples):
-        self.globalstate = paths.SampleSet(samples)
+    def __add__(self, other):
+        if isinstance(other, MCObserver):
+            other.scope = self
+            self.observer.append(other)
 
     def sync_storage(self):
         """
@@ -75,7 +134,17 @@ class PathSimulator(OPSNamed):
             self.storage.cvs.sync()
             self.storage.sync()
 
-    def run(self, nsteps):
+    def _is_running(self, n_steps):
+        """
+        Returns True if the simulation should keep running
+
+        Default is to run until the number of steps is reached. Can be used to
+        override the default behaviour and run until a specific event occurs like
+        reaching a state, etc...
+        """
+        return self.current_step < n_steps
+
+    def run(self, n_steps):
         """
         Run the simulator for a number of steps
 
@@ -84,13 +153,69 @@ class PathSimulator(OPSNamed):
         nsteps : int
             number of step to be run
         """
-        logger.warning("Running an empty pathsimulator? Try a subclass, maybe!")
+        mcstep = None
+
+        cvs = list()
+        n_samples = 0
+
+        if self.storage is not None:
+            n_samples = len(self.storage.snapshots)
+            cvs = list(self.storage.cvs)
+
+        if self.step == 0:
+            self.save_initial()
+
+        self.current_step = 0
+
+        for obs in self.observer.values():
+            obs.start()
+
+        while self._is_running(n_steps):
+            self.step += 1
+            self.current_step += 1
+
+            for obs in self.observer.values():
+                obs.pre()
+
+            movepath = self._mover.move(self.globalstate, step=self.step)
+            samples = movepath.results
+            new_sampleset = self.globalstate.apply_samples(samples)
+
+            self.last_mcstep = MCStep(
+                simulation=self,
+                mccycle=self.step,
+                previous=self.globalstate,
+                active=new_sampleset,
+                change=movepath
+            )
+
+            for obs in self.observer.values():
+                obs.post()
+
+            if self.storage is not None:
+                for cv in cvs:
+                    n_len = len(self.storage.snapshots)
+                    cv(self.storage.snapshots[n_samples:n_len])
+                    n_samples = n_len
+
+                self.storage.steps.save(self.last_mcstep)
+
+            if self.step % self.save_frequency == 0:
+                self.globalstate.sanity_check()
+                self.sync_storage()
+
+            self.globalstate = new_sampleset
+
+        self.sync_storage()
+
+        for obs in self.observer.values():
+            obs.final()
 
     def save_initial(self):
         """
         Save the initial state as an MCStep to the storage
         """
-        mcstep = MCStep(
+        self.last_mcstep = MCStep(
             simulation=self,
             mccycle=self.step,
             previous=None,
@@ -99,7 +224,7 @@ class PathSimulator(OPSNamed):
         )
 
         if self.storage is not None:
-            self.storage.steps.save(mcstep)
+            self.storage.steps.save(self.last_mcstep)
             self.storage.sync()
 
 
@@ -165,8 +290,6 @@ class Bootstrapping(PathSimulator):
     set, in increasing order. Replicas are named numerically.
     """
 
-    calc_name = "Bootstrapping"
-
     def __init__(
             self,
             storage,
@@ -182,8 +305,9 @@ class Bootstrapping(PathSimulator):
             the storage all results should be stored in
         engine : openpathsampling.DynamicsEngine
             the dynamics engine to be used
-        movers : list of openpathsampling.PathMover
-            list of shooters to be used in the BootstrapPromotionMove
+        movers : list of openpathsampling.PathMover or None
+            list of shooters to be used in the BootstrapPromotionMove. If None then
+            Bootstrapping creates uniform selecting OneWayShooters for each ensemble.
         trajectory : openpathsampling.Trajectory
             an initial trajectory to be started from
         ensembles : nested list of openpathsampling.Ensemble
@@ -203,108 +327,53 @@ class Bootstrapping(PathSimulator):
         if self.storage is not None:
             self.storage.samplesets.save(self.globalstate)
         if movers is None:
-            pass # TODO: implement defaults: one per ensemble, uniform sel
+            movers = [
+                paths.OneWayShootingMover(
+                    ensemble=ens,
+                    selector=paths.UniformSelector()
+                )
+                for ens in self.ensembles
+            ]
         else:
             self.movers = movers
+
         initialization_logging(init_log, self,
                                ['movers', 'ensembles'])
         init_log.info("Parameter: %s : %s", 'trajectory', str(trajectory))
 
-        self._bootstrapmove = BootstrapPromotionMove(bias=None,
+        self._mover = BootstrapPromotionMove(bias=None,
                                                shooters=self.movers,
                                                ensembles=self.ensembles
                                               )
 
-        self.root = self.globalstate
+        self.failsteps = 0
+        self.old_ens_num = 0
 
-    def run(self, nsteps):
-        bootstrapmove = self._bootstrapmove
-
-        cvs = []
-        n_samples = 0
-
-        if self.storage is not None:
-            cvs = list(self.storage.cvs)
-            n_samples = len(self.storage.snapshots)
-
-        ens_num = len(self.globalstate)-1
-
-        if self.step == 0:
-            self.save_initial()
-
-        failsteps = 0
-        # if we fail nsteps times in a row, kill the job
-
-        while ens_num < len(self.ensembles) - 1 and failsteps < nsteps:
-            self.step += 1
-            logger.info("Step: " + str(self.step)
-                        + "   Ensemble: " + str(ens_num)
-                        + "  failsteps = " + str(failsteps)
-                       )
-            paths.tools.refresh_output(
+        self + IPythonReporter(
+            pre = lambda this :
                 ("Working on Bootstrapping cycle step %d" +
-                " in ensemble %d/%d .\n") %
-                ( self.step, ens_num + 1, len(self.ensembles) )
-            )
-
-            movepath = bootstrapmove.move(self.globalstate)
-            samples = movepath.results
-            new_sampleset = self.globalstate.apply_samples(samples)
-
-#            samples = movepath.results
-#            logger.debug("SAMPLES:")
-#            for sample in samples:
-#                logger.debug("(" + str(sample.replica)
-#                             + "," + str(sample.trajectory)
-#                             + "," + repr(sample.ensemble)
-#                            )
-
-
-            mcstep = MCStep(
-                simulation=self,
-                mccycle=self.step,
-                previous=self.globalstate,
-                active=new_sampleset,
-                change=movepath
-            )
-
-
-#            logger.debug("GLOBALSTATE:")
-#            for sample in self.globalstate:
-#                logger.debug("(" + str(sample.replica)
-#                             + "," + str(sample.trajectory)
-#                             + "," + repr(sample.ensemble)
-#                            )
-
-
-
-            if self.storage is not None:
-                # compute all cvs now
-                for cv in cvs:
-                    n_len = len(self.storage.snapshots)
-                    cv(self.storage.snapshots[n_samples:n_len])
-                    n_samples = n_len
-
-                self.storage.steps.save(mcstep)
-
-            self.globalstate = new_sampleset
-
-            old_ens_num = ens_num
-            ens_num = len(self.globalstate)-1
-            if ens_num == old_ens_num:
-                failsteps += 1
-
-            if self.step % self.save_frequency == 0:
-                self.globalstate.sanity_check()
-                self.sync_storage()
-
-        self.sync_storage()
-
-        paths.tools.refresh_output(
+                    " in ensemble %d/%d .\n") %
+                    ( this.step, len(this.globalstate), len(this.ensembles) ),
+            final = lambda this :
                 ("DONE! Completed Bootstrapping cycle step %d" +
-                " in ensemble %d/%d .\n") %
-                ( self.step, ens_num + 1, len(self.ensembles) )
-            )
+                    " in ensemble %d/%d .\n") %
+                    ( this.step, len(this.globalstate), len(this.ensembles) )
+        )
+
+        self + InfoLoggingReporter(
+            pre = lambda this : "Beginning Bootstrapping cycle " + str(this.step)
+        )
+
+    def _is_running(self, n_steps):
+
+        ens_num = len(self.globalstate) - 1
+        if ens_num == self.old_ens_num:
+            self.failsteps += 1
+        else:
+            self.old_ens_num = ens_num
+
+        return len(self.globalstate) < len(self.ensembles) and self.failsteps < n_steps
+
 
 class PathSampling(PathSimulator):
     """
@@ -314,7 +383,6 @@ class PathSampling(PathSimulator):
     per replica after each move. 
     """
 
-    calc_name = "PathSampling"
     def __init__(
             self,
             storage,
@@ -336,7 +404,6 @@ class PathSampling(PathSimulator):
         """
         super(PathSampling, self).__init__(storage, engine)
         self.root_mover = root_mover
-#        self.root_mover.name = "PathSamplingRoot"
 
         samples = []
         if globalstate is not None:
@@ -344,60 +411,17 @@ class PathSampling(PathSimulator):
                 samples.append(sample.copy_reset())
 
         self.globalstate = paths.SampleSet(samples)
-        self.root = self.globalstate
 
         initialization_logging(init_log, self, 
                                ['root_mover', 'globalstate'])
 
         self._mover = paths.PathSimulatorMover(self.root_mover, self)
 
-    def run(self, nsteps):
-        mcstep = None
+        self + IPythonReporter(
+            pre = lambda this :  "Working on Monte Carlo cycle step " + str(this.step) + ".\n",
+            final = lambda this : "DONE! Completed " + str(this.step) + " Monte Carlo cycles.\n"
+        )
 
-        cvs = list()
-        n_samples = 0
-
-        if self.storage is not None:
-            n_samples = len(self.storage.snapshots)
-            cvs = list(self.storage.cvs)
-
-        if self.step == 0:
-            self.save_initial()
-
-        for nn in range(nsteps):
-            self.step += 1
-            logger.info("Beginning MC cycle " + str(self.step))
-            paths.tools.refresh_output(
-                "Working on Monte Carlo cycle step " + str(self.step) + ".\n"
-            )
-            movepath = self._mover.move(self.globalstate, step=self.step)
-            samples = movepath.results
-            new_sampleset = self.globalstate.apply_samples(samples)
-
-            mcstep = MCStep(
-                simulation=self,
-                mccycle=self.step,
-                previous=self.globalstate,
-                active=new_sampleset,
-                change=movepath
-            )
-
-
-            if self.storage is not None:
-                for cv in cvs:
-                    n_len = len(self.storage.snapshots)
-                    cv(self.storage.snapshots[n_samples:n_len])
-                    n_samples = n_len
-
-                self.storage.steps.save(mcstep)
-
-            if self.step % self.save_frequency == 0:
-                self.globalstate.sanity_check()
-                self.sync_storage()
-
-            self.globalstate = new_sampleset
-
-        self.sync_storage()
-        paths.tools.refresh_output(
-            "DONE! Completed " + str(self.step) + " Monte Carlo cycles.\n"
+        self + InfoLoggingReporter(
+            pre = lambda this : "Beginning MC cycle " + str(this.step)
         )
