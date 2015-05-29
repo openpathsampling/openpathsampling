@@ -77,6 +77,15 @@ class testHistogram(object):
         assert_equal(histo.compare_parameters(self.hist_nbins), True)
         assert_equal(self.hist_nbins.compare_parameters(histo), False)
 
+    def test_xvals(self):
+        histo = Histogram(n_bins=5)
+        hist = histo.histogram(self.data) # need this to set the bins
+        assert_items_equal(histo.bins, self.bins)
+        assert_items_equal(histo.xvals("l"), [1.0, 1.5, 2.0, 2.5, 3.0])
+        assert_items_equal(histo.xvals("r"), [1.5, 2.0, 2.5, 3.0, 3.5])
+        assert_items_equal(histo.xvals("m"), [1.25, 1.75, 2.25, 2.75, 3.25])
+
+
     def test_normalization(self):
         histo = Histogram(n_bins=5)
         hist = histo.histogram(self.data)
