@@ -126,6 +126,9 @@ class testOpenMMEngine(object):
         traj = self.engine.generate(self.engine.current_snapshot, [true_func])
         assert_equal(len(traj), self.engine.n_frames_max)
 
+    def test_snapshot_timestep(self):
+        assert_equal(self.engine.snapshot_timestep, 20 * u.femtoseconds)
+
     def test_momentum_setter(self):
         raise SkipTest()
         testvel = []
