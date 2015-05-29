@@ -910,11 +910,12 @@ class RandomSubtrajectorySelectGeneratingMover(SampleGeneratingMover):
     ensembles : list of Ensembles or None
         the set of allows samples to chose from
 
-    Attribues
-    ---------
+    Attributes
+    ----------
 
 
     """
+    _is_ensemble_change_mover = True
     def __init__(self, subensemble, n_l=None, ensembles=None):
         super(RandomSubtrajectorySelectGeneratingMover, self).__init__(
             ensembles
@@ -1192,6 +1193,18 @@ class RandomChoiceMover(PathMover):
     @property
     def submovers(self):
         return self.movers
+
+    @property
+    def is_ensemble_change_mover(self):
+        if self._is_ensemble_change_mover is not None:
+            return self._is_ensemble_change_mover
+        sub_change = False
+        for mover in self.movers:
+            if mover.is_ensemble_change_mover:
+                sub_change = True
+                break
+        return sub_change
+
 
     def _get_in_ensembles(self):
         return [ sub.input_ensembles for sub in self.submovers ]
@@ -1529,6 +1542,10 @@ class WrappedMover(PathMover):
     @property
     def submovers(self):
         return [self.mover]
+
+    @property
+    def is_ensemble_change_mover(self):
+        return self.mover.is_ensemble_change_mover
 
     def _get_in_ensembles(self):
         return self.mover.input_ensembles
