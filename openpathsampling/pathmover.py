@@ -118,6 +118,15 @@ class PathMover(TreeMixin, OPSNamed):
         initialization_logging(logger=init_log, obj=self,
                                entries=['ensembles'])
 
+    _is_ensemble_change_mover = None
+    @property
+    def is_ensemble_change_mover(self):
+        if self._is_ensemble_change_mover is None:
+            return False
+        else:
+            return self._is_ensemble_change_mover
+
+
     @property
     def default_name(self):
         return self.__class__.__name__[:-5]
@@ -761,6 +770,7 @@ class ReplicaExchangeGeneratingMover(SampleGeneratingMover):
     """
     A Sample GeneratingMover implementing a standard Replica Exchange
     """
+    _is_ensemble_change_mover = True
 
     def __init__(self, bias=None, ensembles=None):
         """
@@ -900,11 +910,12 @@ class RandomSubtrajectorySelectGeneratingMover(SampleGeneratingMover):
     ensembles : list of Ensembles or None
         the set of allows samples to chose from
 
-    Attribues
-    ---------
+    Attributes
+    ----------
 
 
     """
+    _is_ensemble_change_mover = True
     def __init__(self, subensemble, n_l=None, ensembles=None):
         super(RandomSubtrajectorySelectGeneratingMover, self).__init__(
             ensembles
@@ -1025,6 +1036,7 @@ class PathReversalMover(PathReversalGeneratingMover):
 
 
 class EnsembleHopGeneratingMover(SampleGeneratingMover):
+    _is_ensemble_change_mover = True
     def __init__(self, bias=None, ensembles=None):
         """
         Parameters
@@ -1182,6 +1194,18 @@ class RandomChoiceMover(PathMover):
     def submovers(self):
         return self.movers
 
+    @property
+    def is_ensemble_change_mover(self):
+        if self._is_ensemble_change_mover is not None:
+            return self._is_ensemble_change_mover
+        sub_change = False
+        for mover in self.movers:
+            if mover.is_ensemble_change_mover:
+                sub_change = True
+                break
+        return sub_change
+
+
     def _get_in_ensembles(self):
         return [ sub.input_ensembles for sub in self.submovers ]
 
@@ -1281,6 +1305,18 @@ class SequentialMover(PathMover):
     @property
     def submovers(self):
         return self.movers
+
+    @property
+    def is_ensemble_change_mover(self):
+        if self._is_ensemble_change_mover is not None:
+            return self._is_ensemble_change_mover
+        sub_change = False
+        for mover in self.movers:
+            if mover.is_ensemble_change_mover:
+                sub_change = True
+                break
+        return sub_change
+
 
     def _get_in_ensembles(self):
         return [ sub.input_ensembles for sub in self.submovers ]
@@ -1506,6 +1542,10 @@ class WrappedMover(PathMover):
     @property
     def submovers(self):
         return [self.mover]
+
+    @property
+    def is_ensemble_change_mover(self):
+        return self.mover.is_ensemble_change_mover
 
     def _get_in_ensembles(self):
         return self.mover.input_ensembles
