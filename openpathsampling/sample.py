@@ -120,7 +120,7 @@ class SampleSet(OPSNamed):
         return len(self.samples)
 
     def __contains__(self, item):
-        return (item in self.samples)
+        return item in self.samples
 
     def all_from_ensemble(self, ensemble):
         try:
@@ -154,10 +154,10 @@ class SampleSet(OPSNamed):
     def extend(self, samples):
         # note that this works whether the parameter samples is a list of
         # samples or a SampleSet!
-        try:
+        if type(samples) is not paths.Sample and hasattr(samples, '__iter__'):
             for sample in samples:
                 self.append(sample)
-        except TypeError:
+        else:
             # also acts as .append() if given a single sample
             self.append(samples)
 
@@ -399,6 +399,55 @@ class Sample(object):
 
     def __call__(self):
         return self.trajectory
+
+    #=============================================================================================
+    # LIST INHERITANCE FUNCTIONS
+    #=============================================================================================
+
+    def __len__(self):
+        return len(self.trajectory)
+
+    def __getslice__(self, *args, **kwargs):
+        return self.trajectory.__getslice__(*args, **kwargs)
+
+    def __getitem__(self, *args, **kwargs):
+        return self.trajectory.__getitem__(*args, **kwargs)
+
+    def __reversed__(self):
+        """
+        Return a reversed iterator over all snapshots in the samples trajectory
+
+        Returns
+        -------
+        Iterator()
+            The iterator that iterates the snapshots in reversed order
+
+        Notes
+        -----
+        A reversed trajectory also has reversed snapshots! This means
+        that Trajectory(list(reversed(traj))) will lead to a time-reversed
+        trajectory not just frames in reversed order but also reversed momenta.
+
+        """
+        if self.trajectory is not None:
+            return reversed(self.trajectory)
+        else:
+            return [] # empty iterator
+
+    def __iter__(self):
+        """
+        Return an iterator over all snapshots in the samples trajectory
+
+        Returns
+        -------
+        Iterator()
+            The iterator that iterates the snapshots
+
+        """
+        if self.trajectory is not None:
+            return iter(self.trajectory)
+        else:
+            return [] # empty iterator
 
     def __str__(self):
         mystr  = "Replica: "+str(self.replica)+"\n"
