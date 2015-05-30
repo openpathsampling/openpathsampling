@@ -252,7 +252,7 @@ class BufferedStore(Wrap):
     def __init__(self, name, dimensions, store, scope=None):
         self.storage = store.storage
         self._store = Store(name, dimensions, store, scope)
-        self._cache = ChainDict()
+        self._cache = LRUChainDict()
 
         super(BufferedStore, self).__init__(
             post=self._store + self._cache

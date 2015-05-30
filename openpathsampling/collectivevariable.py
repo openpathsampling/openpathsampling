@@ -64,7 +64,7 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
         self.multi_dict = cd.ExpandMulti()
         self.store_dict = cd.MultiStore('collectivevariables', name,
                                         dimensions, self)
-        self.cache_dict = cd.ChainDict()
+        self.cache_dict = cd.LRUChainDict()
 
         OPSNamed.__init__(self)
 
