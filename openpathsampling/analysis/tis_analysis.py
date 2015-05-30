@@ -528,6 +528,7 @@ class RETISTransition(TISTransition):
         minus_moves = (d.change for d in storage.steps
                        if self.movers['minus'][0] in
                        d.change and d.change.accepted)
+
         for move in minus_moves:
             minus_samp = [s for s in move.results
                           if s.ensemble is self.minus_ensemble][0]

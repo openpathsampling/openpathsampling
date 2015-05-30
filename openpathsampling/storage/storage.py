@@ -40,6 +40,103 @@ class Storage(netcdf.Dataset):
     # netCDF variable is accessed by storage.variables[name][idx] and the
     # `special` variable is accessed by storage.store[idx]
 
+    # Default caching for online use
+
+    default_cache_sizes = {
+        'trajectories' : 10000,
+        'snapshots' : 50000,
+        'configurations' : 10000,
+        'momentum' : 10000,
+        'samples' : 25000,
+        'samplesets' : False,
+        'collectivevariables' : True,
+        'pathmovers' : True,
+        'shootingpoints' : 10000,
+        'shootingpointselectors' : True,
+        'engines' : True,
+        'pathsimulators' : True,
+        'volumes' : True,
+        'ensembles' : True,
+        'pathmovechanges' : False,
+        'transitions' : True,
+        'networks' : True,
+        '_details' : False,
+        'steps' : 1000
+    }
+
+    # Analysis caching is very large to allow fast processing
+
+    analysis_cache_sizes = {
+        'trajectories' : 100000,
+        'snapshots' : 500000,
+        'configurations' : 10000,
+        'momentum' : 10000,
+        'samples' : 250000,
+        'samplesets' : 100000,
+        'collectivevariables' : True,
+        'pathmovers' : True,
+        'shootingpoints' : 100000,
+        'shootingpointselectors' : True,
+        'engines' : True,
+        'pathsimulators' : True,
+        'volumes' : True,
+        'ensembles' : True,
+        'pathmovechanges' : 250000,
+        'transitions' : True,
+        'networks' : True,
+        '_details' : False,
+        'steps' : 100000
+    }
+
+    # Production. No loading, only last 1000 steps and a few other objects for error
+    # testing
+
+    production_cache_sizes = {
+        'trajectories' : 1000,
+        'snapshots' : 5000,
+        'configurations' : 1000,
+        'momentum' : 1000,
+        'samples' : 2500,
+        'samplesets' : False,
+        'collectivevariables' : False,
+        'pathmovers' : False,
+        'shootingpoints' : False,
+        'shootingpointselectors' : False,
+        'engines' : False,
+        'pathsimulators' : False,
+        'volumes' : False,
+        'ensembles' : False,
+        'pathmovechanges' : False,
+        'transitions' : False,
+        'networks' : False,
+        '_details' : False,
+        'steps' : 1000
+    }
+
+    # No caching (so far only CVs internal storage is there)
+
+    no_cache_sizes = {
+        'trajectories' : False,
+        'snapshots' : False,
+        'configurations' : False,
+        'momentum' : False,
+        'samples' : False,
+        'samplesets' : False,
+        'collectivevariables' : False,
+        'pathmovers' : False,
+        'shootingpoints' : False,
+        'shootingpointselectors' : False,
+        'engines' : False,
+        'pathsimulators' : False,
+        'volumes' : False,
+        'ensembles' : False,
+        'pathmovechanges' : False,
+        'transitions' : False,
+        'networks' : False,
+        '_details' : False,
+        'steps' : False
+    }
+
     def _register_storages(self, storage = None):
         """
         Register all Stores used in the OpenPathSampling Storage
@@ -95,17 +192,58 @@ class Storage(netcdf.Dataset):
         self.query = paths.storage.QueryStore(storage)
 
         self._objects = { name : getattr(self, name) for name in
-                  ['trajectories', 'snapshots', 'configurations',
-                   'samples', 'samplesets', 'collectivevariables',
-                   'cvs', 'pathmovers', 'shootingpoints',
-                   'shootingpointselectors', 'engines',
-                   'pathsimulators', 'volumes', 'ensembles',
-                   'pathmovechanges', 'transitions', 'networks', '_details',
-                   'steps'
-                  ]}
+            ['trajectories', 'snapshots', 'configurations',
+             'samples', 'samplesets', 'collectivevariables',
+             'cvs', 'pathmovers', 'shootingpoints',
+             'shootingpointselectors', 'engines',
+             'pathsimulators', 'volumes', 'ensembles',
+             'pathmovechanges', 'transitions', 'networks', '_details',
+             'steps', 'momentum'
+            ]}
+
+        self.set_caching_mode('default')
+
+    def set_caching_mode(self, mode='default'):
+        """
+        Set default values for all caches
+
+        Parameters
+        ----------
+        caching : str
+            One of the following values is allowed 'default', 'production',
+            'analysis', 'off'
+
+        """
+
+        available_cache_sizes = {
+            'default': self.default_cache_sizes,
+            'analysis': self.analysis_cache_sizes,
+            'production': self.production_cache_sizes,
+            'off': self.no_cache_sizes
+        }
+
+        if mode in available_cache_sizes:
+            cache_sizes = available_cache_sizes[mode]
+        else:
+            raise ValueError(
+                "mode '" + mode + "' is not supported. Try one of " +
+                str(available_cache_sizes.keys())
+            )
+
+        for store_name, caching in cache_sizes.iteritems():
+            if hasattr(self, store_name):
+                store = getattr(self, store_name)
+                store.set_caching(caching)
 
     @property
     def objects(self):
+        """
+        Return a dictionary of all objects stored.
+
+        This is similar to the netcdf `.variables` for all stored variables. This
+        allows to write `storage.objects['samples'][idx]` like we
+        write `storage.variables['ensemble_json'][idx]`
+        """
         return self._objects
 
     def _setup_class(self):
@@ -570,3 +708,24 @@ class StorableObjectJSON(ObjectJSON):
                 return result
 
         return super(StorableObjectJSON, self).build(obj)
+
+class AnalysisStorage(Storage):
+    def __init__(self, filename):
+        super(AnalysisStorage, self).__init__(
+            filename=filename,
+            mode='r'
+        )
+
+        self.set_caching_mode('analysis')
+
+        # Let's go caching
+
+        self.samples.cache_all()
+        self.samplesets.cache_all()
+        self.cvs.cache_all()
+        map(lambda x : x.cache_all(self), self.cvs)
+        self.volumes.cache_all()
+        self.ensembles.cache_all()
+        self.pathmovers.cache_all()
+        self.pathmovechanges.cache_all()
+        self.steps.cache_all()

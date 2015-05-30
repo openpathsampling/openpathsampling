@@ -206,16 +206,6 @@ class ObjectStore(object):
             # Should be not really important, since there will be mostly only one
             # storage, but this way it is cleaner
 
-            if caching is None:
-                caching = self.default_cache
-
-            if caching is True:
-                self.cache = dict()
-            elif isinstance(caching, dict):
-                self.cache = caching
-            elif type(caching) is int:
-                self.cache = LRUCache(caching)
-
             _save = self.save
             self.save = types.MethodType(savecache(_save), self)
 
@@ -231,6 +221,16 @@ class ObjectStore(object):
         return "%s(content_class=%s, variable_prefix=%s)" % (
             self.__class__.__name__, self.content_class, self.db)
 
+    def set_caching(self, caching):
+        if caching is None:
+            caching = self.default_cache
+
+        if caching is True:
+            self.cache = dict()
+        elif isinstance(caching, dict):
+            self.cache = caching
+        elif type(caching) is int:
+            self.cache = LRUCache(caching)
 
     def idx(self, obj):
         """
@@ -604,15 +604,26 @@ class ObjectStore(object):
         Add a single object to cache by json
         """
 
-        simplified = yaml.load(json)
-        obj = self.simplifier.build(simplified)
+        if idx not in self.cache:
+            simplified = yaml.load(json)
+            obj = self.simplifier.build(simplified)
 
-        obj.json = json
-        obj.idx[self.storage] = idx
+            obj.json = json
+            obj.idx[self.storage] = idx
 
-        self.cache[idx] = obj
+            self.cache[idx] = obj
 
-        return obj
+            if self.has_name:
+                name = self.storage.variables[self.db + '_name'][idx]
+                setattr(obj, '_name', name)
+                if name != '':
+                    self._update_name_in_cache(obj._name, idx)
+
+            if self.has_uid:
+                if not hasattr(obj, '_uid'):
+                    # get the name of the object
+                    setattr(obj, '_uid', self.get_uid(idx))
+
 
 
     def save(self, obj, idx=None):
@@ -1181,6 +1192,9 @@ def loadcache(func):
         if type(idx) is not str and idx < 0:
             return None
 
+        if not hasattr(self, 'cache'):
+            return func(idx, *args, **kwargs)
+
         n_idx = idx
 
         # if it is in the cache, return it, otherwise not :)
@@ -1257,10 +1271,11 @@ def savecache(func):
         idx = obj.idx[self.storage]
 
         # store the name in the cache
-        self.cache[idx] = obj
-        if self.has_name and obj._name != '':
-            # and also the name, if it has one so we can load by
-            # name afterwards from cache
+        if hasattr(self, 'cache'):
+            self.cache[idx] = obj
+            if self.has_name and obj._name != '':
+                # and also the name, if it has one so we can load by
+                # name afterwards from cache
                 self._update_name_in_cache(obj._name, idx)
 
     return inner

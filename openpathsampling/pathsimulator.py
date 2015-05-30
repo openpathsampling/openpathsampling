@@ -157,13 +157,11 @@ class BootstrapPromotionMove(PathMover):
                 )
             )
 
-
     def move(self, globalstate):
         # find latest ensemble in the list
         top_ens_idx = len(globalstate)-1
         mover = self._hopper[top_ens_idx]
         return mover.move(globalstate)
-
 
 
 class Bootstrapping(PathSimulator):
@@ -199,7 +197,9 @@ class Bootstrapping(PathSimulator):
         """
         # TODO: Change input from trajectory to sample
         super(Bootstrapping, self).__init__(storage, engine)
+
         self.ensembles = ensembles
+        self.trajectory = trajectory
 
         sample = paths.Sample(
             replica=0,
@@ -208,8 +208,7 @@ class Bootstrapping(PathSimulator):
         )
 
         self.globalstate = paths.SampleSet([sample])
-        if self.storage is not None:
-            self.storage.samplesets.save(self.globalstate)
+
         if movers is None:
             pass # TODO: implement defaults: one per ensemble, uniform sel
         else:
@@ -223,7 +222,6 @@ class Bootstrapping(PathSimulator):
                                                ensembles=self.ensembles
                                               )
 
-        self.root = self.globalstate
 
     def run(self, nsteps):
         bootstrapmove = self._bootstrapmove

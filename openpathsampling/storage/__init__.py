@@ -1,4 +1,4 @@
-from storage import Storage, StorableObjectJSON
+from storage import Storage, StorableObjectJSON, AnalysisStorage
 from object_storage import ObjectStore, Query
 from snapshot_store import SnapshotStore, ConfigurationStore, MomentumStore
 from trajectory_store import TrajectoryStore
