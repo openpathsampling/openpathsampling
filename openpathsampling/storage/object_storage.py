@@ -6,27 +6,13 @@ import openpathsampling as paths
 import simtk.unit as u
 
 import logging
-from collections import OrderedDict
+
+from openpathsampling.tools import LRUCache
 
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-
-class LRUCache(OrderedDict):
-  def __init__(self, size_limit):
-    self.size_limit = size_limit
-    OrderedDict.__init__(self)
-    self._check_size_limit()
-
-  def __setitem__(self, key, value, **kwargs) :
-    OrderedDict.__setitem__(self, key, value)
-    self._check_size_limit()
-
-  def _check_size_limit(self):
-    if self.size_limit is not None:
-      while len(self) > self.size_limit:
-        self.popitem(last=False)
 
 class Query(object):
     """
@@ -73,8 +59,10 @@ class ObjectStore(object):
     reference to the store file.
     """
 
+    default_cache = 10000
+
     def __init__(self, storage, content_class, has_uid=False, json=True,
-                 dimension_units=None, caching=10000, load_partial=False,
+                 dimension_units=None, caching=None, load_partial=False,
                  nestable=False, has_name=False):
         """
 
@@ -93,8 +81,7 @@ class ObjectStore(object):
             it will be used.
             An integer `n` means to use LRU Caching with maximal n elements and is
             equal to `cache=LRUCache(n)`
-            Default (None) is equivalent to `cache=10000` and use LRUCache with
-            maximal 10000 objects.
+            Default (None) is equivalent to `cache=ObjectStore.default_cache`
         load_partial : bool
             if this is set to `True` the storage allows support for partial
             delayed loading of member variables. This is useful for larger
@@ -218,6 +205,9 @@ class ObjectStore(object):
             # bound methods is more flexible
             # Should be not really important, since there will be mostly only one
             # storage, but this way it is cleaner
+
+            if caching is None:
+                caching = self.default_cache
 
             if caching is True:
                 self.cache = dict()

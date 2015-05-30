@@ -5,6 +5,8 @@ import simtk.unit as u
 import numpy as np
 import openpathsampling as paths
 
+from collections import OrderedDict
+
 import sys
 def refresh_output(output_str):
     try:
@@ -14,7 +16,6 @@ def refresh_output(output_str):
         pass
     print(output_str)
     sys.stdout.flush()
-
 
 
 def updateunits(func):
@@ -194,3 +195,35 @@ def to_openmm_topology(obj):
             return openmm_topology
     else:
         return None
+
+class LRUCache(OrderedDict):
+    """
+    Implements a simple Least Recently Used Cache
+
+    Very simple using collections.OrderedDict. The size can be change during
+    run-time
+    """
+    def __init__(self, size_limit):
+        self._size_limit = size_limit
+        OrderedDict.__init__(self)
+        self._check_size_limit()
+
+    @property
+    def size_limit(self):
+        return self._size_limit
+
+    @size_limit.setter
+    def size_limit(self, new_size):
+        if new_size < self.size_limit:
+          self._check_size_limit()
+
+        self._size_limit = new_size
+
+    def __setitem__(self, key, value, **kwargs) :
+        OrderedDict.__setitem__(self, key, value)
+        self._check_size_limit()
+
+    def _check_size_limit(self):
+        if self.size_limit is not None:
+            while len(self) > self.size_limit:
+                self.popitem(last=False)
