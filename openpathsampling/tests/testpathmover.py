@@ -104,12 +104,14 @@ class testPathMover(object):
 
 
     def test_select_sample(self):
-#        assert_equal(self.reps1_ens2.select_sample(self.sset), self.s1)
         selected = self.repsAll_ens1.select_sample(self.sset)
         try:
-            assert_equal(selected, self.s2)
+            assert_equal(selected, self.s1)
         except AssertionError:
-            assert_equal(selected, self.s3)
+            try:
+                assert_equal(selected, self.s2)
+            except AssertionError:
+                assert_equal(selected, self.s3)
 
     def test_is_ensemble_change_mover(self):
         pm = PathMover()
