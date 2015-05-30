@@ -6,8 +6,27 @@ import openpathsampling as paths
 import simtk.unit as u
 
 import logging
+from collections import OrderedDict
+
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
+
+
+class LRUCache(OrderedDict):
+  def __init__(self, size_limit):
+    self.size_limit = size_limit
+    OrderedDict.__init__(self)
+    self._check_size_limit()
+
+  def __setitem__(self, key, value, **kwargs) :
+    OrderedDict.__setitem__(self, key, value)
+    self._check_size_limit()
+
+  def _check_size_limit(self):
+    if self.size_limit is not None:
+      while len(self) > self.size_limit:
+        self.popitem(last=False)
 
 class Query(object):
     """
@@ -55,7 +74,7 @@ class ObjectStore(object):
     """
 
     def __init__(self, storage, content_class, has_uid=False, json=True,
-                 dimension_units=None, enable_caching=True, load_partial=False,
+                 dimension_units=None, caching=10000, load_partial=False,
                  nestable=False, has_name=False):
         """
 
@@ -66,9 +85,16 @@ class ObjectStore(object):
         has_uid
         json
         dimension_units
-        enable_caching : bool
-            if this is set to `True` caching is used to quickly access
-            previously loaded objects (default)
+        caching : dict-like or bool or int or None
+            this is the dict used for caching.
+            `True` means to use a python built-in dict which unlimited caching.
+            Be careful.
+            `False` means no caching at all. If a dict-like object is passed,
+            it will be used.
+            An integer `n` means to use LRU Caching with maximal n elements and is
+            equal to `cache=LRUCache(n)`
+            Default (None) is equivalent to `cache=10000` and use LRUCache with
+            maximal 10000 objects.
         load_partial : bool
             if this is set to `True` the storage allows support for partial
             delayed loading of member variables. This is useful for larger
@@ -80,6 +106,11 @@ class ObjectStore(object):
             object is only stored once and not split into several objects that
             are referenced by each other in a tree-like fashion
 
+        Notes
+        -----
+        Usually you want caching, but limited. Recommended is to use an LRUCache
+        with a reasonable number that depends on the typical number of objects to
+        cache and their size
 
         Attributes
         ----------
@@ -102,10 +133,10 @@ class ObjectStore(object):
         identifier : str
             name of the netCDF variable that contains the string to be
             identified by. So far this is `name`
-        cache : dict (int or str : object)
+        cache : dict-like (int or str : object)
             a dictionary that holds references to all stored elements by index
             or string for named objects. This is only used for cached access
-            is enable_caching is True (default)
+            if caching is not `False`
 
         Notes
         -----
@@ -119,7 +150,6 @@ class ObjectStore(object):
         self.content_class = content_class
         self.idx_dimension = content_class.__name__.lower()
         self.db = content_class.__name__.lower()
-        self.cache = dict()
         self.has_uid = has_uid
         self.has_name = has_name
         self.json = json
@@ -177,7 +207,7 @@ class ObjectStore(object):
         _load = self.load
         self.load = types.MethodType(loadidx(_load), self)
 
-        if enable_caching:
+        if caching is not False:
             # wrap load/save to make this work. I use MethodType here to bind the
             # wrapped function to this instance. An alternative would be to
             # add the wrapper to the class itself, which would mean that all
@@ -188,6 +218,13 @@ class ObjectStore(object):
             # bound methods is more flexible
             # Should be not really important, since there will be mostly only one
             # storage, but this way it is cleaner
+
+            if caching is True:
+                self.cache = dict()
+            elif isinstance(caching, dict):
+                self.cache = caching
+            elif type(caching) is int:
+                self.cache = LRUCache(caching)
 
             _save = self.save
             self.save = types.MethodType(savecache(_save), self)
@@ -1223,6 +1260,7 @@ def savecache(func):
     """
     Decorator for save functions that add the basic cache handling
     """
+    # TODO: Mark as cached before delegation to avoid
     def inner(self, obj, idx = None, *args, **kwargs):
         # call the normal storage
         func(obj, idx, *args, **kwargs)
