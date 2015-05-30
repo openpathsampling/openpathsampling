@@ -448,7 +448,7 @@ class TISTransition(Transition):
         self._rate = flux*outer_tcp*ctp
         return self._rate
 
-    def default_movers(self, engine):
+    def default_schemes(self, engine):
         """Create reasonable default movers for a `PathSampling` pathsimulator"""
         shoot_sel = paths.RandomChoiceMover(
             movers=self.movers['shooting']
@@ -458,12 +458,12 @@ class TISTransition(Transition):
             movers=self.movers['pathreversal']
         )
         pathrev_sel.name = "ReversalChooser"
-        root_mover = paths.RandomChoiceMover(
+        move_scheme = paths.RandomChoiceMover(
             movers=[shoot_sel, pathrev_sel], 
             weights=[1.0, 0.5]
         )
-        root_mover.name = "RootMover"
-        return root_mover
+        move_scheme.name = "RootMover"
+        return move_scheme
 
 class RETISTransition(TISTransition):
     """Transition class for RETIS."""
@@ -592,25 +592,25 @@ class RETISTransition(TISTransition):
         )
         return minus_samp
 
-    def default_movers(self, engine):
+    def default_schemes(self, engine):
         """Create reasonable default movers for a `PathSampling` pathsimulator
         
-        Extends `TISTransition.default_movers`.
+        Extends `TISTransition.default_schemes`.
         """
         repex_sel = paths.RandomChoiceMover(
             movers=self.movers['repex']
         )
         repex_sel.name = "ReplicaExchange"
-        tis_root_mover = super(RETISTransition, self).default_movers(engine)
+        tis_move_scheme = super(RETISTransition, self).default_schemes(engine)
         minus = self.movers['minus']
-        movers = tis_root_mover.movers + [repex_sel] + minus
-        weights = tis_root_mover.weights + [0.5, 0.2 / len(self.ensembles)]
-        root_mover = paths.RandomChoiceMover(
+        movers = tis_move_scheme.movers + [repex_sel] + minus
+        weights = tis_move_scheme.weights + [0.5, 0.2 / len(self.ensembles)]
+        move_scheme = paths.RandomChoiceMover(
             movers=movers,
             weights=weights
         )
-        root_mover.name = "RootMover"
-        return root_mover
+        move_scheme.name = "RootMover"
+        return move_scheme
 
 
 def minus_sides_summary(trajectory, minus_ensemble):
