@@ -443,6 +443,7 @@ class TISTransition(Transition):
                                                       outer_ensemble,
                                                       force=force)
         outer_tcp = tcp(outer_lambda)
+        #print outer_lambda
         #print flux, outer_tcp, ctp
         self._rate = flux*outer_tcp*ctp
         return self._rate
@@ -542,7 +543,10 @@ class RETISTransition(TISTransition):
 
         t_in_avg = np.array(self.minus_count_sides['in']).mean()
         t_out_avg = np.array(self.minus_count_sides['out']).mean()
-        self._flux = 1.0 / (t_in_avg + t_out_avg)
+        engine_dt = self.movers['minus'][0].engine.snapshot_timestep
+        flux = 1.0 / (t_in_avg + t_out_avg) / engine_dt
+        # TODO: get minus mover engine dt
+        self._flux = flux
         return self._flux
 
 
