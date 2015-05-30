@@ -154,7 +154,10 @@ class testForwardShootMover(testShootingMover):
         assert_equal(newsamp[0].trajectory, change.trials[0].trajectory)
 
     def test_is_ensemble_change_mover(self):
-        mover = ForwardShootMover(UniformSelector(), ensembles=self.tps)
+        mover = ForwardShootMover(
+            ensemble=self.tps,
+            selector=UniformSelector()
+        )
         assert_equal(mover.is_ensemble_change_mover, False)
 
 class testBackwardShootMover(testShootingMover):
@@ -172,7 +175,10 @@ class testBackwardShootMover(testShootingMover):
         assert_equal(newsamp[0].trajectory, change.trials[0].trajectory)
 
     def test_is_ensemble_change_mover(self):
-        mover = BackwardShootMover(UniformSelector(), ensembles=self.tps)
+        mover = BackwardShootMover(
+            ensemble=self.tps,
+            selector=UniformSelector()
+        )
         assert_equal(mover.is_ensemble_change_mover, False)
 
 class testOneWayShootingMover(testShootingMover):
@@ -277,7 +283,10 @@ class testReplicaExchangeMover(object):
         self.gs_A0B1 = SampleSet([self.sampA0, self.sampB1])
 
     def test_is_ensemble_change_mover(self):
-        repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
+        repex_AB = ReplicaExchangeMover(
+            ensemble1=self.tisA,
+            ensemble2=self.tisB
+        )
         assert_equal(repex_AB.is_ensemble_change_mover, True)
 
     def test_repex_ens_rej(self):
@@ -651,7 +660,10 @@ class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
         assert_equal(found[0] and found[1] and found[2], True)
 
     def test_is_ensemble_change_mover(self):
-        mover = RandomSubtrajectorySelectMover(self.subensemble)
+        mover = RandomSubtrajectorySelectMover(
+            ensemble=self.ensemble,
+            sub_ensemble=self.subensemble
+        )
         assert_equal(mover.is_ensemble_change_mover, True)
 
 

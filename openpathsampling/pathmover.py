@@ -19,6 +19,7 @@ from treelogic import TreeMixin
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
+
 # TODO: Remove if really not used anymore otherwise might move to utils or tools
 def make_list_of_pairs(l):
     """
@@ -95,6 +96,8 @@ class PathMover(TreeMixin, OPSNamed):
     in the PathMover, but have it be a separate class ~~~DWHS
     """
 
+    _is_ensemble_change_mover = None
+
     def __init__(self):
         OPSNamed.__init__(self)
 
@@ -105,14 +108,12 @@ class PathMover(TreeMixin, OPSNamed):
 #        initialization_logging(logger=init_log, obj=self,
 #                               entries=['ensembles'])
 
-    _is_ensemble_change_mover = None
     @property
     def is_ensemble_change_mover(self):
         if self._is_ensemble_change_mover is None:
             return False
         else:
             return self._is_ensemble_change_mover
-
 
     @property
     def default_name(self):
@@ -952,7 +953,6 @@ class RandomSubtrajectorySelectGeneratingMover(SampleGeneratingMover):
 
     """
     _is_ensemble_change_mover = True
-    def __init__(self, subensemble, n_l=None, ensembles=None):
     def __init__(self, ensemble, sub_ensemble, n_l=None):
         super(RandomSubtrajectorySelectGeneratingMover, self).__init__(
         )
@@ -1084,7 +1084,6 @@ class PathReversalMover(PathReversalGeneratingMover):
 
 class EnsembleHopGeneratingMover(SampleGeneratingMover):
     _is_ensemble_change_mover = True
-    def __init__(self, bias=None, ensembles=None):
     def __init__(self, ensemble, target_ensemble, change_replica=None, bias=None):
         """
         Parameters
@@ -1900,7 +1899,7 @@ class MinusMover(SubPathMover):
 
         mover = EnsembleFilterMover(
             ConditionalSequentialMover([
-                subtrajectory_selector,
+                sub_trajectory_selector,
                 repex,
                 extension_mover
             ]),
@@ -1938,6 +1937,7 @@ class PathSimulatorMover(SubPathMover):
 class MultipleSetMinusMover(RandomChoiceMover):
     pass
 
+
 def NeighborEnsembleReplicaExchange(ensemble_list):
     movers = [
         ReplicaExchangeMover(
@@ -1947,6 +1947,7 @@ def NeighborEnsembleReplicaExchange(ensemble_list):
         for i in range(len(ensemble_list)-1)
     ]
     return movers
+
 
 def PathReversalSet(ensembles):
     return map(PathReversalMover, ensembles)
@@ -2033,9 +2034,9 @@ class MoveDetails(Details):
     """
 
     def __init__(self, **kwargs):
-        self.inputs=None
-        self.trials=None
-        self.results=None
+        self.inputs = None
+        self.trials = None
+        self.results = None
         super(MoveDetails, self).__init__(**kwargs)
 
 
@@ -2049,5 +2050,5 @@ class SampleDetails(Details):
     """
 
     def __init__(self, **kwargs):
-        self.selection_probability=1.0
+        self.selection_probability = 1.0
         super(SampleDetails, self).__init__(**kwargs)
