@@ -299,6 +299,14 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
                 return [list.__getitem__(items, 0)]
             else:
                 return list(list.__iter__(items))
+        elif item_type is paths.Sample:
+            if len(items) == 0:
+                return []
+            elif len(items) == 1:
+                return [list.__getitem__(items.trajectory, 0)]
+            else:
+                return list(list.__iter__(items.trajectory))
+
         elif hasattr(items, '__iter__'):
             return list(items)
         else:
