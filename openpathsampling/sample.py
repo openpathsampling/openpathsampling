@@ -400,79 +400,46 @@ class Sample(object):
         return len(self.trajectory)
 
     def __getslice__(self, *args, **kwargs):
-        ret =  list.__getslice__(self.trajectory, *args, **kwargs)
-        if type(ret) is list:
-            ret = paths.Trajectory(ret)
-            ret.atom_indices = self.trajectory.atom_indices
+        return self.trajectory.__getslice__(*args, **kwargs)
 
-        return ret
+    def __getitem__(self, *args, **kwargs):
+        return self.trajectory.__getitem__(*args, **kwargs)
 
-    def __getitem__(self, index):
-        if hasattr(index, '__iter__'):
-            ret = [ list.__getitem__(self.trajectory, i) for i in index ]
-        else:
-            ret = list.__getitem__(self.trajectory, index)
-
-        if type(ret) is list:
-            ret = paths.Trajectory(ret)
-            ret.atom_indices = self.trajectory.atom_indices
-
-        return ret
-
-    def __reversed__(this):
-        class ObjectIterator:
-            def __init__(self):
-                self.trajectory = this.trajectory
-                self.idx = len(this)
-                self.length = 0
-
-            def __iter__(self):
-                return self
-
-            def next(self):
-                if self.idx > self.length:
-                    self.idx -= 1
-                    snapshot = self.trajectory[self.idx]
-                    return snapshot.reversed
-                else:
-                    raise StopIteration()
-
-        return ObjectIterator()
-
-    def __iter__(this):
+    def __reversed__(self):
         """
-        Return an iterator over all snapshots in the storage
-
-        Parameters
-        ----------
-        iter_range : slice or None
-            if this is not `None` it confines the iterator to objects specified
-            in the slice
+        Return a reversed iterator over all snapshots in the samples trajectory
 
         Returns
         -------
         Iterator()
-            The iterator that iterates the objects in the store
+            The iterator that iterates the snapshots in reversed order
+
+        Notes
+        -----
+        A reversed trajectory also has reversed snapshots! This means
+        that Trajectory(list(reversed(traj))) will lead to a time-reversed
+        trajectory not just frames in reversed order but also reversed momenta.
 
         """
-        class ObjectIterator:
-            def __init__(self):
-                self.trajectory = this.trajectory
-                self.idx = 0
-                self.length = len(this)
+        if self.trajectory is not None:
+            return reversed(self.trajectory)
+        else:
+            return [] # empty iterator
 
-            def __iter__(self):
-                return self
+    def __iter__(self):
+        """
+        Return an iterator over all snapshots in the samples trajectory
 
-            def next(self):
-                if self.idx < self.length:
-                    obj = self.trajectory[self.idx]
-                    self.idx += 1
-                    return obj
-                else:
-                    raise StopIteration()
+        Returns
+        -------
+        Iterator()
+            The iterator that iterates the snapshots
 
-        return ObjectIterator()
+        """
+        if self.trajectory is not None:
+            return iter(self.trajectory)
+        else:
+            return [] # empty iterator
 
     def __str__(self):
         mystr  = "Replica: "+str(self.replica)+"\n"
