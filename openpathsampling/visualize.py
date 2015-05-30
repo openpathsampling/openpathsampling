@@ -625,8 +625,8 @@ class MoveTreeBuilder(object):
         for ens_idx, ens in enumerate(ensembles):
             txt = chr(ens_idx + 65)
             show = False
-            in_ens = mover.in_ensembles
-            out_ens = mover.out_ensembles
+            in_ens = mover.input_ensembles
+            out_ens = mover.output_ensembles
             if in_ens is None or None in in_ens or ens in in_ens:
                 self.renderer.add(
                     self.renderer.connector(ens_idx, yp - 0.12, 'green', ''))
