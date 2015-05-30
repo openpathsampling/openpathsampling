@@ -212,6 +212,10 @@ class OpenMMEngine(paths.DynamicsEngine):
     # frequently, but it is also much more likely to be a source of errors
     # for users who forget to implement that last step.
 
+    @property
+    def snapshot_timestep(self):
+        return self.nsteps_per_frame * self.options['timestep']
+
     def _build_current_snapshot(self):
         # TODO: Add caching for this and mark if changed
 

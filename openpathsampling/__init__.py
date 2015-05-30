@@ -1,4 +1,4 @@
-from pathsimulator import PathSimulator, Bootstrapping, PathSampling
+from pathsimulator import PathSimulator, Bootstrapping, PathSampling, MCStep
 
 from ensemble import (
     Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
@@ -22,14 +22,22 @@ from collectivevariable import CV_Function, CV_MD_Function, CV_Featurizer, \
     CV_Volume, CollectiveVariable
 
 from pathmover import (
-    BackwardShootMover, MinusMover, RandomChoiceMover, ForwardShootMover, PathMover, PathMoverFactory, PathReversalMover,
+    BackwardShootMover, MinusMover, RandomChoiceMover, ForwardShootMover,
+    PathMover, PathMoverFactory, PathReversalMover,
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
-    CollapseMove, PathSimulatorMover, PathReversalSet,
-    NeighborEnsembleReplicaExchange, OneWayShootingMover
+    PathSimulatorMover, PathReversalSet, StateSwapGeneratingMover,
+    NeighborEnsembleReplicaExchange, SampleGeneratingMover, StateSwapMover,
+    FinalSubtrajectorySelectMover, BackwardExtendGeneratingMover,
+    BackwardShootGeneratingMover, EngineGeneratingMover, SwappingMover,
+    ExtendingGeneratingMover, FilterBySample, FirstSubtrajectorySelectMover,
+    ForwardExtendGeneratingMover, ForwardShootGeneratingMover,
+    MultipleSetMinusMover, OneWayShootingMover, PathReversalGeneratingMover,
+    RandomSubtrajectorySelectGeneratingMover, RandomSubtrajectorySelectMover,
+    ReplicaExchangeGeneratingMover, ShootGeneratingMover, ShootMover,
+    WrappedMover, BackwardExtendMover, EnsembleFilterMover, ForwardExtendMover
 )
-
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
     GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
@@ -60,11 +68,14 @@ from toy_dynamics.toy_engine import ToyEngine
 from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
     LeapfrogVerletIntegrator
 
-from analysis.tis_analysis import TISTransition, RETISTransition, Transition, \
-    TPSTransition
+from analysis.tis_analysis import (
+    TISTransition, RETISTransition, Transition, TPSTransition
+)
+
+from analysis.move_scheme import MoveScheme
 
 from analysis.network import (
-    MSTISNetwork
+    MSTISNetwork, TransitionNetwork
 )
 
 from analysis.replica_network import (
@@ -75,10 +86,13 @@ from analysis.replica_network import (
 
 from pathmover import Details, MoveDetails, SampleDetails
 
-from pathmovechange import (EmptyPathMoveChange, ConditionalSequentialPathMoveChange,
-                      PathMoveChange, PartialAcceptanceSequentialPathMoveChange,
-                      RandomChoicePathMoveChange, SamplePathMoveChange,
-                      SequentialPathMoveChange,  KeepLastSamplePathMoveChange,
-                      CollapsedPathMoveChange, FilterSamplesPathMoveChange,
-                      PathSimulatorPathMoveChange
-                     )
+from pathmovechange import (
+    EmptyPathMoveChange, ConditionalSequentialPathMoveChange,
+    PathMoveChange, PartialAcceptanceSequentialPathMoveChange,
+    RandomChoicePathMoveChange, SamplePathMoveChange,
+    SequentialPathMoveChange,  KeepLastSamplePathMoveChange,
+    FilterSamplesPathMoveChange,
+    PathSimulatorPathMoveChange, AcceptedSamplePathMoveChange,
+    RejectedSamplePathMoveChange, SubPathMoveChange,
+    FilterByEnsemblePathMoveChange
+)

@@ -6,11 +6,11 @@ from tis_analysis import Histogrammer, max_lambdas
 
 class TransitionNetwork(OPSNamed):
     def __init__(self):
-        pass
+        super(TransitionNetwork, self).__init__()
 
     @property
     def all_ensembles(self):
-        pass
+        return None
 
 #    def replica_exchange_matrix(self):
 
@@ -18,12 +18,12 @@ class TISNetwork(TransitionNetwork):
     # TODO: most of the analysis stuff should end up in here; the bigger
     # differences are in setup, not analysis
     def __init__(self):
+        super(TISNetwork, self).__init__()
         # this should check to build the replica exchange network. If the
         # number of neighbors at any station is more than 2, we can't do
         # "normal" replica flow -- instead produce a network graph. Or,
         # actually, ALWAYS produce a network graph (although this will be a
         # feature to implement later)
-        pass
 
     def from_transitions(self, transitions, interfaces=None):
         # this will have to be disabled until I can do something
@@ -73,8 +73,8 @@ class MSTISNetwork(TISNetwork):
         }
         return ret_dict
 
-    @staticmethod
-    def from_dict(dct):
+    @classmethod
+    def from_dict(cls, dct):
         network = MSTISNetwork.__new__(MSTISNetwork)
         network.from_state = dct['from_state']
         network.movers = dct['movers']
@@ -96,6 +96,7 @@ class MSTISNetwork(TISNetwork):
             Volume, interfaces is a list of Volumes, state_name is a string,
             and orderparameters is a CollectiveVariable
         """
+        super(MSTISNetwork, self).__init__()
         self.trans_info = trans_info
         if not hasattr(self, "from_state"):
             self.from_state = {}
@@ -310,7 +311,7 @@ class MSTISNetwork(TISNetwork):
 
 class MISTISNetwork(TISNetwork):
     def __init__(self, transitions):
-        pass
+        super(MISTISNetwork, self).__init__()
 
 
     def default_movers(self):
