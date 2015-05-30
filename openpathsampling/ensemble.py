@@ -1517,19 +1517,19 @@ class SlicedTrajectoryEnsemble(WrappedEnsemble):
 
 
 
-class BackwardPrependedTrajectoryEnsemble(WrappedEnsemble):
+class SuffixTrajectoryEnsemble(WrappedEnsemble):
     '''
     Ensemble which prepends its trajectory to a given trajectory.
 
     Used in backward shooting.
     '''
     def __init__(self, ensemble, add_trajectory):
-        super(BackwardPrependedTrajectoryEnsemble, self).__init__(ensemble)
+        super(SuffixTrajectoryEnsemble, self).__init__(ensemble)
         self.add_trajectory = add_trajectory
         self._cached_trajectory = paths.Trajectory(add_trajectory)
 
     def _alter(self, trajectory):
-        logger.debug("Starting BackwardPrepended._alter")
+        logger.debug("Starting Suffix._alter")
         #logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
         reset = self._cache_can_prepend.check(trajectory)
         #logger.debug("altered " + str([id(i) for i in self._cached_trajectory]))
@@ -1552,7 +1552,7 @@ class BackwardPrependedTrajectoryEnsemble(WrappedEnsemble):
         return self._cached_trajectory
 
     def can_append(self, trajectory, trusted=None):
-        raise RuntimeError("BackwardPrependedTrajectoryEnsemble.can_append is nonsense.")
+        raise RuntimeError("SuffixTrajectoryEnsemble.can_append is nonsense.")
 
 
 class PrefixTrajectoryEnsemble(WrappedEnsemble):
