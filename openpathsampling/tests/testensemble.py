@@ -1379,13 +1379,13 @@ class testOptionalEnsemble(EnsembleTest):
         opt_inX = OptionalEnsemble(inX)
         assert_equal(opt_inX.__str__(), "{"+inX.__str__()+"} (OPTIONAL)")
 
-class testForwardAppendedTrajectoryEnsemble(EnsembleTest):
+class testPrefixTrajectoryEnsemble(EnsembleTest):
     def setUp(self):
         self.inX = AllInXEnsemble(vol1)
 
     def test_bad_start_traj(self):
         traj = ttraj['upper_out_in_in_in']
-        ens = ForwardAppendedTrajectoryEnsemble(
+        ens = PrefixTrajectoryEnsemble(
             SequentialEnsemble([self.inX]),
             traj[0:2]
         )
@@ -1394,7 +1394,7 @@ class testForwardAppendedTrajectoryEnsemble(EnsembleTest):
 
     def test_good_start_traj(self):
         traj = ttraj['upper_in_in_in']
-        ens = ForwardAppendedTrajectoryEnsemble(
+        ens = PrefixTrajectoryEnsemble(
             SequentialEnsemble([self.inX]),
             traj[0:2]
         )
@@ -1414,7 +1414,7 @@ class testForwardAppendedTrajectoryEnsemble(EnsembleTest):
             inX & length1 
         ])
         traj = ttraj['upper_in_out_in_in_out_in']
-        ens = ForwardAppendedTrajectoryEnsemble(pseudo_minus, traj[0:2])
+        ens = PrefixTrajectoryEnsemble(pseudo_minus, traj[0:2])
         assert_equal(ens.can_append(traj[2:3]), True)
         assert_equal(ens._cached_trajectory, traj[0:3])
         assert_equal(ens._cache_can_append.trusted, False)

@@ -550,7 +550,7 @@ class ForwardShootGeneratingMover(ShootGeneratingMover):
         partial_trajectory = self.engine.generate(
             shooting_point.snapshot.copy(),
             running = [
-                paths.ForwardAppendedTrajectoryEnsemble(
+                paths.PrefixTrajectoryEnsemble(
                     ensemble,
                     shooting_point.trajectory[0:shooting_point.index]
                 ).can_append,
@@ -703,7 +703,7 @@ class ForwardExtendGeneratingMover(ExtendingGeneratingMover):
         partial_trajectory = self.engine.generate(
             initial_trajectory[-1],
             running = [
-                paths.ForwardAppendedTrajectoryEnsemble(
+                paths.PrefixTrajectoryEnsemble(
                     ensemble,
                     initial_trajectory[:-1]
                 ).can_append,

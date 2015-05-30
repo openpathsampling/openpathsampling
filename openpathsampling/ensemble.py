@@ -1555,14 +1555,14 @@ class BackwardPrependedTrajectoryEnsemble(WrappedEnsemble):
         raise RuntimeError("BackwardPrependedTrajectoryEnsemble.can_append is nonsense.")
 
 
-class ForwardAppendedTrajectoryEnsemble(WrappedEnsemble):
+class PrefixTrajectoryEnsemble(WrappedEnsemble):
     '''
     Ensemble which appends its trajectory to a given trajectory.
 
     Used in forward shooting.
     '''
     def __init__(self, ensemble, add_trajectory):
-        super(ForwardAppendedTrajectoryEnsemble, self).__init__(ensemble)
+        super(PrefixTrajectoryEnsemble, self).__init__(ensemble)
         self.add_trajectory = add_trajectory
         self._cached_trajectory = paths.Trajectory(add_trajectory)
 
@@ -1591,7 +1591,7 @@ class ForwardAppendedTrajectoryEnsemble(WrappedEnsemble):
         return self._cached_trajectory
 
     def can_prepend(self, trajectory, trusted=None):
-        raise RuntimeError("ForwardAppendedTrajectoryEnsemble.can_prepend is nonsense.")
+        raise RuntimeError("PrefixTrajectoryEnsemble.can_prepend is nonsense.")
 
 
 class ReversedTrajectoryEnsemble(WrappedEnsemble):
