@@ -83,9 +83,9 @@ def setUp():
     lower = 0.1
     upper = 0.5
     op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
-    vol1 = paths.LambdaVolume(op, lower, upper).named('stateA')
-    vol2 = paths.LambdaVolume(op, -0.1, 0.7).named('interface0')
-    vol3 = paths.LambdaVolume(op, 2.0, 2.5).named('stateB')
+    vol1 = paths.CVRangeVolume(op, lower, upper).named('stateA')
+    vol2 = paths.CVRangeVolume(op, -0.1, 0.7).named('interface0')
+    vol3 = paths.CVRangeVolume(op, 2.0, 2.5).named('stateB')
     # we use the following codes to describe trajectories:
     # in : in the state
     # out : out of the state
@@ -486,7 +486,7 @@ class testSequentialEnsemble(EnsembleTest):
         # regression test for #229
         import numpy as np
         op = paths.CV_Function(name="x", fcn=lambda snap : snap.xyz[0][0])
-        bigvol = paths.LambdaVolume(collectivevariable=op,
+        bigvol = paths.CVRangeVolume(collectivevariable=op,
                                     lambda_min=-100.0, lambda_max=100.0)
 
         traj = paths.Trajectory([
@@ -1434,7 +1434,7 @@ class testForwardAppendedTrajectoryEnsemble(EnsembleTest):
 class testBackwardPrependedTrajectoryEnsemble(EnsembleTest):
     def setUp(self):
         xval = paths.CV_Function("x", lambda s : s.xyz[0][0])
-        vol = paths.LambdaVolume(xval, 0.1, 0.5)
+        vol = paths.CVRangeVolume(xval, 0.1, 0.5)
         self.inX = AllInXEnsemble(vol)
         self.outX = AllOutXEnsemble(vol)
 
