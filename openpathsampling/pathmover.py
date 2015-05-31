@@ -1617,9 +1617,12 @@ class MinusMover(WrappedMover):
     interface ensemble. This is particularly useful for improving sampling
     of path space.
     """
-    def __init__(self, minus_ensemble, innermost_ensembles, 
-                 ensembles=None):
+    def __init__(self, minus_ensemble, innermost_ensembles, ensembles=None):
         segment = minus_ensemble._segment_ensemble
+        try:
+            innermost_ensembles = list(innermost_ensembles)
+        except TypeError:
+            innermost_ensembles = [innermost_ensembles]
         innermost_ensemble = paths.join_ensembles(innermost_ensembles)
         subtrajectory_selector = RandomChoiceMover([
             FirstSubtrajectorySelectMover(subensemble=segment,
