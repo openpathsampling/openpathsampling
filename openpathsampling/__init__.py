@@ -10,7 +10,7 @@ from ensemble import (
     SequentialEnsemble, IntersectionEnsemble, UnionEnsemble,
     SymmetricDifferenceEnsemble, RelativeComplementEnsemble,
     SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble,
-    OptionalEnsemble
+    OptionalEnsemble, join_ensembles
 )
 
 from snapshot import Snapshot, Configuration, Momentum
