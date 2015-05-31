@@ -365,6 +365,28 @@ class Trajectory(list):
         segment_labels.append( (last_vol, count) )
         return segment_labels
 
+    def summarize_by_volumes_str(self, label_dict, delimiter="-"):
+        """
+        Return string version of the volumes visited by this trajectory.
+
+        See `Trajectory.summarize_by_volumes` for details.
+
+        Parameters
+        ----------
+        label_dict : dict
+            dictionary with labels for keys and volumes for values
+        delimiter : string (default "-")
+            string used to separate volumes in output
+
+        Returns
+        -------
+        string
+            order in which this trajectory visits the volumes in
+            `label_dict`, separated by the `delimiter`
+        """
+        summary = self.summarize_by_volumes(label_dict)
+        return delimiter.join([str(s[0]) for s in summary])
+
 
 
     def pathHamiltonian(self):
