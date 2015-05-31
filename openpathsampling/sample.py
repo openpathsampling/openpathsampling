@@ -52,7 +52,6 @@ class SampleSet(OPSNamed):
         else:
             self.movepath = movepath
 
-
     def __getitem__(self, key):
         if isinstance(key, paths.Ensemble):
             return random.choice(self.ensemble_dict[key])
@@ -113,7 +112,7 @@ class SampleSet(OPSNamed):
         return len(self.samples)
 
     def __contains__(self, item):
-        return (item in self.samples)
+        return item in self.samples
 
     def all_from_ensemble(self, ensemble):
         try:
@@ -147,14 +146,14 @@ class SampleSet(OPSNamed):
     def extend(self, samples):
         # note that this works whether the parameter samples is a list of
         # samples or a SampleSet!
-        try:
+        if type(samples) is not paths.Sample and hasattr(samples, '__iter__'):
             for sample in samples:
                 self.append(sample)
-        except TypeError:
+        else:
             # also acts as .append() if given a single sample
             self.append(samples)
 
-    def apply_samples(self, samples, step=None, copy=True):
+    def apply_samples(self, samples, copy=True):
         '''Updates the SampleSet based on a list of samples, by setting them
         by replica in the order given in the argument list.'''
         if type(samples) is Sample:
@@ -167,7 +166,6 @@ class SampleSet(OPSNamed):
             if type(sample) is not paths.Sample:
                 raise ValueError('No SAMPLE!')
             # TODO: should time be a property of Sample or SampleSet?
-            sample.step = step
             newset[sample.replica] = sample
         return newset
 
@@ -179,24 +177,14 @@ class SampleSet(OPSNamed):
         '''Returns the list of ensembles in this SampleSet'''
         return self.ensemble_dict.keys()
 
-    def save_samples(self, storage):
-        """
-        Save all samples in the current GlobalState object. This should be
-        called after a move has generated a new object since then all
-        samples will get a timestamp that is associated with this
-
-        Parameters
-        ==========
-        storage : Storage()
-            the underlying netcdf file to be used for storage
-        """
-        map(storage.samples.save, self.samples)
-
     def sanity_check(self):
         '''Checks that the sample trajectories satisfy their ensembles
         '''
         for sample in self:
             # TODO: Replace by using .valid which means that it is in the ensemble
+            # and does the same testing but with caching so the .valid might
+            # fail in case of some bad hacks. Since we check anyway, let's just
+
             #assert(sample.valid)
             assert(sample.ensemble(sample.trajectory))
 
@@ -235,9 +223,17 @@ class SampleSet(OPSNamed):
         """
         Add the move path to the Sample and return the new sample set
         """
-        new_set = other.apply_to(self)
-        new_set.movepath = other
-        return new_set
+        if isinstance(other, paths.PathMoveChange):
+            return self.apply_samples(other.results)
+        elif type(other) is list:
+            okay = True
+            for samp in other:
+                if not isinstance(samp, paths.Sample):
+                    okay = False
+
+            return self.apply_samples(other)
+        else:
+            raise ValueError('Only lists of Sample or PathMoveChanges allowed.')
 
     @staticmethod
     def map_trajectory_to_ensembles(trajectory, ensembles):
@@ -274,8 +270,7 @@ class SampleSet(OPSNamed):
                 Sample(
                     replica=s.replica,
                     ensemble=translation[s.ensemble],
-                    trajectory=s.trajectory,
-                    step=s.step
+                    trajectory=s.trajectory
                 )
                 for s in sset
             ]
@@ -299,8 +294,7 @@ class SampleSet(OPSNamed):
                 samples.append(Sample(
                     replica=repid,
                     trajectory=s.trajectory,
-                    ensemble=s.ensemble,
-                    step=s.step
+                    ensemble=s.ensemble
                 ))
                 repid += 1
         return SampleSet(samples)
@@ -382,47 +376,100 @@ class Sample(object):
                  replica=None,
                  trajectory=None,
                  ensemble=None,
-                 accepted=True,
+                 bias=1.0,
                  details=None,
-                 valid=None,
                  parent=None,
-                 mover=None,
-                 step=-1
+                 mover=None
                  ):
-        self.accepted = accepted
+        self.bias = bias
         self.replica = replica
         self.ensemble = ensemble
         self.trajectory = trajectory
         self.parent = parent
-        self.step = step
         self.details = details
         self.mover = mover
-        if valid is None:
-            # valid? figure it out
-            if self.trajectory is None:
-                self.valid = True
-            else:
-                self.valid = self.ensemble(self.trajectory)
-        else:
-            self.valid = valid
 
     def __call__(self):
         return self.trajectory
 
+    #=============================================================================================
+    # LIST INHERITANCE FUNCTIONS
+    #=============================================================================================
+
+    def __len__(self):
+        return len(self.trajectory)
+
+    def __getslice__(self, *args, **kwargs):
+        return self.trajectory.__getslice__(*args, **kwargs)
+
+    def __getitem__(self, *args, **kwargs):
+        return self.trajectory.__getitem__(*args, **kwargs)
+
+    def __reversed__(self):
+        """
+        Return a reversed iterator over all snapshots in the samples trajectory
+
+        Returns
+        -------
+        Iterator()
+            The iterator that iterates the snapshots in reversed order
+
+        Notes
+        -----
+        A reversed trajectory also has reversed snapshots! This means
+        that Trajectory(list(reversed(traj))) will lead to a time-reversed
+        trajectory not just frames in reversed order but also reversed momenta.
+
+        """
+        if self.trajectory is not None:
+            return reversed(self.trajectory)
+        else:
+            return [] # empty iterator
+
+    def __iter__(self):
+        """
+        Return an iterator over all snapshots in the samples trajectory
+
+        Returns
+        -------
+        Iterator()
+            The iterator that iterates the snapshots
+
+        """
+        if self.trajectory is not None:
+            return iter(self.trajectory)
+        else:
+            return [] # empty iterator
+
     def __str__(self):
-        mystr = "Step: "+str(self.step)+"\n"
-        mystr += "Replica: "+str(self.replica)+"\n"
+        mystr  = "Replica: "+str(self.replica)+"\n"
         mystr += "Trajectory: "+str(self.trajectory)+"\n"
         mystr += "Ensemble: "+repr(self.ensemble)+"\n"
         return mystr
 
+    @property
+    def valid(self):
+        """Returns true if a sample is in its ensemble
+
+        Returns
+        -------
+        bool
+            `True` if the trajectory is in the ensemble `False` otherwise
+        """
+        if self._valid is None:
+            if self.trajectory is None:
+                self._valid = True
+            else:
+                if self.ensemble is not None:
+                    self._valid = self.ensemble(self.trajectory)
+                else:
+                    # no ensemble means ALL ???
+                    self._valid = True
+
+        return self._valid
+
     def __repr__(self):
         return '<Sample @ ' + str(hex(id(self))) + '>'
-
-    @staticmethod
-    def set_time(step, samples):
-        for sample in samples:
-            sample.step = step
 
     def copy_reset(self):
         '''
@@ -449,14 +496,11 @@ class Sample(object):
             ensemble=ensemble
         )
         return result
-        
+
 
     @property
-    def acceptance_probability(self):
+    def acceptance(self):
         if not self.valid:
             return 0.0
 
-        if hasattr(self.details) and self.details is not None and hasattr(self.details, 'selection_probability'):
-            return self.details.selection_probability
-
-        return 1.0
+        return self.bias

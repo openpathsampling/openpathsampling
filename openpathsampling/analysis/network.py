@@ -1,13 +1,16 @@
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
+import pandas as pd
+
+from tis_analysis import Histogrammer, max_lambdas
 
 class TransitionNetwork(OPSNamed):
     def __init__(self):
-        pass
+        super(TransitionNetwork, self).__init__()
 
     @property
     def all_ensembles(self):
-        pass
+        return None
 
 #    def replica_exchange_matrix(self):
 
@@ -15,12 +18,12 @@ class TISNetwork(TransitionNetwork):
     # TODO: most of the analysis stuff should end up in here; the bigger
     # differences are in setup, not analysis
     def __init__(self):
+        super(TISNetwork, self).__init__()
         # this should check to build the replica exchange network. If the
         # number of neighbors at any station is more than 2, we can't do
         # "normal" replica flow -- instead produce a network graph. Or,
         # actually, ALWAYS produce a network graph (although this will be a
         # feature to implement later)
-        pass
 
     def from_transitions(self, transitions, interfaces=None):
         # this will have to be disabled until I can do something
@@ -47,6 +50,17 @@ class MSTISNetwork(TISNetwork):
     First, there are sampling transitions. These are based on ensembles
     which go to any final state. Second, there are analysis transitions.
     These are based on ensembles which go to a specific final state.
+
+    Sampling is done using the sampling transitions. Sampling transitions
+    are stored in the `from_state[state]` dictionary. For MSTIS, the flux
+    and total crossing probabilities are independent of the final state, and
+    so the analysis calculates them in the sampling transitions, and copies
+    the results into the analysis transitions. This way flux and total
+    crossing probably are only calculated once per interface set.
+
+    The conditional transition probability depends on the final state, so it
+    (and the rate) are calculated using the analysis transitions. The
+    analysis transitions are obtained using `.transition[(stateA, stateB)]`.
     """
     def to_dict(self):
         ret_dict = { 
@@ -59,8 +73,8 @@ class MSTISNetwork(TISNetwork):
         }
         return ret_dict
 
-    @staticmethod
-    def from_dict(dct):
+    @classmethod
+    def from_dict(cls, dct):
         network = MSTISNetwork.__new__(MSTISNetwork)
         network.from_state = dct['from_state']
         network.movers = dct['movers']
@@ -71,23 +85,38 @@ class MSTISNetwork(TISNetwork):
         return network
 
     def __init__(self, trans_info):
+        """
+        Creates MSTISNetwork, including interfaces and default path movers.
+
+        Parameters
+        ----------
+        trans_info : list of tuple
+            Details of each state-based ensemble set. 4-tuple in the order
+            (state, interfaces, state_name, orderparameter) where state is a
+            Volume, interfaces is a list of Volumes, state_name is a string,
+            and orderparameters is a CollectiveVariable
+        """
+        super(MSTISNetwork, self).__init__()
         self.trans_info = trans_info
         if not hasattr(self, "from_state"):
             self.from_state = {}
             self.outer_ensembles = []
             self.outers = []
-            self.build_from_state_transitions(trans_info)
+            self.build_fromstate_transitions(trans_info)
 
         # get the movers from all of our sampling-based transitions
         if not hasattr(self, "movers"):
             self.movers = { }
             self.build_movers()
 
-        self.build_analysis_transitions()
+        # by default, we set assign these values to all ensembles
+        self.hist_args = {}
+        self.transitions = { }
+
+        #self.build_analysis_transitions()
 
     def build_analysis_transitions(self):
         # set up analysis transitions (not to be saved)
-        self.analysis_transitions = { }
         for stateA in self.from_state.keys():
             state_index = self.states.index(stateA)
             fromA = self.from_state[stateA]
@@ -103,14 +132,29 @@ class MSTISNetwork(TISNetwork):
                 # override created stuff
                 trans.ensembles = fromA.ensembles
                 trans.movers = fromA.movers
-                self.analysis_transitions[(stateA, stateB)] = trans
+                self.transitions[(stateA, stateB)] = trans
 
 
 
 
 #    def disallow(self, stateA, stateB):
 
-    def build_from_state_transitions(self, trans_info):
+    def build_fromstate_transitions(self, trans_info):
+        """
+        Builds the sampling transitions (the self.from_state dictionary).
+
+        This also sets self.states (list of states volumes), self.outers
+        (list of interface volumes making the MS-outer interface), and 
+        self.outer_ensembles (list of TISEnsembles associated with the
+        self.outers interfaces). Additionally, it gives default names
+        volumes, interfaces, and transitions.
+
+        Parameters
+        ----------
+        trans_info : list of 4-tuples
+            See description in __init__.
+
+        """
         states, interfaces, names, orderparams = zip(*trans_info)
         self.states = states
         all_states = paths.volume.join_volumes(states)
@@ -140,6 +184,9 @@ class MSTISNetwork(TISNetwork):
 
 
     def build_movers(self):
+        """
+        Build the default movers for this transition, organized by type.
+        """
         for label in ['shooting', 'pathreversal', 'minus', 'repex']:
             self.movers[label] = get_movers_from_transitions(
                 label=label,
@@ -210,15 +257,61 @@ class MSTISNetwork(TISNetwork):
             mystr += str(self.from_state[state])
         return mystr
 
-    def rate_matrix(self, storage):
-        pass
+
+    def rate_matrix(self, storage, force=False):
+        """
+        Calculate the matrix of all rates.
+
+        Parameters
+        ----------
+        storage : Storage
+            object containing storage to be analyzed
+        force : bool (False)
+            if True, cached results are overwritten
+
+        Returns
+        -------
+        pandas.DataFrame
+            Rates from row_label to column_label. Diagonal is NaN.
+        """
+        # for each transition in from_state:
+        # 1. Calculate the flux and the TCP
+        self._rate_matrix = pd.DataFrame(columns=self.states,
+                                         index=self.states)
+        for stateA in self.from_state.keys():
+            transition = self.from_state[stateA]
+            # set up the hist_args if necessary
+            for histname in self.hist_args.keys():
+                trans_hist = transition.ensemble_histogram_info[histname]
+                if trans_hist.hist_args == {}:
+                    trans_hist.hist_args = self.hist_args[histname]
+        
+            transition.total_crossing_probability(storage=storage,
+                                                  force=force)
+            transition.minus_move_flux(storage=storage, force=force)
+            for stateB in self.from_state.keys():
+                if stateA != stateB:
+                    transitionAB = transition.copy()
+                    transitionAB.stateB = stateB
+                    self.transitions[(stateA, stateB)] = transitionAB
+
+
+        for trans in self.transitions.values():
+            rate = trans.rate(storage)
+            self._rate_matrix.set_value(trans.stateA, trans.stateB, rate)
+            #print trans.stateA.name, trans.stateB.name, 
+            #print rate
+
+        return self._rate_matrix
+
+
 
 
 #def multiple_set_minus_switching(mistis, storage):
 
 class MISTISNetwork(TISNetwork):
     def __init__(self, transitions):
-        pass
+        super(MISTISNetwork, self).__init__()
 
 
     def default_movers(self):

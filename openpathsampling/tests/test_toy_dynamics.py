@@ -174,6 +174,9 @@ class testToyEngine(object):
         assert_items_equal(self.sim._minv, [1.0/m_i for m_i in sys_mass])
         assert_equal(self.sim.nsteps_per_frame, 10)
 
+    def test_snapshot_timestep(self):
+        assert_equal(self.sim.snapshot_timestep, 0.02)
+
     def test_momentum_getter(self):
         momentum = self.sim.momentum
         assert_items_equal(momentum.velocities[0],
