@@ -355,12 +355,19 @@ class MISTISNetwork(TISNetwork):
         for initial in initial_states:
             innermosts = []
             for t1 in [t for t in self.transitions if t.stateA==initial]:
-                innermosts.append(t1.ensembles[0])
+                innermosts.append(t1.interfaces[0])
             minus = paths.MinusInterfaceEnsemble(
                 state_vol=initial,
                 innermost_vols=innermosts
             )
             self.minus_ensembles.append(minus)
+            minus_mover = paths.MinusMover(minus, innermosts)
+            try:
+                self.movers['minus'].append(minus_mover)
+            except KeyError:
+                self.movers['minus'] = [minus_mover]
+
+
 
 
         # combining the MS-outer interfaces
