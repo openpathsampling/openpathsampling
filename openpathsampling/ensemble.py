@@ -1731,6 +1731,35 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
         super(MinusInterfaceEnsemble, self).__init__(ensembles, greedy=greedy)
 
+    def populate_minus_ensemble(self, partial_traj, minus_replica_id, engine):
+        """
+        Generate a sample for the minus ensemble by extending `partial_traj`
+
+        Parameters
+        ----------
+        partial_traj : Trajectory
+            trajectory to extend
+        minus_replica_id : integer or string
+            replica ID for this sample
+        engine : DynamicsEngine
+            engine to use for MD extension
+        """
+        last_frame = partial_traj[-1]
+        if not self._segment_ensemble(partial_traj):
+            raise RuntimeError(
+                "Invalid input trajectory for minus extension. (Not A-to-A?)"
+            )
+        extension = engine.generate(last_frame,
+                                    [self.can_append])
+        first_minus = paths.Trajectory(partial_traj + extension[1:])
+        minus_samp = paths.Sample(
+            replica=minus_replica_id,
+            trajectory=first_minus,
+            ensemble=self
+        )
+        return minus_samp
+
+
 
 class TISEnsemble(SequentialEnsemble):
     """An ensemble for TIS (or AMS).
