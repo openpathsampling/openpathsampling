@@ -238,7 +238,7 @@ class MSTISNetwork(TISNetwork):
             len(shooting_chooser.movers),
             len(repex_chooser.movers) / 2,
             len(rev_chooser.movers) / 2,
-            0.2 / len(shooting_chooser.movers),
+            0.2 *len(self.movers['minus']),
             len(self.outer_ensembles)
         ]
         self.root_mover = paths.RandomChoiceMover(
