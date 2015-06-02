@@ -401,14 +401,16 @@ class MISTISNetwork(TISNetwork):
         self.minus_ensembles = []
         for initial in initial_states:
             innermosts = []
+            innermost_ensembles = []
             for t1 in [t for t in self._sampling_transitions if t.stateA==initial]:
                 innermosts.append(t1.interfaces[0])
+                innermost_ensembles.append(t1.ensembles[0])
             minus = paths.MinusInterfaceEnsemble(
                 state_vol=initial,
                 innermost_vols=innermosts
             )
             self.minus_ensembles.append(minus)
-            minus_mover = paths.MinusMover(minus, innermosts)
+            minus_mover = paths.MinusMover(minus, innermost_ensembles)
             try:
                 self.movers['minus'].append(minus_mover)
             except KeyError:
@@ -467,12 +469,12 @@ class MISTISNetwork(TISNetwork):
             len(shooting_chooser.movers),
             len(repex_chooser.movers) / 2,
             len(rev_chooser.movers) / 2,
-            #0.2 *len(self.movers['minus']),
+            0.2 *len(self.movers['minus']),
             len(self.ms_outers)
         ]
         self.root_mover = paths.RandomChoiceMover(
             movers=[shooting_chooser, repex_chooser, rev_chooser,
-                    #minus_chooser, 
+                    minus_chooser, 
                     msouter_chooser],
             weights=weights
         )
