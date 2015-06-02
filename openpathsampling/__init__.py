@@ -46,10 +46,11 @@ from dynamics_engine import DynamicsEngine
 
 from openmm_engine import OpenMMEngine
 
-from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
-    EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, \
-    IntersectionVolume, \
-    UnionVolume, SymmetricDifferenceVolume, RelativeComplementVolume
+from volume import (Volume, VolumeCombination, VolumeFactory, VoronoiVolume, 
+    EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, 
+    IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
+    RelativeComplementVolume, join_volumes
+)
 
 from todict import ObjectJSON, OPSNamed
 
