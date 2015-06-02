@@ -350,8 +350,9 @@ class MISTISNetwork(TISNetwork):
     def build_movers(self):
         # use dictionaries so we only have one instance of each, even if the
         # same state shows up in many transitions
-        initial_states = {trans.stateA : "1" for trans in self.transitions}.keys()
-        final_states = {trans.stateB : "1" for trans in self.transitions}.keys()
+        initial_states = {trans.stateA : 1 for trans in self.transitions}.keys()
+        final_states = {trans.stateB : 1 for trans in self.transitions}.keys()
+
         # identify transition pairs
         for initial in initial_states:
             transition_pair_dict = {}
@@ -370,18 +371,28 @@ class MISTISNetwork(TISNetwork):
         all_in_pairs = reduce(list.__add__, map(lambda x: list(x), 
                                                 self.transition_pairs))
 
-        transition_to_sampling = {}
+        # TODO: really, I'd like to FORBID all other states, but for now,
+        # let's accept all other states -- the key is to stop it. Forbidding
+        # all other states can be done once building the movers is better
+        # separated
+        all_states = paths.join_volumes(initial_states + final_states)
+        self.transition_to_sampling = {}
         for transition in self.transitions:
             if transition not in all_in_pairs:
-                transition_to_sampling[transition] = transition
-            else:
-                transition_to_sampling[transition] = paths.RETISTransition(
+                self.transition_to_sampling[transition] = paths.RETISTransition(
                     stateA=transition.stateA,
-                    stateB=transition.stateB,
+                    stateB=all_states,
+                    interfaces=transition.interfaces,
+                    orderparameter=transition.orderparameter
+                )
+            else:
+                self.transition_to_sampling[transition] = paths.RETISTransition(
+                    stateA=transition.stateA,
+                    stateB=all_states,
                     interfaces=transition.interfaces[:-1],
                     orderparameter=transition.orderparameter
                 )
-        self._sampling_transitions = transition_to_sampling.values()
+        self._sampling_transitions = self.transition_to_sampling.values()
 
         # combining the MS-outer interfaces
         self.ms_outers = []
@@ -395,7 +406,6 @@ class MISTISNetwork(TISNetwork):
                 label=label,
                 transitions=self._sampling_transitions
             )
-
 
         # combining the minus interfaces
         self.minus_ensembles = []
@@ -420,7 +430,10 @@ class MISTISNetwork(TISNetwork):
         for (pair, outer) in zip(self.transition_pairs, self.ms_outers):
             msouter_repex = [
                 paths.ReplicaExchangeMover(
-                    ensembles=[transition_to_sampling[pair_i].ensembles[-1], outer]
+                    ensembles=[
+                        self.transition_to_sampling[pair_i].ensembles[-1], 
+                        outer
+                    ]
                 )
                 for pair_i in pair
             ]
