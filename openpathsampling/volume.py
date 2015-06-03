@@ -10,12 +10,24 @@ from openpathsampling.todict import OPSNamed
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
 def join_volumes(volume_list):
-    volume = None
+    """
+    Make the union of a list of volumes. (Useful shortcut.)
+
+    Parameters
+    ----------
+    volume_list : list of Volume
+        the list to be joined together
+
+    Returns
+    -------
+    UnionVolume 
+        the union of the elements of the list, or EmptyVolume if list is
+        empty
+    """
+    volume = EmptyVolume()
+    # EmptyVolume is smart and knows its OR just takes the other
     for vol in volume_list:
-        if volume is None:
-            volume = vol
-        else:
-            volume = volume | vol
+        volume = volume | vol
     return volume
 
 
