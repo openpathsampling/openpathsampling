@@ -807,6 +807,7 @@ class SequentialEnsemble(Ensemble):
             cache.contents['assignments'] = { }
         else:
             cache.contents['assignments'][ens_num] = slice(subtraj_first, subtraj_final) 
+        logger.debug("Cache assignments: " + str(cache.contents['assignments']))
 
 
     def transition_frames(self, trajectory, trusted=None):
