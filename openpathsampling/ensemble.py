@@ -1696,12 +1696,15 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
         self.state_vol = state_vol
         try:
-            len(innermost_vols)
+            innermost_vols = list(innermost_vols)
         except TypeError:
             innermost_vols = [innermost_vols]
 
         self.innermost_vols = innermost_vols
-        self.innermost_vol = paths.volume.join_volumes(self.innermost_vols)
+        #self.innermost_vol = paths.volume.join_volumes(self.innermost_vols)
+        self.innermost_vol = paths.FullVolume()
+        for vol in self.innermost_vols:
+            self.innermost_vol = self.innermost_vol & vol
         self.greedy = greedy
         inA = AllInXEnsemble(state_vol)
         outA = AllOutXEnsemble(state_vol)
@@ -1709,8 +1712,11 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         inX = AllInXEnsemble(self.innermost_vol)
         leaveX = PartOutXEnsemble(self.innermost_vol)
         interstitial = outA & inX
-        self._segment_ensemble = paths.TISEnsemble(
-            state_vol, state_vol, self.innermost_vol)
+        segment_ensembles = [paths.TISEnsemble(state_vol, state_vol, inner)
+                             for inner in self.innermost_vols]
+
+        self._segment_ensemble = join_ensembles(segment_ensembles)
+
         #interstitial = AllInXEnsemble(self.innermost_vol - state_vol)
         start = [
             SingleFrameEnsemble(inA),
@@ -1756,6 +1762,11 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
             replica=minus_replica_id,
             trajectory=first_minus,
             ensemble=self
+        )
+        logger.info(first_minus.summarize_by_volumes_str(
+            {"A" : self.state_vol,
+             "I" : ~self.state_vol & self.innermost_vol,
+             "X" : ~self.innermost_vol})
         )
         return minus_samp
 

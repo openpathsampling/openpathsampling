@@ -1657,7 +1657,7 @@ class MinusMover(WrappedMover):
                 repex_chooser,
                 extension_mover
             ]),
-            ensembles=[minus_ensemble, innermost_ensemble]
+            ensembles=[minus_ensemble] + innermost_ensembles
         )
 
         self.minus_ensemble = minus_ensemble
