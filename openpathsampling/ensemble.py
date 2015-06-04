@@ -1323,7 +1323,7 @@ class AllInXEnsemble(VolumeEnsemble):
             frame = trajectory[-1]
             return self._volume(frame)
         else:
-            #print "untrusted"
+            #logger.debug("Calling volume untrusted "+repr(self))
             for frame in trajectory:
                 if not self._volume(frame):
                     return False
@@ -1484,7 +1484,7 @@ class WrappedEnsemble(Ensemble):
         
     def can_append(self, trajectory, trusted=None):
         return self._new_ensemble.can_append(self._alter(trajectory),
-                                             self.trusted)
+                                             trusted)
 
     def can_prepend(self, trajectory, trusted=None):
         return self._new_ensemble.can_prepend(self._alter(trajectory))
