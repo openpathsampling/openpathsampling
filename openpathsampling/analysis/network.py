@@ -30,6 +30,13 @@ class TISNetwork(TransitionNetwork):
         # better with it
         pass
 
+    @property
+    def sampling_transitions(self):
+        try:
+            return self._sampling_transitions
+        except AttributeError:
+            return None
+
 
 #def join_mis_minus(minuses):
     #pass
@@ -105,7 +112,7 @@ class MSTISNetwork(TISNetwork):
             self.outers = []
             self.build_fromstate_transitions(trans_info)
 
-        self._sampling_transitions = self.from_state
+        self._sampling_transitions = self.from_state.values()
 
         # get the movers from all of our sampling-based transitions
         if not hasattr(self, "movers"):
@@ -309,9 +316,22 @@ class MSTISNetwork(TISNetwork):
 #def multiple_set_minus_switching(mistis, storage):
 
 class MISTISNetwork(TISNetwork):
-    def __init__(self, transitions):
+    """
+    Multiple interface set TIS network.
+
+    Attributes
+    ----------
+    input_transitions : list of TISTransition
+        the transitions given as input
+    """
+    # NOTE: input_transitions are in addition to the sampling_transitions
+    # and the transitions (analysis transitions)
+    def __init__(self, input_transitions):
         super(MISTISNetwork, self).__init__()
-        self.transitions = transitions
+        self.input_transitions = input_transitions
+
+        if not hasattr(self, '_sampling_transitions'):
+            self.build_sampling_transitions(input_transitions)
 
         if not hasattr(self, 'movers'):
             self.movers = {}
@@ -323,7 +343,7 @@ class MISTISNetwork(TISNetwork):
             'minus_ensembles' : self.minus_ensembles,
             'ms_outers' : self.ms_outers,
             'transition_pairs' : self.transition_pairs,
-            'transitions' : self.transitions
+            'input_transitions' : self.input_transitions
         }
         return ret_dict
 
@@ -346,18 +366,18 @@ class MISTISNetwork(TISNetwork):
         all_ens.extend(self.minus_ensembles)
         return all_ens
 
-    def build_movers(self):
+    def build_sampling_transitions(self, transitions):
         # use dictionaries so we only have one instance of each, even if the
         # same state shows up in many transitions
-        initial_states = {trans.stateA : 1 for trans in self.transitions}.keys()
-        final_states = {trans.stateB : 1 for trans in self.transitions}.keys()
+        self.initial_states = {trans.stateA : 1 for trans in transitions}.keys()
+        self.final_states = {trans.stateB : 1 for trans in transitions}.keys()
 
         # identify transition pairs
-        for initial in initial_states:
+        for initial in self.initial_states:
             transition_pair_dict = {}
-            for t1 in [t for t in self.transitions if t.stateA==initial]:
+            for t1 in [t for t in transitions if t.stateA==initial]:
                 reverse_trans = None
-                for t2 in self.transitions:
+                for t2 in transitions:
                     if t2.stateA==t1.stateB and t2.stateB==t1.stateA:
                         transition_pair_dict[t1] = t2
             for key in transition_pair_dict.keys():
@@ -377,9 +397,9 @@ class MISTISNetwork(TISNetwork):
         # for now, let's accept all other states -- the key is to stop the
         # trajectory.  Forbidding all other states can be done once building
         # the movers is better separated.
-        all_states = paths.join_volumes(initial_states + final_states)
+        all_states = paths.join_volumes(self.initial_states + self.final_states)
         self.transition_to_sampling = {}
-        for transition in self.transitions:
+        for transition in transitions:
             if transition not in all_in_pairs:
                 self.transition_to_sampling[transition] = paths.RETISTransition(
                     stateA=transition.stateA,
@@ -396,6 +416,8 @@ class MISTISNetwork(TISNetwork):
                 )
         self._sampling_transitions = self.transition_to_sampling.values()
 
+        # build non-transition interfaces 
+
         # combining the MS-outer interfaces
         self.ms_outers = []
         for pair in self.transition_pairs:
@@ -405,7 +427,7 @@ class MISTISNetwork(TISNetwork):
         
         # combining the minus interfaces
         self.minus_ensembles = []
-        for initial in initial_states:
+        for initial in self.initial_states:
             innermosts = []
             for t1 in [t for t in self._sampling_transitions if t.stateA==initial]:
                 innermosts.append(t1.interfaces[0])
@@ -419,8 +441,9 @@ class MISTISNetwork(TISNetwork):
         # build analysis transitions
         # TODO
 
+    def build_movers(self):
         # make the movers
-        for initial in initial_states:
+        for initial in self.initial_states:
             innermost_ensembles = []
             for t1 in [t for t in self._sampling_transitions if t.stateA==initial]:
                 innermost_ensembles.append(t1.ensembles[0])
