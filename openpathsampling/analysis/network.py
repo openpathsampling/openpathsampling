@@ -98,11 +98,14 @@ class MSTISNetwork(TISNetwork):
         """
         super(MSTISNetwork, self).__init__()
         self.trans_info = trans_info
+        # build sampling transitions
         if not hasattr(self, "from_state"):
             self.from_state = {}
             self.outer_ensembles = []
             self.outers = []
             self.build_fromstate_transitions(trans_info)
+
+        self._sampling_transitions = self.from_state
 
         # get the movers from all of our sampling-based transitions
         if not hasattr(self, "movers"):
@@ -111,7 +114,8 @@ class MSTISNetwork(TISNetwork):
 
         # by default, we set assign these values to all ensembles
         self.hist_args = {}
-        self.transitions = { }
+
+        self.transitions = {}
 
         #self.build_analysis_transitions()
 
@@ -133,9 +137,6 @@ class MSTISNetwork(TISNetwork):
                 trans.ensembles = fromA.ensembles
                 trans.movers = fromA.movers
                 self.transitions[(stateA, stateB)] = trans
-
-
-
 
 #    def disallow(self, stateA, stateB):
 
@@ -305,8 +306,6 @@ class MSTISNetwork(TISNetwork):
         return self._rate_matrix
 
 
-
-
 #def multiple_set_minus_switching(mistis, storage):
 
 class MISTISNetwork(TISNetwork):
@@ -371,10 +370,13 @@ class MISTISNetwork(TISNetwork):
         all_in_pairs = reduce(list.__add__, map(lambda x: list(x), 
                                                 self.transition_pairs))
 
-        # TODO: really, I'd like to FORBID all other states, but for now,
-        # let's accept all other states -- the key is to stop it. Forbidding
-        # all other states can be done once building the movers is better
-        # separated
+        # build sampling transitions
+
+        # TODO: really, I'd like to FORBID all other states (change the
+        # ensemble to intersection with AllOutXEnsemble(other_states)), but
+        # for now, let's accept all other states -- the key is to stop the
+        # trajectory.  Forbidding all other states can be done once building
+        # the movers is better separated.
         all_states = paths.join_volumes(initial_states + final_states)
         self.transition_to_sampling = {}
         for transition in self.transitions:
@@ -401,30 +403,39 @@ class MISTISNetwork(TISNetwork):
                 [pair[0].ensembles[-1], pair[1].ensembles[-1]]
             ))
         
-        for label in ['shooting', 'pathreversal', 'repex']:
-            self.movers[label] = get_movers_from_transitions(
-                label=label,
-                transitions=self._sampling_transitions
-            )
-
         # combining the minus interfaces
         self.minus_ensembles = []
         for initial in initial_states:
             innermosts = []
-            innermost_ensembles = []
             for t1 in [t for t in self._sampling_transitions if t.stateA==initial]:
                 innermosts.append(t1.interfaces[0])
-                innermost_ensembles.append(t1.ensembles[0])
             minus = paths.MinusInterfaceEnsemble(
                 state_vol=initial,
                 innermost_vols=innermosts
             )
             self.minus_ensembles.append(minus)
+
+
+        # build analysis transitions
+        # TODO
+
+        # make the movers
+        for initial in initial_states:
+            innermost_ensembles = []
+            for t1 in [t for t in self._sampling_transitions if t.stateA==initial]:
+                innermost_ensembles.append(t1.ensembles[0])
+            minus = [m for m in self.minus_ensembles if m.state_vol==initial][0]
             minus_mover = paths.MinusMover(minus, innermost_ensembles)
             try:
                 self.movers['minus'].append(minus_mover)
             except KeyError:
                 self.movers['minus'] = [minus_mover]
+
+        for label in ['shooting', 'pathreversal', 'repex']:
+            self.movers[label] = get_movers_from_transitions(
+                label=label,
+                transitions=self._sampling_transitions
+            )
 
         self.movers['msouter_repex'] = []
         for (pair, outer) in zip(self.transition_pairs, self.ms_outers):

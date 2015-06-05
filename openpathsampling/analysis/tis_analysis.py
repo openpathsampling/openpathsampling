@@ -139,9 +139,6 @@ class TISTransition(Transition):
     
     def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
         super(TISTransition, self).__init__(stateA, stateB)
-        # NOTE: making these into dictionaries like this will make it easy
-        # to combine them in order to make a PathSampling PathSimulator object
-
 
         self.stateA = stateA
         self.stateB = stateB
