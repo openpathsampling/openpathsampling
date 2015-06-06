@@ -299,6 +299,8 @@ class MSTISNetwork(TISNetwork):
             transition.minus_move_flux(storage=storage, force=force)
             for stateB in self.from_state.keys():
                 if stateA != stateB:
+                    #analysis_trans = self.transitions[(stateA, stateB)]
+                    #analysis_trans.copy_analysis_from(transition)
                     transitionAB = transition.copy()
                     transitionAB.stateB = stateB
                     self.transitions[(stateA, stateB)] = transitionAB
