@@ -4,7 +4,7 @@ from openpathsampling.todict import OPSNamed
 import sys
 
 class MoveScheme(OPSNamed):
-    def __init__(self, network, scheme=None):
+    def __init__(self, network):
         self.movers = network.movers
         self._mover_acceptance = {}
 
