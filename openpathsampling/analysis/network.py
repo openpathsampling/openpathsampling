@@ -333,9 +333,12 @@ class MISTISNetwork(TISNetwork):
         if not hasattr(self, '_sampling_transitions'):
             self.build_sampling_transitions(input_transitions)
 
+        self.build_analysis_transitions()
+
         if not hasattr(self, 'movers'):
             self.movers = {}
             self.build_movers()
+
 
     def to_dict(self):
         ret_dict = {
@@ -367,6 +370,7 @@ class MISTISNetwork(TISNetwork):
         return all_ens
 
     def build_sampling_transitions(self, transitions):
+        self._sampling_transitions = {}
         # use dictionaries so we only have one instance of each, even if the
         # same state shows up in many transitions
         self.initial_states = {trans.stateA : 1 for trans in transitions}.keys()
@@ -400,20 +404,23 @@ class MISTISNetwork(TISNetwork):
         all_states = paths.join_volumes(self.initial_states + self.final_states)
         self.transition_to_sampling = {}
         for transition in transitions:
+            stateA = transition.stateA
+            stateB = transition.stateB
             if transition not in all_in_pairs:
-                self.transition_to_sampling[transition] = paths.RETISTransition(
-                    stateA=transition.stateA,
+                sample_trans = paths.RETISTransition(
+                    stateA=stateA,
                     stateB=all_states,
                     interfaces=transition.interfaces,
                     orderparameter=transition.orderparameter
                 )
             else:
-                self.transition_to_sampling[transition] = paths.RETISTransition(
-                    stateA=transition.stateA,
+                sample_trans = paths.RETISTransition(
+                    stateA=stateA,
                     stateB=all_states,
                     interfaces=transition.interfaces[:-1],
                     orderparameter=transition.orderparameter
                 )
+            self.transition_to_sampling[transition] = sample_trans
         self._sampling_transitions = self.transition_to_sampling.values()
 
         # build non-transition interfaces 
@@ -429,7 +436,11 @@ class MISTISNetwork(TISNetwork):
         self.minus_ensembles = []
         for initial in self.initial_states:
             innermosts = []
-            for t1 in [t for t in self._sampling_transitions if t.stateA==initial]:
+            trans_with_initial_state = [
+                t for t in self.sampling_transitions
+                if t.stateA==initial
+            ]
+            for t1 in trans_with_initial_state:
                 innermosts.append(t1.interfaces[0])
             minus = paths.MinusInterfaceEnsemble(
                 state_vol=initial,
@@ -437,15 +448,28 @@ class MISTISNetwork(TISNetwork):
             )
             self.minus_ensembles.append(minus)
 
-
-        # build analysis transitions
-        # TODO
+    def build_analysis_transitions(self):
+        self.transitions = {}
+        for trans in self.input_transitions:
+            sample_trans = self.transition_to_sampling[trans]
+            stateA = trans.stateA
+            stateB = trans.stateB
+            self.transitions[(stateA, stateB)] = paths.RETISTransition(
+                stateA=stateA,
+                stateB=stateB,
+                interfaces=sample_trans.interfaces,
+                orderparameter=sample_trans.orderparameter
+            )
 
     def build_movers(self):
         # make the movers
         for initial in self.initial_states:
             innermost_ensembles = []
-            for t1 in [t for t in self._sampling_transitions if t.stateA==initial]:
+            trans_with_initial_state = [
+                t for t in self.sampling_transitions
+                if t.stateA==initial
+            ]
+            for t1 in trans_with_initial_state:
                 innermost_ensembles.append(t1.ensembles[0])
             minus = [m for m in self.minus_ensembles if m.state_vol==initial][0]
             minus_mover = paths.MinusMover(minus, innermost_ensembles)
@@ -457,7 +481,7 @@ class MISTISNetwork(TISNetwork):
         for label in ['shooting', 'pathreversal', 'repex']:
             self.movers[label] = get_movers_from_transitions(
                 label=label,
-                transitions=self._sampling_transitions
+                transitions=self.sampling_transitions
             )
 
         self.movers['msouter_repex'] = []
