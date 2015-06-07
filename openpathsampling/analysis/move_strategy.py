@@ -3,7 +3,8 @@ from openpathsampling.todict import OPSNamed
 
 class MoveStrategy(object):
     def __init__(self, network, scheme=None):
-        pass
+        self.network = network
+        self.scheme = scheme
 
     def make_chooser(self, scheme, groupname, choosername):
         pass
