@@ -17,20 +17,42 @@ class testMoveStrategy(object):
     def setup(self):
         cvA = paths.CV_Function(name="xA", fcn=lambda s : s.xyz[0][0])
         cvB = paths.CV_Function(name="xA", fcn=lambda s : -s.xyz[0][0])
-        stateA = paths.LambdaVolume(cvA, float("-inf"), -0.5)
-        stateB = paths.LambdaVolume(cvB, float("-inf"), -0.5)
-        interfacesA = vf.LambdaVolumeSet(cvA, float("-inf"), [-0.5, -0.3])
-        interfacesB = vf.LambdaVolumeSet(cvB, float("-inf"), [-0.5, -0.3])
+        self.stateA = paths.LambdaVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.LambdaVolume(cvB, float("-inf"), -0.5)
+        interfacesA = vf.LambdaVolumeSet(cvA, float("-inf"), [-0.5, -0.3, 0.0])
+        interfacesB = vf.LambdaVolumeSet(cvB, float("-inf"), [-0.5, -0.3, 0.0])
         self.network = paths.MSTISNetwork([
-            (stateA, interfacesA, "A", cvA),
-            (stateB, interfacesB, "B", cvB)
+            (self.stateA, interfacesA, "A", cvA),
+            (self.stateB, interfacesB, "B", cvB)
         ])
+        self.strategy = MoveStrategy(self.network)
 
     def test_make_chooser(self):
         raise SkipTest
 
     def test_get_scheme(self):
-        raise SkipTest
+        scheme1 = self.strategy.get_scheme(None)
+        scheme2 = self.strategy.get_scheme(scheme1)
+        assert_equal(scheme1, scheme2)
 
     def test_get_ensembles(self):
-        raise SkipTest
+        # load up the relevant ensembles to test against
+        transition_ensembles = []
+        for transition in self.network.sampling_transitions:
+            transition_ensembles.append(transition.ensembles)
+        assert_equal(len(transition_ensembles), 2)
+        for ens_set in transition_ensembles:
+            assert_equal(len(ens_set), 2)
+        ensA = self.network.from_state[self.stateA].ensembles
+        assert_equal(len(ensA), 2)
+        # if you error before this, something is wrong in setup
+        ensembles = self.strategy.get_ensembles(None)
+        assert_equal(ensembles, transition_ensembles)
+
+        ensembles = self.strategy.get_ensembles(ensA)
+        assert_equal(ensembles, [ensA])
+
+        extra_ens = transition_ensembles[1][0]
+        weird_ens_list = [[ensA[0]], ensA[1], [extra_ens]]
+        ensembles = self.strategy.get_ensembles(weird_ens_list)
+        assert_equal(ensembles, [[ensA[0]], [ensA[1]], [extra_ens]])

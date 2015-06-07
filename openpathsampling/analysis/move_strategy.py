@@ -51,6 +51,8 @@ class MoveStrategy(object):
                         res_ensembles.append(elem_group)
                         elem_group = []
                     res_ensembles.append(append_group)
+            if len(elem_group) > 0:
+                res_ensembles.append(elem_group)
 
         return res_ensembles
                     
