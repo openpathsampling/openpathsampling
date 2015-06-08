@@ -8,6 +8,15 @@ class MoveScheme(OPSNamed):
         self.movers = network.movers
         self._mover_acceptance = {}
 
+    def include_movers(self, movers, groupname, replace):
+        if replace:
+            self.movers[groupname] = movers
+        else:
+            try:
+                self.movers[groupname].extend(movers)
+            except KeyError:
+                self.movers[groupname] = movers
+
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, indentation):
         line = ("* "*indentation + str(move_name) +

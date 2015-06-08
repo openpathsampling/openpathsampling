@@ -6,8 +6,12 @@ class MoveStrategy(object):
         self.network = network
         self.scheme = scheme
 
-    def make_chooser(self, scheme, groupname, choosername):
-        pass
+    def make_chooser(self, scheme, groupname, choosername=None):
+        if choosername is None:
+            choosername = groupname.capitalize()+"Chooser"
+        chooser = paths.RandomChoiceMover(movers=scheme.movers[groupname])
+        chooser.name = choosername
+        scheme.include_movers([chooser], 'choosers', replace=False)
 
     def get_scheme(self, scheme):
         if scheme is None:
@@ -33,7 +37,6 @@ class MoveStrategy(object):
         list of list of Ensembles
             regularized output
         """
-        # TODO: write lots of tests for this
         if ensembles is None:
             res_ensembles = []
             for t in self.network.sampling_transitions:
@@ -56,8 +59,23 @@ class MoveStrategy(object):
 
         return res_ensembles
                     
-class UniformSelectionShootingStrategy(MoveStrategy):
-    pass
+class ShootingSelectionStrategy(MoveStrategy):
+    def __init__(self, network, scheme=None, selector=None):
+        super(ShootingSelectionStrategy, self).__init__(network, scheme)
+        if selector is None:
+            selector = paths.UniformSelector()
+        self.selector = selector
+
+    def make_scheme(self, scheme=None, ensembles=None, groupname="shooting",
+                    replace=True, chooser=True):
+        scheme = self.get_scheme(scheme)
+        ensemble_list = self.get_ensembles(ensembles)
+        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
+        shooters = paths.PathMoverFactory.OneWayShootingSet(self.selector, ensembles)
+        scheme.include_movers(shooters, groupname, replace)
+        if chooser:
+            make_chooser(scheme, groupname, choosername)
+        return scheme
 
 class NearestNeighborRepExStrategy(MoveStrategy):
     def make_scheme(self, scheme=None, ensembles=None, groupname="repex",
@@ -96,22 +114,16 @@ class NearestNeighborRepExStrategy(MoveStrategy):
                  for i in range(len(ensembles)-1)]
             )
 
-        # TODO: replace these lines with
-        #   scheme.include_movers(movers, groupname, replace)
-        if replace:
-            scheme.movers[groupname] = movers
-        else:
-            try:
-                scheme.movers[groupname].extend(movers)
-            except KeyError:
-                scheme.movers[groupname] = movers
-
+        scheme.include_movers(movers, groupname, replace)
         if chooser:
-            choosername = groupname.capitalize()+"Chooser"
             make_chooser(scheme, groupname, choosername)
         return scheme
 
 class SingleReplicaStrategy(MoveStrategy):
+    """
+    Converts ReplicaExchange to EnsembleHop, and changes overall structure
+    to SRTIS approach.
+    """
     pass
 
 class ReplicaExchangeStrategy(MoveStrategy):
@@ -121,15 +133,19 @@ class ReplicaExchangeStrategy(MoveStrategy):
     pass
 
 class MSOuterRepExStrategy(MoveStrategy):
+    """
+    Takes a given network and makes the RepEx movers for the outermost
+    interface and MS-outer exchanges.
+    """
     pass
 
 class MinusMoveStrategy(MoveStrategy):
+    """
+    Takes a given network and makes the minus mover.
+    """
     pass
 
 class DefaultStrategy(MoveStrategy):
-    pass
-
-class BiasedSelectionShootingStrategy(MoveStrategy):
     pass
 
 class AllSetRepExStrategy(MoveStrategy):

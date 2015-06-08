@@ -56,3 +56,9 @@ class testMoveStrategy(object):
         weird_ens_list = [[ensA[0]], ensA[1], [extra_ens]]
         ensembles = self.strategy.get_ensembles(weird_ens_list)
         assert_equal(ensembles, [[ensA[0]], [ensA[1]], [extra_ens]])
+
+class testShootingSelectionStrategy(object):
+    pass
+
+class testNearestNeighborRepExStrategy(object):
+    pass
