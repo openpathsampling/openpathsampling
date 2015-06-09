@@ -329,8 +329,9 @@ class MISTISNetwork(TISNetwork):
         super(MISTISNetwork, self).__init__()
         self.input_transitions = input_transitions
 
-        if not hasattr(self, '_sampling_transitions'):
+        if not hasattr(self, 'x_sampling_transitions'):
             self.build_sampling_transitions(input_transitions)
+        self._sampling_transitions = self.x_sampling_transitions
 
         self.build_analysis_transitions()
 
@@ -345,6 +346,8 @@ class MISTISNetwork(TISNetwork):
             'minus_ensembles' : self.minus_ensembles,
             'ms_outers' : self.ms_outers,
             'transition_pairs' : self.transition_pairs,
+            'x_sampling_transitions' : self.x_sampling_transitions,
+            'transition_to_sampling' : self.transition_to_sampling,
             'input_transitions' : self.input_transitions
         }
         return ret_dict
@@ -356,20 +359,21 @@ class MISTISNetwork(TISNetwork):
         network.minus_ensembles = dct['minus_ensembles']
         network.ms_outers = dct['ms_outers']
         network.transition_pairs = dct['transition_pairs']
-        network.__init__(dct['transitions'])
+        network.transition_to_sampling = dct['transition_to_sampling']
+        network.x_sampling_transitions = dct['x_sampling_transitions']
+        network.__init__(dct['input_transitions'])
         return network
 
     @property
     def all_ensembles(self):
         all_ens = []
-        for t in self._sampling_transitions:
+        for t in self.sampling_transitions:
             all_ens.extend(t.ensembles)
         all_ens.extend(self.ms_outers)
         all_ens.extend(self.minus_ensembles)
         return all_ens
 
     def build_sampling_transitions(self, transitions):
-        self._sampling_transitions = {}
         # use dictionaries so we only have one instance of each, even if the
         # same state shows up in many transitions
         self.initial_states = {trans.stateA : 1 for trans in transitions}.keys()
@@ -419,8 +423,9 @@ class MISTISNetwork(TISNetwork):
                     interfaces=transition.interfaces[:-1],
                     orderparameter=transition.orderparameter
                 )
+            sample_trans.name = "Sampling " + str(stateA) + "->" + str(stateB)
             self.transition_to_sampling[transition] = sample_trans
-        self._sampling_transitions = self.transition_to_sampling.values()
+        self.x_sampling_transitions = self.transition_to_sampling.values()
 
         # build non-transition interfaces 
 
@@ -436,7 +441,7 @@ class MISTISNetwork(TISNetwork):
         for initial in self.initial_states:
             innermosts = []
             trans_with_initial_state = [
-                t for t in self.sampling_transitions
+                t for t in self.x_sampling_transitions
                 if t.stateA==initial
             ]
             for t1 in trans_with_initial_state:
