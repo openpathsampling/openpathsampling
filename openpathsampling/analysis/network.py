@@ -542,7 +542,7 @@ class MISTISNetwork(TISNetwork):
             0.2 *len(self.movers['minus']),
             len(self.ms_outers)
         ]
-        self.root_mover = paths.RandomChoiceMover(
+        self.move_scheme = paths.RandomChoiceMover(
             movers=[shooting_chooser, repex_chooser, rev_chooser,
                     minus_chooser, 
                     msouter_chooser],
@@ -551,6 +551,6 @@ class MISTISNetwork(TISNetwork):
 
 
     def default_movers(self):
-        return self.root_mover
+        return self.move_scheme
 
 
