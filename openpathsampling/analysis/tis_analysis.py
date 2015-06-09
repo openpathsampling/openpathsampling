@@ -139,9 +139,6 @@ class TISTransition(Transition):
     
     def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
         super(TISTransition, self).__init__(stateA, stateB)
-        # NOTE: making these into dictionaries like this will make it easy
-        # to combine them in order to make a PathSampling PathSimulator object
-
 
         self.stateA = stateA
         self.stateB = stateB
@@ -187,18 +184,36 @@ class TISTransition(Transition):
     # TODO: replace with copy.copy()
     def copy(self, with_results=True):
         copy = self.from_dict(self.to_dict())
-        copy.default_orderparameter = self.default_orderparameter
-        copy.total_crossing_probability_method = self.total_crossing_probability_method
-        copy.hist_args = self.hist_args
-        copy.ensemble_histogram_info = self.ensemble_histogram_info
-        copy.histograms = self.histograms
-        copy._flux = self._flux
-        copy._rate = self._rate
-        if hasattr(self, "tcp"):
-            copy.tcp = self.tcp
-        if hasattr(self, "ctp"):
-            copy.ctp = self.ctp
+        copy.copy_analysis_from(self)
+        #copy.default_orderparameter = self.default_orderparameter
+        #copy.total_crossing_probability_method = self.total_crossing_probability_method
+        #copy.hist_args = self.hist_args
+        #copy.ensemble_histogram_info = self.ensemble_histogram_info
+        #copy.histograms = self.histograms
+        #copy._flux = self._flux
+        #copy._rate = self._rate
+        #if hasattr(self, "tcp"):
+            #copy.tcp = self.tcp
+        #if hasattr(self, "ctp"):
+            #copy.ctp = self.ctp
         return copy
+
+    def copy_analysis_from(self, other):
+        self.default_orderparameter = other.default_orderparameter
+        self.total_crossing_probability_method = other.total_crossing_probability_method
+        self.hist_args = other.hist_args
+        self.ensemble_histogram_info = other.ensemble_histogram_info
+        self.histograms = other.histograms
+        self._flux = other._flux
+        self._rate = other._rate
+        try:
+            self.tcp = other.tcp
+        except AttributeError:
+            pass
+        try:
+            self.ctp = other.ctp
+        except AttributeError:
+            pass
 
 
     def __str__(self):
