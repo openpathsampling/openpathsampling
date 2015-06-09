@@ -807,6 +807,7 @@ class SequentialEnsemble(Ensemble):
             cache.contents['assignments'] = { }
         else:
             cache.contents['assignments'][ens_num] = slice(subtraj_first, subtraj_final) 
+        logger.debug("Cache assignments: " + str(cache.contents['assignments']))
 
 
     def transition_frames(self, trajectory, trusted=None):
@@ -1322,7 +1323,7 @@ class AllInXEnsemble(VolumeEnsemble):
             frame = trajectory[-1]
             return self._volume(frame)
         else:
-            #print "untrusted"
+            #logger.debug("Calling volume untrusted "+repr(self))
             for frame in trajectory:
                 if not self._volume(frame):
                     return False
@@ -1483,7 +1484,7 @@ class WrappedEnsemble(Ensemble):
         
     def can_append(self, trajectory, trusted=None):
         return self._new_ensemble.can_append(self._alter(trajectory),
-                                             self.trusted)
+                                             trusted)
 
     def can_prepend(self, trajectory, trusted=None):
         return self._new_ensemble.can_prepend(self._alter(trajectory))
@@ -1664,7 +1665,7 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
     ----------
     state_vol : Volume
         The Volume which defines the state for this minus interface
-    innermost_vol : Volume
+    innermost_vols : list of Volume
         The Volume defining the innermost interface with which this minus
         interface does its replica exchange.
     n_l : integer (greater than one)
@@ -1690,22 +1691,34 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
     _excluded_attr = ['ensembles', 'min_overlap', 'max_overlap']
 
-    def __init__(self, state_vol, innermost_vol, n_l=2, greedy=False):
+    def __init__(self, state_vol, innermost_vols, n_l=2, greedy=False):
         if (n_l < 2):
             raise ValueError("The number of segments n_l must be at least 2")
 
         self.state_vol = state_vol
-        self.innermost_vol = innermost_vol
+        try:
+            innermost_vols = list(innermost_vols)
+        except TypeError:
+            innermost_vols = [innermost_vols]
+
+        self.innermost_vols = innermost_vols
+        #self.innermost_vol = paths.volume.join_volumes(self.innermost_vols)
+        self.innermost_vol = paths.FullVolume()
+        for vol in self.innermost_vols:
+            self.innermost_vol = self.innermost_vol & vol
         self.greedy = greedy
         inA = AllInXEnsemble(state_vol)
         outA = AllOutXEnsemble(state_vol)
-        outX = AllOutXEnsemble(innermost_vol)
-        inX = AllInXEnsemble(innermost_vol)
-        leaveX = PartOutXEnsemble(innermost_vol)
+        outX = AllOutXEnsemble(self.innermost_vol)
+        inX = AllInXEnsemble(self.innermost_vol)
+        leaveX = PartOutXEnsemble(self.innermost_vol)
         interstitial = outA & inX
-        self._segment_ensemble = paths.TISEnsemble(
-            state_vol, state_vol, innermost_vol)
-        #interstitial = AllInXEnsemble(innermost_vol - state_vol)
+        segment_ensembles = [paths.TISEnsemble(state_vol, state_vol, inner)
+                             for inner in self.innermost_vols]
+
+        self._segment_ensemble = join_ensembles(segment_ensembles)
+
+        #interstitial = AllInXEnsemble(self.innermost_vol - state_vol)
         start = [
             SingleFrameEnsemble(inA),
             OptionalEnsemble(interstitial),
@@ -1724,6 +1737,40 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         self.n_l = n_l
 
         super(MinusInterfaceEnsemble, self).__init__(ensembles, greedy=greedy)
+
+    def populate_minus_ensemble(self, partial_traj, minus_replica_id, engine):
+        """
+        Generate a sample for the minus ensemble by extending `partial_traj`
+
+        Parameters
+        ----------
+        partial_traj : Trajectory
+            trajectory to extend
+        minus_replica_id : integer or string
+            replica ID for this sample
+        engine : DynamicsEngine
+            engine to use for MD extension
+        """
+        last_frame = partial_traj[-1]
+        if not self._segment_ensemble(partial_traj):
+            raise RuntimeError(
+                "Invalid input trajectory for minus extension. (Not A-to-A?)"
+            )
+        extension = engine.generate(last_frame,
+                                    [self.can_append])
+        first_minus = paths.Trajectory(partial_traj + extension[1:])
+        minus_samp = paths.Sample(
+            replica=minus_replica_id,
+            trajectory=first_minus,
+            ensemble=self
+        )
+        logger.info(first_minus.summarize_by_volumes_str(
+            {"A" : self.state_vol,
+             "I" : ~self.state_vol & self.innermost_vol,
+             "X" : ~self.innermost_vol})
+        )
+        return minus_samp
+
 
 
 class TISEnsemble(SequentialEnsemble):

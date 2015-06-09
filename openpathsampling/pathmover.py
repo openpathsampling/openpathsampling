@@ -1616,17 +1616,14 @@ class MinusMover(WrappedMover):
     paths between the innermost regular TIS interface ensemble and the minus
     interface ensemble. This is particularly useful for improving sampling
     of path space.
-
-    Note that the inheritance from ReplicaExchangeMover is only to assist
-    with `isinstance` in later anealysis. Since the only two functions here
-    are `.__init__() and `.move()`, both of which exist in both parent
-    classes, the calls to `super` will use the version in
-    ConditionalSequentalMover. However, analysis routines will see
-    `isinstance(minus, ReplicaExchangeMover)` as True.
     """
-    def __init__(self, minus_ensemble, innermost_ensemble, 
-                 ensembles=None):
+    def __init__(self, minus_ensemble, innermost_ensembles, ensembles=None):
         segment = minus_ensemble._segment_ensemble
+        try:
+            innermost_ensembles = list(innermost_ensembles)
+        except TypeError:
+            innermost_ensembles = [innermost_ensembles]
+        innermost_ensemble = paths.join_ensembles(innermost_ensembles)
         subtrajectory_selector = RandomChoiceMover([
             FirstSubtrajectorySelectMover(subensemble=segment,
                                           n_l=minus_ensemble.n_l,
@@ -1639,7 +1636,10 @@ class MinusMover(WrappedMover):
         ])
         subtrajectory_selector.name = "MinusSubtrajectoryChooser"
 
-        repex = ReplicaExchangeMover(ensembles=[[segment, innermost_ensemble]])
+        repexs = [ReplicaExchangeMover(ensembles=[[segment, inner]])
+                  for inner in innermost_ensembles]
+        repex_chooser = RandomChoiceMover(repexs)
+        repex_chooser.name = "InterfaceSetChooser"
 
         extension_mover = RandomChoiceMover([
             ForwardExtendMover(minus_ensemble, segment),
@@ -1654,14 +1654,15 @@ class MinusMover(WrappedMover):
         mover = EnsembleFilterMover(
             ConditionalSequentialMover([
                 subtrajectory_selector,
-                repex,
+                repex_chooser,
                 extension_mover
             ]),
-            ensembles=[minus_ensemble, innermost_ensemble]
+            ensembles=[minus_ensemble] + innermost_ensembles
         )
 
         self.minus_ensemble = minus_ensemble
         self.innermost_ensemble = innermost_ensemble
+        self.innermost_ensembles = innermost_ensembles
         initialization_logging(init_log, self, ['minus_ensemble',
                                                 'innermost_ensemble'])
 
