@@ -134,5 +134,5 @@ def data_filename(fname, subdir='test_data'):
     return resource_filename('openpathsampling',
                              os.path.join('tests', subdir, fname))
 
-def true_func(value):
+def true_func(value, *args, **kwargs):
     return True

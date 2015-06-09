@@ -472,7 +472,7 @@ class RETISTransition(TISTransition):
 
         self.minus_ensemble = paths.MinusInterfaceEnsemble(
             state_vol=stateA, 
-            innermost_vol=interfaces[0]
+            innermost_vols=interfaces[0]
         )
 
         try:
@@ -564,33 +564,6 @@ class RETISTransition(TISTransition):
             force=force
         )
 
-    def populate_minus_ensemble(self, partial_traj, minus_replica_id, engine):
-        """
-        Generate a sample for the minus ensemble by extending `partial_traj`
-
-        Parameters
-        ----------
-        partial_traj : Trajectory
-            trajectory to extend
-        minus_replica_id : integer or string
-            replica ID for this sample
-        engine : DynamicsEngine
-            engine to use for MD extension
-        """
-        last_frame = partial_traj[-1]
-        if not self.minus_ensemble._segment_ensemble(partial_traj):
-            raise RuntimeError(
-                "Invalid input trajectory for minus extension. (Not A-to-A?)"
-            )
-        extension = engine.generate(last_frame,
-                                    [self.minus_ensemble.can_append])
-        first_minus = paths.Trajectory(partial_traj + extension[1:])
-        minus_samp = paths.Sample(
-            replica=minus_replica_id,
-            trajectory=first_minus,
-            ensemble=self.minus_ensemble
-        )
-        return minus_samp
 
     def default_movers(self, engine):
         """Create reasonable default movers for a `PathSampling` pathsimulator
