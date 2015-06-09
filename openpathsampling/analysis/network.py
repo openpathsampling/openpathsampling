@@ -550,7 +550,7 @@ class MISTISNetwork(TISNetwork):
         )
 
 
-    def default_movers(self):
+    def default_schemes(self):
         return self.move_scheme
 
 
