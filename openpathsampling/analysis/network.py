@@ -88,7 +88,9 @@ class MSTISNetwork(TISNetwork):
         network.outer_ensembles = dct['outer_ensembles']
         network.outers = dct['outers']
         network.states = dct['states']
-        network.__init__(dct['trans_info'])
+        network.__init__(
+            trans_info=dct['trans_info']
+        )
         return network
 
     def __init__(self, trans_info):

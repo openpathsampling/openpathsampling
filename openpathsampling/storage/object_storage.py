@@ -1329,11 +1329,11 @@ def saveidx(func):
         if self.has_uid and hasattr(obj, '_uid') and obj._uid != '':
             self.storage.variables[self.identifier][idx] = obj._uid
 
-        if self.has_uid and hasattr(obj, '_name'):
+        if self.has_name and hasattr(obj, '_name'):
             #logger.debug('Object ' + str(type(obj)) + ' with IDX #' + str(idx))
             #logger.debug(repr(obj))
             #logger.debug("Cleaning up name; currently: " + str(obj._name))
-            if obj._name is None:
+            if obj._name is not None:
                 # set name of object to empty string
                 obj.fix_name()
 

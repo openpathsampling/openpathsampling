@@ -54,7 +54,6 @@ class Transition(OPSNamed):
         self.stateA = stateA
         self.stateB = stateB
 
-
     @property
     def all_movers(self):
         """
@@ -86,7 +85,6 @@ class Transition(OPSNamed):
     @property
     def all_ensembles(self):
         return self.ensembles
-
 
     def to_dict(self):
         return {
