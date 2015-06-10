@@ -61,7 +61,7 @@ class MDTrajTopology(Topology):
 
     def to_dict(self):
         out = dict()
-        used_elements = set()
+        # used_elements = set()
 
         atom_data = []
         for atom in self.md.atoms:
@@ -74,12 +74,12 @@ class MDTrajTopology(Topology):
                          int(atom.residue.resSeq), atom.residue.name,
                          atom.residue.chain.index))
 
-            used_elements.add(atom.element)
+            # used_elements.add(atom.element)
 
         out['atom_columns'] = ["serial", "name", "element", "resSeq", "resName", "chainID"]
         out['atoms'] = atom_data
         out['bonds'] = [(a.index, b.index) for (a, b) in self.md.bonds]
-#        out['elements'] = {key: tuple(el) for key, el in md.element.Element._elements_by_symbol.iteritems() if el in used_elements}
+        # out['elements'] = {key: tuple(el) for key, el in md.element.Element._elements_by_symbol.iteritems() if el in used_elements}
 
         return {'md' : out, 'subsets' : self.subsets}
 
@@ -94,20 +94,8 @@ class MDTrajTopology(Topology):
         #         md.element.Element(
         #                     number=int(el[0]), name=el[1], symbol=el[2], mass=float(el[3])
         #                  )
-        #     except(AssertionError):
-        #         pass
-        #     except(TypeError):
-        #         # try mdtraj 1.4.x with radius
-        #         try:
-        #             md.element.Element(
-        #                         number=int(el[0]), name=el[1], symbol=el[2], mass=float(el[3]), radius=float(el[4])*u.nanometer
-        #                      )
-        #         except(AssertionError):
-        #             pass
-        #
-        #     try:
         #         simtk.openmm.app.Element(
-        #                     number=int(el[0]), name=el[1], symbol=el[2], mass=float(el[3])*u.amu
+        #                     number=int(el[0]), name=el[1], symbol=el[2], mass=float(el[3])*units.amu
         #                  )
         #     except(AssertionError):
         #         pass
