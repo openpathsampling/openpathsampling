@@ -19,6 +19,8 @@ import simtk.unit as u
 import openpathsampling as paths
 from openpathsampling.todict import ObjectJSON
 
+from openpathsampling.tools import LRUCache, WeakLRUCache, WeakCache
+
 #=============================================================================================
 # SOURCE CONTROL
 #=============================================================================================
@@ -43,10 +45,10 @@ class Storage(netcdf.Dataset):
     # Default caching for online use
 
     default_cache_sizes = {
-        'trajectories' : 10000,
-        'snapshots' : 50000,
-        'configurations' : 10000,
-        'momentum' : 10000,
+        'trajectories' : LRUCache(10000),
+        'snapshots' : LRUCache(50000),
+        'configurations' : LRUCache(10000),
+        'momentum' : LRUCache(10000),
         'samples' : 25000,
         'samplesets' : False,
         'collectivevariables' : True,
@@ -92,11 +94,11 @@ class Storage(netcdf.Dataset):
     # testing
 
     production_cache_sizes = {
-        'trajectories' : 1000,
-        'snapshots' : 5000,
-        'configurations' : 1000,
-        'momentum' : 1000,
-        'samples' : 2500,
+        'trajectories' : WeakLRUCache(),
+        'snapshots' : WeakLRUCache(),
+        'configurations' : WeakLRUCache(),
+        'momentum' : WeakLRUCache(),
+        'samples' : WeakLRUCache(),
         'samplesets' : False,
         'collectivevariables' : False,
         'pathmovers' : False,
@@ -110,7 +112,7 @@ class Storage(netcdf.Dataset):
         'transitions' : False,
         'networks' : False,
         '_details' : False,
-        'steps' : 1000
+        'steps' : WeakCache()
     }
 
     # No caching (so far only CVs internal storage is there)

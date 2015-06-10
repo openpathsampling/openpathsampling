@@ -233,6 +233,7 @@ class ObjectStore(object):
         elif type(caching) is int:
             self.cache = LRUCache(caching)
 
+        # for now override all cache setting and use only weakreferencing.
         self.cache = WeakLRUCache()
 
     def idx(self, obj):
