@@ -251,6 +251,8 @@ class Trajectory(list):
             ret = [ list.__getitem__(self, i) for i in index ]
         else:
             ret = list.__getitem__(self, index)
+
+        print type(ret)
                 
         if type(ret) is list:
             ret = Trajectory(ret)
@@ -342,7 +344,7 @@ class Trajectory(list):
         last_vol = None
         count = 0
         segment_labels = []
-        for frame in self:
+        for frame in list.__iter__(self):
             in_state = []
             for key in label_dict.keys():
                 vol = label_dict[key]

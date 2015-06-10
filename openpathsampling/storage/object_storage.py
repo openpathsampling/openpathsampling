@@ -7,7 +7,7 @@ import simtk.unit as u
 
 import logging
 
-from openpathsampling.tools import LRUCache, WeakLRUCache
+from openpathsampling.tools import WeakLimitCache
 
 
 logger = logging.getLogger(__name__)
@@ -227,14 +227,9 @@ class ObjectStore(object):
             caching = self.default_cache
 
         if caching is True:
-            self.cache = dict()
+            self.cache = WeakLimitCache(1000000)
         elif isinstance(caching, dict):
             self.cache = caching
-        elif type(caching) is int:
-            self.cache = LRUCache(caching)
-
-        # for now override all cache setting and use only weakreferencing.
-        self.cache = WeakLRUCache()
 
     def idx(self, obj):
         """

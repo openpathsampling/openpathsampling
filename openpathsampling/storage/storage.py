@@ -19,7 +19,7 @@ import simtk.unit as u
 import openpathsampling as paths
 from openpathsampling.todict import ObjectJSON
 
-from openpathsampling.tools import LRUCache, WeakLRUCache, WeakCache
+from openpathsampling.tools import LRUCache, WeakLRUCache, WeakCache, WeakLimitCache
 
 #=============================================================================================
 # SOURCE CONTROL
@@ -45,15 +45,15 @@ class Storage(netcdf.Dataset):
     # Default caching for online use
 
     default_cache_sizes = {
-        'trajectories' : LRUCache(10000),
-        'snapshots' : LRUCache(50000),
-        'configurations' : LRUCache(10000),
-        'momentum' : LRUCache(10000),
-        'samples' : 25000,
+        'trajectories' : WeakLRUCache(10000),
+        'snapshots' : WeakLRUCache(50000),
+        'configurations' : WeakLRUCache(10000),
+        'momentum' : WeakLRUCache(10000),
+        'samples' : WeakLRUCache(25000),
         'samplesets' : False,
         'collectivevariables' : True,
         'pathmovers' : True,
-        'shootingpoints' : 10000,
+        'shootingpoints' : WeakLRUCache(10000),
         'shootingpointselectors' : True,
         'engines' : True,
         'pathsimulators' : True,
@@ -63,31 +63,31 @@ class Storage(netcdf.Dataset):
         'transitions' : True,
         'networks' : True,
         '_details' : False,
-        'steps' : 1000
+        'steps' : WeakLRUCache(1000)
     }
 
     # Analysis caching is very large to allow fast processing
 
     analysis_cache_sizes = {
-        'trajectories' : 100000,
-        'snapshots' : 500000,
-        'configurations' : 10000,
-        'momentum' : 10000,
-        'samples' : 250000,
-        'samplesets' : 100000,
+        'trajectories' : WeakLimitCache(100000),
+        'snapshots' : WeakLimitCache(500000),
+        'configurations' : WeakLRUCache(10000),
+        'momentum' : WeakLRUCache(10000),
+        'samples' : WeakLimitCache(250000),
+        'samplesets' : WeakLimitCache(100000),
         'collectivevariables' : True,
         'pathmovers' : True,
-        'shootingpoints' : 100000,
+        'shootingpoints' : WeakLimitCache(100000),
         'shootingpointselectors' : True,
         'engines' : True,
         'pathsimulators' : True,
         'volumes' : True,
         'ensembles' : True,
-        'pathmovechanges' : 250000,
+        'pathmovechanges' : WeakLimitCache(250000),
         'transitions' : True,
         'networks' : True,
         '_details' : False,
-        'steps' : 100000
+        'steps' : WeakLimitCache(100000)
     }
 
     # Production. No loading, only last 1000 steps and a few other objects for error
@@ -731,3 +731,4 @@ class AnalysisStorage(Storage):
         self.pathmovers.cache_all()
         self.pathmovechanges.cache_all()
         self.steps.cache_all()
+        
