@@ -1329,13 +1329,17 @@ def saveidx(func):
         if self.has_uid and hasattr(obj, '_uid') and obj._uid != '':
             self.storage.variables[self.identifier][idx] = obj._uid
 
-        if self.has_uid and hasattr(obj, '_name'):
+        if self.has_name and hasattr(obj, '_name'):
             #logger.debug('Object ' + str(type(obj)) + ' with IDX #' + str(idx))
             #logger.debug(repr(obj))
             #logger.debug("Cleaning up name; currently: " + str(obj._name))
             if obj._name is None:
-                # set name of object to empty string
-                obj.fix_name()
+                # this should not happen!
+                logger.debug("Nameable object has not been initialized correctly. Has None in _name")
+                raise AttributeError('_name needs to be a string for nameable objects.')
+                obj._name = ''
+
+            obj.fix_name()
 
             self.storage.variables[self.db + '_name'][idx] = obj._name
 
