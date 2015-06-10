@@ -7,7 +7,7 @@ import simtk.unit as u
 
 import logging
 
-from openpathsampling.tools import LRUCache
+from openpathsampling.tools import LRUCache, WeakLRUCache
 
 
 logger = logging.getLogger(__name__)
@@ -145,6 +145,7 @@ class ObjectStore(object):
         self._free = set()
         self._cached_all = False
         self._names_loaded = False
+        self.name_idx = dict()
 
         if dimension_units is not None:
             self.dimension_units = dimension_units
@@ -231,6 +232,8 @@ class ObjectStore(object):
             self.cache = caching
         elif type(caching) is int:
             self.cache = LRUCache(caching)
+
+        self.cache = WeakLRUCache()
 
     def idx(self, obj):
         """
@@ -397,10 +400,10 @@ class ObjectStore(object):
     def _update_name_in_cache(self, name, idx):
         if name != '':
             if name not in self.cache:
-                self.cache[name] = [idx]
+                self.name_idx[name] = [idx]
             else:
                 if idx not in self.cache[name]:
-                    self.cache[name].append(idx)
+                    self.name_idx[name].append(idx)
 
     def find(self, name):
         """
@@ -1197,56 +1200,36 @@ def loadcache(func):
 
         n_idx = idx
 
-        # if it is in the cache, return it, otherwise not :)
-        if idx in self.cache:
-
-            cc = self.cache[idx]
-            if type(cc) is int:
-                logger.debug('Found IDX #' + str(idx) + ' in cache under position #' + str(cc))
-
-                # here the cached value is actually only the index
-                # so it still needs to be loaded with the given index
-                # this happens when we want to load by name (str)
-                # and we need to actually load it
-                n_idx = cc
-            elif type(cc) is list:
-                logger.debug('Found IDX #' + str(idx) + ' in cache under positions #' + str(cc) + '. Loading first.')
-                n_idx = cc[0]
-
-            else:
-                logger.debug('Found IDX #' + str(idx) + ' in cache. Not loading!')
-
-                # we have a real object (hopefully) and just return from cache
-                n_idx = idx
-
-            if n_idx in self.cache:
-                # return from cache
-                return self.cache[n_idx]
-
-
-        elif type(idx) is str:
+        if type(idx) is str:
             # we want to load by name and it was not in cache.
             if self.has_name:
                 # since it is not found in the cache before. Refresh the cache
                 self.update_name_cache()
 
                 # and give it another shot
-                if idx in self.cache:
-                    if len(self.cache[idx]) > 1:
+                if idx in self.name_idx:
+                    if len(self.name_idx[idx]) > 1:
                         logger.debug('Found name "%s" multiple (%d) times in storage! Loading first!' % (idx, len(self.cache[idx])))
-                        n_idx = self.cache[idx][0]
-                    else:
-                        n_idx = self.cache[idx][0]
+
+                    n_idx = self.name_idx[idx][0]
                 else:
                     raise ValueError('str "' + idx + '" not found in storage')
-            else:
-                raise ValueError('str "' + idx + '" as indices are only allowed in named storage')
+        elif type(idx) is int:
+            pass
+        else:
+            raise ValueError('str "' + idx + '" as indices are only allowed in named storage')
+
+        # if it is in the cache, return it
+        if n_idx in self.cache:
+            logger.debug('Found IDX #' + str(idx) + ' in cache. Not loading!')
+            return self.cache[n_idx]
 
         # ATTENTION HERE!
         # Note that the wrapped function no self as first parameter. This is because we are wrapping a bound
         # method in an instance and this one is still bound - luckily - to the same 'self'. In a class decorator when wrapping
         # the class method directly it is not bound yet and so we need to include the self! Took me some time to
         # understand and figure that out
+
         obj = func(n_idx, *args, **kwargs)
         if obj is not None:
             # update cache there might have been a change due to naming
@@ -1264,7 +1247,6 @@ def savecache(func):
     """
     Decorator for save functions that add the basic cache handling
     """
-    # TODO: Mark as cached before delegation to avoid
     def inner(self, obj, idx = None, *args, **kwargs):
         # call the normal storage
         func(obj, idx, *args, **kwargs)
@@ -1380,7 +1362,7 @@ def saveidx(func):
                 # this should not happen!
                 logger.debug("Nameable object has not been initialized correctly. Has None in _name")
                 raise AttributeError('_name needs to be a string for nameable objects.')
-                obj._name = ''
+                # obj._name = ''
 
             obj.fix_name()
 

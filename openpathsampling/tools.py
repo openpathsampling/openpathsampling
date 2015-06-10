@@ -6,8 +6,11 @@ import numpy as np
 import openpathsampling as paths
 
 from collections import OrderedDict
+import weakref
 
 import sys
+
+
 def refresh_output(output_str):
     try:
         import IPython.display
@@ -227,3 +230,54 @@ class LRUCache(OrderedDict):
         if self.size_limit is not None:
             while len(self) > self.size_limit:
                 self.popitem(last=False)
+
+class WeakLRUCache(OrderedDict):
+    """
+    Implements a cache that keeps weak references to all elements
+
+    In addition it uses a simple Least Recently Used Cache to make sure a portion
+    of the last used elements are still present. Usually this number is 100.
+
+    """
+    def __init__(self, size_limit=100):
+        """
+        Parameters
+        ----------
+        size_limit : int
+            integer that defines the size of the LRU cache. Default is 100.
+        """
+        OrderedDict.__init__(self)
+
+        self._size_limit = size_limit
+        self._weak_cache = weakref.WeakValueDictionary()
+
+    @property
+    def size_limit(self):
+        return self._size_limit
+
+    def __getitem__(self, item):
+        try:
+            return OrderedDict.__getitem__(self, item)
+        except(KeyError):
+            return self._weak_cache[item]
+
+    @size_limit.setter
+    def size_limit(self, new_size):
+        if new_size < self.size_limit:
+          self._check_size_limit()
+
+        self._size_limit = new_size
+
+    def __setitem__(self, key, value, **kwargs) :
+        OrderedDict.__setitem__(self, key, value)
+        self._check_size_limit()
+
+    def _check_size_limit(self):
+        if self.size_limit is not None:
+            while len(self) > self.size_limit:
+                self._weak_cache.__setitem__(*self.popitem(last=False))
+
+class WeakCache(weakref.WeakValueDictionary):
+    """
+    Implements a cache that keeps weak references to all elements
+    """
