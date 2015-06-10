@@ -244,6 +244,8 @@ class PathMoveChange(TreeMixin, OPSObject):
         """
         pmc = self
         while pmc.subchange is not None:
+            if pmc.mover.is_canonical is True:
+                return pmc
             pmc = pmc.subchange
 
         return pmc
