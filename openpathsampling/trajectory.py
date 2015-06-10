@@ -252,8 +252,6 @@ class Trajectory(list):
         else:
             ret = list.__getitem__(self, index)
 
-        print type(ret)
-                
         if type(ret) is list:
             ret = Trajectory(ret)
             ret.atom_indices = self.atom_indices
