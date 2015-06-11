@@ -123,6 +123,13 @@ class testPathMover(object):
         pm._is_ensemble_change_mover = True
         assert_equal(pm.is_ensemble_change_mover, True)
 
+    def test_is_canonical(self):
+        pm = PathMover()
+        assert_equal(pm.is_canonical, None)
+        pm._is_canonical = True
+        assert_equal(pm.is_canonical, True)
+
+
 class testShootingMover(object):
     def setup(self):
         self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
@@ -730,6 +737,9 @@ class testMinusMover(object):
 
     def test_is_ensemble_change_mover(self):
         assert_equal(self.mover.is_ensemble_change_mover, True)
+
+    def test_is_canonical(self):
+        assert_equal(self.mover.is_canonical, True)
 
     def test_setup_sanity(self):
         # sanity checks to make sure that what we set up makes sense
