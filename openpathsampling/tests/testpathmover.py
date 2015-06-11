@@ -350,6 +350,16 @@ class testRandomChoiceMover(object):
     def test_is_ensemble_change_mover(self):
         assert_equal(self.mover.is_ensemble_change_mover, True)
 
+    def test_is_canonical(self):
+        for t in range(20):
+            change = self.mover.move(self.init_samp)
+            assert_not_equal(change.canonical.mover, self.mover)
+            canonical_submovers = 0
+            for submover in self.mover.movers:
+                if change.canonical.mover is submover:
+                    canonical_submovers += 1
+            assert_equal(canonical_submovers, 1)
+
     def test_random_choice(self):
         # test that both get selected, but that we always return only one
         # sample
@@ -791,6 +801,8 @@ class testMinusMover(object):
 
             for c in change:
                 assert_equal(c.accepted, True)
+
+            assert_equal(change.canonical.mover, self.mover)
 
             key = ""
             s_inner0_xvals = [s.coordinates[0,0] for s in s_inner[0].trajectory]
