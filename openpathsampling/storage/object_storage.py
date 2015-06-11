@@ -1337,7 +1337,6 @@ def saveidx(func):
                 # this should not happen!
                 logger.debug("Nameable object has not been initialized correctly. Has None in _name")
                 raise AttributeError('_name needs to be a string for nameable objects.')
-                obj._name = ''
 
             obj.fix_name()
 
