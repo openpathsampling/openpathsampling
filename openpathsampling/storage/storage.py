@@ -44,100 +44,107 @@ class Storage(netcdf.Dataset):
 
     # Default caching for online use
 
-    default_cache_sizes = {
-        'trajectories' : WeakLRUCache(10000),
-        'snapshots' : WeakLRUCache(50000),
-        'configurations' : WeakLRUCache(10000),
-        'momentum' : WeakLRUCache(10000),
-        'samples' : WeakLRUCache(25000),
-        'samplesets' : False,
-        'collectivevariables' : True,
-        'pathmovers' : True,
-        'shootingpoints' : WeakLRUCache(10000),
-        'shootingpointselectors' : True,
-        'engines' : True,
-        'pathsimulators' : True,
-        'volumes' : True,
-        'ensembles' : True,
-        'pathmovechanges' : False,
-        'transitions' : True,
-        'networks' : True,
-        '_details' : False,
-        'steps' : WeakLRUCache(1000)
-    }
+
+    @staticmethod
+    def default_cache_sizes():
+        return {
+            'trajectories' : WeakLRUCache(10000),
+            'snapshots' : WeakLRUCache(50000),
+            'configurations' : WeakLRUCache(10000),
+            'momentum' : WeakLRUCache(10000),
+            'samples' : WeakLRUCache(25000),
+            'samplesets' : False,
+            'collectivevariables' : True,
+            'pathmovers' : True,
+            'shootingpoints' : WeakLRUCache(10000),
+            'shootingpointselectors' : True,
+            'engines' : True,
+            'pathsimulators' : True,
+            'volumes' : True,
+            'ensembles' : True,
+            'pathmovechanges' : False,
+            'transitions' : True,
+            'networks' : True,
+            '_details' : False,
+            'steps' : WeakLRUCache(1000)
+        }
 
     # Analysis caching is very large to allow fast processing
 
-    analysis_cache_sizes = {
-        'trajectories' : WeakLimitCache(100000),
-        'snapshots' : WeakLimitCache(500000),
-        'configurations' : WeakLRUCache(10000),
-        'momentum' : WeakLRUCache(10000),
-        'samples' : WeakLimitCache(250000),
-        'samplesets' : WeakLimitCache(100000),
-        'collectivevariables' : True,
-        'pathmovers' : True,
-        'shootingpoints' : WeakLimitCache(100000),
-        'shootingpointselectors' : True,
-        'engines' : True,
-        'pathsimulators' : True,
-        'volumes' : True,
-        'ensembles' : True,
-        'pathmovechanges' : WeakLimitCache(250000),
-        'transitions' : True,
-        'networks' : True,
-        '_details' : False,
-        'steps' : WeakLimitCache(100000)
-    }
+    @staticmethod
+    def analysis_cache_sizes():
+        return {
+            'trajectories' : WeakLimitCache(100000),
+            'snapshots' : WeakLimitCache(500000),
+            'configurations' : WeakLRUCache(10000),
+            'momentum' : WeakLRUCache(10000),
+            'samples' : WeakLimitCache(250000),
+            'samplesets' : WeakLimitCache(100000),
+            'collectivevariables' : True,
+            'pathmovers' : True,
+            'shootingpoints' : WeakLimitCache(100000),
+            'shootingpointselectors' : True,
+            'engines' : True,
+            'pathsimulators' : True,
+            'volumes' : True,
+            'ensembles' : True,
+            'pathmovechanges' : WeakLimitCache(250000),
+            'transitions' : True,
+            'networks' : True,
+            '_details' : False,
+            'steps' : WeakLimitCache(100000)
+        }
 
     # Production. No loading, only last 1000 steps and a few other objects for error
     # testing
 
-    production_cache_sizes = {
-        'trajectories' : WeakLRUCache(),
-        'snapshots' : WeakLRUCache(),
-        'configurations' : WeakLRUCache(),
-        'momentum' : WeakLRUCache(),
-        'samples' : WeakLRUCache(),
-        'samplesets' : False,
-        'collectivevariables' : False,
-        'pathmovers' : False,
-        'shootingpoints' : False,
-        'shootingpointselectors' : False,
-        'engines' : False,
-        'pathsimulators' : False,
-        'volumes' : False,
-        'ensembles' : False,
-        'pathmovechanges' : False,
-        'transitions' : False,
-        'networks' : False,
-        '_details' : False,
-        'steps' : WeakCache()
-    }
+    def production_cache_sizes(self):
+        return {
+            'trajectories' : WeakLRUCache(),
+            'snapshots' : WeakLRUCache(),
+            'configurations' : WeakLRUCache(),
+            'momentum' : WeakLRUCache(),
+            'samples' : WeakLRUCache(),
+            'samplesets' : False,
+            'collectivevariables' : False,
+            'pathmovers' : False,
+            'shootingpoints' : False,
+            'shootingpointselectors' : False,
+            'engines' : False,
+            'pathsimulators' : False,
+            'volumes' : False,
+            'ensembles' : False,
+            'pathmovechanges' : False,
+            'transitions' : False,
+            'networks' : False,
+            '_details' : False,
+            'steps' : WeakCache()
+        }
 
     # No caching (so far only CVs internal storage is there)
 
-    no_cache_sizes = {
-        'trajectories' : False,
-        'snapshots' : False,
-        'configurations' : False,
-        'momentum' : False,
-        'samples' : False,
-        'samplesets' : False,
-        'collectivevariables' : False,
-        'pathmovers' : False,
-        'shootingpoints' : False,
-        'shootingpointselectors' : False,
-        'engines' : False,
-        'pathsimulators' : False,
-        'volumes' : False,
-        'ensembles' : False,
-        'pathmovechanges' : False,
-        'transitions' : False,
-        'networks' : False,
-        '_details' : False,
-        'steps' : False
-    }
+    def no_cache_sizes(self):
+        return {
+            'trajectories' : False,
+            'snapshots' : False,
+            'configurations' : False,
+            'momentum' : False,
+            'samples' : False,
+            'samplesets' : False,
+            'collectivevariables' : False,
+            'pathmovers' : False,
+            'shootingpoints' : False,
+            'shootingpointselectors' : False,
+            'engines' : False,
+            'pathsimulators' : False,
+            'volumes' : False,
+            'ensembles' : False,
+            'pathmovechanges' : False,
+            'transitions' : False,
+            'networks' : False,
+            '_details' : False,
+            'steps' : False
+        }
 
     def _register_storages(self, storage = None):
         """
@@ -190,7 +197,6 @@ class Storage(netcdf.Dataset):
         # special objects
         # TODO: remove query? Not really needed, is it?
 
-
         self.query = paths.storage.QueryStore(storage)
 
         self._objects = { name : getattr(self, name) for name in
@@ -225,7 +231,9 @@ class Storage(netcdf.Dataset):
         }
 
         if mode in available_cache_sizes:
-            cache_sizes = available_cache_sizes[mode]
+            # We need cache sizes as a function. Otherwise we will reuse the same
+            # caches for each storage and that will cause problems! Lots of...
+            cache_sizes = available_cache_sizes[mode]()
         else:
             raise ValueError(
                 "mode '" + mode + "' is not supported. Try one of " +
@@ -601,15 +609,16 @@ class Storage(netcdf.Dataset):
         -----
         This is mostly used to remove water but keep the data intact.
         """
+
         storage2 = Storage(filename=filename, template=self.template.subset(subset), mode='w')
 
         # Copy all configurations and momenta to new file in reduced form
-
-        for obj in self.configurations.iterator():
+        for obj in self.configurations:
 #            print obj._delayed_loading
 #            [ value(obj, self.configuration) for key, value in obj._delayed_loading.iteritems() ]
             storage2.configurations.save(obj.copy(subset), idx=obj.idx[self])
-        for obj in self.momentum.iterator():
+
+        for obj in self.momentum:
             storage2.momentum.save(obj.copy(subset), idx=obj.idx[self])
 
         # All other should be copied one to one. We do this explicitely although we could just copy all

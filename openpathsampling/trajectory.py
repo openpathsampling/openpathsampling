@@ -685,6 +685,5 @@ class Trajectory(list):
         This is taken from the configuration of the first frame.
         Use topology.md instead
         TODO: Should be removed
-        """        
-
+        """
         return self.topology.md

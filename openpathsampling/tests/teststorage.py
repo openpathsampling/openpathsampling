@@ -158,6 +158,9 @@ class testStorage(object):
         store.save(copy)
 
         store.save(self.traj)
+
+        print store.configurations[0].idx
+
         store.clone(filename=self.filename_clone, subset = self.options['solute_indices'])
 
         # clone the storage and reduce the number of atoms to only solute

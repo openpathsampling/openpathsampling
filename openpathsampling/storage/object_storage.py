@@ -298,6 +298,7 @@ class ObjectStore(object):
         # add a property idx that keeps the storage reference
         def _idx(this):
             if not hasattr(this, '_idx'):
+                print 'reset', this
                 this._idx = dict()
 
             return this._idx

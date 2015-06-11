@@ -7,27 +7,51 @@ from test_helpers import SimulationDuckPunch, data_filename
 import mdtraj as md
 import numpy as np
 
-import openpathsampling.trajectory as trajectory
-from openpathsampling.storage import Storage
 import openpathsampling.collectivevariable as op
+import openpathsampling as paths
+from simtk import unit as u
+import time
 
 from msmbuilder.featurizer import AtomPairsFeaturizer
+
+def setUp():
+    class Object():
+        pass
+    # Use the standard Alanine to generate snapshots to store for higher testing
+    global this
+
+    this = Object()
+
+    this.options = {'temperature' : 300.0 * u.kelvin,
+               'collision_rate' : 1.0 / u.picoseconds,
+               'timestep' : 1.0 * u.femtoseconds,
+               'nsteps_per_frame' : 1,
+               'n_frames_max' : 5,
+               'start_time' : time.time(),
+               'fn_initial_pdb' : data_filename("ala_small_traj.pdb"),
+               'platform' : 'fastest',
+               'solute_indices' : range(22),
+               'forcefield_solute' : 'amber96.xml',
+               'forcefield_solvent' : 'tip3p.xml'
+              }
+
+    # create a template snapshot
+    this.template_snapshot = paths.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
+
+    # and an openmm engine
+    this.engine = paths.OpenMMEngine(options=this.options, template=this.template_snapshot)
+    this.engine.initialized = True
+
+    # run a small trajectory of a few steps that can be used to save, etc...
+    this.traj = this.engine.generate(this.template_snapshot, running=[paths.LengthEnsemble(5).can_append])
+    this.mdtraj = this.traj.md()
 
 class testCV_Function(object):
 
     def setUp(self):
-        # setUp is just reading in some alanine dipeptide frames: this is an
-        # ugly hack
-        self.storage = Storage(
-                               filename=data_filename("ala_small_traj.nc"),
-                               mode="a"
-                              )
-
-        topol = md.load(data_filename("ala_small_traj.pdb")).top.to_openmm()
-        self.simulation = SimulationDuckPunch(topol, None)
-
-        trajectory.Trajectory.simulator = self
-        trajectory.Trajectory.storage = self.storage
+        # reuse objects everytime
+        for key, value in this.__dict__.iteritems():
+            setattr(self, key, value)
 
 
     def teardown(self):
@@ -39,11 +63,8 @@ class testCV_Function(object):
         dihedral_op = op.CV_MD_Function("psi", md.compute_dihedrals,
                                     indices=[psi_atoms])
 
-        mdtraj_version = self.storage.trajectories.load(0).md()
-        md_dihed = md.compute_dihedrals(mdtraj_version, indices=[psi_atoms])
-        traj = self.storage.trajectories.load(0)
-
-        my_dihed =  dihedral_op( traj )
+        md_dihed = md.compute_dihedrals(self.mdtraj, indices=[psi_atoms])
+        my_dihed =  dihedral_op(self.traj)
 
         np.testing.assert_allclose(md_dihed, my_dihed)
 
@@ -53,10 +74,8 @@ class testCV_Function(object):
         atom_pairs = [[0,1], [10,14]]
         atom_pair_op = op.CV_Featurizer("atom_pairs", AtomPairsFeaturizer, pair_indices=atom_pairs)
 
-        mdtraj_version = self.storage.trajectories.load(0).md()
-        md_distances = md.compute_distances(mdtraj_version, atom_pairs)
-        traj = self.storage.trajectories.load(0)
+        md_distances = md.compute_distances(self.mdtraj, atom_pairs)
 
-        my_distances = atom_pair_op( traj )
+        my_distances = atom_pair_op( self.traj )
 
         np.testing.assert_allclose(md_distances, my_distances)
