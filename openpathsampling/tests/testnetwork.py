@@ -10,6 +10,13 @@ import openpathsampling as paths
 from openpathsampling.analysis.network import *
 from openpathsampling import VolumeFactory as vf
 
+import logging
+
+logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+
+
 class testMSTISNetwork(object):
     def setup(self):
         xval = paths.CV_Function(name="xA", fcn=lambda s : s.xyz[0][0])

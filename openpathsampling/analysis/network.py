@@ -31,6 +31,13 @@ class TISNetwork(TransitionNetwork):
         # better with it
         pass
 
+    @property
+    def sampling_transitions(self):
+        try:
+            return self._sampling_transitions
+        except AttributeError:
+            return None
+
 
 #def join_mis_minus(minuses):
     #pass
@@ -100,11 +107,14 @@ class MSTISNetwork(TISNetwork):
         """
         super(MSTISNetwork, self).__init__()
         self.trans_info = trans_info
+        # build sampling transitions
         if not hasattr(self, "from_state"):
             self.from_state = {}
             self.outer_ensembles = []
             self.outers = []
             self.build_fromstate_transitions(trans_info)
+
+        self._sampling_transitions = self.from_state.values()
 
         # get the movers from all of our sampling-based transitions
         if not hasattr(self, "movers"):
@@ -113,9 +123,10 @@ class MSTISNetwork(TISNetwork):
 
         # by default, we set assign these values to all ensembles
         self.hist_args = {}
-        self.transitions = { }
 
-        #self.build_analysis_transitions()
+        self.transitions = {}
+        self.build_analysis_transitions()
+
 
     def build_analysis_transitions(self):
         # set up analysis transitions (not to be saved)
@@ -135,9 +146,6 @@ class MSTISNetwork(TISNetwork):
                 trans.ensembles = fromA.ensembles
                 trans.movers = fromA.movers
                 self.transitions[(stateA, stateB)] = trans
-
-
-
 
 #    def disallow(self, stateA, stateB):
 
@@ -241,7 +249,7 @@ class MSTISNetwork(TISNetwork):
             len(shooting_chooser.movers),
             len(repex_chooser.movers) / 2,
             len(rev_chooser.movers) / 2,
-            0.2 / len(shooting_chooser.movers),
+            0.2 *len(self.movers['minus']),
             len(self.outer_ensembles)
         ]
         self.root_mover = paths.RandomChoiceMover(
@@ -294,9 +302,8 @@ class MSTISNetwork(TISNetwork):
             transition.minus_move_flux(storage=storage, force=force)
             for stateB in self.from_state.keys():
                 if stateA != stateB:
-                    transitionAB = transition.copy()
-                    transitionAB.stateB = stateB
-                    self.transitions[(stateA, stateB)] = transitionAB
+                    analysis_trans = self.transitions[(stateA, stateB)]
+                    analysis_trans.copy_analysis_from(transition)
 
 
         for trans in self.transitions.values():
@@ -308,15 +315,250 @@ class MSTISNetwork(TISNetwork):
         return self._rate_matrix
 
 
-
-
 #def multiple_set_minus_switching(mistis, storage):
 
 class MISTISNetwork(TISNetwork):
-    def __init__(self, transitions):
+    """
+    Multiple interface set TIS network.
+
+    Attributes
+    ----------
+    input_transitions : list of TISTransition
+        the transitions given as input
+    """
+    # NOTE: input_transitions are in addition to the sampling_transitions
+    # and the transitions (analysis transitions)
+    def __init__(self, input_transitions):
         super(MISTISNetwork, self).__init__()
+        self.input_transitions = input_transitions
+
+        if not hasattr(self, 'x_sampling_transitions'):
+            self.build_sampling_transitions(input_transitions)
+        self._sampling_transitions = self.x_sampling_transitions
+
+        self.build_analysis_transitions()
+
+        if not hasattr(self, 'movers'):
+            self.movers = {}
+            self.build_movers()
+
+
+    def to_dict(self):
+        ret_dict = {
+            'movers' : self.movers,
+            'minus_ensembles' : self.minus_ensembles,
+            'ms_outers' : self.ms_outers,
+            'transition_pairs' : self.transition_pairs,
+            'x_sampling_transitions' : self.x_sampling_transitions,
+            'transition_to_sampling' : self.transition_to_sampling,
+            'input_transitions' : self.input_transitions
+        }
+        return ret_dict
+
+    @staticmethod
+    def from_dict(dct):
+        network = MISTISNetwork.__new__(MISTISNetwork)
+        network.movers = dct['movers']
+        network.minus_ensembles = dct['minus_ensembles']
+        network.ms_outers = dct['ms_outers']
+        network.transition_pairs = dct['transition_pairs']
+        network.transition_to_sampling = dct['transition_to_sampling']
+        network.x_sampling_transitions = dct['x_sampling_transitions']
+        network.__init__(dct['input_transitions'])
+        return network
+
+    @property
+    def all_ensembles(self):
+        all_ens = []
+        for t in self.sampling_transitions:
+            all_ens.extend(t.ensembles)
+        all_ens.extend(self.ms_outers)
+        all_ens.extend(self.minus_ensembles)
+        return all_ens
+
+    def build_sampling_transitions(self, transitions):
+        # use dictionaries so we only have one instance of each, even if the
+        # same state shows up in many transitions
+        self.initial_states = {trans.stateA : 1 for trans in transitions}.keys()
+        self.final_states = {trans.stateB : 1 for trans in transitions}.keys()
+
+        # identify transition pairs
+        for initial in self.initial_states:
+            transition_pair_dict = {}
+            for t1 in [t for t in transitions if t.stateA==initial]:
+                reverse_trans = None
+                for t2 in transitions:
+                    if t2.stateA==t1.stateB and t2.stateB==t1.stateA:
+                        transition_pair_dict[t1] = t2
+            for key in transition_pair_dict.keys():
+                value = transition_pair_dict[key]
+                if value in transition_pair_dict.keys():
+                    del transition_pair_dict[value]
+        self.transition_pairs = [(k, transition_pair_dict[k]) 
+                                 for k in transition_pair_dict.keys()]
+
+        all_in_pairs = reduce(list.__add__, map(lambda x: list(x), 
+                                                self.transition_pairs))
+
+        # build sampling transitions
+
+        # TODO: really, I'd like to FORBID all other states (change the
+        # ensemble to intersection with AllOutXEnsemble(other_states)), but
+        # for now, let's accept all other states -- the key is to stop the
+        # trajectory.  Forbidding all other states can be done once building
+        # the movers is better separated.
+        all_states = paths.join_volumes(self.initial_states + self.final_states)
+        self.transition_to_sampling = {}
+        for transition in transitions:
+            stateA = transition.stateA
+            stateB = transition.stateB
+            if transition not in all_in_pairs:
+                sample_trans = paths.RETISTransition(
+                    stateA=stateA,
+                    stateB=all_states,
+                    interfaces=transition.interfaces,
+                    orderparameter=transition.orderparameter
+                )
+            else:
+                sample_trans = paths.RETISTransition(
+                    stateA=stateA,
+                    stateB=all_states,
+                    interfaces=transition.interfaces[:-1],
+                    orderparameter=transition.orderparameter
+                )
+            sample_trans.name = "Sampling " + str(stateA) + "->" + str(stateB)
+            self.transition_to_sampling[transition] = sample_trans
+        self.x_sampling_transitions = self.transition_to_sampling.values()
+
+        # build non-transition interfaces 
+
+        # combining the MS-outer interfaces
+        self.ms_outers = []
+        for pair in self.transition_pairs:
+            self.ms_outers.append(paths.ensemble.join_ensembles(
+                [pair[0].ensembles[-1], pair[1].ensembles[-1]]
+            ))
+        
+        # combining the minus interfaces
+        self.minus_ensembles = []
+        for initial in self.initial_states:
+            innermosts = []
+            trans_with_initial_state = [
+                t for t in self.x_sampling_transitions
+                if t.stateA==initial
+            ]
+            for t1 in trans_with_initial_state:
+                innermosts.append(t1.interfaces[0])
+            minus = paths.MinusInterfaceEnsemble(
+                state_vol=initial,
+                innermost_vols=innermosts
+            )
+            self.minus_ensembles.append(minus)
+
+    def build_analysis_transitions(self):
+        self.transitions = {}
+        for trans in self.input_transitions:
+            sample_trans = self.transition_to_sampling[trans]
+            stateA = trans.stateA
+            stateB = trans.stateB
+            self.transitions[(stateA, stateB)] = paths.RETISTransition(
+                stateA=stateA,
+                stateB=stateB,
+                interfaces=sample_trans.interfaces,
+                orderparameter=sample_trans.orderparameter
+            )
+
+    def build_movers(self):
+        # make the movers
+        for initial in self.initial_states:
+            innermost_ensembles = []
+            trans_with_initial_state = [
+                t for t in self.sampling_transitions
+                if t.stateA==initial
+            ]
+            for t1 in trans_with_initial_state:
+                innermost_ensembles.append(t1.ensembles[0])
+            minus = [m for m in self.minus_ensembles if m.state_vol==initial][0]
+            minus_mover = paths.MinusMover(minus, innermost_ensembles)
+            try:
+                self.movers['minus'].append(minus_mover)
+            except KeyError:
+                self.movers['minus'] = [minus_mover]
+
+        for label in ['shooting', 'pathreversal', 'repex']:
+            self.movers[label] = get_movers_from_transitions(
+                label=label,
+                transitions=self.sampling_transitions
+            )
+
+        self.movers['msouter_repex'] = []
+        for (pair, outer) in zip(self.transition_pairs, self.ms_outers):
+            msouter_repex = [
+                paths.ReplicaExchangeMover(
+                    ensembles=[
+                        self.transition_to_sampling[pair_i].ensembles[-1], 
+                        outer
+                    ]
+                )
+                for pair_i in pair
+            ]
+            self.movers['msouter_repex'].extend(msouter_repex)
+        
+        self.movers['msouter_shooting'] = [
+            paths.OneWayShootingMover(
+                selector=paths.UniformSelector(),
+                ensembles=outer_ens
+            )
+            for outer_ens in self.ms_outers
+        ]
+        self.movers['msouter_pathreversal'] = [
+            paths.PathReversalMover(
+                ensembles=outer_ens
+            )
+            for outer_ens in self.ms_outers
+        ]
+
+        shooting_chooser = paths.RandomChoiceMover(
+            movers=self.movers['shooting'] + self.movers['msouter_shooting'],
+        )
+        shooting_chooser.name = "ShootingChooser"
+
+        repex_chooser = paths.RandomChoiceMover(
+            movers=self.movers['repex'],
+        )
+        repex_chooser.name = "RepExChooser"
+
+        rev_chooser = paths.RandomChoiceMover(
+            movers=(self.movers['pathreversal'] + 
+                    self.movers['msouter_pathreversal']),
+        )
+        rev_chooser.name = "ReversalChooser"
+
+        minus_chooser = paths.RandomChoiceMover(
+            movers=self.movers['minus'],
+        )
+        minus_chooser.name = "MinusChooser"
+        
+        msouter_chooser = paths.RandomChoiceMover(
+            movers=self.movers['msouter_repex'],
+        )
+        msouter_chooser.name = "MSOuterRepexChooser"
+        weights = [
+            len(shooting_chooser.movers),
+            len(repex_chooser.movers) / 2,
+            len(rev_chooser.movers) / 2,
+            0.2 *len(self.movers['minus']),
+            len(self.ms_outers)
+        ]
+        self.root_mover = paths.RandomChoiceMover(
+            movers=[shooting_chooser, repex_chooser, rev_chooser,
+                    minus_chooser, 
+                    msouter_chooser],
+            weights=weights
+        )
 
 
     def default_movers(self):
-        pass
+        return self.root_mover
+
 
