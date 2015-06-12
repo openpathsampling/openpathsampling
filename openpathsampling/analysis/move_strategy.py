@@ -42,6 +42,7 @@ class MoveStrategy(object):
             for t in self.network.sampling_transitions:
                 res_ensembles.append(t.ensembles)
         else:
+            # takes a list and makes it into list-of-lists
             res_ensembles = []
             elem_group = []
             for elem in ensembles:
@@ -150,4 +151,5 @@ class DefaultStrategy(MoveStrategy):
 
 class AllSetRepExStrategy(MoveStrategy):
     pass
+
 
