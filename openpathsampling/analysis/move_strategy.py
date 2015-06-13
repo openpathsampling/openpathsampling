@@ -1,6 +1,9 @@
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
 
+GROUPLEVEL = 10
+GLOBALLEVEL = 100
+
 class MoveStrategy(object):
     def __init__(self, network, scheme=None):
         self.network = network
@@ -61,11 +64,15 @@ class MoveStrategy(object):
         return res_ensembles
                     
 class ShootingSelectionStrategy(MoveStrategy):
-    def __init__(self, network, scheme=None, selector=None):
+    def __init__(self, scheme=None, selector=None, group="shooting", 
+                 replace=False):
         super(ShootingSelectionStrategy, self).__init__(network, scheme)
         if selector is None:
             selector = paths.UniformSelector()
         self.selector = selector
+        self.group = group
+        self.replace = replace
+        self.level = GROUPLEVEL
 
     def make_scheme(self, scheme=None, ensembles=None, groupname="shooting",
                     replace=True, chooser=True):
@@ -120,11 +127,16 @@ class NearestNeighborRepExStrategy(MoveStrategy):
             make_chooser(scheme, groupname, choosername)
         return scheme
 
-class SingleReplicaStrategy(MoveStrategy):
-    """
-    Converts ReplicaExchange to EnsembleHop, and changes overall structure
-    to SRTIS approach.
-    """
+class NthNearestNeighborRepExStrategy(MoveStrategy):
+    pass
+
+class AllSetRepExStrategy(MoveStrategy):
+    pass
+
+class SelectedPairsRepExStrategy(MoveStrategy):
+    pass
+
+class StateSwapRepExStrategy(MoveStrategy):
     pass
 
 class ReplicaExchangeStrategy(MoveStrategy):
@@ -133,12 +145,15 @@ class ReplicaExchangeStrategy(MoveStrategy):
     """
     pass
 
-class MSOuterRepExStrategy(MoveStrategy):
+class EnsembleHopStrategy(MoveStrategy):
     """
-    Takes a given network and makes the RepEx movers for the outermost
-    interface and MS-outer exchanges.
+    Converts ReplicaExchange to EnsembleHop.
     """
     pass
+
+class PathReversalStrategy(MoveStrategy):
+    pass
+
 
 class MinusMoveStrategy(MoveStrategy):
     """
@@ -146,10 +161,17 @@ class MinusMoveStrategy(MoveStrategy):
     """
     pass
 
+class SingleReplicaMinusMoveStrategy(MoveStrategy):
+    pass
+
 class DefaultStrategy(MoveStrategy):
     pass
 
-class AllSetRepExStrategy(MoveStrategy):
-    pass
 
+class SingleReplicaStrategy(MoveStrategy):
+    """
+    Converts ReplicaExchange to EnsembleHop, and changes overall structure
+    to SRTIS approach.
+    """
+    pass
 
