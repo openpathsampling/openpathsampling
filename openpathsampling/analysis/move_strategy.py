@@ -5,23 +5,17 @@ GROUPLEVEL = 10
 GLOBALLEVEL = 100
 
 class MoveStrategy(object):
-    def __init__(self, network, scheme=None):
+    def __init__(self, network, group, replace):
         self.network = network
-        self.scheme = scheme
+        self.group = group
+        self.replace = replace
 
-    def make_chooser(self, scheme, groupname, choosername=None):
+    def make_chooser(self, scheme, group, choosername=None):
         if choosername is None:
             choosername = groupname.capitalize()+"Chooser"
         chooser = paths.RandomChoiceMover(movers=scheme.movers[groupname])
         chooser.name = choosername
         scheme.include_movers([chooser], 'choosers', replace=False)
-
-    def get_scheme(self, scheme):
-        if scheme is None:
-            scheme = self.scheme
-        if scheme is None:
-            scheme = paths.MoveScheme(self.network)
-        return scheme
 
     def get_ensembles(self, ensembles):
         """
@@ -64,30 +58,30 @@ class MoveStrategy(object):
         return res_ensembles
                     
 class ShootingSelectionStrategy(MoveStrategy):
-    def __init__(self, scheme=None, selector=None, group="shooting", 
-                 replace=False):
-        super(ShootingSelectionStrategy, self).__init__(network, scheme)
+    def __init__(self, selector=None, group="shooting", replace=True, network=None):
+        super(ShootingSelectionStrategy, self).__init__(
+            network=network, group=group, replace=replace
+        )
         if selector is None:
             selector = paths.UniformSelector()
         self.selector = selector
-        self.group = group
-        self.replace = replace
         self.level = GROUPLEVEL
 
-    def make_scheme(self, scheme=None, ensembles=None, groupname="shooting",
-                    replace=True, chooser=True):
-        scheme = self.get_scheme(scheme)
+    def make_scheme(self, scheme=None, ensembles=None):
         ensemble_list = self.get_ensembles(ensembles)
         ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
         shooters = paths.PathMoverFactory.OneWayShootingSet(self.selector, ensembles)
-        scheme.include_movers(shooters, groupname, replace)
-        if chooser:
-            make_chooser(scheme, groupname, choosername)
+        scheme.include_movers(shooters, group, replace)
         return scheme
 
 class NearestNeighborRepExStrategy(MoveStrategy):
-    def make_scheme(self, scheme=None, ensembles=None, groupname="repex",
-                    replace=True, chooser=True):
+    def __init__(self, group="repex", replace=True, network=None):
+        super(ShootingSelectionStrategy, self).__init__(
+            network=network, group=group, replace=replace
+        )
+
+
+    def make_scheme(self, scheme=None, ensembles=None):
         """
         Make the NN replica exchange scheme among ordered ensembles.
 
@@ -113,7 +107,6 @@ class NearestNeighborRepExStrategy(MoveStrategy):
         MoveScheme :
             the resulting MoveScheme
         """
-        scheme = self.get_scheme(scheme)
         ensemble_list = self.get_ensembles(ensembles)
         movers = []
         for ens in ensemble_list:

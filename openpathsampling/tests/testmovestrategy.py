@@ -25,15 +25,11 @@ class testMoveStrategy(object):
             (self.stateA, interfacesA, "A", cvA),
             (self.stateB, interfacesB, "B", cvB)
         ])
-        self.strategy = MoveStrategy(self.network)
+        self.strategy = MoveStrategy(network=self.network, group="test",
+                                     replace=True)
 
     def test_make_chooser(self):
         raise SkipTest
-
-    def test_get_scheme(self):
-        scheme1 = self.strategy.get_scheme(None)
-        scheme2 = self.strategy.get_scheme(scheme1)
-        assert_equal(scheme1, scheme2)
 
     def test_get_ensembles(self):
         # load up the relevant ensembles to test against
