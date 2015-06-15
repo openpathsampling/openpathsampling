@@ -6,7 +6,52 @@ import sys
 class MoveScheme(OPSNamed):
     def __init__(self, network):
         self.movers = network.movers
-        self._mover_acceptance = {}
+        self.network = network
+        self._mover_acceptance = {} # used in analysis
+        self.strategies = {}
+
+    def append(self, strategies, levels=None):
+        """
+        Adds new strategies to this scheme, organized by `level`.
+
+        Parameters
+        ----------
+        strategies : MoveStrategy or list of MoveStrategy
+            strategies to add to this scheme
+        levels : integer or list of integer or None
+            levels to associate with each strategy. If None, strategy.level.
+        """
+        # first we clean up the input: strategies is a list of MoveStrategy;
+        # levels is a list of integers
+        try:
+            strategies = list(strategies)
+        except TypeError:
+            strategies = [strategies]
+
+        if levels is not None:
+            try:
+                levels = list(levels)
+            except TypeError:
+                levels = [levels]*len(strategies)
+        else:
+            levels = []
+            for strat in strategies:
+                levels.append(strat.level)
+        
+        # now we put everything into appropriate dictionaries
+        for strat, lev in zip(strategies, levels):
+            try:
+                self.strategies[lev].append(strat)
+            except KeyError:
+                self.strategies[lev] = [strat]
+
+    def move_decision_tree(self):
+        for lev in sorted(self.strategies.keys()):
+            for strat in self.strategies[lev]:
+                strat.network = self.network
+                strat.make_scheme(self)
+        # return self.???
+
 
     def include_movers(self, movers, groupname, replace):
         if replace:

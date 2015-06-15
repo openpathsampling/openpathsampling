@@ -5,11 +5,12 @@ GROUPLEVEL = 10
 GLOBALLEVEL = 100
 
 class MoveStrategy(object):
-    def __init__(self, network, group, replace):
+    def __init__(self, group, replace, network):
         self.network = network
         self.group = group
         self.replace = replace
 
+    # TODO: is this really going to be used yet?
     def make_chooser(self, scheme, group, choosername=None):
         if choosername is None:
             choosername = groupname.capitalize()+"Chooser"
@@ -58,7 +59,7 @@ class MoveStrategy(object):
         return res_ensembles
                     
 class ShootingSelectionStrategy(MoveStrategy):
-    def __init__(self, selector=None, group="shooting", replace=True, network=None):
+    def __init__(self, selector=None, ensembles=None, group="shooting", replace=True, network=None):
         super(ShootingSelectionStrategy, self).__init__(
             network=network, group=group, replace=replace
         )
@@ -66,9 +67,10 @@ class ShootingSelectionStrategy(MoveStrategy):
             selector = paths.UniformSelector()
         self.selector = selector
         self.level = GROUPLEVEL
+        self.ensembles = ensembles
 
-    def make_scheme(self, scheme=None, ensembles=None):
-        ensemble_list = self.get_ensembles(ensembles)
+    def make_scheme(self, scheme=None):
+        ensemble_list = self.get_ensembles(self.ensembles)
         ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
         shooters = paths.PathMoverFactory.OneWayShootingSet(self.selector, ensembles)
         scheme.include_movers(shooters, group, replace)
@@ -79,7 +81,6 @@ class NearestNeighborRepExStrategy(MoveStrategy):
         super(ShootingSelectionStrategy, self).__init__(
             network=network, group=group, replace=replace
         )
-
 
     def make_scheme(self, scheme=None, ensembles=None):
         """
@@ -107,6 +108,8 @@ class NearestNeighborRepExStrategy(MoveStrategy):
         MoveScheme :
             the resulting MoveScheme
         """
+        if scheme is not None and self.network is None:
+            self.network = scheme.network
         ensemble_list = self.get_ensembles(ensembles)
         movers = []
         for ens in ensemble_list:
@@ -158,7 +161,13 @@ class SingleReplicaMinusMoveStrategy(MoveStrategy):
     pass
 
 class DefaultStrategy(MoveStrategy):
-    pass
+    def __init__(self, ensembles=None, network=None):
+        shooting = ShootingSelectionStrategy(
+            selector=paths.UniformShooting(),
+            network=network
+        )
+        pass
+
 
 
 class SingleReplicaStrategy(MoveStrategy):
