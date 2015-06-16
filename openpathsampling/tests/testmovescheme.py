@@ -64,10 +64,41 @@ class testMoveScheme(object):
 
 
     def test_append_individuals_custom_levels(self):
-        raise SkipTest
+        shootstrat = OneWayShootingStrategy()
+        repexstrat = NearestNeighborRepExStrategy()
+        defaultstrat = DefaultStrategy()
+        assert_equal(len(self.scheme.strategies.keys()), 0)
+        self.scheme.append(shootstrat, 60)
+        self.scheme.append(repexstrat, 60)
+        self.scheme.append(defaultstrat, 60)
 
-    def test_append_groups_custom_levels(self):
-        raise SkipTest
+        strats = self.scheme.strategies
+        assert_equal(len(strats.keys()), 1)
+        assert_items_equal(strats[60], [shootstrat, repexstrat, defaultstrat])
+
+    def test_append_groups_same_custom_level(self):
+        shootstrat = OneWayShootingStrategy()
+        repexstrat = NearestNeighborRepExStrategy()
+        defaultstrat = DefaultStrategy()
+        assert_equal(len(self.scheme.strategies.keys()), 0)
+        self.scheme.append([shootstrat, repexstrat, defaultstrat], 60)
+
+        strats = self.scheme.strategies
+        assert_equal(len(strats.keys()), 1)
+        assert_items_equal(strats[60], [shootstrat, repexstrat, defaultstrat])
+
+    def test_append_group_different_custom_levels(self):
+        shootstrat = OneWayShootingStrategy()
+        repexstrat = NearestNeighborRepExStrategy()
+        defaultstrat = DefaultStrategy()
+        assert_equal(len(self.scheme.strategies.keys()), 0)
+        self.scheme.append([shootstrat, repexstrat, defaultstrat], 
+                           [45, 55, 65])
+
+        strats = self.scheme.strategies
+        assert_equal(len(strats.keys()), 3)
+        for (k, v) in [(45, shootstrat), (55, repexstrat), (65, defaultstrat)]:
+            assert_in(v, strats[k])
 
     def test_include_movers(self):
         if self.scheme.movers == {}:
