@@ -5,7 +5,8 @@ import sys
 
 class MoveScheme(OPSNamed):
     def __init__(self, network):
-        self.movers = network.movers
+        self.movers = {}
+        self.movers = network.movers # TODO: legacy
         self.network = network
         self._mover_acceptance = {} # used in analysis
         self.strategies = {}

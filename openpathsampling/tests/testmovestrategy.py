@@ -3,8 +3,8 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import true_func, assert_equal_array_array, make_1d_traj
 
-
 import openpathsampling as paths
+from openpathsampling.analysis.move_scheme import MoveScheme
 from openpathsampling.analysis.move_strategy import *
 from openpathsampling import VolumeFactory as vf
 
@@ -13,7 +13,7 @@ logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 
-class testMoveStrategy(object):
+class MoveStrategyTestSetup(object):
     def setup(self):
         cvA = paths.CV_Function(name="xA", fcn=lambda s : s.xyz[0][0])
         cvB = paths.CV_Function(name="xA", fcn=lambda s : -s.xyz[0][0])
@@ -25,13 +25,12 @@ class testMoveStrategy(object):
             (self.stateA, interfacesA, "A", cvA),
             (self.stateB, interfacesB, "B", cvB)
         ])
+
+
+class testMoveStrategy(MoveStrategyTestSetup):
+    def test_get_ensembles(self):
         self.strategy = MoveStrategy(network=self.network, group="test",
                                      replace=True)
-
-    def test_make_chooser(self):
-        raise SkipTest
-
-    def test_get_ensembles(self):
         # load up the relevant ensembles to test against
         transition_ensembles = []
         for transition in self.network.sampling_transitions:
@@ -53,8 +52,11 @@ class testMoveStrategy(object):
         ensembles = self.strategy.get_ensembles(weird_ens_list)
         assert_equal(ensembles, [[ensA[0]], [ensA[1]], [extra_ens]])
 
-class testShootingSelectionStrategy(object):
-    pass
+class testOneWayShootingStrategy(MoveStrategyTestSetup):
+    def test_scheme(self):
+        strategy = OneWayShootingStrategy()
+        scheme = MoveScheme(self.network)
+        raise SkipTest
 
 class testNearestNeighborRepExStrategy(object):
     pass

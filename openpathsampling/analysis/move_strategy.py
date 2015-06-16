@@ -58,9 +58,9 @@ class MoveStrategy(object):
 
         return res_ensembles
                     
-class ShootingSelectionStrategy(MoveStrategy):
+class OneWayShootingStrategy(MoveStrategy):
     def __init__(self, selector=None, ensembles=None, group="shooting", replace=True, network=None):
-        super(ShootingSelectionStrategy, self).__init__(
+        super(OneWayShootingStrategy, self).__init__(
             network=network, group=group, replace=replace
         )
         if selector is None:
@@ -78,7 +78,7 @@ class ShootingSelectionStrategy(MoveStrategy):
 
 class NearestNeighborRepExStrategy(MoveStrategy):
     def __init__(self, group="repex", replace=True, network=None):
-        super(ShootingSelectionStrategy, self).__init__(
+        super(NearestNeighborRepExStrategy, self).__init__(
             network=network, group=group, replace=replace
         )
 
@@ -94,7 +94,7 @@ class NearestNeighborRepExStrategy(MoveStrategy):
             ordered list of the ensembles; replica exchange moves are made
             for each pair of neighbors in the list. In None, defaults to
             using per-transition ensembles sets from `self.network`
-        groupname : string ("repex")
+        group : string ("repex")
             name of the mover group for this. 
         replace : bool (False)
             Whether to replace the existing mover group of this name. If
