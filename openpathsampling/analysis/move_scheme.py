@@ -53,14 +53,33 @@ class MoveScheme(OPSNamed):
         # return self.???
 
 
-    def include_movers(self, movers, groupname, replace):
+    def include_movers(self, movers, group, replace):
         if replace:
-            self.movers[groupname] = movers
+            try:
+                n_existing = len(self.movers[group])
+            except KeyError:
+                # if the group doesn't exist, set it to these movers
+                self.movers[group] = movers
+            else:
+                # Note that the following means that if the list of new
+                # movers includes two movers with the same sig, the second
+                # will overwrite the first. This is desired behavior.
+                existing_sigs = {self.movers[group][i].ensemble_signature : i
+                                 for i in range(n_existing)}
+                # For each mover, if its signature exists in the existing
+                # movers, replace the existing. Otherwise, append it to the
+                # list.
+                for mover in movers:
+                    m_sig = mover.ensemble_signature
+                    if m_sig in existing_sigs.keys():
+                        self.movers[group][existing_sigs[m_sig]] = mover
+                    else:
+                        self.movers[group].append(mover)
         else:
             try:
-                self.movers[groupname].extend(movers)
+                self.movers[group].extend(movers)
             except KeyError:
-                self.movers[groupname] = movers
+                self.movers[group] = movers
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, indentation):
