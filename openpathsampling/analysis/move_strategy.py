@@ -1,10 +1,13 @@
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
 
-GROUPLEVEL = 10
+MOVERLEVEL = 10
+GROUPLEVEL = 50
+SUPERGROUPLEVEL = 75
 GLOBALLEVEL = 100
 
 class MoveStrategy(object):
+    level = "undefined"
     def __init__(self, group, replace, network):
         self.network = network
         self.group = group
@@ -59,6 +62,7 @@ class MoveStrategy(object):
         return res_ensembles
                     
 class OneWayShootingStrategy(MoveStrategy):
+    level = MOVERLEVEL
     def __init__(self, selector=None, ensembles=None, group="shooting", replace=True, network=None):
         super(OneWayShootingStrategy, self).__init__(
             network=network, group=group, replace=replace
@@ -66,7 +70,6 @@ class OneWayShootingStrategy(MoveStrategy):
         if selector is None:
             selector = paths.UniformSelector()
         self.selector = selector
-        self.level = GROUPLEVEL
         self.ensembles = ensembles
 
     def make_scheme(self, scheme=None):
@@ -77,6 +80,7 @@ class OneWayShootingStrategy(MoveStrategy):
         return scheme
 
 class NearestNeighborRepExStrategy(MoveStrategy):
+    level = GROUPLEVEL
     def __init__(self, group="repex", replace=True, network=None):
         super(NearestNeighborRepExStrategy, self).__init__(
             network=network, group=group, replace=replace
@@ -124,30 +128,36 @@ class NearestNeighborRepExStrategy(MoveStrategy):
         return scheme
 
 class NthNearestNeighborRepExStrategy(MoveStrategy):
+    level=GROUPLEVEL
     pass
 
 class AllSetRepExStrategy(MoveStrategy):
+    level=GROUPLEVEL
     pass
 
 class SelectedPairsRepExStrategy(MoveStrategy):
+    level=GROUPLEVEL
     pass
 
 class StateSwapRepExStrategy(MoveStrategy):
     pass
 
 class ReplicaExchangeStrategy(MoveStrategy):
+    level=SUPERGROUPLEVEL
     """
     Converts EnsembleHops to ReplicaExchange (single replica to default)
     """
     pass
 
 class EnsembleHopStrategy(MoveStrategy):
+    level=SUPERGROUPLEVEL
     """
     Converts ReplicaExchange to EnsembleHop.
     """
     pass
 
 class PathReversalStrategy(MoveStrategy):
+    level=GROUPLEVEL
     pass
 
 
@@ -161,9 +171,9 @@ class SingleReplicaMinusMoveStrategy(MoveStrategy):
     pass
 
 class DefaultStrategy(MoveStrategy):
+    level = GLOBALLEVEL
     def __init__(self, ensembles=None, network=None):
-        shooting = ShootingSelectionStrategy(
-            selector=paths.UniformShooting(),
+        shooting = OneWayShootingStrategy(
             network=network
         )
         pass

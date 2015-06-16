@@ -1,5 +1,5 @@
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises)
+                        assert_almost_equal, assert_in, raises)
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import true_func, assert_equal_array_array, make_1d_traj
 
@@ -7,7 +7,9 @@ import openpathsampling as paths
 from openpathsampling import VolumeFactory as vf
 from openpathsampling.analysis.move_scheme import *
 from openpathsampling.analysis.move_strategy import (
-    MoveStrategy, OneWayShootingStrategy, NearestNeighborRepExStrategy
+    MOVERLEVEL, GROUPLEVEL, SUPERGROUPLEVEL, GLOBALLEVEL,
+    MoveStrategy, OneWayShootingStrategy, NearestNeighborRepExStrategy,
+    DefaultStrategy
 )
 
 import logging
@@ -35,10 +37,31 @@ class testMoveScheme(object):
     def test_append_individuals_default_levels(self):
         shootstrat = OneWayShootingStrategy()
         repexstrat = NearestNeighborRepExStrategy()
-        raise SkipTest
+        defaultstrat = DefaultStrategy()
+        assert_equal(len(self.scheme.strategies.keys()), 0)
+        self.scheme.append(shootstrat)
+        self.scheme.append(repexstrat)
+        self.scheme.append(defaultstrat)
+
+        strats = self.scheme.strategies
+        assert_equal(len(strats.keys()), 3)
+        for (k, v) in [(MOVERLEVEL, shootstrat), (GROUPLEVEL, repexstrat),
+                       (GLOBALLEVEL, defaultstrat)]:
+            assert_in(v, strats[k])
 
     def test_append_groups_default_levels(self):
-        raise SkipTest
+        shootstrat = OneWayShootingStrategy()
+        repexstrat = NearestNeighborRepExStrategy()
+        defaultstrat = DefaultStrategy()
+        assert_equal(len(self.scheme.strategies.keys()), 0)
+        self.scheme.append([shootstrat, repexstrat, defaultstrat])
+
+        strats = self.scheme.strategies
+        assert_equal(len(strats.keys()), 3)
+        for (k, v) in [(MOVERLEVEL, shootstrat), (GROUPLEVEL, repexstrat),
+                       (GLOBALLEVEL, defaultstrat)]:
+            assert_in(v, strats[k])
+
 
     def test_append_individuals_custom_levels(self):
         raise SkipTest
