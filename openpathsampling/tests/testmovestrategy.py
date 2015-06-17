@@ -110,3 +110,10 @@ class testNearestNeighborRepExStrategy(MoveStrategyTestSetup):
                      ((ens1[0], ens1[1]), (ens1[0], ens1[1])))
         assert_equal_array_array(movers[3].ensemble_signature,
                      ((ens1[1], ens1[2]), (ens1[1], ens1[2])))
+
+class testDefaultMover(MoveStrategyTestSetup):
+    def test_make_chooser(self):
+        raise SkipTest
+
+    def test_make_movers(self):
+        raise SkipTest

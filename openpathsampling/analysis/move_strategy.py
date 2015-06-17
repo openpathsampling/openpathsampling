@@ -64,14 +64,6 @@ class MoveStrategy(object):
         elif level_type == levels.MOVER:
             self.replace_movers = replace
 
-    # TODO: is this really going to be used yet?
-    def make_chooser(self, scheme, group, choosername=None):
-        if choosername is None:
-            choosername = groupname.capitalize()+"Chooser"
-        chooser = paths.RandomChoiceMover(movers=scheme.movers[groupname])
-        chooser.name = choosername
-        scheme.include_movers([chooser], 'choosers', replace=False)
-
     def get_ensembles(self, ensembles):
         """
         Regularizes ensemble input to list of list.
@@ -200,11 +192,39 @@ class SingleReplicaMinusMoveStrategy(MoveStrategy):
 
 class DefaultStrategy(MoveStrategy):
     _level = levels.GLOBAL
-    def __init__(self, ensembles=None, network=None):
-        shooting = OneWayShootingStrategy(
-            network=network
-        )
+    def __init__(self, ensembles=None, group=None, replace=True,
+                 network=None):
+        self.weight_adjustment = {
+            'shooting' : 1.0
+        }
         pass
+
+    def make_chooser(self, scheme, group, choosername=None):
+        if choosername is None:
+            choosername = groupname.capitalize()+"Chooser"
+        chooser = paths.RandomChoiceMover(movers=scheme.movers[groupname])
+        chooser.name = choosername
+        return chooser
+
+    def make_movers(self, scheme):
+        if self.network is None:
+            self.network = scheme.network
+        choosers = []
+        weights = []
+        for group in scheme.movers.keys():
+            chooser.append(self.make_chooser(scheme, group))
+            try:
+                weight_adjustment = self.weight_adjustment[group]
+            except KeyError:
+                weight_adjustment = 1.0
+            weights.append(len(scheme.movers[group])*weight_adjustment)
+        root_chooser = paths.RandomChoiceMover(movers=choosers,
+                                               weights=weights)
+        root_chooser.name = "RootMover"
+        scheme.root_mover = root_chooser
+        return root_chooser
+
+
 
 
 

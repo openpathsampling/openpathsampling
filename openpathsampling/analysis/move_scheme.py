@@ -1,6 +1,8 @@
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
 
+from openpathsampling.analysis.move_strategy import levels
+
 import sys
 
 class MoveScheme(OPSNamed):
@@ -49,14 +51,16 @@ class MoveScheme(OPSNamed):
     def move_decision_tree(self):
         for lev in sorted(self.strategies.keys()):
             for strat in self.strategies[lev]:
-                strat.network = self.network
-                strat.make_scheme(self)
-        # return self.???
+                self.apply_strategy(strat)
+        return self.root_mover
 
     def apply_strategy(self, strategy):
         movers = strategy.make_movers(self)
         group = strategy.group
-        if strategy.replace_signatures:
+        if levels.level_type(strategy.level) == levels.GLOBAL:
+            # shortcut out for the global-level stuff
+            self.root_mover = movers
+        elif strategy.replace_signatures:
             self.movers[group] = movers
         elif strategy.replace_movers:
             try:

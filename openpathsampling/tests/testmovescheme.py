@@ -142,19 +142,16 @@ class testMoveScheme(object):
 
         shoot_strat_3.replace_signatures = True
         self.scheme.apply_strategy(shoot_strat_3)
-        assert_items_equal(self.scheme.movers.keys(), ['shooting'])
         assert_equal(len(self.scheme.movers['shooting']), 4)
 
         self.scheme.movers = {}
         shoot_strat_1.set_replace(True)
         self.scheme.apply_strategy(shoot_strat_1)
-        assert_items_equal(self.scheme.movers.keys(), ['shooting'])
         assert_equal(len(self.scheme.movers['shooting']), 2)
         old_movers = copy.copy(self.scheme.movers['shooting'])
 
         shoot_strat_3.replace_signatures = False
         self.scheme.apply_strategy(shoot_strat_3)
-        assert_items_equal(self.scheme.movers.keys(), ['shooting'])
         assert_equal(len(self.scheme.movers['shooting']), 4)
         new_movers = self.scheme.movers['shooting']
         for (o, n) in zip(old_movers, new_movers):
