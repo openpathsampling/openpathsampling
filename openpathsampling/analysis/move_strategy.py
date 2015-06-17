@@ -128,6 +128,9 @@ class OneWayShootingStrategy(MoveStrategy):
         return shooters
 
 class NearestNeighborRepExStrategy(MoveStrategy):
+    """
+    Make the NN replica exchange scheme among ordered ensembles.
+    """
     _level = levels.SIGNATURE
     def __init__(self, ensembles=None, group="repex", replace=True,
                  network=None):
@@ -143,43 +146,10 @@ class NearestNeighborRepExStrategy(MoveStrategy):
         for ens in ensemble_list:
             movers.extend(
                 [paths.ReplicaExchangeMover(ensembles=[[ens[i], ens[i+1]]])
-                 for i in range(len(ensembles)-1)]
+                 for i in range(len(ens)-1)]
             )
         return movers
 
-    def make_scheme(self, scheme=None, ensembles=None):
-        """
-        Make the NN replica exchange scheme among ordered ensembles.
-
-        Parameters
-        ----------
-        scheme : MoveScheme (None)
-            scheme to start from. If `None`, use self.scheme
-        ensembles : list of Ensemble (None)
-            ordered list of the ensembles; replica exchange moves are made
-            for each pair of neighbors in the list. In None, defaults to
-            using per-transition ensembles sets from `self.network`
-        group : string ("repex")
-            name of the mover group for this. 
-        replace : bool (False)
-            Whether to replace the existing mover group of this name. If
-            False, appends moves to the existing group.
-        chooser : bool (True)
-            Whether to create a default chooser (RandomChoiceMover) for this
-            group. The name of the chooser would be "GroupnameChooser".
-
-        Returns
-        -------
-        MoveScheme :
-            the resulting MoveScheme
-        """
-        if scheme is not None and self.network is None:
-            self.network = scheme.network
-        movers = self.make_movers()
-        scheme.include_movers(movers, groupname, replace)
-        if chooser:
-            make_chooser(scheme, groupname, choosername)
-        return scheme
 
 class NthNearestNeighborRepExStrategy(MoveStrategy):
     _level = levels.SIGNATURE

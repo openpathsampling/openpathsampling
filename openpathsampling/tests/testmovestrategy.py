@@ -19,8 +19,10 @@ class MoveStrategyTestSetup(object):
         cvB = paths.CV_Function(name="xA", fcn=lambda s : -s.xyz[0][0])
         self.stateA = paths.LambdaVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.LambdaVolume(cvB, float("-inf"), -0.5)
-        interfacesA = vf.LambdaVolumeSet(cvA, float("-inf"), [-0.5, -0.3, 0.0])
-        interfacesB = vf.LambdaVolumeSet(cvB, float("-inf"), [-0.5, -0.3, 0.0])
+        interfacesA = vf.LambdaVolumeSet(cvA, float("-inf"), 
+                                         [-0.5, -0.3, -0.1, 0.0])
+        interfacesB = vf.LambdaVolumeSet(cvB, float("-inf"), 
+                                         [-0.5, -0.3, -0.1, 0.0])
         self.network = paths.MSTISNetwork([
             (self.stateA, interfacesA, "A", cvA),
             (self.stateB, interfacesB, "B", cvB)
@@ -37,9 +39,9 @@ class testMoveStrategy(MoveStrategyTestSetup):
             transition_ensembles.append(transition.ensembles)
         assert_equal(len(transition_ensembles), 2)
         for ens_set in transition_ensembles:
-            assert_equal(len(ens_set), 2)
+            assert_equal(len(ens_set), 3)
         ensA = self.network.from_state[self.stateA].ensembles
-        assert_equal(len(ensA), 2)
+        assert_equal(len(ensA), 3)
         # if you error before this, something is wrong in setup
         ensembles = self.strategy.get_ensembles(None)
         assert_equal(ensembles, transition_ensembles)
@@ -57,10 +59,24 @@ class testOneWayShootingStrategy(MoveStrategyTestSetup):
         strategy = OneWayShootingStrategy()
         scheme = MoveScheme(self.network)
         movers = strategy.make_movers(scheme)
-        assert_equal(len(movers), 4)
+        assert_equal(len(movers), 6)
         for mover in movers:
             assert_equal(type(mover), paths.OneWayShootingMover)
             assert_equal(type(mover.selector), paths.UniformSelector)
 
-class testNearestNeighborRepExStrategy(object):
-    pass
+class testNearestNeighborRepExStrategy(MoveStrategyTestSetup):
+    def test_make_movers(self):
+        strategy = NearestNeighborRepExStrategy()
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        assert_equal(len(movers), 4)
+        ens0 = self.network.sampling_transitions[0].ensembles
+        ens1 = self.network.sampling_transitions[1].ensembles
+        assert_equal_array_array(movers[0].ensemble_signature,
+                     ((ens0[0], ens0[1]), (ens0[0], ens0[1])))
+        assert_equal_array_array(movers[1].ensemble_signature,
+                     ((ens0[1], ens0[2]), (ens0[1], ens0[2])))
+        assert_equal_array_array(movers[2].ensemble_signature,
+                     ((ens1[0], ens1[1]), (ens1[0], ens1[1])))
+        assert_equal_array_array(movers[3].ensemble_signature,
+                     ((ens1[1], ens1[2]), (ens1[1], ens1[2])))
