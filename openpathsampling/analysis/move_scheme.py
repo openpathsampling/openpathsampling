@@ -57,7 +57,7 @@ class MoveScheme(OPSNamed):
         movers = strategy.make_movers(self)
         group = strategy.group
         if strategy.replace_signatures:
-            self.movers[strategy.group] = movers
+            self.movers[group] = movers
         elif strategy.replace_movers:
             try:
                 n_existing = len(self.movers[group])
@@ -68,16 +68,25 @@ class MoveScheme(OPSNamed):
                 # Note that the following means that if the list of new
                 # movers includes two movers with the same sig, the second
                 # will overwrite the first. This is desired behavior. On the
-                # other hand, if the list of movers already has two 
-                existing_sigs = {self.movers[group][i].ensemble_signature : i
-                                 for i in range(n_existing)}
+                # other hand, if the list of old movers in the group already
+                # has two movers with the same signature, then both should
+                # be overwritten.
+                existing_sigs = {}
+                for i in range(n_existing):
+                    key = self.movers[group][i].ensemble_signature
+                    try:
+                        existing_sigs[key].append(i)
+                    except KeyError:
+                        existing_sigs[key] = [i]
+
                 # For each mover, if its signature exists in the existing
                 # movers, replace the existing. Otherwise, append it to the
                 # list.
                 for mover in movers:
                     m_sig = mover.ensemble_signature
                     if m_sig in existing_sigs.keys():
-                        self.movers[group][existing_sigs[m_sig]] = mover
+                        for idx in existing_sigs[m_sig]:
+                            self.movers[group][idx] = mover
                     else:
                         self.movers[group].append(mover)
         else:

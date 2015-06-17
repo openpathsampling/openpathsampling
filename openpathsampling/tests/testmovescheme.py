@@ -3,6 +3,8 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import true_func, assert_equal_array_array, make_1d_traj
 
+import copy
+
 import openpathsampling as paths
 from openpathsampling import VolumeFactory as vf
 from openpathsampling.analysis.move_scheme import *
@@ -20,7 +22,7 @@ logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 class testMoveScheme(object):
     def setup(self):
         cvA = paths.CV_Function(name="xA", fcn=lambda s : s.xyz[0][0])
-        cvB = paths.CV_Function(name="xA", fcn=lambda s : -s.xyz[0][0])
+        cvB = paths.CV_Function(name="xB", fcn=lambda s : -s.xyz[0][0])
         self.stateA = paths.LambdaVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.LambdaVolume(cvB, float("-inf"), -0.5)
         interfacesA = vf.LambdaVolumeSet(cvA, float("-inf"), [-0.5, -0.3, 0.0])
@@ -129,21 +131,34 @@ class testMoveScheme(object):
         self.scheme.apply_strategy(shoot_strat_2)
         assert_items_equal(self.scheme.movers.keys(), ['shooting'])
         assert_equal(len(self.scheme.movers['shooting']), 5)
+        old_movers = copy.copy(self.scheme.movers['shooting'])
 
         self.scheme.apply_strategy(shoot_strat_3)
         assert_items_equal(self.scheme.movers.keys(), ['shooting'])
         assert_equal(len(self.scheme.movers['shooting']), 5)
-        # TODO: check details of the movers
+        new_movers = self.scheme.movers['shooting']
+        for (o, n) in zip(old_movers, new_movers):
+            assert_equal(o is n, False)
 
         shoot_strat_3.replace_signatures = True
         self.scheme.apply_strategy(shoot_strat_3)
         assert_items_equal(self.scheme.movers.keys(), ['shooting'])
         assert_equal(len(self.scheme.movers['shooting']), 4)
 
-        # TODO: add tests for when these are replaced: need to check that we
-        # actually *do* replace... and note that 
+        self.scheme.movers = {}
+        shoot_strat_1.set_replace(True)
+        self.scheme.apply_strategy(shoot_strat_1)
+        assert_items_equal(self.scheme.movers.keys(), ['shooting'])
+        assert_equal(len(self.scheme.movers['shooting']), 2)
+        old_movers = copy.copy(self.scheme.movers['shooting'])
 
-        raise SkipTest
+        shoot_strat_3.replace_signatures = False
+        self.scheme.apply_strategy(shoot_strat_3)
+        assert_items_equal(self.scheme.movers.keys(), ['shooting'])
+        assert_equal(len(self.scheme.movers['shooting']), 4)
+        new_movers = self.scheme.movers['shooting']
+        for (o, n) in zip(old_movers, new_movers):
+            assert_equal(o is n, False)
 
     def test_default_move_decision_tree(self):
         raise SkipTest
