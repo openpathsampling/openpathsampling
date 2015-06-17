@@ -7,7 +7,7 @@ import openpathsampling as paths
 from openpathsampling import VolumeFactory as vf
 from openpathsampling.analysis.move_scheme import *
 from openpathsampling.analysis.move_strategy import (
-    MOVERLEVEL, GROUPLEVEL, SUPERGROUPLEVEL, GLOBALLEVEL,
+    levels,
     MoveStrategy, OneWayShootingStrategy, NearestNeighborRepExStrategy,
     DefaultStrategy
 )
@@ -45,8 +45,8 @@ class testMoveScheme(object):
 
         strats = self.scheme.strategies
         assert_equal(len(strats.keys()), 3)
-        for (k, v) in [(MOVERLEVEL, shootstrat), (GROUPLEVEL, repexstrat),
-                       (GLOBALLEVEL, defaultstrat)]:
+        for (k, v) in [(levels.MOVER, shootstrat), (levels.GROUP, repexstrat),
+                       (levels.GLOBAL, defaultstrat)]:
             assert_in(v, strats[k])
 
     def test_append_groups_default_levels(self):
@@ -58,8 +58,8 @@ class testMoveScheme(object):
 
         strats = self.scheme.strategies
         assert_equal(len(strats.keys()), 3)
-        for (k, v) in [(MOVERLEVEL, shootstrat), (GROUPLEVEL, repexstrat),
-                       (GLOBALLEVEL, defaultstrat)]:
+        for (k, v) in [(levels.MOVER, shootstrat), (levels.GROUP, repexstrat),
+                       (levels.GLOBAL, defaultstrat)]:
             assert_in(v, strats[k])
 
 
@@ -115,6 +115,20 @@ class testMoveScheme(object):
             group='shooting', 
             replace=False
         )
+        assert_items_equal(self.scheme.movers.keys(), ['shooting'])
+        assert_equal(len(self.scheme.movers['shooting']), 2)
+
+        self.scheme.include_movers(
+            movers=shooters[1:],
+            group='shooting',
+            replace=False
+        )
+        assert_items_equal(self.scheme.movers.keys(), ['shooting'])
+        assert_equal(len(self.scheme.movers['shooting']), 5)
+
+        # TODO: add tests for when these are replaced: need to check that we
+        # actually *do* replace... and note that 
+
         raise SkipTest
 
     def test_default_move_decision_tree(self):

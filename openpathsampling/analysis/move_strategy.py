@@ -1,10 +1,22 @@
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
+from openpathsampling import PathMoverFactory as pmf
 
-MOVERLEVEL = 10
-GROUPLEVEL = 50
-SUPERGROUPLEVEL = 75
-GLOBALLEVEL = 100
+import collections
+LevelLabels = collections.namedtuple(
+    "LevelLabels", 
+    ["MOVER", "MOVER_GROUP_EDGE", "GROUP", "GROUP_SUPERGROUP_EDGE", 
+     "SUPERGROUP", "SUPERGROUP_GLOBAL_EDGE", "GLOBAL"]
+)
+levels = LevelLabels(
+    MOVER=10,
+    MOVER_GROUP_EDGE=40,
+    GROUP=50,
+    GROUP_SUPERGROUP_EDGE=60,
+    SUPERGROUP=75,
+    SUPERGROUP_GLOBAL_EDGE=90,
+    GLOBAL=100
+)
 
 class MoveStrategy(object):
     level = "undefined"
@@ -12,6 +24,10 @@ class MoveStrategy(object):
         self.network = network
         self.group = group
         self.replace = replace
+
+    def set_replace(self, replace):
+        if self.level < levels.MOVER_GROUP_EDGE:
+            self.replace_movers = replace
 
     # TODO: is this really going to be used yet?
     def make_chooser(self, scheme, group, choosername=None):
@@ -62,7 +78,7 @@ class MoveStrategy(object):
         return res_ensembles
                     
 class OneWayShootingStrategy(MoveStrategy):
-    level = MOVERLEVEL
+    level = levels.MOVER
     def __init__(self, selector=None, ensembles=None, group="shooting", replace=True, network=None):
         super(OneWayShootingStrategy, self).__init__(
             network=network, group=group, replace=replace
@@ -72,15 +88,20 @@ class OneWayShootingStrategy(MoveStrategy):
         self.selector = selector
         self.ensembles = ensembles
 
+    def make_movers(self, ensembles):
+        ensembles = reduce(list.__add__, map(lambda x: list(x), ensembles))
+        shooters = pmf.OneWayShootingSet(self.selector, ensembles)
+        return shooters
+
+
     def make_scheme(self, scheme=None):
         ensemble_list = self.get_ensembles(self.ensembles)
-        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
-        shooters = paths.PathMoverFactory.OneWayShootingSet(self.selector, ensembles)
-        scheme.include_movers(shooters, group, replace)
+        shooters = self.make_movers(ensembles)
+        scheme.include_movers(shooters, self.group, self.replace)
         return scheme
 
 class NearestNeighborRepExStrategy(MoveStrategy):
-    level = GROUPLEVEL
+    level = levels.GROUP
     def __init__(self, group="repex", replace=True, network=None):
         super(NearestNeighborRepExStrategy, self).__init__(
             network=network, group=group, replace=replace
@@ -128,36 +149,36 @@ class NearestNeighborRepExStrategy(MoveStrategy):
         return scheme
 
 class NthNearestNeighborRepExStrategy(MoveStrategy):
-    level=GROUPLEVEL
+    level=levels.GROUP
     pass
 
 class AllSetRepExStrategy(MoveStrategy):
-    level=GROUPLEVEL
+    level=levels.GROUP
     pass
 
 class SelectedPairsRepExStrategy(MoveStrategy):
-    level=GROUPLEVEL
+    level=levels.GROUP
     pass
 
 class StateSwapRepExStrategy(MoveStrategy):
     pass
 
 class ReplicaExchangeStrategy(MoveStrategy):
-    level=SUPERGROUPLEVEL
+    level=levels.SUPERGROUP
     """
     Converts EnsembleHops to ReplicaExchange (single replica to default)
     """
     pass
 
 class EnsembleHopStrategy(MoveStrategy):
-    level=SUPERGROUPLEVEL
+    level=levels.SUPERGROUP
     """
     Converts ReplicaExchange to EnsembleHop.
     """
     pass
 
 class PathReversalStrategy(MoveStrategy):
-    level=GROUPLEVEL
+    level=levels.GROUP
     pass
 
 
@@ -171,7 +192,7 @@ class SingleReplicaMinusMoveStrategy(MoveStrategy):
     pass
 
 class DefaultStrategy(MoveStrategy):
-    level = GLOBALLEVEL
+    level = levels.GLOBAL
     def __init__(self, ensembles=None, network=None):
         shooting = OneWayShootingStrategy(
             network=network
