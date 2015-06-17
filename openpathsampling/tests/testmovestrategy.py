@@ -13,6 +13,17 @@ logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 
+class testStrategyLevels(object):
+    def test_level_type(self):
+        assert_equal(levels.level_type(10), levels.SIGNATURE)
+        assert_equal(levels.level_type(1), levels.SIGNATURE)
+        assert_equal(levels.level_type(19), levels.SIGNATURE)
+        assert_equal(levels.level_type(20), None)
+        assert_equal(levels.level_type(21), levels.MOVER)
+        assert_equal(levels.level_type(35), levels.MOVER)
+        assert_equal(levels.level_type(100), levels.GLOBAL)
+
+
 class MoveStrategyTestSetup(object):
     def setup(self):
         cvA = paths.CV_Function(name="xA", fcn=lambda s : s.xyz[0][0])
@@ -30,6 +41,25 @@ class MoveStrategyTestSetup(object):
 
 
 class testMoveStrategy(MoveStrategyTestSetup):
+    def test_levels(self):
+        strategy = MoveStrategy(ensembles=None, network=self.network,
+                                group="test", replace=True)
+        assert_equal(strategy.level, -1)
+        assert_equal(strategy.replace_signatures, False)
+        assert_equal(strategy.replace_movers, False)
+        strategy.level = 10
+        assert_equal(strategy.level, levels.SIGNATURE)
+        assert_equal(strategy.replace_signatures, True)
+        assert_equal(strategy.replace_movers, False)
+        strategy.level = 25
+        assert_not_equal(strategy.level, levels.MOVER)
+        assert_equal(levels.level_type(strategy.level), levels.MOVER)
+        assert_equal(strategy.replace_signatures, False)
+        assert_equal(strategy.replace_movers, True)
+        strategy.level = 99
+        assert_equal(strategy.replace_signatures, False)
+        assert_equal(strategy.replace_movers, False)
+
     def test_get_ensembles(self):
         self.strategy = MoveStrategy(ensembles=None, network=self.network,
                                      group="test", replace=True)

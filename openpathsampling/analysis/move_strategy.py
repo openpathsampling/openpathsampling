@@ -13,6 +13,8 @@ class StrategyLevels(LevelLabels):
         Determines which defined level the value `lev` is closest to. If
         the answer is not unique, returns `None`.
         """
+        if lev < 0 or lev > 100:
+            return None
         levels = [self.SIGNATURE, self.MOVER, self.GROUP, self.SUPERGROUP, 
                   self.GLOBAL]
         distances = [abs(lev - v) for v in levels]
@@ -33,14 +35,14 @@ levels = StrategyLevels(
 )
 
 class MoveStrategy(object):
-    _level = 0
+    _level = -1
     def __init__(self, ensembles, group, replace, network):
         self.ensembles = ensembles
         self.network = network
         self.group = group
         self.replace = replace
-        self.replace_signatures = False
-        self.replace_movers = False
+        self.replace_signatures = None
+        self.replace_movers = None
         self.set_replace(replace)
 
     @property
@@ -54,6 +56,8 @@ class MoveStrategy(object):
 
     def set_replace(self, replace):
         """Sets values for replace_signatures and replace_movers.  """
+        self.replace_signatures = False
+        self.replace_movers = False
         level_type = levels.level_type(self.level)
         if level_type == levels.SIGNATURE:
             self.replace_signatures = replace
