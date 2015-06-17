@@ -29,8 +29,8 @@ class MoveStrategyTestSetup(object):
 
 class testMoveStrategy(MoveStrategyTestSetup):
     def test_get_ensembles(self):
-        self.strategy = MoveStrategy(network=self.network, group="test",
-                                     replace=True)
+        self.strategy = MoveStrategy(ensembles=None, network=self.network,
+                                     group="test", replace=True)
         # load up the relevant ensembles to test against
         transition_ensembles = []
         for transition in self.network.sampling_transitions:
@@ -53,10 +53,14 @@ class testMoveStrategy(MoveStrategyTestSetup):
         assert_equal(ensembles, [[ensA[0]], [ensA[1]], [extra_ens]])
 
 class testOneWayShootingStrategy(MoveStrategyTestSetup):
-    def test_scheme(self):
+    def test_make_movers(self):
         strategy = OneWayShootingStrategy()
         scheme = MoveScheme(self.network)
-        raise SkipTest
+        movers = strategy.make_movers(scheme)
+        assert_equal(len(movers), 4)
+        for mover in movers:
+            assert_equal(type(mover), paths.OneWayShootingMover)
+            assert_equal(type(mover.selector), paths.UniformSelector)
 
 class testNearestNeighborRepExStrategy(object):
     pass

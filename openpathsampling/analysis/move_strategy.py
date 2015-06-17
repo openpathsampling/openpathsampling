@@ -9,6 +9,10 @@ LevelLabels = collections.namedtuple(
 )
 class StrategyLevels(LevelLabels):
     def level_type(self, lev):
+        """
+        Determines which defined level the value `lev` is closest to. If
+        the answer is not unique, returns `None`.
+        """
         levels = [self.SIGNATURE, self.MOVER, self.GROUP, self.SUPERGROUP, 
                   self.GLOBAL]
         distances = [abs(lev - v) for v in levels]
@@ -30,7 +34,8 @@ levels = StrategyLevels(
 
 class MoveStrategy(object):
     _level = 0
-    def __init__(self, group, replace, network):
+    def __init__(self, ensembles, group, replace, network):
+        self.ensembles = ensembles
         self.network = network
         self.group = group
         self.replace = replace
@@ -48,6 +53,7 @@ class MoveStrategy(object):
         self.set_replace(self.replace)
 
     def set_replace(self, replace):
+        """Sets values for replace_signatures and replace_movers.  """
         level_type = levels.level_type(self.level)
         if level_type == levels.SIGNATURE:
             self.replace_signatures = replace
@@ -104,33 +110,42 @@ class MoveStrategy(object):
                     
 class OneWayShootingStrategy(MoveStrategy):
     _level = levels.MOVER
-    def __init__(self, selector=None, ensembles=None, group="shooting", replace=True, network=None):
+    def __init__(self, selector=None, ensembles=None, group="shooting",
+                 replace=True, network=None):
         super(OneWayShootingStrategy, self).__init__(
-            network=network, group=group, replace=replace
+            ensembles=ensembles, network=network, group=group, replace=replace
         )
         if selector is None:
             selector = paths.UniformSelector()
         self.selector = selector
-        self.ensembles = ensembles
 
-    def make_movers(self, ensembles):
-        ensembles = reduce(list.__add__, map(lambda x: list(x), ensembles))
+    def make_movers(self, scheme):
+        if self.network is None:
+            self.network = scheme.network
+        ensemble_list = self.get_ensembles(self.ensembles)
+        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
         shooters = pmf.OneWayShootingSet(self.selector, ensembles)
         return shooters
 
-
-    def make_scheme(self, scheme=None):
-        ensemble_list = self.get_ensembles(self.ensembles)
-        shooters = self.make_movers(ensembles)
-        scheme.include_movers(shooters, self.group, self.replace)
-        return scheme
-
 class NearestNeighborRepExStrategy(MoveStrategy):
     _level = levels.SIGNATURE
-    def __init__(self, group="repex", replace=True, network=None):
+    def __init__(self, ensembles=None, group="repex", replace=True,
+                 network=None):
         super(NearestNeighborRepExStrategy, self).__init__(
-            network=network, group=group, replace=replace
+            ensembles=ensembles, network=network, group=group, replace=replace
         )
+
+    def make_movers(self, scheme):
+        if self.network is None:
+            self.network = scheme.network
+        ensemble_list = self.get_ensembles(self.ensembles)
+        movers = []
+        for ens in ensemble_list:
+            movers.extend(
+                [paths.ReplicaExchangeMover(ensembles=[[ens[i], ens[i+1]]])
+                 for i in range(len(ensembles)-1)]
+            )
+        return movers
 
     def make_scheme(self, scheme=None, ensembles=None):
         """
@@ -160,14 +175,7 @@ class NearestNeighborRepExStrategy(MoveStrategy):
         """
         if scheme is not None and self.network is None:
             self.network = scheme.network
-        ensemble_list = self.get_ensembles(ensembles)
-        movers = []
-        for ens in ensemble_list:
-            movers.extend(
-                [paths.ReplicaExchangeMover(ensembles=[[ens[i], ens[i+1]]])
-                 for i in range(len(ensembles)-1)]
-            )
-
+        movers = self.make_movers()
         scheme.include_movers(movers, groupname, replace)
         if chooser:
             make_chooser(scheme, groupname, choosername)

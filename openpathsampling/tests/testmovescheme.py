@@ -109,6 +109,7 @@ class testMoveScheme(object):
         else:
             self.scheme.movers = {} 
 
+        shoot_strat = OneWayShootingStrategy()
         shooters = self.scheme.network.movers['shooting']
         assert_equal(len(shooters), 4)
 
