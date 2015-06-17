@@ -102,32 +102,43 @@ class testMoveScheme(object):
         for (k, v) in [(45, shootstrat), (55, repexstrat), (65, defaultstrat)]:
             assert_in(v, strats[k])
 
-    def test_include_movers(self):
+    def test_apply_strategy(self):
         if self.scheme.movers == {}:
             print "Full support of MoveStrategy implemented?"
             print "Time to remove legacy from tests."
         else:
             self.scheme.movers = {} 
 
-        shoot_strat = OneWayShootingStrategy()
-        shooters = self.scheme.network.movers['shooting']
-        assert_equal(len(shooters), 4)
-
-        self.scheme.include_movers(
-            movers=shooters[:2], 
-            group='shooting', 
+        shoot_strat_1 = OneWayShootingStrategy(
+            ensembles=self.scheme.network.sampling_transitions[0].ensembles,
             replace=False
         )
+        shoot_strat_2 = OneWayShootingStrategy(
+            ensembles=(
+                [self.scheme.network.sampling_transitions[0].ensembles[-1]] + 
+                self.scheme.network.sampling_transitions[1].ensembles
+            ),
+            replace=False
+        )
+        shoot_strat_3 = OneWayShootingStrategy(replace=True)
+
+        self.scheme.apply_strategy(shoot_strat_1)
         assert_items_equal(self.scheme.movers.keys(), ['shooting'])
         assert_equal(len(self.scheme.movers['shooting']), 2)
 
-        self.scheme.include_movers(
-            movers=shooters[1:],
-            group='shooting',
-            replace=False
-        )
+        self.scheme.apply_strategy(shoot_strat_2)
         assert_items_equal(self.scheme.movers.keys(), ['shooting'])
         assert_equal(len(self.scheme.movers['shooting']), 5)
+
+        self.scheme.apply_strategy(shoot_strat_3)
+        assert_items_equal(self.scheme.movers.keys(), ['shooting'])
+        assert_equal(len(self.scheme.movers['shooting']), 5)
+        # TODO: check details of the movers
+
+        shoot_strat_3.replace_signatures = True
+        self.scheme.apply_strategy(shoot_strat_3)
+        assert_items_equal(self.scheme.movers.keys(), ['shooting'])
+        assert_equal(len(self.scheme.movers['shooting']), 4)
 
         # TODO: add tests for when these are replaced: need to check that we
         # actually *do* replace... and note that 

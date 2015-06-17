@@ -54,19 +54,11 @@ class MoveScheme(OPSNamed):
         # return self.???
 
     def apply_strategy(self, strategy):
-        if strategy.network is None:
-            strategy.network = self.network
-        movers = strategy.make_movers()
+        movers = strategy.make_movers(self)
         group = strategy.group
-        if strategy.replace_signature:
+        if strategy.replace_signatures:
             self.movers[strategy.group] = movers
-        else:
-            # TODO: just include this function here
-            self.include_movers(movers, group, strategy.replace_movers)
-
-
-    def include_movers(self, movers, group, replace):
-        if replace:
+        elif strategy.replace_movers:
             try:
                 n_existing = len(self.movers[group])
             except KeyError:
