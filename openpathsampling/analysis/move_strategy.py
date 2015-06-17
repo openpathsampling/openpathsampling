@@ -5,31 +5,53 @@ from openpathsampling import PathMoverFactory as pmf
 import collections
 LevelLabels = collections.namedtuple(
     "LevelLabels", 
-    ["MOVER", "MOVER_GROUP_EDGE", "GROUP", "GROUP_SUPERGROUP_EDGE", 
-     "SUPERGROUP", "SUPERGROUP_GLOBAL_EDGE", "GLOBAL"]
+    ["SIGNATURE", "MOVER", "GROUP", "SUPERGROUP", "GLOBAL"]
 )
+class StrategyLevels(LevelLabels):
+    def level_type(self, lev):
+        levels = [self.SIGNATURE, self.MOVER, self.GROUP, self.SUPERGROUP, 
+                  self.GLOBAL]
+        distances = [abs(lev - v) for v in levels]
+        mindist = min(distances)
+        indices = [i for i in range(len(distances)) if distances[i]==mindist]
+        if len(indices) > 1:
+            return None
+        else:
+            return levels[indices[0]]
+
 # possible rename to make available as paths.stategy_levels?
-levels = LevelLabels(
+levels = StrategyLevels(
     SIGNATURE=10,
-    SIGNATURE_MOVER=20,
     MOVER=30,
-    MOVER_GROUP=40,
     GROUP=50,
-    GROUP_SUPERGROUP=60
     SUPERGROUP=70,
-    SUPERGROUP_GLOBAL=80,
     GLOBAL=90
 )
 
 class MoveStrategy(object):
-    level = "undefined"
+    _level = 0
     def __init__(self, group, replace, network):
         self.network = network
         self.group = group
         self.replace = replace
+        self.replace_signatures = False
+        self.replace_movers = False
+        self.set_replace(replace)
+
+    @property
+    def level(self):
+        return self._level
+
+    @level.setter
+    def level(self, value):
+        self._level = value
+        self.set_replace(self.replace)
 
     def set_replace(self, replace):
-        if self.level < levels.MOVER_GROUP_EDGE:
+        level_type = levels.level_type(self.level)
+        if level_type == levels.SIGNATURE:
+            self.replace_signatures = replace
+        elif level_type == levels.MOVER:
             self.replace_movers = replace
 
     # TODO: is this really going to be used yet?
@@ -81,7 +103,7 @@ class MoveStrategy(object):
         return res_ensembles
                     
 class OneWayShootingStrategy(MoveStrategy):
-    level = levels.MOVER
+    _level = levels.MOVER
     def __init__(self, selector=None, ensembles=None, group="shooting", replace=True, network=None):
         super(OneWayShootingStrategy, self).__init__(
             network=network, group=group, replace=replace
@@ -104,7 +126,7 @@ class OneWayShootingStrategy(MoveStrategy):
         return scheme
 
 class NearestNeighborRepExStrategy(MoveStrategy):
-    level = levels.SIGNATURE
+    _level = levels.SIGNATURE
     def __init__(self, group="repex", replace=True, network=None):
         super(NearestNeighborRepExStrategy, self).__init__(
             network=network, group=group, replace=replace
@@ -152,36 +174,36 @@ class NearestNeighborRepExStrategy(MoveStrategy):
         return scheme
 
 class NthNearestNeighborRepExStrategy(MoveStrategy):
-    level=levels.SIGNATURE
+    _level = levels.SIGNATURE
     pass
 
 class AllSetRepExStrategy(MoveStrategy):
-    level=levels.SIGNATURE
+    _level = levels.SIGNATURE
     pass
 
 class SelectedPairsRepExStrategy(MoveStrategy):
-    level=levels.SIGNATURE
+    _level = levels.SIGNATURE
     pass
 
 class StateSwapRepExStrategy(MoveStrategy):
     pass
 
 class ReplicaExchangeStrategy(MoveStrategy):
-    level=levels.SUPERGROUP
+    _level = levels.SUPERGROUP
     """
     Converts EnsembleHops to ReplicaExchange (single replica to default)
     """
     pass
 
 class EnsembleHopStrategy(MoveStrategy):
-    level=levels.SUPERGROUP
+    _level = levels.SUPERGROUP
     """
     Converts ReplicaExchange to EnsembleHop.
     """
     pass
 
 class PathReversalStrategy(MoveStrategy):
-    level=levels.SIGNATURE
+    _level = levels.SIGNATURE
     pass
 
 
@@ -195,7 +217,7 @@ class SingleReplicaMinusMoveStrategy(MoveStrategy):
     pass
 
 class DefaultStrategy(MoveStrategy):
-    level = levels.GLOBAL
+    _level = levels.GLOBAL
     def __init__(self, ensembles=None, network=None):
         shooting = OneWayShootingStrategy(
             network=network

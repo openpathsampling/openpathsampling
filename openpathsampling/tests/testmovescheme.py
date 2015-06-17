@@ -45,8 +45,9 @@ class testMoveScheme(object):
 
         strats = self.scheme.strategies
         assert_equal(len(strats.keys()), 3)
-        for (k, v) in [(levels.MOVER, shootstrat), (levels.GROUP, repexstrat),
-                       (levels.GLOBAL, defaultstrat)]:
+        pairs = [(levels.MOVER, shootstrat), (levels.SIGNATURE, repexstrat), 
+                 (levels.GLOBAL, defaultstrat)]
+        for (k, v) in pairs:
             assert_in(v, strats[k])
 
     def test_append_groups_default_levels(self):
@@ -58,8 +59,9 @@ class testMoveScheme(object):
 
         strats = self.scheme.strategies
         assert_equal(len(strats.keys()), 3)
-        for (k, v) in [(levels.MOVER, shootstrat), (levels.GROUP, repexstrat),
-                       (levels.GLOBAL, defaultstrat)]:
+        pairs = [(levels.MOVER, shootstrat), (levels.SIGNATURE, repexstrat), 
+                 (levels.GLOBAL, defaultstrat)]
+        for (k, v) in pairs:
             assert_in(v, strats[k])
 
 
