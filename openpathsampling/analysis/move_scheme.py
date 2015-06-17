@@ -53,6 +53,9 @@ class MoveScheme(OPSNamed):
                 strat.make_scheme(self)
         # return self.???
 
+    def apply_strategy(self, strategy):
+        pass
+
 
     def include_movers(self, movers, group, replace):
         if replace:
@@ -64,7 +67,8 @@ class MoveScheme(OPSNamed):
             else:
                 # Note that the following means that if the list of new
                 # movers includes two movers with the same sig, the second
-                # will overwrite the first. This is desired behavior.
+                # will overwrite the first. This is desired behavior. On the
+                # other hand, if the list of movers already has two 
                 existing_sigs = {self.movers[group][i].ensemble_signature : i
                                  for i in range(n_existing)}
                 # For each mover, if its signature exists in the existing

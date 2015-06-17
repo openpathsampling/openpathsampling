@@ -8,14 +8,17 @@ LevelLabels = collections.namedtuple(
     ["MOVER", "MOVER_GROUP_EDGE", "GROUP", "GROUP_SUPERGROUP_EDGE", 
      "SUPERGROUP", "SUPERGROUP_GLOBAL_EDGE", "GLOBAL"]
 )
+# possible rename to make available as paths.stategy_levels?
 levels = LevelLabels(
-    MOVER=10,
-    MOVER_GROUP_EDGE=40,
+    SIGNATURE=10,
+    SIGNATURE_MOVER=20,
+    MOVER=30,
+    MOVER_GROUP=40,
     GROUP=50,
-    GROUP_SUPERGROUP_EDGE=60,
-    SUPERGROUP=75,
-    SUPERGROUP_GLOBAL_EDGE=90,
-    GLOBAL=100
+    GROUP_SUPERGROUP=60
+    SUPERGROUP=70,
+    SUPERGROUP_GLOBAL=80,
+    GLOBAL=90
 )
 
 class MoveStrategy(object):
@@ -101,7 +104,7 @@ class OneWayShootingStrategy(MoveStrategy):
         return scheme
 
 class NearestNeighborRepExStrategy(MoveStrategy):
-    level = levels.GROUP
+    level = levels.SIGNATURE
     def __init__(self, group="repex", replace=True, network=None):
         super(NearestNeighborRepExStrategy, self).__init__(
             network=network, group=group, replace=replace
@@ -149,15 +152,15 @@ class NearestNeighborRepExStrategy(MoveStrategy):
         return scheme
 
 class NthNearestNeighborRepExStrategy(MoveStrategy):
-    level=levels.GROUP
+    level=levels.SIGNATURE
     pass
 
 class AllSetRepExStrategy(MoveStrategy):
-    level=levels.GROUP
+    level=levels.SIGNATURE
     pass
 
 class SelectedPairsRepExStrategy(MoveStrategy):
-    level=levels.GROUP
+    level=levels.SIGNATURE
     pass
 
 class StateSwapRepExStrategy(MoveStrategy):
@@ -178,7 +181,7 @@ class EnsembleHopStrategy(MoveStrategy):
     pass
 
 class PathReversalStrategy(MoveStrategy):
-    level=levels.GROUP
+    level=levels.SIGNATURE
     pass
 
 
