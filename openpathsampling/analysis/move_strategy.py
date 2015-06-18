@@ -187,8 +187,20 @@ class EnsembleHopStrategy(MoveStrategy):
     pass
 
 class PathReversalStrategy(MoveStrategy):
-    _level = levels.SIGNATURE
-    pass
+    _level = levels.MOVER
+    def __init__(self, ensembles=None, group="pathreversal", replace=True,
+                 network=None):
+        super(PathReversalStrategy, self).__init__(
+            ensembles=ensembles, network=network, group=group, replace=replace
+        )
+
+    def make_movers(self, scheme):
+        if self.network is None:
+            self.network = scheme.network
+        ensemble_list = self.get_ensembles(self.ensembles)
+        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
+        movers = paths.PathReversalSet(ensembles)
+        return movers
 
 
 class MinusMoveStrategy(MoveStrategy):
