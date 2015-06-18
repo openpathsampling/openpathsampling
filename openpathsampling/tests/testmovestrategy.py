@@ -131,8 +131,20 @@ class testAllSetRepExStrategy(MoveStrategyTestSetup):
         for sig in expected_signatures:
             assert_in(sig, signatures)
 
+class testPathReversalStrategy(MoveStrategyTestSetup):
+    def test_make_movers(self):
+        strategy = PathReversalStrategy()
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        assert_equal(len(movers), 6)
+        for m in movers:
+            assert_equal(type(m), paths.PathReversalMover)
+        
 
-class testDefaultMover(MoveStrategyTestSetup):
+
+
+
+class testDefaultStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         scheme = MoveScheme(self.network)
         scheme.movers = {} # handles LEGACY stuff
