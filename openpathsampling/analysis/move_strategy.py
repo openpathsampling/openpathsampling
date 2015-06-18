@@ -195,14 +195,19 @@ class DefaultStrategy(MoveStrategy):
     def __init__(self, ensembles=None, group=None, replace=True,
                  network=None):
         self.weight_adjustment = {
-            'shooting' : 1.0
+            'shooting' : 1.0,
+            'repex' : 0.5,
+            'pathreversal' : 0.5,
+            'minus' : 0.2,
         }
-        pass
+        self.group = group
+        self.replace = replace
+        self.network = network
 
     def make_chooser(self, scheme, group, choosername=None):
         if choosername is None:
-            choosername = groupname.capitalize()+"Chooser"
-        chooser = paths.RandomChoiceMover(movers=scheme.movers[groupname])
+            choosername = group.capitalize()+"Chooser"
+        chooser = paths.RandomChoiceMover(movers=scheme.movers[group])
         chooser.name = choosername
         return chooser
 
@@ -212,7 +217,7 @@ class DefaultStrategy(MoveStrategy):
         choosers = []
         weights = []
         for group in scheme.movers.keys():
-            chooser.append(self.make_chooser(scheme, group))
+            choosers.append(self.make_chooser(scheme, group))
             try:
                 weight_adjustment = self.weight_adjustment[group]
             except KeyError:

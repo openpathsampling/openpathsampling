@@ -1,5 +1,5 @@
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises)
+                        assert_almost_equal, raises, assert_in)
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import true_func, assert_equal_array_array, make_1d_traj
 
@@ -112,8 +112,88 @@ class testNearestNeighborRepExStrategy(MoveStrategyTestSetup):
                      ((ens1[1], ens1[2]), (ens1[1], ens1[2])))
 
 class testDefaultMover(MoveStrategyTestSetup):
-    def test_make_chooser(self):
-        raise SkipTest
-
     def test_make_movers(self):
-        raise SkipTest
+        scheme = MoveScheme(self.network)
+        scheme.movers = {} # handles LEGACY stuff
+        scheme.movers['shooting'] = [1, 2, 3]
+        scheme.movers['repex'] = [12, 23]
+        scheme.movers['pathreversal'] = [1, 2, 3]
+        scheme.movers['minus'] = [ 0 ]
+
+        strategy = DefaultStrategy()
+        root = strategy.make_movers(scheme)
+        
+        assert_equal(len(root.movers), 4)
+        names = ['ShootingChooser', 'RepexChooser', 'PathreversalChooser', 
+                 'MinusChooser']
+        name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
+        for name in names:
+            assert_in(name, name_dict.keys())
+
+        name = 'ShootingChooser'
+        weight = root.weights[name_dict[name]]
+        chooser = root.movers[name_dict[name]]
+        assert_equal(type(chooser), paths.RandomChoiceMover)
+        assert_equal(weight, 3.0)
+        assert_equal(len(chooser.movers), 3)
+        for w in chooser.weights:
+            assert_equal(w, 1.0)
+
+        name = 'RepexChooser'
+        weight = root.weights[name_dict[name]]
+        chooser = root.movers[name_dict[name]]
+        assert_equal(type(chooser), paths.RandomChoiceMover)
+        assert_equal(weight, 1.0)
+        assert_equal(len(chooser.movers), 2)
+        for w in chooser.weights:
+            assert_equal(w, 1.0)
+
+        name = 'MinusChooser'
+        weight = root.weights[name_dict[name]]
+        chooser = root.movers[name_dict[name]]
+        assert_equal(type(chooser), paths.RandomChoiceMover)
+        assert_equal(weight, 0.2)
+        assert_equal(len(chooser.movers), 1)
+        for w in chooser.weights:
+            assert_equal(w, 1.0)
+
+    def test_make_movers_unknown_group(self):
+        scheme = MoveScheme(self.network)
+        scheme.movers = {} # handles LEGACY stuff
+        scheme.movers['blahblah']  = [1, 2]
+
+        strategy = DefaultStrategy()
+        root = strategy.make_movers(scheme)
+
+        name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
+
+        name = 'BlahblahChooser'
+        weight = root.weights[name_dict[name]]
+        chooser = root.movers[name_dict[name]]
+        assert_equal(type(chooser), paths.RandomChoiceMover)
+        assert_equal(weight, 2.0)
+        assert_equal(len(chooser.movers), 2)
+        for w in chooser.weights:
+            assert_equal(w, 1.0)
+
+    def test_make_movers_custom_group(self):
+        scheme = MoveScheme(self.network)
+        scheme.movers = {} # handles LEGACY stuff
+        scheme.movers['blahblah']  = [1, 2]
+
+        strategy = DefaultStrategy()
+        strategy.weight_adjustment['blahblah'] = 2.0
+        root = strategy.make_movers(scheme)
+
+        name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
+        
+        name = 'BlahblahChooser'
+        weight = root.weights[name_dict[name]]
+        chooser = root.movers[name_dict[name]]
+        assert_equal(type(chooser), paths.RandomChoiceMover)
+        assert_equal(weight, 4.0)
+        assert_equal(len(chooser.movers), 2)
+        for w in chooser.weights:
+            assert_equal(w, 1.0)
+
+

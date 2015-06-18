@@ -1,9 +1,11 @@
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
 
-from openpathsampling.analysis.move_strategy import levels
+from openpathsampling.analysis.move_strategy import levels as strategy_levels
+import openpathsampling.analysis.move_strategy as strategies
 
 import sys
+
 
 class MoveScheme(OPSNamed):
     def __init__(self, network):
@@ -12,6 +14,7 @@ class MoveScheme(OPSNamed):
         self.network = network
         self._mover_acceptance = {} # used in analysis
         self.strategies = {}
+        self.root_mover = None
 
     def append(self, strategies, levels=None):
         """
@@ -48,16 +51,27 @@ class MoveScheme(OPSNamed):
             except KeyError:
                 self.strategies[lev] = [strat]
 
-    def move_decision_tree(self):
+    # TODO: it might be nice to have a way to "lock" this once it has been
+    # saved. That would prevent a (stupid) user from trying to rebuild a
+    # custom-modified tree
+    def build_move_decision_tree(self):
         for lev in sorted(self.strategies.keys()):
             for strat in self.strategies[lev]:
                 self.apply_strategy(strat)
+
+    # TODO: should I make this a property? make root_mover into
+    # _move_decision_tree? allow the user to directly set it?
+    def move_decision_tree(self, rebuild=False):
+        if self.root_mover is None:
+            rebuild=True
+        if rebuild:
+            self.build_move_decision_tree()
         return self.root_mover
 
     def apply_strategy(self, strategy):
         movers = strategy.make_movers(self)
         group = strategy.group
-        if levels.level_type(strategy.level) == levels.GLOBAL:
+        if strategy_levels.level_type(strategy.level) == strategy_levels.GLOBAL:
             # shortcut out for the global-level stuff
             self.root_mover = movers
         elif strategy.replace_signatures:
@@ -183,5 +197,20 @@ class MoveScheme(OPSNamed):
             )
             output.write(line)
 
-    
+
+class DefaultScheme(MoveScheme):
+    """
+    Just a MoveScheme with the full set of default strategies: nearest
+    neighbor repex, uniform selection one-way shooting, minus move, and
+    path reversals, all structured as choose move type then choose specific
+    move.
+    """
+    def __init__(self, network):
+        super(DefaultScheme, self).__init__(network)
+        self.append(strategies.NearestNeighborRepExStrategy())
+        self.append(strategies.OneWayShootingStrategy())
+        self.append(strategies.PathReversalStrategy())
+        self.append(strategies.DefaultStrategy())
+        #self.append(strategies.MinusStrategy())
+        # TODO: also handle MS-outer stuff
 
