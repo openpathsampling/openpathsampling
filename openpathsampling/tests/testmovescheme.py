@@ -203,3 +203,44 @@ class testMoveScheme(object):
         self.scheme.append(nn_repex)
         root = self.scheme.move_decision_tree(rebuild=True)
         assert_equal(len(self.scheme.movers['repex']), 4)
+
+class testDefaultScheme(object):
+    def setup(self):
+        cvA = paths.CV_Function(name="xA", fcn=lambda s : s.xyz[0][0])
+        cvB = paths.CV_Function(name="xB", fcn=lambda s : -s.xyz[0][0])
+        self.stateA = paths.LambdaVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.LambdaVolume(cvB, float("-inf"), -0.5)
+        interfacesA = vf.LambdaVolumeSet(cvA, float("-inf"), 
+                                         [-0.5, -0.3, -0.1, 0.0])
+        interfacesB = vf.LambdaVolumeSet(cvB, float("-inf"), 
+                                         [-0.5, -0.3, -0.1, 0.0])
+        self.network = paths.MSTISNetwork([
+            (self.stateA, interfacesA, "A", cvA),
+            (self.stateB, interfacesB, "B", cvB)
+        ])
+    
+    def test_default_scheme(self):
+        scheme = DefaultScheme(self.network)
+        scheme.movers = {} # LEGACY
+        root = scheme.move_decision_tree()
+        chooser_type_dict = {
+            'ShootingChooser' : paths.OneWayShootingMover,
+            'PathreversalChooser' : paths.PathReversalMover,
+            'RepexChooser' : paths.ReplicaExchangeMover
+        }
+        names = chooser_type_dict.keys()
+
+        assert_equal(len(root.movers), len(names))
+
+        name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
+        for name in names:
+            assert_in(name, name_dict.keys())
+
+        assert_equal(len(root.movers[name_dict['ShootingChooser']].movers), 6)
+        assert_equal(len(root.movers[name_dict['PathreversalChooser']].movers), 6)
+        assert_equal(len(root.movers[name_dict['RepexChooser']].movers), 4)
+
+        for choosername in names:
+            for mover in root.movers[name_dict[choosername]].movers:
+                assert_equal(type(mover), chooser_type_dict[choosername])
+
