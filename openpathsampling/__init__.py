@@ -73,7 +73,7 @@ from analysis.tis_analysis import (
     TISTransition, RETISTransition, Transition, TPSTransition
 )
 
-from analysis.move_scheme import MoveScheme
+from analysis.move_scheme import MoveScheme, DefaultScheme
 
 from analysis.network import (
     MSTISNetwork, TransitionNetwork, MISTISNetwork

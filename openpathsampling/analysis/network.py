@@ -110,6 +110,7 @@ class MSTISNetwork(TISNetwork):
             self.from_state = {}
             self.outer_ensembles = []
             self.outers = []
+            self.minus_ensembles = []
             self.build_fromstate_transitions(trans_info)
 
         self._sampling_transitions = self.from_state.values()
@@ -125,6 +126,14 @@ class MSTISNetwork(TISNetwork):
         self.transitions = {}
         self.build_analysis_transitions()
 
+    @property
+    def all_ensembles(self):
+        all_ens = []
+        for t in self.sampling_transitions:
+            all_ens.extend(t.ensembles)
+        all_ens.extend(self.ms_outers)
+        all_ens.extend(self.minus_ensembles)
+        return all_ens
 
     def build_analysis_transitions(self):
         # set up analysis transitions (not to be saved)
@@ -182,6 +191,7 @@ class MSTISNetwork(TISNetwork):
                 orderparameter=op
             )
             self.outers.append(ifaces[-1])
+            self.minus_ensembles.append(self.from_state[state].minus_ensemble)
             outer_ensemble = paths.TISEnsemble(
                 initial_states=state,
                 final_states=all_states,
