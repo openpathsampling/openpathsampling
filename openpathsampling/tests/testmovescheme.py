@@ -12,7 +12,7 @@ from openpathsampling.analysis.move_scheme import *
 from openpathsampling.analysis.move_strategy import (
     levels,
     MoveStrategy, OneWayShootingStrategy, NearestNeighborRepExStrategy,
-    DefaultStrategy
+    DefaultStrategy, AllSetRepExStrategy
 )
 
 import logging
@@ -186,3 +186,20 @@ class testMoveScheme(object):
         new_root = self.scheme.move_decision_tree(rebuild=True)
         assert_is_not(new_root, root)
 
+    def test_repex_style_switching(self):
+        self.scheme.movers = {} # LEGACY
+        nn_repex = NearestNeighborRepExStrategy()
+        all_repex = AllSetRepExStrategy()
+        default = DefaultStrategy()
+        
+        self.scheme.append([default, nn_repex])
+        root = self.scheme.move_decision_tree(rebuild=True)
+        assert_equal(len(self.scheme.movers['repex']), 4)
+
+        self.scheme.append(all_repex)
+        root = self.scheme.move_decision_tree(rebuild=True)
+        assert_equal(len(self.scheme.movers['repex']), 6)
+
+        self.scheme.append(nn_repex)
+        root = self.scheme.move_decision_tree(rebuild=True)
+        assert_equal(len(self.scheme.movers['repex']), 4)
