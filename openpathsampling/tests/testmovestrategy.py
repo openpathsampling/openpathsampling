@@ -111,6 +111,27 @@ class testNearestNeighborRepExStrategy(MoveStrategyTestSetup):
         assert_equal_array_array(movers[3].ensemble_signature,
                      ((ens1[1], ens1[2]), (ens1[1], ens1[2])))
 
+class testAllSetRepExStrategy(MoveStrategyTestSetup):
+    def test_make_movers(self):
+        strategy = AllSetRepExStrategy()
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        assert_equal(len(movers), 6)
+        ens0 = self.network.sampling_transitions[0].ensembles
+        ens1 = self.network.sampling_transitions[1].ensembles
+        signatures = [m.ensemble_signature for m in movers]
+        expected_signatures = [
+            ((ens0[0], ens0[1]), (ens0[0], ens0[1])),
+            ((ens0[0], ens0[2]), (ens0[0], ens0[2])),
+            ((ens0[1], ens0[2]), (ens0[1], ens0[2])),
+            ((ens1[0], ens1[1]), (ens1[0], ens1[1])),
+            ((ens1[0], ens1[2]), (ens1[0], ens1[2])),
+            ((ens1[1], ens1[2]), (ens1[1], ens1[2]))
+        ]
+        for sig in expected_signatures:
+            assert_in(sig, signatures)
+
+
 class testDefaultMover(MoveStrategyTestSetup):
     def test_make_movers(self):
         scheme = MoveScheme(self.network)
