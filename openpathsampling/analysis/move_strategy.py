@@ -2,6 +2,8 @@ import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
 from openpathsampling import PathMoverFactory as pmf
 
+import itertools
+
 import collections
 LevelLabels = collections.namedtuple(
     "LevelLabels", 
@@ -146,14 +148,22 @@ class NearestNeighborRepExStrategy(MoveStrategy):
             )
         return movers
 
-
 class NthNearestNeighborRepExStrategy(MoveStrategy):
     _level = levels.SIGNATURE
     pass
 
-class AllSetRepExStrategy(MoveStrategy):
-    _level = levels.SIGNATURE
-    pass
+# inherits from NearestNeighbor so it can get the same __init__ & _level
+class AllSetRepExStrategy(NearestNeighborRepExStrategy):
+    def make_movers(self, scheme):
+        if self.network is None:
+            self.network = scheme.network
+        ensemble_list = self.get_ensembles(self.ensembles)
+        movers = []
+        for ens in ensemble_list:
+            pairs = list(itertools.combinations(ens, 2))
+            movers.extend([paths.ReplicaExchangeMover(ensembles=list(pair))
+                           for pair in pairs])
+        return movers
 
 class SelectedPairsRepExStrategy(MoveStrategy):
     _level = levels.SIGNATURE
