@@ -119,7 +119,8 @@ class testAllSetRepExStrategy(MoveStrategyTestSetup):
         assert_equal(len(movers), 6)
         ens0 = self.network.sampling_transitions[0].ensembles
         ens1 = self.network.sampling_transitions[1].ensembles
-        signatures = [m.ensemble_signature for m in movers]
+        signatures = [(set(m.ensemble_signature[0]),
+                       set(m.ensemble_signature[1])) for m in movers]
         expected_signatures = [
             ((ens0[0], ens0[1]), (ens0[0], ens0[1])),
             ((ens0[0], ens0[2]), (ens0[0], ens0[2])),
@@ -129,7 +130,8 @@ class testAllSetRepExStrategy(MoveStrategyTestSetup):
             ((ens1[1], ens1[2]), (ens1[1], ens1[2]))
         ]
         for sig in expected_signatures:
-            assert_in(sig, signatures)
+            set_sig = (set(sig[0]), set(sig[1]))
+            assert_in(set_sig, signatures)
 
 class testPathReversalStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
