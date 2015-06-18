@@ -55,7 +55,7 @@ class MoveStrategy(object):
         self.set_replace(self.replace)
 
     def set_replace(self, replace):
-        """Sets values for replace_signatures and replace_movers.  """
+        """Sets values for replace_signatures and replace_movers."""
         self.replace_signatures = False
         self.replace_movers = False
         level_type = levels.level_type(self.level)
@@ -228,9 +228,6 @@ class DefaultStrategy(MoveStrategy):
         root_chooser.name = "RootMover"
         scheme.root_mover = root_chooser
         return root_chooser
-
-
-
 
 
 class SingleReplicaStrategy(MoveStrategy):

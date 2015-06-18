@@ -1,5 +1,6 @@
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, assert_in, raises)
+                        assert_almost_equal, assert_in, raises, assert_is,
+                        assert_is_not)
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import true_func, assert_equal_array_array, make_1d_traj
 
@@ -25,8 +26,10 @@ class testMoveScheme(object):
         cvB = paths.CV_Function(name="xB", fcn=lambda s : -s.xyz[0][0])
         self.stateA = paths.LambdaVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.LambdaVolume(cvB, float("-inf"), -0.5)
-        interfacesA = vf.LambdaVolumeSet(cvA, float("-inf"), [-0.5, -0.3, 0.0])
-        interfacesB = vf.LambdaVolumeSet(cvB, float("-inf"), [-0.5, -0.3, 0.0])
+        interfacesA = vf.LambdaVolumeSet(cvA, float("-inf"), 
+                                         [-0.5, -0.3, -0.1, 0.0])
+        interfacesB = vf.LambdaVolumeSet(cvB, float("-inf"), 
+                                         [-0.5, -0.3, -0.1, 0.0])
         network = paths.MSTISNetwork([
             (self.stateA, interfacesA, "A", cvA),
             (self.stateB, interfacesB, "B", cvB)
@@ -126,37 +129,60 @@ class testMoveScheme(object):
 
         self.scheme.apply_strategy(shoot_strat_1)
         assert_items_equal(self.scheme.movers.keys(), ['shooting'])
-        assert_equal(len(self.scheme.movers['shooting']), 2)
+        assert_equal(len(self.scheme.movers['shooting']), 3)
 
         self.scheme.apply_strategy(shoot_strat_2)
         assert_items_equal(self.scheme.movers.keys(), ['shooting'])
-        assert_equal(len(self.scheme.movers['shooting']), 5)
+        assert_equal(len(self.scheme.movers['shooting']), 7)
         old_movers = copy.copy(self.scheme.movers['shooting'])
 
         self.scheme.apply_strategy(shoot_strat_3)
         assert_items_equal(self.scheme.movers.keys(), ['shooting'])
-        assert_equal(len(self.scheme.movers['shooting']), 5)
+        assert_equal(len(self.scheme.movers['shooting']), 7)
         new_movers = self.scheme.movers['shooting']
         for (o, n) in zip(old_movers, new_movers):
             assert_equal(o is n, False)
 
         shoot_strat_3.replace_signatures = True
         self.scheme.apply_strategy(shoot_strat_3)
-        assert_equal(len(self.scheme.movers['shooting']), 4)
+        assert_equal(len(self.scheme.movers['shooting']), 6)
 
         self.scheme.movers = {}
         shoot_strat_1.set_replace(True)
         self.scheme.apply_strategy(shoot_strat_1)
-        assert_equal(len(self.scheme.movers['shooting']), 2)
+        assert_equal(len(self.scheme.movers['shooting']), 3)
         old_movers = copy.copy(self.scheme.movers['shooting'])
 
         shoot_strat_3.replace_signatures = False
         self.scheme.apply_strategy(shoot_strat_3)
-        assert_equal(len(self.scheme.movers['shooting']), 4)
+        assert_equal(len(self.scheme.movers['shooting']), 6)
         new_movers = self.scheme.movers['shooting']
         for (o, n) in zip(old_movers, new_movers):
             assert_equal(o is n, False)
 
-    def test_default_move_decision_tree(self):
-        raise SkipTest
+    def test_move_decision_tree(self):
+        self.scheme.movers = {} # LEGACY
+        shoot = OneWayShootingStrategy()
+        repex = NearestNeighborRepExStrategy()
+        default = DefaultStrategy()
+        self.scheme.append([default, shoot, repex])
+    
+        assert_equal(self.scheme.root_mover, None)
+        root = self.scheme.move_decision_tree()
+        assert_not_equal(self.scheme.root_mover, None)
+
+        assert_equal(len(root.movers), 2)
+        names = ['ShootingChooser', 'RepexChooser']
+        name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
+        for name in names:
+            assert_in(name, name_dict.keys())
+
+        assert_equal(len(root.movers[name_dict['ShootingChooser']].movers), 6)
+        assert_equal(len(root.movers[name_dict['RepexChooser']].movers), 4)
+
+        new_root = self.scheme.move_decision_tree()
+        assert_is(new_root, root)
+
+        new_root = self.scheme.move_decision_tree(rebuild=True)
+        assert_is_not(new_root, root)
 
