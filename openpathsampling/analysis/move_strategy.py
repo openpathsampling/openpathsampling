@@ -167,7 +167,37 @@ class AllSetRepExStrategy(NearestNeighborRepExStrategy):
 
 class SelectedPairsRepExStrategy(MoveStrategy):
     _level = levels.SIGNATURE
-    pass
+
+    def initialization_error(self):
+        raise RuntimeError("SelectedPairsRepExStrategy must be initialized with ensemble pairs.")
+
+    def __init__(self, ensembles=None, group="repex", replace=False,
+                 network=None):
+        # check that we have a list of pairs
+        if ensembles is None:
+            self.initialization_error()
+        else:
+            for pair in ensembles:
+                try:
+                    pair_len = len(pair)
+                except TypeError:
+                    pair_len = len(ensembles)
+                if pair_len != 2:
+                    self.initialization_error()
+        
+        super(SelectedPairsRepExStrategy, self).__init__(
+            ensembles=ensembles, network=network, group=group, replace=replace
+        )
+
+    def make_movers(self, scheme):
+        if self.network is None:
+            self.network = scheme.network
+        ensemble_list = self.get_ensembles(self.ensembles)
+        movers = []
+        for pair in ensemble_list:
+            movers.append(paths.ReplicaExchangeMover(ensembles=pair))
+        return movers
+
 
 class StateSwapRepExStrategy(MoveStrategy):
     pass

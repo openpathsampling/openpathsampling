@@ -133,6 +133,18 @@ class testAllSetRepExStrategy(MoveStrategyTestSetup):
             set_sig = (set(sig[0]), set(sig[1]))
             assert_in(set_sig, signatures)
 
+class testSelectedPairsRepExStrategy(MoveStrategyTestSetup):
+    def test_make_movers(self):
+        ens00 = self.network.sampling_transitions[0].ensembles[0]
+        ens02 = self.network.sampling_transitions[0].ensembles[2]
+        strategy = SelectedPairsRepExStrategy(ensembles=[ens00, ens02])
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        assert_equal(len(movers), 1)
+        assert_equal(movers[0].ensemble_signature, 
+                     ((ens00, ens02), (ens00, ens02)))
+
+
 class testPathReversalStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = PathReversalStrategy()
