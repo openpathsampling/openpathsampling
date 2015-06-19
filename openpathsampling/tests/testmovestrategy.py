@@ -13,6 +13,7 @@ logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 
+
 class testStrategyLevels(object):
     def test_level_type(self):
         assert_equal(levels.level_type(10), levels.SIGNATURE)
@@ -141,8 +142,34 @@ class testSelectedPairsRepExStrategy(MoveStrategyTestSetup):
         scheme = MoveScheme(self.network)
         movers = strategy.make_movers(scheme)
         assert_equal(len(movers), 1)
-        assert_equal(movers[0].ensemble_signature, 
-                     ((ens00, ens02), (ens00, ens02)))
+        assert_equal(movers[0].ensemble_signature_set, 
+                     (set([ens00, ens02]), (set([ens00, ens02]))))
+
+    @raises(RuntimeError)
+    def test_init_ensembles_none(self):
+        strategy = SelectedPairsRepExStrategy()
+
+    @raises(RuntimeError)
+    def test_init_ensembles_triplet(self):
+        ensembles = self.network.sampling_transitions[0].ensembles
+        strategy = SelectedPairsRepExStrategy(ensembles=ensembles)
+
+    def test_make_movers_multiple_pairs(self):
+        ens00 = self.network.sampling_transitions[0].ensembles[0]
+        ens01 = self.network.sampling_transitions[0].ensembles[1]
+        ens02 = self.network.sampling_transitions[0].ensembles[2]
+        strategy = SelectedPairsRepExStrategy(ensembles=[[ens00, ens01],
+                                                         [ens00, ens02],
+                                                         [ens01, ens02]])
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        assert_equal(len(movers), 3)
+        assert_equal(movers[0].ensemble_signature_set,
+                     (set([ens00, ens01]), set([ens00, ens01])))
+        assert_equal(movers[1].ensemble_signature_set,
+                     (set([ens00, ens02]), set([ens00, ens02])))
+        assert_equal(movers[2].ensemble_signature_set,
+                     (set([ens01, ens02]), set([ens01, ens02])))
 
 
 class testPathReversalStrategy(MoveStrategyTestSetup):

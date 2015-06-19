@@ -171,14 +171,26 @@ class PathMover(TreeMixin, OPSNamed):
         else:
             return [ensembles]
 
-    @property
-    def ensemble_signature(self):
+    def _ensemble_signature(self, as_set=False):
         """Return tuple form of (input_ensembles, output_ensembles).
         
         Useful for MoveScheme, e.g., identifying which movers should be
         removed as part of a replacement.
         """
-        return (tuple(self.input_ensembles), tuple(self.output_ensembles))
+        inp = tuple(self.input_ensembles)
+        out = tuple(self.output_ensembles)
+        if as_set:
+            inp = set(inp)
+            out = set(out)
+        return (inp, out)
+               
+    @property
+    def ensemble_signature(self):
+        return self._ensemble_signature(as_set=False)
+
+    @property
+    def ensemble_signature_set(self):
+        return self._ensemble_signature(as_set=True)
 
     @property
     def input_ensembles(self):
