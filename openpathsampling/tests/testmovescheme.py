@@ -36,9 +36,6 @@ class testMoveScheme(object):
         ])
         self.scheme = MoveScheme(network)
 
-    def test_sanity(self):
-        raise SkipTest
-
     def test_append_individuals_default_levels(self):
         shootstrat = OneWayShootingStrategy()
         repexstrat = NearestNeighborRepExStrategy()
