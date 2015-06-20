@@ -28,7 +28,7 @@ class testStrategyLevels(object):
 class MoveStrategyTestSetup(object):
     def setup(self):
         cvA = paths.CV_Function(name="xA", fcn=lambda s : s.xyz[0][0])
-        cvB = paths.CV_Function(name="xA", fcn=lambda s : -s.xyz[0][0])
+        cvB = paths.CV_Function(name="xB", fcn=lambda s : -s.xyz[0][0])
         self.stateA = paths.LambdaVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.LambdaVolume(cvB, float("-inf"), -0.5)
         interfacesA = vf.LambdaVolumeSet(cvA, float("-inf"), 
@@ -180,6 +180,26 @@ class testPathReversalStrategy(MoveStrategyTestSetup):
         assert_equal(len(movers), 6)
         for m in movers:
             assert_equal(type(m), paths.PathReversalMover)
+
+
+class testMinusMoveStrategy(MoveStrategyTestSetup):
+    def test_get_ensembles(self):
+        strategy = MinusMoveStrategy()
+        strategy.network = self.network
+        ensembles = strategy.get_ensembles(None)
+        assert_equal(len(ensembles), 2)
+        for ens_group in ensembles:
+            assert_equal(len(ens_group), 1)
+        assert_not_equal(ensembles[0][0].state_vol, ensembles[1][0].state_vol)
+
+    def test_get_ensembles_multiple_minus(self):
+        raise SkipTest
+
+    def test_get_ensembles_fixed_ensembles(self):
+        raise SkipTest
+
+    def test_make_movers(self):
+        raise SkipTest
 
 
 class testDefaultStrategy(MoveStrategyTestSetup):

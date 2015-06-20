@@ -237,9 +237,33 @@ class MinusMoveStrategy(MoveStrategy):
     """
     Takes a given network and makes the minus mover.
     """
-    pass
+    _level = levels.MOVER
+    def __init__(self, ensembles=None, group="minus", replace=True,
+                 network=None):
+        super(MinusMoveStrategy, self).__init__(
+            ensembles=ensembles, network=network, group=group, replace=replace
+        )
 
-class SingleReplicaMinusMoveStrategy(MoveStrategy):
+    def get_ensembles(self, ensembles):
+        network = self.network
+        if ensembles is None:
+            minus_ensembles = network.minus_ensembles
+            state_sorted_minus = {}
+            for minus in minus_ensembles:
+                try:
+                    state_sorted_minus[minus.state_vol].append(minus)
+                except KeyError:
+                    state_sorted_minus[minus.state_vol] = [minus]
+            ensembles = state_sorted_minus.values()
+
+        # now we use super's ability to turn it into list-of-list
+        res_ensembles = super(MinusMoveStrategy, self).get_ensembles(ensembles)
+        return res_ensembles
+
+    def make_movers(self, scheme):
+        pass
+
+class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
     pass
 
 class DefaultStrategy(MoveStrategy):
