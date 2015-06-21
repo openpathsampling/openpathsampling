@@ -126,6 +126,11 @@ class PathMover(TreeMixin, OPSNamed):
         else:
             return self._is_ensemble_change_mover
 
+    _is_canonical = None
+    @property
+    def is_canonical(self):
+        return self._is_canonical
+
 
     @property
     def default_name(self):
@@ -1617,6 +1622,8 @@ class MinusMover(WrappedMover):
     interface ensemble. This is particularly useful for improving sampling
     of path space.
     """
+    _is_canonical = True
+
     def __init__(self, minus_ensemble, innermost_ensembles, ensembles=None):
         segment = minus_ensemble._segment_ensemble
         try:

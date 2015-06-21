@@ -123,6 +123,13 @@ class testPathMover(object):
         pm._is_ensemble_change_mover = True
         assert_equal(pm.is_ensemble_change_mover, True)
 
+    def test_is_canonical(self):
+        pm = PathMover()
+        assert_equal(pm.is_canonical, None)
+        pm._is_canonical = True
+        assert_equal(pm.is_canonical, True)
+
+
 class testShootingMover(object):
     def setup(self):
         self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
@@ -342,6 +349,16 @@ class testRandomChoiceMover(object):
 
     def test_is_ensemble_change_mover(self):
         assert_equal(self.mover.is_ensemble_change_mover, True)
+
+    def test_is_canonical(self):
+        for t in range(20):
+            change = self.mover.move(self.init_samp)
+            assert_not_equal(change.canonical.mover, self.mover)
+            canonical_submovers = 0
+            for submover in self.mover.movers:
+                if change.canonical.mover is submover:
+                    canonical_submovers += 1
+            assert_equal(canonical_submovers, 1)
 
     def test_random_choice(self):
         # test that both get selected, but that we always return only one
@@ -731,6 +748,9 @@ class testMinusMover(object):
     def test_is_ensemble_change_mover(self):
         assert_equal(self.mover.is_ensemble_change_mover, True)
 
+    def test_is_canonical(self):
+        assert_equal(self.mover.is_canonical, True)
+
     def test_setup_sanity(self):
         # sanity checks to make sure that what we set up makes sense
         assert_equal(self.minus_sample.ensemble(self.minus_sample.trajectory),
@@ -781,6 +801,8 @@ class testMinusMover(object):
 
             for c in change:
                 assert_equal(c.accepted, True)
+
+            assert_equal(change.canonical.mover, self.mover)
 
             key = ""
             s_inner0_xvals = [s.coordinates[0,0] for s in s_inner[0].trajectory]
