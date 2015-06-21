@@ -114,7 +114,7 @@ class MSTISNetwork(TISNetwork):
             self.from_state = {}
             self.outer_ensembles = []
             self.outers = []
-            self.minus_ensembles = []
+            #self.minus_ensembles = []
             self.build_fromstate_transitions(trans_info)
 
         self._sampling_transitions = self.from_state.values()
@@ -197,7 +197,7 @@ class MSTISNetwork(TISNetwork):
 
             this_minus = self.from_state[state].minus_ensemble
             this_inner = self.from_state[state].ensembles[0]
-            self.minus_ensembles.append(this_minus) # OLD
+            #self.minus_ensembles.append(this_minus) # OLD
             try:
                 self.special_ensembles['minus'][this_minus] = [this_inner]
             except KeyError:
@@ -223,6 +223,9 @@ class MSTISNetwork(TISNetwork):
             self.special_ensembles['ms_outer'] = {ms_outer : transition_outers}
 
 
+    @property
+    def minus_ensembles(self):
+        return self.special_ensembles['minus']
 
 
     def build_movers(self):
@@ -376,7 +379,7 @@ class MISTISNetwork(TISNetwork):
     def to_dict(self):
         ret_dict = {
             'movers' : self.movers,
-            'minus_ensembles' : self.minus_ensembles,
+            #'minus_ensembles' : self.minus_ensembles,
             'ms_outers' : self.ms_outers,
             'transition_pairs' : self.transition_pairs,
             'x_sampling_transitions' : self.x_sampling_transitions,
@@ -389,7 +392,7 @@ class MISTISNetwork(TISNetwork):
     def from_dict(dct):
         network = MISTISNetwork.__new__(MISTISNetwork)
         network.movers = dct['movers']
-        network.minus_ensembles = dct['minus_ensembles']
+        #network.minus_ensembles = dct['minus_ensembles']
         network.ms_outers = dct['ms_outers']
         network.transition_pairs = dct['transition_pairs']
         network.transition_to_sampling = dct['transition_to_sampling']
