@@ -4,7 +4,7 @@ from ensemble import (
     Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
     EmptyEnsemble, ExitsXEnsemble, FullEnsemble, PartInXEnsemble,
     AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble,
-    BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble,
+    SuffixTrajectoryEnsemble, PrefixTrajectoryEnsemble,
     PartOutXEnsemble, LengthEnsemble, NegatedEnsemble,
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble,
     SequentialEnsemble, IntersectionEnsemble, UnionEnsemble,
@@ -47,7 +47,7 @@ from dynamics_engine import DynamicsEngine
 from openmm_engine import OpenMMEngine
 
 from volume import (Volume, VolumeCombination, VolumeFactory, VoronoiVolume, 
-    EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, 
+    EmptyVolume, FullVolume, CVRangeVolume, CVRangeVolumePeriodic,
     IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
     RelativeComplementVolume, join_volumes
 )

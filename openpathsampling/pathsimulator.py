@@ -315,7 +315,7 @@ class PathSampling(PathSimulator):
     """
     General path sampling code. 
     
-    Takes a single root_mover and generates samples from that, keeping one
+    Takes a single move_scheme and generates samples from that, keeping one
     per replica after each move. 
     """
 
@@ -324,7 +324,7 @@ class PathSampling(PathSimulator):
             self,
             storage,
             engine=None,
-            root_mover=None,
+            move_scheme=None,
             globalstate=None
     ):
         """
@@ -334,14 +334,14 @@ class PathSampling(PathSimulator):
             the storage where all results should be stored in
         engine : openpathsampling.DynamicsEngine
             the engine to be used with shooting moves
-        root_mover : openpathsampling.PathMover
+        move_scheme : openpathsampling.PathMover
             the mover used for the pathsampling cycle
         globalstate : openpathsampling.SampleSet
             the initial SampleSet for the Simulator
         """
         super(PathSampling, self).__init__(storage, engine)
-        self.root_mover = root_mover
-#        self.root_mover.name = "PathSamplingRoot"
+        self.move_scheme = move_scheme
+#        self.move_scheme.name = "PathSamplingRoot"
 
         samples = []
         if globalstate is not None:
@@ -352,9 +352,9 @@ class PathSampling(PathSimulator):
         self.root = self.globalstate
 
         initialization_logging(init_log, self, 
-                               ['root_mover', 'globalstate'])
+                               ['move_scheme', 'globalstate'])
 
-        self._mover = paths.PathSimulatorMover(self.root_mover, self)
+        self._mover = paths.PathSimulatorMover(self.move_scheme, self)
 
     def run(self, nsteps):
         mcstep = None
