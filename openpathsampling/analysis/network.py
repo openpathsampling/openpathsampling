@@ -211,7 +211,17 @@ class MSTISNetwork(TISNetwork):
                 interface=ifaces[-1]
             )
             outer_ensemble.name = "outer " + str(state)
-            self.outer_ensembles.append(outer_ensemble) # OLD/
+            self.outer_ensembles.append(outer_ensemble) # OLD
+
+        outer_ensembles = self.outer_ensembles
+        ms_outer = paths.ensemble.join_ensembles(outer_ensembles)
+        self.ms_outers = [ms_outer]
+        transition_outers = [t.ensembles[-1] for t in self.from_state.values()]
+        try:
+            self.special_ensembles['ms_outer'][ms_outer] = transition_outers
+        except KeyError:
+            self.special_ensembles['ms_outer'] = {ms_outer : transition_outers}
+
 
 
 
@@ -226,7 +236,6 @@ class MSTISNetwork(TISNetwork):
             )
         # default is only 1 MS outer, but in principle you could have
         # multiple distinct MS outer interfaces
-        self.ms_outers = [paths.ensemble.join_ensembles(self.outer_ensembles)]
         self.movers['msouter_repex'] = [
             paths.ReplicaExchangeMover(
                 ensembles=[trans.ensembles[-1], self.ms_outers[0]]
