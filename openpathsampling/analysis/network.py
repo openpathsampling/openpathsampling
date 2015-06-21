@@ -74,8 +74,8 @@ class MSTISNetwork(TISNetwork):
         ret_dict = { 
             'from_state' : self.from_state,
             'movers' : self.movers,
-            'outer_ensembles' : self.outer_ensembles,
-            'outers' : self.outers,
+            #'outer_ensembles' : self.outer_ensembles,
+            #'outers' : self.outers,
             'states' : self.states,
             'special_ensembles' : self.special_ensembles,
             'trans_info' : self.trans_info
@@ -87,9 +87,9 @@ class MSTISNetwork(TISNetwork):
         network = MSTISNetwork.__new__(MSTISNetwork)
         network.from_state = dct['from_state']
         network.movers = dct['movers']
-        network.outer_ensembles = dct['outer_ensembles']
+        #network.outer_ensembles = dct['outer_ensembles']
         network.special_ensembles = dct['special_ensembles']
-        network.outers = dct['outers']
+        #network.outers = dct['outers']
         network.states = dct['states']
         network.__init__(dct['trans_info'])
         return network
@@ -112,8 +112,8 @@ class MSTISNetwork(TISNetwork):
         if not hasattr(self, "from_state"):
             self.special_ensembles = {}
             self.from_state = {}
-            self.outer_ensembles = []
-            self.outers = []
+            #self.outer_ensembles = []
+            #self.outers = []
             #self.minus_ensembles = []
             self.build_fromstate_transitions(trans_info)
 
@@ -180,6 +180,7 @@ class MSTISNetwork(TISNetwork):
         self.states = states
         all_states = paths.volume.join_volumes(states)
         all_states.name = "all states"
+        outer_ensembles = []
         for (state, ifaces, name, op) in trans_info:
             state_index = states.index(state)
             state.name = name
@@ -204,18 +205,19 @@ class MSTISNetwork(TISNetwork):
                 self.special_ensembles['minus'] = {this_minus : [this_inner]}
 
 
-            self.outers.append(ifaces[-1]) # OLD
+            #self.outers.append(ifaces[-1]) # OLD
             outer_ensemble = paths.TISEnsemble(
                 initial_states=state,
                 final_states=all_states,
                 interface=ifaces[-1]
             )
             outer_ensemble.name = "outer " + str(state)
-            self.outer_ensembles.append(outer_ensemble) # OLD
+            #self.outer_ensembles.append(outer_ensemble) # OLD
+            outer_ensembles.append(outer_ensemble)
 
-        outer_ensembles = self.outer_ensembles
+        #outer_ensembles = self.outer_ensembles
         ms_outer = paths.ensemble.join_ensembles(outer_ensembles)
-        self.ms_outers = [ms_outer]
+        #self.ms_outers = [ms_outer]
         transition_outers = [t.ensembles[-1] for t in self.from_state.values()]
         try:
             self.special_ensembles['ms_outer'][ms_outer] = transition_outers
@@ -225,7 +227,11 @@ class MSTISNetwork(TISNetwork):
 
     @property
     def minus_ensembles(self):
-        return self.special_ensembles['minus']
+        return self.special_ensembles['minus'].keys()
+
+    @property
+    def ms_outers(self):
+        return self.special_ensembles['ms_outer'].keys()
 
 
     def build_movers(self):
@@ -283,7 +289,7 @@ class MSTISNetwork(TISNetwork):
             len(repex_chooser.movers) / 2,
             len(rev_chooser.movers) / 2,
             0.2 *len(self.movers['minus']),
-            len(self.outer_ensembles)
+            len(self.sampling_transitions)
         ]
         self.root_mover = paths.RandomChoiceMover(
             movers=[shooting_chooser, repex_chooser, rev_chooser,
