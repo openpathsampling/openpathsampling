@@ -30,6 +30,7 @@ class TISNetwork(TransitionNetwork):
         # better with it
         pass
 
+
     @property
     def sampling_transitions(self):
         try:
@@ -76,6 +77,7 @@ class MSTISNetwork(TISNetwork):
             'outer_ensembles' : self.outer_ensembles,
             'outers' : self.outers,
             'states' : self.states,
+            'special_ensembles' : self.special_ensembles,
             'trans_info' : self.trans_info
         }
         return ret_dict
@@ -86,6 +88,7 @@ class MSTISNetwork(TISNetwork):
         network.from_state = dct['from_state']
         network.movers = dct['movers']
         network.outer_ensembles = dct['outer_ensembles']
+        network.special_ensembles = dct['special_ensembles']
         network.outers = dct['outers']
         network.states = dct['states']
         network.__init__(dct['trans_info'])
@@ -107,6 +110,7 @@ class MSTISNetwork(TISNetwork):
         self.trans_info = trans_info
         # build sampling transitions
         if not hasattr(self, "from_state"):
+            self.special_ensembles = {}
             self.from_state = {}
             self.outer_ensembles = []
             self.outers = []
@@ -190,15 +194,25 @@ class MSTISNetwork(TISNetwork):
                 name="Out "+name,
                 orderparameter=op
             )
-            self.outers.append(ifaces[-1])
-            self.minus_ensembles.append(self.from_state[state].minus_ensemble)
+
+            this_minus = self.from_state[state].minus_ensemble
+            this_inner = self.from_state[state].ensembles[0]
+            self.minus_ensembles.append(this_minus) # OLD
+            try:
+                self.special_ensembles['minus'][this_minus] = [this_inner]
+            except KeyError:
+                self.special_ensembles['minus'] = {this_minus : [this_inner]}
+
+
+            self.outers.append(ifaces[-1]) # OLD
             outer_ensemble = paths.TISEnsemble(
                 initial_states=state,
                 final_states=all_states,
                 interface=ifaces[-1]
             )
             outer_ensemble.name = "outer " + str(state)
-            self.outer_ensembles.append(outer_ensemble)
+            self.outer_ensembles.append(outer_ensemble) # OLD/
+
 
 
     def build_movers(self):
