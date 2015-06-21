@@ -188,7 +188,7 @@ class MSTISNetwork(TISNetwork):
             union_others = paths.volume.join_volumes(other_states)
             union_others.name = "all states except " + str(name)
 
-            self.from_state[state] = paths.RETISTransition(
+            this_trans = paths.RETISTransition(
                 stateA=state, 
                 stateB=union_others,
                 interfaces=ifaces[:-1],
@@ -196,13 +196,15 @@ class MSTISNetwork(TISNetwork):
                 orderparameter=op
             )
 
+            self.from_state[state] = this_trans
+
             this_minus = self.from_state[state].minus_ensemble
             this_inner = self.from_state[state].ensembles[0]
             #self.minus_ensembles.append(this_minus) # OLD
             try:
-                self.special_ensembles['minus'][this_minus] = [this_inner]
+                self.special_ensembles['minus'][this_minus] = [this_trans]
             except KeyError:
-                self.special_ensembles['minus'] = {this_minus : [this_inner]}
+                self.special_ensembles['minus'] = {this_minus : [this_trans]}
 
 
             #self.outers.append(ifaces[-1]) # OLD
@@ -218,7 +220,7 @@ class MSTISNetwork(TISNetwork):
         #outer_ensembles = self.outer_ensembles
         ms_outer = paths.ensemble.join_ensembles(outer_ensembles)
         #self.ms_outers = [ms_outer]
-        transition_outers = [t.ensembles[-1] for t in self.from_state.values()]
+        transition_outers = self.from_state.values()
         try:
             self.special_ensembles['ms_outer'][ms_outer] = transition_outers
         except KeyError:
