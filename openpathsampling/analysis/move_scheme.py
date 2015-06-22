@@ -113,6 +113,32 @@ class MoveScheme(OPSNamed):
             except KeyError:
                 self.movers[group] = movers
 
+    def ensembles_for_move_tree(self, root=None):
+        if root is None:
+            root = self.root_mover
+        movers = root.map_pre_order(lambda x : x)
+        mover_ensemble_dict = {}
+        for m in movers:
+            input_sig = m.input_ensembles
+            output_sig = m.output_ensembles
+            for ens in input_sig + output_sig:
+                mover_ensemble_dict[ens] = 1
+        mover_ensembles = mover_ensemble_dict.keys()
+        return mover_ensembles
+
+    def find_hidden_ensembles(self, root=None):
+        unhidden_ensembles = set(self.network.all_ensembles)
+        mover_ensembles = set(self.ensembles_for_move_tree(root))
+        hidden_ensembles = mover_ensembles - unhidden_ensembles
+        return hidden_ensembles
+
+    def find_unused_ensembles(self, root=None):
+        unhidden_ensembles = set(self.network.all_ensembles)
+        mover_ensembles = set(self.ensembles_for_move_tree(root))
+        unused_ensembles = unhidden_ensembles - mover_ensembles
+        return unused_ensembles
+
+
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, indentation):
         line = ("* "*indentation + str(move_name) +

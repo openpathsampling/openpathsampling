@@ -241,3 +241,17 @@ class testDefaultScheme(object):
             for mover in root.movers[name_dict[choosername]].movers:
                 assert_equal(type(mover), chooser_type_dict[choosername])
 
+    def test_default_hidden_ensembles(self):
+        scheme = DefaultScheme(self.network)
+        scheme.movers = {} # LEGACY
+        root = scheme.move_decision_tree()
+        hidden = scheme.find_hidden_ensembles()
+        assert_equal(len(hidden), 0) # will change when minus supported
+
+    def test_default_unused_ensembles(self):
+        scheme = DefaultScheme(self.network)
+        scheme.movers = {} # LEGACY
+        root = scheme.move_decision_tree()
+        unused = scheme.find_unused_ensembles()
+        assert_equal(len(unused), 3) # will change when minus/msouter 
+
