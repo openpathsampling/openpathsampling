@@ -4,6 +4,9 @@ import openpathsampling as paths
 from openpathsampling.todict import OPSObject
 from treelogic import TreeMixin
 
+import logging
+logger = logging.getLogger(__name__)
+
 class PathMoveChange(TreeMixin, OPSObject):
     '''
     A class that described the concrete realization of a PathMove.
@@ -244,6 +247,8 @@ class PathMoveChange(TreeMixin, OPSObject):
         """
         pmc = self
         while pmc.subchange is not None:
+            if pmc.mover.is_canonical is True:
+                return pmc
             pmc = pmc.subchange
 
         return pmc

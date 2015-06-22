@@ -3,8 +3,9 @@ from openpathsampling.todict import OPSNamed
 import mdtraj as md
 import numpy as np
 import pandas as pd
-#from simtk import unit as units
-#import simtk.openmm
+
+from simtk import unit as u
+import simtk.openmm
 
 class Topology(OPSNamed):
     '''
@@ -84,6 +85,7 @@ class MDTrajTopology(Topology):
 
     @classmethod
     def from_dict(cls, dct):
+        # TODO: fix this in a better way. Works for now with mdtraj 1.3.x and 1.4.x
         top_dict = dct['md']
         # elements = top_dict['elements']
 
