@@ -209,7 +209,11 @@ class testMinusMoveStrategy(MoveStrategyTestSetup):
         self.network.special_ensembles['minus'][extra_minus] = [innerA, innerB]
         ensembles = strategy.get_ensembles(None)
         assert_equal(len(ensembles), 2)
-        assert_equal(len(ensembles[0]), 2)
+        try:
+            assert_equal(len(ensembles[0]), 2)
+        except AssertionError:
+            print ensembles[0]
+            raise
         assert_equal(len(ensembles[1]), 1)
 
     def test_get_ensembles_fixed_ensembles(self):
