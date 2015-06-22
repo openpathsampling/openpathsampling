@@ -55,6 +55,14 @@ class SampleSet(OPSNamed):
         else:
             self.movepath = movepath
 
+    @property
+    def ensembles(self):
+        return self.ensemble_dict.keys()
+
+    @property
+    def replicas(self):
+        return self.replica_dict.keys()
+
     def __getitem__(self, key):
         if isinstance(key, paths.Ensemble):
             return random.choice(self.ensemble_dict[key])

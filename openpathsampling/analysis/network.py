@@ -1,8 +1,9 @@
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
 import pandas as pd
+import openpathsampling.volume
+import openpathsampling.ensemble
 
-from tis_analysis import Histogrammer, max_lambdas
 
 class TransitionNetwork(OPSNamed):
     def __init__(self):
@@ -82,7 +83,9 @@ class MSTISNetwork(TISNetwork):
 
     @classmethod
     def from_dict(cls, dct):
-        network = MSTISNetwork.__new__(MSTISNetwork)
+        network = cls.__new__(cls)
+
+        # replace automatically created attributes with stored ones
         network.from_state = dct['from_state']
         network.movers = dct['movers']
         network.outer_ensembles = dct['outer_ensembles']
@@ -207,19 +210,20 @@ class MSTISNetwork(TISNetwork):
         self.ms_outers = [paths.ensemble.join_ensembles(self.outer_ensembles)]
         self.movers['msouter_repex'] = [
             paths.ReplicaExchangeMover(
-                ensembles=[trans.ensembles[-1], self.ms_outers[0]]
+                ensemble1=trans.ensembles[-1],
+                ensemble2=self.ms_outers[0]
             )
             for trans in self.from_state.values()
         ]
         self.movers['msouter_pathreversal'] = [
             paths.PathReversalMover(
-                ensembles=[self.ms_outers[0]]
+                ensemble=self.ms_outers[0]
             )
         ]
         self.movers['msouter_shooting'] = [
             paths.OneWayShootingMover(
                 selector=paths.UniformSelector(),
-                ensembles=[self.ms_outers[0]]
+                ensemble=self.ms_outers[0]
             )
         ]
 
