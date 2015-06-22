@@ -4,7 +4,7 @@ sys.path.append(os.path.abspath('../'))
 from Simulator import Simulator
 from collectivevariable import CV_Function
 from snapshot import Snapshot, Configuration
-from volume import LambdaVolumePeriodic
+from volume import CVRangeVolumePeriodic
 from ensemble import EnsembleFactory as ef
 from ensemble import (LengthEnsemble, SequentialEnsemble, AllOutXEnsemble,
                       AllInXEnsemble)
