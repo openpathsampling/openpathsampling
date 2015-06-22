@@ -70,6 +70,13 @@ def assert_subchanges_set_accepted(change, results):
     for ch, result in zip(change.subchanges, results):
         assert_equal(ch.accepted, result)
 
+def assert_choice_of(result, choices):
+    for choice in choices:
+        if result is choice:
+            return
+
+    raise AssertionError("%s is not in list of choices [%s]" % (result, choices))
+
 class testPathMover(object):
     def setup(self):
         self.l1 = LengthEnsemble(1)
@@ -106,11 +113,10 @@ class testPathMover(object):
 
     def test_select_sample(self):
 #        assert_equal(self.reps1_ens2.select_sample(self.sset), self.s1)
-        selected = self.repsAll_ens1.select_sample(self.sset)
-        try:
-            assert_equal(selected, self.s2)
-        except AssertionError:
-            assert_equal(selected, self.s3)
+
+        for i in range(20):
+            selected = self.repsAll_ens1.select_sample(self.sset)
+            assert_choice_of(selected, [self.s1, self.s2, self.s3, self.s4])
 
     def test_is_ensemble_change_mover(self):
         pm = PathMover()
@@ -162,7 +168,11 @@ class testForwardShootMover(testShootingMover):
         assert_equal(newsamp[0].trajectory, change.trials[0].trajectory)
 
     def test_is_ensemble_change_mover(self):
-        mover = ForwardShootMover(UniformSelector(), ensembles=self.tps)
+        mover = ForwardShootMover(
+            selector=UniformSelector(),
+            ensemble=self.tps
+        )
+
         assert_equal(mover.is_ensemble_change_mover, False)
 
 class testBackwardShootMover(testShootingMover):
@@ -180,7 +190,10 @@ class testBackwardShootMover(testShootingMover):
         assert_equal(newsamp[0].trajectory, change.trials[0].trajectory)
 
     def test_is_ensemble_change_mover(self):
-        mover = BackwardShootMover(UniformSelector(), ensembles=self.tps)
+        mover = BackwardShootMover(
+            selector=UniformSelector(),
+            ensemble=self.tps
+        )
         assert_equal(mover.is_ensemble_change_mover, False)
 
 class testOneWayShootingMover(testShootingMover):
@@ -778,8 +791,10 @@ class testMinusMover(object):
         self.dyn.initialized = True
         self.innermost = paths.TISEnsemble(volA, volB, volX)
         self.minus = paths.MinusInterfaceEnsemble(volA, volX)
-        self.mover = MinusMover(minus_ensemble=self.minus,
-                                innermost_ensembles=[self.innermost])
+        self.mover = MinusMover(
+            minus_ensemble=self.minus,
+            innermost_ensemble=self.innermost
+        )
         self.first_segment = [-0.1, 0.1, 0.3, 0.1, -0.15] 
         self.list_innermost = [-0.11, 0.11, 0.31, 0.11, -0.12]
         self.second_segment = [-0.25, 0.2, 0.4, 0.2, -0.2]

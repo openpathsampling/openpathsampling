@@ -1855,7 +1855,6 @@ class MinusMover(SubPathMover):
     """
     _is_canonical = True
 
-    def __init__(self, minus_ensemble, innermost_ensembles, ensembles=None):
     def __init__(self, minus_ensemble, innermost_ensemble):
         segment = minus_ensemble._segment_ensemble
         sub_trajectory_selector = RandomChoiceMover([
