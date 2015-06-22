@@ -407,8 +407,6 @@ class SampleGeneratingMover(PathMover):
         # 1. pick a set of ensembles (in case we allow to pick several ones)
         ensembles = self._called_ensembles()
 
-        print ensembles
-
         # 2. pick samples from these ensembles
         samples = [self.select_sample(globalstate, ens) for ens in ensembles]
 
@@ -1200,7 +1198,7 @@ class EnsembleHopMover(EnsembleHopGeneratingMover):
 #  SELECTION MOVERS
 # ****************************************************************************
 
-class RandomSelectionMover(PathMover):
+class SelectionMover(PathMover):
     """
     A general mover that selects a single mover from a set of possibilities
 
@@ -1217,7 +1215,7 @@ class RandomSelectionMover(PathMover):
     """
 
     def __init__(self, movers):
-        super(RandomSelectionMover, self).__init__()
+        super(SelectionMover, self).__init__()
 
         self.movers = movers
 
@@ -1286,7 +1284,7 @@ class RandomSelectionMover(PathMover):
 
         return path
 
-class RandomChoiceMover(RandomSelectionMover):
+class RandomChoiceMover(SelectionMover):
     """
     Chooses a random mover from its movers list, and runs that move. Returns
     the number of samples the submove return.
@@ -1356,7 +1354,7 @@ class RandomAllowedChoiceMover(RandomChoiceMover):
 
         return weights
 
-class FirstAllowedMover(RandomSelectionMover):
+class FirstAllowedMover(SelectionMover):
     """
     Chooses a first mover that has samples in all required ensembles.
 
@@ -1391,12 +1389,12 @@ class FirstAllowedMover(RandomSelectionMover):
 
         return weights
 
-class LastAllowedMover(RandomSelectionMover):
+class LastAllowedMover(SelectionMover):
     """
     Chooses the last mover that has samples in all required ensembles.
 
     A mover can only safely be run, if all inputs can be satisfied. This will pick
-    the first mover from the list where all ensembles from input_ensembles are
+    the last mover from the list where all ensembles from input_ensembles are
     found.
 
     Attributes
@@ -1412,7 +1410,7 @@ class LastAllowedMover(RandomSelectionMover):
 
         found = False
 
-        for idx, mover in reversed(enumerate(self.movers)):
+        for idx, mover in reversed(list(enumerate(self.movers))):
             if not found:
                 for ens in mover.input_ensembles:
                     if ens not in present_ensembles:
@@ -1795,9 +1793,10 @@ class OneWayShootingMover(RandomChoiceMover):
 
     @classmethod
     def from_dict(cls, dct):
+        # create dummy OneWayShooter
         mover = cls(
-            ensemble=dct['movers'][0].ensemble,
-            selector=dct['movers'][0].selector
+            ensemble=None,
+            selector=None
         )
 
         # override with stored movers
@@ -1834,13 +1833,13 @@ class OneWayExtendMover(RandomChoiceMover):
 
     @classmethod
     def from_dict(cls, dct):
-        mover = cls(
-            ensemble=dct['movers'][0].ensemble,
-            selector=dct['movers'][0].selector
-        )
+        mover = cls.__new__(cls)
 
-        # override with stored movers
-        mover.movers = dct['movers']
+        # override with stored movers and use the init of the super class
+        # this assumes that the super class has movers as its signature
+        super(cls, mover).__init__(
+            movers=dct['movers']
+        )
 
         return mover
 
