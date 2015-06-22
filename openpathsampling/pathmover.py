@@ -948,7 +948,6 @@ class RandomSubtrajectorySelectGeneratingMover(SampleGeneratingMover):
 
     """
     _is_ensemble_change_mover = True
-    def __init__(self, subensemble, n_l=None, ensembles=None):
     def __init__(self, ensemble, sub_ensemble, n_l=None):
         super(RandomSubtrajectorySelectGeneratingMover, self).__init__(
         )
@@ -1080,7 +1079,6 @@ class PathReversalMover(PathReversalGeneratingMover):
 
 class EnsembleHopGeneratingMover(SampleGeneratingMover):
     _is_ensemble_change_mover = True
-    def __init__(self, bias=None, ensembles=None):
     def __init__(self, ensemble, target_ensemble, change_replica=None, bias=None):
         """
         Parameters
