@@ -953,10 +953,6 @@ class RandomSubtrajectorySelectGeneratingMover(SampleGeneratingMover):
         Otherwise the move is only accepted if exactly n_l subtrajectories
         are found.
 
-    Attributes
-    ----------
-
-
     """
     _is_ensemble_change_mover = True
     def __init__(self, ensemble, sub_ensemble, n_l=None):
@@ -1866,7 +1862,6 @@ class MinusMover(SubPathMover):
     ConditionalSequentalMover. However, analysis routines will see
     `isinstance(minus, ReplicaExchangeMover)` as True.
     """
-
     _is_canonical = True
 
     def __init__(self, minus_ensemble, innermost_ensemble):
