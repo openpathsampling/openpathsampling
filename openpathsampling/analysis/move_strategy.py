@@ -265,8 +265,21 @@ class MinusMoveStrategy(MoveStrategy):
         return res_ensembles
 
     def make_movers(self, scheme):
-
-        pass
+        if self.network is None:
+            self.network = scheme.network
+        network = self.network
+        ensemble_list = self.get_ensembles(self.ensembles)
+        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
+        movers = []
+        for ens in ensembles:
+            innermosts = [t.ensembles[0] 
+                          for t in network.special_ensembles['minus'][ens]]
+            movers.append(paths.MinusMover(
+                minus_ensemble=ens, 
+                innermost_ensembles=innermosts
+            ))
+        # TODO: add to hidden ensembles
+        return movers
 
 class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
     pass
