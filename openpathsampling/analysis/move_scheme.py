@@ -238,5 +238,20 @@ class DefaultScheme(MoveScheme):
         self.append(strategies.PathReversalStrategy())
         self.append(strategies.DefaultStrategy())
         self.append(strategies.MinusMoveStrategy())
-        # TODO: also handle MS-outer stuff
+
+        msouters = self.network.special_ensembles['ms_outer']
+        for ms in msouters.keys():
+            self.append(strategies.OneWayShootingStrategy(
+                ensembles=[ms],
+                group="ms_outer_shooting"
+            ))
+            self.append(strategies.PathReversalStrategy(
+                ensembles=[ms],
+                replace=False
+            ))
+            ms_neighbors = [t.ensembles[-1] for t in msouters[ms]]
+            pairs = [[ms, neighb] for neighb in ms_neighbors]
+            self.append(strategies.SelectedPairsRepExStrategy(
+                ensembles=pairs
+            ))
 
