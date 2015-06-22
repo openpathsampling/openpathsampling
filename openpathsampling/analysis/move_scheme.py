@@ -237,6 +237,6 @@ class DefaultScheme(MoveScheme):
         self.append(strategies.OneWayShootingStrategy())
         self.append(strategies.PathReversalStrategy())
         self.append(strategies.DefaultStrategy())
-        #self.append(strategies.MinusStrategy())
+        self.append(strategies.MinusMoveStrategy())
         # TODO: also handle MS-outer stuff
 

@@ -223,7 +223,8 @@ class testDefaultScheme(object):
         chooser_type_dict = {
             'ShootingChooser' : paths.OneWayShootingMover,
             'PathreversalChooser' : paths.PathReversalMover,
-            'RepexChooser' : paths.ReplicaExchangeMover
+            'RepexChooser' : paths.ReplicaExchangeMover,
+            'MinusChooser' : paths.MinusMover
         }
         names = chooser_type_dict.keys()
 
@@ -236,6 +237,7 @@ class testDefaultScheme(object):
         assert_equal(len(root.movers[name_dict['ShootingChooser']].movers), 6)
         assert_equal(len(root.movers[name_dict['PathreversalChooser']].movers), 6)
         assert_equal(len(root.movers[name_dict['RepexChooser']].movers), 4)
+        assert_equal(len(root.movers[name_dict['MinusChooser']].movers), 2)
 
         for choosername in names:
             for mover in root.movers[name_dict[choosername]].movers:
@@ -246,12 +248,12 @@ class testDefaultScheme(object):
         scheme.movers = {} # LEGACY
         root = scheme.move_decision_tree()
         hidden = scheme.find_hidden_ensembles()
-        assert_equal(len(hidden), 0) # will change when minus supported
+        assert_equal(len(hidden), 2) 
 
     def test_default_unused_ensembles(self):
         scheme = DefaultScheme(self.network)
         scheme.movers = {} # LEGACY
         root = scheme.move_decision_tree()
         unused = scheme.find_unused_ensembles()
-        assert_equal(len(unused), 3) # will change when minus/msouter 
+        assert_equal(len(unused), 1) # will change when minus/msouter 
 
