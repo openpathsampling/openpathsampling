@@ -118,6 +118,20 @@ class PathMover(TreeMixin, OPSNamed):
         initialization_logging(logger=init_log, obj=self,
                                entries=['ensembles'])
 
+    _is_ensemble_change_mover = None
+    @property
+    def is_ensemble_change_mover(self):
+        if self._is_ensemble_change_mover is None:
+            return False
+        else:
+            return self._is_ensemble_change_mover
+
+    _is_canonical = None
+    @property
+    def is_canonical(self):
+        return self._is_canonical
+
+
     @property
     def default_name(self):
         return self.__class__.__name__[:-5]
@@ -716,6 +730,7 @@ class ReplicaExchangeGeneratingMover(SampleGeneratingMover):
     """
     A Sample GeneratingMover implementing a standard Replica Exchange
     """
+    _is_ensemble_change_mover = True
 
     def __init__(self, bias=None, ensembles=None):
         """
@@ -855,11 +870,12 @@ class RandomSubtrajectorySelectGeneratingMover(SampleGeneratingMover):
     ensembles : list of Ensembles or None
         the set of allows samples to chose from
 
-    Attribues
-    ---------
+    Attributes
+    ----------
 
 
     """
+    _is_ensemble_change_mover = True
     def __init__(self, subensemble, n_l=None, ensembles=None):
         super(RandomSubtrajectorySelectGeneratingMover, self).__init__(
             ensembles
@@ -980,6 +996,7 @@ class PathReversalMover(PathReversalGeneratingMover):
 
 
 class EnsembleHopGeneratingMover(SampleGeneratingMover):
+    _is_ensemble_change_mover = True
     def __init__(self, bias=None, ensembles=None):
         """
         Parameters
@@ -1137,6 +1154,18 @@ class RandomChoiceMover(PathMover):
     def submovers(self):
         return self.movers
 
+    @property
+    def is_ensemble_change_mover(self):
+        if self._is_ensemble_change_mover is not None:
+            return self._is_ensemble_change_mover
+        sub_change = False
+        for mover in self.movers:
+            if mover.is_ensemble_change_mover:
+                sub_change = True
+                break
+        return sub_change
+
+
     def _get_in_ensembles(self):
         return [ sub.input_ensembles for sub in self.submovers ]
 
@@ -1236,6 +1265,18 @@ class SequentialMover(PathMover):
     @property
     def submovers(self):
         return self.movers
+
+    @property
+    def is_ensemble_change_mover(self):
+        if self._is_ensemble_change_mover is not None:
+            return self._is_ensemble_change_mover
+        sub_change = False
+        for mover in self.movers:
+            if mover.is_ensemble_change_mover:
+                sub_change = True
+                break
+        return sub_change
+
 
     def _get_in_ensembles(self):
         return [ sub.input_ensembles for sub in self.submovers ]
@@ -1462,6 +1503,10 @@ class WrappedMover(PathMover):
     def submovers(self):
         return [self.mover]
 
+    @property
+    def is_ensemble_change_mover(self):
+        return self.mover.is_ensemble_change_mover
+
     def _get_in_ensembles(self):
         return self.mover.input_ensembles
 
@@ -1531,17 +1576,16 @@ class MinusMover(WrappedMover):
     paths between the innermost regular TIS interface ensemble and the minus
     interface ensemble. This is particularly useful for improving sampling
     of path space.
-
-    Note that the inheritance from ReplicaExchangeMover is only to assist
-    with `isinstance` in later anealysis. Since the only two functions here
-    are `.__init__() and `.move()`, both of which exist in both parent
-    classes, the calls to `super` will use the version in
-    ConditionalSequentalMover. However, analysis routines will see
-    `isinstance(minus, ReplicaExchangeMover)` as True.
     """
-    def __init__(self, minus_ensemble, innermost_ensemble, 
-                 ensembles=None):
+    _is_canonical = True
+
+    def __init__(self, minus_ensemble, innermost_ensembles, ensembles=None):
         segment = minus_ensemble._segment_ensemble
+        try:
+            innermost_ensembles = list(innermost_ensembles)
+        except TypeError:
+            innermost_ensembles = [innermost_ensembles]
+        innermost_ensemble = paths.join_ensembles(innermost_ensembles)
         subtrajectory_selector = RandomChoiceMover([
             FirstSubtrajectorySelectMover(subensemble=segment,
                                           n_l=minus_ensemble.n_l,
@@ -1554,7 +1598,10 @@ class MinusMover(WrappedMover):
         ])
         subtrajectory_selector.name = "MinusSubtrajectoryChooser"
 
-        repex = ReplicaExchangeMover(ensembles=[[segment, innermost_ensemble]])
+        repexs = [ReplicaExchangeMover(ensembles=[[segment, inner]])
+                  for inner in innermost_ensembles]
+        repex_chooser = RandomChoiceMover(repexs)
+        repex_chooser.name = "InterfaceSetChooser"
 
         extension_mover = RandomChoiceMover([
             ForwardExtendMover(minus_ensemble, segment),
@@ -1569,14 +1616,15 @@ class MinusMover(WrappedMover):
         mover = EnsembleFilterMover(
             ConditionalSequentialMover([
                 subtrajectory_selector,
-                repex,
+                repex_chooser,
                 extension_mover
             ]),
-            ensembles=[minus_ensemble, innermost_ensemble]
+            ensembles=[minus_ensemble] + innermost_ensembles
         )
 
         self.minus_ensemble = minus_ensemble
         self.innermost_ensemble = innermost_ensemble
+        self.innermost_ensembles = innermost_ensembles
         initialization_logging(init_log, self, ['minus_ensemble',
                                                 'innermost_ensemble'])
 

@@ -20,7 +20,7 @@ from openpathsampling.sample import Sample, SampleSet
 
 from openpathsampling.shooting import UniformSelector
 
-from openpathsampling.volume import LambdaVolume
+from openpathsampling.volume import CVRangeVolume
 from test_helpers import CallIdentity
 from openpathsampling.trajectory import Trajectory
 from openpathsampling.ensemble import EnsembleFactory as ef
@@ -30,6 +30,7 @@ import logging
 #logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 
 
 #logging.getLogger('openpathsampling.pathmover').propagate = False
@@ -115,6 +116,20 @@ class testPathMover(object):
         except AssertionError:
             assert_equal(selected, self.s3)
 
+    def test_is_ensemble_change_mover(self):
+        pm = PathMover()
+        assert_equal(pm.is_ensemble_change_mover, False)
+        assert_equal(pm._is_ensemble_change_mover, None)
+        pm._is_ensemble_change_mover = True
+        assert_equal(pm.is_ensemble_change_mover, True)
+
+    def test_is_canonical(self):
+        pm = PathMover()
+        assert_equal(pm.is_canonical, None)
+        pm._is_canonical = True
+        assert_equal(pm.is_canonical, True)
+
+
 class testShootingMover(object):
     def setup(self):
         self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
@@ -123,8 +138,8 @@ class testShootingMover(object):
         SampleGeneratingMover.engine = self.dyn
         op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
-        stateA = LambdaVolume(op, -100, 0.0)
-        stateB = LambdaVolume(op, 0.65, 100)
+        stateA = CVRangeVolume(op, -100, 0.0)
+        stateB = CVRangeVolume(op, 0.65, 100)
         self.tps = ef.A2BEnsemble(stateA, stateB)
         init_traj = make_1d_traj(
             coordinates=[-0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
@@ -147,6 +162,10 @@ class testForwardShootMover(testShootingMover):
         assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
         assert_equal(newsamp[0].trajectory, change.trials[0].trajectory)
 
+    def test_is_ensemble_change_mover(self):
+        mover = ForwardShootMover(UniformSelector(), ensembles=self.tps)
+        assert_equal(mover.is_ensemble_change_mover, False)
+
 class testBackwardShootMover(testShootingMover):
     def test_move(self):
         mover = BackwardShootMover(UniformSelector(), ensembles=self.tps)
@@ -157,6 +176,10 @@ class testBackwardShootMover(testShootingMover):
         assert_equal(change.accepted, True)
         assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
         assert_equal(newsamp[0].trajectory, change.trials[0].trajectory)
+
+    def test_is_ensemble_change_mover(self):
+        mover = BackwardShootMover(UniformSelector(), ensembles=self.tps)
+        assert_equal(mover.is_ensemble_change_mover, False)
 
 class testOneWayShootingMover(testShootingMover):
     def test_mover_initialization(self):
@@ -173,12 +196,15 @@ class testPathReversalMover(object):
         op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
 
-        volA = LambdaVolume(op, -100, 0.0)
-        volB = LambdaVolume(op, 1.0, 100)
-        volX = LambdaVolume(op, -100, 0.25)
+        volA = CVRangeVolume(op, -100, 0.0)
+        volB = CVRangeVolume(op, 1.0, 100)
+        volX = CVRangeVolume(op, -100, 0.25)
         self.tis = paths.TISEnsemble(volA, volB, volX)
         self.move = PathReversalMover()
         self.op = op
+
+    def test_is_ensemble_change_mover(self):
+        assert_equal(self.move.is_ensemble_change_mover, False)
 
     def test_AXA_path(self):
         trajAXA = make_1d_traj(coordinates=[-0.1, 0.75, -0.6],
@@ -238,10 +264,10 @@ class testReplicaExchangeMover(object):
         op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
 
-        state1 = LambdaVolume(op, -100, 0.0)
-        state2 = LambdaVolume(op, 1, 100)
-        volA = LambdaVolume(op, -100, 0.25)
-        volB = LambdaVolume(op, -100, 0.50)
+        state1 = CVRangeVolume(op, -100, 0.0)
+        state2 = CVRangeVolume(op, 1, 100)
+        volA = CVRangeVolume(op, -100, 0.25)
+        volB = CVRangeVolume(op, -100, 0.50)
         self.tisA = paths.TISEnsemble(state1, state2, volA)
         self.tisB = paths.TISEnsemble(state1, state2, volB)
         self.traj0 = make_1d_traj([-0.1, 0.2, 0.3, 0.1, -0.2])
@@ -252,6 +278,10 @@ class testReplicaExchangeMover(object):
         self.sampA2 = Sample(replica=2, trajectory=self.traj2, ensemble=self.tisA)
         self.gs_B1A2 = SampleSet([self.sampB1, self.sampA2])
         self.gs_A0B1 = SampleSet([self.sampA0, self.sampB1])
+
+    def test_is_ensemble_change_mover(self):
+        repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
+        assert_equal(repex_AB.is_ensemble_change_mover, True)
 
     def test_repex_ens_rej(self):
         repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
@@ -304,9 +334,9 @@ class testRandomChoiceMover(object):
     def setup(self):
         traj = Trajectory([-0.5, 0.7, 1.1])
         op = CallIdentity()
-        volA = LambdaVolume(op, -100, 0.0)
-        volB = LambdaVolume(op, 1.0, 100)
-        volX = LambdaVolume(op, -100, 0.25)
+        volA = CVRangeVolume(op, -100, 0.0)
+        volB = CVRangeVolume(op, 1.0, 100)
+        volX = CVRangeVolume(op, -100, 0.25)
         self.tis = paths.TISEnsemble(volA, volB, volX)
         self.tps = ef.A2BEnsemble(volA, volB)
         self.len3 = LengthEnsemble(3)
@@ -316,6 +346,19 @@ class testRandomChoiceMover(object):
         self.hop_to_tis = EnsembleHopMover(ensembles=[[self.len3, self.tis]])
         self.hop_to_tps = EnsembleHopMover(ensembles=[[self.len3, self.tps]])
         self.mover = RandomChoiceMover([self.hop_to_tis, self.hop_to_tps])
+
+    def test_is_ensemble_change_mover(self):
+        assert_equal(self.mover.is_ensemble_change_mover, True)
+
+    def test_is_canonical(self):
+        for t in range(20):
+            change = self.mover.move(self.init_samp)
+            assert_not_equal(change.canonical.mover, self.mover)
+            canonical_submovers = 0
+            for submover in self.mover.movers:
+                if change.canonical.mover is submover:
+                    canonical_submovers += 1
+            assert_equal(canonical_submovers, 1)
 
     def test_random_choice(self):
         # test that both get selected, but that we always return only one
@@ -343,9 +386,9 @@ class testSequentialMover(object):
     def setup(self):
         traj = Trajectory([-0.5, 0.7, 1.1])
         op = CallIdentity()
-        volA = LambdaVolume(op, -100, 0.0)
-        volB = LambdaVolume(op, 1.0, 100)
-        volX = LambdaVolume(op, -100, 0.25)
+        volA = CVRangeVolume(op, -100, 0.0)
+        volB = CVRangeVolume(op, 1.0, 100)
+        volX = CVRangeVolume(op, -100, 0.25)
         tis = paths.TISEnsemble(volA, volB, volX)
         tps = ef.A2BEnsemble(volA, volB)
         len3 = LengthEnsemble(3)
@@ -382,6 +425,10 @@ class testSequentialMover(object):
         self.last_rejected_movers = [
             self.hop_to_tis, self.hop_to_tps, self.hop_to_len2
         ]
+
+    def test_is_ensemble_change_mover(self):
+        move = SequentialMover(movers=self.everything_accepted_movers)
+        assert_equal(move.is_ensemble_change_mover, True)
 
     def test_everything_accepted(self):
         move = SequentialMover(movers=self.everything_accepted_movers)
@@ -533,7 +580,7 @@ class SubtrajectorySelectTester(object):
 
     def setup(self):
         op = CallIdentity()
-        vol = paths.LambdaVolume(op, -0.5, 0.5)
+        vol = paths.CVRangeVolume(op, -0.5, 0.5)
         inX = paths.AllInXEnsemble(vol)
         outX = paths.AllOutXEnsemble(vol)
         self.ensemble = paths.SequentialEnsemble([
@@ -585,6 +632,11 @@ class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
                 raise RuntimeError("Subtraj unknown!")
         assert_equal(found[0] and found[1] and found[2], True)
 
+    def test_is_ensemble_change_mover(self):
+        mover = RandomSubtrajectorySelectMover(self.subensemble)
+        assert_equal(mover.is_ensemble_change_mover, True)
+
+
     def test_nl_fails(self):
         raise SkipTest
 
@@ -624,9 +676,9 @@ class testFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
 #     def setup(self):
 #         traj = Trajectory([-0.5, 0.7, 1.1])
 #         op = CallIdentity()
-#         volA = LambdaVolume(op, -100, 0.0)
-#         volB = LambdaVolume(op, 1.0, 100)
-#         volX = LambdaVolume(op, -100, 0.25)
+#         volA = CVRangeVolume(op, -100, 0.0)
+#         volB = CVRangeVolume(op, 1.0, 100)
+#         volX = CVRangeVolume(op, -100, 0.25)
 #         self.tis = paths.TISEnsemble(volA, volB, volX)
 #         self.len3 = LengthEnsemble(3)
 #         self.len2 = LengthEnsemble(2)
@@ -659,9 +711,9 @@ class testMinusMover(object):
         op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
 
-        volA = LambdaVolume(op, -100, 0.0)
-        volB = LambdaVolume(op, 1.0, 100)
-        volX = LambdaVolume(op, -100, 0.25)
+        volA = CVRangeVolume(op, -100, 0.0)
+        volB = CVRangeVolume(op, 1.0, 100)
+        volX = CVRangeVolume(op, -100, 0.25)
         self.dyn = CalvinistDynamics([
             # successful move: (backward extension then forward)
             -0.13, 0.13, 0.33, -0.11, -0.12, 0.12, 0.32, -0.131,
@@ -679,7 +731,7 @@ class testMinusMover(object):
         self.innermost = paths.TISEnsemble(volA, volB, volX)
         self.minus = paths.MinusInterfaceEnsemble(volA, volX)
         self.mover = MinusMover(minus_ensemble=self.minus,
-                                innermost_ensemble=self.innermost)
+                                innermost_ensembles=[self.innermost])
         self.first_segment = [-0.1, 0.1, 0.3, 0.1, -0.15] 
         self.list_innermost = [-0.11, 0.11, 0.31, 0.11, -0.12]
         self.second_segment = [-0.25, 0.2, 0.4, 0.2, -0.2]
@@ -692,6 +744,12 @@ class testMinusMover(object):
             trajectory=init_minus,
             ensemble=self.minus
         )
+
+    def test_is_ensemble_change_mover(self):
+        assert_equal(self.mover.is_ensemble_change_mover, True)
+
+    def test_is_canonical(self):
+        assert_equal(self.mover.is_canonical, True)
 
     def test_setup_sanity(self):
         # sanity checks to make sure that what we set up makes sense
@@ -743,6 +801,8 @@ class testMinusMover(object):
 
             for c in change:
                 assert_equal(c.accepted, True)
+
+            assert_equal(change.canonical.mover, self.mover)
 
             key = ""
             s_inner0_xvals = [s.coordinates[0,0] for s in s_inner[0].trajectory]

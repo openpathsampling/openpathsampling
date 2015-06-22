@@ -3,8 +3,9 @@ from openpathsampling.todict import OPSNamed
 import mdtraj as md
 import numpy as np
 import pandas as pd
-#from simtk import unit as units
-#import simtk.openmm
+
+from simtk import unit as u
+import simtk.openmm
 
 class Topology(OPSNamed):
     '''
@@ -60,7 +61,7 @@ class MDTrajTopology(Topology):
 
     def to_dict(self):
         out = dict()
-        used_elements = set()
+        # used_elements = set()
 
         atom_data = []
         for atom in self.md.atoms:
@@ -73,30 +74,31 @@ class MDTrajTopology(Topology):
                          int(atom.residue.resSeq), atom.residue.name,
                          atom.residue.chain.index))
 
-            used_elements.add(atom.element)
+            # used_elements.add(atom.element)
 
         out['atom_columns'] = ["serial", "name", "element", "resSeq", "resName", "chainID"]
         out['atoms'] = atom_data
         out['bonds'] = [(a.index, b.index) for (a, b) in self.md.bonds]
-        out['elements'] = {key: tuple(el) for key, el in md.element.Element._elements_by_symbol.iteritems() if el in used_elements}
+        # out['elements'] = {key: tuple(el) for key, el in md.element.Element._elements_by_symbol.iteritems() if el in used_elements}
 
         return {'md' : out, 'subsets' : self.subsets}
 
     @classmethod
     def from_dict(cls, dct):
+        # TODO: fix this in a better way. Works for now with mdtraj 1.3.x and 1.4.x
         top_dict = dct['md']
-        elements = top_dict['elements']
+        # elements = top_dict['elements']
 
-        for key, el in elements.iteritems():
-            try:
-                md.element.Element(
-                            number=int(el[0]), name=el[1], symbol=el[2], mass=float(el[3])
-                         )
-                simtk.openmm.app.Element(
-                            number=int(el[0]), name=el[1], symbol=el[2], mass=float(el[3])*units.amu
-                         )
-            except(AssertionError):
-                pass
+        # for key, el in elements.iteritems():
+        #     try:
+        #         md.element.Element(
+        #                     number=int(el[0]), name=el[1], symbol=el[2], mass=float(el[3])
+        #                  )
+        #         simtk.openmm.app.Element(
+        #                     number=int(el[0]), name=el[1], symbol=el[2], mass=float(el[3])*units.amu
+        #                  )
+        #     except(AssertionError):
+        #         pass
 
         atoms = pd.DataFrame(top_dict['atoms'], columns=top_dict['atom_columns'])
         bonds = np.array(top_dict['bonds'])

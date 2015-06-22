@@ -4,13 +4,13 @@ from ensemble import (
     Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
     EmptyEnsemble, ExitsXEnsemble, FullEnsemble, PartInXEnsemble,
     AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble,
-    BackwardPrependedTrajectoryEnsemble, ForwardAppendedTrajectoryEnsemble,
+    SuffixTrajectoryEnsemble, PrefixTrajectoryEnsemble,
     PartOutXEnsemble, LengthEnsemble, NegatedEnsemble,
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble,
     SequentialEnsemble, IntersectionEnsemble, UnionEnsemble,
     SymmetricDifferenceEnsemble, RelativeComplementEnsemble,
     SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble,
-    OptionalEnsemble
+    OptionalEnsemble, join_ensembles
 )
 
 from snapshot import Snapshot, Configuration, Momentum
@@ -46,10 +46,11 @@ from dynamics_engine import DynamicsEngine
 
 from openmm_engine import OpenMMEngine
 
-from volume import Volume, VolumeCombination, VolumeFactory, VoronoiVolume, \
-    EmptyVolume, FullVolume, LambdaVolume, LambdaVolumePeriodic, \
-    IntersectionVolume, \
-    UnionVolume, SymmetricDifferenceVolume, RelativeComplementVolume
+from volume import (Volume, VolumeCombination, VolumeFactory, VoronoiVolume, 
+    EmptyVolume, FullVolume, CVRangeVolume, CVRangeVolumePeriodic,
+    IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
+    RelativeComplementVolume, join_volumes
+)
 
 from todict import ObjectJSON, OPSNamed
 
@@ -75,7 +76,7 @@ from analysis.tis_analysis import (
 from analysis.move_scheme import MoveScheme
 
 from analysis.network import (
-    MSTISNetwork, TransitionNetwork
+    MSTISNetwork, TransitionNetwork, MISTISNetwork
 )
 
 from analysis.replica_network import (
