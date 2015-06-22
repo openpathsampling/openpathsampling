@@ -1721,6 +1721,13 @@ class SubPathMover(PathMover):
         )
         return change
 
+    @classmethod
+    def from_dict(cls, dct):
+        # This will always fix the mover to be the one stored for all SubPathMovers
+        obj = super(cls).from_dict(dct)
+        obj.mover = dct['mover']
+
+        return obj
 
 class EnsembleFilterMover(SubPathMover):
     """Mover that return only samples from specified ensembles
@@ -1854,7 +1861,13 @@ class MinusMover(SubPathMover):
     """
     _is_canonical = True
 
-    def __init__(self, minus_ensemble, innermost_ensemble):
+    def __init__(self, minus_ensemble, innermost_ensembles):
+
+        try:
+            innermost_ensembles = list(innermost_ensembles)
+        except TypeError:
+            innermost_ensembles = [innermost_ensembles]
+
         segment = minus_ensemble._segment_ensemble
         sub_trajectory_selector = RandomChoiceMover([
             FirstSubtrajectorySelectMover(
@@ -1870,10 +1883,13 @@ class MinusMover(SubPathMover):
         ])
         sub_trajectory_selector.name = "MinusSubtrajectoryChooser"
 
-        repex = ReplicaExchangeMover(
+        repexs = [ReplicaExchangeMover(
             ensemble1=segment,
-            ensemble2=innermost_ensemble
-        )
+            ensemble2=inner
+        ) for inner in innermost_ensembles]
+
+        repex_chooser = RandomChoiceMover(repexs)
+        repex_chooser.name = "InterfaceSetChooser"
 
         extension_mover = RandomChoiceMover([
             ForwardExtendMover(
@@ -1895,14 +1911,14 @@ class MinusMover(SubPathMover):
             EnsembleFilterMover(
                 ConditionalSequentialMover([
                     sub_trajectory_selector,
-                    repex,
+                    repex_chooser,
                     extension_mover
                 ]),
-            ensembles=[minus_ensemble, innermost_ensemble]
+            ensembles=[minus_ensemble] + innermost_ensembles
         )
 
         self.minus_ensemble = minus_ensemble
-        self.innermost_ensemble = innermost_ensemble
+        self.innermost_ensembles = innermost_ensembles
         initialization_logging(init_log, self, ['minus_ensemble',
                                                 'innermost_ensemble'])
 
