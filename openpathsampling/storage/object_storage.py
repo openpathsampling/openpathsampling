@@ -298,7 +298,6 @@ class ObjectStore(object):
         # add a property idx that keeps the storage reference
         def _idx(this):
             if not hasattr(this, '_idx'):
-                print 'reset', this
                 this._idx = dict()
 
             return this._idx
@@ -419,10 +418,10 @@ class ObjectStore(object):
 
         """
         if self.has_name:
-            if name in self.cache:
+            if name not in self.name_idx:
                 self.update_name_cache()
 
-            return self[self.cache[name]]
+            return self[self.name_idx[name]]
 
         return []
 
@@ -443,10 +442,10 @@ class ObjectStore(object):
 
         """
         if self.has_name:
-            if name in self.cache:
+            if name not in self.name_idx:
                 self.update_name_cache()
 
-            return self.cache[name]
+            return self.name_idx[name]
 
         return []
 
@@ -468,11 +467,11 @@ class ObjectStore(object):
 
         """
         if self.has_name:
-            if name in self.cache:
+            if name not in self.name_idx:
                 self.update_name_cache()
 
-            if len(self.cache[name]) > 0:
-                return self[self.cache[name][0]]
+            if len(self.name_idx[name]) > 0:
+                return self[self.name_idx[name][0]]
 
         return None
 
@@ -1302,7 +1301,8 @@ def loadidx(func):
             obj = func(n_idx, *args, **kwargs)
 
         if not hasattr(obj, 'idx'):
-            obj.idx = dict()
+            print type(obj), obj.__dict__
+#            obj.idx = dict()
 
         obj.idx[self.storage] = n_idx
 
