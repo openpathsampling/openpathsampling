@@ -85,6 +85,11 @@ class testMoveStrategy(MoveStrategyTestSetup):
         ensembles = self.strategy.get_ensembles(weird_ens_list)
         assert_equal(ensembles, [[ensA[0]], [ensA[1]], [extra_ens]])
 
+        ensembles = self.strategy.get_ensembles(extra_ens)
+        assert_equal(len(ensembles), 1)
+        assert_equal(len(ensembles[0]), 1)
+        assert_equal(ensembles[0][0], extra_ens)
+
 class testOneWayShootingStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = OneWayShootingStrategy()
@@ -193,10 +198,28 @@ class testMinusMoveStrategy(MoveStrategyTestSetup):
         assert_not_equal(ensembles[0][0].state_vol, ensembles[1][0].state_vol)
 
     def test_get_ensembles_multiple_minus(self):
-        raise SkipTest
+        strategy = MinusMoveStrategy()
+        strategy.network = self.network
+        innerA = self.network.sampling_transitions[0].ensembles[0]
+        innerB = self.network.sampling_transitions[1].ensembles[0]
+        extra_minus = paths.MinusInterfaceEnsemble(
+            state_vol=self.network.sampling_transitions[0].stateA,
+            innermost_vols=[innerA, innerB]
+        )
+        self.network.special_ensembles['minus'][extra_minus] = [innerA, innerB]
+        ensembles = strategy.get_ensembles(None)
+        assert_equal(len(ensembles), 2)
+        assert_equal(len(ensembles[0]), 2)
+        assert_equal(len(ensembles[1]), 1)
 
     def test_get_ensembles_fixed_ensembles(self):
-        raise SkipTest
+        strategy = MinusMoveStrategy()
+        strategy.network = self.network
+        minusA = self.network.special_ensembles['minus'].keys()[0]
+        ensembles = strategy.get_ensembles(minusA)
+        assert_equal(len(ensembles), 1)
+        assert_equal(len(ensembles[0]), 1)
+        assert_equal(ensembles[0][0], minusA)
 
     def test_make_movers(self):
         raise SkipTest

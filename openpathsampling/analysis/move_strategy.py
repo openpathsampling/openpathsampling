@@ -91,7 +91,11 @@ class MoveStrategy(object):
             # takes a list and makes it into list-of-lists
             res_ensembles = []
             elem_group = []
-            for elem in ensembles:
+            try:
+                ens_iter = iter(ensembles)
+            except TypeError:
+                ens_iter = iter([ensembles])
+            for elem in ens_iter:
                 try:
                     append_group = list(elem)
                 except TypeError:
@@ -235,7 +239,7 @@ class PathReversalStrategy(MoveStrategy):
 
 class MinusMoveStrategy(MoveStrategy):
     """
-    Takes a given network and makes the minus mover.
+    Takes a given scheme and makes the minus mover.
     """
     _level = levels.MOVER
     def __init__(self, ensembles=None, group="minus", replace=True,
@@ -261,6 +265,7 @@ class MinusMoveStrategy(MoveStrategy):
         return res_ensembles
 
     def make_movers(self, scheme):
+
         pass
 
 class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
