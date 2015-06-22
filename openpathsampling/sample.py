@@ -3,6 +3,9 @@ import random
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
 
+import logging
+logger = logging.getLogger(__name__)
+
 class SampleKeyError(Exception):
     def __init__(self, key, sample, sample_key):
         self.key = key
@@ -188,12 +191,15 @@ class SampleSet(OPSNamed):
     def sanity_check(self):
         '''Checks that the sample trajectories satisfy their ensembles
         '''
+        logger.info("Starting sanity check")
         for sample in self:
             # TODO: Replace by using .valid which means that it is in the ensemble
             # and does the same testing but with caching so the .valid might
             # fail in case of some bad hacks. Since we check anyway, let's just
 
             #assert(sample.valid)
+            logger.info("Checking sanity of "+repr(sample.ensemble)+
+                        " with "+str(sample.trajectory))
             assert(sample.ensemble(sample.trajectory))
 
     def consistency_check(self):

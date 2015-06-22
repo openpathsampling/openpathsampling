@@ -14,9 +14,9 @@ logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 class testSummarizeTrajectoryVolumes(object):
     def setup(self):
         op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
-        vol1 = paths.LambdaVolume(op, 0.1, 0.5)
-        vol2 = paths.LambdaVolume(op, -0.1, 0.7)
-        vol3 = paths.LambdaVolume(op, 2.0, 2.5)
+        vol1 = paths.CVRangeVolume(op, 0.1, 0.5)
+        vol2 = paths.CVRangeVolume(op, -0.1, 0.7)
+        vol3 = paths.CVRangeVolume(op, 2.0, 2.5)
 
         self.stateA = vol1
         self.interstitial = vol2 & ~vol1
@@ -41,6 +41,18 @@ class testSummarizeTrajectoryVolumes(object):
             [("A", 1), ("I", 3), ("B", 2), ("X", 2), ("B", 1), ("X", 1)]
         )
 
+    def test_summarize_trajectory_volumes_str(self):
+        voldict = {"A" : self.stateA, "B" : self.stateB, 
+                   "I" : self.interstitial, "X" : self.outInterface}
+        assert_items_equal(
+            self._make_traj("abix").summarize_by_volumes_str(voldict), 
+            "A-B-I-X"
+        )
+        assert_items_equal(
+            self._make_traj("abix").summarize_by_volumes_str(voldict, " blah "), 
+            "A blah B blah I blah X"
+        )
+
     def test_summarize_trajectory_volumes_with_nonevol(self):
         voldict = {"A" : self.stateA, "B" : self.stateB, 
                    "I" : self.interstitial}
@@ -51,6 +63,18 @@ class testSummarizeTrajectoryVolumes(object):
         assert_items_equal(
             self._make_traj("aiiibbxxbx").summarize_by_volumes(voldict), 
             [("A", 1), ("I", 3), ("B", 2), (None, 2), ("B", 1), (None, 1)]
+        )
+
+    def test_summarize_trajectory_volumes_with_nonevol(self):
+        voldict = {"A" : self.stateA, "B" : self.stateB, 
+                   "I" : self.interstitial}
+        assert_items_equal(
+            self._make_traj("abix").summarize_by_volumes_str(voldict), 
+            "A-B-I-None"
+        )
+        assert_items_equal(
+            self._make_traj("aiiibbxxbx").summarize_by_volumes_str(voldict), 
+            "A-I-B-None-B-None"
         )
 
 

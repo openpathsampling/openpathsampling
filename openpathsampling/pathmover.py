@@ -115,6 +115,12 @@ class PathMover(TreeMixin, OPSNamed):
         else:
             return self._is_ensemble_change_mover
 
+    _is_canonical = None
+    @property
+    def is_canonical(self):
+        return self._is_canonical
+
+
     @property
     def default_name(self):
         return self.__class__.__name__[:-5]
@@ -552,8 +558,8 @@ class ForwardShootGeneratingMover(ShootGeneratingMover):
         # Run until one of the stoppers is triggered
         partial_trajectory = self.engine.generate(
             shooting_point.snapshot.copy(),
-            running=[
-                paths.ForwardAppendedTrajectoryEnsemble(
+            running = [
+                paths.PrefixTrajectoryEnsemble(
                     ensemble,
                     shooting_point.trajectory[0:shooting_point.index]
                 ).can_append,
@@ -588,8 +594,8 @@ class BackwardShootGeneratingMover(ShootGeneratingMover):
         # Run until one of the stoppers is triggered
         partial_trajectory = self.engine.generate(
             shooting_point.snapshot.reversed_copy(),
-            running=[
-                paths.BackwardPrependedTrajectoryEnsemble(
+            running = [
+                paths.SuffixTrajectoryEnsemble(
                     ensemble,
                     shooting_point.trajectory[shooting_point.index + 1:]
                 ).can_prepend,
@@ -716,8 +722,8 @@ class ForwardExtendGeneratingMover(ExtendingGeneratingMover):
         # Run until one of the stoppers is triggered
         partial_trajectory = self.engine.generate(
             initial_trajectory[-1],
-            running=[
-                paths.ForwardAppendedTrajectoryEnsemble(
+            running = [
+                paths.PrefixTrajectoryEnsemble(
                     ensemble,
                     initial_trajectory[:-1]
                 ).can_append,
@@ -745,8 +751,8 @@ class BackwardExtendGeneratingMover(ExtendingGeneratingMover):
         # Run until one of the stoppers is triggered
         partial_trajectory = self.engine.generate(
             initial_trajectory[0].reversed,
-            running=[
-                paths.BackwardPrependedTrajectoryEnsemble(
+            running = [
+                paths.SuffixTrajectoryEnsemble(
                     ensemble,
                     initial_trajectory[1:]
                 ).can_prepend,
@@ -1852,6 +1858,8 @@ class MinusMover(SubPathMover):
     paths between the innermost regular TIS interface ensemble and the minus
     interface ensemble. This is particularly useful for improving sampling
     of path space.
+    """
+    _is_canonical = True
 
     Note that the inheritance from ReplicaExchangeMover is only to assist
     with `isinstance` in later anealysis. Since the only two functions here
@@ -1903,11 +1911,12 @@ class MinusMover(SubPathMover):
                 repex,
                 extension_mover
             ]),
-            ensembles=[minus_ensemble, innermost_ensemble]
+            ensembles=[minus_ensemble] + innermost_ensembles
         )
 
         self.minus_ensemble = minus_ensemble
         self.innermost_ensemble = innermost_ensemble
+        self.innermost_ensembles = innermost_ensembles
         initialization_logging(init_log, self, ['minus_ensemble',
                                                 'innermost_ensemble'])
 

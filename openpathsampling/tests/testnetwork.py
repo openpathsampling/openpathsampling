@@ -10,16 +10,23 @@ import openpathsampling as paths
 from openpathsampling.analysis.network import *
 from openpathsampling import VolumeFactory as vf
 
+import logging
+
+logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+
+
 class testMSTISNetwork(object):
     def setup(self):
         xval = paths.CV_Function(name="xA", fcn=lambda s : s.xyz[0][0])
-        self.stateA = paths.LambdaVolume(xval, float("-inf"), -0.5)
-        self.stateB = paths.LambdaVolume(xval, -0.1, 0.1)
-        self.stateC = paths.LambdaVolume(xval, 0.5, float("inf"))
+        self.stateA = paths.CVRangeVolume(xval, float("-inf"), -0.5)
+        self.stateB = paths.CVRangeVolume(xval, -0.1, 0.1)
+        self.stateC = paths.CVRangeVolume(xval, 0.5, float("inf"))
 
-        ifacesA = vf.LambdaVolumeSet(xval, float("-inf"), [-0.5, -0.4, -0.3])
-        ifacesB = vf.LambdaVolumeSet(xval, [-0.2, -0.15, -0.1], [0.2, 0.15, 0.1])
-        ifacesC = vf.LambdaVolumeSet(xval, [0.5, 0.4, 0.3], float("inf"))
+        ifacesA = vf.CVRangeVolumeSet(xval, float("-inf"), [-0.5, -0.4, -0.3])
+        ifacesB = vf.CVRangeVolumeSet(xval, [-0.2, -0.15, -0.1], [0.2, 0.15, 0.1])
+        ifacesC = vf.CVRangeVolumeSet(xval, [0.5, 0.4, 0.3], float("inf"))
 
         self.traj = {}
         self.traj['AA'] = make_1d_traj(
