@@ -1800,14 +1800,13 @@ class OneWayShootingMover(RandomChoiceMover):
 
     @classmethod
     def from_dict(cls, dct):
-        # create dummy OneWayShooter
-        mover = cls(
-            ensemble=None,
-            selector=None
-        )
+        mover = cls.__new__(cls)
 
-        # override with stored movers
-        mover.movers = dct['movers']
+        # override with stored movers and use the init of the super class
+        # this assumes that the super class has movers as its signature
+        super(cls, mover).__init__(
+            movers=dct['movers']
+        )
 
         return mover
 
@@ -1920,7 +1919,7 @@ class MinusMover(SubPathMover):
         self.minus_ensemble = minus_ensemble
         self.innermost_ensembles = innermost_ensembles
         initialization_logging(init_log, self, ['minus_ensemble',
-                                                'innermost_ensemble'])
+                                                'innermost_ensembles'])
 
         super(MinusMover, self).__init__(mover)
 

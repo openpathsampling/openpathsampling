@@ -793,7 +793,7 @@ class testMinusMover(object):
         self.minus = paths.MinusInterfaceEnsemble(volA, volX)
         self.mover = MinusMover(
             minus_ensemble=self.minus,
-            innermost_ensemble=self.innermost
+            innermost_ensembles=self.innermost
         )
         self.first_segment = [-0.1, 0.1, 0.3, 0.1, -0.15] 
         self.list_innermost = [-0.11, 0.11, 0.31, 0.11, -0.12]
