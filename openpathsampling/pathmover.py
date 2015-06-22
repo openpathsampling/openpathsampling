@@ -1721,13 +1721,13 @@ class SubPathMover(PathMover):
         )
         return change
 
-    @classmethod
-    def from_dict(cls, dct):
-        # This will always fix the mover to be the one stored for all SubPathMovers
-        obj = super(cls).from_dict(dct)
-        obj.mover = dct['mover']
-
-        return obj
+#    @classmethod
+#    def from_dict(cls, dct):
+#        # This will always fix the mover to be the one stored for all SubPathMovers
+#        obj = PathMover.from_dict(dct)
+#        obj.mover = dct['mover']
+#
+#        return obj
 
 class EnsembleFilterMover(SubPathMover):
     """Mover that return only samples from specified ensembles

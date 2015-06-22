@@ -83,7 +83,7 @@ class MSTISNetwork(TISNetwork):
 
     @classmethod
     def from_dict(cls, dct):
-        network = MSTISNetwork(dct['trans_info'])
+        network = cls.__new__(cls)
 
         # replace automatically created attributes with stored ones
         network.from_state = dct['from_state']
