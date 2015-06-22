@@ -44,8 +44,10 @@ class TISNetwork(TransitionNetwork):
         all_ens = []
         for t in self.sampling_transitions:
             all_ens.extend(t.ensembles)
-        for special in self.special_ensembles.keys():
-            alL_ens.extend(special.keys())
+        for special_dict in self.special_ensembles.values():
+            all_ens.extend(special_dict.keys())
+        # TODO: add hidden_ensembles
+        return all_ens
 
 
     @property
@@ -149,14 +151,14 @@ class MSTISNetwork(TISNetwork):
         self.transitions = {}
         self.build_analysis_transitions()
 
-    @property
-    def all_ensembles(self):
-        all_ens = []
-        for t in self.sampling_transitions:
-            all_ens.extend(t.ensembles)
-        all_ens.extend(self.ms_outers)
-        all_ens.extend(self.minus_ensembles)
-        return all_ens
+    #@property
+    #def all_ensembles(self):
+        #all_ens = []
+        #for t in self.sampling_transitions:
+            #all_ens.extend(t.ensembles)
+        #all_ens.extend(self.ms_outers)
+        #all_ens.extend(self.minus_ensembles)
+        #return all_ens
 
     def build_analysis_transitions(self):
         # set up analysis transitions (not to be saved)
@@ -421,14 +423,14 @@ class MISTISNetwork(TISNetwork):
         network.__init__(dct['input_transitions'])
         return network
 
-    @property
-    def all_ensembles(self):
-        all_ens = []
-        for t in self.sampling_transitions:
-            all_ens.extend(t.ensembles)
-        all_ens.extend(self.ms_outers)
-        all_ens.extend(self.minus_ensembles)
-        return all_ens
+    #@property
+    #def all_ensembles(self):
+        #all_ens = []
+        #for t in self.sampling_transitions:
+            #all_ens.extend(t.ensembles)
+        #all_ens.extend(self.ms_outers)
+        #all_ens.extend(self.minus_ensembles)
+        #return all_ens
 
     def build_sampling_transitions(self, transitions):
         # use dictionaries so we only have one instance of each, even if the
