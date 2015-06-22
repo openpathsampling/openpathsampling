@@ -1858,8 +1858,6 @@ class MinusMover(SubPathMover):
     paths between the innermost regular TIS interface ensemble and the minus
     interface ensemble. This is particularly useful for improving sampling
     of path space.
-    """
-    _is_canonical = True
 
     Note that the inheritance from ReplicaExchangeMover is only to assist
     with `isinstance` in later anealysis. Since the only two functions here
@@ -1868,6 +1866,9 @@ class MinusMover(SubPathMover):
     ConditionalSequentalMover. However, analysis routines will see
     `isinstance(minus, ReplicaExchangeMover)` as True.
     """
+
+    _is_canonical = True
+
     def __init__(self, minus_ensemble, innermost_ensemble):
         segment = minus_ensemble._segment_ensemble
         sub_trajectory_selector = RandomChoiceMover([
@@ -1911,12 +1912,11 @@ class MinusMover(SubPathMover):
                 repex,
                 extension_mover
             ]),
-            ensembles=[minus_ensemble] + innermost_ensembles
+            ensembles=[minus_ensemble, innermost_ensemble]
         )
 
         self.minus_ensemble = minus_ensemble
         self.innermost_ensemble = innermost_ensemble
-        self.innermost_ensembles = innermost_ensembles
         initialization_logging(init_log, self, ['minus_ensemble',
                                                 'innermost_ensemble'])
 
