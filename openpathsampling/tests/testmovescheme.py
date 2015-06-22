@@ -24,12 +24,12 @@ class testMoveScheme(object):
     def setup(self):
         cvA = paths.CV_Function(name="xA", fcn=lambda s : s.xyz[0][0])
         cvB = paths.CV_Function(name="xB", fcn=lambda s : -s.xyz[0][0])
-        self.stateA = paths.LambdaVolume(cvA, float("-inf"), -0.5)
-        self.stateB = paths.LambdaVolume(cvB, float("-inf"), -0.5)
-        interfacesA = vf.LambdaVolumeSet(cvA, float("-inf"), 
-                                         [-0.5, -0.3, -0.1, 0.0])
-        interfacesB = vf.LambdaVolumeSet(cvB, float("-inf"), 
-                                         [-0.5, -0.3, -0.1, 0.0])
+        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
+        interfacesA = vf.CVRangeVolumeSet(cvA, float("-inf"), 
+                                          [-0.5, -0.3, -0.1, 0.0])
+        interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
+                                          [-0.5, -0.3, -0.1, 0.0])
         network = paths.MSTISNetwork([
             (self.stateA, interfacesA, "A", cvA),
             (self.stateB, interfacesB, "B", cvB)
@@ -205,12 +205,12 @@ class testDefaultScheme(object):
     def setup(self):
         cvA = paths.CV_Function(name="xA", fcn=lambda s : s.xyz[0][0])
         cvB = paths.CV_Function(name="xB", fcn=lambda s : -s.xyz[0][0])
-        self.stateA = paths.LambdaVolume(cvA, float("-inf"), -0.5)
-        self.stateB = paths.LambdaVolume(cvB, float("-inf"), -0.5)
-        interfacesA = vf.LambdaVolumeSet(cvA, float("-inf"), 
-                                         [-0.5, -0.3, -0.1, 0.0])
-        interfacesB = vf.LambdaVolumeSet(cvB, float("-inf"), 
-                                         [-0.5, -0.3, -0.1, 0.0])
+        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
+        interfacesA = vf.CVRangeVolumeSet(cvA, float("-inf"), 
+                                          [-0.5, -0.3, -0.1, 0.0])
+        interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
+                                          [-0.5, -0.3, -0.1, 0.0])
         self.network = paths.MSTISNetwork([
             (self.stateA, interfacesA, "A", cvA),
             (self.stateB, interfacesB, "B", cvB)
