@@ -343,8 +343,6 @@ class TISTransition(Transition):
             if true, cached results are overwritten
         """
 
-        tcp = dict()
-
         if method == "wham":
             run_ensembles = False
             for ens in self.ensembles:
