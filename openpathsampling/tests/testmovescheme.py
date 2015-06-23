@@ -208,6 +208,10 @@ class testMoveScheme(object):
     def test_build_balance_partners_premature(self):
         raise SkipTest
 
+    def test_build_choice_probability(self):
+        raise SkipTest
+
+
 class testDefaultScheme(object):
     def setup(self):
         cvA = paths.CV_Function(name="xA", fcn=lambda s : s.xyz[0][0])
@@ -287,4 +291,12 @@ class testDefaultScheme(object):
         root = scheme.move_decision_tree()
         scheme.build_balance_partners()
         raise SkipTest
+
+    def test_default_choice_probability(self):
+        scheme = DefaultScheme(self.network)
+        scheme.movers = {} # LEGACY
+        root = scheme.move_decision_tree()
+        scheme.build_choice_probability()
+        raise SkipTest
+
 

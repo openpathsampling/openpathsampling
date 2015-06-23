@@ -315,14 +315,18 @@ class DefaultStrategy(MoveStrategy):
     def __init__(self, ensembles=None, group=None, replace=True,
                  network=None):
         self.mover_weights = {}
+        self.ensemble_weights = {}
         self.group = group
         self.replace = replace
         self.network = network
 
-    def make_chooser(self, scheme, group, choosername=None):
+    def make_chooser(self, scheme, group, weights=None, choosername=None):
         if choosername is None:
             choosername = group.capitalize()+"Chooser"
-        chooser = paths.RandomChoiceMover(movers=scheme.movers[group])
+        chooser = paths.RandomChoiceMover(
+            movers=scheme.movers[group],
+            weights=weights
+        )
         chooser.name = choosername
         return chooser
 
@@ -350,25 +354,48 @@ class DefaultStrategy(MoveStrategy):
 
         return mover_weights
 
+    def get_ensemble_weights(self, scheme):
+        ensemble_weights = {}
+        for group in scheme.movers.keys():
+            ensemble_weights[group] = {m.ensemble_signature : 1.0 
+                                       for m in scheme.movers[group]} 
+
+        for weights in [scheme.ensemble_weights, self.ensemble_weights]:
+            if weights != {}:
+                for group in weights.keys():
+                    for sig in weights[group].keys():
+                        ensemble_weights[group][sig] = weights[group][sig]
+        return ensemble_weights
+
+
+
     def make_movers(self, scheme):
         if self.network is None:
             self.network = scheme.network
 
         mover_weights = self.get_mover_weights(scheme)
+        ensemble_weights = self.get_ensemble_weights(scheme)
         choosers = []
         weights = []
         for group in scheme.movers.keys():
-            choosers.append(self.make_chooser(scheme, group))
+            # care to the order of weights
+            ens_weights = [ensemble_weights[group][m.ensemble_signature]
+                           for m in scheme.movers[group]]
+            choosers.append(
+                self.make_chooser(scheme, group, weights=ens_weights)
+            )
             try:
                 group_weights = mover_weights[group]
             except KeyError:
                 group_weights = 1.0
+                mover_weights[group] = group_weights
             weights.append(len(scheme.movers[group])*group_weights)
         root_chooser = paths.RandomChoiceMover(movers=choosers,
                                                weights=weights)
         root_chooser.name = "RootMover"
         scheme.root_mover = root_chooser
         scheme.mover_weights = mover_weights
+        scheme.ensemble_weights = ensemble_weights
         return root_chooser
 
 

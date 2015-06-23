@@ -277,10 +277,28 @@ class testDefaultStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         scheme = MoveScheme(self.network)
         scheme.movers = {} # handles LEGACY stuff
-        scheme.movers['shooting'] = [1, 2, 3]
-        scheme.movers['repex'] = [12, 23]
-        scheme.movers['pathreversal'] = [1, 2, 3]
-        scheme.movers['minus'] = [ 0 ]
+        ens0 = self.network.sampling_transitions[0].ensembles[0]
+        ens1 = self.network.sampling_transitions[0].ensembles[1]
+        ens2 = self.network.sampling_transitions[0].ensembles[2]
+        scheme.movers['shooting'] = [
+            paths.OneWayShootingMover(
+                selector=paths.UniformSelector(),
+                ensembles=[ens]
+            )
+            for ens in [ens0, ens1, ens2]
+        ]
+        scheme.movers['repex'] = [
+            paths.ReplicaExchangeMover(ensembles=[ens0, ens1]),
+            paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
+        ]
+        scheme.movers['pathreversal'] = [
+            paths.PathReversalMover(ensembles=ens) 
+            for ens in [ens0, ens1, ens2]
+        ]
+        scheme.movers['minus'] = [paths.MinusMover(
+            minus_ensemble=self.network.minus_ensembles[0],
+            innermost_ensembles=[ens0]
+        )]
 
         strategy = DefaultStrategy()
         root = strategy.make_movers(scheme)
@@ -314,15 +332,21 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         weight = root.weights[name_dict[name]]
         chooser = root.movers[name_dict[name]]
         assert_equal(type(chooser), paths.RandomChoiceMover)
-        assert_equal(weight, 0.2)
         assert_equal(len(chooser.movers), 1)
+        assert_equal(weight, 0.2)
         for w in chooser.weights:
             assert_equal(w, 1.0)
 
     def test_make_movers_unknown_group(self):
         scheme = MoveScheme(self.network)
         scheme.movers = {} # handles LEGACY stuff
-        scheme.movers['blahblah']  = [1, 2]
+        ens0 = self.network.sampling_transitions[0].ensembles[0]
+        ens1 = self.network.sampling_transitions[0].ensembles[1]
+        ens2 = self.network.sampling_transitions[0].ensembles[2]
+        scheme.movers['blahblah']  = [
+            paths.ReplicaExchangeMover(ensembles=[ens0, ens1]),
+            paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
+        ]
 
         strategy = DefaultStrategy()
         root = strategy.make_movers(scheme)
@@ -333,11 +357,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         weight = root.weights[name_dict[name]]
         chooser = root.movers[name_dict[name]]
         assert_equal(type(chooser), paths.RandomChoiceMover)
-        try:
-            assert_equal(weight, 2.0)
-        except AssertionError:
-            print root.weights, root.movers, chooser.movers
-            raise
+        assert_equal(weight, 2.0)
         assert_equal(len(chooser.movers), 2)
         for w in chooser.weights:
             assert_equal(w, 1.0)
@@ -345,7 +365,13 @@ class testDefaultStrategy(MoveStrategyTestSetup):
     def test_make_movers_custom_group(self):
         scheme = MoveScheme(self.network)
         scheme.movers = {} # handles LEGACY stuff
-        scheme.movers['blahblahblah']  = [1, 2]
+        ens0 = self.network.sampling_transitions[0].ensembles[0]
+        ens1 = self.network.sampling_transitions[0].ensembles[1]
+        ens2 = self.network.sampling_transitions[0].ensembles[2]
+        scheme.movers['blahblahblah']  = [
+            paths.ReplicaExchangeMover(ensembles=[ens0, ens1]),
+            paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
+        ]
 
         strategy = DefaultStrategy()
         strategy.mover_weights['blahblahblah'] = 2.0
@@ -362,4 +388,10 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         for w in chooser.weights:
             assert_equal(w, 1.0)
 
+
+    def test_get_ensemble_weights(self):
+        raise SkipTest
+
+    def test_get_mover_weights(self):
+        raise SkipTest
 

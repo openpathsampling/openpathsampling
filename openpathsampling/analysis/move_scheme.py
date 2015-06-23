@@ -160,6 +160,17 @@ class MoveScheme(OPSNamed):
                             if m.ensemble_signature_set==partner_sig_set]
                 self.balance_partners[groupname][mover] = partners
 
+    def build_choice_probability(self):
+        group_norm = sum(self.mover_weights.values())
+        for groupname in self.movers.keys():
+            group = self.movers[groupname]
+            group_w = self.mover_weights[groupname] / group_norm
+            sig_weights = self.ensemble_weights[groupname]
+            sig_norm = sum(sig_weights.values())
+            for mover in group:
+                sig_w = sig_weights[mover.ensemble_signature]/sig_norm
+                self.choice_probability[mover] = group_w * sig_w
+
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, indentation):
         line = ("* "*indentation + str(move_name) +
