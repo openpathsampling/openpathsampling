@@ -284,11 +284,31 @@ class MinusMoveStrategy(MoveStrategy):
 class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
     pass
 
+class OrganizeByEnsembleStrategy(MoveStrategy):
+    _level = levels.GLOBAL
+    def __init__(self, ensembles=None, group=None, replace=True,
+                 network=None):
+        super(OrganizeByEnsembleStrategy, self).__init__(
+            ensembles=ensembles, network=network, group=group, replace=replace
+        )
+        self.ensemble_weights = None
+        self.mover_weights = None
+
+    def make_ensemble_level_chooser(self, scheme, ensemble):
+        pass
+
+    def make_movers(self, scheme):
+        if self.network is None:
+            self.network = scheme.network
+        network = self.network
+        # TODO
+        pass
+
 class DefaultStrategy(MoveStrategy):
     _level = levels.GLOBAL
     def __init__(self, ensembles=None, group=None, replace=True,
                  network=None):
-        self.weight_adjustment = {
+        self.mover_weights = {
             'shooting' : 1.0,
             'repex' : 0.5,
             'pathreversal' : 0.5,
@@ -313,10 +333,10 @@ class DefaultStrategy(MoveStrategy):
         for group in scheme.movers.keys():
             choosers.append(self.make_chooser(scheme, group))
             try:
-                weight_adjustment = self.weight_adjustment[group]
+                mover_weights = self.mover_weights[group]
             except KeyError:
-                weight_adjustment = 1.0
-            weights.append(len(scheme.movers[group])*weight_adjustment)
+                mover_weights = 1.0
+            weights.append(len(scheme.movers[group])*mover_weights)
         root_chooser = paths.RandomChoiceMover(movers=choosers,
                                                weights=weights)
         root_chooser.name = "RootMover"

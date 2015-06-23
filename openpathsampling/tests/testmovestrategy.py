@@ -263,6 +263,16 @@ class testMinusMoveStrategy(MoveStrategyTestSetup):
         raise SkipTest
 
 
+class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
+    def test_make_ensemble_level_chooser(self):
+        raise SkipTest
+
+    def test_make_movers(self):
+        scheme = MoveScheme(self.network)
+        scheme.movers = {} # handles LEGACY stuff
+        raise SkipTest
+
+
 class testDefaultStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         scheme = MoveScheme(self.network)
