@@ -114,6 +114,20 @@ class MoveScheme(OPSNamed):
                 self.movers[group] = movers
 
     def ensembles_for_move_tree(self, root=None):
+        """
+        Finds the list of all ensembles in the move tree starting at `root`.
+
+        Parameters
+        ----------
+        root : PathMover
+            Mover to act as root of this tree (can be a subtree). Default is
+            `None`, in which case `self.root_mover` is used.
+
+        Returns
+        -------
+        list of Ensemble
+            ensembles which appear in this (sub)tree
+        """
         if root is None:
             root = self.root_mover
         movers = root.map_pre_order(lambda x : x)
@@ -127,12 +141,42 @@ class MoveScheme(OPSNamed):
         return mover_ensembles
 
     def find_hidden_ensembles(self, root=None):
+        """
+        All ensembles which exist in the move scheme but not in the network.
+
+        Parameters
+        ----------
+        root : PathMover
+            Mover to act as root of this tree (can be a subtree). Default is
+            `None`, in which case `self.root_mover` is used.
+
+        Returns
+        -------
+        set of Ensemble
+            "hidden" ensembles; the ensembles which are in the scheme but
+            not the network.
+        """
         unhidden_ensembles = set(self.network.all_ensembles)
         mover_ensembles = set(self.ensembles_for_move_tree(root))
         hidden_ensembles = mover_ensembles - unhidden_ensembles
         return hidden_ensembles
 
     def find_unused_ensembles(self, root=None):
+        """
+        All ensembles which exist in the network but not in the move scheme.
+
+        Parameters
+        ----------
+        root : PathMover
+            Mover to act as root of this tree (can be a subtree). Default is
+            `None`, in which case `self.root_mover` is used.
+
+        Returns
+        -------
+        set of Ensemble
+            "unused" ensembles; the ensembles which are in the network but
+            not the scheme.
+        """
         unhidden_ensembles = set(self.network.all_ensembles)
         mover_ensembles = set(self.ensembles_for_move_tree(root))
         unused_ensembles = unhidden_ensembles - mover_ensembles
