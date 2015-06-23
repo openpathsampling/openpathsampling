@@ -1,6 +1,5 @@
 import openpathsampling as paths
 from openpathsampling import DynamicsEngine
-from openpathsampling import restores_as_full_object
 import os
 
 import logging
@@ -14,7 +13,6 @@ import linecache
 
 import sys # DEBUG
 
-@restores_as_full_object
 class ExternalEngine(DynamicsEngine):
     """
     Generic object to handle arbitrary external engines. 
