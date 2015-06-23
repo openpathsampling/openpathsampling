@@ -8,7 +8,7 @@ import numpy as np
 
 from openpathsampling.Simulator import Simulator
 from openpathsampling.collectivevariable import CV_RMSD_To_Lambda, CV_Multi_RMSD
-from openpathsampling.volume import LambdaVolume, VoronoiVolume
+from openpathsampling.volume import CVRangeVolume, VoronoiVolume
 from openpathsampling.ensemble import EnsembleFactory as ef
 import time
 from openpathsampling.pathmover import ForwardShootMover, BackwardShootMover, PathMover, MixedMover
@@ -50,20 +50,20 @@ if __name__ == '__main__':
         storage.collectivevariables.restore(op)
         print op(Trajectory.storage.load(1)[0:2])
         dd = simulator.storage.trajectories.load(1)[ 0:6 ]
-        lV = LambdaVolume(op, 0.0, 0.06)
-        lV2 = LambdaVolume(op, 0.0, 0.08)
+        lV = CVRangeVolume(op, 0.0, 0.06)
+        lV2 = CVRangeVolume(op, 0.0, 0.08)
 
         # if this uses the same collectivevariable it is fast, since the values are cached!
         tis = ef.TISEnsemble(
-                       LambdaVolume(op, 0.0, 0.041),
-                       LambdaVolume(op, 0.0, 0.041),
-                       LambdaVolume(op, 0.0, 0.045),
+                       CVRangeVolume(op, 0.0, 0.041),
+                       CVRangeVolume(op, 0.0, 0.041),
+                       CVRangeVolume(op, 0.0, 0.045),
                        True
                        )
 
         enAB = ef.A2BEnsemble(
-                       LambdaVolume(op, 0.0, 0.041),
-                       LambdaVolume(op, 0.0, 0.041),
+                       CVRangeVolume(op, 0.0, 0.041),
+                       CVRangeVolume(op, 0.0, 0.041),
                        True
                        )
 
@@ -156,7 +156,7 @@ if __name__ == '__main__':
 
         pth = mm.move(tt)
 
-        storage.samples.save(pth)
+        storage.results.save(pth)
 
         print pth.details.json
 

@@ -70,6 +70,10 @@ class ToyEngine(DynamicsEngine):
         self._minv = np.reciprocal(value)
 
     @property
+    def snapshot_timestep(self):
+        return self.nsteps_per_frame * self.integ.dt
+
+    @property
     def current_snapshot(self):
         snap_pos = self.positions
         snap_vel = self.velocities

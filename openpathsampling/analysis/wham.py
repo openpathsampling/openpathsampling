@@ -111,8 +111,8 @@ class WHAM(object):
             self.sum_hist.remove(0.0)
             self.keys.remove(deadkey)
 
-        #print self.keys
-        #print self.sum_hist
+        logger.debug("keys="+str(self.keys))
+        logger.debug("sum_hist="+str(self.sum_hist))
         #print self.nt
         #print math.fsum(self.nt), math.fsum(self.sum_hist)
 
@@ -170,11 +170,18 @@ class WHAM(object):
         scaling = 1.0
         #print crossing_prob #DEBUG
         for val in crossing_prob:
-            self.lnZ.append(math.log(scaling*val))
+            # absolute to keep if from breaking; only a problem if there
+            # isn't actually enough data, though
+            if abs(scaling)*val > 0:
+                self.lnZ.append(math.log(abs(scaling)*val))
+            else:
+                self.lnZ.append(1e-16)
             scaled.append(scaling*val)
             scaling *= val
+        if self.lnZ == [0.0]*len(self.lnZ):
+            self.lnZ = [1.0]*len(self.lnZ)
+        logger.debug("guess_lnZ: "+str(self.lnZ))
 
-        return
 
     # wham iterations; returns the WHAM lnZ weights
     def generate_lnZ(self):
@@ -257,7 +264,17 @@ class WHAM(object):
     def wham_bam_histogram(self):
         self.guess_lnZ()
         self.prep()
-        self.generate_lnZ()
+        try:
+            self.generate_lnZ()
+        except IndexError as e:
+            failmsg = "Does your input to WHAM have enough data?"
+            if not e.args:
+                e.args = [failmsg]
+            else:
+                arg0 = e.args[0]+"\n"+failmsg
+                e.args = tuple([arg] + list(e.args[1:]))
+                raise
+
         hist = self.wham_histogram()
         return hist
 

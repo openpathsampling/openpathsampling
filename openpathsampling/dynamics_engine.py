@@ -87,6 +87,11 @@ class DynamicsEngine(OPSNamed):
         # this and n_atoms are the only general options we need and register
         if hasattr(self, 'n_frames_max'):
             self.max_length_stopper = paths.LengthEnsemble(slice(0, self.n_frames_max + 1))
+        else:
+            self.max_length_stopper = paths.FullEnsemble()
+
+        # as default set a newly generated engine as the default engine
+        self.set_as_default()
 
     def _register_options(self, options = None):
         """
@@ -182,6 +187,9 @@ class DynamicsEngine(OPSNamed):
             'template' : self.template
         }
 
+    def set_as_default(self):
+        paths.EngineGeneratingMover.engine = self
+
     @property
     def default_options(self):
         default_options = {}
@@ -215,7 +223,8 @@ class DynamicsEngine(OPSNamed):
         return set([ runner for runner, result in self.running.iteritems()
                     if not result])
 
-    def stop_conditions(self, trajectory, continue_conditions=None):
+    def stop_conditions(self, trajectory, continue_conditions=None, 
+                        trusted=True):
         """
         Test whether we can continue; called by generate a couple of times,
         so the logic is separated here.
@@ -236,14 +245,14 @@ class DynamicsEngine(OPSNamed):
         stop = False
         if continue_conditions is not None:
             for condition in continue_conditions:
-                can_continue = condition(trajectory)
+                can_continue = condition(trajectory, trusted)
                 self.running[condition] = can_continue # JHP: is this needed?
                 stop = stop or not can_continue
         stop = stop or not self.max_length_stopper.can_append(trajectory)
         return stop
 
 
-    def generate(self, snapshot, running = None):
+    def generate(self, snapshot, running=None):
         r"""
         Generate a trajectory consisting of ntau segments of tau_steps in
         between storage of Snapshots.
@@ -282,7 +291,8 @@ class DynamicsEngine(OPSNamed):
             frame = 0
             # maybe we should stop before we even begin?
             stop = self.stop_conditions(trajectory=trajectory,
-                                        continue_conditions=running)
+                                        continue_conditions=running,
+                                        trusted=False)
 
             logger.info("Starting trajectory")
             log_freq = 10 # TODO: set this from a singleton class 

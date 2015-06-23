@@ -5,7 +5,9 @@ from simtk import unit as units
 import yaml
 import openpathsampling as paths
 import inspect
-import copy
+
+import logging
+logger = logging.getLogger(__name__)
 
 class OPSObject(object):
     """Mixin that allows an object to carry a .name property that can be saved
@@ -52,9 +54,9 @@ class OPSObject(object):
         }
 
     @classmethod
-    def from_dict(cls, dct = None):
+    def from_dict(cls, dct):
         if dct is None:
-            dct={}
+            dct = {}
         try:
             init_dct = dct
             non_init_dct = {}
@@ -185,12 +187,24 @@ class ObjectJSON(object):
                     for key, o in obj.iteritems()
                     if key not in self.excluded_keys
                 ]}
+
             else:
                 # simple enough, do it the old way
+                # FASTER VERSION NORMALLY
                 result = { key : self.simplify(o)
                     for key, o in obj.iteritems()
                     if key not in self.excluded_keys
                 }
+
+                # SLOWER VERSION FOR DEBUGGING
+                #result = {}
+                #for key, o in obj.iteritems():
+                    #logger.debug("Making dict entry of " + str(key) + " : "
+                                 #+ str(o))
+                    #if key not in self.excluded_keys:
+                        #result[key] = self.simplify(o)
+                    #else:
+                        #logger.debug("EXCLUDED")
 
             return result
         elif type(obj) is slice:

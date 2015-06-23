@@ -64,6 +64,26 @@ class Trajectory(list):
     def __repr__(self):
         return 'Trajectory[' + str(len(self)) + ']'
 
+    def map(self, fnc, allow_fast=True):
+        """
+        This runs a function and tries to be fast.
+
+        Fast here means that functions that are purely based on CVs can be
+        evaluated without actually loading the real Snapshot object. This
+        functions tries to do that and if it fails it does it the usual way
+        and creates the snapshot object. This bears the possibility that
+        the function uses the fake snapshots and returns a non-sense value.
+        It is up to the user to make sure this will not happen.
+        """
+
+        if allow_fast:
+            try:
+                return [fnc(frame) for frame in list.__iter__(self)]
+            except:
+                return self.map(fnc, allow_fast=False)
+
+        return [fnc(frame) for frame in self]
+
     @property
     def reversed(self):
         '''
@@ -301,7 +321,74 @@ class Trajectory(list):
     #=============================================================================================
     # PATH ENSEMBLE FUNCTIONS
     #=============================================================================================
-    
+        
+    def summarize_by_volumes(self, label_dict):
+        """Summarize trajectory based on number of continuous frames in volumes.
+
+        This uses a dictionary of disjoint volumes: the volumes must be disjoint
+        so that every frame can be mapped to one volume. If the frame maps to
+        none of the given volumes, it returns the label None.
+
+        Parameters
+        ----------
+        label_dict : dict
+            dictionary with labels for keys and volumes for values
+
+        Returns
+        -------
+        list of tuple
+            format is (label, number_of_frames)
+        """
+        last_vol = None
+        count = 0
+        segment_labels = []
+        for frame in self:
+            in_state = []
+            for key in label_dict.keys():
+                vol = label_dict[key]
+                if vol(frame):
+                    in_state.append(key)
+            if len(in_state) > 1:
+                raise RuntimeError("Volumes given to summarize_by_volumes not disjoint")
+            if len(in_state) == 0:
+                current_vol = None
+            else:
+                current_vol = in_state[0]
+            
+            if last_vol == current_vol:
+                count += 1
+            else:
+                if count > 0:
+                    segment_labels.append( (last_vol, count) )
+                last_vol = current_vol
+                count = 1
+        segment_labels.append( (last_vol, count) )
+        return segment_labels
+
+    def summarize_by_volumes_str(self, label_dict, delimiter="-"):
+        """
+        Return string version of the volumes visited by this trajectory.
+
+        See `Trajectory.summarize_by_volumes` for details.
+
+        Parameters
+        ----------
+        label_dict : dict
+            dictionary with labels for keys and volumes for values
+        delimiter : string (default "-")
+            string used to separate volumes in output
+
+        Returns
+        -------
+        string
+            order in which this trajectory visits the volumes in
+            `label_dict`, separated by the `delimiter`
+        """
+        summary = self.summarize_by_volumes(label_dict)
+        return delimiter.join([str(s[0]) for s in summary])
+
+
+
     def pathHamiltonian(self):
         """
         Compute the generalized path Hamiltonian of the trajectory.

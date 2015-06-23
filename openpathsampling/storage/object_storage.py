@@ -154,6 +154,9 @@ class ObjectStore(object):
                         return this.__dict__['idx']
 
                     if hasattr(cls, '_delayed_loading'):
+                        if item in dir(cls):
+                            return object.__getattribute__(this, item)
+
                         if item in cls._delayed_loading:
                             _loader = cls._delayed_loading[item]
 #                            print 'from', repr(self.storage), id(self), 'and not', repr(this), 'load', item
@@ -1243,7 +1246,7 @@ def loadidx(func):
     Decorator for load functions that add the basic indexing handling
     """
     def inner(self, idx, *args, **kwargs):
-        if type(idx) is not str and idx < 0:
+        if type(idx) is not str and int(idx) < 0:
             return None
 
         n_idx = idx
@@ -1257,6 +1260,9 @@ def loadidx(func):
                 # load by name only in named storages
                 raise ValueError('Load by name (str) is only supported in named storages')
                 pass
+
+        # turn into python int if it was a numpy int (in some rare cases!)
+        n_idx = int(n_idx)
 
         # ATTENTION HERE!
         # Note that the wrapped function ho self as first parameter. This is because we are wrapping a bound
@@ -1279,8 +1285,9 @@ def loadidx(func):
         obj.idx[self.storage] = n_idx
 
         if self.has_uid:
-            # get the name of the object
-            setattr(obj, '_uid', self.get_uid(idx))
+            if not hasattr(obj, '_uid'):
+                # get the name of the object
+                setattr(obj, '_uid', self.get_uid(idx))
 
         if self.has_name and hasattr(obj, '_name'):
             setattr(obj, '_name',
@@ -1322,10 +1329,16 @@ def saveidx(func):
         if self.has_uid and hasattr(obj, '_uid') and obj._uid != '':
             self.storage.variables[self.identifier][idx] = obj._uid
 
-        if self.has_uid and hasattr(obj, '_name'):
+        if self.has_name and hasattr(obj, '_name'):
+            #logger.debug('Object ' + str(type(obj)) + ' with IDX #' + str(idx))
+            #logger.debug(repr(obj))
+            #logger.debug("Cleaning up name; currently: " + str(obj._name))
             if obj._name is None:
-                # set name of object to empty string
-                obj.fix_name()
+                # this should not happen!
+                logger.debug("Nameable object has not been initialized correctly. Has None in _name")
+                raise AttributeError('_name needs to be a string for nameable objects.')
+
+            obj.fix_name()
 
             self.storage.variables[self.db + '_name'][idx] = obj._name
 
