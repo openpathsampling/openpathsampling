@@ -201,6 +201,13 @@ class testMoveScheme(object):
         root = self.scheme.move_decision_tree(rebuild=True)
         assert_equal(len(self.scheme.movers['repex']), 4)
 
+    def test_build_balance_partners(self):
+        raise SkipTest
+
+    #@raises(RuntimeWarning)
+    def test_build_balance_partners_premature(self):
+        raise SkipTest
+
 class testDefaultScheme(object):
     def setup(self):
         cvA = paths.CV_Function(name="xA", fcn=lambda s : s.xyz[0][0])
@@ -273,4 +280,11 @@ class testDefaultScheme(object):
         root = scheme.move_decision_tree()
         unused = scheme.find_unused_ensembles()
         assert_equal(len(unused), 0) # will change when minus/msouter 
+
+    def test_default_balance_partners(self):
+        scheme = DefaultScheme(self.network)
+        scheme.movers = {} # LEGACY
+        root = scheme.move_decision_tree()
+        scheme.build_balance_partners()
+        raise SkipTest
 

@@ -344,7 +344,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         scheme.movers['blahblah']  = [1, 2]
 
         strategy = DefaultStrategy()
-        strategy.weight_adjustment['blahblah'] = 2.0
+        strategy.mover_weights['blahblah'] = 2.0
         root = strategy.make_movers(scheme)
 
         name_dict = {root.movers[i].name : i for i in range(len(root.movers))}

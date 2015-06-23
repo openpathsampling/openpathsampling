@@ -14,6 +14,8 @@ class MoveScheme(OPSNamed):
         self.network = network
         self._mover_acceptance = {} # used in analysis
         self.strategies = {}
+        self.balance_partners = {}
+        self.choice_probability = {}
         self.root_mover = None
 
     def append(self, strategies, levels=None):
@@ -138,6 +140,18 @@ class MoveScheme(OPSNamed):
         unused_ensembles = unhidden_ensembles - mover_ensembles
         return unused_ensembles
 
+    def build_balance_partners(self):
+        if self.root_mover is None:
+            raise RuntimeWarning("Can't build balance partners before the tree")
+        for groupname in self.movers.keys():
+            group = self.movers[groupname]
+            self.balance_partners[groupname] = {}
+            for mover in group:
+                partner_sig_set = (set(mover.output_ensembles), 
+                                   set(mover.input_ensembles))
+                partners = [m for m in group 
+                            if m.ensemble_signature_set==partner_sig_set]
+                self.balance_partners[groupname][mover] = partners
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, indentation):
