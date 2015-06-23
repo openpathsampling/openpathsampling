@@ -15,6 +15,8 @@ class MoveScheme(OPSNamed):
         self._mover_acceptance = {} # used in analysis
         self.strategies = {}
         self.balance_partners = {}
+        self.mover_weights = {}
+        self.ensemble_weights = {}
         self.choice_probability = {}
         self.root_mover = None
 
@@ -140,9 +142,14 @@ class MoveScheme(OPSNamed):
         unused_ensembles = unhidden_ensembles - mover_ensembles
         return unused_ensembles
 
-    def build_balance_partners(self):
+    def check_for_root(self, fcn_name):
         if self.root_mover is None:
-            raise RuntimeWarning("Can't build balance partners before the tree")
+            warnstr = ("Can't use {fcn_name} before building the move " +
+                       "decision tree").format(fcn_name=fcn_name)
+            raise RuntimeWarning(warn_str)
+
+    def build_balance_partners(self):
+        self.check_for_root("build_balance_partners")
         for groupname in self.movers.keys():
             group = self.movers[groupname]
             self.balance_partners[groupname] = {}

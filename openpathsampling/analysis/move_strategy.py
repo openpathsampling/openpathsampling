@@ -306,14 +306,15 @@ class OrganizeByEnsembleStrategy(MoveStrategy):
 
 class DefaultStrategy(MoveStrategy):
     _level = levels.GLOBAL
+    default_mover_weights = {
+        'shooting' : 1.0,
+        'repex' : 0.5,
+        'pathreversal' : 0.5,
+        'minus' : 0.2,
+    }
     def __init__(self, ensembles=None, group=None, replace=True,
                  network=None):
-        self.mover_weights = {
-            'shooting' : 1.0,
-            'repex' : 0.5,
-            'pathreversal' : 0.5,
-            'minus' : 0.2,
-        }
+        self.mover_weights = {}
         self.group = group
         self.replace = replace
         self.network = network
@@ -325,22 +326,49 @@ class DefaultStrategy(MoveStrategy):
         chooser.name = choosername
         return chooser
 
+    def get_mover_weights(self, scheme):
+        """
+        TODO: BRIEF
+
+        Start with the defaults. Override with scheme.mover_weights, then
+        override with self.mover_weights. Return the result without
+        modifying the others.
+
+        Parameters
+        ----------
+        scheme : MoveScheme
+
+        Returns
+        -------
+        dict
+        """
+        mover_weights = self.default_mover_weights
+        for weights in [scheme.mover_weights, self.mover_weights]:
+            if weights != {}:
+                for k in weights.keys():
+                    mover_weights[k] = weights[k]
+
+        return mover_weights
+
     def make_movers(self, scheme):
         if self.network is None:
             self.network = scheme.network
+
+        mover_weights = self.get_mover_weights(scheme)
         choosers = []
         weights = []
         for group in scheme.movers.keys():
             choosers.append(self.make_chooser(scheme, group))
             try:
-                mover_weights = self.mover_weights[group]
+                group_weights = mover_weights[group]
             except KeyError:
-                mover_weights = 1.0
-            weights.append(len(scheme.movers[group])*mover_weights)
+                group_weights = 1.0
+            weights.append(len(scheme.movers[group])*group_weights)
         root_chooser = paths.RandomChoiceMover(movers=choosers,
                                                weights=weights)
         root_chooser.name = "RootMover"
         scheme.root_mover = root_chooser
+        scheme.mover_weights = mover_weights
         return root_chooser
 
 
