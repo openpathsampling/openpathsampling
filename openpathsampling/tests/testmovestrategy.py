@@ -333,7 +333,11 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         weight = root.weights[name_dict[name]]
         chooser = root.movers[name_dict[name]]
         assert_equal(type(chooser), paths.RandomChoiceMover)
-        assert_equal(weight, 2.0)
+        try:
+            assert_equal(weight, 2.0)
+        except AssertionError:
+            print root.weights, root.movers, chooser.movers
+            raise
         assert_equal(len(chooser.movers), 2)
         for w in chooser.weights:
             assert_equal(w, 1.0)
@@ -341,15 +345,15 @@ class testDefaultStrategy(MoveStrategyTestSetup):
     def test_make_movers_custom_group(self):
         scheme = MoveScheme(self.network)
         scheme.movers = {} # handles LEGACY stuff
-        scheme.movers['blahblah']  = [1, 2]
+        scheme.movers['blahblahblah']  = [1, 2]
 
         strategy = DefaultStrategy()
-        strategy.mover_weights['blahblah'] = 2.0
+        strategy.mover_weights['blahblahblah'] = 2.0
         root = strategy.make_movers(scheme)
 
         name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
         
-        name = 'BlahblahChooser'
+        name = 'BlahblahblahChooser'
         weight = root.weights[name_dict[name]]
         chooser = root.movers[name_dict[name]]
         assert_equal(type(chooser), paths.RandomChoiceMover)
