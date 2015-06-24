@@ -564,7 +564,7 @@ class CV_Featurizer(CV_Class):
     """
     An CollectiveVariable that uses an MSMBuilder3 featurizer as the logic
 
-    Attribues
+    Attributes
     ----------
     name
     cls

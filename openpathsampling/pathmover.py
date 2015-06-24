@@ -479,8 +479,8 @@ class EngineGeneratingMover(SampleGeneratingMover):
 class ShootGeneratingMover(EngineGeneratingMover):
     """Main class for GeneratingMovers using ShootingMoves
 
-    Attributs
-    ---------
+    Attributes
+    ----------
     selector
     """
     def __init__(self, selector, ensembles=None):
