@@ -346,7 +346,7 @@ class DefaultStrategy(MoveStrategy):
         dict
         """
         mover_weights = self.default_mover_weights
-        for weights in [scheme.mover_weights, self.mover_weights]:
+        for weights in [self.mover_weights]:
             if weights != {}:
                 for k in weights.keys():
                     mover_weights[k] = weights[k]
@@ -359,7 +359,7 @@ class DefaultStrategy(MoveStrategy):
             ensemble_weights[group] = {m.ensemble_signature : 1.0 
                                        for m in scheme.movers[group]} 
 
-        for weights in [scheme.ensemble_weights, self.ensemble_weights]:
+        for weights in [self.ensemble_weights]:
             if weights != {}:
                 for group in weights.keys():
                     for sig in weights[group].keys():
@@ -367,6 +367,17 @@ class DefaultStrategy(MoveStrategy):
         return ensemble_weights
 
 
+    def choice_probability(self, scheme, mover_weights, ensemble_weights):
+        unnormed = {}
+        for groupname in scheme.movers.keys():
+            group = scheme.movers[groupname]
+            group_w = mover_weights[groupname] 
+            sig_weights = ensemble_weights[groupname]
+            for mover in group:
+                sig_w = sig_weights[mover.ensemble_signature]
+                unnormed[mover] = group_w * sig_w
+        norm = sum(unnormed.values())
+        return {m : unnormed[m] / norm for m in unnormed}
 
     def make_movers(self, scheme):
         if self.network is None:
@@ -394,8 +405,9 @@ class DefaultStrategy(MoveStrategy):
                                                weights=weights)
         root_chooser.name = "RootMover"
         scheme.root_mover = root_chooser
-        scheme.mover_weights = mover_weights
-        scheme.ensemble_weights = ensemble_weights
+        scheme.choice_probability = self.choice_probability(
+            scheme, mover_weights, ensemble_weights
+        )
         return root_chooser
 
 

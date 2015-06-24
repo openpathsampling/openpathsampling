@@ -12,13 +12,14 @@ class MoveScheme(OPSNamed):
         self.movers = {}
         self.movers = network.movers # TODO: legacy
         self.network = network
-        self._mover_acceptance = {} # used in analysis
         self.strategies = {}
         self.balance_partners = {}
-        self.mover_weights = {}
-        self.ensemble_weights = {}
+        #self.mover_weights = {}
+        #self.ensemble_weights = {}
         self.choice_probability = {}
         self.root_mover = None
+
+        self._mover_acceptance = {} # used in analysis
 
     def append(self, strategies, levels=None):
         """
@@ -159,19 +160,6 @@ class MoveScheme(OPSNamed):
                             if m.ensemble_signature_set==partner_sig_set]
                 self.balance_partners[mover] = partners
 
-    def build_choice_probability(self):
-        #group_norm = sum(self.mover_weights.values())
-        unnormed = {}
-        for groupname in self.movers.keys():
-            group = self.movers[groupname]
-            group_w = self.mover_weights[groupname] 
-            sig_weights = self.ensemble_weights[groupname]
-            #sig_norm = sum(sig_weights.values())
-            for mover in group:
-                sig_w = sig_weights[mover.ensemble_signature]
-                unnormed[mover] = group_w * sig_w
-        norm = sum(unnormed.values())
-        self.choice_probability = {m : unnormed[m] / norm for m in unnormed}
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, indentation):

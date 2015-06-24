@@ -392,3 +392,37 @@ class testDefaultStrategy(MoveStrategyTestSetup):
     def test_get_mover_weights(self):
         raise SkipTest
 
+    # TODO: these tests need to be readjusted to work with strategy
+    #def test_default_ensemble_weights(self):
+        #scheme = DefaultScheme(self.network)
+        #scheme.movers = {} # LEGACY
+        #root = scheme.move_decision_tree()
+
+        #assert_not_equal(scheme.ensemble_weights, {})
+        #assert_equal(set(scheme.ensemble_weights.keys()), 
+                     #set(scheme.movers.keys()))
+        #for groupname in scheme.ensemble_weights.keys():
+            #group = scheme.ensemble_weights[groupname]
+            #mover_sigs = [m.ensemble_signature_set 
+                          #for m in scheme.movers[groupname]]
+            #for sig in group.keys():
+                #assert_in((set(sig[0]), set(sig[1])), mover_sigs)
+            #for sig in [m.ensemble_signature 
+                        #for m in scheme.movers[groupname]]:
+                #assert_equal(group[sig], 1.0) # default is all 1.0
+
+    #def test_default_mover_weights(self):
+        #scheme = DefaultScheme(self.network)
+        #scheme.movers = {} # LEGACY
+        #root = scheme.move_decision_tree()
+    
+        #default_mover_weights = {
+            #'shooting' : 1.0,
+            #'repex' : 0.5,
+            #'pathreversal' : 0.5,
+            #'minus' : 0.2,
+            #'ms_outer_shooting' : 1.0
+        #}
+        #assert_equal(scheme.mover_weights, default_mover_weights)
+
+
