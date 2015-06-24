@@ -241,6 +241,9 @@ class MoveScheme(OPSNamed):
                 partners = [m for m in group 
                             if m.ensemble_signature_set==partner_sig_set]
                 self.balance_partners[mover] = partners
+                if len(partners) != 1:
+                    warnstr = "Mover {0}: number of balance partners is {1}"
+                    raise RuntimeWarning(warnstr.format(mover, len(partners)))
 
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,

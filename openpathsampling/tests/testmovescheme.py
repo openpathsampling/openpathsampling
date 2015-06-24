@@ -219,6 +219,31 @@ class testMoveScheme(object):
         self.scheme.movers = {}
         self.scheme.build_balance_partners()
 
+    @raises(RuntimeWarning)
+    def test_build_balance_partners_no_partner(self):
+        self.scheme.movers = {} #LEGACY
+        ensA = self.scheme.network.sampling_transitions[0].ensembles[0]
+        ensB = self.scheme.network.sampling_transitions[0].ensembles[1]
+        hopAB = paths.EnsembleHopMover(ensembles=[ensA, ensB])
+        hopBA = paths.EnsembleHopMover(ensembles=[ensB, ensA])
+        self.scheme.movers['hop'] = [hopAB]
+        self.scheme.append(strategies.DefaultStrategy())
+        root = self.scheme.move_decision_tree()
+        self.scheme.build_balance_partners()
+
+    @raises(RuntimeWarning)
+    def test_build_balance_partners_two_partners(self):
+        self.scheme.movers = {} #LEGACY
+        ensA = self.scheme.network.sampling_transitions[0].ensembles[0]
+        ensB = self.scheme.network.sampling_transitions[0].ensembles[1]
+        hopAB = paths.EnsembleHopMover(ensembles=[ensA, ensB])
+        hopAB2 = paths.EnsembleHopMover(ensembles=[ensA, ensB])
+        hopBA = paths.EnsembleHopMover(ensembles=[ensB, ensA])
+        self.scheme.movers['hop'] = [hopAB, hopBA, hopAB2]
+        self.scheme.append(strategies.DefaultStrategy())
+        root = self.scheme.move_decision_tree()
+        self.scheme.build_balance_partners()
+
 
 class testDefaultScheme(object):
     def setup(self):
