@@ -8,6 +8,18 @@ import sys
 
 
 class MoveScheme(OPSNamed):
+    """
+    Creates a move decision tree based on `MoveStrategy` instances.
+
+    Attributes
+    ----------
+    movers : dict
+        Dictionary mapping mover group as key to list of movers
+    strategies : dict
+        Dictionary mapping level (number) to list of strategies
+    root_mover : PathMover
+        Root of the move decision tree (`None` until tree is built)
+    """
     def __init__(self, network):
         self.movers = {}
         self.movers = network.movers # TODO: legacy
@@ -58,15 +70,30 @@ class MoveScheme(OPSNamed):
 
     # TODO: it might be nice to have a way to "lock" this once it has been
     # saved. That would prevent a (stupid) user from trying to rebuild a
-    # custom-modified tree
+    # custom-modified tree.
     def build_move_decision_tree(self):
         for lev in sorted(self.strategies.keys()):
             for strat in self.strategies[lev]:
                 self.apply_strategy(strat)
 
     # TODO: should I make this a property? make root_mover into
-    # _move_decision_tree? allow the user to directly set it?
+    # _move_decision_tree? allow the user to directly set it? rename as
+    # move_scheme? separated from building until some of that is clarified
     def move_decision_tree(self, rebuild=False):
+        """
+        Returns the move decision tree.
+
+        Parameters
+        ----------
+        rebuild : bool, optional
+            Whether to rebuild the tree, or use the previously build version
+            (default is False, if no tree exists, sets to True)
+
+        Returns
+        -------
+        PathMover
+            Root mover of the move decision tree
+        """
         if self.root_mover is None:
             rebuild=True
         if rebuild:
@@ -74,6 +101,17 @@ class MoveScheme(OPSNamed):
         return self.root_mover
 
     def apply_strategy(self, strategy):
+        """
+        Applies given strategy to the scheme as it stands.
+
+        This is the tool used in the process of building up the move
+        decision tree. 
+
+        Parameters
+        ----------
+        strategy : MoveStrategy
+            the strategy to apply
+        """
         movers = strategy.make_movers(self)
         group = strategy.group
         if strategy_levels.level_type(strategy.level) == strategy_levels.GLOBAL:
@@ -119,6 +157,20 @@ class MoveScheme(OPSNamed):
                 self.movers[group] = movers
 
     def ensembles_for_move_tree(self, root=None):
+        """
+        Finds the list of all ensembles in the move tree starting at `root`.
+
+        Parameters
+        ----------
+        root : PathMover
+            Mover to act as root of this tree (can be a subtree). Default is
+            `None`, in which case `self.root_mover` is used.
+
+        Returns
+        -------
+        list of Ensemble
+            ensembles which appear in this (sub)tree
+        """
         if root is None:
             root = self.root_mover
         movers = root.map_pre_order(lambda x : x)
@@ -132,12 +184,42 @@ class MoveScheme(OPSNamed):
         return mover_ensembles
 
     def find_hidden_ensembles(self, root=None):
+        """
+        All ensembles which exist in the move scheme but not in the network.
+
+        Parameters
+        ----------
+        root : PathMover
+            Mover to act as root of this tree (can be a subtree). Default is
+            `None`, in which case `self.root_mover` is used.
+
+        Returns
+        -------
+        set of Ensemble
+            "hidden" ensembles; the ensembles which are in the scheme but
+            not the network.
+        """
         unhidden_ensembles = set(self.network.all_ensembles)
         mover_ensembles = set(self.ensembles_for_move_tree(root))
         hidden_ensembles = mover_ensembles - unhidden_ensembles
         return hidden_ensembles
 
     def find_unused_ensembles(self, root=None):
+        """
+        All ensembles which exist in the network but not in the move scheme.
+
+        Parameters
+        ----------
+        root : PathMover
+            Mover to act as root of this tree (can be a subtree). Default is
+            `None`, in which case `self.root_mover` is used.
+
+        Returns
+        -------
+        set of Ensemble
+            "unused" ensembles; the ensembles which are in the network but
+            not the scheme.
+        """
         unhidden_ensembles = set(self.network.all_ensembles)
         mover_ensembles = set(self.ensembles_for_move_tree(root))
         unused_ensembles = unhidden_ensembles - mover_ensembles
