@@ -10,6 +10,10 @@ LevelLabels = collections.namedtuple(
     ["SIGNATURE", "MOVER", "GROUP", "SUPERGROUP", "GLOBAL"]
 )
 class StrategyLevels(LevelLabels):
+    """
+    Custom version of a namedtuple to handle aspects of the `level`
+    attribute of MoveStategy.
+    """
     def level_type(self, lev):
         """
         Determines which defined level the value `lev` is closest to. If
@@ -37,6 +41,30 @@ levels = StrategyLevels(
 )
 
 class MoveStrategy(object):
+    """
+    Each MoveStrategy describes one aspect of the approach to the overall
+    MoveScheme. Within path sampling, there's a near infinity of reasonable
+    move schemes to be used; we use MoveStrategy to simplify mixing and
+    matching of different approaches.
+
+    Parameters
+    ----------
+    ensembles : list of list of Ensemble, list of Ensemble, Ensemble,  or None
+        The ensembles used by this strategy
+    group : string or None
+        The group this strategy is associated with (if any).
+    replace : bool
+        Whether this strategy should replace existing movers. See also
+        `MoveStrategy.set_replace` and `MoveScheme.apply_strategy`.
+
+    Attributes
+    ----------
+    replace_signatures : bool or None
+        Whether this strategy should replace at the signature level.
+    replace_movers : bool or None
+        Whether this strategy should replace at the mover level.
+    level
+    """
     _level = -1
     def __init__(self, ensembles, group, replace, network):
         self.ensembles = ensembles
@@ -49,12 +77,18 @@ class MoveStrategy(object):
 
     @property
     def level(self):
+        """
+        The level of this strategy. 
+        
+        Levels are numeric, but roughly correspond to levels in the default
+        move tree. This way, we build the tree from bottom up.
+        """
         return self._level
 
     @level.setter
     def level(self, value):
         self._level = value
-        self.set_replace(self.replace)
+        self.set_replace(self.replace) # behavior of replace depends on level
 
     def set_replace(self, replace):
         """Sets values for replace_signatures and replace_movers."""
@@ -76,12 +110,18 @@ class MoveStrategy(object):
         Parameters
         ----------
         ensembles : None, list of Ensembles, or list of list of Ensembles
-            input ensembles
+            Input ensembles.
 
         Returns
         -------
         list of list of Ensembles
-            regularized output
+            Regularized output.
+
+        Note
+        ----
+            List-of-list notation is used, as it is the most generic, and
+            likely to be useful for many types of strategies. If desired,
+            a strategy can always flatten this after the fact.
         """
         if ensembles is None:
             res_ensembles = []
@@ -109,8 +149,11 @@ class MoveStrategy(object):
                 res_ensembles.append(elem_group)
 
         return res_ensembles
-                    
+ 
 class OneWayShootingStrategy(MoveStrategy):
+    """
+    Strategy for OneWayShooting. Allows choice of shooting point selector.
+    """
     _level = levels.MOVER
     def __init__(self, selector=None, ensembles=None, group="shooting",
                  replace=True, network=None):
@@ -158,6 +201,12 @@ class NthNearestNeighborRepExStrategy(MoveStrategy):
 
 # inherits from NearestNeighbor so it can get the same __init__ & _level
 class AllSetRepExStrategy(NearestNeighborRepExStrategy):
+    """
+    Make the replica exchange strategy with all ensembles in each sublist.
+
+    Default is to take a list with each transition (interface set) in a
+    different sublist. This makes all the exchanges within that list.
+    """
     def make_movers(self, scheme):
         if self.network is None:
             self.network = scheme.network
@@ -170,6 +219,10 @@ class AllSetRepExStrategy(NearestNeighborRepExStrategy):
         return movers
 
 class SelectedPairsRepExStrategy(MoveStrategy):
+    """
+    Take a specific pair of ensembles and add a replica exchange swap for
+    that pair.
+    """
     _level = levels.SIGNATURE
 
     def initialization_error(self):
@@ -221,6 +274,9 @@ class EnsembleHopStrategy(MoveStrategy):
     pass
 
 class PathReversalStrategy(MoveStrategy):
+    """
+    Creates PathReversalMovers for the strategy.
+    """
     _level = levels.MOVER
     def __init__(self, ensembles=None, group="pathreversal", replace=True,
                  network=None):
