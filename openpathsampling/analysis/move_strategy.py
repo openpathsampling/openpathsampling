@@ -383,11 +383,12 @@ class DefaultStrategy(MoveStrategy):
             choosers.append(
                 self.make_chooser(scheme, group, weights=ens_weights)
             )
+            n_movers = len(scheme.movers[group])
             try:
-                group_weights = mover_weights[group]
+                group_weights = mover_weights[group]*n_movers
             except KeyError:
-                group_weights = 1.0
-                mover_weights[group] = group_weights
+                mover_weights[group] = 1.0
+                group_weights = mover_weights[group]*n_movers
             weights.append(len(scheme.movers[group])*group_weights)
         root_chooser = paths.RandomChoiceMover(movers=choosers,
                                                weights=weights)
