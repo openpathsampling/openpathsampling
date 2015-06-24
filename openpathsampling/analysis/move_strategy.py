@@ -278,7 +278,6 @@ class MinusMoveStrategy(MoveStrategy):
                 minus_ensemble=ens, 
                 innermost_ensembles=innermosts
             ))
-        # TODO: add to hidden ensembles
         return movers
 
 class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):

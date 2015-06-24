@@ -259,9 +259,6 @@ class testMinusMoveStrategy(MoveStrategyTestSetup):
                 True
             )
 
-    def test_hidden_ensembles(self):
-        raise SkipTest
-
 
 class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
     def test_make_ensemble_level_chooser(self):
