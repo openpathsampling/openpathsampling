@@ -202,15 +202,22 @@ class testMoveScheme(object):
         assert_equal(len(self.scheme.movers['repex']), 4)
 
     def test_build_balance_partners(self):
-        raise SkipTest
+        self.scheme.movers = {} #LEGACY
+        ensA = self.scheme.network.sampling_transitions[0].ensembles[0]
+        ensB = self.scheme.network.sampling_transitions[0].ensembles[1]
+        hopAB = paths.EnsembleHopMover(ensembles=[ensA, ensB])
+        hopBA = paths.EnsembleHopMover(ensembles=[ensB, ensA])
+        self.scheme.movers['hop'] = [hopAB, hopBA]
+        self.scheme.append(strategies.DefaultStrategy())
+        root = self.scheme.move_decision_tree()
+        self.scheme.build_balance_partners()
+        assert_equal(self.scheme.balance_partners[hopAB], [hopBA])
+        assert_equal(self.scheme.balance_partners[hopBA], [hopAB])
 
     @raises(RuntimeWarning)
     def test_build_balance_partners_premature(self):
         self.scheme.movers = {}
         self.scheme.build_balance_partners()
-
-    def test_build_choice_probability(self):
-        raise SkipTest
 
 
 class testDefaultScheme(object):

@@ -389,7 +389,7 @@ class DefaultStrategy(MoveStrategy):
             except KeyError:
                 mover_weights[group] = 1.0
                 group_weights = mover_weights[group]*n_movers
-            weights.append(len(scheme.movers[group])*group_weights)
+            weights.append(group_weights)
         root_chooser = paths.RandomChoiceMover(movers=choosers,
                                                weights=weights)
         root_chooser.name = "RootMover"
