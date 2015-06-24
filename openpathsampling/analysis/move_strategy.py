@@ -197,6 +197,12 @@ class NthNearestNeighborRepExStrategy(MoveStrategy):
 
 # inherits from NearestNeighbor so it can get the same __init__ & _level
 class AllSetRepExStrategy(NearestNeighborRepExStrategy):
+    """
+    Make the replica exchange strategy with all ensembles in each sublist.
+
+    Default is to take a list with each transition (interface set) in a
+    different sublist. This makes all the exchanges within that list.
+    """
     def make_movers(self, scheme):
         if self.network is None:
             self.network = scheme.network
@@ -209,6 +215,10 @@ class AllSetRepExStrategy(NearestNeighborRepExStrategy):
         return movers
 
 class SelectedPairsRepExStrategy(MoveStrategy):
+    """
+    Take a specific pair of ensembles and add a replica exchange swap for
+    that pair.
+    """
     _level = levels.SIGNATURE
 
     def initialization_error(self):
@@ -260,6 +270,9 @@ class EnsembleHopStrategy(MoveStrategy):
     pass
 
 class PathReversalStrategy(MoveStrategy):
+    """
+    Creates PathReversalMovers for the strategy.
+    """
     _level = levels.MOVER
     def __init__(self, ensembles=None, group="pathreversal", replace=True,
                  network=None):
