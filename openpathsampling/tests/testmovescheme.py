@@ -333,7 +333,7 @@ class testDefaultScheme(object):
         scheme = DefaultScheme(self.network)
         scheme.movers = {} # LEGACY
         root = scheme.move_decision_tree()
-        default_mover_weights = {
+        default_group_weights = {
             'shooting' : 1.0,
             'repex' : 0.5,
             'pathreversal' : 0.5,
@@ -343,17 +343,17 @@ class testDefaultScheme(object):
 
         assert_almost_equal(sum(scheme.choice_probability.values()), 1.0)
 
-        tot_norm = sum([default_mover_weights[group]*len(scheme.movers[group])
+        tot_norm = sum([default_group_weights[group]*len(scheme.movers[group])
                         for group in scheme.movers])
 
         for groupname in scheme.movers.keys():
             group = scheme.movers[groupname]
-            weight = default_mover_weights[groupname] / tot_norm
+            weight = default_group_weights[groupname] / tot_norm
             for mover in group:
                 assert_almost_equal(scheme.choice_probability[mover], weight)
 
-        for group in default_mover_weights:
-            scale = default_mover_weights[group]
+        for group in default_group_weights:
+            scale = default_group_weights[group]
             assert_almost_equal(
                 scheme.choice_probability[scheme.movers['shooting'][0]],
                 scheme.choice_probability[scheme.movers[group][0]] / scale

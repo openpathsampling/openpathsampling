@@ -371,7 +371,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         ]
 
         strategy = DefaultStrategy()
-        strategy.mover_weights['blahblahblah'] = 2.0
+        strategy.group_weights['blahblahblah'] = 2.0
         root = strategy.make_movers(scheme)
 
         name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
@@ -386,23 +386,23 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             assert_equal(w, 1.0)
 
 
-    def test_get_ensemble_weights(self):
-        raise SkipTest
-
     def test_get_mover_weights(self):
         raise SkipTest
 
+    def test_get_group_weights(self):
+        raise SkipTest
+
     # TODO: these tests need to be readjusted to work with strategy
-    #def test_default_ensemble_weights(self):
+    #def test_default_mover_weights(self):
         #scheme = DefaultScheme(self.network)
         #scheme.movers = {} # LEGACY
         #root = scheme.move_decision_tree()
 
-        #assert_not_equal(scheme.ensemble_weights, {})
-        #assert_equal(set(scheme.ensemble_weights.keys()), 
+        #assert_not_equal(scheme.mover_weights, {})
+        #assert_equal(set(scheme.mover_weights.keys()), 
                      #set(scheme.movers.keys()))
-        #for groupname in scheme.ensemble_weights.keys():
-            #group = scheme.ensemble_weights[groupname]
+        #for groupname in scheme.mover_weights.keys():
+            #group = scheme.mover_weights[groupname]
             #mover_sigs = [m.ensemble_signature_set 
                           #for m in scheme.movers[groupname]]
             #for sig in group.keys():
@@ -411,18 +411,18 @@ class testDefaultStrategy(MoveStrategyTestSetup):
                         #for m in scheme.movers[groupname]]:
                 #assert_equal(group[sig], 1.0) # default is all 1.0
 
-    #def test_default_mover_weights(self):
+    #def test_default_group_weights(self):
         #scheme = DefaultScheme(self.network)
         #scheme.movers = {} # LEGACY
         #root = scheme.move_decision_tree()
     
-        #default_mover_weights = {
+        #default_group_weights = {
             #'shooting' : 1.0,
             #'repex' : 0.5,
             #'pathreversal' : 0.5,
             #'minus' : 0.2,
             #'ms_outer_shooting' : 1.0
         #}
-        #assert_equal(scheme.mover_weights, default_mover_weights)
+        #assert_equal(scheme.group_weights, default_group_weights)
 
 
