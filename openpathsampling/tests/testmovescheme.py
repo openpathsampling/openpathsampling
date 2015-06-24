@@ -204,9 +204,10 @@ class testMoveScheme(object):
     def test_build_balance_partners(self):
         raise SkipTest
 
-    #@raises(RuntimeWarning)
+    @raises(RuntimeWarning)
     def test_build_balance_partners_premature(self):
-        raise SkipTest
+        self.scheme.movers = {}
+        self.scheme.build_balance_partners()
 
     def test_build_choice_probability(self):
         raise SkipTest
@@ -290,7 +291,11 @@ class testDefaultScheme(object):
         scheme.movers = {} # LEGACY
         root = scheme.move_decision_tree()
         scheme.build_balance_partners()
-        raise SkipTest
+        # by default, every mover is its own balance partner
+        for group in scheme.movers.values():
+            for mover in group:
+                assert_equal(scheme.balance_partners[mover], [mover])
+
 
     def test_default_ensemble_weights(self):
         scheme = DefaultScheme(self.network)

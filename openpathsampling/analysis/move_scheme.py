@@ -146,19 +146,18 @@ class MoveScheme(OPSNamed):
         if self.root_mover is None:
             warnstr = ("Can't use {fcn_name} before building the move " +
                        "decision tree").format(fcn_name=fcn_name)
-            raise RuntimeWarning(warn_str)
+            raise RuntimeWarning(warnstr)
 
     def build_balance_partners(self):
         self.check_for_root("build_balance_partners")
         for groupname in self.movers.keys():
             group = self.movers[groupname]
-            self.balance_partners[groupname] = {}
             for mover in group:
                 partner_sig_set = (set(mover.output_ensembles), 
                                    set(mover.input_ensembles))
                 partners = [m for m in group 
                             if m.ensemble_signature_set==partner_sig_set]
-                self.balance_partners[groupname][mover] = partners
+                self.balance_partners[mover] = partners
 
     def build_choice_probability(self):
         #group_norm = sum(self.mover_weights.values())
