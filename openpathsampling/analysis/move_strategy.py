@@ -457,13 +457,20 @@ class DefaultStrategy(MoveStrategy):
                 movers = scheme.movers[group]
                 # set default
                 for mover in movers:
-                    mover_weights[group][mover.ensemble_signature] = 1.0
-                for mover in self.mover_weights:
-                    val = self.mover_weights[group][mover.ensemble_signature]
-                    mover_weights[group][mover.ensemble_signature] = val
+                    try:
+                        mover_weights[group][mover.ensemble_signature] = 1.0
+                    except KeyError:
+                        mover_weights[group] = {mover.ensemble_signature : 1.0}
+                try:
+                    override_sigs = self.mover_weights[group]
+                except KeyError:
+                    pass
+                else:
+                    for sig in override_sigs:
+                        mover_weights[group][sig] = self.mover_weights[group][sig]
         else:
             m_weights = self.strategy_mover_weights(scheme)
-            pred_choice = self.choice_probability(group_weights, m_weights)
+            pred_choice = self.choice_probability(scheme, group_weights, m_weights)
             mover_weights = {m : scheme.choice_probability[m] / pred_choice[m]
                              for m in scheme.choice_probability}
 

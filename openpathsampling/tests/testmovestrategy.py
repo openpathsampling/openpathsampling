@@ -425,8 +425,6 @@ class testDefaultStrategy(MoveStrategyTestSetup):
 
     def test_get_weights_both_internal_weights_set(self):
         strategy = DefaultStrategy()
-        assert_equal(strategy.group_weights, {})
-        assert_equal(strategy.mover_weights, {})
         ensA = self.network.sampling_transitions[0].ensembles[0]
         ensA_sig = ((ensA,),(ensA,))
 
@@ -444,9 +442,23 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         strategy.mover_weights['shooting'] = {} #sadly, can't safely avoid 
         strategy.mover_weights['shooting'][((ensA,), (ensA,))] = 2.0
 
+        (group_weights, mover_weights) = strategy.get_weights(scheme)
         root = scheme.move_decision_tree(rebuild=True)
+
+        assert_equal(group_weights, {'shooting' : 2.0, 'repex' : 0.5})
+        expected_mover_weights = {}
+        for group in scheme.movers:
+            expected_mover_weights[group] = {}
+            for mover in scheme.movers[group]:
+                sig = mover.ensemble_signature
+                if group == 'shooting' and sig == ensA_sig:
+                    expected_mover_weights[group][sig] = 2.0
+                else:
+                    expected_mover_weights[group][sig] = 1.0
+
+        assert_equal(mover_weights, expected_mover_weights)
+
         new_choice_probability = scheme.choice_probability
-        
         new_shoot_chooser = [m for m in root if m.name=="ShootingChooser"][0]
         shoot_chooser_idx = root.movers.index(new_shoot_chooser)
         assert_equal(root.weights[shoot_chooser_idx],
@@ -466,6 +478,26 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         assert_not_equal(new_choice_probability, old_choice_probability)
 
     def test_get_weights_group_weights_set(self):
+        strategy = DefaultStrategy()
+        scheme = MoveScheme(self.network)
+        scheme.movers = {} # handles LEGACY stuff
+        scheme.append([NearestNeighborRepExStrategy(), 
+                       OneWayShootingStrategy(), 
+                       strategy])
+        root = scheme.move_decision_tree()
+        old_sig_prob = {m.ensemble_signature : scheme.choice_probability[m]
+                        for m in scheme.choice_probability}
+
+        strategy.group_weights['shooting'] = 2.0
+        root = scheme.move_decision_tree(rebuild=True)
+        new_sig_prob = {m.ensemble_signature : scheme.choice_probability[m]
+                        for m in scheme.choice_probability}
+        (group_weights, mover_weights) = strategy.get_weights(scheme)
+        assert_equal(group_weights, {'shooting' : 2.0, 'repex' : 0.5})
+
+        # TODO: properly compare old_sig_prob and new_sig_prob
+        assert_not_equal(old_sig_prob, new_sig_prob)
+        
         raise SkipTest
 
     def test_get_weights_mover_weights_set(self):
