@@ -396,6 +396,8 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         assert_equal(len(scheme.movers), 2)
         all_movers = scheme.movers['shooting'] + scheme.movers['repex']
         all_movers_sigs = [m.ensemble_signature for m in all_movers]
+        assert_equal(strategy.group_weights, {})
+        assert_equal(strategy.mover_weights, {})
 
         (group_weights, mover_weights) = strategy.get_weights(scheme)
         assert_equal(group_weights, {'shooting' : 1.0, 'repex' : 0.5})
@@ -423,9 +425,45 @@ class testDefaultStrategy(MoveStrategyTestSetup):
 
     def test_get_weights_both_internal_weights_set(self):
         strategy = DefaultStrategy()
-        strategy.get_movers
+        assert_equal(strategy.group_weights, {})
+        assert_equal(strategy.mover_weights, {})
+        ensA = self.network.sampling_transitions[0].ensembles[0]
+        ensA_sig = ((ensA,),(ensA,))
 
-        raise SkipTest
+        scheme = MoveScheme(self.network)
+        scheme.movers = {} # handles LEGACY stuff
+        scheme.append([NearestNeighborRepExStrategy(), 
+                       OneWayShootingStrategy(), 
+                       strategy])
+        root = scheme.move_decision_tree()
+        old_choice_probability = scheme.choice_probability
+        old_shooter_ensA = [m for m in scheme.movers['shooting'] 
+                            if m.ensemble_signature == ensA_sig][0]
+
+        strategy.group_weights['shooting'] = 2.0
+        strategy.mover_weights['shooting'] = {} #sadly, can't safely avoid 
+        strategy.mover_weights['shooting'][((ensA,), (ensA,))] = 2.0
+
+        root = scheme.move_decision_tree(rebuild=True)
+        new_choice_probability = scheme.choice_probability
+        
+        new_shoot_chooser = [m for m in root if m.name=="ShootingChooser"][0]
+        shoot_chooser_idx = root.movers.index(new_shoot_chooser)
+        assert_equal(root.weights[shoot_chooser_idx],
+                     2.0*len(new_shoot_chooser.movers))
+
+        new_shooter_ensA = [m for m in scheme.movers['shooting'] 
+                            if m.ensemble_signature == ensA_sig][0]
+        shooter_ensA_idx = new_shoot_chooser.movers.index(new_shooter_ensA)
+        assert_equal(new_shoot_chooser.weights[shooter_ensA_idx], 2.0)
+
+        assert_equal(
+            strategy.default_group_weights,
+            {'shooting' : 1.0, 'repex' : 0.5, 'pathreversal' : 0.5, 
+             'minus' : 0.2}
+        )
+
+        assert_not_equal(new_choice_probability, old_choice_probability)
 
     def test_get_weights_group_weights_set(self):
         raise SkipTest

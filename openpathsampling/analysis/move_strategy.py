@@ -365,7 +365,7 @@ class DefaultStrategy(MoveStrategy):
         'shooting' : 1.0,
         'repex' : 0.5,
         'pathreversal' : 0.5,
-        'minus' : 0.2,
+        'minus' : 0.2
     }
     def __init__(self, ensembles=None, group=None, replace=True,
                  network=None):
@@ -386,7 +386,8 @@ class DefaultStrategy(MoveStrategy):
         return chooser
 
     def get_group_weights(self, scheme):
-        group_weights = self.default_group_weights
+        group_weights = {k : self.default_group_weights[k]
+                         for k in self.default_group_weights}
         for weights in [self.group_weights]:
             if weights != {}:
                 for k in weights.keys():
