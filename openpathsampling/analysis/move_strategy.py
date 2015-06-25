@@ -407,42 +407,22 @@ class DefaultStrategy(MoveStrategy):
                         mover_weights[group][sig] = weights[group][sig]
         return mover_weights
 
-    def get_weights(self, scheme):
+    def strategy_group_weights(self, scheme, mover_weights=None):
         """
-        BRIEF
+        Returns the group weights given by info in the strategy and scheme.
 
-        Order of preference
-        1. If scheme.choice_probability is not set then we do whatever the
-        strategy says.
-        2. If both self.group_weights and self.mover_weights is set, then
-        we do whatever the strategy says
-        3. If one of self.group_weights or self.mover_weights is set,
-        then scheme.choice_probability is conserved based on those.
-        4. If neither is set, the use the 
+        `mover_weights` is None if either (a) scheme.choice_probability is
+        not set; or (b) self.group_weights is set. Then we don't make use of
+        scheme.choice_probability. If given mover_weights, we use
+        scheme.choice_probability to set the group_weights.
 
-        Notes
-        -----
-        This gets a bit complicated because we have several variables with
-        similar names. We have self.default_group_weights, which is a class
-        variable which gives the defaults. There is also self.group_weights,
-        which contains any user-defined changes. Finally, there is the local
-        variable group_weights, which is returned by this function. (The
-        same applies to mover_weights.) We do it this way so that the
-        strategy does not get modified by the scheme (which would happen if
-        we just modified the self.group_weights), under the premise that the
-        same strategy instance could, in some crazy case, be used in
-        multiple schemes. 
-
-        The group_weight gives the relative probability of choosing a group;
-        the mover_weight gives the relative probability of choosing a mover
-        *within* its group. 
+        See also
+        --------
+        DefaultStrategy.get_weights
+        DefaultStrategy.strategy_mover_weights
         """
-        group_set = (self.group_weights != {})
-        mover_set = (self.mover_weights != {})
-        choice_prob_set = (scheme.choice_probability != {})
-        if (group_set and ensembles_set) or not choice_prob_set:
-            group_weights = {}
-            mover_weights = {}
+        group_weights = {}
+        if mover_weights is None:
             for group in scheme.movers:
                 try:
                     group_weights[group] = self.default_group_weights[group]
@@ -451,25 +431,77 @@ class DefaultStrategy(MoveStrategy):
                 # override default
                 if group in self.group_weights:
                     group_weights[group] = self.group_weights[group]
-                
+        else:
+            pass
+        return group_weights
+
+    def strategy_mover_weights(self, scheme, group_weights=None):
+        """
+        Returns the mover weights given by info in the strategy and scheme.
+
+        `group_weights` is None if either (a) scheme.choice_probability is
+        not set; or (b) self.mover_weights is set. Then we don't make use of
+        scheme.choice_probability. If given group_weights, we use
+        scheme.choice_probability to set the mover_weights.
+
+        See also
+        --------
+        DefaultStrategy.get_weights
+        DefaultStrategy.strategy_group_weights
+        """
+        mover_weights = {}
+        if group_weights is None:
+            for group in scheme.movers:
                 movers = scheme.movers[group]
                 # set default
                 for mover in movers:
                     mover_weights[mover] = 1.0
                 for mover in self.mover_weights:
                     mover_weights[mover] = self.mover_weights[mover]
+        else:
+            m_weights = self.strategy_mover_weights(scheme)
+            pred_choice = self.choice_probability(group_weights, m_weights)
+            mover_weights = {m : scheme.choice_probability[m] / pred_choice[m]
+                             for m in scheme.choice_probability}
 
-        elif group_set:
-            # set new values for self.mover_weights
-            pass
-        elif mover_set:
-            # set new values for self.group_weights
-            pass
-        else: # neither is set
-            # use the sum of weights within each group as the
-            # group_weight, and the weights themselves as the
-            # mover_weights
-            pass
+        return mover_weights
+
+
+    def get_weights(self, scheme):
+        """
+        BRIEF
+
+        Notes
+        -----
+        The group_weight gives the relative probability of choosing a group;
+        the mover_weight gives the relative probability of choosing a mover
+        *within* its group.
+
+        Note that only the variables returned from this tell the full story.
+        The defaults and the self.* version may not contain the real set of
+        groups/movers.
+        """
+        choice_prob_set = (scheme.choice_probability != {})
+        group_set = (self.group_weights != {})
+        mover_set = (self.mover_weights != {})
+        if (group_set and mover_set) or not choice_prob_set:
+            group_weights = self.strategy_group_weights(scheme)
+            mover_weights = self.strategy_mover_weights(scheme)
+        elif group_set: #choice_prob is set; mover is not set
+            # use group_weights & choice_probability to set mover_weights
+            group_weights = self.strategy_group_weights(scheme)
+            mover_weights = self.strategy_mover_weights(scheme, group_weights)
+        elif mover_set: #choice_prob is set; group is not set
+            # use mover_weights & choice_probability to set group_weights
+            mover_weights = self.strategy_mover_weights(scheme)
+            group_weights = self.strategy_group_weights(scheme, mover_weights)
+        else: #choice_prob is set, neither group nor mover is set
+            # use the sum of weights within each group as the group_weight
+            group_weights = {}
+            for group in scheme.movers:
+                group_weights[group] = sum([scheme.choice_probability[m] 
+                                            for m in scheme.movers[group]])
+            mover_weights = self.strategy_mover_weights(scheme, group_weights)
         return (group_weights, mover_weights) # error if somehow undefined
 
 
