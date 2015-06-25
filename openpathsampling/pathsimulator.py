@@ -353,7 +353,7 @@ class PathSampling(PathSimulator):
 
         initialization_logging(init_log, self, 
                                ['move_scheme', 'globalstate'])
-
+        self.live_visualization = None
         self._mover = paths.PathSimulatorMover(self.move_scheme, self)
 
     def run(self, nsteps):
@@ -398,6 +398,8 @@ class PathSampling(PathSimulator):
                 self.sync_storage()
 
             self.globalstate = new_sampleset
+            if self.live_visualization is not None:
+                self.live_visualization.draw(mcstep)
 
         self.sync_storage()
         paths.tools.refresh_output(
