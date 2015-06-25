@@ -452,12 +452,14 @@ class DefaultStrategy(MoveStrategy):
         mover_weights = {}
         if group_weights is None:
             for group in scheme.movers:
+                mover_weights[group] = {}
                 movers = scheme.movers[group]
                 # set default
                 for mover in movers:
-                    mover_weights[mover] = 1.0
+                    mover_weights[group][mover.ensemble_signature] = 1.0
                 for mover in self.mover_weights:
-                    mover_weights[mover] = self.mover_weights[mover]
+                    val = self.mover_weights[group][mover.ensemble_signature]
+                    mover_weights[group][mover.ensemble_signature] = val
         else:
             m_weights = self.strategy_mover_weights(scheme)
             pred_choice = self.choice_probability(group_weights, m_weights)

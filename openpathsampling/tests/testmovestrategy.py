@@ -395,13 +395,15 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         root = scheme.move_decision_tree()
         assert_equal(len(scheme.movers), 2)
         all_movers = scheme.movers['shooting'] + scheme.movers['repex']
+        all_movers_sigs = [m.ensemble_signature for m in all_movers]
 
         (group_weights, mover_weights) = strategy.get_weights(scheme)
         assert_equal(group_weights, {'shooting' : 1.0, 'repex' : 0.5})
-        for mover in mover_weights:
-            assert_equal(mover_weights[mover], 1.0)
-            assert_in(mover, all_movers)
-        assert_equal(len(mover_weights), len(all_movers))
+        for group in mover_weights:
+            for sig in mover_weights[group]:
+                assert_equal(mover_weights[group][sig], 1.0)
+                assert_in(sig, all_movers_sigs)
+            assert_equal(len(mover_weights[group]), len(scheme.movers[group]))
 
         # check that we can reuse these in a different scheme
         scheme2 = MoveScheme(self.network)
@@ -412,12 +414,17 @@ class testDefaultStrategy(MoveStrategyTestSetup):
 
         (group_weights, mover_weights) = strategy.get_weights(scheme2)
         assert_equal(group_weights, {'shooting' : 1.0})
-        for mover in mover_weights:
-            assert_equal(mover_weights[mover], 1.0)
-            assert_in(mover, scheme2.movers['shooting'])
-        assert_equal(len(mover_weights), len(scheme2.movers['shooting']))
+        for group in mover_weights:
+            for sig in mover_weights[group]:
+                assert_equal(mover_weights[group][sig], 1.0)
+                assert_in(sig, [m.ensemble_signature 
+                                for m in scheme2.movers[group]])
+            assert_equal(len(mover_weights[group]), len(scheme2.movers[group]))
 
     def test_get_weights_both_internal_weights_set(self):
+        strategy = DefaultStrategy()
+        strategy.get_movers
+
         raise SkipTest
 
     def test_get_weights_group_weights_set(self):
