@@ -32,7 +32,6 @@ mdtraj orderparamters
     :toctree: api/generated/
 
     CV_MD_Function
-    CV_RMSD_To_Lambda
 
 msmbuilder3 collectivevariables
 ---------------------------
