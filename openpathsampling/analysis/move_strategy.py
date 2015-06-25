@@ -456,26 +456,23 @@ class DefaultStrategy(MoveStrategy):
                 mover_weights[group] = {}
                 movers = scheme.movers[group]
                 # set default
-                for mover in movers:
-                    try:
-                        mover_weights[group][mover.ensemble_signature] = 1.0
-                    except KeyError:
-                        mover_weights[group] = {mover.ensemble_signature : 1.0}
-                try:
-                    override_sigs = self.mover_weights[group]
-                except KeyError:
-                    pass
-                else:
-                    for sig in override_sigs:
+                mover_weights[group] = {m.ensemble_signature : 1.0
+                                        for m in scheme.movers[group]}
+                if group in self.mover_weights:
+                    for sig in self.mover_weights[group]:
                         mover_weights[group][sig] = self.mover_weights[group][sig]
         else:
-            m_weights = self.strategy_mover_weights(scheme)
-            pred_choice = self.choice_probability(scheme, group_weights, m_weights)
-            mover_weights = {m : scheme.choice_probability[m] / pred_choice[m]
-                             for m in scheme.choice_probability}
-
+            m_weights = self.strategy_mover_weights(scheme) # defaults
+            pred_choice = self.choice_probability(scheme, group_weights,
+                                                  m_weights)
+            scheme_choice = scheme.choice_probability
+            for group in scheme.movers:
+                mover_weights[group] = {
+                    m.ensemble_signature : scheme_choice[m] / pred_choice[m]
+                    for m in scheme.movers[group]
+                }
+                                        
         return mover_weights
-
 
     def get_weights(self, scheme):
         """

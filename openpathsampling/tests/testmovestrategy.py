@@ -469,12 +469,6 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         shooter_ensA_idx = new_shoot_chooser.movers.index(new_shooter_ensA)
         assert_equal(new_shoot_chooser.weights[shooter_ensA_idx], 2.0)
 
-        assert_equal(
-            strategy.default_group_weights,
-            {'shooting' : 1.0, 'repex' : 0.5, 'pathreversal' : 0.5, 
-             'minus' : 0.2}
-        )
-
         assert_not_equal(new_choice_probability, old_choice_probability)
 
     def test_get_weights_group_weights_set(self):
@@ -485,20 +479,33 @@ class testDefaultStrategy(MoveStrategyTestSetup):
                        OneWayShootingStrategy(), 
                        strategy])
         root = scheme.move_decision_tree()
-        old_sig_prob = {m.ensemble_signature : scheme.choice_probability[m]
-                        for m in scheme.choice_probability}
+
+        nshoot = len(scheme.movers['shooting'])
+        nrepex = len(scheme.movers['repex'])
+
+        old_total = 0.5*nrepex + 1.0*nshoot
+        for mover in scheme.movers['shooting']:
+            assert_equal(scheme.choice_probability[mover], 1.0/old_total)
+        for mover in scheme.movers['repex']:
+            assert_equal(scheme.choice_probability[mover], 0.5/old_total)
+
 
         strategy.group_weights['shooting'] = 2.0
         root = scheme.move_decision_tree(rebuild=True)
-        new_sig_prob = {m.ensemble_signature : scheme.choice_probability[m]
-                        for m in scheme.choice_probability}
         (group_weights, mover_weights) = strategy.get_weights(scheme)
         assert_equal(group_weights, {'shooting' : 2.0, 'repex' : 0.5})
+        for group in mover_weights:
+            for mover in mover_weights[group]:
+                assert_equal(mover_weights[group][mover],
+                             mover_weights[group].values()[0])
 
-        # TODO: properly compare old_sig_prob and new_sig_prob
-        assert_not_equal(old_sig_prob, new_sig_prob)
+        new_total = 0.5*nrepex + 2.0*nshoot
+        for mover in scheme.movers['shooting']:
+            assert_equal(scheme.choice_probability[mover], 2.0/new_total)
+        for mover in scheme.movers['repex']:
+            assert_equal(scheme.choice_probability[mover], 0.5/new_total)
+
         
-        raise SkipTest
 
     def test_get_weights_mover_weights_set(self):
         raise SkipTest
