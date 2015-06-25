@@ -20,7 +20,7 @@ initialization parameters. What's more, ensembles can be combined using the
 logical infix operators `&` (and) and `|` (or).
 
 Volume Ensembles
-----------------------
+----------------
 .. autosummary::
     :toctree: api/generated/
 
@@ -31,7 +31,7 @@ Volume Ensembles
 	PartOutXEnsemble
 	
 Set-based Ensemble combinations
------------------------------
+-------------------------------
 .. autosummary::
     :toctree: api/generated/
 
