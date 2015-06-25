@@ -407,7 +407,7 @@ class DefaultStrategy(MoveStrategy):
                         mover_weights[group][sig] = weights[group][sig]
         return mover_weights
 
-    def set_weights(self, scheme):
+    def get_weights(self, scheme):
         """
         BRIEF
 
@@ -420,13 +420,45 @@ class DefaultStrategy(MoveStrategy):
         then scheme.choice_probability is conserved based on those.
         4. If neither is set, the use the 
 
+        Notes
+        -----
+        This gets a bit complicated because we have several variables with
+        similar names. We have self.default_group_weights, which is a class
+        variable which gives the defaults. There is also self.group_weights,
+        which contains any user-defined changes. Finally, there is the local
+        variable group_weights, which is returned by this function. (The
+        same applies to mover_weights.) We do it this way so that the
+        strategy does not get modified by the scheme (which would happen if
+        we just modified the self.group_weights), under the premise that the
+        same strategy instance could, in some crazy case, be used in
+        multiple schemes. 
+
+        The group_weight gives the relative probability of choosing a group;
+        the mover_weight gives the relative probability of choosing a mover
+        *within* its group. 
         """
         group_set = (self.group_weights != {})
         mover_set = (self.mover_weights != {})
         choice_prob_set = (scheme.choice_probability != {})
         if (group_set and ensembles_set) or not choice_prob_set:
-            # do whatver the strategy says
-            pass
+            group_weights = {}
+            mover_weights = {}
+            for group in scheme.movers:
+                try:
+                    group_weights[group] = self.default_group_weights[group]
+                except KeyError:
+                    group_weights[group] = 1.0
+                # override default
+                if group in self.group_weights:
+                    group_weights[group] = self.group_weights[group]
+                
+                movers = scheme.movers[group]
+                # set default
+                for mover in movers:
+                    mover_weights[mover] = 1.0
+                for mover in self.mover_weights:
+                    mover_weights[mover] = self.mover_weights[mover]
+
         elif group_set:
             # set new values for self.mover_weights
             pass
@@ -438,6 +470,7 @@ class DefaultStrategy(MoveStrategy):
             # group_weight, and the weights themselves as the
             # mover_weights
             pass
+        return (group_weights, mover_weights) # error if somehow undefined
 
 
     def choice_probability(self, scheme, group_weights, mover_weights):

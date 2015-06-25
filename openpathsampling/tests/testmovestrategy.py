@@ -385,6 +385,50 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         for w in chooser.weights:
             assert_equal(w, 1.0)
 
+    def test_get_weights_scheme_all_unset(self):
+        strategy = DefaultStrategy()
+
+        scheme = MoveScheme(self.network)
+        scheme.movers = {} # handles LEGACY stuff
+        scheme.append(NearestNeighborRepExStrategy())
+        scheme.append(OneWayShootingStrategy())
+        root = scheme.move_decision_tree()
+        assert_equal(len(scheme.movers), 2)
+        all_movers = scheme.movers['shooting'] + scheme.movers['repex']
+
+        (group_weights, mover_weights) = strategy.get_weights(scheme)
+        assert_equal(group_weights, {'shooting' : 1.0, 'repex' : 0.5})
+        for mover in mover_weights:
+            assert_equal(mover_weights[mover], 1.0)
+            assert_in(mover, all_movers)
+        assert_equal(len(mover_weights), len(all_movers))
+
+        # check that we can reuse these in a different scheme
+        scheme2 = MoveScheme(self.network)
+        scheme2.movers = {} # handles LEGACY stuff
+        scheme2.append(OneWayShootingStrategy())
+        root = scheme2.move_decision_tree()
+        assert_equal(len(scheme2.movers), 1)
+
+        (group_weights, mover_weights) = strategy.get_weights(scheme2)
+        assert_equal(group_weights, {'shooting' : 1.0})
+        for mover in mover_weights:
+            assert_equal(mover_weights[mover], 1.0)
+            assert_in(mover, scheme2.movers['shooting'])
+        assert_equal(len(mover_weights), len(scheme2.movers['shooting']))
+
+    def test_get_weights_both_internal_weights_set(self):
+        raise SkipTest
+
+    def test_get_weights_group_weights_set(self):
+        raise SkipTest
+
+    def test_get_weights_mover_weights_set(self):
+        raise SkipTest
+
+    def test_get_weights_internal_unset_choice_prob_set(self):
+        raise SkipTest
+
 
     def test_get_mover_weights(self):
         raise SkipTest
