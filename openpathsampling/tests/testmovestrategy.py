@@ -504,53 +504,39 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             assert_equal(scheme.choice_probability[mover], 2.0/new_total)
         for mover in scheme.movers['repex']:
             assert_equal(scheme.choice_probability[mover], 0.5/new_total)
-
         
 
     def test_get_weights_mover_weights_set(self):
-        raise SkipTest
+        strategy = DefaultStrategy()
+        scheme = MoveScheme(self.network)
+        scheme.movers = {} # handles LEGACY stuff
+        scheme.append([NearestNeighborRepExStrategy(), 
+                       OneWayShootingStrategy(),
+                       strategy])
+        # build it so there's an old version
+        strategy.group_weights['repex'] = 3.0
+        root = scheme.move_decision_tree()
+        (group_weights, mover_weights) = strategy.get_weights(scheme)
+        assert_equal(group_weights, {'shooting' : 1.0, 'repex' : 3.0})
+
+        ensA = self.network.sampling_transitions[0].ensembles[0]
+        ensA_sig = ((ensA,),(ensA,))
+        strategy.group_weights = {}
+        strategy.mover_weights['shooting'] = {} #sadly, can't safely avoid 
+        strategy.mover_weights['shooting'][ensA_sig] = 2.0
+
+        (group_weights, mover_weights) = strategy.get_weights(scheme)
+        #root = scheme.move_decision_tree(rebuild=True) 
+
+        for sig in mover_weights['shooting']:
+            if sig == ensA_sig:
+                assert_equal(mover_weights['shooting'][sig], 2.0)
+            else:
+                assert_equal(mover_weights['shooting'][sig], 1.0)
+
+        assert_almost_equal(group_weights['shooting'], 1.0)
+        assert_almost_equal(group_weights['repex'], 3.0)
 
     def test_get_weights_internal_unset_choice_prob_set(self):
         raise SkipTest
-
-
-    def test_get_mover_weights(self):
-        raise SkipTest
-
-    def test_get_group_weights(self):
-        raise SkipTest
-
-    # TODO: these tests need to be readjusted to work with strategy
-    #def test_default_mover_weights(self):
-        #scheme = DefaultScheme(self.network)
-        #scheme.movers = {} # LEGACY
-        #root = scheme.move_decision_tree()
-
-        #assert_not_equal(scheme.mover_weights, {})
-        #assert_equal(set(scheme.mover_weights.keys()), 
-                     #set(scheme.movers.keys()))
-        #for groupname in scheme.mover_weights.keys():
-            #group = scheme.mover_weights[groupname]
-            #mover_sigs = [m.ensemble_signature_set 
-                          #for m in scheme.movers[groupname]]
-            #for sig in group.keys():
-                #assert_in((set(sig[0]), set(sig[1])), mover_sigs)
-            #for sig in [m.ensemble_signature 
-                        #for m in scheme.movers[groupname]]:
-                #assert_equal(group[sig], 1.0) # default is all 1.0
-
-    #def test_default_group_weights(self):
-        #scheme = DefaultScheme(self.network)
-        #scheme.movers = {} # LEGACY
-        #root = scheme.move_decision_tree()
-    
-        #default_group_weights = {
-            #'shooting' : 1.0,
-            #'repex' : 0.5,
-            #'pathreversal' : 0.5,
-            #'minus' : 0.2,
-            #'ms_outer_shooting' : 1.0
-        #}
-        #assert_equal(scheme.group_weights, default_group_weights)
-
 

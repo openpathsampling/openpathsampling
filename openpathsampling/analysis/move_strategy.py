@@ -433,6 +433,25 @@ class DefaultStrategy(MoveStrategy):
                 if group in self.group_weights:
                     group_weights[group] = self.group_weights[group]
         else:
+            mover_weights = self.strategy_mover_weights(scheme)
+            group_weights = {}
+            for group in scheme.movers:
+                movers = scheme.movers[group]
+                g_weight = sum([scheme.choice_probability[m] for m in movers])
+                g_weight /= len(movers)
+                min_m_weight = min(mover_weights[group].values())
+                m_weight = sum([mover_weights[group][sig] / min_m_weight
+                                for sig in mover_weights[group]])
+                group_weights[group] = g_weight 
+            try:
+                normalizer = group_weights['shooting']
+            except KeyError:
+                normalizer = sum(group_weights)
+            for group in group_weights:
+                group_weights[group] /= normalizer
+
+            # find the minimum of prob within each group; normalize group to
+            # that; then use the
             pass
         return group_weights
 
