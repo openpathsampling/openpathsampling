@@ -603,7 +603,7 @@ class MISTISNetwork(TISNetwork):
                 # we give NaN so we can calculate the condition transition
                 # probability automatically
 
-            #rate = trans.rate(storage)
-            #self._rate_matrix.set_value(trans.stateA, trans.stateB, rate)
+            rate = trans.rate(storage)
+            self._rate_matrix.set_value(trans.stateA, trans.stateB, rate)
 
         return self._rate_matrix
