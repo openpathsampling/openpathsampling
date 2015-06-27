@@ -406,6 +406,7 @@ class DefaultStrategy(MoveStrategy):
                 for group in weights.keys():
                     for sig in weights[group].keys():
                         mover_weights[group][sig] = weights[group][sig]
+
         return mover_weights
 
     def strategy_group_weights(self, scheme, mover_weights=None):
@@ -439,9 +440,9 @@ class DefaultStrategy(MoveStrategy):
                 movers = scheme.movers[group]
                 g_weight = sum([scheme.choice_probability[m] for m in movers])
                 g_weight /= len(movers)
-                min_m_weight = min(mover_weights[group].values())
-                m_weight = sum([mover_weights[group][sig] / min_m_weight
-                                for sig in mover_weights[group]])
+                #min_m_weight = min(mover_weights[group].values())
+                #m_weight = sum([mover_weights[group][sig] / min_m_weight
+                                #for sig in mover_weights[group]])
                 group_weights[group] = g_weight 
             try:
                 normalizer = group_weights['shooting']
@@ -490,6 +491,11 @@ class DefaultStrategy(MoveStrategy):
                     m.ensemble_signature : scheme_choice[m] / pred_choice[m]
                     for m in scheme.movers[group]
                 }
+
+        for group in mover_weights:
+            group_min = min(mover_weights[group].values())
+            mover_weights[group] = {s : mover_weights[group][s] / group_min
+                                    for s in mover_weights[group]}
                                         
         return mover_weights
 
@@ -523,11 +529,17 @@ class DefaultStrategy(MoveStrategy):
             group_weights = self.strategy_group_weights(scheme, mover_weights)
         else: #choice_prob is set, neither group nor mover is set
             # use the sum of weights within each group as the group_weight
-            group_weights = {}
+            g_weights = {}
             for group in scheme.movers:
-                group_weights[group] = sum([scheme.choice_probability[m] 
-                                            for m in scheme.movers[group]])
-            mover_weights = self.strategy_mover_weights(scheme, group_weights)
+                movers = scheme.movers[group]
+                g_weight = sum([scheme.choice_probability[m] for m in movers])
+                #g_weight /= len(movers)
+                g_weights[group] = g_weight
+
+            mover_weights = self.strategy_mover_weights(scheme, g_weights)
+            group_weights = g_weights
+            #group_weights = self.strategy_group_weights(scheme, mover_weights)
+
         return (group_weights, mover_weights) # error if somehow undefined
 
 

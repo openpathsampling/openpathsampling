@@ -520,7 +520,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         assert_equal(group_weights, {'shooting' : 1.0, 'repex' : 3.0})
 
         ensA = self.network.sampling_transitions[0].ensembles[0]
-        ensA_sig = ((ensA,),(ensA,))
+        ensA_sig = ((ensA,),(ensA,)) 
         strategy.group_weights = {}
         strategy.mover_weights['shooting'] = {} #sadly, can't safely avoid 
         strategy.mover_weights['shooting'][ensA_sig] = 2.0
@@ -538,5 +538,54 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         assert_almost_equal(group_weights['repex'], 3.0)
 
     def test_get_weights_internal_unset_choice_prob_set(self):
+        strategy = DefaultStrategy()
+        scheme = MoveScheme(self.network)
+        scheme.movers = {} # handles LEGACY stuff
+        scheme.append([NearestNeighborRepExStrategy(), 
+                       OneWayShootingStrategy(),
+                       strategy])
+        ensA = self.network.sampling_transitions[0].ensembles[0]
+        ensA_sig = ((ensA,),(ensA,))
+        strategy.group_weights['repex'] = 3.0
+        #strategy.mover_weights['shooting'] = {} #sadly, can't safely avoid 
+        #strategy.mover_weights['shooting'][ensA_sig] = 2.0
+
+        root = scheme.move_decision_tree()
+        (old_group_weights, old_mover_weights) = strategy.get_weights(scheme)
+
+        old_choice_prob = scheme.choice_probability
+        old_movers = scheme.movers
+        strategy.group_weights = {}
+        strategy.mover_weights = {}
+
+        (group_weights, mover_weights) = strategy.get_weights(scheme)
+        scheme.choice_probability = {}
+        new_choice_prob = strategy.choice_probability(scheme, group_weights,
+                                                      mover_weights)
+
+        for m in new_choice_prob:
+            print m, new_choice_prob[m]
+        print group_weights
+        for g in mover_weights:
+            for s in mover_weights[g]:
+                print g, mover_weights[g][s]
+
+        for group in scheme.movers:
+            for mover in scheme.movers[group]:
+                old_mover = [
+                    old for old in old_movers[group] 
+                    if mover.ensemble_signature==old.ensemble_signature
+                ][0]
+                #assert_almost_equal(new_choice_prob[mover], 
+                                    #old_choice_prob[old_mover])
+
+        #for group in group_weights:
+            #assert_almost_equal(group_weights[group],
+                                #old_group_weights[group])
+        #assert_equal(old_mover_weights, mover_weights)
+
+
+
+
         raise SkipTest
 
