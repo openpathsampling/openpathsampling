@@ -9,10 +9,6 @@ Platforms
 
 Mac and Linux. Windows only has limited OpenMM support. (Not recommended)
 
-Supported Hardware
-------------------
-
-Needs OpenMM sofar!
 
 Install with Conda
 ------------------
@@ -62,7 +58,8 @@ be installed.
 Optional packages:
 
     `IPython <http://ipython.org>`_ >= 3.0.0
-        Used for the examples and tutorials. Is optional, but highly recommended.
+        Used for the examples and tutorials. Is optional, but highly
+        recommended.
 
 
 Testing Your Installation
@@ -73,5 +70,5 @@ up via ``conda`` if you don't already have it. ::
 
   conda install nose
 
-From the source directory ``openpathsampling/tests``, you can also run the tests
-with ``nosetests .`` on the command line
+From the source directory ``openpathsampling/tests``, you can run the tests
+by typing ``nosetests`` on the command line.

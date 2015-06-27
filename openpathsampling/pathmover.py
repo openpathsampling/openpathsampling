@@ -66,8 +66,8 @@ class PathMover(TreeMixin, OPSNamed):
     
     Notes
     -----
-    Basically a pathmover takes a SampleSet() and returns PathMoveChange()
-    that is used to change the old SampleSet() to the new one.
+    A pathmover takes a SampleSet() and returns PathMoveChange() that is
+    used to change the old SampleSet() to the new one.
 
     SampleSet1 + PathMoveChange1 => SampleSet2
 
@@ -162,6 +162,27 @@ class PathMover(TreeMixin, OPSNamed):
             return [s for ens in ensembles for s in PathMover._flatten(ens)]
         else:
             return [ensembles]
+
+    def _ensemble_signature(self, as_set=False):
+        """Return tuple form of (input_ensembles, output_ensembles).
+        
+        Useful for MoveScheme, e.g., identifying which movers should be
+        removed as part of a replacement.
+        """
+        inp = tuple(self.input_ensembles)
+        out = tuple(self.output_ensembles)
+        if as_set:
+            inp = set(inp)
+            out = set(out)
+        return (inp, out)
+               
+    @property
+    def ensemble_signature(self):
+        return self._ensemble_signature(as_set=False)
+
+    @property
+    def ensemble_signature_set(self):
+        return self._ensemble_signature(as_set=True)
 
     @property
     def input_ensembles(self):
