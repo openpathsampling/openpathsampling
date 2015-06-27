@@ -827,6 +827,12 @@ class ReplicaExchangeGeneratingMover(SampleGeneratingMover):
     def _called_ensembles(self):
         return [self.ensemble1, self.ensemble2]
 
+    def _get_in_ensembles(self):
+        return [self.ensemble1, self.ensemble2]
+
+    def _get_out_ensembles(self):
+        return [self.ensemble1, self.ensemble2]
+
     def __call__(self, sample1, sample2):
         # convert sample to the language used here before
         trajectory1 = sample1.trajectory
@@ -897,6 +903,12 @@ class StateSwapGeneratingMover(SampleGeneratingMover):
                                entries=['bias', 'ensemble1', 'ensemble2'])
 
     def _called_ensembles(self):
+        return [self.ensemble1, self.ensemble2]
+
+    def _get_in_ensembles(self):
+        return [self.ensemble1, self.ensemble2]
+
+    def _get_out_ensembles(self):
         return [self.ensemble1, self.ensemble2]
 
     def __call__(self, sample1, sample2):
@@ -1325,6 +1337,9 @@ class RandomChoiceMover(SelectionMover):
     def __init__(self, movers, weights=None):
         super(RandomChoiceMover, self).__init__(movers)
 
+        if weights is None:
+            weights = [1.0] * len(movers)
+
         self.movers = movers
         self.weights = weights
 
@@ -1332,12 +1347,7 @@ class RandomChoiceMover(SelectionMover):
                                entries=['weights'])
 
     def _selector(self, globalstate):
-        if self.weights is None:
-            weights = [1.0] * len(self.movers)
-        else:
-            weights = self.weights
-
-        return weights
+        return self.weights
 
 class RandomAllowedChoiceMover(RandomChoiceMover):
     """
@@ -1830,6 +1840,14 @@ class OneWayShootingMover(RandomChoiceMover):
         )
 
         return mover
+
+    @property
+    def ensemble(self):
+        return self.movers[0].ensemble
+
+    @property
+    def selector(self):
+        return self.movers[0].selector
 
 class OneWayExtendMover(RandomChoiceMover):
     """
