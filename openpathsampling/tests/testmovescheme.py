@@ -223,7 +223,9 @@ class testDefaultScheme(object):
         chooser_type_dict = {
             'ShootingChooser' : paths.OneWayShootingMover,
             'PathreversalChooser' : paths.PathReversalMover,
-            'RepexChooser' : paths.ReplicaExchangeMover
+            'RepexChooser' : paths.ReplicaExchangeMover,
+            'MinusChooser' : paths.MinusMover,
+            'Ms_outer_shootingChooser' : paths.OneWayShootingMover
         }
         names = chooser_type_dict.keys()
 
@@ -233,11 +235,42 @@ class testDefaultScheme(object):
         for name in names:
             assert_in(name, name_dict.keys())
 
-        assert_equal(len(root.movers[name_dict['ShootingChooser']].movers), 6)
-        assert_equal(len(root.movers[name_dict['PathreversalChooser']].movers), 6)
-        assert_equal(len(root.movers[name_dict['RepexChooser']].movers), 4)
+        n_normal_repex = 4
+        n_msouter_repex = 2
+        n_repex = n_normal_repex + n_msouter_repex
+
+        assert_equal(
+            len(root.movers[name_dict['ShootingChooser']].movers), 6
+        )
+        assert_equal(
+            len(root.movers[name_dict['PathreversalChooser']].movers), 7
+        )
+        assert_equal(
+            len(root.movers[name_dict['RepexChooser']].movers), n_repex
+        )
+        assert_equal(
+            len(root.movers[name_dict['MinusChooser']].movers), 2
+        )
+        assert_equal(
+            len(root.movers[name_dict['Ms_outer_shootingChooser']].movers), 1
+        )
 
         for choosername in names:
             for mover in root.movers[name_dict[choosername]].movers:
                 assert_equal(type(mover), chooser_type_dict[choosername])
+
+
+    def test_default_hidden_ensembles(self):
+        scheme = DefaultScheme(self.network)
+        scheme.movers = {} # LEGACY
+        root = scheme.move_decision_tree()
+        hidden = scheme.find_hidden_ensembles()
+        assert_equal(len(hidden), 2)
+
+    def test_default_unused_ensembles(self):
+        scheme = DefaultScheme(self.network)
+        scheme.movers = {} # LEGACY
+        root = scheme.move_decision_tree()
+        unused = scheme.find_unused_ensembles()
+        assert_equal(len(unused), 0) # will change when minus/msouter 
 

@@ -28,7 +28,7 @@ class testStrategyLevels(object):
 class MoveStrategyTestSetup(object):
     def setup(self):
         cvA = paths.CV_Function(name="xA", fcn=lambda s : s.xyz[0][0])
-        cvB = paths.CV_Function(name="xA", fcn=lambda s : -s.xyz[0][0])
+        cvB = paths.CV_Function(name="xB", fcn=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
         interfacesA = vf.CVRangeVolumeSet(cvA, float("-inf"), 
@@ -84,6 +84,11 @@ class testMoveStrategy(MoveStrategyTestSetup):
         weird_ens_list = [[ensA[0]], ensA[1], [extra_ens]]
         ensembles = self.strategy.get_ensembles(weird_ens_list)
         assert_equal(ensembles, [[ensA[0]], [ensA[1]], [extra_ens]])
+
+        ensembles = self.strategy.get_ensembles(extra_ens)
+        assert_equal(len(ensembles), 1)
+        assert_equal(len(ensembles[0]), 1)
+        assert_equal(ensembles[0][0], extra_ens)
 
 class testOneWayShootingStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
@@ -180,6 +185,82 @@ class testPathReversalStrategy(MoveStrategyTestSetup):
         assert_equal(len(movers), 6)
         for m in movers:
             assert_equal(type(m), paths.PathReversalMover)
+
+
+class testMinusMoveStrategy(MoveStrategyTestSetup):
+    def test_get_ensembles(self):
+        strategy = MinusMoveStrategy()
+        strategy.network = self.network
+        ensembles = strategy.get_ensembles(None)
+        assert_equal(len(ensembles), 2)
+        for ens_group in ensembles:
+            assert_equal(len(ens_group), 1)
+        assert_not_equal(ensembles[0][0].state_vol, ensembles[1][0].state_vol)
+
+    def test_get_ensembles_multiple_minus(self):
+        strategy = MinusMoveStrategy()
+        strategy.network = self.network
+        innerA = self.network.sampling_transitions[0].ensembles[0]
+        innerB = self.network.sampling_transitions[1].ensembles[0]
+        extra_minus = paths.MinusInterfaceEnsemble(
+            state_vol=self.network.sampling_transitions[0].stateA,
+            innermost_vols=[innerA, innerB]
+        )
+        self.network.special_ensembles['minus'][extra_minus] = [innerA, innerB]
+        ensembles = strategy.get_ensembles(None)
+        assert_equal(len(ensembles), 2)
+        assert_equal(set([len(ensembles[0]), len(ensembles[1])]), set([1,2]))
+
+    def test_get_ensembles_fixed_ensembles(self):
+        strategy = MinusMoveStrategy()
+        strategy.network = self.network
+        minusA = self.network.special_ensembles['minus'].keys()[0]
+        ensembles = strategy.get_ensembles(minusA)
+        assert_equal(len(ensembles), 1)
+        assert_equal(len(ensembles[0]), 1)
+        assert_equal(ensembles[0][0], minusA)
+
+    def test_make_movers(self):
+        strategy = MinusMoveStrategy()
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        assert_equal(len(movers), 2)
+
+        minuses = self.network.special_ensembles['minus']
+        ens_minusA = minuses.keys()[0]
+        ens_innerA = [t.ensembles[0] for t in minuses[ens_minusA]]
+        sig_A = set([ens_minusA] + ens_innerA)
+        ens_minusB = minuses.keys()[1]
+        ens_innerB = [t.ensembles[0] for t in minuses[ens_minusB]]
+        sig_B = set([ens_minusB] + ens_innerB)
+        all_ens_sigs = [m.ensemble_signature_set for m in movers]
+
+        # check the signatures
+        assert_not_equal(sig_A, sig_B)
+        assert_in(tuple([sig_A, sig_A]), all_ens_sigs)
+        assert_in(tuple([sig_B, sig_B]), all_ens_sigs)
+
+        # check that these are inner ensembles
+        inners = [t.ensembles[0] for t in self.network.sampling_transitions]
+        for inner in ens_innerA + ens_innerB:
+            assert_in(inner, inners)
+
+        # check that we've got the right inner for the right state
+        stateA_inner = self.network.from_state[ens_minusA.state_vol].ensembles[0]
+        assert_equal([stateA_inner], ens_innerA)
+        stateB_inner = self.network.from_state[ens_minusB.state_vol].ensembles[0]
+        assert_equal([stateB_inner], ens_innerB)
+
+        # check that we've got minus ensembles
+        for mover in movers:
+            assert_in(mover.minus_ensemble, self.network.minus_ensembles)
+            assert_equal(
+                isinstance(mover.minus_ensemble, paths.MinusInterfaceEnsemble),
+                True
+            )
+
+    def test_hidden_ensembles(self):
+        raise SkipTest
 
 
 class testDefaultStrategy(MoveStrategyTestSetup):

@@ -131,7 +131,11 @@ class MoveStrategy(object):
             # takes a list and makes it into list-of-lists
             res_ensembles = []
             elem_group = []
-            for elem in ensembles:
+            try:
+                ens_iter = iter(ensembles)
+            except TypeError:
+                ens_iter = iter([ensembles])
+            for elem in ens_iter:
                 try:
                     append_group = list(elem)
                 except TypeError:
@@ -291,11 +295,49 @@ class PathReversalStrategy(MoveStrategy):
 
 class MinusMoveStrategy(MoveStrategy):
     """
-    Takes a given network and makes the minus mover.
+    Takes a given scheme and makes the minus mover.
     """
-    pass
+    _level = levels.MOVER
+    def __init__(self, ensembles=None, group="minus", replace=True,
+                 network=None):
+        super(MinusMoveStrategy, self).__init__(
+            ensembles=ensembles, network=network, group=group, replace=replace
+        )
 
-class SingleReplicaMinusMoveStrategy(MoveStrategy):
+    def get_ensembles(self, ensembles):
+        network = self.network
+        if ensembles is None:
+            minus_ensembles = network.minus_ensembles
+            state_sorted_minus = {}
+            for minus in minus_ensembles:
+                try:
+                    state_sorted_minus[minus.state_vol].append(minus)
+                except KeyError:
+                    state_sorted_minus[minus.state_vol] = [minus]
+            ensembles = state_sorted_minus.values()
+
+        # now we use super's ability to turn it into list-of-list
+        res_ensembles = super(MinusMoveStrategy, self).get_ensembles(ensembles)
+        return res_ensembles
+
+    def make_movers(self, scheme):
+        if self.network is None:
+            self.network = scheme.network
+        network = self.network
+        ensemble_list = self.get_ensembles(self.ensembles)
+        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
+        movers = []
+        for ens in ensembles:
+            innermosts = [t.ensembles[0] 
+                          for t in network.special_ensembles['minus'][ens]]
+            movers.append(paths.MinusMover(
+                minus_ensemble=ens, 
+                innermost_ensembles=innermosts
+            ))
+        # TODO: add to hidden ensembles
+        return movers
+
+class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
     pass
 
 class DefaultStrategy(MoveStrategy):

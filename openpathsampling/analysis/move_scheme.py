@@ -151,6 +151,76 @@ class MoveScheme(OPSNamed):
             except KeyError:
                 self.movers[group] = movers
 
+    def ensembles_for_move_tree(self, root=None):
+        """
+        Finds the list of all ensembles in the move tree starting at `root`.
+
+        Parameters
+        ----------
+        root : PathMover
+            Mover to act as root of this tree (can be a subtree). Default is
+            `None`, in which case `self.root_mover` is used.
+
+        Returns
+        -------
+        list of Ensemble
+            ensembles which appear in this (sub)tree
+        """
+        if root is None:
+            root = self.root_mover
+        movers = root.map_pre_order(lambda x : x)
+        mover_ensemble_dict = {}
+        for m in movers:
+            input_sig = m.input_ensembles
+            output_sig = m.output_ensembles
+            for ens in input_sig + output_sig:
+                mover_ensemble_dict[ens] = 1
+        mover_ensembles = mover_ensemble_dict.keys()
+        return mover_ensembles
+
+    def find_hidden_ensembles(self, root=None):
+        """
+        All ensembles which exist in the move scheme but not in the network.
+
+        Parameters
+        ----------
+        root : PathMover
+            Mover to act as root of this tree (can be a subtree). Default is
+            `None`, in which case `self.root_mover` is used.
+
+        Returns
+        -------
+        set of Ensemble
+            "hidden" ensembles; the ensembles which are in the scheme but
+            not the network.
+        """
+        unhidden_ensembles = set(self.network.all_ensembles)
+        mover_ensembles = set(self.ensembles_for_move_tree(root))
+        hidden_ensembles = mover_ensembles - unhidden_ensembles
+        return hidden_ensembles
+
+    def find_unused_ensembles(self, root=None):
+        """
+        All ensembles which exist in the network but not in the move scheme.
+
+        Parameters
+        ----------
+        root : PathMover
+            Mover to act as root of this tree (can be a subtree). Default is
+            `None`, in which case `self.root_mover` is used.
+
+        Returns
+        -------
+        set of Ensemble
+            "unused" ensembles; the ensembles which are in the network but
+            not the scheme.
+        """
+        unhidden_ensembles = set(self.network.all_ensembles)
+        mover_ensembles = set(self.ensembles_for_move_tree(root))
+        unused_ensembles = unhidden_ensembles - mover_ensembles
+        return unused_ensembles
+
+
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, indentation):
         line = ("* "*indentation + str(move_name) +
@@ -249,6 +319,21 @@ class DefaultScheme(MoveScheme):
         self.append(strategies.OneWayShootingStrategy())
         self.append(strategies.PathReversalStrategy())
         self.append(strategies.DefaultStrategy())
-        #self.append(strategies.MinusStrategy())
-        # TODO: also handle MS-outer stuff
+        self.append(strategies.MinusMoveStrategy())
+
+        msouters = self.network.special_ensembles['ms_outer']
+        for ms in msouters.keys():
+            self.append(strategies.OneWayShootingStrategy(
+                ensembles=[ms],
+                group="ms_outer_shooting"
+            ))
+            self.append(strategies.PathReversalStrategy(
+                ensembles=[ms],
+                replace=False
+            ))
+            ms_neighbors = [t.ensembles[-1] for t in msouters[ms]]
+            pairs = [[ms, neighb] for neighb in ms_neighbors]
+            self.append(strategies.SelectedPairsRepExStrategy(
+                ensembles=pairs
+            ))
 
