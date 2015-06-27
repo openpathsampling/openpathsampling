@@ -371,13 +371,15 @@ class PathSampling(PathSimulator):
         for nn in range(nsteps):
             self.step += 1
             logger.info("Beginning MC cycle " + str(self.step))
-            paths.tools.refresh_output(
-                "Working on Monte Carlo cycle step " + str(self.step) + ".\n"
-            )
+            refresh=True
             if self.live_visualization is not None and mcstep is not None:
-                print "about to draw"
                 self.live_visualization.draw(mcstep)
-                sys.stdout.flush()
+                refresh=False
+
+            paths.tools.refresh_output(
+                "Working on Monte Carlo cycle step " + str(self.step) + ".\n",
+                refresh=refresh
+            )
 
             movepath = self._mover.move(self.globalstate, step=self.step)
             samples = movepath.results

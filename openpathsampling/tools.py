@@ -6,14 +6,15 @@ import numpy as np
 import openpathsampling as paths
 
 import sys
-def refresh_output(output_str, print_anyway=True):
+def refresh_output(output_str, print_anyway=True, refresh=True):
     try:
         import IPython.display
     except ImportError:
         if print_anyway:
             print(output_str)
     else:
-        IPython.display.clear_output(wait=True)
+        if refresh:
+            IPython.display.clear_output(wait=True)
         print(output_str)
     sys.stdout.flush()
 
