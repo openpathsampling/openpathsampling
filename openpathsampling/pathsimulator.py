@@ -9,6 +9,8 @@ from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
+import sys
+
 class MCStep(OPSObject):
     """
     A monte-carlo step in the main PathSimulation loop
@@ -372,6 +374,11 @@ class PathSampling(PathSimulator):
             paths.tools.refresh_output(
                 "Working on Monte Carlo cycle step " + str(self.step) + ".\n"
             )
+            if self.live_visualization is not None and mcstep is not None:
+                print "about to draw"
+                self.live_visualization.draw(mcstep)
+                sys.stdout.flush()
+
             movepath = self._mover.move(self.globalstate, step=self.step)
             samples = movepath.results
             new_sampleset = self.globalstate.apply_samples(samples)
@@ -398,8 +405,6 @@ class PathSampling(PathSimulator):
                 self.sync_storage()
 
             self.globalstate = new_sampleset
-            if self.live_visualization is not None:
-                self.live_visualization.draw(mcstep)
 
         self.sync_storage()
         paths.tools.refresh_output(
