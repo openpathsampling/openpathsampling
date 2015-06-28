@@ -1,7 +1,7 @@
 OpenPathSampling
 ================
 
-A toolkit to run PathSampling Algorithms in python with OpenMM
+A Python toolkit to run PathSampling algorithms.
 
 --------------------------------------------------------------------------------
 

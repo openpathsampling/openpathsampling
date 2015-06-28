@@ -106,8 +106,8 @@ class PathMoveChange(TreeMixin, OPSObject):
         correct and allow to target sample set to be correctly created.
         These are the samples used by `.closed`
 
-        Example
-        -------
+        Examples
+        --------
         Assume that you run 3 shooting moves for replica #1. Then only the
         last of the three really matters for the target sample_set since #1
         will be replaced by #2 which will be replaced by #3. So this function
