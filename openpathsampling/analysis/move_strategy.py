@@ -1,5 +1,4 @@
 import openpathsampling as paths
-from openpathsampling.todict import OPSNamed
 from openpathsampling import PathMoverFactory as pmf
 
 import itertools
@@ -190,7 +189,10 @@ class NearestNeighborRepExStrategy(MoveStrategy):
         movers = []
         for ens in ensemble_list:
             movers.extend(
-                [paths.ReplicaExchangeMover(ensembles=[[ens[i], ens[i+1]]])
+                [paths.ReplicaExchangeMover(
+                    ensemble1=ens[i],
+                    ensemble2=ens[i+1]
+                )
                  for i in range(len(ens)-1)]
             )
         return movers
@@ -214,8 +216,10 @@ class AllSetRepExStrategy(NearestNeighborRepExStrategy):
         movers = []
         for ens in ensemble_list:
             pairs = list(itertools.combinations(ens, 2))
-            movers.extend([paths.ReplicaExchangeMover(ensembles=list(pair))
-                           for pair in pairs])
+            movers.extend([paths.ReplicaExchangeMover(
+                ensemble1=pair[0],
+                ensemble2=pair[1]
+            ) for pair in pairs])
         return movers
 
 class SelectedPairsRepExStrategy(MoveStrategy):
@@ -252,7 +256,10 @@ class SelectedPairsRepExStrategy(MoveStrategy):
         ensemble_list = self.get_ensembles(self.ensembles)
         movers = []
         for pair in ensemble_list:
-            movers.append(paths.ReplicaExchangeMover(ensembles=pair))
+            movers.append(paths.ReplicaExchangeMover(
+                ensemble1=pair[0],
+                ensemble2=pair[1]
+            ))
         return movers
 
 
@@ -344,6 +351,9 @@ class DefaultStrategy(MoveStrategy):
     _level = levels.GLOBAL
     def __init__(self, ensembles=None, group=None, replace=True,
                  network=None):
+
+        super(DefaultStrategy, self).__init__(ensembles, group, replace, network)
+
         self.weight_adjustment = {
             'shooting' : 1.0,
             'repex' : 0.5,

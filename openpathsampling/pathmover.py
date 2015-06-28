@@ -827,6 +827,12 @@ class ReplicaExchangeGeneratingMover(SampleGeneratingMover):
     def _called_ensembles(self):
         return [self.ensemble1, self.ensemble2]
 
+    def _get_in_ensembles(self):
+        return [self.ensemble1, self.ensemble2]
+
+    def _get_out_ensembles(self):
+        return [self.ensemble1, self.ensemble2]
+
     def __call__(self, sample1, sample2):
         # convert sample to the language used here before
         trajectory1 = sample1.trajectory
@@ -897,6 +903,12 @@ class StateSwapGeneratingMover(SampleGeneratingMover):
                                entries=['bias', 'ensemble1', 'ensemble2'])
 
     def _called_ensembles(self):
+        return [self.ensemble1, self.ensemble2]
+
+    def _get_in_ensembles(self):
+        return [self.ensemble1, self.ensemble2]
+
+    def _get_out_ensembles(self):
         return [self.ensemble1, self.ensemble2]
 
     def __call__(self, sample1, sample2):
@@ -1325,6 +1337,9 @@ class RandomChoiceMover(SelectionMover):
     def __init__(self, movers, weights=None):
         super(RandomChoiceMover, self).__init__(movers)
 
+        if weights is None:
+            weights = [1.0] * len(movers)
+
         self.movers = movers
         self.weights = weights
 
@@ -1332,12 +1347,7 @@ class RandomChoiceMover(SelectionMover):
                                entries=['weights'])
 
     def _selector(self, globalstate):
-        if self.weights is None:
-            weights = [1.0] * len(self.movers)
-        else:
-            weights = self.weights
-
-        return weights
+        return self.weights
 
 class RandomAllowedChoiceMover(RandomChoiceMover):
     """
@@ -1774,7 +1784,13 @@ class EnsembleFilterMover(SubPathMover):
                              'Please check your ensembles and submovers!')
 
     def move(self, globalstate):
-        subchange = self.mover.move(globalstate)
+        # TODO: This will only pass filtered samples. We might split this into an
+        # separate input and output filter if only one side is needed
+
+        filtered_globalstate = paths.SampleSet([
+            samp for samp in globalstate if samp.ensemble in self.ensembles
+        ])
+        subchange = self.mover.move(filtered_globalstate)
         change = paths.FilterByEnsemblePathMoveChange(
             subchange=subchange,
             mover=self
@@ -1782,8 +1798,9 @@ class EnsembleFilterMover(SubPathMover):
         return change
 
     def _get_in_ensembles(self):
-        # only finter the output, not the input
-        return self.mover.input_ensembles
+        # only filter the output, not the input
+        # return self.mover.input_ensembles
+        return self.ensembles
 
     def _get_out_ensembles(self):
         return self.ensembles
@@ -1830,6 +1847,14 @@ class OneWayShootingMover(RandomChoiceMover):
         )
 
         return mover
+
+    @property
+    def ensemble(self):
+        return self.movers[0].ensemble
+
+    @property
+    def selector(self):
+        return self.movers[0].selector
 
 class OneWayExtendMover(RandomChoiceMover):
     """

@@ -125,6 +125,7 @@ class testAllSetRepExStrategy(MoveStrategyTestSetup):
         assert_equal(len(movers), 6)
         ens0 = self.network.sampling_transitions[0].ensembles
         ens1 = self.network.sampling_transitions[1].ensembles
+
         signatures = [(set(m.ensemble_signature[0]),
                        set(m.ensemble_signature[1])) for m in movers]
         expected_signatures = [
@@ -148,7 +149,7 @@ class testSelectedPairsRepExStrategy(MoveStrategyTestSetup):
         movers = strategy.make_movers(scheme)
         assert_equal(len(movers), 1)
         assert_equal(movers[0].ensemble_signature_set, 
-                     (set([ens00, ens02]), (set([ens00, ens02]))))
+                     ({ ens00, ens02 }, ({ ens00, ens02 })))
 
     @raises(RuntimeError)
     def test_init_ensembles_none(self):
@@ -170,11 +171,11 @@ class testSelectedPairsRepExStrategy(MoveStrategyTestSetup):
         movers = strategy.make_movers(scheme)
         assert_equal(len(movers), 3)
         assert_equal(movers[0].ensemble_signature_set,
-                     (set([ens00, ens01]), set([ens00, ens01])))
+                     ({ ens00, ens01 }, { ens00, ens01 }))
         assert_equal(movers[1].ensemble_signature_set,
-                     (set([ens00, ens02]), set([ens00, ens02])))
+                     ({ ens00, ens02 }, { ens00, ens02 }))
         assert_equal(movers[2].ensemble_signature_set,
-                     (set([ens01, ens02]), set([ens01, ens02])))
+                     ({ ens01, ens02 }, { ens01, ens02 }))
 
 
 class testPathReversalStrategy(MoveStrategyTestSetup):
@@ -209,7 +210,7 @@ class testMinusMoveStrategy(MoveStrategyTestSetup):
         self.network.special_ensembles['minus'][extra_minus] = [innerA, innerB]
         ensembles = strategy.get_ensembles(None)
         assert_equal(len(ensembles), 2)
-        assert_equal(set([len(ensembles[0]), len(ensembles[1])]), set([1,2]))
+        assert_equal({ len(ensembles[0]), len(ensembles[1]) }, { 1, 2 })
 
     def test_get_ensembles_fixed_ensembles(self):
         strategy = MinusMoveStrategy()
