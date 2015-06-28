@@ -1,12 +1,225 @@
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
 
+from openpathsampling.analysis.move_strategy import levels as strategy_levels
+import openpathsampling.analysis.move_strategy as strategies
+
 import sys
 
+
 class MoveScheme(OPSNamed):
-    def __init__(self, network, scheme=None):
-        self.movers = network.movers
-        self._mover_acceptance = {}
+    """
+    Creates a move decision tree based on `MoveStrategy` instances.
+
+    Attributes
+    ----------
+    movers : dict
+        Dictionary mapping mover group as key to list of movers
+    strategies : dict
+        Dictionary mapping level (number) to list of strategies
+    root_mover : PathMover
+        Root of the move decision tree (`None` until tree is built)
+    """
+    def __init__(self, network):
+        self.movers = {}
+        self.movers = network.movers # TODO: legacy
+        self.network = network
+        self._mover_acceptance = {} # used in analysis
+        self.strategies = {}
+        self.root_mover = None
+
+    def append(self, strategies, levels=None):
+        """
+        Adds new strategies to this scheme, organized by `level`.
+
+        Parameters
+        ----------
+        strategies : MoveStrategy or list of MoveStrategy
+            strategies to add to this scheme
+        levels : integer or list of integer or None
+            levels to associate with each strategy. If None, strategy.level.
+        """
+        # first we clean up the input: strategies is a list of MoveStrategy;
+        # levels is a list of integers
+        try:
+            strategies = list(strategies)
+        except TypeError:
+            strategies = [strategies]
+
+        if levels is not None:
+            try:
+                levels = list(levels)
+            except TypeError:
+                levels = [levels]*len(strategies)
+        else:
+            levels = []
+            for strat in strategies:
+                levels.append(strat.level)
+        
+        # now we put everything into appropriate dictionaries
+        for strat, lev in zip(strategies, levels):
+            try:
+                self.strategies[lev].append(strat)
+            except KeyError:
+                self.strategies[lev] = [strat]
+
+    # TODO: it might be nice to have a way to "lock" this once it has been
+    # saved. That would prevent a (stupid) user from trying to rebuild a
+    # custom-modified tree.
+    def build_move_decision_tree(self):
+        for lev in sorted(self.strategies.keys()):
+            for strat in self.strategies[lev]:
+                self.apply_strategy(strat)
+
+    # TODO: should I make this a property? make root_mover into
+    # _move_decision_tree? allow the user to directly set it? rename as
+    # move_scheme? separated from building until some of that is clarified
+    def move_decision_tree(self, rebuild=False):
+        """
+        Returns the move decision tree.
+
+        Parameters
+        ----------
+        rebuild : bool, optional
+            Whether to rebuild the tree, or use the previously build version
+            (default is False, if no tree exists, sets to True)
+
+        Returns
+        -------
+        PathMover
+            Root mover of the move decision tree
+        """
+        if self.root_mover is None:
+            rebuild=True
+        if rebuild:
+            self.build_move_decision_tree()
+        return self.root_mover
+
+    def apply_strategy(self, strategy):
+        """
+        Applies given strategy to the scheme as it stands.
+
+        This is the tool used in the process of building up the move
+        decision tree. 
+
+        Parameters
+        ----------
+        strategy : MoveStrategy
+            the strategy to apply
+        """
+        movers = strategy.make_movers(self)
+        group = strategy.group
+        if strategy_levels.level_type(strategy.level) == strategy_levels.GLOBAL:
+            # shortcut out for the global-level stuff
+            self.root_mover = movers
+        elif strategy.replace_signatures:
+            self.movers[group] = movers
+        elif strategy.replace_movers:
+            try:
+                n_existing = len(self.movers[group])
+            except KeyError:
+                # if the group doesn't exist, set it to these movers
+                self.movers[group] = movers
+            else:
+                # Note that the following means that if the list of new
+                # movers includes two movers with the same sig, the second
+                # will overwrite the first. This is desired behavior. On the
+                # other hand, if the list of old movers in the group already
+                # has two movers with the same signature, then both should
+                # be overwritten.
+                existing_sigs = {}
+                for i in range(n_existing):
+                    key = self.movers[group][i].ensemble_signature
+                    try:
+                        existing_sigs[key].append(i)
+                    except KeyError:
+                        existing_sigs[key] = [i]
+
+                # For each mover, if its signature exists in the existing
+                # movers, replace the existing. Otherwise, append it to the
+                # list.
+                for mover in movers:
+                    m_sig = mover.ensemble_signature
+                    if m_sig in existing_sigs.keys():
+                        for idx in existing_sigs[m_sig]:
+                            self.movers[group][idx] = mover
+                    else:
+                        self.movers[group].append(mover)
+        else:
+            try:
+                self.movers[group].extend(movers)
+            except KeyError:
+                self.movers[group] = movers
+
+    def ensembles_for_move_tree(self, root=None):
+        """
+        Finds the list of all ensembles in the move tree starting at `root`.
+
+        Parameters
+        ----------
+        root : PathMover
+            Mover to act as root of this tree (can be a subtree). Default is
+            `None`, in which case `self.root_mover` is used.
+
+        Returns
+        -------
+        list of Ensemble
+            ensembles which appear in this (sub)tree
+        """
+        if root is None:
+            root = self.root_mover
+        movers = root.map_pre_order(lambda x : x)
+        mover_ensemble_dict = {}
+        for m in movers:
+            input_sig = m.input_ensembles
+            output_sig = m.output_ensembles
+            for ens in input_sig + output_sig:
+                mover_ensemble_dict[ens] = 1
+        mover_ensembles = mover_ensemble_dict.keys()
+        return mover_ensembles
+
+    def find_hidden_ensembles(self, root=None):
+        """
+        All ensembles which exist in the move scheme but not in the network.
+
+        Parameters
+        ----------
+        root : PathMover
+            Mover to act as root of this tree (can be a subtree). Default is
+            `None`, in which case `self.root_mover` is used.
+
+        Returns
+        -------
+        set of Ensemble
+            "hidden" ensembles; the ensembles which are in the scheme but
+            not the network.
+        """
+        unhidden_ensembles = set(self.network.all_ensembles)
+        mover_ensembles = set(self.ensembles_for_move_tree(root))
+        hidden_ensembles = mover_ensembles - unhidden_ensembles
+        return hidden_ensembles
+
+    def find_unused_ensembles(self, root=None):
+        """
+        All ensembles which exist in the network but not in the move scheme.
+
+        Parameters
+        ----------
+        root : PathMover
+            Mover to act as root of this tree (can be a subtree). Default is
+            `None`, in which case `self.root_mover` is used.
+
+        Returns
+        -------
+        set of Ensemble
+            "unused" ensembles; the ensembles which are in the network but
+            not the scheme.
+        """
+        unhidden_ensembles = set(self.network.all_ensembles)
+        mover_ensembles = set(self.ensembles_for_move_tree(root))
+        unused_ensembles = unhidden_ensembles - mover_ensembles
+        return unused_ensembles
+
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, indentation):
@@ -92,5 +305,35 @@ class MoveScheme(OPSNamed):
             )
             output.write(line)
 
-    
+
+class DefaultScheme(MoveScheme):
+    """
+    Just a MoveScheme with the full set of default strategies: nearest
+    neighbor repex, uniform selection one-way shooting, minus move, and
+    path reversals, all structured as choose move type then choose specific
+    move.
+    """
+    def __init__(self, network):
+        super(DefaultScheme, self).__init__(network)
+        self.append(strategies.NearestNeighborRepExStrategy())
+        self.append(strategies.OneWayShootingStrategy())
+        self.append(strategies.PathReversalStrategy())
+        self.append(strategies.DefaultStrategy())
+        self.append(strategies.MinusMoveStrategy())
+
+        msouters = self.network.special_ensembles['ms_outer']
+        for ms in msouters.keys():
+            self.append(strategies.OneWayShootingStrategy(
+                ensembles=[ms],
+                group="ms_outer_shooting"
+            ))
+            self.append(strategies.PathReversalStrategy(
+                ensembles=[ms],
+                replace=False
+            ))
+            ms_neighbors = [t.ensembles[-1] for t in msouters[ms]]
+            pairs = [[ms, neighb] for neighb in ms_neighbors]
+            self.append(strategies.SelectedPairsRepExStrategy(
+                ensembles=pairs
+            ))
 

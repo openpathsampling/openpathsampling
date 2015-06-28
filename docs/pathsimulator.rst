@@ -3,10 +3,10 @@
 .. currentmodule:: openpathsampling.pathsimulator
 
 PathSimulator Functions
-=====================
+=======================
 
 basic pathsimulators
-------------------
+--------------------
 .. autosummary::
     :toctree: api/generated/
 
@@ -14,7 +14,7 @@ basic pathsimulators
 
 
 special pathsimulators
---------------------
+----------------------
 .. autosummary::
     :toctree: api/generated/
 
