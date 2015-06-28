@@ -1,6 +1,6 @@
 .. _engine:
 
-.. currentmodule:: openpathsampling.dynamicsengine
+.. currentmodule:: openpathsampling.dynamics_engine
 
 Engine Functions
 ================
@@ -15,7 +15,7 @@ engine basic
 
 	DynamicsEngine
 
-.. currentmodule:: openpathsampling.openmmengine
+.. currentmodule:: openpathsampling.openmm_engine
 
 OpenMM
 ------

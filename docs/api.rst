@@ -5,9 +5,9 @@ API Functions
 .. toctree::
 	:maxdepth: 2
 
-**************
+******************
 CollectiveVariable
-**************
+******************
 	
 .. automodule:: collectivevariable
 	:members:

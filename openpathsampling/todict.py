@@ -125,8 +125,8 @@ class OPSNamed(OPSObject):
 
         This is only for syntactic sugar and allow for chained generation
 
-        Example
-        -------
+        Examples
+        --------
         >>> import openpathsampling as p
         >>> full = p.FullVolume().named('myFullVolume')
         """
