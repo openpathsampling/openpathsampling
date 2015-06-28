@@ -37,14 +37,6 @@ Changing the ensemble
     ReplicaExchangeMover
     EnsembleHopMover
 
-Changing the replica ID
------------------------
-
-.. autosummary::
-    :toctree: api/generated/
-
-    ReplicaIDChange
-
 Combining movers
 ----------------
 
@@ -62,7 +54,7 @@ Pre-made combined movers
 .. autosummary::
     :toctree: api/generated/
 
-    MinusMove
+    MinusMover
     OneWayShootingMover
 
 

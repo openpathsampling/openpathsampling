@@ -3,7 +3,7 @@
 .. currentmodule:: openpathsampling.collectivevariable
 
 CollectiveVariable Functions
-========================
+============================
 
 :class:`openpathsampling.CollectiveVariables`
 
@@ -19,7 +19,7 @@ basic orderparamters
     CV_Function
 
 simple collectivevariables
-----------------------
+--------------------------
 .. autosummary::
     :toctree: api/generated/
 
@@ -32,9 +32,8 @@ mdtraj orderparamters
     :toctree: api/generated/
 
     CV_MD_Function
-    CV_RMSD_To_Lambda
 
 msmbuilder3 collectivevariables
----------------------------
+-------------------------------
 
     CV_Featurizer
