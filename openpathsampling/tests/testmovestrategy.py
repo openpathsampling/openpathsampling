@@ -583,3 +583,33 @@ class testDefaultStrategy(MoveStrategyTestSetup):
 
         assert_equal(old_mover_weights, mover_weights)
 
+    def test_get_weights_mover_weights_set_no_shooting(self):
+        # follows test_get_weights_mover_weights_set, replacing shooting
+        # with path reversal
+        strategy = DefaultStrategy()
+        scheme = MoveScheme(self.network)
+        scheme.movers = {} # handles LEGACY stuff
+        scheme.append([NearestNeighborRepExStrategy(), 
+                       PathReversalStrategy(),
+                       strategy])
+        strategy.group_weights['repex'] = 3.0
+        strategy.group_weights['pathreversal'] = 1.0
+        root = scheme.move_decision_tree()
+        (group_weights, mover_weights) = strategy.get_weights(scheme)
+        assert_equal(group_weights, {'pathreversal' : 1.0, 'repex' : 3.0})
+        ensA = self.network.sampling_transitions[0].ensembles[0]
+        ensA_sig = ((ensA,),(ensA,)) 
+        strategy.group_weights = {}
+        strategy.mover_weights['pathreversal'] = {} #sadly, can't safely avoid 
+        strategy.mover_weights['pathreversal'][ensA_sig] = 2.0
+
+        (group_weights, mover_weights) = strategy.get_weights(scheme)
+        for sig in mover_weights['pathreversal']:
+            if sig == ensA_sig:
+                assert_equal(mover_weights['pathreversal'][sig], 2.0)
+            else:
+                assert_equal(mover_weights['pathreversal'][sig], 1.0)
+
+        assert_almost_equal(group_weights['pathreversal'], 0.25)
+        assert_almost_equal(group_weights['repex'], 0.75)
+        

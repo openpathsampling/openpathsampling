@@ -420,8 +420,7 @@ class DefaultStrategy(MoveStrategy):
             try:
                 normalizer = group_weights['shooting']
             except KeyError:
-                print "couldn't find shooting as option"
-                normalizer = sum(group_weights)
+                normalizer = sum(group_weights.values())
             for group in group_weights:
                 group_weights[group] /= normalizer
 
