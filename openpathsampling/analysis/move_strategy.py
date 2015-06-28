@@ -439,21 +439,19 @@ class DefaultStrategy(MoveStrategy):
             for group in scheme.movers:
                 movers = scheme.movers[group]
                 g_weight = sum([scheme.choice_probability[m] for m in movers])
-                g_weight /= len(movers)
+                #g_weight = g_weight / sum(mover_weights[group].values())
                 #min_m_weight = min(mover_weights[group].values())
                 #m_weight = sum([mover_weights[group][sig] / min_m_weight
                                 #for sig in mover_weights[group]])
-                group_weights[group] = g_weight 
+                group_weights[group] = g_weight
             try:
                 normalizer = group_weights['shooting']
             except KeyError:
+                print "couldn't find shooting as option"
                 normalizer = sum(group_weights)
             for group in group_weights:
                 group_weights[group] /= normalizer
 
-            # find the minimum of prob within each group; normalize group to
-            # that; then use the
-            pass
         return group_weights
 
     def strategy_mover_weights(self, scheme, group_weights=None):
@@ -529,28 +527,32 @@ class DefaultStrategy(MoveStrategy):
             group_weights = self.strategy_group_weights(scheme, mover_weights)
         else: #choice_prob is set, neither group nor mover is set
             # use the sum of weights within each group as the group_weight
-            g_weights = {}
-            for group in scheme.movers:
-                movers = scheme.movers[group]
-                g_weight = sum([scheme.choice_probability[m] for m in movers])
-                #g_weight /= len(movers)
-                g_weights[group] = g_weight
+            #g_weights = {}
+            #for group in scheme.movers:
+                #movers = scheme.movers[group]
+                #g_weight = sum([scheme.choice_probability[m] for m in movers])
+                #g_weights[group] = g_weight
 
-            mover_weights = self.strategy_mover_weights(scheme, g_weights)
-            group_weights = g_weights
+            #mover_weights = self.strategy_mover_weights(scheme, g_weights)
+            #group_weights = g_weights
             #group_weights = self.strategy_group_weights(scheme, mover_weights)
+            m_weights = self.strategy_mover_weights(scheme)
+            group_weights = self.strategy_group_weights(scheme, m_weights)
+            mover_weights = self.strategy_mover_weights(scheme, group_weights)
 
         return (group_weights, mover_weights) # error if somehow undefined
 
 
     def choice_probability(self, scheme, group_weights, mover_weights):
         unnormed = {}
-        for groupname in scheme.movers.keys():
-            group = scheme.movers[groupname]
-            group_w = group_weights[groupname] 
+        group_norm = sum(group_weights.values())
+        for groupname in scheme.movers:
+            #group = scheme.movers[groupname]
+            group_w = group_weights[groupname] / group_norm
             sig_weights = mover_weights[groupname]
-            for mover in group:
-                sig_w = sig_weights[mover.ensemble_signature]
+            sig_norm = sum(mover_weights[groupname].values())
+            for mover in scheme.movers[groupname]:
+                sig_w = sig_weights[mover.ensemble_signature] / sig_norm
                 unnormed[mover] = group_w * sig_w
         norm = sum(unnormed.values())
         return {m : unnormed[m] / norm for m in unnormed}
