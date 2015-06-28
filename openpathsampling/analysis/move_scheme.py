@@ -26,8 +26,6 @@ class MoveScheme(OPSNamed):
         self.network = network
         self.strategies = {}
         self.balance_partners = {}
-        #self.mover_weights = {}
-        #self.ensemble_weights = {}
         self.choice_probability = {}
         self.root_mover = None
 
@@ -97,6 +95,7 @@ class MoveScheme(OPSNamed):
         if self.root_mover is None:
             rebuild=True
         if rebuild:
+            self.choice_probability = {}
             self.build_move_decision_tree()
         return self.root_mover
 

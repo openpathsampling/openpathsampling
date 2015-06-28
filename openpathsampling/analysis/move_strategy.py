@@ -385,29 +385,6 @@ class DefaultStrategy(MoveStrategy):
         chooser.name = choosername
         return chooser
 
-    def get_group_weights(self, scheme):
-        group_weights = {k : self.default_group_weights[k]
-                         for k in self.default_group_weights}
-        for weights in [self.group_weights]:
-            if weights != {}:
-                for k in weights.keys():
-                    group_weights[k] = weights[k]
-
-        return group_weights
-
-    def get_mover_weights(self, scheme):
-        mover_weights = {}
-        for group in scheme.movers.keys():
-            mover_weights[group] = {m.ensemble_signature : 1.0 
-                                       for m in scheme.movers[group]} 
-
-        for weights in [self.mover_weights]:
-            if weights != {}:
-                for group in weights.keys():
-                    for sig in weights[group].keys():
-                        mover_weights[group][sig] = weights[group][sig]
-
-        return mover_weights
 
     def strategy_group_weights(self, scheme, mover_weights=None):
         """
@@ -438,12 +415,8 @@ class DefaultStrategy(MoveStrategy):
             group_weights = {}
             for group in scheme.movers:
                 movers = scheme.movers[group]
-                g_weight = sum([scheme.choice_probability[m] for m in movers])
-                #g_weight = g_weight / sum(mover_weights[group].values())
-                #min_m_weight = min(mover_weights[group].values())
-                #m_weight = sum([mover_weights[group][sig] / min_m_weight
-                                #for sig in mover_weights[group]])
-                group_weights[group] = g_weight
+                group_weights[group] = sum([scheme.choice_probability[m] 
+                                            for m in movers])
             try:
                 normalizer = group_weights['shooting']
             except KeyError:
@@ -526,16 +499,8 @@ class DefaultStrategy(MoveStrategy):
             mover_weights = self.strategy_mover_weights(scheme)
             group_weights = self.strategy_group_weights(scheme, mover_weights)
         else: #choice_prob is set, neither group nor mover is set
-            # use the sum of weights within each group as the group_weight
-            #g_weights = {}
-            #for group in scheme.movers:
-                #movers = scheme.movers[group]
-                #g_weight = sum([scheme.choice_probability[m] for m in movers])
-                #g_weights[group] = g_weight
-
-            #mover_weights = self.strategy_mover_weights(scheme, g_weights)
-            #group_weights = g_weights
-            #group_weights = self.strategy_group_weights(scheme, mover_weights)
+            # use default mover weights to get the group weights, then use
+            # that to get the actual correct mover weights
             m_weights = self.strategy_mover_weights(scheme)
             group_weights = self.strategy_group_weights(scheme, m_weights)
             mover_weights = self.strategy_mover_weights(scheme, group_weights)
@@ -547,7 +512,6 @@ class DefaultStrategy(MoveStrategy):
         unnormed = {}
         group_norm = sum(group_weights.values())
         for groupname in scheme.movers:
-            #group = scheme.movers[groupname]
             group_w = group_weights[groupname] / group_norm
             sig_weights = mover_weights[groupname]
             sig_norm = sum(mover_weights[groupname].values())
@@ -561,10 +525,8 @@ class DefaultStrategy(MoveStrategy):
         if self.network is None:
             self.network = scheme.network
 
-        group_weights = self.get_group_weights(scheme)
-        mover_weights = self.get_mover_weights(scheme)
+        (group_weights, mover_weights) = self.get_weights(scheme)
         choosers = []
-        weights = []
         for group in scheme.movers.keys():
             # care to the order of weights
             ens_weights = [mover_weights[group][m.ensemble_signature]
@@ -572,15 +534,11 @@ class DefaultStrategy(MoveStrategy):
             choosers.append(
                 self.make_chooser(scheme, group, weights=ens_weights)
             )
-            n_movers = len(scheme.movers[group])
-            try:
-                full_group_weights = group_weights[group]*n_movers
-            except KeyError:
-                group_weights[group] = 1.0
-                full_group_weights = group_weights[group]*n_movers
-            weights.append(full_group_weights)
+
+        root_weights = [group_weights[group] * len(scheme.movers[group])
+                        for group in scheme.movers]
         root_chooser = paths.RandomChoiceMover(movers=choosers,
-                                               weights=weights)
+                                               weights=root_weights)
         root_chooser.name = "RootMover"
         scheme.root_mover = root_chooser
         scheme.choice_probability = self.choice_probability(

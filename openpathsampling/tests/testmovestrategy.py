@@ -491,7 +491,10 @@ class testDefaultStrategy(MoveStrategyTestSetup):
 
 
         strategy.group_weights['shooting'] = 2.0
-        root = scheme.move_decision_tree(rebuild=True)
+        #root = scheme.move_decision_tree(rebuild=True)
+
+        assert_equal(strategy.group_weights, {'shooting' : 2.0})
+        assert_equal(strategy.mover_weights, {})
 
         (group_weights, mover_weights) = strategy.get_weights(scheme)
         assert_equal(group_weights, {'shooting' : 2.0, 'repex' : 0.5})
@@ -500,10 +503,12 @@ class testDefaultStrategy(MoveStrategyTestSetup):
                 assert_equal(mover_weights[group][mover],
                              mover_weights[group].values()[0])
 
+        choice_prob = strategy.choice_probability(scheme, group_weights, 
+                                                  mover_weights)
         for mover in scheme.movers['shooting']:
-            assert_almost_equal(scheme.choice_probability[mover], 2.0/15.0)
+            assert_almost_equal(choice_prob[mover], 2.0/15.0)
         for mover in scheme.movers['repex']:
-            assert_almost_equal(scheme.choice_probability[mover], 1.0/20.0)
+            assert_almost_equal(choice_prob[mover], 1.0/20.0)
         
 
     def test_get_weights_mover_weights_set(self):
