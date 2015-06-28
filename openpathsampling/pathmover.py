@@ -1784,7 +1784,13 @@ class EnsembleFilterMover(SubPathMover):
                              'Please check your ensembles and submovers!')
 
     def move(self, globalstate):
-        subchange = self.mover.move(globalstate)
+        # TODO: This will only pass filtered samples. We might split this into an
+        # separate input and output filter if only one side is needed
+
+        filtered_globalstate = paths.SampleSet([
+            samp for samp in globalstate if samp.ensemble in self.ensembles
+        ])
+        subchange = self.mover.move(filtered_globalstate)
         change = paths.FilterByEnsemblePathMoveChange(
             subchange=subchange,
             mover=self
@@ -1792,8 +1798,9 @@ class EnsembleFilterMover(SubPathMover):
         return change
 
     def _get_in_ensembles(self):
-        # only finter the output, not the input
-        return self.mover.input_ensembles
+        # only filter the output, not the input
+        # return self.mover.input_ensembles
+        return self.ensembles
 
     def _get_out_ensembles(self):
         return self.ensembles

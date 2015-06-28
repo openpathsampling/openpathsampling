@@ -126,8 +126,6 @@ class testAllSetRepExStrategy(MoveStrategyTestSetup):
         ens0 = self.network.sampling_transitions[0].ensembles
         ens1 = self.network.sampling_transitions[1].ensembles
 
-        print movers
-
         signatures = [(set(m.ensemble_signature[0]),
                        set(m.ensemble_signature[1])) for m in movers]
         expected_signatures = [
@@ -348,7 +346,6 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         assert_equal(type(chooser), paths.RandomChoiceMover)
         assert_equal(weight, 4.0)
         assert_equal(len(chooser.movers), 2)
-        print chooser.__dict__
         for w in chooser.weights:
             assert_equal(w, 1.0)
 
