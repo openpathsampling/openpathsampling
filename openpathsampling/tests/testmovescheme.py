@@ -343,19 +343,23 @@ class testDefaultScheme(object):
 
         assert_almost_equal(sum(scheme.choice_probability.values()), 1.0)
 
-        tot_norm = sum([default_group_weights[group]*len(scheme.movers[group])
+        tot_norm = sum([default_group_weights[group] 
                         for group in scheme.movers])
 
         for groupname in scheme.movers.keys():
             group = scheme.movers[groupname]
-            weight = default_group_weights[groupname] / tot_norm
+            n_movers = len(group)
+            weight = default_group_weights[groupname] / tot_norm / n_movers
             for mover in group:
                 assert_almost_equal(scheme.choice_probability[mover], weight)
 
+        prob_shoot0 = scheme.choice_probability[scheme.movers['shooting'][0]]
+        n_shooting = len(scheme.movers['shooting'])
         for group in default_group_weights:
             scale = default_group_weights[group]
+            n_group = len(scheme.movers[group])
             assert_almost_equal(
-                scheme.choice_probability[scheme.movers['shooting'][0]],
+                prob_shoot0 * n_shooting / n_group,
                 scheme.choice_probability[scheme.movers[group][0]] / scale
             )
 
