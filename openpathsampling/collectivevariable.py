@@ -407,7 +407,7 @@ class CV_Class(CollectiveVariable):
     kwargs
 
     Examples
-    -------
+    --------
     >>> # To create an order parameter which calculates the dihedral formed
     >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
     >>> import mdtraj as md
@@ -522,7 +522,7 @@ class CV_MD_Function(CV_Function):
     `fnc(traj.md(), **kwargs)`
 
     Examples
-    -------
+    --------
     >>> # To create an order parameter which calculates the dihedral formed
     >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
     >>> import mdtraj as md
@@ -564,7 +564,7 @@ class CV_Featurizer(CV_Class):
     """
     An CollectiveVariable that uses an MSMBuilder3 featurizer as the logic
 
-    Attribues
+    Attributes
     ----------
     name
     cls
