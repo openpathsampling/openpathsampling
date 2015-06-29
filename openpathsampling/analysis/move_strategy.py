@@ -341,6 +341,11 @@ class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
 
 
 class DefaultStrategy(MoveStrategy):
+    """
+    Default global strategy. 
+    
+    First choose move type, then choose specific instance of the mover.
+    """
     _level = levels.GLOBAL
     default_group_weights = {
         'shooting' : 1.0,
@@ -357,6 +362,9 @@ class DefaultStrategy(MoveStrategy):
         self.network = network
 
     def make_chooser(self, scheme, group, weights=None, choosername=None):
+        """
+        Make RandomChoiceMover that selects mover from a move type group
+        """
         if choosername is None:
             choosername = group.capitalize()+"Chooser"
         chooser = paths.RandomChoiceMover(
@@ -452,7 +460,7 @@ class DefaultStrategy(MoveStrategy):
 
     def get_weights(self, scheme):
         """
-        BRIEF
+        Gets group_weights and mover_weights dictionaries.
 
         Notes
         -----
@@ -489,6 +497,9 @@ class DefaultStrategy(MoveStrategy):
 
 
     def choice_probability(self, scheme, group_weights, mover_weights):
+        """
+        Calculates the probability of choosing to do each move.
+        """
         unnormed = {}
         group_norm = sum(group_weights.values())
         for groupname in scheme.movers:
