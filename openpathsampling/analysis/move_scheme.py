@@ -225,12 +225,30 @@ class MoveScheme(OPSNamed):
         return unused_ensembles
 
     def check_for_root(self, fcn_name):
+        """
+        Raises runtime warning if self.root_mover not set.
+
+        Some functions are only valid after the decision tree has been
+        built. This complains if the tree is not there.
+        """
         if self.root_mover is None:
             warnstr = ("Can't use {fcn_name} before building the move " +
                        "decision tree").format(fcn_name=fcn_name)
             raise RuntimeWarning(warnstr)
 
     def build_balance_partners(self):
+        """
+        Create list of balance partners for all movers in groups.
+
+        The balance partners are the movers in the same mover group which
+        have the opposite ensemble signature (input and output switched).
+        These are used when dynamically calculating detailed balance.
+
+        Note
+        ----
+        Currently, every mover in a group must have exactly one balance
+        partner.  In the future, this might be relaxed to "at least one".
+        """
         self.check_for_root("build_balance_partners")
         for groupname in self.movers.keys():
             group = self.movers[groupname]
@@ -243,6 +261,7 @@ class MoveScheme(OPSNamed):
                 if len(partners) != 1:
                     warnstr = "Mover {0}: number of balance partners is {1}"
                     raise RuntimeWarning(warnstr.format(mover, len(partners)))
+        return self.balance_partners
 
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
