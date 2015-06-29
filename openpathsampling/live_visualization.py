@@ -11,18 +11,37 @@ class LiveVisualization(object):
         self.range_y = range_y
         self.output_directory = output_directory
         self.extent = [range_x[0], range_x[1], range_y[0], range_y[1]]
+        self.background = None
+
 
     def draw(self, mcstep):
+        fig, ax = plt.subplots()
+        if self.background is not None:
+            fig = (self.background)
+        # draw the background
+        # draw the active trajectories
+        for sample in mcstep.active:
+            plt.plot(self.cv_x(sample.trajectory), 
+                     self.cv_y(sample.trajectory), linewidth=2);
+            # draw arrowheads at the end of each active
+
+        # draw the trials
+            # draw arrowheads at the end of each trial
+        # decorate by trial type
+
+        return fig
+
+
+    def draw_ipynb(self, mcstep):
         try:
             import IPython.display
         except ImportError:
             pass
         else:
             IPython.display.clear_output(wait=True)
-            fig, ax = plt.subplots()
-            # draw the trajectories
-            for traj in mcstep.active:
-                ax.plot(self.cv_x(traj), self.cv_y(traj));
-
+            fig = self.draw(mcstep)
             IPython.display.display(fig);
             plt.close() # prevents crap in the output
+
+    def draw_png(self, mcstep):
+        pass

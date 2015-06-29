@@ -373,7 +373,7 @@ class PathSampling(PathSimulator):
             logger.info("Beginning MC cycle " + str(self.step))
             refresh=True
             if self.live_visualization is not None and mcstep is not None:
-                self.live_visualization.draw(mcstep)
+                self.live_visualization.draw_ipynb(mcstep)
                 refresh=False
 
             paths.tools.refresh_output(
