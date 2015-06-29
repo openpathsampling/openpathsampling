@@ -339,25 +339,6 @@ class MinusMoveStrategy(MoveStrategy):
 class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
     pass
 
-class OrganizeByEnsembleStrategy(MoveStrategy):
-    _level = levels.GLOBAL
-    def __init__(self, ensembles=None, group=None, replace=True,
-                 network=None):
-        super(OrganizeByEnsembleStrategy, self).__init__(
-            ensembles=ensembles, network=network, group=group, replace=replace
-        )
-        self.mover_weights = None
-        self.group_weights = None
-
-    def make_ensemble_level_chooser(self, scheme, ensemble):
-        pass
-
-    def make_movers(self, scheme):
-        if self.network is None:
-            self.network = scheme.network
-        network = self.network
-        # TODO
-        pass
 
 class DefaultStrategy(MoveStrategy):
     _level = levels.GLOBAL
@@ -553,3 +534,29 @@ class SingleReplicaStrategy(MoveStrategy):
     """
     pass
 
+class OrganizeByEnsembleStrategy(DefaultStrategy):
+    def __init__(self, ensembles=None, group=None, replace=True,
+                 network=None):
+        super(OrganizeByEnsembleStrategy, self).__init__(
+            ensembles=ensembles, network=network, group=group, replace=replace
+        )
+        self.mover_weights = {}
+        self.group_weights = {}
+
+    def make_chooser(self, scheme, ensemble, weights=None, choosername=None):
+        if choosername is None:
+            choosername = ensemble.name.capitalize() + "Chooser"
+
+
+
+    def make_movers(self, scheme):
+        if self.network is None:
+            self.network = scheme.network
+        network = self.network
+        (group_weights, mover_weights) = self.get_weights(scheme)
+        choosers = []
+        for ens in scheme.network.all_ensembles():
+            pass
+
+        # TODO
+        pass
