@@ -1,14 +1,20 @@
 __author__ = 'jan-hendrikprinz'
 
-class TreeMixin(object):
+class TreeSetMixin(object):
     """
-    A mixin that provides basic tree handling.
+    A mixin that provides basic handling for sets of trees.
 
     A tree is basically a node with children of the same type. The mixin
     requires to implement `.subnodes` to contain a list of children.
 
     The `__contains__` operator requires `_default_match` to be implemented.
     Otherwise is defaults to a comparison between two elements.
+
+    A tree set means that it actually does not represent a single tree but a whole
+    group of trees. The description works by assuming that all leaves are actually
+    different choices of a single leave.
+
+    The main difficulty is that now leaves can have two meaning and we need to
     """
 
     @staticmethod
@@ -310,6 +316,28 @@ class TreeMixin(object):
         """
         return hex(id(self))
 
+    def keylist2(self):
+        """
+        Return a list of key : subtree tuples
+
+        Returns
+        -------
+        list of tuple(key, subtree)
+            A list of all subtrees with their respective keys
+        """
+        path = [self.identifier]
+
+        result = list()
+        result.append( ( path, self ) )
+        for leaf in self._leaves:
+            sub = leaf[-1]
+            pre = leaf[:-1]
+            subtree = sub.keylist()
+            mp = [[m.identifier] for m in pre]
+            result.extend([ ( path + mp + [m[0]], m[1] ) for m in subtree ])
+
+        return result
+
     def keylist(self):
         """
         Return a list of key : subtree tuples
@@ -327,7 +355,8 @@ class TreeMixin(object):
         for sub in self._subnodes:
             subtree = sub.keylist()
             result.extend([ ( path + mp + [m[0]], m[1] ) for m in subtree ])
-            mp.extend([subtree[-1][0]])
+            if self._is_sequential:
+                mp.append([sub.identifier])
 
         return result
 

@@ -14,7 +14,7 @@ from openpathsampling.todict import OPSNamed, OPSObject
 import logging
 from ops_logging import initialization_logging
 
-from treelogic import TreeMixin
+from treelogic import TreeSetMixin
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -60,7 +60,7 @@ def make_list_of_pairs(l):
     return outlist
 
 
-class PathMover(TreeMixin, OPSNamed):
+class PathMover(TreeSetMixin, OPSNamed):
     """
     A PathMover is the description of a move in replica space.
     
@@ -106,6 +106,7 @@ class PathMover(TreeMixin, OPSNamed):
 #                               entries=['ensembles'])
 
     _is_ensemble_change_mover = None
+
     @property
     def is_ensemble_change_mover(self):
         if self._is_ensemble_change_mover is None:
@@ -143,6 +144,10 @@ class PathMover(TreeMixin, OPSNamed):
             return original.__class__ is test
         else:
             return False
+
+    @property
+    def _leaves(self):
+        return [ [sub for sub in self.submovers] ]
 
     @property
     def submovers(self):
@@ -325,6 +330,9 @@ class PathMover(TreeMixin, OPSNamed):
             return self.__repr__()
         else:
             return self.name
+
+    def __repr__(self):
+        return self.name
 
 
 ###############################################################################
@@ -1489,6 +1497,14 @@ class ConditionalMover(PathMover):
     def _get_out_ensembles(self):
         return [ sub.output_ensembles for sub in self.submovers ]
 
+    @property
+    def _leaves(self):
+        return [
+            [self.if_mover],
+            [self.if_mover, self.then_mover],
+            [self.if_mover, self.else_mover]
+        ]
+
     def move(self, globalstate):
         subglobal = globalstate
 
@@ -1534,6 +1550,10 @@ class SequentialMover(PathMover):
     @property
     def submovers(self):
         return self.movers
+
+    @property
+    def _leaves(self):
+        return [self.submovers[:n+1] for n in range(0,len(self.submovers))]
 
     @property
     def is_ensemble_change_mover(self):
@@ -1603,7 +1623,6 @@ class PartialAcceptanceSequentialMover(SequentialMover):
         return paths.PartialAcceptanceSequentialPathMoveChange(pathmovechanges, mover=self)
 
 
-
 class ConditionalSequentialMover(SequentialMover):
     """
     Performs each move in its movers list until complete or until one is not
@@ -1636,7 +1655,6 @@ class ConditionalSequentialMover(SequentialMover):
                 break
 
         return paths.ConditionalSequentialPathMoveChange(pathmovechanges, mover=self)
-
 
 # TODO: Restrict to last should not be used, but rather a filter by ensemble.
 # reason is that the order or samples is partially arbitrary and so the result

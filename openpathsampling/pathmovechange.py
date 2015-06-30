@@ -2,12 +2,12 @@ __author__ = 'jan-hendrikprinz'
 
 import openpathsampling as paths
 from openpathsampling.todict import OPSObject
-from treelogic import TreeMixin
+from treelogic import TreeSetMixin
 
 import logging
 logger = logging.getLogger(__name__)
 
-class PathMoveChange(TreeMixin, OPSObject):
+class PathMoveChange(TreeSetMixin, OPSObject):
     '''
     A class that described the concrete realization of a PathMove.
 
@@ -357,6 +357,7 @@ class SequentialPathMoveChange(PathMoveChange):
     SequentialPathMoveChange has no own samples, only inferred Sampled from the
     underlying MovePaths
     """
+
     def __init__(self, subchanges, mover=None, details=None):
         """
         Parameters
@@ -374,6 +375,10 @@ class SequentialPathMoveChange(PathMoveChange):
         """
         super(SequentialPathMoveChange, self).__init__(mover=mover, details=details)
         self.subchanges = subchanges
+
+    @property
+    def _leaves(self):
+        return [self.subchanges[:n+1] for n in range(len(self.subchanges))]
 
     def _get_results(self):
         samples = []
