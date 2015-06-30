@@ -261,7 +261,15 @@ class testMinusMoveStrategy(MoveStrategyTestSetup):
 
 
 class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
-    def test_make_ensemble_level_chooser(self):
+    def test_make_chooser(self):
+        strategy = OrganizeByEnsembleStrategy()
+        scheme = MoveScheme(self.network)
+        scheme.movers = {} # handles LEGACY stuff
+        scheme.append([NearestNeighborRepExStrategy(),
+                       OneWayShootingStrategy()])
+        root = scheme.move_decision_tree()
+        ensA0 = self.network.sampling_transitions[0].ensembles[0]
+
         raise SkipTest
 
     def test_make_movers(self):
@@ -612,4 +620,4 @@ class testDefaultStrategy(MoveStrategyTestSetup):
 
         assert_almost_equal(group_weights['pathreversal'], 0.25)
         assert_almost_equal(group_weights['repex'], 0.75)
-        
+

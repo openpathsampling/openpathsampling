@@ -557,8 +557,19 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
     def make_chooser(self, scheme, ensemble, weights=None, choosername=None):
         if choosername is None:
             choosername = ensemble.name.capitalize() + "Chooser"
-
-
+        movers = []
+        for group in scheme.movers:
+            # as MacLeod always says: There can be only one!
+            movers.append = [m for m in scheme.movers[group] 
+                             if ensemble in m.input_ensembles][0]
+        final_weights = [w / len(m.input_ensembles) 
+                         for (m, w) in zip(movers, weights)]
+        chooser = paths.RandomChoiceMover(
+            movers=movers,
+            weights=final_weights
+        )
+        chooser.name = choosername
+        return chooser
 
     def make_movers(self, scheme):
         if self.network is None:
