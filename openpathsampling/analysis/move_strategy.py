@@ -559,9 +559,9 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
             choosername = ensemble.name.capitalize() + "Chooser"
         movers = []
         for group in scheme.movers:
-            # as MacLeod always says: There can be only one!
-            movers.append = [m for m in scheme.movers[group] 
-                             if ensemble in m.input_ensembles][0]
+            # take [0] since, as MacLeod always says: There can be only one!
+            movers.append([m for m in scheme.movers[group] 
+                           if ensemble in m.input_ensembles][0])
         final_weights = [w / len(m.input_ensembles) 
                          for (m, w) in zip(movers, weights)]
         chooser = paths.RandomChoiceMover(

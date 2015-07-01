@@ -269,8 +269,18 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
                        OneWayShootingStrategy()])
         root = scheme.move_decision_tree()
         ensA0 = self.network.sampling_transitions[0].ensembles[0]
+        (group_weights, mover_weights) = strategy.get_weights(scheme)
+        weights = [group_weights[g] for g in scheme.movers]
 
-        raise SkipTest
+        chooser = strategy.make_chooser(scheme, ensA0, weights=weights)
+        assert_equal(chooser.name, "I'face 0Chooser")
+        assert_equal(len(chooser.movers), len(chooser.weights))
+        assert_equal(len(chooser.movers), 2)
+        weight_dict = {type(m) : w 
+                       for (m, w) in zip(chooser.movers, chooser.weights)}
+        assert_equal(weight_dict, 
+                     {paths.ReplicaExchangeMover : 0.25,
+                      paths.OneWayShootingMover : 1.0})
 
     def test_make_movers(self):
         scheme = MoveScheme(self.network)
