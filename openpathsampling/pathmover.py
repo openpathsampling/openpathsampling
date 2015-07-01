@@ -1221,11 +1221,6 @@ class EnsembleHopGeneratingMover(SampleGeneratingMover):
             bias=bias
         )
 
-        details = MoveDetails()
-        setattr(details, 'initial_ensemble', ens_from)
-        setattr(details, 'trial_ensemble', ens_to)
-        setattr(details, 'bias', bias)
-
         return [trial]
 
 

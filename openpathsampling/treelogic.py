@@ -117,11 +117,12 @@ class TreeSetMixin(object):
 
     @classmethod
     def _check_tree(cls, tree, branch, match):
-        WILDCATS = {
+        WILDCARDS = {
             '*' : lambda s : slice(0,None),
             '.' : lambda s : slice(1,2),
             '?' : lambda s : slice(0,2),
-            ':' : lambda s : slice(*map(int, s.split(':')))
+            ':' : lambda s : slice(*map(int, s.split(':'))),
+            None: lambda s : slice(1,2)
         }
         MATCH_ONE = ['.', '?', '*']
 
@@ -133,13 +134,13 @@ class TreeSetMixin(object):
                 sub_branch = [branch[0]] + branch[2:]
                 if type(sub) is str:
                     region = None
-                    for wild in WILDCATS:
+                    for wild in WILDCARDS:
                         if wild in sub:
-                            region = WILDCATS[wild](sub)
+                            region = WILDCARDS[wild](sub)
                             break
 
                     if region is None:
-                        raise ValueError('Parse error. ONLY ' + str(WILDCATS.values()) + ' as wildcats allowed.')
+                        raise ValueError('Parse error. ONLY ' + str(WILDCARDS.values()) + ' as wildcards allowed.')
 
                     if region.start < len(tree):
                         # check that there are enough children to match
@@ -225,7 +226,7 @@ class TreeSetMixin(object):
         fits on top of the tree to match. Here child nodes are ignored as long
         as the mask of the subtree fits.
 
-        In searching wildcats are allowed. This works as
+        In searching wildcards are allowed. This works as
 
         1. slice(start, end) means a number of arbitrary children between
             start and end-1
