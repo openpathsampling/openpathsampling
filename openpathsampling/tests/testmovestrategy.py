@@ -43,8 +43,7 @@ class MoveStrategyTestSetup(object):
 
 class testMoveStrategy(MoveStrategyTestSetup):
     def test_levels(self):
-        strategy = MoveStrategy(ensembles=None, network=self.network,
-                                group="test", replace=True)
+        strategy = MoveStrategy(ensembles=None, group="test", replace=True)
         assert_equal(strategy.level, -1)
         assert_equal(strategy.replace_signatures, False)
         assert_equal(strategy.replace_movers, False)
@@ -62,8 +61,7 @@ class testMoveStrategy(MoveStrategyTestSetup):
         assert_equal(strategy.replace_movers, False)
 
     def test_get_ensembles(self):
-        self.strategy = MoveStrategy(ensembles=None, group="test",
-                                     replace=True, network=None)
+        self.strategy = MoveStrategy(ensembles=None, group="test", replace=True)
         scheme = MoveScheme(self.network)
         # load up the relevant ensembles to test against
         transition_ensembles = []
