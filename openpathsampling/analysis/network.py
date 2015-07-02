@@ -4,6 +4,9 @@ import pandas as pd
 
 from tis_analysis import Histogrammer, max_lambdas
 
+import logging
+logger = logging.getLogger(__name__)
+
 class TransitionNetwork(OPSNamed):
     def __init__(self):
         super(TransitionNetwork, self).__init__()
@@ -358,6 +361,18 @@ class MISTISNetwork(TISNetwork):
     ----------
     input_transitions : list of TISTransition
         the transitions given as input
+    sampling_transitions : list of TISTransition
+        the transitions used in sampling
+    transitions : list of TISTransition
+        the transitions used in analysis
+
+    Note
+    ----
+        The distinction between the three types of transitions in the object
+        are a bit subtle, but important. The `input_transitions` are, of
+        course, the transitions given in the input. These are A->B
+        transitions. The `sampling_transitions` are what are used in
+        sampling. These are A->any transitions. Finally, the 
     """
     # NOTE: input_transitions are in addition to the sampling_transitions
     # and the transitions (analysis transitions)
@@ -365,10 +380,19 @@ class MISTISNetwork(TISNetwork):
         super(MISTISNetwork, self).__init__()
         self.input_transitions = input_transitions
 
+        # use dictionaries so we only have one instance of each, even if the
+        # same state shows up in many transitions TODO: replace with sets?
+        self.initial_states = {trans.stateA : 1 
+                               for trans in input_transitions}.keys()
+        self.final_states = {trans.stateB : 1 
+                             for trans in input_transitions}.keys()
         if not hasattr(self, 'x_sampling_transitions'):
             self.special_ensembles = {}
             self.build_sampling_transitions(input_transitions)
         self._sampling_transitions = self.x_sampling_transitions
+
+        # by default, we set assign these values to all ensembles
+        self.hist_args = {}
 
         self.build_analysis_transitions()
 
@@ -401,11 +425,6 @@ class MISTISNetwork(TISNetwork):
 
 
     def build_sampling_transitions(self, transitions):
-        # use dictionaries so we only have one instance of each, even if the
-        # same state shows up in many transitions
-        self.initial_states = {trans.stateA : 1 for trans in transitions}.keys()
-        self.final_states = {trans.stateB : 1 for trans in transitions}.keys()
-
         # identify transition pairs
         for initial in self.initial_states:
             transition_pair_dict = {}
@@ -492,12 +511,17 @@ class MISTISNetwork(TISNetwork):
             sample_trans = self.transition_to_sampling[trans]
             stateA = trans.stateA
             stateB = trans.stateB
-            self.transitions[(stateA, stateB)] = paths.RETISTransition(
+            analysis_trans = paths.RETISTransition(
                 stateA=stateA,
                 stateB=stateB,
                 interfaces=sample_trans.interfaces,
                 orderparameter=sample_trans.orderparameter
             )
+            analysis_trans.ensembles = sample_trans.ensembles
+            analysis_trans.name = trans.name
+            #analysis_trans.special_ensembles = sample_trans.special_ensembles
+            self.transitions[(stateA, stateB)] = analysis_trans
+
 
     def build_movers(self):
         # make the movers
@@ -593,3 +617,25 @@ class MISTISNetwork(TISNetwork):
         return self.move_scheme
 
 
+    def rate_matrix(self, storage, force=False):
+        self._rate_matrix = pd.DataFrame(columns=self.final_states,
+                                         index=self.initial_states)
+        for trans in self.transitions.values():
+            # set up the hist_args if necessary
+            for histname in self.hist_args.keys():
+                trans_hist = trans.ensemble_histogram_info[histname]
+                if trans_hist.hist_args == {}:
+                    trans_hist.hist_args = self.hist_args[histname]
+            tcp = trans.total_crossing_probability(storage=storage,
+                                                   force=force)
+            if trans._flux is None:
+                logger.warning("No flux for transition " + str(trans.name)
+                               + ": Rate will be NaN")
+                trans._flux = float("nan")
+                # we give NaN so we can calculate the condition transition
+                # probability automatically
+
+            rate = trans.rate(storage)
+            self._rate_matrix.set_value(trans.stateA, trans.stateB, rate)
+
+        return self._rate_matrix
