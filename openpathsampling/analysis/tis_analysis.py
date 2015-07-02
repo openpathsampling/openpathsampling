@@ -5,10 +5,6 @@ from lookup_function import LookupFunction
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
 
-import inspect
-
-import time 
-
 import logging
 logger = logging.getLogger(__name__)
 
@@ -64,27 +60,22 @@ class Transition(OPSNamed):
             all_movers += self.movers[movetype]
         return all_movers
 
-    def _assign_sample(self, sample):
-        if sample.ensemble in self.all_ensembles:
-            try:
-                self._samples_by_ensemble[sample.ensemble].append(sample)
-            except KeyError:
-                self._samples_by_ensemble[sample.ensemble] = [sample]
-            try: 
-                self._samples_by_id[sample.replica].append(sample)
-            except KeyError:
-                self._samples_by_id[sample.replica] = [sample]
+    # TODO: @dwhs can this function be removed?
+    # def _assign_sample(self, sample):
+    #     if sample.ensemble in self.all_ensembles:
+    #         try:
+    #             self._samples_by_ensemble[sample.ensemble].append(sample)
+    #         except KeyError:
+    #             self._samples_by_ensemble[sample.ensemble] = [sample]
+    #         try:
+    #             self._samples_by_id[sample.replica].append(sample)
+    #         except KeyError:
+    #             self._samples_by_id[sample.replica] = [sample]
 
-    @property
-    def all_movers(self):
-        all_movers = []
-        for movetype in self.movers.keys():
-            all_movers += self.movers[movetype]
-        return all_movers
-
-    @property
-    def all_ensembles(self):
-        return self.ensembles
+    # TODO: can this be removed? Only used in _assign_sample
+    # @property
+    # def all_ensembles(self):
+    #     return self.ensembles
 
     def to_dict(self):
         return {
@@ -351,6 +342,9 @@ class TISTransition(Transition):
         force : bool (False)
             if true, cached results are overwritten
         """
+
+        tcp = dict()
+
         if method == "wham":
             run_ensembles = False
             for ens in self.ensembles:
@@ -373,6 +367,9 @@ class TISTransition(Transition):
             tcp = wham.wham_bam_histogram()
         elif method == "mbar":
             pass
+        else:
+            raise ValueError("Only supported methods are 'wham' and 'mbar'. " + \
+                             "Whereas 'mbar' is not yet implemented!")
 
         self.tcp = LookupFunction(tcp.keys(), tcp.values())
         return self.tcp

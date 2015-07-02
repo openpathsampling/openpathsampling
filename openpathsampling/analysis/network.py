@@ -1,8 +1,9 @@
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
 import pandas as pd
+import openpathsampling.volume
+import openpathsampling.ensemble
 
-from tis_analysis import Histogrammer, max_lambdas
 
 import logging
 logger = logging.getLogger(__name__)
@@ -104,7 +105,9 @@ class MSTISNetwork(TISNetwork):
 
     @classmethod
     def from_dict(cls, dct):
-        network = MSTISNetwork.__new__(MSTISNetwork)
+        network = MSTISNetwork(dct['trans_info'])
+
+        # replace automatically created attributes with stored ones
         network.from_state = dct['from_state']
         network.movers = dct['movers']
         network.special_ensembles = dct['special_ensembles']
@@ -244,19 +247,20 @@ class MSTISNetwork(TISNetwork):
         # multiple distinct MS outer interfaces
         self.movers['msouter_repex'] = [
             paths.ReplicaExchangeMover(
-                ensembles=[trans.ensembles[-1], self.ms_outers[0]]
+                ensemble1=trans.ensembles[-1],
+                ensemble2=self.ms_outers[0]
             )
             for trans in self.from_state.values()
         ]
         self.movers['msouter_pathreversal'] = [
             paths.PathReversalMover(
-                ensembles=[self.ms_outers[0]]
+                ensemble=self.ms_outers[0]
             )
         ]
         self.movers['msouter_shooting'] = [
             paths.OneWayShootingMover(
                 selector=paths.UniformSelector(),
-                ensembles=[self.ms_outers[0]]
+                ensemble=self.ms_outers[0]
             )
         ]
 
