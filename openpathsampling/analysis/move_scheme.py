@@ -236,6 +236,7 @@ class MoveScheme(OPSNamed):
                        "decision tree").format(fcn_name=fcn_name)
             raise RuntimeWarning(warnstr)
 
+
     def build_balance_partners(self):
         """
         Create list of balance partners for all movers in groups.
@@ -262,6 +263,23 @@ class MoveScheme(OPSNamed):
                     warnstr = "Mover {0}: number of balance partners is {1}"
                     raise RuntimeWarning(warnstr.format(mover, len(partners)))
         return self.balance_partners
+
+    def sanity_check(self):
+        # check that all sampling ensembles are used
+        sampling_transitions = self.network.sampling_transitions
+        all_sampling_ensembles = sum(sampling_transitions.ensembles, [])
+        unused = self.find_unused_ensembles()
+        for ens in unused:
+            assert(ens not in all_sampling_ensembles)
+
+        # check that choice_probability adds up
+        total_choice = sum(self.choice_probability.values())
+        assert(abs(total_choice - 1.0) < 1e-7)
+
+        # check for duplicated movers in groups
+        all_movers = sum(self.movers.values(), [])
+        all_unique_movers = set(all_movers)
+        assert(len(all_movers) == len(all_unique_movers))
 
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
