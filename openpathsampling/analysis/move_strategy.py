@@ -575,10 +575,19 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
         if self.network is None:
             self.network = scheme.network
         network = self.network
+        # TODO: this is wrong: need ensemble_weights and mover_weights
         (group_weights, mover_weights) = self.get_weights(scheme)
         choosers = []
         for ens in scheme.network.all_ensembles():
-            pass
+            # TODO: get the correct weights here: group_weights and ensemble
+            # weights
+            weights = [group_weights[g] for g in scheme.movers]
+            choosers.append(self.make_chooser(
+                scheme=scheme, 
+                ensemble=ens, 
+                weights=weights
+            ))
 
-        # TODO
+        # TODO: make the toplevel move that manages all the 
+
         pass
