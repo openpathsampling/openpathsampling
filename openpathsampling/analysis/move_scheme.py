@@ -267,19 +267,41 @@ class MoveScheme(OPSNamed):
     def sanity_check(self):
         # check that all sampling ensembles are used
         sampling_transitions = self.network.sampling_transitions
-        all_sampling_ensembles = sum(sampling_transitions.ensembles, [])
+        all_sampling_ensembles = sum(
+            [t.ensembles for t in sampling_transitions], []
+        )
         unused = self.find_unused_ensembles()
         for ens in unused:
-            assert(ens not in all_sampling_ensembles)
+            try:
+                assert(ens not in all_sampling_ensembles)
+            except AssertionError as e:
+                failmsg = "Sampling ensemble {ens} unused in move scheme {s}\n"
+                e.args = [failmsg.format(ens=ens.name, s=self)]
+                raise
 
         # check that choice_probability adds up
         total_choice = sum(self.choice_probability.values())
-        assert(abs(total_choice - 1.0) < 1e-7)
+        try:
+            assert(abs(total_choice - 1.0) < 1e-7)
+        except AssertionError as e:
+            failmsg = "Choice probability not normalized for scheme {s}\n"
+            e.args = [failmsg.format(s=self)]
+            raise
 
         # check for duplicated movers in groups
         all_movers = sum(self.movers.values(), [])
         all_unique_movers = set(all_movers)
-        assert(len(all_movers) == len(all_unique_movers))
+        try:
+            assert(len(all_movers) == len(all_unique_movers))
+        except AssertionError as e:
+            failmsg = "At least one group-level mover duplicated in scheme {s}\n"
+            e.args = [failmsg.format(s=self)]
+            raise
+
+        # note that the test for the same ens sig is part of the balance
+        # calc
+        return True # if we get here, then we must have passed tests
+
 
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,

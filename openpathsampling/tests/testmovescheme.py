@@ -244,6 +244,47 @@ class testMoveScheme(object):
         root = self.scheme.move_decision_tree()
         self.scheme.build_balance_partners()
 
+    def test_sanity_check_sane(self):
+        self.scheme.movers = {} #LEGACY
+        self.scheme.append([NearestNeighborRepExStrategy(),
+                            OneWayShootingStrategy(), DefaultStrategy()])
+        root = self.scheme.move_decision_tree()
+        self.scheme.sanity_check()
+
+    @raises(AssertionError)
+    def test_sanity_check_unused_sampling(self):
+        self.scheme.movers = {} #LEGACY
+        ensemble_subset = self.scheme.network.sampling_transitions[0].ensembles
+        self.scheme.append([
+            OneWayShootingStrategy(ensembles=ensemble_subset),
+            DefaultStrategy()
+        ])
+        root = self.scheme.move_decision_tree()
+        self.scheme.sanity_check()
+
+    @raises(AssertionError)
+    def test_sanity_check_choice_prob_fails(self):
+        self.scheme.movers = {} #LEGACY
+        self.scheme.append([NearestNeighborRepExStrategy(),
+                            OneWayShootingStrategy(), DefaultStrategy()])
+        root = self.scheme.move_decision_tree()
+        key0 = self.scheme.choice_probability.keys()[0]
+        self.scheme.choice_probability[key0] = 0.0
+        self.scheme.sanity_check()
+
+    @raises(AssertionError)
+    def test_sanity_check_duplicated_movers(self):
+        self.scheme.movers = {} #LEGACY
+        ensemble_subset = self.scheme.network.sampling_transitions[0].ensembles
+        self.scheme.append([
+            OneWayShootingStrategy(),
+            DefaultStrategy()
+        ])
+        root = self.scheme.move_decision_tree()
+        self.scheme.movers['foo'] = [self.scheme.movers['shooting'][0]]
+        self.scheme.sanity_check()
+
+
 
 class testDefaultScheme(object):
     def setup(self):
@@ -303,6 +344,12 @@ class testDefaultScheme(object):
             for mover in root.movers[name_dict[choosername]].movers:
                 assert_equal(type(mover), chooser_type_dict[choosername])
 
+
+    def test_default_sanity(self):
+        scheme = DefaultScheme(self.network)
+        scheme.movers = {} # LEGACY
+        root = scheme.move_decision_tree()
+        scheme.sanity_check()
 
     def test_default_hidden_ensembles(self):
         scheme = DefaultScheme(self.network)
