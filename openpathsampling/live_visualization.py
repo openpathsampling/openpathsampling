@@ -15,21 +15,23 @@ class LiveVisualization(object):
 
 
     def draw(self, mcstep):
-        fig, ax = plt.subplots()
         if self.background is not None:
-            fig = (self.background)
+            self.fig = (self.background)
+            ax = self.fig.axes[0]
+        else:
+            self.fig, ax = plt.subplots()
         # draw the background
         # draw the active trajectories
         for sample in mcstep.active:
-            plt.plot(self.cv_x(sample.trajectory), 
-                     self.cv_y(sample.trajectory), linewidth=2);
+            ax.plot(self.cv_x(sample.trajectory), 
+                    self.cv_y(sample.trajectory), linewidth=2, zorder=2);
             # draw arrowheads at the end of each active
 
         # draw the trials
             # draw arrowheads at the end of each trial
         # decorate by trial type
 
-        return fig
+        return self.fig
 
 
     def draw_ipynb(self, mcstep):
