@@ -11,6 +11,8 @@ class LiveVisualization(object):
         self.range_y = range_y
         self.output_directory = output_directory
         self.extent = [range_x[0], range_x[1], range_y[0], range_y[1]]
+        self.xlim = [range_x[0], range_x[1]]
+        self.ylim = [range_y[0], range_y[1]]
         self.background = None
 
 
@@ -20,6 +22,8 @@ class LiveVisualization(object):
             ax = self.fig.axes[0]
         else:
             self.fig, ax = plt.subplots()
+        ax.set_xlim(self.xlim)
+        ax.set_ylim(self.ylim)
         # draw the background
         # draw the active trajectories
         for sample in mcstep.active:
