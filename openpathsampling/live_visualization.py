@@ -27,10 +27,25 @@ class LiveVisualization(object):
         for special_type in self.network.special_ensembles:
             for ens in self.network.special_ensembles[special_type].keys():
                 self.ensemble_colors[ens] = 'k'
-            
+
+    def draw_arrowhead(self, sample, accepted=True):
+        if accepted:
+            face_color = self.ensemble_colors[sample.ensemble]
+        else:
+            face_color = 'none'
+        # for now, our "arrowheads" are just circles
+        frame = sample.trajectory[-1]
+        self.ax.plot(
+            self.cv_x(frame), self.cv_y(frame), marker='o',
+            markeredgecolor=self.ensemble_colors[sample.ensemble],
+            markerfacecolor=face_color, 
+            zorder=5
+        )
+
 
     def draw(self, mcstep):
         self.fig, self.ax = plt.subplots()
+        # draw the background
         if self.background is not None:
             if self._save_bg_axes is None:
                 self._save_bg_axes = self.background.axes
@@ -41,34 +56,31 @@ class LiveVisualization(object):
                 self.fig.add_axes(ax)
             self.ax = self.fig.axes[0].twinx()
             self.ax.cla()
-            #ax = self.fig.axes[0]
-        #else:
-            #self.fig, ax = plt.subplots()
+
         self.ax.set_xlim(self.xlim)
         self.ax.set_ylim(self.ylim)
-        # draw the background
+
         # draw the active trajectories
         for sample in mcstep.active:
-            #lines.append(matplotlib.lines.lines2D(
             self.ax.plot(
                 self.cv_x(sample.trajectory), 
                 self.cv_y(sample.trajectory), 
                 linewidth=2, zorder=2,
                 color=self.ensemble_colors[sample.ensemble]
-            )#)
+            )
             # draw arrowheads at the end of each active
+            self.draw_arrowhead(sample, accepted=True)
 
         # draw the trials
         for trial in mcstep.change.trials:
-            #lines.append(matplotlib.lines.lines2D(
             self.ax.plot(
                 self.cv_x(trial.trajectory), 
                 self.cv_y(trial.trajectory), 
                 linewidth=1.0, zorder=3,
                 color=self.ensemble_colors[trial.ensemble]
-            )#)
+            )
             # draw arrowheads at the end of each trial
-        # decorate by trial type
+            self.draw_arrowhead(sample, accepted=False)
 
         return self.fig
 
