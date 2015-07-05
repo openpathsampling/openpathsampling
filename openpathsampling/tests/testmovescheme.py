@@ -201,6 +201,50 @@ class testMoveScheme(object):
         root = self.scheme.move_decision_tree(rebuild=True)
         assert_equal(len(self.scheme.movers['repex']), 4)
 
+    def test_build_balance_partners(self):
+        self.scheme.movers = {} #LEGACY
+        ensA = self.scheme.network.sampling_transitions[0].ensembles[0]
+        ensB = self.scheme.network.sampling_transitions[0].ensembles[1]
+        hopAB = paths.EnsembleHopMover(ensembles=[ensA, ensB])
+        hopBA = paths.EnsembleHopMover(ensembles=[ensB, ensA])
+        self.scheme.movers['hop'] = [hopAB, hopBA]
+        self.scheme.append(strategies.DefaultStrategy())
+        root = self.scheme.move_decision_tree()
+        self.scheme.build_balance_partners()
+        assert_equal(self.scheme.balance_partners[hopAB], [hopBA])
+        assert_equal(self.scheme.balance_partners[hopBA], [hopAB])
+
+    @raises(RuntimeWarning)
+    def test_build_balance_partners_premature(self):
+        self.scheme.movers = {}
+        self.scheme.build_balance_partners()
+
+    @raises(RuntimeWarning)
+    def test_build_balance_partners_no_partner(self):
+        self.scheme.movers = {} #LEGACY
+        ensA = self.scheme.network.sampling_transitions[0].ensembles[0]
+        ensB = self.scheme.network.sampling_transitions[0].ensembles[1]
+        hopAB = paths.EnsembleHopMover(ensembles=[ensA, ensB])
+        hopBA = paths.EnsembleHopMover(ensembles=[ensB, ensA])
+        self.scheme.movers['hop'] = [hopAB]
+        self.scheme.append(strategies.DefaultStrategy())
+        root = self.scheme.move_decision_tree()
+        self.scheme.build_balance_partners()
+
+    @raises(RuntimeWarning)
+    def test_build_balance_partners_two_partners(self):
+        self.scheme.movers = {} #LEGACY
+        ensA = self.scheme.network.sampling_transitions[0].ensembles[0]
+        ensB = self.scheme.network.sampling_transitions[0].ensembles[1]
+        hopAB = paths.EnsembleHopMover(ensembles=[ensA, ensB])
+        hopAB2 = paths.EnsembleHopMover(ensembles=[ensA, ensB])
+        hopBA = paths.EnsembleHopMover(ensembles=[ensB, ensA])
+        self.scheme.movers['hop'] = [hopAB, hopBA, hopAB2]
+        self.scheme.append(strategies.DefaultStrategy())
+        root = self.scheme.move_decision_tree()
+        self.scheme.build_balance_partners()
+
+
 class testDefaultScheme(object):
     def setup(self):
         cvA = paths.CV_Function(name="xA", fcn=lambda s : s.xyz[0][0])
@@ -273,4 +317,50 @@ class testDefaultScheme(object):
         root = scheme.move_decision_tree()
         unused = scheme.find_unused_ensembles()
         assert_equal(len(unused), 0) # will change when minus/msouter 
+
+    def test_default_balance_partners(self):
+        scheme = DefaultScheme(self.network)
+        scheme.movers = {} # LEGACY
+        root = scheme.move_decision_tree()
+        scheme.build_balance_partners()
+        # by default, every mover is its own balance partner
+        for group in scheme.movers.values():
+            for mover in group:
+                assert_equal(scheme.balance_partners[mover], [mover])
+
+
+    def test_default_choice_probability(self):
+        scheme = DefaultScheme(self.network)
+        scheme.movers = {} # LEGACY
+        root = scheme.move_decision_tree()
+        default_group_weights = {
+            'shooting' : 1.0,
+            'repex' : 0.5,
+            'pathreversal' : 0.5,
+            'minus' : 0.2,
+            'ms_outer_shooting' : 1.0
+        }
+
+        assert_almost_equal(sum(scheme.choice_probability.values()), 1.0)
+
+        tot_norm = sum([default_group_weights[group] 
+                        for group in scheme.movers])
+
+        for groupname in scheme.movers.keys():
+            group = scheme.movers[groupname]
+            n_movers = len(group)
+            weight = default_group_weights[groupname] / tot_norm / n_movers
+            for mover in group:
+                assert_almost_equal(scheme.choice_probability[mover], weight)
+
+        prob_shoot0 = scheme.choice_probability[scheme.movers['shooting'][0]]
+        n_shooting = len(scheme.movers['shooting'])
+        for group in default_group_weights:
+            scale = default_group_weights[group]
+            n_group = len(scheme.movers[group])
+            assert_almost_equal(
+                prob_shoot0 * n_shooting / n_group,
+                scheme.choice_probability[scheme.movers[group][0]] / scale
+            )
+
 
