@@ -527,7 +527,7 @@ class SingleReplicaStrategy(MoveStrategy):
 class OrganizeByEnsembleStrategy(DefaultStrategy):
     def __init__(self, ensembles=None, group=None, replace=True):
         super(OrganizeByEnsembleStrategy, self).__init__(
-            ensembles=ensembles, network=network, group=group, replace=replace
+            ensembles=ensembles, group=group, replace=replace
         )
         self.mover_weights = {}
         self.group_weights = {}
