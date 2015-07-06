@@ -12,6 +12,7 @@ python ipynbtest.py "repex_networks.ipynb" || testfail=1
 python ipynbtest.py "multistate_system_setup.ipynb" || testfail=1
 python ipynbtest.py "mstis_analysis.ipynb" || testfail=1
 python ipynbtest.py "mistis_setup.ipynb" || testfail=1
+python ipynbtest.py "mistis_analysis.ipynb" || testfail=1
 python ipynbtest.py "langevin_integrator_check.ipynb" || testfail=1
 python ipynbtest.py "sliced_sequential_ensembles.ipynb" || testfail=1
 # needs to run after alanine since it need the trajectory.nc file

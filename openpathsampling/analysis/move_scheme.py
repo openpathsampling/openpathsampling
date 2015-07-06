@@ -236,6 +236,7 @@ class MoveScheme(OPSNamed):
                        "decision tree").format(fcn_name=fcn_name)
             raise RuntimeWarning(warnstr)
 
+
     def build_balance_partners(self):
         """
         Create list of balance partners for all movers in groups.
@@ -262,6 +263,133 @@ class MoveScheme(OPSNamed):
                     warnstr = "Mover {0}: number of balance partners is {1}"
                     raise RuntimeWarning(warnstr.format(mover, len(partners)))
         return self.balance_partners
+
+    def _select_movers(self, input_mover):
+        """
+        Return list of movers from group name, list of movers, or mover.
+
+        Mainly used to regularize input for other functions.
+
+        Parameters
+        ----------
+        input_mover : PathMover or list of PathMover or string
+        
+        Returns
+        -------
+        list of PathMover
+            If `input_mover` is list of PathMovers, returns same. If
+            `input_mover` is PathMover, wraps it in a list. If `input_mover`
+            is a string, uses that key in self.movers.
+        """
+        try:
+            movers = self.movers[input_mover]
+        except TypeError: # unhashable type: 'list'
+            movers = input_mover
+        except KeyError: # input_mover not found
+            movers = [input_mover]
+
+        # here we do a little type-checking
+        for m in movers:
+            try:
+                assert(isinstance(m, paths.PathMover))
+            except AssertionError:
+                msg = ("Bad output from _select_movers: " + str(movers) 
+                       + "; " + repr(m) + " is not a PathMover\n")
+                msg += ("Are you using a group name before building the "
+                        +"move decision tree?")
+                raise TypeError(msg)
+        return movers
+
+    def n_steps_for_trials(self, mover, n_attempts):
+        """
+        Return number of MC steps to expect `n_attempts` trials of `mover`.
+
+        Read this as "To get `n_attempts` trials of `mover`, you need around
+        `scheme.n_steps_for_trials(mover, n_attempts)` MC steps. If `mover`
+        is a (string) key for a group, then return the total for that group.
+        If mover is a list of movers, return the total for that list.
+        
+        Parameters
+        ----------
+        mover : PathMover or list of PathMover or string
+            The mover of interest. See MoveScheme._select_movers for
+            interpretation.
+        n_attempts : The desired number of attempts of `mover`
+
+        Returns
+        -------
+        float
+            expected number of steps to get `n_attempts` of `mover`
+        """
+        movers = self._select_movers(mover)
+        total_probability = sum([self.choice_probability[m] for m in movers])
+        return (n_attempts / total_probability)
+
+    def n_trials_for_steps(self, mover, n_steps):
+        """
+        Return number of attempts expected for `mover` after `n_steps`.
+
+        Read this as "If you run `n_steps` Monte Carlo steps, you can expect
+        to have about `scheme.n_trials_in_steps(mover, n_steps)` trials of
+        `mover`.  If `mover` is a (string) key for a group, then return the
+        total for that group.  If mover is a list of movers, return the
+        total for that list.
+        
+        Parameters
+        ----------
+        mover : PathMover or list of PathMover or string
+            The mover of interest. See MoveScheme._select_movers for
+            interpretation.
+        n_steps : The number of hypothetical MC steps
+
+        Returns
+        -------
+        float
+            expected number of trials of `mover` in `n_steps` MC steps
+        """
+        movers = self._select_movers(mover)
+        total_probability = sum([self.choice_probability[m] for m in movers])
+        return (total_probability * n_steps)
+
+
+    def sanity_check(self):
+        # check that all sampling ensembles are used
+        sampling_transitions = self.network.sampling_transitions
+        all_sampling_ensembles = sum(
+            [t.ensembles for t in sampling_transitions], []
+        )
+        unused = self.find_unused_ensembles()
+        for ens in unused:
+            try:
+                assert(ens not in all_sampling_ensembles)
+            except AssertionError as e:
+                failmsg = "Sampling ensemble {ens} unused in move scheme {s}\n"
+                e.args = [failmsg.format(ens=ens.name, s=self)]
+                raise
+
+        # check that choice_probability adds up
+        total_choice = sum(self.choice_probability.values())
+        try:
+            assert(abs(total_choice - 1.0) < 1e-7)
+        except AssertionError as e:
+            failmsg = "Choice probability not normalized for scheme {s}\n"
+            e.args = [failmsg.format(s=self)]
+            raise
+
+        # check for duplicated movers in groups
+        all_movers = sum(self.movers.values(), [])
+        all_unique_movers = set(all_movers)
+        try:
+            assert(len(all_movers) == len(all_unique_movers))
+        except AssertionError as e:
+            failmsg = "At least one group-level mover duplicated in scheme {s}\n"
+            e.args = [failmsg.format(s=self)]
+            raise
+
+        # note that the test for the same ens sig is part of the balance
+        # calc
+        return True # if we get here, then we must have passed tests
+
 
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
