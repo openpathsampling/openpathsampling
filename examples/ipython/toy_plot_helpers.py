@@ -102,6 +102,7 @@ class ToyPlot(object):
             plt.plot(traj.xyz()[:,0,0], traj.xyz()[:,0,1],
                      self.repcolordict[trajectories.index(traj) % 5],
                      zorder=2)
+        return fig
 
     def reset(self):
         self._pes = None
