@@ -66,9 +66,8 @@ class MoveStrategy(object):
     level
     """
     _level = -1
-    def __init__(self, ensembles, group, replace, network):
+    def __init__(self, ensembles, group, replace):
         self.ensembles = ensembles
-        self.network = network
         self.group = group
         self.replace = replace
         self.replace_signatures = None
@@ -100,7 +99,7 @@ class MoveStrategy(object):
         elif level_type == levels.MOVER:
             self.replace_movers = replace
 
-    def get_ensembles(self, ensembles):
+    def get_ensembles(self, scheme, ensembles):
         """
         Regularizes ensemble input to list of list.
 
@@ -125,7 +124,7 @@ class MoveStrategy(object):
         """
         if ensembles is None:
             res_ensembles = []
-            for t in self.network.sampling_transitions:
+            for t in scheme.network.sampling_transitions:
                 res_ensembles.append(t.ensembles)
         else:
             # takes a list and makes it into list-of-lists
@@ -156,18 +155,16 @@ class OneWayShootingStrategy(MoveStrategy):
     """
     _level = levels.MOVER
     def __init__(self, selector=None, ensembles=None, group="shooting",
-                 replace=True, network=None):
+                 replace=True):
         super(OneWayShootingStrategy, self).__init__(
-            ensembles=ensembles, network=network, group=group, replace=replace
+            ensembles=ensembles, group=group, replace=replace
         )
         if selector is None:
             selector = paths.UniformSelector()
         self.selector = selector
 
     def make_movers(self, scheme):
-        if self.network is None:
-            self.network = scheme.network
-        ensemble_list = self.get_ensembles(self.ensembles)
+        ensemble_list = self.get_ensembles(scheme, self.ensembles)
         ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
         shooters = pmf.OneWayShootingSet(self.selector, ensembles)
         return shooters
@@ -177,16 +174,13 @@ class NearestNeighborRepExStrategy(MoveStrategy):
     Make the NN replica exchange scheme among ordered ensembles.
     """
     _level = levels.SIGNATURE
-    def __init__(self, ensembles=None, group="repex", replace=True,
-                 network=None):
+    def __init__(self, ensembles=None, group="repex", replace=True):
         super(NearestNeighborRepExStrategy, self).__init__(
-            ensembles=ensembles, network=network, group=group, replace=replace
+            ensembles=ensembles, group=group, replace=replace
         )
 
     def make_movers(self, scheme):
-        if self.network is None:
-            self.network = scheme.network
-        ensemble_list = self.get_ensembles(self.ensembles)
+        ensemble_list = self.get_ensembles(scheme, self.ensembles)
         movers = []
         for ens in ensemble_list:
             movers.extend(
@@ -208,9 +202,7 @@ class AllSetRepExStrategy(NearestNeighborRepExStrategy):
     different sublist. This makes all the exchanges within that list.
     """
     def make_movers(self, scheme):
-        if self.network is None:
-            self.network = scheme.network
-        ensemble_list = self.get_ensembles(self.ensembles)
+        ensemble_list = self.get_ensembles(scheme, self.ensembles)
         movers = []
         for ens in ensemble_list:
             pairs = list(itertools.combinations(ens, 2))
@@ -228,8 +220,7 @@ class SelectedPairsRepExStrategy(MoveStrategy):
     def initialization_error(self):
         raise RuntimeError("SelectedPairsRepExStrategy must be initialized with ensemble pairs.")
 
-    def __init__(self, ensembles=None, group="repex", replace=False,
-                 network=None):
+    def __init__(self, ensembles=None, group="repex", replace=False):
         # check that we have a list of pairs
         if ensembles is None:
             self.initialization_error()
@@ -243,13 +234,11 @@ class SelectedPairsRepExStrategy(MoveStrategy):
                     self.initialization_error()
         
         super(SelectedPairsRepExStrategy, self).__init__(
-            ensembles=ensembles, network=network, group=group, replace=replace
+            ensembles=ensembles, group=group, replace=replace
         )
 
     def make_movers(self, scheme):
-        if self.network is None:
-            self.network = scheme.network
-        ensemble_list = self.get_ensembles(self.ensembles)
+        ensemble_list = self.get_ensembles(scheme, self.ensembles)
         movers = []
         for pair in ensemble_list:
             movers.append(paths.ReplicaExchangeMover(ensembles=pair))
@@ -278,16 +267,13 @@ class PathReversalStrategy(MoveStrategy):
     Creates PathReversalMovers for the strategy.
     """
     _level = levels.MOVER
-    def __init__(self, ensembles=None, group="pathreversal", replace=True,
-                 network=None):
+    def __init__(self, ensembles=None, group="pathreversal", replace=True):
         super(PathReversalStrategy, self).__init__(
-            ensembles=ensembles, network=network, group=group, replace=replace
+            ensembles=ensembles, group=group, replace=replace
         )
 
     def make_movers(self, scheme):
-        if self.network is None:
-            self.network = scheme.network
-        ensemble_list = self.get_ensembles(self.ensembles)
+        ensemble_list = self.get_ensembles(scheme, self.ensembles)
         ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
         movers = paths.PathReversalSet(ensembles)
         return movers
@@ -298,14 +284,13 @@ class MinusMoveStrategy(MoveStrategy):
     Takes a given scheme and makes the minus mover.
     """
     _level = levels.MOVER
-    def __init__(self, ensembles=None, group="minus", replace=True,
-                 network=None):
+    def __init__(self, ensembles=None, group="minus", replace=True):
         super(MinusMoveStrategy, self).__init__(
-            ensembles=ensembles, network=network, group=group, replace=replace
+            ensembles=ensembles, group=group, replace=replace
         )
 
-    def get_ensembles(self, ensembles):
-        network = self.network
+    def get_ensembles(self, scheme, ensembles):
+        network = scheme.network
         if ensembles is None:
             minus_ensembles = network.minus_ensembles
             state_sorted_minus = {}
@@ -317,14 +302,13 @@ class MinusMoveStrategy(MoveStrategy):
             ensembles = state_sorted_minus.values()
 
         # now we use super's ability to turn it into list-of-list
-        res_ensembles = super(MinusMoveStrategy, self).get_ensembles(ensembles)
+        res_ensembles = super(MinusMoveStrategy, self).get_ensembles(scheme,
+                                                                     ensembles)
         return res_ensembles
 
     def make_movers(self, scheme):
-        if self.network is None:
-            self.network = scheme.network
-        network = self.network
-        ensemble_list = self.get_ensembles(self.ensembles)
+        network = scheme.network
+        ensemble_list = self.get_ensembles(scheme, self.ensembles)
         ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
         movers = []
         for ens in ensembles:
@@ -341,10 +325,9 @@ class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
 
 class OrganizeByEnsembleStrategy(MoveStrategy):
     _level = levels.GLOBAL
-    def __init__(self, ensembles=None, group=None, replace=True,
-                 network=None):
+    def __init__(self, ensembles=None, group=None, replace=True):
         super(OrganizeByEnsembleStrategy, self).__init__(
-            ensembles=ensembles, network=network, group=group, replace=replace
+            ensembles=ensembles, group=group, replace=replace
         )
         self.mover_weights = None
         self.group_weights = None
@@ -353,9 +336,7 @@ class OrganizeByEnsembleStrategy(MoveStrategy):
         pass
 
     def make_movers(self, scheme):
-        if self.network is None:
-            self.network = scheme.network
-        network = self.network
+        network = scheme.network
         # TODO
         pass
 
@@ -372,13 +353,11 @@ class DefaultStrategy(MoveStrategy):
         'pathreversal' : 0.5,
         'minus' : 0.2
     }
-    def __init__(self, ensembles=None, group=None, replace=True,
-                 network=None):
+    def __init__(self, ensembles=None, group=None, replace=True):
         self.group_weights = {}
         self.mover_weights = {}
         self.group = group
         self.replace = replace
-        self.network = network
 
     def make_chooser(self, scheme, group, weights=None, choosername=None):
         """
@@ -532,9 +511,6 @@ class DefaultStrategy(MoveStrategy):
         return {m : unnormed[m] / norm for m in unnormed}
 
     def make_movers(self, scheme):
-        if self.network is None:
-            self.network = scheme.network
-
         (group_weights, mover_weights) = self.get_weights(scheme)
         choosers = []
         for group in scheme.movers.keys():

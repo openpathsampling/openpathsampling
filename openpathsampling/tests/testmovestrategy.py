@@ -43,8 +43,7 @@ class MoveStrategyTestSetup(object):
 
 class testMoveStrategy(MoveStrategyTestSetup):
     def test_levels(self):
-        strategy = MoveStrategy(ensembles=None, network=self.network,
-                                group="test", replace=True)
+        strategy = MoveStrategy(ensembles=None, group="test", replace=True)
         assert_equal(strategy.level, -1)
         assert_equal(strategy.replace_signatures, False)
         assert_equal(strategy.replace_movers, False)
@@ -62,8 +61,8 @@ class testMoveStrategy(MoveStrategyTestSetup):
         assert_equal(strategy.replace_movers, False)
 
     def test_get_ensembles(self):
-        self.strategy = MoveStrategy(ensembles=None, network=self.network,
-                                     group="test", replace=True)
+        self.strategy = MoveStrategy(ensembles=None, group="test", replace=True)
+        scheme = MoveScheme(self.network)
         # load up the relevant ensembles to test against
         transition_ensembles = []
         for transition in self.network.sampling_transitions:
@@ -74,18 +73,18 @@ class testMoveStrategy(MoveStrategyTestSetup):
         ensA = self.network.from_state[self.stateA].ensembles
         assert_equal(len(ensA), 3)
         # if you error before this, something is wrong in setup
-        ensembles = self.strategy.get_ensembles(None)
+        ensembles = self.strategy.get_ensembles(scheme, None)
         assert_equal(ensembles, transition_ensembles)
 
-        ensembles = self.strategy.get_ensembles(ensA)
+        ensembles = self.strategy.get_ensembles(scheme, ensA)
         assert_equal(ensembles, [ensA])
 
         extra_ens = transition_ensembles[1][0]
         weird_ens_list = [[ensA[0]], ensA[1], [extra_ens]]
-        ensembles = self.strategy.get_ensembles(weird_ens_list)
+        ensembles = self.strategy.get_ensembles(scheme, weird_ens_list)
         assert_equal(ensembles, [[ensA[0]], [ensA[1]], [extra_ens]])
 
-        ensembles = self.strategy.get_ensembles(extra_ens)
+        ensembles = self.strategy.get_ensembles(scheme, extra_ens)
         assert_equal(len(ensembles), 1)
         assert_equal(len(ensembles[0]), 1)
         assert_equal(ensembles[0][0], extra_ens)
@@ -190,8 +189,8 @@ class testPathReversalStrategy(MoveStrategyTestSetup):
 class testMinusMoveStrategy(MoveStrategyTestSetup):
     def test_get_ensembles(self):
         strategy = MinusMoveStrategy()
-        strategy.network = self.network
-        ensembles = strategy.get_ensembles(None)
+        scheme = MoveScheme(self.network)
+        ensembles = strategy.get_ensembles(scheme, None)
         assert_equal(len(ensembles), 2)
         for ens_group in ensembles:
             assert_equal(len(ens_group), 1)
@@ -199,7 +198,6 @@ class testMinusMoveStrategy(MoveStrategyTestSetup):
 
     def test_get_ensembles_multiple_minus(self):
         strategy = MinusMoveStrategy()
-        strategy.network = self.network
         innerA = self.network.sampling_transitions[0].ensembles[0]
         innerB = self.network.sampling_transitions[1].ensembles[0]
         extra_minus = paths.MinusInterfaceEnsemble(
@@ -207,15 +205,16 @@ class testMinusMoveStrategy(MoveStrategyTestSetup):
             innermost_vols=[innerA, innerB]
         )
         self.network.special_ensembles['minus'][extra_minus] = [innerA, innerB]
-        ensembles = strategy.get_ensembles(None)
+        scheme = MoveScheme(self.network)
+        ensembles = strategy.get_ensembles(scheme, None)
         assert_equal(len(ensembles), 2)
         assert_equal(set([len(ensembles[0]), len(ensembles[1])]), set([1,2]))
 
     def test_get_ensembles_fixed_ensembles(self):
         strategy = MinusMoveStrategy()
-        strategy.network = self.network
         minusA = self.network.special_ensembles['minus'].keys()[0]
-        ensembles = strategy.get_ensembles(minusA)
+        scheme = MoveScheme(self.network)
+        ensembles = strategy.get_ensembles(scheme, minusA)
         assert_equal(len(ensembles), 1)
         assert_equal(len(ensembles[0]), 1)
         assert_equal(ensembles[0][0], minusA)
