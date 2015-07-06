@@ -284,6 +284,79 @@ class testMoveScheme(object):
         self.scheme.movers['foo'] = [self.scheme.movers['shooting'][0]]
         self.scheme.sanity_check()
 
+    @raises(TypeError)
+    def test_select_movers_no_choice_probability(self):
+        self.scheme.movers = {} # LEGACY
+        self.scheme.append([OneWayShootingStrategy(), DefaultStrategy()])
+        movers = self.scheme._select_movers('shooting')
+
+    def test_select_movers(self):
+        self.scheme.movers = {} # LEGACY
+        self.scheme.append([
+            OneWayShootingStrategy(), 
+            NearestNeighborRepExStrategy(),
+            DefaultStrategy()
+        ])
+        root = self.scheme.move_decision_tree()
+        some_shooters = self.scheme.movers['shooting'][0:2]
+
+        movers = self.scheme._select_movers('shooting')
+        assert_equal(movers, self.scheme.movers['shooting'])
+
+        movers = self.scheme._select_movers(some_shooters)
+        assert_equal(movers, some_shooters)
+
+        movers = self.scheme._select_movers(some_shooters[0])
+        assert_equal(movers, [some_shooters[0]])
+
+    def test_n_trials_for_steps(self):
+        self.scheme.movers = {} # LEGACY
+        self.scheme.append([
+            OneWayShootingStrategy(), 
+            NearestNeighborRepExStrategy(),
+            DefaultStrategy()
+        ])
+        root = self.scheme.move_decision_tree()
+        some_shooters = self.scheme.movers['shooting'][0:3]
+
+        assert_almost_equal(
+            self.scheme.n_trials_for_steps('shooting', 100),
+            2.0/3.0*100
+        )
+
+        assert_almost_equal(
+            self.scheme.n_trials_for_steps(some_shooters, 100),
+            1.0/3.0*100
+        )
+
+        assert_almost_equal(
+            self.scheme.n_trials_for_steps(some_shooters[0], 100),
+            1.0/9.0*100
+        )
+
+
+    def test_n_steps_for_trials(self):
+        self.scheme.movers = {} # LEGACY
+        self.scheme.append([
+            OneWayShootingStrategy(), 
+            NearestNeighborRepExStrategy(),
+            DefaultStrategy()
+        ])
+        root = self.scheme.move_decision_tree()
+        some_shooters = self.scheme.movers['shooting'][0:3]
+
+        assert_almost_equal(
+            self.scheme.n_steps_for_trials('shooting', 100), 150.0
+        )
+
+        assert_almost_equal(
+            self.scheme.n_steps_for_trials(some_shooters, 100), 300.0
+        )
+
+        assert_almost_equal(
+            self.scheme.n_steps_for_trials(some_shooters[0], 100), 900.0
+        )
+
 
 
 class testDefaultScheme(object):

@@ -282,12 +282,22 @@ class MoveScheme(OPSNamed):
             is a string, uses that key in self.movers.
         """
         try:
-            movers = self.movers[mover]
-        except KeyError:
+            movers = self.movers[input_mover]
+        except TypeError: # unhashable type: 'list'
+            movers = input_mover
+        except KeyError: # input_mover not found
+            movers = [input_mover]
+
+        # here we do a little type-checking
+        for m in movers:
             try:
-                movers = list(mover)
-            except TypeError:
-                movers = [mover]
+                assert(isinstance(m, paths.PathMover))
+            except AssertionError:
+                msg = ("Bad output from _select_movers: " + str(movers) 
+                       + "; " + repr(m) + " is not a PathMover\n")
+                msg += ("Are you using a group name before building the "
+                        +"move decision tree?")
+                raise TypeError(msg)
         return movers
 
     def n_steps_for_trials(self, mover, n_attempts):
@@ -315,7 +325,7 @@ class MoveScheme(OPSNamed):
         total_probability = sum([self.choice_probability[m] for m in movers])
         return (n_attempts / total_probability)
 
-    def n_trials_in_steps(self, mover, n_steps):
+    def n_trials_for_steps(self, mover, n_steps):
         """
         Return number of attempts expected for `mover` after `n_steps`.
 
