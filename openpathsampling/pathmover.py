@@ -1266,6 +1266,70 @@ class RandomChoiceMover(PathMover):
         return path
 
 
+class EnsembleDictionaryMover(PathMover):
+    """
+    Selects random sample and picks which move to do based its ensemble.
+
+
+    """
+    def __init__(self, ensemble_to_mover_dict):
+        ensembles = ensemble_to_mover_dict.keys()
+        super(EnsembleDictionaryMover, self).__init__(ensembles=ensembles)
+
+        self.movers = ensemble_to_mover_dict.values()
+        self.ensemble_to_mover_dict = ensemble_to_mover_dict
+
+    @property
+    def submovers(self):
+        return self.movers
+
+    @property
+    def is_ensemble_change_mover(self):
+        if self._is_ensemble_change_mover is not None:
+            return self._is_ensemble_change_mover
+        sub_change = False
+        for mover in self.movers:
+            if mover.is_ensemble_change_mover:
+                sub_change = True
+                break
+        return sub_change
+
+
+    def _get_in_ensembles(self):
+        return [ sub.input_ensembles for sub in self.submovers ]
+
+    def _get_out_ensembles(self):
+        return [ sub.output_ensembles for sub in self.submovers ]
+
+    def move(self, globalstate):
+        samp = random.choice(globalstate.samples)
+        submove = self.ensemble_to_mover_dict[samp.ensemble]
+        subset = SampleSet([samp])
+        logger_str = "{name} (EnsembleDictionaryMover) selecting {m} (ensemble {ens})"
+        logger.info(logger_str.format(name=self.name, m=submove.name,
+                                      ens=samp.ensemble.name))
+        
+        detailes = MoveDetails()
+        details.inputs = []
+        details.choice = samp
+        details.chosen_mover = submove
+        details.probability = 1.0/len(globalstate)
+
+        subchange = submove(subset)
+
+        change = paths.SubPathMoveChange(
+            subchange=sub(subset),
+            mover=self,
+            details=details
+        )
+        return change
+
+
+
+        pass
+
+
+
 class ConditionalMover(PathMover):
     """
     An if-then-else structure for PathMovers.
