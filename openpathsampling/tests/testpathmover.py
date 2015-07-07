@@ -395,7 +395,7 @@ class testEnsembleDictionaryMover(object):
         stateA = CVRangeVolume(op, -100, 0.0)
         stateB = CVRangeVolume(op, 0.65, 100)
         volX = CVRangeVolume(op, -100, 0.25)
-        volY = CVRangeVolume(op, -100, 0.50)
+        volY = CVRangeVolume(op, -100, 0.40)
         self.ens1 = paths.TISEnsemble(stateA, stateB, volX, op)
         self.ens2 = paths.TISEnsemble(stateA, stateB, volY, op)
         init_traj1 = make_1d_traj(
@@ -418,11 +418,24 @@ class testEnsembleDictionaryMover(object):
         ens_dict = {self.ens1 : self.pathrev, self.ens2 : self.shooter}
         self.mover = EnsembleDictionaryMover(ens_dict)
 
+        self.op = op # temp
+
     def test_move_single_replica(self):
         sampleset = SampleSet([self.samp1])
         change = self.mover.move(sampleset)
+        subchange = change.subchange
+        assert_equal(subchange.mover, self.pathrev)
+        assert_equal(subchange.accepted, True)
+        assert_equal(change.accepted, True)
+        assert_equal(len(subchange.samples), 1)
 
-        raise SkipTest
+        sampleset = SampleSet([self.samp2])
+        change = self.mover.move(sampleset)
+        subchange = change.subchange
+        assert_equal(subchange.mover, self.shooter)
+        assert_equal(subchange.accepted, True)
+        assert_equal(change.accepted, True)
+
 
     def test_move_multiple_replicas(self):
         raise SkipTest

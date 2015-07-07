@@ -396,6 +396,8 @@ class SampleGeneratingMover(PathMover):
         accepted = True
         probability = 1.0
 
+        # TODO: This isn't right. `bias` should be associated with the 
+        # change; not with each individual sample. ~~~DWHS
         for ens, sample in trial_dict.iteritems():
             valid = ens(sample.trajectory)
             if not valid:
