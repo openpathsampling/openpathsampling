@@ -284,6 +284,34 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         scheme = MoveScheme(self.network)
         scheme.movers = {} # handles LEGACY stuff
+        ens0 = self.network.sampling_transitions[0].ensembles[0]
+        ens1 = self.network.sampling_transitions[0].ensembles[1]
+        ens2 = self.network.sampling_transitions[0].ensembles[2]
+        scheme.movers['shooting'] = [
+            paths.OneWayShootingMover(
+                selector=paths.UniformSelector(),
+                ensembles=[ens]
+            )
+            for ens in [ens0, ens1, ens2]
+        ]
+        scheme.movers['repex'] = [
+            paths.ReplicaExchangeMover(ensembles=[ens0, ens1]),
+            paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
+        ]
+        scheme.movers['pathreversal'] = [
+            paths.PathReversalMover(ensembles=ens) 
+            for ens in [ens0, ens1, ens2]
+        ]
+        scheme.movers['minus'] = [paths.MinusMover(
+            minus_ensemble=self.network.minus_ensembles[0],
+            innermost_ensembles=[ens0]
+        )]
+
+        strategy = OrganizeByEnsembleStrategy()
+        #root = strategy.make_movers(scheme)
+
+
+
         raise SkipTest
 
 

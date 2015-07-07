@@ -537,9 +537,15 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
             choosername = ensemble.name.capitalize() + "Chooser"
         movers = []
         for group in scheme.movers:
-            # take [0] since, as MacLeod always says: There can be only one!
-            movers.append([m for m in scheme.movers[group] 
-                           if ensemble in m.input_ensembles][0])
+            ens_movers = [m for m in scheme.movers[group]
+                          if ensemble in m.input_ensembles]
+            # take [0] since, as MacLeod says: There can be only one!
+            try:
+                movers.append(ens_movers[0])
+            except IndexError:
+                pass
+            #movers.append([m for m in scheme.movers[group] 
+                           #if ensemble in m.input_ensembles][0])
         final_weights = [w / len(m.input_ensembles) 
                          for (m, w) in zip(movers, weights)]
         chooser = paths.RandomChoiceMover(
@@ -551,19 +557,25 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
 
     def make_movers(self, scheme):
         network = scheme.network
-        # TODO: this is wrong: need ensemble_weights and mover_weights
+        # we still prefer to think in terms of group weights (and
+        # adjustments to that for mover weights). Note that all the math in
+        # here will assume that ensembles are all equally likely to be
+        # chosen.
         (group_weights, mover_weights) = self.get_weights(scheme)
-        choosers = []
-        for ens in scheme.network.all_ensembles():
-            # TODO: get the correct weights here: group_weights and ensemble
-            # weights
+        chooser_dict = {}
+        # TODO: this still doesn't handle arbitrary differences in weights,
+        # so this won't quite be correct
+        for ens in scheme.network.all_ensembles:
             weights = [group_weights[g] for g in scheme.movers]
-            choosers.append(self.make_chooser(
+            ens_chooser = self.make_chooser(
                 scheme=scheme, 
                 ensemble=ens, 
                 weights=weights
-            ))
-
-        # TODO: make the toplevel move that manages all the 
-
-        pass
+            )
+            chooser_dict[ens] = ens_chooser
+        root = paths.EnsembleDictionaryMover(chooser_dict)
+        root.name = "RootMover"
+        scheme.choice_probability = self.choice_probability(
+            scheme, group_weights, mover_weights
+        )
+        return root
