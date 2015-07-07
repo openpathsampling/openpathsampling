@@ -382,6 +382,52 @@ class testRandomChoiceMover(object):
     def test_restricted_by_ensemble(self):
         raise SkipTest
 
+
+class testEnsembleDictionaryMover(object):
+    def setup(self):
+        self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
+                                      -0.1, 0.2, 0.4, 0.6, 0.8,
+                                     ])
+        self.dyn.initialized = True
+        SampleGeneratingMover.engine = self.dyn
+        op = CV_Function("myid", fcn=lambda snap :
+                             snap.coordinates[0][0])
+        stateA = CVRangeVolume(op, -100, 0.0)
+        stateB = CVRangeVolume(op, 0.65, 100)
+        volX = CVRangeVolume(op, -100, 0.25)
+        volY = CVRangeVolume(op, -100, 0.50)
+        self.ens1 = paths.TISEnsemble(stateA, stateB, volX, op)
+        self.ens2 = paths.TISEnsemble(stateA, stateB, volY, op)
+        init_traj1 = make_1d_traj(
+            coordinates=[-0.1, 0.1, 0.2, 0.3, 0.24, 0.15, 0.06, -0.07],
+            velocities=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        )
+        init_traj2 = make_1d_traj(
+            coordinates=[-0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+            velocities=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        )
+        self.samp1 = Sample(trajectory=init_traj1, replica=0, 
+                            ensemble=self.ens1)
+        self.samp2 = Sample(trajectory=init_traj2, replica=1,
+                            ensemble=self.ens2)
+
+        self.shooter = ForwardShootMover(UniformSelector(),
+                                         ensembles=self.ens2)
+        self.pathrev = PathReversalMover(ensembles=self.ens1)
+
+        ens_dict = {self.ens1 : self.pathrev, self.ens2 : self.shooter}
+        self.mover = EnsembleDictionaryMover(ens_dict)
+
+    def test_move_single_replica(self):
+        sampleset = SampleSet([self.samp1])
+        change = self.mover.move(sampleset)
+
+        raise SkipTest
+
+    def test_move_multiple_replicas(self):
+        raise SkipTest
+
+
 class testSequentialMover(object):
     def setup(self):
         traj = Trajectory([-0.5, 0.7, 1.1])

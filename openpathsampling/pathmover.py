@@ -1304,29 +1304,25 @@ class EnsembleDictionaryMover(PathMover):
     def move(self, globalstate):
         samp = random.choice(globalstate.samples)
         submove = self.ensemble_to_mover_dict[samp.ensemble]
-        subset = SampleSet([samp])
+        subset = paths.SampleSet([samp])
         logger_str = "{name} (EnsembleDictionaryMover) selecting {m} (ensemble {ens})"
         logger.info(logger_str.format(name=self.name, m=submove.name,
                                       ens=samp.ensemble.name))
         
-        detailes = MoveDetails()
+        details = MoveDetails()
         details.inputs = []
         details.choice = samp
         details.chosen_mover = submove
         details.probability = 1.0/len(globalstate)
 
-        subchange = submove(subset)
+        subchange = submove.move(subset)
 
         change = paths.SubPathMoveChange(
-            subchange=sub(subset),
+            subchange=subchange,
             mover=self,
             details=details
         )
         return change
-
-
-
-        pass
 
 
 
