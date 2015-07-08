@@ -356,7 +356,8 @@ class DefaultStrategy(MoveStrategy):
         return chooser
 
 
-    def strategy_group_weights(self, scheme, mover_weights=None):
+    def strategy_sortkey_weights(self, scheme, sorted_movers,
+                                 sortkey_weights, mover_weights=None):
         """
         Returns the group weights given by info in the strategy and scheme.
 
@@ -381,7 +382,7 @@ class DefaultStrategy(MoveStrategy):
                 if group in self.group_weights:
                     group_weights[group] = self.group_weights[group]
         else:
-            mover_weights = self.strategy_mover_weights(scheme)
+            mover_weights = self.strategy_mover_weights(scheme, sorted_movers)
             group_weights = {}
             for group in scheme.movers:
                 movers = scheme.movers[group]
@@ -396,50 +397,51 @@ class DefaultStrategy(MoveStrategy):
 
         return group_weights
 
-    def strategy_mover_weights(self, scheme, group_weights=None):
+    def strategy_mover_weights(self, scheme, sorted_movers, 
+                               sortkey_weights=None):
         """
         Returns the mover weights given by info in the strategy and scheme.
 
-        `group_weights` is None if either (a) scheme.choice_probability is
+        `sortkey_weights` is None if either (a) scheme.choice_probability is
         not set; or (b) self.mover_weights is set. Then we don't make use of
-        scheme.choice_probability. If given group_weights, we use
+        scheme.choice_probability. If given sortkey_weights, we use
         scheme.choice_probability to set the mover_weights.
 
         See also
         --------
         DefaultStrategy.get_weights
-        DefaultStrategy.strategy_group_weights
+        DefaultStrategy.strategy_sortkey_weights
         """
         mover_weights = {}
-        if group_weights is None:
-            for group in scheme.movers:
-                mover_weights[group] = {}
-                movers = scheme.movers[group]
+        if sortkey_weights is None:
+            for sortkey in sorted_movers:
+                mover_weights[sortkey] = {}
+                movers = sorted_movers[sortkey]
                 # set default
-                mover_weights[group] = {m.ensemble_signature : 1.0
-                                        for m in scheme.movers[group]}
-                if group in self.mover_weights:
-                    for sig in self.mover_weights[group]:
-                        mover_weights[group][sig] = self.mover_weights[group][sig]
+                mover_weights[sortkey] = {m.ensemble_signature : 1.0
+                                        for m in sorted_movers[sortkey]}
+                if sortkey in self.mover_weights:
+                    for sig in self.mover_weights[sortkey]:
+                        mover_weights[sortkey][sig] = self.mover_weights[sortkey][sig]
         else:
-            m_weights = self.strategy_mover_weights(scheme) # defaults
-            pred_choice = self.choice_probability(scheme.movers,
-                                                  group_weights, m_weights)
+            m_weights = self.strategy_mover_weights(scheme, sorted_movers) # defaults
+            pred_choice = self.choice_probability(sorted_movers,
+                                                  sortkey_weights, m_weights)
             scheme_choice = scheme.choice_probability
-            for group in scheme.movers:
-                mover_weights[group] = {
+            for sortkey in sorted_movers:
+                mover_weights[sortkey] = {
                     m.ensemble_signature : scheme_choice[m] / pred_choice[m]
-                    for m in scheme.movers[group]
+                    for m in sorted_movers[sortkey]
                 }
 
-        for group in mover_weights:
-            group_min = min(mover_weights[group].values())
-            mover_weights[group] = {s : mover_weights[group][s] / group_min
-                                    for s in mover_weights[group]}
+        for skey in mover_weights:
+            skey_min = min(mover_weights[skey].values())
+            mover_weights[skey] = {s : mover_weights[skey][s] / skey_min
+                                   for s in mover_weights[skey]}
                                         
         return mover_weights
 
-    def get_weights(self, scheme):
+    def get_weights(self, scheme, sorted_movers, preset_sortkey_weights):
         """
         Gets group_weights and mover_weights dictionaries.
 
@@ -454,27 +456,41 @@ class DefaultStrategy(MoveStrategy):
         groups/movers.
         """
         choice_prob_set = (scheme.choice_probability != {})
-        group_set = (self.group_weights != {})
+        sort_set = (preset_sortkey_weights != {})
         mover_set = (self.mover_weights != {})
-        if (group_set and mover_set) or not choice_prob_set:
-            group_weights = self.strategy_group_weights(scheme)
-            mover_weights = self.strategy_mover_weights(scheme)
-        elif group_set: #choice_prob is set; mover is not set
-            # use group_weights & choice_probability to set mover_weights
-            group_weights = self.strategy_group_weights(scheme)
-            mover_weights = self.strategy_mover_weights(scheme, group_weights)
-        elif mover_set: #choice_prob is set; group is not set
+        if (sort_set and mover_set) or not choice_prob_set:
+            sort_weights = self.strategy_sortkey_weights(
+                scheme, scheme.movers, preset_sortkey_weights
+            )
+            mover_weights = self.strategy_mover_weights(scheme,
+                                                        sorted_movers)
+        elif sort_set: #choice_prob is set; mover is not set
+            # use sort_weights & choice_probability to set mover_weights
+            sort_weights = self.strategy_sortkey_weights(
+                scheme, scheme.movers, preset_sortkey_weights
+            )
+            mover_weights = self.strategy_mover_weights(scheme,
+                                                        sorted_movers, 
+                                                        sort_weights)
+        elif mover_set: #choice_prob is set; sort is not set
             # use mover_weights & choice_probability to set group_weights
-            mover_weights = self.strategy_mover_weights(scheme)
-            group_weights = self.strategy_group_weights(scheme, mover_weights)
+            mover_weights = self.strategy_mover_weights(scheme,
+                                                        sorted_movers)
+            sort_weights = self.strategy_sortkey_weights(
+                scheme, scheme.movers, preset_sortkey_weights, mover_weights
+            )
         else: #choice_prob is set, neither group nor mover is set
             # use default mover weights to get the group weights, then use
             # that to get the actual correct mover weights
-            m_weights = self.strategy_mover_weights(scheme)
-            group_weights = self.strategy_group_weights(scheme, m_weights)
-            mover_weights = self.strategy_mover_weights(scheme, group_weights)
+            m_weights = self.strategy_mover_weights(scheme, sorted_movers)
+            sort_weights = self.strategy_sortkey_weights(
+                scheme, scheme.movers, preset_sortkey_weights, m_weights
+            )
+            mover_weights = self.strategy_mover_weights(scheme,
+                                                        sorted_movers, 
+                                                        sort_weights)
 
-        return (group_weights, mover_weights) # error if somehow undefined
+        return (sort_weights, mover_weights) # error if somehow undefined
 
 
     def choice_probability(self, sorted_movers, sorted_weights, mover_weights):
@@ -494,7 +510,11 @@ class DefaultStrategy(MoveStrategy):
         return {m : unnormed[m] / norm for m in unnormed}
 
     def make_movers(self, scheme):
-        (group_weights, mover_weights) = self.get_weights(scheme)
+        (group_weights, mover_weights) = self.get_weights(
+            scheme=scheme, 
+            sorted_movers=scheme.movers, 
+            preset_sortkey_weights=self.group_weights
+        )
         choosers = []
         for group in scheme.movers.keys():
             # care to the order of weights
@@ -563,7 +583,11 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
         # adjustments to that for mover weights). Note that all the math in
         # here will assume that ensembles are all equally likely to be
         # chosen.
-        (group_weights, mover_weights) = self.get_weights(scheme)
+        (group_weights, mover_weights) = self.get_weights(
+            scheme=scheme,
+            sorted_movers=scheme.movers, # TODO: this will change
+            preset_sortkey_weights=self.group_weights
+        )
         chooser_dict = {}
         # TODO: this still doesn't handle arbitrary differences in weights,
         # so this won't quite be correct
