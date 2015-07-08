@@ -343,15 +343,13 @@ class DefaultStrategy(MoveStrategy):
         self.group = group
         self.replace = replace
 
-    def make_chooser(self, scheme, group, weights=None, choosername=None):
+    def make_chooser(self, scheme, mover_weights, choosername):
         """
         Make RandomChoiceMover that selects mover from a move type group
         """
-        if choosername is None:
-            choosername = group.capitalize()+"Chooser"
         chooser = paths.RandomChoiceMover(
-            movers=scheme.movers[group],
-            weights=weights
+            movers=mover_weights.keys(),
+            weights=mover_weights.values()
         )
         chooser.name = choosername
         return chooser
@@ -501,8 +499,11 @@ class DefaultStrategy(MoveStrategy):
             # care to the order of weights
             ens_weights = [mover_weights[group][m.ensemble_signature]
                            for m in scheme.movers[group]]
+            weight_dict = {m : w for (m, w) in zip(scheme.movers[group],
+                                                   ens_weights)}
+            choosername = group.capitalize()+"Chooser"
             choosers.append(
-                self.make_chooser(scheme, group, weights=ens_weights)
+                self.make_chooser(scheme, weight_dict, choosername)
             )
 
         root_weights = [group_weights[group] * len(scheme.movers[group])
