@@ -548,7 +548,8 @@ class testDefaultStrategy(MoveStrategyTestSetup):
                 assert_equal(mover_weights[group][mover],
                              mover_weights[group].values()[0])
 
-        choice_prob = strategy.choice_probability(scheme, group_weights, 
+        choice_prob = strategy.choice_probability(scheme.movers, 
+                                                  group_weights,
                                                   mover_weights)
         for mover in scheme.movers['shooting']:
             assert_almost_equal(choice_prob[mover], 2.0/15.0)
@@ -610,7 +611,8 @@ class testDefaultStrategy(MoveStrategyTestSetup):
 
         (group_weights, mover_weights) = strategy.get_weights(scheme)
         scheme.choice_probability = {}
-        new_choice_prob = strategy.choice_probability(scheme, group_weights,
+        new_choice_prob = strategy.choice_probability(scheme.movers, 
+                                                      group_weights,
                                                       mover_weights)
 
         for group in scheme.movers:

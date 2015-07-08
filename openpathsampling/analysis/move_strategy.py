@@ -345,7 +345,8 @@ class DefaultStrategy(MoveStrategy):
 
     def make_chooser(self, scheme, mover_weights, choosername):
         """
-        Make RandomChoiceMover that selects mover from a move type group
+        Make RandomChoiceMover based on the movers and weights in
+        mover_weights.
         """
         chooser = paths.RandomChoiceMover(
             movers=mover_weights.keys(),
@@ -422,8 +423,8 @@ class DefaultStrategy(MoveStrategy):
                         mover_weights[group][sig] = self.mover_weights[group][sig]
         else:
             m_weights = self.strategy_mover_weights(scheme) # defaults
-            pred_choice = self.choice_probability(scheme, group_weights,
-                                                  m_weights)
+            pred_choice = self.choice_probability(scheme.movers,
+                                                  group_weights, m_weights)
             scheme_choice = scheme.choice_probability
             for group in scheme.movers:
                 mover_weights[group] = {
@@ -476,19 +477,19 @@ class DefaultStrategy(MoveStrategy):
         return (group_weights, mover_weights) # error if somehow undefined
 
 
-    def choice_probability(self, scheme, group_weights, mover_weights):
+    def choice_probability(self, sorted_movers, sorted_weights, mover_weights):
         """
         Calculates the probability of choosing to do each move.
         """
         unnormed = {}
-        group_norm = sum(group_weights.values())
-        for groupname in scheme.movers:
-            group_w = group_weights[groupname] / group_norm
-            sig_weights = mover_weights[groupname]
-            sig_norm = sum(mover_weights[groupname].values())
-            for mover in scheme.movers[groupname]:
+        sorted_norm = sum(sorted_weights.values())
+        for sortkey in sorted_movers:
+            sorted_w = sorted_weights[sortkey] / sorted_norm
+            sig_weights = mover_weights[sortkey]
+            sig_norm = sum(mover_weights[sortkey].values())
+            for mover in sorted_movers[sortkey]:
                 sig_w = sig_weights[mover.ensemble_signature] / sig_norm
-                unnormed[mover] = group_w * sig_w
+                unnormed[mover] = sorted_w * sig_w
         norm = sum(unnormed.values())
         return {m : unnormed[m] / norm for m in unnormed}
 
@@ -513,7 +514,7 @@ class DefaultStrategy(MoveStrategy):
         root_chooser.name = "RootMover"
         scheme.root_mover = root_chooser
         scheme.choice_probability = self.choice_probability(
-            scheme, group_weights, mover_weights
+            scheme.movers, group_weights, mover_weights
         )
         return root_chooser
 
@@ -577,6 +578,6 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
         root = paths.EnsembleDictionaryMover(chooser_dict)
         root.name = "RootMover"
         scheme.choice_probability = self.choice_probability(
-            scheme, group_weights, mover_weights
+            scheme.movers, group_weights, mover_weights
         )
         return root
