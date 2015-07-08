@@ -371,31 +371,36 @@ class DefaultStrategy(MoveStrategy):
         DefaultStrategy.get_weights
         DefaultStrategy.strategy_mover_weights
         """
-        group_weights = {}
+        sorted_weights = {}
         if mover_weights is None:
-            for group in scheme.movers:
+            for skey in sorted_movers:
                 try:
-                    group_weights[group] = self.default_group_weights[group]
+                    # note that since ONLY the keys in group_weight have
+                    # defaults that are other than 1, this works REGARDLESS
+                    # of the choice of sortkey!
+                    sorted_weights[skey] = self.default_group_weights[skey]
                 except KeyError:
-                    group_weights[group] = 1.0
+                    # note that this also works if the key is not a group
+                    # (e.g., if you organize by ensemble!)
+                    sorted_weights[skey] = 1.0
                 # override default
-                if group in self.group_weights:
-                    group_weights[group] = self.group_weights[group]
+                if skey in sortkey_weights:
+                    sorted_weights[skey] = sortkey_weights[skey]
         else:
             mover_weights = self.strategy_mover_weights(scheme, sorted_movers)
-            group_weights = {}
-            for group in scheme.movers:
-                movers = scheme.movers[group]
-                group_weights[group] = sum([scheme.choice_probability[m] 
+            sorted_weights = {}
+            for skey in sorted_movers:
+                movers = sorted_movers[skey]
+                sorted_weights[skey] = sum([scheme.choice_probability[m] 
                                             for m in movers])
             try:
-                normalizer = group_weights['shooting']
+                normalizer = sorted_weights['shooting']
             except KeyError:
-                normalizer = sum(group_weights.values())
-            for group in group_weights:
-                group_weights[group] /= normalizer
+                normalizer = sum(sorted_weights.values())
+            for skey in sorted_weights:
+                sorted_weights[skey] /= normalizer
 
-        return group_weights
+        return sorted_weights
 
     def strategy_mover_weights(self, scheme, sorted_movers, 
                                sortkey_weights=None):
@@ -443,7 +448,7 @@ class DefaultStrategy(MoveStrategy):
 
     def get_weights(self, scheme, sorted_movers, preset_sortkey_weights):
         """
-        Gets group_weights and mover_weights dictionaries.
+        Gets sort_weights and mover_weights dictionaries.
 
         Notes
         -----
@@ -459,38 +464,38 @@ class DefaultStrategy(MoveStrategy):
         sort_set = (preset_sortkey_weights != {})
         mover_set = (self.mover_weights != {})
         if (sort_set and mover_set) or not choice_prob_set:
-            sort_weights = self.strategy_sortkey_weights(
-                scheme, scheme.movers, preset_sortkey_weights
+            sorted_weights = self.strategy_sortkey_weights(
+                scheme, sorted_movers, preset_sortkey_weights
             )
             mover_weights = self.strategy_mover_weights(scheme,
                                                         sorted_movers)
         elif sort_set: #choice_prob is set; mover is not set
-            # use sort_weights & choice_probability to set mover_weights
-            sort_weights = self.strategy_sortkey_weights(
-                scheme, scheme.movers, preset_sortkey_weights
+            # use sorted_weights & choice_probability to set mover_weights
+            sorted_weights = self.strategy_sortkey_weights(
+                scheme, sorted_movers, preset_sortkey_weights
             )
             mover_weights = self.strategy_mover_weights(scheme,
                                                         sorted_movers, 
-                                                        sort_weights)
+                                                        sorted_weights)
         elif mover_set: #choice_prob is set; sort is not set
             # use mover_weights & choice_probability to set group_weights
             mover_weights = self.strategy_mover_weights(scheme,
                                                         sorted_movers)
-            sort_weights = self.strategy_sortkey_weights(
-                scheme, scheme.movers, preset_sortkey_weights, mover_weights
+            sorted_weights = self.strategy_sortkey_weights(
+                scheme, sorted_movers, preset_sortkey_weights, mover_weights
             )
         else: #choice_prob is set, neither group nor mover is set
             # use default mover weights to get the group weights, then use
             # that to get the actual correct mover weights
             m_weights = self.strategy_mover_weights(scheme, sorted_movers)
-            sort_weights = self.strategy_sortkey_weights(
-                scheme, scheme.movers, preset_sortkey_weights, m_weights
+            sorted_weights = self.strategy_sortkey_weights(
+                scheme, sorted_movers, preset_sortkey_weights, m_weights
             )
             mover_weights = self.strategy_mover_weights(scheme,
                                                         sorted_movers, 
-                                                        sort_weights)
+                                                        sorted_weights)
 
-        return (sort_weights, mover_weights) # error if somehow undefined
+        return (sorted_weights, mover_weights) # error if somehow undefined
 
 
     def choice_probability(self, sorted_movers, sorted_weights, mover_weights):
