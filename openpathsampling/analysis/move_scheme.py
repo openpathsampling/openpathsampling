@@ -186,6 +186,10 @@ class MoveScheme(OPSNamed):
         """
         All ensembles which exist in the move scheme but not in the network.
 
+        Hidden ensembles are typically helper ensembles for moves; for
+        example, the minus move uses a "segment" helper ensemble which is
+        almost, but not quite, the innermost interface ensemble.
+
         Parameters
         ----------
         root : PathMover
@@ -207,6 +211,10 @@ class MoveScheme(OPSNamed):
         """
         All ensembles which exist in the network but not in the move scheme.
 
+        Not all move schemes will use all the ensembles. For example, a move
+        scheme might choose not to use the network's automatically generated
+        minus ensemble or multistate ensemble.
+
         Parameters
         ----------
         root : PathMover
@@ -223,6 +231,16 @@ class MoveScheme(OPSNamed):
         mover_ensembles = set(self.ensembles_for_move_tree(root))
         unused_ensembles = unhidden_ensembles - mover_ensembles
         return unused_ensembles
+
+    def find_used_ensembles(self, root=None):
+        """
+        All ensembles which are both in the network and in the move scheme.
+
+        """
+        unhidden_ensembles = set(self.network.all_ensembles)
+        mover_ensembles = set(self.ensembles_for_move_tree(root))
+        used_ensembles = unhidden_ensembles & mover_ensembles
+        return used_ensembles
 
     def check_for_root(self, fcn_name):
         """

@@ -402,6 +402,9 @@ class DefaultStrategy(MoveStrategy):
 
         return sorted_weights
 
+    def _mover_key(self, mover, scheme):
+        return mover.ensemble_signature
+
     def strategy_mover_weights(self, scheme, sorted_movers, 
                                sortkey_weights=None):
         """
@@ -423,19 +426,19 @@ class DefaultStrategy(MoveStrategy):
                 mover_weights[sortkey] = {}
                 movers = sorted_movers[sortkey]
                 # set default
-                mover_weights[sortkey] = {m.ensemble_signature : 1.0
-                                        for m in sorted_movers[sortkey]}
+                mover_weights[sortkey] = {self._mover_key(m, scheme): 1.0
+                                          for m in sorted_movers[sortkey]}
                 if sortkey in self.mover_weights:
                     for sig in self.mover_weights[sortkey]:
                         mover_weights[sortkey][sig] = self.mover_weights[sortkey][sig]
         else:
             m_weights = self.strategy_mover_weights(scheme, sorted_movers) # defaults
-            pred_choice = self.choice_probability(sorted_movers,
+            pred_choice = self.choice_probability(scheme, sorted_movers,
                                                   sortkey_weights, m_weights)
             scheme_choice = scheme.choice_probability
             for sortkey in sorted_movers:
                 mover_weights[sortkey] = {
-                    m.ensemble_signature : scheme_choice[m] / pred_choice[m]
+                    self._mover_key(m, scheme) : scheme_choice[m]/pred_choice[m]
                     for m in sorted_movers[sortkey]
                 }
 
@@ -498,7 +501,8 @@ class DefaultStrategy(MoveStrategy):
         return (sorted_weights, mover_weights) # error if somehow undefined
 
 
-    def choice_probability(self, sorted_movers, sorted_weights, mover_weights):
+    def choice_probability(self, scheme, sorted_movers, sorted_weights, 
+                           mover_weights):
         """
         Calculates the probability of choosing to do each move.
         """
@@ -509,7 +513,7 @@ class DefaultStrategy(MoveStrategy):
             sig_weights = mover_weights[sortkey]
             sig_norm = sum(mover_weights[sortkey].values())
             for mover in sorted_movers[sortkey]:
-                sig_w = sig_weights[mover.ensemble_signature] / sig_norm
+                sig_w = sig_weights[self._mover_key(mover, scheme)] / sig_norm
                 unnormed[mover] = sorted_w * sig_w
         norm = sum(unnormed.values())
         return {m : unnormed[m] / norm for m in unnormed}
@@ -523,7 +527,7 @@ class DefaultStrategy(MoveStrategy):
         choosers = []
         for group in scheme.movers.keys():
             # care to the order of weights
-            ens_weights = [mover_weights[group][m.ensemble_signature]
+            ens_weights = [mover_weights[group][self._mover_key(m, scheme)]
                            for m in scheme.movers[group]]
             weight_dict = {m : w for (m, w) in zip(scheme.movers[group],
                                                    ens_weights)}
@@ -539,7 +543,7 @@ class DefaultStrategy(MoveStrategy):
         root_chooser.name = "RootMover"
         scheme.root_mover = root_chooser
         scheme.choice_probability = self.choice_probability(
-            scheme.movers, group_weights, mover_weights
+            scheme, scheme.movers, group_weights, mover_weights
         )
         return root_chooser
 
@@ -557,56 +561,42 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
             ensembles=ensembles, group=group, replace=replace
         )
         self.mover_weights = {}
-        self.group_weights = {}
+        self.ensemble_weights = {}
 
-    def make_chooser(self, scheme, ensemble, weights=None, choosername=None):
-        if choosername is None:
-            choosername = ensemble.name.capitalize() + "Chooser"
-        movers = []
-        for group in scheme.movers:
-            ens_movers = [m for m in scheme.movers[group]
-                          if ensemble in m.input_ensembles]
-            # take [0] since, as MacLeod says: There can be only one!
-            try:
-                movers.append(ens_movers[0])
-            except IndexError:
-                pass
-            #movers.append([m for m in scheme.movers[group] 
-                           #if ensemble in m.input_ensembles][0])
-        final_weights = [w / len(m.input_ensembles) 
-                         for (m, w) in zip(movers, weights)]
-        chooser = paths.RandomChoiceMover(
-            movers=movers,
-            weights=final_weights
-        )
-        chooser.name = choosername
-        return chooser
+    def _mover_key(self, mover, scheme):
+        # take first, because as MacLeod says, "there can be only one!"
+        try:
+            group = [g for g in scheme.movers if mover in scheme.movers[g]][0]
+        except IndexError:
+            print mover
+
+        return (group, mover.ensemble_signature)
 
     def make_movers(self, scheme):
-        network = scheme.network
-        # we still prefer to think in terms of group weights (and
-        # adjustments to that for mover weights). Note that all the math in
-        # here will assume that ensembles are all equally likely to be
-        # chosen.
-        (group_weights, mover_weights) = self.get_weights(
+        all_movers = []
+        for g in scheme.movers:
+            all_movers.extend(scheme.movers[g])
+
+        # ensemble_movers is used in the same way as scheme.movers in the
+        # standard organization strategy
+        ensemble_movers = {}
+        for mover in all_movers:
+            for inp_ens in mover.input_ensembles:
+                try:
+                    ensemble_movers[inp_ens].append(mover)
+                except KeyError:
+                    ensemble_movers[inp_ens] = [mover]
+
+        (ensemble_weights, mover_weights) = self.get_weights(
             scheme=scheme,
-            sorted_movers=scheme.movers, # TODO: this will change
-            preset_sortkey_weights=self.group_weights
+            sorted_movers=ensemble_movers, # TODO: this will change
+            preset_sortkey_weights=self.ensemble_weights
         )
-        chooser_dict = {}
-        # TODO: this still doesn't handle arbitrary differences in weights,
-        # so this won't quite be correct
-        for ens in scheme.network.all_ensembles:
-            weights = [group_weights[g] for g in scheme.movers]
-            ens_chooser = self.make_chooser(
-                scheme=scheme, 
-                ensemble=ens, 
-                weights=weights
-            )
-            chooser_dict[ens] = ens_chooser
-        root = paths.EnsembleDictionaryMover(chooser_dict)
-        root.name = "RootMover"
-        scheme.choice_probability = self.choice_probability(
-            scheme.movers, group_weights, mover_weights
-        )
-        return root
+        for ens in mover_weights:
+            for mover_key in mover_weights[ens]:
+                n_inp = len(mover_key[1][0])
+                mover_weights[ens][mover_key] /= n_inp
+        for ens in mover_weights:
+            print "====", ens.name
+            print mover_weights[ens]
+        #return root
