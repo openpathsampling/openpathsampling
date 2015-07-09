@@ -8,6 +8,8 @@ from openpathsampling.analysis.move_scheme import MoveScheme
 from openpathsampling.analysis.move_strategy import *
 from openpathsampling import VolumeFactory as vf
 
+import collections
+
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
@@ -289,9 +291,24 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         strategy = OrganizeByEnsembleStrategy()
         root = strategy.make_movers(scheme)
 
-        assert_equal(root.weights, [1.0]*4)
+        assert_equal(collections.Counter(root.weights), 
+                     collections.Counter([0.5, 2.5, 3.0, 3.0]))
+        for mover in root.movers:
+            weights_count = collections.Counter(mover.weights)
 
+            if len(mover.weights) == 1: # minus
+                assert_equal(weights_count,
+                             collections.Counter({ 0.5 : 1}))
+            elif len(mover.weights) == 3: # outermost
+                assert_equal(weights_count, 
+                             collections.Counter({ 0.5 : 1, 1.0 : 2}))
+            elif len(mover.weights) == 4:
+                assert_equal(weights_count, 
+                             collections.Counter({ 0.5 : 2, 1.0 : 2}))
 
+        for mover in scheme.choice_probability:
+            assert_almost_equal(scheme.choice_probability[mover], 1.0/9.0)
+                
         raise SkipTest
 
 

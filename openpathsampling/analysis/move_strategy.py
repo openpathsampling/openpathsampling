@@ -514,7 +514,11 @@ class DefaultStrategy(MoveStrategy):
             sig_norm = sum(mover_weights[sortkey].values())
             for mover in sorted_movers[sortkey]:
                 sig_w = sig_weights[self._mover_key(mover, scheme)] / sig_norm
-                unnormed[mover] = sorted_w * sig_w
+                try:
+                    unnormed[mover] += sorted_w * sig_w
+                except KeyError:
+                    unnormed[mover] = sorted_w * sig_w
+
         norm = sum(unnormed.values())
         return {m : unnormed[m] / norm for m in unnormed}
 
@@ -607,15 +611,19 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
                 self.make_chooser(scheme, weight_dict, choosername)
             )
         
-        # unlike other org strat, we really want the given ensemble choice
-        # probability to be exactly what we gave
-        root_weights = [ensemble_weights[ens] for ens in ensemble_movers]
+        # this sum, among other things, ensure that the prob of selecting an
+        # ensemble hop stays the same
+        corrected_ensemble_weights = {
+            e : ensemble_weights[e] * sum(mover_weights[e].values())
+            for e in ensemble_movers
+        }
+        root_weights = [corrected_ensemble_weights[e] for e in ensemble_movers]
         root_chooser = paths.RandomChoiceMover(movers=choosers,
                                                weights=root_weights)
         root_chooser.name = "RootMover"
         scheme.root_mover = root_chooser
         scheme.choice_probability = self.choice_probability(
-            scheme, ensemble_movers, ensemble_weights, mover_weights
+            scheme, ensemble_movers, corrected_ensemble_weights, mover_weights
         )
         return root_chooser
 
