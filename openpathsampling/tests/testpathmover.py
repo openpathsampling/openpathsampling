@@ -418,8 +418,6 @@ class testEnsembleDictionaryMover(object):
         ens_dict = {self.ens1 : self.pathrev, self.ens2 : self.shooter}
         self.mover = EnsembleDictionaryMover(ens_dict)
 
-        self.op = op # temp
-
     def test_move_single_replica(self):
         sampleset = SampleSet([self.samp1])
         change = self.mover.move(sampleset)
@@ -461,7 +459,29 @@ class testEnsembleDictionaryMover(object):
 
 
     def test_move_multiple_replicas_weighted_ensembles(self):
-        raise SkipTest
+        sampleset = SampleSet([self.samp1, self.samp2])
+        ens_dict = {self.ens1 : self.pathrev, self.ens2 : self.shooter}
+        weighted_mover = EnsembleDictionaryMover(ens_dict, [1.0, 2.0])
+        count = {}
+        for i in range(100):
+            change = self.mover.move(sampleset)
+            subchange = change.subchange
+            assert_equal(change.accepted, True)
+            assert_equal(subchange.accepted, True)
+            assert_equal(len(subchange.samples), 1)
+            ens = subchange.trials[0].ensemble
+            try:
+                count[ens] += 1
+            except KeyError:
+                count[ens] = 1
+            if ens == self.ens1:
+                assert_equal(subchange.mover, self.pathrev)
+            elif ens == self.ens2:
+                assert_equal(subchange.mover, self.shooter)
+            else:
+                raise AssertionError("Resulting mover unknown!")
+        assert_equal(set(count.keys()), set([self.ens1, self.ens2]))
+        assert(count[self.ens1] < count[self.ens2])
 
 
 class testSequentialMover(object):
