@@ -31,7 +31,7 @@ class StrategyLevels(LevelLabels):
         else:
             return levels[indices[0]]
 
-# possible rename to make available as paths.stategy_levels?
+# possible rename to make available as paths.strategy_levels?
 levels = StrategyLevels(
     SIGNATURE=10,
     MOVER=30,
@@ -536,6 +536,7 @@ class DefaultStrategy(MoveStrategy):
                 self.make_chooser(scheme, weight_dict, choosername)
             )
 
+        # TODO: should this be len or sum?
         root_weights = [group_weights[group] * len(scheme.movers[group])
                         for group in scheme.movers]
         root_chooser = paths.RandomChoiceMover(movers=choosers,
@@ -596,7 +597,31 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
             for mover_key in mover_weights[ens]:
                 n_inp = len(mover_key[1][0])
                 mover_weights[ens][mover_key] /= n_inp
+
+        choosers = []
         for ens in mover_weights:
-            print "====", ens.name
-            print mover_weights[ens]
+            weight_dict = {m : mover_weights[ens][self._mover_key(m, scheme)]
+                           for m in ensemble_movers[ens]}
+            choosername = ens.name.capitalize() + " Chooser"
+            choosers.append(
+                self.make_chooser(scheme, weight_dict, choosername)
+            )
+        
+        # unlike other org strat, we really want the given ensemble choice
+        # probability to be exactly what we gave
+        root_weights = [ensemble_weights[ens] for ens in ensemble_movers]
+        root_chooser = paths.RandomChoiceMover(movers=choosers,
+                                               weights=root_weights)
+        root_chooser.name = "RootMover"
+        scheme.root_mover = root_chooser
+        scheme.choice_probability = self.choice_probability(
+            scheme, ensemble_movers, ensemble_weights, mover_weights
+        )
+        return root_chooser
+
+
+        #for ens in mover_weights:
+            #print "====", ens.name
+            #print mover_weights[ens]
+            #print ensemble_movers[ens]
         #return root

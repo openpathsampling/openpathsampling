@@ -289,6 +289,8 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         strategy = OrganizeByEnsembleStrategy()
         root = strategy.make_movers(scheme)
 
+        assert_equal(root.weights, [1.0]*4)
+
 
         raise SkipTest
 
