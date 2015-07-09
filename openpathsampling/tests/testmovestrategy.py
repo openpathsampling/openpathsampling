@@ -262,7 +262,8 @@ class testMinusMoveStrategy(MoveStrategyTestSetup):
 
 
 class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
-    def test_make_movers(self):
+    def setup(self):
+        super(testOrganizeByEnsembleStrategy, self).setup()
         scheme = MoveScheme(self.network)
         scheme.movers = {} # handles LEGACY stuff
         ens0 = self.network.sampling_transitions[0].ensembles[0]
@@ -287,13 +288,18 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
             minus_ensemble=self.network.minus_ensembles[0],
             innermost_ensembles=[ens0]
         )]
+        self.scheme = scheme
 
+    def test_make_movers(self):
+        scheme = self.scheme
         strategy = OrganizeByEnsembleStrategy()
         root = strategy.make_movers(scheme)
 
-        assert_equal(collections.Counter(root.weights), 
+        choosers = root.movers
+        chooser_weights = root.weights
+        assert_equal(collections.Counter(chooser_weights), 
                      collections.Counter([0.5, 2.5, 3.0, 3.0]))
-        for mover in root.movers:
+        for mover in choosers:
             weights_count = collections.Counter(mover.weights)
 
             if len(mover.weights) == 1: # minus
@@ -308,9 +314,16 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
 
         for mover in scheme.choice_probability:
             assert_almost_equal(scheme.choice_probability[mover], 1.0/9.0)
-                
+
+    def test_make_movers_light_minus(self):
         raise SkipTest
 
+    def test_make_mover_light_minus_and_minus_partner(self):
+        raise SkipTest
+
+    def test_make_movers_preserves_default_choice_prob(self):
+        raise SkipTest
+                
 
 class testDefaultStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):

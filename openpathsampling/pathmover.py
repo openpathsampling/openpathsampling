@@ -1270,16 +1270,20 @@ class RandomChoiceMover(PathMover):
 
 class EnsembleDictionaryMover(PathMover):
     """
-    Selects random sample and picks which move to do based its ensemble.
+    Selects random ensemble and chooses a move based on that.
 
 
     """
-    def __init__(self, ensemble_to_mover_dict):
+    def __init__(self, ensemble_to_mover_dict, weights=None):
         ensembles = ensemble_to_mover_dict.keys()
         super(EnsembleDictionaryMover, self).__init__(ensembles=ensembles)
 
         self.movers = ensemble_to_mover_dict.values()
         self.ensemble_to_mover_dict = ensemble_to_mover_dict
+        if weights is None:
+            self.weights = [1.0]*len(ensembles)
+        else:
+            self.weights = weights
 
     @property
     def submovers(self):
@@ -1304,7 +1308,27 @@ class EnsembleDictionaryMover(PathMover):
         return [ sub.output_ensembles for sub in self.submovers ]
 
     def move(self, globalstate):
-        samp = random.choice(globalstate.samples)
+        # reweights is self.weights masked to be nonzero only for ensembles 
+        # in the globalstate
+        reweights = []
+        gs_ensemble_list = globalstate.ensemble_list()
+        for i in range(len(self.ensembles)):
+            if self.ensembles[i] in gs_ensemble_list:
+                reweights.append(self.weights[i])
+            else:
+                reweights.append(0.0)
+
+        rand = np.random.random() * sum(reweights)
+        idx = 0
+        prob = reweights[0]
+        while prob <= rand and idx < len(reweights):
+            idx += 1
+            prob += reweights[idx]
+
+        ensemble = self.ensembles[idx]
+        logger.debug("idx: " + str(idx) + " | ens: " + repr(ensemble))
+        samp = globalstate[ensemble]
+
         submove = self.ensemble_to_mover_dict[samp.ensemble]
         subset = paths.SampleSet([samp])
         logger_str = "{name} (EnsembleDictionaryMover) selecting {m} (ensemble {ens})"

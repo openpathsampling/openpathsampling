@@ -460,6 +460,10 @@ class testEnsembleDictionaryMover(object):
         assert_equal(set(count.keys()), set([self.ens1, self.ens2]))
 
 
+    def test_move_multiple_replicas_weighted_ensembles(self):
+        raise SkipTest
+
+
 class testSequentialMover(object):
     def setup(self):
         traj = Trajectory([-0.5, 0.7, 1.1])
