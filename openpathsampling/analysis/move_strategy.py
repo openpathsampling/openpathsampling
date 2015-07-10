@@ -355,6 +355,9 @@ class DefaultStrategy(MoveStrategy):
         chooser.name = choosername
         return chooser
 
+    def normalization_basis(self, scheme):
+        return scheme.movers['shooting'][0]
+
 
     def strategy_sortkey_weights(self, scheme, sorted_movers,
                                  sortkey_weights, mover_weights=None):
@@ -393,13 +396,24 @@ class DefaultStrategy(MoveStrategy):
                 movers = sorted_movers[skey]
                 sorted_weights[skey] = sum([scheme.choice_probability[m] 
                                             for m in movers])
-            try:
-                normalizer = sorted_weights['shooting']
-            except KeyError:
-                normalizer = sum(sorted_weights.values())
-            for skey in sorted_weights:
-                sorted_weights[skey] /= normalizer
+            sorted_weights = self.normalize_sorted_weights(scheme, 
+                                                           sorted_movers,
+                                                           sorted_weights)
 
+        return sorted_weights
+
+    def normalize_sorted_weights(self, scheme, sorted_movers, sorted_weights):
+        try:
+            normalization_basis = self.normalization_basis(scheme)
+        except KeyError:
+            normalizer = sum(sorted_weights.values())
+        else:
+            for skey in sorted_movers:
+                if normalization_basis in sorted_movers[skey]:
+                    normalizer = sorted_weights[skey]
+
+        for skey in sorted_weights:
+            sorted_weights[skey] /= normalizer
         return sorted_weights
 
     def _mover_key(self, mover, scheme):
@@ -442,12 +456,32 @@ class DefaultStrategy(MoveStrategy):
                     for m in sorted_movers[sortkey]
                 }
 
-        for skey in mover_weights:
-            skey_min = min(mover_weights[skey].values())
-            mover_weights[skey] = {s : mover_weights[skey][s] / skey_min
-                                   for s in mover_weights[skey]}
-                                        
+        mover_weights = self.normalize_mover_weights(scheme, sorted_movers,
+                                                     mover_weights)
+
         return mover_weights
+
+
+    def normalize_mover_weights(self, scheme, sorted_movers, mover_weights):
+        for skey in mover_weights:
+            default_norm = mover_weights[skey].values()[0]
+            try:
+                normalization_basis = self.normalization_basis(scheme)
+            except KeyError:
+                normalization = default_norm
+            else:
+                norm_key = self._mover_key(normalization_basis, scheme)
+                if normalization_basis in sorted_movers[skey]:
+                    normalization = mover_weights[skey][norm_key]
+                else:
+                    normalization = default_norm
+
+            mover_weights[skey] = {
+                s : mover_weights[skey][s] / normalization
+                for s in mover_weights[skey]
+            }
+        return mover_weights
+
 
     def get_weights(self, scheme, sorted_movers, preset_sortkey_weights):
         """
@@ -570,11 +604,7 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
 
     def _mover_key(self, mover, scheme):
         # take first, because as MacLeod says, "there can be only one!"
-        try:
-            group = [g for g in scheme.movers if mover in scheme.movers[g]][0]
-        except IndexError:
-            print mover
-
+        group = [g for g in scheme.movers if mover in scheme.movers[g]][0]
         return (group, mover.ensemble_signature)
 
     def make_movers(self, scheme):
@@ -594,7 +624,7 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
 
         (ensemble_weights, mover_weights) = self.get_weights(
             scheme=scheme,
-            sorted_movers=ensemble_movers, # TODO: this will change
+            sorted_movers=ensemble_movers, 
             preset_sortkey_weights=self.ensemble_weights
         )
         for ens in mover_weights:

@@ -338,8 +338,24 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         minus =  scheme.network.special_ensembles['minus'].keys()[0]
         minus_trans = scheme.network.special_ensembles['minus'][minus][0]
         innermost = minus_trans.ensembles[0]
-        strategy.mover_weights[minus] = { ('minus', ((minus, innermost),
-                                                     (minus, innermost))) }
+        minus_key = ('minus', ((minus, innermost), (minus, innermost)))  
+        strategy.mover_weights[minus] = { minus_key : 0.25 }
+        strategy.mover_weights[innermost] = { minus_key : 0.25 }
+
+        root = strategy.make_movers(scheme)
+
+        choosers = root.movers
+        chooser_weights = root.weights
+        print chooser_weights
+        for chooser in choosers:
+            print chooser.name, chooser.weights
+            print chooser.movers
+
+        print scheme.choice_probability
+
+        #assert_equal(collections.Counter(chooser_weights),
+                     #collections.Counter([0.25, 2.5, 2.75, 3.0]))
+
         raise SkipTest
 
     def test_make_movers_preserves_default_choice_prob(self):
@@ -524,7 +540,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
 
         strategy.group_weights['repex'] = 3.0
         strategy.mover_weights['shooting'] = {} #sadly, can't safely avoid 
-        strategy.mover_weights['shooting'][((ensA,), (ensA,))] = 2.0
+        strategy.mover_weights['shooting'][ensA_sig]= 2.0
 
         (group_weights, mover_weights) = strategy.get_weights(
             scheme=scheme,
@@ -540,7 +556,9 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             for mover in scheme.movers[group]:
                 sig = mover.ensemble_signature
                 if group == 'shooting' and sig == ensA_sig:
-                    expected_mover_weights[group][sig] = 2.0
+                    expected_mover_weights[group][sig] = 1.0
+                elif group == 'shooting':
+                    expected_mover_weights[group][sig] = 0.5
                 else:
                     expected_mover_weights[group][sig] = 1.0
 
@@ -556,7 +574,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         new_shooter_ensA = [m for m in scheme.movers['shooting'] 
                             if m.ensemble_signature == ensA_sig][0]
         shooter_ensA_idx = new_shoot_chooser.movers.index(new_shooter_ensA)
-        assert_equal(new_shoot_chooser.weights[shooter_ensA_idx], 2.0)
+        assert_equal(new_shoot_chooser.weights[shooter_ensA_idx], 1.0)
 
         assert_not_equal(new_choice_probability, old_choice_probability)
 
@@ -634,11 +652,12 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         )
         #root = scheme.move_decision_tree(rebuild=True) 
 
+        # we always normalize to so that shooting for ensA is 1.0
         for sig in mover_weights['shooting']:
             if sig == ensA_sig:
-                assert_equal(mover_weights['shooting'][sig], 2.0)
-            else:
                 assert_equal(mover_weights['shooting'][sig], 1.0)
+            else:
+                assert_equal(mover_weights['shooting'][sig], 0.5)
 
         assert_almost_equal(group_weights['shooting'], 1.0)
         assert_almost_equal(group_weights['repex'], 3.0)
@@ -691,6 +710,16 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             assert_almost_equal(group_weights[group],
                                 old_group_weights[group])
 
+        #print new_choice_prob
+        for (old, new) in zip(old_mover_weights.keys(), mover_weights.keys()):
+            print old, new
+            try:
+                assert_equal(old_mover_weights[old], mover_weights[new])
+        
+            except AssertionError:
+                print old_mover_weights[old]
+                print mover_weights[new]
+                raise
         assert_equal(old_mover_weights, mover_weights)
 
     def test_get_weights_mover_weights_set_no_shooting(self):
