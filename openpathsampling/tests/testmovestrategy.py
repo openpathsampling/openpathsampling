@@ -4,7 +4,7 @@ from nose.plugins.skip import Skip, SkipTest
 from test_helpers import true_func, assert_equal_array_array, make_1d_traj
 
 import openpathsampling as paths
-from openpathsampling.analysis.move_scheme import MoveScheme
+from openpathsampling.analysis.move_scheme import MoveScheme, DefaultScheme
 from openpathsampling.analysis.move_strategy import *
 from openpathsampling import VolumeFactory as vf
 
@@ -338,13 +338,13 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
     def test_make_mover_light_minus_and_minus_partner(self):
         scheme = self.scheme
         strategy = OrganizeByEnsembleStrategy()
-        minus =  scheme.network.special_ensembles['minus'].keys()[0]
-        minus_trans = scheme.network.special_ensembles['minus'][minus][0]
-        innermost = minus_trans.ensembles[0]
-        minus_key = ('minus', ((minus, innermost), (minus, innermost)))  
+        minus_mover = scheme.movers['minus'][0]
+        minus_ensemble = minus_mover.minus_ensemble
+        innermost_ensemble = minus_mover.innermost_ensemble
+        minus_key = strategy._mover_key(scheme.movers['minus'][0], scheme)
         # this has no effect: minus mover is only move in minus ens
-        strategy.mover_weights[minus] = { minus_key : 0.5 }
-        strategy.mover_weights[innermost] = { minus_key : 0.5 }
+        strategy.mover_weights[minus_ensemble] = { minus_key : 0.5 }
+        strategy.mover_weights[innermost_ensemble] = { minus_key : 0.5 }
         # note that if you really want to reduce the probability of the
         # specific move, it might be best to do that within
         # scheme.choice_probability
@@ -361,12 +361,24 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
 
         for mover in scheme.choice_probability:
             if strategy._mover_key(mover, scheme) == minus_key:
-                assert_equal(scheme.choice_probability[mover], 0.75/8.75)
+                assert_almost_equal(scheme.choice_probability[mover], 0.75/8.75)
             else:
-                assert_equal(scheme.choice_probability[mover], 1.0/8.75)
+                assert_almost_equal(scheme.choice_probability[mover], 1.0/8.75)
 
+    def test_make_mover_rebuild_choice_probability(self):
+        raise SkipTest
 
     def test_make_movers_preserves_default_choice_prob(self):
+        scheme1 = DefaultScheme(self.network)
+        scheme1.movers = {} # handles LEGACY stuff
+        scheme1.append(OrganizeByEnsembleStrategy())
+        root1 = scheme1.move_decision_tree()
+
+        scheme2 = DefaultScheme(self.network)
+        root2 = scheme2.move_decision_tree()
+
+        print scheme1.choice_probability
+
         raise SkipTest
                 
 
@@ -760,10 +772,12 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             preset_sortkey_weights=strategy.group_weights
         )
         for sig in mover_weights['pathreversal']:
+            weight_sigA = mover_weights['pathreversal'][ensA_sig]
+            ratio = mover_weights['pathreversal'][sig] / weight_sigA
             if sig == ensA_sig:
-                assert_equal(mover_weights['pathreversal'][sig], 2.0)
+                assert_equal(ratio, 1.0)
             else:
-                assert_equal(mover_weights['pathreversal'][sig], 1.0)
+                assert_equal(ratio, 0.5)
 
         assert_almost_equal(group_weights['pathreversal'], 0.25)
         assert_almost_equal(group_weights['repex'], 0.75)
