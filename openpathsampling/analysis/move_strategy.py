@@ -627,9 +627,3 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
         )
         return root_chooser
 
-
-        #for ens in mover_weights:
-            #print "====", ens.name
-            #print mover_weights[ens]
-            #print ensemble_movers[ens]
-        #return root

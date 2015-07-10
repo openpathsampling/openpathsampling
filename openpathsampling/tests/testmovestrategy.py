@@ -303,8 +303,7 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
             weights_count = collections.Counter(mover.weights)
 
             if len(mover.weights) == 1: # minus
-                assert_equal(weights_count,
-                             collections.Counter({ 0.5 : 1}))
+                assert_equal(weights_count, collections.Counter({ 0.5 : 1}))
             elif len(mover.weights) == 3: # outermost
                 assert_equal(weights_count, 
                              collections.Counter({ 0.5 : 1, 1.0 : 2}))
@@ -315,10 +314,32 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         for mover in scheme.choice_probability:
             assert_almost_equal(scheme.choice_probability[mover], 1.0/9.0)
 
-    def test_make_movers_light_minus(self):
-        raise SkipTest
+    def test_make_movers_light_minus_ensemble(self):
+        scheme = self.scheme
+        strategy = OrganizeByEnsembleStrategy()
+        minus =  scheme.network.special_ensembles['minus'].keys()[0]
+        strategy.ensemble_weights[minus] = 0.5
+        root = strategy.make_movers(scheme)
+
+        choosers = root.movers
+        chooser_weights = root.weights
+        assert_equal(collections.Counter(chooser_weights),
+                     collections.Counter([0.25, 2.5, 3.0, 3.0]))
+        for mover in scheme.choice_probability:
+            if minus in mover.input_ensembles:
+                assert_equal(scheme.choice_probability[mover], 0.75/8.75)
+            else:
+                assert_equal(scheme.choice_probability[mover], 1.0/8.75)
+
 
     def test_make_mover_light_minus_and_minus_partner(self):
+        scheme = self.scheme
+        strategy = OrganizeByEnsembleStrategy()
+        minus =  scheme.network.special_ensembles['minus'].keys()[0]
+        minus_trans = scheme.network.special_ensembles['minus'][minus][0]
+        innermost = minus_trans.ensembles[0]
+        strategy.mover_weights[minus] = { ('minus', ((minus, innermost),
+                                                     (minus, innermost))) }
         raise SkipTest
 
     def test_make_movers_preserves_default_choice_prob(self):
