@@ -299,17 +299,20 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         chooser_weights = root.weights
         assert_equal(collections.Counter(chooser_weights), 
                      collections.Counter([0.5, 2.5, 3.0, 3.0]))
-        for mover in choosers:
+        for (mover, w) in zip(choosers, chooser_weights):
             weights_count = collections.Counter(mover.weights)
 
             if len(mover.weights) == 1: # minus
                 assert_equal(weights_count, collections.Counter({ 0.5 : 1}))
+                assert_equal(w, 0.5)
             elif len(mover.weights) == 3: # outermost
                 assert_equal(weights_count, 
                              collections.Counter({ 0.5 : 1, 1.0 : 2}))
+                assert_equal(w, 2.5)
             elif len(mover.weights) == 4:
                 assert_equal(weights_count, 
                              collections.Counter({ 0.5 : 2, 1.0 : 2}))
+                assert_equal(w, 3.0)
 
         for mover in scheme.choice_probability:
             assert_almost_equal(scheme.choice_probability[mover], 1.0/9.0)
@@ -339,24 +342,29 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         minus_trans = scheme.network.special_ensembles['minus'][minus][0]
         innermost = minus_trans.ensembles[0]
         minus_key = ('minus', ((minus, innermost), (minus, innermost)))  
-        strategy.mover_weights[minus] = { minus_key : 0.25 }
-        strategy.mover_weights[innermost] = { minus_key : 0.25 }
+        # this has no effect: minus mover is only move in minus ens
+        strategy.mover_weights[minus] = { minus_key : 0.5 }
+        strategy.mover_weights[innermost] = { minus_key : 0.5 }
+        # note that if you really want to reduce the probability of the
+        # specific move, it might be best to do that within
+        # scheme.choice_probability
 
         root = strategy.make_movers(scheme)
 
         choosers = root.movers
         chooser_weights = root.weights
-        print chooser_weights
-        for chooser in choosers:
-            print chooser.name, chooser.weights
-            print chooser.movers
+        for (chooser, w) in zip(choosers, chooser_weights):
+            assert_almost_equal(sum(chooser.weights), w)
 
-        print scheme.choice_probability
+        assert_equal(collections.Counter(chooser_weights),
+                     collections.Counter([0.5, 2.5, 2.75, 3.0]))
 
-        #assert_equal(collections.Counter(chooser_weights),
-                     #collections.Counter([0.25, 2.5, 2.75, 3.0]))
+        for mover in scheme.choice_probability:
+            if strategy._mover_key(mover, scheme) == minus_key:
+                assert_equal(scheme.choice_probability[mover], 0.75/8.75)
+            else:
+                assert_equal(scheme.choice_probability[mover], 1.0/8.75)
 
-        raise SkipTest
 
     def test_make_movers_preserves_default_choice_prob(self):
         raise SkipTest

@@ -627,13 +627,15 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
             sorted_movers=ensemble_movers, 
             preset_sortkey_weights=self.ensemble_weights
         )
-        for ens in mover_weights:
+        ens_list = mover_weights.keys() # used for canonical ordering
+        # (otherwise the weight list isn't in the same order as choosers!)
+        for ens in ens_list:
             for mover_key in mover_weights[ens]:
                 n_inp = len(mover_key[1][0])
                 mover_weights[ens][mover_key] /= n_inp
 
         choosers = []
-        for ens in mover_weights:
+        for ens in ens_list:
             weight_dict = {m : mover_weights[ens][self._mover_key(m, scheme)]
                            for m in ensemble_movers[ens]}
             choosername = ens.name.capitalize() + " Chooser"
@@ -645,9 +647,9 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
         # ensemble hop stays the same
         corrected_ensemble_weights = {
             e : ensemble_weights[e] * sum(mover_weights[e].values())
-            for e in ensemble_movers
+            for e in ens_list
         }
-        root_weights = [corrected_ensemble_weights[e] for e in ensemble_movers]
+        root_weights = [corrected_ensemble_weights[e] for e in ens_list]
         root_chooser = paths.RandomChoiceMover(movers=choosers,
                                                weights=root_weights)
         root_chooser.name = "RootMover"
