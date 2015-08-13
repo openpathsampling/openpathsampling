@@ -134,11 +134,15 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
         if self.has_fnc:
             eval_single = True
             value_single = None
+
             eval_list = True
             value_list = None
+
             eval_multi = True
             value_multi = None
+
             fnc_uses_lists = None
+
             try:
                 # try use single item
                 value_single = self._eval(template)
@@ -161,6 +165,7 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
                 # who knows what happened (after loading), since we
                 # cannot use the function we disable the function
                 self.has_fnc = False
+                raise ValueError('Passed Function cannot be evaluated !')
                 pass
 
             if eval_list is not False and eval_multi is not False:
@@ -447,6 +452,10 @@ class CV_Function(CollectiveVariable):
         We will also check if non-standard modules are imported, which are now
         numpy, math, msmbuilder, pandas and mdtraj
         """
+
+        self.callable_fcn = fcn
+        self.kwargs = kwargs
+
         super(CV_Function, self).__init__(
             name,
             template=template,
@@ -454,8 +463,6 @@ class CV_Function(CollectiveVariable):
             store_cache=store_cache,
             fnc_uses_lists=fnc_uses_lists
         )
-        self.callable_fcn = fcn
-        self.kwargs = kwargs
 
     @staticmethod
     def _find_var(code, op):
@@ -529,9 +536,10 @@ class CV_Function(CollectiveVariable):
         return {
             'name': self.name,
             'fcn': fcn,
+            'template':  self.template,
             'dimensions': self.dimensions,
             'kwargs': self.kwargs,
-            'store_cache' : self.store_cache
+            'store_cache': self.store_cache
         }
 
     @classmethod
@@ -551,13 +559,17 @@ class CV_Function(CollectiveVariable):
                     imp = __import__(module)
                     f = getattr(imp, f_dict['_name'])
 
-        return cls(
+        obj = cls(
             name=dct['name'],
             fcn=f,
             dimensions=dct['dimensions'],
             store_cache=dct['store_cache'],
             **dct['kwargs']
         )
+
+        obj.template = dct['template']
+
+        return obj
 
 
     def __eq__(self, other):
