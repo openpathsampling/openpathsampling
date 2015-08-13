@@ -535,8 +535,8 @@ class ObjectStore(object):
         Returns an object from the storage. Needs to be implemented from
         the specific storage class.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         idx : int or str
             either the integer index of the object to be loaded or a string
             (name) for named objects. This will always return the first object
@@ -633,8 +633,8 @@ class ObjectStore(object):
         """
         Returns a list of objects from the given list of indices
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         indices : list of int
             the list of integers specifying the object to be returned
 
@@ -771,8 +771,8 @@ class ObjectStore(object):
         Create a new variable in the netCDF storage. This is just a helper
         function to structure the code better.
 
-        Paramters
-        =========
+        Parameters
+        ==========
         name : str
             The name of the variable to be created
         var_type : str
@@ -1329,10 +1329,16 @@ def saveidx(func):
         if self.has_uid and hasattr(obj, '_uid') and obj._uid != '':
             self.storage.variables[self.identifier][idx] = obj._uid
 
-        if self.has_uid and hasattr(obj, '_name'):
+        if self.has_name and hasattr(obj, '_name'):
+            #logger.debug('Object ' + str(type(obj)) + ' with IDX #' + str(idx))
+            #logger.debug(repr(obj))
+            #logger.debug("Cleaning up name; currently: " + str(obj._name))
             if obj._name is None:
-                # set name of object to empty string
-                obj.fix_name()
+                # this should not happen!
+                logger.debug("Nameable object has not been initialized correctly. Has None in _name")
+                raise AttributeError('_name needs to be a string for nameable objects.')
+
+            obj.fix_name()
 
             self.storage.variables[self.db + '_name'][idx] = obj._name
 

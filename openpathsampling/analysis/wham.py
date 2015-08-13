@@ -264,7 +264,17 @@ class WHAM(object):
     def wham_bam_histogram(self):
         self.guess_lnZ()
         self.prep()
-        self.generate_lnZ()
+        try:
+            self.generate_lnZ()
+        except IndexError as e:
+            failmsg = "Does your input to WHAM have enough data?"
+            if not e.args:
+                e.args = [failmsg]
+            else:
+                arg0 = e.args[0]+"\n"+failmsg
+                e.args = tuple([arg0] + list(e.args[1:]))
+                raise
+
         hist = self.wham_histogram()
         return hist
 

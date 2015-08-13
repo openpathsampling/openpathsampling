@@ -7,7 +7,7 @@ a duck.
 
 import os
 from pkg_resources import resource_filename 
-from nose.tools import assert_items_equal, assert_equal
+from nose.tools import assert_items_equal, assert_equal, assert_in
 
 from openpathsampling.trajectory import Trajectory
 from openpathsampling.snapshot import Snapshot
@@ -50,6 +50,12 @@ def assert_not_equal_array_array(list_a, list_b):
             if elem_a != elem_b:
                 exist_diff = True
     return exist_diff
+
+def assert_same_items(list_a, list_b):
+    assert_equal(len(list_a), len(list_b))
+    for elem_a in list_a:
+        assert_in(elem_a, list_b)
+
 
 
 class CalvinistDynamics(DynamicsEngine):
@@ -134,5 +140,5 @@ def data_filename(fname, subdir='test_data'):
     return resource_filename('openpathsampling',
                              os.path.join('tests', subdir, fname))
 
-def true_func(value):
+def true_func(value, *args, **kwargs):
     return True

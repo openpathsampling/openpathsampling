@@ -65,8 +65,8 @@ class PathMover(TreeMixin, OPSNamed):
     
     Notes
     -----
-    Basically a pathmover takes a SampleSet() and returns PathMoveChange()
-    that is used to change the old SampleSet() to the new one.
+    A pathmover takes a SampleSet() and returns PathMoveChange() that is
+    used to change the old SampleSet() to the new one.
 
     SampleSet1 + PathMoveChange1 => SampleSet2
 
@@ -126,6 +126,11 @@ class PathMover(TreeMixin, OPSNamed):
         else:
             return self._is_ensemble_change_mover
 
+    _is_canonical = None
+    @property
+    def is_canonical(self):
+        return self._is_canonical
+
 
     @property
     def default_name(self):
@@ -170,6 +175,27 @@ class PathMover(TreeMixin, OPSNamed):
             return [s for ens in ensembles for s in PathMover._flatten(ens)]
         else:
             return [ensembles]
+
+    def _ensemble_signature(self, as_set=False):
+        """Return tuple form of (input_ensembles, output_ensembles).
+        
+        Useful for MoveScheme, e.g., identifying which movers should be
+        removed as part of a replacement.
+        """
+        inp = tuple(self.input_ensembles)
+        out = tuple(self.output_ensembles)
+        if as_set:
+            inp = set(inp)
+            out = set(out)
+        return (inp, out)
+               
+    @property
+    def ensemble_signature(self):
+        return self._ensemble_signature(as_set=False)
+
+    @property
+    def ensemble_signature_set(self):
+        return self._ensemble_signature(as_set=True)
 
     @property
     def input_ensembles(self):
@@ -474,8 +500,8 @@ class EngineGeneratingMover(SampleGeneratingMover):
 class ShootGeneratingMover(EngineGeneratingMover):
     """Main class for GeneratingMovers using ShootingMoves
 
-    Attributs
-    ---------
+    Attributes
+    ----------
     selector
     """
     def __init__(self, selector, ensembles=None):
@@ -559,7 +585,7 @@ class ForwardShootGeneratingMover(ShootGeneratingMover):
         partial_trajectory = self.engine.generate(
             shooting_point.snapshot.copy(),
             running = [
-                paths.ForwardAppendedTrajectoryEnsemble(
+                paths.PrefixTrajectoryEnsemble(
                     ensemble,
                     shooting_point.trajectory[0:shooting_point.index]
                 ).can_append,
@@ -592,7 +618,7 @@ class BackwardShootGeneratingMover(ShootGeneratingMover):
         partial_trajectory = self.engine.generate(
             shooting_point.snapshot.reversed_copy(),
             running = [
-                paths.BackwardPrependedTrajectoryEnsemble(
+                paths.SuffixTrajectoryEnsemble(
                     ensemble,
                     shooting_point.trajectory[shooting_point.index + 1:]
                 ).can_prepend,
@@ -712,7 +738,7 @@ class ForwardExtendGeneratingMover(ExtendingGeneratingMover):
         partial_trajectory = self.engine.generate(
             initial_trajectory[-1],
             running = [
-                paths.ForwardAppendedTrajectoryEnsemble(
+                paths.PrefixTrajectoryEnsemble(
                     ensemble,
                     initial_trajectory[:-1]
                 ).can_append,
@@ -740,7 +766,7 @@ class BackwardExtendGeneratingMover(ExtendingGeneratingMover):
         partial_trajectory = self.engine.generate(
             initial_trajectory[0].reversed,
             running = [
-                paths.BackwardPrependedTrajectoryEnsemble(
+                paths.SuffixTrajectoryEnsemble(
                     ensemble,
                     initial_trajectory[1:]
                 ).can_prepend,
@@ -1616,17 +1642,16 @@ class MinusMover(WrappedMover):
     paths between the innermost regular TIS interface ensemble and the minus
     interface ensemble. This is particularly useful for improving sampling
     of path space.
-
-    Note that the inheritance from ReplicaExchangeMover is only to assist
-    with `isinstance` in later anealysis. Since the only two functions here
-    are `.__init__() and `.move()`, both of which exist in both parent
-    classes, the calls to `super` will use the version in
-    ConditionalSequentalMover. However, analysis routines will see
-    `isinstance(minus, ReplicaExchangeMover)` as True.
     """
-    def __init__(self, minus_ensemble, innermost_ensemble, 
-                 ensembles=None):
+    _is_canonical = True
+
+    def __init__(self, minus_ensemble, innermost_ensembles, ensembles=None):
         segment = minus_ensemble._segment_ensemble
+        try:
+            innermost_ensembles = list(innermost_ensembles)
+        except TypeError:
+            innermost_ensembles = [innermost_ensembles]
+        innermost_ensemble = paths.join_ensembles(innermost_ensembles)
         subtrajectory_selector = RandomChoiceMover([
             FirstSubtrajectorySelectMover(subensemble=segment,
                                           n_l=minus_ensemble.n_l,
@@ -1639,7 +1664,10 @@ class MinusMover(WrappedMover):
         ])
         subtrajectory_selector.name = "MinusSubtrajectoryChooser"
 
-        repex = ReplicaExchangeMover(ensembles=[[segment, innermost_ensemble]])
+        repexs = [ReplicaExchangeMover(ensembles=[[segment, inner]])
+                  for inner in innermost_ensembles]
+        repex_chooser = RandomChoiceMover(repexs)
+        repex_chooser.name = "InterfaceSetChooser"
 
         extension_mover = RandomChoiceMover([
             ForwardExtendMover(minus_ensemble, segment),
@@ -1654,14 +1682,15 @@ class MinusMover(WrappedMover):
         mover = EnsembleFilterMover(
             ConditionalSequentialMover([
                 subtrajectory_selector,
-                repex,
+                repex_chooser,
                 extension_mover
             ]),
-            ensembles=[minus_ensemble, innermost_ensemble]
+            ensembles=[minus_ensemble] + innermost_ensembles
         )
 
         self.minus_ensemble = minus_ensemble
         self.innermost_ensemble = innermost_ensemble
+        self.innermost_ensembles = innermost_ensembles
         initialization_logging(init_log, self, ['minus_ensemble',
                                                 'innermost_ensemble'])
 

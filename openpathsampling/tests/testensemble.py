@@ -83,9 +83,9 @@ def setUp():
     lower = 0.1
     upper = 0.5
     op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
-    vol1 = paths.LambdaVolume(op, lower, upper).named('stateA')
-    vol2 = paths.LambdaVolume(op, -0.1, 0.7).named('interface0')
-    vol3 = paths.LambdaVolume(op, 2.0, 2.5).named('stateB')
+    vol1 = paths.CVRangeVolume(op, lower, upper).named('stateA')
+    vol2 = paths.CVRangeVolume(op, -0.1, 0.7).named('interface0')
+    vol3 = paths.CVRangeVolume(op, 2.0, 2.5).named('stateB')
     # we use the following codes to describe trajectories:
     # in : in the state
     # out : out of the state
@@ -486,7 +486,7 @@ class testSequentialEnsemble(EnsembleTest):
         # regression test for #229
         import numpy as np
         op = paths.CV_Function(name="x", fcn=lambda snap : snap.xyz[0][0])
-        bigvol = paths.LambdaVolume(collectivevariable=op,
+        bigvol = paths.CVRangeVolume(collectivevariable=op,
                                     lambda_min=-100.0, lambda_max=100.0)
 
         traj = paths.Trajectory([
@@ -1379,13 +1379,13 @@ class testOptionalEnsemble(EnsembleTest):
         opt_inX = OptionalEnsemble(inX)
         assert_equal(opt_inX.__str__(), "{"+inX.__str__()+"} (OPTIONAL)")
 
-class testForwardAppendedTrajectoryEnsemble(EnsembleTest):
+class testPrefixTrajectoryEnsemble(EnsembleTest):
     def setUp(self):
         self.inX = AllInXEnsemble(vol1)
 
     def test_bad_start_traj(self):
         traj = ttraj['upper_out_in_in_in']
-        ens = ForwardAppendedTrajectoryEnsemble(
+        ens = PrefixTrajectoryEnsemble(
             SequentialEnsemble([self.inX]),
             traj[0:2]
         )
@@ -1394,7 +1394,7 @@ class testForwardAppendedTrajectoryEnsemble(EnsembleTest):
 
     def test_good_start_traj(self):
         traj = ttraj['upper_in_in_in']
-        ens = ForwardAppendedTrajectoryEnsemble(
+        ens = PrefixTrajectoryEnsemble(
             SequentialEnsemble([self.inX]),
             traj[0:2]
         )
@@ -1414,7 +1414,7 @@ class testForwardAppendedTrajectoryEnsemble(EnsembleTest):
             inX & length1 
         ])
         traj = ttraj['upper_in_out_in_in_out_in']
-        ens = ForwardAppendedTrajectoryEnsemble(pseudo_minus, traj[0:2])
+        ens = PrefixTrajectoryEnsemble(pseudo_minus, traj[0:2])
         assert_equal(ens.can_append(traj[2:3]), True)
         assert_equal(ens._cached_trajectory, traj[0:3])
         assert_equal(ens._cache_can_append.trusted, False)
@@ -1431,16 +1431,16 @@ class testForwardAppendedTrajectoryEnsemble(EnsembleTest):
         assert_equal(ens._cached_trajectory, traj[0:6])
         assert_equal(ens._cache_can_append.trusted, True)
 
-class testBackwardPrependedTrajectoryEnsemble(EnsembleTest):
+class testSuffixTrajectoryEnsemble(EnsembleTest):
     def setUp(self):
         xval = paths.CV_Function("x", lambda s : s.xyz[0][0])
-        vol = paths.LambdaVolume(xval, 0.1, 0.5)
+        vol = paths.CVRangeVolume(xval, 0.1, 0.5)
         self.inX = AllInXEnsemble(vol)
         self.outX = AllOutXEnsemble(vol)
 
     def test_bad_end_traj(self):
         traj = ttraj['upper_in_in_in_out']
-        ens = BackwardPrependedTrajectoryEnsemble(
+        ens = SuffixTrajectoryEnsemble(
             SequentialEnsemble([self.inX]),
             traj[-2:]
         )
@@ -1449,7 +1449,7 @@ class testBackwardPrependedTrajectoryEnsemble(EnsembleTest):
 
     def test_good_end_traj(self):
         traj = ttraj['upper_out_in_in_in']
-        ens = BackwardPrependedTrajectoryEnsemble(
+        ens = SuffixTrajectoryEnsemble(
             SequentialEnsemble([self.inX]),
             traj[-2:]
         )
@@ -1475,7 +1475,7 @@ class testBackwardPrependedTrajectoryEnsemble(EnsembleTest):
             assert_equal(pseudo_minus.can_prepend(traj[i:]), True)
 
         logger.debug("alltraj " + str([id(i) for i in traj]))
-        ens = BackwardPrependedTrajectoryEnsemble(pseudo_minus, traj[-3:])
+        ens = SuffixTrajectoryEnsemble(pseudo_minus, traj[-3:])
         assert_equal(len(ens._cached_trajectory), 3)
 
         assert_equal(ens.can_prepend(traj[-4:-3].reversed), True)
@@ -1498,24 +1498,24 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         # things easier.)
         self.minus_nl2 = MinusInterfaceEnsemble(
             state_vol=vol1,
-            innermost_vol=vol1,
+            innermost_vols=vol1,
             n_l=2
         )
         self.minus_interstitial_nl2 = MinusInterfaceEnsemble(
             state_vol=vol1,
-            innermost_vol=vol2,
+            innermost_vols=vol2,
             n_l=2
         )
         self.minus_nl3 = MinusInterfaceEnsemble(
             state_vol=vol1,
-            innermost_vol=vol1,
+            innermost_vols=vol1,
             n_l=3
         )
 
     @raises(ValueError)
     def test_minus_nl1_fail(self):
         minus_nl1 = MinusInterfaceEnsemble(state_vol=vol1,
-                                           innermost_vol=vol2,
+                                           innermost_vols=vol2,
                                            n_l=1)
 
 

@@ -9,6 +9,8 @@ from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
+import sys
+
 class MCStep(OPSObject):
     """
     A monte-carlo step in the main PathSimulation loop
@@ -315,7 +317,7 @@ class PathSampling(PathSimulator):
     """
     General path sampling code. 
     
-    Takes a single root_mover and generates samples from that, keeping one
+    Takes a single move_scheme and generates samples from that, keeping one
     per replica after each move. 
     """
 
@@ -324,7 +326,7 @@ class PathSampling(PathSimulator):
             self,
             storage,
             engine=None,
-            root_mover=None,
+            move_scheme=None,
             globalstate=None
     ):
         """
@@ -334,14 +336,14 @@ class PathSampling(PathSimulator):
             the storage where all results should be stored in
         engine : openpathsampling.DynamicsEngine
             the engine to be used with shooting moves
-        root_mover : openpathsampling.PathMover
+        move_scheme : openpathsampling.PathMover
             the mover used for the pathsampling cycle
         globalstate : openpathsampling.SampleSet
             the initial SampleSet for the Simulator
         """
         super(PathSampling, self).__init__(storage, engine)
-        self.root_mover = root_mover
-#        self.root_mover.name = "PathSamplingRoot"
+        self.move_scheme = move_scheme
+#        self.move_scheme.name = "PathSamplingRoot"
 
         samples = []
         if globalstate is not None:
@@ -352,9 +354,9 @@ class PathSampling(PathSimulator):
         self.root = self.globalstate
 
         initialization_logging(init_log, self, 
-                               ['root_mover', 'globalstate'])
-
-        self._mover = paths.PathSimulatorMover(self.root_mover, self)
+                               ['move_scheme', 'globalstate'])
+        self.live_visualization = None
+        self._mover = paths.PathSimulatorMover(self.move_scheme, self)
 
     def run(self, nsteps):
         mcstep = None
@@ -369,9 +371,16 @@ class PathSampling(PathSimulator):
         for nn in range(nsteps):
             self.step += 1
             logger.info("Beginning MC cycle " + str(self.step))
+            refresh=True
+            if self.live_visualization is not None and mcstep is not None:
+                self.live_visualization.draw_ipynb(mcstep)
+                refresh=False
+
             paths.tools.refresh_output(
-                "Working on Monte Carlo cycle step " + str(self.step) + ".\n"
+                "Working on Monte Carlo cycle step " + str(self.step) + ".\n",
+                refresh=refresh
             )
+
             movepath = self._mover.move(self.globalstate, step=self.step)
             samples = movepath.results
             new_sampleset = self.globalstate.apply_samples(samples)

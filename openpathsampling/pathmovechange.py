@@ -4,6 +4,9 @@ import openpathsampling as paths
 from openpathsampling.todict import OPSObject
 from treelogic import TreeMixin
 
+import logging
+logger = logging.getLogger(__name__)
+
 class PathMoveChange(TreeMixin, OPSObject):
     '''
     A class that described the concrete realization of a PathMove.
@@ -103,8 +106,8 @@ class PathMoveChange(TreeMixin, OPSObject):
         correct and allow to target sample set to be correctly created.
         These are the samples used by `.closed`
 
-        Example
-        -------
+        Examples
+        --------
         Assume that you run 3 shooting moves for replica #1. Then only the
         last of the three really matters for the target sample_set since #1
         will be replaced by #2 which will be replaced by #3. So this function
@@ -244,6 +247,8 @@ class PathMoveChange(TreeMixin, OPSObject):
         """
         pmc = self
         while pmc.subchange is not None:
+            if pmc.mover.is_canonical is True:
+                return pmc
             pmc = pmc.subchange
 
         return pmc
