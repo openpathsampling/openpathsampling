@@ -63,7 +63,7 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
             unit=None,
             has_fnc=True,
             fnc_uses_lists=False,
-            fnc_is_numeric=True,
+            value_type=float,
             store_cache=True
     ):
         if (type(name) is not str and type(name) is not unicode) or len(
@@ -83,7 +83,7 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
             self.dimensions = dimensions
             self.unit = unit
             self.fnc_uses_lists = fnc_uses_lists
-            self.fnc_is_numeric = fnc_is_numeric
+            self.value_type = value_type
 
         self.single_dict = cd.ExpandSingle()
         self.pre_dict = cd.Transform(self._pre_item)
@@ -173,8 +173,8 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
                 if type(eval_list) is list and len(value_list) == 1:
                     if type(eval_multi) is list and len(value_multi) == 2:
                         if value_list[0] == value_multi[0] \
-                        and value_list[0] == value_multi[1]:
-                                fnc_uses_lists = True
+                                and value_list[0] == value_multi[1]:
+                            fnc_uses_lists = True
                         else:
                             if eval_single is False:
                                 fnc_uses_lists = True
@@ -188,7 +188,6 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
                     fnc_uses_lists = False
 
             if fnc_uses_lists is None:
-#                raise ValueError('Cannot determine of function uses lists or single.')
                 # no idea what that function does, but it does not work as
                 # expected so we disable it
                 self.has_fnc = False
@@ -202,7 +201,8 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
                 test_value = value_single
 
             dimensions = 1
-            is_numeric = True
+            storable = True
+            value_type = None
             unit = None
 
             test_type = test_value
@@ -219,25 +219,31 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
                     for val in test_value:
                         if type(val._value) is not type(test_value._value):
                             # all values must be of same type
-                            is_numeric = False
+                            storable = False
                 else:
                     for val in test_value:
                         if type(val) is not type(test_value):
                             # all values must be of same type
-                            is_numeric = False
+                            storable = False
 
             if type(test_type) is u.Quantity:
                 # could also be [Quantity, ...]
                 unit = test_type.unit
                 test_type = test_type._value
 
-            try:
-                t_value = float(test_type)
-            except:
-                is_numeric = False
+            # try:
+            #     t_value = float(test_type)
+            # except:
+            #     is_numeric = False
+
+            if storable:
+                value_type = type(test_type).__name__
+            else:
+                value_type = None
 
             # we have determined the ouput type
-            self.is_numeric = is_numeric
+            self.value_type = value_type
+            self.storable = storable
             self.dimensions = dimensions
             self.fnc_uses_lists = fnc_uses_lists
             self.unit = unit
@@ -443,11 +449,16 @@ class CV_Function(CollectiveVariable):
         To avoid problems you should try to:
         1. import necessary modules inside of your function
         2. create constants inside your function
+        3. if variables from the global scope are used these need to be stored
+           with the function and this can only be done if they are passed as arguments
+           to the function and added as kwargs to the CV_Function
 
-        >>> def func(snapshot):
+        >>> def func(snapshot, psi):
         >>>     import mdtraj as md
         >>>     indices = [4,6,8,10]
         >>>     return md.compute_dihedrals(Trajectory([snapshot]).md(), [indices=indices])
+
+        >>> cv = CV_Function('my_cv', func, psi=my_global_psi_function)
 
         We will also check if non-standard modules are imported, which are now
         numpy, math, msmbuilder, pandas and mdtraj

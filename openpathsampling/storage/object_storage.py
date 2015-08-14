@@ -765,6 +765,49 @@ class ObjectStore(object):
 
 #        self.storage.sync()
 
+    @staticmethod
+    def _parse_var_type_as_np_type(var_type):
+        nc_type = var_type
+        if var_type == 'float':
+            nc_type = np.float32   # 32-bit float
+        elif var_type == 'int':
+            nc_type = np.int32   # 32-bit signed integer
+        elif var_type == 'index':
+            nc_type = np.int32
+            # 32-bit signed integer / for indices / -1 : no index (None)
+        elif var_type == 'length':
+            nc_type = np.int32
+            # 32-bit signed integer / for indices / -1 : no length specified (None)
+        elif var_type == 'bool':
+            nc_type = np.uint8   # 8-bit signed integer for boolean
+        elif var_type == 'str':
+            nc_type = 'str'
+
+        types = {
+            'float' : np.float32,
+            'int' : np.int32,
+            'index' : np.int32,
+            'length' : np.int32,
+            'bool' : np.uint8,
+            'str' : 'str',
+            float : np.float32,
+            int : np.int32,
+            bool : np.int8,
+            str : 'str',
+            np.uint8 : np.uint8,
+            np.uint16 : np.uint16,
+            np.uint32 : np.uint32,
+            np.uint64 : np.uint64,
+            np.int8 : np.int8,
+            np.int16 : np.int16,
+            np.int32 : np.int32,
+            np.int64 : np.int64,
+            np.float32 : np.float32,
+            np.float64 : np.float64
+        }
+
+        return types[var_type]
+
     def init_variable(self, name, var_type, dimensions = None, units=None,
                       description=None, variable_length=False, chunksizes=None):
         '''
@@ -805,21 +848,7 @@ class ObjectStore(object):
         if dimensions is None:
             dimensions = self.db
 
-        nc_type = var_type
-        if var_type == 'float':
-            nc_type = np.float32   # 32-bit float
-        elif var_type == 'int':
-            nc_type = np.int32   # 32-bit signed integer
-        elif var_type == 'index':
-            nc_type = np.int32
-            # 32-bit signed integer / for indices / -1 : no index (None)
-        elif var_type == 'length':
-            nc_type = np.int32
-            # 32-bit signed integer / for indices / -1 : no length specified (None)
-        elif var_type == 'bool':
-            nc_type = np.uint8   # 8-bit signed integer for boolean
-        elif var_type == 'str':
-            nc_type = 'str'
+        nc_type = self._parse_var_type_as_np_type(var_type)
 
         if variable_length:
             vlen_t = ncfile.createVLType(nc_type, name + '_vlen')

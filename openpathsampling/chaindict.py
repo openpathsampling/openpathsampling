@@ -245,7 +245,7 @@ class BufferedStore(Wrap):
                     self._store._set(item, value)
 
     def cache_all(self):
-        all_values = self._store.store.get_list_value(self._store.scope, slice(None,None))
+        all_values = self._store.store.get_list_value(self._store.scope, slice(None, None))
         storage = self.storage
         for idx, value in enumerate(all_values):
             if value is not None:

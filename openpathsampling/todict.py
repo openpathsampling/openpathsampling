@@ -146,6 +146,13 @@ class ObjectJSON(object):
 
     allow_marshal = True
 
+    allowed_storable_types = [
+        int, float, bool, long, str,
+        np.float32, np.float64,
+        np.int8, np.int16, np.int32, np.int64,
+        np.uint8, np.uint16, np.uint32, np.uint64,
+    ]
+
     def __init__(self, unit_system = None):
         self.excluded_keys = []
         self.unit_system = unit_system
@@ -174,6 +181,10 @@ class ObjectJSON(object):
             return [self.simplify(o, base_type) for o in obj]
         elif type(obj) is tuple:
             return { '_tuple' : [self.simplify(o, base_type) for o in obj] }
+        elif type(obj) is type:
+            # store a storable number type
+            if obj in self.allowed_storable_types:
+                return { '_type' : obj.__name__ }
         elif type(obj) is dict:
             ### we want to support storable objects as keys so we need to wrap
             ### dicts with care and store them using tuples
@@ -230,6 +241,14 @@ class ObjectJSON(object):
                     raise ValueError('Cannot create obj of class "' + obj['_cls']+ '". Class is not registered as creatable!')
             elif '_tuple' in obj:
                 return tuple([self.build(o) for o in obj['_tuple']])
+            elif '_type' in obj:
+                # return a type of a built-in type that represents a type in netcdf
+                ret = [t for t in self.allowed_storable_types if str(t) == obj['_type']]
+
+                if len(ret) > 0:
+                    return ret[0]
+                else:
+                    return None
             elif '_dict' in obj:
                 return {
                     self.build(key) : self.build(o)

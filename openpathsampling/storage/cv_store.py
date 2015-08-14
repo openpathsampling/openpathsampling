@@ -29,7 +29,12 @@ class ObjectDictStore(ObjectStore):
             var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
 
             if var_name + '_value' not in storage.variables:
-                self.init_variable(var_name + '_value', 'float', (self.key_class.__name__.lower()))
+                self.init_variable(
+                    var_name + '_value',
+                    objectdict.value_type,
+                    (self.key_class.__name__.lower()),
+                    units=objectdict.unit
+                )
 
         self.save_json(self.idx_dimension + '_json', idx, objectdict)
 
@@ -83,7 +88,6 @@ class ObjectDictStore(ObjectStore):
             var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
             storage.variables[var_name + '_value'][positions] = values
 
-
     def get_value(self, objectdict, position):
         storage = self.storage
         idx = self.idx(objectdict)
@@ -110,7 +114,6 @@ class ObjectDictStore(ObjectStore):
             return val.tolist()
 
         return [None] * len(positions)
-
 
     def load(self, idx):
         """
