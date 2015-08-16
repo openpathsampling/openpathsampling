@@ -174,19 +174,19 @@ class SnapshotStore(ObjectStore):
         '''
         super(SnapshotStore, self)._init()
 
-        self.init_variable('snapshot_configuration_idx', 'index', self.db,
+        self.init_variable('snapshot_configuration_idx', 'index', selfprefix,
                 description="snapshot[snapshot] is the snapshot index (0..n_configuration-1) of snapshot 'snapshot'.",
                 chunksizes=(1, )
         )
 
-        self.init_variable('snapshot_momentum_idx', 'index', self.db,
+        self.init_variable('snapshot_momentum_idx', 'index', selfprefix,
                 description="snapshot[snapshot] is the snapshot index (0..n_momentum-1) 'frame' of snapshot 'snapshot'.",
                 chunksizes=(1, )
                 )
 
-        self.init_variable('snapshot_momentum_reversed', 'bool', self.db, chunksizes=(1, ))
+        self.init_variable('snapshot_momentum_reversed', 'bool', selfprefix, chunksizes=(1, ))
 
-        self.init_variable('snapshot_reversed_idx', 'index', self.db,
+        self.init_variable('snapshot_reversed_idx', 'index', selfprefix,
                 description="snapshot[snapshot] is the idx of the reversed snapshot index (0..n_snapshot-1) 'frame' of snapshot 'snapshot'.",
                 chunksizes=(1, )
                 )
@@ -398,14 +398,14 @@ class MomentumStore(ObjectStore):
         n_spatial = self.storage.n_spatial
 
         self.init_variable('momentum_velocities', 'float',
-                (self.db, 'atom','spatial'),
+                (selfprefix, 'atom','spatial'),
                 self.dimension_units['velocity'],
                 description="velocities[momentum][atom][coordinate] are " +
                             "velocities of atom 'atom' in dimension " +
                             "'coordinate' of momentum 'momentum'.",
                 chunksizes=(1,n_atoms,n_spatial))
 
-        self.init_variable('momentum_kinetic', 'float', self.db,
+        self.init_variable('momentum_kinetic', 'float', selfprefix,
                 self.dimension_units['energy'],
                 chunksizes=(1, ))
 
@@ -431,14 +431,6 @@ class ConfigurationStore(ObjectStore):
 
         if configuration.box_vectors is not None:
             storage.variables['configuration_box_vectors'][idx,:,:] = (configuration.box_vectors / self.storage.units["configuration_box_vectors"]).astype(np.float32)
-
-        # TODO: Add simple test if topologies match
-        # if configuration.topology is not storage.topology:
-        # log that topologies were different
-
-        # Force sync to disk to avoid data loss.
-        # storage.sync()
-
 
     def get(self, indices):
         return [ self.load(idx) for idx in indices ]
@@ -617,18 +609,18 @@ class ConfigurationStore(ObjectStore):
         n_spatial = self.storage.n_spatial
 
         self.init_variable('configuration_coordinates', 'float',
-                (self.db, 'atom','spatial'), self.dimension_units['length'],
+                (selfprefix, 'atom','spatial'), self.dimension_units['length'],
                 description="coordinates[configuration][atom][coordinate] " +
                             "are coordinate of atom 'atom' in dimension " +
                             "'coordinate' of configuration 'configuration'.",
                 chunksizes=(1,n_atoms,n_spatial))
 
         self.init_variable('configuration_box_vectors', 'float',
-                (self.db, 'spatial', 'spatial'),
+                (selfprefix, 'spatial', 'spatial'),
                 self.dimension_units['length'],
                 chunksizes=(1,n_spatial,n_spatial))
 
         self.init_variable('configuration_potential', 'float',
-                self.db,
+                selfprefix,
                 self.dimension_units['energy'],
                 chunksizes=(1, ))

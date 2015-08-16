@@ -54,9 +54,17 @@ class ObjectStore(object):
     reference to the store file.
     """
 
-    def __init__(self, storage, content_class, has_uid=False, json=True,
+    allowed_types = [
+        'int', 'float', 'long', 'str', 'bool'
+        'nunpy.float32', 'numpy.float64',
+        'numpy.int8', 'numpy.inf16', 'numpy.int32', 'numpy.int64',
+        'numpy.uint8', 'numpy.uinf16', 'numpy.uint32', 'numpy.uint64',
+        'index', 'length'
+    ]
+
+    def __init__(self, name, storage, content_class, has_uid=False, json=True,
                  dimension_units=None, enable_caching=True, load_partial=False,
-                 nestable=False, has_name=False):
+                 nestable=False, has_name=False, register_attr=True):
         """
 
         Parameters
@@ -115,19 +123,22 @@ class ObjectStore(object):
         like ObjectStore, SampleStore, etc...
 
         """
+
         self.storage = storage
         self.content_class = content_class
-        self.idx_dimension = content_class.__name__.lower()
-        self.db = content_class.__name__.lower()
+        self.prefix = content_class.__name__.lower()
+        selfprefix = content_class.__name__.lower()
+        self.prefix = name
         self.cache = dict()
         self.has_uid = has_uid
         self.has_name = has_name
         self.json = json
         self.simplifier = paths.storage.StorableObjectJSON(storage)
-        self.identifier = self.db + '_uid'
+        self.identifier = selfprefix + '_uid'
         self._free = set()
         self._cached_all = False
         self._names_loaded = False
+
 
         if dimension_units is not None:
             self.dimension_units = dimension_units
@@ -202,7 +213,7 @@ class ObjectStore(object):
 
     def __repr__(self):
         return "%s(content_class=%s, variable_prefix=%s)" % (
-            self.__class__.__name__, self.content_class, self.db)
+            self.__class__.__name__, self.content_class, selfprefix)
 
 
     def idx(self, obj):
@@ -362,7 +373,7 @@ class ObjectStore(object):
         """
         if self.has_name:
             if not self._names_loaded:
-                for idx, name in enumerate(self.storage.variables[self.db + "_name"][:]):
+                for idx, name in enumerate(self.storage.variables[selfprefix + "_name"][:]):
                     self._update_name_in_cache(name, idx)
 
                 self._names_loaded = True
@@ -548,7 +559,7 @@ class ObjectStore(object):
             the loaded object
         '''
 
-        return self.load_json(self.idx_dimension + '_json', idx)
+        return self.load_json(self.prefix + '_json', idx)
 
     def clear_cache(self):
         """Clear the cache and force reloading
@@ -564,7 +575,7 @@ class ObjectStore(object):
         """
         if not self._cached_all:
             idxs = range(len(self))
-            jsons = self.storage.variables[self.idx_dimension + '_json'][:]
+            jsons = self.storage.variables[self.prefix + '_json'][:]
 
             [ self.add_single_to_cache(i,j) for i,j in zip(
                 idxs,
@@ -607,7 +618,7 @@ class ObjectStore(object):
         if self.has_uid and hasattr(obj, '_uid'):
             self.storage.variables[self.identifier][idx] = obj._uid
 
-        self.save_json(self.idx_dimension + '_json', idx, obj)
+        self.save_json(self.prefix + '_json', idx, obj)
 
     def get_uid(self, idx):
         """
@@ -681,7 +692,7 @@ class ObjectStore(object):
         -----
         Use len(store) instead
         '''
-        return int(len(self.storage.dimensions[self.idx_dimension]))
+        return int(len(self.storage.dimensions[self.prefix]))
 
     def free(self):
         '''
@@ -721,24 +732,24 @@ class ObjectStore(object):
             units used in the storage
         """
         # define dimensions used for the specific object
-        self.storage.createDimension(self.idx_dimension, 0)
+        self.storage.createDimension(self.prefix, 0)
 #        if self.has_name:
-#            self.init_variable(self.db + "_name", 'str',
+#            self.init_variable(selfprefix + "_name", 'str',
 #                description='A short descriptive name for convenience',
 #                chunksizes=tuple([10240]))
 
         if self.has_uid:
-            self.init_variable(self.db + "_uid", 'str',
+            self.init_variable(selfprefix + "_uid", 'str',
                 description='A unique identifier',
                 chunksizes=tuple([10240]))
 
         if self.has_name:
-            self.init_variable(self.db + "_name", 'str',
+            self.init_variable(selfprefix + "_name", 'str',
                 description='A name',
                 chunksizes=tuple([10240]))
 
         if self.json:
-            self.init_variable(self.db + "_json", 'str',
+            self.init_variable(selfprefix + "_json", 'str',
                 description='A json serialized version of the object',
                 chunksizes=tuple([10240]))
 
@@ -766,6 +777,42 @@ class ObjectStore(object):
 #        self.storage.sync()
 
     @staticmethod
+    def find_number_type(instance):
+        ty = type(instance)
+
+        types = [
+            float, int, bool, str, long
+        ]
+
+        if ty in types:
+            return types[ty].__name__
+        elif ty is np.dtype:
+            return 'numpy.' + instance.dtype.type.__name__
+
+    @staticmethod
+    def _interprete_num_type(instance):
+        ty = type(instance)
+
+        types = {
+            'float' : np.float32,
+            'int' : np.int32,
+            'index' : np.int32,
+            'length' : np.int32,
+            'bool' : np.uint8,
+            'str' : 'str',
+            float : np.float32,
+            int : np.int32,
+            bool : np.int8,
+            str : 'str',
+        }
+
+        if ty in types:
+            return types[ty]
+        elif ty is np.dtype:
+            return instance.dtype.type
+
+
+    @staticmethod
     def _parse_var_type_as_np_type(var_type):
         nc_type = var_type
         if var_type == 'float':
@@ -790,20 +837,6 @@ class ObjectStore(object):
             'length' : np.int32,
             'bool' : np.uint8,
             'str' : 'str',
-            float : np.float32,
-            int : np.int32,
-            bool : np.int8,
-            str : 'str',
-            np.uint8 : np.uint8,
-            np.uint16 : np.uint16,
-            np.uint32 : np.uint32,
-            np.uint64 : np.uint64,
-            np.int8 : np.int8,
-            np.int16 : np.int16,
-            np.int32 : np.int32,
-            np.int64 : np.int64,
-            np.float32 : np.float32,
-            np.float64 : np.float64
         }
 
         return types[var_type]
@@ -820,9 +853,12 @@ class ObjectStore(object):
             The name of the variable to be created
         var_type : str
             The string representing the type of the data stored in the variable.
-            Either the netCDF types can be used directly and
-            strings representing the python native types are translated to
-            appropriate netCDF types.
+            Allowed are strings of native python types in which case the variables
+            will be treated as python or a string of the form 'numpy.type' which
+            will refer to the numpy data types. Numpy is preferred sinec the api
+            to netCDF uses numpy and thus it is faster. Possible input strings are
+            `int`, `float`, `long`, `str`, `numpy.float32`, `numpy.float64`,
+            `numpy.int8`, `numpy.int16`, `numpy.int32`, `numpy.int64`
         dimensions : str or tuple of str
             A tuple representing the dimensions used for the netcdf variable.
             If not specified then the default dimension of the storage is used.
@@ -845,10 +881,37 @@ class ObjectStore(object):
 
         ncfile = self.storage
 
-        if dimensions is None:
-            dimensions = self.db
 
-        nc_type = self._parse_var_type_as_np_type(var_type)
+        if dimensions is None:
+            dimensions = selfprefix
+
+        if var_type not in self.allowed_types:
+            raise ValueError(
+                'Storage variables only allow one of the following datatypes: %s' %
+                str(self.allowed_types)
+            )
+
+        type_conversion = {
+            'float' : np.float32,
+            'int' : np.int32,
+            'long' : np.int64,
+            'index' : np.int32,
+            'length' : np.int32,
+            'bool' : np.uint8,
+            'str' : 'str',
+            'numpy.float32' : np.float32,
+            'numpy.float64' : np.float32,
+            'numpy.int8' : np.int8,
+            'numpy.int16' : np.int16,
+            'numpy.int32' : np.int32,
+            'numpy.int64' : np.int64,
+            'numpy.uint8' : np.uint8,
+            'numpy.uinf16' : np.uint16,
+            'numpy.uint32' : np.uint32,
+            'numpy.uint64' : np.uint64
+        }
+
+        nc_type = type_conversion[var_type]
 
         if variable_length:
             vlen_t = ncfile.createVLType(nc_type, name + '_vlen')
@@ -857,6 +920,8 @@ class ObjectStore(object):
         else:
             ncvar = ncfile.createVariable(name, nc_type, dimensions,
                                           zlib=False, chunksizes=chunksizes)
+
+        setattr(ncvar,      'var_type', var_type)
 
         if var_type == 'float' or units is not None:
 
@@ -888,7 +953,6 @@ class ObjectStore(object):
             # Define long (human-readable) names for variables.
             setattr(ncvar,    "long_str", description)
 
-#        self.storage.sync()
 
 #==============================================================================
 # LOAD / SAVE UTILITY FUNCTIONS
@@ -1320,7 +1384,7 @@ def loadidx(func):
 
         if self.has_name and hasattr(obj, '_name'):
             setattr(obj, '_name',
-                    self.storage.variables[self.db + '_name'][idx])
+                    self.storage.variables[selfprefix + '_name'][idx])
             # make sure that you cannot change the name of loaded objects
             obj.fix_name()
 
@@ -1369,7 +1433,7 @@ def saveidx(func):
 
             obj.fix_name()
 
-            self.storage.variables[self.db + '_name'][idx] = obj._name
+            self.storage.variables[selfprefix + '_name'][idx] = obj._name
 
     return inner
 

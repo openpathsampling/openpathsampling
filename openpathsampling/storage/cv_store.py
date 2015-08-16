@@ -26,17 +26,17 @@ class ObjectDictStore(ObjectStore):
         storage = self.storage
 
         if objectdict.store_cache:
-            var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
+            var_name = self.prefix + '_' + str(idx) + '_' + objectdict.name
 
             if var_name + '_value' not in storage.variables:
                 self.init_variable(
                     var_name + '_value',
-                    objectdict.value_type,
+                    self._parse_var_type_as_np_type(objectdict.value_type),
                     (self.key_class.__name__.lower()),
                     units=objectdict.unit
                 )
 
-        self.save_json(self.idx_dimension + '_json', idx, objectdict)
+        self.save_json(self.prefix + '_json', idx, objectdict)
 
         # this will copy the cache from an op and store it if it is stored
         if objectdict.store_cache:
@@ -77,15 +77,17 @@ class ObjectDictStore(ObjectStore):
         idx = self.idx(objectdict)
 
         if idx is not None and idx >=0:
-            var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
+            var_name = self.prefix + '_' + str(idx) + '_' + objectdict.name
             storage.variables[var_name + '_value'][position] = value
 
     def set_list_value(self, objectdict, positions, values):
+        # TODO: Add treatment of python number types here
+        # TODO: Add unit support here
         storage = self.storage
         idx = self.idx(objectdict)
 
         if idx is not None and idx >=0:
-            var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
+            var_name = self.prefix + '_' + str(idx) + '_' + objectdict.name
             storage.variables[var_name + '_value'][positions] = values
 
     def get_value(self, objectdict, position):
@@ -93,7 +95,7 @@ class ObjectDictStore(ObjectStore):
         idx = self.idx(objectdict)
 
         if idx is not None and idx >=0:
-            var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
+            var_name = self.prefix + '_' + str(idx) + '_' + objectdict.name
             val = storage.variables[var_name + '_value'][position]
 
             if hasattr(val, 'mask'):
@@ -104,11 +106,14 @@ class ObjectDictStore(ObjectStore):
         return None
 
     def get_list_value(self, objectdict, positions):
+        # TODO: Add treatment of python number types here
+        # TODO: Add unit support here
+
         storage = self.storage
         idx = self.idx(objectdict)
 
         if idx is not None and idx >=0:
-            var_name = self.idx_dimension + '_' + str(idx) + '_' + objectdict.name
+            var_name = self.prefix + '_' + str(idx) + '_' + objectdict.name
             val = storage.variables[var_name + '_value'][positions]
 
             return val.tolist()
@@ -132,7 +137,7 @@ class ObjectDictStore(ObjectStore):
         wrong parameters!
         """
 
-        op = self.load_json(self.idx_dimension + '_json', idx)
+        op = self.load_json(self.prefix + '_json', idx)
 
         return op
 

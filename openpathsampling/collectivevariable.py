@@ -237,11 +237,9 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
             #     is_numeric = False
 
             if storable:
-                value_type = type(test_type).__name__
-            else:
-                value_type = None
+                value_type = type(test_type)
 
-            # we have determined the ouput type
+            # we have determined the output type
             self.value_type = value_type
             self.storable = storable
             self.dimensions = dimensions

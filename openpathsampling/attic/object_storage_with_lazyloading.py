@@ -23,7 +23,7 @@ class ObjectStorage(object):
         storage : Storage
         content_class : class
             a reference to the class type to be stored using this Storage
-        idx_dimension : str
+        prefix : str
             name of the dimension used for major numbering the stored object in the netCDF file.
             This is usually the lowercase class name
         cache : dict {int : object}
@@ -46,7 +46,6 @@ class ObjectStorage(object):
         """
         self.storage = storage
         self.content_class = obj
-        self.idx_dimension = obj.__name__.lower()
         self.db = obj.__name__.lower()
         self.cache = dict()
         self.named = named
@@ -55,7 +54,7 @@ class ObjectStorage(object):
         self.simplifier = paths.storage.StorableObjectJSON(storage)
         self._uids_loaded = False
         if identifier is not None:
-            self.identifier = self.idx_dimension + '_' + identifier
+            self.identifier = self.prefix + '_' + identifier
         else:
             self.identifier = None
 
@@ -315,7 +314,7 @@ class ObjectStorage(object):
         Returns an object from the storage. Needs to be implented from the specific storage class.
         '''
 
-        return self.load_json(self.idx_dimension + '_json', idx)
+        return self.load_json(self.prefix + '_json', idx)
 
     def save(self, obj, idx=None):
         """
@@ -326,7 +325,7 @@ class ObjectStorage(object):
         if self.named and hasattr(obj, 'name'):
             self.storage.variables[self.db + '_uid'][idx] = obj.name
 
-        self.save_json(self.idx_dimension + '_json', idx, obj)
+        self.save_json(self.prefix + '_json', idx, obj)
 
     def get_uid(self, idx):
         if self.named:
@@ -382,7 +381,7 @@ class ObjectStorage(object):
         number : int
             number of objects in the storage.
         '''
-        return int(len(self.storage.dimensions[self.idx_dimension]))
+        return int(len(self.storage.dimensions[self.prefix]))
 
     def free(self):
         '''
@@ -401,7 +400,7 @@ class ObjectStorage(object):
 
         """
         # define dimensions used for the specific object
-        self.storage.createDimension(self.idx_dimension, 0)
+        self.storage.createDimension(self.prefix, 0)
         if self.named:
             self.init_variable(self.db + "_uid", 'str', description='A short descriptive name for convenience', chunksizes=tuple([10240]))
         if self.json:
@@ -754,7 +753,7 @@ def loadlazy_dictable(func):
         obj = LazyLoadedObjectDict()
 
         def loader(this):
-            obj = func(self.idx_dimension + '_json', idx)
+            obj = func(self.prefix + '_json', idx)
             for key, value in obj.__dict__.iteritems():
                 setattr(this, key, value)
 

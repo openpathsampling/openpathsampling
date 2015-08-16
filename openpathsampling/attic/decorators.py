@@ -2,7 +2,7 @@ def savecache(func):
     def inner(self, obj, idx = None, *args, **kwargs):
         idx = self.index(obj, idx)
         # add logging here
-        # print 'SAVE in', self.db, ':', idx
+        # print 'SAVE in', selfprefix, ':', idx
         if idx is not None:
             func(self, obj, idx, *args, **kwargs)
 

@@ -29,6 +29,7 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 # NetCDF Storage for multiple forked trajectories
 #=============================================================================================
 
+
 class Storage(netcdf.Dataset):
     '''
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
@@ -40,69 +41,13 @@ class Storage(netcdf.Dataset):
     # netCDF variable is accessed by storage.variables[name][idx] and the
     # `special` variable is accessed by storage.store[idx]
 
-    def _register_storages(self, storage = None):
-        """
-        Register all Stores used in the OpenPathSampling Storage
-
-        Parameters
-        ----------
-        storage : Storage
-            the Storage object the store should use. Usually (default) the
-            storage itself
-
-        """
-        if storage is None:
-            storage = self
-
-        # objects with special storages
-
-        # self.objectname = ... could also be done in the initialization
-        # automatically. But the IDE would not be able to autocomplete
-        # so we leave it this way :)
-
-        self.trajectories = paths.storage.TrajectoryStore(storage)
-        self.snapshots = paths.storage.SnapshotStore(storage)
-        self.configurations = paths.storage.ConfigurationStore(storage)
-        self.momentum = paths.storage.MomentumStore(storage)
-        self.samples = paths.storage.SampleStore(storage)
-        self.samplesets = paths.storage.SampleSetStore(storage)
-        self.pathmovechanges = paths.storage.PathMoveChangeStore(storage)
-        self.steps = paths.storage.MCStepStore(storage)
-
-        self.collectivevariables = paths.storage.ObjectDictStore(storage, paths.CollectiveVariable, paths.Snapshot)
-        self.cvs = self.collectivevariables
-
-        # normal objects
-
-        self.pathmovers = paths.storage.ObjectStore(storage, paths.PathMover, has_uid=True, has_name=True)
-        self._details = paths.storage.ObjectStore(storage, paths.Details, has_uid=False)
-        self.shootingpoints = paths.storage.ObjectStore(storage, paths.ShootingPoint, has_uid=False)
-        self.shootingpointselectors = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, has_uid=False, has_name=True)
-        self.engines = paths.storage.ObjectStore(storage, paths.DynamicsEngine, has_uid=True, has_name=True)
-        self.pathsimulators = paths.storage.ObjectStore(storage, paths.PathSimulator, has_uid=True, has_name=True)
-        self.transitions = paths.storage.ObjectStore(storage, paths.Transition, has_uid=True, has_name=True)
-        self.networks = paths.storage.ObjectStore(storage, paths.TransitionNetwork, has_uid=True, has_name=True)
-
-        # nestable objects
-
-        self.volumes = paths.storage.ObjectStore(storage, paths.Volume, has_uid=True, nestable=True, has_name=True)
-        self.ensembles = paths.storage.ObjectStore(storage, paths.Ensemble, has_uid=True, nestable=True, has_name=True)
-
-        # special objects
-        # TODO: remove query? Not really needed, is it?
-
-
-        self.query = paths.storage.QueryStore(storage)
-
-        self._objects = { name : getattr(self, name) for name in
-                  ['trajectories', 'snapshots', 'configurations',
-                   'samples', 'samplesets', 'collectivevariables',
-                   'cvs', 'pathmovers', 'shootingpoints',
-                   'shootingpointselectors', 'engines',
-                   'pathsimulators', 'volumes', 'ensembles',
-                   'pathmovechanges', 'transitions', 'networks', '_details',
-                   'steps'
-                  ]}
+    allowed_types = [
+        'int', 'float', 'long', 'str', 'bool'
+        'nunpy.float32', 'numpy.float64',
+        'numpy.int8', 'numpy.inf16', 'numpy.int32', 'numpy.int64',
+        'numpy.uint8', 'numpy.uinf16', 'numpy.uint32', 'numpy.uint64',
+        'index', 'length'
+    ]
 
     @property
     def objects(self):
@@ -129,6 +74,33 @@ class Storage(netcdf.Dataset):
             'velocity': u.nanometers / u.picoseconds,
             'energy': u.kilojoules_per_mole
         }
+
+    def add(self, store, register_attr=True):
+        self._objects[store.prefix] = store
+
+        if register_attr:
+            if hasattr(self, store.prefix):
+                raise ValueError('Attribute name %s is already in use!' % store.prefix)
+
+            setattr(self, store.prefix, store)
+
+    def _register(self):
+        pass
+
+    def _initialize(self):
+        """
+        Hook after a new file is created.
+
+        This is used to setup all variables in the storage
+        """
+
+        pass
+
+    def _restore(self):
+        """
+        Hook after an existing file is openend
+        """
+        pass
 
     def __init__(self, filename, mode=None,
                  template=None, units=None):
@@ -163,6 +135,7 @@ class Storage(netcdf.Dataset):
 
         self.filename = filename
 
+        # call netCDF4-python to create or open .nc file
         super(Storage, self).__init__(filename, mode)
 
         self._setup_class()
@@ -175,36 +148,26 @@ class Storage(netcdf.Dataset):
         if mode == 'w':
             logger.info("Setup netCDF file and create variables")
 
-            if template.topology is not None:
-                self.topology = template.topology
-            else:
-                raise RuntimeError("Storage need a template snapshot with topology")
+            # Initialization
 
-            self._initialize_netCDF()
+            # add shared dimension for everyone. scalar and spatial
+            if 'scalar' not in self.dimensions:
+                self.createDimension('scalar', 1) # scalar dimension
 
-            # update the units for dimensions from the template
-            self.dimension_units.update(paths.tools.units_from_snapshot(template))
-            self._init_storages()
+            if 'atom' not in self.dimensions:
+                self.createDimension('atom', self.topology.n_atoms)
 
-            logger.info("Saving topology")
+            # spatial dimensions
+            if 'spatial' not in self.dimensions:
+                self.createDimension('spatial', self.n_spatial)
 
-            # create a json from the mdtraj.Topology() and store it
-            self.write_str('topology', self.simplifier.to_json(self.topology))
-
-            logger.info("Create initial template snapshot")
-
-            # Save the initial configuration
-            self.snapshots.save(template)
-
-            self.createVariable('template_idx', 'i4', 'scalar')
-            self.variables['template_idx'][:] = template.idx[self]
-
-            self.sync()
+            self._initialize()
 
             logger.info("Finished setting up netCDF file")
 
         elif mode == 'a' or mode == 'r+' or mode == 'r':
             logger.debug("Restore the dict of units from the storage")
+
             # Create a dict of simtk.Unit() instances for all netCDF.Variable()
             for variable_name in self.variables:
                 unit = None
@@ -218,32 +181,12 @@ class Storage(netcdf.Dataset):
 
             # After we have restored the units we can load objects from the storage
 
-            self.topology = self.simplifier.from_json(self.variables['topology'][0])
+            self._restore()
 
         self.sync()
 
     def __repr__(self):
         return "Storage @ '" + self.filename + "'"
-
-    @property
-    def n_atoms(self):
-        return self.topology.n_atoms
-
-    @property
-    def n_spatial(self):
-        return self.topology.n_spatial
-
-    @property
-    def template(self):
-        """
-        Return the template snapshot from the storage
-
-        Returns
-        -------
-        Snapshot
-            the initial snapshot
-        """
-        return self.snapshots.load(int(self.variables['template_idx'][0]))
 
     def get_unit(self, dimension):
         """
@@ -252,10 +195,7 @@ class Storage(netcdf.Dataset):
         return u.Unit({self.unit_system.base_units[u.BaseDimension(dimension)] : 1.0})
 
     def __getattr__(self, item):
-#        if item in self.__dict__:
-            return self.__dict__[item]
- #       else:
-  #          return super(Storage, self).__getattr__(item)
+        return self.__dict__[item]
 
     def __setattr__(self, key, value):
         self.__dict__[key] = value
@@ -280,30 +220,6 @@ class Storage(netcdf.Dataset):
         Initialize the netCDF file for storage itself.
         """
 
-        # add shared dimension for everyone. scalar and spatial
-        if 'scalar' not in self.dimensions:
-            self.createDimension('scalar', 1) # scalar dimension
-
-        if 'atom' not in self.dimensions:
-            self.createDimension('atom', self.topology.n_atoms)
-
-        # spatial dimensions
-        if 'spatial' not in self.dimensions:
-            self.createDimension('spatial', self.n_spatial)
-
-        # Set global attributes.
-        setattr(self, 'title', 'OpenPathSampling Storage')
-#        setattr(self, 'application', 'Host-Guest-System')
-#        setattr(self, 'program', 'run.py')
-#        setattr(self, 'programVersion', __version__)
-#        setattr(self, 'Conventions', 'Multi-State Transition Interface TPS')
-        setattr(self, 'ConventionVersion', '0.2')
-
-        # Create a string to hold the topology
-        self.init_str('topology')
-
-        # Force sync to disk to avoid data loss.
-        self.sync()
 
     def list_stores(self):
         """
@@ -314,7 +230,7 @@ class Storage(netcdf.Dataset):
         list of str
             list of stores that can be accessed using `storage.[store]`
         """
-        return [store.db for store in self.links]
+        return [storeprefix for store in self.links]
 
     def list_storable_objects(self):
         """
@@ -341,24 +257,6 @@ class Storage(netcdf.Dataset):
         packed_data = numpy.empty(1, 'O')
         packed_data[0] = string
         self.variables[name][:] = packed_data
-
-    def load_str(self, name):
-        '''
-        Load a string from a netCDF variable
-
-        Parameters
-        ----------
-        name : str
-            the name of the variable
-
-        Returns
-        -------
-        str
-            the loaded str
-
-        '''
-        return self.variables[name][0]
-
 
     def init_str(self, name):
         '''
@@ -453,6 +351,54 @@ class Storage(netcdf.Dataset):
             return store.idx(obj)
 
 
+    def clone_storage(self, storage_to_copy, new_storage):
+        """
+        Clone a store from one storage to another. Mainly used as a helper
+        for the cloning of a store
+
+        Parameters
+        ----------
+        store_to_copy : [..]Store
+            the store to be copied
+        new_storage : Storage
+            the new Storage object
+
+        """
+        if type(storage_to_copy) is str:
+            storage_name = storage_to_copy
+        else:
+            storage_name = storage_to_copyprefix
+
+        for variable in self.variables.keys():
+            if variable.startswith(storage_name + '_'):
+                if variable not in new_storage.variables:
+                    # collectivevariables have additional variables in the storage that need to be copied
+                    # TODO: copy chunksizes?
+                    new_storage.createVariable(variable, str(self.variables[variable].dtype), self.variables[variable].dimensions)
+                    for attr in self.variables[variable].ncattrs():
+                        setattr(new_storage.variables[variable], attr, getattr(self.variables[variable], attr))
+
+                    new_storage.variables[variable][:] = self.variables[variable][:]
+                else:
+                    for idx in range(0, len(self.variables[variable])):
+                        new_storage.variables[variable][idx] = self.variables[variable][idx]
+
+    def add_store(self, name, store):
+
+
+class OPSStorage(Storage):
+    @property
+    def template(self):
+        """
+        Return the template snapshot from the storage
+
+        Returns
+        -------
+        Snapshot
+            the initial snapshot
+        """
+        return self.snapshots.load(int(self.variables['template_idx'][0]))
+
     def clone(self, filename, subset):
         """
         Creates a copy of the netCDF file and allows to reduce the used atoms.
@@ -503,37 +449,183 @@ class Storage(netcdf.Dataset):
 
         storage2.close()
 
+    @property
+    def n_atoms(self):
+        return self.topology.n_atoms
 
-    def clone_storage(self, storage_to_copy, new_storage):
-        """
-        Clone a store from one storage to another. Mainly used as a helper
-        for the cloning of a store
+    @property
+    def n_spatial(self):
+        return self.topology.n_spatial
+
+    def __init__(self, filename, mode=None,
+                 template=None, units=None):
+        '''
+        Create a storage for complex objects in a netCDF file
 
         Parameters
         ----------
-        store_to_copy : [..]Store
-            the store to be copied
-        new_storage : Storage
-            the new Storage object
+        filename : string
+            filename of the netcdf file to be used or created
+        mode : string, default: None
+            the mode of file creation, one of 'w' (write), 'a' (append) or
+            None, which will append any existing files.
+        template : openpathsampling.Snapshot
+            a Snapshot instance that contains a reference to a Topology, the
+            number of atoms and used units
+        units : dict of {str : simtk.unit.Unit } or None
+            representing a dict of string representing a dimension
+            ('length', 'velocity', 'energy') pointing to
+            the simtk.unit.Unit to be used. If not None overrides the
+            standard units used
+        '''
+
+        if mode == None:
+            if os.path.isfile(filename):
+                logger.info("Open existing netCDF file '%s' for storage", filename)
+                mode = 'a'
+            else:
+                logger.info("Create new netCDF file '%s' for storage", filename)
+                mode = 'w'
+
+
+        self.filename = filename
+
+        super(Storage, self).__init__(filename, mode)
+
+        self._setup_class()
+
+        if units is not None:
+            self.dimension_units.update(units)
+
+        self._register_storages()
+
+        if mode == 'w':
+            logger.info("Setup netCDF file and create variables")
+
+            if template.topology is not None:
+                self.topology = template.topology
+            else:
+                raise RuntimeError("Storage need a template snapshot with topology")
+
+            self._initialize_netCDF()
+
+            # update the units for dimensions from the template
+            self.dimension_units.update(paths.tools.units_from_snapshot(template))
+            self._init_storages()
+
+            logger.info("Saving topology")
+
+            # create a json from the mdtraj.Topology() and store it
+            self.write_str('topology', self.simplifier.to_json(self.topology))
+
+            logger.info("Create initial template snapshot")
+
+            # Save the initial configuration
+            self.snapshots.save(template)
+
+            self.createVariable('template_idx', 'i4', 'scalar')
+            self.variables['template_idx'][:] = template.idx[self]
+
+            self.sync()
+
+            logger.info("Finished setting up netCDF file")
+
+        elif mode == 'a' or mode == 'r+' or mode == 'r':
+            logger.debug("Restore the dict of units from the storage")
+            # Create a dict of simtk.Unit() instances for all netCDF.Variable()
+            for variable_name in self.variables:
+                unit = None
+                variable = self.variables[variable_name]
+                if hasattr(variable, 'unit_simtk'):
+                    unit_dict = self.simplifier.from_json(getattr(variable, 'unit_simtk'))
+                    if unit_dict is not None:
+                        unit = self.simplifier.unit_from_dict(unit_dict)
+
+                self.units[str(variable_name)] = unit
+
+            # After we have restored the units we can load objects from the storage
+
+            self.topology = self.simplifier.from_json(self.variables['topology'][0])
+
+        self.sync()
+
+    def _register_storages(self):
+        """
+        Register all Stores used in the OpenPathSampling Storage
 
         """
-        if type(storage_to_copy) is str:
-            storage_name = storage_to_copy
+        storage = self
+
+        # objects with special storages
+
+        # self.objectname = ... could also be done in the initialization
+        # automatically. But the IDE would not be able to autocomplete
+        # so we leave it this way :)
+
+        self.trajectories = paths.storage.TrajectoryStore('trajectories', storage)
+        self.snapshots = paths.storage.SnapshotStore('snapshots', storage)
+        self.configurations = paths.storage.ConfigurationStore('configurations', storage)
+        self.momentum = paths.storage.MomentumStore('momenta', storage)
+        self.samples = paths.storage.SampleStore('samples', storage)
+        self.samplesets = paths.storage.SampleSetStore('samplesets', storage)
+        self.pathmovechanges = paths.storage.PathMoveChangeStore('pmc', storage)
+        self.steps = paths.storage.MCStepStore('mcsteps', storage)
+
+        self.collectivevariables = paths.storage.ObjectDictStore('cvs', storage, paths.CollectiveVariable, paths.Snapshot)
+        self.collectivevariables = self.cvs
+
+        # normal objects
+
+        self.pathmovers = paths.storage.ObjectStore('pathmovers', storage, paths.PathMover, has_uid=True, has_name=True)
+        self.shootingpoints = paths.storage.ObjectStore('shootingpoints', storage, paths.ShootingPoint, has_uid=False)
+        self.shootingpointselectors = paths.storage.ObjectStore('shootingpointselectors', storage, paths.ShootingPointSelector, has_uid=False, has_name=True)
+        self.engines = paths.storage.ObjectStore('engines', storage, paths.DynamicsEngine, has_uid=True, has_name=True)
+        self.pathsimulators = paths.storage.ObjectStore('pathsimulators', storage, paths.PathSimulator, has_uid=True, has_name=True)
+        self.transitions = paths.storage.ObjectStore('transitions', storage, paths.Transition, has_uid=True, has_name=True)
+        self.networks = paths.storage.ObjectStore('networks', storage, paths.TransitionNetwork, has_uid=True, has_name=True)
+
+        # nestable objects
+
+        self.volumes = paths.storage.ObjectStore('volumes', storage, paths.Volume, has_uid=True, nestable=True, has_name=True)
+        self.ensembles = paths.storage.ObjectStore('ensembles', storage, paths.Ensemble, has_uid=True, nestable=True, has_name=True)
+
+        # self.query = paths.storage.QueryStore(storage)
+
+    def _initialize(self):
+        # Set global attributes.
+        setattr(self, 'title', 'OpenPathSampling Storage')
+        setattr(self, 'ConventionVersion', '0.2')
+
+        template = self.template
+
+        if template.topology is not None:
+            self.topology = template.topology
         else:
-            storage_name = storage_to_copy.db
+            raise RuntimeError("A Storage needs a template snapshot with a topology")
 
-        for variable in self.variables.keys():
-            if variable.startswith(storage_name + '_'):
-                if variable not in new_storage.variables:
-                    # collectivevariables have additional variables in the storage that need to be copied
-                    new_storage.createVariable(variable, str(self.variables[variable].dtype), self.variables[variable].dimensions)
-                    for attr in self.variables[variable].ncattrs():
-                        setattr(new_storage.variables[variable], attr, getattr(self.variables[variable], attr))
+        # Create a string to hold the topology
+        # TODO: Remove and use other storage ways
+        self.init_str('topology')
 
-                    new_storage.variables[variable][:] = self.variables[variable][:]
-                else:
-                    for idx in range(0, len(self.variables[variable])):
-                        new_storage.variables[variable][idx] = self.variables[variable][idx]
+        # update the units for dimensions from the template
+        self.dimension_units.update(paths.tools.units_from_snapshot(template))
+        self._init_storages()
+
+        logger.info("Saving topology")
+
+        # create a json from the mdtraj.Topology() and store it
+        self.write_str('topology', self.simplifier.to_json(self.topology))
+
+        logger.info("Create initial template snapshot")
+
+        # Save the initial configuration
+        self.snapshots.save(template)
+
+        self.createVariable('template_idx', 'i4', 'scalar')
+        self.variables['template_idx'][:] = template.idx[self]
+
+    def _restore(self):
+        self.topology = self.simplifier.from_json(self.variables['topology'][0])
 
 
 class StorableObjectJSON(ObjectJSON):
