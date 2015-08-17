@@ -1,10 +1,8 @@
 from object_storage import ObjectStore
-from openpathsampling.collectivevariable import CollectiveVariable
 
 class ObjectDictStore(ObjectStore):
-    def __init__(self, storage, cls, key_class):
+    def __init__(self, cls, key_class):
         super(ObjectDictStore, self).__init__(
-            storage,
             cls,
             has_uid=True,
             json=True,

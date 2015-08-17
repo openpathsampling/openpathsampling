@@ -9,45 +9,6 @@ import logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-class Query(object):
-    """
-    Return
-    """
-    def __init__(self, query_fnc = None, caching = True):
-        if caching:
-            self.cache = {}
-        else:
-            self.cache = None
-        self.query_fnc = query_fnc
-
-    def __call__(self, store):
-        def _query_iterator(self, store):
-            if self.cache is not None:
-                if store not in self.cache:
-                    self.cache[store] = {}
-                store_cache = self.cache[store]
-
-                n_object = len(store)
-
-                for idx in range(n_object):
-                    if self.cache is not None:
-                        if idx in store_cache:
-                            if store_cache[idx]:
-                                yield store[idx]
-                        else:
-                            obj = store.load(idx)
-                            result = self.query_fnc(obj)
-                            self.cache[store][idx] = result
-                            if result:
-                                yield obj
-                    else:
-                        obj = store.load(idx)
-                        result = self.query_fnc(obj)
-                        if result:
-                            yield obj
-
-        return _query_iterator(self, store)
-
 class ObjectStore(object):
     """
     Base Class for storing complex objects in a netCDF4 file. It holds a
@@ -62,9 +23,9 @@ class ObjectStore(object):
         'index', 'length'
     ]
 
-    def __init__(self, name, storage, content_class, has_uid=False, json=True,
-                 dimension_units=None, enable_caching=True, load_partial=False,
-                 nestable=False, has_name=False, register_attr=True):
+    def __init__(self, content_class, has_uid=False, json=True,
+                 enable_caching=True, load_partial=False,
+                 nestable=False, has_name=False):
         """
 
         Parameters
@@ -100,11 +61,6 @@ class ObjectStore(object):
             if `True` objects can also be loaded by a string identifier/name
         json : string
             if already computed a JSON Serialized string of the object
-        dimension_units : dict of {str : simtk.unit.Unit } or None
-            representing a dict of string representing a dimension
-            ('length', 'velocity', 'energy') pointing to
-            the simtk.unit.Unit to be used. If not None overrides the standard
-            units used in the storage
         simplifier : util.StorableObjectJSON
             an instance of a JSON Serializer
         identifier : str
@@ -124,26 +80,17 @@ class ObjectStore(object):
 
         """
 
-        self.storage = storage
+        self._storage = None
         self.content_class = content_class
-        self.prefix = content_class.__name__.lower()
-        selfprefix = content_class.__name__.lower()
-        self.prefix = name
+        self.prefix = None
         self.cache = dict()
         self.has_uid = has_uid
         self.has_name = has_name
         self.json = json
-        self.simplifier = paths.storage.StorableObjectJSON(storage)
-        self.identifier = selfprefix + '_uid'
         self._free = set()
         self._cached_all = False
         self._names_loaded = False
-
-
-        if dimension_units is not None:
-            self.dimension_units = dimension_units
-        else:
-            self.dimension_units = self.storage.dimension_units
+        self.nestable = nestable
 
         # First, apply standard decorator for loading and saving
         # this handles all the setting and getting of .idx and is
@@ -206,15 +153,36 @@ class ObjectStore(object):
             _load = self.load
             self.load = types.MethodType(loadcache(_load), self)
 
-        self._register_with_storage(nestable=nestable)
+
+    def register(self, storage, name):
+        self._storage = storage
+        self.prefix = name
+
+    @property
+    def identifier(self):
+        return self.prefix + '_uid'
+
+    @property
+    def storage(self):
+        if self._storage is None:
+            raise RuntimeError('A store need to be added to a storage to be used!')
+
+        return self._storage
+
+    @property
+    def dimensions_units(self):
+        return self.storage.dimension_units
 
     def __str__(self):
         return repr(self)
 
     def __repr__(self):
         return "%s(content_class=%s, variable_prefix=%s)" % (
-            self.__class__.__name__, self.content_class, selfprefix)
+            self.__class__.__name__, self.content_class, self.prefix)
 
+    @property
+    def simplifier(self):
+        return self.storage.simplifier
 
     def idx(self, obj):
         """
@@ -251,74 +219,6 @@ class ObjectStore(object):
 
         """
         return self.storage.units
-
-    def _register_with_storage(self, nestable = False):
-        """
-        Register the store with the associated storage. This means the
-
-        Parameters
-        ----------
-        nestable : bool
-            if true this marks the content_class to be saved as nested dict
-            objects and not a pointing to saved objects. So the saved complex
-            object is only stored once and not split into several objects that
-            are referenced by each other in a tree-like fashion
-
-        Notes
-        -----
-        """
-
-        self.storage._storages[self.content_class] = self
-        self.storage._storages[self.content_class.__name__] = self
-        self.storage._storages[self.content_class.__name__.lower()] = self
-
-        # Add here the logic to change the actual class and add the decorator
-        # this is the same as add the  decorator (without default_storage,
-        # I removed this since it is not used anyway)
-        # all it does is make sure that there is a .idx property and the base_
-        # cls is known
-        self.content_class.base_cls_name = self.content_class.__name__
-        self.content_class.base_cls = self.content_class
-
-        # add a property idx that keeps the storage reference
-        def _idx(this):
-            if not hasattr(this, '_idx'):
-                this._idx = dict()
-
-            return this._idx
-
-        self.content_class.idx = property(_idx)
-
-        if self.has_uid:
-            def _uid_get(this):
-                if not hasattr(this, '_uid'):
-                    this._uid = ''
-
-                return this._uid
-
-            def _uid_set(this, uid):
-                this._uid = uid
-
-            self.content_class.uid = property(_uid_get, _uid_set)
-
-        def _save(this, storage):
-            if storage is not None:
-                storage.save(this)
-
-        if nestable:
-            self.content_class.nestable = True
-
-        self.content_class.save = _save
-
-        if not hasattr(self.content_class, 'cls'):
-            def _cls(this):
-                return this.__class__.__name__
-
-            self.content_class.cls = property(_cls)
-
-        # register as a base_class for storable objects
-        self.storage.links.append(self)
-
 
     def set_variable_partial_loading(self, variable, loader):
         cls = self.content_class
@@ -373,7 +273,7 @@ class ObjectStore(object):
         """
         if self.has_name:
             if not self._names_loaded:
-                for idx, name in enumerate(self.storage.variables[selfprefix + "_name"][:]):
+                for idx, name in enumerate(self.storage.variables[self.prefix + "_name"][:]):
                     self._update_name_in_cache(name, idx)
 
                 self._names_loaded = True
@@ -739,17 +639,17 @@ class ObjectStore(object):
 #                chunksizes=tuple([10240]))
 
         if self.has_uid:
-            self.init_variable(selfprefix + "_uid", 'str',
+            self.init_variable(self.prefix + "_uid", 'str',
                 description='A unique identifier',
                 chunksizes=tuple([10240]))
 
         if self.has_name:
-            self.init_variable(selfprefix + "_name", 'str',
+            self.init_variable(self.prefix + "_name", 'str',
                 description='A name',
                 chunksizes=tuple([10240]))
 
         if self.json:
-            self.init_variable(selfprefix + "_json", 'str',
+            self.init_variable(self.prefix + "_json", 'str',
                 description='A json serialized version of the object',
                 chunksizes=tuple([10240]))
 
@@ -883,7 +783,7 @@ class ObjectStore(object):
 
 
         if dimensions is None:
-            dimensions = selfprefix
+            dimensions = self.prefix
 
         if var_type not in self.allowed_types:
             raise ValueError(
@@ -1384,7 +1284,7 @@ def loadidx(func):
 
         if self.has_name and hasattr(obj, '_name'):
             setattr(obj, '_name',
-                    self.storage.variables[selfprefix + '_name'][idx])
+                    self.storage.variables[self.prefix + '_name'][idx])
             # make sure that you cannot change the name of loaded objects
             obj.fix_name()
 
@@ -1433,7 +1333,7 @@ def saveidx(func):
 
             obj.fix_name()
 
-            self.storage.variables[selfprefix + '_name'][idx] = obj._name
+            self.storage.variables[self.prefix + '_name'][idx] = obj._name
 
     return inner
 

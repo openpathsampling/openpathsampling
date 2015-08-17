@@ -30,7 +30,7 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 #=============================================================================================
 
 
-class Storage(netcdf.Dataset):
+class NetCDFPlus(netcdf.Dataset):
     '''
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
     simulation. This allows effective storage of shooting trajectories '''
@@ -49,58 +49,6 @@ class Storage(netcdf.Dataset):
         'index', 'length'
     ]
 
-    @property
-    def objects(self):
-        return self._objects
-
-    def _setup_class(self):
-        """
-        Sets the basic properties for the storage
-        """
-        self._storages = {}
-        self._storages_base_cls = {}
-        self.links = []
-        self.simplifier = paths.ObjectJSON()
-        self.units = dict()
-        # use no units
-        self.dimension_units = {
-            'length': u.Unit({}),
-            'velocity': u.Unit({}),
-            'energy': u.Unit({})
-        }
-        # use MD units
-        self.dimension_units = {
-            'length': u.nanometers,
-            'velocity': u.nanometers / u.picoseconds,
-            'energy': u.kilojoules_per_mole
-        }
-
-    def add(self, store, register_attr=True):
-        self._objects[store.prefix] = store
-
-        if register_attr:
-            if hasattr(self, store.prefix):
-                raise ValueError('Attribute name %s is already in use!' % store.prefix)
-
-            setattr(self, store.prefix, store)
-
-    def _register(self):
-        pass
-
-    def _initialize(self):
-        """
-        Hook after a new file is created.
-
-        This is used to setup all variables in the storage
-        """
-
-        pass
-
-    def _restore(self):
-        """
-        Hook after an existing file is openend
-        """
-        pass
 
     def __init__(self, filename, mode=None,
                  template=None, units=None):
@@ -136,7 +84,7 @@ class Storage(netcdf.Dataset):
         self.filename = filename
 
         # call netCDF4-python to create or open .nc file
-        super(Storage, self).__init__(filename, mode)
+        super(NetCDFPlus, self).__init__(filename, mode)
 
         self._setup_class()
 
@@ -185,6 +133,75 @@ class Storage(netcdf.Dataset):
 
         self.sync()
 
+
+    @property
+    def objects(self):
+        return self._objects
+
+    def _setup_class(self):
+        """
+        Sets the basic properties for the storage
+        """
+        self._objects = {}
+        self._storages = {}
+        self._storages_base_cls = {}
+        self._obj_store = {}
+        self.simplifier = paths.ObjectJSON()
+        self.units = dict()
+        # use no units
+        self.dimension_units = {
+            'length': u.Unit({}),
+            'velocity': u.Unit({}),
+            'energy': u.Unit({})
+        }
+        # use MD units
+        self.dimension_units = {
+            'length': u.nanometers,
+            'velocity': u.nanometers / u.picoseconds,
+            'energy': u.kilojoules_per_mole
+        }
+
+    def add(self, name, store, register_attr=True):
+        store.register(self, name)
+
+        if register_attr:
+            if hasattr(self, name):
+                raise ValueError('Attribute name %s is already in use!' % name)
+
+            setattr(self, store.prefix, store)
+
+
+        self._objects[name] = store
+
+        self._storages[store.content_class] = store
+#        self._storages[store.content_class.__name__] = store
+#        self._storages[store.content_class.__name__.lower()] = store
+
+        self._obj_store[store.content_class] = store
+        print store.content_class.__name__
+        print store.content_class.__dict__
+        self._obj_store.update({cls : store for cls in store.content_class.descendants()})
+
+
+
+    def _register(self):
+        pass
+
+    def _initialize(self):
+        """
+        Hook after a new file is created.
+
+        This is used to setup all variables in the storage
+        """
+
+        pass
+
+    def _restore(self):
+        """
+        Hook after an existing file is openend
+        """
+        pass
+
     def __repr__(self):
         return "Storage @ '" + self.filename + "'"
 
@@ -210,7 +227,7 @@ class Storage(netcdf.Dataset):
         Only runs when the storage is created.
         '''
 
-        for storage in self.links:
+        for storage in self._ob:
             # create a member variable which is the associated Class itself
             storage.dimension_units.update(units=self.dimension_units)
             storage._init()
@@ -219,7 +236,7 @@ class Storage(netcdf.Dataset):
         """
         Initialize the netCDF file for storage itself.
         """
-
+        pass
 
     def list_stores(self):
         """
@@ -230,7 +247,7 @@ class Storage(netcdf.Dataset):
         list of str
             list of stores that can be accessed using `storage.[store]`
         """
-        return [storeprefix for store in self.links]
+        return [store.prefix for store in self.objects.items()]
 
     def list_storable_objects(self):
         """
@@ -241,7 +258,7 @@ class Storage(netcdf.Dataset):
         list of class
             list of base classes that can be stored using `storage.save(obj)`
         """
-        return [store.content_class for store in self.links]
+        return [store.content_class for store in self.objects.items()]
 
     def write_str(self, name, string):
         '''
@@ -287,22 +304,24 @@ class Storage(netcdf.Dataset):
         if type(obj) is list:
             # a list of objects will be stored one by one
             return [ self.save(part, *args, **kwargs) for part in obj]
+
         elif type(obj) is tuple:
             # a tuple will store all parts
             return tuple([self.save(part, *args, **kwargs) for part in obj])
-        elif hasattr(obj, 'base_cls'):
+
+        elif obj in self._obj_store:
             # to store we just check if the base_class is present in the storages
             # also we assume that if a class has no base_cls
-            if obj.base_cls in self._storages:
-                store = self._storages[obj.base_cls]
-                store.save(obj, *args, **kwargs)
+            store = self._obj_store[obj]
+            store.save(obj, *args, **kwargs)
 
-                # save has been called, all is good
-                return True
+            # save has been called, all is good
+            return True
 
         # Could not save this object. Might raise an exception, but
         # return an empty string as type
-        return False
+        raise RuntimeWarning("Objects of type '%s' cannot be stored!" %
+                             obj.__class__.__name__)
 
     def load(self, obj_type, *args, **kwargs):
         """
@@ -311,7 +330,7 @@ class Storage(netcdf.Dataset):
         Parameters
         ----------
         obj_type : str or class
-            the string or class of the base object to be loaded.
+            the store or class of the base object to be loaded.
 
         Returns
         -------
@@ -327,11 +346,13 @@ class Storage(netcdf.Dataset):
         if obj_type in self._storages:
             store = self._storages[obj_type]
             return store.load(*args, **kwargs)
-        elif hasattr(obj_type, 'base_cls'):
+        elif obj_type in self._obj_store:
             # check if a store for the base_cls exists and use this one
-            if obj_type.base_cls in self._storages:
-                store = self._storages[obj_type.base_cls]
-                return store.load(*args, **kwargs)
+            store = self._obj_store[obj_type]
+            return store.load(*args, **kwargs)
+        elif obj_type in self.simplifier.class_list:
+            store = self._obj_store[self.simplifier.class_list[obj_type]]
+            return store.load(*args, **kwargs)
 
         # no store found. This is bad and should be logged and raise
         # an exception
@@ -367,7 +388,7 @@ class Storage(netcdf.Dataset):
         if type(storage_to_copy) is str:
             storage_name = storage_to_copy
         else:
-            storage_name = storage_to_copyprefix
+            storage_name = storage_to_copy.prefix
 
         for variable in self.variables.keys():
             if variable.startswith(storage_name + '_'):
@@ -383,10 +404,8 @@ class Storage(netcdf.Dataset):
                     for idx in range(0, len(self.variables[variable])):
                         new_storage.variables[variable][idx] = self.variables[variable][idx]
 
-    def add_store(self, name, store):
 
-
-class OPSStorage(Storage):
+class Storage(NetCDFPlus):
     @property
     def template(self):
         """
@@ -562,34 +581,33 @@ class OPSStorage(Storage):
         # automatically. But the IDE would not be able to autocomplete
         # so we leave it this way :)
 
-        self.trajectories = paths.storage.TrajectoryStore('trajectories', storage)
-        self.snapshots = paths.storage.SnapshotStore('snapshots', storage)
-        self.configurations = paths.storage.ConfigurationStore('configurations', storage)
-        self.momentum = paths.storage.MomentumStore('momenta', storage)
-        self.samples = paths.storage.SampleStore('samples', storage)
-        self.samplesets = paths.storage.SampleSetStore('samplesets', storage)
-        self.pathmovechanges = paths.storage.PathMoveChangeStore('pmc', storage)
-        self.steps = paths.storage.MCStepStore('mcsteps', storage)
+        self.add('trajectories', paths.storage.TrajectoryStore())
+        self.add('snapshots', paths.storage.SnapshotStore())
+        self.add('configurations', paths.storage.ConfigurationStore())
+        self.add('momenta', paths.storage.MomentumStore())
+        self.add('samples', paths.storage.SampleStore())
+        self.add('samplesets', paths.storage.SampleSetStore())
+        self.add('pmc', paths.storage.PathMoveChangeStore())
+        self.add('mcsteps', paths.storage.MCStepStore())
 
-        self.collectivevariables = paths.storage.ObjectDictStore('cvs', storage, paths.CollectiveVariable, paths.Snapshot)
+        self.add('cvs', paths.storage.ObjectDictStore(paths.CollectiveVariable, paths.Snapshot))
         self.collectivevariables = self.cvs
 
         # normal objects
 
-        self.pathmovers = paths.storage.ObjectStore('pathmovers', storage, paths.PathMover, has_uid=True, has_name=True)
-        self.shootingpoints = paths.storage.ObjectStore('shootingpoints', storage, paths.ShootingPoint, has_uid=False)
-        self.shootingpointselectors = paths.storage.ObjectStore('shootingpointselectors', storage, paths.ShootingPointSelector, has_uid=False, has_name=True)
-        self.engines = paths.storage.ObjectStore('engines', storage, paths.DynamicsEngine, has_uid=True, has_name=True)
-        self.pathsimulators = paths.storage.ObjectStore('pathsimulators', storage, paths.PathSimulator, has_uid=True, has_name=True)
-        self.transitions = paths.storage.ObjectStore('transitions', storage, paths.Transition, has_uid=True, has_name=True)
-        self.networks = paths.storage.ObjectStore('networks', storage, paths.TransitionNetwork, has_uid=True, has_name=True)
+        self.add('pathmovers', paths.storage.ObjectStore(paths.PathMover, has_uid=True, has_name=True))
+        self.add('shootingpoints', paths.storage.ObjectStore(paths.ShootingPoint, has_uid=False))
+        self.add('shootingpointselectors', paths.storage.ObjectStore(paths.ShootingPointSelector, has_uid=False, has_name=True))
+        self.add('engines', paths.storage.ObjectStore(paths.DynamicsEngine, has_uid=True, has_name=True))
+        self.add('pathsimulators', paths.storage.ObjectStore(paths.PathSimulator, has_uid=True, has_name=True))
+        self.add('transitions', paths.storage.ObjectStore(paths.Transition, has_uid=True, has_name=True))
+        self.add('networks', paths.storage.ObjectStore(paths.TransitionNetwork, has_uid=True, has_name=True))
 
         # nestable objects
 
-        self.volumes = paths.storage.ObjectStore('volumes', storage, paths.Volume, has_uid=True, nestable=True, has_name=True)
-        self.ensembles = paths.storage.ObjectStore('ensembles', storage, paths.Ensemble, has_uid=True, nestable=True, has_name=True)
+        self.add('volumes', paths.storage.ObjectStore(paths.Volume, has_uid=True, nestable=True, has_name=True))
+        self.add('ensembles', paths.storage.ObjectStore(paths.Ensemble, has_uid=True, nestable=True, has_name=True))
 
-        # self.query = paths.storage.QueryStore(storage)
 
     def _initialize(self):
         # Set global attributes.
@@ -638,12 +656,14 @@ class StorableObjectJSON(ObjectJSON):
         if obj is self.storage:
             return { '_storage' : 'self' }
         if type(obj).__module__ != '__builtin__':
-            if hasattr(obj, 'idx') and (not hasattr(obj, 'nestable') or (obj.base_cls_name != base_type)):
-                # this also returns the base class name used for storage
-                # store objects only if they are not creatable. If so they will only be created in their
-                # top instance and we use the simplify from the super class ObjectJSON
-                self.storage.save(obj)
-                return { '_idx' : obj.idx[self.storage], '_cls' : obj.__class__.__name__ }
+            if hasattr(obj, 'idx'):
+                store = self.storage._obj_store[obj.__class__]
+                if not store.nestable or obj.base_cls_name != base_type:
+                    # this also returns the base class name used for storage
+                    # store objects only if they are not creatable. If so they will only be created in their
+                    # top instance and we use the simplify from the super class ObjectJSON
+                    self.storage.save(obj)
+                    return { '_idx' : obj.idx[self.storage], '_cls' : obj.cls }
 
         return super(StorableObjectJSON, self).simplify(obj, base_type)
 
@@ -652,12 +672,11 @@ class StorableObjectJSON(ObjectJSON):
             if '_storage' in obj:
                 if obj['_storage'] == 'self':
                     return self.storage
-            if '_cls' in obj and '_idx' in obj:
-                if obj['_cls'] in self.class_list:
-                    base_cls = self.class_list[obj['_cls']]
-                    result = self.storage.load(base_cls, obj['_idx'])
-                else:
-                    result = self.storage.load(obj['_cls'], obj['_idx'])
+
+            if '_cls' in obj in obj:
+                cls = self.class_list[obj['_cls']]
+                store = self.storage._obj_store[cls]
+                result = store.load(obj['_idx'])
 
                 return result
 

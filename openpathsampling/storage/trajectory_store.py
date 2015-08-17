@@ -20,8 +20,8 @@ Trajectory.__getitem__ = load_missing_snapshot(Trajectory.__getitem__)
 Trajectory.__getslice__ = load_missing_snapshot(Trajectory.__getslice__)
 
 class TrajectoryStore(ObjectStore):
-    def __init__(self, storage, lazy=True, use_snapshot_cache=True):
-        super(TrajectoryStore, self).__init__(storage, Trajectory)
+    def __init__(self, lazy=True, use_snapshot_cache=True):
+        super(TrajectoryStore, self).__init__(Trajectory)
         self.lazy = lazy
         self.use_snapshot_cache = use_snapshot_cache
 

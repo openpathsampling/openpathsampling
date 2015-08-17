@@ -2,9 +2,8 @@ from openpathsampling.storage import ObjectStore
 from openpathsampling.pathsimulator import MCStep
 
 class MCStepStore(ObjectStore):
-    def __init__(self, storage):
+    def __init__(self):
         super(MCStepStore, self).__init__(
-            storage,
             MCStep,
             json=False,
             load_partial=False

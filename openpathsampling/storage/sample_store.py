@@ -5,8 +5,8 @@ from openpathsampling.storage.object_storage import func_update_object
 import time
 
 class SampleStore(ObjectStore):
-    def __init__(self, storage):
-        super(SampleStore, self).__init__(storage, Sample, json=False, load_partial=True)
+    def __init__(self):
+        super(SampleStore, self).__init__(Sample, json=False, load_partial=True)
 
         self.set_variable_partial_loading('details', self.update_details)
         self.set_variable_partial_loading('parent', self.update_parent)
@@ -147,8 +147,8 @@ class SampleStore(ObjectStore):
 
 class SampleSetStore(ObjectStore):
 
-    def __init__(self, storage):
-        super(SampleSetStore, self).__init__(storage, SampleSet, json=False, load_partial=True)
+    def __init__(self):
+        super(SampleSetStore, self).__init__(SampleSet, json=False, load_partial=True)
 
         self.set_variable_partial_loading('movepath', self.update_movepath)
 

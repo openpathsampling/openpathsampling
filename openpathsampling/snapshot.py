@@ -10,14 +10,16 @@ import numpy as np
 import mdtraj as md
 
 #THIS SHOULD NOT BE NECESSARY! SEE XYZ BELOW
-import simtk.unit as u 
+import simtk.unit as u
+
+from openpathsampling.todict import OPSObject
 
 
 #=============================================================================
 # SIMULATION CONFIGURATION
 #=============================================================================
 
-class Configuration(object):
+class Configuration(OPSObject):
 
     """
     Simulation configuration. Only Coordinates, the associated boxvectors
@@ -58,6 +60,8 @@ class Configuration(object):
             a reference to the used topology. This is necessary to allow
             export to mdtraj objects
         """
+
+        super(Configuration, self).__init__()
 
         self.coordinates = None
         self.box_vectors = None
@@ -172,7 +176,7 @@ class Configuration(object):
 # SIMULATION MOMENTUM / VELOCITY
 #=============================================================================
 
-class Momentum(object):
+class Momentum(OPSObject):
     """
     Simulation momentum. Contains only velocities of all atoms and
     associated kinetic energies
@@ -204,6 +208,8 @@ class Momentum(object):
         idx : dict( Storage() : int )
             dict for storing the used index per storage
         """
+
+        super(Momentum, self).__init__()
         
         self.velocities = None
         self.kinetic_energy = None
@@ -298,7 +304,7 @@ def has(attr):
 
 
 
-class Snapshot(object):
+class Snapshot(OPSObject):
     """
     Simulation snapshot. Contains references to a configuration and momentum
     """
@@ -350,6 +356,8 @@ class Snapshot(object):
         idx : dict( Storage() : int )
             dict for storing the used index per storage
         """
+
+        super(Snapshot, self).__init__()
         
         if configuration is None:
             self.configuration = Configuration()

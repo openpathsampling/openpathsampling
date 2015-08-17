@@ -17,17 +17,53 @@ class OPSObject(object):
     before. This means that you cannot name an object, after is has been saved.
     """
 
-    @staticmethod
-    def _subclasses(cls):
-        return cls.__subclasses__() + [g for s in cls.__subclasses__()
-                                       for g in OPSObject._subclasses(s)]
+    _base = None
+
+    @property
+    def idx(this):
+        return this._idx
+
+    def __init__(self):
+        self._idx = {}
+        self._uid = ''
+
+    @classmethod
+    def cls(cls):
+        return cls.__name__
+
+    def save(self, storage):
+        storage.save(self)
+
+    @classmethod
+    def base(cls):
+        if cls._base is None:
+            if cls is not OPSObject:
+                if cls.__base__ is OPSObject:
+                    cls._base = cls
+                else:
+                    cls._base = cls.__base__
+
+        return cls._base
+
+    @property
+    def base_cls_name(self):
+        return self.base().__name__
+
+    @property
+    def base_cls(self):
+        return self.base()
+
+    @classmethod
+    def descendants(cls):
+        return cls.__subclasses__() + \
+               [g for s in cls.__subclasses__()  for g in s.descendants()]
 
     @staticmethod
     def objects():
         """
         Returns a dictionary of all subclasses
         """
-        subclasses = OPSObject._subclasses(OPSObject)
+        subclasses = OPSObject.descendants()
 
         return { subclass.__name__ : subclass for subclass in subclasses }
 

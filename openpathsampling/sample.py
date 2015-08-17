@@ -1,7 +1,7 @@
 import random
 
 import openpathsampling as paths
-from openpathsampling.todict import OPSNamed
+from openpathsampling.todict import OPSNamed, OPSObject
 
 import logging
 logger = logging.getLogger(__name__)
@@ -352,7 +352,7 @@ class SampleSet(OPSNamed):
     #         raise ValueError('Incompatible MovePaths')
 
 
-class Sample(object):
+class Sample(OPSObject):
     """
     A Sample represents a given "draw" from its ensemble, and is the return
     object from a PathMover. It and contains all information about the move,
@@ -387,6 +387,8 @@ class Sample(object):
                  parent=None,
                  mover=None
                  ):
+
+        super(Sample, self).__init__()
         self.bias = bias
         self.replica = replica
         self.ensemble = ensemble

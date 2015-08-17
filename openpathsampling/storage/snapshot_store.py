@@ -9,8 +9,8 @@ class SnapshotStore(ObjectStore):
     An ObjectStore for Snapshots in netCDF files.
     """
 
-    def __init__(self, storage = None):
-        super(SnapshotStore, self).__init__(storage, Snapshot, json=False)
+    def __init__(self):
+        super(SnapshotStore, self).__init__(Snapshot, json=False)
 
     def load(self, idx=None):
         '''
@@ -232,8 +232,8 @@ class MomentumStore(ObjectStore):
     An ObjectStore for Momenta. Allows to store Momentum() instances in a netcdf file.
     """
 
-    def __init__(self, storage = None):
-        super(MomentumStore, self).__init__(storage, Momentum, json=False, load_partial=True)
+    def __init__(self):
+        super(MomentumStore, self).__init__(Momentum, json=False, load_partial=True)
 
         # attach delayed loaders
         self.set_variable_partial_loading('velocities', self.update_velocities)
@@ -412,8 +412,8 @@ class MomentumStore(ObjectStore):
 
     
 class ConfigurationStore(ObjectStore):
-    def __init__(self, storage = None):
-        super(ConfigurationStore, self).__init__(storage, Configuration, json=False, load_partial=True)
+    def __init__(self):
+        super(ConfigurationStore, self).__init__(Configuration, json=False, load_partial=True)
 
         # attach delayed loaders
         self.set_variable_partial_loading('coordinates', self.update_coordinates)
