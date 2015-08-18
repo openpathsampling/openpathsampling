@@ -62,7 +62,8 @@ class NetCDFPlus(netcdf.Dataset):
             self.getter = getter
 
         def __setitem__(self, key, value):
-                self.variable[key] = self.setter(value)
+            print self.variable.name, key, value, self.setter(value)
+            self.variable[key] = self.setter(value)
 
         def __getitem__(self, item):
             return self.getter(self.variable[item])
@@ -99,7 +100,6 @@ class NetCDFPlus(netcdf.Dataset):
                 logger.info("Create new netCDF file '%s' for storage", filename)
                 mode = 'w'
 
-
         self.filename = filename
 
         # call netCDF4-python to create or open .nc file
@@ -130,7 +130,6 @@ class NetCDFPlus(netcdf.Dataset):
             for variable_name in self.variables:
                 unit = None
                 variable = self.variables[variable_name]
-                self.create_variable_delegate(variable_name)
 
                 if hasattr(variable, 'unit_simtk'):
                     unit_dict = self.simplifier.from_json(getattr(variable, 'unit_simtk'))
@@ -139,8 +138,9 @@ class NetCDFPlus(netcdf.Dataset):
 
                 self.units[str(variable_name)] = unit
 
-            # After we have restored the units we can load objects from the storage
+            self.update_delegates()
 
+            # After we have restored the units we can load objects from the storage
             self._restore()
 
         self.sync()
@@ -237,6 +237,8 @@ class NetCDFPlus(netcdf.Dataset):
 
         for storage in self._objects.values():
             storage._init()
+
+        self.update_delegates()
 
     def _initialize_netCDF(self):
         """
@@ -435,6 +437,9 @@ class NetCDFPlus(netcdf.Dataset):
 
         var = self.variables[name]
 
+        if not hasattr(var, 'var_type'):
+            return
+
         var_type = var.var_type
 
         getter = None
@@ -481,6 +486,8 @@ class NetCDFPlus(netcdf.Dataset):
             setter = lambda v : \
                 [ -1 if w is None else store.save(v) for w in v] \
                     if hasattr(v, '__iter__') else -1 if v is None else store.save(v)
+
+
 
         self.vars[name] = NetCDFPlus.Variable_Delegate(self.variables[name], getter, setter)
 
@@ -605,7 +612,11 @@ class NetCDFPlus(netcdf.Dataset):
             # Define long (human-readable) names for variables.
             setattr(ncvar,    "long_str", description)
 
-        self.create_variable_delegate(name)
+    def update_delegates(self):
+        for name in self.variables:
+            if name not in self.vars:
+                self.create_variable_delegate(name)
+
 
 class Storage(NetCDFPlus):
 
@@ -638,8 +649,8 @@ class Storage(NetCDFPlus):
 
         for obj in self.configurations.iterator():
             storage2.configurations.save(obj.copy(subset), idx=obj.idx[self])
-        for obj in self.momentum.iterator():
-            storage2.momentum.save(obj.copy(subset), idx=obj.idx[self])
+        for obj in self.momenta.iterator():
+            storage2.momenta.save(obj.copy(subset), idx=obj.idx[self])
 
         # All other should be copied one to one. We do this explicitely although we could just copy all
         # and exclude configurations and momenta, but this seems cleaner
@@ -723,7 +734,7 @@ class Storage(NetCDFPlus):
         self.add('momenta', paths.storage.MomentumStore())
         self.add('samples', paths.storage.SampleStore())
         self.add('samplesets', paths.storage.SampleSetStore())
-        self.add('pmc', paths.storage.PathMoveChangeStore())
+        self.add('pathmovechanges', paths.storage.PathMoveChangeStore())
         self.add('mcsteps', paths.storage.MCStepStore())
 
         self.add('cvs', paths.storage.ObjectDictStore(paths.CollectiveVariable, paths.Snapshot))
@@ -731,6 +742,7 @@ class Storage(NetCDFPlus):
 
         # normal objects
 
+        self.add('details', paths.storage.ObjectStore(paths.Details, has_uid=False, has_name=False))
         self.add('topologies', paths.storage.ObjectStore(paths.Topology, has_uid=True, has_name=True))
         self.add('pathmovers', paths.storage.ObjectStore(paths.PathMover, has_uid=True, has_name=True))
         self.add('shootingpoints', paths.storage.ObjectStore(paths.ShootingPoint, has_uid=False))
@@ -771,6 +783,7 @@ class Storage(NetCDFPlus):
 
         # update the units for dimensions from the template
         self.dimension_units.update(paths.tools.units_from_snapshot(template))
+
         self._init_storages()
 
         logger.info("Saving topology")
@@ -780,8 +793,10 @@ class Storage(NetCDFPlus):
 
         logger.info("Create initial template snapshot")
 
+        print 'save'
         # Save the initial configuration
         self.snapshots.save(template)
+        print 'done'
 
         self.createVariable('template_idx', 'i4', 'scalar')
         self.variables['template_idx'][:] = template.idx[self]
@@ -817,7 +832,7 @@ class StorableObjectJSON(ObjectJSON):
                 if obj['_storage'] == 'self':
                     return self.storage
 
-            if '_cls' in obj in obj:
+            if '_idx' in obj and '_cls' in obj:
                 cls = self.class_list[obj['_cls']]
                 store = self.storage._obj_store[cls]
                 result = store.load(obj['_idx'])

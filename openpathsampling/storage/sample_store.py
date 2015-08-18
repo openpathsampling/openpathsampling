@@ -76,7 +76,7 @@ class SampleStore(ObjectStore):
         self.init_variable('parent', 'obj.samples', chunksizes=(1, ))
         self.init_variable('details', 'obj.details', chunksizes=(1, ))
         self.init_variable('bias', 'float', chunksizes=(1, ))
-        self.init_variable('mover', 'obj.mover', chunksizes=(1, ))
+        self.init_variable('mover', 'obj.pathmovers', chunksizes=(1, ))
 
     def all(self):
         self.cache_all()

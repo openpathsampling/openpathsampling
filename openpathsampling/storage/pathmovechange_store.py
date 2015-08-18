@@ -1,6 +1,5 @@
 from openpathsampling.storage import ObjectStore
 from openpathsampling.pathmovechange import PathMoveChange
-from openpathsampling.storage.object_storage import func_update_object
 from openpathsampling.todict import OPSObject
 
 class PathMoveChangeStore(ObjectStore):

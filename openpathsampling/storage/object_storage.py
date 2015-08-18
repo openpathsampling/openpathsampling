@@ -28,6 +28,7 @@ class ObjectStore(object):
             self.dct = dct
 
         def __getitem__(self, item):
+#            print self.dct.keys()
             return self.dct[self.prefix + item]
 
     def prefix_delegate(self, dct):
@@ -1296,7 +1297,6 @@ def func_update_variable(attribute, variable):
     return staticmethod(updater)
 
 def create_load_function(cls, arguments):
-
     def loader(self, idx):
         params = {arg : self.vars[param][idx] for arg, param in arguments.iteritems()}
 

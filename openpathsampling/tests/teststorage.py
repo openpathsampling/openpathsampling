@@ -74,6 +74,7 @@ class testStorage(object):
 
         if os.path.isfile(self.filename_clone):
             os.remove(self.filename_clone)
+        pass
 
     def test_create_template(self):
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')

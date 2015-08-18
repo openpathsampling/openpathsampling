@@ -34,15 +34,6 @@ class MCStepStore(ObjectStore):
             the sample
         '''
 
-        storage = self.storage
-
-        previous_idx = self.storage.variables['mcstep_previous_idx'][idx]
-        active_idx = self.storage.variables['mcstep_active_idx'][idx]
-        simulation_idx = self.storage.variables['mcstep_simulation_idx'][idx]
-        change_idx = self.storage.variables['mcstep_change_idx'][idx]
-
-        step = self.storage.variables['mcstep_mccycle'][idx]
-
         return MCStep(
             mccycle=self.vars['mccycle'],
             previous=self.vars['previous'],
@@ -58,7 +49,7 @@ class MCStepStore(ObjectStore):
         self.init_variable('change', 'obj.pathmovechanges', chunksizes=(1, ))
         self.init_variable('active', 'obj.samplesets', chunksizes=(1, ))
         self.init_variable('previous', 'obj.samplesets', chunksizes=(1, ))
-        self.init_variable('simulation', 'obj.simulations', chunksizes=(1, ))
+        self.init_variable('simulation', 'obj.pathsimulators', chunksizes=(1, ))
         self.init_variable('mccycle', 'int', chunksizes=(1, ))
 
     def all(self):
@@ -74,11 +65,11 @@ class MCStepStore(ObjectStore):
 
             storage = self.storage
 
-            steps = storage.variables['mcstep_mccycle'][:]
-            previous_idxs = storage.variables['mcstep_previous_idx'][:]
-            active_idxs = storage.variables['mcstep_active_idx'][:]
-            simulation_idxs = storage.variables['mcstep_simulation_idx'][:]
-            change_idxs = storage.variables['mcstep_change_idx'][:]
+            steps = storage.variables[self.prefix + '_mccycle'][:]
+            previous_idxs = storage.variables[self.prefix + '_previous'][:]
+            active_idxs = storage.variables[self.prefix + '_active'][:]
+            simulation_idxs = storage.variables[self.prefix + '_simulation'][:]
+            change_idxs = storage.variables[self.prefix + '_change'][:]
 
             [ self.add_to_cache(i, n, p, a, s, c) for i, n, p, a, s, c in zip(
                 idxs,

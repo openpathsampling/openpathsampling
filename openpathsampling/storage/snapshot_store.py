@@ -86,9 +86,9 @@ class SnapshotStore(ObjectStore):
         A single Snapshot object can only be saved once!
         """
 
-        self.vars['configuration'][idx] = self.idx(snapshot.configuration)
-        self.vars['momentum'][idx] = self.idx(snapshot.momentum)
-        self.vars['reversed'][idx] = self.idx(snapshot._reversed)
+        self.vars['configuration'][idx] = snapshot.configuration
+        self.vars['momentum'][idx] = snapshot.momentum
+        self.vars['reversed'][idx] = snapshot._reversed
 
         self.vars['momentum_reversed'][idx] = snapshot.is_reversed
 
@@ -169,14 +169,14 @@ class SnapshotStore(ObjectStore):
                 chunksizes=(1, )
         )
 
-        self.init_variable('momentum_idx', 'obj.momenta',
+        self.init_variable('momentum', 'obj.momenta',
                 description="the snapshot index (0..n_momentum-1) 'frame' of snapshot '{idx}'.",
                 chunksizes=(1, )
                 )
 
         self.init_variable('momentum_reversed', 'bool', chunksizes=(1, ))
 
-        self.init_variable('reversed_idx', 'obj.snapshots',
+        self.init_variable('reversed', 'obj.snapshots',
                 description="the idx of the reversed snapshot index (0..n_snapshot-1) 'snapshot' of snapshot '{idx}'.",
                 chunksizes=(1, )
                 )
@@ -212,7 +212,7 @@ class SnapshotStore(ObjectStore):
 
         """
         def idx(obj):
-            return obj.momentum.idx[self.storage]
+            return obj.momenta.idx[self.storage]
 
         return idx
 
