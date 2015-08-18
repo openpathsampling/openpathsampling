@@ -30,7 +30,7 @@ class SnapshotStore(ObjectStore):
         configuration = self.vars['configuration'][idx]
         momentum = self.vars['momentum'][idx]
         momentum_reversed = self.vars['momentum_reversed'][idx]
-        reversed_idx = self.vars['reversed'][idx]
+        reversed_idx = self.vars['reversed_idx'][idx]
 
         snapshot = Snapshot(
             configuration=configuration,
@@ -176,7 +176,7 @@ class SnapshotStore(ObjectStore):
 
         self.init_variable('momentum_reversed', 'bool', chunksizes=(1, ))
 
-        self.init_variable('reversed', 'obj.snapshots',
+        self.init_variable('reversed', 'index',
                 description="the idx of the reversed snapshot index (0..n_snapshot-1) 'snapshot' of snapshot '{idx}'.",
                 chunksizes=(1, )
                 )
