@@ -27,17 +27,23 @@ class SnapshotStore(ObjectStore):
             the loaded snapshot instance
         '''
 
+        configuration = self.vars['configuration'][idx]
+        momentum = self.vars['momentum'][idx]
+        momentum_reversed = self.vars['momentum_reversed'][idx]
+        reversed_idx = self.vars['reversed'][idx]
 
-        configuration_idx = self.configuration_idx(idx)
-        momentum_idx = self.momentum_idx(idx)
-        momentum_reversed = self.momentum_reversed(idx)
-        reversed_idx = self.reversed_idx(idx)
-
-        configuration = self.storage.configurations.load(configuration_idx)
-        momentum = self.storage.momentum.load(momentum_idx)
-
-        snapshot = Snapshot(configuration=configuration, momentum=momentum, is_reversed=momentum_reversed, reversed_copy=None)
-        snapshot_reversed = Snapshot(configuration=configuration, momentum=momentum, is_reversed=not momentum_reversed, reversed_copy=None)
+        snapshot = Snapshot(
+            configuration=configuration,
+            momentum=momentum,
+            is_reversed=momentum_reversed,
+            reversed_copy=None
+        )
+        snapshot_reversed = Snapshot(
+            configuration=configuration,
+            momentum=momentum,
+            is_reversed=not momentum_reversed,
+            reversed_copy=None
+        )
 
         snapshot._reversed = snapshot_reversed
         snapshot_reversed._reversed = snapshot
@@ -79,28 +85,12 @@ class SnapshotStore(ObjectStore):
         This also saves all contained frames in the snapshot if not done yet.
         A single Snapshot object can only be saved once!
         """
-        storage = self.storage
 
-        if snapshot.configuration is not None:
-            storage.configurations.save(snapshot.configuration)
-            self.save_variable('snapshot_configuration_idx', idx, snapshot.configuration.idx[storage])
-        else:
-            self.save_variable('snapshot_configuration_idx', idx, -1)
+        self.vars['configuration'][idx] = self.idx(snapshot.configuration)
+        self.vars['momentum'][idx] = self.idx(snapshot.momentum)
+        self.vars['reversed'][idx] = self.idx(snapshot._reversed)
 
-        if snapshot.momentum is not None:
-            storage.momentum.save(snapshot.momentum)
-            self.save_variable('snapshot_momentum_idx', idx, snapshot.momentum.idx[storage])
-        else:
-            self.save_variable('snapshot_momentum_idx', idx, -1)
-
-        if snapshot._reversed is not None:
-            storage.snapshots.save(snapshot._reversed)
-            self.save_variable('snapshot_reversed_idx', idx, snapshot._reversed.idx[storage])
-        else:
-            self.save_variable('snapshot_reversed_idx', idx, -1)
-
-        self.save_variable('snapshot_momentum_reversed', idx, int(snapshot.is_reversed))
-
+        self.vars['momentum_reversed'][idx] = snapshot.is_reversed
 
     def configuration_idx(self, idx):
         '''
@@ -116,7 +106,7 @@ class SnapshotStore(ObjectStore):
         list of int
             configuration indices
         '''
-        return int(self.load_variable('snapshot_configuration_idx', idx))
+        return self.vars['configuration'][idx]
 
     def momentum_idx(self, idx):
         '''
@@ -132,7 +122,7 @@ class SnapshotStore(ObjectStore):
         int
             momentum indices
         '''
-        return int(self.load_variable('snapshot_momentum_idx', idx))
+        return self.vars['momentum'][idx]
 
     def reversed_idx(self, idx):
         '''
@@ -149,7 +139,7 @@ class SnapshotStore(ObjectStore):
         int
             reversed snapshot indices
         '''
-        return int(self.load_variable('snapshot_reversed_idx', idx))
+        return self.vars['reversed'][idx]
 
     def momentum_reversed(self, idx):
         '''
@@ -165,7 +155,7 @@ class SnapshotStore(ObjectStore):
         boolean
             boolean if the momentum of the snapshot is reversed
         '''
-        return bool(self.load_variable('snapshot_momentum_reversed', idx))
+        return self.vars['momentum_reversed'][idx]
 
 
     def _init(self):
@@ -174,20 +164,20 @@ class SnapshotStore(ObjectStore):
         '''
         super(SnapshotStore, self)._init()
 
-        self.init_variable('snapshot_configuration_idx', 'index', selfprefix,
-                description="snapshot[snapshot] is the snapshot index (0..n_configuration-1) of snapshot 'snapshot'.",
+        self.init_variable('configuration', 'obj.configurations',
+                description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
                 chunksizes=(1, )
         )
 
-        self.init_variable('snapshot_momentum_idx', 'index', selfprefix,
-                description="snapshot[snapshot] is the snapshot index (0..n_momentum-1) 'frame' of snapshot 'snapshot'.",
+        self.init_variable('momentum_idx', 'obj.momenta',
+                description="the snapshot index (0..n_momentum-1) 'frame' of snapshot '{idx}'.",
                 chunksizes=(1, )
                 )
 
-        self.init_variable('snapshot_momentum_reversed', 'bool', selfprefix, chunksizes=(1, ))
+        self.init_variable('momentum_reversed', 'bool', chunksizes=(1, ))
 
-        self.init_variable('snapshot_reversed_idx', 'index', selfprefix,
-                description="snapshot[snapshot] is the idx of the reversed snapshot index (0..n_snapshot-1) 'frame' of snapshot 'snapshot'.",
+        self.init_variable('reversed_idx', 'obj.snapshots',
+                description="the idx of the reversed snapshot index (0..n_snapshot-1) 'snapshot' of snapshot '{idx}'.",
                 chunksizes=(1, )
                 )
 
@@ -236,9 +226,8 @@ class MomentumStore(ObjectStore):
         super(MomentumStore, self).__init__(Momentum, json=False, load_partial=True)
 
         # attach delayed loaders
-        self.set_variable_partial_loading('velocities', self.update_velocities)
-        self.set_variable_partial_loading('kinetic_energy', self.update_kinetic_energy)
-
+        self.set_variable_partial_loading('velocities')
+        self.set_variable_partial_loading('kinetic_energy')
 
     def save(self, momentum, idx = None):
         """
@@ -252,20 +241,13 @@ class MomentumStore(ObjectStore):
             if not None `idx`is used as the index to index the Momentum()
             instance. Might overwrite existing Momentum in the database.
         """
-
-        storage = self.storage
-
         if momentum.velocities is not None:
-            if hasattr(momentum.velocities, 'unit'):
-                storage.variables['momentum_velocities'][idx,:,:] = (momentum.velocities / self.storage.units["momentum_velocities"]).astype(np.float32)
-            else:
-                # in this case we blindly assume that the units are correct
-                storage.variables['momentum_velocities'][idx,:,:] = momentum.velocities.astype(np.float32)
+            self.vars['velocities'][idx,:,:] = momentum.velocities
         else:
             print 'ERROR : Momentum should not be empty'
 
         if momentum.kinetic_energy is not None:
-            storage.variables['momentum_kinetic'][idx] = momentum.kinetic_energy / self.storage.units["momentum_kinetic"]
+            self.vars['kinetic_energy'][idx] = momentum.kinetic_energy
         else:
             # TODO: No kinetic energy is not yet supported
             print 'Think about how to handle this. It should only be None if loaded lazy and in this case it will never be saved.'
@@ -288,12 +270,10 @@ class MomentumStore(ObjectStore):
             the loaded momentum instance
         '''
 
-        storage = self.storage
 
-        v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
-        velocities = u.Quantity(v, self.storage.units["momentum_velocities"])
-        T = storage.variables['momentum_kinetic'][idx]
-        kinetic_energy = u.Quantity(T, self.storage.units["momentum_kinetic"])
+        velocities = self.vars['velocities'][idx]
+        kinetic_energy = self.vars['kinetic_energy'][idx]
+
         momentum = Momentum(velocities=velocities, kinetic_energy=kinetic_energy)
 
         return momentum
@@ -303,45 +283,6 @@ class MomentumStore(ObjectStore):
         del momentum.velocities
         del momentum.kinetic_energy
         return momentum
-
-    @staticmethod
-    def update_velocities(obj):
-        """
-        Update/Load the velocities in the given obj from the attached storage
-
-        Parameters
-        ----------
-        obj : Momentum
-            The Momentum object to be updated
-
-        """
-        storage = obj._origin
-
-        idx = obj.idx[storage]
-        v = storage.variables['momentum_velocities'][idx,:,:].astype(np.float32).copy()
-        velocities = u.Quantity(v, storage.units["momentum_velocities"])
-
-        obj.velocities = velocities
-
-    @staticmethod
-    def update_kinetic_energy(obj):
-        """
-        Update/Load the kinetic_energy in the given obj from the attached storage
-
-        Parameters
-        ----------
-        obj : Momentum
-            The Momentum object to be updated
-
-        """
-        storage = obj._origin
-
-        idx = obj.idx[storage]
-        T = storage.variables['momentum_kinetic'][idx]
-        kinetic_energy = u.Quantity(T, storage.units["momentum_kinetic"])
-
-        obj.kinetic_energy = kinetic_energy
-
 
     def velocities_as_numpy(self, frame_indices=None, atom_indices=None):
         """
@@ -363,7 +304,7 @@ class MomentumStore(ObjectStore):
         if atom_indices is None:
             atom_indices = slice(None)
 
-        return self.variables['momentum_velocities'][frame_indices,atom_indices,:].astype(np.float32).copy()
+        return self.variables['velocities'][frame_indices,atom_indices,:].astype(np.float32).copy()
 
     def velocities_as_array(self, frame_indices=None, atom_indices=None):
         '''
@@ -397,15 +338,14 @@ class MomentumStore(ObjectStore):
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
-        self.init_variable('momentum_velocities', 'float',
-                (selfprefix, 'atom','spatial'),
-                self.dimension_units['velocity'],
-                description="velocities[momentum][atom][coordinate] are " +
-                            "velocities of atom 'atom' in dimension " +
+        self.init_variable('velocities', 'float',
+                dimensions=(self.prefix, 'atom', 'spatial'),
+                units=self.dimension_units['velocity'],
+                description="the velocity of atom 'atom' in dimension " +
                             "'coordinate' of momentum 'momentum'.",
-                chunksizes=(1,n_atoms,n_spatial))
+                chunksizes=(1, n_atoms, n_spatial))
 
-        self.init_variable('momentum_kinetic', 'float', selfprefix,
+        self.init_variable('kinetic_energy', 'float', self.prefix,
                 self.dimension_units['energy'],
                 chunksizes=(1, ))
 
@@ -416,38 +356,30 @@ class ConfigurationStore(ObjectStore):
         super(ConfigurationStore, self).__init__(Configuration, json=False, load_partial=True)
 
         # attach delayed loaders
-        self.set_variable_partial_loading('coordinates', self.update_coordinates)
-        self.set_variable_partial_loading('box_vectors', self.update_box_vectors)
-        self.set_variable_partial_loading('potential_energy', self.update_potential_energy)
+        self.set_variable_partial_loading('coordinates')
+        self.set_variable_partial_loading('box_vectors')
+        self.set_variable_partial_loading('potential_energy')
 
     def save(self, configuration, idx = None):
-        storage = self.storage
-
         # Store configuration.
-        storage.variables['configuration_coordinates'][idx,:,:] = (configuration.coordinates / self.storage.units["configuration_coordinates"]).astype(np.float32)
+        self.vars['coordinates'][idx] = configuration.coordinates
 
         if configuration.potential_energy is not None:
-            storage.variables['configuration_potential'][idx] = configuration.potential_energy / self.storage.units["configuration_potential"]
+            self.vars['potential'][idx] = configuration.potential_energy
 
         if configuration.box_vectors is not None:
-            storage.variables['configuration_box_vectors'][idx,:,:] = (configuration.box_vectors / self.storage.units["configuration_box_vectors"]).astype(np.float32)
+            self.vars['box_vectors'][idx] = configuration.box_vectors
 
     def get(self, indices):
         return [ self.load(idx) for idx in indices ]
 
     def load(self, idx):
-        storage = self.storage
-        x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
-        coordinates = u.Quantity(x, self.storage.units["configuration_coordinates"])
-        b = storage.variables['configuration_box_vectors'][idx]
-        box_vectors = u.Quantity(b, self.storage.units["configuration_box_vectors"])
-        V = storage.variables['configuration_potential'][idx]
-        potential_energy = u.Quantity(V, self.storage.units["configuration_potential"])
+        coordinates = self.vars["coordinates"][idx]
+        box_vectors = self.vars["box_vectors"][idx]
+        potential_energy = self.vars["potential"][idx]
 
         configuration = Configuration(coordinates=coordinates, box_vectors = box_vectors, potential_energy=potential_energy)
         configuration.topology = self.storage.topology
-
-#        print 'loaded normally'
 
         return configuration
 
@@ -476,63 +408,6 @@ class ConfigurationStore(ObjectStore):
 
         return configuration
 
-    @staticmethod
-    def update_coordinates(obj):
-        """
-        Update/Load the coordinates in the given obj from the attached storage
-
-        Parameters
-        ----------
-        obj : Configuration
-            the Configuration object to be updated
-
-        """
-        storage = obj._origin
-        idx = obj.idx[storage]
-
-        x = storage.variables['configuration_coordinates'][idx,:,:].astype(np.float32).copy()
-        coordinates = u.Quantity(x, storage.units["configuration_coordinates"])
-
-        obj.coordinates = coordinates
-
-    @staticmethod
-    def update_box_vectors(obj):
-        """
-        Update/Load the box_vectors in the given obj from the attached storage
-
-        Parameters
-        ----------
-        obj : Configuration
-            the Configuration object to be updated
-
-        """
-        storage = obj._origin
-        idx = obj.idx[storage]
-
-        b = storage.variables['configuration_box_vectors'][idx]
-        box_vectors = u.Quantity(b, storage.units["configuration_box_vectors"])
-
-        obj.box_vectors = box_vectors
-
-    @staticmethod
-    def update_potential_energy(obj):
-        """
-        Update/Load the potential_energy in the given obj from the attached storage
-
-        Parameters
-        ----------
-        obj : Configuration
-            the Configuration object to be updated
-
-        """
-        storage = obj._origin
-        idx = obj.idx[storage]
-
-        V = storage.variables['configuration_potential'][idx]
-        potential_energy = u.Quantity(V, storage.units["configuration_potential"])
-
-        obj.potential_energy = potential_energy
-
     def coordinates_as_numpy(self, frame_indices=None, atom_indices=None):
         """
         Return the atom coordinates in the storage for given frame indices
@@ -557,7 +432,7 @@ class ConfigurationStore(ObjectStore):
         if atom_indices is None:
             atom_indices = slice(None)
 
-        return self.storage.variables['configuration_coordinates'][frame_indices,atom_indices,:].astype(np.float32).copy()
+        return self.storage.variables[self.prefix + '_coordinates'][frame_indices,atom_indices,:].astype(np.float32).copy()
 
     def coordinates_as_array(self, frame_indices=None, atom_indices=None):
         '''
@@ -608,19 +483,18 @@ class ConfigurationStore(ObjectStore):
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
-        self.init_variable('configuration_coordinates', 'float',
-                (selfprefix, 'atom','spatial'), self.dimension_units['length'],
-                description="coordinates[configuration][atom][coordinate] " +
-                            "are coordinate of atom 'atom' in dimension " +
-                            "'coordinate' of configuration 'configuration'.",
+        self.init_variable('coordinates', 'float',
+                (self.prefix, 'atom','spatial'), self.dimension_units['length'],
+                description="coordinate of atom '{ix[1]}' in dimension " +
+                            "'{ix[2]}' of configuration '{ix[0]}'.",
                 chunksizes=(1,n_atoms,n_spatial))
 
-        self.init_variable('configuration_box_vectors', 'float',
-                (selfprefix, 'spatial', 'spatial'),
+        self.init_variable('box_vectors', 'float',
+                (self.prefix, 'spatial', 'spatial'),
                 self.dimension_units['length'],
                 chunksizes=(1,n_spatial,n_spatial))
 
-        self.init_variable('configuration_potential', 'float',
-                selfprefix,
+        self.init_variable('potential', 'float',
+                self.prefix,
                 self.dimension_units['energy'],
                 chunksizes=(1, ))

@@ -43,5 +43,5 @@ class DynamicsEngineStorage(ObjectStorage):
         """
         super(DynamicsEngineStorage, self)._init()
 
-        self.init_variable('dynamicsengine_options', 'str', description="dynamicsengine_options[ensemble] is the json string of the options dict of engine 'ensemble'.")
-        self.init_variable('dynamicsengine_type', 'str', description="dynamicsengine_type[ensemble] is the actual class name of engine 'ensemble'.")
+        self.init_variable('options', 'str', description="the json string of the options dict of engine '{idx}'.")
+        self.init_variable('type', 'str', description="the actual class name of engine '{idx}'.")

@@ -9,7 +9,7 @@ import copy
 import numpy as np
 import mdtraj as md
 
-#THIS SHOULD NOT BE NECESSARY! SEE XYZ BELOW
+# THIS SHOULD NOT BE NECESSARY! SEE XYZ BELOW
 import simtk.unit as u
 
 from openpathsampling.todict import OPSObject
@@ -20,7 +20,6 @@ from openpathsampling.todict import OPSObject
 #=============================================================================
 
 class Configuration(OPSObject):
-
     """
     Simulation configuration. Only Coordinates, the associated boxvectors
     and the potential_energy
@@ -31,8 +30,8 @@ class Configuration(OPSObject):
     engine = None
     load_lazy = True
 
-    def __init__(self, coordinates=None, box_vectors=None,
-                 potential_energy=None, topology=None):
+    def __init__(self, coordinates = None, box_vectors = None,
+                 potential_energy = None, topology = None):
         """
         Create a simulation configuration from either an OpenMM context or
         individually-specified components.
@@ -71,18 +70,19 @@ class Configuration(OPSObject):
         if topology is not None:
             self.topology = topology
 
-        if coordinates is not None: 
+        if coordinates is not None:
             self.coordinates = copy.deepcopy(coordinates)
-        if box_vectors is not None: 
+        if box_vectors is not None:
             self.box_vectors = copy.deepcopy(box_vectors)
-        if potential_energy is not None: 
+        if potential_energy is not None:
             self.potential_energy = copy.deepcopy(potential_energy)
 
         if self.coordinates is not None:
             # Check for nans in coordinates, and raise an exception if
             # something is wrong.
             if np.any(np.isnan(self.coordinates)):
-                raise ValueError("Some coordinates became 'nan'; simulation is unstable or buggy.")
+                raise ValueError(
+                    "Some coordinates became 'nan'; simulation is unstable or buggy.")
 
         return
 
@@ -106,14 +106,14 @@ class Configuration(OPSObject):
         if self is other:
             return True
 
-        # This is not good since this code requires knowledge about storage
-        # I remove it since it is not used yet anyway
-        # If we want to figure out if two Snapshots are loaded from two different
-        # instances of the storage we should put this logic into storages
+            # This is not good since this code requires knowledge about storage
+            # I remove it since it is not used yet anyway
+            # If we want to figure out if two Snapshots are loaded from two different
+            # instances of the storage we should put this logic into storages
 
-#        for storage in self.idx:
-#            if storage in other.idx and other.idx[storage] == self.idx[storage]:
-#                return True
+        #        for storage in self.idx:
+        #            if storage in other.idx and other.idx[storage] == self.idx[storage]:
+        #                return True
 
         return False
 
@@ -129,7 +129,7 @@ class Configuration(OPSObject):
     # Utility functions
     #=========================================================================
 
-    def copy(self, subset=None):
+    def copy(self, subset = None):
         """
         Returns a deep copy of the instance itself. If this object is saved
         it will not be stored as a separate object and consume additional
@@ -142,12 +142,18 @@ class Configuration(OPSObject):
         """
 
         if subset is None:
-            this = Configuration(coordinates=self.coordinates, box_vectors=self.box_vectors, potential_energy=self.potential_energy, topology=self.topology)
+            this = Configuration(coordinates = self.coordinates,
+                                 box_vectors = self.box_vectors,
+                                 potential_energy = self.potential_energy,
+                                 topology = self.topology)
         else:
-            new_coordinates = self.coordinates[subset,:]
+            new_coordinates = self.coordinates[subset, :]
             new_topology = self.topology.subset(subset)
             # TODO: Keep old potential_energy? Is not correct but might be useful. Boxvectors are fine!
-            this = Configuration(coordinates=new_coordinates, box_vectors=self.box_vectors, potential_energy=self.potential_energy, topology=new_topology)
+            this = Configuration(coordinates = new_coordinates,
+                                 box_vectors = self.box_vectors,
+                                 potential_energy = self.potential_energy,
+                                 topology = new_topology)
 
         return this
 
@@ -168,9 +174,10 @@ class Configuration(OPSObject):
         n_atoms = self.n_atoms
 
         output = np.zeros([1, n_atoms, 3], np.float32)
-        output[0,:,:] = self.coordinates
+        output[0, :, :] = self.coordinates
 
         return md.Trajectory(output, self.topology)
+
 
 #=============================================================================
 # SIMULATION MOMENTUM / VELOCITY
@@ -181,13 +188,13 @@ class Momentum(OPSObject):
     Simulation momentum. Contains only velocities of all atoms and
     associated kinetic energies
     """
-    
+
     # Class variables to store the global storage and the system context
     # describing the system to be safed as momentums
     engine = None
     load_lazy = True
 
-    def __init__(self, velocities=None, kinetic_energy=None):
+    def __init__(self, velocities = None, kinetic_energy = None):
         """
         Create a simulation momentum from either an OpenMM context or
         individually-specified components.
@@ -210,13 +217,13 @@ class Momentum(OPSObject):
         """
 
         super(Momentum, self).__init__()
-        
+
         self.velocities = None
         self.kinetic_energy = None
 
-        if velocities is not None: 
+        if velocities is not None:
             self.velocities = copy.deepcopy(velocities)
-        if kinetic_energy is not None: 
+        if kinetic_energy is not None:
             self.kinetic_energy = copy.deepcopy(kinetic_energy)
 
         return
@@ -236,14 +243,14 @@ class Momentum(OPSObject):
     def n_atoms(self):
         '''
         Returns the number of atoms in the momentum
-        '''   
+        '''
         return self.velocities.shape[0]
 
     #=========================================================================
     # Utility functions
     #=========================================================================
 
-    def copy(self, subset=None, reversed=False):
+    def copy(self, subset = None, reversed = False):
         """
         Returns a deep copy of the instance itself. If this object will not
         be saved as a separate object and consumes additional memory. It is
@@ -257,22 +264,21 @@ class Momentum(OPSObject):
             the deep copy
         """
 
-
         if subset is None:
             new_velocities = self.velocities
         else:
-            new_velocities = self.velocities[subset,:]
+            new_velocities = self.velocities[subset, :]
             # TODO: Keep old kinetic_energy? Is not correct but might be useful.
 
         if reversed:
             # Note the v *= -1.0 would be in place for numpy arrays. This here makes a copy!
             new_velocities = -1.0 * new_velocities
 
-        this = Momentum(velocities=new_velocities, kinetic_energy=self.kinetic_energy)
+        this = Momentum(velocities = new_velocities, kinetic_energy = self.kinetic_energy)
 
         return this
 
-    def reversed_copy(self, subset=None):
+    def reversed_copy(self, subset = None):
         """
         Create a copy and flips the velocities and erases the stored indices.
         If stores is will be treated as a new Momentum instance.
@@ -283,9 +289,7 @@ class Momentum(OPSObject):
         Momentum()
             the deep copy with reversed velocities.
         """
-        return self.copy(subset=subset, reversed=True)
-
-
+        return self.copy(subset = subset, reversed = True)
 
 
 #=============================================================================
@@ -299,25 +303,26 @@ def has(attr):
                 return func(self, *args, **kwargs)
             else:
                 return None
-        return inner
-    return _has
 
+        return inner
+
+    return _has
 
 
 class Snapshot(OPSObject):
     """
     Simulation snapshot. Contains references to a configuration and momentum
     """
-    
+
     # Class variables to store the global storage and the system context
     # describing the system to be saved as snapshots
     # Hopefully these class member variables will not be needed any longer
     engine = None
 
-    def __init__(self, coordinates=None, velocities=None, box_vectors=None,
-                 potential_energy=None, kinetic_energy=None, topology=None,
-                 configuration=None, momentum=None, is_reversed=False,
-                 reversed_copy=None):
+    def __init__(self, coordinates = None, velocities = None, box_vectors = None,
+                 potential_energy = None, kinetic_energy = None, topology = None,
+                 configuration = None, momentum = None, is_reversed = False,
+                 reversed_copy = None):
         """
         Create a simulation snapshot. Initialization happens primarily in
         one of two ways:
@@ -358,7 +363,7 @@ class Snapshot(OPSObject):
         """
 
         super(Snapshot, self).__init__()
-        
+
         if configuration is None:
             self.configuration = Configuration()
         else:
@@ -373,15 +378,15 @@ class Snapshot(OPSObject):
 
         self.is_reversed = is_reversed
 
-        if coordinates is not None: 
+        if coordinates is not None:
             self.configuration.coordinates = copy.deepcopy(coordinates)
-        if velocities is not None: 
+        if velocities is not None:
             self.momentum.velocities = copy.deepcopy(velocities)
-        if box_vectors is not None: 
+        if box_vectors is not None:
             self.configuration.box_vectors = copy.deepcopy(box_vectors)
-        if potential_energy is not None: 
+        if potential_energy is not None:
             self.configuration.potential_energy = copy.deepcopy(potential_energy)
-        if kinetic_energy is not None: 
+        if kinetic_energy is not None:
             self.momentum.kinetic_energy = copy.deepcopy(kinetic_energy)
 
         # TODO: consider whether it is cleaner to move this logic into the
@@ -393,16 +398,19 @@ class Snapshot(OPSObject):
         if moment.velocities is None and moment.kinetic_energy is None:
             self.momentum = None
 
-
         if self.configuration is not None and self.configuration.coordinates is not None:
             # Check for nans in coordinates, and raise an exception if
             # something is wrong.
             if np.any(np.isnan(self.configuration.coordinates)):
-                raise ValueError("Some coordinates became 'nan'; simulation is unstable or buggy.")
+                raise ValueError(
+                    "Some coordinates became 'nan'; simulation is unstable or buggy.")
 
         if reversed_copy is None:
             # this will always create the mirrored copy so we can save in pairs!
-            self._reversed = Snapshot(configuration=self.configuration, momentum=self.momentum, is_reversed=not self.is_reversed, reversed_copy=self)
+            self._reversed = Snapshot(configuration = self.configuration,
+                                      momentum = self.momentum,
+                                      is_reversed = not self.is_reversed,
+                                      reversed_copy = self)
         else:
             self._reversed = reversed_copy
 
@@ -450,7 +458,7 @@ class Snapshot(OPSObject):
             return -1.0 * self.momentum.velocities
         else:
             return self.momentum.velocities
-    
+
     @property
     @has('configuration')
     def box_vectors(self):
@@ -461,7 +469,7 @@ class Snapshot(OPSObject):
             return self.configuration.box_vectors
         else:
             return None
-    
+
     @property
     @has('configuration')
     def potential_energy(self):
@@ -472,7 +480,7 @@ class Snapshot(OPSObject):
             return self.configuration.potential_energy
         else:
             return None
-    
+
     @property
     @has('momentum')
     def kinetic_energy(self):
@@ -483,7 +491,7 @@ class Snapshot(OPSObject):
             return self.momentum.kinetic_energy
         else:
             return None
-    
+
     @property
     @has('configuration')
     def n_atoms(self):
@@ -501,9 +509,9 @@ class Snapshot(OPSObject):
     def total_energy(self):
         '''
         The total energy (sum of potential and kinetic) of the snapshot
-        '''   
+        '''
         return self.kinetic_energy + self.potential_energy
-    
+
     #==========================================================================
     # Utility functions
     #==========================================================================
@@ -520,9 +528,10 @@ class Snapshot(OPSObject):
         Snapshot()
             the deep copy
         """
-        this = Snapshot(configuration=self.configuration, momentum=self.momentum, is_reversed=self.is_reversed)
+        this = Snapshot(configuration = self.configuration, momentum = self.momentum,
+                        is_reversed=self.is_reversed)
         return this
-    
+
     def reversed_copy(self):
         """
         Returns a shallow reversed copy of the instance itself. The
@@ -553,7 +562,7 @@ class Snapshot(OPSObject):
             self._reversed._reversed = self
 
         return self._reversed
-    
+
     @has('configuration')
     def md(self):
         '''
@@ -562,7 +571,7 @@ class Snapshot(OPSObject):
         Notes
         -----        
         Rather slow since the topology has to be made each time. Try to avoid it
-        '''        
+        '''
         return self.configuration.md()
 
     def subset(self, subset):
@@ -575,5 +584,7 @@ class Snapshot(OPSObject):
         So far the potential and kinetic energies are copied and are thus false but still useful!?!
         """
 
-        this = Snapshot(configuration=self.configuration.copy(subset), momentum=self.momentum.copy(subset), is_reversed=self.is_reversed)
+        this = Snapshot(configuration = self.configuration.copy(subset),
+                        momentum = self.momentum.copy(subset),
+                        is_reversed = self.is_reversed)
         return this

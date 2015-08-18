@@ -394,7 +394,7 @@ class ObjectStorage(object):
         '''
         return self.count()
 
-    def _init(self, units=None):
+    def _init(self):
         """
         Initialize the associated storage to allow for object storage. Mainly creates an index dimension with the name of the object.
 

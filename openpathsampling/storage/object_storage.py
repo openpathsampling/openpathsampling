@@ -2,12 +2,11 @@ import yaml
 import types
 
 import numpy as np
-import openpathsampling as paths
-import simtk.unit as u
 
 import logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
+
 
 class ObjectStore(object):
     """
@@ -22,6 +21,17 @@ class ObjectStore(object):
         'numpy.uint8', 'numpy.uinf16', 'numpy.uint32', 'numpy.uint64',
         'index', 'length'
     ]
+
+    class DictDelegator(object):
+        def __init__(self, store, dct):
+            self.prefix = store.prefix + '_'
+            self.dct = dct
+
+        def __getitem__(self, item):
+            return self.dct[self.prefix + item]
+
+    def prefix_delegate(self, dct):
+        return ObjectStore.DictDelegator(self, dct)
 
     def __init__(self, content_class, has_uid=False, json=True,
                  enable_caching=True, load_partial=False,
@@ -92,6 +102,10 @@ class ObjectStore(object):
         self._names_loaded = False
         self.nestable = nestable
 
+        self.variables = dict()
+        self.vars = dict()
+        self.units = dict()
+
         # First, apply standard decorator for loading and saving
         # this handles all the setting and getting of .idx and is
         # always necessary!
@@ -153,10 +167,13 @@ class ObjectStore(object):
             _load = self.load
             self.load = types.MethodType(loadcache(_load), self)
 
-
     def register(self, storage, name):
         self._storage = storage
         self.prefix = name
+
+        self.variables = self.prefix_delegate(self.storage.variables)
+        self.units = self.prefix_delegate(self.storage.units)
+        self.vars = self.prefix_delegate(self.storage.vars)
 
     @property
     def identifier(self):
@@ -170,7 +187,7 @@ class ObjectStore(object):
         return self._storage
 
     @property
-    def dimensions_units(self):
+    def dimension_units(self):
         return self.storage.dimension_units
 
     def __str__(self):
@@ -205,25 +222,13 @@ class ObjectStore(object):
 
         return None
 
-    @property
-    def units(self):
-        """
-        Return the units dictionary used in the attached storage
-
-        Returns
-        -------
-        units : dict of {str : simtk.unit.Unit }
-            representing a dict of string representing a dimension
-            ('length', 'velocity', 'energy')
-            pointing to the simtk.unit.Unit to be used
-
-        """
-        return self.storage.units
-
-    def set_variable_partial_loading(self, variable, loader):
+    def set_variable_partial_loading(self, variable, loader=None):
         cls = self.content_class
         if not hasattr(cls, '_delayed_loading'):
             cls._delayed_loading = dict()
+
+        if loader is None:
+            loader = func_update_variable(variable, variable)
 
         cls._delayed_loading[variable] = loader
 
@@ -501,7 +506,7 @@ class ObjectStore(object):
 
     def save(self, obj, idx=None):
         """
-        Saves an object the storage.
+        Saves an object to the storage.
 
         Parameters
         ----------
@@ -618,7 +623,8 @@ class ObjectStore(object):
         '''
         self._free.add(idx)
 
-    def _init(self, units=None):
+
+    def _init(self):
         """
         Initialize the associated storage to allow for object storage. Mainly
         creates an index dimension with the name of the object.
@@ -633,48 +639,25 @@ class ObjectStore(object):
         """
         # define dimensions used for the specific object
         self.storage.createDimension(self.prefix, 0)
-#        if self.has_name:
-#            self.init_variable(selfprefix + "_name", 'str',
-#                description='A short descriptive name for convenience',
-#                chunksizes=tuple([10240]))
 
         if self.has_uid:
-            self.init_variable(self.prefix + "_uid", 'str',
+            self.init_variable("uid", 'str',
                 description='A unique identifier',
                 chunksizes=tuple([10240]))
 
         if self.has_name:
-            self.init_variable(self.prefix + "_name", 'str',
+            self.init_variable("name", 'str',
                 description='A name',
                 chunksizes=tuple([10240]))
 
         if self.json:
-            self.init_variable(self.prefix + "_json", 'str',
+            self.init_variable("json", 'str',
                 description='A json serialized version of the object',
                 chunksizes=tuple([10240]))
 
 #==============================================================================
 # INITIALISATION UTILITY FUNCTIONS
 #==============================================================================
-
-    def init_dimension(self, name, length = 0):
-        """
-        Initialize a new dimension in the storage.
-        Wraps the netCDF createDimension
-
-        Parameters
-        ----------
-        name : str
-            the name for the new dimension
-        length : int
-            the number of elements in this dimension. Zero (0) (default) means
-            an infinite dimension that extends when more objects are stored
-
-        """
-        if name not in self.storage.dimensions:
-            self.storage.createDimension(name, length)
-
-#        self.storage.sync()
 
     @staticmethod
     def find_number_type(instance):
@@ -779,79 +762,18 @@ class ObjectStore(object):
             (1, ..., ...)
         '''
 
-        ncfile = self.storage
-
-
         if dimensions is None:
             dimensions = self.prefix
 
-        if var_type not in self.allowed_types:
-            raise ValueError(
-                'Storage variables only allow one of the following datatypes: %s' %
-                str(self.allowed_types)
-            )
-
-        type_conversion = {
-            'float' : np.float32,
-            'int' : np.int32,
-            'long' : np.int64,
-            'index' : np.int32,
-            'length' : np.int32,
-            'bool' : np.uint8,
-            'str' : 'str',
-            'numpy.float32' : np.float32,
-            'numpy.float64' : np.float32,
-            'numpy.int8' : np.int8,
-            'numpy.int16' : np.int16,
-            'numpy.int32' : np.int32,
-            'numpy.int64' : np.int64,
-            'numpy.uint8' : np.uint8,
-            'numpy.uinf16' : np.uint16,
-            'numpy.uint32' : np.uint32,
-            'numpy.uint64' : np.uint64
-        }
-
-        nc_type = type_conversion[var_type]
-
-        if variable_length:
-            vlen_t = ncfile.createVLType(nc_type, name + '_vlen')
-            ncvar = ncfile.createVariable(name, vlen_t, dimensions,
-                                          zlib=False, chunksizes=chunksizes)
-        else:
-            ncvar = ncfile.createVariable(name, nc_type, dimensions,
-                                          zlib=False, chunksizes=chunksizes)
-
-        setattr(ncvar,      'var_type', var_type)
-
-        if var_type == 'float' or units is not None:
-
-            unit_instance = u.Unit({})
-            symbol = 'none'
-
-            if isinstance(units, u.Unit):
-                unit_instance = units
-                symbol = unit_instance.get_symbol()
-            elif isinstance(units, u.BaseUnit):
-                unit_instance = u.Unit({units : 1.0})
-                symbol = unit_instance.get_symbol()
-            elif type(units) is str and hasattr(u, units):
-                unit_instance = getattr(u, units)
-                symbol = unit_instance.get_symbol()
-            elif type(units) is str and units is not None:
-                symbol = units
-
-            json_unit = self.simplifier.unit_to_json(unit_instance)
-
-            # store the unit in the dict inside the Storage object
-            self.storage.units[name] = unit_instance
-
-            # Define units for a float variable
-            setattr(ncvar,      'unit_simtk', json_unit)
-            setattr(ncvar,      'unit', symbol)
-
-        if description is not None:
-            # Define long (human-readable) names for variables.
-            setattr(ncvar,    "long_str", description)
+        self.storage.create_variable(
+            self.prefix + '_' + name,
+            var_type=var_type,
+            dimensions=dimensions,
+            units=units,
+            description=description,
+            variable_length=variable_length,
+            chunksizes=chunksizes
+        )
 
 
 #==============================================================================
@@ -1129,7 +1051,7 @@ def loadpartial(func, constructor=None):
 
         return_obj = new_func(idx, *args, **kwargs)
         # this tells the obj where it was loaded from
-        return_obj._origin = self.storage
+        return_obj._origin = self
         return return_obj
 
     return inner
@@ -1228,6 +1150,8 @@ def savecache(func):
             # name afterwards from cache
                 self._update_name_in_cache(obj._name, idx)
 
+        return idx
+
     return inner
 
 #=============================================================================
@@ -1302,7 +1226,7 @@ def saveidx(func):
         if idx is None:
             if storage in obj.idx:
                 # has been saved so quit and do nothing
-                return None
+                return obj.idx[storage]
             else:
                 idx = self.free()
         else:
@@ -1335,11 +1259,13 @@ def saveidx(func):
 
             self.storage.variables[self.prefix + '_name'][idx] = obj._name
 
+        return idx
+
     return inner
 
 # CREATE EASY UPDATE WRAPPER
 
-def func_update_object(attribute, db, variable, store):
+def func_update_variable(attribute, variable):
     """
     Create a delayed loading function for stores
 
@@ -1360,11 +1286,20 @@ def func_update_object(attribute, db, variable, store):
         the function that is used for updating
     """
     def updater(obj):
-        storage = obj._origin
-
+        store = obj._origin
+        storage = store.storage
         idx = obj.idx[storage]
-        obj_idx = int(storage.variables[db + '_' + variable + '_idx'][idx])
 
-        setattr(obj, attribute, getattr(storage, store).load(obj_idx))
+        obj = store.vars[variable + '_idx'][idx]
+        setattr(obj, attribute, obj)
 
     return staticmethod(updater)
+
+def create_load_function(cls, arguments):
+
+    def loader(self, idx):
+        params = {arg : self.vars[param][idx] for arg, param in arguments.iteritems()}
+
+        return cls(**params)
+
+    return loader

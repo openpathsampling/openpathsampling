@@ -61,7 +61,7 @@ class TrajectoryStore(ObjectStore):
 #        values = self.list_to_numpy(trajectory, 'snapshot')
 
         values = self.list_to_numpy(values, 'index')
-        self.storage.variables['trajectory_snapshot_idx'][idx] = values
+        self.storage.variables[self.prefix + '_snapshots'][idx] = values
 
         # self.storage.sync()
 
@@ -82,7 +82,7 @@ class TrajectoryStore(ObjectStore):
         '''
 
         # get the values
-        values = self.storage.variables['trajectory_snapshot_idx'][idx]
+        values = self.storage.variables[self.prefix + '_snapshots'][idx]
 
         # typecast to integer
         return self.list_from_numpy(values, 'index')
@@ -103,7 +103,7 @@ class TrajectoryStore(ObjectStore):
 
         '''
 
-        values = self.storage.variables['trajectory_snapshot_idx'][idx]
+        values = self.storage.variables[self.prefix + '_snapshots'][idx]
 
         # typecast to snapshot
         if self.lazy:
@@ -170,7 +170,7 @@ class TrajectoryStore(ObjectStore):
 
         # index associated storage in class variable for all Trajectory instances to access
 
-        self.init_variable('trajectory_snapshot_idx', 'index', 'trajectory',
+        self.init_variable('snapshots', 'obj.snapshots',
             description="trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.",
             variable_length = True,
             chunksizes=(10240, )

@@ -13,11 +13,11 @@ class MCStepStore(ObjectStore):
 
     def save(self, mcstep, idx=None):
         if idx is not None:
-            self.save_object('mcstep_change', idx, mcstep.change)
-            self.save_object('mcstep_active', idx, mcstep.active)
-            self.save_object('mcstep_previous', idx, mcstep.previous)
-            self.save_object('mcstep_simulation', idx, mcstep.simulation)
-            self.save_variable('mcstep_mccycle', idx, mcstep.mccycle)
+            self.vars['change'][idx] = mcstep.change
+            self.vars['active'][idx] = mcstep.active
+            self.vars['previous'][idx] = mcstep.previous
+            self.vars['simulation'][idx] = mcstep.simulation
+            self.vars['mccycle'][idx] = mcstep.mccycle
 
     def load(self, idx):
         '''
@@ -44,19 +44,19 @@ class MCStepStore(ObjectStore):
         step = self.storage.variables['mcstep_mccycle'][idx]
 
         return MCStep(
-            mccycle=int(step),
-            previous=storage.samplesets[int(previous_idx)],
-            active=storage.samplesets[int(active_idx)],
-            simulation=storage.pathsimulators[int(simulation_idx)],
-            change=storage.pathmovechanges[int(change_idx)]
+            mccycle=self.vars['mccycle'],
+            previous=self.vars['previous'],
+            active=self.vars['active'],
+            simulation=self.vars['simulation'],
+            change=self.vars['change']
         )
 
     def _init(self, units=None):
         super(MCStepStore, self)._init()
 
         # New short-hand definition
-        self.init_variable('mcstep_change_idx', 'index', chunksizes=(1, ))
-        self.init_variable('mcstep_active_idx', 'index', chunksizes=(1, ))
+        self.init_variable('change', 'obj.pathmovechanges', chunksizes=(1, ))
+        self.init_variable('mcstep_active_idx', 'obj.pathmovechanges', chunksizes=(1, ))
         self.init_variable('mcstep_previous_idx', 'index', chunksizes=(1, ))
         self.init_variable('mcstep_simulation_idx', 'index', chunksizes=(1, ))
         self.init_variable('mcstep_mccycle', 'int', chunksizes=(1, ))

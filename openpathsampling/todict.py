@@ -27,9 +27,9 @@ class OPSObject(object):
         self._idx = {}
         self._uid = ''
 
-    @classmethod
-    def cls(cls):
-        return cls.__name__
+    @property
+    def cls(self):
+        return self.__class__.__name__
 
     def save(self, storage):
         storage.save(self)

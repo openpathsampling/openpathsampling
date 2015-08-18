@@ -11,8 +11,8 @@ class PathMoveChangeStore(ObjectStore):
             load_partial=True
         )
 
-        self.set_variable_partial_loading('details', self.update_details)
-#        self.set_variable_partial_loading('mover', self.update_mover)
+        self.set_variable_partial_loading('details')
+#        self.set_variable_partial_loading('mover')
 
         self._cached_all = False
         self.class_list = OPSObject.objects()
@@ -24,28 +24,16 @@ class PathMoveChangeStore(ObjectStore):
 
         return obj
 
-    update_details = func_update_object('details', 'change', 'details', '_details')
-    update_mover = func_update_object('mover', 'change', 'pathmover', 'pathmovers')
-
-
     def save(self, pathmovechange, idx=None):
         if idx is not None:
-            if len(pathmovechange.samples) > 0:
-                map(self.storage.samples.save, pathmovechange.samples)
+            self.vars['samples'][idx] = pathmovechange.samples
 
-            values = self.list_to_numpy(pathmovechange.samples, 'samples')
-            self.storage.variables['change_samples_idxs'][idx] = values
+            self.vars['subchanges'][idx] = pathmovechange.subchanges
 
-            if len(pathmovechange.subchanges) > 0:
-                map(self.storage.pathmovechanges.save, pathmovechange.subchanges)
+            self.vars['details'][idx] = pathmovechange.details
+            self.vars['mover'][idx] = pathmovechange.mover
 
-            values = self.list_to_numpy(pathmovechange.subchanges, 'pathmovechanges')
-            self.storage.variables['change_subchanges_idxs'][idx] = values
-
-            self.save_object('change_details', idx, pathmovechange.details)
-            self.save_object('change_pathmover', idx, pathmovechange.mover)
-
-            self.save_variable('change_cls', idx, pathmovechange.__class__.__name__)
+            self.vars['cls'][idx] = pathmovechange.__class__.__name__
 
     def load(self, idx):
         '''
@@ -63,9 +51,7 @@ class PathMoveChangeStore(ObjectStore):
         '''
 
         obj = self._load_partial(idx)
-
-        details_idx = int(self.storage.variables['change_details_idx'][idx])
-        obj.details = self.storage._details[details_idx]
+        obj.details = self.vars['details'][idx]
 
         return obj
 
@@ -73,16 +59,16 @@ class PathMoveChangeStore(ObjectStore):
         super(PathMoveChangeStore, self)._init()
 
         # New short-hand definition
-        self.init_variable('change_details_idx', 'index', chunksizes=(1, ))
-        self.init_variable('change_pathmover_idx', 'index', chunksizes=(1, ))
-        self.init_variable('change_cls', 'str', chunksizes=(1, ))
+        self.init_variable('details', 'obj.details', chunksizes=(1, ))
+        self.init_variable('pathmover', 'obj.pathmovers', chunksizes=(1, ))
+        self.init_variable('cls', 'str', chunksizes=(1, ))
 
-        self.init_variable('change_subchanges_idxs', 'index',
+        self.init_variable('subchanges', 'obj.pathmovechanges',
             variable_length = True,
             chunksizes=(10240, )
         )
 
-        self.init_variable('change_samples_idxs', 'index',
+        self.init_variable('samples', 'obj.samples',
             variable_length = True,
             chunksizes=(10240, )
         )
@@ -98,10 +84,10 @@ class PathMoveChangeStore(ObjectStore):
         if not self._cached_all:
             idxs = range(len(self))
 
-            cls_names = self.storage.variables['change_cls'][:]
-            samples_idxss = self.storage.variables['change_samples_idxs'][:]
-            subchanges_idxss = self.storage.variables['change_subchanges_idxs'][:]
-            mover_idxs = self.storage.variables['change_pathmover_idx'][:]
+            cls_names = self.storage.variables[self.prefix + '_cls'][:]
+            samples_idxss = self.storage.variables[self.prefix + '_samples'][:]
+            subchanges_idxss = self.storage.variables[self.prefix + '_subchanges'][:]
+            mover_idxs = self.storage.variables[self.prefix + '_pathmover'][:]
 
             [ self.add_empty_to_cache(i,c,g,m) for i,c,g,m in zip(
                 idxs,
@@ -121,20 +107,18 @@ class PathMoveChangeStore(ObjectStore):
         if idx not in self.cache:
             obj = self._load_partial_samples(cls_name, samples_idxs, mover_idx)
             obj.idx[self.storage] = idx
-            obj._origin = self.storage
+            obj._origin = self
 
             self.cache[idx] = obj
             del obj.details
 #            del obj.mover
 
-
-
     def _load_partial(self, idx):
-        samples_idxs = self.storage.variables['change_samples_idxs'][idx]
-        subchanges_idxs = self.storage.variables['change_subchanges_idxs'][idx]
-        mover_idx = self.storage.variables['change_pathmover_idx'][idx]
+        samples_idxs = self.storage.variables[self.prefix + '_samples'][idx]
+        subchanges_idxs = self.storage.variables[self.prefix + '_subchanges'][idx]
+        mover_idx = self.storage.variables[self.prefix + '_pathmover'][idx]
 
-        cls_name = self.storage.variables['change_cls'][idx]
+        cls_name = self.storage.variables[self.prefix + '_cls'][idx]
 
         obj = self._load_partial_samples(cls_name, samples_idxs, mover_idx)
         return self._load_partial_subchanges(obj, subchanges_idxs)
