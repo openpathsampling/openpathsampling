@@ -56,10 +56,10 @@ class MCStepStore(ObjectStore):
 
         # New short-hand definition
         self.init_variable('change', 'obj.pathmovechanges', chunksizes=(1, ))
-        self.init_variable('mcstep_active_idx', 'obj.pathmovechanges', chunksizes=(1, ))
-        self.init_variable('mcstep_previous_idx', 'index', chunksizes=(1, ))
-        self.init_variable('mcstep_simulation_idx', 'index', chunksizes=(1, ))
-        self.init_variable('mcstep_mccycle', 'int', chunksizes=(1, ))
+        self.init_variable('active', 'obj.samplesets', chunksizes=(1, ))
+        self.init_variable('previous', 'obj.samplesets', chunksizes=(1, ))
+        self.init_variable('simulation', 'obj.simulations', chunksizes=(1, ))
+        self.init_variable('mccycle', 'int', chunksizes=(1, ))
 
     def all(self):
         self.cache_all()
