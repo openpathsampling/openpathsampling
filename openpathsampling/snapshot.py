@@ -80,7 +80,7 @@ class Configuration(OPSObject):
         if self.coordinates is not None:
             # Check for nans in coordinates, and raise an exception if
             # something is wrong.
-            if np.any(np.isnan(self.coordinates)):
+            if np.any(np.isnan(self.coordinates._value)):
                 raise ValueError(
                     "Some coordinates became 'nan'; simulation is unstable or buggy.")
 
@@ -401,7 +401,7 @@ class Snapshot(OPSObject):
         if self.configuration is not None and self.configuration.coordinates is not None:
             # Check for nans in coordinates, and raise an exception if
             # something is wrong.
-            if np.any(np.isnan(self.configuration.coordinates)):
+            if np.any(np.isnan(self.configuration.coordinates._value)):
                 raise ValueError(
                     "Some coordinates became 'nan'; simulation is unstable or buggy.")
 

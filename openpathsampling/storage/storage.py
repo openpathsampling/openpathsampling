@@ -62,7 +62,7 @@ class NetCDFPlus(netcdf.Dataset):
             self.getter = getter
 
         def __setitem__(self, key, value):
-            print self.variable.name, key, value, self.setter(value)
+#            print self.variable.name, key, value, self.setter(value)
             self.variable[key] = self.setter(value)
 
         def __getitem__(self, item):
@@ -398,8 +398,11 @@ class NetCDFPlus(netcdf.Dataset):
         else:
             storage_name = storage_to_copy.prefix
 
+        copied_storages = 0
+
         for variable in self.variables.keys():
             if variable.startswith(storage_name + '_'):
+                copied_storages += 1
                 if variable not in new_storage.variables:
                     # collectivevariables have additional variables in the storage that need to be copied
                     # TODO: copy chunksizes?
@@ -411,6 +414,9 @@ class NetCDFPlus(netcdf.Dataset):
                 else:
                     for idx in range(0, len(self.variables[variable])):
                         new_storage.variables[variable][idx] = self.variables[variable][idx]
+
+        if copied_storages == 0:
+            raise RuntimeWarning('Potential error in storage name. No storage variables copied from ' + storage_name)
 
     def create_dimension(self, dimname, size = None):
         """
@@ -656,13 +662,16 @@ class Storage(NetCDFPlus):
         # and exclude configurations and momenta, but this seems cleaner
 
         for storage_name in [
-                'trajectory', 'snapshot', 'sample', 'sampleset', 'collectivevariable',
-                'pathmover', 'engine', 'movedetails', 'shootingpoint', 'shootingpointselector',
-                'globalstate', 'volume', 'ensemble', 'movepath', 'dynamicsengine' ]:
+                'pathmovers', 'topologies', 'networks', 'details', 'trajectories',
+                'shootingpoints', 'shootingpointselectors', 'engines', 'volumes',
+                'samplesets', 'ensembles', 'transitions', 'mcsteps', 'pathmovechanges',
+                'samples', 'snapshots', 'pathsimulators', 'cvs'
+            ]:
             self.clone_storage(storage_name, storage2)
 
         storage2.close()
 
+    # TODO: Need to copy cvs without caches!
     def clone_empty(self, filename):
         """
         Creates a copy of the netCDF file and replicates only the static parts which I consider
@@ -677,8 +686,10 @@ class Storage(NetCDFPlus):
         storage2 = Storage(filename=filename, template=self.template, mode='w')
 
         for storage_name in [
-                'pathmover', 'engine', 'shootingpointselector', 'volume', 'ensemble']:
-
+                'pathmovers', 'topologies', 'networks',
+                'shootingpointselectors', 'engines', 'volumes',
+                'ensembles', 'transitions', 'pathsimulators'
+            ]:
             self.clone_storage(storage_name, storage2)
 
         storage2.close()
@@ -793,10 +804,12 @@ class Storage(NetCDFPlus):
 
         logger.info("Create initial template snapshot")
 
-        print 'save'
         # Save the initial configuration
         self.snapshots.save(template)
-        print 'done'
+
+        print template.__dict__
+
+        print len(self.snapshots)
 
         self.createVariable('template_idx', 'i4', 'scalar')
         self.variables['template_idx'][:] = template.idx[self]

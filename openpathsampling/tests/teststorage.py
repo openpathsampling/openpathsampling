@@ -18,10 +18,14 @@ from openpathsampling.snapshot import Momentum, Configuration
 import simtk.unit as u
 import time
 
+def assert_close_unit(v1, v2, *args, **kwargs):
+    assert(v1.unit == v2.unit)
+    npt.assert_allclose(v1._value, v2._value, *args, **kwargs)
+
 def compare_snapshot(snapshot1, snapshot2):
-    npt.assert_allclose(snapshot1.box_vectors, snapshot2.box_vectors, rtol=1e-7, atol=0)
-    npt.assert_allclose(snapshot1.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
-    npt.assert_allclose(snapshot1.velocities, snapshot2.velocities, rtol=1e-7, atol=0)
+    assert_close_unit(snapshot1.box_vectors, snapshot2.box_vectors, rtol=1e-7, atol=0)
+    assert_close_unit(snapshot1.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
+    assert_close_unit(snapshot1.velocities, snapshot2.velocities, rtol=1e-7, atol=0)
 
     assert_equal(snapshot1.potential_energy, snapshot2.potential_energy)
     assert_equal(snapshot1.kinetic_energy, snapshot2.kinetic_energy)
@@ -201,6 +205,8 @@ class testStorage(object):
             store2.snapshots.load(0),
             store.snapshots.load(0)
         )
+
+        print len(store.snapshots), len(store2.snapshots)
 
         # check if the reversed copy also works
         compare_snapshot(

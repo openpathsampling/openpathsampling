@@ -1291,10 +1291,12 @@ def func_update_variable(attribute, variable):
         storage = store.storage
         idx = obj.idx[storage]
 
-        obj = store.vars[variable + '_idx'][idx]
-        setattr(obj, attribute, obj)
+#        print 'updater called', obj, obj.__dict__.keys(), attribute, variable
 
-    return staticmethod(updater)
+        value = store.vars[variable][idx]
+        setattr(obj, attribute, value)
+
+    return updater
 
 def create_load_function(cls, arguments):
     def loader(self, idx):

@@ -88,7 +88,7 @@ class SnapshotStore(ObjectStore):
 
         self.vars['configuration'][idx] = snapshot.configuration
         self.vars['momentum'][idx] = snapshot.momentum
-        self.vars['reversed'][idx] = snapshot._reversed
+        self.vars['reversed_idx'][idx] = self.idx(snapshot._reversed)
 
         self.vars['momentum_reversed'][idx] = snapshot.is_reversed
 
@@ -139,7 +139,7 @@ class SnapshotStore(ObjectStore):
         int
             reversed snapshot indices
         '''
-        return self.vars['reversed'][idx]
+        return self.vars['reversed_idx'][idx]
 
     def momentum_reversed(self, idx):
         '''
@@ -176,7 +176,7 @@ class SnapshotStore(ObjectStore):
 
         self.init_variable('momentum_reversed', 'bool', chunksizes=(1, ))
 
-        self.init_variable('reversed', 'index',
+        self.init_variable('reversed_idx', 'index',
                 description="the idx of the reversed snapshot index (0..n_snapshot-1) 'snapshot' of snapshot '{idx}'.",
                 chunksizes=(1, )
                 )
@@ -365,7 +365,7 @@ class ConfigurationStore(ObjectStore):
         self.vars['coordinates'][idx] = configuration.coordinates
 
         if configuration.potential_energy is not None:
-            self.vars['potential'][idx] = configuration.potential_energy
+            self.vars['potential_energy'][idx] = configuration.potential_energy
 
         if configuration.box_vectors is not None:
             self.vars['box_vectors'][idx] = configuration.box_vectors
@@ -376,7 +376,7 @@ class ConfigurationStore(ObjectStore):
     def load(self, idx):
         coordinates = self.vars["coordinates"][idx]
         box_vectors = self.vars["box_vectors"][idx]
-        potential_energy = self.vars["potential"][idx]
+        potential_energy = self.vars["potential_energy"][idx]
 
         configuration = Configuration(coordinates=coordinates, box_vectors = box_vectors, potential_energy=potential_energy)
         configuration.topology = self.storage.topology
@@ -494,7 +494,7 @@ class ConfigurationStore(ObjectStore):
                 self.dimension_units['length'],
                 chunksizes=(1,n_spatial,n_spatial))
 
-        self.init_variable('potential', 'float',
+        self.init_variable('potential_energy', 'float',
                 self.prefix,
                 self.dimension_units['energy'],
                 chunksizes=(1, ))
