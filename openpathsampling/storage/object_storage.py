@@ -38,13 +38,12 @@ class ObjectStore(object):
     def prefix_delegate(self, dct):
         return ObjectStore.DictDelegator(self, dct)
 
-    def __init__(self, content_class, has_uid=False, json=True,
-                 enable_caching=True, load_partial=False,
     default_cache = 10000
 
-    def __init__(self, storage, content_class, has_uid=False, json=True,
-                 dimension_units=None, caching=None, load_partial=False,
-                 nestable=False, has_name=False):
+    def __init__(self, content_class, has_uid=False, json=True,
+                 caching=None, load_partial=False,
+                nestable=False, has_name=False):
+
         """
 
         Parameters
@@ -221,6 +220,7 @@ class ObjectStore(object):
     @property
     def simplifier(self):
         return self.storage.simplifier
+
     def set_caching(self, caching):
         if caching is None:
             caching = self.default_cache
@@ -532,7 +532,7 @@ class ObjectStore(object):
             self.cache[idx] = obj
 
             if self.has_name:
-                name = self.storage.variables[self.db + '_name'][idx]
+                name = self.storage.variables[self.prefix + '_name'][idx]
                 setattr(obj, '_name', name)
                 if name != '':
                     self._update_name_in_cache(obj._name, idx)
@@ -541,8 +541,6 @@ class ObjectStore(object):
                 if not hasattr(obj, '_uid'):
                     # get the name of the object
                     setattr(obj, '_uid', self.get_uid(idx))
-
-
 
     def save(self, obj, idx=None):
         """

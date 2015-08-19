@@ -153,10 +153,6 @@ class NetCDFPlus(netcdf.Dataset):
             'steps' : False
         }
 
-    def _register_storages(self, storage = None):
-        """
-        Register all Stores used in the OpenPathSampling Storage
-
     class Variable_Delegate(object):
         def __init__(self, variable, getter, setter):
             self.variable = variable
@@ -184,28 +180,6 @@ class NetCDFPlus(netcdf.Dataset):
         def __getattr__(self, item):
             print self.variable, item
             return getattr(self.variable, item)
-
-        # nestable objects
-
-        self.volumes = paths.storage.ObjectStore(storage, paths.Volume, has_uid=True, nestable=True, has_name=True)
-        self.ensembles = paths.storage.ObjectStore(storage, paths.Ensemble, has_uid=True, nestable=True, has_name=True)
-
-        # special objects
-        # TODO: remove query? Not really needed, is it?
-
-        self.query = paths.storage.QueryStore(storage)
-
-        self._objects = { name : getattr(self, name) for name in
-            ['trajectories', 'snapshots', 'configurations',
-             'samples', 'samplesets', 'collectivevariables',
-             'cvs', 'pathmovers', 'shootingpoints',
-             'shootingpointselectors', 'engines',
-             'pathsimulators', 'volumes', 'ensembles',
-             'pathmovechanges', 'transitions', 'networks', '_details',
-             'steps', 'momentum'
-            ]}
-
-        self.set_caching_mode('default')
 
     def set_caching_mode(self, mode='default'):
         """
@@ -252,30 +226,6 @@ class NetCDFPlus(netcdf.Dataset):
         """
         return self._objects
 
-    def _setup_class(self):
-        """
-        Sets the basic properties for the storage
-        """
-        self._storages = {}
-        self._storages_base_cls = {}
-        self.links = []
-        self.simplifier = paths.ObjectJSON()
-        self.units = dict()
-        # use no units
-        self.dimension_units = {
-            'length': u.Unit({}),
-            'velocity': u.Unit({}),
-            'energy': u.Unit({})
-        }
-        # use MD units
-        self.dimension_units = {
-            'length': u.nanometers,
-            'velocity': u.nanometers / u.picoseconds,
-            'energy': u.kilojoules_per_mole
-        }
-
-    def __init__(self, filename, mode=None,
-                 template=None, units=None):
     def __init__(self, filename, mode=None, units=None):
         '''
         Create a storage for complex objects in a netCDF file
@@ -349,6 +299,8 @@ class NetCDFPlus(netcdf.Dataset):
             self._restore()
 
         self.sync()
+
+        self.set_caching_mode('default')
 
     @property
     def objects(self):
