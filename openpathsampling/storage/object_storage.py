@@ -4,6 +4,10 @@ import types
 import numpy as np
 
 import logging
+
+from openpathsampling.tools import WeakLimitCache
+
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
@@ -36,6 +40,10 @@ class ObjectStore(object):
 
     def __init__(self, content_class, has_uid=False, json=True,
                  enable_caching=True, load_partial=False,
+    default_cache = 10000
+
+    def __init__(self, storage, content_class, has_uid=False, json=True,
+                 dimension_units=None, caching=None, load_partial=False,
                  nestable=False, has_name=False):
         """
 
@@ -46,9 +54,15 @@ class ObjectStore(object):
         has_uid
         json
         dimension_units
-        enable_caching : bool
-            if this is set to `True` caching is used to quickly access
-            previously loaded objects (default)
+        caching : dict-like or bool or int or None
+            this is the dict used for caching.
+            `True` means to use a python built-in dict which unlimited caching.
+            Be careful.
+            `False` means no caching at all. If a dict-like object is passed,
+            it will be used.
+            An integer `n` means to use LRU Caching with maximal n elements and is
+            equal to `cache=LRUCache(n)`
+            Default (None) is equivalent to `cache=ObjectStore.default_cache`
         load_partial : bool
             if this is set to `True` the storage allows support for partial
             delayed loading of member variables. This is useful for larger
@@ -60,6 +74,11 @@ class ObjectStore(object):
             object is only stored once and not split into several objects that
             are referenced by each other in a tree-like fashion
 
+        Notes
+        -----
+        Usually you want caching, but limited. Recommended is to use an LRUCache
+        with a reasonable number that depends on the typical number of objects to
+        cache and their size
 
         Attributes
         ----------
@@ -77,10 +96,10 @@ class ObjectStore(object):
         identifier : str
             name of the netCDF variable that contains the string to be
             identified by. So far this is `name`
-        cache : dict (int or str : object)
+        cache : dict-like (int or str : object)
             a dictionary that holds references to all stored elements by index
             or string for named objects. This is only used for cached access
-            is enable_caching is True (default)
+            if caching is not `False`
 
         Notes
         -----
@@ -102,6 +121,7 @@ class ObjectStore(object):
         self._cached_all = False
         self._names_loaded = False
         self.nestable = nestable
+        self.name_idx = dict()
 
         self.variables = dict()
         self.vars = dict()
@@ -150,7 +170,7 @@ class ObjectStore(object):
         _load = self.load
         self.load = types.MethodType(loadidx(_load), self)
 
-        if enable_caching:
+        if caching is not False:
             # wrap load/save to make this work. I use MethodType here to bind the
             # wrapped function to this instance. An alternative would be to
             # add the wrapper to the class itself, which would mean that all
@@ -201,6 +221,14 @@ class ObjectStore(object):
     @property
     def simplifier(self):
         return self.storage.simplifier
+    def set_caching(self, caching):
+        if caching is None:
+            caching = self.default_cache
+
+        if caching is True:
+            self.cache = WeakLimitCache(1000000)
+        elif isinstance(caching, dict):
+            self.cache = caching
 
     def idx(self, obj):
         """
@@ -287,10 +315,10 @@ class ObjectStore(object):
     def _update_name_in_cache(self, name, idx):
         if name != '':
             if name not in self.cache:
-                self.cache[name] = [idx]
+                self.name_idx[name] = [idx]
             else:
                 if idx not in self.cache[name]:
-                    self.cache[name].append(idx)
+                    self.name_idx[name].append(idx)
 
     def find(self, name):
         """
@@ -309,10 +337,10 @@ class ObjectStore(object):
 
         """
         if self.has_name:
-            if name in self.cache:
+            if name not in self.name_idx:
                 self.update_name_cache()
 
-            return self[self.cache[name]]
+            return self[self.name_idx[name]]
 
         return []
 
@@ -333,10 +361,10 @@ class ObjectStore(object):
 
         """
         if self.has_name:
-            if name in self.cache:
+            if name not in self.name_idx:
                 self.update_name_cache()
 
-            return self.cache[name]
+            return self.name_idx[name]
 
         return []
 
@@ -358,11 +386,11 @@ class ObjectStore(object):
 
         """
         if self.has_name:
-            if name in self.cache:
+            if name not in self.name_idx:
                 self.update_name_cache()
 
-            if len(self.cache[name]) > 0:
-                return self[self.cache[name][0]]
+            if len(self.name_idx[name]) > 0:
+                return self[self.name_idx[name][0]]
 
         return None
 
@@ -494,15 +522,26 @@ class ObjectStore(object):
         Add a single object to cache by json
         """
 
-        simplified = yaml.load(json)
-        obj = self.simplifier.build(simplified)
+        if idx not in self.cache:
+            simplified = yaml.load(json)
+            obj = self.simplifier.build(simplified)
 
-        obj.json = json
-        obj.idx[self.storage] = idx
+            obj.json = json
+            obj.idx[self.storage] = idx
 
-        self.cache[idx] = obj
+            self.cache[idx] = obj
 
-        return obj
+            if self.has_name:
+                name = self.storage.variables[self.db + '_name'][idx]
+                setattr(obj, '_name', name)
+                if name != '':
+                    self._update_name_in_cache(obj._name, idx)
+
+            if self.has_uid:
+                if not hasattr(obj, '_uid'):
+                    # get the name of the object
+                    setattr(obj, '_uid', self.get_uid(idx))
+
 
 
     def save(self, obj, idx=None):
@@ -1047,58 +1086,41 @@ def loadcache(func):
         if type(idx) is not str and idx < 0:
             return None
 
+        if not hasattr(self, 'cache'):
+            return func(idx, *args, **kwargs)
+
         n_idx = idx
 
-        # if it is in the cache, return it, otherwise not :)
-        if idx in self.cache:
-
-            cc = self.cache[idx]
-            if type(cc) is int:
-                logger.debug('Found IDX #' + str(idx) + ' in cache under position #' + str(cc))
-
-                # here the cached value is actually only the index
-                # so it still needs to be loaded with the given index
-                # this happens when we want to load by name (str)
-                # and we need to actually load it
-                n_idx = cc
-            elif type(cc) is list:
-                logger.debug('Found IDX #' + str(idx) + ' in cache under positions #' + str(cc) + '. Loading first.')
-                n_idx = cc[0]
-
-            else:
-                logger.debug('Found IDX #' + str(idx) + ' in cache. Not loading!')
-
-                # we have a real object (hopefully) and just return from cache
-                n_idx = idx
-
-            if n_idx in self.cache:
-                # return from cache
-                return self.cache[n_idx]
-
-
-        elif type(idx) is str:
+        if type(idx) is str:
             # we want to load by name and it was not in cache.
             if self.has_name:
                 # since it is not found in the cache before. Refresh the cache
                 self.update_name_cache()
 
                 # and give it another shot
-                if idx in self.cache:
-                    if len(self.cache[idx]) > 1:
+                if idx in self.name_idx:
+                    if len(self.name_idx[idx]) > 1:
                         logger.debug('Found name "%s" multiple (%d) times in storage! Loading first!' % (idx, len(self.cache[idx])))
-                        n_idx = self.cache[idx][0]
-                    else:
-                        n_idx = self.cache[idx][0]
+
+                    n_idx = self.name_idx[idx][0]
                 else:
                     raise ValueError('str "' + idx + '" not found in storage')
-            else:
-                raise ValueError('str "' + idx + '" as indices are only allowed in named storage')
+        elif type(idx) is int:
+            pass
+        else:
+            raise ValueError('str "' + idx + '" as indices are only allowed in named storage')
+
+        # if it is in the cache, return it
+        if n_idx in self.cache:
+            logger.debug('Found IDX #' + str(idx) + ' in cache. Not loading!')
+            return self.cache[n_idx]
 
         # ATTENTION HERE!
         # Note that the wrapped function no self as first parameter. This is because we are wrapping a bound
         # method in an instance and this one is still bound - luckily - to the same 'self'. In a class decorator when wrapping
         # the class method directly it is not bound yet and so we need to include the self! Took me some time to
         # understand and figure that out
+
         obj = func(n_idx, *args, **kwargs)
         if obj is not None:
             # update cache there might have been a change due to naming
@@ -1122,10 +1144,11 @@ def savecache(func):
         idx = obj.idx[self.storage]
 
         # store the name in the cache
-        self.cache[idx] = obj
-        if self.has_name and obj._name != '':
-            # and also the name, if it has one so we can load by
-            # name afterwards from cache
+        if hasattr(self, 'cache'):
+            self.cache[idx] = obj
+            if self.has_name and obj._name != '':
+                # and also the name, if it has one so we can load by
+                # name afterwards from cache
                 self._update_name_in_cache(obj._name, idx)
 
         return idx
@@ -1175,7 +1198,8 @@ def loadidx(func):
             obj = func(n_idx, *args, **kwargs)
 
         if not hasattr(obj, 'idx'):
-            obj.idx = dict()
+            print type(obj), obj.__dict__
+#            obj.idx = dict()
 
         obj.idx[self.storage] = n_idx
 

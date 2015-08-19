@@ -19,6 +19,8 @@ import simtk.unit as u
 import openpathsampling as paths
 from openpathsampling.todict import ObjectJSON
 
+from openpathsampling.tools import LRUCache, WeakLRUCache, WeakCache, WeakLimitCache
+
 #=============================================================================================
 # SOURCE CONTROL
 #=============================================================================================
@@ -47,6 +49,113 @@ class NetCDFPlus(netcdf.Dataset):
         'numpy.uint8', 'numpy.uinf16', 'numpy.uint32', 'numpy.uint64',
         'index', 'length'
     ]
+    # Default caching for online use
+
+
+    @staticmethod
+    def default_cache_sizes():
+        return {
+            'trajectories' : WeakLRUCache(10000),
+            'snapshots' : WeakLRUCache(50000),
+            'configurations' : WeakLRUCache(10000),
+            'momentum' : WeakLRUCache(10000),
+            'samples' : WeakLRUCache(25000),
+            'samplesets' : False,
+            'collectivevariables' : True,
+            'pathmovers' : True,
+            'shootingpoints' : WeakLRUCache(10000),
+            'shootingpointselectors' : True,
+            'engines' : True,
+            'pathsimulators' : True,
+            'volumes' : True,
+            'ensembles' : True,
+            'pathmovechanges' : False,
+            'transitions' : True,
+            'networks' : True,
+            '_details' : False,
+            'steps' : WeakLRUCache(1000)
+        }
+
+    # Analysis caching is very large to allow fast processing
+
+    @staticmethod
+    def analysis_cache_sizes():
+        return {
+            'trajectories' : WeakLimitCache(100000),
+            'snapshots' : WeakLimitCache(500000),
+            'configurations' : WeakLRUCache(10000),
+            'momentum' : WeakLRUCache(10000),
+            'samples' : WeakLimitCache(250000),
+            'samplesets' : WeakLimitCache(100000),
+            'collectivevariables' : True,
+            'pathmovers' : True,
+            'shootingpoints' : WeakLimitCache(100000),
+            'shootingpointselectors' : True,
+            'engines' : True,
+            'pathsimulators' : True,
+            'volumes' : True,
+            'ensembles' : True,
+            'pathmovechanges' : WeakLimitCache(250000),
+            'transitions' : True,
+            'networks' : True,
+            '_details' : False,
+            'steps' : WeakLimitCache(100000)
+        }
+
+    # Production. No loading, only last 1000 steps and a few other objects for error
+    # testing
+
+    def production_cache_sizes(self):
+        return {
+            'trajectories' : WeakLRUCache(),
+            'snapshots' : WeakLRUCache(),
+            'configurations' : WeakLRUCache(),
+            'momentum' : WeakLRUCache(),
+            'samples' : WeakLRUCache(),
+            'samplesets' : False,
+            'collectivevariables' : False,
+            'pathmovers' : False,
+            'shootingpoints' : False,
+            'shootingpointselectors' : False,
+            'engines' : False,
+            'pathsimulators' : False,
+            'volumes' : False,
+            'ensembles' : False,
+            'pathmovechanges' : False,
+            'transitions' : False,
+            'networks' : False,
+            '_details' : False,
+            'steps' : WeakCache()
+        }
+
+    # No caching (so far only CVs internal storage is there)
+
+    def no_cache_sizes(self):
+        return {
+            'trajectories' : False,
+            'snapshots' : False,
+            'configurations' : False,
+            'momentum' : False,
+            'samples' : False,
+            'samplesets' : False,
+            'collectivevariables' : False,
+            'pathmovers' : False,
+            'shootingpoints' : False,
+            'shootingpointselectors' : False,
+            'engines' : False,
+            'pathsimulators' : False,
+            'volumes' : False,
+            'ensembles' : False,
+            'pathmovechanges' : False,
+            'transitions' : False,
+            'networks' : False,
+            '_details' : False,
+            'steps' : False
+        }
+
+    def _register_storages(self, storage = None):
+        """
+        Register all Stores used in the OpenPathSampling Storage
 
     class Variable_Delegate(object):
         def __init__(self, variable, getter, setter):
@@ -76,6 +185,97 @@ class NetCDFPlus(netcdf.Dataset):
             print self.variable, item
             return getattr(self.variable, item)
 
+        # nestable objects
+
+        self.volumes = paths.storage.ObjectStore(storage, paths.Volume, has_uid=True, nestable=True, has_name=True)
+        self.ensembles = paths.storage.ObjectStore(storage, paths.Ensemble, has_uid=True, nestable=True, has_name=True)
+
+        # special objects
+        # TODO: remove query? Not really needed, is it?
+
+        self.query = paths.storage.QueryStore(storage)
+
+        self._objects = { name : getattr(self, name) for name in
+            ['trajectories', 'snapshots', 'configurations',
+             'samples', 'samplesets', 'collectivevariables',
+             'cvs', 'pathmovers', 'shootingpoints',
+             'shootingpointselectors', 'engines',
+             'pathsimulators', 'volumes', 'ensembles',
+             'pathmovechanges', 'transitions', 'networks', '_details',
+             'steps', 'momentum'
+            ]}
+
+        self.set_caching_mode('default')
+
+    def set_caching_mode(self, mode='default'):
+        """
+        Set default values for all caches
+
+        Parameters
+        ----------
+        caching : str
+            One of the following values is allowed 'default', 'production',
+            'analysis', 'off'
+
+        """
+
+        available_cache_sizes = {
+            'default': self.default_cache_sizes,
+            'analysis': self.analysis_cache_sizes,
+            'production': self.production_cache_sizes,
+            'off': self.no_cache_sizes
+        }
+
+        if mode in available_cache_sizes:
+            # We need cache sizes as a function. Otherwise we will reuse the same
+            # caches for each storage and that will cause problems! Lots of...
+            cache_sizes = available_cache_sizes[mode]()
+        else:
+            raise ValueError(
+                "mode '" + mode + "' is not supported. Try one of " +
+                str(available_cache_sizes.keys())
+            )
+
+        for store_name, caching in cache_sizes.iteritems():
+            if hasattr(self, store_name):
+                store = getattr(self, store_name)
+                store.set_caching(caching)
+
+    @property
+    def objects(self):
+        """
+        Return a dictionary of all objects stored.
+
+        This is similar to the netcdf `.variables` for all stored variables. This
+        allows to write `storage.objects['samples'][idx]` like we
+        write `storage.variables['ensemble_json'][idx]`
+        """
+        return self._objects
+
+    def _setup_class(self):
+        """
+        Sets the basic properties for the storage
+        """
+        self._storages = {}
+        self._storages_base_cls = {}
+        self.links = []
+        self.simplifier = paths.ObjectJSON()
+        self.units = dict()
+        # use no units
+        self.dimension_units = {
+            'length': u.Unit({}),
+            'velocity': u.Unit({}),
+            'energy': u.Unit({})
+        }
+        # use MD units
+        self.dimension_units = {
+            'length': u.nanometers,
+            'velocity': u.nanometers / u.picoseconds,
+            'energy': u.kilojoules_per_mole
+        }
+
+    def __init__(self, filename, mode=None,
+                 template=None, units=None):
     def __init__(self, filename, mode=None, units=None):
         '''
         Create a storage for complex objects in a netCDF file
@@ -632,11 +832,13 @@ class Storage(NetCDFPlus):
         -----
         This is mostly used to remove water but keep the data intact.
         """
+
         storage2 = Storage(filename=filename, template=self.template.subset(subset), mode='w')
 
         # Copy all configurations and momenta to new file in reduced form
-
-        for obj in self.configurations.iterator():
+        for obj in self.configurations:
+#            print obj._delayed_loading
+#            [ value(obj, self.configuration) for key, value in obj._delayed_loading.iteritems() ]
             storage2.configurations.save(obj.copy(subset), idx=obj.idx[self])
         for obj in self.momenta.iterator():
             storage2.momenta.save(obj.copy(subset), idx=obj.idx[self])
@@ -826,3 +1028,25 @@ class StorableObjectJSON(ObjectJSON):
                 return result
 
         return super(StorableObjectJSON, self).build(obj)
+
+class AnalysisStorage(Storage):
+    def __init__(self, filename):
+        super(AnalysisStorage, self).__init__(
+            filename=filename,
+            mode='r'
+        )
+
+        self.set_caching_mode('analysis')
+
+        # Let's go caching
+
+        self.samples.cache_all()
+        self.samplesets.cache_all()
+        self.cvs.cache_all()
+        map(lambda x : x.cache_all(self), self.cvs)
+        self.volumes.cache_all()
+        self.ensembles.cache_all()
+        self.pathmovers.cache_all()
+        self.pathmovechanges.cache_all()
+        self.steps.cache_all()
+        

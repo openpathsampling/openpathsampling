@@ -1,5 +1,4 @@
 import openpathsampling as paths
-from openpathsampling.todict import OPSNamed
 from openpathsampling import PathMoverFactory as pmf
 
 import itertools
@@ -66,8 +65,9 @@ class MoveStrategy(object):
     level
     """
     _level = -1
-    def __init__(self, ensembles, group, replace):
+    def __init__(self, ensembles, group, replace, network):
         self.ensembles = ensembles
+        self.network = network
         self.group = group
         self.replace = replace
         self.replace_signatures = None
@@ -99,7 +99,7 @@ class MoveStrategy(object):
         elif level_type == levels.MOVER:
             self.replace_movers = replace
 
-    def get_ensembles(self, scheme, ensembles):
+    def get_ensembles(self, ensembles):
         """
         Regularizes ensemble input to list of list.
 
@@ -124,7 +124,7 @@ class MoveStrategy(object):
         """
         if ensembles is None:
             res_ensembles = []
-            for t in scheme.network.sampling_transitions:
+            for t in self.network.sampling_transitions:
                 res_ensembles.append(t.ensembles)
         else:
             # takes a list and makes it into list-of-lists
@@ -155,16 +155,18 @@ class OneWayShootingStrategy(MoveStrategy):
     """
     _level = levels.MOVER
     def __init__(self, selector=None, ensembles=None, group="shooting",
-                 replace=True):
+                 replace=True, network=None):
         super(OneWayShootingStrategy, self).__init__(
-            ensembles=ensembles, group=group, replace=replace
+            ensembles=ensembles, network=network, group=group, replace=replace
         )
         if selector is None:
             selector = paths.UniformSelector()
         self.selector = selector
 
     def make_movers(self, scheme):
-        ensemble_list = self.get_ensembles(scheme, self.ensembles)
+        if self.network is None:
+            self.network = scheme.network
+        ensemble_list = self.get_ensembles(self.ensembles)
         ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
         shooters = pmf.OneWayShootingSet(self.selector, ensembles)
         return shooters
@@ -174,17 +176,23 @@ class NearestNeighborRepExStrategy(MoveStrategy):
     Make the NN replica exchange scheme among ordered ensembles.
     """
     _level = levels.SIGNATURE
-    def __init__(self, ensembles=None, group="repex", replace=True):
+    def __init__(self, ensembles=None, group="repex", replace=True,
+                 network=None):
         super(NearestNeighborRepExStrategy, self).__init__(
-            ensembles=ensembles, group=group, replace=replace
+            ensembles=ensembles, network=network, group=group, replace=replace
         )
 
     def make_movers(self, scheme):
-        ensemble_list = self.get_ensembles(scheme, self.ensembles)
+        if self.network is None:
+            self.network = scheme.network
+        ensemble_list = self.get_ensembles(self.ensembles)
         movers = []
         for ens in ensemble_list:
             movers.extend(
-                [paths.ReplicaExchangeMover(ensembles=[[ens[i], ens[i+1]]])
+                [paths.ReplicaExchangeMover(
+                    ensemble1=ens[i],
+                    ensemble2=ens[i+1]
+                )
                  for i in range(len(ens)-1)]
             )
         return movers
@@ -202,12 +210,16 @@ class AllSetRepExStrategy(NearestNeighborRepExStrategy):
     different sublist. This makes all the exchanges within that list.
     """
     def make_movers(self, scheme):
-        ensemble_list = self.get_ensembles(scheme, self.ensembles)
+        if self.network is None:
+            self.network = scheme.network
+        ensemble_list = self.get_ensembles(self.ensembles)
         movers = []
         for ens in ensemble_list:
             pairs = list(itertools.combinations(ens, 2))
-            movers.extend([paths.ReplicaExchangeMover(ensembles=list(pair))
-                           for pair in pairs])
+            movers.extend([paths.ReplicaExchangeMover(
+                ensemble1=pair[0],
+                ensemble2=pair[1]
+            ) for pair in pairs])
         return movers
 
 class SelectedPairsRepExStrategy(MoveStrategy):
@@ -220,7 +232,8 @@ class SelectedPairsRepExStrategy(MoveStrategy):
     def initialization_error(self):
         raise RuntimeError("SelectedPairsRepExStrategy must be initialized with ensemble pairs.")
 
-    def __init__(self, ensembles=None, group="repex", replace=False):
+    def __init__(self, ensembles=None, group="repex", replace=False,
+                 network=None):
         # check that we have a list of pairs
         if ensembles is None:
             self.initialization_error()
@@ -234,14 +247,19 @@ class SelectedPairsRepExStrategy(MoveStrategy):
                     self.initialization_error()
         
         super(SelectedPairsRepExStrategy, self).__init__(
-            ensembles=ensembles, group=group, replace=replace
+            ensembles=ensembles, network=network, group=group, replace=replace
         )
 
     def make_movers(self, scheme):
-        ensemble_list = self.get_ensembles(scheme, self.ensembles)
+        if self.network is None:
+            self.network = scheme.network
+        ensemble_list = self.get_ensembles(self.ensembles)
         movers = []
         for pair in ensemble_list:
-            movers.append(paths.ReplicaExchangeMover(ensembles=pair))
+            movers.append(paths.ReplicaExchangeMover(
+                ensemble1=pair[0],
+                ensemble2=pair[1]
+            ))
         return movers
 
 
@@ -267,13 +285,16 @@ class PathReversalStrategy(MoveStrategy):
     Creates PathReversalMovers for the strategy.
     """
     _level = levels.MOVER
-    def __init__(self, ensembles=None, group="pathreversal", replace=True):
+    def __init__(self, ensembles=None, group="pathreversal", replace=True,
+                 network=None):
         super(PathReversalStrategy, self).__init__(
-            ensembles=ensembles, group=group, replace=replace
+            ensembles=ensembles, network=network, group=group, replace=replace
         )
 
     def make_movers(self, scheme):
-        ensemble_list = self.get_ensembles(scheme, self.ensembles)
+        if self.network is None:
+            self.network = scheme.network
+        ensemble_list = self.get_ensembles(self.ensembles)
         ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
         movers = paths.PathReversalSet(ensembles)
         return movers
@@ -284,13 +305,14 @@ class MinusMoveStrategy(MoveStrategy):
     Takes a given scheme and makes the minus mover.
     """
     _level = levels.MOVER
-    def __init__(self, ensembles=None, group="minus", replace=True):
+    def __init__(self, ensembles=None, group="minus", replace=True,
+                 network=None):
         super(MinusMoveStrategy, self).__init__(
-            ensembles=ensembles, group=group, replace=replace
+            ensembles=ensembles, network=network, group=group, replace=replace
         )
 
-    def get_ensembles(self, scheme, ensembles):
-        network = scheme.network
+    def get_ensembles(self, ensembles):
+        network = self.network
         if ensembles is None:
             minus_ensembles = network.minus_ensembles
             state_sorted_minus = {}
@@ -302,13 +324,14 @@ class MinusMoveStrategy(MoveStrategy):
             ensembles = state_sorted_minus.values()
 
         # now we use super's ability to turn it into list-of-list
-        res_ensembles = super(MinusMoveStrategy, self).get_ensembles(scheme,
-                                                                     ensembles)
+        res_ensembles = super(MinusMoveStrategy, self).get_ensembles(ensembles)
         return res_ensembles
 
     def make_movers(self, scheme):
-        network = scheme.network
-        ensemble_list = self.get_ensembles(scheme, self.ensembles)
+        if self.network is None:
+            self.network = scheme.network
+        network = self.network
+        ensemble_list = self.get_ensembles(self.ensembles)
         ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
         movers = []
         for ens in ensembles:
@@ -318,218 +341,52 @@ class MinusMoveStrategy(MoveStrategy):
                 minus_ensemble=ens, 
                 innermost_ensembles=innermosts
             ))
+        # TODO: add to hidden ensembles
         return movers
 
 class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
     pass
 
-class OrganizeByEnsembleStrategy(MoveStrategy):
-    _level = levels.GLOBAL
-    def __init__(self, ensembles=None, group=None, replace=True):
-        super(OrganizeByEnsembleStrategy, self).__init__(
-            ensembles=ensembles, group=group, replace=replace
-        )
-        self.mover_weights = None
-        self.group_weights = None
-
-    def make_ensemble_level_chooser(self, scheme, ensemble):
-        pass
-
-    def make_movers(self, scheme):
-        network = scheme.network
-        # TODO
-        pass
-
 class DefaultStrategy(MoveStrategy):
-    """
-    Default global strategy. 
-    
-    First choose move type, then choose specific instance of the mover.
-    """
     _level = levels.GLOBAL
-    default_group_weights = {
-        'shooting' : 1.0,
-        'repex' : 0.5,
-        'pathreversal' : 0.5,
-        'minus' : 0.2
-    }
-    def __init__(self, ensembles=None, group=None, replace=True):
-        self.group_weights = {}
-        self.mover_weights = {}
+    def __init__(self, ensembles=None, group=None, replace=True,
+                 network=None):
+
+        super(DefaultStrategy, self).__init__(ensembles, group, replace, network)
+
+        self.weight_adjustment = {
+            'shooting' : 1.0,
+            'repex' : 0.5,
+            'pathreversal' : 0.5,
+            'minus' : 0.2,
+        }
         self.group = group
         self.replace = replace
+        self.network = network
 
-    def make_chooser(self, scheme, group, weights=None, choosername=None):
-        """
-        Make RandomChoiceMover that selects mover from a move type group
-        """
+    def make_chooser(self, scheme, group, choosername=None):
         if choosername is None:
             choosername = group.capitalize()+"Chooser"
-        chooser = paths.RandomChoiceMover(
-            movers=scheme.movers[group],
-            weights=weights
-        )
+        chooser = paths.RandomChoiceMover(movers=scheme.movers[group])
         chooser.name = choosername
         return chooser
 
-
-    def strategy_group_weights(self, scheme, mover_weights=None):
-        """
-        Returns the group weights given by info in the strategy and scheme.
-
-        `mover_weights` is None if either (a) scheme.choice_probability is
-        not set; or (b) self.group_weights is set. Then we don't make use of
-        scheme.choice_probability. If given mover_weights, we use
-        scheme.choice_probability to set the group_weights.
-
-        See also
-        --------
-        DefaultStrategy.get_weights
-        DefaultStrategy.strategy_mover_weights
-        """
-        group_weights = {}
-        if mover_weights is None:
-            for group in scheme.movers:
-                try:
-                    group_weights[group] = self.default_group_weights[group]
-                except KeyError:
-                    group_weights[group] = 1.0
-                # override default
-                if group in self.group_weights:
-                    group_weights[group] = self.group_weights[group]
-        else:
-            mover_weights = self.strategy_mover_weights(scheme)
-            group_weights = {}
-            for group in scheme.movers:
-                movers = scheme.movers[group]
-                group_weights[group] = sum([scheme.choice_probability[m] 
-                                            for m in movers])
-            try:
-                normalizer = group_weights['shooting']
-            except KeyError:
-                normalizer = sum(group_weights.values())
-            for group in group_weights:
-                group_weights[group] /= normalizer
-
-        return group_weights
-
-    def strategy_mover_weights(self, scheme, group_weights=None):
-        """
-        Returns the mover weights given by info in the strategy and scheme.
-
-        `group_weights` is None if either (a) scheme.choice_probability is
-        not set; or (b) self.mover_weights is set. Then we don't make use of
-        scheme.choice_probability. If given group_weights, we use
-        scheme.choice_probability to set the mover_weights.
-
-        See also
-        --------
-        DefaultStrategy.get_weights
-        DefaultStrategy.strategy_group_weights
-        """
-        mover_weights = {}
-        if group_weights is None:
-            for group in scheme.movers:
-                mover_weights[group] = {}
-                movers = scheme.movers[group]
-                # set default
-                mover_weights[group] = {m.ensemble_signature : 1.0
-                                        for m in scheme.movers[group]}
-                if group in self.mover_weights:
-                    for sig in self.mover_weights[group]:
-                        mover_weights[group][sig] = self.mover_weights[group][sig]
-        else:
-            m_weights = self.strategy_mover_weights(scheme) # defaults
-            pred_choice = self.choice_probability(scheme, group_weights,
-                                                  m_weights)
-            scheme_choice = scheme.choice_probability
-            for group in scheme.movers:
-                mover_weights[group] = {
-                    m.ensemble_signature : scheme_choice[m] / pred_choice[m]
-                    for m in scheme.movers[group]
-                }
-
-        for group in mover_weights:
-            group_min = min(mover_weights[group].values())
-            mover_weights[group] = {s : mover_weights[group][s] / group_min
-                                    for s in mover_weights[group]}
-                                        
-        return mover_weights
-
-    def get_weights(self, scheme):
-        """
-        Gets group_weights and mover_weights dictionaries.
-
-        Notes
-        -----
-        The group_weight gives the relative probability of choosing a group;
-        the mover_weight gives the relative probability of choosing a mover
-        *within* its group.
-
-        Note that only the variables returned from this tell the full story.
-        The defaults and the self.* version may not contain the real set of
-        groups/movers.
-        """
-        choice_prob_set = (scheme.choice_probability != {})
-        group_set = (self.group_weights != {})
-        mover_set = (self.mover_weights != {})
-        if (group_set and mover_set) or not choice_prob_set:
-            group_weights = self.strategy_group_weights(scheme)
-            mover_weights = self.strategy_mover_weights(scheme)
-        elif group_set: #choice_prob is set; mover is not set
-            # use group_weights & choice_probability to set mover_weights
-            group_weights = self.strategy_group_weights(scheme)
-            mover_weights = self.strategy_mover_weights(scheme, group_weights)
-        elif mover_set: #choice_prob is set; group is not set
-            # use mover_weights & choice_probability to set group_weights
-            mover_weights = self.strategy_mover_weights(scheme)
-            group_weights = self.strategy_group_weights(scheme, mover_weights)
-        else: #choice_prob is set, neither group nor mover is set
-            # use default mover weights to get the group weights, then use
-            # that to get the actual correct mover weights
-            m_weights = self.strategy_mover_weights(scheme)
-            group_weights = self.strategy_group_weights(scheme, m_weights)
-            mover_weights = self.strategy_mover_weights(scheme, group_weights)
-
-        return (group_weights, mover_weights) # error if somehow undefined
-
-
-    def choice_probability(self, scheme, group_weights, mover_weights):
-        """
-        Calculates the probability of choosing to do each move.
-        """
-        unnormed = {}
-        group_norm = sum(group_weights.values())
-        for groupname in scheme.movers:
-            group_w = group_weights[groupname] / group_norm
-            sig_weights = mover_weights[groupname]
-            sig_norm = sum(mover_weights[groupname].values())
-            for mover in scheme.movers[groupname]:
-                sig_w = sig_weights[mover.ensemble_signature] / sig_norm
-                unnormed[mover] = group_w * sig_w
-        norm = sum(unnormed.values())
-        return {m : unnormed[m] / norm for m in unnormed}
-
     def make_movers(self, scheme):
-        (group_weights, mover_weights) = self.get_weights(scheme)
+        if self.network is None:
+            self.network = scheme.network
         choosers = []
+        weights = []
         for group in scheme.movers.keys():
-            # care to the order of weights
-            ens_weights = [mover_weights[group][m.ensemble_signature]
-                           for m in scheme.movers[group]]
-            choosers.append(
-                self.make_chooser(scheme, group, weights=ens_weights)
-            )
-
-        root_weights = [group_weights[group] * len(scheme.movers[group])
-                        for group in scheme.movers]
+            choosers.append(self.make_chooser(scheme, group))
+            try:
+                weight_adjustment = self.weight_adjustment[group]
+            except KeyError:
+                weight_adjustment = 1.0
+            weights.append(len(scheme.movers[group])*weight_adjustment)
         root_chooser = paths.RandomChoiceMover(movers=choosers,
-                                               weights=root_weights)
+                                               weights=weights)
         root_chooser.name = "RootMover"
         scheme.root_mover = root_chooser
-        scheme.choice_probability = self.choice_probability(
-            scheme, group_weights, mover_weights
-        )
         return root_chooser
 
 

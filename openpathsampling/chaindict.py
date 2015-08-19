@@ -1,7 +1,7 @@
 __author__ = 'jan-hendrikprinz'
 
 import collections
-
+from openpathsampling.tools import LRUCache
 
 class ChainDict(dict):
     """
@@ -38,7 +38,7 @@ class ChainDict(dict):
     use_unique = True
 
     def __init__(self):
-        dict.__init__(self)
+        super(ChainDict, self).__init__()
         self.post = None
 
     def __getitem__(self, items):
@@ -72,14 +72,14 @@ class ChainDict(dict):
         return dict.__contains__(self, item)
 
     def _contains_list(self, items):
-        return [dict.__contains__(self, item) for item in items]
+        return [self._contains(item) for item in items]
 
     def _set(self, item, value):
         if value is not None:
             dict.__setitem__(self, item, value)
 
     def _set_list(self, items, values):
-        [dict.__setitem__(self, item, value) for item, value in zip(items, values) if value is not None]
+        [self._set(item, value) for item, value in zip(items, values) if value is not None]
 
     def _get(self, item):
         try:
@@ -222,6 +222,26 @@ class Function(ChainDict):
 
         return fnc
 
+class LRUChainDict(ChainDict):
+    def __init__(self, size_limit=1000000):
+        super(LRUChainDict, self).__init__()
+        self.size_limit = size_limit
+        self.size_limit = size_limit
+        self.cache = LRUCache(size_limit)
+
+    def _contains(self, item):
+        return item in self.cache
+
+    def _set(self, item, value):
+        if value is not None:
+            self.cache[item] = value
+
+    def _get(self, item):
+        try:
+            return self.cache[item]
+        except KeyError:
+            return None
+
 class BufferedStore(Wrap):
     def __init__(self, name, dimensions, store, scope=None, unit=None):
         self.storage = store.storage
@@ -245,7 +265,7 @@ class BufferedStore(Wrap):
                     self._store._set(item, value)
 
     def cache_all(self):
-        all_values = self._store.store.get_list_value(self._store.scope, slice(None, None))
+        all_values = self._store.store.get_list_value(self._store.scope, slice(None))
         storage = self.storage
         for idx, value in enumerate(all_values):
             if value is not None:
@@ -456,6 +476,7 @@ class MultiStore(Store):
             results_list[s] = self.cod_stores[s][items]
 
         first = True
+        output = None
         for s, results in results_list.iteritems():
             if first:
                 output = results
@@ -465,7 +486,6 @@ class MultiStore(Store):
                      for item, result in zip(output, results) ]
 
         return output
-
 
 
 class UnwrapTuple(ChainDict):

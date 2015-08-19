@@ -251,7 +251,7 @@ class Trajectory(list, OPSObject):
             ret = [ list.__getitem__(self, i) for i in index ]
         else:
             ret = list.__getitem__(self, index)
-                
+
         if type(ret) is list:
             ret = Trajectory(ret)
             ret.atom_indices = self.atom_indices
@@ -342,7 +342,7 @@ class Trajectory(list, OPSObject):
         last_vol = None
         count = 0
         segment_labels = []
-        for frame in self:
+        for frame in list.__iter__(self):
             in_state = []
             for key in label_dict.keys():
                 vol = label_dict[key]
@@ -685,6 +685,5 @@ class Trajectory(list, OPSObject):
         This is taken from the configuration of the first frame.
         Use topology.md instead
         TODO: Should be removed
-        """        
-
+        """
         return self.topology.md
