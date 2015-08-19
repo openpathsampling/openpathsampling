@@ -424,7 +424,7 @@ class CV_Function(CollectiveVariable):
             fcn,
             template=None,
             dimensions=None,
-            store_cache=None,
+            store_cache=True,
             fnc_uses_lists=False,
             var_type='float',
             **kwargs

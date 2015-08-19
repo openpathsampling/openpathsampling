@@ -178,7 +178,6 @@ class NetCDFPlus(netcdf.Dataset):
             return self.getter(self.variable[item])
 
         def __getattr__(self, item):
-            print self.variable, item
             return getattr(self.variable, item)
 
     def set_caching_mode(self, mode='default'):
@@ -801,7 +800,7 @@ class Storage(NetCDFPlus):
         for storage_name in [
                 'pathmovers', 'topologies', 'networks', 'details', 'trajectories',
                 'shootingpoints', 'shootingpointselectors', 'engines', 'volumes',
-                'samplesets', 'ensembles', 'transitions', 'mcsteps', 'pathmovechanges',
+                'samplesets', 'ensembles', 'transitions', 'steps', 'pathmovechanges',
                 'samples', 'snapshots', 'pathsimulators', 'cvs'
             ]:
             self.clone_storage(storage_name, storage2)

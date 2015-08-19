@@ -184,7 +184,7 @@ class NearestNeighborRepExStrategy(MoveStrategy):
         movers = []
         for ens in ensemble_list:
             movers.extend(
-                [paths.ReplicaExchangeMover(ensembles=[[ens[i], ens[i+1]]])
+                [paths.ReplicaExchangeMover(ensemble1=ens[i], ensemble2=ens[i+1])
                  for i in range(len(ens)-1)]
             )
         return movers
@@ -206,7 +206,7 @@ class AllSetRepExStrategy(NearestNeighborRepExStrategy):
         movers = []
         for ens in ensemble_list:
             pairs = list(itertools.combinations(ens, 2))
-            movers.extend([paths.ReplicaExchangeMover(ensembles=list(pair))
+            movers.extend([paths.ReplicaExchangeMover(ensemble1= pair[0], ensemble2=pair[1])
                            for pair in pairs])
         return movers
 
@@ -241,7 +241,7 @@ class SelectedPairsRepExStrategy(MoveStrategy):
         ensemble_list = self.get_ensembles(scheme, self.ensembles)
         movers = []
         for pair in ensemble_list:
-            movers.append(paths.ReplicaExchangeMover(ensembles=pair))
+            movers.append(paths.ReplicaExchangeMover(ensemble1=pair[0], ensemble2=pair[1]))
         return movers
 
 
