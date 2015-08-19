@@ -88,9 +88,11 @@ class SnapshotStore(ObjectStore):
 
         self.vars['configuration'][idx] = snapshot.configuration
         self.vars['momentum'][idx] = snapshot.momentum
+        self.vars['momentum_reversed'][idx] = snapshot.is_reversed
+
+        self.save(snapshot._reversed)
         self.vars['reversed_idx'][idx] = self.idx(snapshot._reversed)
 
-        self.vars['momentum_reversed'][idx] = snapshot.is_reversed
 
     def configuration_idx(self, idx):
         '''
@@ -338,7 +340,7 @@ class MomentumStore(ObjectStore):
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
-        self.init_variable('velocities', 'float',
+        self.init_variable('velocities', 'numpy.float32',
                 dimensions=(self.prefix, 'atom', 'spatial'),
                 units=self.dimension_units['velocity'],
                 description="the velocity of atom 'atom' in dimension " +
@@ -483,13 +485,13 @@ class ConfigurationStore(ObjectStore):
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
-        self.init_variable('coordinates', 'float',
+        self.init_variable('coordinates', 'numpy.float32',
                 (self.prefix, 'atom','spatial'), self.dimension_units['length'],
                 description="coordinate of atom '{ix[1]}' in dimension " +
                             "'{ix[2]}' of configuration '{ix[0]}'.",
                 chunksizes=(1,n_atoms,n_spatial))
 
-        self.init_variable('box_vectors', 'float',
+        self.init_variable('box_vectors', 'numpy.float32',
                 (self.prefix, 'spatial', 'spatial'),
                 self.dimension_units['length'],
                 chunksizes=(1,n_spatial,n_spatial))

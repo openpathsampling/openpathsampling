@@ -20,12 +20,10 @@ from openpathsampling.todict import OPSObject
 class Trajectory(list, OPSObject):
     """
     Simulation trajectory. Essentially a python list of snapshots
-
     """
-    
+
     engine = None
     use_lazy = True    # We assume that snapshots are immutable. That should safe a lot of time to copy trajectories
-
 
     def __init__(self, trajectory=None):
         """
@@ -229,7 +227,7 @@ class Trajectory(list, OPSObject):
         """
 
         if self.atom_indices is None:
-            n_atoms = self[0].coordinates.shape[0]
+            n_atoms = self[0].xyz.shape[0]
         else:
             n_atoms = len(self.atom_indices)
         return n_atoms    

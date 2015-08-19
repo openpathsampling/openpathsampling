@@ -22,7 +22,7 @@ if __name__ == '__main__':
 
     storage = Storage(
         filename = file,
-        mode = 'a'
+        mode = 'r'
     )
 
     storage.samples.cache_all()

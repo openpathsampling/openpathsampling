@@ -14,13 +14,17 @@ import numpy.testing as npt
 from openpathsampling.openmm_engine import *
 from openpathsampling.snapshot import Snapshot
 from openpathsampling.snapshot import Momentum, Configuration
+from openpathsampling.todict import ObjectJSON
 
 import simtk.unit as u
 import time
 
 def assert_close_unit(v1, v2, *args, **kwargs):
-    assert(v1.unit == v2.unit)
-    npt.assert_allclose(v1._value, v2._value, *args, **kwargs)
+    if type(v1) is u.Quantity:
+        assert(v1.unit == v2.unit)
+        npt.assert_allclose(v1._value, v2._value, *args, **kwargs)
+    else:
+        npt.assert_allclose(v1, v2, *args, **kwargs)
 
 def compare_snapshot(snapshot1, snapshot2):
     assert_close_unit(snapshot1.box_vectors, snapshot2.box_vectors, rtol=1e-7, atol=0)
@@ -72,13 +76,14 @@ class testStorage(object):
         for key, value in this.__dict__.iteritems():
             setattr(self, key, value)
 
+        self.simplifier = ObjectJSON()
+
     def teardown(self):
         if os.path.isfile(self.filename):
             os.remove(self.filename)
 
         if os.path.isfile(self.filename_clone):
             os.remove(self.filename_clone)
-        pass
 
     def test_create_template(self):
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
@@ -96,30 +101,11 @@ class testStorage(object):
         # check if poth topologies have the same JSON string (this also tests the simplifier for topologies
 
         assert_equal(
-            store.simplifier.to_json(self.template_snapshot.topology),
-            store.simplifier.to_json(loaded_topology)
+            self.simplifier.to_json(self.template_snapshot.topology),
+            self.simplifier.to_json(loaded_topology)
         )
 
         store.close()
-
-        pass
-
-    def test_write_load_str(self):
-        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
-        assert(os.path.isfile(self.filename))
-
-        test_str = 'test_string'
-        store.init_str('test_variable')
-        store.write_str('test_variable', test_str)
-        store.close()
-
-        store2 = Storage(filename=self.filename, mode='a')
-        loaded_str = store2.load_str('test_variable')
-
-        assert(loaded_str == test_str)
-
-        store2.close()
-        pass
 
     def test_stored_template(self):
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
@@ -132,7 +118,6 @@ class testStorage(object):
         compare_snapshot(loaded_template, self.template_snapshot)
 
         store.close()
-        pass
 
     def test_load_save(self):
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
@@ -152,8 +137,6 @@ class testStorage(object):
         compare_snapshot(loaded_template, loaded_copy)
 
         store.close()
-        pass
-
 
     def test_clone(self):
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')

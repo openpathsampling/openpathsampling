@@ -11,6 +11,7 @@ import base64
 import types
 import opcode
 import __builtin__
+import numpy as np
 
 class CollectiveVariable(cd.Wrap, OPSNamed):
     """
@@ -63,7 +64,7 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
             unit=None,
             has_fnc=True,
             fnc_uses_lists=False,
-            value_type=float,
+            var_type='float',
             store_cache=True
     ):
         if (type(name) is not str and type(name) is not unicode) or len(
@@ -83,7 +84,7 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
             self.dimensions = dimensions
             self.unit = unit
             self.fnc_uses_lists = fnc_uses_lists
-            self.value_type = value_type
+            self.var_type = var_type
 
         self.single_dict = cd.ExpandSingle()
         self.pre_dict = cd.Transform(self._pre_item)
@@ -114,6 +115,20 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
         super(CollectiveVariable, self).__init__(post=post)
 
         self._stored = False
+
+    @staticmethod
+    def _interprete_num_type(instance):
+        ty = type(instance)
+
+        types = [float, int, bool, str]
+
+        if ty in types:
+            return ty.__name__
+        elif ty is np.dtype:
+            return 'numpy.' + instance.dtype.type.__name__
+        else:
+            return 'None'
+
 
     @property
     def template_value(self):
@@ -202,7 +217,7 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
 
             dimensions = 1
             storable = True
-            value_type = None
+            var_type = None
             unit = None
 
             test_type = test_value
@@ -237,10 +252,10 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
             #     is_numeric = False
 
             if storable:
-                value_type = type(test_type)
+                var_type = self._interprete_num_type(test_type)
 
             # we have determined the output type
-            self.value_type = value_type
+            self.var_type = var_type
             self.storable = storable
             self.dimensions = dimensions
             self.fnc_uses_lists = fnc_uses_lists
@@ -411,6 +426,7 @@ class CV_Function(CollectiveVariable):
             dimensions=None,
             store_cache=None,
             fnc_uses_lists=False,
+            var_type='float',
             **kwargs
     ):
         """
@@ -470,7 +486,8 @@ class CV_Function(CollectiveVariable):
             template=template,
             dimensions=dimensions,
             store_cache=store_cache,
-            fnc_uses_lists=fnc_uses_lists
+            fnc_uses_lists=fnc_uses_lists,
+            var_type=var_type
         )
 
     @staticmethod
@@ -777,6 +794,7 @@ class CV_MD_Function(CV_Function):
             dimensions=dimensions,
             store_cache=store_cache,
             fnc_uses_lists=True,
+            var_type='numpy.float32',
             **kwargs
         )
         self._topology = None

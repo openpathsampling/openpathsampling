@@ -29,7 +29,6 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 # NetCDF Storage for multiple forked trajectories
 #=============================================================================================
 
-
 class NetCDFPlus(netcdf.Dataset):
     '''
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
@@ -62,13 +61,19 @@ class NetCDFPlus(netcdf.Dataset):
             self.getter = getter
 
         def __setitem__(self, key, value):
-#            print self.variable.name, key, value, self.setter(value)
+#            print self.variable.name, key, ' : ' ,value, hasattr(value, '__iter__')
+#            if hasattr(value, '__iter__') and type(value) is not u.Quantity:
+#                print [(type(v),v) for v in value]
+
+#            print self.setter(value)
+
             self.variable[key] = self.setter(value)
 
         def __getitem__(self, item):
             return self.getter(self.variable[item])
 
         def __getattr__(self, item):
+            print self.variable, item
             return getattr(self.variable, item)
 
     def __init__(self, filename, mode=None, units=None):
@@ -268,32 +273,6 @@ class NetCDFPlus(netcdf.Dataset):
         """
         return [store.content_class for store in self.objects.values()]
 
-    def write_str(self, name, string):
-        '''
-        Write a string into a netCDF variable
-
-        Parameters
-        ----------
-        name : str
-            the name of the variable
-        string : str
-            the string to store
-        '''
-        packed_data = np.empty(1, 'O')
-        packed_data[0] = string
-        self.variables[name][:] = packed_data
-
-    def init_str(self, name):
-        '''
-        Initialize a netCDF Variable to store a single string
-
-        Parameters
-        ----------
-        name : str
-            the name of the variable
-        '''
-        self.createVariable(name, 'str', 'scalar')
-
     def save(self, obj, *args, **kwargs):
         """
         Save a storable object into the correct Storage in the netCDF file
@@ -485,15 +464,17 @@ class NetCDFPlus(netcdf.Dataset):
                 setter = lambda v : v / unit
         elif var_type.startswith('obj.'):
             store = getattr(self, var_type[4:])
+            base_type = store.content_class
+
+            iterable = lambda v : \
+                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+
             getter = lambda v : \
                 [ None if int(w) < 0 else store.load(int(w)) for w in v.tolist()] \
-                    if hasattr(v, '__iter__') else \
-                        None if int(v) < 0 else store.load(int(v))
+                    if iterable(v) else None if int(v) < 0 else store.load(int(v))
             setter = lambda v : \
-                [ -1 if w is None else store.save(v) for w in v] \
-                    if hasattr(v, '__iter__') else -1 if v is None else store.save(v)
-
-
+                np.array([ -1 if w is None else store.save(w) for w in v], dtype=np.int32) \
+                    if iterable(v) else -1 if v is None else store.save(v)
 
         self.vars[name] = NetCDFPlus.Variable_Delegate(self.variables[name], getter, setter)
 
@@ -536,6 +517,8 @@ class NetCDFPlus(netcdf.Dataset):
         '''
 
         ncfile = self
+
+#        print type(var_type), name
 
         if var_type not in self.allowed_types and not var_type.startswith('obj.'):
             raise ValueError(
@@ -746,7 +729,7 @@ class Storage(NetCDFPlus):
         self.add('samples', paths.storage.SampleStore())
         self.add('samplesets', paths.storage.SampleSetStore())
         self.add('pathmovechanges', paths.storage.PathMoveChangeStore())
-        self.add('mcsteps', paths.storage.MCStepStore())
+        self.add('steps', paths.storage.MCStepStore())
 
         self.add('cvs', paths.storage.ObjectDictStore(paths.CollectiveVariable, paths.Snapshot))
         self.collectivevariables = self.cvs
@@ -787,11 +770,6 @@ class Storage(NetCDFPlus):
         if 'spatial' not in self.dimensions:
             self.createDimension('spatial', self.n_spatial)
 
-
-        # Create a string to hold the topology
-        # TODO: Remove and use other storage ways
-        self.init_str('topology')
-
         # update the units for dimensions from the template
         self.dimension_units.update(paths.tools.units_from_snapshot(template))
 
@@ -799,23 +777,18 @@ class Storage(NetCDFPlus):
 
         logger.info("Saving topology")
 
-        # create a json from the mdtraj.Topology() and store it
-        self.write_str('topology', self.simplifier.to_json(self.topology))
+        topology_id = self.topologies.save(self.topology)
 
         logger.info("Create initial template snapshot")
 
         # Save the initial configuration
         self.snapshots.save(template)
 
-        print template.__dict__
-
-        print len(self.snapshots)
-
         self.createVariable('template_idx', 'i4', 'scalar')
         self.variables['template_idx'][:] = template.idx[self]
 
     def _restore(self):
-        self.topology = self.simplifier.from_json(self.variables['topology'][0])
+        self.topology = self.topologies[0]
 
 
 class StorableObjectJSON(ObjectJSON):
@@ -828,7 +801,7 @@ class StorableObjectJSON(ObjectJSON):
         if obj is self.storage:
             return { '_storage' : 'self' }
         if type(obj).__module__ != '__builtin__':
-            if hasattr(obj, 'idx'):
+            if obj.__class__ in self.storage._obj_store:
                 store = self.storage._obj_store[obj.__class__]
                 if not store.nestable or obj.base_cls_name != base_type:
                     # this also returns the base class name used for storage

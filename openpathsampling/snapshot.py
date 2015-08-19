@@ -80,7 +80,12 @@ class Configuration(OPSObject):
         if self.coordinates is not None:
             # Check for nans in coordinates, and raise an exception if
             # something is wrong.
-            if np.any(np.isnan(self.coordinates._value)):
+            if type(self.coordinates) is u.Quantity:
+                coords = self.coordinates._value
+            else:
+                coords = self.coordinates
+
+            if np.any(np.isnan(coords)):
                 raise ValueError(
                     "Some coordinates became 'nan'; simulation is unstable or buggy.")
 
@@ -401,10 +406,14 @@ class Snapshot(OPSObject):
         if self.configuration is not None and self.configuration.coordinates is not None:
             # Check for nans in coordinates, and raise an exception if
             # something is wrong.
-            if np.any(np.isnan(self.configuration.coordinates._value)):
+            if type(self.configuration.coordinates) is u.Quantity:
+                coords = self.configuration.coordinates._value
+            else:
+                coords = self.configuration.coordinates
+
+            if np.any(np.isnan(coords)):
                 raise ValueError(
                     "Some coordinates became 'nan'; simulation is unstable or buggy.")
-
         if reversed_copy is None:
             # this will always create the mirrored copy so we can save in pairs!
             self._reversed = Snapshot(configuration = self.configuration,

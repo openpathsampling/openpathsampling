@@ -674,29 +674,6 @@ class ObjectStore(object):
             return 'numpy.' + instance.dtype.type.__name__
 
     @staticmethod
-    def _interprete_num_type(instance):
-        ty = type(instance)
-
-        types = {
-            'float' : np.float32,
-            'int' : np.int32,
-            'index' : np.int32,
-            'length' : np.int32,
-            'bool' : np.uint8,
-            'str' : 'str',
-            float : np.float32,
-            int : np.int32,
-            bool : np.int8,
-            str : 'str',
-        }
-
-        if ty in types:
-            return types[ty]
-        elif ty is np.dtype:
-            return instance.dtype.type
-
-
-    @staticmethod
     def _parse_var_type_as_np_type(var_type):
         nc_type = var_type
         if var_type == 'float':
@@ -1222,7 +1199,6 @@ def saveidx(func):
     Decorator for save functions that add the basic indexing handling
     """
     def inner(self, obj, idx = None, *args, **kwargs):
-
         storage = self.storage
         if idx is None:
             if storage in obj.idx:

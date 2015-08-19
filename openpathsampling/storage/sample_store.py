@@ -88,7 +88,7 @@ class SampleStore(ObjectStore):
         """
         if not self._cached_all:
             idxs = range(len(self))
-            trajectory_idxs = self.storage.variables[self.prefix + '_trajectory_idx'][:]
+            trajectory_idxs = self.storage.variables[self.prefix + '_trajectory'][:]
             replica_idxs = self.storage.variables[self.prefix + '_replica'][:]
             biass = self.storage.variables[self.prefix + '_bias'][:]
 
@@ -102,7 +102,7 @@ class SampleStore(ObjectStore):
 
     def add_empty_to_cache(self, idx, trajectory_idx, replica_idx, bias):
         obj = Sample(
-                trajectory=self.vars['trajectory'][trajectory_idx],
+                trajectory=self.storage.trajectories[int(trajectory_idx)],
                 replica=int(replica_idx),
                 bias=float(bias)
             )
@@ -131,8 +131,7 @@ class SampleSetStore(ObjectStore):
         # Check if all samples are saved
         map(self.storage.samples.save, sample_set)
 
-        values = self.list_to_numpy(sample_set, 'sample')
-        self.storage.variables['sampleset_sample_idx'][idx] = values
+        self.vars['samples'][idx] = sample_set
 
         self.vars['movepath'][idx] = sample_set.movepath
 
@@ -173,7 +172,7 @@ class SampleSetStore(ObjectStore):
         '''
 
         sample_set = SampleSet(
-            self.vars['samples'],
+            self.vars['samples'][idx],
             movepath=self.vars['movepath'][idx]
         )
 
@@ -181,7 +180,7 @@ class SampleSetStore(ObjectStore):
 
     def load_empty(self, idx):
         sample_set = SampleSet(
-            self.vars['samples'],
+            self.vars['samples'][idx],
             movepath=None
         )
 
@@ -196,7 +195,7 @@ class SampleSetStore(ObjectStore):
         """
         super(SampleSetStore, self)._init()
 
-        self.init_variable('sample', 'obj.samples',
+        self.init_variable('samples', 'obj.samples',
             description="sampleset[sampleset][frame] is the sample index (0..nspanshots-1) of frame 'frame' of sampleset 'sampleset'.",
             variable_length = True,
             chunksizes=(1024, )

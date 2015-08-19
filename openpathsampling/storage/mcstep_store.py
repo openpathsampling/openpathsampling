@@ -35,11 +35,11 @@ class MCStepStore(ObjectStore):
         '''
 
         return MCStep(
-            mccycle=self.vars['mccycle'],
-            previous=self.vars['previous'],
-            active=self.vars['active'],
-            simulation=self.vars['simulation'],
-            change=self.vars['change']
+            mccycle=self.vars['mccycle'][idx],
+            previous=self.vars['previous'][idx],
+            active=self.vars['active'][idx],
+            simulation=self.vars['simulation'][idx],
+            change=self.vars['change'][idx]
         )
 
     def _init(self, units=None):

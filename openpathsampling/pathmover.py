@@ -401,6 +401,7 @@ class SampleGeneratingMover(PathMover):
             if not valid:
                 # one sample not valid reject
                 accepted = False
+                probability = 0.0
                 break
             else:
                 probability *= sample.bias
@@ -1766,6 +1767,7 @@ class Details(OPSObject):
     """
 
     def __init__(self, **kwargs):
+        super(Details, self).__init__()
         for key, value in kwargs.iteritems():
             setattr(self, key, value)
 

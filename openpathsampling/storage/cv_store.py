@@ -24,13 +24,15 @@ class ObjectDictStore(ObjectStore):
         storage = self.storage
 
         if objectdict.store_cache:
-            var_name = self.prefix + '_' + str(idx) + '_' + objectdict.name
+            var_name = str(idx) + '_' + objectdict.name
+
+            obj_dimension = storage._obj_store[self.key_class].prefix
 
             if var_name + '_value' not in storage.variables:
                 self.init_variable(
                     var_name + '_value',
-                    self._parse_var_type_as_np_type(objectdict.value_type),
-                    (self.key_class.__name__.lower()),
+                    objectdict.var_type,
+                    (obj_dimension),
                     units=objectdict.unit
                 )
 

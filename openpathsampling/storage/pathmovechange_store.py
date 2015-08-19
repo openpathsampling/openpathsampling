@@ -26,12 +26,9 @@ class PathMoveChangeStore(ObjectStore):
     def save(self, pathmovechange, idx=None):
         if idx is not None:
             self.vars['samples'][idx] = pathmovechange.samples
-
             self.vars['subchanges'][idx] = pathmovechange.subchanges
-
             self.vars['details'][idx] = pathmovechange.details
             self.vars['mover'][idx] = pathmovechange.mover
-
             self.vars['cls'][idx] = pathmovechange.__class__.__name__
 
     def load(self, idx):
@@ -59,7 +56,7 @@ class PathMoveChangeStore(ObjectStore):
 
         # New short-hand definition
         self.init_variable('details', 'obj.details', chunksizes=(1, ))
-        self.init_variable('pathmover', 'obj.pathmovers', chunksizes=(1, ))
+        self.init_variable('mover', 'obj.pathmovers', chunksizes=(1, ))
         self.init_variable('cls', 'str', chunksizes=(1, ))
 
         self.init_variable('subchanges', 'obj.pathmovechanges',
@@ -86,7 +83,7 @@ class PathMoveChangeStore(ObjectStore):
             cls_names = self.storage.variables[self.prefix + '_cls'][:]
             samples_idxss = self.storage.variables[self.prefix + '_samples'][:]
             subchanges_idxss = self.storage.variables[self.prefix + '_subchanges'][:]
-            mover_idxs = self.storage.variables[self.prefix + '_pathmover'][:]
+            mover_idxs = self.storage.variables[self.prefix + '_mover'][:]
 
             [ self.add_empty_to_cache(i,c,g,m) for i,c,g,m in zip(
                 idxs,
@@ -113,14 +110,16 @@ class PathMoveChangeStore(ObjectStore):
 #            del obj.mover
 
     def _load_partial(self, idx):
-        samples_idxs = self.storage.variables[self.prefix + '_samples'][idx]
-        subchanges_idxs = self.storage.variables[self.prefix + '_subchanges'][idx]
-        mover_idx = self.storage.variables[self.prefix + '_pathmover'][idx]
+        cls_name = self.vars['cls'][idx]
 
-        cls_name = self.storage.variables[self.prefix + '_cls'][idx]
+        cls = self.class_list[cls_name]
+        obj = cls.__new__(cls)
+        PathMoveChange.__init__(obj, mover=self.vars['mover'][idx])
 
-        obj = self._load_partial_samples(cls_name, samples_idxs, mover_idx)
-        return self._load_partial_subchanges(obj, subchanges_idxs)
+        obj.samples = self.vars['samples'][idx]
+        obj.subchanges = self.vars['subchanges'][idx]
+
+        return obj
 
     def _load_partial_subchanges(self, obj, subchanges_idxs):
         if len(subchanges_idxs) > 0:

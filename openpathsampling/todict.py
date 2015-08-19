@@ -37,11 +37,11 @@ class OPSObject(object):
     @classmethod
     def base(cls):
         if cls._base is None:
-            if cls is not OPSObject:
-                if cls.__base__ is OPSObject:
+            if cls is not OPSObject and cls is not OPSNamed:
+                if OPSObject in cls.__bases__ or OPSNamed in cls.__bases__:
                     cls._base = cls
                 else:
-                    cls._base = cls.__base__
+                    cls._base = cls.__base__.base()
 
         return cls._base
 
