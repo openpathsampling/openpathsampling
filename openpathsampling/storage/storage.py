@@ -565,6 +565,75 @@ class NetCDFPlus(netcdf.Dataset):
         if dimname not in self.storage.dimensions:
             self.storage.createDimension(dimname, size)
 
+    def create_type_delegate(self, var_type, *args):
+
+        getter = None
+        setter = None
+        n_args = 0
+        atomic = True
+
+        if var_type == 'int':
+            getter = lambda v : v.tolist()
+
+        elif var_type == 'bool':
+            getter = lambda v : v.astype(np.bool).tolist()
+
+        elif var_type == 'index':
+            getter = lambda v : \
+                [ None if int(w) < 0 else int(w) for w in v.tolist()] \
+                    if hasattr(v, '__iter__') else None if int(v) < 0 else int(v)
+            setter = lambda v : \
+                [ -1 if w is None else w for w in v] \
+                    if hasattr(v, '__iter__') else -1 if v is None else v
+
+        elif var_type == 'float':
+            getter = lambda v : v.tolist()
+
+        elif var_type.startswith('numpy.'):
+            pass
+
+        elif var_type == 'tuple':
+            atomic = False
+            getter = tuple
+
+        elif var_type == 'list':
+            atomic = False
+            getter = list # might be obsolete
+
+        elif var_type == 'json':
+            atomic = True
+            setter = lambda v : self.simplifier.to_json_object(v, v.base_cls_name)
+            getter = lambda v : self.simplifier.from_json(v)
+
+        elif var_type == 'quantity':
+            atomic = False
+            n_args = 1
+            unit = self.units[args[0]]
+            getter = lambda v : u.Quantity(v.tolist(), unit)
+            setter = lambda v : v / unit
+
+        elif var_type.startswith('obj.'):
+            atomic = True
+            store = getattr(self, var_type[4:])
+            base_type = store.content_class
+
+            iterable = lambda v : \
+                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+
+            getter = lambda v : \
+                [ None if int(w) < 0 else store.load(int(w)) for w in v.tolist()] \
+                    if iterable(v) else None if int(v) < 0 else store.load(int(v))
+            setter = lambda v : \
+                np.array([ -1 if w is None else store.save(w) for w in v], dtype=np.int32) \
+                    if iterable(v) else -1 if v is None else store.save(v)
+
+        return {
+            'getter' : getter,
+            'setter' : setter,
+            'atomic' : atomic,
+            'n_args' : n_args
+        }
+
     def create_variable_delegate(self, name):
         """
         Create a delegate property that wraps the netcdf.Variable and takes care
