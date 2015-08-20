@@ -345,7 +345,7 @@ class CVRangeVolume(Volume):
             return super(CVRangeVolume, self).__sub__(other)
 
     def __call__(self, snapshot):
-        l = self.collectivevariable(snapshot)
+        l = float(self.collectivevariable(snapshot))
         return l >= self.lambda_min and l <= self.lambda_max
 
     def __str__(self):
@@ -418,7 +418,7 @@ class CVRangeVolumePeriodic(CVRangeVolume):
                                    )
 
     def __call__(self, snapshot):
-        l = self.collectivevariable(snapshot)
+        l = float(self.collectivevariable(snapshot))
         if self.wrap:
             l = self.do_wrap(l)
         if self.lambda_min > self.lambda_max:

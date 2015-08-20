@@ -27,7 +27,7 @@ from openpathsampling.tools import LRUCache, WeakLRUCache, WeakCache, WeakLimitC
 # SOURCE CONTROL
 #=============================================================================================
 
-__version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
+__version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jz $"
 
 #=============================================================================================
 # NetCDF Storage for multiple forked trajectories
@@ -60,10 +60,10 @@ class NetCDFPlus(netcdf.Dataset):
             'trajectories' : WeakLRUCache(10000),
             'snapshots' : WeakLRUCache(50000),
             'configurations' : WeakLRUCache(10000),
-            'momentum' : WeakLRUCache(10000),
+            'momenta' : WeakLRUCache(10000),
             'samples' : WeakLRUCache(25000),
             'samplesets' : False,
-            'collectivevariables' : True,
+            'cvs' : True,
             'pathmovers' : True,
             'shootingpoints' : WeakLRUCache(10000),
             'shootingpointselectors' : True,
@@ -86,10 +86,10 @@ class NetCDFPlus(netcdf.Dataset):
             'trajectories' : WeakLimitCache(100000),
             'snapshots' : WeakLimitCache(500000),
             'configurations' : WeakLRUCache(10000),
-            'momentum' : WeakLRUCache(10000),
+            'momenta' : WeakLRUCache(10000),
             'samples' : WeakLimitCache(250000),
             'samplesets' : WeakLimitCache(100000),
-            'collectivevariables' : True,
+            'cvs' : True,
             'pathmovers' : True,
             'shootingpoints' : WeakLimitCache(100000),
             'shootingpointselectors' : True,
@@ -100,7 +100,7 @@ class NetCDFPlus(netcdf.Dataset):
             'pathmovechanges' : WeakLimitCache(250000),
             'transitions' : True,
             'networks' : True,
-            '_details' : False,
+            'ddetails' : False,
             'steps' : WeakLimitCache(100000)
         }
 
@@ -112,10 +112,10 @@ class NetCDFPlus(netcdf.Dataset):
             'trajectories' : WeakLRUCache(),
             'snapshots' : WeakLRUCache(),
             'configurations' : WeakLRUCache(),
-            'momentum' : WeakLRUCache(),
+            'momenta' : WeakLRUCache(),
             'samples' : WeakLRUCache(),
             'samplesets' : False,
-            'collectivevariables' : False,
+            'cvs' : False,
             'pathmovers' : False,
             'shootingpoints' : False,
             'shootingpointselectors' : False,
@@ -126,7 +126,7 @@ class NetCDFPlus(netcdf.Dataset):
             'pathmovechanges' : False,
             'transitions' : False,
             'networks' : False,
-            '_details' : False,
+            'details' : False,
             'steps' : WeakCache()
         }
 
@@ -137,10 +137,10 @@ class NetCDFPlus(netcdf.Dataset):
             'trajectories' : False,
             'snapshots' : False,
             'configurations' : False,
-            'momentum' : False,
+            'momenta' : False,
             'samples' : False,
             'samplesets' : False,
-            'collectivevariables' : False,
+            'cvs' : False,
             'pathmovers' : False,
             'shootingpoints' : False,
             'shootingpointselectors' : False,
@@ -151,7 +151,7 @@ class NetCDFPlus(netcdf.Dataset):
             'pathmovechanges' : False,
             'transitions' : False,
             'networks' : False,
-            '_details' : False,
+            'details' : False,
             'steps' : False
         }
 
@@ -264,6 +264,7 @@ class NetCDFPlus(netcdf.Dataset):
             self.dimension_units.update(units)
 
         self._register_storages()
+        self.set_caching_mode('default')
 
         if mode == 'w':
             logger.info("Setup netCDF file and create variables")
@@ -298,7 +299,6 @@ class NetCDFPlus(netcdf.Dataset):
 
         self.sync()
 
-        self.set_caching_mode('default')
 
     @property
     def objects(self):
@@ -642,7 +642,7 @@ class NetCDFPlus(netcdf.Dataset):
             'long' : np.int64,
             'index' : np.int32,
             'length' : np.int32,
-            'bool' : np.uint8,
+            'bool' : np.int8,
             'str' : 'str',
             'json' : 'str',
             'numpy.float32' : np.float32,
@@ -688,7 +688,7 @@ class NetCDFPlus(netcdf.Dataset):
 
         elif var_type == 'bool':
             getter = lambda v : v.astype(np.bool).tolist()
-            setter = lambda v : np.array(v, dtype=np.uint8)
+            setter = lambda v : np.array(v, dtype=np.int8)
 
         elif var_type == 'index':
             getter = lambda v : \

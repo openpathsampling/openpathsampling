@@ -109,6 +109,9 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
 
         post = post + self.multi_dict + self.single_dict
 
+        if 'numpy' in var_type:
+            post = post + cd.MergeNumpy()
+
         super(CollectiveVariable, self).__init__(post=post)
 
         self._stored = False

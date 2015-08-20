@@ -724,7 +724,7 @@ class ObjectStore(object):
             nc_type = np.int32
             # 32-bit signed integer / for indices / -1 : no length specified (None)
         elif var_type == 'bool':
-            nc_type = np.uint8   # 8-bit signed integer for boolean
+            nc_type = np.int8   # 8-bit signed integer for boolean
         elif var_type == 'str':
             nc_type = 'str'
 
@@ -733,7 +733,7 @@ class ObjectStore(object):
             'int' : np.int32,
             'index' : np.int32,
             'length' : np.int32,
-            'bool' : np.uint8,
+            'bool' : np.int8,
             'str' : 'str',
         }
 
@@ -922,7 +922,7 @@ class ObjectStore(object):
         elif value_type == 'float':
             values = np.array(data).astype(np.float32)
         elif value_type == 'bool':
-            values = np.array(data).astype(np.uint8)
+            values = np.array(data).astype(np.int8)
         elif value_type == 'index':
             values = np.array(data).astype(np.int32)
         elif value_type == 'length':

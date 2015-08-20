@@ -4,6 +4,8 @@ import collections
 from openpathsampling.tools import LRUCache
 from openpathsampling.objproxy import DelayedLoaderProxy
 
+import numpy as np
+
 class ChainDict(dict):
     """
     Cache attached to Configuration indices stored in Configuration storage
@@ -132,6 +134,17 @@ class Wrap(ChainDict):
     def __setitem__(self, key, value):
         self.post[key] = value
 
+class MergeNumpy(ChainDict):
+    """
+    Will take care of iterables
+    """
+
+    def __getitem__(self, items):
+        return np.array(self.post[items])
+
+    def _add_new(self, items, values):
+        pass
+
 class ExpandSingle(ChainDict):
     """
     Will take care of iterables
@@ -159,6 +172,7 @@ class ExpandMulti(ChainDict):
     def __getitem__(self, items):
         if len(items) == 0:
             return []
+
 
         uniques = list(set(items))
         rep_unique = self.post[[p for p in uniques]]
