@@ -170,8 +170,7 @@ class TrajectoryStore(ObjectStore):
 
         # index associated storage in class variable for all Trajectory instances to access
 
-        self.init_variable('snapshots', 'obj.snapshots',
+        self.init_variable('snapshots', 'obj.snapshots[]',
             description="trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.",
-            variable_length = True,
             chunksizes=(10240, )
         )

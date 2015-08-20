@@ -739,8 +739,7 @@ class ObjectStore(object):
 
         return types[var_type]
 
-    def init_variable(self, name, var_type, dimensions = None, units=None,
-                      description=None, variable_length=False, chunksizes=None):
+    def init_variable(self, name, var_type, description=None, chunksizes=None):
         '''
         Create a new variable in the netCDF storage. This is just a helper
         function to structure the code better.
@@ -777,16 +776,15 @@ class ObjectStore(object):
             (1, ..., ...)
         '''
 
-        if dimensions is None:
-            dimensions = self.prefix
+        # add the main dimension to the var_type
+
+        parts = var_type.split('[')
+        var_type = parts[0] + '[' + self.prefix + ']' + ('[' if len(parts) > 1 else '') + '['.join(parts[1:])
 
         self.storage.create_variable(
             self.prefix + '_' + name,
             var_type=var_type,
-            dimensions=dimensions,
-            units=units,
             description=description,
-            variable_length=variable_length,
             chunksizes=chunksizes
         )
 
@@ -1195,8 +1193,7 @@ def loadidx(func):
         else:
             obj = func(n_idx, *args, **kwargs)
 
-        if not hasattr(obj, 'idx'):
-            print type(obj), obj.__dict__
+#        if not hasattr(obj, 'idx'):
 #            obj.idx = dict()
 
         obj.idx[self.storage] = n_idx

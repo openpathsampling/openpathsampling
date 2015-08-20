@@ -340,15 +340,12 @@ class MomentumStore(ObjectStore):
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
-        self.init_variable('velocities', 'numpy.float32',
-                dimensions=(self.prefix, 'atom', 'spatial'),
-                units=self.dimension_units['velocity'],
+        self.init_variable('velocities', 'quantity(numpy.float32, velocity)[atom][spatial]',
                 description="the velocity of atom 'atom' in dimension " +
                             "'coordinate' of momentum 'momentum'.",
                 chunksizes=(1, n_atoms, n_spatial))
 
-        self.init_variable('kinetic_energy', 'float', self.prefix,
-                self.dimension_units['energy'],
+        self.init_variable('kinetic_energy', 'quantity(float, energy)', self.prefix,
                 chunksizes=(1, ))
 
 
@@ -485,18 +482,13 @@ class ConfigurationStore(ObjectStore):
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
-        self.init_variable('coordinates', 'numpy.float32',
-                (self.prefix, 'atom','spatial'), self.dimension_units['length'],
+        self.init_variable('coordinates', 'quantity(numpy.float32, length)[atom][spatial]',
                 description="coordinate of atom '{ix[1]}' in dimension " +
                             "'{ix[2]}' of configuration '{ix[0]}'.",
                 chunksizes=(1,n_atoms,n_spatial))
 
-        self.init_variable('box_vectors', 'numpy.float32',
-                (self.prefix, 'spatial', 'spatial'),
-                self.dimension_units['length'],
+        self.init_variable('box_vectors', 'quantity(numpy.float32, length)[spatial][spatial]',
                 chunksizes=(1,n_spatial,n_spatial))
 
-        self.init_variable('potential_energy', 'float',
-                self.prefix,
-                self.dimension_units['energy'],
+        self.init_variable('potential_energy', 'quantity(float, energy)',
                 chunksizes=(1, ))

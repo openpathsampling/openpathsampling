@@ -9,6 +9,14 @@ class ObjectDictStore(ObjectStore):
             has_name=True
         )
         self.key_class = key_class
+        self._key_store = None
+
+    @property
+    def key_store(self):
+        if self._key_store is None:
+            self._key_store = self.storage._obj_store[self.key_class]
+
+        return self._key_store
 
     def save(self, objectdict, idx=None):
         """
@@ -24,17 +32,14 @@ class ObjectDictStore(ObjectStore):
         storage = self.storage
 
         if objectdict.store_cache:
-            var_name = str(idx) + '_' + objectdict.name
+            var_name = 'cv' + '_' + str(idx) + '_' + objectdict.name
 
-            obj_dimension = storage._obj_store[self.key_class].prefix
-
-            if var_name + '_value' not in storage.variables:
-                self.init_variable(
-                    var_name + '_value',
+            if var_name not in storage.variables:
+                self.key_store.init_variable(
+                    var_name,
                     objectdict.var_type,
-                    (obj_dimension),
-                    units=objectdict.unit
                 )
+                self.storage.update_delegates()
 
         self.save_json(self.prefix + '_json', idx, objectdict)
 
@@ -73,50 +78,42 @@ class ObjectDictStore(ObjectStore):
             cv.cache_all(self.storage)
 
     def set_value(self, objectdict, position, value):
-        storage = self.storage
         idx = self.idx(objectdict)
 
         if idx is not None and idx >=0:
-            var_name = self.prefix + '_' + str(idx) + '_' + objectdict.name
-            storage.variables[var_name + '_value'][position] = value
+            var_name = 'cv_' + str(idx) + '_' + objectdict.name
+            self.key_store.vars[var_name][position] = value
 
     def set_list_value(self, objectdict, positions, values):
-        # TODO: Add treatment of python number types here
-        # TODO: Add unit support here
-        storage = self.storage
         idx = self.idx(objectdict)
 
         if idx is not None and idx >=0:
-            var_name = self.prefix + '_' + str(idx) + '_' + objectdict.name
-            storage.variables[var_name + '_value'][positions] = values
+            var_name = 'cv_' + str(idx) + '_' + objectdict.name
+            self.key_store.vars[var_name][positions] = values
 
     def get_value(self, objectdict, position):
-        storage = self.storage
         idx = self.idx(objectdict)
 
         if idx is not None and idx >=0:
-            var_name = self.prefix + '_' + str(idx) + '_' + objectdict.name
-            val = storage.variables[var_name + '_value'][position]
+            var_name = self.key_store.prefix + '_cv_' + str(idx) + '_' + objectdict.name
+            val = self.storage.variables[var_name][position]
 
             if hasattr(val, 'mask'):
                 return None
             else:
-                return val
+                return self.storage.vars[var_name].getter(val)
 
         return None
 
     def get_list_value(self, objectdict, positions):
-        # TODO: Add treatment of python number types here
-        # TODO: Add unit support here
-
-        storage = self.storage
         idx = self.idx(objectdict)
 
         if idx is not None and idx >=0:
-            var_name = self.prefix + '_' + str(idx) + '_' + objectdict.name
-            val = storage.variables[var_name + '_value'][positions]
+            var_name = self.key_store.prefix + '_cv_' + str(idx) + '_' + objectdict.name
+            values = self.storage.variables[var_name][positions]
+            getter = self.storage.vars[var_name].getter
 
-            return val.tolist()
+            return [None if hasattr(val, 'mask') else getter(val) for val in values ]
 
         return [None] * len(positions)
 

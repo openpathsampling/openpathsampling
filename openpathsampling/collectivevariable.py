@@ -379,14 +379,15 @@ class CV_Volume(CollectiveVariable):
             name,
             dimensions=1,
             store_cache=store_cache,
-            fnc_uses_lists=True
+            fnc_uses_lists=True,
+            var_type='bool'
         )
         self.volume = volume
 
     _compare_keys = ['name', 'volume']
 
     def _eval(self, items):
-        result = [float(self.volume(item)) for item in items]
+        result = [bool(self.volume(item)) for item in items]
         return result
 
     def to_dict(self):

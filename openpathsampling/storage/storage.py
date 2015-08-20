@@ -15,6 +15,8 @@ init_log = logging.getLogger('openpathsampling.initialization')
 
 import numpy as np
 import simtk.unit as u
+import re
+import functools
 
 import openpathsampling as paths
 from openpathsampling.todict import ObjectJSON
@@ -47,7 +49,7 @@ class NetCDFPlus(netcdf.Dataset):
         'numpy.float32', 'numpy.float64',
         'numpy.int8', 'numpy.inf16', 'numpy.int32', 'numpy.int64',
         'numpy.uint8', 'numpy.uinf16', 'numpy.uint32', 'numpy.uint64',
-        'index', 'length'
+        'index', 'json'
     ]
     # Default caching for online use
 
@@ -224,6 +226,9 @@ class NetCDFPlus(netcdf.Dataset):
         write `storage.variables['ensemble_json'][idx]`
         """
         return self._objects
+
+    def _register_storages(self):
+        pass
 
     def __init__(self, filename, mode=None, units=None):
         '''
@@ -565,8 +570,119 @@ class NetCDFPlus(netcdf.Dataset):
         if dimname not in self.storage.dimensions:
             self.storage.createDimension(dimname, size)
 
-    def create_type_delegate(self, var_type, *args):
+    @staticmethod
+    def compose(*functions):
+        funcs = [func for func in functions if func is not None]
+        return functools.reduce(lambda f, g: lambda x: f(g(x)), funcs, lambda x: x)
 
+
+    def parse_var_type(self, var_name, var_type):
+        dimensions = None
+        new_dimensions = dict()
+        if '[' in var_type:
+            # find dimensions
+            dimensions = re.findall('\[([a-zA-Z]*|[0-9]*)\]', var_type)
+
+        for ix, dim in enumerate(dimensions):
+            try:
+                length = int(dim)
+                dimensions[ix] = var_name + '_dim_' + str(ix)
+                new_dimensions[dimensions[ix]] = length
+            except ValueError:
+                pass
+
+        if dimensions[-1] == '':
+            # last dimension is simply [] so we allow arbitrary length and remove the last dimension
+            variable_length = True
+            dimensions = dimensions[:-1]
+        else:
+            variable_length = False
+
+        inner_type = None
+        outer_fncs = []
+
+        if '(' in var_type:
+            red_var_type = var_type
+            first_group = True
+            while '(' in red_var_type:
+                outer_params = list(re.search('([a-zA-Z\._]+)\([ ]*(?:([a-zA-Z0-9_\.]+)[ ]*,)*[ ]*([a-zA-Z0-9_\.]+)[ ]*\)', red_var_type).groups())
+                outer_type = outer_params[0]
+                if first_group:
+                    if outer_params[1] is None:
+                        inner_type = outer_params[2]
+                        outer_params = [outer_params[0]] + outer_params[2:]
+                    else:
+                        inner_type = outer_params[1]
+                    first_group = False
+                outer_args = list(outer_params)[2:]
+                outer_fncs.append([outer_type, outer_args])
+                red_var_type = re.sub('(([a-zA-Z\._]+)\([ ]*(?:([a-zA-Z0-9_\.]+)[ ]*,)*[ ]*([a-zA-Z0-9_\.]+)[ ]*\))', 'inner', red_var_type)
+        else:
+            inner_type = re.search('[ ]*([a-zA-Z0-9_\.]+)[ ]*', var_type).group()
+
+        inner = self.create_type_delegate(inner_type)
+
+        if not inner['atomic']:
+            raise ValueError('Type of inner function must be numeric!')
+
+        get_list = [inner['getter']]
+        set_list = [inner['setter']]
+
+        for outer_type, outer_args in outer_fncs:
+            outer = self.create_type_delegate(outer_type, *outer_args)
+
+            if outer['atomic']:
+                raise ValueError('Type of outer function must be')
+            _get = outer['getter']
+            _set = outer['setter']
+
+            get_list.insert(0,_get)
+            set_list.append(_set)
+
+        getter = self.compose(*get_list)
+        setter = self.compose(*set_list)
+
+        type_conversion = {
+            'float' : np.float32,
+            'int' : np.int32,
+            'long' : np.int64,
+            'index' : np.int32,
+            'length' : np.int32,
+            'bool' : np.uint8,
+            'str' : 'str',
+            'json' : 'str',
+            'numpy.float32' : np.float32,
+            'numpy.float64' : np.float32,
+            'numpy.int8' : np.int8,
+            'numpy.int16' : np.int16,
+            'numpy.int32' : np.int32,
+            'numpy.int64' : np.int64,
+            'numpy.uint8' : np.uint8,
+            'numpy.uinf16' : np.uint16,
+            'numpy.uint32' : np.uint32,
+            'numpy.uint64' : np.uint64
+        }
+
+        if inner_type.startswith('obj.'):
+            nc_type = np.int32
+        else:
+            nc_type = type_conversion[inner_type]
+
+        return {
+            'getter' : getter,
+            'setter' : setter,
+            'dimensions' : tuple(dimensions),
+            'new_dimensions' : new_dimensions,
+            'variable_length' : variable_length,
+            'nc_type' : nc_type,
+            'outer' : outer_fncs,
+            'inner' : inner_type,
+            'get_list' : get_list,
+            'set_list' : set_list
+        }
+
+
+    def create_type_delegate(self, var_type, *args):
         getter = None
         setter = None
         n_args = 0
@@ -574,9 +690,11 @@ class NetCDFPlus(netcdf.Dataset):
 
         if var_type == 'int':
             getter = lambda v : v.tolist()
+            setter = lambda v : np.array(v)
 
         elif var_type == 'bool':
             getter = lambda v : v.astype(np.bool).tolist()
+            setter = lambda v : np.array(v, dtype=np.uint8)
 
         elif var_type == 'index':
             getter = lambda v : \
@@ -588,6 +706,7 @@ class NetCDFPlus(netcdf.Dataset):
 
         elif var_type == 'float':
             getter = lambda v : v.tolist()
+            setter = lambda v : np.array(v)
 
         elif var_type.startswith('numpy.'):
             pass
@@ -602,14 +721,15 @@ class NetCDFPlus(netcdf.Dataset):
 
         elif var_type == 'json':
             atomic = True
-            setter = lambda v : self.simplifier.to_json_object(v, v.base_cls_name)
+            setter = lambda v : \
+                self.simplifier.to_json(v)
             getter = lambda v : self.simplifier.from_json(v)
 
         elif var_type == 'quantity':
             atomic = False
             n_args = 1
-            unit = self.units[args[0]]
-            getter = lambda v : u.Quantity(v.tolist(), unit)
+            unit = self.dimension_units[args[0]]
+            getter = lambda v : u.Quantity(v, unit)
             setter = lambda v : v / unit
 
         elif var_type.startswith('obj.'):
@@ -645,61 +765,15 @@ class NetCDFPlus(netcdf.Dataset):
         if not hasattr(var, 'var_type'):
             return
 
-        var_type = var.var_type
+        var_info = self.parse_var_type(name, var.var_type)
 
-        getter = None
-        setter = None
+        getter = var_info['getter']
+        setter = var_info['setter']
 
-        if var_type == 'int':
-            getter = lambda v : v.tolist()
-            setter = None
-        elif var_type == 'bool':
-            getter = lambda v : v.astype(np.bool).tolist()
-            setter = None
-        elif var_type == 'index':
-            getter = lambda v : \
-                [ None if int(w) < 0 else int(w) for w in v.tolist()] \
-                    if hasattr(v, '__iter__') else None if int(v) < 0 else int(v)
-            setter = lambda v : \
-                [ -1 if w is None else w for w in v] \
-                    if hasattr(v, '__iter__') else -1 if v is None else v
-        elif var_type == 'length':
-            getter = lambda v : v.tolist()
-            setter = None
-        if var_type == 'float':
-            unit = self.units[name]
-            if unit is None or unit == u.Unit({}):
-                getter = lambda v : v.tolist()
-                setter = None
-            else:
-                getter = lambda v : u.Quantity(v.tolist(), unit)
-                setter = lambda v : v / unit
-        elif var_type.startswith('numpy.'):
-            unit = self.units[name]
-            if unit is None or unit == u.Unit({}):
-                getter = None
-                setter = None
-            else:
-                getter = lambda v : u.Quantity(v, unit)
-                setter = lambda v : v / unit
-        elif var_type.startswith('obj.'):
-            store = getattr(self, var_type[4:])
-            base_type = store.content_class
+        self.vars[name] = NetCDFPlus.Variable_Delegate(var, getter, setter)
 
-            iterable = lambda v : \
-                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
-
-            getter = lambda v : \
-                [ None if int(w) < 0 else store.load(int(w)) for w in v.tolist()] \
-                    if iterable(v) else None if int(v) < 0 else store.load(int(v))
-            setter = lambda v : \
-                np.array([ -1 if w is None else store.save(w) for w in v], dtype=np.int32) \
-                    if iterable(v) else -1 if v is None else store.save(v)
-
-        self.vars[name] = NetCDFPlus.Variable_Delegate(self.variables[name], getter, setter)
-
-    def create_variable(self, name, var_type, dimensions = None, units=None,
-                      description=None, variable_length=False, chunksizes=None):
+    def create_variable(self, name, var_type,
+                      description=None, chunksizes=None):
         '''
         Create a new variable in the netCDF storage. This is just a helper
         function to structure the code better.
@@ -737,41 +811,14 @@ class NetCDFPlus(netcdf.Dataset):
         '''
 
         ncfile = self
+        var_info = self.parse_var_type(name, var_type)
 
-#        print type(var_type), name
+        dimensions = var_info['dimensions']
+        variable_length = var_info['variable_length']
+        nc_type = var_info['nc_type']
 
-        if var_type not in self.allowed_types and not var_type.startswith('obj.'):
-            raise ValueError(
-                'Storage variables only allow one of the following datatypes: %s' %
-                str(self.allowed_types)
-            )
-
-        # figure out the netcdf variable type that is best suited to store our data
-
-        type_conversion = {
-            'float' : np.float32,
-            'int' : np.int32,
-            'long' : np.int64,
-            'index' : np.int32,
-            'length' : np.int32,
-            'bool' : np.uint8,
-            'str' : 'str',
-            'numpy.float32' : np.float32,
-            'numpy.float64' : np.float32,
-            'numpy.int8' : np.int8,
-            'numpy.int16' : np.int16,
-            'numpy.int32' : np.int32,
-            'numpy.int64' : np.int64,
-            'numpy.uint8' : np.uint8,
-            'numpy.uinf16' : np.uint16,
-            'numpy.uint32' : np.uint32,
-            'numpy.uint64' : np.uint64
-        }
-
-        if var_type.startswith('obj.'):
-            nc_type = np.int32
-        else:
-            nc_type = type_conversion[var_type]
+        for dimname, size in var_info['new_dimensions'].items():
+            ncfile.create_dimension(dimname, size)
 
         if variable_length:
             vlen_t = ncfile.createVLType(nc_type, name + '_vlen')
@@ -783,31 +830,31 @@ class NetCDFPlus(netcdf.Dataset):
 
         setattr(ncvar,      'var_type', var_type)
 
-        if var_type == 'float' or units is not None:
+        # if var_type == 'float' or units is not None:
+        #
+        #     unit_instance = u.Unit({})
+        #     symbol = 'none'
+        #
+        #     if isinstance(units, u.Unit):
+        #         unit_instance = units
+        #         symbol = unit_instance.get_symbol()
+        #     elif isinstance(units, u.BaseUnit):
+        #         unit_instance = u.Unit({units : 1.0})
+        #         symbol = unit_instance.get_symbol()
+        #     elif type(units) is str and hasattr(u, units):
+        #         unit_instance = getattr(u, units)
+        #         symbol = unit_instance.get_symbol()
+        #     elif type(units) is str and units is not None:
+        #         symbol = units
 
-            unit_instance = u.Unit({})
-            symbol = 'none'
+#            json_unit = self.simplifier.unit_to_json(unit_instance)
 
-            if isinstance(units, u.Unit):
-                unit_instance = units
-                symbol = unit_instance.get_symbol()
-            elif isinstance(units, u.BaseUnit):
-                unit_instance = u.Unit({units : 1.0})
-                symbol = unit_instance.get_symbol()
-            elif type(units) is str and hasattr(u, units):
-                unit_instance = getattr(u, units)
-                symbol = unit_instance.get_symbol()
-            elif type(units) is str and units is not None:
-                symbol = units
-
-            json_unit = self.simplifier.unit_to_json(unit_instance)
-
-            # store the unit in the dict inside the Storage object
-            self.units[name] = unit_instance
-
-            # Define units for a float variable
-            setattr(ncvar,      'unit_simtk', json_unit)
-            setattr(ncvar,      'unit', symbol)
+#            # store the unit in the dict inside the Storage object
+#            self.units[name] = unit_instance
+#
+#            # Define units for a float variable
+#            setattr(ncvar,      'unit_simtk', json_unit)
+#            setattr(ncvar,      'unit', symbol)
 
         if description is not None:
             if type(dimensions) is str:
