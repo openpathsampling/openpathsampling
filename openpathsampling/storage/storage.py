@@ -943,7 +943,7 @@ class StorableObjectJSON(ObjectJSON):
     def simplify(self,obj, base_type = ''):
         if obj is self.storage:
             return { '_storage' : 'self' }
-        if type(obj).__module__ != '__builtin__':
+        if obj.__class__.__module__ != '__builtin__':
             if obj.__class__ in self.storage._obj_store:
                 store = self.storage._obj_store[obj.__class__]
                 if not store.nestable or obj.base_cls_name != base_type:

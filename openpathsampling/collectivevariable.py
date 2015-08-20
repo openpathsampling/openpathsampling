@@ -69,7 +69,6 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
     ):
         if (type(name) is not str and type(name) is not unicode) or len(
                 name) == 0:
-            print type(name), len(name)
             raise ValueError('name must be a non-empty string')
 
         OPSNamed.__init__(self)
@@ -93,13 +92,12 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
         self.store_cache = store_cache
 
         if self.has_fnc:
-            self.expand_dict = cd.UnwrapTuple()
             self.func_dict = cd.Function(
                 self._eval,
                 fnc_uses_lists=self.fnc_uses_lists
             )
 
-            post = self.func_dict + self.expand_dict + self.cache_dict
+            post = self.func_dict + self.cache_dict
         else:
             post = self.cache_dict
 
@@ -184,8 +182,8 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
 
             if eval_list is not False and eval_multi is not False:
                 # check if results are the same
-                if type(eval_list) is list and len(value_list) == 1:
-                    if type(eval_multi) is list and len(value_multi) == 2:
+                if type(value_list) is list and len(value_list) == 1:
+                    if type(value_multi) is list and len(value_multi) == 2:
                         if value_list[0] == value_multi[0] \
                                 and value_list[0] == value_multi[1]:
                             fnc_uses_lists = True
@@ -808,9 +806,9 @@ class CV_Featurizer(CV_Class):
         self.kwargs = kwargs
         # turn Snapshot and Trajectory into md.trajectory
         for key in kwargs:
-            if type(kwargs[key]) is paths.Snapshot:
+            if kwargs[key].__class__ is paths.Snapshot:
                 kwargs[key] = kwargs[key].md()
-            elif type(kwargs[key]) is paths.Trajectory:
+            elif kwargs[key].__class__ is paths.Trajectory:
                 kwargs[key] = kwargs[key].md()
 
         self._feat = featurizer(**kwargs)

@@ -360,12 +360,6 @@ class Store(ChainDict):
         else:
             return []
 
-    def _basetype(self, item):
-        if hasattr(item, 'base_cls'):
-            return item.base_cls
-        else:
-            return type(item)
-
 class MultiStore(Store):
     def __init__(self, store_name, name, dimensions, scope, unit=None):
         super(Store, self).__init__()
@@ -453,15 +447,3 @@ class MultiStore(Store):
                      for item, result in zip(output, results) ]
 
         return output
-
-
-class UnwrapTuple(ChainDict):
-    def __init__(self):
-        super(UnwrapTuple, self).__init__()
-
-    def __getitem__(self, items):
-        return self.post([value[0].load(value[1])
-            if type(value) is tuple else value for value in items])
-
-    def __setitem__(self, key, value):
-        self.post[key] = value

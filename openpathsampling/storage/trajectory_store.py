@@ -105,24 +105,7 @@ class TrajectoryStore(ObjectStore):
 
         '''
 
-        # values = self.storage.variables[self.prefix + '_snapshots'][idx]
-        #
-        # # typecast to snapshot
-        # if self.lazy:
-        #     if self.use_snapshot_cache:
-        #         snapshots = [ self.storage.snapshots.cache[idx] if idx in self.storage.snapshots.cache else tuple([self.storage.snapshots, idx]) for idx in self.list_from_numpy(values, 'int') ]
-        #     else:
-        #         snapshots = [ tuple([self.storage.snapshots, idx]) for idx in self.list_from_numpy(values, 'int') ]
-        # else:
-        #     snapshots = self.list_from_numpy(values, 'snapshots')
-        #
-        # trajectory = Trajectory(snapshots)
-        # # save the used storage to load snapshots if required
-        #
-        # trajectory.storage = self.storage
-
         trajectory = Trajectory(self.vars['snapshots'][idx])
-
         return trajectory
 
     def iter_snapshot_indices(this, iter_range=None):
