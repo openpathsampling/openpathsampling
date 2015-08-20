@@ -87,7 +87,6 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
             self.var_type = var_type
 
         self.single_dict = cd.ExpandSingle()
-        self.pre_dict = cd.Transform(self._pre_item)
         self.multi_dict = cd.ExpandMulti()
         self.cache_dict = cd.ChainDict()
 
@@ -110,7 +109,7 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
 
             post = post + self.store_dict
 
-        post = post + self.multi_dict + self.single_dict + self.pre_dict
+        post = post + self.multi_dict + self.single_dict
 
         super(CollectiveVariable, self).__init__(post=post)
 
@@ -261,7 +260,6 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
             self.fnc_uses_lists = fnc_uses_lists
             self.unit = unit
 
-
     def flush_cache(self, storage):
         """
         Copy the cache to the internal storage cache for saving
@@ -280,7 +278,7 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
                 self.store_dict.cod_stores[storage].post.update(stored)
                 self.store_dict.cod_stores[storage].update(stored)
 
-    def sync(self, storage):
+    def sync(self, store):
         """
         Sync this collectivevariable with attached storages
 
@@ -291,10 +289,10 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
         """
         if hasattr(self, 'store_dict'):
             self.store_dict.update_nod_stores()
-            if storage in self.store_dict.cod_stores:
-                self.store_dict.cod_stores[storage].sync()
+            if store in self.store_dict.cod_stores:
+                self.store_dict.cod_stores[store].sync()
 
-    def cache_all(self, storage):
+    def cache_all(self, store):
         """
         Sync this collective variable with attached storages
 
@@ -305,36 +303,8 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
         """
         if hasattr(self, 'store_dict'):
             self.store_dict.update_nod_stores()
-            if storage in self.store_dict.cod_stores:
-                self.store_dict.cod_stores[storage].cache_all()
-
-    def _pre_item(self, items):
-        if self.store_cache:
-            item_type = self.store_dict._basetype(items)
-        else:
-            item_type = type(items)
-
-        if item_type is paths.Snapshot:
-            return items
-        elif item_type is paths.Sample or item_type is paths.Trajectory:
-            if len(items) == 0:
-                return []
-            elif len(items) == 1:
-                return [list.__getitem__(items, 0)]
-            else:
-                return list(list.__iter__(items))
-        elif item_type is paths.Sample:
-            if len(items) == 0:
-                return []
-            elif len(items) == 1:
-                return [list.__getitem__(items.trajectory, 0)]
-            else:
-                return list(list.__iter__(items.trajectory))
-
-        elif hasattr(items, '__iter__'):
-            return list(items)
-        else:
-            return items
+            if store in self.store_dict.cod_stores:
+                self.store_dict.cod_stores[store].cache_all()
 
     _compare_keys = ['name', 'dimensions']
 

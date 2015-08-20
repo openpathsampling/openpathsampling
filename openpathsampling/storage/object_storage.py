@@ -214,8 +214,8 @@ class ObjectStore(object):
         return repr(self)
 
     def __repr__(self):
-        return "%s(content_class=%s, variable_prefix=%s)" % (
-            self.__class__.__name__, self.content_class, self.prefix)
+        return "store.%s[%s]" % (
+            self.prefix, self.content_class.__name__)
 
     @property
     def simplifier(self):
@@ -246,8 +246,8 @@ class ObjectStore(object):
             The integer index of the given object or None if it is not stored yet
         """
         if hasattr(obj, 'idx'):
-            if self.storage in obj.idx:
-                return obj.idx[self.storage]
+            if self in obj.idx:
+                return obj.idx[self]
 
         return None
 
@@ -286,7 +286,7 @@ class ObjectStore(object):
                 if type(self.cache[needle]) is int:
                     return self.cache[needle]
                 else:
-                    return self.cache[needle].idx[self.storage]
+                    return self.cache[needle].idx[self]
 
             # otherwise search the storage for the name
             found_idx = [ idx for idx,s in enumerate(self.storage.variables[
@@ -527,7 +527,7 @@ class ObjectStore(object):
             obj = self.simplifier.build(simplified)
 
             obj.json = json
-            obj.idx[self.storage] = idx
+            obj.idx[self] = idx
 
             self.cache[idx] = obj
 
@@ -932,7 +932,7 @@ class ObjectStore(object):
         else:
             # an object
             values = [-1 if value is None and allow_empty is True
-                      else value.idx[self.storage] for value in data]
+                      else value.idx[self] for value in data]
             values = np.array(values).astype(np.int32)
 
         return values.copy()
@@ -1006,27 +1006,6 @@ class ObjectStore(object):
         obj = store.load(index)
         return obj
 
-    def save_object(self, name, idx, obj):
-        """
-        Store an object in the storage
-
-        Parameters
-        ----------
-        name : str
-            name of the variable to be used
-        index : int
-            index in the storage
-        obj : object
-            the object to be stored
-
-        """
-        storage = self.storage
-
-        if obj is not None:
-            storage.save(obj)
-            storage.variables[name + '_idx'][idx] = obj.idx[storage]
-        else:
-            storage.variables[name + '_idx'][idx] = -1
 
 #==============================================================================
 # COLLECTIVE VARIABLE UTILITY FUNCTIONS
@@ -1045,7 +1024,7 @@ class ObjectStore(object):
             the function that reports the index in this store
         """
         def idx(obj):
-            return obj.idx[self.storage]
+            return obj.idx[self]
 
         return idx
 
@@ -1122,7 +1101,7 @@ def loadcache(func):
         obj = func(n_idx, *args, **kwargs)
         if obj is not None:
             # update cache there might have been a change due to naming
-            self.cache[obj.idx[self.storage]] = obj
+            self.cache[obj.idx[self]] = obj
 
             # finally store the name of a named object in cache
             if self.has_name and obj._name != '':
@@ -1139,7 +1118,7 @@ def savecache(func):
     def inner(self, obj, idx = None, *args, **kwargs):
         # call the normal storage
         func(obj, idx, *args, **kwargs)
-        idx = obj.idx[self.storage]
+        idx = obj.idx[self]
 
         # store the name in the cache
         if hasattr(self, 'cache'):
@@ -1199,7 +1178,7 @@ def loadidx(func):
             print type(obj), obj.__dict__
 #            obj.idx = dict()
 
-        obj.idx[self.storage] = n_idx
+        obj.idx[self] = n_idx
 
         if self.has_uid:
             if not hasattr(obj, '_uid'):
@@ -1223,9 +1202,9 @@ def saveidx(func):
     def inner(self, obj, idx = None, *args, **kwargs):
         storage = self.storage
         if idx is None:
-            if storage in obj.idx:
+            if self in obj.idx:
                 # has been saved so quit and do nothing
-                return obj.idx[storage]
+                return obj.idx[self]
             else:
                 idx = self.free()
         else:
@@ -1235,7 +1214,7 @@ def saveidx(func):
             else:
                 idx = int(idx)
 
-        obj.idx[storage] = idx
+        obj.idx[self] = idx
 
         # make sure in nested saving that an IDX is not used twice!
         self.reserve_idx(idx)
@@ -1286,8 +1265,7 @@ def func_update_variable(attribute, variable):
     """
     def updater(obj):
         store = obj._origin
-        storage = store.storage
-        idx = obj.idx[storage]
+        idx = obj.idx[store]
 
 #        print 'updater called', obj, obj.__dict__.keys(), attribute, variable
 

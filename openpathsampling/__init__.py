@@ -100,3 +100,5 @@ from pathmovechange import (
     RejectedSamplePathMoveChange, SubPathMoveChange,
     FilterByEnsemblePathMoveChange
 )
+
+from objproxy import DelayedLoaderProxy

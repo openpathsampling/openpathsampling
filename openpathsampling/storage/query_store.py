@@ -32,7 +32,7 @@ class QueryStore():
         storage = self.storage
 
         if ensemble is not None:
-            ens_idx = ensemble.idx[storage]
+            ens_idx = ensemble.idx[self]
 
         output = []
 
@@ -83,7 +83,7 @@ class QueryStore():
         storage = self.storage
 
         if ensemble is not None:
-            ens_idx = ensemble.idx[storage]
+            ens_idx = ensemble.idx[self]
 
         output = []
 

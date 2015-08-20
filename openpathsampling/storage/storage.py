@@ -166,12 +166,6 @@ class NetCDFPlus(netcdf.Dataset):
             self.getter = getter
 
         def __setitem__(self, key, value):
-#            print self.variable.name, key, ' : ' ,value, hasattr(value, '__iter__')
-#            if hasattr(value, '__iter__') and type(value) is not u.Quantity:
-#                print [(type(v),v) for v in value]
-
-#            print self.setter(value)
-
             self.variable[key] = self.setter(value)
 
         def __getitem__(self, item):
@@ -669,8 +663,6 @@ class NetCDFPlus(netcdf.Dataset):
 
         ncfile = self
 
-#        print type(var_type), name
-
         if var_type not in self.allowed_types and not var_type.startswith('obj.'):
             raise ValueError(
                 'Storage variables only allow one of the following datatypes: %s' %
@@ -788,11 +780,9 @@ class Storage(NetCDFPlus):
 
         # Copy all configurations and momenta to new file in reduced form
         for obj in self.configurations:
-#            print obj._delayed_loading
-#            [ value(obj, self.configuration) for key, value in obj._delayed_loading.iteritems() ]
-            storage2.configurations.save(obj.copy(subset), idx=obj.idx[self])
+            storage2.configurations.save(obj.copy(subset), idx=obj.idx[self.configurations])
         for obj in self.momenta.iterator():
-            storage2.momenta.save(obj.copy(subset), idx=obj.idx[self])
+            storage2.momenta.save(obj.copy(subset), idx=obj.idx[self.momenta])
 
         # All other should be copied one to one. We do this explicitely although we could just copy all
         # and exclude configurations and momenta, but this seems cleaner
@@ -938,7 +928,7 @@ class Storage(NetCDFPlus):
         self.snapshots.save(template)
 
         self.createVariable('template_idx', 'i4', 'scalar')
-        self.variables['template_idx'][:] = template.idx[self]
+        self.variables['template_idx'][:] = template.idx[self.snapshots]
 
     def _restore(self):
         self.topology = self.topologies[0]
@@ -961,7 +951,7 @@ class StorableObjectJSON(ObjectJSON):
                     # store objects only if they are not creatable. If so they will only be created in their
                     # top instance and we use the simplify from the super class ObjectJSON
                     self.storage.save(obj)
-                    return { '_idx' : obj.idx[self.storage], '_cls' : obj.cls }
+                    return { '_idx' : obj.idx[store], '_obj' : store.prefix }
 
         return super(StorableObjectJSON, self).simplify(obj, base_type)
 
@@ -971,9 +961,8 @@ class StorableObjectJSON(ObjectJSON):
                 if obj['_storage'] == 'self':
                     return self.storage
 
-            if '_idx' in obj and '_cls' in obj:
-                cls = self.class_list[obj['_cls']]
-                store = self.storage._obj_store[cls]
+            if '_idx' in obj and '_obj' in obj:
+                store = self.storage._objects[obj['_obj']]
                 result = store.load(obj['_idx'])
 
                 return result
@@ -994,7 +983,7 @@ class AnalysisStorage(Storage):
         self.samples.cache_all()
         self.samplesets.cache_all()
         self.cvs.cache_all()
-        map(lambda x : x.cache_all(self), self.cvs)
+        map(lambda x : x.cache_all(self.cvs), self.cvs)
         self.volumes.cache_all()
         self.ensembles.cache_all()
         self.pathmovers.cache_all()
