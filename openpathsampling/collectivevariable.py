@@ -69,7 +69,6 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
     ):
         if (type(name) is not str and type(name) is not unicode) or len(
                 name) == 0:
-            print type(name), len(name)
             raise ValueError('name must be a non-empty string')
 
         OPSNamed.__init__(self)
@@ -87,20 +86,18 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
             self.var_type = var_type
 
         self.single_dict = cd.ExpandSingle()
-        self.pre_dict = cd.Transform(self._pre_item)
         self.multi_dict = cd.ExpandMulti()
         self.cache_dict = cd.ChainDict()
 
         self.store_cache = store_cache
 
         if self.has_fnc:
-            self.expand_dict = cd.UnwrapTuple()
             self.func_dict = cd.Function(
                 self._eval,
                 fnc_uses_lists=self.fnc_uses_lists
             )
 
-            post = self.func_dict + self.expand_dict + self.cache_dict
+            post = self.func_dict + self.cache_dict
         else:
             post = self.cache_dict
 
@@ -110,7 +107,7 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
 
             post = post + self.store_dict
 
-        post = post + self.multi_dict + self.single_dict + self.pre_dict
+        post = post + self.multi_dict + self.single_dict
 
         super(CollectiveVariable, self).__init__(post=post)
 
@@ -185,8 +182,8 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
 
             if eval_list is not False and eval_multi is not False:
                 # check if results are the same
-                if type(eval_list) is list and len(value_list) == 1:
-                    if type(eval_multi) is list and len(value_multi) == 2:
+                if type(value_list) is list and len(value_list) == 1:
+                    if type(value_multi) is list and len(value_multi) == 2:
                         if value_list[0] == value_multi[0] \
                                 and value_list[0] == value_multi[1]:
                             fnc_uses_lists = True
@@ -261,7 +258,6 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
             self.fnc_uses_lists = fnc_uses_lists
             self.unit = unit
 
-
     def flush_cache(self, storage):
         """
         Copy the cache to the internal storage cache for saving
@@ -280,7 +276,7 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
                 self.store_dict.cod_stores[storage].post.update(stored)
                 self.store_dict.cod_stores[storage].update(stored)
 
-    def sync(self, storage):
+    def sync(self, store):
         """
         Sync this collectivevariable with attached storages
 
@@ -291,10 +287,10 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
         """
         if hasattr(self, 'store_dict'):
             self.store_dict.update_nod_stores()
-            if storage in self.store_dict.cod_stores:
-                self.store_dict.cod_stores[storage].sync()
+            if store in self.store_dict.cod_stores:
+                self.store_dict.cod_stores[store].sync()
 
-    def cache_all(self, storage):
+    def cache_all(self, store):
         """
         Sync this collective variable with attached storages
 
@@ -305,36 +301,8 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
         """
         if hasattr(self, 'store_dict'):
             self.store_dict.update_nod_stores()
-            if storage in self.store_dict.cod_stores:
-                self.store_dict.cod_stores[storage].cache_all()
-
-    def _pre_item(self, items):
-        if self.store_cache:
-            item_type = self.store_dict._basetype(items)
-        else:
-            item_type = type(items)
-
-        if item_type is paths.Snapshot:
-            return items
-        elif item_type is paths.Sample or item_type is paths.Trajectory:
-            if len(items) == 0:
-                return []
-            elif len(items) == 1:
-                return [list.__getitem__(items, 0)]
-            else:
-                return list(list.__iter__(items))
-        elif item_type is paths.Sample:
-            if len(items) == 0:
-                return []
-            elif len(items) == 1:
-                return [list.__getitem__(items.trajectory, 0)]
-            else:
-                return list(list.__iter__(items.trajectory))
-
-        elif hasattr(items, '__iter__'):
-            return list(items)
-        else:
-            return items
+            if store in self.store_dict.cod_stores:
+                self.store_dict.cod_stores[store].cache_all()
 
     _compare_keys = ['name', 'dimensions']
 
@@ -839,9 +807,9 @@ class CV_Featurizer(CV_Class):
         self.kwargs = kwargs
         # turn Snapshot and Trajectory into md.trajectory
         for key in kwargs:
-            if type(kwargs[key]) is paths.Snapshot:
+            if kwargs[key].__class__ is paths.Snapshot:
                 kwargs[key] = kwargs[key].md()
-            elif type(kwargs[key]) is paths.Trajectory:
+            elif kwargs[key].__class__ is paths.Trajectory:
                 kwargs[key] = kwargs[key].md()
 
         self._feat = featurizer(**kwargs)

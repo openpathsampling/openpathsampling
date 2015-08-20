@@ -2,7 +2,8 @@ import numpy as np
 from openpathsampling.snapshot import Snapshot, Configuration, Momentum
 from object_storage import ObjectStore
 from openpathsampling.trajectory import Trajectory
-import simtk.unit as u
+from openpathsampling.objproxy import DelayedLoaderProxy
+
 
 class SnapshotStore(ObjectStore):
     """
@@ -12,7 +13,7 @@ class SnapshotStore(ObjectStore):
     def __init__(self):
         super(SnapshotStore, self).__init__(Snapshot, json=False)
 
-    def load(self, idx=None):
+    def get(self, idx=None):
         '''
         Load a snapshot from the storage.
 
@@ -49,10 +50,27 @@ class SnapshotStore(ObjectStore):
         snapshot_reversed._reversed = snapshot
 
         # fix caching!
-        snapshot_reversed.idx[self.storage] = reversed_idx
+        snapshot_reversed.idx[self] = reversed_idx
         self.cache[reversed_idx] = snapshot_reversed
 
         return snapshot
+
+    def load(self, idx=None):
+        '''
+        Load a snapshot from the storage.
+
+        Parameters
+        ----------
+        idx : int
+            the integer index of the snapshot to be loaded
+
+        Returns
+        -------
+        snapshot : Snapshot
+            the loaded snapshot instance
+        '''
+
+        return DelayedLoaderProxy()
 
     def all(self):
         """
@@ -198,7 +216,7 @@ class SnapshotStore(ObjectStore):
             the function that returns the idx of the configuration
         """
         def idx(obj):
-            return obj.configuration.idx[self.storage]
+            return obj.configuration.idx[self]
 
         return idx
 
@@ -214,7 +232,7 @@ class SnapshotStore(ObjectStore):
 
         """
         def idx(obj):
-            return obj.momenta.idx[self.storage]
+            return obj.momenta.idx[self]
 
         return idx
 

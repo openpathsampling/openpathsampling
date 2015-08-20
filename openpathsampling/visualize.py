@@ -481,7 +481,7 @@ class MoveTreeBuilder(object):
             self.renderer.add(self.renderer.block(-8.0, self.t_count, 'black'))
             self.renderer.add(
                 self.renderer.label(-8.0, self.t_count, 3,
-                                    'storage.sampleset[%d]' % sset.idx[storage],
+                                    'storage.sampleset[%d]' % sset.idx[storage.samplesets],
                                     align='start', color='black')
             )
 
@@ -660,7 +660,7 @@ class MoveTreeBuilder(object):
         for ens_idx, ens in enumerate(ensembles):
             samp_ens = [samp for samp in sset if samp.ensemble is ens]
             if len(samp_ens) > 0:
-                traj_idx = samp_ens[0].trajectory.idx[storage]
+                traj_idx = samp_ens[0].trajectory.idx[storage.trajectories]
                 txt = str(traj_idx)
                 if len(samp_ens) > 1:
                     txt += '+'
@@ -685,7 +685,7 @@ class MoveTreeBuilder(object):
         for ens_idx, ens in enumerate(ensembles):
             samp_ens = [samp for samp in sset if samp.ensemble is ens]
             if len(samp_ens) > 0:
-                traj_idx = samp_ens[0].trajectory.idx[storage]
+                traj_idx = samp_ens[0].trajectory.idx[storage.trajectories]
                 self.ens_x[ens_idx] = traj_idx
                 self.traj_ens_x[traj_idx] = ens_idx
                 self.traj_ens_y[traj_idx] = self.t_count
@@ -699,7 +699,7 @@ class MoveTreeBuilder(object):
             samp_repl = [samp for samp in sset if samp.replica == repl_idx - 1]
             xp = repl_idx + 10
             if len(samp_repl) > 0:
-                traj_idx = samp_repl[0].trajectory.idx[storage]
+                traj_idx = samp_repl[0].trajectory.idx[storage.trajectories]
                 txt = str(traj_idx)
                 if len(samp_repl) > 1:
                     txt += '+'
@@ -723,7 +723,7 @@ class MoveTreeBuilder(object):
             samp_repl = [samp for samp in sset if samp.replica == repl_idx - 1]
             xp = repl_idx + 10
             if len(samp_repl) > 0:
-                traj_idx = samp_repl[0].trajectory.idx[storage]
+                traj_idx = samp_repl[0].trajectory.idx[storage.trajectories]
                 self.repl_x[repl_idx] = traj_idx
                 self.traj_repl_x[traj_idx] = xp
                 self.traj_repl_y[traj_idx] = self.t_count
@@ -792,7 +792,7 @@ class PathTreeBuilder(object):
 
                 self.renderer.add(
                     self.renderer.label(0, t_count, 1,
-                        str(self.storage.idx(sample.trajectory)) + 'b',
+                        str(self.storage.trajectories.idx(sample.trajectory)) + 'b',
                         align='end',
                         color='black'
                     )

@@ -107,7 +107,7 @@ class SampleStore(ObjectStore):
                 bias=float(bias)
             )
 
-        obj.idx[self.storage] = idx
+        obj.idx[self] = idx
         obj._origin = self
 
         del obj.details
@@ -228,7 +228,7 @@ class SampleSetStore(ObjectStore):
                     movepath=None
                 )
 
-            obj.idx[self.storage] = idx
+            obj.idx[self] = idx
             obj._origin = self
 
             del obj.movepath

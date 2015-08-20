@@ -197,7 +197,7 @@ if __name__ == '__main__':
 
     def format_traj(traj_obj):
         s = ''
-        traj = storage.trajectories.snapshot_indices(traj_obj.idx[storage])
+        traj = storage.trajectories.snapshot_indices(traj_obj.idx[storage.trajectories])
         old_idx = -2
         count = 0
         for idx in traj:
@@ -220,7 +220,7 @@ if __name__ == '__main__':
         return s
 
     def print_traj(name, traj_obj):
-        traj = storage.trajectories.snapshot_indices(traj_obj.idx[storage])
+        traj = storage.trajectories.snapshot_indices(traj_obj.idx[storage.trajectories])
         sys.stdout.write("      {:>10}:  {:>5} frames [".format(name, str(len(traj))) + ' ]')
         print format_traj(traj_obj)
 

@@ -237,7 +237,6 @@ class Trajectory(list, OPSObject):
     #=============================================================================================
 
     def __getslice__(self, *args, **kwargs):
-#        print 'PRE',  list(list.__iter__(self))
         ret =  list.__getslice__(self, *args, **kwargs)
         if type(ret) is list:
             ret = Trajectory(ret)

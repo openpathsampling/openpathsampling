@@ -16,8 +16,8 @@ def load_missing_snapshot(func):
 
     return getter
 
-Trajectory.__getitem__ = load_missing_snapshot(Trajectory.__getitem__)
-Trajectory.__getslice__ = load_missing_snapshot(Trajectory.__getslice__)
+#Trajectory.__getitem__ = load_missing_snapshot(Trajectory.__getitem__)
+#Trajectory.__getslice__ = load_missing_snapshot(Trajectory.__getslice__)
 
 class TrajectoryStore(ObjectStore):
     def __init__(self, lazy=True, use_snapshot_cache=True):
@@ -45,23 +45,25 @@ class TrajectoryStore(ObjectStore):
         """
 
         # Check if all snapshots are saved
-        values = []
-        for snap in list.__iter__(trajectory):
-            if type(snap) is not tuple:
-                self.storage.snapshots.save(snap)
-                values.append(snap.idx[self.storage])
-            elif snap[0].storage is not self.storage:
-                new_snap = snap[0][snap[1]]
-                self.storage.snapshots.save(new_snap)
-                values.append(new_snap.idx[self.storage])
-            else:
-                values.append(snap[1])
+#         values = []
+#         for snap in list.__iter__(trajectory):
+#             if type(snap) is not tuple:
+#                 self.storage.snapshots.save(snap)
+#                 values.append(snap.idx[self.storage.snapshots])
+#             elif snap[0].storage is not self.storage:
+#                 new_snap = snap[0][snap[1]]
+#                 self.storage.snapshots.save(new_snap)
+#                 values.append(new_snap.idx[self])
+#             else:
+#                 values.append(snap[1])
+#
+# #        map(self.storage.snapshots.save, trajectory)
+# #        values = self.list_to_numpy(trajectory, 'snapshot')
+#
+#         values = self.list_to_numpy(values, 'index')
+#         self.storage.variables[self.prefix + '_snapshots'][idx] = values
 
-#        map(self.storage.snapshots.save, trajectory)
-#        values = self.list_to_numpy(trajectory, 'snapshot')
-
-        values = self.list_to_numpy(values, 'index')
-        self.storage.variables[self.prefix + '_snapshots'][idx] = values
+        self.vars['snapshots'][idx] = trajectory
 
         # self.storage.sync()
 
@@ -103,22 +105,7 @@ class TrajectoryStore(ObjectStore):
 
         '''
 
-        values = self.storage.variables[self.prefix + '_snapshots'][idx]
-
-        # typecast to snapshot
-        if self.lazy:
-            if self.use_snapshot_cache:
-                snapshots = [ self.storage.snapshots.cache[idx] if idx in self.storage.snapshots.cache else tuple([self.storage.snapshots, idx]) for idx in self.list_from_numpy(values, 'int') ]
-            else:
-                snapshots = [ tuple([self.storage.snapshots, idx]) for idx in self.list_from_numpy(values, 'int') ]
-        else:
-            snapshots = self.list_from_numpy(values, 'snapshots')
-
-        trajectory = Trajectory(snapshots)
-        # save the used storage to load snapshots if required
-
-        trajectory.storage = self.storage
-
+        trajectory = Trajectory(self.vars['snapshots'][idx])
         return trajectory
 
     def iter_snapshot_indices(this, iter_range=None):

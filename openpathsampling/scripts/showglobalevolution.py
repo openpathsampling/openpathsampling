@@ -120,7 +120,7 @@ if __name__ == '__main__':
 
     for ensemble, pos_y in ensembles_y.iteritems():
         svg_document.add(svg_document.text(
-                text = '[' + str(ensemble.idx[storage]) + '] ' + str(ensemble.name) ,
+                text = '[' + str(ensemble.idx[storage.ensembles]) + '] ' + str(ensemble.name) ,
                 insert = (start_x + (0 + 0.5) * scale_x, start_y + (pos_y + 0.05) * scale_y),
                 text_anchor = 'start',
                 font_size = 0.6*scale_y,
@@ -209,7 +209,7 @@ if __name__ == '__main__':
             if last_x >=0:
                 for ens, pos_yy in ensembles_y.iteritems():
                     if ens not in changed and state[ens] is not None:
-                        block(last_x, pos_yy, lightcolor, str(int(state[ens].trajectory.idx[storage])))
+                        block(last_x, pos_yy, lightcolor, str(int(state[ens].trajectory.idx[storage.trajectories])))
 
             changed = set()
 
@@ -217,14 +217,14 @@ if __name__ == '__main__':
 
             block(pos_x, -1, "red", str(int(sample.step)))
 
-        block(pos_x, pos_y, "black", str(int(sample.trajectory.idx[storage])))
+        block(pos_x, pos_y, "black", str(int(sample.trajectory.idx[storage.trajectories])))
         changed.add(ensemble)
         state[ensemble] = sample
 
     if last_x >=0:
         for ens, pos_yy in ensembles_y.iteritems():
             if ens not in changed and state[ens] is not None:
-                block(last_x, pos_yy, lightcolor, str(int(state[ens].trajectory.idx[storage])))
+                block(last_x, pos_yy, lightcolor, str(int(state[ens].trajectory.idx[storage.trajectories])))
 
 
     svg_document.save()

@@ -198,14 +198,14 @@ class ObjectJSON(object):
         return { '_cls' : obj.__class__.__name__, '_dict' : self.simplify(obj.to_dict(), obj.base_cls_name) }
 
     def simplify(self, obj, base_type = ''):
-        if type(obj).__module__ != '__builtin__':
-            if type(obj) is units.Quantity:
+        if obj.__class__.__module__ != '__builtin__':
+            if obj.__class__ is units.Quantity:
                 # This is number with a unit so turn it into a list
                 if self.unit_system is not None:
                     return { '_value' : obj.value_in_unit_system(self.unit_system), '_units' : self.unit_to_dict(obj.unit.in_unit_system(self.unit_system)) }
                 else:
                     return { '_value' : obj / obj.unit, '_units' : self.unit_to_dict(obj.unit) }
-            elif type(obj) is np.ndarray:
+            elif obj.__class__ is np.ndarray:
                 # this is maybe not the best way to store large numpy arrays!
                 return { '_numpy' : self.simplify(obj.shape), '_dtype' : str(obj.dtype), '_data' : base64.b64encode(obj) }
             elif hasattr(obj, 'to_dict'):

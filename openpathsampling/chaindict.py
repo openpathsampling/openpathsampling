@@ -2,6 +2,7 @@ __author__ = 'jan-hendrikprinz'
 
 import collections
 from openpathsampling.tools import LRUCache
+from openpathsampling.objproxy import DelayedLoaderProxy
 
 class ChainDict(dict):
     """
@@ -137,9 +138,9 @@ class ExpandSingle(ChainDict):
     """
 
     def __getitem__(self, items):
-        if type(items) is tuple:
+        if type(items) is DelayedLoaderProxy:
             return self.post[[items]][0]
-        elif hasattr(items, '__iter__'):
+        if hasattr(items, '__iter__'):
             return self.post[items]
         else:
             return self.post[[items]][0]
@@ -244,10 +245,11 @@ class LRUChainDict(ChainDict):
 
 class BufferedStore(Wrap):
     def __init__(self, name, dimensions, store, scope=None, unit=None):
-        self.storage = store.storage
+        self.store = store
         self._store = Store(name, dimensions, store, scope, unit)
         self._cache = ChainDict()
         self.unit = unit
+        self.content_store = self.store.storage._obj_store[self.store.key_class]
 
         super(BufferedStore, self).__init__(
             post=self._store + self._cache
@@ -259,18 +261,15 @@ class BufferedStore(Wrap):
     def _add_new(self, items, values):
         for item, value in zip(items, values):
             if value is not None:
-                if type(item) is tuple or len(item.idx) > 0 \
-                        and self.storage in item.idx:
+                if len(item.idx) > 0 and self.content_store in item.idx:
                     self._cache._set(item, value)
                     self._store._set(item, value)
 
     def cache_all(self):
-        all_values = self._store.store.get_list_value(self._store.scope, slice(None))
-        storage = self.storage
+        all_values = self._store.store.get_list_value(self._store.scope, slice(None, None))
         for idx, value in enumerate(all_values):
             if value is not None:
-#                self._cache[storage.snapshots[idx]] = value
-                self._cache[[(storage.snapshots, idx)]] = [value]
+                self._cache._set(self.content_store[idx], value)
 
 class Store(ChainDict):
     def __init__(self, name, dimensions, store, scope=None, unit=None):
@@ -280,6 +279,7 @@ class Store(ChainDict):
         self.store = store
         self.key_class = store.content_class
         self.unit = unit
+        self.content_store = self.store.storage._obj_store[self.store.key_class]
 
         if scope is None:
             self.scope = self
@@ -299,11 +299,9 @@ class Store(ChainDict):
         return self.store.storage
 
     def sync(self):
-#        print 'Sync', len(self)
-        storable = [ (key.idx[self.storage], value)
+        storable = [ (key.idx[self.content_store], value)
                             for key, value in self.iteritems()
-                            if type(key) is not tuple and len(key.idx) > 0
-                            and self.storage in key.idx]
+                            if len(key.idx) > 0 and self.content_store in key.idx]
 
         if len(storable) > 0:
             storable_sorted = sorted(storable, key=lambda x: x[0])
@@ -318,14 +316,8 @@ class Store(ChainDict):
         if item is None:
             return None
 
-        if type(item) is tuple:
-            if item[0].storage is self.store.storage:
-                return item[1]
-            else:
-                item = item[0][item[1]]
-
-        if self.storage in item.idx:
-            return item.idx[self.storage]
+        if self.store in item.idx:
+            return item.idx[self.store]
 
         return None
 
@@ -368,14 +360,6 @@ class Store(ChainDict):
         else:
             return []
 
-    def _basetype(self, item):
-        if type(item) is tuple:
-            return item[0].content_class
-        elif hasattr(item, 'base_cls'):
-            return item.base_cls
-        else:
-            return type(item)
-
 class MultiStore(Store):
     def __init__(self, store_name, name, dimensions, scope, unit=None):
         super(Store, self).__init__()
@@ -383,7 +367,7 @@ class MultiStore(Store):
         self.dimensions = dimensions
         self.store_name = store_name
         self.unit = unit
-        self._storages = []
+        self._stores = []
 
         if scope is None:
             self.scope = self
@@ -394,16 +378,16 @@ class MultiStore(Store):
         self.update_nod_stores()
 
     @property
-    def storages(self):
+    def stores(self):
         if hasattr(self.scope, 'idx'):
-            if len(self.scope.idx) != len(self._storages):
-                self._storages = self.scope.idx.keys()
-            return self._storages
+            if len(self.scope.idx) != len(self._stores):
+                self._stores = self.scope.idx.keys()
+            return self._stores
         else:
             return []
 
     def sync(self):
-        if len(self.storages) != len(self.cod_stores):
+        if len(self.stores) != len(self.cod_stores):
             self.update_nod_stores()
 
         if len(self.cod_stores) == 0:
@@ -412,7 +396,7 @@ class MultiStore(Store):
         [store.sync() for store in self.cod_stores.values()]
 
     def cache_all(self):
-        if len(self.storages) != len(self.cod_stores):
+        if len(self.stores) != len(self.cod_stores):
             self.update_nod_stores()
 
         if len(self.cod_stores) == 0:
@@ -420,52 +404,29 @@ class MultiStore(Store):
 
         [store.cache_all() for store in self.cod_stores.values()]
 
-    def add_nod_store(self, storage):
-        self.cod_stores[storage] = BufferedStore(
-            self.name, self.dimensions, getattr(storage, self.store_name),
+    def add_nod_store(self, store):
+        self.cod_stores[store] = BufferedStore(
+            self.name, self.dimensions, store,
             self.scope, unit=self.unit
         )
 
     def update_nod_stores(self):
-        for storage in self.cod_stores:
-            if storage not in self.storages:
-                del self.cod_stores[storage]
+        for store in self.cod_stores:
+            if store not in self.stores:
+                del self.cod_stores[store]
 
-        for storage in self.storages:
-            if storage not in self.cod_stores:
-                self.add_nod_store(storage)
+        for store in self.stores:
+            if store not in self.cod_stores:
+                self.add_nod_store(store)
 
     def _add_new(self, items, values):
-        if len(self.storages) != len(self.cod_stores):
+        if len(self.stores) != len(self.cod_stores):
             self.update_nod_stores()
         for s in self.cod_stores:
             self.cod_stores[s]._add_new(items, values)
 
-    def _get(self, item):
-        print 'Should not appear'
-        if len(self.storages) != len(self.cod_stores):
-            self.update_nod_stores()
-
-        if len(self.cod_stores) == 0:
-            return None
-
-        results = dict()
-        for s in self.cod_stores:
-            results[s] = self.cod_stores[s][item]
-
-        output = None
-
-        for result in results.values():
-            if result is None:
-                return None
-            elif output is None:
-                output = result
-
-        return output
-
-
     def _get_list(self, items):
-        if len(self.storages) != len(self.cod_stores):
+        if len(self.stores) != len(self.cod_stores):
             self.update_nod_stores()
 
         if len(self.cod_stores) == 0:
@@ -486,15 +447,3 @@ class MultiStore(Store):
                      for item, result in zip(output, results) ]
 
         return output
-
-
-class UnwrapTuple(ChainDict):
-    def __init__(self):
-        super(UnwrapTuple, self).__init__()
-
-    def __getitem__(self, items):
-        return self.post([value[0].load(value[1])
-            if type(value) is tuple else value for value in items])
-
-    def __setitem__(self, key, value):
-        self.post[key] = value

@@ -311,7 +311,7 @@ class SamplePathMoveChange(PathMoveChange):
         """
         super(SamplePathMoveChange, self).__init__(mover=mover, details=details)
 
-        if type(samples) is paths.Sample:
+        if samples.__class__ is paths.Sample:
             samples = [samples]
 
         self.samples = samples
