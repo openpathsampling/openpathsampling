@@ -653,6 +653,7 @@ class CV_Class(CollectiveVariable):
             dimensions=1,
             store_cache=True,
             fnc_uses_lists=False,
+            var_type=None,
             **kwargs):
         """
         Parameters
@@ -677,7 +678,8 @@ class CV_Class(CollectiveVariable):
             name,
             dimensions=dimensions,
             store_cache=store_cache,
-            fnc_uses_lists=fnc_uses_lists
+            fnc_uses_lists=fnc_uses_lists,
+            var_type=var_type
         )
         self.callable_cls = cls
         self.kwargs = kwargs
@@ -803,7 +805,7 @@ class CV_MD_Function(CV_Function):
 
         t = trajectory.md(self._topology)
         arr =self.callable_fcn(t, **self.kwargs)
-        if arr.shape[-1] == 1:
+        if self.single_as_scalar and arr.shape[-1] == 1:
             return arr.reshape(arr.shape[:-1])
         else:
             return arr
@@ -819,7 +821,7 @@ class CV_Featurizer(CV_Class):
     cls
     """
 
-    def __init__(self, name, featurizer, store_cache=True, **kwargs):
+    def __init__(self, name, featurizer, store_cache=True, single_as_scalar=True, **kwargs):
         """
 
         Parameters
@@ -843,13 +845,19 @@ class CV_Featurizer(CV_Class):
                 kwargs[key] = kwargs[key].md()
 
         self._feat = featurizer(**kwargs)
+        self.single_as_scalar = single_as_scalar
+
+        dimensions = self._feat.n_features
+        if self.single_as_scalar and dimensions == 1:
+            dimensions = None
 
         super(CV_Featurizer, self).__init__(
             name,
             cls=featurizer,
-            dimensions=self._feat.n_features,
+            dimensions=dimensions,
             store_cache=store_cache,
             fnc_uses_lists=True,
+            var_type='numpy.float32',
             **self.kwargs
         )
 
@@ -863,6 +871,11 @@ class CV_Featurizer(CV_Class):
         ptraj = trajectory.md()
 
         # run the featurizer
-        result = self._feat.partial_transform(ptraj)
+        arr = self._feat.partial_transform(ptraj)
 
-        return result
+        if self.single_as_scalar and arr.shape[-1] == 1:
+            return arr.reshape(arr.shape[:-1])
+        else:
+            return arr
+
+        return arr

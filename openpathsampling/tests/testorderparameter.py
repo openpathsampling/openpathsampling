@@ -66,7 +66,7 @@ class testCV_Function(object):
         md_dihed = md.compute_dihedrals(self.mdtraj, indices=[psi_atoms])
         my_dihed =  dihedral_op(self.traj)
 
-        np.testing.assert_allclose(md_dihed, my_dihed)
+        np.testing.assert_allclose(md_dihed.reshape(md_dihed.shape[:-1]), my_dihed)
 
     def test_atom_pair_featurizer(self):
         """ Create an atom pair collectivevariable using MSMSBuilder3 """
