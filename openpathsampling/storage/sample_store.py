@@ -195,7 +195,8 @@ class SampleSetStore(ObjectStore):
         """
         super(SampleSetStore, self)._init()
 
-        self.init_variable('samples', 'obj.samples[]',
+        self.init_variable('samples', 'obj.samples',
+            dimensions='...',
             description="sampleset[sampleset][frame] is the sample index (0..nspanshots-1) of frame 'frame' of sampleset 'sampleset'.",
             chunksizes=(1024, )
         )

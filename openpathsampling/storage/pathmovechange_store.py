@@ -59,11 +59,13 @@ class PathMoveChangeStore(ObjectStore):
         self.init_variable('mover', 'obj.pathmovers', chunksizes=(1, ))
         self.init_variable('cls', 'str', chunksizes=(1, ))
 
-        self.init_variable('subchanges', 'obj.pathmovechanges[]',
+        self.init_variable('subchanges', 'obj.pathmovechanges',
+            dimensions=('...'),
             chunksizes=(10240, )
         )
 
-        self.init_variable('samples', 'obj.samples[]',
+        self.init_variable('samples', 'obj.samples',
+            dimensions=('...'),
             chunksizes=(10240, )
         )
 

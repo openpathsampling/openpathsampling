@@ -63,8 +63,8 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
             dimensions=None,
             unit=None,
             has_fnc=True,
-            fnc_uses_lists=False,
-            var_type='float',
+            fnc_uses_lists=None,
+            var_type=None,
             store_cache=True
     ):
         if (type(name) is not str and type(name) is not unicode) or len(
@@ -79,11 +79,31 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
 
         if self.template is not None:
             self._init_from_template(self.template)
+
+            if dimensions is not None:
+                self.dimensions = dimensions
+
+            if fnc_uses_lists is not None:
+                self.fnc_uses_lists = fnc_uses_lists
+
+            if unit is not None:
+                self.unit = unit
+
+            if var_type is not None:
+                self.var_type = None
+
         else:
-            self.dimensions = dimensions
             self.unit = unit
             self.fnc_uses_lists = fnc_uses_lists
             self.var_type = var_type
+            self.dimensions = dimensions
+
+            if fnc_uses_lists is None:
+                self.fnc_uses_lists = False
+
+            if var_type is None:
+                self.var_type = 'float'
+
 
         self.single_dict = cd.ExpandSingle()
         self.multi_dict = cd.ExpandMulti()
@@ -215,7 +235,7 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
             else:
                 test_value = value_single
 
-            dimensions = 1
+            dimensions = None
             storable = True
             var_type = None
             unit = None
@@ -227,24 +247,27 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
                 unit = test_type.unit
                 test_type = test_type._value
 
-            if hasattr(test_value, '__len__'):
-                dimensions = len(test_value)
-                test_type = test_value[0]
-                if type(test_type) is u.Quantity:
-                    for val in test_value:
-                        if type(val._value) is not type(test_value._value):
-                            # all values must be of same type
-                            storable = False
-                else:
-                    for val in test_value:
-                        if type(val) is not type(test_value):
-                            # all values must be of same type
-                            storable = False
+            if type(test_type) is np.array:
+                dimensions = test_type.shape
+            else:
+                if hasattr(test_value, '__len__'):
+                    dimensions = len(test_value)
+                    test_type = test_value[0]
+                    if type(test_type) is u.Quantity:
+                        for val in test_value:
+                            if type(val._value) is not type(test_value._value):
+                                # all values must be of same type
+                                storable = False
+                    else:
+                        for val in test_value:
+                            if type(val) is not type(test_value):
+                                # all values must be of same type
+                                storable = False
 
-            if type(test_type) is u.Quantity:
-                # could also be [Quantity, ...]
-                unit = test_type.unit
-                test_type = test_type._value
+                if type(test_type) is u.Quantity:
+                    # could also be [Quantity, ...]
+                    unit = test_type.unit
+                    test_type = test_type._value
 
             # try:
             #     t_value = float(test_type)

@@ -1,9 +1,9 @@
 import numpy as np
 from openpathsampling.snapshot import Snapshot, Configuration, Momentum
 from object_storage import ObjectStore
-from openpathsampling.trajectory import Trajectory
 from openpathsampling.objproxy import DelayedLoaderProxy
 
+import simtk.unit as u
 
 class SnapshotStore(ObjectStore):
     """
@@ -39,19 +39,10 @@ class SnapshotStore(ObjectStore):
             is_reversed=momentum_reversed,
             reversed_copy=None
         )
-        snapshot_reversed = Snapshot(
-            configuration=configuration,
-            momentum=momentum,
-            is_reversed=not momentum_reversed,
-            reversed_copy=None
-        )
-
-        snapshot._reversed = snapshot_reversed
-        snapshot_reversed._reversed = snapshot
 
         # fix caching!
-        snapshot_reversed.idx[self] = reversed_idx
-        self.cache[reversed_idx] = snapshot_reversed
+        snapshot._reversed.idx[self] = reversed_idx
+        self.cache[reversed_idx] = snapshot._reversed
 
         return snapshot
 
@@ -71,20 +62,6 @@ class SnapshotStore(ObjectStore):
         '''
 
         return DelayedLoaderProxy()
-
-    def all(self):
-        """
-        Return a trajectory consisting of all (unordered) frames in the storage.
-
-        Notes
-        -----
-        If you are interested in collectivevariables this is faster since it does not
-        load the snapshots. Otherwise storage.snapshots is fine to get an
-        iterator. Both should should be about the same speed.
-        """
-        #TODO: Might think about replacing the iterator with this since it is
-        # faster for collectivevariables
-        return Trajectory([ (self, idx) for idx in range(len(self)) ])
 
     def save(self, snapshot, idx=None):
         """
@@ -110,73 +87,6 @@ class SnapshotStore(ObjectStore):
 
         self.save(snapshot._reversed)
         self.vars['reversed_idx'][idx] = self.idx(snapshot._reversed)
-
-
-    def configuration_idx(self, idx):
-        '''
-        Load snapshot index for snapshot with ID 'idx' from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the snapshot
-
-        Returns
-        -------
-        list of int
-            configuration indices
-        '''
-        return self.vars['configuration'][idx]
-
-    def momentum_idx(self, idx):
-        '''
-        Load momentum index for snapshot with ID 'idx' from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the snapshot
-
-        Returns
-        -------
-        int
-            momentum indices
-        '''
-        return self.vars['momentum'][idx]
-
-    def reversed_idx(self, idx):
-        '''
-        Load snapshot index for the reversed snapshot with ID 'idx'
-        from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the snapshot
-
-        Returns
-        -------
-        int
-            reversed snapshot indices
-        '''
-        return self.vars['reversed_idx'][idx]
-
-    def momentum_reversed(self, idx):
-        '''
-        Load reversed boolean for snapshot with ID 'idx' from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the snapshot
-
-        Returns
-        -------
-        boolean
-            boolean if the momentum of the snapshot is reversed
-        '''
-        return self.vars['momentum_reversed'][idx]
-
 
     def _init(self):
         '''
@@ -232,7 +142,7 @@ class SnapshotStore(ObjectStore):
 
         """
         def idx(obj):
-            return obj.momenta.idx[self]
+            return obj.momentum.idx[self]
 
         return idx
 
@@ -358,16 +268,19 @@ class MomentumStore(ObjectStore):
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
-        self.init_variable('velocities', 'quantity(numpy.float32, velocity)[atom][spatial]',
+        self.init_variable('velocities', 'numpy.float32',
+                dimensions=('atom', 'spatial'),
                 description="the velocity of atom 'atom' in dimension " +
                             "'coordinate' of momentum 'momentum'.",
-                chunksizes=(1, n_atoms, n_spatial))
+                chunksizes=(1, n_atoms, n_spatial),
+                simtk_unit = 'velocity'
+        )
 
-        self.init_variable('kinetic_energy', 'quantity(float, energy)', self.prefix,
-                chunksizes=(1, ))
+        self.init_variable('kinetic_energy', 'float',
+                chunksizes=(1, ),
+                simtk_unit = 'energy'
+        )
 
-
-    
 class ConfigurationStore(ObjectStore):
     def __init__(self):
         super(ConfigurationStore, self).__init__(Configuration, json=False, load_partial=True)
@@ -500,13 +413,21 @@ class ConfigurationStore(ObjectStore):
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
-        self.init_variable('coordinates', 'quantity(numpy.float32, length)[atom][spatial]',
+        self.init_variable('coordinates', 'numpy.float32',
+                dimensions=('atom', 'spatial'),
                 description="coordinate of atom '{ix[1]}' in dimension " +
                             "'{ix[2]}' of configuration '{ix[0]}'.",
-                chunksizes=(1,n_atoms,n_spatial))
+                chunksizes=(1,n_atoms,n_spatial),
+                simtk_unit = 'length'
+        )
 
-        self.init_variable('box_vectors', 'quantity(numpy.float32, length)[spatial][spatial]',
-                chunksizes=(1,n_spatial,n_spatial))
+        self.init_variable('box_vectors', 'numpy.float32',
+                dimensions=('spatial', 'spatial'),
+                chunksizes=(1,n_spatial,n_spatial),
+                simtk_unit = 'length'
+        )
 
-        self.init_variable('potential_energy', 'quantity(float, energy)',
-                chunksizes=(1, ))
+        self.init_variable('potential_energy', 'float',
+                chunksizes=(1, ),
+                simtk_unit = 'energy'
+        )

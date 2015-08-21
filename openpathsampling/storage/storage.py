@@ -44,15 +44,7 @@ class NetCDFPlus(netcdf.Dataset):
     # netCDF variable is accessed by storage.variables[name][idx] and the
     # `special` variable is accessed by storage.store[idx]
 
-    allowed_types = [
-        'int', 'float', 'long', 'str', 'bool',
-        'numpy.float32', 'numpy.float64',
-        'numpy.int8', 'numpy.inf16', 'numpy.int32', 'numpy.int64',
-        'numpy.uint8', 'numpy.uinf16', 'numpy.uint32', 'numpy.uint64',
-        'index', 'json'
-    ]
-    # Default caching for online use
-
+    support_simtk_unit = True
 
     @staticmethod
     def default_cache_sizes():
@@ -168,6 +160,7 @@ class NetCDFPlus(netcdf.Dataset):
             self.getter = getter
 
         def __setitem__(self, key, value):
+#            print self.variable.name, key, value, self.setter(value)
             self.variable[key] = self.setter(value)
 
         def __getitem__(self, item):
@@ -282,15 +275,15 @@ class NetCDFPlus(netcdf.Dataset):
 
             # Create a dict of simtk.Unit() instances for all netCDF.Variable()
             for variable_name in self.variables:
-                unit = None
                 variable = self.variables[variable_name]
 
-                if hasattr(variable, 'unit_simtk'):
-                    unit_dict = self.simplifier.from_json(getattr(variable, 'unit_simtk'))
-                    if unit_dict is not None:
-                        unit = self.simplifier.unit_from_dict(unit_dict)
+                if self.support_simtk_unit:
+                    if hasattr(variable, 'unit_simtk'):
+                        unit_dict = self.simplifier.from_json(getattr(variable, 'unit_simtk'))
+                        if unit_dict is not None:
+                            unit = self.simplifier.unit_from_dict(unit_dict)
 
-                self.units[str(variable_name)] = unit
+                        self.units[str(variable_name)] = unit
 
             self.update_delegates()
 
@@ -298,11 +291,6 @@ class NetCDFPlus(netcdf.Dataset):
             self._restore()
 
         self.sync()
-
-
-    @property
-    def objects(self):
-        return self._objects
 
     def _setup_class(self):
         """
@@ -313,20 +301,15 @@ class NetCDFPlus(netcdf.Dataset):
         self._storages_base_cls = {}
         self._obj_store = {}
         self.simplifier = StorableObjectJSON(self)
-        self.units = dict()
         self.vars = dict()
-        # use no units
+        self.units = dict()
+
         self.dimension_units = {
-            'length': u.Unit({}),
-            'velocity': u.Unit({}),
-            'energy': u.Unit({})
+            'length': u.dimensionless,
+            'velocity': u.dimensionless,
+            'energy': u.dimensionless
         }
-        # use MD units
-        self.dimension_units = {
-            'length': u.nanometers,
-            'velocity': u.nanometers / u.picoseconds,
-            'energy': u.kilojoules_per_mole
-        }
+
 
     def add(self, name, store, register_attr=True):
         store.register(self, name)
@@ -356,7 +339,6 @@ class NetCDFPlus(netcdf.Dataset):
 
         This is used to setup all variables in the storage
         """
-
         pass
 
     def _restore(self):
@@ -367,12 +349,6 @@ class NetCDFPlus(netcdf.Dataset):
 
     def __repr__(self):
         return "Storage @ '" + self.filename + "'"
-
-    def get_unit(self, dimension):
-        """
-        Return a simtk.Unit instance from the unit_system the is of the specified dimension, e.g. length, time
-        """
-        return u.Unit({self.unit_system.base_units[u.BaseDimension(dimension)] : 1.0})
 
     def __getattr__(self, item):
         return self.__dict__[item]
@@ -547,7 +523,7 @@ class NetCDFPlus(netcdf.Dataset):
         if copied_storages == 0:
             raise RuntimeWarning('Potential error in storage name. No storage variables copied from ' + storage_name)
 
-    def create_dimension(self, dimname, size = None):
+    def create_dimension(self, dim_name, size = None):
         """
         Initialize a new dimension in the storage.
         Wraps the netCDF createDimension
@@ -561,81 +537,10 @@ class NetCDFPlus(netcdf.Dataset):
             an infinite dimension that extends when more objects are stored
 
         """
-        if dimname not in self.storage.dimensions:
-            self.storage.createDimension(dimname, size)
+        if dim_name not in self.storage.dimensions:
+            self.storage.createDimension(dim_name, size)
 
-    @staticmethod
-    def compose(*functions):
-        funcs = [func for func in functions if func is not None]
-        return functools.reduce(lambda f, g: lambda x: f(g(x)), funcs, lambda x: x)
-
-
-    def parse_var_type(self, var_name, var_type):
-        dimensions = None
-        new_dimensions = dict()
-        if '[' in var_type:
-            # find dimensions
-            dimensions = re.findall('\[([a-zA-Z]*|[0-9]*)\]', var_type)
-
-        for ix, dim in enumerate(dimensions):
-            try:
-                length = int(dim)
-                dimensions[ix] = var_name + '_dim_' + str(ix)
-                new_dimensions[dimensions[ix]] = length
-            except ValueError:
-                pass
-
-        if dimensions[-1] == '':
-            # last dimension is simply [] so we allow arbitrary length and remove the last dimension
-            variable_length = True
-            dimensions = dimensions[:-1]
-        else:
-            variable_length = False
-
-        inner_type = None
-        outer_fncs = []
-
-        if '(' in var_type:
-            red_var_type = var_type
-            first_group = True
-            while '(' in red_var_type:
-                outer_params = list(re.search('([a-zA-Z\._]+)\([ ]*(?:([a-zA-Z0-9_\.]+)[ ]*,)*[ ]*([a-zA-Z0-9_\.]+)[ ]*\)', red_var_type).groups())
-                outer_type = outer_params[0]
-                if first_group:
-                    if outer_params[1] is None:
-                        inner_type = outer_params[2]
-                        outer_params = [outer_params[0]] + outer_params[2:]
-                    else:
-                        inner_type = outer_params[1]
-                    first_group = False
-                outer_args = list(outer_params)[2:]
-                outer_fncs.append([outer_type, outer_args])
-                red_var_type = re.sub('(([a-zA-Z\._]+)\([ ]*(?:([a-zA-Z0-9_\.]+)[ ]*,)*[ ]*([a-zA-Z0-9_\.]+)[ ]*\))', 'inner', red_var_type)
-        else:
-            inner_type = re.search('[ ]*([a-zA-Z0-9_\.]+)[ ]*', var_type).group()
-
-        inner = self.create_type_delegate(inner_type)
-
-        if not inner['atomic']:
-            raise ValueError('Type of inner function must be numeric!')
-
-        get_list = [inner['getter']]
-        set_list = [inner['setter']]
-
-        for outer_type, outer_args in outer_fncs:
-            outer = self.create_type_delegate(outer_type, *outer_args)
-
-            if outer['atomic']:
-                raise ValueError('Type of outer function must be')
-            _get = outer['getter']
-            _set = outer['setter']
-
-            get_list.insert(0,_get)
-            set_list.append(_set)
-
-        getter = self.compose(*get_list)
-        setter = self.compose(*set_list)
-
+    def var_type_to_nc_type(self, var_type):
         type_conversion = {
             'float' : np.float32,
             'int' : np.int32,
@@ -657,30 +562,17 @@ class NetCDFPlus(netcdf.Dataset):
             'numpy.uint64' : np.uint64
         }
 
-        if inner_type.startswith('obj.'):
+        if var_type.startswith('obj.'):
             nc_type = np.int32
         else:
-            nc_type = type_conversion[inner_type]
+            nc_type = type_conversion[var_type]
 
-        return {
-            'getter' : getter,
-            'setter' : setter,
-            'dimensions' : tuple(dimensions),
-            'new_dimensions' : new_dimensions,
-            'variable_length' : variable_length,
-            'nc_type' : nc_type,
-            'outer' : outer_fncs,
-            'inner' : inner_type,
-            'get_list' : get_list,
-            'set_list' : set_list
-        }
+        return nc_type
 
 
-    def create_type_delegate(self, var_type, *args):
+    def create_type_delegate(self, var_type):
         getter = None
         setter = None
-        n_args = 0
-        atomic = True
 
         if var_type == 'int':
             getter = lambda v : v.tolist()
@@ -705,29 +597,12 @@ class NetCDFPlus(netcdf.Dataset):
         elif var_type.startswith('numpy.'):
             pass
 
-        elif var_type == 'tuple':
-            atomic = False
-            getter = tuple
-
-        elif var_type == 'list':
-            atomic = False
-            getter = list # might be obsolete
-
         elif var_type == 'json':
-            atomic = True
             setter = lambda v : \
                 self.simplifier.to_json(v)
             getter = lambda v : self.simplifier.from_json(v)
 
-        elif var_type == 'quantity':
-            atomic = False
-            n_args = 1
-            unit = self.dimension_units[args[0]]
-            getter = lambda v : u.Quantity(v, unit)
-            setter = lambda v : v / unit
-
         elif var_type.startswith('obj.'):
-            atomic = True
             store = getattr(self, var_type[4:])
             base_type = store.content_class
 
@@ -741,33 +616,54 @@ class NetCDFPlus(netcdf.Dataset):
                 np.array([ -1 if w is None else store.save(w) for w in v], dtype=np.int32) \
                     if iterable(v) else -1 if v is None else store.save(v)
 
-        return {
-            'getter' : getter,
-            'setter' : setter,
-            'atomic' : atomic,
-            'n_args' : n_args
-        }
+        return getter, setter
 
-    def create_variable_delegate(self, name):
+    def create_variable_delegate(self, var_name):
         """
         Create a delegate property that wraps the netcdf.Variable and takes care
         of type conversions
         """
 
-        var = self.variables[name]
+        if var_name not in self.vars:
+            var = self.variables[var_name]
 
-        if not hasattr(var, 'var_type'):
-            return
+            if not hasattr(var, 'var_type'):
+                return
 
-        var_info = self.parse_var_type(name, var.var_type)
+            getter, setter = self.create_type_delegate(var.var_type)
 
-        getter = var_info['getter']
-        setter = var_info['setter']
+            if True or self.support_simtk_unit:
+                if hasattr(var, 'unit_simtk'):
+                    if var_name not in self.units:
+                        self.update_simtk_unit(var_name)
 
-        self.vars[name] = NetCDFPlus.Variable_Delegate(var, getter, setter)
+                    unit = self.units[var_name]
 
-    def create_variable(self, name, var_type,
-                      description=None, chunksizes=None):
+                    def _get(my_getter):
+                        if my_getter is None:
+                            return  lambda v : u.Quantity(v, unit)
+                        else:
+                            return  lambda v : u.Quantity(my_getter(v), unit)
+                    def _set(my_setter):
+                        if my_setter is None:
+                            return  lambda v : v / unit
+                        else:
+                            return  lambda v : my_setter(v / unit)
+                    getter = _get(getter)
+                    setter = _set(setter)
+
+
+            self.vars[var_name] = NetCDFPlus.Variable_Delegate(var, getter, setter)
+        else:
+            raise ValueError("Variable '%s' is already taken!")
+
+    def create_variable(self, var_name,
+                        var_type,
+                        dimensions,
+                        description=None,
+                        chunksizes=None,
+                        simtk_unit=None
+    ):
         '''
         Create a new variable in the netCDF storage. This is just a helper
         function to structure the code better.
@@ -805,50 +701,72 @@ class NetCDFPlus(netcdf.Dataset):
         '''
 
         ncfile = self
-        var_info = self.parse_var_type(name, var_type)
 
-        dimensions = var_info['dimensions']
-        variable_length = var_info['variable_length']
-        nc_type = var_info['nc_type']
+        if type(dimensions) is str:
+            dimensions = [dimensions]
 
-        for dimname, size in var_info['new_dimensions'].items():
-            ncfile.create_dimension(dimname, size)
+        dimensions = list(dimensions)
+
+        new_dimensions = dict()
+        for ix, dim in enumerate(dimensions):
+            if type(dim) is int:
+                dimensions[ix] = var_name + '_dim_' + str(ix)
+                new_dimensions[dimensions[ix]] = dim
+
+
+        if dimensions[-1] == '...':
+            # last dimension is simply [] so we allow arbitrary length and remove the last dimension
+            variable_length = True
+            dimensions = dimensions[:-1]
+        else:
+            variable_length = False
+
+        nc_type = self.var_type_to_nc_type(var_type)
+
+        for dim_name, size in new_dimensions.items():
+            ncfile.create_dimension(dim_name, size)
+
+        dimensions = tuple(dimensions)
 
         if variable_length:
-            vlen_t = ncfile.createVLType(nc_type, name + '_vlen')
-            ncvar = ncfile.createVariable(name, vlen_t, dimensions,
+            vlen_t = ncfile.createVLType(nc_type, var_name + '_vlen')
+            ncvar = ncfile.createVariable(var_name, vlen_t, dimensions,
                                           zlib=False, chunksizes=chunksizes)
         else:
-            ncvar = ncfile.createVariable(name, nc_type, dimensions,
+            ncvar = ncfile.createVariable(var_name, nc_type, dimensions,
                                           zlib=False, chunksizes=chunksizes)
 
         setattr(ncvar,      'var_type', var_type)
 
-        # if var_type == 'float' or units is not None:
-        #
-        #     unit_instance = u.Unit({})
-        #     symbol = 'none'
-        #
-        #     if isinstance(units, u.Unit):
-        #         unit_instance = units
-        #         symbol = unit_instance.get_symbol()
-        #     elif isinstance(units, u.BaseUnit):
-        #         unit_instance = u.Unit({units : 1.0})
-        #         symbol = unit_instance.get_symbol()
-        #     elif type(units) is str and hasattr(u, units):
-        #         unit_instance = getattr(u, units)
-        #         symbol = unit_instance.get_symbol()
-        #     elif type(units) is str and units is not None:
-        #         symbol = units
+        if self.support_simtk_unit and simtk_unit is not None:
 
-#            json_unit = self.simplifier.unit_to_json(unit_instance)
+            unit_instance = u.Unit({})
+            symbol = 'none'
 
-#            # store the unit in the dict inside the Storage object
-#            self.units[name] = unit_instance
-#
-#            # Define units for a float variable
-#            setattr(ncvar,      'unit_simtk', json_unit)
-#            setattr(ncvar,      'unit', symbol)
+            if isinstance(simtk_unit, u.Unit):
+                unit_instance = simtk_unit
+                symbol = unit_instance.get_symbol()
+            elif isinstance(simtk_unit, u.BaseUnit):
+                unit_instance = u.Unit({simtk_unit : 1.0})
+                symbol = unit_instance.get_symbol()
+            elif type(simtk_unit) is str and hasattr(u, simtk_unit):
+                unit_instance = getattr(u, simtk_unit)
+                symbol = unit_instance.get_symbol()
+            elif type(simtk_unit) is str and simtk_unit in self.dimension_units:
+                unit_instance = self.dimension_units[simtk_unit]
+                symbol = unit_instance.get_symbol()
+            else:
+                raise NotImplementedError('Unit by abbreviated string representation is not yet supported')
+
+            json_unit = self.simplifier.unit_to_json(unit_instance)
+
+
+            # store the unit in the dict inside the Storage object
+            self.units[var_name] = unit_instance
+
+            # Define units for a float variable
+            setattr(ncvar,      'unit_simtk', json_unit)
+            setattr(ncvar,      'unit', symbol)
 
         if description is not None:
             if type(dimensions) is str:
@@ -857,10 +775,12 @@ class NetCDFPlus(netcdf.Dataset):
                 dim_names = map( lambda p : '#ix{0}:{1}'.format(*p), enumerate(dimensions))
 
             idx_desc = '[' + ']['.join(dim_names) + ']'
-            description = name + idx_desc + ' is ' + description.format(idx=dim_names[0], ix=dim_names)
+            description = var_name + idx_desc + ' is ' + description.format(idx=dim_names[0], ix=dim_names)
 
             # Define long (human-readable) names for variables.
             setattr(ncvar,    "long_str", description)
+
+        return ncvar
 
     def update_delegates(self):
         for name in self.variables:
@@ -869,6 +789,12 @@ class NetCDFPlus(netcdf.Dataset):
 
 
 class Storage(NetCDFPlus):
+
+    def get_unit(self, dimension):
+        """
+        Return a simtk.Unit instance from the unit_system the is of the specified dimension, e.g. length, time
+        """
+        return u.Unit({self.unit_system.base_units[u.BaseDimension(dimension)] : 1.0})
 
     @property
     def template(self):
@@ -884,6 +810,17 @@ class Storage(NetCDFPlus):
             self._template = self.snapshots.load(int(self.variables['template_idx'][0]))
 
         return self._template
+
+    def _setup_class(self):
+        super(Storage, self)._setup_class()
+                # use MD units
+
+        self.dimension_units = {
+            'length': u.nanometers,
+            'velocity': u.nanometers / u.picoseconds,
+            'energy': u.kilojoules_per_mole
+        }
+
 
     def clone(self, filename, subset):
         """
@@ -1033,7 +970,6 @@ class Storage(NetCDFPlus):
 
         # update the units for dimensions from the template
         self.dimension_units.update(paths.tools.units_from_snapshot(template))
-
         self._init_storages()
 
         logger.info("Saving topology")

@@ -32,7 +32,6 @@ class ObjectStore(object):
             self.dct = dct
 
         def __getitem__(self, item):
-#            print self.dct.keys()
             return self.dct[self.prefix + item]
 
     def prefix_delegate(self, dct):
@@ -710,36 +709,8 @@ class ObjectStore(object):
         elif ty is np.dtype:
             return 'numpy.' + instance.dtype.type.__name__
 
-    @staticmethod
-    def _parse_var_type_as_np_type(var_type):
-        nc_type = var_type
-        if var_type == 'float':
-            nc_type = np.float32   # 32-bit float
-        elif var_type == 'int':
-            nc_type = np.int32   # 32-bit signed integer
-        elif var_type == 'index':
-            nc_type = np.int32
-            # 32-bit signed integer / for indices / -1 : no index (None)
-        elif var_type == 'length':
-            nc_type = np.int32
-            # 32-bit signed integer / for indices / -1 : no length specified (None)
-        elif var_type == 'bool':
-            nc_type = np.int8   # 8-bit signed integer for boolean
-        elif var_type == 'str':
-            nc_type = 'str'
 
-        types = {
-            'float' : np.float32,
-            'int' : np.int32,
-            'index' : np.int32,
-            'length' : np.int32,
-            'bool' : np.int8,
-            'str' : 'str',
-        }
-
-        return types[var_type]
-
-    def init_variable(self, name, var_type, description=None, chunksizes=None):
+    def init_variable(self, name, var_type, dimensions=None, **kwargs):
         '''
         Create a new variable in the netCDF storage. This is just a helper
         function to structure the code better.
@@ -778,14 +749,25 @@ class ObjectStore(object):
 
         # add the main dimension to the var_type
 
-        parts = var_type.split('[')
-        var_type = parts[0] + '[' + self.prefix + ']' + ('[' if len(parts) > 1 else '') + '['.join(parts[1:])
+        if type(dimensions) is str:
+            dimensions = [dimensions]
+
+        if type(dimensions) is int:
+            if dimensions == 1:
+                dimensions = ['scalar']
+            else:
+                dimensions = [dimensions]
+
+        if dimensions is None:
+            dimensions = (self.prefix, )
+        else:
+            dimensions = tuple([self.prefix] + list(dimensions))
 
         self.storage.create_variable(
             self.prefix + '_' + name,
             var_type=var_type,
-            description=description,
-            chunksizes=chunksizes
+            dimensions=dimensions,
+            **kwargs
         )
 
 
