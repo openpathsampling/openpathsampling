@@ -371,7 +371,7 @@ class CV_Volume(CollectiveVariable):
 
         super(CV_Volume, self).__init__(
             name,
-            dimensions=1,
+            dimensions=None,
             store_cache=store_cache,
             fnc_uses_lists=True,
             var_type='bool'
@@ -772,7 +772,7 @@ class CV_MD_Function(CV_Function):
     >>> print psi_orderparam( traj )
     """
 
-    def __init__(self, name, fcn, dimensions=1, store_cache=True, **kwargs):
+    def __init__(self, name, fcn, dimensions=None, store_cache=True, single_as_scalar=True, **kwargs):
         """
         Parameters
         ----------
@@ -792,6 +792,7 @@ class CV_MD_Function(CV_Function):
             var_type='numpy.float32',
             **kwargs
         )
+        self.single_as_scalar = single_as_scalar
         self._topology = None
 
     def _eval(self, items):
@@ -801,8 +802,11 @@ class CV_MD_Function(CV_Function):
             self._topology = trajectory.topology.md
 
         t = trajectory.md(self._topology)
-        return self.callable_fcn(t, **self.kwargs)
-
+        arr =self.callable_fcn(t, **self.kwargs)
+        if arr.shape[-1] == 1:
+            return arr.reshape(arr.shape[:-1])
+        else:
+            return arr
 
 
 class CV_Featurizer(CV_Class):
