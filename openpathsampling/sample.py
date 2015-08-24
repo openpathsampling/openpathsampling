@@ -1,9 +1,9 @@
 import random
+import logging
 
 import openpathsampling as paths
-from openpathsampling.todict import OPSNamed, OPSObject
+from openpathsampling.base import StorableNamedObject, StorableObject
 
-import logging
 logger = logging.getLogger(__name__)
 
 class SampleKeyError(Exception):
@@ -14,7 +14,7 @@ class SampleKeyError(Exception):
         self.msg = (str(self.key) + " does not match " + str(self.sample_key)
                     + " from " + str(self.sample))
 
-class SampleSet(OPSNamed):
+class SampleSet(StorableNamedObject):
     '''
     SampleSet is essentially a list of samples, with a few conveniences.  It
     can be treated as a list of samples (using, e.g., .append), or as a
@@ -360,7 +360,7 @@ class SampleSet(OPSNamed):
     #         raise ValueError('Incompatible MovePaths')
 
 
-class Sample(OPSObject):
+class Sample(StorableObject):
     """
     A Sample represents a given "draw" from its ensemble, and is the return
     object from a PathMover. It and contains all information about the move,

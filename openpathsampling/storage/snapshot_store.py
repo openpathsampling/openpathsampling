@@ -1,9 +1,9 @@
 import numpy as np
+
 from openpathsampling.snapshot import Snapshot, Configuration, Momentum
 from object_storage import ObjectStore
-from openpathsampling.objproxy import DelayedLoaderProxy
+from objproxy import DelayedLoaderProxy
 
-import simtk.unit as u
 
 class SnapshotStore(ObjectStore):
     """

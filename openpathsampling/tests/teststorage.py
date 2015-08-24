@@ -13,8 +13,7 @@ import numpy.testing as npt
 
 from openpathsampling.openmm_engine import *
 from openpathsampling.snapshot import Snapshot
-from openpathsampling.snapshot import Momentum, Configuration
-from openpathsampling.todict import ObjectJSON
+from openpathsampling.storage.todict import ObjectJSON
 
 import simtk.unit as u
 import time

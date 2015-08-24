@@ -1,13 +1,14 @@
 __author__ = 'jan-hendrikprinz'
 
+import logging
+
 import openpathsampling as paths
-from openpathsampling.todict import OPSObject
+from openpathsampling.base import StorableObject
 from treelogic import TreeMixin
 
-import logging
 logger = logging.getLogger(__name__)
 
-class PathMoveChange(TreeMixin, OPSObject):
+class PathMoveChange(TreeMixin, StorableObject):
     '''
     A class that described the concrete realization of a PathMove.
 
@@ -26,7 +27,7 @@ class PathMoveChange(TreeMixin, OPSObject):
     '''
 
     def __init__(self, subchanges=None, samples=None, mover=None, details=None):
-        OPSObject.__init__(self)
+        StorableObject.__init__(self)
         self._len = None
         self._collapsed = None
         self._results = None

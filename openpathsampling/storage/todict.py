@@ -3,177 +3,10 @@ import json
 import numpy as np
 from simtk import unit as units
 import yaml
-import openpathsampling as paths
-import inspect
+from openpathsampling.base import StorableObject
 
-import logging
-logger = logging.getLogger(__name__)
+__author__ = 'jan-hendrikprinz'
 
-class OPSObject(object):
-    """Mixin that allows an object to carry a .name property that can be saved
-
-    It is not allowed to rename object once it has been given a name. Also
-    storage usually sets the name to empty if an object has not been named
-    before. This means that you cannot name an object, after is has been saved.
-    """
-
-    _base = None
-
-    @property
-    def idx(this):
-        return this._idx
-
-    def __init__(self):
-        self._idx = {}
-        self._uid = ''
-
-    @property
-    def cls(self):
-        return self.__class__.__name__
-
-    def save(self, storage):
-        storage.save(self)
-
-    @classmethod
-    def base(cls):
-        if cls._base is None:
-            if cls is not OPSObject and cls is not OPSNamed:
-                if OPSObject in cls.__bases__ or OPSNamed in cls.__bases__:
-                    cls._base = cls
-                else:
-                    cls._base = cls.__base__.base()
-
-        return cls._base
-
-    @property
-    def base_cls_name(self):
-        return self.base().__name__
-
-    @property
-    def base_cls(self):
-        return self.base()
-
-    @classmethod
-    def descendants(cls):
-        return cls.__subclasses__() + \
-               [g for s in cls.__subclasses__()  for g in s.descendants()]
-
-    @staticmethod
-    def objects():
-        """
-        Returns a dictionary of all subclasses
-        """
-        subclasses = OPSObject.descendants()
-
-        return { subclass.__name__ : subclass for subclass in subclasses }
-
-    @classmethod
-    def args(cls):
-        try:
-            args = inspect.getargspec(cls.__init__)
-        except TypeError:
-            return []
-        return args[0]
-
-    _excluded_attr = []
-    _exclude_private_attr = True
-    _restore_non_initial_attr = True
-    _restore_name = True
-
-    def to_dict(self):
-        excluded_keys = ['idx', 'json', 'identifier']
-        return {
-            key: value for key, value in self.__dict__.iteritems()
-            if key not in excluded_keys
-            and key not in self._excluded_attr
-            and not (key.startswith('_') and self._exclude_private_attr)
-        }
-
-    @classmethod
-    def from_dict(cls, dct):
-        if dct is None:
-            dct = {}
-        try:
-            init_dct = dct
-            non_init_dct = {}
-            if hasattr(cls, 'args'):
-                args = cls.args()
-                init_dct = {key: dct[key] for key in dct if key in args}
-                non_init_dct = {key: dct[key] for key in dct if key not in args}
-
-            obj = cls(**init_dct)
-
-            if cls._restore_non_initial_attr:
-                if len(non_init_dct) > 0:
-                    for key, value in non_init_dct.iteritems():
-                        setattr(obj, key, value)
-            else:
-                if cls._restore_name:
-                    if 'name' in dct:
-                        obj.name = dct['name']
-
-        except TypeError as e:
-            print dct
-            print cls.__name__
-            print e
-            print args
-            print init_dct
-            print non_init_dct
-
-        return obj
-
-class OPSNamed(OPSObject):
-    """Mixin that allows an object to carry a .name property that can be saved
-
-    It is not allowed to rename object once it has been given a name. Also
-    storage usually sets the name to empty if an object has not been named
-    before. This means that you cannot name an object, after is has been saved.
-    """
-
-    def __init__(self):
-        super(OPSNamed, self).__init__()
-        self._name = ''
-        self._name_fixed = False
-
-    @property
-    def default_name(self):
-        return '[' + self.__class__.__name__ + ']'
-
-    def fix_name(self):
-        self._name_fixed = True
-
-    @property
-    def name(self):
-        if self._name == '':
-            return self.default_name
-        else:
-            return self._name
-
-    @name.setter
-    def name(self, name):
-        if self._name_fixed:
-            raise ValueError('Objects cannot be renamed to "%s" after is has been saved, it is already named "%s"' % ( name, self._name))
-        else:
-            self._name = name
-
-    def named(self, name):
-        """Set the name
-
-        This is only for syntactic sugar and allow for chained generation
-
-        Examples
-        --------
-        >>> import openpathsampling as p
-        >>> full = p.FullVolume().named('myFullVolume')
-        """
-#        copied_object = copy.copy(self)
-#        copied_object._name = name
-#        if hasattr(copied_object, 'idx'):
-#            copied_object.idx = dict()
-
-        self._name = name
-
-        return self
 
 class ObjectJSON(object):
     """
@@ -192,7 +25,7 @@ class ObjectJSON(object):
     def __init__(self, unit_system = None):
         self.excluded_keys = []
         self.unit_system = unit_system
-        self.class_list = paths.OPSNamed.objects()
+        self.class_list = StorableObject.objects()
 
     def simplify_object(self, obj, base_type = ''):
         return { '_cls' : obj.__class__.__name__, '_dict' : self.simplify(obj.to_dict(), obj.base_cls_name) }
@@ -261,7 +94,6 @@ class ObjectJSON(object):
             return oo
 
     def build(self,obj):
-        global class_list
         if type(obj) is dict:
             if '_units' in obj and '_value' in obj:
                 return obj['_value'] * self.unit_from_dict(obj['_units'])
@@ -352,3 +184,39 @@ class ObjectJSON(object):
 
     def unit_from_json(self, json_string):
         return self.unit_from_dict(self.from_json(json_string))
+
+
+class StorableObjectJSON(ObjectJSON):
+    def __init__(self, storage, unit_system = None):
+        super(StorableObjectJSON, self).__init__(unit_system)
+        self.excluded_keys = ['idx', 'json', 'identifier']
+        self.storage = storage
+
+    def simplify(self,obj, base_type = ''):
+        if obj is self.storage:
+            return { '_storage' : 'self' }
+        if obj.__class__.__module__ != '__builtin__':
+            if obj.__class__ in self.storage._obj_store:
+                store = self.storage._obj_store[obj.__class__]
+                if not store.nestable or obj.base_cls_name != base_type:
+                    # this also returns the base class name used for storage
+                    # store objects only if they are not creatable. If so they will only be created in their
+                    # top instance and we use the simplify from the super class ObjectJSON
+                    self.storage.save(obj)
+                    return { '_idx' : obj.idx[store], '_obj' : store.prefix }
+
+        return super(StorableObjectJSON, self).simplify(obj, base_type)
+
+    def build(self,obj):
+        if type(obj) is dict:
+            if '_storage' in obj:
+                if obj['_storage'] == 'self':
+                    return self.storage
+
+            if '_idx' in obj and '_obj' in obj:
+                store = self.storage._objects[obj['_obj']]
+                result = store.load(obj['_idx'])
+
+                return result
+
+        return super(StorableObjectJSON, self).build(obj)

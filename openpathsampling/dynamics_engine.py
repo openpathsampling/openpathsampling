@@ -5,12 +5,13 @@ Created on 01.07.2014
 @author: JH Prinz
 '''
 
-import simtk.unit as u
-import openpathsampling as paths
-from openpathsampling.todict import OPSNamed
-
-
 import logging
+
+import simtk.unit as u
+
+import openpathsampling as paths
+from openpathsampling.base import StorableNamedObject
+
 logger = logging.getLogger(__name__)
 
 #=============================================================================
@@ -24,7 +25,7 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 #=============================================================================
 
 
-class DynamicsEngine(OPSNamed):
+class DynamicsEngine(StorableNamedObject):
     '''
     Wraps simulation tool (parameters, storage, etc.)
 

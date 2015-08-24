@@ -1,16 +1,16 @@
-from openpathsampling.todict import OPSNamed, OPSObject
+import logging
+
+from openpathsampling.base import StorableNamedObject, StorableObject
 import openpathsampling as paths
 import openpathsampling.tools
 from openpathsampling.pathmover import SubPathMover
-
-import logging
 from ops_logging import initialization_logging
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-import sys
 
-class MCStep(OPSObject):
+class MCStep(StorableObject):
     """
     A monte-carlo step in the main PathSimulation loop
 
@@ -47,7 +47,7 @@ class MCStep(OPSObject):
         self.mccycle = mccycle
 
 
-class PathSimulator(OPSNamed):
+class PathSimulator(StorableNamedObject):
 
     calc_name = "PathSimulator"
     _excluded_attr = ['globalstate', 'step', 'save_frequency']

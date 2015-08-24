@@ -1,13 +1,12 @@
-import openpathsampling as paths
-from openpathsampling.todict import OPSNamed
+import sys
 
+import openpathsampling as paths
+from openpathsampling.base import StorableNamedObject
 from openpathsampling.analysis.move_strategy import levels as strategy_levels
 import openpathsampling.analysis.move_strategy as strategies
 
-import sys
 
-
-class MoveScheme(OPSNamed):
+class MoveScheme(StorableNamedObject):
     """
     Creates a move decision tree based on `MoveStrategy` instances.
 

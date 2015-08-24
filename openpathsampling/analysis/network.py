@@ -1,14 +1,15 @@
-import openpathsampling as paths
-from openpathsampling.todict import OPSNamed
+import logging
+
 import pandas as pd
+
+import openpathsampling as paths
+from openpathsampling.base import StorableNamedObject
 import openpathsampling.volume
 import openpathsampling.ensemble
 
-
-import logging
 logger = logging.getLogger(__name__)
 
-class TransitionNetwork(OPSNamed):
+class TransitionNetwork(StorableNamedObject):
     def __init__(self):
         super(TransitionNetwork, self).__init__()
 

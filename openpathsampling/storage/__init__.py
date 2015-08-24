@@ -1,4 +1,5 @@
-from storage import Storage, StorableObjectJSON, AnalysisStorage
+from storage import Storage, AnalysisStorage
+from openpathsampling.storage.todict import StorableObjectJSON
 from object_storage import ObjectStore
 from snapshot_store import SnapshotStore, ConfigurationStore, MomentumStore
 from trajectory_store import TrajectoryStore

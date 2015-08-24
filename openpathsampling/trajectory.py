@@ -10,14 +10,14 @@ import mdtraj as md
 import simtk.unit as u
 
 import openpathsampling as paths
-from openpathsampling.todict import OPSObject
+from openpathsampling.base import StorableObject
 
 #=============================================================================================
 # SIMULATION TRAJECTORY
 #=============================================================================================
 
 
-class Trajectory(list, OPSObject):
+class Trajectory(list, StorableObject):
     """
     Simulation trajectory. Essentially a python list of snapshots
     """
@@ -38,7 +38,7 @@ class Trajectory(list, OPSObject):
 
         # Initialize list.
         list.__init__(self)
-        OPSObject.__init__(self)
+        StorableObject.__init__(self)
 
         self.path_probability = None # For future uses
 

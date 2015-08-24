@@ -3,15 +3,15 @@
 @author: JH Prinz
 '''
 
-from openpathsampling.todict import OPSObject
+from openpathsampling.base import StorableObject
 
 #=============================================================================
 # SIMULATION CONFIGURATION
 #=============================================================================
 
-class DelayedLoaderProxy(OPSObject):
+class DelayedLoaderProxy(StorableObject):
     """
-    Simulation snapshot. Contains references to a configuration and momentum
+    A proxy that loads an underlying object if attributes are accessed
     """
 
     # Class variables to store the global storage and the system context
@@ -20,9 +20,6 @@ class DelayedLoaderProxy(OPSObject):
     engine = None
 
     def __init__(self):
-        """
-
-        """
         super(DelayedLoaderProxy, self).__init__()
         self.__subject__ = None
 
@@ -32,9 +29,22 @@ class DelayedLoaderProxy(OPSObject):
 
     def __getattr__(self, item):
         if self.__subject__ is None:
+            self.load()
+
+        return getattr(self.__subject__, item)
+
+    def load(self):
+        """
+        Call the loader and get the referenced object
+        """
+        if self.__subject__ is None:
             store, idx = self.idx.iteritems().next()
             self.__subject__ = store.get(idx) # .load would just get another Proxy
 
-#            print 'loaded %s[%d] : %s' % (store.content_class.__name__, idx, self.__subject__)
+            # print 'loaded %s[%d] : %s' % (store.content_class.__name__, idx, self.__subject__)
 
-        return getattr(self.__subject__, item)
+    def unload(self):
+        """
+        Unload the referenced object to free memory
+        """
+        self.__subject__ = None

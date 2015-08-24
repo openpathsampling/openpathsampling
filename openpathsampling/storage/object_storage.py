@@ -1,18 +1,18 @@
-import yaml
 import types
-
-import numpy as np
-
 import logging
 
-from openpathsampling.tools import WeakLimitCache
+import yaml
+import numpy as np
+
+from cache import WeakLimitCache
+from openpathsampling.base import StorableNamedObject
 
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 
-class ObjectStore(object):
+class ObjectStore(StorableNamedObject):
     """
     Base Class for storing complex objects in a netCDF4 file. It holds a
     reference to the store file.

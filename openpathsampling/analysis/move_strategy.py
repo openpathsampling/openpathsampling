@@ -1,10 +1,9 @@
+import itertools
+import collections
+
 import openpathsampling as paths
-from openpathsampling.todict import OPSNamed
 from openpathsampling import PathMoverFactory as pmf
 
-import itertools
-
-import collections
 LevelLabels = collections.namedtuple(
     "LevelLabels", 
     ["SIGNATURE", "MOVER", "GROUP", "SUPERGROUP", "GLOBAL"]

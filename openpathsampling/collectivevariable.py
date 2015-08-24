@@ -2,18 +2,21 @@
 #| CLASS Order Parameter
 ###############################################################
 
-import openpathsampling as paths
-import chaindict as cd
-from openpathsampling.todict import OPSNamed
-import simtk.unit as u
 import marshal
 import base64
 import types
 import opcode
 import __builtin__
+
+import simtk.unit as u
 import numpy as np
 
-class CollectiveVariable(cd.Wrap, OPSNamed):
+import openpathsampling as paths
+import chaindict as cd
+from openpathsampling.base import StorableNamedObject
+
+
+class CollectiveVariable(cd.Wrap, StorableNamedObject):
     """
     Wrapper for a function that maps a snapshot or an iterable of snapshots
     (like Trajectory) to a number or vector.
@@ -71,7 +74,7 @@ class CollectiveVariable(cd.Wrap, OPSNamed):
                 name) == 0:
             raise ValueError('name must be a non-empty string')
 
-        OPSNamed.__init__(self)
+        StorableNamedObject.__init__(self)
 
         self.name = name
         self.template = template

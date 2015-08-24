@@ -4,12 +4,11 @@ Created on 03.09.2014
 @author: jan-hendrikprinz, David W.H. Swenson
 '''
 
-from openpathsampling.todict import OPSNamed
+import logging
 
+from openpathsampling.base import StorableNamedObject
 import openpathsampling as paths
 
-import logging
-from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
@@ -120,7 +119,7 @@ class EnsembleCache(object):
 
         return reset
 
-class Ensemble(OPSNamed):
+class Ensemble(StorableNamedObject):
     '''
     Path ensemble object.
 

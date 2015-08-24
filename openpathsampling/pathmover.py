@@ -5,16 +5,16 @@ Created on 19.07.2014
 @author: David W. H. Swenson
 """
 
-import numpy as np
 import random
+import logging
+
+import numpy as np
 
 import openpathsampling as paths
-from openpathsampling.todict import OPSNamed, OPSObject
-
-import logging
+from openpathsampling.base import StorableNamedObject, StorableObject
 from ops_logging import initialization_logging
-
 from treelogic import TreeMixin
+
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -60,7 +60,7 @@ def make_list_of_pairs(l):
     return outlist
 
 
-class PathMover(TreeMixin, OPSNamed):
+class PathMover(TreeMixin, StorableNamedObject):
     """
     A PathMover is the description of a move in replica space.
     
@@ -96,7 +96,7 @@ class PathMover(TreeMixin, OPSNamed):
     """
 
     def __init__(self):
-        OPSNamed.__init__(self)
+        StorableNamedObject.__init__(self)
 
         self._in_ensembles = None
         self._out_ensembles = None
@@ -2034,7 +2034,7 @@ class PathMoverFactory(object):
         pass
 
 
-class Details(OPSObject):
+class Details(StorableObject):
     """Details of an object. Can contain any data
     """
 

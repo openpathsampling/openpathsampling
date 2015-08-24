@@ -1,6 +1,6 @@
 from openpathsampling.storage import ObjectStore
 from openpathsampling.pathmovechange import PathMoveChange
-from openpathsampling.todict import OPSObject
+from openpathsampling.base import StorableObject
 
 class PathMoveChangeStore(ObjectStore):
     def __init__(self):
@@ -14,7 +14,7 @@ class PathMoveChangeStore(ObjectStore):
 #        self.set_variable_partial_loading('mover')
 
         self._cached_all = False
-        self.class_list = OPSObject.objects()
+        self.class_list = StorableObject.objects()
 
     def load_empty(self, idx):
 

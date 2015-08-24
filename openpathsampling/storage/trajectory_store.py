@@ -1,5 +1,3 @@
-import numpy as np
-
 from object_storage import ObjectStore
 from openpathsampling.trajectory import Trajectory
 
@@ -20,10 +18,8 @@ def load_missing_snapshot(func):
 #Trajectory.__getslice__ = load_missing_snapshot(Trajectory.__getslice__)
 
 class TrajectoryStore(ObjectStore):
-    def __init__(self, lazy=True, use_snapshot_cache=True):
+    def __init__(self):
         super(TrajectoryStore, self).__init__(Trajectory)
-        self.lazy = lazy
-        self.use_snapshot_cache = use_snapshot_cache
 
     def save(self, trajectory, idx=None):
         """

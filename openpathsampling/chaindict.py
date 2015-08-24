@@ -1,10 +1,12 @@
 __author__ = 'jan-hendrikprinz'
 
 import collections
-from openpathsampling.tools import LRUCache
-from openpathsampling.objproxy import DelayedLoaderProxy
 
 import numpy as np
+
+from openpathsampling.storage.cache import LRUCache
+from openpathsampling.storage.objproxy import DelayedLoaderProxy
+
 
 class ChainDict(dict):
     """

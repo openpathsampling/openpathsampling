@@ -5,7 +5,7 @@ Created on 03.09.2014
 '''
 
 import range_logic
-from openpathsampling.todict import OPSNamed
+from openpathsampling.base import StorableNamedObject
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
@@ -31,7 +31,7 @@ def join_volumes(volume_list):
     return volume
 
 
-class Volume(OPSNamed):
+class Volume(StorableNamedObject):
     """
     A Volume describes a set of snapshots 
     """

@@ -12,14 +12,14 @@ import mdtraj as md
 # THIS SHOULD NOT BE NECESSARY! SEE XYZ BELOW
 import simtk.unit as u
 
-from openpathsampling.todict import OPSObject
+from openpathsampling.base import StorableObject
 
 
 #=============================================================================
 # SIMULATION CONFIGURATION
 #=============================================================================
 
-class Configuration(OPSObject):
+class Configuration(StorableObject):
     """
     Simulation configuration. Only Coordinates, the associated boxvectors
     and the potential_energy
@@ -188,7 +188,7 @@ class Configuration(OPSObject):
 # SIMULATION MOMENTUM / VELOCITY
 #=============================================================================
 
-class Momentum(OPSObject):
+class Momentum(StorableObject):
     """
     Simulation momentum. Contains only velocities of all atoms and
     associated kinetic energies
@@ -314,7 +314,7 @@ def has(attr):
     return _has
 
 
-class Snapshot(OPSObject):
+class Snapshot(StorableObject):
     """
     Simulation snapshot. Contains references to a configuration and momentum
     """

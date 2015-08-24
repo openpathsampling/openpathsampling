@@ -1,9 +1,11 @@
 import math
+import logging
+
 import numpy as np
 
-from openpathsampling.todict import OPSNamed
-import logging
-from ops_logging import initialization_logging
+from openpathsampling.base import StorableNamedObject
+
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
@@ -20,7 +22,7 @@ init_log = logging.getLogger('openpathsampling.initialization')
 #  
 #############################################################################
 
-class ShootingPoint(OPSNamed):
+class ShootingPoint(StorableNamedObject):
 
     def __init__(self, selector, trajectory, index, f = None, sum_bias = None):
         '''
@@ -96,7 +98,7 @@ class ShootingPoint(OPSNamed):
             'sum_bias' : self._sum_bias
         }
 
-class ShootingPointSelector(OPSNamed):
+class ShootingPointSelector(StorableNamedObject):
     def __init__(self):
         super(ShootingPointSelector, self).__init__()
 
