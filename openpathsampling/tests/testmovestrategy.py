@@ -280,16 +280,16 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         scheme.movers['shooting'] = [
             paths.OneWayShootingMover(
                 selector=paths.UniformSelector(),
-                ensembles=[ens]
+                ensemble=ens
             )
             for ens in [ens0, ens1, ens2]
         ]
         scheme.movers['repex'] = [
-            paths.ReplicaExchangeMover(ensembles=[ens0, ens1]),
-            paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
+            paths.ReplicaExchangeMover(ensemble1=ens0, ensemble2=ens1),
+            paths.ReplicaExchangeMover(ensemble1=ens1, ensemble2=ens2)
         ]
         scheme.movers['pathreversal'] = [
-            paths.PathReversalMover(ensembles=ens) 
+            paths.PathReversalMover(ensemble=ens)
             for ens in [ens0, ens1, ens2]
         ]
         scheme.movers['minus'] = [paths.MinusMover(
@@ -341,8 +341,8 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         ens1 = self.network.sampling_transitions[0].ensembles[1]
         ens2 = self.network.sampling_transitions[0].ensembles[2]
         scheme.movers['blahblah']  = [
-            paths.ReplicaExchangeMover(ensembles=[ens0, ens1]),
-            paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
+            paths.ReplicaExchangeMover(ensemble1=ens0, ensemble2=ens1),
+            paths.ReplicaExchangeMover(ensemble1=ens1, ensemble2=ens2)
         ]
 
         strategy = DefaultStrategy()
@@ -366,8 +366,8 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         ens1 = self.network.sampling_transitions[0].ensembles[1]
         ens2 = self.network.sampling_transitions[0].ensembles[2]
         scheme.movers['blahblahblah']  = [
-            paths.ReplicaExchangeMover(ensembles=[ens0, ens1]),
-            paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
+            paths.ReplicaExchangeMover(ensemble1=ens0, ensemble2=ens1),
+            paths.ReplicaExchangeMover(ensemble1=ens1, ensemble2=ens2)
         ]
 
         strategy = DefaultStrategy()

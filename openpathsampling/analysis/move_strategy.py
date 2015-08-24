@@ -40,7 +40,7 @@ levels = StrategyLevels(
     GLOBAL=90
 )
 
-class MoveStrategy(object):
+class MoveStrategy(OPSNamed):
     """
     Each MoveStrategy describes one aspect of the approach to the overall
     MoveScheme. Within path sampling, there's a near infinity of reasonable
@@ -184,7 +184,7 @@ class NearestNeighborRepExStrategy(MoveStrategy):
         movers = []
         for ens in ensemble_list:
             movers.extend(
-                [paths.ReplicaExchangeMover(ensembles=[[ens[i], ens[i+1]]])
+                [paths.ReplicaExchangeMover(ensemble1=ens[i], ensemble2=ens[i+1])
                  for i in range(len(ens)-1)]
             )
         return movers
@@ -206,7 +206,7 @@ class AllSetRepExStrategy(NearestNeighborRepExStrategy):
         movers = []
         for ens in ensemble_list:
             pairs = list(itertools.combinations(ens, 2))
-            movers.extend([paths.ReplicaExchangeMover(ensembles=list(pair))
+            movers.extend([paths.ReplicaExchangeMover(*list(pair))
                            for pair in pairs])
         return movers
 
@@ -241,7 +241,7 @@ class SelectedPairsRepExStrategy(MoveStrategy):
         ensemble_list = self.get_ensembles(scheme, self.ensembles)
         movers = []
         for pair in ensemble_list:
-            movers.append(paths.ReplicaExchangeMover(ensembles=pair))
+            movers.append(paths.ReplicaExchangeMover(ensemble1=pair[0], ensemble2=pair[1]))
         return movers
 
 
@@ -354,6 +354,7 @@ class DefaultStrategy(MoveStrategy):
         'minus' : 0.2
     }
     def __init__(self, ensembles=None, group=None, replace=True):
+        super(DefaultStrategy, self).__init__(ensembles, group, replace)
         self.group_weights = {}
         self.mover_weights = {}
         self.group = group
