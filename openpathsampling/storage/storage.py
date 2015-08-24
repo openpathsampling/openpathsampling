@@ -151,10 +151,6 @@ class Storage(NetCDFPlus):
 
         # objects with special storages
 
-        # self.objectname = ... could also be done in the initialization
-        # automatically. But the IDE would not be able to autocomplete
-        # so we leave it this way :)
-
         self.add('trajectories', paths.storage.TrajectoryStore())
         self.add('snapshots', paths.storage.SnapshotStore())
         self.add('configurations', paths.storage.ConfigurationStore())
