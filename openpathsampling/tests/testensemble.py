@@ -1666,3 +1666,15 @@ class testEnsembleSplit(EnsembleTest):
         assert_equal(len(subtrajs_out_2), 2)
         assert_equal(len(subtrajs_out_2[0]), 1)
         assert_equal(len(subtrajs_out_2[1]), 1)
+
+
+class testEnsembleABCError(object):
+    @raises(NotImplementedError)
+    def test_ABCEnsemble(self):
+        ens = Ensemble()
+        ens(1)
+
+    @raises(NotImplementedError)
+    def test_ABCVolumeEnsemble(self):
+        ens = VolumeEnsemble()
+        ens(1)
