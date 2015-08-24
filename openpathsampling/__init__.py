@@ -1,4 +1,4 @@
-from pathsimulator import PathSimulator, Bootstrapping, PathSampling, MCStep
+from pathsimulator import Bootstrapping, PathSampling, MCStep
 
 from ensemble import (
     EnsembleCombination, EnsembleFactory, EntersXEnsemble,
@@ -33,7 +33,7 @@ from pathmover import (
     FilterBySample, FirstSubtrajectorySelectMover,
     MultipleSetMinusMover, OneWayShootingMover, RandomSubtrajectorySelectMover,
     ShootMover, WrappedMover, BackwardExtendMover, EnsembleFilterMover,
-    ForwardExtendMover
+    ForwardExtendMover, EngineGeneratingMover
 )
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \

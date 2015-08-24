@@ -1675,6 +1675,26 @@ class testEnsembleABCError(object):
         ens(1)
 
     @raises(NotImplementedError)
+    def test_ABCEnsemble_append(self):
+        ens = Ensemble()
+        ens.can_append(1)
+
+    @raises(NotImplementedError)
+    def test_ABCEnsemble_prepend(self):
+        ens = Ensemble()
+        ens.can_prepend(1)
+
+    @raises(NotImplementedError)
     def test_ABCVolumeEnsemble(self):
-        ens = VolumeEnsemble()
+        ens = VolumeEnsemble(lambda x : True)
         ens(1)
+
+    @raises(NotImplementedError)
+    def test_ABCEnsemble_append(self):
+        ens = VolumeEnsemble(lambda x : True)
+        ens.can_append(1)
+
+    @raises(NotImplementedError)
+    def test_ABCEnsemble_prepend(self):
+        ens = VolumeEnsemble(lambda x : True)
+        ens.can_prepend(1)

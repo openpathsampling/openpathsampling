@@ -918,3 +918,14 @@ class testMinusMover(object):
             len(sub[-1][0].trials[0].trajectory),
             len(traj_bad_extension)+self.dyn.n_frames_max-1
         )
+
+class testMoverABCError(object):
+    @raises(NotImplementedError)
+    def test_ABCMover(self):
+        pm = PathMover()
+        pm.move([])
+
+    @raises(NotImplementedError)
+    def test_ABCSampleGeneratingMover(self):
+        pm = SampleGeneratingMover()
+        pm([])
