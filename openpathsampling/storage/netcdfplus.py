@@ -8,133 +8,15 @@ init_log = logging.getLogger('openpathsampling.initialization')
 from todict import StorableObjectJSON
 
 import numpy as np
-from cache import WeakLRUCache, WeakCache, WeakLimitCache
 import netCDF4 as netcdf
 import os.path
 
 #=============================================================================================
-# SOURCE CONTROL
-#=============================================================================================
-
-__version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jz $"
-
-#=============================================================================================
-# NetCDF Storage for multiple forked trajectories
+# Extended NetCDF Storage for multiple forked trajectories
 #=============================================================================================
 
 class NetCDFPlus(netcdf.Dataset):
-    '''
-    A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
-    simulation. This allows effective storage of shooting trajectories '''
-
-    # I was wondering if it makes sense to just treat the stores as a
-    # variable with one index, since their basic behaviour is the same.
-    # For now I would leave it this way to make clear, that means a normal
-    # netCDF variable is accessed by storage.variables[name][idx] and the
-    # `special` variable is accessed by storage.store[idx]
-
     support_simtk_unit = True
-
-    @staticmethod
-    def default_cache_sizes():
-        return {
-            'trajectories' : WeakLRUCache(10000),
-            'snapshots' : WeakLRUCache(50000),
-            'configurations' : WeakLRUCache(10000),
-            'momenta' : WeakLRUCache(10000),
-            'samples' : WeakLRUCache(25000),
-            'samplesets' : False,
-            'cvs' : True,
-            'pathmovers' : True,
-            'shootingpoints' : WeakLRUCache(10000),
-            'shootingpointselectors' : True,
-            'engines' : True,
-            'pathsimulators' : True,
-            'volumes' : True,
-            'ensembles' : True,
-            'pathmovechanges' : False,
-            'transitions' : True,
-            'networks' : True,
-            '_details' : False,
-            'steps' : WeakLRUCache(1000)
-        }
-
-    # Analysis caching is very large to allow fast processing
-
-    @staticmethod
-    def analysis_cache_sizes():
-        return {
-            'trajectories' : WeakLimitCache(100000),
-            'snapshots' : WeakLimitCache(500000),
-            'configurations' : WeakLRUCache(10000),
-            'momenta' : WeakLRUCache(10000),
-            'samples' : WeakLimitCache(250000),
-            'samplesets' : WeakLimitCache(100000),
-            'cvs' : True,
-            'pathmovers' : True,
-            'shootingpoints' : WeakLimitCache(100000),
-            'shootingpointselectors' : True,
-            'engines' : True,
-            'pathsimulators' : True,
-            'volumes' : True,
-            'ensembles' : True,
-            'pathmovechanges' : WeakLimitCache(250000),
-            'transitions' : True,
-            'networks' : True,
-            'ddetails' : False,
-            'steps' : WeakLimitCache(100000)
-        }
-
-    # Production. No loading, only last 1000 steps and a few other objects for error
-    # testing
-
-    def production_cache_sizes(self):
-        return {
-            'trajectories' : WeakLRUCache(),
-            'snapshots' : WeakLRUCache(),
-            'configurations' : WeakLRUCache(),
-            'momenta' : WeakLRUCache(),
-            'samples' : WeakLRUCache(),
-            'samplesets' : False,
-            'cvs' : False,
-            'pathmovers' : False,
-            'shootingpoints' : False,
-            'shootingpointselectors' : False,
-            'engines' : False,
-            'pathsimulators' : False,
-            'volumes' : False,
-            'ensembles' : False,
-            'pathmovechanges' : False,
-            'transitions' : False,
-            'networks' : False,
-            'details' : False,
-            'steps' : WeakCache()
-        }
-
-    # No caching (so far only CVs internal storage is there)
-
-    def no_cache_sizes(self):
-        return {
-            'trajectories' : False,
-            'snapshots' : False,
-            'configurations' : False,
-            'momenta' : False,
-            'samples' : False,
-            'samplesets' : False,
-            'cvs' : False,
-            'pathmovers' : False,
-            'shootingpoints' : False,
-            'shootingpointselectors' : False,
-            'engines' : False,
-            'pathsimulators' : False,
-            'volumes' : False,
-            'ensembles' : False,
-            'pathmovechanges' : False,
-            'transitions' : False,
-            'networks' : False,
-            'details' : False,
-            'steps' : False
-        }
 
     class Variable_Delegate(object):
         def __init__(self, variable, getter, setter):
@@ -157,40 +39,6 @@ class NetCDFPlus(netcdf.Dataset):
 
         def __getattr__(self, item):
             return getattr(self.variable, item)
-
-    def set_caching_mode(self, mode='default'):
-        """
-        Set default values for all caches
-
-        Parameters
-        ----------
-        caching : str
-            One of the following values is allowed 'default', 'production',
-            'analysis', 'off'
-
-        """
-
-        available_cache_sizes = {
-            'default': self.default_cache_sizes,
-            'analysis': self.analysis_cache_sizes,
-            'production': self.production_cache_sizes,
-            'off': self.no_cache_sizes
-        }
-
-        if mode in available_cache_sizes:
-            # We need cache sizes as a function. Otherwise we will reuse the same
-            # caches for each storage and that will cause problems! Lots of...
-            cache_sizes = available_cache_sizes[mode]()
-        else:
-            raise ValueError(
-                "mode '" + mode + "' is not supported. Try one of " +
-                str(available_cache_sizes.keys())
-            )
-
-        for store_name, caching in cache_sizes.iteritems():
-            if hasattr(self, store_name):
-                store = getattr(self, store_name)
-                store.set_caching(caching)
 
     @property
     def objects(self):
@@ -452,9 +300,6 @@ class NetCDFPlus(netcdf.Dataset):
             return store.load(*args, **kwargs)
 
         raise RuntimeError('No store registered to load variable type %s' % obj_type)
-        # no store found. This is bad and should be logged and raise
-        # an exception
-#        return None
 
     def idx(self, obj):
         """

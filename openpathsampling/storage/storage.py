@@ -13,12 +13,17 @@ init_log = logging.getLogger('openpathsampling.initialization')
 import openpathsampling as paths
 import simtk.unit as u
 from netcdfplus import NetCDFPlus
+from cache import WeakLRUCache, WeakCache, WeakLimitCache
 
 #=============================================================================================
 # OPS SPECIFIC STORAGE
 #=============================================================================================
 
 class Storage(NetCDFPlus):
+    """
+    A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
+    simulation. This allows effective storage of shooting trajectories
+    """
 
     def get_unit(self, dimension):
         """
@@ -216,6 +221,141 @@ class Storage(NetCDFPlus):
 
     def _restore(self):
         self.topology = self.topologies[0]
+
+    @staticmethod
+    def default_cache_sizes():
+        return {
+            'trajectories' : WeakLRUCache(10000),
+            'snapshots' : WeakLRUCache(50000),
+            'configurations' : WeakLRUCache(10000),
+            'momenta' : WeakLRUCache(10000),
+            'samples' : WeakLRUCache(25000),
+            'samplesets' : False,
+            'cvs' : True,
+            'pathmovers' : True,
+            'shootingpoints' : WeakLRUCache(10000),
+            'shootingpointselectors' : True,
+            'engines' : True,
+            'pathsimulators' : True,
+            'volumes' : True,
+            'ensembles' : True,
+            'pathmovechanges' : False,
+            'transitions' : True,
+            'networks' : True,
+            '_details' : False,
+            'steps' : WeakLRUCache(1000)
+        }
+
+    # Analysis caching is very large to allow fast processing
+
+    @staticmethod
+    def analysis_cache_sizes():
+        return {
+            'trajectories' : WeakLimitCache(100000),
+            'snapshots' : WeakLimitCache(500000),
+            'configurations' : WeakLRUCache(10000),
+            'momenta' : WeakLRUCache(10000),
+            'samples' : WeakLimitCache(250000),
+            'samplesets' : WeakLimitCache(100000),
+            'cvs' : True,
+            'pathmovers' : True,
+            'shootingpoints' : WeakLimitCache(100000),
+            'shootingpointselectors' : True,
+            'engines' : True,
+            'pathsimulators' : True,
+            'volumes' : True,
+            'ensembles' : True,
+            'pathmovechanges' : WeakLimitCache(250000),
+            'transitions' : True,
+            'networks' : True,
+            'ddetails' : False,
+            'steps' : WeakLimitCache(100000)
+        }
+
+    # Production. No loading, only last 1000 steps and a few other objects for error
+    # testing
+
+    def production_cache_sizes(self):
+        return {
+            'trajectories' : WeakLRUCache(),
+            'snapshots' : WeakLRUCache(),
+            'configurations' : WeakLRUCache(),
+            'momenta' : WeakLRUCache(),
+            'samples' : WeakLRUCache(),
+            'samplesets' : False,
+            'cvs' : False,
+            'pathmovers' : False,
+            'shootingpoints' : False,
+            'shootingpointselectors' : False,
+            'engines' : False,
+            'pathsimulators' : False,
+            'volumes' : False,
+            'ensembles' : False,
+            'pathmovechanges' : False,
+            'transitions' : False,
+            'networks' : False,
+            'details' : False,
+            'steps' : WeakCache()
+        }
+
+    # No caching (so far only CVs internal storage is there)
+
+    def no_cache_sizes(self):
+        return {
+            'trajectories' : False,
+            'snapshots' : False,
+            'configurations' : False,
+            'momenta' : False,
+            'samples' : False,
+            'samplesets' : False,
+            'cvs' : False,
+            'pathmovers' : False,
+            'shootingpoints' : False,
+            'shootingpointselectors' : False,
+            'engines' : False,
+            'pathsimulators' : False,
+            'volumes' : False,
+            'ensembles' : False,
+            'pathmovechanges' : False,
+            'transitions' : False,
+            'networks' : False,
+            'details' : False,
+            'steps' : False
+        }
+
+    def set_caching_mode(self, mode='default'):
+        """
+        Set default values for all caches
+
+        Parameters
+        ----------
+        caching : str
+            One of the following values is allowed 'default', 'production',
+            'analysis', 'off'
+
+        """
+
+        available_cache_sizes = {
+            'default': self.default_cache_sizes,
+            'analysis': self.analysis_cache_sizes,
+            'production': self.production_cache_sizes,
+            'off': self.no_cache_sizes
+        }
+
+        if mode in available_cache_sizes:
+            # We need cache sizes as a function. Otherwise we will reuse the same
+            # caches for each storage and that will cause problems! Lots of...
+            cache_sizes = available_cache_sizes[mode]()
+        else:
+            raise ValueError(
+                "mode '" + mode + "' is not supported. Try one of " +
+                str(available_cache_sizes.keys())
+            )
+
+        for store_name, caching in cache_sizes.iteritems():
+            if hasattr(self, store_name):
+                store = getattr(self, store_name)
+                store.set_caching(caching)
 
 
 class AnalysisStorage(Storage):
