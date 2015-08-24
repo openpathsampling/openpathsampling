@@ -86,7 +86,7 @@ class PathSimulator(OPSNamed):
         nsteps : int
             number of step to be run
         """
-        logger.warning("Running an empty pathsimulator? Try a subclass, maybe!")
+        raise self.AbstractBaseClassError()
 
     def save_initial(self):
         """
