@@ -25,6 +25,14 @@ class PathMoveChange(TreeSetMixin, OPSObject):
         E.g. for a RandomChoiceMover which Mover was selected.
     '''
 
+    @property
+    def _node_type(self):
+        return self.mover._node_type
+
+    @property
+    def _leaves(self):
+        return self.mover._leaves
+
     def __init__(self, subchanges=None, samples=None, mover=None, details=None):
         OPSObject.__init__(self)
         self._len = None
@@ -376,9 +384,6 @@ class SequentialPathMoveChange(PathMoveChange):
         super(SequentialPathMoveChange, self).__init__(mover=mover, details=details)
         self.subchanges = subchanges
 
-    @property
-    def _leaves(self):
-        return [self.subchanges[:n+1] for n in range(len(self.subchanges))]
 
     def _get_results(self):
         samples = []

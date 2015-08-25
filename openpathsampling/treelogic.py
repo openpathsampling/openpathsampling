@@ -1,5 +1,7 @@
 __author__ = 'jan-hendrikprinz'
 
+import itertools
+
 class TreeSetMixin(object):
     """
     A mixin that provides basic handling for sets of trees.
@@ -16,6 +18,13 @@ class TreeSetMixin(object):
 
     The main difficulty is that now leaves can have two meaning and we need to
     """
+
+    NODE_TYPE_NONE = 0
+    NODE_TYPE_ALL = 1
+    NODE_TYPE_ONE = 2
+    NODE_TYPE_ACCUMULATE = 3
+    NODE_TYPE_POWER = 4
+    NODE_TYPE_CUSTOM = 5
 
     @staticmethod
     def _indent(s):
@@ -114,6 +123,83 @@ class TreeSetMixin(object):
     def key(self, change):
         tree = self.keylist()
         return [leave for leave in tree if leave[1] is change ][0][0]
+
+    def locators(self):
+        return self.keylist()
+
+    @property
+    def deterministic(self):
+        if not hasattr(self, '_deterministic'):
+            if len(self._leaves) > 1:
+                self._deterministic = False
+            else:
+                self._deterministic = True
+                for node in self._subnodes:
+                    if not node.deterministic:
+                        self._deterministic = False
+
+        return self._deterministic
+
+    @property
+    def unique(self):
+        ret = []
+        if len(self._subnodes) == 0:
+            ret = [self.identifier]
+        elif self.deterministic:
+            ret = [self.identifier]
+        elif len(self._subnodes) == 1:
+            ret = [self.identifier, self._subnodes[0].unique]
+        else:
+            ret = [self.identifier]
+            if len(self._leaves) < 2:
+                ## our node is deterministic locally
+                for sub in self._subnodes:
+#                    if not sub.deterministic:
+                    ret.append(sub.unique)
+#                    else:
+#                        ret.append(tuple([None]))
+            else:
+                ## our node was chosen from multiple possibilities
+                for sub in self._subnodes:
+                    ret.append(sub.unique)
+
+        return tuple(ret)
+
+    @property
+    def enum(self):
+        l = []
+        ret = (self.identifier, )
+        if self.deterministic:
+            l.append(ret)
+        else:
+            for leave in self._leaves:
+                if len(leave) == 0:
+                    l.append(ret)
+                else:
+                    l.extend(itertools.product(ret, *map(lambda x : x.enum, leave)))
+
+        return l
+
+    @property
+    def _leaves(self):
+        if self._node_type == self.NODE_TYPE_ALL:
+            return [[sub for sub in self._subnodes]]
+        elif self._node_type == self.NODE_TYPE_ACCUMULATE:
+            return [self._subnodes[:n+1] for n in range(0, len(self._subnodes))]
+        elif self._node_type == self.NODE_TYPE_ONE:
+            return [[sub] for sub in self._subnodes]
+        elif self._node_type == self.NODE_TYPE_POWER:
+            s = list(self._subnodes)
+            return itertools.chain.from_iterable(
+                itertools.combinations(s, r) for r in range(len(s)+1)
+            )
+        elif self._node_type == self.NODE_TYPE_NONE:
+            return []
+        elif hasattr(self._node_type, '__call__'):
+            return self._node_type()
+        else:
+            raise RuntimeError('Node has no type !')
+
 
     @classmethod
     def _check_tree(cls, tree, branch, match):
@@ -333,11 +419,15 @@ class TreeSetMixin(object):
         for leaf in self._leaves:
             sub = leaf[-1]
             pre = leaf[:-1]
-            subtree = sub.keylist()
+            subtree = sub.keylist2()
             mp = [[m.identifier] for m in pre]
             result.extend([ ( path + mp + [m[0]], m[1] ) for m in subtree ])
 
         return result
+
+    @property
+    def is_sequential(self):
+        return len(self._leaves) < 2
 
     def keylist(self):
         """
@@ -351,13 +441,13 @@ class TreeSetMixin(object):
         path = [self.identifier]
 
         result = list()
-        result.append( ( path, self ) )
+        result.append( ( tuple(path), self ) )
         mp = []
         for sub in self._subnodes:
             subtree = sub.keylist()
-            result.extend([ ( path + mp + [m[0]], m[1] ) for m in subtree ])
-            if self._is_sequential:
-                mp.append([sub.identifier])
+            result.extend([ ( tuple(path + mp + [m[0]]), m[1] ) for m in subtree ])
+            if self.is_sequential:
+                mp.append(tuple([sub.identifier]))
 
         return result
 

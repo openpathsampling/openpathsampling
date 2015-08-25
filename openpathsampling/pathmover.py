@@ -95,6 +95,8 @@ class PathMover(TreeSetMixin, OPSNamed):
     in the PathMover, but have it be a separate class ~~~DWHS
     """
 
+    _node_type = TreeSetMixin.NODE_TYPE_ALL
+
     def __init__(self):
         OPSNamed.__init__(self)
 
@@ -144,10 +146,6 @@ class PathMover(TreeSetMixin, OPSNamed):
             return original.__class__ is test
         else:
             return False
-
-    @property
-    def _leaves(self):
-        return [ [sub for sub in self.submovers] ]
 
     @property
     def submovers(self):
@@ -1250,6 +1248,8 @@ class SelectionMover(PathMover):
         the PathMovers to choose from
     """
 
+    _node_type = TreeSetMixin.NODE_TYPE_ONE
+
     def __init__(self, movers):
         super(SelectionMover, self).__init__()
 
@@ -1467,6 +1467,9 @@ class ConditionalMover(PathMover):
     movepath (if if_move is accepted) or the else_move movepath (if if_move
     is rejected).
     """
+
+    _node_type = TreeSetMixin.NODE_TYPE_CUSTOM
+
     def __init__(self, if_mover, then_mover, else_mover):
         """
         Parameters
@@ -1493,7 +1496,7 @@ class ConditionalMover(PathMover):
         return [ sub.output_ensembles for sub in self.submovers ]
 
     @property
-    def _leaves(self):
+    def _node_type(self):
         return [
             [self.if_mover],
             [self.if_mover, self.then_mover],
@@ -1547,10 +1550,6 @@ class SequentialMover(PathMover):
         return self.movers
 
     @property
-    def _leaves(self):
-        return [self.submovers[:n+1] for n in range(0,len(self.submovers))]
-
-    @property
     def is_ensemble_change_mover(self):
         if self._is_ensemble_change_mover is not None:
             return self._is_ensemble_change_mover
@@ -1597,6 +1596,9 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     promotion ConditionalSequentialMover. Even if the EnsembleHop fails, the
     accepted shooting move should be accepted.
     """
+
+    _node_type = TreeSetMixin.NODE_TYPE_ACCUMULATE
+
     def move(self, globalstate):
         logger.debug("==== BEGINNING " + self.name + " ====")
         subglobal = paths.SampleSet(self.legal_sample_set(globalstate))
@@ -1631,6 +1633,9 @@ class ConditionalSequentialMover(SequentialMover):
     ConditionalSequentialMover only works if there is a *single* active
     sample per replica.
     """
+
+    _node_type = TreeSetMixin.NODE_TYPE_ACCUMULATE
+
     def move(self, globalstate):
         logger.debug("Starting conditional sequential move")
 
