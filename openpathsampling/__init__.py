@@ -86,6 +86,8 @@ from analysis.replica_network import (
     ReplicaNetworkGraph
 )
 
+from live_visualization import LiveVisualization
+
 from pathmover import Details, MoveDetails, SampleDetails
 
 from pathmovechange import (
