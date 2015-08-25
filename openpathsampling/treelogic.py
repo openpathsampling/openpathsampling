@@ -217,7 +217,7 @@ class TreeSetMixin(object):
         else:
             if len(branch) > 1:
                 sub = branch[1]
-                sub_branch = [branch[0]] + branch[2:]
+                sub_branch = (type(branch))([branch[0]] + list(branch[2:]))
                 if type(sub) is str:
                     region = None
                     for wild in WILDCARDS:
@@ -231,8 +231,7 @@ class TreeSetMixin(object):
                     if region.start < len(tree):
                         # check that there are enough children to match
                         for left in range(*region.indices(len(tree))):
-
-                            sub_tree = [tree[0]] + tree[1+left:]
+                            sub_tree = (type(tree))([tree[0]] + list(tree[1+left:]))
                             if cls._check_tree(sub_tree, sub_branch, match):
                                 return True
 
@@ -245,7 +244,8 @@ class TreeSetMixin(object):
                             # go to next sub in branch
                             if len(branch) > 2:
                                 if len(tree) > 2:
-                                    return cls._check_tree([tree[0]] + tree[2:], sub_branch, match)
+                                    sub_tree = (type(tree))([tree[0]] + list(tree[2:]))
+                                    return cls._check_tree(sub_tree, sub_branch, match)
                                 else:
                                     return False
                     else:
@@ -339,7 +339,7 @@ class TreeSetMixin(object):
             True if the node is in the tree or if the subtree is in the tree
 
         """
-        if type(item) is list:
+        if type(item) is tuple or type(item) is list:
             return self._check_head_node(item)
 
             # Disable checking for submoves for now. I think we will not
