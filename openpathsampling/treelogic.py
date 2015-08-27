@@ -473,7 +473,7 @@ class TreeSetMixin(object):
                     )
                     excludes.append(leave_id)
 
-                mp.append(tuple([sub.identifier]))
+                mp.append(TupleTree([sub.identifier]))
 
         return result
 
@@ -612,7 +612,30 @@ class TreeSetMixin(object):
 
         return output
 
-class TupleTree(tuple):
+    @property
+    def head(self):
+        return self[0]
+
+    @staticmethod
+    def _tail(obj):
+        if len(obj._subnodes) > 0:
+            return TreeSetMixin._tail(obj[-1])
+
+        return obj[0]
+
+    @property
+    def tail(self):
+        return TupleTree._tail(self)
+
+    @property
+    def branches(self):
+        return self._subnodes
+
+    def treeprint(self):
+        return str(self.head) + "\n" + TreeSetMixin._indent("\n".join(map(lambda x : x.treeprint(), self.branches)))
+
+
+class TupleTree(tuple, TreeSetMixin):
 
     @staticmethod
     def contains(needle, haystack):
@@ -630,27 +653,14 @@ class TupleTree(tuple):
     def __str__(self):
         return TupleTree.treeprint(self)
 
-    @staticmethod
-    def treeprint(x):
-        return str(x[0]) + "\n" + TreeSetMixin._indent("\n".join(map(TupleTree.treeprint, x[1:])))
+    @property
+    def _leaves(self):
+        return [self[1:]]
+
+    @property
+    def _subnodes(self):
+        return self[1:]
 
     @property
     def identifier(self):
         return self[0]
-
-    def head(self):
-        return self[0]
-
-    @staticmethod
-    def _tail(obj):
-        if len(obj) > 1:
-            if isinstance(obj[-1], tuple):
-                return TupleTree._tail(obj[-1])
-
-            return obj[-1]
-
-        return obj[0]
-
-    @property
-    def tail(self):
-        return TupleTree._tail(self)

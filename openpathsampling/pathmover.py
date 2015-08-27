@@ -331,14 +331,8 @@ class PathMover(TreeSetMixin, OPSNamed):
 
         return paths.EmptyPathMoveChange()  # pragma: no cover
 
-    def __str__(self):
-        if self.name == self.__class__.__name__:
-            return self.__repr__()
-        else:
-            return self.name
-
     def __repr__(self):
-        return self.name
+        return self.name + '(%s)' % self.idx.values()
 
 
 ###############################################################################
