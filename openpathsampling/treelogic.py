@@ -203,21 +203,16 @@ class TreeSetMixin(object):
 
     @property
     def enum(self):
-        l = []
         ret = TupleTree([self.identifier])
         if self.deterministic:
-            l.append(ret)
+            yield ret
         else:
             for leave in self._choices:
                 if len(leave) == 0:
-                    l.append(ret)
+                    yield ret
                 else:
-                    l.extend(
-                        ( TupleTree(l) for l in
-                          itertools.product(ret, *map(lambda x : x.enum, leave)))
-                    )
-
-        return l
+                    for l in itertools.product(ret, *map(lambda x : x.enum, leave)):
+                        yield TupleTree(l)
 
     @property
     def _choices(self):
