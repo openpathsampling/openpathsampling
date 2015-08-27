@@ -140,10 +140,12 @@ class PathMover(TreeSetMixin, OPSNamed):
 
     @staticmethod
     def _default_match(original, test):
-        if isinstance(test, paths.PathMover):
-            return original is test
-        elif issubclass(test, paths.PathMover):
-            return original.__class__ is test
+        if test is original.identifier:
+            return True
+        elif isinstance(test, paths.PathMover):
+            return original.identifier is test
+        elif type(test) is type and issubclass(test, paths.PathMover):
+            return original.identifier.__class__ is test
         else:
             return False
 
@@ -158,6 +160,12 @@ class PathMover(TreeSetMixin, OPSNamed):
             the list of sub-movers
         """
         return []
+
+    def __contains__(self, item):
+        if isinstance(item, paths.PathMoveChange):
+            return item.unique in self
+
+        return super(PathMover, self).__contains__(item)
 
     @staticmethod
     def _flatten(ensembles):

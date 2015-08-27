@@ -25,13 +25,11 @@ class PathMoveChange(TreeSetMixin, OPSObject):
         E.g. for a RandomChoiceMover which Mover was selected.
     '''
 
-    @property
-    def _node_type(self):
-        return self.mover._node_type
+    _node_type = TreeSetMixin.NODE_TYPE_ALL
 
     @property
-    def _leaves(self):
-        return self.mover._leaves
+    def is_sequential(self):
+        return self.mover.is_sequential
 
     def __init__(self, subchanges=None, samples=None, mover=None, details=None):
         OPSObject.__init__(self)
@@ -78,12 +76,14 @@ class PathMoveChange(TreeSetMixin, OPSObject):
 
     @staticmethod
     def _default_match(original, test):
-        if isinstance(test, paths.PathMoveChange):
-            return original is test
+        if original.identifier is test:
+            return True
+        elif isinstance(test, paths.PathMoveChange):
+            return original.identifier is test
         elif isinstance(test, paths.PathMover):
-            return original.mover is test
-        elif issubclass(test, paths.PathMover):
-            return original.mover.__class__ is test
+            return original.identifier is test
+        elif type(test) is type and issubclass(test, paths.PathMover):
+            return original.identifier.__class__ is test
         else:
             return False
 
