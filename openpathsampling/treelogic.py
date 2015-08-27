@@ -1,6 +1,7 @@
 __author__ = 'jan-hendrikprinz'
 
 import itertools
+import collections
 
 class TreeSetMixin(object):
     """
@@ -77,8 +78,30 @@ class TreeSetMixin(object):
         PathMoveChange
             the n-th subchange if this PathMoveChange uses underlying changes
         """
+
         if type(item) is int:
-            return self._subnodes[item]
+            if item == 0:
+                return self
+            elif item > 0:
+                return self._subnodes[item - 1]
+            elif item < 0:
+                return self._subnodes[item]
+
+
+        if isinstance(item, tuple):
+            self._last_found = None
+            def match_find(original, test):
+                self._last_found = original
+                return self._default_match(original, test)
+
+            find_match = TreeSetMixin._check_tree(
+                self, item, match_find
+            )
+
+            if find_match:
+                return self._last_found
+            else:
+                raise KeyError('Key %s not found in tree' % item)
 
         if type(item) is list:
             # this is assumed to be a tree
@@ -132,6 +155,9 @@ class TreeSetMixin(object):
     def locators(self):
         return self.keylist()
 
+    def locate(self, item):
+        return [key for key, value in self.keylist().iteritems() if value is item]
+
     @property
     def is_sequential(self):
         return len(self._leaves) < 2
@@ -162,14 +188,9 @@ class TreeSetMixin(object):
         else:
             ret = [self.identifier]
             if self.is_sequential:
-                ## our node is deterministic locally
                 for sub in self._subnodes:
-#                    if not sub.deterministic:
                     ret.append(sub.unique)
-#                    else:
-#                        ret.append(tuple([None]))
             else:
-                ## our node was chosen from multiple possibilities
                 for sub in self._subnodes:
                     ret.append(sub.unique)
 
@@ -217,61 +238,7 @@ class TreeSetMixin(object):
 
     @classmethod
     def _check_tree(cls, tree, branch, match, leave_n = 0, start = 0, branch_n = 0):
-        WILDCARDS = {
-            '*' : lambda s : slice(0,None),
-            '.' : lambda s : slice(1,2),
-            '?' : lambda s : slice(0,2),
-            ':' : lambda s : slice(*map(int, s.split(':'))),
-            None: lambda s : slice(1,2)
-        }
-        MATCH_ONE = ['.', '?', '*']
-
-        # print leave_n, '/', len(tree._leaves), start, '/', len(tree._leaves[leave_n]), tree.__class__.__name__, tree.identifier,  match(tree.identifier, branch[0]), branch
-
-        if branch[0] not in MATCH_ONE and not match(tree, branch[0]):
-            return False
-        else:
-            if len(branch) + branch_n < 2:
-                return True
-            else:
-                sub = branch[branch_n+1]
-                if type(sub) is str:
-                    region = None
-                    for wild in WILDCARDS:
-                        if wild in sub:
-                            region = WILDCARDS[wild](sub)
-                            break
-
-                    if region is None:
-                        raise ValueError('Parse error. ONLY ' + str(WILDCARDS.values()) + ' as wildcards allowed.')
-
-                    if leave_n < len(tree._leaves):
-                        leave = tree._leaves[leave_n]
-                        if region.start <= len(leave):
-                            # check that there are enough children to match
-                            for left in range(*region.indices(len(leave) - 1)):
-                                if cls._check_tree(tree, branch, match, leave_n, start + left, branch_n + 1):
-                                    return True
-
-                else:
-                    if leave_n < len(tree._leaves):
-                        leave = tree._leaves[leave_n]
-
-                        if len(leave) > start:
-                            if cls._check_tree(leave[start], sub, match):
-                                # go to next sub in branch
-                                if len(branch) - branch_n < 3:
-                                    return True
-                                else:
-                                    if len(leave) > start + 1:
-                                        return cls._check_tree(tree, branch, match, leave_n, start + 1, branch_n + 1)
-
-
-                if leave_n < len(tree._leaves) - 1:
-                    if cls._check_tree(tree, branch, match, leave_n + 1):
-                        return True
-
-                return False
+        return TreeSetMixin._general_check_tree(tree, branch, match, lambda x : x._leaves, leave_n, start, branch_n)
 
     @classmethod
     def _general_check_tree(cls, tree, branch, match, leave_fnc, leave_n = 0, start = 0, branch_n = 0):
@@ -479,28 +446,6 @@ class TreeSetMixin(object):
         """
         return hex(id(self))
 
-    def keylist2(self):
-        """
-        Return a list of key : subtree tuples
-
-        Returns
-        -------
-        list of tuple(key, subtree)
-            A list of all subtrees with their respective keys
-        """
-        path = [self.identifier]
-
-        result = list()
-        result.append( ( path, self ) )
-        for leaf in self._leaves:
-            sub = leaf[-1]
-            pre = leaf[:-1]
-            subtree = sub.keylist2()
-            mp = [[m.identifier] for m in pre]
-            result.extend([ ( path + mp + [m[0]], m[1] ) for m in subtree ])
-
-        return result
-
     def keylist(self):
         """
         Return a list of key : subtree tuples
@@ -512,8 +457,8 @@ class TreeSetMixin(object):
         """
         path = [self.identifier]
 
-        result = list()
-        result.append((tuple(path), self))
+        result = collections.OrderedDict()
+        result[tuple(path)] = self
         excludes = []
         for leave in self._leaves:
             mp = []
@@ -521,8 +466,10 @@ class TreeSetMixin(object):
                 subtree = sub.keylist()
                 leave_id = tuple(map(lambda x : x.identifier, leave[:pos+1]))
                 if leave_id not in excludes:
-    #                print tuple(mp) == leave_id[:-1], tuple(mp), leave_id[:-1]
-                    result.extend([ ( tuple(path + mp + [m[0]]), m[1] ) for m in subtree ])
+                    # print tuple(mp) == leave_id[:-1], tuple(mp), leave_id[:-1]
+                    result.update(
+                        {tuple(path + mp + [key]) : m for key, m in subtree.iteritems()}
+                    )
                     excludes.append(leave_id)
 
                 mp.append(tuple([sub.identifier]))
