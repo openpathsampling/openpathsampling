@@ -404,9 +404,10 @@ class MoveScheme(OPSNamed):
     def move_acceptance(self, storage):
         for step in storage.steps:
             delta = step.change
-            for m in delta:
+            for k, m in delta.iteritems():
                 acc = 1 if m.accepted else 0
-                key = (m.mover, str(delta.key(m)))
+                key = (m.mover, k)
+
                 try:
                     self._mover_acceptance[key][0] += acc
                     self._mover_acceptance[key][1] += 1

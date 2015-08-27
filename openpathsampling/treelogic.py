@@ -94,7 +94,7 @@ class TreeSetMixin(object):
                 self._last_found = original
                 return self._default_match(original, test)
 
-            find_match = TreeSetMixin._check_tree(
+            find_match = TreeSetMixin._in_tree(
                 self, item, match_find
             )
 
@@ -148,6 +148,12 @@ class TreeSetMixin(object):
 
         return self._len
 
+    def items(self):
+        return self.locators().items()
+
+    def iteritems(self):
+        return self.locators().iteritems()
+
     def key(self, change):
         tree = self.keylist()
         return [leave for leave in tree if leave[1] is change ][0][0]
@@ -160,7 +166,7 @@ class TreeSetMixin(object):
 
     @property
     def is_sequential(self):
-        return len(self._leaves) < 2
+        return len(self._choices) < 2
 
     @property
     def deterministic(self):
@@ -174,7 +180,6 @@ class TreeSetMixin(object):
                         self._deterministic = False
 
         return self._deterministic
-
 
     @property
     def unique(self):
@@ -203,7 +208,7 @@ class TreeSetMixin(object):
         if self.deterministic:
             l.append(ret)
         else:
-            for leave in self._leaves:
+            for leave in self._choices:
                 if len(leave) == 0:
                     l.append(ret)
                 else:
@@ -212,7 +217,7 @@ class TreeSetMixin(object):
         return l
 
     @property
-    def _leaves(self):
+    def _choices(self):
         if self._node_type == self.NODE_TYPE_ALL:
             return [[sub for sub in self._subnodes]]
         elif self._node_type == self.NODE_TYPE_ACCUMULATE:
@@ -235,13 +240,20 @@ class TreeSetMixin(object):
         else:
             raise RuntimeError('Node has no type !')
 
-
     @classmethod
-    def _check_tree(cls, tree, branch, match, leave_n = 0, start = 0, branch_n = 0):
-        return TreeSetMixin._general_check_tree(tree, branch, match, lambda x : x._leaves, leave_n, start, branch_n)
+    def _in_tree(cls,
+                 tree,
+                 test,
+                 node_match_fnc,
+                 leave_fnc=None,
+                 leave_n = 0,
+                 tree_branch_n = 0,
+                 test_branch_n = 0
+    ):
 
-    @classmethod
-    def _general_check_tree(cls, tree, branch, match, leave_fnc, leave_n = 0, start = 0, branch_n = 0):
+        if leave_fnc is None:
+            leave_fnc =  lambda x : x._choices
+
         WILDCARDS = {
             '*' : lambda s : slice(0,None),
             '.' : lambda s : slice(1,2),
@@ -253,13 +265,13 @@ class TreeSetMixin(object):
 
         # print leave_n, '/', len(tree._leaves), start, '/', len(tree._leaves[leave_n]), tree.__class__.__name__, tree.identifier,  match(tree.identifier, branch[0]), branch
 
-        if branch[0] not in MATCH_ONE and not match(tree, branch[0]):
+        if test[0] not in MATCH_ONE and not node_match_fnc(tree, test[0]):
             return False
         else:
-            if len(branch) + branch_n < 2:
+            if len(test) + test_branch_n < 2:
                 return True
             else:
-                sub = branch[branch_n+1]
+                sub = test[test_branch_n+1]
                 if type(sub) is str:
                     region = None
                     for wild in WILDCARDS:
@@ -275,31 +287,30 @@ class TreeSetMixin(object):
                         if region.start <= len(leave):
                             # check that there are enough children to match
                             for left in range(*region.indices(len(leave) - 1)):
-                                if cls._general_check_tree(tree, branch, match, leave_fnc, leave_n, start + left, branch_n + 1):
+                                if cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n, tree_branch_n + left, test_branch_n + 1):
                                     return True
 
                 else:
                     if leave_n < len(leave_fnc(tree)):
                         leave = leave_fnc(tree)[leave_n]
 
-                        if len(leave) > start:
-                            if cls._general_check_tree(leave[start], sub, match, leave_fnc):
+                        if len(leave) > tree_branch_n:
+                            if cls._in_tree(leave[tree_branch_n], sub, node_match_fnc, leave_fnc):
                                 # go to next sub in branch
-                                if len(branch) - branch_n < 3:
+                                if len(test) - test_branch_n < 3:
                                     return True
                                 else:
-                                    if len(leave) > start + 1:
-                                        return cls._general_check_tree(tree, branch, match, leave_fnc, leave_n, start + 1, branch_n + 1)
-
+                                    if len(leave) > tree_branch_n + 1:
+                                        return cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n, tree_branch_n + 1, test_branch_n + 1)
 
                 if leave_n < len(leave_fnc(tree)) - 1:
-                    if cls._general_check_tree(tree, branch, match, leave_fnc, leave_n + 1):
+                    if cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n + 1):
                         return True
 
                 return False
 
     def _check_head_node(self, items):
-        return self._check_tree(self, items, self._default_match)
+        return self._in_tree(self, items, self._default_match)
 
     @staticmethod
     def _default_match(original, test):
@@ -460,7 +471,7 @@ class TreeSetMixin(object):
         result = collections.OrderedDict()
         result[tuple(path)] = self
         excludes = []
-        for leave in self._leaves:
+        for leave in self._choices:
             mp = []
             for pos, sub in enumerate(leave):
                 subtree = sub.keylist()
@@ -621,7 +632,7 @@ class TupleTree(tuple):
         def leave_fnc(x):
             return [x[1:]]
 
-        return TreeSetMixin._general_check_tree(haystack, needle, cmp_fnc, leave_fnc)
+        return TreeSetMixin._in_tree(haystack, needle, cmp_fnc, leave_fnc)
 
     def __contains__(self, item):
         return self.contains(item, self)
@@ -632,3 +643,24 @@ class TupleTree(tuple):
     @staticmethod
     def treeprint(x):
         return str(x[0]) + "\n" + TreeSetMixin._indent("\n".join(map(TupleTree.treeprint, x[1:])))
+
+    @property
+    def identifier(self):
+        return self[0]
+
+    def head(self):
+        return self[0]
+
+    @staticmethod
+    def _tail(obj):
+        if len(obj) > 1:
+            if isinstance(obj[-1], tuple):
+                return TupleTree._tail(obj[-1])
+
+            return obj[-1]
+
+        return obj[0]
+
+    @property
+    def tail(self):
+        return TupleTree._tail(self)
