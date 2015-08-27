@@ -199,12 +199,12 @@ class TreeSetMixin(object):
                 for sub in self._subnodes:
                     ret.append(sub.unique)
 
-        return tuple(ret)
+        return TupleTree(ret)
 
     @property
     def enum(self):
         l = []
-        ret = (self.identifier, )
+        ret = TupleTree([self.identifier])
         if self.deterministic:
             l.append(ret)
         else:
@@ -212,7 +212,10 @@ class TreeSetMixin(object):
                 if len(leave) == 0:
                     l.append(ret)
                 else:
-                    l.extend(itertools.product(ret, *map(lambda x : x.enum, leave)))
+                    l.extend(
+                        ( TupleTree(l) for l in
+                          itertools.product(ret, *map(lambda x : x.enum, leave)))
+                    )
 
         return l
 
@@ -393,16 +396,8 @@ class TreeSetMixin(object):
             True if the node is in the tree or if the subtree is in the tree
 
         """
-        if type(item) is tuple or type(item) is list:
+        if isinstance(item, tuple) or type(item) is list:
             return self._check_head_node(item)
-
-            # Disable checking for submoves for now. I think we will not
-            # use this ?!?
-
-            # the head node did not fit so continue trying subnodes
-#            for sub in self.subnodes:
-#                if item in sub:
-#                    return True
         else:
             for x in self:
                 if self._default_match(x, item):
@@ -469,7 +464,7 @@ class TreeSetMixin(object):
         path = [self.identifier]
 
         result = collections.OrderedDict()
-        result[tuple(path)] = self
+        result[TupleTree(path)] = self
         excludes = []
         for leave in self._choices:
             mp = []
@@ -479,7 +474,7 @@ class TreeSetMixin(object):
                 if leave_id not in excludes:
                     # print tuple(mp) == leave_id[:-1], tuple(mp), leave_id[:-1]
                     result.update(
-                        {tuple(path + mp + [key]) : m for key, m in subtree.iteritems()}
+                        {TupleTree(path + mp + [key]) : m for key, m in subtree.iteritems()}
                     )
                     excludes.append(leave_id)
 
