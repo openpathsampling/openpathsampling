@@ -390,6 +390,7 @@ class IPyKernel(object):
                 out.ename = content['ename']
                 out.evalue = content['evalue']
                 out.traceback = content['traceback']
+
             else:
                 print "unhandled iopub msg:", msg_type
 

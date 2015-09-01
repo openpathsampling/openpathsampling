@@ -2,6 +2,7 @@ __author__ = 'jan-hendrikprinz'
 
 import itertools
 import collections
+import random
 
 class TreeSetMixin(object):
     """
@@ -638,11 +639,16 @@ class TreeSetMixin(object):
         spl = [(' |  ' + p if no <= last else '    ' + p) if p[0] == ' ' else ' +- ' + p for no, p in enumerate(spl) if len(p)]
         return '\n'.join(spl)
 
-    def flatten(self):
-        pass
-
     def random(self):
-        pass
+        """
+        Generate a random choice of a tree if it has multiple possibilities
+
+        """
+
+        this_choice = random.choice(self._choices)
+
+        return TupleTree([self] + [ ch.random() for ch in this_choice])
+
 
 class TupleTree(tuple, TreeSetMixin):
 
@@ -686,12 +692,14 @@ class TupleTree(tuple, TreeSetMixin):
             if cycle:
                 p.text('(...)')
             else:
-                with p.group(8, '(', ')'):
+                with p.group(4, '(', ')'):
                     p.text(str(self.head))
-                    p.text(',')
-                    p.breakable()
-                    for idx, item in enumerate(self._subnodes):
-                        if idx:
-                            p.text(',')
-                            p.breakable()
-                        p.pretty(item)
+                    if len(self._subnodes) > 0:
+                        for idx, item in enumerate(self._subnodes):
+                            if idx == 0 or idx < len(self._subnodes):
+                                p.text(',')
+                                p.breakable()
+                            p.pretty(item)
+                    # else:
+                    #     p.text(',')
+                    #     p.breakable()
