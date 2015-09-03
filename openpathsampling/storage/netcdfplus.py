@@ -366,8 +366,8 @@ class NetCDFPlus(netcdf.Dataset):
             an infinite dimension that extends when more objects are stored
 
         """
-        if dim_name not in self.storage.dimensions:
-            self.storage.createDimension(dim_name, size)
+        if dim_name not in self.dimensions:
+            self.createDimension(dim_name, size)
 
     def var_type_to_nc_type(self, var_type):
         type_conversion = {

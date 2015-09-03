@@ -414,7 +414,7 @@ class CV_Function(CollectiveVariable):
     """
 
     allow_marshal = True
-    _allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy', 'pandas']
+    _allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy', 'pandas', 'pyemma.coordinates']
 
     def __init__(
             self,
