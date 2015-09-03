@@ -498,9 +498,9 @@ class testSequentialMover(object):
         # @DWHS: This should have two samples since two are accepted
         # and thus applied
         assert_equal(len(samples), 2)
-        assert_equal(change[0].accepted, False)
-        assert_equal(change[1].accepted, True)
+        assert_equal(change[1].accepted, False)
         assert_equal(change[2].accepted, True)
+        assert_equal(change[3].accepted, True)
         gs = gs + change
         assert_equal(gs[0].ensemble, self.tps)
 
@@ -513,9 +513,9 @@ class testSequentialMover(object):
         # @DWHS: I think if the last is rejected then there should only be two
         # samples to be used, since the last one is not accepted and thus
         # discarded (does not mean that it is not stored!!!)
-        assert_equal(change[0].accepted, True)
         assert_equal(change[1].accepted, True)
-        assert_equal(change[2].accepted, False)
+        assert_equal(change[2].accepted, True)
+        assert_equal(change[3].accepted, False)
         gs = gs + change
         assert_equal(gs[0].ensemble, self.tps)
 
@@ -548,7 +548,7 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
         assert_equal(len(samples), 0)
         allsamp = change.trials
         assert_equal(len(allsamp), 1)
-        assert_equal(change[0].accepted, False)
+        assert_equal(change[1].accepted, False)
         gs = gs + change
         assert_equal(gs[0].ensemble, self.len3)
 
@@ -563,9 +563,9 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
         allsamp = change.trials
         assert_equal(len(allsamp), 3)
 
-        assert_equal(change[0].accepted, True)
         assert_equal(change[1].accepted, True)
-        assert_equal(change[2].accepted, False)
+        assert_equal(change[2].accepted, True)
+        assert_equal(change[3].accepted, False)
         gs = gs + change
         assert_equal(gs[0].ensemble, self.tps)
 
@@ -596,7 +596,7 @@ class testConditionalSequentialMover(testSequentialMover):
         assert_equal(len(samples), 0)
         allsamp = change.trials
         assert_equal(len(allsamp), 1)
-        assert_equal(change[0].accepted, False)
+        assert_equal(change[1].accepted, False)
         gs = gs + change
         assert_equal(gs[0].ensemble, self.len3)
 
@@ -613,9 +613,9 @@ class testConditionalSequentialMover(testSequentialMover):
         # check here if last actual samples was false
         # this actually allows to see later if the single samples were
         # accepted or not, even from the change without loading samples
-        assert_equal(change[0].accepted, True)
         assert_equal(change[1].accepted, True)
-        assert_equal(change[2].accepted, False)
+        assert_equal(change[2].accepted, True)
+        assert_equal(change[3].accepted, False)
         gs = gs + change
         assert_equal(gs[0].ensemble, self.len3)
 
@@ -909,8 +909,8 @@ class testMinusMover(object):
 
         sub = change.subchange.subchange
         assert_equal(self.innermost(innermost_other_ensemble), False)
-        assert_equal(sub[0].accepted, True)
-        assert_equal(sub[1].accepted, False)
+        assert_equal(sub[1].accepted, True)
+        assert_equal(sub[2].accepted, False)
         assert_equal(len(sub.trials), 3) # stop after failed repex
         # only one sample which is not a segment
 

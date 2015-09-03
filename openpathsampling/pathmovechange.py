@@ -26,7 +26,7 @@ class PathMoveChange(TreeMixin, StorableObject):
         E.g. for a RandomChoiceMover which Mover was selected.
     '''
 
-    _node_type = TreeSetMixin.NODE_TYPE_ALL
+    _node_type = TreeMixin.NODE_TYPE_ALL
 
     @property
     def is_sequential(self):

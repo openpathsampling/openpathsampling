@@ -4,7 +4,7 @@ import itertools
 import collections
 import random
 
-class TreeSetMixin(object):
+class TreeMixin(object):
     """
     A mixin that provides basic handling for sets of trees.
 
@@ -49,7 +49,7 @@ class TreeSetMixin(object):
     @staticmethod
     def _tail(obj):
         if len(obj._subnodes) > 0:
-            return TreeSetMixin._tail(obj[-1])
+            return TreeMixin._tail(obj[-1])
 
         return obj[0]
 
@@ -95,7 +95,7 @@ class TreeSetMixin(object):
             raise RuntimeError('Node has no type !')
 
     def treeprint(self):
-        return str(self.head) + "\n" + TreeSetMixin._indent("\n".join(map(lambda x : x.treeprint(), self.branches)))
+        return str(self.head) + "\n" + TreeMixin._indent("\n".join(map(lambda x : x.treeprint(), self.branches)))
 
     def locate(self, item):
         l = [key for key, value in self.locators().iteritems() if self._default_match(value, item)]
@@ -555,7 +555,7 @@ class TreeSetMixin(object):
                 self._last_found = original
                 return self._default_match(original, test)
 
-            find_match = TreeSetMixin._in_tree(
+            find_match = TreeMixin._in_tree(
                 self, item, match_find
             )
 
@@ -650,9 +650,9 @@ class TreeSetMixin(object):
         return TupleTree([self] + [ ch.random() for ch in this_choice])
 
 
-class TupleTree(tuple, TreeSetMixin):
+class TupleTree(tuple, TreeMixin):
 
-    _node_type = TreeSetMixin.NODE_TYPE_ALL
+    _node_type = TreeMixin.NODE_TYPE_ALL
 
     @staticmethod
     def contains(needle, haystack):
@@ -662,7 +662,7 @@ class TupleTree(tuple, TreeSetMixin):
         def leave_fnc(x):
             return [x[1:]]
 
-        return TreeSetMixin._in_tree(haystack, needle, cmp_fnc, leave_fnc)
+        return TreeMixin._in_tree(haystack, needle, cmp_fnc, leave_fnc)
 
     def __contains__(self, item):
         return self.contains(item, self)

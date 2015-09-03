@@ -95,7 +95,7 @@ class PathMover(TreeMixin, StorableNamedObject):
     in the PathMover, but have it be a separate class ~~~DWHS
     """
 
-    _node_type = TreeSetMixin.NODE_TYPE_ALL
+    _node_type = TreeMixin.NODE_TYPE_ALL
 
     def __init__(self):
         StorableNamedObject.__init__(self)
@@ -1253,7 +1253,7 @@ class SelectionMover(PathMover):
         the PathMovers to choose from
     """
 
-    _node_type = TreeSetMixin.NODE_TYPE_ONE
+    _node_type = TreeMixin.NODE_TYPE_ONE
 
     def __init__(self, movers):
         super(SelectionMover, self).__init__()
@@ -1473,7 +1473,7 @@ class ConditionalMover(PathMover):
     is rejected).
     """
 
-    _node_type = TreeSetMixin.NODE_TYPE_CUSTOM
+    _node_type = TreeMixin.NODE_TYPE_CUSTOM
 
     def __init__(self, if_mover, then_mover, else_mover):
         """
@@ -1602,7 +1602,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     accepted shooting move should be accepted.
     """
 
-    _node_type = TreeSetMixin.NODE_TYPE_ACCUMULATE
+    _node_type = TreeMixin.NODE_TYPE_ACCUMULATE
 
     def move(self, globalstate):
         logger.debug("==== BEGINNING " + self.name + " ====")
@@ -1639,7 +1639,7 @@ class ConditionalSequentialMover(SequentialMover):
     sample per replica.
     """
 
-    _node_type = TreeSetMixin.NODE_TYPE_ACCUMULATE
+    _node_type = TreeMixin.NODE_TYPE_ACCUMULATE
 
     def move(self, globalstate):
         logger.debug("Starting conditional sequential move")
