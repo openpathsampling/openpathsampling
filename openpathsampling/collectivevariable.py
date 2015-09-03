@@ -814,6 +814,67 @@ class CV_MD_Function(CV_Function):
             return arr
 
 
+class CV_PyEMMA_Featurizer(CV_Function):
+    """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
+
+    This is identical to CV_Function except that the function is called with
+    an mdraj.Trajetory object instead of the openpathsampling.Trajectory one using
+    `fnc(traj.md(), **kwargs)`
+
+    Examples
+    --------
+    >>> # To create an order parameter which calculates the dihedral formed
+    >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
+    >>> import mdtraj as md
+    >>> traj = 'paths.Trajectory()'
+    >>> psi_atoms = [7,9,15,17]
+    >>> psi_orderparam = CV_Function("psi", md.compute_dihedrals,
+    >>>                              indices=[[2,4,6,8]])
+    >>> print psi_orderparam( traj )
+    """
+
+    def __init__(self, name, feat, dimensions=None, store_cache=True, single_as_scalar=True):
+        """
+        Parameters
+        ----------
+        name : str
+        feat : PyEmma.featurizer
+
+        """
+
+        if dimensions is None:
+            dimensions = feat.dimension()
+
+        super(CV_PyEMMA_Featurizer, self).__init__(
+            name,
+            feat.transform,
+            dimensions=dimensions,
+            store_cache=store_cache,
+            fnc_uses_lists=True,
+            var_type='numpy.float32'
+        )
+        self.single_as_scalar = single_as_scalar
+        self._topology = None
+
+    def _eval(self, items):
+        trajectory = paths.Trajectory(items)
+
+        if self._topology is None:
+            self._topology = trajectory.topology.md
+
+        t = trajectory.md(self._topology)
+        arr =self.callable_fcn(t, **self.kwargs)
+
+        if arr.shape[-1] != self.dimensions:
+            raise RuntimeError('The PyEmma featurizer has changed since instantiation which ' +
+                               'is not compatible with the immutable storage concept!')
+
+        if self.single_as_scalar and arr.shape[-1] == 1:
+            return arr.reshape(arr.shape[:-1])
+        else:
+            return arr
+
+
 class CV_Featurizer(CV_Class):
     """
     An CollectiveVariable that uses an MSMBuilder3 featurizer as the logic
