@@ -83,6 +83,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         if self.template is not None:
             self._init_from_template(self.template)
 
+
             if dimensions is not None:
                 self.dimensions = dimensions
 
@@ -93,7 +94,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
                 self.unit = unit
 
             if var_type is not None:
-                self.var_type = None
+                self.var_type = var_type
 
         else:
             self.unit = unit
@@ -106,7 +107,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
             if var_type is None:
                 self.var_type = 'float'
-
 
         self.single_dict = cd.ExpandSingle()
         self.multi_dict = cd.ExpandMulti()
@@ -132,7 +132,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         post = post + self.multi_dict + self.single_dict
 
-        if 'numpy' in var_type:
+        if 'numpy' in self.var_type:
             post = post + cd.MergeNumpy()
 
         super(CollectiveVariable, self).__init__(post=post)
@@ -147,10 +147,10 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         if ty in types:
             return ty.__name__
-        elif ty is np.dtype:
+        elif ty is np.ndarray:
             return 'numpy.' + instance.dtype.type.__name__
         else:
-            return 'None'
+            return None
 
 
     @property
@@ -208,16 +208,17 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
             if eval_list is not False and eval_multi is not False:
                 # check if results are the same
-                if type(value_list) is list and len(value_list) == 1:
-                    if type(value_multi) is list and len(value_multi) == 2:
-                        if value_list[0] == value_multi[0] \
-                                and value_list[0] == value_multi[1]:
-                            fnc_uses_lists = True
-                        else:
-                            if eval_single is False:
-                                fnc_uses_lists = True
-                            else:
-                                fnc_uses_lists = False
+                if hasattr(value_list, '__iter__') and len(value_list) == 1:
+                    if hasattr(value_multi, '__iter__') and len(value_multi) == 2:
+                        # if value_list[0] == value_multi[0] \
+                        #         and value_list[0] == value_multi[1]:
+                        #     fnc_uses_lists = True
+                        # else:
+                        #     if eval_single is False:
+                        #         fnc_uses_lists = True
+                        #     else:
+                        #         fnc_uses_lists = False
+                        fnc_uses_lists = True
                     else:
                         if eval_single:
                             fnc_uses_lists = False
@@ -240,7 +241,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
             dimensions = None
             storable = True
-            var_type = None
+            var_type = 'None'
             unit = None
 
             test_type = test_value
@@ -250,7 +251,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
                 unit = test_type.unit
                 test_type = test_type._value
 
-            if type(test_type) is np.array:
+            if type(test_type) is np.ndarray:
                 dimensions = test_type.shape
             else:
                 if hasattr(test_value, '__len__'):
@@ -510,16 +511,16 @@ class CV_Function(CollectiveVariable):
 
         return [ code.func_code.co_names[i[1]] for i in ret ]
 
-    def to_dict(self):
+    def _fnc_to_dict(self, callable_fcn):
         fcn = None
-        f = self.callable_fcn
+        f = callable_fcn
         f_module = f.__module__
         is_local = f_module == '__main__'
         is_class = isinstance(f, (type, types.ClassType))
         if not is_class:
             if is_local:
                 # this is a local function, let's see if we can save it
-                if self.allow_marshal and callable(self.callable_fcn):
+                if self.allow_marshal and callable(callable_fcn):
                     # use marshal
                     global_vars = CV_Function._find_var(f, opcode.opmap['LOAD_GLOBAL'])
                     import_vars = CV_Function._find_var(f, opcode.opmap['IMPORT_NAME'])
@@ -550,7 +551,7 @@ class CV_Function(CollectiveVariable):
 
                     fcn = {
                         '_marshal': base64.b64encode(
-                            marshal.dumps(self.callable_fcn.func_code)),
+                            marshal.dumps(callable_fcn.func_code)),
                         '_global_vars': global_vars,
                         '_module_vars': import_vars
                     }
@@ -560,23 +561,15 @@ class CV_Function(CollectiveVariable):
                 if f_module.split('.')[0] in self._allowed_modules:
                     # only store the function and the module
                     fcn = {
-                        '_module': self.callable_fcn.__module__,
-                        '_name': self.callable_fcn.__name__
+                        '_module': callable_fcn.__module__,
+                        '_name': callable_fcn.__name__
                     }
 
-        return {
-            'name': self.name,
-            'fcn': fcn,
-            'template':  self.template,
-            'dimensions': self.dimensions,
-            'kwargs': self.kwargs,
-            'store_cache': self.store_cache
-        }
+        return fcn
 
     @classmethod
-    def from_dict(cls, dct):
+    def _fnc_from_dict(cls, f_dict):
         f = None
-        f_dict = dct['fcn']
         if f_dict is not None:
             if '_marshal' in f_dict:
                 if cls.allow_marshal:
@@ -590,9 +583,23 @@ class CV_Function(CollectiveVariable):
                     imp = __import__(module)
                     f = getattr(imp, f_dict['_name'])
 
+        return f
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'fcn': self._fnc_to_dict(self.callable_fcn),
+            'template':  self.template,
+            'dimensions': self.dimensions,
+            'kwargs': self.kwargs,
+            'store_cache': self.store_cache
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
         obj = cls(
             name=dct['name'],
-            fcn=f,
+            fcn=cls._fnc_from_dict(dct['fcn']),
             dimensions=dct['dimensions'],
             store_cache=dct['store_cache'],
             **dct['kwargs']
@@ -626,6 +633,102 @@ class CV_Function(CollectiveVariable):
         # trajectory = paths.Trajectory(items)
         # return [self.callable_fcn(snap, **self.kwargs) for snap in trajectory]
         return self.callable_fcn(items, **self.kwargs)
+
+
+class CV_Generator(CV_Function):
+
+    def __init__(
+            self,
+            name,
+            generator,
+            template=None,
+            dimensions=None,
+            store_cache=True,
+            fnc_uses_lists=False,
+            var_type='float',
+            **kwargs
+    ):
+        self.generator = generator
+        fnc = generator(**kwargs)
+
+        super(CV_Generator, self).__init__(
+            name,
+            fnc,
+            template=template,
+            dimensions=dimensions,
+            store_cache=store_cache,
+            fnc_uses_lists=fnc_uses_lists,
+            var_type=var_type
+        )
+
+        self.kwargs = kwargs
+
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'generator': self._fnc_to_dict(self.generator),
+            'template':  self.template,
+            'dimensions': self.dimensions,
+            'kwargs': self.kwargs,
+            'store_cache': self.store_cache
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
+        obj = cls(
+            name=dct['name'],
+            generator=cls._fnc_from_dict(dct['generator']),
+            dimensions=dct['dimensions'],
+            store_cache=dct['store_cache'],
+            **dct['kwargs']
+        )
+
+        obj.template = dct['template']
+
+        return obj
+
+    def _eval(self, items):
+        # trajectory = paths.Trajectory(items)
+        # return [self.callable_fcn(snap, **self.kwargs) for snap in trajectory]
+        return self.callable_fcn(items)
+
+class CV_MD_Generator(CV_Generator):
+
+    def __init__(
+            self,
+            name,
+            generator,
+            template=None,
+            dimensions=None,
+            store_cache=True,
+            var_type=None,
+            **kwargs
+    ):
+
+        self._topology = None
+
+        super(CV_MD_Generator, self).__init__(
+            name,
+            generator,
+            template=template,
+            dimensions=dimensions,
+            store_cache=store_cache,
+            fnc_uses_lists=True,
+            var_type=var_type,
+            **kwargs
+        )
+
+    def _eval(self, items):
+        trajectory = paths.Trajectory(items)
+
+        if self._topology is None:
+            self._topology = trajectory.topology.md
+
+        t = trajectory.md(self._topology)
+        arr = self.callable_fcn(t)
+
+        return arr
 
 
 class CV_Class(CollectiveVariable):
