@@ -26,6 +26,12 @@ class PathMoveChange(TreeMixin, StorableObject):
         E.g. for a RandomChoiceMover which Mover was selected.
     '''
 
+    _node_type = TreeSetMixin.NODE_TYPE_ALL
+
+    @property
+    def is_sequential(self):
+        return self.mover.is_sequential
+
     def __init__(self, subchanges=None, samples=None, mover=None, details=None):
         StorableObject.__init__(self)
         self._len = None
@@ -71,12 +77,14 @@ class PathMoveChange(TreeMixin, StorableObject):
 
     @staticmethod
     def _default_match(original, test):
-        if isinstance(test, paths.PathMoveChange):
-            return original is test
+        if original.identifier is test:
+            return True
+        elif isinstance(test, paths.PathMoveChange):
+            return original.identifier is test
         elif isinstance(test, paths.PathMover):
-            return original.mover is test
-        elif issubclass(test, paths.PathMover):
-            return original.mover.__class__ is test
+            return original.identifier is test
+        elif type(test) is type and issubclass(test, paths.PathMover):
+            return original.identifier.__class__ is test
         else:
             return False
 
@@ -358,6 +366,7 @@ class SequentialPathMoveChange(PathMoveChange):
     SequentialPathMoveChange has no own samples, only inferred Sampled from the
     underlying MovePaths
     """
+
     def __init__(self, subchanges, mover=None, details=None):
         """
         Parameters
@@ -375,6 +384,7 @@ class SequentialPathMoveChange(PathMoveChange):
         """
         super(SequentialPathMoveChange, self).__init__(mover=mover, details=details)
         self.subchanges = subchanges
+
 
     def _get_results(self):
         samples = []

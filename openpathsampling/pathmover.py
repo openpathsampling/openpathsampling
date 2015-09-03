@@ -95,6 +95,8 @@ class PathMover(TreeMixin, StorableNamedObject):
     in the PathMover, but have it be a separate class ~~~DWHS
     """
 
+    _node_type = TreeSetMixin.NODE_TYPE_ALL
+
     def __init__(self):
         StorableNamedObject.__init__(self)
 
@@ -106,6 +108,7 @@ class PathMover(TreeMixin, StorableNamedObject):
 #                               entries=['ensembles'])
 
     _is_ensemble_change_mover = None
+
     @property
     def is_ensemble_change_mover(self):
         if self._is_ensemble_change_mover is None:
@@ -137,10 +140,14 @@ class PathMover(TreeMixin, StorableNamedObject):
 
     @staticmethod
     def _default_match(original, test):
-        if isinstance(test, paths.PathMover):
-            return original is test
-        elif issubclass(test, paths.PathMover):
-            return original.__class__ is test
+        if test is original.identifier:
+            return True
+        elif isinstance(test, paths.PathMover):
+            return original.identifier is test
+        elif type(test) is type and issubclass(test, paths.PathMover):
+            return original.identifier.__class__ is test
+        elif type(test) is str:
+            return original.name == test
         else:
             return False
 
@@ -155,6 +162,12 @@ class PathMover(TreeMixin, StorableNamedObject):
             the list of sub-movers
         """
         return []
+
+    def __contains__(self, item):
+        if isinstance(item, paths.PathMoveChange):
+            return item.unique in self
+
+        return super(PathMover, self).__contains__(item)
 
     @staticmethod
     def _flatten(ensembles):
@@ -320,11 +333,8 @@ class PathMover(TreeMixin, StorableNamedObject):
 
         return paths.EmptyPathMoveChange()  # pragma: no cover
 
-    def __str__(self):
-        if self.name == self.__class__.__name__:
-            return self.__repr__()
-        else:
-            return self.name
+    def __repr__(self):
+        return self.name + '(%s)' % self.idx.values()
 
 
 ###############################################################################
@@ -1214,11 +1224,6 @@ class EnsembleHopGeneratingMover(SampleGeneratingMover):
             bias=bias
         )
 
-        details = MoveDetails()
-        setattr(details, 'initial_ensemble', ens_from)
-        setattr(details, 'trial_ensemble', ens_to)
-        setattr(details, 'bias', bias)
-
         return [trial]
 
 
@@ -1247,6 +1252,8 @@ class SelectionMover(PathMover):
     movers : list of openpathsampling.PathMover
         the PathMovers to choose from
     """
+
+    _node_type = TreeSetMixin.NODE_TYPE_ONE
 
     def __init__(self, movers):
         super(SelectionMover, self).__init__()
@@ -1465,6 +1472,9 @@ class ConditionalMover(PathMover):
     movepath (if if_move is accepted) or the else_move movepath (if if_move
     is rejected).
     """
+
+    _node_type = TreeSetMixin.NODE_TYPE_CUSTOM
+
     def __init__(self, if_mover, then_mover, else_mover):
         """
         Parameters
@@ -1489,6 +1499,14 @@ class ConditionalMover(PathMover):
 
     def _get_out_ensembles(self):
         return [ sub.output_ensembles for sub in self.submovers ]
+
+    @property
+    def _node_type(self):
+        return [
+            [self.if_mover],
+            [self.if_mover, self.then_mover],
+            [self.if_mover, self.else_mover]
+        ]
 
     def move(self, globalstate):
         subglobal = globalstate
@@ -1583,6 +1601,9 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     promotion ConditionalSequentialMover. Even if the EnsembleHop fails, the
     accepted shooting move should be accepted.
     """
+
+    _node_type = TreeSetMixin.NODE_TYPE_ACCUMULATE
+
     def move(self, globalstate):
         logger.debug("==== BEGINNING " + self.name + " ====")
         subglobal = paths.SampleSet(self.legal_sample_set(globalstate))
@@ -1604,7 +1625,6 @@ class PartialAcceptanceSequentialMover(SequentialMover):
         return paths.PartialAcceptanceSequentialPathMoveChange(pathmovechanges, mover=self)
 
 
-
 class ConditionalSequentialMover(SequentialMover):
     """
     Performs each move in its movers list until complete or until one is not
@@ -1618,6 +1638,9 @@ class ConditionalSequentialMover(SequentialMover):
     ConditionalSequentialMover only works if there is a *single* active
     sample per replica.
     """
+
+    _node_type = TreeSetMixin.NODE_TYPE_ACCUMULATE
+
     def move(self, globalstate):
         logger.debug("Starting conditional sequential move")
 
@@ -1637,7 +1660,6 @@ class ConditionalSequentialMover(SequentialMover):
                 break
 
         return paths.ConditionalSequentialPathMoveChange(pathmovechanges, mover=self)
-
 
 # TODO: Restrict to last should not be used, but rather a filter by ensemble.
 # reason is that the order or samples is partially arbitrary and so the result
