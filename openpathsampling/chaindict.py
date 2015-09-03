@@ -175,7 +175,6 @@ class ExpandMulti(ChainDict):
         if len(items) == 0:
             return []
 
-
         uniques = list(set(items))
         rep_unique = self.post[[p for p in uniques]]
         multi_cache = dict(zip(uniques, rep_unique))
