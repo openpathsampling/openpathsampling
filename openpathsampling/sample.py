@@ -35,7 +35,11 @@ class SampleSet(OPSNamed):
         Since replicas are integers we add slicing/ranges for replicas. In addition
         we support any iterable as input in __getitem__ an it will return an iterable
         over the results. This makes it possible to write `sset[0:5]` to get a list
-        of of ordered samples by replica_id, or sset[list_of_ensembles]
+        of of ordered samples by replica_id, or sset[list_of_ensembles].
+        replica_ids can be any number do not have to be subsequent to slicing does not
+        make sense and we ignore it. We will also ignore missing replica_ids. A slice
+        `1:5` will return all existing replica ids >=1 and <5. If you want exactly
+        all replicas from 1 to 4 use `sset[xrange(1,5)]`
 
 
     Attributes
@@ -63,10 +67,19 @@ class SampleSet(OPSNamed):
     def __getitem__(self, key):
         if hasattr(key, '__iter__'):
             return (self[element] for element in key)
+        elif type(key) is slice:
+            rep_idxs = filter(
+                lambda x :
+                    (key.start is None or x >= key.start) and
+                    (key.stop is None or x < key.stop),
+                sorted(self.replica_dict.keys())
 
+            )
+
+            return (self[element] for element in rep_idxs)
         elif isinstance(key, paths.Ensemble):
             return random.choice(self.ensemble_dict[key])
-        else:
+        elif type(key) is int:
             return random.choice(self.replica_dict[key])
 
     def __setitem__(self, key, value):
