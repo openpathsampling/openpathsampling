@@ -58,6 +58,7 @@ class OpenMMEngine(paths.DynamicsEngine):
 
         self.initialized = True
 
+
     @property
     def platform(self):
         return self.options['platform']
@@ -98,6 +99,10 @@ class OpenMMEngine(paths.DynamicsEngine):
     @property
     def nsteps_per_frame(self):
         return self.options['nsteps_per_frame']
+
+    @nsteps_per_frame.setter
+    def nsteps_per_frame(self, value):
+        self.options['nsteps_per_frame'] = value
 
     @property
     def snapshot_timestep(self):
