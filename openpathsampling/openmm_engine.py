@@ -58,7 +58,6 @@ class OpenMMEngine(paths.DynamicsEngine):
 
         self.initialized = True
 
-
     @property
     def platform(self):
         return self.options['platform']
@@ -81,7 +80,7 @@ class OpenMMEngine(paths.DynamicsEngine):
         template = dct['template']
         options = dct['options']
 
-        return cls(
+        return OpenMMEngine(
             template=template,
             system=simtk.openmm.XmlSerializer.deserialize(system_xml),
             integrator=simtk.openmm.XmlSerializer.deserialize(integrator_xml),
@@ -91,17 +90,14 @@ class OpenMMEngine(paths.DynamicsEngine):
     # this property is specific to direct control simulations: other
     # simulations might not use this
     # TODO: Maybe remove this and put it into the creation logic
+
     @property
-    # this property is specific to direct control simulations: other
-    # simulations might not use this
-    # TODO: Maybe remove this and put it into the creation logic
+    def topology(self):
+        return self.template.topology
+
     @property
     def nsteps_per_frame(self):
-        return self._nsteps_per_frame
-
-    @nsteps_per_frame.setter
-    def nsteps_per_frame(self, value):
-        self._nsteps_per_frame = value
+        return self.options['nsteps_per_frame']
 
     @property
     def snapshot_timestep(self):
@@ -241,3 +237,19 @@ class SimpleOpenMMEngine(OpenMMEngine):
 
         for i in self.solute_indices:
             system.setParticleMass(i, solute_masses[i].value_in_unit(u.dalton))
+
+class OpenMMToolsEngine(OpenMMEngine):
+    """OpenMM dynamics engine based on a openmmtools.testsystem object.
+
+    This is only to allow to use the examples from openmmtools.testsystems
+    within this framework
+    """
+
+    def __init__(self, testsystem, integrator, options=None):
+
+        super(OpenMMToolsEngine, self).__init__(
+            template=paths.tools.snapshot_from_testsystem(testsystem),
+            system=testsystem.system,
+            integrator=integrator,
+            options=options
+        )

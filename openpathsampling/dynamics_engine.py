@@ -167,9 +167,9 @@ class DynamicsEngine(OPSNamed):
 
             self.options = okay_options
 
-            for variable, value in okay_options.iteritems():
-                if not hasattr(self, variable):
-                    setattr(self, variable, value)
+            # for variable, value in okay_options.iteritems():
+            #     if not hasattr(self, variable):
+            #         setattr(self, variable, value)
         else:
             self.options = {}
 

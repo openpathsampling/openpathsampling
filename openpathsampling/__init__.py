@@ -44,7 +44,7 @@ from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
 
 from dynamics_engine import DynamicsEngine
 
-from openmm_engine import OpenMMEngine
+from openmm_engine import OpenMMEngine, OpenMMToolsEngine, SimpleOpenMMEngine
 
 from volume import (Volume, VolumeCombination, VolumeFactory, VoronoiVolume, 
     EmptyVolume, FullVolume, CVRangeVolume, CVRangeVolumePeriodic,
