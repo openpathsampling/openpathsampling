@@ -32,6 +32,11 @@ class SampleSet(OPSNamed):
         have some of the convenient tools in Python sequences (e.g.,
         slices). On the other hand, I'm not sure whether that is meaningful
         here.
+        Since replicas are integers we add slicing/ranges for replicas. In addition
+        we support any iterable as input in __getitem__ an it will return an iterable
+        over the results. This makes it possible to write `sset[0:5]` to get a list
+        of of ordered samples by replica_id, or sset[list_of_ensembles]
+
 
     Attributes
     ----------
@@ -56,7 +61,10 @@ class SampleSet(OPSNamed):
             self.movepath = movepath
 
     def __getitem__(self, key):
-        if isinstance(key, paths.Ensemble):
+        if hasattr(key, '__iter__'):
+            return (self[element] for element in key)
+
+        elif isinstance(key, paths.Ensemble):
             return random.choice(self.ensemble_dict[key])
         else:
             return random.choice(self.replica_dict[key])
