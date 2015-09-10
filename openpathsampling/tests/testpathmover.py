@@ -909,8 +909,8 @@ class testMinusMover(object):
 
         sub = change.subchange.subchange
         assert_equal(self.innermost(innermost_other_ensemble), False)
-        assert_equal(sub[0].accepted, True)
-        assert_equal(sub[1].accepted, False)
+        assert_equal(sub[1].accepted, True)
+        assert_equal(sub[2].accepted, False)
         assert_equal(len(sub.trials), 3) # stop after failed repex
         # only one sample which is not a segment
 
