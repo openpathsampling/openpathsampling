@@ -4,8 +4,7 @@ import mdtraj as md
 import numpy as np
 import pandas as pd
 
-from simtk import unit as u
-import simtk.openmm
+from simtk.openmm import XmlSerializer
 
 class Topology(OPSNamed):
     '''
@@ -107,7 +106,6 @@ class MDTrajTopology(Topology):
 
         return cls(md_topology, dct['subsets'])
 
-@restores_as_full_object
 class OpenMMSystemTopology(Topology):
     """A Topology that is based on an openmm.system object
 
