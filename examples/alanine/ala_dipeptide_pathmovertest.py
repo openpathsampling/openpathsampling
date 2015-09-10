@@ -20,18 +20,19 @@ sys.path.append(os.path.abspath('../../'))
 
 # in principle, all of these imports should be simplified once this is a
 # package
-from openpathsampling.orderparameter import OP_Function, OP_Volume, OP_MD_Function
+from openpathsampling.collectivevariable import CV_Function, CV_Volume, CV_MD_Function
 from openpathsampling.openmm_engine import OpenMMEngine
 from openpathsampling.snapshot import Snapshot
-from openpathsampling.volume import LambdaVolumePeriodic, VolumeFactory as vf
+from openpathsampling.volume import CVRangeVolumePeriodic, VolumeFactory as vf
 from openpathsampling.pathmover import PathMoverFactory as mf
 from openpathsampling.ensemble import EnsembleFactory as ef
-from openpathsampling.ensemble import (LengthEnsemble, SequentialEnsemble, OutXEnsemble,
-                              InXEnsemble)
-from openpathsampling.calculation import Bootstrapping
-from openpathsampling.pathmover import PathMover, MoveDetails, SequentialMover, \
+from openpathsampling.ensemble import (LengthEnsemble, SequentialEnsemble, AllOutXEnsemble,
+                              AllInXEnsemble)
+from openpathsampling.pathsimulator import Bootstrapping
+from openpathsampling.pathmover import PathMover, SequentialMover, \
     ConditionalSequentialMover, PartialAcceptanceSequentialMover, \
     ForwardShootMover, CollapseMove
+from openpathsampling.pathmovechange import MoveDetails
 from openpathsampling.shooting import UniformSelector
 from openpathsampling.sample import Sample, SampleSet
 
@@ -71,9 +72,9 @@ if __name__=="__main__":
 
     engine.equilibrate(5)
     snap = engine.current_snapshot
-    engine.storage.snapshot.save(snap, 0)
+    engine.storage.snapshots.save(snap, 0)
     engine.initialized = True
-    PathMover.engine = engine
+    SampleGeneratingMover.engine = engine
 
     # this generates an order parameter (callable) object named psi (so if
     # we call `psi(trajectory)` we get a list of the values of psi for each
@@ -81,22 +82,22 @@ if __name__=="__main__":
     # mdtraj's compute_dihedrals function, with the atoms in psi_atoms
 
     psi_atoms = [6,8,14,16]
-    psi = OP_MD_Function("psi", md.compute_dihedrals, indices=[psi_atoms])
+    psi = CV_MD_Function("psi", md.compute_dihedrals, indices=[psi_atoms])
 
     # same story for phi, although we won't use that
 
     phi_atoms = [4,6,8,14]
-    phi = OP_MD_Function("phi", md.compute_dihedrals, indices=[phi_atoms])
+    phi = CV_MD_Function("phi", md.compute_dihedrals, indices=[phi_atoms])
 
-    # save the orderparameters in the storage
+    # save the collectivevariables in the storage
     # since they have no data cache this will only contain their name
-    psi.save(storage=engine.storage.collectivevariable)
-    phi.save(storage=engine.storage.collectivevariable)
+    psi.save(storage=engine.storage.collectivevariables)
+    phi.save(storage=engine.storage.collectivevariables)
 
     # now we define our states and our interfaces
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
-    stateA = LambdaVolumePeriodic(psi, -120.0/degrees, -30.0/degrees)
-    stateB = LambdaVolumePeriodic(psi, 100/degrees, 180/degrees)
+    stateA = CVRangeVolumePeriodic(psi, -120.0/degrees, -30.0/degrees)
+    stateB = CVRangeVolumePeriodic(psi, 100/degrees, 180/degrees)
 
     # set up minima and maxima for this transition's interface set
     minima = map((1.0 / degrees).__mul__,
@@ -104,14 +105,14 @@ if __name__=="__main__":
     maxima = map((1.0 / degrees).__mul__,
                  [-25.0, -21.0, -18.5, -17.0, -15.0, -10.0, 0.0])
 
-    volume_set = vf.LambdaVolumePeriodicSet(psi, minima, maxima)
+    volume_set = vf.CVRangeVolumePeriodicSet(psi, minima, maxima)
     interface0 = volume_set[0]
     interface_set = ef.TISEnsembleSet(stateA, stateA | stateB, volume_set)
     for no, interface in enumerate(interface_set):
         # Give each interface a name
         interface.name = 'Interface '+str(no)
         # And save all of these
-        engine.storage.ensemble.save(interface)
+        engine.storage.ensembles.save(interface)
 
     mover_set = mf.OneWayShootingSet(UniformSelector(), interface_set)
 
@@ -122,18 +123,18 @@ for the innermost interface.
 We do this by using a special sequential ensemble for the sequence.
 This path ensemble is particularly complex because we want to be sure that
 the path we generate is in the ensemble we desire: this means that we can't
-use LeaveXEnsemble as we typically do with TIS paths.
+use PartOutXEnsemble as we typically do with TIS paths.
     """
-    snapshot = engine.storage.snapshot.load(0)
+    snapshot = engine.storage.snapshots.load(0)
 
     first_traj_ensemble = SequentialEnsemble([
-        OutXEnsemble(stateA) | LengthEnsemble(0),
-        InXEnsemble(stateA),
-        (OutXEnsemble(stateA) & InXEnsemble(interface0)) | LengthEnsemble(0),
-        InXEnsemble(interface0) | LengthEnsemble(0),
-        OutXEnsemble(interface0),
-        OutXEnsemble(stateA) | LengthEnsemble(0),
-        InXEnsemble(stateA) & LengthEnsemble(1)
+        AllOutXEnsemble(stateA) | LengthEnsemble(0),
+        AllInXEnsemble(stateA),
+        (AllOutXEnsemble(stateA) & AllInXEnsemble(interface0)) | LengthEnsemble(0),
+        AllInXEnsemble(interface0) | LengthEnsemble(0),
+        AllOutXEnsemble(interface0),
+        AllOutXEnsemble(stateA) | LengthEnsemble(0),
+        AllInXEnsemble(stateA) & LengthEnsemble(1)
     ])
 
     interface0_ensemble = interface_set[0]
@@ -188,8 +189,8 @@ use LeaveXEnsemble as we typically do with TIS paths.
     print third_set[0].__dict__
     print third_set.__dict__
 
-    print second_path.samples
-    print first_path.samples
+    print second_path.results
+    print first_path.results
 
 
     mover3 = CollapseMove(SequentialMover([
@@ -203,7 +204,7 @@ use LeaveXEnsemble as we typically do with TIS paths.
 
     third_path = mover3.move(third_set)
 
-    print third_path.samples
+    print third_path.results
     print str(third_path)
     print str(third_path.opened)
     print len(third_path)
@@ -211,7 +212,7 @@ use LeaveXEnsemble as we typically do with TIS paths.
     forth_set = third_set + third_path
     print interface0_ensemble(forth_set[0].trajectory)
 
-    engine.storage.sampleset.save(forth_set)
+    engine.storage.samplesets.save(forth_set)
 
     exit()
 
@@ -227,29 +228,29 @@ use LeaveXEnsemble as we typically do with TIS paths.
     bootstrap.run(50)
 
     print """
-    Saving all cached computations of orderparameters.
+    Saving all cached computations of collectivevariables.
     """
 
-    engine.storage.collectivevariable.sync(psi)
-    engine.storage.collectivevariable.sync(phi)
+    engine.storage.collectivevariables.sync(psi)
+    engine.storage.collectivevariables.sync(phi)
 
-    # Save all interface volumes as orderparameters
-    op_vol_set = [OP_Volume('OP' + str(idx), vol) for idx, vol in enumerate(volume_set)]
+    # Save all interface volumes as collectivevariables
+    op_vol_set = [CV_Volume('OP' + str(idx), vol) for idx, vol in enumerate(volume_set)]
 
     for op in op_vol_set:
-        op(engine.storage.snapshot.all())
-        engine.storage.collectivevariable.save(op)
+        op(engine.storage.snapshots.all())
+        engine.storage.collectivevariables.save(op)
 
-    # Create an orderparameter from a volume
-    op_inA = OP_Volume('StateA', stateA)
-    op_inB = OP_Volume('StateB', stateB)
-    op_notinAorB = OP_Volume('StateX', ~ (stateA | stateB))
+    # Create an collectivevariable from a volume
+    op_inA = CV_Volume('StateA', stateA)
+    op_inB = CV_Volume('StateB', stateB)
+    op_notinAorB = CV_Volume('StateX', ~ (stateA | stateB))
 
-    # compute the orderparameter for all snapshots
-    op_inA(engine.storage.snapshot.all())
-    op_inB(engine.storage.snapshot.all())
-    op_notinAorB(engine.storage.snapshot.all())
+    # compute the collectivevariable for all snapshots
+    op_inA(engine.storage.snapshots.all())
+    op_inB(engine.storage.snapshots.all())
+    op_notinAorB(engine.storage.snapshots.all())
 
-    engine.storage.collectivevariable.save(op_inA)
-    engine.storage.collectivevariable.save(op_inB)
-    engine.storage.collectivevariable.save(op_notinAorB)
+    engine.storage.collectivevariables.save(op_inA)
+    engine.storage.collectivevariables.save(op_inB)
+    engine.storage.collectivevariables.save(op_notinAorB)

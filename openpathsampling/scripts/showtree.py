@@ -11,8 +11,8 @@ if __name__ == '__main__':
                    const=True, default=False,
                    help='show also rejected paths')
     parser.add_argument('file', metavar='file.nc', help='an integer for the accumulator')
-    parser.add_argument('--show', metavar='orderparameter/snapshot/configuration/momentum', default='',
-                   help='show an orderparameter or an id of the snapshot/configuration/momentum')
+    parser.add_argument('--show', metavar='collectivevariable/snapshot/configuration/momentum', default='',
+                   help='show an collectivevariable or an id of the snapshot/configuration/momentum')
 
     parser.add_argument('--pdf', dest='pdf', action='store_const',
                    const=True, default=False,
@@ -23,12 +23,12 @@ if __name__ == '__main__':
                    help='create a svg embedded in a html')
 
     parser.add_argument('--state', nargs=2, action='append',
-                        help='add a background coloring to s snapshot using the given orderparameter.',
-                        metavar=('orderparameter', 'color'))
+                        help='add a background coloring to s snapshot using the given collectivevariable.',
+                        metavar=('collectivevariable', 'color'))
 
     parser.add_argument('--show-degree', dest='in_degree', action='store_const',
                    const=True, default=False,
-                   help='shows orderparameters in degree and not plain')
+                   help='shows collectivevariables in degree and not plain')
 
     args = parser.parse_args()
 
@@ -48,18 +48,18 @@ if __name__ == '__main__':
 
 
     if args.show == 'snapshot':
-        show_op = storage.snapshot.op_idx
+        show_op = storage.snapshots.op_idx
     elif args.show == 'configuration':
-        show_op = storage.snapshot.op_configuration_idx
+        show_op = storage.snapshots.op_configuration_idx
     elif args.show == 'momentum':
-        show_op = storage.snapshot.op_momentum_idx
+        show_op = storage.snapshots.op_momentum_idx
     elif args.show == '':
         def show_id(s):
             return ''
 
         show_op = show_id
     else:
-        show_op = storage.cv.load(args.show)
+        show_op = storage.cvs.load(args.show)
 
     if args.in_degree:
         inner = show_op
@@ -69,7 +69,7 @@ if __name__ == '__main__':
         show_op = func
 
     tree = PathTreeBuilder(storage, op=show_op, states=args.state)
-    samples = storage.sample.by_ensemble(storage.ensemble.load(4))
+    samples = storage.samples.by_ensemble(storage.ensembles.load(4))
     tree.from_samples(samples)
 
     if args.pdf:

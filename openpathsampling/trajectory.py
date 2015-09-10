@@ -16,7 +16,6 @@ import openpathsampling as paths
 #=============================================================================================
 
 
-
 class Trajectory(list):
     """
     Simulation trajectory. Essentially a python list of snapshots
@@ -65,6 +64,26 @@ class Trajectory(list):
     def __repr__(self):
         return 'Trajectory[' + str(len(self)) + ']'
 
+    def map(self, fnc, allow_fast=True):
+        """
+        This runs a function and tries to be fast.
+
+        Fast here means that functions that are purely based on CVs can be
+        evaluated without actually loading the real Snapshot object. This
+        functions tries to do that and if it fails it does it the usual way
+        and creates the snapshot object. This bears the possibility that
+        the function uses the fake snapshots and returns a non-sense value.
+        It is up to the user to make sure this will not happen.
+        """
+
+        if allow_fast:
+            try:
+                return [fnc(frame) for frame in list.__iter__(self)]
+            except:
+                return self.map(fnc, allow_fast=False)
+
+        return [fnc(frame) for frame in self]
+
     @property
     def reversed(self):
         '''
@@ -78,7 +97,7 @@ class Trajectory(list):
             the reversed trajectory
         '''
 
-        return Trajectory([snap.reversed_copy() for snap in reversed(self)])
+        return Trajectory([snap for snap in reversed(self)])
 
     def coordinates(self):
         """
@@ -91,7 +110,7 @@ class Trajectory(list):
 
         # Make sure snapshots are stored and have an index and then add the snapshot index to the trajectory
 
-        n_frames = self.frames     
+        n_frames = len(self)
         n_atoms = self.n_atoms
         n_spatial = self.spatial
             
@@ -104,9 +123,24 @@ class Trajectory(list):
                 output[frame_index,:,:] = self[frame_index].coordinates[self.atom_indices,:]
 
         return output
+
+    def xyz(self):
+        n_frames = len(self)
+        n_atoms = self.n_atoms
+        n_spatial = self.spatial
+            
+        output = np.zeros([n_frames, n_atoms, n_spatial], np.float32)
+        
+        for frame_index in range(n_frames):      
+            if self.atom_indices is None:
+                output[frame_index,:,:] = self[frame_index].xyz
+            else:
+                output[frame_index,:,:] = self[frame_index].xyz[self.atom_indices,:]
+
+        return output
     
     @property
-    def frames(self):
+    def n_snapshots(self):
         """
         Return the number of frames in the trajectory.
         
@@ -116,11 +150,33 @@ class Trajectory(list):
 
         Notes
         -----
-        Might be removed in later versions len(trajectory) is more intuitive
-        
+        Might be removed in later versions for len(trajectory) is more pythonic
+
+        See also
+        --------
+        n_frames, len
+
         """
 
         return len(self)
+
+    @property
+    def n_frames(self):
+        """
+        Return the number of frames in the trajectory.
+
+        Returns
+        -------
+        length (int) - the number of frames in the trajectory
+
+        See also
+        --------
+        n_snapshots, len
+
+        """
+
+        return len(self)
+
 
     def configurations(self):
         """
@@ -181,8 +237,9 @@ class Trajectory(list):
     #=============================================================================================
 
     def __getslice__(self, *args, **kwargs):
+#        print 'PRE',  list(list.__iter__(self))
         ret =  list.__getslice__(self, *args, **kwargs)
-        if isinstance(ret, list):
+        if type(ret) is list:
             ret = Trajectory(ret)
             ret.atom_indices = self.atom_indices
             
@@ -190,16 +247,36 @@ class Trajectory(list):
         
     def __getitem__(self, index):
         # Allow for numpy style of selecting several indices using a list as index parameter
-        if type(index) is list:
+        if hasattr(index, '__iter__'):
             ret = [ list.__getitem__(self, i) for i in index ]
         else:
             ret = list.__getitem__(self, index)
                 
-        if isinstance(ret, list):
+        if type(ret) is list:
             ret = Trajectory(ret)
             ret.atom_indices = self.atom_indices
 
         return ret
+
+    def __reversed__(this):
+        class ObjectIterator:
+            def __init__(self):
+                self.trajectory = this
+                self.idx = len(this)
+                self.length = 0
+
+            def __iter__(self):
+                return self
+
+            def next(self):
+                if self.idx > self.length:
+                    self.idx -= 1
+                    snapshot = self.trajectory[self.idx]
+                    return snapshot.reversed
+                else:
+                    raise StopIteration()
+
+        return ObjectIterator()
 
     def __iter__(this):
         """
@@ -221,12 +298,13 @@ class Trajectory(list):
             def __init__(self):
                 self.trajectory = this
                 self.idx = 0
+                self.length = len(this)
 
             def __iter__(self):
                 return self
 
             def next(self):
-                if self.idx < len(self.trajectory):
+                if self.idx < self.length:
                     obj = self.trajectory[self.idx]
                     self.idx += 1
                     return obj
@@ -243,7 +321,74 @@ class Trajectory(list):
     #=============================================================================================
     # PATH ENSEMBLE FUNCTIONS
     #=============================================================================================
-    
+        
+    def summarize_by_volumes(self, label_dict):
+        """Summarize trajectory based on number of continuous frames in volumes.
+
+        This uses a dictionary of disjoint volumes: the volumes must be disjoint
+        so that every frame can be mapped to one volume. If the frame maps to
+        none of the given volumes, it returns the label None.
+
+        Parameters
+        ----------
+        label_dict : dict
+            dictionary with labels for keys and volumes for values
+
+        Returns
+        -------
+        list of tuple
+            format is (label, number_of_frames)
+        """
+        last_vol = None
+        count = 0
+        segment_labels = []
+        for frame in self:
+            in_state = []
+            for key in label_dict.keys():
+                vol = label_dict[key]
+                if vol(frame):
+                    in_state.append(key)
+            if len(in_state) > 1:
+                raise RuntimeError("Volumes given to summarize_by_volumes not disjoint")
+            if len(in_state) == 0:
+                current_vol = None
+            else:
+                current_vol = in_state[0]
+            
+            if last_vol == current_vol:
+                count += 1
+            else:
+                if count > 0:
+                    segment_labels.append( (last_vol, count) )
+                last_vol = current_vol
+                count = 1
+        segment_labels.append( (last_vol, count) )
+        return segment_labels
+
+    def summarize_by_volumes_str(self, label_dict, delimiter="-"):
+        """
+        Return string version of the volumes visited by this trajectory.
+
+        See `Trajectory.summarize_by_volumes` for details.
+
+        Parameters
+        ----------
+        label_dict : dict
+            dictionary with labels for keys and volumes for values
+        delimiter : string (default "-")
+            string used to separate volumes in output
+
+        Returns
+        -------
+        string
+            order in which this trajectory visits the volumes in
+            `label_dict`, separated by the `delimiter`
+        """
+        summary = self.summarize_by_volumes(label_dict)
+        return delimiter.join([str(s[0]) for s in summary])
+
+
+
     def pathHamiltonian(self):
         """
         Compute the generalized path Hamiltonian of the trajectory.
@@ -329,7 +474,70 @@ class Trajectory(list):
 
         return log_q
 
-    
+    #=============================================================================================
+    # ANALYSIS FUNCTIONS
+    #=============================================================================================
+
+    def is_correlated(self, other):
+        """
+        Checks if two trajectories share a common snapshot
+
+        Parameters
+        ----------
+        other : Trajectory()
+            the second trajectory to check for common snapshots
+
+        Returns
+        -------
+        bool
+            returns True if at least one snapshot appears in both trajectories
+        """
+
+        # if hasattr(self, 'idx') and hasattr(other, 'idx'):
+        #     shared_store = set(self.idx.keys()) & set(other.idx.keys())
+        #     # both are saved so use the snapshot idx as identifiers
+        #     if len(shared_store) > 0:
+        #         storage = list(shared_store)[0]
+        #         t1id = storage.trajectories.snapshot_indices(self.idx[storage])
+        #         t2id = storage.trajectories.snapshot_indices(other.idx[storage])
+        #         return bool(set(t1id) & set(t2id))
+
+        # Use some fallback
+        return bool(self.shared_configurations(other))
+
+    def shared_configurations(self, other):
+        """
+        Returns a set of shared snapshots
+
+        Parameters
+        ----------
+        other : Trajectory()
+            the second trajectory to use
+
+        Returns
+        -------
+        set of Snapshot()
+            the set of common snapshots
+        """
+        return set([snap.configuration for snap in self]) & set([snap.configuration for snap in other])
+
+    def shared_subtrajectory(self, other):
+        """
+        Returns a subtrajectory which only contains frames present in other
+
+        Parameters
+        ----------
+        other : Trajectory()
+            the second trajectory to use
+
+        Returns
+        -------
+        Trajectory
+            the shared subtrajectory
+        """
+        shared = self.shared_configurations(other)
+        return Trajectory([ snap for snap in self if snap.configuration in shared])
+
     #=============================================================================================
     # UTILITY FUNCTIONS
     #=============================================================================================
@@ -420,7 +628,7 @@ class Trajectory(list):
         trajectory = Trajectory()
         empty_momentum = paths.Momentum()
         empty_momentum.velocities = None
-        for frame_num in range(mdtrajectory.n_frames):
+        for frame_num in range(len(mdtrajectory)):
             # mdtraj trajectories only have coordinates and box_vectors
             coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
             if mdtrajectory.unitcell_vectors is not None:

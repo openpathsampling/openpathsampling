@@ -1,7 +1,9 @@
 matplotlib
 sphinx
+ipython
 ipython-notebook
 jinja2
+netcdf4
 runipy
 openmm
 pytables

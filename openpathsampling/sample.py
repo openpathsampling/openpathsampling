@@ -1,7 +1,10 @@
 import random
 
 import openpathsampling as paths
-import copy
+from openpathsampling.todict import OPSNamed
+
+import logging
+logger = logging.getLogger(__name__)
 
 class SampleKeyError(Exception):
     def __init__(self, key, sample, sample_key):
@@ -11,7 +14,7 @@ class SampleKeyError(Exception):
         self.msg = (str(self.key) + " does not match " + str(self.sample_key)
                     + " from " + str(self.sample))
 
-class SampleSet(object):
+class SampleSet(OPSNamed):
     '''
     SampleSet is essentially a list of samples, with a few conveniences.  It
     can be treated as a list of samples (using, e.g., .append), or as a
@@ -42,15 +45,15 @@ class SampleSet(object):
     '''
 
     def __init__(self, samples, movepath=None):
+        super(SampleSet, self).__init__()
         self.samples = []
         self.ensemble_dict = {}
         self.replica_dict = {}
         self.extend(samples)
         if movepath is None:
-            self.movepath = paths.EmptyMovePath()
+            self.movepath = paths.EmptyPathMoveChange()
         else:
             self.movepath = movepath
-
 
     def __getitem__(self, key):
         if isinstance(key, paths.Ensemble):
@@ -82,6 +85,17 @@ class SampleSet(object):
             del self[dead_to_me]
         self.append(value)
 
+    def __eq__(self, other):
+        if len(self.samples) == len(other.samples):
+            return True
+            for samp1, samp2 in zip(self.samples,other.samples):
+                if samp1 is not samp2:
+                    return False
+
+            return True
+        else:
+            return False
+
     def __delitem__(self, sample):
         self.ensemble_dict[sample.ensemble].remove(sample)
         self.replica_dict[sample.replica].remove(sample)
@@ -101,7 +115,7 @@ class SampleSet(object):
         return len(self.samples)
 
     def __contains__(self, item):
-        return (item in self.samples)
+        return item in self.samples
 
     def all_from_ensemble(self, ensemble):
         try:
@@ -135,14 +149,14 @@ class SampleSet(object):
     def extend(self, samples):
         # note that this works whether the parameter samples is a list of
         # samples or a SampleSet!
-        try:
+        if type(samples) is not paths.Sample and hasattr(samples, '__iter__'):
             for sample in samples:
                 self.append(sample)
-        except TypeError:
+        else:
             # also acts as .append() if given a single sample
             self.append(samples)
 
-    def apply_samples(self, samples, step=None, copy=True):
+    def apply_samples(self, samples, copy=True):
         '''Updates the SampleSet based on a list of samples, by setting them
         by replica in the order given in the argument list.'''
         if type(samples) is Sample:
@@ -152,26 +166,9 @@ class SampleSet(object):
         else:
             newset = self
         for sample in samples:
+            if type(sample) is not paths.Sample:
+                raise ValueError('No SAMPLE!')
             # TODO: should time be a property of Sample or SampleSet?
-            sample.step = step
-            if sample.intermediate == False:
-                newset[sample.replica] = sample
-        return newset
-
-    def apply_intermediates(self, samples, step=None, copy=True):
-        '''Return updated SampleSet, including all intermediates.
-
-        Useful in SequentialMovers.
-        '''
-        if type(samples) is Sample:
-            samples = [samples]
-        if copy==True:
-            newset = SampleSet(self)
-        else:
-            newset = self
-        for sample in samples:
-            # TODO: should time be a property of Sample or SampleSet?
-            sample.step = step
             newset[sample.replica] = sample
         return newset
 
@@ -183,23 +180,18 @@ class SampleSet(object):
         '''Returns the list of ensembles in this SampleSet'''
         return self.ensemble_dict.keys()
 
-    def save_samples(self, storage):
-        """
-        Save all samples in the current GlobalState object. This should be
-        called after a move has generated a new object since then all
-        samples will get a timestamp that is associated with this
-
-        Parameters
-        ==========
-        storage : Storage()
-            the underlying netcdf file to be used for storage
-        """
-        map(storage.sample.save, self.samples)
-
     def sanity_check(self):
         '''Checks that the sample trajectories satisfy their ensembles
         '''
+        logger.info("Starting sanity check")
         for sample in self:
+            # TODO: Replace by using .valid which means that it is in the ensemble
+            # and does the same testing but with caching so the .valid might
+            # fail in case of some bad hacks. Since we check anyway, let's just
+
+            #assert(sample.valid)
+            logger.info("Checking sanity of "+repr(sample.ensemble)+
+                        " with "+str(sample.trajectory))
             assert(sample.ensemble(sample.trajectory))
 
     def consistency_check(self):
@@ -237,9 +229,84 @@ class SampleSet(object):
         """
         Add the move path to the Sample and return the new sample set
         """
-        new_set = other.apply_to(self)
-        new_set.movepath = other
-        return new_set
+        if isinstance(other, paths.PathMoveChange):
+            return self.apply_samples(other.results)
+        elif type(other) is list:
+            okay = True
+            for samp in other:
+                if not isinstance(samp, paths.Sample):
+                    okay = False
+
+            return self.apply_samples(other)
+        else:
+            raise ValueError('Only lists of Sample or PathMoveChanges allowed.')
+
+    @staticmethod
+    def map_trajectory_to_ensembles(trajectory, ensembles):
+        """Return SampleSet mapping one trajectory to all ensembles.
+
+        One common approach to starting a simulation is to take a single
+        transition trajectory (which satisfies all ensembles) and use it as
+        the starting point for all ensembles.
+        """
+        return SampleSet(
+            [Sample.initial_sample(replica=ensembles.index(e),
+                                   trajectory=paths.Trajectory(trajectory), # copy
+                                   ensemble = e)
+            for e in ensembles]
+    )
+
+    @staticmethod
+    def translate_ensembles(sset, new_ensembles):
+        """Return SampleSet using `new_ensembles` as ensembles.
+
+        This replaces the samples in TODO
+
+        Note that this assumes that the mapping of old ensembles to new
+        ensembles is injective. If this is not true, then there is no unique
+        way to translate.
+        """
+        translation = {}
+        for ens1 in sset.ensemble_list():
+            for ens2 in new_ensembles:
+                if ens1.__str__() == ens2.__str__():
+                    translation[ens1] = ens2
+        return SampleSet(
+            [
+                Sample(
+                    replica=s.replica,
+                    ensemble=translation[s.ensemble],
+                    trajectory=s.trajectory
+                )
+                for s in sset
+            ]
+        )
+
+    @staticmethod
+    def relabel_replicas_per_ensemble(ssets):
+        """
+        Return a SampleSet with one trajectory ID per ensemble in the given ssets.
+
+        This is used if you create several sample sets (e.g., from
+        bootstrapping different transitions) which have the same trajectory
+        ID associated with different ensembles.
+        """
+        if type(ssets) is SampleSet:
+            ssets = [ssets]
+        samples = []
+        repid = 0
+        for sset in ssets:
+            for s in sset:
+                samples.append(Sample(
+                    replica=repid,
+                    trajectory=s.trajectory,
+                    ensemble=s.ensemble
+                ))
+                repid += 1
+        return SampleSet(samples)
+        
+
+
 
     # @property
     # def ensemble_dict(self):
@@ -311,32 +378,104 @@ class Sample(object):
         the Monte Carlo step number associated with this Sample
     """
 
-    def __init__(self, replica=None, trajectory=None, ensemble=None, intermediate=False, details=None, step=-1):
+    def __init__(self,
+                 replica=None,
+                 trajectory=None,
+                 ensemble=None,
+                 bias=1.0,
+                 details=None,
+                 parent=None,
+                 mover=None
+                 ):
+        self.bias = bias
         self.replica = replica
         self.ensemble = ensemble
         self.trajectory = trajectory
-        self.intermediate = intermediate
+        self.parent = parent
         self.details = details
-        self.step = step
+        self.mover = mover
 
     def __call__(self):
         return self.trajectory
 
+    #=============================================================================================
+    # LIST INHERITANCE FUNCTIONS
+    #=============================================================================================
+
+    def __len__(self):
+        return len(self.trajectory)
+
+    def __getslice__(self, *args, **kwargs):
+        return self.trajectory.__getslice__(*args, **kwargs)
+
+    def __getitem__(self, *args, **kwargs):
+        return self.trajectory.__getitem__(*args, **kwargs)
+
+    def __reversed__(self):
+        """
+        Return a reversed iterator over all snapshots in the samples trajectory
+
+        Returns
+        -------
+        Iterator()
+            The iterator that iterates the snapshots in reversed order
+
+        Notes
+        -----
+        A reversed trajectory also has reversed snapshots! This means
+        that Trajectory(list(reversed(traj))) will lead to a time-reversed
+        trajectory not just frames in reversed order but also reversed momenta.
+
+        """
+        if self.trajectory is not None:
+            return reversed(self.trajectory)
+        else:
+            return [] # empty iterator
+
+    def __iter__(self):
+        """
+        Return an iterator over all snapshots in the samples trajectory
+
+        Returns
+        -------
+        Iterator()
+            The iterator that iterates the snapshots
+
+        """
+        if self.trajectory is not None:
+            return iter(self.trajectory)
+        else:
+            return [] # empty iterator
+
     def __str__(self):
-        mystr = "Step: "+str(self.step)+"\n"
-        mystr += "Replica: "+str(self.replica)+"\n"
+        mystr  = "Replica: "+str(self.replica)+"\n"
         mystr += "Trajectory: "+str(self.trajectory)+"\n"
         mystr += "Ensemble: "+repr(self.ensemble)+"\n"
-        mystr += "Details: "+str(self.details)+"\n"
         return mystr
+
+    @property
+    def valid(self):
+        """Returns true if a sample is in its ensemble
+
+        Returns
+        -------
+        bool
+            `True` if the trajectory is in the ensemble `False` otherwise
+        """
+        if self._valid is None:
+            if self.trajectory is None:
+                self._valid = True
+            else:
+                if self.ensemble is not None:
+                    self._valid = self.ensemble(self.trajectory)
+                else:
+                    # no ensemble means ALL ???
+                    self._valid = True
+
+        return self._valid
 
     def __repr__(self):
         return '<Sample @ ' + str(hex(id(self))) + '>'
-
-    @staticmethod
-    def set_time(step, samples):
-        for sample in samples:
-            sample.step = step
 
     def copy_reset(self):
         '''
@@ -345,8 +484,7 @@ class Sample(object):
         result = Sample(
             replica=self.replica,
             trajectory=self.trajectory,
-            ensemble=self.ensemble,
-            details=paths.MoveDetails.initialization(self)
+            ensemble=self.ensemble
         )
         return result
 
@@ -361,12 +499,14 @@ class Sample(object):
         result = Sample(
             replica=replica,
             trajectory=trajectory,
-            ensemble=ensemble,
-            details=paths.MoveDetails.initialization_from_scratch(
-                trajectory=trajectory,
-                ensemble=ensemble)
+            ensemble=ensemble
         )
         return result
-        
 
 
+    @property
+    def acceptance(self):
+        if not self.valid:
+            return 0.0
+
+        return self.bias

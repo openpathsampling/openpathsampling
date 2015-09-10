@@ -167,13 +167,13 @@ class testStorage(object):
         # do some tests, if this is still the same data
 
         compare_snapshot(
-            store2.snapshot.load(0),
-            store.snapshot.load(0).subset(self.options['solute_indices'])
+            store2.snapshots.load(0),
+            store.snapshots.load(0).subset(self.options['solute_indices'])
         )
 
         compare_snapshot(
-            store2.snapshot.load(1),
-            store.snapshot.load(1).subset(self.options['solute_indices'])
+            store2.snapshots.load(1),
+            store.snapshots.load(1).subset(self.options['solute_indices'])
         )
         store.close()
         store2.close()
@@ -197,12 +197,18 @@ class testStorage(object):
         # do some tests, if this is still the same data
 
         compare_snapshot(
-            store2.snapshot.load(0),
-            store.snapshot.load(0)
+            store2.snapshots.load(0),
+            store.snapshots.load(0)
         )
 
-        assert_equal(store2.snapshot.count(), 1)
-        assert_equal(store2.trajectory.count(), 0)
+        # check if the reversed copy also works
+        compare_snapshot(
+            store2.snapshots.load(1),
+            store.snapshots.load(1)
+        )
+
+        assert_equal(store2.snapshots.count(), 2)
+        assert_equal(store2.trajectories.count(), 0)
 
         store.close()
         store2.close()

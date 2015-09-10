@@ -7,7 +7,7 @@ from openpathsampling.tests.test_helpers import (assert_equal_array_array,
                           CalvinistDynamics
                          )
 from openpathsampling.shooting import *
-from openpathsampling.pathmover import PathMover, ForwardShootMover, BackwardShootMover
+from openpathsampling.pathmover import ForwardShootMover, BackwardShootMover, SampleGeneratingMover
 from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.sample import Sample, SampleSet
 
@@ -18,7 +18,7 @@ class SelectorTest(object):
         self.dyn = CalvinistDynamics([-0.5, -0.4, -0.3, -0.2, -0.1,
                                       0.1, 0.2, 0.3, 0.4, 0.5])
                                       #0.5, 0.4, 0.3, 0.2, 0.1])
-        PathMover.engine = self.dyn
+        SampleGeneratingMover.engine = self.dyn
         self.dyn.initialized = True
         self.ens = LengthEnsemble(5)
         self.gs = SampleSet(Sample(
@@ -39,11 +39,11 @@ class testFirstFrameSelector(SelectorTest):
         assert_equal(snap.coordinates[0][0], -0.5)
 
     def test_shooting_move(self):
-        self.shooter = ForwardShootMover(FirstFrameSelector(), replicas=[0])
-        movepath = self.shooter.move(self.gs)
-        samples = movepath.all_samples
+        self.shooter = ForwardShootMover(FirstFrameSelector(), ensembles=self.ens)
+        change = self.shooter.move(self.gs)
+        samples = change.trials
         assert_equal(len(samples), 1)
-        assert_equal(samples[0].details.accepted, True)
+        assert_equal(change.accepted, True)
         assert_items_equal([-0.5, -0.4, -0.3, -0.2, -0.1],
                            [s.coordinates[0][0] for s in samples[0].trajectory]
                           )
@@ -61,10 +61,10 @@ class testFinalFrameSelector(SelectorTest):
         assert_equal(snap.coordinates[0][0], 0.5)
 
     def test_shooting_move(self):
-        self.shooter = BackwardShootMover(FinalFrameSelector(), replicas=[0])
-        movepath = self.shooter.move(self.gs)
-        samples = movepath.all_samples
-        assert_equal(samples[0].details.accepted, True)
+        self.shooter = BackwardShootMover(FinalFrameSelector(), ensembles=self.ens)
+        change = self.shooter.move(self.gs)
+        samples = change.trials
+        assert_equal(change.accepted, True)
         assert_items_equal([0.1, 0.2, 0.3, 0.4, 0.5],
                            [s.coordinates[0][0] for s in samples[0].trajectory]
                           )

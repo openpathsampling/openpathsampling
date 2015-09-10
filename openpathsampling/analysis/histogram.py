@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import math
+from lookup_function import LookupFunction
 
 # TODO: someday I should replace this with a variant of my sparse-histogram
 # code. It is easy to use and probably can be made faster than numpy for
@@ -54,6 +55,25 @@ class Histogram(object):
         self.name = None
         self._histogram = None
 
+    @staticmethod
+    def sum_histograms(hists):
+        (w, r) = (hists[0].bin_width, hists[0].bin_range)
+        newhist = Histogram(bin_width=w, bin_range=r)
+
+        for hist in hists:
+            if not newhist.compare_parameters(hist):
+                raise RuntimeError
+
+            newhist.count += hist.count
+            try:
+                for i in range(newhist.n_bins):
+                    newhist._histogram[i] += hist._histogram[i]
+            except TypeError:
+                newhist._histogram = hist._histogram.copy()
+        
+        return newhist
+
+
     def add_data_to_histogram(self, data, weights=None):
         """Add `data` to an existing histogram; return resulting histogram"""
         if self._histogram is None:
@@ -89,9 +109,21 @@ class Histogram(object):
             raise RuntimeError("Histogram.histogram called without data!")
         return self._histogram.copy()
 
-    def __call__(self):
+    def xvals(self, bin_edge):
+        if bin_edge == "m":
+            xvals = [0.5*(self.bins[i]+self.bins[i+1]) 
+                     for i in range(len(self.bins)-1)]
+        elif bin_edge == "r":
+            xvals = self.bins[1:]
+        elif bin_edge == "l":
+            xvals = self.bins[0:-1]
+        return xvals
+
+    def __call__(self, bin_edge="m"):
         """Return copy of histogram if it has already been built"""
-        return self.histogram()
+        hist = self.histogram()
+        vals = self.xvals(bin_edge)
+        return LookupFunction(vals, hist)
 
     def compare_parameters(self, other):
         """Return true if `other` has the same bin parameters as `self`.
@@ -124,7 +156,7 @@ class Histogram(object):
     # complicates the code for no real benefit (you're more likely to suffer
     # from L2 cache misses than to get a speedup).
 
-    def normalized(self, raw_probability=False):
+    def normalized(self, raw_probability=False, bin_edge="m"):
         """Return normalized version of histogram.
 
         By default (`raw_probability` false), this returns the histogram
@@ -137,9 +169,10 @@ class Histogram(object):
         nnorm = self._normalization() if not raw_probability else self.count
         norm = 1.0/nnorm
         normed_hist = normed_hist * norm
-        return normed_hist
+        xvals = self.xvals(bin_edge)
+        return LookupFunction(xvals, normed_hist)
 
-    def cumulative(self, maximum=1.0):
+    def cumulative(self, maximum=1.0, bin_edge="r"):
         """Cumulative from the left: number of values less than bin value.
 
         Use `maximum=None` to get the raw counts.
@@ -151,12 +184,15 @@ class Histogram(object):
             cumul_hist.append(total)
 
         cumul_hist = np.array(cumul_hist)
+        if total == 0:
+            return 0
         if maximum is not None:
             cumul_hist *= maximum / total
             
-        return cumul_hist
+        xvals = self.xvals(bin_edge)
+        return LookupFunction(xvals, cumul_hist)
     
-    def reverse_cumulative(self, maximum=1.0):
+    def reverse_cumulative(self, maximum=1.0, bin_edge="l"):
         """Cumulative from the right: number of values greater than bin value.
 
         Use `maximum=None` to get the raw counts.
@@ -168,10 +204,13 @@ class Histogram(object):
             cumul_hist.insert(0, total)
 
         cumul_hist = np.array(cumul_hist)
+        if total == 0:
+            return 0
         if maximum is not None:
             cumul_hist *= maximum / total
-            
-        return cumul_hist
+        
+        xvals = self.xvals(bin_edge)
+        return LookupFunction(xvals, cumul_hist)
 
     def rebinned(self, scaling):
         """Redistributes histogram bins of width binwidth*scaling
@@ -212,7 +251,15 @@ def histograms_to_pandas_dataframe(hists, fcn="histogram", fcn_args={}):
             "rebinned" : hist.rebinned
         }[fcn](**fcn_args)
 
-        frames.append(pd.DataFrame({hist.name : hist_data}, index=keys))
+        bin_edge = {
+            "histogram" : "m",
+            "normalized" : "m",
+            "reverse_cumulative" : "l",
+            "cumulative" : "r"
+        }[fcn]
+        xvals = hist.xvals(bin_edge)
+
+        frames.append(pd.DataFrame({hist.name : hist_data}, index=xvals))
     all_frames = pd.concat(frames, axis=1)
     return all_frames
 

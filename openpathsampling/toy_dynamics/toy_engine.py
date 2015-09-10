@@ -1,7 +1,6 @@
 import numpy as np
 from openpathsampling.snapshot import Snapshot, Momentum, Configuration
 from openpathsampling.dynamics_engine import DynamicsEngine
-from openpathsampling.todict import restores_as_full_object
 
 def convert_to_3Ndim(v):
     ndofs = len(v)
@@ -25,7 +24,6 @@ def count_atoms(ndofs):
     # first part gives whole atoms, second part says if a partial exists
     return (ndofs / 3) + min(1, ndofs % 3)
 
-@restores_as_full_object
 class ToyEngine(DynamicsEngine):
     '''The trick is that we have various "simulation" classes (either
     generated directly as here, or subclassed for more complication
@@ -71,6 +69,10 @@ class ToyEngine(DynamicsEngine):
     def mass(self, value):
         self._mass = value
         self._minv = np.reciprocal(value)
+
+    @property
+    def snapshot_timestep(self):
+        return self.nsteps_per_frame * self.integ.dt
 
     @property
     def current_snapshot(self):

@@ -5,6 +5,20 @@ import simtk.unit as u
 import numpy as np
 import openpathsampling as paths
 
+import sys
+def refresh_output(output_str, print_anyway=True, refresh=True):
+    try:
+        import IPython.display
+    except ImportError:
+        if print_anyway:
+            print(output_str)
+    else:
+        if refresh:
+            IPython.display.clear_output(wait=True)
+        print(output_str)
+    sys.stdout.flush()
+
+
 
 def updateunits(func):
     def inner(self, *args, **kwargs):
@@ -71,7 +85,7 @@ def trajectory_from_mdtraj(mdtrajectory):
     """
     trajectory = paths.Trajectory()
     empty_momentum = paths.Momentum()
-    for frame_num in range(mdtrajectory.n_frames):
+    for frame_num in range(len(mdtrajectory)):
         # mdtraj trajectories only have coordinates and box_vectors
         coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
         if mdtrajectory.unitcell_vectors is not None:

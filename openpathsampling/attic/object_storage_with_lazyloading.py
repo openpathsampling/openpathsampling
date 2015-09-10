@@ -53,7 +53,7 @@ class ObjectStorage(object):
         self.json = json
         self.all_names = None
         self.simplifier = paths.storage.StorableObjectJSON(storage)
-        self._names_loaded = False
+        self._uids_loaded = False
         if identifier is not None:
             self.identifier = self.idx_dimension + '_' + identifier
         else:
@@ -244,10 +244,10 @@ class ObjectStorage(object):
 
     def update_name_cache(self):
         if self.named:
-            for idx, name in enumerate(self.variables[self.db + "_name"][:]):
+            for idx, name in enumerate(self.variables[self.db + "_uid"][:]):
                 self.cache[name] = idx
 
-            self._names_loaded = True
+            self._uids_loaded = True
 
     def index(self, obj, idx=None):
         """
@@ -315,7 +315,7 @@ class ObjectStorage(object):
         Returns an object from the storage. Needs to be implented from the specific storage class.
         '''
 
-        return self.load_object(self.idx_dimension + '_json', idx)
+        return self.load_json(self.idx_dimension + '_json', idx)
 
     def save(self, obj, idx=None):
         """
@@ -324,13 +324,13 @@ class ObjectStorage(object):
         """
 
         if self.named and hasattr(obj, 'name'):
-            self.storage.variables[self.db + '_name'][idx] = obj.name
+            self.storage.variables[self.db + '_uid'][idx] = obj.name
 
-        self.save_object(self.idx_dimension + '_json', idx, obj)
+        self.save_json(self.idx_dimension + '_json', idx, obj)
 
-    def get_name(self, idx):
+    def get_uid(self, idx):
         if self.named:
-            return self.storage.variables[self.db + '_name'][idx]
+            return self.storage.variables[self.db + '_uid'][idx]
         else:
             return None
 
@@ -403,7 +403,7 @@ class ObjectStorage(object):
         # define dimensions used for the specific object
         self.storage.createDimension(self.idx_dimension, 0)
         if self.named:
-            self.init_variable(self.db + "_name", 'str', description='A short descriptive name for convenience', chunksizes=tuple([10240]))
+            self.init_variable(self.db + "_uid", 'str', description='A short descriptive name for convenience', chunksizes=tuple([10240]))
         if self.json:
             self.init_variable(self.db + "_json", 'str', description='A json serialized version of the object', chunksizes=tuple([10240]))
 
@@ -657,7 +657,7 @@ class ObjectStorage(object):
         self.storage.variables[name][idx, begin:begin+len(data)] = values
 
 #=============================================================================================
-# ORDERPARAMETER UTILITY FUNCTIONS
+# COLLECTIVE VARIABLE UTILITY FUNCTIONS
 #=============================================================================================
 
     @property
@@ -790,7 +790,7 @@ def loadcache(func):
             # we want to load by name and it was not in cache
             if self.named:
                 # only do it, if we allow named objects
-                if not self._names_loaded:
+                if not self._uids_loaded:
                     # this only has to happen once, since afterwards we keep track of the name_cache
                     # this name cache shares just the normal cache but stores indices instead of objects
                     self.update_name_cache()
@@ -803,7 +803,7 @@ def loadcache(func):
             else:
                 raise ValueError('str "' + idx + '" as indices are only allowed in named storage')
 
-            n_idx = self.idx_from_name(idx)
+            n_idx = self.idx_from_uid(idx)
 
         # ATTENTION HERE!
         # Note that the wrapped function no self as first parameter. This is because we are wrapping a bound
@@ -855,7 +855,7 @@ def loadidx(func):
         if type(idx) is str:
             # we want to load by name and it was not in cache
             if self.named:
-                n_idx = self.idx_from_name(idx)
+                n_idx = self.idx_from_uid(idx)
             else:
                 # load by name only in named storages
                 raise ValueError('Load by name (str) is only supported in named storages')

@@ -1,16 +1,12 @@
 import os
 import numpy as np
-from openmmtools.integrators import VVVRIntegrator
-
 import simtk.unit as u
-import simtk.openmm as openmm
-from simtk.openmm.app import ForceField, PME, HBonds, PDBFile
+from simtk.openmm.app import ForceField, PME, HBonds, PDBFile, Simulation
 
 import openpathsampling as paths
 from openpathsampling.storage import Storage
-from openpathsampling.todict import restores_as_full_object
+from openpathsampling.integrators import VVVRIntegrator
 
-@restores_as_full_object
 class OpenMMEngine(paths.DynamicsEngine):
     """OpenMM dynamics engine."""
 
@@ -109,7 +105,7 @@ class OpenMMEngine(paths.DynamicsEngine):
             options=options
         )
         engine.storage = storage
-        storage.engine.save(engine)
+        storage.engines.save(engine)
 
         return engine
 
@@ -129,7 +125,7 @@ class OpenMMEngine(paths.DynamicsEngine):
 #            options=options
 #        )
 
-        engine = storage.engine.load(0)
+        engine = storage.engines.load(0)
 
         engine.storage = storage
         return engine
@@ -164,7 +160,7 @@ class OpenMMEngine(paths.DynamicsEngine):
                                      self.options["collision_rate"],
                                      self.options["timestep"])
 
-        simulation = openmm.app.Simulation(openmm_topology, system,
+        simulation = Simulation(openmm_topology, system,
                                            integrator)
 
         # claim the OpenMM simulation as our own
@@ -216,6 +212,10 @@ class OpenMMEngine(paths.DynamicsEngine):
     # frequently, but it is also much more likely to be a source of errors
     # for users who forget to implement that last step.
 
+    @property
+    def snapshot_timestep(self):
+        return self.nsteps_per_frame * self.options['timestep']
+
     def _build_current_snapshot(self):
         # TODO: Add caching for this and mark if changed
 
@@ -254,7 +254,7 @@ class OpenMMEngine(paths.DynamicsEngine):
 #                        self.simulation.context.getPeriodicBoxVectors(snapshot.box_vectors)
 
             if snapshot.momentum is not None:
-                if self._current_snapshot is None or snapshot.momentum is not self._current_snapshot.momentum or snapshot.reversed != self._current_snapshot.reversed:
+                if self._current_snapshot is None or snapshot.momentum is not self._current_snapshot.momentum or snapshot.is_reversed != self._current_snapshot.is_reversed:
                     # new snapshot has a different momenta (different coordinates and reverse setting)
                     # so update. Note snapshot.velocities is different from snapshot.momenta.velocities!!!
                     # The first includes the reversal setting in the snapshot the second does not.

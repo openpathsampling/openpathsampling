@@ -1,5 +1,5 @@
 Toy Dynamics Example
 ====================
 
-.. notebook:: examples/ipython/toy_dynamics_tis.ipynb
+.. notebook:: examples/ipython/toy_tis.ipynb
    :skip_exceptions:

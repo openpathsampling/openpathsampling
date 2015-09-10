@@ -1,7 +1,7 @@
 OpenPathSampling
 ================
 
-A toolkit to run PathSampling Algorithms in python with OpenMM
+A Python toolkit to run PathSampling algorithms.
 
 --------------------------------------------------------------------------------
 
@@ -9,7 +9,7 @@ Documentation
 -------------
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    getting_started
    examples/index
@@ -24,12 +24,12 @@ API Reference
    :maxdepth: 1
 
    core
-   orderparameter
+   collectivevariable
    volume
    ensemble
    shooting
    pathmover
-   calculation
+   pathsimulator
    engine
    storage
 

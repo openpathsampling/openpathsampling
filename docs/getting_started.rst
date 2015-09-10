@@ -9,10 +9,6 @@ Platforms
 
 Mac and Linux. Windows only has limited OpenMM support. (Not recommended)
 
-Supported Hardware
-------------------
-
-Needs OpenMM sofar!
 
 Install with Conda
 ------------------
@@ -25,7 +21,10 @@ To install OpenPathSampling with conda, use the following commands ::
   $ conda config --add channels http://conda.binstar.org/omnia
   $ conda install openpathsampling
 
-.. note:: ``conda`` will automatically all of the tricky dependencies from binary packages automatically! This includes pytables / numpy / scipy! The easiest way to get conda is with the `Anaconda python distribution <https://store.continuum.io/cshop/anaconda/>`_.
+.. note:: ``conda`` will automatically install all of the tricky dependencies
+    from binary packages automatically! This includes pytables / numpy / scipy!
+    The easiest way to get conda is with the
+    `Anaconda python distribution <https://store.continuum.io/cshop/anaconda/>`_.
 
 
 Install from Source
@@ -52,12 +51,16 @@ be installed.
         The development package (``python-dev`` or ``python-devel``
         on most Linux distributions) is recommended.
 
-    `NumPy <http://numpy.scipy.org/>`_ >= 1.6.0
+    `NumPy <http://numpy.scipy.org/>`_ >= 1.8.0
         Numpy is the base package for numerical computing in python.
+
 
 Optional packages:
 
-[list these]
+    `IPython <http://ipython.org>`_ >= 3.0.0
+        Used for the examples and tutorials. Is optional, but highly
+        recommended.
+
 
 Testing Your Installation
 =========================
@@ -67,5 +70,5 @@ up via ``conda`` if you don't already have it. ::
 
   conda install nose
 
-From the source directory ``openpathsampling/tests``, you can also run the tests with ``nosetests .`` on
-the command line
+From the source directory ``openpathsampling/tests``, you can run the tests
+by typing ``nosetests`` on the command line.
