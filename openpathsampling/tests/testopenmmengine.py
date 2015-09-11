@@ -30,12 +30,15 @@ class testOpenMMEngine(object):
                    'forcefield_solute' : 'amber96.xml',
                    'forcefield_solvent' : 'tip3p.xml'
                   }
-        self.engine = OpenMMEngine.auto(
-            filename=data_filename("openmmengine_test.nc"), 
-            template=data_filename("ala_small_traj.pdb"),
-            options=options,
-            mode='create'
+
+        template = paths.tools.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
+
+        self.engine = SimpleOpenMMEngine(
+            template=template,
+            options=options
         )
+
+        self.engine.create()
 
         context = self.engine.simulation.context
         zero_array = np.zeros((self.engine.n_atoms, 3))
@@ -43,12 +46,10 @@ class testOpenMMEngine(object):
         context.setVelocities(u.Quantity(zero_array, u.nanometers / u.picoseconds))
 
     def teardown(self):
-        if os.path.isfile(data_filename("openmmengine_test.nc")):
-            os.remove(data_filename("openmmengine_test.nc"))
+        pass
 
     def test_sanity(self):
-        assert_equal(os.path.isfile(data_filename("openmmengine_test.nc")),
-                     True)
+        pass
 
     def test_equilibrate(self):
         snap0 = Snapshot(
@@ -64,7 +65,7 @@ class testOpenMMEngine(object):
             # engine.topology because the latter is a mdtraj, former is
             # openmm; we might change that so that engine.simulation is the
             # only place you find an openmm topol
-            res_i = self.engine.storage.topology.md.atom(atom_i).residue
+            res_i = self.engine.topology.md.atom(atom_i).residue
             if res_i in self.engine.solute_indices:
                 assert_items_equal(old_pos[atom_i], new_pos[atom_i])
             else:

@@ -63,14 +63,6 @@ class DynamicsEngine(OPSNamed):
         self.initialized = False
         self.running = dict()
 
-        # if there has not been created a storage by the init of a derived
-        # class make sure there is at least a member variable
-#        if not hasattr(self, 'storage'):
-#            self.storage = None
-
-#        if storage is not None:
-#            self.storage = storage
-
         self.template = template
 
         # Trajectories need to know the engine as a hack to get the topology.
@@ -81,7 +73,7 @@ class DynamicsEngine(OPSNamed):
         # used to get the solute indices which should depend on the topology anyway
         # Trajectory.engine = self
 
-        self._register_options(options)
+        self._check_options(options)
 
         # TODO: switch this not needing slice; use can_append
         # this and n_atoms are the only general options we need and register
@@ -93,7 +85,7 @@ class DynamicsEngine(OPSNamed):
         # as default set a newly generated engine as the default engine
         self.set_as_default()
 
-    def _register_options(self, options = None):
+    def _check_options(self, options = None):
         """
         This will register all variables in the options dict as a member variable if
         they are present in either the DynamicsEngine.default_options or this
@@ -166,20 +158,24 @@ class DynamicsEngine(OPSNamed):
                         raise ValueError('Type of option "' + str(variable) + '" (' + str(type(my_options[variable])) + ') is not "' + str(type(default_value)) + '"')
 
             self.options = okay_options
-
-            for variable, value in okay_options.iteritems():
-                if not hasattr(self, variable):
-                    setattr(self, variable, value)
         else:
             self.options = {}
 
+    def __getattr__(self, item):
+        # default is to look for an option and return it's value
+        return self.options[item]
+
+    @property
+    def topology(self):
+        return self.template.topology
+
     @property
     def n_atoms(self):
-        return self.template.topology.n_atoms
+        return self.topology.n_atoms
 
     @property
     def n_spatial(self):
-        return self.template.topology.n_spatial
+        return self.topology.n_spatial
 
     def to_dict(self):
         return {

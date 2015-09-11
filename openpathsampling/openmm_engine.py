@@ -23,7 +23,7 @@ class OpenMMEngine(paths.DynamicsEngine):
     _default_options = {
         'nsteps_per_frame': 10,
         'n_frames_max': 5000,
-        'platform' : 'CUDA'
+        'platform' : 'fastest'
     }
 
     def __init__(self, template, system, integrator, options=None):
@@ -35,6 +35,20 @@ class OpenMMEngine(paths.DynamicsEngine):
             options=options,
             template=template
         )
+
+        if self.options['platform'] == 'fastest':
+
+            speed = 0.0
+
+            # determine the fastest platform
+            for platform_idx in range(simtk.openmm.Platform.getNumPlatforms()):
+                pf = simtk.openmm.Platform.getPlatform(platform_idx)
+                if pf.getSpeed() > speed:
+                    speed = pf.getSpeed()
+                    platform = pf.getName()
+
+            self.options['platform'] = platform
+            self.platform = platform
 
         # set no cached snapshot, means it will be constructed from the openmm context
         self._current_snapshot = None
@@ -49,11 +63,14 @@ class OpenMMEngine(paths.DynamicsEngine):
         Create the final OpenMMEngine
 
         """
+
+        platform = self.platform
+
         self.simulation = simtk.openmm.app.Simulation(
             topology=self.template.topology.md.to_openmm(),
             system=self.system,
             integrator=self.integrator,
-            platform=simtk.openmm.Platform.getPlatformByName(self.platform)
+            platform=simtk.openmm.Platform.getPlatformByName(platform)
         )
 
         self.initialized = True
@@ -91,18 +108,6 @@ class OpenMMEngine(paths.DynamicsEngine):
     # this property is specific to direct control simulations: other
     # simulations might not use this
     # TODO: Maybe remove this and put it into the creation logic
-
-    @property
-    def topology(self):
-        return self.template.topology
-
-    @property
-    def nsteps_per_frame(self):
-        return self.options['nsteps_per_frame']
-
-    @nsteps_per_frame.setter
-    def nsteps_per_frame(self, value):
-        self.options['nsteps_per_frame'] = value
 
     @property
     def snapshot_timestep(self):
@@ -178,7 +183,7 @@ class SimpleOpenMMEngine(OpenMMEngine):
         "temperature": 300.0 * u.kelvin,
         'collision_rate': 1.0 / u.picoseconds,
         'timestep': 2.0 * u.femtoseconds,
-        'platform': 'CUDA',
+        'platform': 'fastest',
         'forcefield_solute': 'amber96.xml',
         'forcefield_solvent': 'tip3p.xml'
     }
@@ -188,7 +193,6 @@ class SimpleOpenMMEngine(OpenMMEngine):
         if 'template' in options:
             template = options['template']
 
-        self.topology = template.topology
         self.options = {
         }
 
@@ -223,6 +227,19 @@ class SimpleOpenMMEngine(OpenMMEngine):
         self._current_box_vectors = None
 
         self.simulation = None
+
+        if self.options['platform'] == 'fastest':
+
+            speed = 0.0
+
+            # determine the fastest platform
+            for platform_idx in range(simtk.openmm.Platform.getNumPlatforms()):
+                pf = simtk.openmm.Platform.getPlatform(platform_idx)
+                if pf.getSpeed() > speed:
+                    speed = pf.getSpeed()
+                    platform = pf.getName()
+
+            self.options['platform'] = platform
 
     def equilibrate(self, nsteps):
         # TODO: rename... this is position restrained equil, right?
