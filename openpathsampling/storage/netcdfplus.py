@@ -392,7 +392,7 @@ class NetCDFPlus(netcdf.Dataset):
             'obj' : np.int32
         }
 
-        if var_type.startswith('obj.'):
+        if var_type.startswith('obj.') or var_type.startswith('lazyobj.'):
             nc_type = np.int32
         else:
             nc_type = type_conversion[var_type]
@@ -441,6 +441,20 @@ class NetCDFPlus(netcdf.Dataset):
             getter = lambda v : \
                 [ None if int(w) < 0 else store.load(int(w)) for w in v.tolist()] \
                     if iterable(v) else None if int(v) < 0 else store.load(int(v))
+            setter = lambda v : \
+                np.array([ -1 if w is None else store.save(w) for w in v], dtype=np.int32) \
+                    if iterable(v) else -1 if v is None else store.save(v)
+
+        elif var_type.startswith('lazyobj.'):
+            store = getattr(self, var_type[8:])
+            base_type = store.content_class
+
+            iterable = lambda v : \
+                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+
+            getter = lambda v : \
+                [ None if int(w) < 0 else (store,int(w)) for w in v.tolist()] \
+                    if iterable(v) else None if int(v) < 0 else (store,int(v))
             setter = lambda v : \
                 np.array([ -1 if w is None else store.save(w) for w in v], dtype=np.int32) \
                     if iterable(v) else -1 if v is None else store.save(v)

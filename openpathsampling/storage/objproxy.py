@@ -5,6 +5,8 @@
 
 from openpathsampling.base import StorableObject
 
+import weakref
+
 #=============================================================================
 # SIMULATION CONFIGURATION
 #=============================================================================
@@ -14,37 +16,70 @@ class DelayedLoaderProxy(StorableObject):
     A proxy that loads an underlying object if attributes are accessed
     """
 
-    # Class variables to store the global storage and the system context
-    # describing the system to be saved as snapshots
-    # Hopefully these class member variables will not be needed any longer
-    engine = None
-
     def __init__(self):
         super(DelayedLoaderProxy, self).__init__()
-        self.__subject__ = None
+        self._subject_ref_ = None
+
+    @property
+    def __subject__(self):
+        if self._subject_ref_ is None:
+            self._subject_ref_ = self._load_()
+
+        return self._subject_ref_
 
     @property
     def __class__(self):
         return self.store.content_class
 
     def __getattr__(self, item):
-        if self.__subject__ is None:
-            self.load()
-
         return getattr(self.__subject__, item)
 
-    def load(self):
+    def _load_(self):
         """
         Call the loader and get the referenced object
         """
-        if self.__subject__ is None:
-            store, idx = self.idx.iteritems().next()
-            self.__subject__ = store.get(idx) # .load would just get another Proxy
+        store, idx = self.idx.iteritems().next()
+        return store.get(idx) # .load would just get another Proxy
 
-            # print 'loaded %s[%d] : %s' % (store.content_class.__name__, idx, self.__subject__)
+        # print 'loaded %s[%d] : %s' % (store.content_class.__name__, idx, self.__subject__)
 
     def unload(self):
         """
         Unload the referenced object to free memory
         """
-        self.__subject__ = None
+        self._subject_ref_ = None
+
+class WeakLoaderProxy(DelayedLoaderProxy):
+    """
+    A proxy that loads an underlying object with weak reference if attributes are accessed
+    """
+
+    def __init__(self):
+        super(WeakLoaderProxy, self).__init__()
+        self._subject_weak_ = None
+
+    @property
+    def __subject__(self):
+        if self._subject_ref_ is None:
+            if self._subject_weak_ is None:
+                obj = self.load()
+                self._subject_weak_ = weakref.ref(obj)
+            else:
+                obj = self._subject_weak_()
+                if obj is None:
+                    obj = self._load_()
+                    self._subject_weak_ = weakref.ref(obj)
+
+            return obj
+        else:
+            return self._subject_ref_
+
+    def stick(self):
+        self._subject_ref_ = self.__subject__
+
+    def unstick(self):
+        self._subject_weak_ = None
+
+    def unload(self):
+        self._subject_ref_ = None
+        self._subject_weak_ = None

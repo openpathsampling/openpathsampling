@@ -20,10 +20,10 @@ class SampleStore(ObjectStore):
             bias=self.vars['bias'][idx],
         )
 
-        del obj.details
-        del obj.ensemble
-        del obj.mover
-        del obj.parent
+#        del obj.details
+#        del obj.ensemble
+#        del obj.mover
+#        del obj.parent
 
         return obj
 
@@ -51,6 +51,8 @@ class SampleStore(ObjectStore):
             the sample
         '''
 
+        print self.vars['parent'][idx]
+
         obj = Sample(
             trajectory=self.vars['trajectory'][idx],
             replica=self.vars['replica'][idx],
@@ -73,7 +75,7 @@ class SampleStore(ObjectStore):
         self.init_variable('trajectory', 'obj.trajectories', chunksizes=(1, ))
         self.init_variable('ensemble', 'obj.ensembles', chunksizes=(1, ))
         self.init_variable('replica', 'int', chunksizes=(1, ))
-        self.init_variable('parent', 'obj.samples', chunksizes=(1, ))
+        self.init_variable('parent', 'lazyobj.samples', chunksizes=(1, ))
         self.init_variable('details', 'obj.details', chunksizes=(1, ))
         self.init_variable('bias', 'float', chunksizes=(1, ))
         self.init_variable('mover', 'obj.pathmovers', chunksizes=(1, ))
@@ -110,10 +112,10 @@ class SampleStore(ObjectStore):
         obj.idx[self] = idx
         obj._origin = self
 
-        del obj.details
-        del obj.ensemble
-        del obj.mover
-        del obj.parent
+#        del obj.details
+#        del obj.ensemble
+#        del obj.mover
+#        del obj.parent
 
         self.cache[idx] = obj
 
@@ -132,7 +134,6 @@ class SampleSetStore(ObjectStore):
         map(self.storage.samples.save, sample_set)
 
         self.vars['samples'][idx] = sample_set
-
         self.vars['movepath'][idx] = sample_set.movepath
 
     def sample_indices(self, idx):

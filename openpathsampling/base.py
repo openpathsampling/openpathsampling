@@ -3,6 +3,29 @@ import inspect
 import logging
 logger = logging.getLogger(__name__)
 
+class DelayedLoader(object):
+    def __get__(self, instance, owner):
+        if instance is not None:
+            obj = instance._lazy[self]
+            if type(obj) is tuple:
+                (store, idx) = obj
+                return store[idx]
+            else:
+                return obj
+
+        else:
+            return None
+
+    def __set__(self, instance, value):
+        if type(value) is tuple:
+            instance._lazy[self] = value
+        elif hasattr(value, 'idx') and len(value.idx) > 0:
+            instance._lazy[self] = value.idx.iteritems().next()
+        else:
+            instance._lazy[self] = value
+
+        print self, instance, value
+
 class StorableObject(object):
     """Mixin that allows an object to carry a .name property that can be saved
 
@@ -18,7 +41,8 @@ class StorableObject(object):
         return this._idx
 
     def __init__(self):
-        self._idx = {}
+        self._idx = dict()
+        self._lazy = dict()
         self._uid = ''
 
     @property
