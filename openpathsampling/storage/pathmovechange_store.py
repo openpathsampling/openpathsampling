@@ -7,10 +7,10 @@ class PathMoveChangeStore(ObjectStore):
         super(PathMoveChangeStore, self).__init__(
             PathMoveChange,
             json=False,
-            load_partial=True
+            load_partial=False
         )
 
-        self.set_variable_partial_loading('details')
+#        self.set_variable_partial_loading('details')
 #        self.set_variable_partial_loading('mover')
 
         self._cached_all = False

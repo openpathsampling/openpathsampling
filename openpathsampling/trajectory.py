@@ -243,6 +243,9 @@ class Trajectory(list, StorableObject):
             ret.atom_indices = self.atom_indices
             
         return ret
+
+    def __hash__(self):
+        return object.__hash__(self)
         
     def __getitem__(self, index):
         # Allow for numpy style of selecting several indices using a list as index parameter
@@ -254,6 +257,8 @@ class Trajectory(list, StorableObject):
         if type(ret) is list:
             ret = Trajectory(ret)
             ret.atom_indices = self.atom_indices
+        elif type(ret) is tuple:
+            ret = ret
 
         return ret
 

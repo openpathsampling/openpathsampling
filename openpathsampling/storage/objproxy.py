@@ -11,6 +11,37 @@ import weakref
 # SIMULATION CONFIGURATION
 #=============================================================================
 
+class LoaderProxy(StorableObject):
+    """
+    A proxy that loads an underlying object if attributes are accessed
+    """
+
+    def __init__(self):
+        super(LoaderProxy, self).__init__()
+
+    @property
+    def __subject__(self):
+        return self._load_()
+
+    @property
+    def __class__(self):
+        store, idx = self.idx.iteritems().next()
+        return store.content_class
+
+    def __getattr__(self, item):
+        return getattr(self.__subject__, item)
+
+    def _load_(self):
+        """
+        Call the loader and get the referenced object
+        """
+        store, idx = self.idx.iteritems().next()
+        obj = store[idx]
+
+        return obj
+
+        # print 'loaded %s[%d] : %s' % (store.content_class.__name__, idx, self.__subject__)
+
 class DelayedLoaderProxy(StorableObject):
     """
     A proxy that loads an underlying object if attributes are accessed

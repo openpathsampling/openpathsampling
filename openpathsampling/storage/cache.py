@@ -55,6 +55,9 @@ class WeakLRUCache(OrderedDict):
         self._size_limit = size_limit
         self._weak_cache = weakref.WeakValueDictionary()
 
+    def __str__(self):
+        return '%s(%d[%d])' % (self.__class__.__name__, len(self), len(self._weak_cache))
+
     @property
     def size_limit(self):
         return self._size_limit
@@ -80,6 +83,9 @@ class WeakLRUCache(OrderedDict):
         if self.size_limit is not None:
             while len(self) > self.size_limit:
                 self._weak_cache.__setitem__(*self.popitem(last=False))
+
+    def __contains__(self, item):
+        return OrderedDict.__contains__(self, item) or item in self._weak_cache
 
 class WeakCache(weakref.WeakValueDictionary):
     """

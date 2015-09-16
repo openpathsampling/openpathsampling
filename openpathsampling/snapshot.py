@@ -12,7 +12,7 @@ import mdtraj as md
 # THIS SHOULD NOT BE NECESSARY! SEE XYZ BELOW
 import simtk.unit as u
 
-from openpathsampling.base import StorableObject
+from openpathsampling.base import StorableObject, DelayedLoader
 
 
 #=============================================================================
@@ -422,6 +422,9 @@ class Snapshot(StorableObject):
                                       reversed_copy = self)
         else:
             self._reversed = reversed_copy
+
+    configuration = DelayedLoader()
+    momentum = DelayedLoader()
 
     @property
     @has('configuration')

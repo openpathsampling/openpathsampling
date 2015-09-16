@@ -3,12 +3,12 @@ from openpathsampling.sample import SampleSet, Sample
 
 class SampleStore(ObjectStore):
     def __init__(self):
-        super(SampleStore, self).__init__(Sample, json=False, load_partial=True)
+        super(SampleStore, self).__init__(Sample, json=False, load_partial=False)
 
-        self.set_variable_partial_loading('details')
-        self.set_variable_partial_loading('parent')
-        self.set_variable_partial_loading('mover')
-        self.set_variable_partial_loading('ensemble')
+#        self.set_variable_partial_loading('details')
+#        self.set_variable_partial_loading('parent')
+#        self.set_variable_partial_loading('mover')
+#        self.set_variable_partial_loading('ensemble')
 
         self._cached_all = False
 
@@ -50,8 +50,6 @@ class SampleStore(ObjectStore):
         sample : Sample
             the sample
         '''
-
-        print self.vars['parent'][idx]
 
         obj = Sample(
             trajectory=self.vars['trajectory'][idx],

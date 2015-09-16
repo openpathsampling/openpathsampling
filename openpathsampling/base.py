@@ -10,9 +10,10 @@ class DelayedLoader(object):
             if type(obj) is tuple:
                 (store, idx) = obj
                 return store[idx]
+            elif hasattr(obj, '__subject__'):
+                return obj.__subject__
             else:
                 return obj
-
         else:
             return None
 
@@ -23,8 +24,6 @@ class DelayedLoader(object):
             instance._lazy[self] = value.idx.iteritems().next()
         else:
             instance._lazy[self] = value
-
-        print self, instance, value
 
 class StorableObject(object):
     """Mixin that allows an object to carry a .name property that can be saved

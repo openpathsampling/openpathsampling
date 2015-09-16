@@ -2,7 +2,7 @@ import numpy as np
 
 from openpathsampling.snapshot import Snapshot, Configuration, Momentum
 from object_storage import ObjectStore
-from objproxy import DelayedLoaderProxy
+from objproxy import DelayedLoaderProxy, WeakLoaderProxy, LoaderProxy
 
 
 class SnapshotStore(ObjectStore):
@@ -13,7 +13,7 @@ class SnapshotStore(ObjectStore):
     def __init__(self):
         super(SnapshotStore, self).__init__(Snapshot, json=False)
 
-    def get(self, idx=None):
+    def load(self, idx=None):
         '''
         Load a snapshot from the storage.
 
@@ -46,7 +46,7 @@ class SnapshotStore(ObjectStore):
 
         return snapshot
 
-    def load(self, idx=None):
+    def lazy(self, idx=None):
         '''
         Load a snapshot from the storage.
 
@@ -61,7 +61,7 @@ class SnapshotStore(ObjectStore):
             the loaded snapshot instance
         '''
 
-        return DelayedLoaderProxy()
+        return LoaderProxy()
 
     def save(self, snapshot, idx=None):
         """
@@ -94,12 +94,12 @@ class SnapshotStore(ObjectStore):
         '''
         super(SnapshotStore, self)._init()
 
-        self.init_variable('configuration', 'obj.configurations',
+        self.init_variable('configuration', 'lazyobj.configurations',
                 description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
                 chunksizes=(1, )
         )
 
-        self.init_variable('momentum', 'obj.momenta',
+        self.init_variable('momentum', 'lazyobj.momenta',
                 description="the snapshot index (0..n_momentum-1) 'frame' of snapshot '{idx}'.",
                 chunksizes=(1, )
                 )
@@ -153,11 +153,11 @@ class MomentumStore(ObjectStore):
     """
 
     def __init__(self):
-        super(MomentumStore, self).__init__(Momentum, json=False, load_partial=True)
+        super(MomentumStore, self).__init__(Momentum, json=False, load_partial=False)
 
         # attach delayed loaders
-        self.set_variable_partial_loading('velocities')
-        self.set_variable_partial_loading('kinetic_energy')
+#        self.set_variable_partial_loading('velocities')
+#        self.set_variable_partial_loading('kinetic_energy')
 
     def save(self, momentum, idx = None):
         """
@@ -283,12 +283,12 @@ class MomentumStore(ObjectStore):
 
 class ConfigurationStore(ObjectStore):
     def __init__(self):
-        super(ConfigurationStore, self).__init__(Configuration, json=False, load_partial=True)
+        super(ConfigurationStore, self).__init__(Configuration, json=False, load_partial=False)
 
         # attach delayed loaders
-        self.set_variable_partial_loading('coordinates')
-        self.set_variable_partial_loading('box_vectors')
-        self.set_variable_partial_loading('potential_energy')
+#        self.set_variable_partial_loading('coordinates')
+#        self.set_variable_partial_loading('box_vectors')
+#        self.set_variable_partial_loading('potential_energy')
 
     def save(self, configuration, idx = None):
         # Store configuration.

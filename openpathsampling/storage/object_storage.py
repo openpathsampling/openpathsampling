@@ -7,6 +7,7 @@ import numpy as np
 from cache import WeakLimitCache
 from openpathsampling.base import StorableNamedObject
 
+import weakref
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -124,6 +125,8 @@ class ObjectStore(StorableNamedObject):
         self.variables = dict()
         self.vars = dict()
         self.units = dict()
+
+        self.index = weakref.WeakKeyDictionary()
 
         # First, apply standard decorator for loading and saving
         # this handles all the setting and getting of .idx and is
@@ -1068,12 +1071,16 @@ def loadcache(func):
             raise ValueError('str "' + idx + '" as indices are only allowed in named storage')
 
         # if it is in the cache, return it
-        if n_idx in self.cache:
+        try:
+            obj = self.cache[n_idx]
             logger.debug('Found IDX #' + str(idx) + ' in cache. Not loading!')
-            return self.cache[n_idx]
+            return obj
+
+        except KeyError:
+            pass
 
         # ATTENTION HERE!
-        # Note that the wrapped function no self as first parameter. This is because we are wrapping a bound
+        # Note that the wrapped function has no self as first parameter. This is because we are wrapping a bound
         # method in an instance and this one is still bound - luckily - to the same 'self'. In a class decorator when wrapping
         # the class method directly it is not bound yet and so we need to include the self! Took me some time to
         # understand and figure that out
@@ -1099,6 +1106,8 @@ def savecache(func):
         # call the normal storage
         func(obj, idx, *args, **kwargs)
         idx = obj.idx[self]
+
+        idx = self.index[obj]
 
         # store the name in the cache
         if hasattr(self, 'cache'):
@@ -1159,6 +1168,8 @@ def loadidx(func):
 
         obj.idx[self] = n_idx
 
+        self.index[obj] = n_idx
+
         if self.has_uid:
             if not hasattr(obj, '_uid'):
                 # get the name of the object
@@ -1181,7 +1192,7 @@ def saveidx(func):
     def inner(self, obj, idx = None, *args, **kwargs):
         storage = self.storage
         if idx is None:
-            if self in obj.idx:
+            if obj in self.index:
                 # has been saved so quit and do nothing
                 return obj.idx[self]
             else:
@@ -1192,6 +1203,8 @@ def saveidx(func):
                 raise ValueError('Saving by name not yet supported')
             else:
                 idx = int(idx)
+
+        self.index[obj] = idx
 
         obj.idx[self] = idx
 

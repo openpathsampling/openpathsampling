@@ -406,6 +406,9 @@ class Sample(StorableObject):
         self.mover = mover
 
     parent = paths.base.DelayedLoader()
+    details = paths.base.DelayedLoader()
+    mover = paths.base.DelayedLoader()
+    parent = paths.base.DelayedLoader()
 
     def __call__(self):
         return self.trajectory
