@@ -102,9 +102,9 @@ class PathMoveChangeStore(ObjectStore):
 
         if idx not in self.cache:
             obj = self._load_partial_samples(cls_name, samples_idxs, mover_idx)
-            obj.idx[self] = idx
             obj._origin = self
 
+            self.index[obj] = idx
             self.cache[idx] = obj
             del obj.details
 #            del obj.mover

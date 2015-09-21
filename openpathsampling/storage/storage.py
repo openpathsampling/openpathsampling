@@ -70,9 +70,9 @@ class Storage(NetCDFPlus):
 
         # Copy all configurations and momenta to new file in reduced form
         for obj in self.configurations:
-            storage2.configurations.save(obj.copy(subset), idx=obj.idx[self.configurations])
+            storage2.configurations.save(obj.copy(subset), idx=self.configurations.index[obj])
         for obj in self.momenta.iterator():
-            storage2.momenta.save(obj.copy(subset), idx=obj.idx[self.momenta])
+            storage2.momenta.save(obj.copy(subset), idx=self.momenta.index[obj])
 
         # All other should be copied one to one. We do this explicitely although we could just copy all
         # and exclude configurations and momenta, but this seems cleaner
@@ -213,7 +213,7 @@ class Storage(NetCDFPlus):
         self.snapshots.save(template)
 
         self.createVariable('template_idx', 'i4', 'scalar')
-        self.variables['template_idx'][:] = template.idx[self.snapshots]
+        self.variables['template_idx'][:] = self.snapshots.index[template]
 
     def _restore(self):
         self.topology = self.topologies[0]

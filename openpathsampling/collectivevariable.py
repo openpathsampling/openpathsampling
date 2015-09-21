@@ -139,6 +139,9 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         self._stored = False
 
+    def __hash__(self):
+        return id(self) / 8
+
     @staticmethod
     def _interprete_num_type(instance):
         ty = type(instance)

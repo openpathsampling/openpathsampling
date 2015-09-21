@@ -20,8 +20,6 @@ class DelayedLoader(object):
     def __set__(self, instance, value):
         if type(value) is tuple:
             instance._lazy[self] = value
-        elif hasattr(value, 'idx') and len(value.idx) > 0:
-            instance._lazy[self] = value.idx.iteritems().next()
         else:
             instance._lazy[self] = value
 
@@ -35,12 +33,10 @@ class StorableObject(object):
 
     _base = None
 
-    @property
-    def idx(this):
-        return this._idx
+    def idx(self, store):
+        return store.index.get(self, None)
 
     def __init__(self):
-        self._idx = dict()
         self._lazy = dict()
         self._uid = ''
 
@@ -105,6 +101,9 @@ class StorableObject(object):
             and key not in self._excluded_attr
             and not (key.startswith('_') and self._exclude_private_attr)
         }
+
+    def __hash__(self):
+        return id(self) / 8
 
     @classmethod
     def from_dict(cls, dct):

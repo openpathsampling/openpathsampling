@@ -7,6 +7,8 @@ init_log = logging.getLogger('openpathsampling.initialization')
 
 from todict import StorableObjectJSON
 
+from objproxy import LoaderProxy
+
 import numpy as np
 import netCDF4 as netcdf
 import os.path
@@ -453,8 +455,8 @@ class NetCDFPlus(netcdf.Dataset):
                 not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
 
             getter = lambda v : \
-                [ None if int(w) < 0 else (store,int(w)) for w in v.tolist()] \
-                    if iterable(v) else None if int(v) < 0 else (store,int(v))
+                [ None if int(w) < 0 else LoaderProxy({store : int(w)}) for w in v.tolist()] \
+                    if iterable(v) else None if int(v) < 0 else LoaderProxy({store : int(v)})
             setter = lambda v : \
                 np.array([ -1 if w is None else store.save(w) for w in v], dtype=np.int32) \
                     if iterable(v) else -1 if v is None else store.save(v)

@@ -1,5 +1,6 @@
 from object_storage import ObjectStore
 from openpathsampling.trajectory import Trajectory
+from openpathsampling.storage.objproxy import LoaderProxy
 
 # This adds delayed snapshot loading support to Trajectory
 
@@ -61,6 +62,13 @@ class TrajectoryStore(ObjectStore):
 
         self.vars['snapshots'][idx] = trajectory
 
+        for frame, snapshot in enumerate(trajectory):
+            if type(snapshot) is not LoaderProxy:
+                loader = LoaderProxy({self : self.index[snapshot]})
+                trajectory[frame] = loader
+
+#        print list.__getitem__(trajectory, 2)
+
         # self.storage.sync()
 
     def snapshot_indices(self, idx):
@@ -119,6 +127,7 @@ class TrajectoryStore(ObjectStore):
         -------
         Iterator
             the iterator
+
         '''
 
         class ObjectIterator:

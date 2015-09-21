@@ -247,11 +247,7 @@ class ObjectStore(StorableNamedObject):
         int or None
             The integer index of the given object or None if it is not stored yet
         """
-        if hasattr(obj, 'idx'):
-            if self in obj.idx:
-                return obj.idx[self]
-
-        return None
+        return self.index.get(obj, None)
 
     def set_variable_partial_loading(self, variable, loader=None):
         cls = self.content_class
@@ -288,7 +284,7 @@ class ObjectStore(StorableNamedObject):
                 if type(self.cache[needle]) is int:
                     return self.cache[needle]
                 else:
-                    return self.cache[needle].idx[self]
+                    return self.index[self.cache[needle]]
 
             # otherwise search the storage for the name
             found_idx = [ idx for idx,s in enumerate(self.storage.variables[
@@ -529,8 +525,7 @@ class ObjectStore(StorableNamedObject):
             obj = self.simplifier.build(simplified)
 
             obj.json = json
-            obj.idx[self] = idx
-
+            self.index[obj] = idx
             self.cache[idx] = obj
 
             if self.has_name:
@@ -1007,7 +1002,7 @@ class ObjectStore(StorableNamedObject):
             the function that reports the index in this store
         """
         def idx(obj):
-            return obj.idx[self]
+            return self.index[obj]
 
         return idx
 
@@ -1088,7 +1083,7 @@ def loadcache(func):
         obj = func(n_idx, *args, **kwargs)
         if obj is not None:
             # update cache there might have been a change due to naming
-            self.cache[obj.idx[self]] = obj
+            self.cache[n_idx] = obj
 
             # finally store the name of a named object in cache
             if self.has_name and obj._name != '':
@@ -1105,7 +1100,6 @@ def savecache(func):
     def inner(self, obj, idx = None, *args, **kwargs):
         # call the normal storage
         func(obj, idx, *args, **kwargs)
-        idx = obj.idx[self]
 
         idx = self.index[obj]
 
@@ -1163,11 +1157,6 @@ def loadidx(func):
         else:
             obj = func(n_idx, *args, **kwargs)
 
-#        if not hasattr(obj, 'idx'):
-#            obj.idx = dict()
-
-        obj.idx[self] = n_idx
-
         self.index[obj] = n_idx
 
         if self.has_uid:
@@ -1194,7 +1183,7 @@ def saveidx(func):
         if idx is None:
             if obj in self.index:
                 # has been saved so quit and do nothing
-                return obj.idx[self]
+                return self.index[obj]
             else:
                 idx = self.free()
         else:
@@ -1205,8 +1194,6 @@ def saveidx(func):
                 idx = int(idx)
 
         self.index[obj] = idx
-
-        obj.idx[self] = idx
 
         # make sure in nested saving that an IDX is not used twice!
         self.reserve_idx(idx)

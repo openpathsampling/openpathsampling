@@ -41,7 +41,7 @@ class SnapshotStore(ObjectStore):
         )
 
         # fix caching!
-        snapshot._reversed.idx[self] = reversed_idx
+        self.index[snapshot._reversed] = reversed_idx
         self.cache[reversed_idx] = snapshot._reversed
 
         return snapshot
@@ -126,7 +126,7 @@ class SnapshotStore(ObjectStore):
             the function that returns the idx of the configuration
         """
         def idx(obj):
-            return obj.configuration.idx[self]
+            return self.index[obj.configuration]
 
         return idx
 
@@ -142,7 +142,7 @@ class SnapshotStore(ObjectStore):
 
         """
         def idx(obj):
-            return obj.momentum.idx[self]
+            return self.index[obj.momentum]
 
         return idx
 

@@ -315,9 +315,9 @@ class Store(ChainDict):
         return self.store.storage
 
     def sync(self):
-        storable = [ (key.idx[self.content_store], value)
+        storable = [ (self.content_store.index[key], value)
                             for key, value in self.iteritems()
-                            if len(key.idx) > 0 and self.content_store in key.idx]
+                            if key in self.content_store.index]
 
         if len(storable) > 0:
             storable_sorted = sorted(storable, key=lambda x: x[0])
@@ -329,13 +329,7 @@ class Store(ChainDict):
             self.clear()
 
     def _get_key(self, item):
-        if item is None:
-            return None
-
-        if self.store in item.idx:
-            return item.idx[self.store]
-
-        return None
+        return self.store.index.get(item, None)
 
     def _get(self, item):
         if dict.__contains__(self, item):
@@ -394,7 +388,8 @@ class MultiStore(Store):
         self.update_nod_stores()
 
     @property
-    def stores(self):
+    def stores(self):b
+        return []
         if hasattr(self.scope, 'idx'):
             if len(self.scope.idx) != len(self._stores):
                 self._stores = self.scope.idx.keys()

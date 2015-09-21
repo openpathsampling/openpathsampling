@@ -94,6 +94,6 @@ class MCStepStore(ObjectStore):
                 simulation=storage.pathsimulators[int(simulation_idx)],
                 change=storage.pathmovechanges[int(change_idx)]
             )
-            obj.idx[self] = idx
 
+            self.index[obj] = idx
             self.cache[idx] = obj
