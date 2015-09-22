@@ -65,7 +65,7 @@ if __name__=="__main__":
 
     engine.equilibrate(5)
     snap = engine.current_snapshot
-    engine.storage.snapshots.save(snap, 0)
+    engine.storage.snapshots.save()
     engine.initialized = True
     SampleGeneratingMover.engine = engine
 
@@ -94,7 +94,7 @@ if __name__=="__main__":
     stateA = CVRangeVolumePeriodic(psi, -120.0/degrees, -30.0/degrees)
     stateB = CVRangeVolumePeriodic(psi, 100/degrees, 180/degrees)
 
-    engine.storate.volumes.save(stateA)
+    engine.storate.volumes.save()
 
     # set up minima and maxima for this transition's interface set
     minima = map((1.0 / degrees).__mul__,
@@ -109,7 +109,7 @@ if __name__=="__main__":
         # Give each interface a name
         interface.name = 'Interface '+str(no)
         # And save all of these
-        engine.storage.ensembles.save(interface)
+        engine.storage.ensembles.save()
 
     mover_set = mf.OneWayShootingSet(UniformSelector(), interface_set)
 

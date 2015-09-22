@@ -20,8 +20,8 @@ import os.path
 class NetCDFPlus(netcdf.Dataset):
     support_simtk_unit = True
 
-    class Variable_Delegate(object):
-        def __init__(self, variable, getter, setter):
+    class Value_Delegate(object):
+        def __init__(self, variable, getter = None, setter = None):
             self.variable = variable
 
             if setter is None:
@@ -33,14 +33,40 @@ class NetCDFPlus(netcdf.Dataset):
             self.getter = getter
 
         def __setitem__(self, key, value):
-#            print self.variable.name, key, value, self.setter(value)
             self.variable[key] = self.setter(value)
 
-        def __getitem__(self, item):
-            return self.getter(self.variable[item])
+        def __getitem__(self, key):
+            return self.getter(self.variable[key])
 
         def __getattr__(self, item):
             return getattr(self.variable, item)
+
+    class Key_Delegate(object):
+        def __init__(self, variable, store):
+            self.variable = variable
+            self.store = store
+
+        def __setitem__(self, key, value):
+            if hasattr(key, '__iter__'):
+                idxs = [self.store.index[item] for item in key]
+                sorted_idxs = list(set(idxs))
+                sorted_values = [value[idxs.index(val)] for val in sorted_idxs]
+                self.variable[sorted_idxs] = sorted_values
+
+            else:
+                self.variable[self.store.index[key]] = value
+
+        def __getitem__(self, key):
+            if hasattr(key, '__iter__'):
+                idxs = [self.store.index[item] for item in key]
+                sorted_idxs = list(set(idxs))
+
+                sorted_values = self.variable[sorted_idxs]
+                return [sorted_values[sorted_idxs.index(idx)] for idx in idxs]
+            else:
+                return self.variable[self.store.index[key]]
+
+
 
     @property
     def objects(self):
@@ -498,8 +524,20 @@ class NetCDFPlus(netcdf.Dataset):
                     getter = _get(getter)
                     setter = _set(setter)
 
+            if True:
+                if hasattr(var, 'maskable'):
+                    iterable = lambda v : type(v) is not int and hasattr(v, '__iter__')
 
-            self.vars[var_name] = NetCDFPlus.Variable_Delegate(var, getter, setter)
+                    def _get(my_getter):
+                        return lambda v : \
+                            [None if hasattr(w, 'mask') else my_getter(w) for w in v ] \
+                            if type(v) is not str and len(v.shape) > 0 else \
+                                (None if hasattr(v, 'mask') else my_getter(v))
+
+                    getter = _get(getter)
+
+            self.vars[var_name] = NetCDFPlus.Value_Delegate(var, getter, setter)
+
         else:
             raise ValueError("Variable '%s' is already taken!")
 
@@ -508,7 +546,9 @@ class NetCDFPlus(netcdf.Dataset):
                         dimensions,
                         description=None,
                         chunksizes=None,
-                        simtk_unit=None
+                        simtk_unit=None,
+                        maskable=False,
+                        index_by=None,
     ):
         '''
         Create a new variable in the netCDF storage. This is just a helper
@@ -615,6 +655,9 @@ class NetCDFPlus(netcdf.Dataset):
             # Define units for a float variable
             setattr(ncvar,      'unit_simtk', json_unit)
             setattr(ncvar,      'unit', symbol)
+
+        if maskable:
+            setattr(ncvar,      'maskable', 'True')
 
         if description is not None:
             if type(dimensions) is str:

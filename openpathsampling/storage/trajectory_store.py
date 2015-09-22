@@ -62,9 +62,11 @@ class TrajectoryStore(ObjectStore):
 
         self.vars['snapshots'][idx] = trajectory
 
+        snapshot_store = self.storage.snapshots
+
         for frame, snapshot in enumerate(trajectory):
             if type(snapshot) is not LoaderProxy:
-                loader = LoaderProxy({self : self.index[snapshot]})
+                loader = LoaderProxy({snapshot_store : snapshot_store.index[snapshot]})
                 trajectory[frame] = loader
 
 #        print list.__getitem__(trajectory, 2)

@@ -66,7 +66,9 @@ class WeakLRUCache(OrderedDict):
         try:
             return OrderedDict.__getitem__(self, item)
         except(KeyError):
-            return self._weak_cache[item]
+            obj = self._weak_cache[item]
+            self[item] = obj
+            return obj
 
     @size_limit.setter
     def size_limit(self, new_size):

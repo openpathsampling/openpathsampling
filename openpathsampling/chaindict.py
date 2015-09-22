@@ -388,7 +388,7 @@ class MultiStore(Store):
         self.update_nod_stores()
 
     @property
-    def stores(self):b
+    def stores(self):
         return []
         if hasattr(self.scope, 'idx'):
             if len(self.scope.idx) != len(self._stores):

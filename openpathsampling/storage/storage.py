@@ -70,9 +70,9 @@ class Storage(NetCDFPlus):
 
         # Copy all configurations and momenta to new file in reduced form
         for obj in self.configurations:
-            storage2.configurations.save(obj.copy(subset), idx=self.configurations.index[obj])
+            storage2.configurations.save(idx = self.configurations.index[obj])
         for obj in self.momenta.iterator():
-            storage2.momenta.save(obj.copy(subset), idx=self.momenta.index[obj])
+            storage2.momenta.save(idx = self.momenta.index[obj])
 
         # All other should be copied one to one. We do this explicitely although we could just copy all
         # and exclude configurations and momenta, but this seems cleaner
@@ -222,7 +222,7 @@ class Storage(NetCDFPlus):
     def default_cache_sizes():
         return {
             'trajectories' : WeakLRUCache(10000),
-            'snapshots' : WeakLRUCache(50000),
+            'snapshots' : WeakLRUCache(10),
             'configurations' : WeakLRUCache(10000),
             'momenta' : WeakLRUCache(10000),
             'samples' : WeakLRUCache(25000),

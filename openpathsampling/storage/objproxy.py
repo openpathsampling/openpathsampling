@@ -28,7 +28,7 @@ class LoaderProxy(StorableObject):
 
     @property
     def __class__(self):
-        store, idx = self.idx.iteritems().next()
+        store, idx = self._idx.iteritems().next()
         return store.content_class
 
     def __getattr__(self, item):
@@ -38,7 +38,7 @@ class LoaderProxy(StorableObject):
         """
         Call the loader and get the referenced object
         """
-        store, idx = self.idx.iteritems().next()
+        store, idx = self._idx.iteritems().next()
         obj = store[idx]
 
         return obj

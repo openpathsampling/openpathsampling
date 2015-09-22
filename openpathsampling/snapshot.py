@@ -369,51 +369,26 @@ class Snapshot(StorableObject):
 
         super(Snapshot, self).__init__()
 
-        if configuration is None:
-            self.configuration = Configuration()
-        else:
-            self.configuration = configuration
-        if momentum is None:
-            self.momentum = Momentum()
-        else:
-            self.momentum = momentum
-
-        if topology is not None:
-            self.configuration.topology = topology
-
         self.is_reversed = is_reversed
 
-        if coordinates is not None:
-            self.configuration.coordinates = copy.deepcopy(coordinates)
-        if velocities is not None:
-            self.momentum.velocities = copy.deepcopy(velocities)
-        if box_vectors is not None:
-            self.configuration.box_vectors = copy.deepcopy(box_vectors)
-        if potential_energy is not None:
-            self.configuration.potential_energy = copy.deepcopy(potential_energy)
-        if kinetic_energy is not None:
-            self.momentum.kinetic_energy = copy.deepcopy(kinetic_energy)
+        if configuration is not None or momentum is not None:
+            self.configuration = configuration
+            self.momentum = momentum
+        else:
+            if coordinates is not None:
+                self.configuration = Configuration(
+                    coordinates=coordinates,
+                    box_vectors=box_vectors,
+                    potential_energy=potential_energy,
+                    topology=topology
+                )
 
-        # TODO: consider whether it is cleaner to move this logic into the
-        # main allocation process instead of fixing things after the fact
-        config = self.configuration
-        if config.coordinates is None and config.box_vectors is None and config.potential_energy is None:
-            self.configuration = None
-        moment = self.momentum
-        if moment.velocities is None and moment.kinetic_energy is None:
-            self.momentum = None
+            if self.momentum is not None:
+                self.momentum = Momentum(
+                    velocities=velocities,
+                    kinetic_energy=kinetic_energy
+                )
 
-        if self.configuration is not None and self.configuration.coordinates is not None:
-            # Check for nans in coordinates, and raise an exception if
-            # something is wrong.
-            if type(self.configuration.coordinates) is u.Quantity:
-                coords = self.configuration.coordinates._value
-            else:
-                coords = self.configuration.coordinates
-
-            if np.any(np.isnan(coords)):
-                raise ValueError(
-                    "Some coordinates became 'nan'; simulation is unstable or buggy.")
         if reversed_copy is None:
             # this will always create the mirrored copy so we can save in pairs!
             self._reversed = Snapshot(configuration = self.configuration,
@@ -425,6 +400,7 @@ class Snapshot(StorableObject):
 
     configuration = DelayedLoader()
     momentum = DelayedLoader()
+    _reversed = DelayedLoader()
 
     @property
     @has('configuration')

@@ -69,7 +69,7 @@ if __name__=="__main__":
 
     engine.equilibrate(5)
     snap = engine.current_snapshot
-    engine.storage.snapshots.save(snap, 0)
+    engine.storage.snapshots.save()
     engine.initialized = True
     SampleGeneratingMover.engine = engine
 
@@ -111,7 +111,7 @@ if __name__=="__main__":
         # Give each interface a name
         interface.name = 'Interface '+str(no)
         # And save all of these
-        engine.storage.ensembles.save(interface)
+        engine.storage.ensembles.save()
 
     mover_set = mf.OneWayShootingSet(UniformSelector(), interface_set)
 
@@ -200,7 +200,7 @@ the bootstrapping pathsimulator, then we run it.
 
     for op in op_vol_set:
         op(engine.storage.snapshots.all())
-        engine.storage.collectivevariables.save(op)
+        engine.storage.collectivevariables.save()
 
     # Create an collectivevariable from a volume
     op_inA = CV_Volume('StateA', stateA)
@@ -212,6 +212,6 @@ the bootstrapping pathsimulator, then we run it.
     op_inB(engine.storage.snapshots.all())
     op_notinAorB(engine.storage.snapshots.all())
 
-    engine.storage.collectivevariables.save(op_inA)
-    engine.storage.collectivevariables.save(op_inB)
-    engine.storage.collectivevariables.save(op_notinAorB)
+    engine.storage.collectivevariables.save()
+    engine.storage.collectivevariables.save()
+    engine.storage.collectivevariables.save()

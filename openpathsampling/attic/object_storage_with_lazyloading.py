@@ -187,7 +187,7 @@ class ObjectStorage(object):
             return this._idx
 
         def _save(this, storage):
-            storage.save(this)
+            storage.save()
 
         if nestable:
             self.content_class.nestable = True

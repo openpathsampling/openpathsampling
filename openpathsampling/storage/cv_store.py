@@ -1,5 +1,30 @@
 from object_storage import ObjectStore
 
+class ObjectVariableStore(ObjectStore):
+    def __init__(self, cls, key_class, var_name):
+        super(ObjectVariableStore, self).__init__(
+            cls,
+            has_uid=False,
+            json=False,
+            has_name=False
+        )
+        self.key_class = key_class
+        self._key_store = None
+        self.var_name = var_name
+
+    @property
+    def key_store(self):
+        if self._key_store is None:
+            self._key_store = self.storage._obj_store[self.key_class]
+
+        return self._key_store
+
+    def load(self, idx):
+        return self.key_store.vars[idx]
+
+    def save(self, idx, value):
+        self.key_store.vars[idx] = value
+
 class ObjectDictStore(ObjectStore):
     def __init__(self, cls, key_class):
         super(ObjectDictStore, self).__init__(
@@ -69,6 +94,7 @@ class ObjectDictStore(ObjectStore):
         if objectdict is None:
             for obj in self:
                 self.sync(obj)
+
             return
 
         if objectdict.store_cache:

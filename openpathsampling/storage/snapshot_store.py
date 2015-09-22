@@ -28,21 +28,23 @@ class SnapshotStore(ObjectStore):
             the loaded snapshot instance
         '''
 
-        configuration = self.vars['configuration'][idx]
-        momentum = self.vars['momentum'][idx]
-        momentum_reversed = self.vars['momentum_reversed'][idx]
-        reversed_idx = self.vars['reversed_idx'][idx]
+        s_idx = int(idx / 2)
+
+        configuration = self.vars['configuration'][s_idx]
+        momentum = self.vars['momentum'][s_idx]
+        momentum_reversed = self.vars['reversed'][s_idx] ^ (idx % 2)
+
+        reversed_idx = 4 * s_idx + 1 - idx
 
         snapshot = Snapshot(
-            configuration=configuration,
-            momentum=momentum,
+            configuration=None,
+            momentum=None,
             is_reversed=momentum_reversed,
-            reversed_copy=None
+            reversed_copy=LoaderProxy({self : reversed_idx})
         )
 
-        # fix caching!
-        self.index[snapshot._reversed] = reversed_idx
-        self.cache[reversed_idx] = snapshot._reversed
+        snapshot.configuration = configuration
+        snapshot.momentum = momentum
 
         return snapshot
 
@@ -81,12 +83,17 @@ class SnapshotStore(ObjectStore):
         A single Snapshot object can only be saved once!
         """
 
-        self.vars['configuration'][idx] = snapshot.configuration
-        self.vars['momentum'][idx] = snapshot.momentum
-        self.vars['momentum_reversed'][idx] = snapshot.is_reversed
+        s_idx = int(idx / 2)
 
-        self.save(snapshot._reversed)
-        self.vars['reversed_idx'][idx] = self.idx(snapshot._reversed)
+        self.vars['configuration'][s_idx] = snapshot.configuration
+        self.vars['momentum'][s_idx] = snapshot.momentum
+
+        momentum_reversed = snapshot
+        reversed_idx = idx + (-1) if momentum_reversed else +1
+
+        reversed = snapshot._reversed
+        snapshot._reversed = LoaderProxy({self : reversed_idx})
+        reversed._reversed = LoaderProxy({self : idx})
 
     def _init(self):
         '''

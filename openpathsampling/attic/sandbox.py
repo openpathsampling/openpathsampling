@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
         # generate from this snapshot a trajectory with 50 steps
         traj = simulator.generate(snapshot, [LengthEnsemble(slice(0,6))])
-        simulator.storage.trajectories.save(traj)
+        simulator.storage.trajectories.save()
 
         print len(traj)
 
@@ -131,7 +131,7 @@ if __name__ == '__main__':
         en = AllOutXEnsemble(lV, slice(1,-1), lazy = False)
         print en(tt)
 
-        storage.ensembles.save(en)
+        storage.ensembles.save()
 
         bm = BackwardShootMover(
                 selector = UniformSelector(),
@@ -156,7 +156,7 @@ if __name__ == '__main__':
 
         pth = mm.move(tt)
 
-        storage.results.save(pth)
+        storage.results.save()
 
         print pth.details.json
 
@@ -182,7 +182,7 @@ if __name__ == '__main__':
         en = AllOutXEnsemble(lV, slice(1, -1), lazy = False)
         print en(pth.details.final)
 
-        op.save(storage=storage.collectivevariables)
+        op.save(storage = storage.collectivevariables)
 
         exit()
 
