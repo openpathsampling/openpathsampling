@@ -35,7 +35,7 @@ class LRUCache(OrderedDict):
             while len(self) > self.size_limit:
                 self.popitem(last=False)
 
-class WeakLRUCache(OrderedDict):
+class WeakLRUCache(object):
     """
     Implements a cache that keeps weak references to all elements
 
@@ -50,13 +50,12 @@ class WeakLRUCache(OrderedDict):
         size_limit : int
             integer that defines the size of the LRU cache. Default is 100.
         """
-        OrderedDict.__init__(self)
-
         self._size_limit = size_limit
         self._weak_cache = weakref.WeakValueDictionary()
+        self._cache = OrderedDict()
 
     def __str__(self):
-        return '%s(%d[%d])' % (self.__class__.__name__, len(self), len(self._weak_cache))
+        return '%s(%d[%d])' % (self.__class__.__name__, len(self._cache), len(self._weak_cache))
 
     @property
     def size_limit(self):
@@ -64,10 +63,14 @@ class WeakLRUCache(OrderedDict):
 
     def __getitem__(self, item):
         try:
-            return OrderedDict.__getitem__(self, item)
+            obj = self._cache.pop(item)
+            self._cache[item] = obj
+            return obj
         except(KeyError):
             obj = self._weak_cache[item]
-            self[item] = obj
+            del self._weak_cache[item]
+            self._cache[item] = obj
+            self._check_size_limit()
             return obj
 
     @size_limit.setter
@@ -77,17 +80,23 @@ class WeakLRUCache(OrderedDict):
 
         self._size_limit = new_size
 
-    def __setitem__(self, key, value, **kwargs) :
-        OrderedDict.__setitem__(self, key, value)
+    def __setitem__(self, key, value, **kwargs):
+        try:
+            self._cache.pop(key)
+        except KeyError:
+            pass
+
+        self._cache[key] = value
         self._check_size_limit()
+
 
     def _check_size_limit(self):
         if self.size_limit is not None:
-            while len(self) > self.size_limit:
-                self._weak_cache.__setitem__(*self.popitem(last=False))
+            while len(self._cache) > self.size_limit:
+                self._weak_cache.__setitem__(*self._cache.popitem(last=False))
 
     def __contains__(self, item):
-        return OrderedDict.__contains__(self, item) or item in self._weak_cache
+        return item in self._cache or item in self._weak_cache
 
 class WeakCache(weakref.WeakValueDictionary):
     """

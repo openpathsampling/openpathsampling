@@ -32,7 +32,7 @@ class SnapshotStore(ObjectStore):
 
         configuration = self.vars['configuration'][s_idx]
         momentum = self.vars['momentum'][s_idx]
-        momentum_reversed = self.vars['reversed'][s_idx] ^ (idx % 2)
+        momentum_reversed = self.vars['momentum_reversed'][s_idx] ^ bool(idx % 2)
 
         reversed_idx = 4 * s_idx + 1 - idx
 
@@ -87,13 +87,19 @@ class SnapshotStore(ObjectStore):
 
         self.vars['configuration'][s_idx] = snapshot.configuration
         self.vars['momentum'][s_idx] = snapshot.momentum
+        self.vars['momentum_reversed'][s_idx] = snapshot.is_reversed
 
-        momentum_reversed = snapshot
-        reversed_idx = idx + (-1) if momentum_reversed else +1
+        reversed_idx = 4 * s_idx + 1 - idx
 
         reversed = snapshot._reversed
         snapshot._reversed = LoaderProxy({self : reversed_idx})
         reversed._reversed = LoaderProxy({self : idx})
+
+        # mark reversed as stored
+        self.index[reversed] = reversed_idx
+
+    def __len__(self):
+        return 2 * self.count()
 
     def _init(self):
         '''
@@ -112,11 +118,6 @@ class SnapshotStore(ObjectStore):
                 )
 
         self.init_variable('momentum_reversed', 'bool', chunksizes=(1, ))
-
-        self.init_variable('reversed_idx', 'index',
-                description="the idx of the reversed snapshot index (0..n_snapshot-1) 'snapshot' of snapshot '{idx}'.",
-                chunksizes=(1, )
-                )
 
 #=============================================================================================
 # COLLECTIVE VARIABLE UTILITY FUNCTIONS

@@ -68,7 +68,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             has_fnc=True,
             fnc_uses_lists=None,
             var_type=None,
-            store_cache=True
+            store_cache=False
     ):
         if (type(name) is not str and type(name) is not unicode) or len(
                 name) == 0:

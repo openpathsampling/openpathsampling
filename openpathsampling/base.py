@@ -15,7 +15,7 @@ class DelayedLoader(object):
             else:
                 return obj
         else:
-            return None
+            return self
 
     def __set__(self, instance, value):
         if type(value) is tuple:

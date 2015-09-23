@@ -229,7 +229,7 @@ class ObjectStore(StorableNamedObject):
 
         if caching is True:
             self.cache = WeakLimitCache(1000000)
-        elif isinstance(caching, dict):
+        elif hasattr(caching, '__getitem__'):
             self.cache = caching
 
     def idx(self, obj):

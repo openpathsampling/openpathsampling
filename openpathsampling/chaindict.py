@@ -4,11 +4,11 @@ import collections
 
 import numpy as np
 
-from openpathsampling.storage.cache import LRUCache
+from openpathsampling.storage.cache import LRUCache, WeakLRUCache
 from openpathsampling.storage.objproxy import DelayedLoaderProxy
 
 
-class ChainDict(dict):
+class ChainDict(object):
     """
     Cache attached to Configuration indices stored in Configuration storage
 
@@ -65,7 +65,7 @@ class ChainDict(dict):
         return results
 
     def _add_new(self, items, values):
-        self[items] = values
+        pass
 
     def __setitem__(self, key, value):
         if isinstance(key, collections.Iterable):
@@ -80,17 +80,13 @@ class ChainDict(dict):
         return [self._contains(item) for item in items]
 
     def _set(self, item, value):
-        if value is not None:
-            dict.__setitem__(self, item, value)
+        pass
 
     def _set_list(self, items, values):
         [self._set(item, value) for item, value in zip(items, values) if value is not None]
 
     def _get(self, item):
-        try:
-            return dict.__getitem__(self, item)
-        except KeyError:
-            return None
+        return None
 
     def _get_list(self, items):
         return [ self._get(item) for item in items ]
@@ -144,9 +140,6 @@ class MergeNumpy(ChainDict):
     def __getitem__(self, items):
         return np.array(self.post[items])
 
-    def _add_new(self, items, values):
-        pass
-
 class ExpandSingle(ChainDict):
     """
     Will take care of iterables
@@ -162,9 +155,6 @@ class ExpandSingle(ChainDict):
 
     def __setitem__(self, key, value):
         self.post[key] = value
-
-    def _add_new(self, items, values):
-        pass
 
 class ExpandMulti(ChainDict):
     """
@@ -185,9 +175,6 @@ class ExpandMulti(ChainDict):
     def __setitem__(self, key, value):
         self.post[key] = value
 
-    def _add_new(self, items, values):
-        pass
-
 class Transform(ChainDict):
     def __init__(self, transform):
         super(Transform, self).__init__()
@@ -198,9 +185,6 @@ class Transform(ChainDict):
 
     def __setitem__(self, key, value):
         self.post[self.transform(key)] = value
-
-    def _add_new(self, items, values):
-        pass
 
 class Function(ChainDict):
     def __init__(self, fnc, fnc_uses_lists=True):
@@ -238,6 +222,27 @@ class Function(ChainDict):
             return transform(self(obj))
 
         return fnc
+
+class CacheChainDict(ChainDict):
+    def __init__(self, size_limit=1000000):
+        super(LRUChainDict, self).__init__()
+        self.size_limit = size_limit
+        self.size_limit = size_limit
+        self.cache = LRUCache(size_limit)
+
+    def _contains(self, item):
+        return item in self.cache
+
+    def _set(self, item, value):
+        if value is not None:
+            self.cache[item] = value
+
+    def _get(self, item):
+        try:
+            return self.cache[item]
+        except KeyError:
+            return None
+
 
 class LRUChainDict(ChainDict):
     def __init__(self, size_limit=1000000):

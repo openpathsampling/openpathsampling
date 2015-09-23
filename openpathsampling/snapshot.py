@@ -371,28 +371,28 @@ class Snapshot(StorableObject):
 
         self.is_reversed = is_reversed
 
-        if configuration is not None or momentum is not None:
-            self.configuration = configuration
-            self.momentum = momentum
-        else:
+        if configuration is None and momentum is None:
             if coordinates is not None:
-                self.configuration = Configuration(
+                configuration = Configuration(
                     coordinates=coordinates,
                     box_vectors=box_vectors,
                     potential_energy=potential_energy,
                     topology=topology
                 )
 
-            if self.momentum is not None:
-                self.momentum = Momentum(
+            if velocities is not None:
+                momentum = Momentum(
                     velocities=velocities,
                     kinetic_energy=kinetic_energy
                 )
 
+        self.configuration = configuration
+        self.momentum = momentum
+
         if reversed_copy is None:
             # this will always create the mirrored copy so we can save in pairs!
-            self._reversed = Snapshot(configuration = self.configuration,
-                                      momentum = self.momentum,
+            self._reversed = Snapshot(configuration = configuration,
+                                      momentum = momentum,
                                       is_reversed = not self.is_reversed,
                                       reversed_copy = self)
         else:
