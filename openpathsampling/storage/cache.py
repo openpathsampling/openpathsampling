@@ -3,7 +3,7 @@ __author__ = 'jan-hendrikprinz'
 from collections import OrderedDict
 import weakref
 
-class LRUCache(OrderedDict):
+class LRUCache(object):
     """
     Implements a simple Least Recently Used Cache
 
@@ -12,8 +12,7 @@ class LRUCache(OrderedDict):
     """
     def __init__(self, size_limit):
         self._size_limit = size_limit
-        OrderedDict.__init__(self)
-        self._check_size_limit()
+        self._cache = OrderedDict()
 
     @property
     def size_limit(self):
@@ -26,14 +25,28 @@ class LRUCache(OrderedDict):
 
         self._size_limit = new_size
 
+    def __iter__(self):
+        return iter(self._cache)
+
+    def __getitem__(self, item):
+        obj = self._cache.pop(item)
+        self._cache[item] = obj
+        return obj
+
     def __setitem__(self, key, value, **kwargs) :
-        OrderedDict.__setitem__(self, key, value)
+        self._cache[key] = value
         self._check_size_limit()
 
     def _check_size_limit(self):
-        if self.size_limit is not None:
-            while len(self) > self.size_limit:
-                self.popitem(last=False)
+        while len(self._cache) > self.size_limit:
+            self._cache.popitem(last=False)
+
+    def __str__(self):
+        return '%s(%d)' % (self.__class__.__name__, len(self._cache))
+
+    def __contains__(self, item):
+        return item in self._cache
+
 
 class WeakLRUCache(object):
     """
@@ -43,7 +56,7 @@ class WeakLRUCache(object):
     of the last used elements are still present. Usually this number is 100.
 
     """
-    def __init__(self, size_limit=100):
+    def __init__(self, size_limit=100, weak_type='value'):
         """
         Parameters
         ----------
@@ -51,7 +64,13 @@ class WeakLRUCache(object):
             integer that defines the size of the LRU cache. Default is 100.
         """
         self._size_limit = size_limit
-        self._weak_cache = weakref.WeakValueDictionary()
+        self.weak_type = weak_type
+
+        if weak_type == 'value':
+            self._weak_cache = weakref.WeakValueDictionary()
+        elif weak_type == 'key':
+            self._weak_cache = weakref.WeakKeyDictionary()
+
         self._cache = OrderedDict()
 
     def __str__(self):
@@ -97,6 +116,12 @@ class WeakLRUCache(object):
 
     def __contains__(self, item):
         return item in self._cache or item in self._weak_cache
+
+    def keys(self):
+        return self._cache.keys() + self._weak_cache.keys()
+
+    def values(self):
+        return self._cache.values() + self._weak_cache.values()
 
 class WeakCache(weakref.WeakValueDictionary):
     """

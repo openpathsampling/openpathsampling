@@ -10,7 +10,7 @@ class DelayedLoader(object):
             if type(obj) is tuple:
                 (store, idx) = obj
                 return store[idx]
-            elif hasattr(obj, '__subject__'):
+            elif hasattr(obj, '_idx'):
                 return obj.__subject__
             else:
                 return obj
@@ -101,9 +101,6 @@ class StorableObject(object):
             and key not in self._excluded_attr
             and not (key.startswith('_') and self._exclude_private_attr)
         }
-
-    def __hash__(self):
-        return id(self) / 8
 
     @classmethod
     def from_dict(cls, dct):

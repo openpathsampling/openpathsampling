@@ -16,6 +16,7 @@ class LoaderProxy(StorableObject):
     A proxy that loads an underlying object if attributes are accessed
     """
 
+
     def __init__(self, idx=None):
         if idx is None:
             idx = dict()

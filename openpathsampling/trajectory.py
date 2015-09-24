@@ -257,7 +257,7 @@ class Trajectory(list, StorableObject):
         if type(ret) is list:
             ret = Trajectory(ret)
             ret.atom_indices = self.atom_indices
-        elif hasattr(type(ret), '__subject__'):
+        elif hasattr(type(ret), '_idx'):
             ret = ret.__subject__
 
         return ret

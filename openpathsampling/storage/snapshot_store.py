@@ -28,23 +28,34 @@ class SnapshotStore(ObjectStore):
             the loaded snapshot instance
         '''
 
-        s_idx = int(idx / 2)
+        s_idx = int(idx / 2) * 2
+
+        reversed_idx = 2 * s_idx + 1 - idx
+        try:
+            obj = self.cache[reversed_idx]
+            snapshot = Snapshot(
+                configuration=obj.configuration,
+                momentum=obj.momentum,
+                is_reversed=not obj.is_reversed,
+                reversed_copy=LoaderProxy({self : reversed_idx})
+            )
+            return snapshot
+
+
+        except KeyError:
+            pass
+
 
         configuration = self.vars['configuration'][s_idx]
         momentum = self.vars['momentum'][s_idx]
-        momentum_reversed = self.vars['momentum_reversed'][s_idx] ^ bool(idx % 2)
-
-        reversed_idx = 4 * s_idx + 1 - idx
+        momentum_reversed = self.vars['momentum_reversed'][idx]
 
         snapshot = Snapshot(
-            configuration=None,
-            momentum=None,
+            configuration=configuration,
+            momentum=momentum,
             is_reversed=momentum_reversed,
             reversed_copy=LoaderProxy({self : reversed_idx})
         )
-
-        snapshot.configuration = configuration
-        snapshot.momentum = momentum
 
         return snapshot
 
@@ -83,13 +94,17 @@ class SnapshotStore(ObjectStore):
         A single Snapshot object can only be saved once!
         """
 
-        s_idx = int(idx / 2)
+        s_idx = int(idx / 2) * 2
+
+        reversed_idx = 2 * s_idx + 1 - idx
 
         self.vars['configuration'][s_idx] = snapshot.configuration
         self.vars['momentum'][s_idx] = snapshot.momentum
-        self.vars['momentum_reversed'][s_idx] = snapshot.is_reversed
+        self.vars['configuration'][s_idx + 1] = snapshot.configuration
+        self.vars['momentum'][s_idx + 1] = snapshot.momentum
 
-        reversed_idx = 4 * s_idx + 1 - idx
+        self.vars['momentum_reversed'][idx] = snapshot.is_reversed
+        self.vars['momentum_reversed'][reversed_idx] = not snapshot.is_reversed
 
         reversed = snapshot._reversed
         snapshot._reversed = LoaderProxy({self : reversed_idx})
@@ -99,7 +114,7 @@ class SnapshotStore(ObjectStore):
         self.index[reversed] = reversed_idx
 
     def __len__(self):
-        return 2 * self.count()
+        return self.count()
 
     def _init(self):
         '''

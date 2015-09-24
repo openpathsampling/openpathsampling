@@ -6,6 +6,7 @@ import numpy as np
 
 from cache import WeakLimitCache
 from openpathsampling.base import StorableNamedObject
+from objproxy import LoaderProxy
 
 import weakref
 
@@ -1099,17 +1100,16 @@ def savecache(func):
     """
     def inner(self, obj, idx = None, *args, **kwargs):
         # call the normal storage
-        func(obj, idx, *args, **kwargs)
-
-        idx = self.index[obj]
+        idx = func(obj, idx, *args, **kwargs)
 
         # store the name in the cache
         if hasattr(self, 'cache'):
-            self.cache[idx] = obj
-            if self.has_name and obj._name != '':
-                # and also the name, if it has one so we can load by
-                # name afterwards from cache
-                self._update_name_in_cache(obj._name, idx)
+            if type(obj) is not LoaderProxy:
+                self.cache[idx] = obj
+                if self.has_name and obj._name != '':
+                    # and also the name, if it has one so we can load by
+                    # name afterwards from cache
+                    self._update_name_in_cache(obj._name, idx)
 
         return idx
 
@@ -1184,6 +1184,8 @@ def saveidx(func):
             if obj in self.index:
                 # has been saved so quit and do nothing
                 return self.index[obj]
+            elif type(obj) is LoaderProxy:
+                return obj._idx.itervalues().next()
             else:
                 idx = self.free()
         else:

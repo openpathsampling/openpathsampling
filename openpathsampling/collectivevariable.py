@@ -14,6 +14,7 @@ import numpy as np
 import openpathsampling as paths
 import chaindict as cd
 from openpathsampling.base import StorableNamedObject
+from openpathsampling.storage.cache import WeakLRUCache
 
 
 class CollectiveVariable(cd.Wrap, StorableNamedObject):
@@ -107,10 +108,9 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             if var_type is None:
                 self.var_type = 'float'
 
-
         self.single_dict = cd.ExpandSingle()
         self.multi_dict = cd.ExpandMulti()
-        self.cache_dict = cd.ChainDict()
+        self.cache_dict = cd.CacheChainDict(WeakLRUCache(10000, weak_type='key'))
 
         self.store_cache = store_cache
 
@@ -124,12 +124,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         else:
             post = self.cache_dict
 
-        if store_cache:
-            self.store_dict = cd.MultiStore('collectivevariables', self.name,
-                                        self.dimensions, self)
-
-            post = post + self.store_dict
-
         post = post + self.multi_dict + self.single_dict
 
         if 'numpy' in var_type:
@@ -138,6 +132,11 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         super(CollectiveVariable, self).__init__(post=post)
 
         self._stored = False
+
+    def set_cache_store(self, key_store, value_store):
+        self.store_dict = cd.StoredDict(key_store, value_store)
+        self.store_dict.post = self.cache_dict
+        self.multi_dict.post = self.store_dict
 
     def __hash__(self):
         return id(self) / 8
@@ -290,25 +289,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             self.fnc_uses_lists = fnc_uses_lists
             self.unit = unit
 
-    def flush_cache(self, storage):
-        """
-        Copy the cache to the internal storage cache for saving
-
-        Parameters
-        ----------
-        storage : Storage()
-            the storage for which the cache should be copied
-        """
-        if hasattr(self, 'store_dict'):
-            if storage in self.store_dict.cod_stores:
-                stored = {
-                    key: value for key, value in self.cache_dict
-                    if type(key) is tuple or storage in key.idx
-                }
-                self.store_dict.cod_stores[storage].post.update(stored)
-                self.store_dict.cod_stores[storage].update(stored)
-
-    def sync(self, store):
+    def sync(self):
         """
         Sync this collectivevariable with attached storages
 
@@ -318,11 +299,9 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             the store to be used, otherwise all underlying storages are synced
         """
         if hasattr(self, 'store_dict'):
-            self.store_dict.update_nod_stores()
-            if store in self.store_dict.cod_stores:
-                self.store_dict.cod_stores[store].sync()
+            self.store_dict.sync()
 
-    def cache_all(self, store):
+    def cache_all(self):
         """
         Sync this collective variable with attached storages
 
@@ -332,9 +311,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             the store to be used, otherwise all underlying storages are synced
         """
         if hasattr(self, 'store_dict'):
-            self.store_dict.update_nod_stores()
-            if store in self.store_dict.cod_stores:
-                self.store_dict.cod_stores[store].cache_all()
+            self.store_dict.cache_all()
 
     _compare_keys = ['name', 'dimensions']
 
@@ -749,16 +726,12 @@ class CV_Class(CollectiveVariable):
             if self.name != other.name:
                 return False
 
-            if self.fcn != other.fcn:
-                return False
-
             if self.kwargs != other.kwargs:
                 return False
 
             return True
 
         return NotImplemented
-
 
 
 class CV_MD_Function(CV_Function):
@@ -810,7 +783,7 @@ class CV_MD_Function(CV_Function):
             self._topology = trajectory.topology.md
 
         t = trajectory.md(self._topology)
-        arr =self.callable_fcn(t, **self.kwargs)
+        arr = self.callable_fcn(t, **self.kwargs)
         if self.single_as_scalar and arr.shape[-1] == 1:
             return arr.reshape(arr.shape[:-1])
         else:
@@ -883,5 +856,3 @@ class CV_Featurizer(CV_Class):
             return arr.reshape(arr.shape[:-1])
         else:
             return arr
-
-        return arr

@@ -4,8 +4,8 @@ import collections
 
 import numpy as np
 
-from openpathsampling.storage.cache import LRUCache, WeakLRUCache
-from openpathsampling.storage.objproxy import DelayedLoaderProxy
+from openpathsampling.storage.cache import LRUCache
+from openpathsampling.storage.objproxy import LoaderProxy
 
 
 class ChainDict(object):
@@ -106,7 +106,7 @@ class ChainDict(object):
 
     def _split_list(self, keys, values):
         missing = [ obj[0] for obj in zip(keys,values) if obj[1] is None ]
-        nones = values
+        nones = [ None if obj[1] is None else obj[0] for obj in zip(keys,values)  ]
 
         return nones, missing
 
@@ -146,7 +146,7 @@ class ExpandSingle(ChainDict):
     """
 
     def __getitem__(self, items):
-        if type(items) is DelayedLoaderProxy:
+        if type(items) is LoaderProxy:
             return self.post[[items]][0]
         if hasattr(items, '__iter__'):
             return self.post[items]
@@ -162,6 +162,7 @@ class ExpandMulti(ChainDict):
     """
 
     def __getitem__(self, items):
+        return self.post[items]
         if len(items) == 0:
             return []
 
@@ -224,11 +225,9 @@ class Function(ChainDict):
         return fnc
 
 class CacheChainDict(ChainDict):
-    def __init__(self, size_limit=1000000):
-        super(LRUChainDict, self).__init__()
-        self.size_limit = size_limit
-        self.size_limit = size_limit
-        self.cache = LRUCache(size_limit)
+    def __init__(self, cache):
+        super(CacheChainDict, self).__init__()
+        self.cache = cache
 
     def _contains(self, item):
         return item in self.cache
@@ -242,142 +241,94 @@ class CacheChainDict(ChainDict):
             return self.cache[item]
         except KeyError:
             return None
-
-
-class LRUChainDict(ChainDict):
-    def __init__(self, size_limit=1000000):
-        super(LRUChainDict, self).__init__()
-        self.size_limit = size_limit
-        self.size_limit = size_limit
-        self.cache = LRUCache(size_limit)
-
-    def _contains(self, item):
-        return item in self.cache
-
-    def _set(self, item, value):
-        if value is not None:
-            self.cache[item] = value
-
-    def _get(self, item):
-        try:
-            return self.cache[item]
-        except KeyError:
-            return None
-
-class BufferedStore(Wrap):
-    def __init__(self, name, dimensions, store, scope=None, unit=None):
-        self.store = store
-        self._store = Store(name, dimensions, store, scope, unit)
-        self._cache = ChainDict()
-        self.unit = unit
-        self.content_store = self.store.storage._obj_store[self.store.key_class]
-
-        super(BufferedStore, self).__init__(
-            post=self._store + self._cache
-        )
-
-    def sync(self):
-        self._store.sync()
 
     def _add_new(self, items, values):
         for item, value in zip(items, values):
-            if value is not None:
-                if len(item.idx) > 0 and self.content_store in item.idx:
-                    self._cache._set(item, value)
-                    self._store._set(item, value)
+            self.cache[item] = value
 
-    def cache_all(self):
-        all_values = self._store.store.get_list_value(self._store.scope, slice(None, None))
-        for idx, value in enumerate(all_values):
-            if value is not None:
-                self._cache._set(self.content_store[idx], value)
 
-class Store(ChainDict):
-    def __init__(self, name, dimensions, store, scope=None, unit=None):
-        super(Store, self).__init__()
-        self.name = name
-        self.dimensions = dimensions
-        self.store = store
-        self.key_class = store.content_class
-        self.unit = unit
-        self.content_store = self.store.storage._obj_store[self.store.key_class]
+class LRUChainDict(CacheChainDict):
+    def __init__(self, size_limit=1000000):
+        super(LRUChainDict, self).__init__(LRUCache(size_limit))
 
-        if scope is None:
-            self.scope = self
-        else:
-            self.scope = scope
 
+class StoredDict(ChainDict):
+    def __init__(self, key_store, value_store, cache=None):
+        super(StoredDict, self).__init__()
+        self.value_store = value_store
+        self.key_store = key_store
         self.max_save_buffer_size = None
+        if cache is None:
+            cache = LRUCache(100000)
+        self.cache = cache
+        self.storable = set()
 
     def _add_new(self, items, values):
-        [dict.__setitem__(self, item, value) for item, value in zip(items, values)]
+        for item, value in zip(items, values):
+            key = self._get_key(item)
+            if key is not None:
+                self.cache[key] = value
+                self.storable.add(key)
 
-        if self.max_save_buffer_size is not None and len(self) > self.max_save_buffer_size:
+        if self.max_save_buffer_size is not None and len(self.storable) > self.max_save_buffer_size:
             self.sync()
 
-    @property
-    def storage(self):
-        return self.store.storage
-
     def sync(self):
-        storable = [ (self.content_store.index[key], value)
-                            for key, value in self.iteritems()
-                            if key in self.content_store.index]
+        if len(self.storable) > 0:
+            keys = [idx for idx in sorted(list(self.storable)) if idx in self.cache]
+            values = [self.cache[idx] for idx in keys]
+            self.value_store[keys] = values
+            self.storable.clear()
 
-        if len(storable) > 0:
-            storable_sorted = sorted(storable, key=lambda x: x[0])
-            storable_keys = [x[0] for x in storable_sorted]
-            storable_values = [x[1] for x in storable_sorted]
-            self.store.set_list_value(self.scope, storable_keys, storable_values)
-            self.clear()
-        else:
-            self.clear()
+    def cache_all(self):
+        values = self.value_store[:]
+        self.cache.clear()
+        [self.cache.__setitem__(key, value) for key, value in enumerate(values)]
 
     def _get_key(self, item):
-        return self.store.index.get(item, None)
+        if item is None:
+            return None
+
+        if hasattr(item, '_idx'):
+            store, idx = item._idx.iteritems().next()
+            if store is self.key_store:
+                return idx
+
+        return self.key_store.index.get(item, None)
 
     def _get(self, item):
-        if dict.__contains__(self, item):
-            return dict.__getitem__(self, item)
-
         key = self._get_key(item)
 
         if key is None:
             return None
 
-        return self._load(key)
+        if key in self.cache:
+            return self.cache[key]
+        else:
+            # update cache with specific strategy
+            self.cache[key] = self.value_store[key]
+            return self.cache[key]
 
     def _get_list(self, items):
-        cached, missing = self._split_list_dict(self, items)
+        keys = map(self._get_key, items)
+#        cached, missing = self._split_list(items, keys)
 
-        keys = [self._get_key(item) for item in missing]
-        replace = self._apply_some_list(self._load_list, keys)
+        idxs = [item for item in keys if item is not None and item not in self.cache]
 
-        return self._replace_none(cached, replace)
+        if len(idxs) > 0:
+            sorted_idxs = sorted(list(set(idxs)))
 
-    def _load(self, key):
-        return self.store.get_value(self.scope, key)
-
-    def _load_list(self, keys):
-        # This is to load all keys in ordered fashion since netCDF does not
-        # allow reading in unsorted order using lists
-        # TODO: Might consider moving this logic to the store, but this is faster
-        # Also requesting an empty list raises an Error
-        if len(keys) > 0:
-            keys_sorted = sorted(enumerate(keys), key=lambda x: x[1])
-            loadable_keys = [x[1] for x in keys_sorted]
-            loadable_idxs = [x[0] for x in keys_sorted]
-            values_sorted = self.store.get_list_value(self.scope, loadable_keys)
-            ret = [0.0] * len(keys)
-            [ret.__setitem__(idx, values_sorted[pos])
-                    for pos, idx in enumerate(loadable_idxs)]
-            return ret
+            sorted_values = self.value_store[sorted_idxs]
+            replace = [None if key is None else self.cache[key] if key in self.cache else
+                            sorted_values[sorted_idxs.index(key)] for key in keys]
         else:
-            return []
+            replace = [None if key is None else self.cache[key] if key in self.cache else None for key in keys]
 
-class MultiStore(Store):
+        return replace
+
+class MultiStore(object):
     def __init__(self, store_name, name, dimensions, scope, unit=None):
-        super(Store, self).__init__()
+        super(object, self).__init__()
         self.name = name
         self.dimensions = dimensions
         self.store_name = store_name
@@ -421,7 +372,7 @@ class MultiStore(Store):
         [store.cache_all() for store in self.cod_stores.values()]
 
     def add_nod_store(self, store):
-        self.cod_stores[store] = BufferedStore(
+        self.cod_stores[store] = StoredDict(
             self.name, self.dimensions, store,
             self.scope, unit=self.unit
         )

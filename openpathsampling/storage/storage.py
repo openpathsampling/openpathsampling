@@ -222,7 +222,7 @@ class Storage(NetCDFPlus):
     def default_cache_sizes():
         return {
             'trajectories' : WeakLRUCache(10000),
-            'snapshots' : WeakLRUCache(10),
+            'snapshots' : WeakLRUCache(10000),
             'configurations' : WeakLRUCache(10000),
             'momenta' : WeakLRUCache(10000),
             'samples' : WeakLRUCache(25000),

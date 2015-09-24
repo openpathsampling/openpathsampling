@@ -48,25 +48,23 @@ class NetCDFPlus(netcdf.Dataset):
 
         def __setitem__(self, key, value):
             if hasattr(key, '__iter__'):
-                idxs = [self.store.index[item] for item in key]
+                idxs = [item if type(item) is int else self.store.index[item] for item in key]
                 sorted_idxs = list(set(idxs))
                 sorted_values = [value[idxs.index(val)] for val in sorted_idxs]
                 self.variable[sorted_idxs] = sorted_values
 
             else:
-                self.variable[self.store.index[key]] = value
+                self.variable[key if type(key) is int else self.store.index[key]] = value
 
         def __getitem__(self, key):
             if hasattr(key, '__iter__'):
-                idxs = [self.store.index[item] for item in key]
-                sorted_idxs = list(set(idxs))
+                idxs = [item if type(item) is int else self.store.index[item] for item in key]
+                sorted_idxs = sorted(list(set(idxs)))
 
                 sorted_values = self.variable[sorted_idxs]
                 return [sorted_values[sorted_idxs.index(idx)] for idx in idxs]
             else:
-                return self.variable[self.store.index[key]]
-
-
+                return self.variable[key if type(key) is int else self.store.index[key]]
 
     @property
     def objects(self):
@@ -528,13 +526,16 @@ class NetCDFPlus(netcdf.Dataset):
                 if hasattr(var, 'maskable'):
                     iterable = lambda v : type(v) is not int and hasattr(v, '__iter__')
 
-                    def _get(my_getter):
+                    def _get2(my_getter):
                         return lambda v : \
                             [None if hasattr(w, 'mask') else my_getter(w) for w in v ] \
                             if type(v) is not str and len(v.shape) > 0 else \
                                 (None if hasattr(v, 'mask') else my_getter(v))
 
-                    getter = _get(getter)
+                    if getter is not None:
+                        getter = _get2(getter)
+                    else:
+                        getter = _get2(lambda v : v)
 
             self.vars[var_name] = NetCDFPlus.Value_Delegate(var, getter, setter)
 
