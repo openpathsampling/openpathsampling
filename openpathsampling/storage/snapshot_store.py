@@ -171,11 +171,7 @@ class MomentumStore(ObjectStore):
     """
 
     def __init__(self):
-        super(MomentumStore, self).__init__(Momentum, json=False, load_partial=False)
-
-        # attach delayed loaders
-#        self.set_variable_partial_loading('velocities')
-#        self.set_variable_partial_loading('kinetic_energy')
+        super(MomentumStore, self).__init__(Momentum, json=False)
 
     def save(self, momentum, idx = None):
         """
@@ -200,8 +196,6 @@ class MomentumStore(ObjectStore):
             # TODO: No kinetic energy is not yet supported
             print 'Think about how to handle this. It should only be None if loaded lazy and in this case it will never be saved.'
 
-        # Force sync to disk to avoid data loss.
-        # storage.sync()
 
     def load(self, idx):
         '''
@@ -218,18 +212,11 @@ class MomentumStore(ObjectStore):
             the loaded momentum instance
         '''
 
-
         velocities = self.vars['velocities'][idx]
         kinetic_energy = self.vars['kinetic_energy'][idx]
 
         momentum = Momentum(velocities=velocities, kinetic_energy=kinetic_energy)
 
-        return momentum
-
-    def load_empty(self, idx):
-        momentum = Momentum()
-        del momentum.velocities
-        del momentum.kinetic_energy
         return momentum
 
     def velocities_as_numpy(self, frame_indices=None, atom_indices=None):
@@ -301,7 +288,7 @@ class MomentumStore(ObjectStore):
 
 class ConfigurationStore(ObjectStore):
     def __init__(self):
-        super(ConfigurationStore, self).__init__(Configuration, json=False, load_partial=False)
+        super(ConfigurationStore, self).__init__(Configuration, json=False)
 
     def save(self, configuration, idx = None):
         # Store configuration.
@@ -351,50 +338,6 @@ class ConfigurationStore(ObjectStore):
             atom_indices = slice(None)
 
         return self.storage.variables[self.prefix + '_coordinates'][frame_indices,atom_indices,:].astype(np.float32).copy()
-
-    def coordinates_as_array(self, frame_indices=None, atom_indices=None):
-        '''
-        Returns a numpy array consisting of all coordinates at the given indices
-
-        Parameters
-        ----------
-        frame_indices : list of int
-            configuration indices to be loaded
-        atom_indices : list of int
-            selects only the atoms to be returned. If None (Default) all atoms
-            will be selected
-
-        Returns
-        -------
-        numpy.ndarray, shape = (l,n)
-            returns an array with `l` the number of frames and `n` the number
-            of atoms
-        '''
-
-        return self.coordinates_as_numpy(frame_indices, atom_indices)
-
-    def snapshot_coordinates_as_array(self, idx, atom_indices=None):
-        '''
-        Returns a numpy array consisting of all coordinates of a snapshot
-
-        Parameters
-        ----------
-        idx : int
-            index of the snapshot to be loaded
-        atom_indices : list of int
-            selects only the atoms to be returned. If None (Default) all atoms
-            will be selected
-
-
-        Returns
-        -------
-        numpy.ndarray, shape = (l,n)
-            returns an array with `l` the number of frames and `n` the number
-            of atoms
-        '''
-
-        frame_indices = self.configuration_indices(idx)
-        return self.coordinates_as_array(frame_indices, atom_indices)
 
     def _init(self):
         super(ConfigurationStore, self)._init()

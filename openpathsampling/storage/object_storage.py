@@ -42,8 +42,7 @@ class ObjectStore(StorableNamedObject):
     default_cache = 10000
 
     def __init__(self, content_class, has_uid=False, json=True,
-                 caching=None, load_partial=False,
-                nestable=False, has_name=False):
+                 caching=None, nestable=False, has_name=False):
 
         """
 
@@ -63,11 +62,6 @@ class ObjectStore(StorableNamedObject):
             An integer `n` means to use LRU Caching with maximal n elements and is
             equal to `cache=LRUCache(n)`
             Default (None) is equivalent to `cache=ObjectStore.default_cache`
-        load_partial : bool
-            if this is set to `True` the storage allows support for partial
-            delayed loading of member variables. This is useful for larger
-            objects that might only be required in particular circumstances.
-            (default is `False`)
         nestable : bool
             if true this marks the content_class to be saved as nested dict
             objects and not a pointing to saved objects. So the saved complex
@@ -132,39 +126,6 @@ class ObjectStore(StorableNamedObject):
         # First, apply standard decorator for loading and saving
         # this handles all the setting and getting of .idx and is
         # always necessary!
-
-        if load_partial:
-            # this allows the class to load members only if needed
-            # adds a different __getattr__ to the content class
-            # makes only sense if not already lazy loading
-            # it uses load_constructor instead to create an empty object
-            # and then each class can attach delayed loaders to load
-            # when necessary, fall back is of course the normal load function
-
-            if hasattr(self, 'load_empty'):
-                cls = self.content_class
-
-                def _getattr(this, item):
-                    if item == '_idx':
-                        return this.__dict__['idx']
-
-                    if hasattr(cls, '_delayed_loading'):
-                        if item in dir(cls):
-                            return object.__getattribute__(this, item)
-
-                        if item in cls._delayed_loading:
-                            _loader = cls._delayed_loading[item]
-#                            print 'from', repr(self.storage), id(self), 'and not', repr(this), 'load', item
-                            _loader(this)
-                        else:
-                            raise KeyError(item)
-
-                    return this.__dict__[item]
-
-                setattr(cls, '__getattr__', _getattr)
-
-                _load = self.load
-                self.load = types.MethodType(loadpartial(_load), self)
 
         _save = self.save
         self.save = types.MethodType(saveidx(_save), self)
@@ -979,36 +940,6 @@ class ObjectStore(StorableNamedObject):
 
         return data
 
-#==============================================================================
-# SETTER / GETTER UTILITY FUNCTIONS
-#==============================================================================
-
-    # TODO: This might go tho storage.py
-    def load_object(self, name, idx, store):
-        """
-        Load an object from the storage
-
-        Parameters
-        ----------
-        name : str
-            name of the variable to be used
-        index : int
-            index in the storage
-        cls : cls
-            type of the object to be loaded. Determines the store to be used
-
-        Returns
-        -------
-        object
-            the loaded object
-        """
-        index = self.load_variable(name + '_idx', idx)
-        if index < 0:
-            return None
-
-        obj = store.load(index)
-        return obj
-
 
 #==============================================================================
 # COLLECTIVE VARIABLE UTILITY FUNCTIONS
@@ -1031,32 +962,9 @@ class ObjectStore(StorableNamedObject):
 
         return idx
 
-#=============================================================================
-# LOAD/SAVE DECORATORS FOR PARTIAL LOADING OF ATTRIBUTES
-#=============================================================================
-
-def loadpartial(func, constructor=None):
-    """
-    Decorator for load functions that add the basic handling for partial loading
-    """
-
-    def inner(self, idx, *args, **kwargs):
-        if constructor is None:
-            new_func = getattr(self, 'load_empty')
-        else:
-            new_func = getattr(self, constructor)
-
-        return_obj = new_func(idx, *args, **kwargs)
-        # this tells the obj where it was loaded from
-        return_obj._origin = self
-        return return_obj
-
-    return inner
-
-
-#=============================================================================
+# =============================================================================
 # LOAD/SAVE DECORATORS FOR CACHE HANDLING
-#=============================================================================
+# =============================================================================
 
 def loadcache(func):
     """

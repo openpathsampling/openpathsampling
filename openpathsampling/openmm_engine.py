@@ -97,10 +97,6 @@ class OpenMMEngine(paths.DynamicsEngine):
 
         options['template'] = template
 
-#        storage.init_str('simulation_options')
-#        storage.write_as_json('simulation_options', options)
-
-
         engine = OpenMMEngine(
             options=options
         )
@@ -116,14 +112,6 @@ class OpenMMEngine(paths.DynamicsEngine):
             filename=filename,
             mode='a'
         )
-
-#        options = storage.restore_object('simulation_options')
-
-#        options['template'] = storage.template
-
-#        engine = OpenMMEngine(
-#            options=options
-#        )
 
         engine = storage.engines.load(0)
 

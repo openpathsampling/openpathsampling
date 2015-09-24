@@ -304,7 +304,6 @@ class Momentum(StorableObject):
 def has(attr):
     def _has(func):
         def inner(self, *args, **kwargs):
-#            print type(self), self, self.__dict__
             if hasattr(self, attr):
                 return func(self, *args, **kwargs)
             else:

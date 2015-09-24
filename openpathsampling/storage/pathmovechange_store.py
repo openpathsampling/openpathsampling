@@ -7,8 +7,7 @@ class PathMoveChangeStore(ObjectStore):
     def __init__(self):
         super(PathMoveChangeStore, self).__init__(
             PathMoveChange,
-            json=False,
-            load_partial=False
+            json=False
         )
 
         self._cached_all = False

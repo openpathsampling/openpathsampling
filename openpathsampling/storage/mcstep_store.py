@@ -5,8 +5,7 @@ class MCStepStore(ObjectStore):
     def __init__(self):
         super(MCStepStore, self).__init__(
             MCStep,
-            json=False,
-            load_partial=False
+            json=False
         )
 
         self._cached_all = False
