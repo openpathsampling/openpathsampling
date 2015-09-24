@@ -53,7 +53,7 @@ class PathMoveChangeStore(ObjectStore):
         obj.samples = self.vars['samples'][idx]
         obj.subchanges = self.vars['subchanges'][idx]
 
-        obj.details = LoaderProxy({self.storage.details, int(self.variables['details'])})
+        obj.details = LoaderProxy({self.storage.details, int(self.variables['details'][idx])})
 
         return obj
 

@@ -177,7 +177,7 @@ class SampleSetStore(ObjectStore):
 
         sample_set = SampleSet(
             self.vars['samples'][idx],
-            movepath=LoaderProxy({self.storage.pathmovechanges: int(self.variables['movepath'])})
+            movepath=LoaderProxy({self.storage.pathmovechanges: int(self.variables['movepath'][idx])})
         )
 
         return sample_set
