@@ -89,10 +89,10 @@ class SnapshotStore(ObjectStore):
 
         reversed_idx = 2 * s_idx + 1 - idx
 
-        self.store('configuration', s_idx, snapshot)
-        self.store('momentum', s_idx, snapshot)
         self.vars['configuration'][s_idx + 1] = snapshot.configuration
         self.vars['momentum'][s_idx + 1] = snapshot.momentum
+        self.store('configuration', s_idx, snapshot)
+        self.store('momentum', s_idx, snapshot)
 
         self.vars['momentum_reversed'][idx] = snapshot.is_reversed
         self.vars['momentum_reversed'][reversed_idx] = not snapshot.is_reversed

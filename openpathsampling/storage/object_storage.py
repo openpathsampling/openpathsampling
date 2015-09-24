@@ -458,26 +458,20 @@ class ObjectStore(StorableNamedObject):
 
         return ObjectIterator()
 
-    def store_soft(self, variable, idx, obj, attribute):
-        var = self.vars[variable]
-        var[idx] = getattr(obj, attribute)
-        setattr(obj, attribute, var.store.loader(obj))
-
-    def store_hard(self, variable, idx, obj, attribute):
-        var = self.vars[variable]
-        var[idx] = getattr(obj, attribute)
-
     def store(self, variable, idx, obj, attribute=None):
         if attribute is None:
             attribute = variable
 
         var = self.vars[variable]
+        val = getattr(obj, attribute)
 
-        var[idx] = getattr(obj, attribute)
+        var[int(idx)] = val
+
         if var.var_type.startswith('lazy'):
-            setattr(obj, attribute, var.store.loader(obj))
+            proxy = var.store.proxy(val)
+            setattr(obj, attribute, proxy)
 
-    def loader(self, item):
+    def proxy(self, item):
         if type(item) is not int:
             idx = self.index.get(item, None)
         else:
