@@ -21,8 +21,9 @@ class NetCDFPlus(netcdf.Dataset):
     support_simtk_unit = True
 
     class Value_Delegate(object):
-        def __init__(self, variable, getter = None, setter = None):
+        def __init__(self, variable, getter = None, setter = None, store=None):
             self.variable = variable
+            self.store = store
 
             if setter is None:
                 setter = lambda v : v
@@ -428,6 +429,7 @@ class NetCDFPlus(netcdf.Dataset):
     def create_type_delegate(self, var_type):
         getter = None
         setter = None
+        store = None
 
         if var_type == 'int':
             getter = lambda v : v.tolist()
@@ -485,7 +487,7 @@ class NetCDFPlus(netcdf.Dataset):
                 np.array([ -1 if w is None else store.save(w) for w in v], dtype=np.int32) \
                     if iterable(v) else -1 if v is None else store.save(v)
 
-        return getter, setter
+        return getter, setter, store
 
     def create_variable_delegate(self, var_name):
         """
@@ -499,7 +501,7 @@ class NetCDFPlus(netcdf.Dataset):
             if not hasattr(var, 'var_type'):
                 return
 
-            getter, setter = self.create_type_delegate(var.var_type)
+            getter, setter, store = self.create_type_delegate(var.var_type)
 
             if True or self.support_simtk_unit:
                 if hasattr(var, 'unit_simtk'):
@@ -524,8 +526,6 @@ class NetCDFPlus(netcdf.Dataset):
 
             if True:
                 if hasattr(var, 'maskable'):
-                    iterable = lambda v : type(v) is not int and hasattr(v, '__iter__')
-
                     def _get2(my_getter):
                         return lambda v : \
                             [None if hasattr(w, 'mask') else my_getter(w) for w in v ] \
@@ -537,7 +537,7 @@ class NetCDFPlus(netcdf.Dataset):
                     else:
                         getter = _get2(lambda v : v)
 
-            self.vars[var_name] = NetCDFPlus.Value_Delegate(var, getter, setter)
+            self.vars[var_name] = NetCDFPlus.Value_Delegate(var, getter, setter, store)
 
         else:
             raise ValueError("Variable '%s' is already taken!")

@@ -110,7 +110,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         self.single_dict = cd.ExpandSingle()
         self.multi_dict = cd.ExpandMulti()
-        self.cache_dict = cd.CacheChainDict(WeakLRUCache(10000, weak_type='key'))
+        self.cache_dict = cd.CacheChainDict(WeakLRUCache(100, weak_type='key'))
 
         self.store_cache = store_cache
 

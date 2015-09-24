@@ -130,6 +130,9 @@ class WeakLRUCache(object):
     def values(self):
         return self._cache.values() + self._weak_cache.values()
 
+    def __len__(self):
+        return len(self._cache) + len(self._weak_cache)
+
 class WeakCache(weakref.WeakValueDictionary):
     """
     Implements a cache that keeps weak references to all elements

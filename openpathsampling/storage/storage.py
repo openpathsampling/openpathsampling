@@ -243,6 +243,30 @@ class Storage(NetCDFPlus):
             'steps' : WeakLRUCache(1000)
         }
 
+    @staticmethod
+    def lowmemory_cache_sizes():
+        return {
+            'trajectories' : WeakLRUCache(10),
+            'snapshots' : WeakLRUCache(100),
+            'configurations' : WeakLRUCache(100),
+            'momenta' : WeakLRUCache(100),
+            'samples' : WeakLRUCache(250),
+            'samplesets' : False,
+            'cvs' : True,
+            'pathmovers' : True,
+            'shootingpoints' : False,
+            'shootingpointselectors' : True,
+            'engines' : True,
+            'pathsimulators' : True,
+            'volumes' : True,
+            'ensembles' : True,
+            'pathmovechanges' : False,
+            'transitions' : True,
+            'networks' : True,
+            '_details' : False,
+            'steps' : WeakLRUCache(10)
+        }
+
     # Analysis caching is very large to allow fast processing
 
     @staticmethod
@@ -336,7 +360,8 @@ class Storage(NetCDFPlus):
             'default': self.default_cache_sizes,
             'analysis': self.analysis_cache_sizes,
             'production': self.production_cache_sizes,
-            'off': self.no_cache_sizes
+            'off': self.no_cache_sizes,
+            'lowmemory' : self.lowmemory_cache_sizes
         }
 
         if mode in available_cache_sizes:

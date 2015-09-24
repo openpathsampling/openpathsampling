@@ -14,18 +14,11 @@ class PathMoveChangeStore(ObjectStore):
         self._cached_all = False
         self.class_list = StorableObject.objects()
 
-    def load_empty(self, idx):
-
-        obj = self._load_partial(idx)
-        del obj.details
-
-        return obj
-
     def save(self, pathmovechange, idx=None):
         if idx is not None:
             self.vars['samples'][idx] = pathmovechange.samples
             self.vars['subchanges'][idx] = pathmovechange.subchanges
-            self.vars['details'][idx] = pathmovechange.details
+            self.store('details', idx, pathmovechange)
             self.vars['mover'][idx] = pathmovechange.mover
             self.vars['cls'][idx] = pathmovechange.__class__.__name__
 

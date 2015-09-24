@@ -458,6 +458,36 @@ class ObjectStore(StorableNamedObject):
 
         return ObjectIterator()
 
+    def store_soft(self, variable, idx, obj, attribute):
+        var = self.vars[variable]
+        var[idx] = getattr(obj, attribute)
+        setattr(obj, attribute, var.store.loader(obj))
+
+    def store_hard(self, variable, idx, obj, attribute):
+        var = self.vars[variable]
+        var[idx] = getattr(obj, attribute)
+
+    def store(self, variable, idx, obj, attribute=None):
+        if attribute is None:
+            attribute = variable
+
+        var = self.vars[variable]
+
+        var[idx] = getattr(obj, attribute)
+        if var.var_type.startswith('lazy'):
+            setattr(obj, attribute, var.store.loader(obj))
+
+    def loader(self, item):
+        if type(item) is not int:
+            idx = self.index.get(item, None)
+        else:
+            idx = item
+
+        if idx is None:
+            return item
+        else:
+            return LoaderProxy({self: idx})
+
     def __getitem__(self, item):
         """
         Enable numpy style selection of object in the store

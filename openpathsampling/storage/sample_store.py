@@ -4,36 +4,15 @@ from objproxy import LoaderProxy
 
 class SampleStore(ObjectStore):
     def __init__(self):
-        super(SampleStore, self).__init__(Sample, json=False, load_partial=False)
-
-#        self.set_variable_partial_loading('details')
-#        self.set_variable_partial_loading('parent')
-#        self.set_variable_partial_loading('mover')
-#        self.set_variable_partial_loading('ensemble')
-
+        super(SampleStore, self).__init__(Sample, json=False)
         self._cached_all = False
-
-
-    def load_empty(self, idx):
-        obj = Sample(
-            trajectory=self.vars['trajectory'][idx],
-            replica=self.vars['replica'][idx],
-            bias=self.vars['bias'][idx],
-        )
-
-#        del obj.details
-#        del obj.ensemble
-#        del obj.mover
-#        del obj.parent
-
-        return obj
 
     def save(self, sample, idx=None):
         self.vars['trajectory'][idx] = sample.trajectory
         self.vars['ensemble'][idx] = sample.ensemble
         self.vars['replica'][idx] = sample.replica
-        self.vars['parent'][idx] = sample.parent
-        self.vars['details'][idx] = sample.details
+        self.store('parent',idx, sample)
+        self.store('details',idx, sample)
         self.vars['bias'][idx] = sample.bias
         self.vars['mover'][idx] = sample.mover
 
@@ -130,14 +109,14 @@ class SampleStore(ObjectStore):
 class SampleSetStore(ObjectStore):
 
     def __init__(self):
-        super(SampleSetStore, self).__init__(SampleSet, json=False, load_partial=True)
+        super(SampleSetStore, self).__init__(SampleSet, json=False)
 
     def save(self, sample_set, idx=None):
         # Check if all samples are saved
         map(self.storage.samples.save, sample_set)
 
         self.vars['samples'][idx] = sample_set
-        self.vars['movepath'][idx] = sample_set.movepath
+        self.store('movepath', idx, sample_set)
 
     def sample_indices(self, idx):
         '''

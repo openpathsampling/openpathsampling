@@ -2,22 +2,6 @@ from object_storage import ObjectStore
 from openpathsampling.trajectory import Trajectory
 from openpathsampling.storage.objproxy import LoaderProxy
 
-# This adds delayed snapshot loading support to Trajectory
-
-def load_missing_snapshot(func):
-    def getter(self, *args, **kwargs):
-        item = func(self, *args, **kwargs)
-
-        if type(item) is tuple:
-            item = item[0][item[1]]
-
-        return item
-
-    return getter
-
-#Trajectory.__getitem__ = load_missing_snapshot(Trajectory.__getitem__)
-#Trajectory.__getslice__ = load_missing_snapshot(Trajectory.__getslice__)
-
 class TrajectoryStore(ObjectStore):
     def __init__(self):
         super(TrajectoryStore, self).__init__(Trajectory)
@@ -41,37 +25,13 @@ class TrajectoryStore(ObjectStore):
         A single Trajectory object can only be saved once!
         """
 
-        # Check if all snapshots are saved
-#         values = []
-#         for snap in list.__iter__(trajectory):
-#             if type(snap) is not tuple:
-#                 self.storage.snapshots.save(snap)
-#                 values.append(snap.idx[self.storage.snapshots])
-#             elif snap[0].storage is not self.storage:
-#                 new_snap = snap[0][snap[1]]
-#                 self.storage.snapshots.save(new_snap)
-#                 values.append(new_snap.idx[self])
-#             else:
-#                 values.append(snap[1])
-#
-# #        map(self.storage.snapshots.save, trajectory)
-# #        values = self.list_to_numpy(trajectory, 'snapshot')
-#
-#         values = self.list_to_numpy(values, 'index')
-#         self.storage.variables[self.prefix + '_snapshots'][idx] = values
-
         self.vars['snapshots'][idx] = trajectory
-
         snapshot_store = self.storage.snapshots
 
         for frame, snapshot in enumerate(trajectory):
             if type(snapshot) is not LoaderProxy:
                 loader = LoaderProxy({snapshot_store : snapshot_store.index[snapshot]})
                 trajectory[frame] = loader
-
-#        print list.__getitem__(trajectory, 2)
-
-        # self.storage.sync()
 
     def snapshot_indices(self, idx):
         '''
@@ -90,10 +50,7 @@ class TrajectoryStore(ObjectStore):
         '''
 
         # get the values
-        values = self.storage.variables[self.prefix + '_snapshots'][idx]
-
-        # typecast to integer
-        return self.list_from_numpy(values, 'index')
+        return self.variables['snapshots'][idx].tolist()
 
     def load(self, idx):
         '''

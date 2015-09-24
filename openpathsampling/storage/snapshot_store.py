@@ -1,6 +1,7 @@
 import numpy as np
 
 from openpathsampling.snapshot import Snapshot, Configuration, Momentum
+from openpathsampling.trajectory import Trajectory
 from object_storage import ObjectStore
 from objproxy import LoaderProxy
 
@@ -12,6 +13,13 @@ class SnapshotStore(ObjectStore):
 
     def __init__(self):
         super(SnapshotStore, self).__init__(Snapshot, json=False)
+
+    def store_soft(self, variable, idx, object, attribute=None):
+        if attribute is None:
+            attribute = variable
+
+        self.vars[variable][idx] = getattr(object, attribute)
+
 
     def load(self, idx=None):
         '''
@@ -59,23 +67,6 @@ class SnapshotStore(ObjectStore):
 
         return snapshot
 
-    def lazy(self, idx=None):
-        '''
-        Load a snapshot from the storage.
-
-        Parameters
-        ----------
-        idx : int
-            the integer index of the snapshot to be loaded
-
-        Returns
-        -------
-        snapshot : Snapshot
-            the loaded snapshot instance
-        '''
-
-        return LoaderProxy()
-
     def save(self, snapshot, idx=None):
         """
         Add the current state of the snapshot in the database.
@@ -98,8 +89,8 @@ class SnapshotStore(ObjectStore):
 
         reversed_idx = 2 * s_idx + 1 - idx
 
-        self.vars['configuration'][s_idx] = snapshot.configuration
-        self.vars['momentum'][s_idx] = snapshot.momentum
+        self.store('configuration', s_idx, snapshot)
+        self.store('momentum', s_idx, snapshot)
         self.vars['configuration'][s_idx + 1] = snapshot.configuration
         self.vars['momentum'][s_idx + 1] = snapshot.momentum
 
@@ -170,7 +161,9 @@ class SnapshotStore(ObjectStore):
         return idx
 
     def all(self):
-        return self
+        return Trajectory([
+            LoaderProxy({self: idx})
+                for idx in range(len(self))])
 
 class MomentumStore(ObjectStore):
     """
@@ -310,11 +303,6 @@ class ConfigurationStore(ObjectStore):
     def __init__(self):
         super(ConfigurationStore, self).__init__(Configuration, json=False, load_partial=False)
 
-        # attach delayed loaders
-#        self.set_variable_partial_loading('coordinates')
-#        self.set_variable_partial_loading('box_vectors')
-#        self.set_variable_partial_loading('potential_energy')
-
     def save(self, configuration, idx = None):
         # Store configuration.
         self.vars['coordinates'][idx] = configuration.coordinates
@@ -335,31 +323,6 @@ class ConfigurationStore(ObjectStore):
 
         configuration = Configuration(coordinates=coordinates, box_vectors = box_vectors, potential_energy=potential_energy)
         configuration.topology = self.storage.topology
-
-        return configuration
-
-    def load_empty(self, idx):
-        """
-        Loading function for partial loading. Constructs an empty Configuration
-        object.
-
-        Parameters
-        ----------
-        idx : int
-            the integer index of the configuration to be loaded
-
-        Returns
-        -------
-        Configuration
-            an empty configuration object
-        """
-        configuration = Configuration()
-        configuration.topology = self.storage.topology
-
-        # if these still exist they will not be loaded using __getattr__
-        del configuration.coordinates
-        del configuration.box_vectors
-        del configuration.potential_energy
 
         return configuration
 
