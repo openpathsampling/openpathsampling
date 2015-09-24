@@ -11,7 +11,7 @@ import weakref
 # SIMULATION CONFIGURATION
 #=============================================================================
 
-class LoaderProxy(StorableObject):
+class LoaderProxy(object):
     """
     A proxy that loads an underlying object if attributes are accessed
     """
