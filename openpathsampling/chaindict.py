@@ -43,7 +43,6 @@ class ChainDict(object):
     use_unique = True
 
     def __init__(self):
-        super(ChainDict, self).__init__()
         self.post = None
 
     def __getitem__(self, items):
@@ -325,92 +324,3 @@ class StoredDict(ChainDict):
             replace = [None if key is None else self.cache[key] if key in self.cache else None for key in keys]
 
         return replace
-
-class MultiStore(object):
-    def __init__(self, store_name, name, dimensions, scope, unit=None):
-        super(object, self).__init__()
-        self.name = name
-        self.dimensions = dimensions
-        self.store_name = store_name
-        self.unit = unit
-        self._stores = []
-
-        if scope is None:
-            self.scope = self
-        else:
-            self.scope = scope
-
-        self.cod_stores = {}
-        self.update_nod_stores()
-
-    @property
-    def stores(self):
-        return []
-        if hasattr(self.scope, 'idx'):
-            if len(self.scope.idx) != len(self._stores):
-                self._stores = self.scope.idx.keys()
-            return self._stores
-        else:
-            return []
-
-    def sync(self):
-        if len(self.stores) != len(self.cod_stores):
-            self.update_nod_stores()
-
-        if len(self.cod_stores) == 0:
-            return None
-
-        [store.sync() for store in self.cod_stores.values()]
-
-    def cache_all(self):
-        if len(self.stores) != len(self.cod_stores):
-            self.update_nod_stores()
-
-        if len(self.cod_stores) == 0:
-            return None
-
-        [store.cache_all() for store in self.cod_stores.values()]
-
-    def add_nod_store(self, store):
-        self.cod_stores[store] = StoredDict(
-            self.name, self.dimensions, store,
-            self.scope, unit=self.unit
-        )
-
-    def update_nod_stores(self):
-        for store in self.cod_stores:
-            if store not in self.stores:
-                del self.cod_stores[store]
-
-        for store in self.stores:
-            if store not in self.cod_stores:
-                self.add_nod_store(store)
-
-    def _add_new(self, items, values):
-        if len(self.stores) != len(self.cod_stores):
-            self.update_nod_stores()
-        for s in self.cod_stores:
-            self.cod_stores[s]._add_new(items, values)
-
-    def _get_list(self, items):
-        if len(self.stores) != len(self.cod_stores):
-            self.update_nod_stores()
-
-        if len(self.cod_stores) == 0:
-            return [None] * len(items)
-
-        results_list = dict()
-        for s in self.cod_stores:
-            results_list[s] = self.cod_stores[s][items]
-
-        first = True
-        output = None
-        for s, results in results_list.iteritems():
-            if first:
-                output = results
-                first = False
-            else:
-                output = [None if item is None or result is None else item
-                     for item, result in zip(output, results) ]
-
-        return output

@@ -143,6 +143,7 @@ class MoveScheme(StorableNamedObject):
                 # list.
                 for mover in movers:
                     m_sig = mover.ensemble_signature
+                    print m_sig
                     if m_sig in existing_sigs.keys():
                         for idx in existing_sigs[m_sig]:
                             self.movers[group][idx] = mover

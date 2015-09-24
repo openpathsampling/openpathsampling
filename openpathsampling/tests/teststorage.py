@@ -54,7 +54,6 @@ def setUp():
                'forcefield_solvent' : 'tip3p.xml'
               }
 
-    # create a template snapshot
     this.template_snapshot = paths.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
 
     # and an openmm engine
@@ -76,6 +75,8 @@ class testStorage(object):
             setattr(self, key, value)
 
         self.simplifier = ObjectJSON()
+        self.template_snapshot = paths.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
+
 
     def teardown(self):
         if os.path.isfile(self.filename):
@@ -85,6 +86,7 @@ class testStorage(object):
             os.remove(self.filename_clone)
 
     def test_create_template(self):
+
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
         assert(os.path.isfile(data_filename("storage_test.nc")))
         store.close()
