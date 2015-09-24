@@ -5,6 +5,7 @@ import logging
 import openpathsampling as paths
 from openpathsampling.base import StorableObject
 from treelogic import TreeMixin
+from openpathsampling.base import DelayedLoader
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,8 @@ class PathMoveChange(TreeMixin, StorableObject):
             self.samples = samples
         self.details = details
 
+    details = DelayedLoader()
+
     # hook for TreeMixin
     @property
     def _subnodes(self):
@@ -81,7 +84,7 @@ class PathMoveChange(TreeMixin, StorableObject):
             return False
 
     def __repr__(self):
-        return self.__class__.__name__[:-14] + '(' + str(self.idx.values()) + ')'
+        return '%s (%s)' % (self.__class__.__name__[:-14], hex(id(self))[-6:])
 
     def movetree(self):
         """

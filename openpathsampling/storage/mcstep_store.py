@@ -71,7 +71,7 @@ class MCStepStore(ObjectStore):
             simulation_idxs = storage.variables[self.prefix + '_simulation'][:]
             change_idxs = storage.variables[self.prefix + '_change'][:]
 
-            [ self.add_to_cache(i, n, p, a, s, c) for i, n, p, a, s, c in zip(
+            [ self.add_to_cache(*v) for v in zip(
                 idxs,
                 steps,
                 previous_idxs,
