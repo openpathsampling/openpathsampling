@@ -132,8 +132,6 @@ class SampleSetStore(ObjectStore):
     def __init__(self):
         super(SampleSetStore, self).__init__(SampleSet, json=False, load_partial=True)
 
-        self.set_variable_partial_loading('movepath')
-
     def save(self, sample_set, idx=None):
         # Check if all samples are saved
         map(self.storage.samples.save, sample_set)
@@ -179,18 +177,8 @@ class SampleSetStore(ObjectStore):
 
         sample_set = SampleSet(
             self.vars['samples'][idx],
-            movepath=self.vars['movepath'][idx]
+            movepath=LoaderProxy({self.storage.pathmovechanges: int(self.variables['movepath'])})
         )
-
-        return sample_set
-
-    def load_empty(self, idx):
-        sample_set = SampleSet(
-            self.vars['samples'][idx],
-            movepath=None
-        )
-
-        del sample_set.movepath
 
         return sample_set
 
@@ -215,29 +203,23 @@ class SampleSetStore(ObjectStore):
         """
         if not self._cached_all:
             idxs = range(len(self))
-            values = self.storage.variables[self.prefix + '_samples'][:]
+            samples_idxs = self.variables['samples'][:]
+            pmc_idxs = self.variables['movepath'][:]
 
-            # assume that these are cached!
-            all_samples = self.storage.samples
-
-
-            [ self.add_empty_to_cache(i,t,all_samples) for i,t in zip(
+            [ self.add_empty_to_cache(*v) for v in zip(
                 idxs,
-                values
+                samples_idxs,
+                pmc_idxs
                 ) ]
 
             self._cached_all = True
 
-    def add_empty_to_cache(self, idx, sample_idxs, all_samples):
+    def add_empty_to_cache(self, idx, sample_idxs, pmc_idx):
         if idx not in self.cache:
             obj = SampleSet(
-                    samples=[all_samples[sample_idx.tolist()] for sample_idx in sample_idxs],
-                    movepath=None
+                    samples=[self.storage.samples[sample_idx.tolist()] for sample_idx in sample_idxs],
+                    movepath=LoaderProxy({self.storage.pathmovechanges : int(pmc_idx)})
                 )
 
             self.index[obj] = idx
-            obj._origin = self
-
-            del obj.movepath
-
             self.cache[idx] = obj

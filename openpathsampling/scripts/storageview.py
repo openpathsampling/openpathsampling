@@ -29,7 +29,7 @@ if __name__ == '__main__':
     storage.samplesets.cache_all()
     storage.pathmovechanges.cache_all()
 
-    class ReadableObjectJSON(paths.todict.ObjectJSON):
+    class ReadableObjectJSON(paths.storage.todict.ObjectJSON):
         def __init__(self, unit_system = None):
             super(ReadableObjectJSON, self).__init__(unit_system)
             self.excluded_keys = ['name', 'idx', 'json', 'identifier']
@@ -144,7 +144,7 @@ if __name__ == '__main__':
 
     headline("CollectiveVariables (" + str(storage.collectivevariables.count()) + ")")
 
-    all_snapshot_traj = storage.snapshots.all()
+#    all_snapshot_traj = storage.snapshots.all()
 
     for p_idx in range(0, storage.collectivevariables.count()):
         obj = storage.collectivevariables.load(p_idx)
@@ -197,7 +197,7 @@ if __name__ == '__main__':
 
     def format_traj(traj_obj):
         s = ''
-        traj = storage.trajectories.snapshot_indices(traj_obj.idx[storage.trajectories])
+        traj = storage.trajectories.snapshot_indices(traj_obj.idx(storage.trajectories))
         old_idx = -2
         count = 0
         for idx in traj:

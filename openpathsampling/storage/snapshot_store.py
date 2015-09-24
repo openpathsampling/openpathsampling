@@ -2,7 +2,7 @@ import numpy as np
 
 from openpathsampling.snapshot import Snapshot, Configuration, Momentum
 from object_storage import ObjectStore
-from objproxy import DelayedLoaderProxy, WeakLoaderProxy, LoaderProxy
+from objproxy import LoaderProxy
 
 
 class SnapshotStore(ObjectStore):
@@ -169,6 +169,8 @@ class SnapshotStore(ObjectStore):
 
         return idx
 
+    def all(self):
+        return self
 
 class MomentumStore(ObjectStore):
     """

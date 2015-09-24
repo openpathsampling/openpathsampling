@@ -2,7 +2,7 @@ import random
 import logging
 
 import openpathsampling as paths
-from openpathsampling.base import StorableNamedObject, StorableObject
+from openpathsampling.base import StorableObject, DelayedLoader
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ class SampleKeyError(Exception):
         self.msg = (str(self.key) + " does not match " + str(self.sample_key)
                     + " from " + str(self.sample))
 
-class SampleSet(StorableNamedObject):
+class SampleSet(StorableObject):
     '''
     SampleSet is essentially a list of samples, with a few conveniences.  It
     can be treated as a list of samples (using, e.g., .append), or as a
@@ -50,10 +50,9 @@ class SampleSet(StorableNamedObject):
         self.ensemble_dict = {}
         self.replica_dict = {}
         self.extend(samples)
-        if movepath is None:
-            self.movepath = paths.EmptyPathMoveChange()
-        else:
-            self.movepath = movepath
+        self.movepath = movepath
+
+    movepath = DelayedLoader()
 
     @property
     def ensembles(self):
