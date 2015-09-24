@@ -402,7 +402,7 @@ class NetCDFPlus(netcdf.Dataset):
             'long' : np.int64,
             'index' : np.int32,
             'length' : np.int32,
-            'bool' : np.int8,
+            'bool' : np.int16,
             'str' : 'str',
             'json' : 'str',
             'numpy.float32' : np.float32,

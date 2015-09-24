@@ -319,7 +319,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         """Override the default Equals behavior"""
         if isinstance(other, self.__class__):
             for key in self._compare_keys:
-                if self.__dict__[key] != other.__dict__[key]:
+                if getattr(self, key) != getattr(other, key):
                     return False
 
             return True

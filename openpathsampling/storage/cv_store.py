@@ -58,6 +58,9 @@ class ObjectDictStore(ObjectStore):
         """
         self.save_json(self.prefix + '_json', idx, objectdict)
 
+        if objectdict.store_cache:
+            self.create_cache(objectdict)
+
     def cache_var_name(self, idx):
         if type(idx) is not int:
             idx = self.index.get(idx, None)
@@ -176,7 +179,7 @@ class ObjectDictStore(ObjectStore):
 
     def cache_all(self):
         for cv in self:
-            cv.cache_all(self)
+            cv.cache_all()
 
     def load(self, idx):
         """
@@ -196,7 +199,7 @@ class ObjectDictStore(ObjectStore):
         """
 
         op = self.load_json(self.prefix + '_json', idx)
-        op.set_cache_store(self.cache_store(idx))
+        op.set_cache_store(self.key_store, self.cache_var(idx))
 
         return op
 

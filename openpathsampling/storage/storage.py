@@ -368,7 +368,6 @@ class AnalysisStorage(Storage):
         self.samples.cache_all()
         self.samplesets.cache_all()
         self.cvs.cache_all()
-        map(lambda x : x.cache_all(self.cvs), self.cvs)
         self.volumes.cache_all()
         self.ensembles.cache_all()
         self.pathmovers.cache_all()

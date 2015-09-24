@@ -47,6 +47,9 @@ class LRUCache(object):
     def __contains__(self, item):
         return item in self._cache
 
+    def clear(self):
+        self._cache.clear()
+
 
 class WeakLRUCache(object):
     """
@@ -75,6 +78,10 @@ class WeakLRUCache(object):
 
     def __str__(self):
         return '%s(%d[%d])' % (self.__class__.__name__, len(self._cache), len(self._weak_cache))
+
+    def clear(self):
+        self._cache.clear()
+        self._weak_cache.clear()
 
     @property
     def size_limit(self):
