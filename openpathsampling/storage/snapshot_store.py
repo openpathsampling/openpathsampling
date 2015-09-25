@@ -105,7 +105,7 @@ class SnapshotStore(ObjectStore):
         self.index[reversed] = reversed_idx
 
     def __len__(self):
-        return self.count()
+        return len(self)
 
     def _init(self):
         '''
@@ -185,17 +185,11 @@ class MomentumStore(ObjectStore):
             if not None `idx`is used as the index to index the Momentum()
             instance. Might overwrite existing Momentum in the database.
         """
-        if momentum.velocities is not None:
-            self.vars['velocities'][idx,:,:] = momentum.velocities
-        else:
-            print 'ERROR : Momentum should not be empty'
+
+        self.vars['velocities'][idx,:,:] = momentum.velocities
 
         if momentum.kinetic_energy is not None:
             self.vars['kinetic_energy'][idx] = momentum.kinetic_energy
-        else:
-            # TODO: No kinetic energy is not yet supported
-            print 'Think about how to handle this. It should only be None if loaded lazy and in this case it will never be saved.'
-
 
     def load(self, idx):
         '''

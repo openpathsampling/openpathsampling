@@ -95,7 +95,7 @@ class TrajectoryStore(ObjectStore):
                 self.iter_range = iter_range
                 if iter_range is None:
                     self.idx = 0
-                    self.end = self.storage.count()
+                    self.end = len(self.storage)
                 else:
                     self.idx = iter_range.start
                     self.end = iter_range.stop
@@ -104,7 +104,7 @@ class TrajectoryStore(ObjectStore):
                 return self
 
             def next(self):
-                if self.idx < self.storage.count():
+                if self.idx < len(self.storage):
                     obj = self.snapshot_indices(self.idx)
                     if self.iter_range is not None and self.iter_range.step is not None:
                         self.idx += self.iter_range.step

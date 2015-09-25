@@ -362,7 +362,7 @@ class ObjectStore(object):
         -----
         Equal to `store.count()`
         """
-        return self.count()
+        return len(self)
 
     def iterator(this, iter_range=None):
         """
@@ -386,7 +386,7 @@ class ObjectStore(object):
                 self.iter_range = iter_range
                 if iter_range is None:
                     self.idx = 0
-                    self.end = self.storage.count()
+                    self.end = len(self.storage)
                 else:
                     self.idx = iter_range.start
                     self.end = iter_range.stop
@@ -557,7 +557,7 @@ class ObjectStore(object):
         else:
             return None
 
-    #TODO: turn into property ?
+    @property
     def last(self):
         '''
         Returns the last generated trajectory. Useful to continue a run.
@@ -567,9 +567,9 @@ class ObjectStore(object):
         Trajectoy
             the actual trajectory object
         '''
-        return self.load(self.count() - 1)
+        return self.load(len(self) - 1)
 
-    #TODO: turn into property ?
+    @property
     def first(self):
         '''
         Returns the last stored object. Useful to continue a run.
@@ -581,21 +581,6 @@ class ObjectStore(object):
         '''
         return self.load(0)
 
-    def count(self):
-        '''
-        Return the number of objects in the storage
-
-        Returns
-        -------
-        number : int
-            number of objects in the storage.
-
-        Notes
-        -----
-        Use len(store) instead
-        '''
-        return int(len(self.storage.dimensions[self.prefix]))
-
     def free(self):
         '''
         Return the number of the next free index
@@ -606,7 +591,7 @@ class ObjectStore(object):
             the number of the next free index in the storage.
             Used to store a new object.
         '''
-        count = self.count()
+        count = len(self)
         self._free = set([ idx for idx in self._free if idx >= count])
         idx = count
         while idx in self._free:
@@ -619,7 +604,6 @@ class ObjectStore(object):
         Locks an idx as used
         '''
         self._free.add(idx)
-
 
     def _init(self):
         """
@@ -652,26 +636,12 @@ class ObjectStore(object):
                 description='A json serialized version of the object',
                 chunksizes=tuple([10240]))
 
-#==============================================================================
+# ==============================================================================
 # INITIALISATION UTILITY FUNCTIONS
-#==============================================================================
-
-    @staticmethod
-    def find_number_type(instance):
-        ty = type(instance)
-
-        types = [
-            float, int, bool, str, long
-        ]
-
-        if ty in types:
-            return types[ty].__name__
-        elif ty is np.dtype:
-            return 'numpy.' + instance.dtype.type.__name__
-
+# ==============================================================================
 
     def init_variable(self, name, var_type, dimensions=None, **kwargs):
-        '''
+        """
         Create a new variable in the netCDF storage. This is just a helper
         function to structure the code better.
 
@@ -705,7 +675,7 @@ class ObjectStore(object):
             block sizes a variable is stored. Usually for object related stuff
             we want to store everything of one object at once so this is often
             (1, ..., ...)
-        '''
+        """
 
         # add the main dimension to the var_type
 
@@ -744,10 +714,10 @@ class ObjectStore(object):
         Returns
         -------
         function
-            the function that reports the index in this store
+            the function that reports the index (int) in this store or None if it is not stored
         """
         def idx(obj):
-            return self.index[obj]
+            return self.index.get(obj, None)
 
         return idx
 
@@ -814,7 +784,7 @@ def loadcache(func):
         return obj
     return inner
 
-# the default decorator for save functions to enable caching
+
 def savecache(func):
     """
     Decorator for save functions that add the basic cache handling
@@ -835,6 +805,7 @@ def savecache(func):
         return idx
 
     return inner
+
 
 # =============================================================================
 # LOAD/SAVE DECORATORS FOR .idx HANDLING
@@ -894,6 +865,7 @@ def loadidx(func):
         return obj
 
     return inner
+
 
 def saveidx(func):
     """

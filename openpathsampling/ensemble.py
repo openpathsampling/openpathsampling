@@ -580,7 +580,6 @@ class EnsembleCombination(Ensemble):
     '''
     Logical combination of two ensembles
     '''
-    #TODO: EnsembleCombination cannot be saved alone yet!
     def __init__(self, ensemble1, ensemble2, fnc, str_fnc):
         super(EnsembleCombination, self).__init__()
         self.ensemble1 = ensemble1

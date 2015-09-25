@@ -291,7 +291,7 @@ class ObjectStorage(object):
                 self.storage = this
                 if iter_range is None:
                     self.idx = 0
-                    self.end = self.storage.count()
+                    self.end = len(self.storage)
                 else:
                     self.idx = iter_range.start
                     self.end = iter_range.stop
@@ -300,7 +300,7 @@ class ObjectStorage(object):
                 return self
 
             def next(self):
-                if self.idx < self.storage.count():
+                if self.idx < len(self.storage):
                     obj = self.storage.load(self.idx)
                     self.idx += 1
                     return obj
@@ -348,7 +348,7 @@ class ObjectStorage(object):
             a list of objects stored under the given indices
 
         """
-        return [self.load(idx) for idx in range(0, self.count())[indices] ]
+        return [self.load(idx) for idx in range(0, len(self))[indices] ]
 
     def last(self):
         '''
@@ -359,7 +359,7 @@ class ObjectStorage(object):
         Trajectoy
             the actual trajectory object
         '''
-        return self.load(self.count())
+        return self.load(len(self))
 
     def first(self):
         '''
@@ -392,7 +392,7 @@ class ObjectStorage(object):
         index : int
             the number of the next free index in the storage. Used to store a new object.
         '''
-        return self.count()
+        return len(self)
 
     def _init(self):
         """

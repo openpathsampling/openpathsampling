@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
     degrees = 180/3.14159 # psi reports in radians; I think in degrees
 
-    ensembles = map(storage.ensembles.load, range(storage.ensembles.count()))
+    ensembles = map(storage.ensembles.load, range(len(storage.ensembles)))
     ensembles_y = {ensemble : idx for idx, ensemble in enumerate(ensembles) if ensemble.name != ''}
 
     left = 100
@@ -147,7 +147,7 @@ if __name__ == '__main__':
     last_x = -1
 
 
-    for o_idx in range(0, storage.samples.count()):
+    for o_idx in range(0, len(storage.samples)):
 
         sample = storage.samples.load(o_idx)
         ensemble = sample.ensemble

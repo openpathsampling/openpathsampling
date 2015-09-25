@@ -78,10 +78,6 @@ class DynamicsEngine(StorableNamedObject):
         # Better would be a link to the topology directly. This is needed to create
         # mdtraj.Trajectory() objects
 
-        # TODO: Remove this and put the logic outside of the engine. The engine in trajectory is only
-        # used to get the solute indices which should depend on the topology anyway
-        # Trajectory.engine = self
-
         self._register_options(options)
 
         # TODO: switch this not needing slice; use can_append

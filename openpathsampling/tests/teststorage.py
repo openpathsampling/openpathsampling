@@ -199,8 +199,8 @@ class testStorage(object):
             store.snapshots.load(1)
         )
 
-        assert_equal(store2.snapshots.count(), 2)
-        assert_equal(store2.trajectories.count(), 0)
+        assert_equal(len(store2.snapshots), 2)
+        assert_equal(len(store2.trajectories), 0)
 
         store.close()
         store2.close()

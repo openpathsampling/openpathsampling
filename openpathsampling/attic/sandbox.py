@@ -25,12 +25,12 @@ if __name__ == '__main__':
     PathMover.simulator = simulator
     storage = simulator.storage
 
-    print "Currently", simulator.storage.trajectories.count(), "simulations in the storage"
-    print "Currently", simulator.storage.configurations.count(), "total frames in the storage"
+    print "Currently", len(simulator.storage.trajectories), "simulations in the storage"
+    print "Currently", len(simulator.storage.configurations), "total frames in the storage"
 
     Trajectory.storage = simulator.storage.trajectory
 
-    if simulator.storage.trajectories.count() == 0:
+    if len(simulator.storage.trajectories) == 0:
         # load initial equilibrate snapshot given by ID #0
         snapshot = simulator.storage.snapshots.load(0)
 

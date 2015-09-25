@@ -83,10 +83,10 @@ if __name__ == '__main__':
 
     headline("Content")
 
-    line("Number of trajectories", storage.trajectories.count())
-    line("Number of snapshots", storage.snapshots.count())
-    line("Number of configurations", storage.configurations.count())
-    line("Number of momenta", storage.momenta.count())
+    line("Number of trajectories", len(storage.trajectories))
+    line("Number of snapshots", len(storage.snapshots))
+    line("Number of configurations", len(storage.configurations))
+    line("Number of momenta", len(storage.momenta))
 
     headline("Topology")
 
@@ -116,7 +116,7 @@ if __name__ == '__main__':
 
     headline("Ensembles")
 
-    for e_idx in range(0, storage.ensembles.count()):
+    for e_idx in range(0, len(storage.ensembles)):
         ensemble = storage.ensembles.load(e_idx)
         nline(e_idx,ensemble.cls, '')
 #        print indent(str(ensemble),16)
@@ -124,29 +124,29 @@ if __name__ == '__main__':
 
     headline("PathMovers")
 
-    for p_idx in range(0, storage.pathmovers.count()):
+    for p_idx in range(0, len(storage.pathmovers)):
         pathmover = storage.pathmovers.load(p_idx)
         nline(p_idx,pathmover.name, '')
         print indent(format_by_json(simplifier.from_json(pathmover.json)), 16)
 
     headline("ShootingPointSelector")
 
-    for p_idx in range(0, storage.shootingpointselectors.count()):
+    for p_idx in range(0, len(storage.shootingpointselectors)):
         obj = storage.shootingpointselectors.load(p_idx)
         nline(p_idx, obj.cls, '')
 #        print indent(format_by_json(simplifier.from_json(obj.json)), 16)
 
-    headline("ShootingPoints (" + str(storage.shootingpoints.count()) + ")")
+    headline("ShootingPoints (" + str(len(storage.shootingpoints)) + ")")
 
 #    for p_idx in range(0, storage.shootingpoints.count()):
 #        obj = storage.shootingpoints.load(p_idx)
 #        nline(p_idx,obj.json, obj.cls)
 
-    headline("CollectiveVariables (" + str(storage.collectivevariables.count()) + ")")
+    headline("CollectiveVariables (" + str(len(storage.collectivevariables)) + ")")
 
 #    all_snapshot_traj = storage.snapshots.all()
 
-    for p_idx in range(0, storage.collectivevariables.count()):
+    for p_idx in range(0, len(storage.collectivevariables)):
         obj = storage.collectivevariables.load(p_idx)
         nline(p_idx,obj.name, '')
         add = ''
@@ -159,14 +159,14 @@ if __name__ == '__main__':
 
     headline("MCSteps")
 
-    for p_idx in range(0, storage.steps.count()):
+    for p_idx in range(0, len(storage.steps)):
         obj = storage.steps.load(p_idx)
         nline(p_idx, '', '')
         print indent(str(obj.change),16)
 
     headline("SampleSets")
 
-    for p_idx in range(0, storage.samplesets.count()):
+    for p_idx in range(0, len(storage.samplesets)):
         obj = storage.samplesets.load(p_idx)
         nline(p_idx, str(len(obj)) + ' sample(s)', [storage.idx(sample) for sample in obj ])
 #        print indent(str(obj.movepath),16)
@@ -225,14 +225,14 @@ if __name__ == '__main__':
         print format_traj(traj_obj)
 
 
-    for o_idx in range(0, storage.samples.count()):
+    for o_idx in range(0, len(storage.samples)):
 
         sample = storage.samples.load(o_idx)
         nline(o_idx, 'trajectory #' + str(storage.idx(sample.trajectory)),'[ ' + str(len(sample.trajectory)) + ' frames ] ' + format_traj(sample.trajectory))
 
     headline("Trajectories")
 
-    for t_idx in range(0, storage.trajectories.count()):
+    for t_idx in range(0, len(storage.trajectories)):
         traj = storage.trajectories.snapshot_indices(t_idx)
         sys.stdout.write("  {:>4} [{:>5} frames] : ".format(str(t_idx),str(len(traj))))
         old_idx = -2

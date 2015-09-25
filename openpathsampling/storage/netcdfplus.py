@@ -10,14 +10,15 @@ from todict import StorableObjectJSON
 from objproxy import LoaderProxy
 
 import numpy as np
-import netCDF4 as netcdf
+import netCDF4
 import os.path
+
 
 #=============================================================================================
 # Extended NetCDF Storage for multiple forked trajectories
 #=============================================================================================
 
-class NetCDFPlus(netcdf.Dataset):
+class NetCDFPlus(netCDF4.Dataset):
     support_simtk_unit = True
 
     class Value_Delegate(object):
@@ -103,12 +104,22 @@ class NetCDFPlus(netcdf.Dataset):
         '''
 
         if mode == None:
-            if os.path.isfile(filename):
-                logger.info("Open existing netCDF file '%s' for storage", filename)
-                mode = 'a'
-            else:
-                logger.info("Create new netCDF file '%s' for storage", filename)
-                mode = 'w'
+            mode = 'a'
+
+        exists = os.path.isfile(filename)
+        if exists and mode == 'a':
+            logger.info("Open existing netCDF file '%s' for appending - appending existing file", filename)
+        elif exists and mode == 'w':
+            logger.info("Create new netCDF file '%s' for writing - deleting existing file", filename)
+        elif not exists and mode == 'a':
+            logger.info("Create new netCDF file '%s' for appending - appending non-existing file", filename)
+        elif not exists and mode == 'w':
+            logger.info("Create new netCDF file '%s' for writing - creating new file", filename)
+        elif not exists and mode == 'r':
+            logger.info("Open existing netCDF file '%s' for reading - file does not exist", filename)
+            raise RuntimeError("File '%s' does not exist." % filename)
+        elif exists and mode == 'r':
+            logger.info("Open existing netCDF file '%s' for reading - reading from existing file", filename)
 
         self.filename = filename
 
@@ -128,7 +139,7 @@ class NetCDFPlus(netcdf.Dataset):
 
             # add shared dimension for everyone. scalar and spatial
             if 'scalar' not in self.dimensions:
-                self.createDimension('scalar', 1) # scalar dimension
+                self.createDimension('scalar', 1)  # scalar dimension
 
             self._initialize()
 
@@ -142,10 +153,13 @@ class NetCDFPlus(netcdf.Dataset):
                 variable = self.variables[variable_name]
 
                 if self.support_simtk_unit:
+                    import simtk.unit as u
                     if hasattr(variable, 'unit_simtk'):
                         unit_dict = self.simplifier.from_json(getattr(variable, 'unit_simtk'))
                         if unit_dict is not None:
                             unit = self.simplifier.unit_from_dict(unit_dict)
+                        else:
+                            unit = self.simplifier.unit_from_dict(u.Unit({}))
 
                         self.units[str(variable_name)] = unit
 
@@ -179,15 +193,11 @@ class NetCDFPlus(netcdf.Dataset):
 
             setattr(self, store.prefix, store)
 
-
         self._objects[name] = store
-
         self._storages[store.content_class] = store
-#        self._storages[store.content_class.__name__] = store
-#        self._storages[store.content_class.__name__.lower()] = store
 
         self._obj_store[store.content_class] = store
-        self._obj_store.update({cls : store for cls in store.content_class.descendants()})
+        self._obj_store.update({cls: store for cls in store.content_class.descendants()})
 
     def _register(self):
         pass
@@ -216,14 +226,14 @@ class NetCDFPlus(netcdf.Dataset):
         self.__dict__[key] = value
 
     def _init_storages(self):
-        '''
+        """
         Run the initialization on all added classes, when the storage is
         created only!
 
         Notes
         -----
         Only runs when the storage is created.
-        '''
+        """
 
         for storage in self._objects.values():
             storage._init()
@@ -275,7 +285,7 @@ class NetCDFPlus(netcdf.Dataset):
 
         if type(obj) is list:
             # a list of objects will be stored one by one
-            return [ self.save(part, *args, **kwargs) for part in obj]
+            return [self.save(part, *args, **kwargs) for part in obj]
 
         elif type(obj) is tuple:
             # a tuple will store all parts
@@ -367,9 +377,19 @@ class NetCDFPlus(netcdf.Dataset):
                 if variable not in new_storage.variables:
                     # collectivevariables have additional variables in the storage that need to be copied
                     # TODO: copy chunksizes?
-                    new_storage.createVariable(variable, str(self.variables[variable].dtype), self.variables[variable].dimensions)
+                    var = self.variables[variable]
+                    new_storage.createVariable(
+                        variable,
+                        str(var.dtype),
+                        var.dimensions,
+                        chunksizes=var.chunk
+                    )
                     for attr in self.variables[variable].ncattrs():
-                        setattr(new_storage.variables[variable], attr, getattr(self.variables[variable], attr))
+                        setattr(
+                            new_storage.variables[variable],
+                            attr,
+                            getattr(self.variables[variable], attr)
+                        )
 
                     new_storage.variables[variable][:] = self.variables[variable][:]
                 else:
@@ -377,9 +397,12 @@ class NetCDFPlus(netcdf.Dataset):
                         new_storage.variables[variable][idx] = self.variables[variable][idx]
 
         if copied_storages == 0:
-            raise RuntimeWarning('Potential error in storage name. No storage variables copied from ' + storage_name)
+            raise RuntimeWarning(
+                'Potential error in storage name. No storage variables copied from ' +
+                storage_name
+            )
 
-    def create_dimension(self, dim_name, size = None):
+    def create_dimension(self, dim_name, size=None):
         """
         Initialize a new dimension in the storage.
         Wraps the netCDF createDimension
@@ -396,27 +419,28 @@ class NetCDFPlus(netcdf.Dataset):
         if dim_name not in self.storage.dimensions:
             self.storage.createDimension(dim_name, size)
 
-    def var_type_to_nc_type(self, var_type):
+    @staticmethod
+    def var_type_to_nc_type(var_type):
         type_conversion = {
-            'float' : np.float32,
-            'int' : np.int32,
-            'long' : np.int64,
-            'index' : np.int32,
-            'length' : np.int32,
-            'bool' : np.int16,
-            'str' : 'str',
-            'json' : 'str',
-            'numpy.float32' : np.float32,
-            'numpy.float64' : np.float32,
-            'numpy.int8' : np.int8,
-            'numpy.int16' : np.int16,
-            'numpy.int32' : np.int32,
-            'numpy.int64' : np.int64,
-            'numpy.uint8' : np.uint8,
-            'numpy.uinf16' : np.uint16,
-            'numpy.uint32' : np.uint32,
-            'numpy.uint64' : np.uint64,
-            'obj' : np.int32
+            'float': np.float32,
+            'int': np.int32,
+            'long': np.int64,
+            'index': np.int32,
+            'length': np.int32,
+            'bool': np.int16,
+            'str': 'str',
+            'json': 'str',
+            'numpy.float32': np.float32,
+            'numpy.float64': np.float32,
+            'numpy.int8': np.int8,
+            'numpy.int16': np.int16,
+            'numpy.int32': np.int32,
+            'numpy.int64': np.int64,
+            'numpy.uint8': np.uint8,
+            'numpy.uinf16': np.uint16,
+            'numpy.uint32': np.uint32,
+            'numpy.uint64': np.uint64,
+            'obj': np.int32
         }
 
         if var_type.startswith('obj.') or var_type.startswith('lazyobj.'):
@@ -432,58 +456,58 @@ class NetCDFPlus(netcdf.Dataset):
         store = None
 
         if var_type == 'int':
-            getter = lambda v : v.tolist()
-            setter = lambda v : np.array(v)
+            getter = lambda v: v.tolist()
+            setter = lambda v: np.array(v)
 
         elif var_type == 'bool':
-            getter = lambda v : v.astype(np.bool).tolist()
-            setter = lambda v : np.array(v, dtype=np.int8)
+            getter = lambda v: v.astype(np.bool).tolist()
+            setter = lambda v: np.array(v, dtype=np.int8)
 
         elif var_type == 'index':
-            getter = lambda v : \
-                [ None if int(w) < 0 else int(w) for w in v.tolist()] \
+            getter = lambda v: \
+                [None if int(w) < 0 else int(w) for w in v.tolist()] \
                     if hasattr(v, '__iter__') else None if int(v) < 0 else int(v)
-            setter = lambda v : \
-                [ -1 if w is None else w for w in v] \
+            setter = lambda v: \
+                [-1 if w is None else w for w in v] \
                     if hasattr(v, '__iter__') else -1 if v is None else v
 
         elif var_type == 'float':
-            getter = lambda v : v.tolist()
-            setter = lambda v : np.array(v)
+            getter = lambda v: v.tolist()
+            setter = lambda v: np.array(v)
 
         elif var_type.startswith('numpy.'):
             pass
 
         elif var_type == 'json':
-            setter = lambda v : self.simplifier.to_json_object(v)
-            getter = lambda v : self.simplifier.from_json(v)
+            setter = lambda v: self.simplifier.to_json_object(v)
+            getter = lambda v: self.simplifier.from_json(v)
 
         elif var_type.startswith('obj.'):
             store = getattr(self, var_type[4:])
             base_type = store.content_class
 
-            iterable = lambda v : \
+            iterable = lambda v: \
                 not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
 
-            getter = lambda v : \
-                [ None if int(w) < 0 else store.load(int(w)) for w in v.tolist()] \
+            getter = lambda v: \
+                [None if int(w) < 0 else store.load(int(w)) for w in v.tolist()] \
                     if iterable(v) else None if int(v) < 0 else store.load(int(v))
-            setter = lambda v : \
-                np.array([ -1 if w is None else store.save(w) for w in v], dtype=np.int32) \
+            setter = lambda v: \
+                np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
                     if iterable(v) else -1 if v is None else store.save(v)
 
         elif var_type.startswith('lazyobj.'):
             store = getattr(self, var_type[8:])
             base_type = store.content_class
 
-            iterable = lambda v : \
+            iterable = lambda v: \
                 not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
 
-            getter = lambda v : \
-                [ None if int(w) < 0 else LoaderProxy({store : int(w)}) for w in v.tolist()] \
+            getter = lambda v: \
+                [None if int(w) < 0 else LoaderProxy({store : int(w)}) for w in v.tolist()] \
                     if iterable(v) else None if int(v) < 0 else LoaderProxy({store : int(v)})
-            setter = lambda v : \
-                np.array([ -1 if w is None else store.save(w) for w in v], dtype=np.int32) \
+            setter = lambda v: \
+                np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
                     if iterable(v) else -1 if v is None else store.save(v)
 
         return getter, setter, store
@@ -512,21 +536,23 @@ class NetCDFPlus(netcdf.Dataset):
                     def _get(my_getter):
                         import simtk.unit as u
                         if my_getter is None:
-                            return  lambda v : u.Quantity(v, unit)
+                            return lambda v : u.Quantity(v, unit)
                         else:
-                            return  lambda v : u.Quantity(my_getter(v), unit)
+                            return lambda v : u.Quantity(my_getter(v), unit)
+
                     def _set(my_setter):
                         if my_setter is None:
                             return  lambda v : v / unit
                         else:
                             return  lambda v : my_setter(v / unit)
+
                     getter = _get(getter)
                     setter = _set(setter)
 
             if True:
                 if hasattr(var, 'maskable'):
                     def _get2(my_getter):
-                        return lambda v : \
+                        return lambda v: \
                             [None if hasattr(w, 'mask') else my_getter(w) for w in v ] \
                             if type(v) is not str and len(v.shape) > 0 else \
                                 (None if hasattr(v, 'mask') else my_getter(v))
@@ -534,7 +560,7 @@ class NetCDFPlus(netcdf.Dataset):
                     if getter is not None:
                         getter = _get2(getter)
                     else:
-                        getter = _get2(lambda v : v)
+                        getter = _get2(lambda v: v)
 
             self.vars[var_name] = NetCDFPlus.Value_Delegate(var, getter, setter, store)
 
@@ -547,10 +573,9 @@ class NetCDFPlus(netcdf.Dataset):
                         description=None,
                         chunksizes=None,
                         simtk_unit=None,
-                        maskable=False,
-                        index_by=None,
+                        maskable=False
     ):
-        '''
+        """
         Create a new variable in the netCDF storage. This is just a helper
         function to structure the code better.
 
@@ -584,7 +609,7 @@ class NetCDFPlus(netcdf.Dataset):
             block sizes a variable is stored. Usually for object related stuff
             we want to store everything of one object at once so this is often
             (1, ..., ...)
-        '''
+        """
 
         ncfile = self
 
@@ -599,7 +624,6 @@ class NetCDFPlus(netcdf.Dataset):
                 dimensions[ix] = var_name + '_dim_' + str(ix)
                 new_dimensions[dimensions[ix]] = dim
 
-
         if dimensions[-1] == '...':
             # last dimension is simply [] so we allow arbitrary length and remove the last dimension
             variable_length = True
@@ -607,7 +631,7 @@ class NetCDFPlus(netcdf.Dataset):
         else:
             variable_length = False
 
-        nc_type = self.var_type_to_nc_type(var_type)
+        nc_type = NetCDFPlus.var_type_to_nc_type(var_type)
 
         for dim_name, size in new_dimensions.items():
             ncfile.create_dimension(dim_name, size)
@@ -628,14 +652,11 @@ class NetCDFPlus(netcdf.Dataset):
 
             import simtk.unit as u
 
-            unit_instance = u.Unit({})
-            symbol = 'none'
-
             if isinstance(simtk_unit, u.Unit):
                 unit_instance = simtk_unit
                 symbol = unit_instance.get_symbol()
             elif isinstance(simtk_unit, u.BaseUnit):
-                unit_instance = u.Unit({simtk_unit : 1.0})
+                unit_instance = u.Unit({simtk_unit: 1.0})
                 symbol = unit_instance.get_symbol()
             elif type(simtk_unit) is str and hasattr(u, simtk_unit):
                 unit_instance = getattr(u, simtk_unit)
@@ -647,7 +668,6 @@ class NetCDFPlus(netcdf.Dataset):
                 raise NotImplementedError('Unit by abbreviated string representation is not yet supported')
 
             json_unit = self.simplifier.unit_to_json(unit_instance)
-
 
             # store the unit in the dict inside the Storage object
             self.units[var_name] = unit_instance
@@ -661,9 +681,9 @@ class NetCDFPlus(netcdf.Dataset):
 
         if description is not None:
             if type(dimensions) is str:
-                dim_names = [ dimensions ]
+                dim_names = [dimensions]
             else:
-                dim_names = map( lambda p : '#ix{0}:{1}'.format(*p), enumerate(dimensions))
+                dim_names = map(lambda p: '#ix{0}:{1}'.format(*p), enumerate(dimensions))
 
             idx_desc = '[' + ']['.join(dim_names) + ']'
             description = var_name + idx_desc + ' is ' + description.format(idx=dim_names[0], ix=dim_names)

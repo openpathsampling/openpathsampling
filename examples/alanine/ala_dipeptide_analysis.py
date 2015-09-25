@@ -26,7 +26,7 @@ if __name__ == "__main__":
     # restore old computed values
     storage.cvs.restore(psi)
 
-    for tnum in range(1,storage.trajectories.count()+1):
+    for tnum in range(1,len(storage.trajectories)+1):
         traj = storage.trajectories.load(tnum)
         degrees = 180/3.14159 # psi reports in radians; I think in degrees
         psis = [psi(snap) for snap in traj]
