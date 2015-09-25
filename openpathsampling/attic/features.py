@@ -1,5 +1,9 @@
 __author__ = 'jan-hendrikprinz'
 
+import simtk.unit as u
+import functools
+import re
+
 class VariableFeature(object):
 
     @classmethod
@@ -35,7 +39,7 @@ class VariableFeature(object):
 
 
 class SimtkUnits(VariableFeature):
-        def add_simtk_support(self, var_name, unit):
+    def add_simtk_support(self, var_name, unit):
 
         ncvar = self.variables[var_name]
 

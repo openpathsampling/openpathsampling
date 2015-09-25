@@ -23,7 +23,6 @@ class Trajectory(list, StorableObject):
     """
 
     engine = None
-    use_lazy = True    # We assume that snapshots are immutable. That should safe a lot of time to copy trajectories
 
     def __init__(self, trajectory=None):
         """
@@ -49,12 +48,7 @@ class Trajectory(list, StorableObject):
             else:
                 self.atom_indices = None
                 
-            if (self.use_lazy):
-                self.extend(trajectory)
-            else:
-                for snapshot in trajectory:
-                    snapshot_copy = copy.deepcopy(snapshot)
-                    self.append(snapshot_copy)
+            self.extend(trajectory)
         else:
             self.atom_indices = None
 

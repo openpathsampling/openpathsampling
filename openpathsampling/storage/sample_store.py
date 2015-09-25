@@ -11,8 +11,8 @@ class SampleStore(ObjectStore):
         self.vars['trajectory'][idx] = sample.trajectory
         self.vars['ensemble'][idx] = sample.ensemble
         self.vars['replica'][idx] = sample.replica
-        self.store('parent',idx, sample)
-        self.store('details',idx, sample)
+        self.write('parent',idx, sample)
+        self.write('details',idx, sample)
         self.vars['bias'][idx] = sample.bias
         self.vars['mover'][idx] = sample.mover
 
@@ -116,7 +116,7 @@ class SampleSetStore(ObjectStore):
         map(self.storage.samples.save, sample_set)
 
         self.vars['samples'][idx] = sample_set
-        self.store('movepath', idx, sample_set)
+        self.write('movepath', idx, sample_set)
 
     def sample_indices(self, idx):
         '''
@@ -133,11 +133,7 @@ class SampleSetStore(ObjectStore):
             list of sample indices
         '''
 
-        # get the values
-        values = self.storage.variables[self.prefix + '_samples'][idx]
-
-        # typecast to integer
-        return self.list_from_numpy(values, 'index')
+        return self.variables['samples'][idx].tolist()
 
     def load(self, idx):
         '''

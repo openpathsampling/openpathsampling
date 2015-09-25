@@ -601,6 +601,8 @@ class ForwardShootGeneratingMover(ShootGeneratingMover):
 class BackwardShootGeneratingMover(ShootGeneratingMover):
     """A Backward shooting generator
     """
+
+    #TODO: Remove use of reversed_copy. The reversed snapshot already exists!
     def _shoot(self, shooting_point, ensemble):
         shoot_str = "Shooting {sh_dir} from frame {fnum} in [0:{maxt}]"
         logger.info(shoot_str.format(

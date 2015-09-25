@@ -455,8 +455,7 @@ class NetCDFPlus(netcdf.Dataset):
             pass
 
         elif var_type == 'json':
-            setter = lambda v : \
-                self.simplifier.to_json(v)
+            setter = lambda v : self.simplifier.to_json_object(v)
             getter = lambda v : self.simplifier.from_json(v)
 
         elif var_type.startswith('obj.'):

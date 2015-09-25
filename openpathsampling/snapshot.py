@@ -70,6 +70,7 @@ class Configuration(StorableObject):
         if topology is not None:
             self.topology = topology
 
+        #TODO: Replace deepcopy by reference. Deepcopy is against immutable agreement
         if coordinates is not None:
             self.coordinates = copy.deepcopy(coordinates)
         if box_vectors is not None:
@@ -545,10 +546,6 @@ class Snapshot(StorableObject):
         snapshot are reversed. This is fast and should be used instead of
         read velocity inversion.
         """
-        if self._reversed is None:
-            self._reversed = self.reversed_copy()
-            self._reversed._reversed = self
-
         return self._reversed
 
     @has('configuration')

@@ -27,7 +27,7 @@ class ObjectJSON(object):
         self.unit_system = unit_system
         self.class_list = StorableObject.objects()
 
-    def simplify_object(self, obj, base_type = ''):
+    def simplify_object(self, obj):
         return { '_cls' : obj.__class__.__name__, '_dict' : self.simplify(obj.to_dict(), obj.base_cls_name) }
 
     def simplify(self, obj, base_type = ''):
@@ -162,8 +162,8 @@ class ObjectJSON(object):
         simplified = self.simplify(obj, base_type)
         return json.dumps(simplified)
 
-    def to_json_object(self, obj, base_type = ''):
-        simplified = self.simplify_object(obj, base_type)
+    def to_json_object(self, obj):
+        simplified = self.simplify_object(obj)
         try:
             json_str = json.dumps(simplified)
         except TypeError:

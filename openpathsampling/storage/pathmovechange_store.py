@@ -17,7 +17,7 @@ class PathMoveChangeStore(ObjectStore):
         if idx is not None:
             self.vars['samples'][idx] = pathmovechange.samples
             self.vars['subchanges'][idx] = pathmovechange.subchanges
-            self.store('details', idx, pathmovechange)
+            self.write('details', idx, pathmovechange)
             self.vars['mover'][idx] = pathmovechange.mover
             self.vars['cls'][idx] = pathmovechange.__class__.__name__
 

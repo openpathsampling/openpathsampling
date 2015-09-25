@@ -1,5 +1,6 @@
 from object_storage import ObjectStore
 
+
 class ObjectDictStore(ObjectStore):
     def __init__(self, cls, key_class):
         super(ObjectDictStore, self).__init__(
@@ -31,7 +32,7 @@ class ObjectDictStore(ObjectStore):
         idx : int
             the index
         """
-        self.save_json(self.prefix + '_json', idx, objectdict)
+        self.vars['json'][idx] = objectdict
 
         if objectdict.store_cache:
             self.create_cache(objectdict)
@@ -100,8 +101,8 @@ class ObjectDictStore(ObjectStore):
         values a second time. You can copy the store cache to the new file using `transfer_cache` but this
         requires that you have all snapshots loaded into memory otherwise there is no connection between
         snapshots. Meaning we will not try to figure out which pairs of snapshots in the two files are the
-        same. You might have a snapshot stored in two files then remove the snapshot from memory and reload it.
-        In this case the loaded snapshot will not know that it is also saved in another file.
+        same. You might have a snapshot stored in two files then remove the snapshot from memory and reload
+        it. In this case the loaded snapshot will not know that it is also saved in another file.
 
         In the worst case you will have to compute the CVs again.
         """
@@ -112,7 +113,6 @@ class ObjectDictStore(ObjectStore):
             raise RuntimeWarning(('Your object is not stored as a CV in "%s" yet and hence a store ' +
                                   'for the cache cannot be attached.' +
                                  'Save your CV first and retry.') % self.storage)
-
 
     def cache_transfer(self, objectdict, target_file):
         if objectdict in target_file.cvs.index:
@@ -125,7 +125,6 @@ class ObjectDictStore(ObjectStore):
                 target_idx = target_file.snapshots.index.get(snapshot, None)
                 if target_idx is not None:
                     target_variable[target_idx] = source_variable[source_idx]
-
 
     def sync(self, objectdict=None):
         """
@@ -173,7 +172,8 @@ class ObjectDictStore(ObjectStore):
         wrong parameters!
         """
 
-        op = self.load_json(self.prefix + '_json', idx)
+        # op = self.load_json(self.prefix + '_json', idx)
+        op = self.vars['json'][idx]
         op.set_cache_store(self.key_store, self.cache_var(idx))
 
         return op

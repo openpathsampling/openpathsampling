@@ -5,7 +5,6 @@ import yaml
 import numpy as np
 
 from cache import WeakLimitCache
-from openpathsampling.base import StorableNamedObject
 from objproxy import LoaderProxy
 
 import weakref
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 
-class ObjectStore(StorableNamedObject):
+class ObjectStore(object):
     """
     Base Class for storing complex objects in a netCDF4 file. It holds a
     reference to the store file.
@@ -133,6 +132,7 @@ class ObjectStore(StorableNamedObject):
         _load = self.load
         self.load = types.MethodType(loadidx(_load), self)
 
+        # TODO: Combine idx and cache wrapper
         if caching is not False:
             # wrap load/save to make this work. I use MethodType here to bind the
             # wrapped function to this instance. An alternative would be to
@@ -211,16 +211,6 @@ class ObjectStore(StorableNamedObject):
         """
         return self.index.get(obj, None)
 
-    def set_variable_partial_loading(self, variable, loader=None):
-        cls = self.content_class
-        if not hasattr(cls, '_delayed_loading'):
-            cls._delayed_loading = dict()
-
-        if loader is None:
-            loader = func_update_variable(variable, variable)
-
-        cls._delayed_loading[variable] = loader
-
     def idx_by_name(self, needle):
         """
         Return the index for the (first) object with a given name from the store
@@ -249,7 +239,7 @@ class ObjectStore(StorableNamedObject):
                     return self.index[self.cache[needle]]
 
             # otherwise search the storage for the name
-            found_idx = [ idx for idx,s in enumerate(self.storage.variables[
+            found_idx = [idx for idx, s in enumerate(self.storage.variables[
                 self.identifier][:]) if s == needle
             ]
 
@@ -328,7 +318,6 @@ class ObjectStore(StorableNamedObject):
 
         return []
 
-
     def find_first(self, name):
         """
         Return first object with a given name
@@ -354,7 +343,6 @@ class ObjectStore(StorableNamedObject):
 
         return None
 
-
     def __iter__(self):
         """
         Add iteration over all elements in the storage
@@ -376,7 +364,7 @@ class ObjectStore(StorableNamedObject):
         """
         return self.count()
 
-    def iterator(this, iter_range = None):
+    def iterator(this, iter_range=None):
         """
         Return an iterator over all objects in the storage
 
@@ -419,7 +407,7 @@ class ObjectStore(StorableNamedObject):
 
         return ObjectIterator()
 
-    def store(self, variable, idx, obj, attribute=None):
+    def write(self, variable, idx, obj, attribute=None):
         if attribute is None:
             attribute = variable
 
@@ -460,7 +448,7 @@ class ObjectStore(StorableNamedObject):
             return None
 
     def load(self, idx):
-        '''
+        """
         Returns an object from the storage. Needs to be implemented from
         the specific storage class.
 
@@ -475,16 +463,19 @@ class ObjectStore(StorableNamedObject):
         -------
         object
             the loaded object
-        '''
+        """
 
-        return self.load_json(self.prefix + '_json', idx)
+        obj = self.vars['json'][idx]
+        return obj
+
+#        return self.load_json(self.prefix + '_json', idx)
 
     def clear_cache(self):
         """Clear the cache and force reloading
 
         """
 
-        self.cache = dict()
+        self.cache.clear()
         self._cached_all = False
 
     def cache_all(self):
@@ -493,7 +484,7 @@ class ObjectStore(StorableNamedObject):
         """
         if not self._cached_all:
             idxs = range(len(self))
-            jsons = self.storage.variables[self.prefix + '_json'][:]
+            jsons = self.variables['json'][:]
 
             [ self.add_single_to_cache(i,j) for i,j in zip(
                 idxs,
@@ -544,7 +535,7 @@ class ObjectStore(StorableNamedObject):
         if self.has_uid and hasattr(obj, '_uid'):
             self.storage.variables[self.identifier][idx] = obj._uid
 
-        self.save_json(self.prefix + '_json', idx, obj)
+        self.vars['json'][idx] = obj
 
     def get_uid(self, idx):
         """
@@ -566,23 +557,7 @@ class ObjectStore(StorableNamedObject):
         else:
             return None
 
-    def get(self, indices):
-        """
-        Returns a list of objects from the given list of indices
-
-        Parameters
-        ----------
-        indices : list of int
-            the list of integers specifying the object to be returned
-
-        Returns
-        -------
-        list of objects
-            a list of objects stored under the given indices
-
-        """
-        return [self.load(idx) for idx in range(0, self.count())[indices]]
-
+    #TODO: turn into property ?
     def last(self):
         '''
         Returns the last generated trajectory. Useful to continue a run.
@@ -594,6 +569,7 @@ class ObjectStore(StorableNamedObject):
         '''
         return self.load(self.count() - 1)
 
+    #TODO: turn into property ?
     def first(self):
         '''
         Returns the last stored object. Useful to continue a run.
@@ -672,7 +648,7 @@ class ObjectStore(StorableNamedObject):
                 chunksizes=tuple([10240]))
 
         if self.json:
-            self.init_variable("json", 'str',
+            self.init_variable("json", 'json',
                 description='A json serialized version of the object',
                 chunksizes=tuple([10240]))
 
@@ -754,196 +730,9 @@ class ObjectStore(StorableNamedObject):
             **kwargs
         )
 
-
-#==============================================================================
-# LOAD / SAVE UTILITY FUNCTIONS
-#==============================================================================
-
-    def load_variable(self, name, idx):
-        """
-        Wrapper for netCDF storage.variables[name][idx] property
-
-        Parameters
-        ----------
-        name : str
-            The name of the variable
-        idx : int, slice, list of int, etc...
-            An index specification as in netCDF4
-
-        Returns
-        -------
-        numpy.ndarray
-            The data stored in the netCDF variable
-
-        """
-        return self.storage.variables[name][idx]
-
-    def save_variable(self, name, idx, value):
-        """
-        Wrapper for netCDF storage.variables[name][idx] property
-
-        Parameters
-        ----------
-        name : str
-            The name of the variable
-        idx : int, slice, list of int, etc...
-            An index specification as in netCDF4
-        value : numpy.ndarray
-            The array to be stored in the variable
-
-        """
-        self.storage.variables[name][idx] = value
-
-    def load_json(self, name, idx):
-        """
-        Load an object from the associated storage using json
-
-        Parameters
-        ----------
-        name : str
-            the name of the variable in the netCDF storage
-        idx : int
-            the integer index in the variable
-
-        Returns
-        -------
-        object
-            the loaded object
-
-        """
-        # TODO: Add logging here
-        idx = int(idx)
-
-        json_string = self.storage.variables[name][idx]
-
-        simplified = yaml.load(json_string)
-        obj = self.simplifier.build(simplified)
-        setattr(obj, 'json', json_string)
-
-        return obj
-
-    def save_json(self, name, idx, obj):
-        """
-        Save an object as a json string in a variable in the referenced storage
-
-        Parameters
-        ----------
-        name : str
-            the name of the variable in the netCDF storage
-        idx : int
-            the integer index in the variable
-        obj : object
-            the object to be stored as JSON
-
-        """
-        if not hasattr(obj,'json'):
-            setattr(obj, 'json', self.object_to_json(obj))
-
-        self.storage.variables[name][idx] = obj.json
-
-
-#==============================================================================
-# CONVERSION UTILITIES
-#==============================================================================
-
-    def object_to_json(self, obj):
-        """
-        Convert a given object to a json string using the simplifier
-
-        Parameters
-        ----------
-        obj : the object to be converted
-
-        Returns
-        -------
-        str
-            the JSON string
-        """
-        json_string = self.simplifier.to_json_object(obj, obj.base_cls_name)
-
-        return json_string
-
-    def list_to_numpy(self, data, value_type, allow_empty = True):
-        """
-        Return a numpy list from a python list in a given format
-
-        Parameters
-        ----------
-        data : list
-            the list to be converted
-        value_type : str
-            the type of the input list elements. If this is an object type it
-            will be saved and the returned index is stored in an numpy
-            integer array
-        allow_empty : bool
-            if set to `True` None will be stored as the integer -1
-
-        Returns
-        -------
-        numpy.ndarray
-            the converted numpy array
-        """
-        if value_type == 'int':
-            values = np.array(data).astype(np.float32)
-        elif value_type == 'float':
-            values = np.array(data).astype(np.float32)
-        elif value_type == 'bool':
-            values = np.array(data).astype(np.int8)
-        elif value_type == 'index':
-            values = np.array(data).astype(np.int32)
-        elif value_type == 'length':
-            values = np.array(data).astype(np.int32)
-        else:
-            # an object
-            values = [-1 if value is None and allow_empty is True
-                      else value.idx[self] for value in data]
-            values = np.array(values).astype(np.int32)
-
-        return values.copy()
-
-    def list_from_numpy(self, values, value_type, allow_empty = True):
-        """
-        Return a python list from a numpy array in a given format
-
-        Parameters
-        ----------
-        values : numpy.ndarray
-            the numpy array to be converted
-        value_type : str
-            the type of the output list elements. If this is a object type it
-            will be loaded using the numpy array content as the index
-        allow_empty : bool
-            if set to `True` then loaded objects will only be loaded if the
-            index is not negative. Otherwise the load function will always
-            be called
-
-        Returns
-        -------
-        list
-            the converted list
-        """
-        if value_type == 'int':
-            data = values.tolist()
-        elif value_type == 'float':
-            data = values.tolist()
-        elif value_type == 'bool':
-            data = values.tolist()
-        elif value_type == 'index':
-            data = values.tolist()
-        elif value_type == 'length':
-            data = values.tolist()
-        else:
-            # an object
-            key_store = getattr(self.storage, value_type)
-            data = [key_store.load(obj_idx) if allow_empty is False
-                    or obj_idx >= 0 else None for obj_idx in values.tolist()]
-
-        return data
-
-
-#==============================================================================
+# ==============================================================================
 # COLLECTIVE VARIABLE UTILITY FUNCTIONS
-#==============================================================================
+# ==============================================================================
 
     @property
     def op_idx(self):
@@ -1047,9 +836,9 @@ def savecache(func):
 
     return inner
 
-#=============================================================================
+# =============================================================================
 # LOAD/SAVE DECORATORS FOR .idx HANDLING
-#=============================================================================
+# =============================================================================
 
 def loadidx(func):
     """
@@ -1153,44 +942,3 @@ def saveidx(func):
         return idx
 
     return inner
-
-# CREATE EASY UPDATE WRAPPER
-
-def func_update_variable(attribute, variable):
-    """
-    Create a delayed loading function for stores
-
-    Parameters
-    ----------
-    attribute : string
-        name of the attribute of the object to be updated. E.g. for sample.mover this is 'mover'
-    db : string
-        the storage prefix where the object are stored in the file. E.g. for samples this is 'sample'
-    variable : string
-        the name of the variable in the storage. this is often the same as the attribute
-    store : string
-        the name of the store. E.g. 'trajectories'
-
-    Returns
-    -------
-    function
-        the function that is used for updating
-    """
-    def updater(obj):
-        store = obj._origin
-        idx = obj.idx[store]
-
-#        print 'updater called', obj, obj.__dict__.keys(), attribute, variable
-
-        value = store.vars[variable][idx]
-        setattr(obj, attribute, value)
-
-    return updater
-
-def create_load_function(cls, arguments):
-    def loader(self, idx):
-        params = {arg : self.vars[param][idx] for arg, param in arguments.iteritems()}
-
-        return cls(**params)
-
-    return loader
