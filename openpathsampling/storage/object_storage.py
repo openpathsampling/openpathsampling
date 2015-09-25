@@ -362,7 +362,7 @@ class ObjectStore(object):
         -----
         Equal to `store.count()`
         """
-        return len(self)
+        return len(self.storage.dimensions[self.prefix])
 
     def iterator(this, iter_range=None):
         """
@@ -421,6 +421,9 @@ class ObjectStore(object):
             setattr(obj, attribute, proxy)
 
     def proxy(self, item):
+        if item is None:
+            return None
+
         if type(item) is not int:
             idx = self.index.get(item, None)
         else:
@@ -635,6 +638,9 @@ class ObjectStore(object):
             self.init_variable("json", 'json',
                 description='A json serialized version of the object',
                 chunksizes=tuple([10240]))
+
+    def _restore(self):
+        pass
 
 # ==============================================================================
 # INITIALISATION UTILITY FUNCTIONS

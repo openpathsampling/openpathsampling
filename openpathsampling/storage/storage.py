@@ -181,6 +181,10 @@ class Storage(NetCDFPlus):
         self.add('volumes', paths.storage.ObjectStore(paths.Volume, has_uid=True, nestable=True, has_name=True))
         self.add('ensembles', paths.storage.ObjectStore(paths.Ensemble, has_uid=True, nestable=True, has_name=True))
 
+        # special stores
+
+        # self.add('names', paths.storage.NameStore())
+
     def _initialize(self):
         # Set global attributes.
         setattr(self, 'title', 'OpenPathSampling Storage')
@@ -217,7 +221,11 @@ class Storage(NetCDFPlus):
         self.variables['template_idx'][:] = self.snapshots.index[template]
 
     def _restore(self):
+
+        self._restore_storages()
         self.topology = self.topologies[0]
+
+
 
     @staticmethod
     def default_cache_sizes():

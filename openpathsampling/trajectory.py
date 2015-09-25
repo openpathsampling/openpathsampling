@@ -624,8 +624,12 @@ class Trajectory(list, StorableObject):
         Trajectory
         """
         trajectory = Trajectory()
-        empty_momentum = paths.Momentum()
-        empty_momentum.velocities = None
+
+        velocities = \
+            u.Quantity(np.zeros(mdtrajectory.xyz[0].shape, dtype=np.float32), u.nanometers / u.picoseconds)
+
+        zero_momentum = paths.Momentum(velocities=velocities)
+
         for frame_num in range(len(mdtrajectory)):
             # mdtraj trajectories only have coordinates and box_vectors
             coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
@@ -636,7 +640,7 @@ class Trajectory(list, StorableObject):
                 box_v = None
             config = paths.Configuration(coordinates=coord, box_vectors=box_v)
 
-            snap = paths.Snapshot(configuration=config, momentum=empty_momentum)
+            snap = paths.Snapshot(configuration=config, momentum=zero_momentum)
             trajectory.append(snap)
 
         return trajectory

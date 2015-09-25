@@ -19,6 +19,9 @@ import os.path
 #=============================================================================================
 
 class NetCDFPlus(netCDF4.Dataset):
+    """
+    Extension of the python netCDF wrapper for easier storage of python objects
+    """
     support_simtk_unit = True
 
     class Value_Delegate(object):
@@ -27,11 +30,11 @@ class NetCDFPlus(netCDF4.Dataset):
             self.store = store
 
             if setter is None:
-                setter = lambda v : v
+                setter = lambda v: v
             self.setter = setter
 
             if getter is None:
-                getter = lambda v : v
+                getter = lambda v: v
             self.getter = getter
 
         def __setitem__(self, key, value):
@@ -83,7 +86,7 @@ class NetCDFPlus(netCDF4.Dataset):
         pass
 
     def __init__(self, filename, mode=None, units=None):
-        '''
+        """
         Create a storage for complex objects in a netCDF file
 
         Parameters
@@ -91,17 +94,19 @@ class NetCDFPlus(netCDF4.Dataset):
         filename : string
             filename of the netcdf file to be used or created
         mode : string, default: None
-            the mode of file creation, one of 'w' (write), 'a' (append) or
+            the mode of file creation, one of 'w' (write), 'a' (append) or 'r' (read-only)
             None, which will append any existing files.
-        template : openpathsampling.Snapshot
-            a Snapshot instance that contains a reference to a Topology, the
-            number of atoms and used units
         units : dict of {str : simtk.unit.Unit } or None
             representing a dict of string representing a dimension
             ('length', 'velocity', 'energy') pointing to
-            the simtk.unit.Unit to be used. If not None overrides the
+            the simtk.unit.Unit to be used. If not `None` it overrides the
             standard units used
-        '''
+
+        Notes
+        -----
+        A single file can be opened by multiple storages, but only one can be used for writing
+
+        """
 
         if mode == None:
             mode = 'a'
@@ -137,9 +142,8 @@ class NetCDFPlus(netCDF4.Dataset):
         if mode == 'w':
             logger.info("Setup netCDF file and create variables")
 
-            # add shared dimension for everyone. scalar and spatial
-            if 'scalar' not in self.dimensions:
-                self.createDimension('scalar', 1)  # scalar dimension
+            # add shared scalar dimension for everyone
+            self.create_dimension('scalar', 1)
 
             self._initialize()
 
@@ -194,17 +198,15 @@ class NetCDFPlus(netCDF4.Dataset):
             setattr(self, store.prefix, store)
 
         self._objects[name] = store
-        self._storages[store.content_class] = store
+        if store.content_class is not type(None):
+            self._storages[store.content_class] = store
 
-        self._obj_store[store.content_class] = store
-        self._obj_store.update({cls: store for cls in store.content_class.descendants()})
-
-    def _register(self):
-        pass
+            self._obj_store[store.content_class] = store
+            self._obj_store.update({cls: store for cls in store.content_class.descendants()})
 
     def _initialize(self):
         """
-        Hook after a new file is created.
+        Function run after a new file is created.
 
         This is used to setup all variables in the storage
         """
@@ -212,7 +214,9 @@ class NetCDFPlus(netCDF4.Dataset):
 
     def _restore(self):
         """
-        Hook after an existing file is openend
+        Function run after an existing file is opened.
+
+        This is used in special storages to complete reading existing files.
         """
         pass
 
@@ -227,8 +231,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
     def _init_storages(self):
         """
-        Run the initialization on all added classes, when the storage is
-        created only!
+        Run the initialization on all added classes
 
         Notes
         -----
@@ -240,9 +243,21 @@ class NetCDFPlus(netCDF4.Dataset):
 
         self.update_delegates()
 
+    def _restore_storages(self):
+        """
+        Run the restore method on all added classes
+
+        Notes
+        -----
+        Only runs when an existing storage is opened.
+        """
+
+        for storage in self._objects.values():
+            storage._restore()
+
     def _initialize_netCDF(self):
         """
-        Initialize the netCDF file for storage itself.
+        Initialize the netCDF+ file for storage itself.
         """
         pass
 
@@ -267,6 +282,9 @@ class NetCDFPlus(netCDF4.Dataset):
             list of base classes that can be stored using `storage.save(obj)`
         """
         return [store.content_class for store in self.objects.values()]
+
+    def find_store(self, obj):
+        return self._obj_store.get(obj.__class__, None)
 
     def save(self, obj, *args, **kwargs):
         """
@@ -300,8 +318,7 @@ class NetCDFPlus(netCDF4.Dataset):
             # save has been called, all is good
             return True
 
-        # Could not save this object. Might raise an exception, but
-        # return an empty string as type
+        # Could not save this object.
         raise RuntimeWarning("Objects of type '%s' cannot be stored!" %
                              obj.__class__.__name__)
 
@@ -416,8 +433,8 @@ class NetCDFPlus(netCDF4.Dataset):
             an infinite dimension that extends when more objects are stored
 
         """
-        if dim_name not in self.storage.dimensions:
-            self.storage.createDimension(dim_name, size)
+        if dim_name not in self.dimensions:
+            self.createDimension(dim_name, size)
 
     @staticmethod
     def var_type_to_nc_type(var_type):
@@ -440,7 +457,8 @@ class NetCDFPlus(netCDF4.Dataset):
             'numpy.uinf16': np.uint16,
             'numpy.uint32': np.uint32,
             'numpy.uint64': np.uint64,
-            'obj': np.int32
+            'obj': np.int32,
+            'store': 'str'
         }
 
         if var_type.startswith('obj.') or var_type.startswith('lazyobj.'):
@@ -510,6 +528,10 @@ class NetCDFPlus(netCDF4.Dataset):
                 np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
                     if iterable(v) else -1 if v is None else store.save(v)
 
+        elif var_type == 'store':
+            setter = lambda v: v.prefix
+            getter = lambda v: self.objects[v]
+
         return getter, setter, store
 
     def create_variable_delegate(self, var_name):
@@ -573,11 +595,12 @@ class NetCDFPlus(netCDF4.Dataset):
                         description=None,
                         chunksizes=None,
                         simtk_unit=None,
-                        maskable=False
-    ):
+                        maskable=False):
         """
-        Create a new variable in the netCDF storage. This is just a helper
-        function to structure the code better.
+        Create a new variable in the netCDF storage.
+
+        This is just a helper function to structure the code better and add some convenience to
+        creating more complex variables
 
         Parameters
         ==========
@@ -590,25 +613,29 @@ class NetCDFPlus(netCDF4.Dataset):
             will refer to the numpy data types. Numpy is preferred sinec the api
             to netCDF uses numpy and thus it is faster. Possible input strings are
             `int`, `float`, `long`, `str`, `numpy.float32`, `numpy.float64`,
-            `numpy.int8`, `numpy.int16`, `numpy.int32`, `numpy.int64`
+            `numpy.int8`, `numpy.int16`, `numpy.int32`, `numpy.int64`, `json`,
+            `obj.<store>`, `lazyobj.<store>`
         dimensions : str or tuple of str
             A tuple representing the dimensions used for the netcdf variable.
             If not specified then the default dimension of the storage is used.
-        units : str
-            A string representing the units used if the var_type is `float`
-            the units is set to `none`
+            If the last dimension is `'...'` then it is assumed that the objects are of
+            variable length. In netCDF this is usually referred to as a VLType.
+            We will treat is just as another dimension, but it can only be the last dimension.
         description : str
             A string describing the variable in a readable form.
-        variable_length : bool
-            If true the variable is treated as a variable length (list) of the
-            given type. A built-in example for this type is a string which is
-            a variable length of char. This make using all the mixed
-            stuff superfluous
         chunksizes : tuple of int
             A tuple of ints per number of dimensions. This specifies in what
             block sizes a variable is stored. Usually for object related stuff
             we want to store everything of one object at once so this is often
             (1, ..., ...)
+        simtk_units : str
+            A string representing the units used for this variable. Can be used with
+            all var_types although it makes sense only for numeric ones.
+        maskable : bool, default: False
+            If set to `True` the values in this variable can only partially exist and if
+            they have not yet been written they are filled with a fill_value which is
+            treated as a non-set variable. The created variable will interprete this values
+            as `None` when returned
         """
 
         ncfile = self

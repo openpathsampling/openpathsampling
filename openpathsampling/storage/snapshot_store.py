@@ -104,9 +104,6 @@ class SnapshotStore(ObjectStore):
         # mark reversed as stored
         self.index[reversed] = reversed_idx
 
-    def __len__(self):
-        return len(self)
-
     def _init(self):
         '''
         Initializes the associated storage to index configuration_indices in it
