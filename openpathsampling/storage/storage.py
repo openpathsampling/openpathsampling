@@ -247,7 +247,7 @@ class Storage(NetCDFPlus):
             'pathmovechanges' : False,
             'transitions' : True,
             'networks' : True,
-            '_details' : False,
+            'details' : False,
             'steps' : WeakLRUCache(1000)
         }
 
@@ -271,7 +271,7 @@ class Storage(NetCDFPlus):
             'pathmovechanges' : False,
             'transitions' : True,
             'networks' : True,
-            '_details' : False,
+            'details' : False,
             'steps' : WeakLRUCache(10)
         }
 
@@ -297,7 +297,7 @@ class Storage(NetCDFPlus):
             'pathmovechanges' : WeakLimitCache(250000),
             'transitions' : True,
             'networks' : True,
-            'ddetails' : False,
+            'details' : False,
             'steps' : WeakLimitCache(100000)
         }
 

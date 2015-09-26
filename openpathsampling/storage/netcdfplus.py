@@ -436,6 +436,11 @@ class NetCDFPlus(netCDF4.Dataset):
         if dim_name not in self.dimensions:
             self.createDimension(dim_name, size)
 
+    def cache_image(self):
+        for store in self.objects:
+            pass
+
+
     @staticmethod
     def var_type_to_nc_type(var_type):
         type_conversion = {

@@ -119,15 +119,15 @@ if __name__ == '__main__':
     for e_idx in range(0, len(storage.ensembles)):
         ensemble = storage.ensembles.load(e_idx)
         nline(e_idx,ensemble.cls, '')
-#        print indent(str(ensemble),16)
-        print indent(format_by_json(simplifier.from_json(ensemble.json)), 16)
+        print indent(str(ensemble),16)
+#        print indent(format_by_json(ensemble.to_dict()), 16)
 
     headline("PathMovers")
 
     for p_idx in range(0, len(storage.pathmovers)):
         pathmover = storage.pathmovers.load(p_idx)
         nline(p_idx,pathmover.name, '')
-        print indent(format_by_json(simplifier.from_json(pathmover.json)), 16)
+#        print indent(format_by_json(pathmover.to_dict()), 16)
 
     headline("ShootingPointSelector")
 

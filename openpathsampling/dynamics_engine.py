@@ -36,7 +36,7 @@ class DynamicsEngine(StorableNamedObject):
     '''
 
     _default_options = {
-        'n_frames_max' : 0
+        'n_frames_max' : 1000
     }
 
     units = {
@@ -62,7 +62,6 @@ class DynamicsEngine(StorableNamedObject):
         super(DynamicsEngine, self).__init__()
 
         self.initialized = False
-        self.running = dict()
 
         # if there has not been created a storage by the init of a derived
         # class make sure there is at least a member variable
@@ -242,8 +241,8 @@ class DynamicsEngine(StorableNamedObject):
         if continue_conditions is not None:
             for condition in continue_conditions:
                 can_continue = condition(trajectory, trusted)
-                self.running[condition] = can_continue # JHP: is this needed?
                 stop = stop or not can_continue
+
         stop = stop or not self.max_length_stopper.can_append(trajectory)
         return stop
 
@@ -322,3 +321,7 @@ class DynamicsEngine(StorableNamedObject):
 
     def generate_next_frame(self):
         raise NotImplementedError('Next frame generation must be implemented!')
+
+    @property
+    def current_snapshot(self):
+        raise NotImplementedError('Getter and setter for current_snapshot must be implemented')
