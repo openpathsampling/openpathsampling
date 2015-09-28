@@ -1775,8 +1775,6 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         )
         return minus_samp
 
-
-
 class TISEnsemble(SequentialEnsemble):
     """An ensemble for TIS (or AMS).
 
