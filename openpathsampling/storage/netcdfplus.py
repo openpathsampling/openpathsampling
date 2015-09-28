@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-from todict import StorableObjectJSON
+from todict import StorableObjectJSON, ObjectJSON
 
 from objproxy import LoaderProxy
 
@@ -366,6 +366,16 @@ class NetCDFPlus(netCDF4.Dataset):
         if hasattr(obj, 'base_cls'):
             store = self._storages[obj.base_cls]
             return store.idx(obj)
+
+    def repr_json(self, obj):
+        if hasattr(obj, 'base_cls'):
+            store = self._storages[obj.base_cls]
+
+        if store.json:
+            return store.variables['json'][store.idx(obj)]
+
+        else:
+            return None
 
     def clone_storage(self, storage_to_copy, new_storage):
         """

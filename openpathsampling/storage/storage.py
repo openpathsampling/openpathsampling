@@ -223,6 +223,8 @@ class Storage(NetCDFPlus):
 
     def _restore(self):
 
+        self.set_caching_mode('default')
+
         self._restore_storages()
         self.topology = self.topologies[0]
 

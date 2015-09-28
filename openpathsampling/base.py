@@ -34,7 +34,10 @@ class StorableObject(object):
     _base = None
 
     def idx(self, store):
-        return store.index.get(self, None)
+        if hasattr(store, 'index'):
+            return store.index.get(self, None)
+        else:
+            return store.idx(self)
 
     def __init__(self):
         self._lazy = dict()
