@@ -3,7 +3,97 @@ __author__ = 'jan-hendrikprinz'
 from collections import OrderedDict
 import weakref
 
-class LRUCache(object):
+
+class Cache(object):
+
+    @property
+    def count(self):
+        return len(self), 0
+
+    @property
+    def size(self):
+        return -1, -1
+
+    def __str__(self):
+        size = self.count
+        maximum = self.size
+        return '%s(%d/%d of %s/%s)' % (
+            self.__class__.__name__,
+            size[0], size[1],
+            'Inf' if maximum[0] < 0 else str(maximum[0]), 'Inf' if maximum[1] < 0 else str(maximum[1])
+        )
+
+    def get(self, item, default=None):
+        try:
+            return self[item]
+        except KeyError:
+            return default
+
+    def transfer(self, old_cache):
+        size = self.size
+        if size[0] == -1 or size[1] == -1:
+            for key in reversed(list(old_cache)):
+                try:
+                    self[key] = old_cache[key]
+                except KeyError:
+                    pass
+        else:
+            #TODO: Might make a shortcut here
+            for key in reversed(list(old_cache)[0:size[0] + size[1]]):
+                try:
+                    self[key] = old_cache[key]
+                except KeyError:
+                    pass
+
+        return self
+
+
+class NoCache(Cache):
+    def __init__(self):
+        super(NoCache, self).__init__()
+
+    def __getitem__(self, item):
+        raise KeyError('No Cache has no items')
+
+    def __contains__(self, item):
+        return False
+
+    def __setitem__(self, key, value):
+        pass
+
+    def __iter__(self):
+        return iter([])
+
+    @property
+    def count(self):
+        return 0, 0
+
+    @property
+    def size(self):
+        return 0, 0
+
+    def items(self):
+        return []
+
+    def transfer(self, old_cache):
+        return self
+
+
+class MaxCache(dict, Cache):
+    def __init__(self):
+        dict.__init__(self)
+        Cache.__init__(self)
+
+    @property
+    def count(self):
+        return len(self), 0
+
+    @property
+    def size(self):
+        return -1, 0
+
+
+class LRUCache(Cache):
     """
     Implements a simple Least Recently Used Cache
 
@@ -11,8 +101,17 @@ class LRUCache(object):
     run-time
     """
     def __init__(self, size_limit):
+        super(LRUCache, self).__init__()
         self._size_limit = size_limit
         self._cache = OrderedDict()
+
+    @property
+    def count(self):
+        return len(self._cache), 0
+
+    @property
+    def size(self):
+        return -1, 0
 
     @property
     def size_limit(self):
@@ -28,6 +127,9 @@ class LRUCache(object):
     def __iter__(self):
         return iter(self._cache)
 
+    def __reversed__(self):
+        return reversed(self._cache)
+
     def __getitem__(self, item):
         obj = self._cache.pop(item)
         self._cache[item] = obj
@@ -41,17 +143,17 @@ class LRUCache(object):
         while len(self._cache) > self.size_limit:
             self._cache.popitem(last=False)
 
-    def __str__(self):
-        return '%s(%d)' % (self.__class__.__name__, len(self._cache))
-
     def __contains__(self, item):
         return item in self._cache
 
     def clear(self):
         self._cache.clear()
 
+    def __len__(self):
+        return len(self._cache)
 
-class WeakLRUCache(object):
+
+class WeakLRUCache(Cache):
     """
     Implements a cache that keeps weak references to all elements
 
@@ -66,6 +168,8 @@ class WeakLRUCache(object):
         size_limit : int
             integer that defines the size of the LRU cache. Default is 100.
         """
+
+        super(WeakLRUCache, self).__init__()
         self._size_limit = size_limit
         self.weak_type = weak_type
 
@@ -73,11 +177,18 @@ class WeakLRUCache(object):
             self._weak_cache = weakref.WeakValueDictionary()
         elif weak_type == 'key':
             self._weak_cache = weakref.WeakKeyDictionary()
+        else:
+            raise ValueError("weak_type must be either 'key' or 'value'")
 
         self._cache = OrderedDict()
 
-    def __str__(self):
-        return '%s(%d[%d])' % (self.__class__.__name__, len(self._cache), len(self._weak_cache))
+    @property
+    def count(self):
+        return len(self._cache), len(self._weak_cache)
+
+    @property
+    def size(self):
+        return self._size_limit, -1
 
     def clear(self):
         self._cache.clear()
@@ -115,7 +226,6 @@ class WeakLRUCache(object):
         self._cache[key] = value
         self._check_size_limit()
 
-
     def _check_size_limit(self):
         if self.size_limit is not None:
             while len(self._cache) > self.size_limit:
@@ -133,56 +243,46 @@ class WeakLRUCache(object):
     def __len__(self):
         return len(self._cache) + len(self._weak_cache)
 
-class WeakCache(weakref.WeakValueDictionary):
+    def __iter__(self):
+        for key in self.keys():
+            yield key
+
+    def __reversed__(self):
+        for key in reversed(self._weak_cache):
+            yield key
+
+        for key in reversed(self._cache):
+            yield key
+
+
+class WeakValueCache(weakref.WeakValueDictionary, Cache):
     """
     Implements a cache that keeps weak references to all elements
     """
-
-class WeakLimitCache(dict):
-    """
-    Implements a cache that keeps weak references to all elements
-
-    In addition it uses a simple Least Recently Used Cache to make sure a portion
-    of the last used elements are still present. Usually this number is 100.
-
-    """
-    def __init__(self, size_limit=100):
-        """
-        Parameters
-        ----------
-        size_limit : int
-            integer that defines the size of the LRU cache. Default is 100.
-        """
-        dict.__init__(self)
-
-        self._size_limit = size_limit
-        self._weak_cache = weakref.WeakValueDictionary()
+    def __init__(self, *args, **kwargs):
+        weakref.WeakValueDictionary.__init__(self, *args, **kwargs)
+        Cache.__init__(self)
 
     @property
-    def size_limit(self):
-        return self._size_limit
+    def count(self):
+        return 0, len(self)
 
-    def __getitem__(self, item):
-        try:
-            return dict.__getitem__(self, item)
-        except(KeyError):
-            return self._weak_cache[item]
+    @property
+    def size(self):
+        return 0, -1
 
-    @size_limit.setter
-    def size_limit(self, new_size):
-        if new_size < self.size_limit:
-          self._check_size_limit()
+class WeakKeyCache(weakref.WeakValueDictionary, Cache):
+    """
+    Implements a cache that keeps weak references to all elements
+    """
+    def __init__(self, *args, **kwargs):
+        weakref.WeakKeyDictionary.__init__(self, *args, **kwargs)
+        Cache.__init__(self)
 
-        self._size_limit = new_size
+    @property
+    def count(self):
+        return 0, len(self)
 
-    def __setitem__(self, key, value, **kwargs) :
-        if self.size_limit is not None:
-            if len(self) == self.size_limit:
-                self._weak_cache[key] = value
-            else:
-                dict.__setitem__(self, key, value)
-
-    def _check_size_limit(self):
-        if self.size_limit is not None:
-            while len(self) > self.size_limit:
-                self._weak_cache.__setitem__(*self.popitem())
+    @property
+    def size(self):
+        return 0, -1

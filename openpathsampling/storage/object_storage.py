@@ -2,9 +2,8 @@ import types
 import logging
 
 import yaml
-import numpy as np
 
-from cache import WeakLimitCache
+from cache import MaxCache, Cache, NoCache, WeakLRUCache
 from objproxy import LoaderProxy
 
 import weakref
@@ -106,7 +105,7 @@ class ObjectStore(object):
         self._storage = None
         self.content_class = content_class
         self.prefix = None
-        self.cache = dict()
+        self.cache = NoCache()
         self.has_uid = has_uid
         self.has_name = has_name
         self.json = json
@@ -190,9 +189,14 @@ class ObjectStore(object):
             caching = self.default_cache
 
         if caching is True:
-            self.cache = WeakLimitCache(1000000)
-        elif hasattr(caching, '__getitem__'):
-            self.cache = caching
+            caching = MaxCache()
+        elif caching is False:
+            caching = NoCache()
+        elif type(caching) is int:
+            caching = WeakLRUCache(caching)
+
+        if isinstance(caching, Cache):
+            self.cache = caching.transfer(self.cache)
 
     def idx(self, obj):
         """

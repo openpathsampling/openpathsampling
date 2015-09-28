@@ -13,8 +13,7 @@ init_log = logging.getLogger('openpathsampling.initialization')
 import openpathsampling as paths
 import simtk.unit as u
 from netcdfplus import NetCDFPlus
-from cache import WeakLRUCache, WeakCache, WeakLimitCache
-
+from cache import WeakLRUCache, WeakValueCache
 #=============================================================================================
 # OPS SPECIFIC STORAGE
 #=============================================================================================
@@ -190,6 +189,8 @@ class Storage(NetCDFPlus):
         setattr(self, 'title', 'OpenPathSampling Storage')
         setattr(self, 'ConventionVersion', '0.2')
 
+        self.set_caching_mode('default')
+
         template = self._template
 
         if template.topology is not None:
@@ -256,9 +257,9 @@ class Storage(NetCDFPlus):
         return {
             'trajectories' : WeakLRUCache(10),
             'snapshots' : WeakLRUCache(100),
-            'configurations' : WeakLRUCache(100),
-            'momenta' : WeakLRUCache(100),
-            'samples' : WeakLRUCache(250),
+            'configurations' : WeakLRUCache(10),
+            'momenta' : WeakLRUCache(10),
+            'samples' : WeakLRUCache(25),
             'samplesets' : False,
             'cvs' : True,
             'pathmovers' : True,
@@ -275,30 +276,57 @@ class Storage(NetCDFPlus):
             'steps' : WeakLRUCache(10)
         }
 
+    # Memtest will cache everything weak to measure if there is some object left in
+    # memory that should have been disposed of.
+
+    @staticmethod
+    def memtest_cache_sizes():
+        return {
+            'trajectories' : WeakValueCache(),
+            'snapshots' : WeakValueCache(),
+            'configurations' : WeakValueCache(),
+            'momenta' : WeakValueCache(),
+            'samples' : WeakValueCache(),
+            'samplesets' : WeakValueCache(),
+            'cvs' : WeakValueCache(),
+            'pathmovers' : WeakValueCache(),
+            'shootingpoints' : WeakValueCache(),
+            'shootingpointselectors' : WeakValueCache(),
+            'engines' : WeakValueCache(),
+            'pathsimulators' : WeakValueCache(),
+            'volumes' : WeakValueCache(),
+            'ensembles' : WeakValueCache(),
+            'pathmovechanges' : WeakValueCache(),
+            'transitions' : WeakValueCache(),
+            'networks' : WeakValueCache(),
+            'details' : WeakValueCache(),
+            'steps' : WeakValueCache()
+        }
+
     # Analysis caching is very large to allow fast processing
 
     @staticmethod
     def analysis_cache_sizes():
         return {
-            'trajectories' : WeakLimitCache(100000),
-            'snapshots' : WeakLimitCache(500000),
+            'trajectories' : WeakLRUCache(500000),
+            'snapshots' : WeakLRUCache(100000),
             'configurations' : WeakLRUCache(10000),
-            'momenta' : WeakLRUCache(10000),
-            'samples' : WeakLimitCache(250000),
-            'samplesets' : WeakLimitCache(100000),
+            'momenta' : WeakLRUCache(1000),
+            'samples' : WeakLRUCache(1000000),
+            'samplesets' : WeakLRUCache(100000),
             'cvs' : True,
             'pathmovers' : True,
-            'shootingpoints' : WeakLimitCache(100000),
+            'shootingpoints' : WeakLRUCache(100000),
             'shootingpointselectors' : True,
             'engines' : True,
             'pathsimulators' : True,
             'volumes' : True,
             'ensembles' : True,
-            'pathmovechanges' : WeakLimitCache(250000),
+            'pathmovechanges' : WeakLRUCache(250000),
             'transitions' : True,
             'networks' : True,
             'details' : False,
-            'steps' : WeakLimitCache(100000)
+            'steps' : WeakLRUCache(50000)
         }
 
     # Production. No loading, only last 1000 steps and a few other objects for error
@@ -306,11 +334,11 @@ class Storage(NetCDFPlus):
 
     def production_cache_sizes(self):
         return {
-            'trajectories' : WeakLRUCache(),
-            'snapshots' : WeakLRUCache(),
-            'configurations' : WeakLRUCache(),
-            'momenta' : WeakLRUCache(),
-            'samples' : WeakLRUCache(),
+            'trajectories' : WeakLRUCache(100),
+            'snapshots' : WeakLRUCache(100),
+            'configurations' : WeakLRUCache(1000),
+            'momenta' : WeakLRUCache(1000),
+            'samples' : WeakLRUCache(100),
             'samplesets' : False,
             'cvs' : False,
             'pathmovers' : False,
@@ -324,7 +352,7 @@ class Storage(NetCDFPlus):
             'transitions' : False,
             'networks' : False,
             'details' : False,
-            'steps' : WeakCache()
+            'steps' : WeakLRUCache(10)
         }
 
     # No caching (so far only CVs internal storage is there)
@@ -369,7 +397,8 @@ class Storage(NetCDFPlus):
             'analysis': self.analysis_cache_sizes,
             'production': self.production_cache_sizes,
             'off': self.no_cache_sizes,
-            'lowmemory' : self.lowmemory_cache_sizes
+            'lowmemory' : self.lowmemory_cache_sizes,
+            'memtest' : self.memtest_cache_sizes
         }
 
         if mode in available_cache_sizes:

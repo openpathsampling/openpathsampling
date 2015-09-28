@@ -137,7 +137,6 @@ class NetCDFPlus(netCDF4.Dataset):
             self.dimension_units.update(units)
 
         self._register_storages()
-        self.set_caching_mode('default')
 
         if mode == 'w':
             logger.info("Setup netCDF file and create variables")
@@ -437,9 +436,51 @@ class NetCDFPlus(netCDF4.Dataset):
             self.createDimension(dim_name, size)
 
     def cache_image(self):
-        for store in self.objects:
-            pass
+        image = {
+            'weak' : {},
+            'strong' : {},
+            'total' : {},
+            'file' : {},
+            'index' : {}
+        }
 
+        total_strong = 0
+        total_weak = 0
+        total_file = 0
+        total_index = 0
+
+        for name, store in self.objects.iteritems():
+            size = store.cache.size
+            count = store.cache.count
+            profile = {
+                'count' : count[0] + count[1],
+                'count_strong' : count[0],
+                'count_weak' : count[1],
+                'max' : size[0],
+                'size_strong' : size[0],
+                'size_weak' : size[1],
+            }
+            total_strong += count[0]
+            total_weak += count[1]
+            total_file += len(store)
+            total_index += len(store.index)
+            image[name] = profile
+            image['strong'][name] = count[0]
+            image['weak'][name] = count[1]
+            image['total'][name] = count[0] + count[1]
+            image['file'][name] = len(store)
+#            if hasattr(store, 'index'):
+            image['index'][name] = len(store.index)
+#            else:
+#                image['index'][name] = 0
+
+        image['full'] = total_weak + total_strong
+        image['total_strong'] = total_strong
+        image['total_weak'] = total_weak
+        image['file'] = total_file
+        image['index'] = total_index
+
+        return image
 
     @staticmethod
     def var_type_to_nc_type(var_type):
