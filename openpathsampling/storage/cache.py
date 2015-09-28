@@ -3,7 +3,6 @@ __author__ = 'jan-hendrikprinz'
 from collections import OrderedDict
 import weakref
 
-
 class Cache(object):
 
     @property
@@ -23,6 +22,12 @@ class Cache(object):
             'Inf' if maximum[0] < 0 else str(maximum[0]), 'Inf' if maximum[1] < 0 else str(maximum[1])
         )
 
+    def __getitem__(self, item):
+        raise KeyError("No items")
+
+    def __setitem__(self, key, value):
+        pass
+
     def get(self, item, default=None):
         try:
             return self[item]
@@ -38,7 +43,6 @@ class Cache(object):
                 except KeyError:
                     pass
         else:
-            #TODO: Might make a shortcut here
             for key in reversed(list(old_cache)[0:size[0] + size[1]]):
                 try:
                     self[key] = old_cache[key]
@@ -81,7 +85,7 @@ class NoCache(Cache):
 
 class MaxCache(dict, Cache):
     def __init__(self):
-        dict.__init__(self)
+        super(MaxCache, self).__init__()
         Cache.__init__(self)
 
     @property
@@ -271,12 +275,12 @@ class WeakValueCache(weakref.WeakValueDictionary, Cache):
     def size(self):
         return 0, -1
 
-class WeakKeyCache(weakref.WeakValueDictionary, Cache):
+class WeakKeyCache(weakref.WeakKeyDictionary, Cache):
     """
     Implements a cache that keeps weak references to all elements
     """
     def __init__(self, *args, **kwargs):
-        weakref.WeakKeyDictionary.__init__(self, *args, **kwargs)
+        weakref.WeakKeyDictionary.__init__(*args, **kwargs)
         Cache.__init__(self)
 
     @property

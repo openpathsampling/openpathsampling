@@ -226,7 +226,41 @@ class Storage(NetCDFPlus):
         self._restore_storages()
         self.topology = self.topologies[0]
 
+    def set_caching_mode(self, mode='default'):
+        """
+        Set default values for all caches
 
+        Parameters
+        ----------
+        caching : str
+            One of the following values is allowed 'default', 'production',
+            'analysis', 'off'
+
+        """
+
+        available_cache_sizes = {
+            'default': self.default_cache_sizes,
+            'analysis': self.analysis_cache_sizes,
+            'production': self.production_cache_sizes,
+            'off': self.no_cache_sizes,
+            'lowmemory' : self.lowmemory_cache_sizes,
+            'memtest' : self.memtest_cache_sizes
+        }
+
+        if mode in available_cache_sizes:
+            # We need cache sizes as a function. Otherwise we will reuse the same
+            # caches for each storage and that will cause problems! Lots of...
+            cache_sizes = available_cache_sizes[mode]()
+        else:
+            raise ValueError(
+                "mode '" + mode + "' is not supported. Try one of " +
+                str(available_cache_sizes.keys())
+            )
+
+        for store_name, caching in cache_sizes.iteritems():
+            if hasattr(self, store_name):
+                store = getattr(self, store_name)
+                store.set_caching(caching)
 
     @staticmethod
     def default_cache_sizes():
@@ -282,25 +316,25 @@ class Storage(NetCDFPlus):
     @staticmethod
     def memtest_cache_sizes():
         return {
-            'trajectories' : WeakValueCache(),
-            'snapshots' : WeakValueCache(),
-            'configurations' : WeakValueCache(),
-            'momenta' : WeakValueCache(),
-            'samples' : WeakValueCache(),
-            'samplesets' : WeakValueCache(),
-            'cvs' : WeakValueCache(),
-            'pathmovers' : WeakValueCache(),
-            'shootingpoints' : WeakValueCache(),
-            'shootingpointselectors' : WeakValueCache(),
-            'engines' : WeakValueCache(),
-            'pathsimulators' : WeakValueCache(),
-            'volumes' : WeakValueCache(),
-            'ensembles' : WeakValueCache(),
-            'pathmovechanges' : WeakValueCache(),
-            'transitions' : WeakValueCache(),
-            'networks' : WeakValueCache(),
-            'details' : WeakValueCache(),
-            'steps' : WeakValueCache()
+            'trajectories' : WeakLRUCache(10),
+            'snapshots' : WeakLRUCache(10),
+            'configurations' : WeakLRUCache(10),
+            'momenta' : WeakLRUCache(10),
+            'samples' : WeakLRUCache(10),
+            'samplesets' : WeakLRUCache(10),
+            'cvs' : WeakLRUCache(10),
+            'pathmovers' : WeakLRUCache(10),
+            'shootingpoints' : WeakLRUCache(10),
+            'shootingpointselectors' : WeakLRUCache(10),
+            'engines' : WeakLRUCache(10),
+            'pathsimulators' : WeakLRUCache(10),
+            'volumes' : WeakLRUCache(10),
+            'ensembles' : WeakLRUCache(10),
+            'pathmovechanges' : WeakLRUCache(10),
+            'transitions' : WeakLRUCache(10),
+            'networks' : WeakLRUCache(10),
+            'details' : WeakLRUCache(10),
+            'steps' : WeakLRUCache(10)
         }
 
     # Analysis caching is very large to allow fast processing
@@ -379,42 +413,6 @@ class Storage(NetCDFPlus):
             'details' : False,
             'steps' : False
         }
-
-    def set_caching_mode(self, mode='default'):
-        """
-        Set default values for all caches
-
-        Parameters
-        ----------
-        caching : str
-            One of the following values is allowed 'default', 'production',
-            'analysis', 'off'
-
-        """
-
-        available_cache_sizes = {
-            'default': self.default_cache_sizes,
-            'analysis': self.analysis_cache_sizes,
-            'production': self.production_cache_sizes,
-            'off': self.no_cache_sizes,
-            'lowmemory' : self.lowmemory_cache_sizes,
-            'memtest' : self.memtest_cache_sizes
-        }
-
-        if mode in available_cache_sizes:
-            # We need cache sizes as a function. Otherwise we will reuse the same
-            # caches for each storage and that will cause problems! Lots of...
-            cache_sizes = available_cache_sizes[mode]()
-        else:
-            raise ValueError(
-                "mode '" + mode + "' is not supported. Try one of " +
-                str(available_cache_sizes.keys())
-            )
-
-        for store_name, caching in cache_sizes.iteritems():
-            if hasattr(self, store_name):
-                store = getattr(self, store_name)
-                store.set_caching(caching)
 
 class AnalysisStorage(Storage):
     def __init__(self, filename):
