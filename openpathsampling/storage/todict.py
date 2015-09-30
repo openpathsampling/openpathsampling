@@ -163,7 +163,10 @@ class ObjectJSON(object):
         return json.dumps(simplified)
 
     def to_json_object(self, obj):
-        simplified = self.simplify_object(obj)
+        if hasattr(obj, 'base_cls'):
+            simplified = self.simplify_object(obj)
+        else:
+            simplified = self.simplify(obj)
         try:
             json_str = json.dumps(simplified)
         except TypeError:

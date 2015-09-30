@@ -314,7 +314,7 @@ class IPyKernel(object):
         self.shell.get_msg()
         while True:
             try:
-                self.iopub.get_msg(timeout=1)
+                self.iopub.get_msg(timeout=0.1)
             except Empty:
                 break
 
@@ -362,7 +362,7 @@ class IPyKernel(object):
 
         while True:
             try:
-                msg = self.iopub.get_msg(timeout=0.5)
+                msg = self.iopub.get_msg(timeout=0.01)
             except Empty:
                 break
             msg_type = msg['msg_type']

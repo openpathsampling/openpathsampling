@@ -5,8 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-from todict import StorableObjectJSON, ObjectJSON
-
+from todict import StorableObjectJSON
 from objproxy import LoaderProxy
 
 import numpy as np
@@ -23,6 +22,28 @@ class NetCDFPlus(netCDF4.Dataset):
     Extension of the python netCDF wrapper for easier storage of python objects
     """
     support_simtk_unit = True
+
+    _type_conversion = {
+        'float': np.float32,
+        'int': np.int32,
+        'long': np.int64,
+        'index': np.int32,
+        'length': np.int32,
+        'bool': np.int16,
+        'str': 'str',
+        'json': 'str',
+        'numpy.float32': np.float32,
+        'numpy.float64': np.float32,
+        'numpy.int8': np.int8,
+        'numpy.int16': np.int16,
+        'numpy.int32': np.int32,
+        'numpy.int64': np.int64,
+        'numpy.uint8': np.uint8,
+        'numpy.uint16': np.uint16,
+        'numpy.uint32': np.uint32,
+        'numpy.uint64': np.uint64,
+        'store': 'str'
+    }
 
     class Value_Delegate(object):
         def __init__(self, variable, getter = None, setter = None, store=None):
@@ -45,6 +66,12 @@ class NetCDFPlus(netCDF4.Dataset):
 
         def __getattr__(self, item):
             return getattr(self.variable, item)
+
+        def __str__(self):
+            return str(self.variable)
+
+        def __repr__(self):
+            return repr(self.variable)
 
     class Key_Delegate(object):
         def __init__(self, variable, store):
@@ -492,35 +519,18 @@ class NetCDFPlus(netCDF4.Dataset):
 
         return image
 
+    def get_var_types(self):
+        types = NetCDFPlus._type_conversion.keys()
+        types += [ 'obj.' + x for x in self.objects.keys()]
+        types += [ 'lazyobj.' + x for x in self.objects.keys()]
+        return sorted(types)
+
     @staticmethod
     def var_type_to_nc_type(var_type):
-        type_conversion = {
-            'float': np.float32,
-            'int': np.int32,
-            'long': np.int64,
-            'index': np.int32,
-            'length': np.int32,
-            'bool': np.int16,
-            'str': 'str',
-            'json': 'str',
-            'numpy.float32': np.float32,
-            'numpy.float64': np.float32,
-            'numpy.int8': np.int8,
-            'numpy.int16': np.int16,
-            'numpy.int32': np.int32,
-            'numpy.int64': np.int64,
-            'numpy.uint8': np.uint8,
-            'numpy.uinf16': np.uint16,
-            'numpy.uint32': np.uint32,
-            'numpy.uint64': np.uint64,
-            'obj': np.int32,
-            'store': 'str'
-        }
-
         if var_type.startswith('obj.') or var_type.startswith('lazyobj.'):
             nc_type = np.int32
         else:
-            nc_type = type_conversion[var_type]
+            nc_type = NetCDFPlus._type_conversion[var_type]
 
         return nc_type
 
