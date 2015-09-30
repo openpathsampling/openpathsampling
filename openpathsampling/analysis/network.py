@@ -41,15 +41,18 @@ class TISNetwork(TransitionNetwork):
     def ms_outers(self):
         return self.special_ensembles['ms_outer'].keys()
 
-    
+    @property
+    def transition_ensembles(self):
+        ens_list = []
+        for t in self.sampling_transitions:
+            ens_list.extend(t.ensembles)
+        return ens_list
+
     @property
     def all_ensembles(self):
-        all_ens = []
-        for t in self.sampling_transitions:
-            all_ens.extend(t.ensembles)
+        all_ens = self.transition_ensembles
         for special_dict in self.special_ensembles.values():
             all_ens.extend(special_dict.keys())
-        # TODO: add hidden_ensembles
         return all_ens
 
 

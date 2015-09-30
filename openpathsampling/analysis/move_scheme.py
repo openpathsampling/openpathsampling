@@ -504,11 +504,13 @@ class DefaultScheme(MoveScheme):
     """
     def __init__(self, network):
         super(DefaultScheme, self).__init__(network)
+        n_ensembles = len(network.transition_ensembles)
         self.append(strategies.NearestNeighborRepExStrategy())
         self.append(strategies.OneWayShootingStrategy())
         self.append(strategies.PathReversalStrategy())
-        self.append(strategies.DefaultStrategy())
         self.append(strategies.MinusMoveStrategy())
+        global_strategy = strategies.DefaultStrategy()
+        self.append(global_strategy)
 
         msouters = self.network.special_ensembles['ms_outer']
         for ms in msouters.keys():
@@ -525,4 +527,6 @@ class DefaultScheme(MoveScheme):
             self.append(strategies.SelectedPairsRepExStrategy(
                 ensembles=pairs
             ))
+        #ms_outer_shoot_w = float(len(msouters)) / n_ensembles
+        #global_strategy.group_weights['ms_outer_shooting'] = ms_outer_shoot_w
 

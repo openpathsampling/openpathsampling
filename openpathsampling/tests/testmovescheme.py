@@ -316,22 +316,23 @@ class testMoveScheme(object):
             NearestNeighborRepExStrategy(),
             DefaultStrategy()
         ])
+        # we should have 6 shooters and 4 repex movers, but default strategy
+        # means that have the probability of selecting repex; so we get
+        # a shooting move 75% of the time
         root = self.scheme.move_decision_tree()
-        some_shooters = self.scheme.movers['shooting'][0:3]
+        root = self.scheme.move_decision_tree()
+        some_shooters = self.scheme.movers['shooting'][0:2]
 
         assert_almost_equal(
-            self.scheme.n_trials_for_steps('shooting', 100),
-            2.0/3.0*100
+            self.scheme.n_trials_for_steps('shooting', 100), 75.0
         )
 
         assert_almost_equal(
-            self.scheme.n_trials_for_steps(some_shooters, 100),
-            1.0/3.0*100
+            self.scheme.n_trials_for_steps(some_shooters, 100), 25.0
         )
 
         assert_almost_equal(
-            self.scheme.n_trials_for_steps(some_shooters[0], 100),
-            1.0/9.0*100
+            self.scheme.n_trials_for_steps(some_shooters[0], 100), 12.5
         )
 
 
@@ -342,19 +343,22 @@ class testMoveScheme(object):
             NearestNeighborRepExStrategy(),
             DefaultStrategy()
         ])
+        # we should have 6 shooters and 4 repex movers, but default strategy
+        # means that have the probability of selecting repex; so we get
+        # a shooting move 75% of the time
         root = self.scheme.move_decision_tree()
-        some_shooters = self.scheme.movers['shooting'][0:3]
+        some_shooters = self.scheme.movers['shooting'][0:2]
 
         assert_almost_equal(
-            self.scheme.n_steps_for_trials('shooting', 100), 150.0
+            self.scheme.n_steps_for_trials('shooting', 100), 400.0/3.0
         )
 
         assert_almost_equal(
-            self.scheme.n_steps_for_trials(some_shooters, 100), 300.0
+            self.scheme.n_steps_for_trials(some_shooters, 100), 400.0
         )
 
         assert_almost_equal(
-            self.scheme.n_steps_for_trials(some_shooters[0], 100), 900.0
+            self.scheme.n_steps_for_trials(some_shooters[0], 100), 800.0
         )
 
 
@@ -466,21 +470,14 @@ class testDefaultScheme(object):
         tot_norm = sum([default_group_weights[group] 
                         for group in scheme.movers])
 
-        for groupname in scheme.movers.keys():
-            group = scheme.movers[groupname]
-            n_movers = len(group)
-            weight = default_group_weights[groupname] / tot_norm / n_movers
-            for mover in group:
-                assert_almost_equal(scheme.choice_probability[mover], weight)
-
         prob_shoot0 = scheme.choice_probability[scheme.movers['shooting'][0]]
         n_shooting = len(scheme.movers['shooting'])
         for group in default_group_weights:
             scale = default_group_weights[group]
             n_group = len(scheme.movers[group])
-            assert_almost_equal(
-                prob_shoot0 * n_shooting / n_group,
-                scheme.choice_probability[scheme.movers[group][0]] / scale
-            )
+            expected_prob = default_group_weights[group]*prob_shoot0
+            for mover in scheme.movers[group]:
+                test_prob = scheme.choice_probability[mover]
+                assert_almost_equal(expected_prob, test_prob)
 
 

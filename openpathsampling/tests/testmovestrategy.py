@@ -369,15 +369,31 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         raise SkipTest
 
     def test_make_movers_preserves_default_choice_prob(self):
+        strategy = OrganizeByEnsembleStrategy()
         scheme1 = DefaultScheme(self.network)
         scheme1.movers = {} # handles LEGACY stuff
-        scheme1.append(OrganizeByEnsembleStrategy())
+        #scheme1.append(strategy)
         root1 = scheme1.move_decision_tree()
 
-        scheme2 = DefaultScheme(self.network)
-        root2 = scheme2.move_decision_tree()
+        #scheme2 = DefaultScheme(self.network)
+        #scheme2.movers = {} # handles LEGACY stuff
+        #root2 = scheme2.move_decision_tree()
 
-        print scheme1.choice_probability
+        sigprobs1 = {
+            strategy._mover_key(m, scheme1) : scheme1.choice_probability[m]
+            for m in scheme1.choice_probability
+        }
+        #sigprobs2 = {
+            #strategy._mover_key(m, scheme2) : scheme2.choice_probability[m]
+            #for m in scheme2.choice_probability
+        #}
+        #for k in sigprobs1.keys():
+            #print k[0], sigprobs1[k], sigprobs2[k]
+
+
+        print len(scheme1.choice_probability)
+        #assert_equal(sigprobs1, sigprobs2)
+
 
         raise SkipTest
                 
@@ -611,9 +627,9 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         nrepex = len(scheme.movers['repex'])
 
         for mover in scheme.movers['shooting']:
-            assert_almost_equal(scheme.choice_probability[mover], 1.0/9.0)
+            assert_almost_equal(scheme.choice_probability[mover], 1.0/8.0)
         for mover in scheme.movers['repex']:
-            assert_almost_equal(scheme.choice_probability[mover], 1.0/12.0)
+            assert_almost_equal(scheme.choice_probability[mover], 1.0/16.0)
 
 
         strategy.group_weights['shooting'] = 2.0
@@ -637,9 +653,9 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             scheme, scheme.movers, group_weights, mover_weights
         )
         for mover in scheme.movers['shooting']:
-            assert_almost_equal(choice_prob[mover], 2.0/15.0)
+            assert_almost_equal(choice_prob[mover], 1.0/7.0)
         for mover in scheme.movers['repex']:
-            assert_almost_equal(choice_prob[mover], 1.0/20.0)
+            assert_almost_equal(choice_prob[mover], 1.0/28.0)
         
 
     def test_get_weights_mover_weights_set(self):
@@ -671,6 +687,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             preset_sortkey_weights=strategy.group_weights
         )
         #root = scheme.move_decision_tree(rebuild=True) 
+        
 
         # we always normalize to so that shooting for ensA is 1.0
         for sig in mover_weights['shooting']:
@@ -717,6 +734,12 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             scheme, scheme.movers, group_weights, mover_weights
         )
 
+        for group in group_weights:
+            print group, old_group_weights[group], group_weights[group]
+        for group in group_weights:
+            assert_almost_equal(group_weights[group],
+                                old_group_weights[group])
+
         for group in scheme.movers:
             for mover in scheme.movers[group]:
                 old_mover = [
@@ -726,16 +749,11 @@ class testDefaultStrategy(MoveStrategyTestSetup):
                 assert_almost_equal(new_choice_prob[mover], 
                                     old_choice_prob[old_mover])
 
-        for group in group_weights:
-            assert_almost_equal(group_weights[group],
-                                old_group_weights[group])
-
         #print new_choice_prob
         for (old, new) in zip(old_mover_weights.keys(), mover_weights.keys()):
             print old, new
             try:
                 assert_equal(old_mover_weights[old], mover_weights[new])
-        
             except AssertionError:
                 print old_mover_weights[old]
                 print mover_weights[new]

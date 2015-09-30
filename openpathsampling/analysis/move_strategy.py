@@ -396,6 +396,7 @@ class DefaultStrategy(MoveStrategy):
                 movers = sorted_movers[skey]
                 sorted_weights[skey] = sum([scheme.choice_probability[m] 
                                             for m in movers])
+            print "pre-norm: ", sorted_weights
             sorted_weights = self.normalize_sorted_weights(scheme, 
                                                            sorted_movers,
                                                            sorted_weights)
@@ -536,7 +537,7 @@ class DefaultStrategy(MoveStrategy):
 
 
     def choice_probability(self, scheme, sorted_movers, sorted_weights, 
-                           mover_weights):
+                           mover_weights, renormalize=False):
         """
         Calculates the probability of choosing to do each move.
         """
@@ -544,14 +545,20 @@ class DefaultStrategy(MoveStrategy):
         sorted_norm = sum(sorted_weights.values())
         for sortkey in sorted_movers:
             sorted_w = sorted_weights[sortkey] / sorted_norm
+            #print sortkey, sorted_w, len(sorted_movers[sortkey]),
             sig_weights = mover_weights[sortkey]
-            sig_norm = sum(mover_weights[sortkey].values())
+            if renormalize:
+                sig_norm = sum(mover_weights[sortkey].values())
+            else:
+                sig_norm = 1.0
+            #print sig_norm, 
             for mover in sorted_movers[sortkey]:
                 sig_w = sig_weights[self._mover_key(mover, scheme)] / sig_norm
                 try:
                     unnormed[mover] += sorted_w * sig_w
                 except KeyError:
                     unnormed[mover] = sorted_w * sig_w
+            #print sorted_w * sig_w
 
         norm = sum(unnormed.values())
         return {m : unnormed[m] / norm for m in unnormed}
@@ -602,6 +609,8 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
         self.mover_weights = {}
         self.ensemble_weights = {}
 
+    # TODO: make this the same for both (this is unique) and maybe move it
+    # to scheme.mover_key
     def _mover_key(self, mover, scheme):
         # take first, because as MacLeod says, "there can be only one!"
         group = [g for g in scheme.movers if mover in scheme.movers[g]][0]
