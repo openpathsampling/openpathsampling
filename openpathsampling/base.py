@@ -1,6 +1,7 @@
 import inspect
 
 import logging
+import weakref
 logger = logging.getLogger(__name__)
 
 class DelayedLoader(object):
@@ -31,7 +32,22 @@ class StorableObject(object):
     before. This means that you cannot name an object, after is has been saved.
     """
 
+    _weak_cache = weakref.WeakKeyDictionary()
+    _weak_index = 0L
+
     _base = None
+
+    observe_objects = False
+
+    @staticmethod
+    def count_weaks():
+        summary = dict()
+        complete = list(StorableObject._weak_cache)
+        for obj in complete:
+            name = obj.base_cls_name
+            summary[name] = summary.get(name, 0) + 1
+
+        return summary
 
     def idx(self, store):
         if hasattr(store, 'index'):
@@ -40,6 +56,10 @@ class StorableObject(object):
             return store.idx(self)
 
     def __init__(self):
+        if StorableObject.observe_objects:
+            StorableObject._weak_cache[self] = StorableObject._weak_index
+            StorableObject._weak_index += 1
+
         self._lazy = dict()
         self._uid = ''
 
