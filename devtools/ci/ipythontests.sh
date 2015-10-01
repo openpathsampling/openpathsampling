@@ -3,6 +3,7 @@
 
 cd examples/ipython
 testfail=0
+python ipynbtest.py --strict "test_netcdfplus.ipynb" || testfail=1
 python ipynbtest.py "alanine.ipynb" || testfail=1
 python ipynbtest.py "sliced_sequential_ensembles.ipynb" || testfail=1
 python ipynbtest.py "toy_bootstrapping.ipynb" || testfail=1
@@ -15,6 +16,7 @@ python ipynbtest.py "mistis_setup.ipynb" || testfail=1
 python ipynbtest.py "mistis_analysis.ipynb" || testfail=1
 python ipynbtest.py "langevin_integrator_check.ipynb" || testfail=1
 python ipynbtest.py "sliced_sequential_ensembles.ipynb" || testfail=1
+
 # needs to run after alanine since it need the trajectory.nc file
 python ipynbtest.py "storage_tutorial.ipynb" || testfail=1
 # python ipynbtest.py "visualization.ipynb" || testfail=1
