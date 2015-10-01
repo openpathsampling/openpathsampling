@@ -46,6 +46,26 @@ class NetCDFPlus(netCDF4.Dataset):
     }
 
     class Value_Delegate(object):
+        """
+        Value delegator for objects that implement __getitem__ and __setitem__
+
+        It will basically just wrap values that are used in a dict like structure
+        with getter and setter function to allow easier conversion
+
+        delegator[x] is equivalent to delegator.getter(delegator.variable[x])
+
+        Attributes
+        ----------
+        variable : dict-like
+            the dict to be wrapped
+        getter : function
+            the function applied to results from running the __getitem__ on the variable
+        setter : function
+            the function applied to the value to be stored using __setitem__ on the variable
+        store : openpathsampling.storage.ObjectStore
+            a reference to an object store used for convenience in some cases
+
+        """
         def __init__(self, variable, getter = None, setter = None, store=None):
             self.variable = variable
             self.store = store
@@ -74,6 +94,22 @@ class NetCDFPlus(netCDF4.Dataset):
             return repr(self.variable)
 
     class Key_Delegate(object):
+        """
+        Value delegator for objects that implement __getitem__ and __setitem__
+
+        It will basically just wrap keys for objects that are used in a dict like structure
+        with getter and setter function to allow easier conversion
+
+        delegator[x] is equivalent to delegator[x.idx(store)]
+
+        Attributes
+        ----------
+        variable : dict-like
+            the dict to be wrapped
+        store : openpathsampling.storage.ObjectStore
+            a reference to an object store used
+
+        """
         def __init__(self, variable, store):
             self.variable = variable
             self.store = store
@@ -110,6 +146,11 @@ class NetCDFPlus(netCDF4.Dataset):
         return self._objects
 
     def _register_storages(self):
+        """
+        Function to be called automatically to register all object stores
+
+        This will usually only be called in subclassed storages.
+        """
         pass
 
     def __init__(self, filename, mode=None, units=None):
@@ -215,6 +256,20 @@ class NetCDFPlus(netCDF4.Dataset):
         self.dimension_units = dict()
 
     def add(self, name, store, register_attr=True):
+        """
+        Add a object store to the file
+
+        An object store is a special type of variable that allows to store python objects
+
+        Parameters
+        ----------
+        name : str
+            the name of the store under which the objects are accessible like `store.{name}`
+        store : openpathsampling.storages.ObjectStore
+            instance of the object store
+        register_attr : bool, default: True
+            if set to false the store will not be accesible as an attribute
+        """
         store.register(self, name)
 
         if register_attr:
@@ -379,7 +434,7 @@ class NetCDFPlus(netCDF4.Dataset):
             store = self._obj_store[self.simplifier.class_list[obj_type]]
             return store.load(*args, **kwargs)
 
-        raise RuntimeError('No store registered to load variable type %s' % obj_type)
+        raise RuntimeError("No store registered to load variable type '%s'" % obj_type)
 
     def idx(self, obj):
         """
@@ -473,6 +528,15 @@ class NetCDFPlus(netCDF4.Dataset):
             self.createDimension(dim_name, size)
 
     def cache_image(self):
+        """
+        Return an dict containing information about all caches
+
+        Returns
+        -------
+        dict
+            a nested dict containing information about the number and types of
+            cached objects
+        """
         image = {
             'weak' : {},
             'strong' : {},
@@ -520,6 +584,14 @@ class NetCDFPlus(netCDF4.Dataset):
         return image
 
     def get_var_types(self):
+        """
+        List all allowed variable type to be used in `create_variable`
+
+        Returns
+        -------
+        list of str
+            the list of variable types
+        """
         types = NetCDFPlus._type_conversion.keys()
         types += [ 'obj.' + x for x in self.objects.keys()]
         types += [ 'lazyobj.' + x for x in self.objects.keys()]
@@ -527,6 +599,14 @@ class NetCDFPlus(netCDF4.Dataset):
 
     @staticmethod
     def var_type_to_nc_type(var_type):
+        """
+        Return the compatible netCDF variable type for var_type
+
+        Returns
+        -------
+        object
+            A object of netcdf compatible varible types
+        """
         if var_type.startswith('obj.') or var_type.startswith('lazyobj.'):
             nc_type = np.int32
         else:
@@ -535,6 +615,22 @@ class NetCDFPlus(netCDF4.Dataset):
         return nc_type
 
     def create_type_delegate(self, var_type):
+        """
+        Create a variable value delegator for var_type
+
+        The delegator will convert automatically between the given variable type
+        and the netcdf compatible one
+
+        Parameters
+        ----------
+        var_type : str
+            the variable type
+
+        Returns
+        -------
+        NetCDFPlus.Value_Delegate
+            the delegator instance
+        """
         getter = None
         setter = None
         store = None
@@ -787,6 +883,11 @@ class NetCDFPlus(netCDF4.Dataset):
         return ncvar
 
     def update_delegates(self):
+        """
+        Updates the set of delegates in `self.vars`
+
+        Should be called after new variables have been created or loaded.
+        """
         for name in self.variables:
             if name not in self.vars:
                 self.create_variable_delegate(name)
