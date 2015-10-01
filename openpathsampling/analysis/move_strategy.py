@@ -483,56 +483,44 @@ class DefaultStrategy(MoveStrategy):
             }
         return mover_weights
 
+    def default_weights(self, scheme):
+        sortkey_w = {}
+        movers_w = {}
+        if scheme.choice_probability != {}:
+            # extract weights from the choice probability
+            pass
+        else:
+            # generate absolutely generic weights
+            for skey in scheme.movers.keys():
+                try:
+                    sortkey_w[skey] = self.default_group_weights[skey]
+                except KeyError:
+                    sortkey_w[skey] = 1.0
+                for mover in scheme.movers[skey]:
+                    total_sig = (skey, mover.ensemble_signature)
+                    movers_w[total_sig] = 1.0
+        return (sortkey_w, movers_w)
 
-    def get_weights(self, scheme, sorted_movers, preset_sortkey_weights):
+    def override_weights(self, weights, override_w):
+        for key in override_w.keys():
+            weights[key] = override_w[key]
+        return weights
+
+
+    def get_weights(self, scheme, sorted_movers, sort_weights_override={}, 
+                    mover_weights_override={}):
         """
         Gets sort_weights and mover_weights dictionaries.
 
         Notes
         -----
-        The group_weight gives the relative probability of choosing a group;
-        the mover_weight gives the relative probability of choosing a mover
-        *within* its group.
-
         Note that only the variables returned from this tell the full story.
         The defaults and the self.* version may not contain the real set of
         groups/movers.
         """
-        choice_prob_set = (scheme.choice_probability != {})
-        sort_set = (preset_sortkey_weights != {})
-        mover_set = (self.mover_weights != {})
-        if (sort_set and mover_set) or not choice_prob_set:
-            sorted_weights = self.strategy_sortkey_weights(
-                scheme, sorted_movers, preset_sortkey_weights
-            )
-            mover_weights = self.strategy_mover_weights(scheme,
-                                                        sorted_movers)
-        elif sort_set: #choice_prob is set; mover is not set
-            # use sorted_weights & choice_probability to set mover_weights
-            sorted_weights = self.strategy_sortkey_weights(
-                scheme, sorted_movers, preset_sortkey_weights
-            )
-            mover_weights = self.strategy_mover_weights(scheme,
-                                                        sorted_movers, 
-                                                        sorted_weights)
-        elif mover_set: #choice_prob is set; sort is not set
-            # use mover_weights & choice_probability to set group_weights
-            mover_weights = self.strategy_mover_weights(scheme,
-                                                        sorted_movers)
-            sorted_weights = self.strategy_sortkey_weights(
-                scheme, sorted_movers, preset_sortkey_weights, mover_weights
-            )
-        else: #choice_prob is set, neither group nor mover is set
-            # use default mover weights to get the group weights, then use
-            # that to get the actual correct mover weights
-            m_weights = self.strategy_mover_weights(scheme, sorted_movers)
-            sorted_weights = self.strategy_sortkey_weights(
-                scheme, sorted_movers, preset_sortkey_weights, m_weights
-            )
-            mover_weights = self.strategy_mover_weights(scheme,
-                                                        sorted_movers, 
-                                                        sorted_weights)
-
+        (sorted_w, mover_w) = self.default_weights(scheme)
+        sorted_weights = self.override_weights(sorted_w, sort_weights_override)
+        mover_weights = self.override_weights(mover_w, mover_weights_override)
         return (sorted_weights, mover_weights) # error if somehow undefined
 
 
@@ -567,7 +555,7 @@ class DefaultStrategy(MoveStrategy):
         (group_weights, mover_weights) = self.get_weights(
             scheme=scheme, 
             sorted_movers=scheme.movers, 
-            preset_sortkey_weights=self.group_weights
+            sort_weights_override=self.group_weights
         )
         choosers = []
         for group in scheme.movers.keys():
@@ -634,7 +622,7 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
         (ensemble_weights, mover_weights) = self.get_weights(
             scheme=scheme,
             sorted_movers=ensemble_movers, 
-            preset_sortkey_weights=self.ensemble_weights
+            sort_weights_override=self.ensemble_weights
         )
         ens_list = mover_weights.keys() # used for canonical ordering
         # (otherwise the weight list isn't in the same order as choosers!)

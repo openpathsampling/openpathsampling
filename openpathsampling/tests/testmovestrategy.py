@@ -530,14 +530,20 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         (group_weights, mover_weights) = strategy.get_weights(
             scheme=scheme,
             sorted_movers=scheme.movers,
-            preset_sortkey_weights=strategy.group_weights
+            sort_weights_override=strategy.group_weights
         )
         assert_equal(group_weights, {'shooting' : 1.0, 'repex' : 0.5})
-        for group in mover_weights:
-            for sig in mover_weights[group]:
-                assert_equal(mover_weights[group][sig], 1.0)
-                assert_in(sig, all_movers_sigs)
-            assert_equal(len(mover_weights[group]), len(scheme.movers[group]))
+
+        # check that the number of sigs in a each group matches the number
+        # of movers in that group
+        for group in group_weights.keys():
+            mover_sigs = [sig for sig in mover_weights.keys() 
+                          if sig[0]==group]
+            assert_equal(len(mover_sigs), len(scheme.movers[group]))
+
+        for sig in mover_weights.keys():
+            assert_equal(mover_weights[sig], 1.0)
+            assert_in(sig[1], all_movers_sigs)
 
         # check that we can reuse these in a different scheme
         scheme2 = MoveScheme(self.network)
@@ -549,15 +555,18 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         (group_weights, mover_weights) = strategy.get_weights(
             scheme=scheme2,
             sorted_movers=scheme2.movers,
-            preset_sortkey_weights=strategy.group_weights
+            sort_weights_override=strategy.group_weights
         )
         assert_equal(group_weights, {'shooting' : 1.0})
-        for group in mover_weights:
-            for sig in mover_weights[group]:
-                assert_equal(mover_weights[group][sig], 1.0)
-                assert_in(sig, [m.ensemble_signature 
-                                for m in scheme2.movers[group]])
-            assert_equal(len(mover_weights[group]), len(scheme2.movers[group]))
+        for sig in mover_weights:
+            assert_equal(mover_weights[sig], 1.0)
+            assert_in(sig[1], [m.ensemble_signature 
+                               for m in scheme2.movers[sig[0]]])
+
+        for group in scheme2.movers.keys():
+            mover_sigs = [sig for sig in mover_weights.keys()
+                          if sig[0]==group]
+            assert_equal(len(mover_sigs), len(scheme2.movers[group]))
 
     def test_get_weights_both_internal_weights_set(self):
         strategy = DefaultStrategy()
@@ -581,7 +590,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         (group_weights, mover_weights) = strategy.get_weights(
             scheme=scheme,
             sorted_movers=scheme.movers,
-            preset_sortkey_weights=strategy.group_weights
+            sort_weights_override=strategy.group_weights
         )
         root = scheme.move_decision_tree(rebuild=True)
 
@@ -641,7 +650,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         (group_weights, mover_weights) = strategy.get_weights(
             scheme=scheme,
             sorted_movers=scheme.movers,
-            preset_sortkey_weights=strategy.group_weights
+            sort_weights_override=strategy.group_weights
         )
         assert_equal(group_weights, {'shooting' : 2.0, 'repex' : 0.5})
         for group in mover_weights:
@@ -671,7 +680,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         (group_weights, mover_weights) = strategy.get_weights(
             scheme=scheme,
             sorted_movers=scheme.movers,
-            preset_sortkey_weights=strategy.group_weights
+            sort_weights_override=strategy.group_weights
         )
         assert_equal(group_weights, {'shooting' : 1.0, 'repex' : 3.0})
 
@@ -684,7 +693,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         (group_weights, mover_weights) = strategy.get_weights(
             scheme=scheme,
             sorted_movers=scheme.movers,
-            preset_sortkey_weights=strategy.group_weights
+            sort_weights_override=strategy.group_weights
         )
         #root = scheme.move_decision_tree(rebuild=True) 
         
@@ -716,7 +725,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         (old_group_weights, old_mover_weights) = strategy.get_weights(
             scheme=scheme,
             sorted_movers=scheme.movers,
-            preset_sortkey_weights=strategy.group_weights
+            sort_weights_override=strategy.group_weights
         )
 
         old_choice_prob = scheme.choice_probability
@@ -727,7 +736,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         (group_weights, mover_weights) = strategy.get_weights(
             scheme=scheme,
             sorted_movers=scheme.movers,
-            preset_sortkey_weights=strategy.group_weights
+            sort_weights_override=strategy.group_weights
         )
         scheme.choice_probability = {}
         new_choice_prob = strategy.choice_probability(
@@ -775,7 +784,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         (group_weights, mover_weights) = strategy.get_weights(
             scheme=scheme,
             sorted_movers=scheme.movers,
-            preset_sortkey_weights=strategy.group_weights
+            sort_weights_override=strategy.group_weights
         )
         assert_equal(group_weights, {'pathreversal' : 1.0, 'repex' : 3.0})
         ensA = self.network.sampling_transitions[0].ensembles[0]
@@ -787,7 +796,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         (group_weights, mover_weights) = strategy.get_weights(
             scheme=scheme,
             sorted_movers=scheme.movers,
-            preset_sortkey_weights=strategy.group_weights
+            sort_weights_override=strategy.group_weights
         )
         for sig in mover_weights['pathreversal']:
             weight_sigA = mover_weights['pathreversal'][ensA_sig]
