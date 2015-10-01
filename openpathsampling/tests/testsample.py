@@ -201,3 +201,15 @@ class testSampleSet(object):
 
     def test_consistency_fail_duplicate_samples(self):
         raise SkipTest
+
+    def test_sanity(self):
+        self.testset.sanity_check()
+
+    @raises(AssertionError)
+    def test_sanity_insane(self):
+        traj0A = self.s0A.trajectory
+        ensB = self.s2B.ensemble
+        bad_samp = Sample(replica=0, trajectory=traj0A, ensemble=ensB)
+        testset = SampleSet([bad_samp])
+        testset.sanity_check()
+
