@@ -3,12 +3,13 @@ __author__ = 'jan-hendrikprinz'
 import logging
 
 import openpathsampling as paths
-from openpathsampling.base import StorableObject
+from openpathsampling.base import StorableObject, lazy
 from treelogic import TreeMixin
-from openpathsampling.base import DelayedLoader
 
 logger = logging.getLogger(__name__)
 
+
+@lazy('details')
 class PathMoveChange(TreeMixin, StorableObject):
     '''
     A class that described the concrete realization of a PathMove.
@@ -45,8 +46,6 @@ class PathMoveChange(TreeMixin, StorableObject):
         else:
             self.samples = samples
         self.details = details
-
-    details = DelayedLoader()
 
     # hook for TreeMixin
     @property

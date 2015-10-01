@@ -12,7 +12,7 @@ import mdtraj as md
 # THIS SHOULD NOT BE NECESSARY! SEE XYZ BELOW
 import simtk.unit as u
 
-from openpathsampling.base import StorableObject, DelayedLoader
+from openpathsampling.base import StorableObject, lazy
 
 
 #=============================================================================
@@ -315,6 +315,7 @@ def has(attr):
     return _has
 
 
+@lazy('configuration', 'momentum', '_reversed')
 class Snapshot(StorableObject):
     """
     Simulation snapshot. Contains references to a configuration and momentum
@@ -398,10 +399,6 @@ class Snapshot(StorableObject):
                                       reversed_copy = self)
         else:
             self._reversed = reversed_copy
-
-    configuration = DelayedLoader()
-    momentum = DelayedLoader()
-    _reversed = DelayedLoader()
 
     @property
     @has('configuration')

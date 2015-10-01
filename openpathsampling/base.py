@@ -2,6 +2,8 @@ import inspect
 
 import logging
 import weakref
+from decorator import decorator
+
 logger = logging.getLogger(__name__)
 
 class DelayedLoader(object):
@@ -211,3 +213,11 @@ class StorableNamedObject(StorableObject):
 
         return self
 
+
+def lazy(*attribues):
+    def _decorator(cls):
+        for attr in attribues:
+            setattr(cls, attr, DelayedLoader())
+
+        return cls
+    return _decorator
