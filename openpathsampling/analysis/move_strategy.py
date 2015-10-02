@@ -524,30 +524,20 @@ class DefaultStrategy(MoveStrategy):
         return (sorted_weights, mover_weights) # error if somehow undefined
 
 
-    def choice_probability(self, scheme, sorted_movers, sorted_weights, 
-                           mover_weights, renormalize=False):
+    def choice_probability(self, scheme, group_weights, mover_weights):
         """
         Calculates the probability of choosing to do each move.
+
+        This approach requires that the group_weights and mover_weights
+        include all groups and all movers in the actual scheme, otherwise a
+        KeyError will occur. This is a safety check. Typically these values
+        are obtained from the strategy.get_weights function.
         """
         unnormed = {}
-        sorted_norm = sum(sorted_weights.values())
-        for sortkey in sorted_movers:
-            sorted_w = sorted_weights[sortkey] / sorted_norm
-            #print sortkey, sorted_w, len(sorted_movers[sortkey]),
-            sig_weights = mover_weights[sortkey]
-            if renormalize:
-                sig_norm = sum(mover_weights[sortkey].values())
-            else:
-                sig_norm = 1.0
-            #print sig_norm, 
-            for mover in sorted_movers[sortkey]:
-                sig_w = sig_weights[self._mover_key(mover, scheme)] / sig_norm
-                try:
-                    unnormed[mover] += sorted_w * sig_w
-                except KeyError:
-                    unnormed[mover] = sorted_w * sig_w
-            #print sorted_w * sig_w
-
+        for g_name in scheme.movers.keys(): 
+            for mover in scheme.movers[g_name]:
+                m_sig = (g_name, mover.ensemble_signature)
+                unnormed[mover] = group_weights[g_name]*mover_weights[m_sig]
         norm = sum(unnormed.values())
         return {m : unnormed[m] / norm for m in unnormed}
 
@@ -560,7 +550,7 @@ class DefaultStrategy(MoveStrategy):
         choosers = []
         for group in scheme.movers.keys():
             # care to the order of weights
-            ens_weights = [mover_weights[group][self._mover_key(m, scheme)]
+            ens_weights = [mover_weights[(group,self._mover_key(m, scheme))]
                            for m in scheme.movers[group]]
             weight_dict = {m : w for (m, w) in zip(scheme.movers[group],
                                                    ens_weights)}
