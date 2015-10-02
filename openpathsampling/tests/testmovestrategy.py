@@ -420,7 +420,6 @@ class testDefaultStrategy(MoveStrategyTestSetup):
 
     def test_choice_probability(self):
         scheme = self.scheme_setup_shooting_repex()
-        scheme.movers = {} # handles LEGACY stuff
         ens0 = self.network.sampling_transitions[0].ensembles[0]
         strategy = DefaultStrategy()
         group_weights = {'shooting' : 1.0, 'repex' : 0.5}
@@ -466,7 +465,6 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             else:
                 raise RuntimeError("Unknown mover "+repr(m))
 
-
     @raises(KeyError)
     def test_choice_probability_bad_group_weights(self):
         scheme = MoveScheme(self.network)
@@ -494,6 +492,29 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         assert_equal(len(mover_weights), 5)
         choice_prob = strategy.choice_probability(scheme, group_weights,
                                                   mover_weights)
+
+    def test_weights_from_choice_probability(self):
+        scheme = self.scheme_setup_shooting_repex()
+        ens0 = self.network.sampling_transitions[0].ensembles[0]
+        strategy = DefaultStrategy()
+        group_weights = {'shooting' : 1.0, 'repex' : 0.5}
+        mover_weights = {}
+        for groupname in scheme.movers.keys():
+            for mover in scheme.movers[groupname]:
+                mover_weights[(groupname, mover.ensemble_signature)] = 1.0
+        ens0_sig = ((ens0,),(ens0,))
+        mover_weights[('shooting', ens0_sig)] = 2.0
+
+        choice_prob = strategy.choice_probability(scheme, group_weights,
+                                                  mover_weights)
+
+        (group_w, mover_w) = strategy.weights_from_choice_probability(
+            scheme, choice_prob
+        )
+
+        assert_equal(group_weights, group_w)
+        assert_equal(mover_weights, mover_w)
+        #TODO: run more thorough tests of this
 
     def test_chooser_root_weights(self):
         scheme = MoveScheme(self.network)
@@ -725,27 +746,26 @@ class testDefaultStrategy(MoveStrategyTestSetup):
                             if m.ensemble_signature == ensA_sig][0]
 
         strategy.group_weights['repex'] = 3.0
-        strategy.mover_weights['shooting'] = {} #sadly, can't safely avoid 
         strategy.mover_weights[('shooting',ensA_sig)]= 2.0
-
+        scheme.choice_probability = {} # this is unset here
+ 
         (group_weights, mover_weights) = strategy.get_weights(
             scheme=scheme,
             sorted_movers=scheme.movers,
             sort_weights_override=strategy.group_weights,
-            mmover_weights_override=strategy.mover_weights
+            mover_weights_override=strategy.mover_weights
         )
         root = scheme.move_decision_tree(rebuild=True)
 
         assert_equal(group_weights, {'shooting' : 1.0, 'repex' : 3.0})
         expected_mover_weights = {}
         for group in scheme.movers:
-            expected_mover_weights[group] = {}
             for mover in scheme.movers[group]:
                 sig = mover.ensemble_signature
                 if group == 'shooting' and sig == ensA_sig:
-                    expected_mover_weights[(group,sig)] = 1.0
+                    expected_mover_weights[(group,sig)] = 2.0
                 elif group == 'shooting':
-                    expected_mover_weights[(group,sig)] = 0.5
+                    expected_mover_weights[(group,sig)] = 1.0
                 else:
                     expected_mover_weights[(group,sig)] = 1.0
 
@@ -784,7 +804,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
 
 
         strategy.group_weights['shooting'] = 2.0
-        #root = scheme.move_decision_tree(rebuild=True)
+        root = scheme.move_decision_tree(rebuild=True)
 
         assert_equal(strategy.group_weights, {'shooting' : 2.0})
         assert_equal(strategy.mover_weights, {})
@@ -829,23 +849,20 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         ensA = self.network.sampling_transitions[0].ensembles[0]
         ensA_sig = ((ensA,),(ensA,)) 
         strategy.group_weights = {}
-        strategy.mover_weights['shooting'] = {} #sadly, can't safely avoid 
-        strategy.mover_weights['shooting'][ensA_sig] = 2.0
+        strategy.mover_weights[('shooting',ensA_sig)] = 2.0
 
         (group_weights, mover_weights) = strategy.get_weights(
             scheme=scheme,
             sorted_movers=scheme.movers,
-            sort_weights_override=strategy.group_weights
+            sort_weights_override=strategy.group_weights,
+            mover_weights_override=strategy.mover_weights
         )
-        #root = scheme.move_decision_tree(rebuild=True) 
-        
 
-        # we always normalize to so that shooting for ensA is 1.0
-        for sig in mover_weights['shooting']:
-            if sig == ensA_sig:
-                assert_equal(mover_weights['shooting'][sig], 1.0)
-            else:
-                assert_equal(mover_weights['shooting'][sig], 0.5)
+        for sig in mover_weights:
+            if sig == ('shooting',ensA_sig):
+                assert_equal(mover_weights[sig], 2.0)
+            elif sig[0] == 'shooting':
+                assert_equal(mover_weights[sig], 1.0)
 
         assert_almost_equal(group_weights['shooting'], 1.0)
         assert_almost_equal(group_weights['repex'], 3.0)
@@ -860,8 +877,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         ensA = self.network.sampling_transitions[0].ensembles[0]
         ensA_sig = ((ensA,),(ensA,))
         strategy.group_weights['repex'] = 3.0
-        strategy.mover_weights['shooting'] = {} #sadly, can't safely avoid 
-        strategy.mover_weights['shooting'][ensA_sig] = 2.0
+        strategy.mover_weights[('shooting',ensA_sig)] = 2.0
 
         root = scheme.move_decision_tree()
         (old_group_weights, old_mover_weights) = strategy.get_weights(
@@ -878,11 +894,12 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         (group_weights, mover_weights) = strategy.get_weights(
             scheme=scheme,
             sorted_movers=scheme.movers,
-            sort_weights_override=strategy.group_weights
+            sort_weights_override=strategy.group_weights,
+            mover_weights_override=strategy.mover_weights
         )
         scheme.choice_probability = {}
         new_choice_prob = strategy.choice_probability(
-            scheme, scheme.movers, group_weights, mover_weights
+            scheme, group_weights, mover_weights
         )
 
         for group in group_weights:

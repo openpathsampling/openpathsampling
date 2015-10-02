@@ -488,7 +488,9 @@ class DefaultStrategy(MoveStrategy):
         movers_w = {}
         if scheme.choice_probability != {}:
             # extract weights from the choice probability
-            pass
+            (sortkey_w, movers_w) = self.weights_from_choice_probability(
+                scheme, scheme.choice_probability
+            )
         else:
             # generate absolutely generic weights
             for skey in scheme.movers.keys():
@@ -523,6 +525,49 @@ class DefaultStrategy(MoveStrategy):
         mover_weights = self.override_weights(mover_w, mover_weights_override)
         return (sorted_weights, mover_weights) # error if somehow undefined
 
+    def weights_from_choice_probability(self, scheme, choice_probability):
+        """Get the contributing weights from existing choice probability
+        """
+        # first get the norm-based probabilities, then reset them.
+        mover_weights = {}
+        group_unscaled = {}
+        most_common = {}
+        for group in scheme.movers:
+            group_probs = {m : choice_probability[m] 
+                           for m in choice_probability 
+                           if m in scheme.movers[group]}
+            # normalize here based on making the most common within the
+            # group the baseline (1)
+            counts = {}
+            for v in group_probs.values():
+                try:
+                    counts[v] += 1
+                except:
+                    counts[v] = 1
+            most_common[group] = None
+            most_common_count = 0
+            for v in counts:
+                if counts[v] > most_common_count:
+                    most_common[group] = v
+
+            for m in group_probs:
+                val = group_probs[m] / most_common[group]
+                mover_weights[(group, m.ensemble_signature)] = val
+
+        for group in scheme.movers:
+            m0 = scheme.movers[group][0]
+            mover_w0 = mover_weights[(group, m0.ensemble_signature)]
+            group_unscaled[group] = choice_probability[m0] / mover_w0 
+
+        try:
+            scaling = most_common['shooting']
+        except KeyError:
+            scaling = max(most_common.values())
+
+        group_weights = {g : group_unscaled[g] / scaling 
+                         for g in group_unscaled}
+
+        return (group_weights, mover_weights)
 
     def choice_probability(self, scheme, group_weights, mover_weights):
         """
@@ -542,6 +587,11 @@ class DefaultStrategy(MoveStrategy):
         return {m : unnormed[m] / norm for m in unnormed}
 
     def chooser_root_weights(self, scheme, group_weights, mover_weights):
+        """
+        Determine the choice probabilities for the root chooser.
+
+        In this case, the root chooser selects move type.
+        """
         weights = {}
         for g in scheme.movers.keys():
             weights[g] = sum([mover_weights[m] for m in mover_weights 
