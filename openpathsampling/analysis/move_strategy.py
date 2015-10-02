@@ -532,6 +532,10 @@ class DefaultStrategy(MoveStrategy):
         mover_weights = {}
         group_unscaled = {}
         most_common = {}
+        # most_most_common tracks which group has the largest count of
+        # common values (used as backup if there is no shooting group)
+        most_most_common = None
+        most_most_common_count = None
         for group in scheme.movers:
             group_probs = {m : choice_probability[m] 
                            for m in choice_probability 
@@ -549,6 +553,9 @@ class DefaultStrategy(MoveStrategy):
             for v in counts:
                 if counts[v] > most_common_count:
                     most_common[group] = v
+                    if counts[v] > most_most_common_count:
+                        most_most_common = group
+                        most_most_common_count = counts[v]
 
             for m in group_probs:
                 val = group_probs[m] / most_common[group]
@@ -562,7 +569,7 @@ class DefaultStrategy(MoveStrategy):
         try:
             scaling = most_common['shooting']
         except KeyError:
-            scaling = max(most_common.values())
+            scaling = most_common[most_most_common]
 
         group_weights = {g : group_unscaled[g] / scaling 
                          for g in group_unscaled}

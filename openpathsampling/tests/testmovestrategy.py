@@ -949,22 +949,22 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         ensA = self.network.sampling_transitions[0].ensembles[0]
         ensA_sig = ((ensA,),(ensA,)) 
         strategy.group_weights = {}
-        strategy.mover_weights['pathreversal'] = {} #sadly, can't safely avoid 
-        strategy.mover_weights['pathreversal'][ensA_sig] = 2.0
+        strategy.mover_weights[('pathreversal',ensA_sig)] = 2.0
 
         (group_weights, mover_weights) = strategy.get_weights(
             scheme=scheme,
             sorted_movers=scheme.movers,
-            sort_weights_override=strategy.group_weights
+            sort_weights_override=strategy.group_weights,
+            mover_weights_override=strategy.mover_weights
         )
-        for sig in mover_weights['pathreversal']:
-            weight_sigA = mover_weights['pathreversal'][ensA_sig]
-            ratio = mover_weights['pathreversal'][sig] / weight_sigA
-            if sig == ensA_sig:
+        for sig in [s for s in mover_weights if s[0]=='pathreversal']:
+            weight_sigA = mover_weights[('pathreversal',ensA_sig)]
+            ratio = mover_weights[sig] / weight_sigA
+            if sig == ('pathreversal',ensA_sig):
                 assert_equal(ratio, 1.0)
             else:
                 assert_equal(ratio, 0.5)
 
-        assert_almost_equal(group_weights['pathreversal'], 0.25)
-        assert_almost_equal(group_weights['repex'], 0.75)
+        assert_almost_equal(group_weights['pathreversal'], 1.0)
+        assert_almost_equal(group_weights['repex'], 3.0)
 
