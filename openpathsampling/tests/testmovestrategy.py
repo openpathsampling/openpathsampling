@@ -399,7 +399,7 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
                 
 
 class testDefaultStrategy(MoveStrategyTestSetup):
-    def test_choice_probability(self):
+    def scheme_setup_shooting_repex(self):
         scheme = MoveScheme(self.network)
         scheme.movers = {} # handles LEGACY stuff
         ens0 = self.network.sampling_transitions[0].ensembles[0]
@@ -416,6 +416,12 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             paths.ReplicaExchangeMover(ensembles=[ens0, ens1]),
             paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
         ]
+        return scheme
+
+    def test_choice_probability(self):
+        scheme = self.scheme_setup_shooting_repex()
+        scheme.movers = {} # handles LEGACY stuff
+        ens0 = self.network.sampling_transitions[0].ensembles[0]
         strategy = DefaultStrategy()
         group_weights = {'shooting' : 1.0, 'repex' : 0.5}
         mover_weights = {}
@@ -489,8 +495,51 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         choice_prob = strategy.choice_probability(scheme, group_weights,
                                                   mover_weights)
 
+    def test_chooser_root_weights(self):
+        scheme = MoveScheme(self.network)
+        scheme.movers = {} # handles LEGACY stuff
+        ens0 = self.network.sampling_transitions[0].ensembles[0]
+        ens1 = self.network.sampling_transitions[0].ensembles[1]
+        ens2 = self.network.sampling_transitions[0].ensembles[2]
+        scheme.movers['shooting'] = [
+            paths.OneWayShootingMover(
+                selector=paths.UniformSelector(),
+                ensembles=[ens]
+            )
+            for ens in [ens0, ens1, ens2]
+        ]
+        scheme.movers['repex'] = [
+            paths.ReplicaExchangeMover(ensembles=[ens0, ens1]),
+            paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
+        ]
+        strategy = DefaultStrategy()
+        group_weights = {'shooting' : 1.0, 'repex' : 0.5}
+        mover_weights = {}
+        for groupname in scheme.movers.keys():
+            for mover in scheme.movers[groupname]:
+                mover_weights[(groupname, mover.ensemble_signature)] = 1.0
 
+        w = strategy.chooser_root_weights(scheme, group_weights, mover_weights)
+        assert_equal(w, {'shooting' : 3.0, 'repex' : 1.0})
 
+    def test_chooser_mover_weights(self):
+        scheme = self.scheme_setup_shooting_repex()
+        strategy = DefaultStrategy()
+        group_weights = {'shooting' : 1.0, 'repex' : 0.5}
+        mover_weights = {}
+        for groupname in scheme.movers.keys():
+            for mover in scheme.movers[groupname]:
+                mover_weights[(groupname, mover.ensemble_signature)] = 1.0
+    
+        m_sig = {}
+        for g in scheme.movers:
+            for m in scheme.movers[g]:
+                m_sig[m] = (g, m.ensemble_signature)
+
+        for g in scheme.movers:
+            expected_w = {m : mover_weights[m_sig[m]] for m in scheme.movers[g]}
+            w = strategy.chooser_mover_weights(scheme, g, mover_weights)
+            assert_equal(w, expected_w)
 
 
     def test_make_movers(self):

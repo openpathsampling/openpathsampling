@@ -541,34 +541,45 @@ class DefaultStrategy(MoveStrategy):
         norm = sum(unnormed.values())
         return {m : unnormed[m] / norm for m in unnormed}
 
+    def chooser_root_weights(self, scheme, group_weights, mover_weights):
+        weights = {}
+        for g in scheme.movers.keys():
+            weights[g] = sum([mover_weights[m] for m in mover_weights 
+                              if m[0]==g])  * group_weights[g]
+        return weights
+
+    def chooser_mover_weights(self, scheme, group, mover_weights):
+        weights = {m : mover_weights[(group, m.ensemble_signature)]
+                   for m in scheme.movers[group]}
+        return weights
+
     def make_movers(self, scheme):
         (group_weights, mover_weights) = self.get_weights(
             scheme=scheme, 
             sorted_movers=scheme.movers, 
             sort_weights_override=self.group_weights
         )
-        choosers = []
-        for group in scheme.movers.keys():
+        scheme.choice_probability = self.choice_probability(
+            scheme, group_weights, mover_weights
+        )
+        root_info = self.chooser_root_weights(scheme, group_weights,
+                                              mover_weights)
+        chooser_dict = {}
+        for group in root_info.keys():
             # care to the order of weights
-            ens_weights = [mover_weights[(group,self._mover_key(m, scheme))]
-                           for m in scheme.movers[group]]
-            weight_dict = {m : w for (m, w) in zip(scheme.movers[group],
-                                                   ens_weights)}
+            weight_dict = self.chooser_mover_weights(scheme, group,
+                                                     mover_weights)
             choosername = group.capitalize()+"Chooser"
-            choosers.append(
-                self.make_chooser(scheme, weight_dict, choosername)
-            )
+            chooser_dict[group] = self.make_chooser(scheme, weight_dict, 
+                                                    choosername)
 
-        # TODO: should this be len or sum?
-        root_weights = [group_weights[group] * len(scheme.movers[group])
-                        for group in scheme.movers]
+        root_couples = [(root_info[g], chooser_dict[g]) 
+                        for g in root_info.keys()]
+        (root_weights, choosers) = zip(*root_couples)
         root_chooser = paths.RandomChoiceMover(movers=choosers,
                                                weights=root_weights)
         root_chooser.name = "RootMover"
         scheme.root_mover = root_chooser
-        scheme.choice_probability = self.choice_probability(
-            scheme, scheme.movers, group_weights, mover_weights
-        )
         return root_chooser
 
 
