@@ -932,9 +932,22 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
                 m.ensemble_signature
             ) : choice_prob[m] for m in choice_prob
         }
+        # TODO: still need to find a way to fix this
         assert_equal(set(expected.keys()), set(found.keys()))
         for k in expected.keys():
             assert_almost_equal(expected[k], found[k])
+
+
+    def test_chooser_mover_weights(self):
+        # TODO NEXT
+        pass
+
+    def test_default_weights(self):
+        # TODO NEXT
+        pass
+
+    def test_weights_from_choice_probability(self):
+        pass
         
 
 
