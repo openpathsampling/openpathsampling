@@ -142,3 +142,6 @@ def data_filename(fname, subdir='test_data'):
 
 def true_func(value, *args, **kwargs):
     return True
+
+def setify_ensemble_signature(sig):
+    return (set(sig[0]), set(sig[1]))

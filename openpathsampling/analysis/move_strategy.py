@@ -665,6 +665,49 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
         group = [g for g in scheme.movers if mover in scheme.movers[g]][0]
         return (group, mover.ensemble_signature)
 
+    def weights_from_choice_probability(self, scheme, choice_probability):
+        pass
+
+    def default_weights(self, scheme):
+        pass
+
+    def choice_probability(self, scheme, ensemble_weights, mover_weights):
+        choice_probability = {}
+        ens_prob_norm = sum(ensemble_weights.values())
+        ens_prob = {e : ensemble_weights[e] / ens_prob_norm 
+                    for e in ensemble_weights}
+        
+        mover_norm = {e : sum([mover_weights[s] for s in mover_weights
+                               if s[2] == e])
+                      for e in ensemble_weights}
+
+        for sig in mover_weights:
+            group = sig[0]
+            ens_sig = sig[1]
+            ens = sig[2]
+            local_prob = ens_prob[ens] * mover_weights[sig] / mover_norm[ens]
+            # take first, because as MacLeod says, "there can be only one!"
+            mover = [m for m in scheme.movers[group]
+                     if m.ensemble_signature == ens_sig][0]
+            try:
+                choice_probability[mover] += local_prob
+            except KeyError:
+                choice_probability[mover] = local_prob
+
+        return choice_probability
+
+    def chooser_root_weights(self, scheme, ensemble_weights, mover_weights):
+        return ensemble_weights
+
+    def chooser_mover_weights(self, scheme, ensemble, mover_weights):
+        weights = {}
+        for group in scheme.movers:
+            for m in scheme.movers[group]:
+                # weights[(group, m.ensemble_signature)] = 
+                pass
+
+        pass
+
     def make_movers(self, scheme):
         all_movers = []
         for g in scheme.movers:
