@@ -968,3 +968,4 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         assert_almost_equal(group_weights['pathreversal'], 1.0)
         assert_almost_equal(group_weights['repex'], 3.0)
 
+

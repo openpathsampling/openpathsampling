@@ -553,6 +553,7 @@ class DefaultStrategy(MoveStrategy):
             for v in counts:
                 if counts[v] > most_common_count:
                     most_common[group] = v
+                    most_common_count = counts[v]
                     if counts[v] > most_most_common_count:
                         most_most_common = group
                         most_most_common_count = counts[v]
