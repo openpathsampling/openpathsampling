@@ -619,6 +619,8 @@ class DefaultStrategy(MoveStrategy):
         scheme.choice_probability = self.choice_probability(
             scheme, group_weights, mover_weights
         )
+        self.group_weights = group_weights
+        self.mover_weights = mover_weights
         root_info = self.chooser_root_weights(scheme, group_weights,
                                               mover_weights)
         chooser_dict = {}
