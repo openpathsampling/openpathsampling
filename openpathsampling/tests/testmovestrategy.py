@@ -950,8 +950,50 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         pass
 
     def test_default_weights(self):
-        # TODO NEXT
-        pass
+        scheme = self.scheme
+        ens0 = self.network.sampling_transitions[0].ensembles[0]
+        ens1 = self.network.sampling_transitions[0].ensembles[1]
+        ens2 = self.network.sampling_transitions[0].ensembles[2]
+        minus = self.network.minus_ensembles[0]
+        strategy = OrganizeByEnsembleStrategy()
+
+        (ensemble_weights, mover_weights)= strategy.default_weights(scheme)
+
+        assert_equal(ensemble_weights, 
+                     {e : 1.0 for e in [ens0, ens1, ens2, minus]})
+
+        # get the correct order on repex and minus signatures for testing
+        double_sigs = [m.ensemble_signature 
+                       for m in sum([scheme.movers[g] 
+                                     for g in ['repex', 'minus']], [])
+                      ]
+        repex01_sig = reorder_ensemble_signature(((ens0,ens1),(ens0,ens1)),
+                                                 double_sigs)
+        repex12_sig = reorder_ensemble_signature(((ens1,ens2),(ens1,ens2)),
+                                                 double_sigs)
+        minus_sig = reorder_ensemble_signature(((minus,ens0),(minus,ens0)),
+                                               double_sigs)
+
+        mover_ens_sigs = [
+            ('shooting', ((ens0,),(ens0,)), ens0),
+            ('shooting', ((ens1,),(ens1,)), ens1),
+            ('shooting', ((ens2,),(ens2,)), ens2),
+            ('pathreversal', ((ens0,),(ens0,)), ens0),
+            ('pathreversal', ((ens1,),(ens1,)), ens1),
+            ('pathreversal', ((ens2,),(ens2,)), ens2),
+            ('repex', repex01_sig, ens0),
+            ('repex', repex01_sig, ens1),
+            ('repex', repex12_sig, ens1),
+            ('repex', repex12_sig, ens2),
+            ('minus', minus_sig, minus),
+            ('minus', minus_sig, ens0),
+        ]
+
+        assert_equal(len(mover_ens_sigs), len(mover_weights.keys()))
+        assert_equal(set(mover_weights.keys()), set(mover_ens_sigs))
+        
+        expected = {s : 1.0 for s in mover_ens_sigs}
+        assert_equal(expected, mover_weights)
 
     def test_weights_from_choice_probability(self):
         pass
