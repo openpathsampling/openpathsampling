@@ -2,7 +2,8 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, raises, assert_in)
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import (true_func, assert_equal_array_array, make_1d_traj,
-                          setify_ensemble_signature)
+                          setify_ensemble_signature,
+                          reorder_ensemble_signature)
 
 import openpathsampling as paths
 from openpathsampling.analysis.move_scheme import MoveScheme, DefaultScheme
@@ -882,6 +883,14 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
 
         choice_prob = strategy.choice_probability(scheme, ensemble_weights,
                                                   mover_weights)
+        # choice_prob is {mover : prob}; found is {mover_sig : prob}
+        found = {
+            (
+                [g for g in scheme.movers if m in scheme.movers[g]][0],
+                m.ensemble_signature
+            ) : choice_prob[m] for m in choice_prob
+        }
+
         # norm for ensemble selection: 4.5
         # ens0: 2/4.5 = 4/9
         # ens1, ens2: 2/9
@@ -907,13 +916,17 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         #   rev0 = 4/9 * 1.0/5.0 = 4.0/45.0
         #   rev1 = 2/9 * 1.0/4.0 = 1.0/18.0
         #   rev2 = 2/9 * 1.0/3.0 = 2.0/27.0
+        found_sigs = set([s[1] for s in found.keys()])
 
-        sig0 = ((ens0,),(ens0,))
-        sig1 = ((ens1,),(ens1,))
-        sig2 = ((ens2,),(ens2,))
-        sig01 = ((ens0,ens1),(ens0,ens1))
-        sig12 = ((ens1,ens2),(ens1,ens2))
-        sig_minus = ((minus,ens0),(minus,ens0))
+        sig0 = reorder_ensemble_signature(((ens0,),(ens0,)), found_sigs)
+        sig1 = reorder_ensemble_signature(((ens1,),(ens1,)), found_sigs)
+        sig2 = reorder_ensemble_signature(((ens2,),(ens2,)), found_sigs)
+        sig01 = reorder_ensemble_signature(((ens0,ens1),(ens0,ens1)),
+                                           found_sigs)
+        sig12 = reorder_ensemble_signature(((ens1,ens2),(ens1,ens2)),
+                                           found_sigs)
+        sig_minus = reorder_ensemble_signature(((minus,ens0),(minus,ens0)),
+                                               found_sigs)
 
         expected = {
             ('shooting', sig0) : 8.0/45.0,
@@ -925,12 +938,6 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
             ('pathreversal', sig0) : 4.0/45.0,
             ('pathreversal', sig1) : 1.0/18.0,
             ('pathreversal', sig2) : 2.0/27.0
-        }
-        found = {
-            (
-                [g for g in scheme.movers if m in scheme.movers[g]][0],
-                m.ensemble_signature
-            ) : choice_prob[m] for m in choice_prob
         }
         # TODO: still need to find a way to fix this
         assert_equal(set(expected.keys()), set(found.keys()))

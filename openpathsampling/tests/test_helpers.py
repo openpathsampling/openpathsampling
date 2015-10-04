@@ -145,3 +145,17 @@ def true_func(value, *args, **kwargs):
 
 def setify_ensemble_signature(sig):
     return (set(sig[0]), set(sig[1]))
+
+def reorder_ensemble_signature(sig, match_with):
+    setified = setify_ensemble_signature(sig)
+    found_sigs = []
+    for s in match_with:
+        if setified == setify_ensemble_signature(s):
+            found_sigs.append(s)
+    if len(found_sigs) == 0:
+        raise RuntimeError("Signature not found for matching: " + repr(sig))
+    elif len(found_sigs) > 1:
+        raise RuntimeError("More than one form found for signature: " +
+                           repr(sig) + "\n" + repr(found_sigs))
+    else:
+        return found_sigs[0]
