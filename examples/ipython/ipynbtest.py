@@ -40,12 +40,18 @@ from Queue import Empty
 import difflib
 
 # IPython 3.0.0
-from IPython.kernel.manager import KernelManager
-import IPython
+# from IPython.kernel.manager import KernelManager
+# import IPython
 
 # Allows to read from all notebook versions
-from IPython.nbformat.reader import reads
-from IPython.nbformat import NotebookNode
+# from IPython.nbformat.reader import reads
+# from IPython.nbformat import NotebookNode
+
+# IPython 4.0.0
+from ipykernel.ipkernel import IPythonKernel
+
+# Allows to read from all notebook versions
+from nbformat import reads, NotebookNode
 
 import uuid
 
@@ -295,7 +301,7 @@ class IPyKernel(object):
         self.nb_version = nb_version
 
     def __enter__(self):
-        self.km = KernelManager()
+        self.km = IPythonKernel()
         self.km.start_kernel(
             extra_arguments=self.extra_arguments,
             stderr=open(os.devnull, 'w')
@@ -314,7 +320,7 @@ class IPyKernel(object):
         self.shell.get_msg()
         while True:
             try:
-                self.iopub.get_msg(timeout=1)
+                self.iopub.get_msg(timeout=0.05)
             except Empty:
                 break
 
@@ -362,7 +368,7 @@ class IPyKernel(object):
 
         while True:
             try:
-                msg = self.iopub.get_msg(timeout=0.5)
+                msg = self.iopub.get_msg(timeout=0.05)
             except Empty:
                 break
             msg_type = msg['msg_type']
