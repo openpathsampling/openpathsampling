@@ -39,19 +39,18 @@ import argparse
 from Queue import Empty
 import difflib
 
-# IPython 3.0.0
-# from IPython.kernel.manager import KernelManager
-# import IPython
 
-# Allows to read from all notebook versions
-# from IPython.nbformat.reader import reads
-# from IPython.nbformat import NotebookNode
+try:
+    # IPython 4.0.0+ / Jupyter - the big split
+    from jupyter_client.manager import KernelManager
+    import nbformat
+    print 'Found Jupyter / IPython 4+'
 
-# IPython 4.0.0
-from ipykernel.ipkernel import IPythonKernel
-
-# Allows to read from all notebook versions
-from nbformat import reads, NotebookNode
+except ImportError:
+    # IPython 3.0.0+
+    from IPython.kernel.manager import KernelManager
+    import IPython.nbformat as nbformat
+    print 'Using IPython 3+'
 
 import uuid
 
@@ -301,7 +300,7 @@ class IPyKernel(object):
         self.nb_version = nb_version
 
     def __enter__(self):
-        self.km = IPythonKernel()
+        self.km = KernelManager()
         self.km.start_kernel(
             extra_arguments=self.extra_arguments,
             stderr=open(os.devnull, 'w')
@@ -379,7 +378,7 @@ class IPyKernel(object):
                 continue
 
             content = msg['content']
-            out = NotebookNode(output_type=msg_type)
+            out = nbformat.NotebookNode(output_type=msg_type)
 
             if msg_type == 'stream':
                 out.name = content['name']
@@ -692,10 +691,10 @@ if __name__ == '__main__':
     fail_restart = args.restart
 
     with open(ipynb) as f:
-        nb = reads(f.read())
+        nb = nbformat.reads(f.read(), 4)
         # Convert all notebooks to the format IPython 3.0.0 uses to
         # simplify comparison
-        nb = IPython.nbformat.convert(nb, 4)
+        nb = nbformat.convert(nb, 4)
 
     notebook_restart = True
     notebook_run_count = 0
