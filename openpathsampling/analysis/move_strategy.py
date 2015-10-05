@@ -9,6 +9,10 @@ LevelLabels = collections.namedtuple(
     "LevelLabels", 
     ["SIGNATURE", "MOVER", "GROUP", "SUPERGROUP", "GLOBAL"]
 )
+
+def most_common_value(ll):
+    pass
+
 class StrategyLevels(LevelLabels):
     """
     Custom version of a namedtuple to handle aspects of the `level`
@@ -666,7 +670,39 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
         return (group, mover.ensemble_signature)
 
     def weights_from_choice_probability(self, scheme, choice_probability):
-        pass
+        # NOTE this is harder than it looks. The problem is that there isn't
+        # always a unique solution when one move appears under more than one
+        # ensemble. More details on the problem and solution are in a gist:
+        # https://gist.github.com/dwhswenson/5d5b18ba8e811cbe21da
+        ensemble_weights = {}
+        mover_weights = {}
+        ensemble_list = []
+        for m in choice_probability:
+            ensemble_list.extend([e for e in m.ensemble_signature[0]])
+        ensembles = set(ensemble_list)
+        for ens in ensembles:
+            ens_movers = [m for m in choice_probability 
+                          if ens in m.signature[0]]
+            for m in ens_movers:
+                ens_sig = m.ensemble_signature
+                group = [g for g in scheme.movers if m in scheme.movers[g]][0]
+                weight = choice_probability[m] / len(ens_sig)
+                mover_weights[(group, ens_sig, ens)] = weight
+
+            local_movers = {s : mover_weights[s] for s in mover_weights
+                            if s[2]==ens}
+            ensemble_weights[ens] = sum(local_movers.values())
+
+            shooters = [s for s in local_movers if s[0]=='shooting']
+            if len(shooters) > 0:
+                renorm = local_movers[shooters[0]]
+            else:
+                # TODO: I don't know. I don't feel like renormalizing this
+                # yet
+                pass
+            for s in local_movers:
+                mover_weights[s] = local_movers[s] / renorm
+        return (ensemble_weights, mover_weights)
 
     def default_weights(self, scheme):
         ensemble_weights = {}
