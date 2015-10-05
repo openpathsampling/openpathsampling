@@ -2,57 +2,89 @@
 """
 Simple example script for running and testing IPython notebooks.
 
-usage: ipnbdoctest.py [-h] [--timeout TIMEOUT] [--strict] [--fail-if-timeout]
-                      [--show-diff]
-                      file.ipynb
+usage: ipynbtest.py [-h] [--timeout TIMEOUT] [--rerun-if-timeout [RERUN]]
+                    [--restart-if-fail [RESTART]] [--strict]
+                    [--pass-if-timeout] [--show-diff] [--verbose]
+                    file.ipynb
 
 Run all cells in an ipython notebook as a test and check whether these
 successfully execute and compares their output to the one inside the notebook
 
 positional arguments:
-  file.ipynb         the notebook to be checked
+  file.ipynb            the notebook to be checked
 
 optional arguments:
-  -h, --help         show this help message and exit
-  --timeout TIMEOUT  the default timeout time in seconds for a cell
-                     evaluation. Default is 300s.
-  --strict           if set to true then the default test is that cell have to
-                     match otherwise a diff will not be considered a failed
-                     test
-  --fail-if-timeout  if set to true then a timeout is considered a failed test
-  --show-diff        if set to true differences in the cell are shown in
-                     `diff` style
+  -h, --help            show this help message and exit
+  --timeout TIMEOUT     the default timeout time in seconds for a cell
+                        evaluation. Default is 300s (5mins). Note that travis
+                        will consider it an error by default if after 600s
+                        (10mins) no output is generated. So 600s is the
+                        default limit by travis. However, a test cell that
+                        takes this long should be split in more than one or
+                        simplified.
+  --rerun-if-timeout [RERUN]
+                        if set then a timeout in a cell will cause to run the.
+                        Default is 2 (means make up to 3 attempts)
+  --restart-if-fail [RESTART]
+                        if set then a fail in a cell will cause to restart the
+                        full notebook!. Default is 0 (means NO rerun).Use this
+                        with care.
+  --strict              if set to true then the default test is that cell have
+                        to match otherwise a diff will not be considered a
+                        failed test
+  --pass-if-timeout     if set then a timeout (after last retry) is considered
+                        a passed test
+  --show-diff           if set to true differences in the cell are shown in
+                        `diff` style
+  --verbose             if set then text output is send to the console.
+
 
 Each cell is submitted to the kernel, and the outputs are compared with those
 stored in the notebook.
 
-This version need IPython 3.0.0 and makes use of some nice features. It can
-handle notebooks of version 3 (IPython 2) and version 4 (IPython 3)
+This version needs IPython 3.0.0 and makes use of some nice features. It can
+handle notebooks of version 3 (IPython 2) and version 4 (IPython 3).
+
+CHANGELOG
+---------
+Oct-05 2014:
+- Added support for IPython 4.0.0 / Jupyter. This had some extensive
+  packages renamed but should work now.
+- Reduced the latency for cell to 0.05 seconds. This should be enough on a
+  local machine to get the result.
 
 The original is found in a gist under https://gist.github.com/minrk/2620735
 """
 
-import os,sys
+import os
+import sys
 import re
 import argparse
- 
-from Queue import Empty
+import uuid
 import difflib
 
-# IPython 3.0.0
-from IPython.kernel.manager import KernelManager
-import IPython
+from Queue import Empty
 
-# Allows to read from all notebook versions
-from IPython.nbformat.reader import reads
-from IPython.nbformat import NotebookNode
+try:
+    # IPython 4.0.0+ / Jupyter - the big split
+    from jupyter_client.manager import KernelManager
+    import nbformat
 
-import uuid
+#    print 'Found Jupyter / IPython 4+'
+
+except ImportError:
+    # IPython 3.0.0+
+    from IPython.kernel.manager import KernelManager
+    import IPython.nbformat as nbformat
+
+#    print 'Using IPython 3+'
+
 
 class TravisConsole(object):
     """
     A wrapper class to allow easier output to the console especially for travis
     """
+
     def __init__(self):
         self.stream = sys.stdout
         self.linebreak = '\n'
@@ -76,8 +108,7 @@ class TravisConsole(object):
             self.fold_stack[name] = []
 
         self.fold_count[name] += 1
-        fold_name = self.fold_uuid + '.' + name.lower() \
-                    + '.' + str(self.fold_count[name])
+        fold_name = self.fold_uuid + '.' + name.lower() + '.' + str(self.fold_count[name])
 
         self.fold_stack[name].append(fold_name)
 
@@ -92,11 +123,11 @@ class TravisConsole(object):
         name : string
             the name of the fold
         """
-        fold_name = self.fold_uuid + '.' + name.lower() \
-                    + '.' + str(self.fold_count[name])
+        fold_name = self.fold_uuid + '.' + name.lower() + '.' + str(self.fold_count[name])
         self.writeln("travis_fold:end:" + fold_name)
 
-    def _indent(self, s, num = 4):
+    @staticmethod
+    def _indent(s, num = 4):
         lines = s.splitlines(True)
         lines = map(lambda s: ' ' * num + s, lines)
         return ''.join(lines)
@@ -139,7 +170,8 @@ class TravisConsole(object):
 
         self.stream.flush()
 
-    def red(self, s):
+    @staticmethod
+    def red(s):
         """format a string to be red in travis output
 
         Parameters
@@ -156,7 +188,8 @@ class TravisConsole(object):
         DEFAULT = '\033[39m'
         return RED + s + DEFAULT
 
-    def green(self, s):
+    @staticmethod
+    def green(s):
         """format a string to be green in travis output
 
         Parameters
@@ -173,7 +206,8 @@ class TravisConsole(object):
         DEFAULT = '\033[39m'
         return GREEN + s + DEFAULT
 
-    def blue(self, s):
+    @staticmethod
+    def blue(s):
         """format a string to be blue in travis output
 
         Parameters
@@ -190,7 +224,7 @@ class TravisConsole(object):
         DEFAULT = '\033[39m'
         return BLUE + s + DEFAULT
 
-    def format_diff(self, diff):
+    def format_diff(self, difference):
         """format a list of diff commands for travis output
 
         this will remove empty lines, lines starting with `?` and
@@ -207,7 +241,7 @@ class TravisConsole(object):
             a string representation of all diffs
         """
         colored_diffs = []
-        for line in diff:
+        for line in difference:
             if line[0] == '-':
                 colored_diffs.append(self.red(line))
             elif line[0] == '+':
@@ -216,11 +250,10 @@ class TravisConsole(object):
                 colored_diffs.append(line)
 
         # remove unnecessary linebreaks
-        colored_diffs = [ line.replace('\n', '') for line in colored_diffs]
+        colored_diffs = [line.replace('\n', '') for line in colored_diffs]
 
         # remove line we do not want
-        colored_diffs = [ line for line in colored_diffs
-                            if len(line) > 0 and line[0] != '?']
+        colored_diffs = [line for line in colored_diffs if len(line) > 0 and line[0] != '?']
 
         return '\n'.join(colored_diffs)
 
@@ -229,31 +262,31 @@ class IPyTestConsole(TravisConsole):
     """
     Add support for different output results
     """
+
     def __init__(self):
         super(IPyTestConsole, self).__init__()
 
         self.default_results = {
-            'success' : True,       # passed without differences
-            'kernel' : False,       # kernel (IPYTHON) error occurred
-            'error' : False,        # errors during execution
-            'timeout' : True,       # kernel run timed out
-            'diff' : True,          # passed, but with differences in the output
-            'skip' : True,          # cell has been skipped
-            'ignore' : True         # cell has been executed, but not compared
+            'success': True,  # passed without differences
+            'kernel': False,  # kernel (IPYTHON) error occurred
+            'error': False,  # errors during execution
+            'timeout': False,  # kernel run timed out
+            'diff': True,  # passed, but with differences in the output
+            'skip': True,  # cell has been skipped
+            'ignore': True  # cell has been executed, but not compared
         }
 
         self.pass_count = 0
         self.fail_count = 0
+        self.result_count = dict()
+        self.last_fail = False
 
         self.reset()
 
-        self.last_fail = False
-
     def reset(self):
-        self.result_count = { key : 0 for key in self.default_results.keys() }
+        self.result_count = { key: 0 for key in self.default_results.keys() }
         self.pass_count = 0
         self.fail_count = 0
-
 
     def write_result(self, result, okay_list = None):
         """write final result of test
@@ -288,7 +321,7 @@ class IPyKernel(object):
 
     """
 
-    def __init__(self, console = None, nb_version=4):
+    def __init__(self, nb_version = 4):
         # default timeout time is 60 seconds
         self.default_timeout = 60
         self.extra_arguments = ['--pylab=inline']
@@ -297,8 +330,8 @@ class IPyKernel(object):
     def __enter__(self):
         self.km = KernelManager()
         self.km.start_kernel(
-            extra_arguments=self.extra_arguments,
-            stderr=open(os.devnull, 'w')
+            extra_arguments = self.extra_arguments,
+            stderr = open(os.devnull, 'w')
         )
 
         self.kc = self.km.client()
@@ -314,7 +347,7 @@ class IPyKernel(object):
         self.shell.get_msg()
         while True:
             try:
-                self.iopub.get_msg(timeout=0.1)
+                self.iopub.get_msg(timeout = 0.05)
             except Empty:
                 break
 
@@ -357,12 +390,12 @@ class IPyKernel(object):
         else:
             raise AttributeError('No source/input key')
 
-        self.shell.get_msg(timeout=use_timeout)
+        self.shell.get_msg(timeout = use_timeout)
         outs = []
 
         while True:
             try:
-                msg = self.iopub.get_msg(timeout=0.01)
+                msg = self.iopub.get_msg(timeout = 0.05)
             except Empty:
                 break
             msg_type = msg['msg_type']
@@ -373,7 +406,7 @@ class IPyKernel(object):
                 continue
 
             content = msg['content']
-            out = NotebookNode(output_type=msg_type)
+            out = nbformat.NotebookNode(output_type = msg_type)
 
             if msg_type == 'stream':
                 out.name = content['name']
@@ -390,6 +423,12 @@ class IPyKernel(object):
                 out.ename = content['ename']
                 out.evalue = content['evalue']
                 out.traceback = content['traceback']
+
+            elif msg_type.startswith('comm_'):
+                # messages used to initialize, close and unpdate widgets
+                # we will ignore these and hope for the best
+                pass
+
             else:
                 print "unhandled iopub msg:", msg_type
 
@@ -397,7 +436,8 @@ class IPyKernel(object):
 
         return outs
 
-    def sanitize(self, s):
+    @staticmethod
+    def sanitize(s):
         """sanitize a string for comparison.
 
         fix universal newlines, strip trailing newlines, and normalize likely
@@ -425,7 +465,7 @@ class IPyKernel(object):
             self,
             test,
             ref,
-            skip_compare=('traceback', 'latex', 'execution_count')
+            skip_compare = ('traceback', 'latex', 'execution_count')
     ):
         """
         Compare two lists of `NotebookNode`s
@@ -452,8 +492,7 @@ class IPyKernel(object):
         if self.nb_version == 4:
             for key in ref:
                 if key not in test:
-                    return True, [ "missing key: %s != %s" %
-                                        (test.keys(), ref.keys()) ]
+                    return True, ["missing key: %s != %s" % (test.keys(), ref.keys())]
 
                 elif key not in skip_compare:
                     if key == 'data':
@@ -508,14 +547,14 @@ class IPyKernel(object):
         if key in ['image/png', 'image/svg', 'image/svg+xml']:
             if s1 != s2:
                 return ['>>> diff in %s (size new : %d vs size old : %d )' %
-                            (key, len(s1), len(s2) )]
+                        (key, len(s1), len(s2))]
         else:
             if s1 != s2:
-                expected=s1.splitlines(1)
-                actual=s2.splitlines(1)
-                diff=difflib.ndiff(expected, actual)
+                expected = s1.splitlines(1)
+                actual = s2.splitlines(1)
+                diff = difflib.ndiff(expected, actual)
 
-                return [ '>>> diff in ' + key ] + list(diff)
+                return ['>>> diff in ' + key] + list(diff)
 
         return None
 
@@ -539,7 +578,7 @@ class IPyKernel(object):
         dict
             a dict of key/value pairs. For a single command the value is `True`
         """
-        commands = {}
+        commands = { }
         source = self.get_source(cell)
         if source is not None:
             lines = source.splitlines()
@@ -605,67 +644,71 @@ class IPyKernel(object):
         else:
             return False
 
-###############################################################################
-##  MAIN
-###############################################################################
+
+# ===============================================================================
+#  MAIN
+# ===============================================================================
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Run all cells in an ipython notebook as a test and ' +
-                    'check whether these successfully execute and ' +
-                    'compares their output to the one inside the notebook')
+        description = 'Run all cells in an ipython notebook as a test and ' +
+                      'check whether these successfully execute and ' +
+                      'compares their output to the one inside the notebook')
 
     parser.add_argument(
-                    'file',
-                    metavar='file.ipynb',
-                    help='the notebook to be checked',
-                    type=str)
+        'file',
+        metavar = 'file.ipynb',
+        help = 'the notebook to be checked',
+        type = str)
 
-    parser.add_argument('--timeout', dest='timeout',
-                    type=int, default=300,
-                    help='the default timeout time in seconds for a cell ' +
-                        'evaluation. Default is 300s.')
+    parser.add_argument('--timeout', dest = 'timeout',
+                        type = int, default = 300,
+                        help = 'the default timeout time in seconds for a cell ' +
+                               'evaluation. Default is 300s (5mins). Note that travis ' +
+                               'will consider it an error by default if after 600s (10mins) ' +
+                               'no output is generated. So 600s is the default limit by travis. '
+                               'However, a test cell that takes this long should be split in ' +
+                               'more than one or simplified.')
 
-    parser.add_argument('--rerun-if-timeout', dest='rerun',
-                    type=int, default=2, nargs='?',
-                    help='if set then a timeout in a cell will cause to run ' +
-                         'the. Default is 2 (means make upto 3 attempts)')
+    parser.add_argument('--rerun-if-timeout', dest = 'rerun',
+                        type = int, default = 2, nargs = '?',
+                        help = 'if set then a timeout in a cell will cause to run ' +
+                               'the. Default is 2 (means make up to 3 attempts)')
 
-    parser.add_argument('--restart-if-fail', dest='restart',
-                    type=int, default=2, nargs='?',
-                    help='if set then a fail in a cell will cause to restart ' +
-                         'the full notebook!. Default is 0 (means NO rerun).' +
-                         'Use this with care.')
+    parser.add_argument('--restart-if-fail', dest = 'restart',
+                        type = int, default = 0, nargs = '?',
+                        help = 'if set then a fail in a cell will cause to restart ' +
+                               'the full notebook!. Default is 0 (means NO rerun).' +
+                               'Use this with care.')
 
-    parser.add_argument('--strict', dest='strict',
-                    action='store_true',
-                    default=False,
-                    help='if set to true then the default test is that cell ' +
-                        'have to match otherwise a diff will not be ' +
-                        'considered a failed test')
-
-    parser.add_argument(
-                    '--fail-if-timeout',
-                    dest='no_timeout', action='store_true',
-                    default=False,
-                    help='if set to true then a timeout is considered a ' +
-                         'failed test')
+    parser.add_argument('--strict', dest = 'strict',
+                        action = 'store_true',
+                        default = False,
+                        help = 'if set to true then the default test is that cell ' +
+                               'have to match otherwise a diff will not be ' +
+                               'considered a failed test')
 
     parser.add_argument(
-                    '--show-diff',
-                    dest='show_diff',
-                    action='store_true',
-                    default=False,
-                    help='if set to true differences in the cell are shown ' +
-                         'in `diff` style')
+        '--pass-if-timeout',
+        dest = 'no_timeout', action = 'store_true',
+        default = False,
+        help = 'if set then a timeout (after last retry) is considered a ' +
+               'passed test')
 
     parser.add_argument(
-                    '-v, --verbose',
-                    dest='verbose', action='store_true',
-                    default=False,
-                    help='if set then text output is send to the ' +
-                         'console.')
+        '--show-diff',
+        dest = 'show_diff',
+        action = 'store_true',
+        default = False,
+        help = 'if set to true differences in the cell are shown ' +
+               'in `diff` style')
 
+    parser.add_argument(
+        '--verbose',
+        dest = 'verbose', action = 'store_true',
+        default = False,
+        help = 'if set then text output is send to the ' +
+               'console.')
 
     args = parser.parse_args()
     ipynb = args.file
@@ -677,7 +720,7 @@ if __name__ == '__main__':
         tv.default_results['diff'] = False
 
     if args.no_timeout:
-        tv.default_results['timeout'] = False
+        tv.default_results['timeout'] = True
 
     tv.writeln('testing ipython notebook : "%s"' % ipynb)
     tv.fold_open('ipynb')
@@ -686,15 +729,15 @@ if __name__ == '__main__':
     fail_restart = args.restart
 
     with open(ipynb) as f:
-        nb = reads(f.read())
+        nb = nbformat.reads(f.read(), 4)
         # Convert all notebooks to the format IPython 3.0.0 uses to
         # simplify comparison
-        nb = IPython.nbformat.convert(nb, 4)
+        nb = nbformat.convert(nb, 4)
 
     notebook_restart = True
     notebook_run_count = 0
 
-    while (notebook_restart):
+    while notebook_restart:
         notebook_restart = False
         notebook_run_count += 1
 
@@ -741,11 +784,11 @@ if __name__ == '__main__':
 
                 if hasattr(cell, 'prompt_number'):
                     tv.write(nb_class_name + '.' + 'In [%3i]' %
-                             cell.prompt_number + ' ... ')
+                            cell.prompt_number + ' ... ')
                 elif hasattr(cell, 'execution_count') and \
-                                cell.execution_count is not None:
+                            cell.execution_count is not None:
                     tv.write(nb_class_name + '.' + 'In [%3i]' %
-                             cell.execution_count + ' ... ')
+                            cell.execution_count + ' ... ')
                 else:
                     tv.write(nb_class_name + '.' + 'In [???]' + ' ... ')
 
@@ -763,6 +806,8 @@ if __name__ == '__main__':
                 cell_run_again = True
                 cell_passed = True
 
+                outs = []
+
                 while cell_run_again:
                     cell_run_count += 1
                     cell_run_again = False
@@ -770,7 +815,7 @@ if __name__ == '__main__':
 
                     try:
                         if 'timeout' in commands:
-                            outs = ipy.run(cell, timeout=int(commands['timeout']))
+                            outs = ipy.run(cell, timeout = int(commands['timeout']))
                         else:
                             outs = ipy.run(cell)
 
@@ -785,13 +830,19 @@ if __name__ == '__main__':
                                     cell_run_again = True
                                     tv.write('timeout [retry #%d] ' % cell_run_count)
                                 else:
-                                    tv.write_result('timeout')
-                                # tv.writeln('>>> TimeOut (%is)' % args.timeout)
+                                    if 'pass-if-timeout' in commands:
+                                        tv.write_result('timeout', okay_list = {'timeout': True})
+                                    elif 'fail-if-timeout' in commands:
+                                        tv.write_result('timeout', okay_list = {'timeout': False})
+                                    else:
+                                        tv.write_result('timeout')
+
+                                        # tv.writeln('>>> TimeOut (%is)' % args.timeout)
                             else:
                                 tv.write_result('kernel')
                                 tv.fold_open('ipynb.kernel')
                                 tv.writeln('>>> ' + out.ename + ' ("' + out.evalue + '")')
-                                tv.writeln(repr(e), indent=4)
+                                tv.writeln(repr(e), indent = 4)
                                 tv.fold_close('ipynb.kernel')
                         else:
                             if repr(e) == 'Empty()':
@@ -803,7 +854,7 @@ if __name__ == '__main__':
                                 tv.write_result('ignore')
                                 tv.fold_open('ipynb.kernel')
                                 tv.writeln('>>> ' + out.ename + ' ("' + out.evalue + '")')
-                                tv.writeln(repr(e), indent=4)
+                                tv.writeln(repr(e), indent = 4)
                                 tv.fold_close('ipynb.kernel')
 
                 if not cell_passed:
@@ -829,7 +880,7 @@ if __name__ == '__main__':
                         tv.writeln('>>> ' + out.ename + ' ("' + out.evalue + '")')
 
                         for idx, trace in enumerate(out.traceback[1:]):
-                            tv.writeln(trace, indent=4)
+                            tv.writeln(trace, indent = 4)
 
                         tv.fold_close('ipynb.error')
                         failed = True
@@ -837,7 +888,7 @@ if __name__ == '__main__':
                         this_diff, this_str = ipy.compare_outputs(out, ref)
                         if 'verbose' in commands or verbose:
                             if 'data' in out:
-                                for key,value in out.data.iteritems():
+                                for key, value in out.data.iteritems():
                                     if 'text' in key:
                                         out_str += value + '\n'
 
@@ -850,10 +901,10 @@ if __name__ == '__main__':
                     if 'ignore' not in commands:
                         if 'strict' in commands:
                             # strict mode means a difference will fail the test
-                            tv.write_result('diff', okay_list={ 'diff' : False })
+                            tv.write_result('diff', okay_list = {'diff': False})
                         elif 'lazy' in commands:
                             # lazy mode means a difference will pass the test
-                            tv.write_result('diff', okay_list={ 'diff' : True })
+                            tv.write_result('diff', okay_list = {'diff': True})
                         else:
                             # use defaults
                             tv.write_result('diff')
@@ -883,10 +934,10 @@ if __name__ == '__main__':
             tv.writeln("  ===============")
             if tv.pass_count > 0:
                 tv.writeln("    %3i cells passed [" %
-                           tv.pass_count + tv.green('ok') + "]" )
+                           tv.pass_count + tv.green('ok') + "]")
             if tv.fail_count > 0:
                 tv.writeln("    %3i cells failed [" %
-                           tv.fail_count + tv.red('fail') + "]" )
+                           tv.fail_count + tv.red('fail') + "]")
 
             tv.br()
             tv.writeln("  %3i cells successfully replicated [success]" %
@@ -907,12 +958,13 @@ if __name__ == '__main__':
             if notebook_restart:
                 tv.br()
                 tv.writeln(
-                    tv.red("  attempt #%d of max %d failed, restarting notebook!" % (notebook_run_count, fail_restart + 1))
+                    tv.red("  attempt #%d of max %d failed, restarting notebook!" % (
+                        notebook_run_count, fail_restart + 1
+                    ))
                 )
 
             tv.br()
             tv.write("shutting down kernel ... ")
-
 
         tv.writeln('ok')
 
