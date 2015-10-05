@@ -939,15 +939,34 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
             ('pathreversal', sig1) : 1.0/18.0,
             ('pathreversal', sig2) : 2.0/27.0
         }
-        # TODO: still need to find a way to fix this
         assert_equal(set(expected.keys()), set(found.keys()))
         for k in expected.keys():
             assert_almost_equal(expected[k], found[k])
 
 
     def test_chooser_mover_weights(self):
-        # TODO NEXT
-        pass
+        scheme = self.scheme
+        ens0 = self.network.sampling_transitions[0].ensembles[0]
+        ens1 = self.network.sampling_transitions[0].ensembles[1]
+        ens2 = self.network.sampling_transitions[0].ensembles[2]
+        minus = self.network.minus_ensembles[0]
+        strategy = OrganizeByEnsembleStrategy()
+
+        (ensemble_weights, mover_weights)= strategy.default_weights(scheme)
+
+        for ens in [ens0, ens1, ens2, minus]:
+            chooser_mweights = strategy.chooser_mover_weights(scheme, ens, 
+                                                              mover_weights)
+            for mover in chooser_mweights:
+                assert_in(ens, mover.ensemble_signature[0])
+
+            if ens in [ens0, ens1]:
+                assert_equal(len(chooser_mweights), 4)
+            elif ens is minus:
+                assert_equal(len(chooser_mweights), 1)
+            elif ens is ens2:
+                assert_equal(len(chooser_mweights), 3)
+        # that test feels a little minimal, but I guess it does the job
 
     def test_default_weights(self):
         scheme = self.scheme
