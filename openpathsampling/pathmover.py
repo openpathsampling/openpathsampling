@@ -334,7 +334,7 @@ class PathMover(TreeSetMixin, OPSNamed):
         return paths.EmptyPathMoveChange()  # pragma: no cover
 
     def __repr__(self):
-        return self.name + '(%s)' % self.idx.values()
+        return self.name + '(%s)' % hex(id(self))[2:]
 
 
 ###############################################################################
