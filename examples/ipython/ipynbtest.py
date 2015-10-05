@@ -39,7 +39,6 @@ import argparse
 from Queue import Empty
 import difflib
 
-
 try:
     # IPython 4.0.0+ / Jupyter - the big split
     from jupyter_client.manager import KernelManager
