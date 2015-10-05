@@ -2,31 +2,47 @@
 """
 Simple example script for running and testing IPython notebooks.
 
-usage: ipnbdoctest.py [-h] [--timeout TIMEOUT] [--strict] [--fail-if-timeout]
-                      [--show-diff]
+usage: ipnbdoctest.py [-h] [--timeout TIMEOUT] [--rerun-if-timeout [RERUN]]
+                      [--restart-if-fail [RESTART]] [--strict]
+                      [--pass-if-timeout] [--show-diff] [--verbose]
                       file.ipynb
 
 Run all cells in an ipython notebook as a test and check whether these
 successfully execute and compares their output to the one inside the notebook
 
 positional arguments:
-  file.ipynb         the notebook to be checked
+  file.ipynb            the notebook to be checked
 
 optional arguments:
-  -h, --help         show this help message and exit
-  --timeout TIMEOUT  the default timeout time in seconds for a cell
-                     evaluation. Default is 300s.
-  --strict           if set to true then the default test is that cell have to
-                     match otherwise a diff will not be considered a failed
-                     test
-  --fail-if-timeout  if set to true then a timeout is considered a failed test
-  --show-diff        if set to true differences in the cell are shown in
-                     `diff` style
+  -h, --help            show this help message and exit
+  --timeout TIMEOUT     the default timeout time in seconds for a cell
+                        evaluation. Default is 300s (5mins). Note that travis
+                        will consider it an error by default if after 600s
+                        (10mins) no output is generated. So 600s is the
+                        default limit by travis. However, a test cell that
+                        takes this long should be split in more than one or
+                        simplified.
+  --rerun-if-timeout [RERUN]
+                        if set then a timeout in a cell will cause to run the.
+                        Default is 2 (means make up to 3 attempts)
+  --restart-if-fail [RESTART]
+                        if set then a fail in a cell will cause to restart the
+                        full notebook!. Default is 0 (means NO rerun).Use this
+                        with care.
+  --strict              if set to true then the default test is that cell have
+                        to match otherwise a diff will not be considered a
+                        failed test
+  --pass-if-timeout     if set then a timeout (after last retry) is considered
+                        a passed test
+  --show-diff           if set to true differences in the cell are shown in
+                        `diff` style
+  --verbose             if set then text output is send to the console.
+
 
 Each cell is submitted to the kernel, and the outputs are compared with those
 stored in the notebook.
 
-This version need IPython 3.0.0 and makes use of some nice features. It can
+This version needs IPython 3.0.0 and makes use of some nice features. It can
 handle notebooks of version 3 (IPython 2) and version 4 (IPython 3)
 
 The original is found in a gist under https://gist.github.com/minrk/2620735
@@ -35,7 +51,7 @@ The original is found in a gist under https://gist.github.com/minrk/2620735
 import os,sys
 import re
 import argparse
- 
+
 from Queue import Empty
 import difflib
 
@@ -240,7 +256,7 @@ class IPyTestConsole(TravisConsole):
             'success' : True,       # passed without differences
             'kernel' : False,       # kernel (IPYTHON) error occurred
             'error' : False,        # errors during execution
-            'timeout' : True,       # kernel run timed out
+            'timeout' : False,      # kernel run timed out
             'diff' : True,          # passed, but with differences in the output
             'skip' : True,          # cell has been skipped
             'ignore' : True         # cell has been executed, but not compared
@@ -377,7 +393,7 @@ class IPyKernel(object):
                 continue
 
             content = msg['content']
-            out = nbformat.NotebookNode(output_type=msg_type)
+            out = NotebookNode(output_type=msg_type)
 
             if msg_type == 'stream':
                 out.name = content['name']
@@ -394,6 +410,12 @@ class IPyKernel(object):
                 out.ename = content['ename']
                 out.evalue = content['evalue']
                 out.traceback = content['traceback']
+
+            elif msg_type.startswith('comm_'):
+                # messages used to initialize, close and unpdate widgets
+                # we will ignore these and hope for the best
+                pass
+
             else:
                 print "unhandled iopub msg:", msg_type
 
@@ -628,15 +650,19 @@ if __name__ == '__main__':
     parser.add_argument('--timeout', dest='timeout',
                     type=int, default=300,
                     help='the default timeout time in seconds for a cell ' +
-                        'evaluation. Default is 300s.')
+                        'evaluation. Default is 300s (5mins). Note that travis ' +
+                        'will consider it an error by default if after 600s (10mins) ' +
+                        'no output is generated. So 600s is the default limit by travis. '
+                        'However, a test cell that takes this long should be split in ' +
+                        'more than one or simplified.')
 
     parser.add_argument('--rerun-if-timeout', dest='rerun',
                     type=int, default=2, nargs='?',
                     help='if set then a timeout in a cell will cause to run ' +
-                         'the. Default is 2 (means make upto 3 attempts)')
+                         'the. Default is 2 (means make up to 3 attempts)')
 
     parser.add_argument('--restart-if-fail', dest='restart',
-                    type=int, default=2, nargs='?',
+                    type=int, default=0, nargs='?',
                     help='if set then a fail in a cell will cause to restart ' +
                          'the full notebook!. Default is 0 (means NO rerun).' +
                          'Use this with care.')
@@ -649,11 +675,11 @@ if __name__ == '__main__':
                         'considered a failed test')
 
     parser.add_argument(
-                    '--fail-if-timeout',
+                    '--pass-if-timeout',
                     dest='no_timeout', action='store_true',
                     default=False,
-                    help='if set to true then a timeout is considered a ' +
-                         'failed test')
+                    help='if set then a timeout (after last retry) is considered a ' +
+                         'passed test')
 
     parser.add_argument(
                     '--show-diff',
@@ -664,7 +690,7 @@ if __name__ == '__main__':
                          'in `diff` style')
 
     parser.add_argument(
-                    '-v, --verbose',
+                    '--verbose',
                     dest='verbose', action='store_true',
                     default=False,
                     help='if set then text output is send to the ' +
@@ -681,7 +707,7 @@ if __name__ == '__main__':
         tv.default_results['diff'] = False
 
     if args.no_timeout:
-        tv.default_results['timeout'] = False
+        tv.default_results['timeout'] = True
 
     tv.writeln('testing ipython notebook : "%s"' % ipynb)
     tv.fold_open('ipynb')
@@ -690,10 +716,10 @@ if __name__ == '__main__':
     fail_restart = args.restart
 
     with open(ipynb) as f:
-        nb = nbformat.reads(f.read(), 4)
+        nb = reads(f.read())
         # Convert all notebooks to the format IPython 3.0.0 uses to
         # simplify comparison
-        nb = nbformat.convert(nb, 4)
+        nb = IPython.nbformat.convert(nb, 4)
 
     notebook_restart = True
     notebook_run_count = 0
@@ -789,7 +815,13 @@ if __name__ == '__main__':
                                     cell_run_again = True
                                     tv.write('timeout [retry #%d] ' % cell_run_count)
                                 else:
-                                    tv.write_result('timeout')
+                                    if 'pass-if-timeout' in commands:
+                                        tv.write_result('timeout', okay_list={'timeout' : True })
+                                    elif 'fail-if-timeout' in commands:
+                                        tv.write_result('timeout', okay_list={'timeout' : False })
+                                    else:
+                                        tv.write_result('timeout')
+
                                 # tv.writeln('>>> TimeOut (%is)' % args.timeout)
                             else:
                                 tv.write_result('kernel')
