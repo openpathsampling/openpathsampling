@@ -48,7 +48,6 @@ class OpenMMEngine(paths.DynamicsEngine):
                     platform = pf.getName()
 
             self.options['platform'] = platform
-            self.platform = platform
 
         # set no cached snapshot, means it will be constructed from the openmm context
         self._current_snapshot = None

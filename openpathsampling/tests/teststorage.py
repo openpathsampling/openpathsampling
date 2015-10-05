@@ -13,7 +13,7 @@ import numpy.testing as npt
 
 from openpathsampling.openmm_engine import *
 from openpathsampling.snapshot import Snapshot
-from openpathsampling.snapshot import Momentum, Configuration
+from openpathsampling.storage import Storage
 
 import simtk.unit as u
 import time
@@ -51,8 +51,8 @@ def setUp():
     this.template_snapshot = paths.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
 
     # and an openmm engine
-    this.engine = paths.OpenMMEngine(options=this.options, template=this.template_snapshot)
-    this.engine.initialized = True
+    this.engine = paths.SimpleOpenMMEngine(options=this.options, template=this.template_snapshot)
+    this.engine.create()
 
     # run a small trajectory of a few steps that can be used to save, etc...
     this.traj = this.engine.generate(this.template_snapshot, running=[paths.LengthEnsemble(2).can_append])

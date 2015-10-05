@@ -16,6 +16,8 @@ from openpathsampling.snapshot import Momentum, Configuration
 import simtk.unit as u
 import time
 
+import openmmtools
+
 class testOpenMMEngine(object):
     def setUp(self):
         options = {'temperature' : 300.0 * u.kelvin,
