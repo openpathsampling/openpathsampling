@@ -686,7 +686,7 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
         ensembles = set(ensemble_list)
         for ens in ensembles:
             ens_movers = [m for m in choice_probability 
-                          if ens in m.signature[0]]
+                          if ens in m.ensemble_signature[0]]
             for m in ens_movers:
                 ens_sig = m.ensemble_signature
                 group = [g for g in scheme.movers if m in scheme.movers[g]][0]
@@ -704,7 +704,7 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
                 renorm = most_common_value(local_movers.values())[0]
             for s in local_movers:
                 mover_weights[s] = local_movers[s] / renorm
-        ensemble_norm = most_common_value(ensemble_weights.values())
+        ensemble_norm = most_common_value(ensemble_weights.values())[0]
         ensemble_weights = {e : ensemble_weights[e] / ensemble_norm
                             for e in ensemble_weights}
         return (ensemble_weights, mover_weights)

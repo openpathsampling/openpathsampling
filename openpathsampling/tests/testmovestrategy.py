@@ -17,6 +17,13 @@ logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 
+def find_mover(scheme, group, sig):
+    mover = None
+    for m in scheme.movers[group]:
+        if m.ensemble_signature_set == (set(sig[0]), set(sig[1])):
+            mover = m
+    return mover
+
 
 class testStrategyLevels(object):
     def test_level_type(self):
@@ -1012,8 +1019,38 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         assert_equal(expected, mover_weights)
 
     def test_weights_from_choice_probability(self):
-        pass
-        
+        scheme = self.scheme
+        ens0 = self.network.sampling_transitions[0].ensembles[0]
+        ens1 = self.network.sampling_transitions[0].ensembles[1]
+        ens2 = self.network.sampling_transitions[0].ensembles[2]
+        minus = self.network.minus_ensembles[0]
+
+        sig0 = ((ens0,),(ens0,))
+        sig1 = ((ens1,),(ens1,))
+        sig2 = ((ens2,),(ens2,))
+        sig01 = ((ens0,ens1),(ens0,ens1))
+        sig12 = ((ens1,ens2),(ens1,ens2))
+        sig_minus = ((minus,ens0),(minus,ens0))
+
+        choice_probability = {
+            find_mover(scheme, 'shooting', sig0) : 8.0/45.0,
+            find_mover(scheme, 'shooting', sig1) : 1.0/18.0,
+            find_mover(scheme, 'shooting', sig2) : 2.0/27.0,
+            find_mover(scheme, 'repex', sig01) : 13.0/90.0,
+            find_mover(scheme, 'repex', sig12) : 7.0/54.0,
+            find_mover(scheme, 'minus', sig_minus) : 1.8/9.0,
+            find_mover(scheme, 'pathreversal', sig0) : 4.0/45.0,
+            find_mover(scheme, 'pathreversal', sig1) : 1.0/18.0,
+            find_mover(scheme, 'pathreversal', sig2) : 2.0/27.0
+        }
+
+        strategy = OrganizeByEnsembleStrategy()
+        (ens_w, mover_w) = strategy.weights_from_choice_probability(
+            scheme, choice_probability
+        )
+
+        new_choice_prob = strategy.choice_probability(scheme, ens_w, mover_w)
+        assert_equal_=(choice_probability, new_choice_prob)
 
 
     def test_make_movers(self):
