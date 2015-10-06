@@ -340,7 +340,7 @@ class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
     pass
 
 
-class DefaultStrategy(MoveStrategy):
+class OrganizeByMoveGroupStrategy(MoveStrategy):
     """
     Default global strategy. 
     
@@ -531,7 +531,7 @@ class SingleReplicaStrategy(MoveStrategy):
     """
     pass
 
-class OrganizeByEnsembleStrategy(DefaultStrategy):
+class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
     def __init__(self, ensembles=None, group=None, replace=True):
         super(OrganizeByEnsembleStrategy, self).__init__(
             ensembles=ensembles, group=group, replace=replace

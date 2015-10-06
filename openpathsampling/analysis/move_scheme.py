@@ -509,7 +509,7 @@ class DefaultScheme(MoveScheme):
         self.append(strategies.OneWayShootingStrategy())
         self.append(strategies.PathReversalStrategy())
         self.append(strategies.MinusMoveStrategy())
-        global_strategy = strategies.DefaultStrategy()
+        global_strategy = strategies.OrganizeByMoveGroupStrategy()
         self.append(global_strategy)
 
         msouters = self.network.special_ensembles['ms_outer']

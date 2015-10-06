@@ -271,7 +271,7 @@ class testMinusMoveStrategy(MoveStrategyTestSetup):
 
 
 
-class testDefaultStrategy(MoveStrategyTestSetup):
+class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
     def scheme_setup_shooting_repex(self):
         scheme = MoveScheme(self.network)
         scheme.movers = {} # handles LEGACY stuff
@@ -294,7 +294,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
     def test_choice_probability(self):
         scheme = self.scheme_setup_shooting_repex()
         ens0 = self.network.sampling_transitions[0].ensembles[0]
-        strategy = DefaultStrategy()
+        strategy = OrganizeByMoveGroupStrategy()
         group_weights = {'shooting' : 1.0, 'repex' : 0.5}
         mover_weights = {}
         for groupname in scheme.movers.keys():
@@ -356,7 +356,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             paths.ReplicaExchangeMover(ensembles=[ens0, ens1]),
             paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
         ]
-        strategy = DefaultStrategy()
+        strategy = OrganizeByMoveGroupStrategy()
         group_weights = {'shooting' : 1.0}
         mover_weights = {}
         for groupname in scheme.movers.keys():
@@ -369,7 +369,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
     def test_weights_from_choice_probability(self):
         scheme = self.scheme_setup_shooting_repex()
         ens0 = self.network.sampling_transitions[0].ensembles[0]
-        strategy = DefaultStrategy()
+        strategy = OrganizeByMoveGroupStrategy()
         group_weights = {'shooting' : 1.0, 'repex' : 0.5}
         mover_weights = {}
         for groupname in scheme.movers.keys():
@@ -406,7 +406,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             paths.ReplicaExchangeMover(ensembles=[ens0, ens1]),
             paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
         ]
-        strategy = DefaultStrategy()
+        strategy = OrganizeByMoveGroupStrategy()
         group_weights = {'shooting' : 1.0, 'repex' : 0.5}
         mover_weights = {}
         for groupname in scheme.movers.keys():
@@ -418,7 +418,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
 
     def test_chooser_mover_weights(self):
         scheme = self.scheme_setup_shooting_repex()
-        strategy = DefaultStrategy()
+        strategy = OrganizeByMoveGroupStrategy()
         group_weights = {'shooting' : 1.0, 'repex' : 0.5}
         mover_weights = {}
         for groupname in scheme.movers.keys():
@@ -462,7 +462,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             innermost_ensembles=[ens0]
         )]
 
-        strategy = DefaultStrategy()
+        strategy = OrganizeByMoveGroupStrategy()
         root = strategy.make_movers(scheme)
         
         assert_equal(len(root.movers), 4)
@@ -510,7 +510,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
         ]
 
-        strategy = DefaultStrategy()
+        strategy = OrganizeByMoveGroupStrategy()
         root = strategy.make_movers(scheme)
 
         name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
@@ -535,7 +535,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
         ]
 
-        strategy = DefaultStrategy()
+        strategy = OrganizeByMoveGroupStrategy()
         strategy.group_weights['blahblahblah'] = 2.0
         root = strategy.make_movers(scheme)
 
@@ -551,7 +551,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             assert_equal(w, 1.0)
 
     def test_get_weights_scheme_all_unset(self):
-        strategy = DefaultStrategy()
+        strategy = OrganizeByMoveGroupStrategy()
 
         scheme = MoveScheme(self.network)
         scheme.movers = {} # handles LEGACY stuff
@@ -604,7 +604,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
             assert_equal(len(mover_sigs), len(scheme2.movers[group]))
 
     def test_get_weights_both_internal_weights_set(self):
-        strategy = DefaultStrategy()
+        strategy = OrganizeByMoveGroupStrategy()
         ensA = self.network.sampling_transitions[0].ensembles[0]
         ensA_sig = ((ensA,),(ensA,))
 
@@ -659,7 +659,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         assert_not_equal(new_choice_probability, old_choice_probability)
 
     def test_get_weights_group_weights_set(self):
-        strategy = DefaultStrategy()
+        strategy = OrganizeByMoveGroupStrategy()
         scheme = MoveScheme(self.network)
         scheme.movers = {} # handles LEGACY stuff
         scheme.append([NearestNeighborRepExStrategy(), 
@@ -703,7 +703,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         
 
     def test_get_weights_mover_weights_set(self):
-        strategy = DefaultStrategy()
+        strategy = OrganizeByMoveGroupStrategy()
         scheme = MoveScheme(self.network)
         scheme.movers = {} # handles LEGACY stuff
         scheme.append([NearestNeighborRepExStrategy(), 
@@ -741,7 +741,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         assert_almost_equal(group_weights['repex'], 3.0)
 
     def test_get_weights_internal_unset_choice_prob_set(self):
-        strategy = DefaultStrategy()
+        strategy = OrganizeByMoveGroupStrategy()
         scheme = MoveScheme(self.network)
         scheme.movers = {} # handles LEGACY stuff
         scheme.append([NearestNeighborRepExStrategy(), 
@@ -801,7 +801,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
     def test_get_weights_mover_weights_set_no_shooting(self):
         # follows test_get_weights_mover_weights_set, replacing shooting
         # with path reversal
-        strategy = DefaultStrategy()
+        strategy = OrganizeByMoveGroupStrategy()
         scheme = MoveScheme(self.network)
         scheme.movers = {} # handles LEGACY stuff
         scheme.append([NearestNeighborRepExStrategy(), 

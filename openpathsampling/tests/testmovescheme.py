@@ -12,7 +12,7 @@ from openpathsampling.analysis.move_scheme import *
 from openpathsampling.analysis.move_strategy import (
     levels,
     MoveStrategy, OneWayShootingStrategy, NearestNeighborRepExStrategy,
-    DefaultStrategy, AllSetRepExStrategy
+    OrganizeByMoveGroupStrategy, AllSetRepExStrategy
 )
 
 import logging
@@ -39,7 +39,7 @@ class testMoveScheme(object):
     def test_append_individuals_default_levels(self):
         shootstrat = OneWayShootingStrategy()
         repexstrat = NearestNeighborRepExStrategy()
-        defaultstrat = DefaultStrategy()
+        defaultstrat = OrganizeByMoveGroupStrategy()
         assert_equal(len(self.scheme.strategies.keys()), 0)
         self.scheme.append(shootstrat)
         self.scheme.append(repexstrat)
@@ -55,7 +55,7 @@ class testMoveScheme(object):
     def test_append_groups_default_levels(self):
         shootstrat = OneWayShootingStrategy()
         repexstrat = NearestNeighborRepExStrategy()
-        defaultstrat = DefaultStrategy()
+        defaultstrat = OrganizeByMoveGroupStrategy()
         assert_equal(len(self.scheme.strategies.keys()), 0)
         self.scheme.append([shootstrat, repexstrat, defaultstrat])
 
@@ -70,7 +70,7 @@ class testMoveScheme(object):
     def test_append_individuals_custom_levels(self):
         shootstrat = OneWayShootingStrategy()
         repexstrat = NearestNeighborRepExStrategy()
-        defaultstrat = DefaultStrategy()
+        defaultstrat = OrganizeByMoveGroupStrategy()
         assert_equal(len(self.scheme.strategies.keys()), 0)
         self.scheme.append(shootstrat, 60)
         self.scheme.append(repexstrat, 60)
@@ -83,7 +83,7 @@ class testMoveScheme(object):
     def test_append_groups_same_custom_level(self):
         shootstrat = OneWayShootingStrategy()
         repexstrat = NearestNeighborRepExStrategy()
-        defaultstrat = DefaultStrategy()
+        defaultstrat = OrganizeByMoveGroupStrategy()
         assert_equal(len(self.scheme.strategies.keys()), 0)
         self.scheme.append([shootstrat, repexstrat, defaultstrat], 60)
 
@@ -94,7 +94,7 @@ class testMoveScheme(object):
     def test_append_group_different_custom_levels(self):
         shootstrat = OneWayShootingStrategy()
         repexstrat = NearestNeighborRepExStrategy()
-        defaultstrat = DefaultStrategy()
+        defaultstrat = OrganizeByMoveGroupStrategy()
         assert_equal(len(self.scheme.strategies.keys()), 0)
         self.scheme.append([shootstrat, repexstrat, defaultstrat], 
                            [45, 55, 65])
@@ -161,7 +161,7 @@ class testMoveScheme(object):
         self.scheme.movers = {} # LEGACY
         shoot = OneWayShootingStrategy()
         repex = NearestNeighborRepExStrategy()
-        default = DefaultStrategy()
+        default = OrganizeByMoveGroupStrategy()
         self.scheme.append([default, shoot, repex])
     
         assert_equal(self.scheme.root_mover, None)
@@ -187,7 +187,7 @@ class testMoveScheme(object):
         self.scheme.movers = {} # LEGACY
         nn_repex = NearestNeighborRepExStrategy()
         all_repex = AllSetRepExStrategy()
-        default = DefaultStrategy()
+        default = OrganizeByMoveGroupStrategy()
         
         self.scheme.append([default, nn_repex])
         root = self.scheme.move_decision_tree(rebuild=True)
@@ -208,7 +208,7 @@ class testMoveScheme(object):
         hopAB = paths.EnsembleHopMover(ensembles=[ensA, ensB])
         hopBA = paths.EnsembleHopMover(ensembles=[ensB, ensA])
         self.scheme.movers['hop'] = [hopAB, hopBA]
-        self.scheme.append(strategies.DefaultStrategy())
+        self.scheme.append(strategies.OrganizeByMoveGroupStrategy())
         root = self.scheme.move_decision_tree()
         self.scheme.build_balance_partners()
         assert_equal(self.scheme.balance_partners[hopAB], [hopBA])
@@ -227,7 +227,7 @@ class testMoveScheme(object):
         hopAB = paths.EnsembleHopMover(ensembles=[ensA, ensB])
         hopBA = paths.EnsembleHopMover(ensembles=[ensB, ensA])
         self.scheme.movers['hop'] = [hopAB]
-        self.scheme.append(strategies.DefaultStrategy())
+        self.scheme.append(strategies.OrganizeByMoveGroupStrategy())
         root = self.scheme.move_decision_tree()
         self.scheme.build_balance_partners()
 
@@ -240,14 +240,15 @@ class testMoveScheme(object):
         hopAB2 = paths.EnsembleHopMover(ensembles=[ensA, ensB])
         hopBA = paths.EnsembleHopMover(ensembles=[ensB, ensA])
         self.scheme.movers['hop'] = [hopAB, hopBA, hopAB2]
-        self.scheme.append(strategies.DefaultStrategy())
+        self.scheme.append(strategies.OrganizeByMoveGroupStrategy())
         root = self.scheme.move_decision_tree()
         self.scheme.build_balance_partners()
 
     def test_sanity_check_sane(self):
         self.scheme.movers = {} #LEGACY
         self.scheme.append([NearestNeighborRepExStrategy(),
-                            OneWayShootingStrategy(), DefaultStrategy()])
+                            OneWayShootingStrategy(),
+                            OrganizeByMoveGroupStrategy()])
         root = self.scheme.move_decision_tree()
         self.scheme.sanity_check()
 
@@ -257,7 +258,7 @@ class testMoveScheme(object):
         ensemble_subset = self.scheme.network.sampling_transitions[0].ensembles
         self.scheme.append([
             OneWayShootingStrategy(ensembles=ensemble_subset),
-            DefaultStrategy()
+            OrganizeByMoveGroupStrategy()
         ])
         root = self.scheme.move_decision_tree()
         self.scheme.sanity_check()
@@ -266,7 +267,8 @@ class testMoveScheme(object):
     def test_sanity_check_choice_prob_fails(self):
         self.scheme.movers = {} #LEGACY
         self.scheme.append([NearestNeighborRepExStrategy(),
-                            OneWayShootingStrategy(), DefaultStrategy()])
+                            OneWayShootingStrategy(),
+                            OrganizeByMoveGroupStrategy()])
         root = self.scheme.move_decision_tree()
         key0 = self.scheme.choice_probability.keys()[0]
         self.scheme.choice_probability[key0] = 0.0
@@ -278,7 +280,7 @@ class testMoveScheme(object):
         ensemble_subset = self.scheme.network.sampling_transitions[0].ensembles
         self.scheme.append([
             OneWayShootingStrategy(),
-            DefaultStrategy()
+            OrganizeByMoveGroupStrategy()
         ])
         root = self.scheme.move_decision_tree()
         self.scheme.movers['foo'] = [self.scheme.movers['shooting'][0]]
@@ -287,7 +289,8 @@ class testMoveScheme(object):
     @raises(TypeError)
     def test_select_movers_no_choice_probability(self):
         self.scheme.movers = {} # LEGACY
-        self.scheme.append([OneWayShootingStrategy(), DefaultStrategy()])
+        self.scheme.append([OneWayShootingStrategy(),
+                            OrganizeByMoveGroupStrategy()])
         movers = self.scheme._select_movers('shooting')
 
     def test_select_movers(self):
@@ -295,7 +298,7 @@ class testMoveScheme(object):
         self.scheme.append([
             OneWayShootingStrategy(), 
             NearestNeighborRepExStrategy(),
-            DefaultStrategy()
+            OrganizeByMoveGroupStrategy()
         ])
         root = self.scheme.move_decision_tree()
         some_shooters = self.scheme.movers['shooting'][0:2]
@@ -314,7 +317,7 @@ class testMoveScheme(object):
         self.scheme.append([
             OneWayShootingStrategy(), 
             NearestNeighborRepExStrategy(),
-            DefaultStrategy()
+            OrganizeByMoveGroupStrategy()
         ])
         # we should have 6 shooters and 4 repex movers, but default strategy
         # means that have the probability of selecting repex; so we get
@@ -341,7 +344,7 @@ class testMoveScheme(object):
         self.scheme.append([
             OneWayShootingStrategy(), 
             NearestNeighborRepExStrategy(),
-            DefaultStrategy()
+            OrganizeByMoveGroupStrategy()
         ])
         # we should have 6 shooters and 4 repex movers, but default strategy
         # means that have the probability of selecting repex; so we get
