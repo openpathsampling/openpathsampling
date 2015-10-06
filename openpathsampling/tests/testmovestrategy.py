@@ -769,8 +769,6 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         )
 
         for group in group_weights:
-            print group, old_group_weights[group], group_weights[group]
-        for group in group_weights:
             assert_almost_equal(group_weights[group],
                                 old_group_weights[group])
 
@@ -785,7 +783,6 @@ class testDefaultStrategy(MoveStrategyTestSetup):
 
         #print new_choice_prob
         for (old, new) in zip(old_mover_weights.keys(), mover_weights.keys()):
-            print old, new
             try:
                 assert_equal(old_mover_weights[old], mover_weights[new])
             except AssertionError:

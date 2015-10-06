@@ -11,7 +11,19 @@ LevelLabels = collections.namedtuple(
 )
 
 def most_common_value(ll):
-    pass
+    counts = {}
+    for v in ll:
+        try:
+            counts[v] += 1
+        except KeyError:
+            counts[v] = 1
+    most_common = None
+    most_common_count = 0
+    for v in counts:
+        if counts[v] > most_common_count:
+            most_common = v
+            most_common_count = counts[v]
+    return (most_common, most_common_count)
 
 class StrategyLevels(LevelLabels):
     """
@@ -538,32 +550,18 @@ class DefaultStrategy(MoveStrategy):
         most_common = {}
         # most_most_common tracks which group has the largest count of
         # common values (used as backup if there is no shooting group)
-        most_most_common = None
-        most_most_common_count = None
         for group in scheme.movers:
             group_probs = {m : choice_probability[m] 
                            for m in choice_probability 
                            if m in scheme.movers[group]}
+
             # normalize here based on making the most common within the
             # group the baseline (1)
-            counts = {}
-            for v in group_probs.values():
-                try:
-                    counts[v] += 1
-                except:
-                    counts[v] = 1
-            most_common[group] = None
-            most_common_count = 0
-            for v in counts:
-                if counts[v] > most_common_count:
-                    most_common[group] = v
-                    most_common_count = counts[v]
-                    if counts[v] > most_most_common_count:
-                        most_most_common = group
-                        most_most_common_count = counts[v]
+            most_common[group] = most_common_value(group_probs.values())
+
 
             for m in group_probs:
-                val = group_probs[m] / most_common[group]
+                val = group_probs[m] / most_common[group][0]
                 mover_weights[(group, m.ensemble_signature)] = val
 
         for group in scheme.movers:
@@ -572,9 +570,15 @@ class DefaultStrategy(MoveStrategy):
             group_unscaled[group] = choice_probability[m0] / mover_w0 
 
         try:
-            scaling = most_common['shooting']
+            scaling = most_common['shooting'][0]
         except KeyError:
-            scaling = most_common[most_most_common]
+            most_most_common = None
+            most_most_common_count = 0
+            for g in most_common:
+                if most_common[g][1] > most_most_common_count:
+                    most_most_common_count = most_common[g][1]
+                    most_most_common = g
+            scaling = most_common[most_most_common][0]
 
         group_weights = {g : group_unscaled[g] / scaling 
                          for g in group_unscaled}
@@ -697,11 +701,12 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
             if len(shooters) > 0:
                 renorm = local_movers[shooters[0]]
             else:
-                # TODO: I don't know. I don't feel like renormalizing this
-                # yet
-                pass
+                renorm = most_common_value(local_movers.values())[0]
             for s in local_movers:
                 mover_weights[s] = local_movers[s] / renorm
+        ensemble_norm = most_common_value(ensemble_weights.values())
+        ensemble_weights = {e : ensemble_weights[e] / ensemble_norm
+                            for e in ensemble_weights}
         return (ensemble_weights, mover_weights)
 
     def default_weights(self, scheme):
