@@ -623,7 +623,8 @@ class DefaultStrategy(MoveStrategy):
         (group_weights, mover_weights) = self.get_weights(
             scheme=scheme, 
             sorted_movers=scheme.movers, 
-            sort_weights_override=self.group_weights
+            sort_weights_override=self.group_weights,
+            mover_weights_override=self.mover_weights
         )
         scheme.choice_probability = self.choice_probability(
             scheme, group_weights, mover_weights
@@ -762,54 +763,35 @@ class OrganizeByEnsembleStrategy(DefaultStrategy):
         return weights
 
     def make_movers(self, scheme):
-        all_movers = []
-        for g in scheme.movers:
-            all_movers.extend(scheme.movers[g])
-
-        # ensemble_movers is used in the same way as scheme.movers in the
-        # standard organization strategy
-        ensemble_movers = {}
-        for mover in all_movers:
-            for inp_ens in mover.input_ensembles:
-                try:
-                    ensemble_movers[inp_ens].append(mover)
-                except KeyError:
-                    ensemble_movers[inp_ens] = [mover]
-
         (ensemble_weights, mover_weights) = self.get_weights(
-            scheme=scheme,
-            sorted_movers=ensemble_movers, 
-            sort_weights_override=self.ensemble_weights
+            scheme=scheme, 
+            sorted_movers=scheme.movers, 
+            sort_weights_override=self.ensemble_weights,
+            mover_weights_override=self.mover_weights
         )
-        ens_list = mover_weights.keys() # used for canonical ordering
-        # (otherwise the weight list isn't in the same order as choosers!)
-        for ens in ens_list:
-            for mover_key in mover_weights[ens]:
-                n_inp = len(mover_key[1][0])
-                mover_weights[ens][mover_key] /= n_inp
+        scheme.choice_probability = self.choice_probability(
+            scheme, ensemble_weights, mover_weights
+        )
+        self.ensemble_weights = ensemble_weights
+        self.mover_weights = mover_weights
+        root_info = self.chooser_root_weights(scheme, ensemble_weights,
+                                              mover_weights)
 
-        choosers = []
-        for ens in ens_list:
-            weight_dict = {m : mover_weights[ens][self._mover_key(m, scheme)]
-                           for m in ensemble_movers[ens]}
-            choosername = ens.name.capitalize() + " Chooser"
-            choosers.append(
-                self.make_chooser(scheme, weight_dict, choosername)
-            )
-        
-        # this sum, among other things, ensure that the prob of selecting an
-        # ensemble hop stays the same
-        corrected_ensemble_weights = {
-            e : ensemble_weights[e] * sum(mover_weights[e].values())
-            for e in ens_list
-        }
-        root_weights = [corrected_ensemble_weights[e] for e in ens_list]
+        chooser_dict = {}
+        for ens in root_info.keys():
+            weight_dict = self.chooser_mover_weights(scheme, ens,
+                                                     mover_weights)
+            choosername = ens.name+"Chooser"
+            chooser_dict[ens] = self.make_chooser(scheme, weight_dict,
+                                                  choosername)
+
+
+        root_couples = [(root_info[g], chooser_dict[g]) 
+                        for g in root_info.keys()]
+        (root_weights, choosers) = zip(*root_couples)
         root_chooser = paths.RandomChoiceMover(movers=choosers,
                                                weights=root_weights)
         root_chooser.name = "RootMover"
         scheme.root_mover = root_chooser
-        scheme.choice_probability = self.choice_probability(
-            scheme, ensemble_movers, corrected_ensemble_weights, mover_weights
-        )
         return root_chooser
 

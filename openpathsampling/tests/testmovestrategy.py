@@ -654,7 +654,7 @@ class testDefaultStrategy(MoveStrategyTestSetup):
         new_shooter_ensA = [m for m in scheme.movers['shooting'] 
                             if m.ensemble_signature == ensA_sig][0]
         shooter_ensA_idx = new_shoot_chooser.movers.index(new_shooter_ensA)
-        assert_equal(new_shoot_chooser.weights[shooter_ensA_idx], 1.0)
+        assert_equal(new_shoot_chooser.weights[shooter_ensA_idx], 2.0)
 
         assert_not_equal(new_choice_probability, old_choice_probability)
 
@@ -1060,102 +1060,11 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
 
         choosers = root.movers
         chooser_weights = root.weights
-        assert_equal(collections.Counter(chooser_weights), 
-                     collections.Counter([0.5, 2.5, 3.0, 3.0]))
+        assert_equal(list(chooser_weights), [1.0]*4)
         for (mover, w) in zip(choosers, chooser_weights):
-            weights_count = collections.Counter(mover.weights)
+            n_moves = len(mover.movers)
+            assert_equal(mover.weights, [1.0]*n_moves)
 
-            if len(mover.weights) == 1: # minus
-                assert_equal(weights_count, collections.Counter({ 0.5 : 1}))
-                assert_equal(w, 0.5)
-            elif len(mover.weights) == 3: # outermost
-                assert_equal(weights_count, 
-                             collections.Counter({ 0.5 : 1, 1.0 : 2}))
-                assert_equal(w, 2.5)
-            elif len(mover.weights) == 4:
-                assert_equal(weights_count, 
-                             collections.Counter({ 0.5 : 2, 1.0 : 2}))
-                assert_equal(w, 3.0)
-
-        for mover in scheme.choice_probability:
-            assert_almost_equal(scheme.choice_probability[mover], 1.0/9.0)
-
-    def test_make_movers_light_minus_ensemble(self):
-        scheme = self.scheme
-        strategy = OrganizeByEnsembleStrategy()
-        minus =  scheme.network.special_ensembles['minus'].keys()[0]
-        strategy.ensemble_weights[minus] = 0.5
-        root = strategy.make_movers(scheme)
-
-        choosers = root.movers
-        chooser_weights = root.weights
-        assert_equal(collections.Counter(chooser_weights),
-                     collections.Counter([0.25, 2.5, 3.0, 3.0]))
-        for mover in scheme.choice_probability:
-            if minus in mover.input_ensembles:
-                assert_equal(scheme.choice_probability[mover], 0.75/8.75)
-            else:
-                assert_equal(scheme.choice_probability[mover], 1.0/8.75)
-
-
-    def test_make_mover_light_minus_and_minus_partner(self):
-        scheme = self.scheme
-        strategy = OrganizeByEnsembleStrategy()
-        minus_mover = scheme.movers['minus'][0]
-        minus_ensemble = minus_mover.minus_ensemble
-        innermost_ensemble = minus_mover.innermost_ensemble
-        minus_key = strategy._mover_key(scheme.movers['minus'][0], scheme)
-        # this has no effect: minus mover is only move in minus ens
-        strategy.mover_weights[minus_ensemble] = { minus_key : 0.5 }
-        strategy.mover_weights[innermost_ensemble] = { minus_key : 0.5 }
-        # note that if you really want to reduce the probability of the
-        # specific move, it might be best to do that within
-        # scheme.choice_probability
-
-        root = strategy.make_movers(scheme)
-
-        choosers = root.movers
-        chooser_weights = root.weights
-        for (chooser, w) in zip(choosers, chooser_weights):
-            assert_almost_equal(sum(chooser.weights), w)
-
-        assert_equal(collections.Counter(chooser_weights),
-                     collections.Counter([0.5, 2.5, 2.75, 3.0]))
-
-        for mover in scheme.choice_probability:
-            if strategy._mover_key(mover, scheme) == minus_key:
-                assert_almost_equal(scheme.choice_probability[mover], 0.75/8.75)
-            else:
-                assert_almost_equal(scheme.choice_probability[mover], 1.0/8.75)
 
     def test_make_mover_rebuild_choice_probability(self):
-        raise SkipTest
-
-    def test_make_movers_preserves_default_choice_prob(self):
-        strategy = OrganizeByEnsembleStrategy()
-        scheme1 = DefaultScheme(self.network)
-        scheme1.movers = {} # handles LEGACY stuff
-        #scheme1.append(strategy)
-        root1 = scheme1.move_decision_tree()
-
-        #scheme2 = DefaultScheme(self.network)
-        #scheme2.movers = {} # handles LEGACY stuff
-        #root2 = scheme2.move_decision_tree()
-
-        sigprobs1 = {
-            strategy._mover_key(m, scheme1) : scheme1.choice_probability[m]
-            for m in scheme1.choice_probability
-        }
-        #sigprobs2 = {
-            #strategy._mover_key(m, scheme2) : scheme2.choice_probability[m]
-            #for m in scheme2.choice_probability
-        #}
-        #for k in sigprobs1.keys():
-            #print k[0], sigprobs1[k], sigprobs2[k]
-
-
-        print len(scheme1.choice_probability)
-        #assert_equal(sigprobs1, sigprobs2)
-
-
         raise SkipTest
