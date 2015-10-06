@@ -464,7 +464,7 @@ class testEnsembleDictionaryMover(object):
         weighted_mover = EnsembleDictionaryMover(ens_dict, [1.0, 2.0])
         count = {}
         for i in range(100):
-            change = self.mover.move(sampleset)
+            change = weighted_mover.move(sampleset)
             subchange = change.subchange
             assert_equal(change.accepted, True)
             assert_equal(subchange.accepted, True)
@@ -481,7 +481,11 @@ class testEnsembleDictionaryMover(object):
             else:
                 raise AssertionError("Resulting mover unknown!")
         assert_equal(set(count.keys()), set([self.ens1, self.ens2]))
-        assert(count[self.ens1] < count[self.ens2])
+        try:
+            assert(count[self.ens1] < count[self.ens2])
+        except AssertionError:
+            raise AssertionError("Not true: "+str(count[self.ens1]) + " < "
+                                 + str(count[self.ens2]))
 
 
 class testSequentialMover(object):
