@@ -46,6 +46,8 @@ from dynamics_engine import DynamicsEngine
 
 from openmm_engine import OpenMMEngine, OpenMMToolsEngine, SimpleOpenMMEngine
 
+from lammps_engine import LammpsEngine
+
 from volume import (Volume, VolumeCombination, VolumeFactory, VoronoiVolume, 
     EmptyVolume, FullVolume, CVRangeVolume, CVRangeVolumePeriodic,
     IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
