@@ -1371,7 +1371,7 @@ class RandomAllowedChoiceMover(RandomChoiceMover):
         if self.weights is None:
             weights = [1.0] * len(self.movers)
         else:
-            weights = self.weights
+            weights = list(self.weights) # make a copy
 
         # this is implemented by setting all weights locally to zero that
         # correspond to movers that will potentially fail since the required

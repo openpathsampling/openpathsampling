@@ -262,7 +262,7 @@ class testPathReversalMover(object):
                          replica=0)
         gs_BXA = SampleSet([sampBXA])
         change = self.move.move(gs_BXA)
-        print [[v.coordinates[0] for v in t.trajectory] for t in change.trials]
+        # print [[v.coordinates[0] for v in t.trajectory] for t in change.trials]
         assert_equal(change.accepted, True)
 
 
@@ -449,7 +449,8 @@ class testEnsembleDictionaryMover(object):
         self.pathrev = PathReversalMover(ensemble=self.ens1)
 
         ens_dict = {self.ens1 : self.pathrev, self.ens2 : self.shooter}
-        self.mover = EnsembleDictionaryMover(ens_dict)
+        # self.mover = EnsembleDictionaryMover(ens_dict)
+        self.mover = RandomAllowedChoiceMover([self.shooter, self.pathrev])
 
     def test_move_single_replica(self):
         sampleset = SampleSet([self.samp1])
@@ -494,7 +495,9 @@ class testEnsembleDictionaryMover(object):
     def test_move_multiple_replicas_weighted_ensembles(self):
         sampleset = SampleSet([self.samp1, self.samp2])
         ens_dict = {self.ens1 : self.pathrev, self.ens2 : self.shooter}
-        weighted_mover = EnsembleDictionaryMover(ens_dict, [1.0, 2.0])
+        # weighted_mover = EnsembleDictionaryMover(ens_dict, [1.0, 2.0])
+        weighted_mover = RandomAllowedChoiceMover([self.pathrev,
+                                                   self.shooter], [1.0, 2.0])
         count = {}
         for i in range(100):
             change = weighted_mover.move(sampleset)
@@ -808,7 +811,7 @@ class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
         change = mover.move(self.gs)
         samples = change.results
         assert_equal(len(samples), 0)
-        print change.samples
+        # print change.samples
         assert_equal(len(change.samples), 0)
 
 class testFirstSubtrajectorySelectMover(SubtrajectorySelectTester):
