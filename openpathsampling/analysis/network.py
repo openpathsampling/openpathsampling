@@ -1,8 +1,9 @@
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
 import pandas as pd
+import openpathsampling.volume
+import openpathsampling.ensemble
 
-from tis_analysis import Histogrammer, max_lambdas
 
 import logging
 logger = logging.getLogger(__name__)
@@ -104,7 +105,9 @@ class MSTISNetwork(TISNetwork):
 
     @classmethod
     def from_dict(cls, dct):
-        network = MSTISNetwork.__new__(MSTISNetwork)
+        network = cls.__new__(cls)
+
+        # replace automatically created attributes with stored ones
         network.from_state = dct['from_state']
         network.movers = dct['movers']
         network.special_ensembles = dct['special_ensembles']
@@ -244,19 +247,20 @@ class MSTISNetwork(TISNetwork):
         # multiple distinct MS outer interfaces
         self.movers['msouter_repex'] = [
             paths.ReplicaExchangeMover(
-                ensembles=[trans.ensembles[-1], self.ms_outers[0]]
+                ensemble1=trans.ensembles[-1],
+                ensemble2=self.ms_outers[0]
             )
             for trans in self.from_state.values()
         ]
         self.movers['msouter_pathreversal'] = [
             paths.PathReversalMover(
-                ensembles=[self.ms_outers[0]]
+                ensemble=self.ms_outers[0]
             )
         ]
         self.movers['msouter_shooting'] = [
             paths.OneWayShootingMover(
                 selector=paths.UniformSelector(),
-                ensembles=[self.ms_outers[0]]
+                ensemble=self.ms_outers[0]
             )
         ]
 
@@ -550,10 +554,8 @@ class MISTISNetwork(TISNetwork):
         for (pair, outer) in zip(self.transition_pairs, self.ms_outers):
             msouter_repex = [
                 paths.ReplicaExchangeMover(
-                    ensembles=[
-                        self.transition_to_sampling[pair_i].ensembles[-1], 
-                        outer
-                    ]
+                    ensemble1=self.transition_to_sampling[pair_i].ensembles[-1],
+                    ensemble2=outer
                 )
                 for pair_i in pair
             ]
@@ -562,13 +564,13 @@ class MISTISNetwork(TISNetwork):
         self.movers['msouter_shooting'] = [
             paths.OneWayShootingMover(
                 selector=paths.UniformSelector(),
-                ensembles=outer_ens
+                ensemble=outer_ens
             )
             for outer_ens in self.ms_outers
         ]
         self.movers['msouter_pathreversal'] = [
             paths.PathReversalMover(
-                ensembles=outer_ens
+                ensemble=outer_ens
             )
             for outer_ens in self.ms_outers
         ]
