@@ -200,7 +200,17 @@ class SampleSet(StorableNamedObject):
             #assert(sample.valid)
             logger.info("Checking sanity of "+repr(sample.ensemble)+
                         " with "+str(sample.trajectory))
-            assert(sample.ensemble(sample.trajectory))
+            try:
+                assert(sample.ensemble(sample.trajectory))
+            except AssertionError as e:
+                failmsg = ("Trajectory does not match ensemble for replica "
+                           + str(sample.replica))
+                if not e.args:
+                    e.args = [failmsg]
+                else:
+                    arg0 = failmsg + e.args[0]
+                    e.args = tuple([arg0] + list(e.args[1:]))
+                raise # reraises last exception
 
     def consistency_check(self):
         '''This is mainly a sanity check for use in testing, but might be
