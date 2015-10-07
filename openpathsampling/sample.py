@@ -2,6 +2,7 @@ import random
 
 import openpathsampling as paths
 from openpathsampling.todict import OPSNamed
+from openpathsampling.ensemble import Ensemble
 
 import logging
 logger = logging.getLogger(__name__)
@@ -56,14 +57,14 @@ class SampleSet(OPSNamed):
             self.movepath = movepath
 
     def __getitem__(self, key):
-        if isinstance(key, paths.Ensemble):
+        if isinstance(key, Ensemble):
             return random.choice(self.ensemble_dict[key])
         else:
             return random.choice(self.replica_dict[key])
 
     def __setitem__(self, key, value):
         # first, we check whether the key matches the sample: if no, KeyError
-        if isinstance(key, paths.Ensemble):
+        if isinstance(key, Ensemble):
             if key != value.ensemble:
                 raise SampleKeyError(key, value, value.ensemble)
         else:

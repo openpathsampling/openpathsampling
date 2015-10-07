@@ -333,8 +333,7 @@ class PathMover(TreeMixin, OPSNamed):
             the new SampleSet
 
         """
-
-        return paths.EmptyPathMoveChange()  # pragma: no cover
+        raise self.AbstractBaseClassError()
 
     def __str__(self):
         if self.name == self.__class__.__name__:
@@ -475,8 +474,7 @@ class SampleGeneratingMover(PathMover):
         this function
         """
 
-        # Default is that the original samples are returned
-        return args
+        raise self.AbstractBaseClassError()
 
     def _accept(self, trials):
         """Function to determine the acceptance of a trial

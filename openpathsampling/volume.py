@@ -43,8 +43,8 @@ class Volume(OPSNamed):
         Returns `True` if the given snapshot is part of the defined Region
         '''
         
-        return False # pragma: no cover
-                
+        raise self.AbstractBaseClassError()
+
     def __str__(self):
         '''
         Returns a string representation of the volume

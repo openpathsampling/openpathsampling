@@ -164,7 +164,7 @@ class Ensemble(OPSNamed):
         trusted : boolean
             If trusted is not None it overrides the default setting in the ensemble
         '''
-        return False
+        raise self.AbstractBaseClassError()
 
     def check_reverse(self, trajectory, trusted=False):
         return self(trajectory, trusted=False)
@@ -187,17 +187,6 @@ class Ensemble(OPSNamed):
             return "No summary available"
         else:
             return str(summ)
-
-
-    def oom_matrix(self, oom):
-        """
-        Return the oom representation where the OOM is based on a set of volumes
-
-        """
-
-        # Needs to be implemented by the actual class
-
-        return None
     
     def can_append(self, trajectory, trusted=False):
         '''
@@ -227,7 +216,7 @@ class Ensemble(OPSNamed):
         be triggered, when the last frame is reached.  This is even more
         difficult if this depends on the length.
         '''
-        return True        
+        raise self.AbstractBaseClassError()
 
     def can_prepend(self, trajectory, trusted=False):
         '''
@@ -257,7 +246,7 @@ class Ensemble(OPSNamed):
         triggered, when the last frame is reached.  This is even more
         difficult if this depends on the length.
         '''
-        return True        
+        raise self.AbstractBaseClassError()
 
 
 
@@ -1279,6 +1268,11 @@ class LengthEnsemble(Ensemble):
 class VolumeEnsemble(Ensemble):
     '''
     Path ensembles based on the Volume object
+
+    Notes
+    -----
+    This is an abstract base class for all VolumeEnsemble type classes and
+    cannot be called directly.
     '''    
     def __init__(self, volume, trusted = True):
         super(VolumeEnsemble, self).__init__()
@@ -1385,6 +1379,12 @@ class PartInXEnsemble(VolumeEnsemble):
                 return True
         return False
 
+    def can_append(self, trajectory, trusted=False):
+        return True
+
+    def can_prepend(self, trajectory, trusted=False):
+        return True
+
     def __invert__(self):
         return AllOutXEnsemble(self.volume, self.frames, self.trusted)
 
@@ -1434,6 +1434,13 @@ class ExitsXEnsemble(VolumeEnsemble):
             if self._volume(frame_i) and not self._volume(frame_iplus):
                 return True
         return False
+
+    def can_append(self, trajectory, trusted=False):
+        return True
+
+    def can_prepend(self, trajectory, trusted=False):
+        return True
+
 
 
 class EntersXEnsemble(ExitsXEnsemble):

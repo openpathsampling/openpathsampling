@@ -1,12 +1,12 @@
-from pathsimulator import PathSimulator, Bootstrapping, PathSampling, MCStep
+from pathsimulator import Bootstrapping, PathSampling, MCStep
 
 from ensemble import (
-    Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
+    EnsembleCombination, EnsembleFactory, EntersXEnsemble,
     EmptyEnsemble, ExitsXEnsemble, FullEnsemble, PartInXEnsemble,
     AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble,
     SuffixTrajectoryEnsemble, PrefixTrajectoryEnsemble,
     PartOutXEnsemble, LengthEnsemble, NegatedEnsemble,
-    ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble,
+    ReversedTrajectoryEnsemble, SequentialEnsemble,
     SequentialEnsemble, IntersectionEnsemble, UnionEnsemble,
     SymmetricDifferenceEnsemble, RelativeComplementEnsemble,
     SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble,
@@ -27,16 +27,13 @@ from pathmover import (
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
     ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
-    PathSimulatorMover, PathReversalSet, StateSwapGeneratingMover,
-    NeighborEnsembleReplicaExchange, SampleGeneratingMover, StateSwapMover,
-    FinalSubtrajectorySelectMover, BackwardExtendGeneratingMover,
-    BackwardShootGeneratingMover, EngineGeneratingMover, SwappingMover,
-    ExtendingGeneratingMover, FilterBySample, FirstSubtrajectorySelectMover,
-    ForwardExtendGeneratingMover, ForwardShootGeneratingMover,
-    MultipleSetMinusMover, OneWayShootingMover, PathReversalGeneratingMover,
-    RandomSubtrajectorySelectGeneratingMover, RandomSubtrajectorySelectMover,
-    ReplicaExchangeGeneratingMover, ShootGeneratingMover, ShootMover,
-    WrappedMover, BackwardExtendMover, EnsembleFilterMover, ForwardExtendMover
+    PathSimulatorMover, PathReversalSet,
+    NeighborEnsembleReplicaExchange, StateSwapMover,
+    FinalSubtrajectorySelectMover, SwappingMover,
+    FilterBySample, FirstSubtrajectorySelectMover,
+    MultipleSetMinusMover, OneWayShootingMover, RandomSubtrajectorySelectMover,
+    ShootMover, WrappedMover, BackwardExtendMover, EnsembleFilterMover,
+    ForwardExtendMover, EngineGeneratingMover
 )
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
@@ -46,7 +43,8 @@ from dynamics_engine import DynamicsEngine
 
 from openmm_engine import OpenMMEngine
 
-from volume import (Volume, VolumeCombination, VolumeFactory, VoronoiVolume, 
+from volume import (
+    VolumeCombination, VolumeFactory, VoronoiVolume,
     EmptyVolume, FullVolume, CVRangeVolume, CVRangeVolumePeriodic,
     IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
     RelativeComplementVolume, join_volumes

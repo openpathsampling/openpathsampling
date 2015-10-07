@@ -17,6 +17,12 @@ class OPSObject(object):
     before. This means that you cannot name an object, after is has been saved.
     """
 
+    def AbstractBaseClassError(self):
+        return NotImplementedError(
+            'Baseclass %s cannot be called, please use derived class like %s' %
+            (self.__class__.__name__, self._subclasses(self.__class__))
+        )
+
     @staticmethod
     def _subclasses(cls):
         return cls.__subclasses__() + [g for s in cls.__subclasses__()
