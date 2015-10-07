@@ -282,13 +282,13 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         scheme.movers['shooting'] = [
             paths.OneWayShootingMover(
                 selector=paths.UniformSelector(),
-                ensembles=[ens]
+                ensemble=ens
             )
             for ens in [ens0, ens1, ens2]
         ]
         scheme.movers['repex'] = [
-            paths.ReplicaExchangeMover(ensembles=[ens0, ens1]),
-            paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
+            paths.ReplicaExchangeMover(ens0, ens1),
+            paths.ReplicaExchangeMover(ens1, ens2)
         ]
         return scheme
 
@@ -349,13 +349,13 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         scheme.movers['shooting'] = [
             paths.OneWayShootingMover(
                 selector=paths.UniformSelector(),
-                ensembles=[ens]
+                ensemble=ens
             )
             for ens in [ens0, ens1, ens2]
         ]
         scheme.movers['repex'] = [
-            paths.ReplicaExchangeMover(ensembles=[ens0, ens1]),
-            paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
+            paths.ReplicaExchangeMover(ens0, ens1),
+            paths.ReplicaExchangeMover(ens1, ens2)
         ]
         strategy = OrganizeByMoveGroupStrategy()
         group_weights = {'shooting' : 1.0}
@@ -399,13 +399,13 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         scheme.movers['shooting'] = [
             paths.OneWayShootingMover(
                 selector=paths.UniformSelector(),
-                ensembles=[ens]
+                ensemble=ens
             )
             for ens in [ens0, ens1, ens2]
         ]
         scheme.movers['repex'] = [
-            paths.ReplicaExchangeMover(ensembles=[ens0, ens1]),
-            paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
+            paths.ReplicaExchangeMover(ens0, ens1),
+            paths.ReplicaExchangeMover(ens1, ens2)
         ]
         strategy = OrganizeByMoveGroupStrategy()
         group_weights = {'shooting' : 1.0, 'repex' : 0.5}
@@ -851,16 +851,16 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         scheme.movers['shooting'] = [
             paths.OneWayShootingMover(
                 selector=paths.UniformSelector(),
-                ensembles=[ens]
+                ensemble=ens
             )
             for ens in [ens0, ens1, ens2]
         ]
         scheme.movers['repex'] = [
-            paths.ReplicaExchangeMover(ensembles=[ens0, ens1]),
-            paths.ReplicaExchangeMover(ensembles=[ens1, ens2])
+            paths.ReplicaExchangeMover(ens0, ens1),
+            paths.ReplicaExchangeMover(ens1, ens2)
         ]
         scheme.movers['pathreversal'] = [
-            paths.PathReversalMover(ensembles=ens) 
+            paths.PathReversalMover(ensemble=ens) 
             for ens in [ens0, ens1, ens2]
         ]
         scheme.movers['minus'] = [paths.MinusMover(

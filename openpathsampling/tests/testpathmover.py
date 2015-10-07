@@ -444,9 +444,9 @@ class testEnsembleDictionaryMover(object):
         self.samp2 = Sample(trajectory=init_traj2, replica=1,
                             ensemble=self.ens2)
 
-        self.shooter = ForwardShootMover(UniformSelector(),
-                                         ensembles=self.ens2)
-        self.pathrev = PathReversalMover(ensembles=self.ens1)
+        self.shooter = ForwardShootMover(selector=UniformSelector(),
+                                         ensemble=self.ens2)
+        self.pathrev = PathReversalMover(ensemble=self.ens1)
 
         ens_dict = {self.ens1 : self.pathrev, self.ens2 : self.shooter}
         self.mover = EnsembleDictionaryMover(ens_dict)
