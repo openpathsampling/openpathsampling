@@ -55,11 +55,11 @@ class ToyEngine(DynamicsEngine):
 
     @property
     def nsteps_per_frame(self):
-        return self._nsteps_per_frame
+        return self.options['nsteps_per_frame']
 
     @nsteps_per_frame.setter
     def nsteps_per_frame(self, value):
-        self._nsteps_per_frame = value
+        self.options['nsteps_per_frame'] = value
 
     @property
     def mass(self):
