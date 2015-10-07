@@ -251,7 +251,15 @@ def histograms_to_pandas_dataframe(hists, fcn="histogram", fcn_args={}):
             "rebinned" : hist.rebinned
         }[fcn](**fcn_args)
 
-        frames.append(pd.DataFrame({hist.name : hist_data}, index=keys))
+        bin_edge = {
+            "histogram" : "m",
+            "normalized" : "m",
+            "reverse_cumulative" : "l",
+            "cumulative" : "r"
+        }[fcn]
+        xvals = hist.xvals(bin_edge)
+
+        frames.append(pd.DataFrame({hist.name : hist_data}, index=xvals))
     all_frames = pd.concat(frames, axis=1)
     return all_frames
 

@@ -26,17 +26,18 @@ from pathmover import (
     PathMover, PathMoverFactory, PathReversalMover,
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
-    ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
+    ConditionalMover, RestrictToLastSampleMover,
     PathSimulatorMover, PathReversalSet, StateSwapGeneratingMover,
     NeighborEnsembleReplicaExchange, SampleGeneratingMover, StateSwapMover,
     FinalSubtrajectorySelectMover, BackwardExtendGeneratingMover,
     BackwardShootGeneratingMover, EngineGeneratingMover, SwappingMover,
-    ExtendingGeneratingMover, FilterBySample, FirstSubtrajectorySelectMover,
+    ExtendingGeneratingMover, FirstSubtrajectorySelectMover,
     ForwardExtendGeneratingMover, ForwardShootGeneratingMover,
     MultipleSetMinusMover, OneWayShootingMover, PathReversalGeneratingMover,
     RandomSubtrajectorySelectGeneratingMover, RandomSubtrajectorySelectMover,
     ReplicaExchangeGeneratingMover, ShootGeneratingMover, ShootMover,
-    WrappedMover, BackwardExtendMover, EnsembleFilterMover, ForwardExtendMover
+    SubPathMover, BackwardExtendMover, EnsembleFilterMover, ForwardExtendMover,
+    SelectionMover, FirstAllowedMover, LastAllowedMover, OneWayExtendMover
 )
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
@@ -84,6 +85,8 @@ from analysis.replica_network import (
     trace_replicas_for_ensemble, condense_repeats,
     ReplicaNetworkGraph
 )
+
+from live_visualization import LiveVisualization
 
 from pathmover import Details, MoveDetails, SampleDetails
 
