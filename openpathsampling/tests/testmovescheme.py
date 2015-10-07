@@ -205,8 +205,8 @@ class testMoveScheme(object):
         self.scheme.movers = {} #LEGACY
         ensA = self.scheme.network.sampling_transitions[0].ensembles[0]
         ensB = self.scheme.network.sampling_transitions[0].ensembles[1]
-        hopAB = paths.EnsembleHopMover(ensembles=[ensA, ensB])
-        hopBA = paths.EnsembleHopMover(ensembles=[ensB, ensA])
+        hopAB = paths.EnsembleHopMover(ensemble=ensA, target_ensemble=ensB)
+        hopBA = paths.EnsembleHopMover(ensemble=ensB, target_ensemble=ensA)
         self.scheme.movers['hop'] = [hopAB, hopBA]
         self.scheme.append(strategies.OrganizeByMoveGroupStrategy())
         root = self.scheme.move_decision_tree()
@@ -224,8 +224,8 @@ class testMoveScheme(object):
         self.scheme.movers = {} #LEGACY
         ensA = self.scheme.network.sampling_transitions[0].ensembles[0]
         ensB = self.scheme.network.sampling_transitions[0].ensembles[1]
-        hopAB = paths.EnsembleHopMover(ensembles=[ensA, ensB])
-        hopBA = paths.EnsembleHopMover(ensembles=[ensB, ensA])
+        hopAB = paths.EnsembleHopMover(ensemble=ensA, target_ensemble=ensB)
+        hopBA = paths.EnsembleHopMover(ensemble=ensB, target_ensemble=ensA)
         self.scheme.movers['hop'] = [hopAB]
         self.scheme.append(strategies.OrganizeByMoveGroupStrategy())
         root = self.scheme.move_decision_tree()
@@ -236,9 +236,9 @@ class testMoveScheme(object):
         self.scheme.movers = {} #LEGACY
         ensA = self.scheme.network.sampling_transitions[0].ensembles[0]
         ensB = self.scheme.network.sampling_transitions[0].ensembles[1]
-        hopAB = paths.EnsembleHopMover(ensembles=[ensA, ensB])
-        hopAB2 = paths.EnsembleHopMover(ensembles=[ensA, ensB])
-        hopBA = paths.EnsembleHopMover(ensembles=[ensB, ensA])
+        hopAB = paths.EnsembleHopMover(ensemble=ensA, target_ensemble=ensB)
+        hopAB2 = paths.EnsembleHopMover(ensemble=ensA, target_ensemble=ensB)
+        hopBA = paths.EnsembleHopMover(ensemble=ensB, target_ensemble=ensA)
         self.scheme.movers['hop'] = [hopAB, hopBA, hopAB2]
         self.scheme.append(strategies.OrganizeByMoveGroupStrategy())
         root = self.scheme.move_decision_tree()
