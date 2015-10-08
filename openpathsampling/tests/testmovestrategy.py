@@ -1068,4 +1068,39 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
 
 
     def test_make_mover_rebuild_choice_probability(self):
+        scheme = self.scheme
+
+        # Organize by move group, switch to ensemble, switch back
+        scheme.append(OrganizeByMoveGroupStrategy())
+        root_1a = scheme.move_decision_tree()
+        choice_prob_1a = scheme.choice_probability
+        scheme.append(OrganizeByEnsembleStrategy())
+        root_1b = scheme.move_decision_tree(rebuild=True)
+        choice_prob_1b = scheme.choice_probability
+        assert(choice_prob_1a is not choice_prob_1b)
+        # Huh... for some reason we're ignoring the old
+        # scheme.choice_probability
+        # assert_equal(choice_prob_1a, choice_prob_1b)
+        scheme.append(OrganizeByMoveGroupStrategy())
+        root_1c = scheme.move_decision_tree(rebuild=True)
+        choice_prob_1c = scheme.choice_probability
+        assert(choice_prob_1a is not choice_prob_1c)
+        # assert_equal(choice_prob_1a, choice_prob_1c)
+
+        # Organize by ensemble, switch to move group, switch back
+        scheme.strategies = {}
+        scheme.append(OrganizeByEnsembleStrategy())
+        root_2a = scheme.move_decision_tree(rebuild=True)
+        choice_prob_2a = scheme.choice_probability
+        scheme.append(OrganizeByMoveGroupStrategy())
+        root_2b = scheme.move_decision_tree(rebuild=True)
+        choice_prob_2b = scheme.choice_probability
+        assert(choice_prob_2a is not choice_prob_2b)
+        # assert_equal(choice_prob_2a, choice_prob_2b)
+        scheme.append(OrganizeByEnsembleStrategy())
+        root_2c = scheme.move_decision_tree(rebuild=True)
+        choice_prob_2c = scheme.choice_probability
+        assert(choice_prob_1a is not choice_prob_1c)
+        # assert_equal(choice_prob_1a, choice_prob_1c)
+
         raise SkipTest
