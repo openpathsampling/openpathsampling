@@ -26,7 +26,11 @@ conda update --yes conda
 source activate $python
 
 # Useful for debugging any issues with conda
-# conda info -a
+conda info -a
+
+ls ${HOME}/miniconda/envs/
+ls ${HOME}/miniconda/envs/${python}
+ls ${HOME}/miniconda/envs/${python}/bin
 
 # install python pip packages
 PIP_ARGS="-U"
