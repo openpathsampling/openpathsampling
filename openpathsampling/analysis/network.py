@@ -195,7 +195,8 @@ class MSTISNetwork(TISNetwork):
         outer_ensembles = []
         for (state, ifaces, name, op) in trans_info:
             state_index = states.index(state)
-            state.name = name
+            if state.name != name:
+                state.name = name
             other_states = states[:state_index]+states[state_index+1:]
             union_others = paths.volume.join_volumes(other_states)
             union_others.name = "all states except " + str(name)
