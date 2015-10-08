@@ -1078,14 +1078,14 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         root_1b = scheme.move_decision_tree(rebuild=True)
         choice_prob_1b = scheme.choice_probability
         assert(choice_prob_1a is not choice_prob_1b)
-        # Huh... for some reason we're ignoring the old
-        # scheme.choice_probability
-        # assert_equal(choice_prob_1a, choice_prob_1b)
+        for m in choice_prob_1a:
+            assert_almost_equal(choice_prob_1a[m], choice_prob_1b[m])
         scheme.append(OrganizeByMoveGroupStrategy())
         root_1c = scheme.move_decision_tree(rebuild=True)
         choice_prob_1c = scheme.choice_probability
         assert(choice_prob_1a is not choice_prob_1c)
-        # assert_equal(choice_prob_1a, choice_prob_1c)
+        for m in choice_prob_1a:
+            assert_almost_equal(choice_prob_1a[m], choice_prob_1c[m])
 
         # Organize by ensemble, switch to move group, switch back
         scheme.strategies = {}
@@ -1096,11 +1096,15 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         root_2b = scheme.move_decision_tree(rebuild=True)
         choice_prob_2b = scheme.choice_probability
         assert(choice_prob_2a is not choice_prob_2b)
-        # assert_equal(choice_prob_2a, choice_prob_2b)
+        for m in choice_prob_2a:
+            assert_almost_equal(choice_prob_2a[m], choice_prob_2b[m])
         scheme.append(OrganizeByEnsembleStrategy())
         root_2c = scheme.move_decision_tree(rebuild=True)
         choice_prob_2c = scheme.choice_probability
         assert(choice_prob_1a is not choice_prob_1c)
-        # assert_equal(choice_prob_1a, choice_prob_1c)
+        for m in choice_prob_2a:
+            assert_almost_equal(choice_prob_2a[m], choice_prob_2c[m])
 
-        raise SkipTest
+        # Org strategy 1 and org strategy 2 are different
+        for m in choice_prob_1a:
+            assert(abs(choice_prob_1a[m] - choice_prob_2a[m]) > 0.001)

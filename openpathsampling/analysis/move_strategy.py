@@ -570,7 +570,7 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
             for m in ens_movers:
                 ens_sig = m.ensemble_signature
                 group = [g for g in scheme.movers if m in scheme.movers[g]][0]
-                weight = choice_probability[m] / len(ens_sig)
+                weight = choice_probability[m] / len(ens_sig[0])
                 mover_weights[(group, ens_sig, ens)] = weight
 
             local_movers = {s : mover_weights[s] for s in mover_weights
@@ -592,11 +592,17 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
     def default_weights(self, scheme):
         ensemble_weights = {}
         mover_weights = {}
-        for g in scheme.movers:
-            for m in scheme.movers[g]:
-                for e in m.ensemble_signature[0]:
-                    ensemble_weights[e] = 1.0
-                    mover_weights[(g, m.ensemble_signature, e)] = 1.0
+        if scheme.choice_probability != {}:
+            (ensemble_weights, mover_weights) = (
+                self.weights_from_choice_probability(scheme,
+                                                     scheme.choice_probability)
+            )
+        else:
+            for g in scheme.movers:
+                for m in scheme.movers[g]:
+                    for e in m.ensemble_signature[0]:
+                        ensemble_weights[e] = 1.0
+                        mover_weights[(g, m.ensemble_signature, e)] = 1.0
 
         return (ensemble_weights, mover_weights)
 
