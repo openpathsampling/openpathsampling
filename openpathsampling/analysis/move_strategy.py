@@ -687,6 +687,24 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
         return (ensemble_weights, mover_weights)
 
     def default_weights(self, scheme):
+        """
+        Set the default weights given the initial `scheme`.
+
+        Note that this includes preservation of scheme.choice_probability,
+        if it is set.
+
+        Parameters
+        ----------
+        scheme : paths.MoveScheme
+            the scheme to which this strategy is being applied
+
+        Returns
+        -------
+        tuple (sortkey_w, movers_w)
+            sortkey_w is a dictionary of sort keys to weights; movers_w is a
+            dictionary of mover keys to weights. See class definition for
+            the specific formats of the keys.
+        """
         ensemble_weights = {}
         mover_weights = {}
         if scheme.choice_probability != {}:
@@ -705,6 +723,26 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
 
 
     def choice_probability(self, scheme, ensemble_weights, mover_weights):
+        """Get the contributing weights from existing choice probability.
+
+        Parameters
+        ----------
+        scheme : paths.MoveScheme
+            The scheme to which this strategy is being applied
+        choice_probability : dict
+            Choice probability dictionary to be separated (typically
+            scheme.choice_probability). Format {mover:probability}, where
+            probability is normalized over all movers.
+
+        Returns
+        -------
+        tuple (sortkey_w, movers_w)
+            Sort key weights and mover weights consistent with this
+            scheme and choice_probability.  sortkey_w is a dictionary of
+            sort keys to weights; movers_w is a dictionary of mover keys to
+            weights. See class definition for the specific formats of the
+            keys.  
+        """
         choice_probability = {}
         ens_prob_norm = sum(ensemble_weights.values())
         ens_prob = {e : ensemble_weights[e] / ens_prob_norm 
@@ -730,9 +768,17 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
         return choice_probability
 
     def chooser_root_weights(self, scheme, ensemble_weights, mover_weights):
+        """
+        Determine the choice probabilities for the root chooser. The nature
+        of the root chooser depends on the class definition.
+        """
         return ensemble_weights
 
     def chooser_mover_weights(self, scheme, ensemble, mover_weights):
+        """
+        Set the weights within each "sorted"-level chooser. The nature of
+        the sorting depends on the class definition.
+        """
         weights = {}
         for sig in [s for s in mover_weights if s[2]==ensemble]:
             group = sig[0]
