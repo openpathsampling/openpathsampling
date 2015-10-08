@@ -10,6 +10,10 @@ LevelLabels = collections.namedtuple(
 )
 
 def most_common_value(ll):
+    """
+    Calculates the most common value and its count. Should probably be
+    replaced by collections.Counter at some point.
+    """
     counts = {}
     for v in ll:
         try:
@@ -163,6 +167,29 @@ class MoveStrategy(object):
                 res_ensembles.append(elem_group)
 
         return res_ensembles
+
+    def make_movers(self, scheme):
+        """
+        Makes the movers associated with this strategy.
+
+        The exact behavior of this function differs somewhat depending on
+        the `strategy.level`. In particular, this function can have
+        side-effects on the `scheme`.
+
+        For example, `GLOBAL`-level strategies must set
+        `scheme.choice_probability`.
+        
+        Parameters
+        ----------
+        scheme : paths.MoveScheme
+            the move scheme that this strategy will be used for
+        
+        Returns
+        -------
+        paths.PathMover or list of paths.PathMover
+            the movers created by this part of the strategy
+        """
+        raise NotImplementedError #TODO: use JHP's ABCError when 302 is merged
  
 class OneWayShootingStrategy(MoveStrategy):
     """
@@ -352,6 +379,16 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
     Default global strategy. 
     
     First choose move type, then choose specific instance of the mover.
+
+    Attributes
+    ----------
+    default_group_weights : dict
+        In the format {str(group_name) : float(weight)}
+    group_weights : dict
+        The sortkey weights. In the format {str(group_name) : float(weight)}
+    mover_weights = dict
+        The mover weights. In the format {(str(group_name),
+        ensemble_signature) : weight}
     """
     _level = levels.GLOBAL
     default_group_weights = {
@@ -379,6 +416,24 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         return chooser
 
     def default_weights(self, scheme):
+        """
+        Set the default weights given the initial `scheme`.
+
+        Note that this includes preservation of scheme.choice_probability,
+        if it is set.
+
+        Parameters
+        ----------
+        scheme : paths.MoveScheme
+            the scheme to which this strategy is being applied
+
+        Returns
+        -------
+        tuple (sortkey_w, movers_w)
+            sortkey_w is a dictionary of sort keys to weights; movers_w is a
+            dictionary of mover keys to weights. See class definition for
+            the specific formats of the keys.
+        """
         sortkey_w = {}
         movers_w = {}
         if scheme.choice_probability != {}:
@@ -399,6 +454,12 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         return (sortkey_w, movers_w)
 
     def override_weights(self, weights, override_w):
+        """
+        Overrides weights in a dictionary.
+
+        TODO: as this got simplified, I think there might be Python
+        built-ins to accomplish it (dict.update?)
+        """
         for key in override_w.keys():
             weights[key] = override_w[key]
         return weights
@@ -409,11 +470,25 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         """
         Gets sort_weights and mover_weights dictionaries.
 
-        Notes
-        -----
-        Note that only the variables returned from this tell the full story.
-        The defaults and the self.* version may not contain the real set of
-        groups/movers.
+        Parameters
+        ----------
+        scheme : paths.MoveScheme
+            the scheme to which this strategy is being applied
+        sorted_movers : unneeded?
+        sort_weights_override : dict 
+            Overrides for sort weights. Format {sort_key : weight}; see
+            class definition for sort_key format
+        mover_weights_override : dict
+            Overrides for mover weights. Format {mover_key : weight}; see
+            class definition for mover_key format
+
+        Returns
+        -------
+        tuple (sortkey_w, movers_w)
+            Canonical weights for this strategy. sortkey_w is a dictionary
+            of sort keys to weights; movers_w is a dictionary of mover keys
+            to weights. See class definition for the specific formats of the
+            keys. 
         """
         (sorted_w, mover_w) = self.default_weights(scheme)
         sorted_weights = self.override_weights(sorted_w, sort_weights_override)
@@ -421,8 +496,27 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         return (sorted_weights, mover_weights) # error if somehow undefined
 
     def weights_from_choice_probability(self, scheme, choice_probability):
-        """Get the contributing weights from existing choice probability
+        """Get the contributing weights from existing choice probability.
+
+        Parameters
+        ----------
+        scheme : paths.MoveScheme
+            The scheme to which this strategy is being applied
+        choice_probability : dict
+            Choice probability dictionary to be separated (typically
+            scheme.choice_probability). Format {mover:probability}, where
+            probability is normalized over all movers.
+
+        Returns
+        -------
+        tuple (sortkey_w, movers_w)
+            Sort key weights and mover weights consistent with this
+            scheme and choice_probability.  sortkey_w is a dictionary of
+            sort keys to weights; movers_w is a dictionary of mover keys to
+            weights. See class definition for the specific formats of the
+            keys.  
         """
+
         # first get the norm-based probabilities, then reset them.
         mover_weights = {}
         group_unscaled = {}
@@ -483,9 +577,8 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
 
     def chooser_root_weights(self, scheme, group_weights, mover_weights):
         """
-        Determine the choice probabilities for the root chooser.
-
-        In this case, the root chooser selects move type.
+        Determine the choice probabilities for the root chooser. The nature
+        of the root chooser depends on the class definition.
         """
         weights = {}
         for g in scheme.movers.keys():
@@ -494,6 +587,10 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         return weights
 
     def chooser_mover_weights(self, scheme, group, mover_weights):
+        """
+        Set the weights within each "sorted"-level chooser. The nature of
+        the sorting depends on the class definition.
+        """
         weights = {m : mover_weights[(group, m.ensemble_signature)]
                    for m in scheme.movers[group]}
         return weights
