@@ -3,6 +3,7 @@
 
 cd examples/ipython
 testfail=0
+python ipynbtest.py "stupid_test.ipynb" || testfail=1
 python ipynbtest.py "alanine.ipynb" || testfail=1
 python ipynbtest.py "sliced_sequential_ensembles.ipynb" || testfail=1
 python ipynbtest.py "toy_bootstrapping.ipynb" || testfail=1
