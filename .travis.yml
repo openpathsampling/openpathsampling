@@ -24,9 +24,9 @@ script:
   - conda list -e
 
   # Run tests
-  - which python
-  - source devtools/ci/nosetests.sh
-  - which python
+  #- source devtools/ci/nosetests.sh
+  - python -c "import openpathsampling as paths"
+  - ipython -c "import openpathsampling as paths"
   - source devtools/ci/ipythontests.sh
 
   # Push to binstar anyway.
