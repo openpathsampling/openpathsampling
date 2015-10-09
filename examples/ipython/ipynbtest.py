@@ -65,9 +65,6 @@ import difflib
 
 from Queue import Empty
 
-print sys.executable #DEBUG
-import openpathsampling as paths # DEBUG
-
 try:
     # IPython 4.0.0+ / Jupyter - the big split
     from jupyter_client.manager import KernelManager
@@ -718,6 +715,8 @@ if __name__ == '__main__':
     verbose = args.verbose
 
     tv = IPyTestConsole()
+    tv.writeln("Verbose="+verbose)  #DEBUG
+    tv.writeln(sys.executable)      #DEBUG
 
     if args.strict:
         tv.default_results['diff'] = False
