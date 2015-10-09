@@ -65,6 +65,9 @@ import difflib
 
 from Queue import Empty
 
+print sys.executable #DEBUG
+import openpathsampling as paths # DEBUG
+
 try:
     # IPython 4.0.0+ / Jupyter - the big split
     from jupyter_client.manager import KernelManager
