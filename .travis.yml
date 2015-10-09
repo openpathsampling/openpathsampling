@@ -24,7 +24,9 @@ script:
   - conda list -e
 
   # Run tests
+  - which python
   - source devtools/ci/nosetests.sh
+  - which python
   - source devtools/ci/ipythontests.sh
 
   # Push to binstar anyway.
