@@ -715,8 +715,8 @@ if __name__ == '__main__':
     verbose = args.verbose
 
     tv = IPyTestConsole()
-    tv.writeln("Verbose="+verbose)  #DEBUG
-    tv.writeln(sys.executable)      #DEBUG
+    tv.writeln("Verbose="+str(verbose))  #DEBUG
+    tv.writeln(str(sys.executable))      #DEBUG
 
     if args.strict:
         tv.default_results['diff'] = False
