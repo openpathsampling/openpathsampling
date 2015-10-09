@@ -304,7 +304,8 @@ class SampleSet(OPSNamed):
                     ensemble=translation[s.ensemble],
                     trajectory=s.trajectory
                 ))
-        return SampleSet(new_samples)
+        res = SampleSet.relabel_replicas_per_ensemble(SampleSet(new_samples))
+        return res
 
     @staticmethod
     def relabel_replicas_per_ensemble(ssets):
