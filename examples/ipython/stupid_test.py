@@ -9,3 +9,5 @@ print volume.name
 import numpy as np
 import sys
 print [np.__version__, np.__file__, sys.version, sys.executable]
+
+print sys.path
