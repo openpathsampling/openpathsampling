@@ -15,6 +15,7 @@ install:
   - python setup.py install
 
 script:
+  - echo "STARTING SCRIPT"
   - ipython -c "import openpathsampling as paths" # this import fails...
   - source devtools/ci/ipythontests.sh
   # Build conda package
@@ -28,7 +29,7 @@ script:
   # Run tests
   #- source devtools/ci/nosetests.sh
   #- python -c "import openpathsampling as paths"
-  - ipython -c "import openpathsampling as paths" # this import fails...
+  #- ipython -c "import openpathsampling as paths" # this import fails...
   - source devtools/ci/ipythontests.sh
 
   # Push to binstar anyway.
