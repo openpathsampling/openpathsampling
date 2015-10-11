@@ -79,13 +79,6 @@ except ImportError:
 
 #    print 'Using IPython 3+'
 
-try:
-    import jupyter_client as IP
-except ImportError:
-    import IPython as IP
-
-print "Kernel manager from",  IP.__file__
-
 
 class TravisConsole(object):
     """
@@ -722,9 +715,6 @@ if __name__ == '__main__':
     verbose = args.verbose
 
     tv = IPyTestConsole()
-    tv.writeln("Verbose="+str(verbose))  #DEBUG
-    tv.writeln(str(sys.executable))      #DEBUG
-    tv.writeln(str(sys.path))
 
     if args.strict:
         tv.default_results['diff'] = False

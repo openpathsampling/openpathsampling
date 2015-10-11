@@ -5,6 +5,7 @@ python:
   - "2.7"
 
 install:
+  - python ipython_path_rewrite.py
   - deactivate
   # Sets up a MINIConda enviroment in the name of the selected python verson
   - source devtools/ci/install.sh
@@ -16,12 +17,6 @@ install:
   - python setup.py install
 
 script:
-  - which ipython
-  - env | grep "PYTHON"
-  - conda info --envs
-  - env | grep "VIRTUAL"
-  - ipython -c "import sys; print sys.executable; print sys.path"
-  - cat `which ipython`
   # Build conda package
   - source deactivate
   - conda install --yes conda-build jinja2
