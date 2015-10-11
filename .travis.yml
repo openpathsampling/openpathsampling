@@ -15,13 +15,12 @@ install:
   - python setup.py install
 
 script:
-  - echo "if the next passes, then the problem is ipynbs in subfiles"
-  - python examples/ipython/ipynbtest.py --verbose examples/ipython/stupid_test.ipynb
   - which ipython
+  - env | grep "PYTHON"
+  - env | grep "VIRTUAL"
   - ipython -c "import sys; print sys.executable; print sys.path"
-  - ipython -c "import os; print os.environ['PYTHONPATH']"
-  - ipython -c "import openpathsampling as paths" # this import fails...
-  - source devtools/ci/ipythontests.sh
+  - cat `which ipython`
+  - python examples/ipython/ipynbtest.py --verbose examples/ipython/stupid_test.ipynb
   # Build conda package
   - source deactivate
   - conda install --yes conda-build jinja2
@@ -34,7 +33,7 @@ script:
   #- source devtools/ci/nosetests.sh
   #- python -c "import openpathsampling as paths"
   #- ipython -c "import openpathsampling as paths" # this import fails...
-  - source devtools/ci/ipythontests.sh
+  #- source devtools/ci/ipythontests.sh
 
   # Push to binstar anyway.
   - bash -x devtools/ci/after_sucess.sh
