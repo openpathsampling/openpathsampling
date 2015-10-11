@@ -31,7 +31,7 @@ script:
   - conda list -e
 
   # Run tests
-  #- source devtools/ci/nosetests.sh
+  - source devtools/ci/nosetests.sh
   - source devtools/ci/ipythontests.sh
 
   # Push to binstar anyway.
