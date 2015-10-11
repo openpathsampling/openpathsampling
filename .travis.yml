@@ -17,9 +17,13 @@ install:
 script:
   - echo "if the next passes, then the problem is ipynbs in subfiles"
   - python examples/ipython/ipynbtest.py --verbose examples/ipython/stupid_test.ipynb
+  - [[ -n $VIRTUAL_ENV ]] && echo virtualenv
   - which ipython
-  - ipython -c "import sys; print sys.path"
+  - ipython -c "import sys; print sys.executable; print sys.path"
+  - ipython -c "import os; print os.environ['PYTHONPATH']"
+  - ipython -c "import sys; try: print sys.real_prefix; except: print 'Not virtual'"
   - ipython -c "import openpathsampling as paths" # this import fails...
+  - python -c "import sys; try: print sys.real_prefix; except: print 'Not virtual'"
   - source devtools/ci/ipythontests.sh
   # Build conda package
   - source deactivate
