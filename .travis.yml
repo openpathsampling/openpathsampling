@@ -17,7 +17,7 @@ install:
 script:
   - echo "if the next passes, then the problem is ipynbs in subfiles"
   - python examples/ipython/ipynbtest.py --verbose examples/ipython/stupid_test.ipynb
-  - [[ -n $VIRTUAL_ENV ]] && echo virtualenv
+  - echo "virtualenv ${VIRTUAL_ENV}"
   - which ipython
   - ipython -c "import sys; print sys.executable; print sys.path"
   - ipython -c "import os; print os.environ['PYTHONPATH']"
