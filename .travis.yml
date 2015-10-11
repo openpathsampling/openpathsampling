@@ -5,7 +5,7 @@ python:
   - "2.7"
 
 install:
-  #- deactivate
+  - deactivate
   # Sets up a MINIConda enviroment in the name of the selected python verson
   - source devtools/ci/install.sh
   # Don't know what this is meant for
@@ -16,7 +16,6 @@ install:
   - python setup.py install
 
 script:
-  - python ipython_path_rewrite.py
   # Build conda package
   - source deactivate
   - conda install --yes conda-build jinja2
@@ -35,6 +34,7 @@ script:
 env:
   matrix:
 # - python=2.6  CONDA_PY=26  CONDA_NPY=16
+# is 110 the correct numpy label? doesn't seem to cause problems....
     - python=2.7  CONDA_PY=27  CONDA_NPY=110
 # - python=3.3  CONDA_PY=33  CONDA_NPY=17
 # - python=3.4  CONDA_PY=34  CONDA_NPY=18
