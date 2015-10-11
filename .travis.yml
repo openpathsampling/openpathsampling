@@ -16,8 +16,10 @@ install:
 
 script:
   - which ipython
-  - conda info --envs
   - env | grep "PYTHON"
+  - env | grep "VIRTUAL"
+  - deactivate
+  - conda info --envs
   - env | grep "VIRTUAL"
   - ipython -c "import sys; print sys.executable; print sys.path"
   - cat `which ipython`
