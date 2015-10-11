@@ -4,10 +4,8 @@ python:
   # We don't actually use the Travis Python, but this keeps it organized.
   - "2.7"
 
-virtualenv:
-  system_site_packages: true
-
 install:
+  - deactivate
   # Sets up a MINIConda enviroment in the name of the selected python verson
   - source devtools/ci/install.sh
   # Don't know what this is meant for
