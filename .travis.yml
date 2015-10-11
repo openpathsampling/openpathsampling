@@ -15,7 +15,10 @@ install:
   - python setup.py install
 
 script:
-  - echo "STARTING SCRIPT"
+  - echo "if the next passes, then the problem is ipynbs in subfiles"
+  - python examples/ipython/ipynbtest.py --verbose examples/ipython/stupid_test.ipynb
+  - which ipython
+  - ipython -c "import sys; print sys.path"
   - ipython -c "import openpathsampling as paths" # this import fails...
   - source devtools/ci/ipythontests.sh
   # Build conda package

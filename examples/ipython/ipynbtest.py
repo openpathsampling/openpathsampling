@@ -65,6 +65,9 @@ import difflib
 
 from Queue import Empty
 
+print "BEFORE"
+print sys.path
+
 try:
     # IPython 4.0.0+ / Jupyter - the big split
     from jupyter_client.manager import KernelManager
@@ -78,6 +81,16 @@ except ImportError:
     import IPython.nbformat as nbformat
 
 #    print 'Using IPython 3+'
+
+print "AFTER"
+print sys.path
+
+try:
+    import jupyter_client as IP
+except ImportError:
+    import IPython as IP
+
+print IP.__file__
 
 
 class TravisConsole(object):
@@ -717,6 +730,7 @@ if __name__ == '__main__':
     tv = IPyTestConsole()
     tv.writeln("Verbose="+str(verbose))  #DEBUG
     tv.writeln(str(sys.executable))      #DEBUG
+    tv.writeln(str(sys.path))
 
     if args.strict:
         tv.default_results['diff'] = False
