@@ -4,6 +4,9 @@ python:
   # We don't actually use the Travis Python, but this keeps it organized.
   - "2.7"
 
+virtualenv:
+  system_site_packages: true
+
 install:
   # Sets up a MINIConda enviroment in the name of the selected python verson
   - source devtools/ci/install.sh
@@ -17,8 +20,6 @@ install:
 script:
   - which ipython
   - env | grep "PYTHON"
-  - env | grep "VIRTUAL"
-  - deactivate
   - conda info --envs
   - env | grep "VIRTUAL"
   - ipython -c "import sys; print sys.executable; print sys.path"
