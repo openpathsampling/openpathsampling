@@ -1124,9 +1124,9 @@ class EnsembleHopGeneratingMover(SampleGeneratingMover):
         target_ensemble : openpathsampling.Ensemble
             the final ensemble to be jumped to
         change_replica : int of None
-            if None the replica id of the chosen sample will not be changed. Otherwise
-            the replica id will be set to change_replica. This is useful when hoping to
-            ensembles to create a new replica.
+            if None the replica id of the chosen sample will not be changed.
+            Otherwise the replica id will be set to change_replica. This is
+            useful when hoping to ensembles to create a new replica.
         bias : float, dict or None (default)
             gives the bias of accepting (not proposing) a hop. A float will
             be the acceptance for all possible attempts. If a dict is given,
@@ -1817,9 +1817,8 @@ class OneWayShootingMover(RandomChoiceMover):
     ----------
     selector : ShootingPointSelector
         The shooting point selection scheme
-    ensembles : list of Ensemble or None
-        valid ensembles; None implies all ensembles are allowed (no
-        restriction)
+    ensemble : paths.Ensemble
+        Ensemble for this shooting mover
     """
     def __init__(self, ensemble, selector):
         movers = [
