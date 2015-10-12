@@ -25,7 +25,11 @@ class ObjectJSON(object):
     def __init__(self, unit_system = None):
         self.excluded_keys = []
         self.unit_system = unit_system
-        self.class_list = StorableObject.objects()
+        self.class_list = dict()
+        self.update_class_list()
+
+    def update_class_list(self):
+        self.class_list = paths.OPSNamed.objects()
 
     def simplify_object(self, obj):
         return { '_cls' : obj.__class__.__name__, '_dict' : self.simplify(obj.to_dict(), obj.base_cls_name) }
