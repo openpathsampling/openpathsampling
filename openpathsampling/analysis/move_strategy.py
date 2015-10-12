@@ -96,8 +96,8 @@ class MoveStrategy(object):
     @property
     def level(self):
         """
-        The level of this strategy. 
-        
+        The level of this strategy.
+
         Levels are numeric, but roughly correspond to levels in the default
         move tree. This way, we build the tree from bottom up.
         """
@@ -178,19 +178,19 @@ class MoveStrategy(object):
 
         For example, `GLOBAL`-level strategies must set
         `scheme.choice_probability`.
-        
+
         Parameters
         ----------
         scheme : paths.MoveScheme
             the move scheme that this strategy will be used for
-        
+
         Returns
         -------
         paths.PathMover or list of paths.PathMover
             the movers created by this part of the strategy
         """
         raise NotImplementedError #TODO: use JHP's ABCError when 302 is merged
- 
+
 class OneWayShootingStrategy(MoveStrategy):
     """
     Strategy for OneWayShooting. Allows choice of shooting point selector.
@@ -376,8 +376,8 @@ class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
 
 class OrganizeByMoveGroupStrategy(MoveStrategy):
     """
-    Default global strategy. 
-    
+    Default global strategy.
+
     First choose move type, then choose specific instance of the mover.
 
     Attributes
@@ -398,6 +398,8 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         'minus' : 0.2
     }
     def __init__(self, ensembles=None, group=None, replace=True):
+        super(OrganizeByMoveGroupStrategy, self).__init__(ensembles,
+                                                          group, replace)
         self.group_weights = {}
         self.mover_weights = {}
         self.group = group
@@ -475,7 +477,7 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         scheme : paths.MoveScheme
             the scheme to which this strategy is being applied
         sorted_movers : unneeded?
-        sort_weights_override : dict 
+        sort_weights_override : dict
             Overrides for sort weights. Format {sort_key : weight}; see
             class definition for sort_key format
         mover_weights_override : dict
@@ -488,7 +490,7 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
             Canonical weights for this strategy. sortkey_w is a dictionary
             of sort keys to weights; movers_w is a dictionary of mover keys
             to weights. See class definition for the specific formats of the
-            keys. 
+            keys.
         """
         (sorted_w, mover_w) = self.default_weights(scheme)
         sorted_weights = self.override_weights(sorted_w, sort_weights_override)
@@ -514,7 +516,7 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
             scheme and choice_probability.  sortkey_w is a dictionary of
             sort keys to weights; movers_w is a dictionary of mover keys to
             weights. See class definition for the specific formats of the
-            keys.  
+            keys.
         """
 
         # first get the norm-based probabilities, then reset them.
@@ -524,8 +526,8 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         # most_most_common tracks which group has the largest count of
         # common values (used as backup if there is no shooting group)
         for group in scheme.movers:
-            group_probs = {m : choice_probability[m] 
-                           for m in choice_probability 
+            group_probs = {m : choice_probability[m]
+                           for m in choice_probability
                            if m in scheme.movers[group]}
 
             # normalize here based on making the most common within the
@@ -540,7 +542,7 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         for group in scheme.movers:
             m0 = scheme.movers[group][0]
             mover_w0 = mover_weights[(group, m0.ensemble_signature)]
-            group_unscaled[group] = choice_probability[m0] / mover_w0 
+            group_unscaled[group] = choice_probability[m0] / mover_w0
 
         try:
             scaling = most_common['shooting'][0]
@@ -553,7 +555,7 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
                     most_most_common = g
             scaling = most_common[most_most_common][0]
 
-        group_weights = {g : group_unscaled[g] / scaling 
+        group_weights = {g : group_unscaled[g] / scaling
                          for g in group_unscaled}
 
         return (group_weights, mover_weights)
@@ -568,7 +570,7 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         are obtained from the strategy.get_weights function.
         """
         unnormed = {}
-        for g_name in scheme.movers.keys(): 
+        for g_name in scheme.movers.keys():
             for mover in scheme.movers[g_name]:
                 m_sig = (g_name, mover.ensemble_signature)
                 unnormed[mover] = group_weights[g_name]*mover_weights[m_sig]
@@ -582,8 +584,8 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         """
         weights = {}
         for g in scheme.movers.keys():
-            weights[g] = sum([mover_weights[m] for m in mover_weights 
-                              if m[0]==g])  * group_weights[g]
+            weights[g] = sum([mover_weights[m] for m in mover_weights
+                              if m[0] == g]) * group_weights[g]
         return weights
 
     def chooser_mover_weights(self, scheme, group, mover_weights):
@@ -597,8 +599,8 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
 
     def make_movers(self, scheme):
         (group_weights, mover_weights) = self.get_weights(
-            scheme=scheme, 
-            sorted_movers=scheme.movers, 
+            scheme=scheme,
+            sorted_movers=scheme.movers,
             sort_weights_override=self.group_weights,
             mover_weights_override=self.mover_weights
         )
@@ -615,10 +617,10 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
             weight_dict = self.chooser_mover_weights(scheme, group,
                                                      mover_weights)
             choosername = group.capitalize()+"Chooser"
-            chooser_dict[group] = self.make_chooser(scheme, weight_dict, 
+            chooser_dict[group] = self.make_chooser(scheme, weight_dict,
                                                     choosername)
 
-        root_couples = [(root_info[g], chooser_dict[g]) 
+        root_couples = [(root_info[g], chooser_dict[g])
                         for g in root_info.keys()]
         (root_weights, choosers) = zip(*root_couples)
         root_chooser = paths.RandomChoiceMover(movers=choosers,
@@ -636,6 +638,21 @@ class SingleReplicaStrategy(MoveStrategy):
     pass
 
 class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
+    """
+    Global strategy to organize by ensemble first. Needed for SRTIS.
+
+    First we choose an ensemble, then we choose the specific mover within
+    that ensemble.
+
+    Attributes
+    ----------
+    ensemble_weights : dict
+        The sortkey weights. In the format {paths.Ensemble : float(weight)}
+    mover_weights : dict
+        The mover weights. In the fromat {(str(groupname),
+        PathMover.ensemble_signature, paths.Ensemble) : float(weight)}
+
+    """
     def __init__(self, ensembles=None, group=None, replace=True):
         super(OrganizeByEnsembleStrategy, self).__init__(
             ensembles=ensembles, group=group, replace=replace
@@ -662,7 +679,7 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
             ensemble_list.extend([e for e in m.ensemble_signature[0]])
         ensembles = set(ensemble_list)
         for ens in ensembles:
-            ens_movers = [m for m in choice_probability 
+            ens_movers = [m for m in choice_probability
                           if ens in m.ensemble_signature[0]]
             for m in ens_movers:
                 ens_sig = m.ensemble_signature
@@ -671,10 +688,10 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
                 mover_weights[(group, ens_sig, ens)] = weight
 
             local_movers = {s : mover_weights[s] for s in mover_weights
-                            if s[2]==ens}
+                            if s[2] == ens}
             ensemble_weights[ens] = sum(local_movers.values())
 
-            shooters = [s for s in local_movers if s[0]=='shooting']
+            shooters = [s for s in local_movers if s[0] == 'shooting']
             if len(shooters) > 0:
                 renorm = local_movers[shooters[0]]
             else:
@@ -741,11 +758,11 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
             scheme and choice_probability.  sortkey_w is a dictionary of
             sort keys to weights; movers_w is a dictionary of mover keys to
             weights. See class definition for the specific formats of the
-            keys.  
+            keys.
         """
         choice_probability = {}
         ens_prob_norm = sum(ensemble_weights.values())
-        ens_prob = {e : ensemble_weights[e] / ens_prob_norm 
+        ens_prob = {e : ensemble_weights[e] / ens_prob_norm
                     for e in ensemble_weights}
         
         mover_norm = {e : sum([mover_weights[s] for s in mover_weights
@@ -780,10 +797,10 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
         the sorting depends on the class definition.
         """
         weights = {}
-        for sig in [s for s in mover_weights if s[2]==ensemble]:
+        for sig in [s for s in mover_weights if s[2] == ensemble]:
             group = sig[0]
             ens_sig = sig[1]
-            ens = sig[2]
+            #ens = sig[2]
             # there can be only one
             mover = [m for m in scheme.movers[group]
                      if m.ensemble_signature == ens_sig][0]
@@ -792,8 +809,8 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
 
     def make_movers(self, scheme):
         (ensemble_weights, mover_weights) = self.get_weights(
-            scheme=scheme, 
-            sorted_movers=scheme.movers, 
+            scheme=scheme,
+            sorted_movers=scheme.movers,
             sort_weights_override=self.ensemble_weights,
             mover_weights_override=self.mover_weights
         )
@@ -814,7 +831,7 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
                                                   choosername)
 
 
-        root_couples = [(root_info[g], chooser_dict[g]) 
+        root_couples = [(root_info[g], chooser_dict[g])
                         for g in root_info.keys()]
         (root_weights, choosers) = zip(*root_couples)
         root_chooser = paths.RandomChoiceMover(movers=choosers,
