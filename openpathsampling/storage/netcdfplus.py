@@ -145,6 +145,9 @@ class NetCDFPlus(netCDF4.Dataset):
         """
         return self._objects
 
+    def update_storable_classes(self):
+        self.simplifier.update_class_list()
+
     def _register_storages(self):
         """
         Function to be called automatically to register all object stores

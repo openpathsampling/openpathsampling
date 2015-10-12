@@ -29,7 +29,7 @@ class ObjectJSON(object):
         self.update_class_list()
 
     def update_class_list(self):
-        self.class_list = paths.OPSNamed.objects()
+        self.class_list = StorableObject.objects()
 
     def simplify_object(self, obj):
         return { '_cls' : obj.__class__.__name__, '_dict' : self.simplify(obj.to_dict(), obj.base_cls_name) }
@@ -110,7 +110,9 @@ class ObjectJSON(object):
                     attributes = self.build(obj['_dict'])
                     return self.class_list[obj['_cls']].from_dict(attributes)
                 else:
-                    raise ValueError('Cannot create obj of class "' + obj['_cls']+ '". Class is not registered as creatable!')
+                    raise ValueError('Cannot create obj of class "' + obj['_cls']+ '".\n' +
+                                     'Class is not registered as creatable! You might have to define\n' +
+                                     'the class locally and call update_storable_classes() on your storage.')
             elif '_tuple' in obj:
                 return tuple([self.build(o) for o in obj['_tuple']])
             elif '_type' in obj:
