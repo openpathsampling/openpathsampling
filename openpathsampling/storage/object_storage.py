@@ -123,7 +123,6 @@ class ObjectStore(object):
         self.has_uid = has_uid
         self.has_name = has_name
         self.json = json
-        self.simplifier = paths.storage.StorableObjectJSON(storage)
         self.identifier = self.db + '_uid'
         self._free = set()
         self._cached_all = False
@@ -196,6 +195,10 @@ class ObjectStore(object):
             self.load = types.MethodType(loadcache(_load), self)
 
         self._register_with_storage(nestable=nestable)
+
+    @property
+    def simplifier(self):
+        return self.storage.simplifier
 
     def __str__(self):
         return repr(self)

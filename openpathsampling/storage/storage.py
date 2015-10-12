@@ -108,6 +108,9 @@ class Storage(netcdf.Dataset):
     def objects(self):
         return self._objects
 
+    def update_storable_classes(self):
+        self.simplifier.update_class_list()
+
     def _setup_class(self):
         """
         Sets the basic properties for the storage
@@ -115,7 +118,7 @@ class Storage(netcdf.Dataset):
         self._storages = {}
         self._storages_base_cls = {}
         self.links = []
-        self.simplifier = paths.ObjectJSON()
+        self.simplifier = paths.storage.StorableObjectJSON(self)
         self.units = dict()
         # use no units
         self.dimension_units = {
