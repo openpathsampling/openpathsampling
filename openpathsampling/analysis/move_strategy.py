@@ -660,13 +660,6 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
         self.mover_weights = {}
         self.ensemble_weights = {}
 
-    # TODO: make this the same for both (this is unique) and maybe move it
-    # to scheme.mover_key
-    def _mover_key(self, mover, scheme):
-        # take first, because as MacLeod says, "there can be only one!"
-        group = [g for g in scheme.movers if mover in scheme.movers[g]][0]
-        return (group, mover.ensemble_signature)
-
     def weights_from_choice_probability(self, scheme, choice_probability):
         # NOTE this is harder than it looks. The problem is that there isn't
         # always a unique solution when one move appears under more than one
