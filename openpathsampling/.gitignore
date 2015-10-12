@@ -1,6 +1,8 @@
 # ignore python bytecode files
 *pyc
 
+version.py
+
 # ignore tag files
 tags
 version.py
