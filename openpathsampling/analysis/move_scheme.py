@@ -402,7 +402,7 @@ class MoveScheme(OPSNamed):
         line = ("* "*indentation + str(move_name) +
                 " ran " + str(float(n_trials)/n_total_trials*100) +
                 "% of the cycles with acceptance " + str(n_accepted) + "/" +
-                str(n_trials) + " (" + acceptance + ")\n")
+                str(n_trials) + " (" + str(acceptance) + ")\n")
         return line
 
     def move_acceptance(self, storage):
