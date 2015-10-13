@@ -394,11 +394,15 @@ class MoveScheme(OPSNamed):
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, indentation):
+        try:
+            acceptance = float(n_accepted) / n_trials
+        except ZeroDivisionError:
+            acceptance = "nan"
+
         line = ("* "*indentation + str(move_name) +
-                " ran " + str(float(n_trials)/n_total_trials*100) + 
-                "% of the cycles with acceptance " + str(n_accepted) + "/" + 
-                str(n_trials) + " (" + str(float(n_accepted) / n_trials) + 
-                ") \n")
+                " ran " + str(float(n_trials)/n_total_trials*100) +
+                "% of the cycles with acceptance " + str(n_accepted) + "/" +
+                str(n_trials) + " (" + acceptance + ")\n")
         return line
 
     def move_acceptance(self, storage):
