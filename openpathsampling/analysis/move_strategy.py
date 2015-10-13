@@ -446,10 +446,7 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         else:
             # generate absolutely generic weights
             for skey in scheme.movers.keys():
-                try:
-                    sortkey_w[skey] = self.default_group_weights[skey]
-                except KeyError:
-                    sortkey_w[skey] = 1.0
+                sortkey_w[skey] = self.default_group_weights.get(skey, 1.0)
                 for mover in scheme.movers[skey]:
                     total_sig = (skey, mover.ensemble_signature)
                     movers_w[total_sig] = 1.0
