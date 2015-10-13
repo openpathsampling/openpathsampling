@@ -11,8 +11,8 @@ python ipynbtest.py "mstis.ipynb" || testfail=1
 date
 python ipynbtest.py "mstis_analysis.ipynb" || testfail=1
 date
-#python ipynbtest.py "repex_networks.ipynb" || testfail=1
-#date
+python ipynbtest.py "repex_networks.ipynb" || testfail=1
+date
 python ipynbtest.py "mistis_setup.ipynb" || testfail=1
 date
 python ipynbtest.py "mistis_analysis.ipynb" || testfail=1
