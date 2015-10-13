@@ -5,11 +5,9 @@ python:
   - "2.7"
 
 install:
-  - date
   - deactivate
   # Sets up a MINIConda enviroment in the name of the selected python verson
   - source devtools/ci/install.sh
-  - date
   # Don't know what this is meant for
   - export PYTHONUNBUFFERED=true
   # Try to install our package
@@ -19,22 +17,16 @@ install:
 
 script:
   # Build conda package
-  - date
   - source deactivate
   - conda install --yes conda-build jinja2
   - conda build devtools/conda-recipe
-  - date
   - source activate $python
   - conda install --yes $HOME/miniconda/conda-bld/linux-64/openpathsampling-*
-  - date
   - conda list -e
 
   # Run tests
-  - date
   - source devtools/ci/nosetests.sh
-  - date
   - source devtools/ci/ipythontests.sh
-  - date
 
   # Push to binstar anyway.
   - bash -x devtools/ci/after_sucess.sh
