@@ -65,7 +65,11 @@ class SampleSet(OPSNamed):
             self.movepath = movepath
 
     def __getitem__(self, key):
-        if hasattr(key, '__iter__'):
+        if isinstance(key, paths.Ensemble):
+            return random.choice(self.ensemble_dict[key])
+        elif type(key) is int:
+            return random.choice(self.replica_dict[key])
+        elif hasattr(key, '__iter__'):
             return (self[element] for element in key)
         elif type(key) is slice:
             rep_idxs = filter(
@@ -77,10 +81,6 @@ class SampleSet(OPSNamed):
             )
 
             return (self[element] for element in rep_idxs)
-        elif isinstance(key, paths.Ensemble):
-            return random.choice(self.ensemble_dict[key])
-        elif type(key) is int:
-            return random.choice(self.replica_dict[key])
 
     def __setitem__(self, key, value):
         # first, we check whether the key matches the sample: if no, KeyError
