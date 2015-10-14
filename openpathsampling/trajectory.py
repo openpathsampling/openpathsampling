@@ -1,9 +1,7 @@
-'''
+"""
 @author: JD Chodera
 @author: JH Prinz
-'''
-
-import copy
+"""
 
 import numpy as np
 import mdtraj as md
@@ -12,9 +10,10 @@ import simtk.unit as u
 import openpathsampling as paths
 from openpathsampling.base import StorableObject
 
-#=============================================================================================
+
+# =============================================================================================
 # SIMULATION TRAJECTORY
-#=============================================================================================
+# =============================================================================================
 
 
 class Trajectory(list, StorableObject):
@@ -39,7 +38,7 @@ class Trajectory(list, StorableObject):
         list.__init__(self)
         StorableObject.__init__(self)
 
-        self.path_probability = None # For future uses
+        self.path_probability = None  # For future uses
 
         if trajectory is not None:
             # Try to make a copy out of whatever container we were provided
@@ -47,7 +46,7 @@ class Trajectory(list, StorableObject):
                 self.atom_indices = trajectory.atom_indices
             else:
                 self.atom_indices = None
-                
+
             self.extend(trajectory)
         else:
             self.atom_indices = None
@@ -74,13 +73,13 @@ class Trajectory(list, StorableObject):
             try:
                 return [fnc(frame) for frame in list.__iter__(self)]
             except:
-                return self.map(fnc, allow_fast=False)
+                pass
 
         return [fnc(frame) for frame in self]
 
     @property
     def reversed(self):
-        '''
+        """
         Returns a reversed (shallow) copy of the trajectory itself. Effectively
         creates a new Trajectory object and then fills it with shallow reversed copies
         of the contained snapshots.
@@ -89,7 +88,7 @@ class Trajectory(list, StorableObject):
         -------
         Trajectory()
             the reversed trajectory
-        '''
+        """
 
         return Trajectory([snap for snap in reversed(self)])
 
@@ -99,7 +98,9 @@ class Trajectory(list, StorableObject):
         
         Returns
         -------        
-        coordinates (numpy.array(n_frames, n_atoms, 3) - numpy.array of coordinates of size number of frames 'n_frames' x number of atoms 'n_atoms' x 3 in x,y,z
+        coordinates : numpy.ndarray((n_frames, n_atoms, 3))
+            numpy.array of coordinates of size number of
+            frames 'n_frames' x number of atoms 'n_atoms' x 3 in x,y,z
         """
 
         # Make sure snapshots are stored and have an index and then add the snapshot index to the trajectory
@@ -107,14 +108,14 @@ class Trajectory(list, StorableObject):
         n_frames = len(self)
         n_atoms = self.n_atoms
         n_spatial = self.spatial
-            
+
         output = np.zeros([n_frames, n_atoms, n_spatial], np.float32)
-        
-        for frame_index in range(n_frames):      
+
+        for frame_index in range(n_frames):
             if self.atom_indices is None:
-                output[frame_index,:,:] = self[frame_index].coordinates
+                output[frame_index, :, :] = self[frame_index].coordinates
             else:
-                output[frame_index,:,:] = self[frame_index].coordinates[self.atom_indices,:]
+                output[frame_index, :, :] = self[frame_index].coordinates[self.atom_indices, :]
 
         return output
 
@@ -122,17 +123,17 @@ class Trajectory(list, StorableObject):
         n_frames = len(self)
         n_atoms = self.n_atoms
         n_spatial = self.spatial
-            
+
         output = np.zeros([n_frames, n_atoms, n_spatial], np.float32)
-        
-        for frame_index in range(n_frames):      
+
+        for frame_index in range(n_frames):
             if self.atom_indices is None:
-                output[frame_index,:,:] = self[frame_index].xyz
+                output[frame_index, :, :] = self[frame_index].xyz
             else:
-                output[frame_index,:,:] = self[frame_index].xyz[self.atom_indices,:]
+                output[frame_index, :, :] = self[frame_index].xyz[self.atom_indices, :]
 
         return output
-    
+
     @property
     def n_snapshots(self):
         """
@@ -171,7 +172,6 @@ class Trajectory(list, StorableObject):
 
         return len(self)
 
-
     def configurations(self):
         """
         Return a list of the snapshots in the trajectory
@@ -183,7 +183,6 @@ class Trajectory(list, StorableObject):
 
         """
         return [f.configuration for f in self]
-
 
     def momenta(self):
         """
@@ -212,11 +211,13 @@ class Trajectory(list, StorableObject):
         
         Returns
         -------        
-        n_atoms (int) - number of atoms
+        n_atoms : int
+            number of atoms
 
         Notes
         -----        
-        If a trajectory has been subsetted then this returns only the number of the view otherwise if equals the number of atoms in the snapshots stored
+        If a trajectory has been subsetted then this returns only the number
+        of the view otherwise if equals the number of atoms in the snapshots stored
         
         """
 
@@ -224,27 +225,28 @@ class Trajectory(list, StorableObject):
             n_atoms = self[0].xyz.shape[0]
         else:
             n_atoms = len(self.atom_indices)
-        return n_atoms    
-        
-    #=============================================================================================
+        return n_atoms
+
+        # =============================================================================================
+
     # LIST INHERITANCE FUNCTIONS
-    #=============================================================================================
+    # =============================================================================================
 
     def __getslice__(self, *args, **kwargs):
-        ret =  list.__getslice__(self, *args, **kwargs)
+        ret = list.__getslice__(self, *args, **kwargs)
         if type(ret) is list:
             ret = Trajectory(ret)
             ret.atom_indices = self.atom_indices
-            
+
         return ret
 
     def __hash__(self):
         return object.__hash__(self)
-        
+
     def __getitem__(self, index):
         # Allow for numpy style of selecting several indices using a list as index parameter
         if hasattr(index, '__iter__'):
-            ret = [ list.__getitem__(self, i) for i in index ]
+            ret = [list.__getitem__(self, i) for i in index]
         else:
             ret = list.__getitem__(self, index)
 
@@ -292,6 +294,7 @@ class Trajectory(list, StorableObject):
             The iterator that iterates the objects in the store
 
         """
+
         class ObjectIterator:
             def __init__(self):
                 self.trajectory = this
@@ -310,16 +313,16 @@ class Trajectory(list, StorableObject):
                     raise StopIteration()
 
         return ObjectIterator()
-    
-    def __add__(self, other):        
+
+    def __add__(self, other):
         t = Trajectory(self)
         t.extend(other)
         return t
-    
-    #=============================================================================================
+
+    # =============================================================================================
     # PATH ENSEMBLE FUNCTIONS
-    #=============================================================================================
-        
+    # =============================================================================================
+
     def summarize_by_volumes(self, label_dict):
         """Summarize trajectory based on number of continuous frames in volumes.
 
@@ -352,15 +355,15 @@ class Trajectory(list, StorableObject):
                 current_vol = None
             else:
                 current_vol = in_state[0]
-            
+
             if last_vol == current_vol:
                 count += 1
             else:
                 if count > 0:
-                    segment_labels.append( (last_vol, count) )
+                    segment_labels.append((last_vol, count))
                 last_vol = current_vol
                 count = 1
-        segment_labels.append( (last_vol, count) )
+        segment_labels.append((last_vol, count))
         return segment_labels
 
     def summarize_by_volumes_str(self, label_dict, delimiter="-"):
@@ -384,8 +387,6 @@ class Trajectory(list, StorableObject):
         """
         summary = self.summarize_by_volumes(label_dict)
         return delimiter.join([str(s[0]) for s in summary])
-
-
 
     def pathHamiltonian(self):
         """
@@ -411,14 +412,14 @@ class Trajectory(list, StorableObject):
         nsnapshots = len(self)
         if nsnapshots > 0:
             H = self[0].total_energy
-            for snapshot_index in range(1, nsnapshots-1):
+            for snapshot_index in range(1, nsnapshots - 1):
                 H += self[snapshot_index].kinetic_energy
         else:
             H = 0
 
         return H
 
-    def computeActivity(self):
+    def computeActivity(self, atom_indices=None):
         """
         Compute the (timeless!) activity of a given trajectory, defined in Ref. [1] as
 
@@ -438,43 +439,55 @@ class Trajectory(list, StorableObject):
         nframes = len(self)
 
         # Compute activity of component A.
-        K = 0.0 * u.nanometers**2
-        for frame_index in range(nframes-1):
-            # Compute displacement of all atoms.
-            delta_r = self[frame_index+1].coordinates - self[frame_index].coordinates
-            # Compute contribution to activity K.
-            K += ((delta_r[0:self.N,:] / u.nanometers)**2).sum() * (u.nanometers**2)
+        K = 0.0
 
-        return K 
-    
+        if atom_indices is None:
+            atom_indices = slice(None)
+
+        for frame_index in range(nframes - 1):
+            # Compute displacement of all atoms.
+            delta_r = self[frame_index + 1].coordinates - self[frame_index].coordinates
+            # Compute contribution to activity K.
+            K += ((delta_r[atom_indices, :] / u.nanometers) ** 2).sum()
+
+        return K * (u.nanometers ** 2)
+
     def logEquilibriumTrajectoryProbability(self):
         """
-        Compute the (temperatureless!) log equilibrium probability (up to an unknown additive constant) of an unbiased trajectory evolved according to Verlet dynamics with Andersen thermostatting.
+        Compute the (temperatureless!) log equilibrium probability
 
-        ARGUMENTS
-        trajectory (Trajectory) - the trajectory
+        Up to an unknown additive constant of an unbiased trajectory evolved
+        according to Verlet dynamics with Andersen thermostatting.
+
+        Parameters
+        ----------
+        trajectory : openpathsampling.Trajectory
+            the trajectory
 
         Returns
         -------        
         log_q : float
-            the log equilibrium probability of the trajectory divided by the inverse temperature beta
+            the log equilibrium probability of the trajectory divided by the
+            inverse temperature beta
         
         NOTES
-        This might be better places into the trajectory class. The trajectory should know the system and ensemble? and so it is not necessarily 
+        -----
+        This might be better places into the trajectory class. The trajectory
+        should know the system and ensemble? and so it is not necessarily
         TPS specific
 
         """
 
         nsnapshots = len(self)
         log_q = - self[0].total_energy
-        for snapshot_index in range(1, nsnapshots-1):
+        for snapshot_index in range(1, nsnapshots - 1):
             log_q += - self[snapshot_index].kinetic_energy
 
         return log_q
 
-    #=============================================================================================
+    # =============================================================================================
     # ANALYSIS FUNCTIONS
-    #=============================================================================================
+    # =============================================================================================
 
     def is_correlated(self, other):
         """
@@ -482,7 +495,7 @@ class Trajectory(list, StorableObject):
 
         Parameters
         ----------
-        other : Trajectory()
+        other : openpathsampling.Trajectory
             the second trajectory to check for common snapshots
 
         Returns
@@ -534,21 +547,23 @@ class Trajectory(list, StorableObject):
             the shared subtrajectory
         """
         shared = self.shared_configurations(other)
-        return Trajectory([ snap for snap in self if snap.configuration in shared])
+        return Trajectory([snap for snap in self if snap.configuration in shared])
 
-    #=============================================================================================
+    # =============================================================================================
     # UTILITY FUNCTIONS
-    #=============================================================================================
+    # =============================================================================================
 
     def subset(self, atom_indices):
         """
-        Reduce the view of the trajectory to a subset of atoms specified. This is only a view, no data will be changed or copied.
+        Reduce the view of the trajectory to a subset of atoms specified.
+
+        This is only a view, no data will be changed or copied.
         
         Returns
         -------        
-        trajectory : Trajectory
+        trajectory : openpathsampling.Trajectory
             the trajectory showing the subsets of atoms
-        """        
+        """
 
         t = Trajectory(self)
         t.atom_indices = atom_indices
@@ -566,8 +581,8 @@ class Trajectory(list, StorableObject):
             the trajectory showing the subsets of solute atoms
         """
 
-        #TODO: To remove the dependency of the dynamics engine we need to get the information
-        #TODO: about the solute_indices from somewhere else, preferrably the topology?
+        # TODO: To remove the dependency of the dynamics engine we need to get the information
+        # TODO: about the solute_indices from somewhere else, preferrably the topology?
 
         if Trajectory.engine is None:
             raise ValueError("No engine specified to get solute_indices from !")
@@ -585,7 +600,7 @@ class Trajectory(list, StorableObject):
         """
         return self.subset(None)
 
-    def md(self, topology = None):
+    def md(self, topology=None):
         """
         Construct a mdtraj.Trajectory object from the Trajectory itself
 
@@ -635,7 +650,7 @@ class Trajectory(list, StorableObject):
             coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
             if mdtrajectory.unitcell_vectors is not None:
                 box_v = u.Quantity(mdtrajectory.unitcell_vectors[frame_num],
-                                 u.nanometers)
+                                   u.nanometers)
             else:
                 box_v = None
             config = paths.Configuration(coordinates=coord, box_vectors=box_v)

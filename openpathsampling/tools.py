@@ -5,10 +5,9 @@ import simtk.unit as u
 import numpy as np
 import openpathsampling as paths
 
-from collections import OrderedDict
-import weakref
-
 import sys
+
+
 def refresh_output(output_str, print_anyway=True, refresh=True):
     try:
         import IPython.display
@@ -25,9 +24,9 @@ def refresh_output(output_str, print_anyway=True, refresh=True):
 def updateunits(func):
     def inner(self, *args, **kwargs):
         my_units = {
-            'length' : u.nanometer,
-            'velocity' : u.nanometer / u.picoseconds,
-            'energy' : u.kilojoules_per_mole
+            'length': u.nanometer,
+            'velocity': u.nanometer / u.picoseconds,
+            'energy': u.kilojoules_per_mole
         }
 
         if 'units' in kwargs and kwargs['units'] is not None:
@@ -41,7 +40,7 @@ def updateunits(func):
 
 
 @updateunits
-def snapshot_from_pdb(pdb_file, units = None):
+def snapshot_from_pdb(pdb_file, units=None):
     """
     Construct a Snapshot from the first frame in a pdb file without velocities
 
@@ -71,6 +70,7 @@ def snapshot_from_pdb(pdb_file, units = None):
 
     return snapshot
 
+
 def trajectory_from_mdtraj(mdtrajectory):
     """
     Construct a Trajectory object from an mdtraj.Trajectory object
@@ -92,7 +92,7 @@ def trajectory_from_mdtraj(mdtrajectory):
         coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
         if mdtrajectory.unitcell_vectors is not None:
             box_v = u.Quantity(mdtrajectory.unitcell_vectors[frame_num],
-                             u.nanometers)
+                               u.nanometers)
         else:
             box_v = None
         config = paths.Configuration(coordinates=coord, box_vectors=box_v)
@@ -105,6 +105,7 @@ def trajectory_from_mdtraj(mdtrajectory):
         trajectory.append(snap)
 
     return trajectory
+
 
 @updateunits
 def empty_snapshot_from_openmm_topology(topology, units):
@@ -137,6 +138,7 @@ def empty_snapshot_from_openmm_topology(topology, units):
     )
 
     return snapshot
+
 
 def units_from_snapshot(snapshot):
     """
@@ -174,6 +176,7 @@ def units_from_snapshot(snapshot):
             units['velocity'] = u.Unit({})
 
     return units
+
 
 def to_openmm_topology(obj):
     """

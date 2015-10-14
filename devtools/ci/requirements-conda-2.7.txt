@@ -16,3 +16,4 @@ matplotlib
 svgwrite
 networkx
 psutil
+pandas
