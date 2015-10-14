@@ -53,11 +53,11 @@ class EnsembleCache(object):
         raise RuntimeError("EnsembleCache.direction = " +
                            str(self.direction) + " invalid.") #nocover
 
-    def clear(self):
-        self.start_frame = None
-        self.prev_last_frame = None
-        self.last_length = None
-        self.contents = {}
+    # def clear(self):
+    #     self.start_frame = None
+    #     self.prev_last_frame = None
+    #     self.last_length = None
+    #     self.contents = {}
 
     def check(self, trajectory=None, reset=None):
         """Checks and resets (if necessary) the ensemble cache.
