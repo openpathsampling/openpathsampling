@@ -88,7 +88,7 @@ class ChainDict(object):
         return None
 
     def _get_list(self, items):
-        return [ self._get(item) for item in items ]
+        return [self._get(item) for item in items]
 
     def __call__(self, items):
         return self[items]
@@ -97,28 +97,33 @@ class ChainDict(object):
         other.post = self
         return other
 
-    def _split_list_dict(self, dct, items):
+    @staticmethod
+    def _split_list_dict(dct, items):
         nones = [dct[item] if item in dct else None for item in items]
         missing = [item for item in items if item not in dct]
 
         return nones, missing
 
-    def _split_list(self, keys, values):
-        missing = [ obj[0] for obj in zip(keys,values) if obj[1] is None ]
-        nones = [ None if obj[1] is None else obj[0] for obj in zip(keys,values)  ]
+    @staticmethod
+    def _split_list(keys, values):
+        missing = [obj[0] for obj in zip(keys, values) if obj[1] is None]
+        nones = [None if obj[1] is None else obj[0] for obj in zip(keys, values)]
 
         return nones, missing
 
-    def _apply_some_list(self, func, items):
+    @staticmethod
+    def _apply_some_list(func, items):
         some = [item for item in items if item is not None]
         replace = func(some)
         it = iter(replace)
 
-        return [ it.next() if obj is not None else None for obj in items ]
+        return [it.next() if obj is not None else None for obj in items]
 
-    def _replace_none(self, nones, replace):
+    @staticmethod
+    def _replace_none(nones, replace):
         it = iter(replace)
-        return [ obj if obj is not None else it.next() for obj in nones ]
+        return [obj if obj is not None else it.next() for obj in nones]
+
 
 class Wrap(ChainDict):
     def __init__(self, post):
@@ -131,6 +136,7 @@ class Wrap(ChainDict):
     def __setitem__(self, key, value):
         self.post[key] = value
 
+
 class MergeNumpy(ChainDict):
     """
     Will take care of iterables
@@ -138,6 +144,7 @@ class MergeNumpy(ChainDict):
 
     def __getitem__(self, items):
         return np.array(self.post[items])
+
 
 class ExpandSingle(ChainDict):
     """
@@ -155,6 +162,7 @@ class ExpandSingle(ChainDict):
     def __setitem__(self, key, value):
         self.post[key] = value
 
+
 class ExpandMulti(ChainDict):
     """
     Will only request the unique keys to post
@@ -162,18 +170,18 @@ class ExpandMulti(ChainDict):
 
     def __getitem__(self, items):
         return self.post[items]
-        if len(items) == 0:
-            return []
-
-
-        uniques = list(set(items))
-        rep_unique = self.post[[p for p in uniques]]
-        multi_cache = dict(zip(uniques, rep_unique))
-
-        return [multi_cache[item] for item in items]
+        # if len(items) == 0:
+        #     return []
+        #
+        # uniques = list(set(items))
+        # rep_unique = self.post[[p for p in uniques]]
+        # multi_cache = dict(zip(uniques, rep_unique))
+        #
+        # return [multi_cache[item] for item in items]
 
     def __setitem__(self, key, value):
         self.post[key] = value
+
 
 class Transform(ChainDict):
     def __init__(self, transform):
@@ -185,6 +193,7 @@ class Transform(ChainDict):
 
     def __setitem__(self, key, value):
         self.post[self.transform(key)] = value
+
 
 class Function(ChainDict):
     def __init__(self, fnc, fnc_uses_lists=True):
@@ -198,7 +207,7 @@ class Function(ChainDict):
     def _get(self, item):
         if self._eval is None:
             return None
-#             raise KeyError('No cached values for item - %s' % str(item))
+        #             raise KeyError('No cached values for item - %s' % str(item))
 
         if self.fnc_uses_lists:
             result = self._eval([item])
@@ -222,6 +231,7 @@ class Function(ChainDict):
             return transform(self(obj))
 
         return fnc
+
 
 class CacheChainDict(ChainDict):
     def __init__(self, cache):
@@ -288,6 +298,7 @@ class StoredDict(ChainDict):
         if item is None:
             return None
 
+        # TODO: This is for handling Proxies and there might be a better way
         if hasattr(item, '_idx'):
             store, idx = item._idx.iteritems().next()
             if store is self.key_store:
@@ -310,7 +321,7 @@ class StoredDict(ChainDict):
 
     def _get_list(self, items):
         keys = map(self._get_key, items)
-#        cached, missing = self._split_list(items, keys)
+        #        cached, missing = self._split_list(items, keys)
 
         idxs = [item for item in keys if item is not None and item not in self.cache]
 
@@ -319,7 +330,7 @@ class StoredDict(ChainDict):
 
             sorted_values = self.value_store[sorted_idxs]
             replace = [None if key is None else self.cache[key] if key in self.cache else
-                            sorted_values[sorted_idxs.index(key)] for key in keys]
+            sorted_values[sorted_idxs.index(key)] for key in keys]
         else:
             replace = [None if key is None else self.cache[key] if key in self.cache else None for key in keys]
 
