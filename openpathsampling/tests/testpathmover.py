@@ -262,7 +262,7 @@ class testPathReversalMover(object):
                          replica=0)
         gs_BXA = SampleSet([sampBXA])
         change = self.move.move(gs_BXA)
-        print [[v.coordinates[0] for v in t.trajectory] for t in change.trials]
+        # print [[v.coordinates[0] for v in t.trajectory] for t in change.trials]
         assert_equal(change.accepted, True)
 
 
@@ -414,6 +414,115 @@ class testRandomChoiceMover(object):
 
     def test_restricted_by_ensemble(self):
         raise SkipTest
+
+
+class testRandomAllowedChoiceMover(object):
+    def setup(self):
+        self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
+                                      -0.1, 0.2, 0.4, 0.6, 0.8,
+                                     ])
+        self.dyn.initialized = True
+        SampleGeneratingMover.engine = self.dyn
+        op = CV_Function("myid", fcn=lambda snap :
+                             snap.coordinates[0][0])
+        stateA = CVRangeVolume(op, -100, 0.0)
+        stateB = CVRangeVolume(op, 0.65, 100)
+        volX = CVRangeVolume(op, -100, 0.25)
+        volY = CVRangeVolume(op, -100, 0.40)
+        self.ens1 = paths.TISEnsemble(stateA, stateB, volX, op)
+        self.ens2 = paths.TISEnsemble(stateA, stateB, volY, op)
+        init_traj1 = make_1d_traj(
+            coordinates=[-0.1, 0.1, 0.2, 0.3, 0.24, 0.15, 0.06, -0.07],
+            velocities=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        )
+        init_traj2 = make_1d_traj(
+            coordinates=[-0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+            velocities=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        )
+        self.samp1 = Sample(trajectory=init_traj1, replica=0, 
+                            ensemble=self.ens1)
+        self.samp2 = Sample(trajectory=init_traj2, replica=1,
+                            ensemble=self.ens2)
+
+        self.shooter = ForwardShootMover(selector=UniformSelector(),
+                                         ensemble=self.ens2)
+        self.pathrev = PathReversalMover(ensemble=self.ens1)
+
+        ens_dict = {self.ens1 : self.pathrev, self.ens2 : self.shooter}
+        # self.mover = EnsembleDictionaryMover(ens_dict)
+        self.mover = RandomAllowedChoiceMover([self.shooter, self.pathrev])
+
+    def test_move_single_replica(self):
+        sampleset = SampleSet([self.samp1])
+        change = self.mover.move(sampleset)
+        subchange = change.subchange
+        assert_equal(subchange.mover, self.pathrev)
+        assert_equal(subchange.accepted, True)
+        assert_equal(change.accepted, True)
+        assert_equal(len(subchange.samples), 1)
+
+        sampleset = SampleSet([self.samp2])
+        change = self.mover.move(sampleset)
+        subchange = change.subchange
+        assert_equal(subchange.mover, self.shooter)
+        assert_equal(subchange.accepted, True)
+        assert_equal(change.accepted, True)
+
+
+    def test_move_multiple_replicas(self):
+        sampleset = SampleSet([self.samp1, self.samp2])
+        count = {}
+        for i in range(100):
+            change = self.mover.move(sampleset)
+            subchange = change.subchange
+            assert_equal(change.accepted, True)
+            assert_equal(subchange.accepted, True)
+            assert_equal(len(subchange.samples), 1)
+            ens = subchange.trials[0].ensemble
+            try:
+                count[ens] += 1
+            except KeyError:
+                count[ens] = 1
+            if ens == self.ens1:
+                assert_equal(subchange.mover, self.pathrev)
+            elif ens == self.ens2:
+                assert_equal(subchange.mover, self.shooter)
+            else:
+                raise AssertionError("Resulting mover unknown!")
+        assert_equal(set(count.keys()), set([self.ens1, self.ens2]))
+
+
+    def test_move_multiple_replicas_weighted_ensembles(self):
+        sampleset = SampleSet([self.samp1, self.samp2])
+        ens_dict = {self.ens1 : self.pathrev, self.ens2 : self.shooter}
+        # weighted_mover = EnsembleDictionaryMover(ens_dict, [1.0, 2.0])
+        weighted_mover = RandomAllowedChoiceMover([self.pathrev,
+                                                   self.shooter], [1.0, 2.0])
+        count = {}
+        for i in range(100):
+            change = weighted_mover.move(sampleset)
+            subchange = change.subchange
+            assert_equal(change.accepted, True)
+            assert_equal(subchange.accepted, True)
+            assert_equal(len(subchange.samples), 1)
+            ens = subchange.trials[0].ensemble
+            try:
+                count[ens] += 1
+            except KeyError:
+                count[ens] = 1
+            if ens == self.ens1:
+                assert_equal(subchange.mover, self.pathrev)
+            elif ens == self.ens2:
+                assert_equal(subchange.mover, self.shooter)
+            else:
+                raise AssertionError("Resulting mover unknown!")
+        assert_equal(set(count.keys()), set([self.ens1, self.ens2]))
+        try:
+            assert(count[self.ens1] < count[self.ens2])
+        except AssertionError:
+            raise AssertionError("Not true: "+str(count[self.ens1]) + " < "
+                                 + str(count[self.ens2]))
+
 
 class testSequentialMover(object):
     def setup(self):
@@ -702,7 +811,7 @@ class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
         change = mover.move(self.gs)
         samples = change.results
         assert_equal(len(samples), 0)
-        print change.samples
+        # print change.samples
         assert_equal(len(change.samples), 0)
 
 class testFirstSubtrajectorySelectMover(SubtrajectorySelectTester):

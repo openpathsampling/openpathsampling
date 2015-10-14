@@ -5,3 +5,4 @@ version.py
 
 # ignore tag files
 tags
+version.py
