@@ -1,10 +1,10 @@
-__author__ = 'jan-hendrikprinz'
+__author__ = 'Jan-Hendrik Prinz'
 
 from collections import OrderedDict
 import weakref
 
-class Cache(object):
 
+class Cache(object):
     @property
     def count(self):
         return len(self), 0
@@ -82,6 +82,9 @@ class NoCache(Cache):
     def transfer(self, old_cache):
         return self
 
+    def clear(self):
+        pass
+
 
 class MaxCache(dict, Cache):
     def __init__(self):
@@ -104,6 +107,7 @@ class LRUCache(Cache):
     Very simple using collections.OrderedDict. The size can be change during
     run-time
     """
+
     def __init__(self, size_limit):
         super(LRUCache, self).__init__()
         self._size_limit = size_limit
@@ -124,7 +128,7 @@ class LRUCache(Cache):
     @size_limit.setter
     def size_limit(self, new_size):
         if new_size < self.size_limit:
-          self._check_size_limit()
+            self._check_size_limit()
 
         self._size_limit = new_size
 
@@ -139,7 +143,7 @@ class LRUCache(Cache):
         self._cache[item] = obj
         return obj
 
-    def __setitem__(self, key, value, **kwargs) :
+    def __setitem__(self, key, value, **kwargs):
         self._cache[key] = value
         self._check_size_limit()
 
@@ -165,6 +169,7 @@ class WeakLRUCache(Cache):
     of the last used elements are still present. Usually this number is 100.
 
     """
+
     def __init__(self, size_limit=100, weak_type='value'):
         """
         Parameters
@@ -217,7 +222,7 @@ class WeakLRUCache(Cache):
     @size_limit.setter
     def size_limit(self, new_size):
         if new_size < self.size_limit:
-          self._check_size_limit()
+            self._check_size_limit()
 
         self._size_limit = new_size
 
@@ -263,6 +268,7 @@ class WeakValueCache(weakref.WeakValueDictionary, Cache):
     """
     Implements a cache that keeps weak references to all elements
     """
+
     def __init__(self, *args, **kwargs):
         weakref.WeakValueDictionary.__init__(self, *args, **kwargs)
         Cache.__init__(self)
@@ -275,10 +281,12 @@ class WeakValueCache(weakref.WeakValueDictionary, Cache):
     def size(self):
         return 0, -1
 
+
 class WeakKeyCache(weakref.WeakKeyDictionary, Cache):
     """
     Implements a cache that keeps weak references to all elements
     """
+
     def __init__(self, *args, **kwargs):
         weakref.WeakKeyDictionary.__init__(*args, **kwargs)
         Cache.__init__(self)

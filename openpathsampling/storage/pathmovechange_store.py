@@ -3,6 +3,7 @@ from openpathsampling.pathmovechange import PathMoveChange
 from openpathsampling.base import StorableObject
 from objproxy import LoaderProxy
 
+
 class PathMoveChangeStore(ObjectStore):
     def __init__(self):
         super(PathMoveChangeStore, self).__init__(
@@ -22,7 +23,7 @@ class PathMoveChangeStore(ObjectStore):
             self.vars['cls'][idx] = pathmovechange.__class__.__name__
 
     def load(self, idx):
-        '''
+        """
         Return a sample from the storage
 
         Parameters
@@ -34,7 +35,7 @@ class PathMoveChangeStore(ObjectStore):
         -------
         sample : Sample
             the sample
-        '''
+        """
 
         cls_name = self.vars['cls'][idx]
 
@@ -53,19 +54,19 @@ class PathMoveChangeStore(ObjectStore):
         super(PathMoveChangeStore, self)._init()
 
         # New short-hand definition
-        self.init_variable('details', 'lazyobj.details', chunksizes=(1, ))
-        self.init_variable('mover', 'obj.pathmovers', chunksizes=(1, ))
-        self.init_variable('cls', 'str', chunksizes=(1, ))
+        self.init_variable('details', 'lazyobj.details', chunksizes=(1,))
+        self.init_variable('mover', 'obj.pathmovers', chunksizes=(1,))
+        self.init_variable('cls', 'str', chunksizes=(1,))
 
         self.init_variable('subchanges', 'obj.pathmovechanges',
-            dimensions=('...'),
-            chunksizes=(10240, )
-        )
+                           dimensions=('...'),
+                           chunksizes=(10240,)
+                           )
 
         self.init_variable('samples', 'obj.samples',
-            dimensions=('...'),
-            chunksizes=(10240, )
-        )
+                           dimensions=('...'),
+                           chunksizes=(10240,)
+                           )
 
     def all(self):
         self.cache_all()
@@ -84,19 +85,18 @@ class PathMoveChangeStore(ObjectStore):
             mover_idxs = self.variables['mover'][:]
             details_idxs = self.variables['details'][:]
 
-            [ self.add_empty_to_cache(*v) for v in zip(
+            [self.add_empty_to_cache(*v) for v in zip(
                 idxs,
                 cls_names,
                 samples_idxss,
                 mover_idxs,
-                details_idxs) ]
+                details_idxs)]
 
-            [ self._load_partial_subchanges(c,s) for c,s in zip(
+            [self._load_partial_subchanges(c, s) for c, s in zip(
                 self,
-                subchanges_idxss) ]
+                subchanges_idxss)]
 
             self._cached_all = True
-
 
     def add_empty_to_cache(self, idx, cls_name, samples_idxs, mover_idx, details_idx):
 
@@ -108,7 +108,7 @@ class PathMoveChangeStore(ObjectStore):
 
     def _load_partial_subchanges(self, obj, subchanges_idxs):
         if len(subchanges_idxs) > 0:
-            obj.subchanges = [ self.load(int(idx)) for idx in subchanges_idxs ]
+            obj.subchanges = [self.load(int(idx)) for idx in subchanges_idxs]
 
         return obj
 
@@ -118,7 +118,7 @@ class PathMoveChangeStore(ObjectStore):
         PathMoveChange.__init__(obj, mover=self.storage.pathmovers[int(mover_idx)])
 
         if len(samples_idxs) > 0:
-            obj.samples = [ self.storage.samples[int(idx)] for idx in samples_idxs ]
+            obj.samples = [self.storage.samples[int(idx)] for idx in samples_idxs]
 
         obj.details = LoaderProxy({self.storage.details: int(details_idx)})
 

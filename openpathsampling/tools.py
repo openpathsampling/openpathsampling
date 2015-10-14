@@ -1,4 +1,4 @@
-__author__ = 'jan-hendrikprinz'
+__author__ = 'Jan-Hendrik Prinz'
 
 import mdtraj as md
 import simtk.unit as u

@@ -2,6 +2,7 @@ from object_storage import ObjectStore
 from openpathsampling.trajectory import Trajectory
 from openpathsampling.storage.objproxy import LoaderProxy
 
+
 class TrajectoryStore(ObjectStore):
     def __init__(self):
         super(TrajectoryStore, self).__init__(Trajectory)
@@ -30,11 +31,11 @@ class TrajectoryStore(ObjectStore):
 
         for frame, snapshot in enumerate(trajectory):
             if type(snapshot) is not LoaderProxy:
-                loader = LoaderProxy({snapshot_store : snapshot_store.index[snapshot]})
+                loader = LoaderProxy({snapshot_store: snapshot_store.index[snapshot]})
                 trajectory[frame] = loader
 
     def snapshot_indices(self, idx):
-        '''
+        """
         Load snapshot indices for trajectory with ID 'idx' from the storage
 
         Parameters
@@ -47,13 +48,13 @@ class TrajectoryStore(ObjectStore):
         list of int
             trajectory indices
 
-        '''
+        """
 
         # get the values
         return self.variables['snapshots'][idx].tolist()
 
     def load(self, idx):
-        '''
+        """
         Return a trajectory from the storage
 
         Parameters
@@ -66,13 +67,13 @@ class TrajectoryStore(ObjectStore):
         Trajectory
             the trajectory
 
-        '''
+        """
 
         trajectory = Trajectory(self.vars['snapshots'][idx])
         return trajectory
 
     def iter_snapshot_indices(this, iter_range=None):
-        '''
+        """
         Return an iterator over the lists of snapshot indices for all
         trajectories in the storage
 
@@ -87,7 +88,7 @@ class TrajectoryStore(ObjectStore):
         Iterator
             the iterator
 
-        '''
+        """
 
         class ObjectIterator:
             def __init__(self):
@@ -105,7 +106,7 @@ class TrajectoryStore(ObjectStore):
 
             def next(self):
                 if self.idx < len(self.storage):
-                    obj = self.snapshot_indices(self.idx)
+                    obj = this.snapshot_indices(self.idx)
                     if self.iter_range is not None and self.iter_range.step is not None:
                         self.idx += self.iter_range.step
                     else:
@@ -122,7 +123,8 @@ class TrajectoryStore(ObjectStore):
         # index associated storage in class variable for all Trajectory instances to access
 
         self.init_variable('snapshots', 'lazyobj.snapshots',
-            dimensions=('...', ),
-            description="trajectory[trajectory][frame] is the snapshot index (0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.",
-            chunksizes=(10240, )
-        )
+                           dimensions=('...',),
+                           description="trajectory[trajectory][frame] is the snapshot index " +
+                                       "(0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.",
+                           chunksizes=(10240,)
+                           )

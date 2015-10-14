@@ -2,9 +2,9 @@ import inspect
 
 import logging
 import weakref
-from decorator import decorator
 
 logger = logging.getLogger(__name__)
+
 
 class DelayedLoader(object):
     def __get__(self, instance, owner):
@@ -25,6 +25,7 @@ class DelayedLoader(object):
             instance._lazy[self] = value
         else:
             instance._lazy[self] = value
+
 
 class StorableObject(object):
     """Mixin that allows an object to carry a .name property that can be saved
@@ -94,7 +95,7 @@ class StorableObject(object):
     @classmethod
     def descendants(cls):
         return cls.__subclasses__() + \
-               [g for s in cls.__subclasses__()  for g in s.descendants()]
+               [g for s in cls.__subclasses__() for g in s.descendants()]
 
     @staticmethod
     def objects():
@@ -103,7 +104,7 @@ class StorableObject(object):
         """
         subclasses = StorableObject.descendants()
 
-        return { subclass.__name__ : subclass for subclass in subclasses }
+        return {subclass.__name__: subclass for subclass in subclasses}
 
     @classmethod
     def args(cls):
@@ -122,9 +123,8 @@ class StorableObject(object):
         excluded_keys = ['idx', 'json', 'identifier']
         return {
             key: value for key, value in self.__dict__.iteritems()
-            if key not in excluded_keys
-            and key not in self._excluded_attr
-            and not (key.startswith('_') and self._exclude_private_attr)
+            if key not in excluded_keys and key not in self._excluded_attr and
+            not (key.startswith('_') and self._exclude_private_attr)
         }
 
     @classmethod
@@ -150,7 +150,10 @@ class StorableObject(object):
                     if 'name' in dct:
                         obj.name = dct['name']
 
+            return obj
+
         except TypeError as e:
+            #TODO: Better exception
             print dct
             print cls.__name__
             print e
@@ -158,7 +161,6 @@ class StorableObject(object):
             print init_dct
             print non_init_dct
 
-        return obj
 
 class StorableNamedObject(StorableObject):
     """Mixin that allows an object to carry a .name property that can be saved
@@ -190,7 +192,8 @@ class StorableNamedObject(StorableObject):
     @name.setter
     def name(self, name):
         if self._name_fixed:
-            raise ValueError('Objects cannot be renamed to "%s" after is has been saved, it is already named "%s"' % ( name, self._name))
+            raise ValueError('Objects cannot be renamed to "%s" after is has been saved, it is already named "%s"' % (
+                name, self._name))
         else:
             self._name = name
 
@@ -204,20 +207,21 @@ class StorableNamedObject(StorableObject):
         >>> import openpathsampling as p
         >>> full = p.FullVolume().named('myFullVolume')
         """
-#        copied_object = copy.copy(self)
-#        copied_object._name = name
-#        if hasattr(copied_object, 'idx'):
-#            copied_object.idx = dict()
+        #        copied_object = copy.copy(self)
+        #        copied_object._name = name
+        #        if hasattr(copied_object, 'idx'):
+        #            copied_object.idx = dict()
 
         self._name = name
 
         return self
 
 
-def lazy(*attribues):
+def lazy(*attributes):
     def _decorator(cls):
-        for attr in attribues:
+        for attr in attributes:
             setattr(cls, attr, DelayedLoader())
 
         return cls
+
     return _decorator

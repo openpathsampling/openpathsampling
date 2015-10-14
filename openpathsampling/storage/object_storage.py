@@ -20,7 +20,7 @@ class ObjectStore(object):
 
     allowed_types = [
         'int', 'float', 'long', 'str', 'bool'
-        'nunpy.float32', 'numpy.float64',
+                                       'nunpy.float32', 'numpy.float64',
         'numpy.int8', 'numpy.inf16', 'numpy.int32', 'numpy.int64',
         'numpy.uint8', 'numpy.uinf16', 'numpy.uint32', 'numpy.uint64',
         'index', 'length'
@@ -244,11 +244,11 @@ class ObjectStore(object):
 
             # otherwise search the storage for the name
             found_idx = [idx for idx, s in enumerate(self.storage.variables[
-                self.identifier][:]) if s == needle
-            ]
+                                                         self.identifier][:]) if s == needle
+                         ]
 
             if len(found_idx) > 0:
-                    return found_idx[0]
+                return found_idx[0]
 
             return None
         else:
@@ -384,6 +384,7 @@ class ObjectStore(object):
             The iterator that iterates the objects in the store
 
         """
+
         class ObjectIterator:
             def __init__(self):
                 self.storage = this
@@ -475,7 +476,7 @@ class ObjectStore(object):
         obj = self.vars['json'][idx]
         return obj
 
-#        return self.load_json(self.prefix + '_json', idx)
+    #        return self.load_json(self.prefix + '_json', idx)
 
     def clear_cache(self):
         """Clear the cache and force reloading
@@ -493,9 +494,9 @@ class ObjectStore(object):
             idxs = range(len(self))
             jsons = self.variables['json'][:]
 
-            [ self.add_single_to_cache(i,j) for i,j in zip(
+            [self.add_single_to_cache(i, j) for i, j in zip(
                 idxs,
-                jsons) ]
+                jsons)]
 
             self._cached_all = True
 
@@ -566,30 +567,30 @@ class ObjectStore(object):
 
     @property
     def last(self):
-        '''
+        """
         Returns the last generated trajectory. Useful to continue a run.
 
         Returns
         -------
         Trajectoy
             the actual trajectory object
-        '''
+        """
         return self.load(len(self) - 1)
 
     @property
     def first(self):
-        '''
+        """
         Returns the last stored object. Useful to continue a run.
 
         Returns
         -------
         Object
             the actual last stored object
-        '''
+        """
         return self.load(0)
 
     def free(self):
-        '''
+        """
         Return the number of the next free index
 
         Returns
@@ -597,9 +598,9 @@ class ObjectStore(object):
         index : int
             the number of the next free index in the storage.
             Used to store a new object.
-        '''
+        """
         count = len(self)
-        self._free = set([ idx for idx in self._free if idx >= count])
+        self._free = set([idx for idx in self._free if idx >= count])
         idx = count
         while idx in self._free:
             idx += 1
@@ -607,9 +608,9 @@ class ObjectStore(object):
         return idx
 
     def reserve_idx(self, idx):
-        '''
+        """
         Locks an idx as used
-        '''
+        """
         self._free.add(idx)
 
     def _init(self):
@@ -630,25 +631,25 @@ class ObjectStore(object):
 
         if self.has_uid:
             self.init_variable("uid", 'str',
-                description='A unique identifier',
-                chunksizes=tuple([10240]))
+                               description='A unique identifier',
+                               chunksizes=tuple([10240]))
 
         if self.has_name:
             self.init_variable("name", 'str',
-                description='A name',
-                chunksizes=tuple([10240]))
+                               description='A name',
+                               chunksizes=tuple([10240]))
 
         if self.json:
             self.init_variable("json", 'json',
-                description='A json serialized version of the object',
-                chunksizes=tuple([10240]))
+                               description='A json serialized version of the object',
+                               chunksizes=tuple([10240]))
 
     def _restore(self):
         pass
 
-# ==============================================================================
-# INITIALISATION UTILITY FUNCTIONS
-# ==============================================================================
+    # ==============================================================================
+    # INITIALISATION UTILITY FUNCTIONS
+    # ==============================================================================
 
     def init_variable(self, name, var_type, dimensions=None, **kwargs):
         """
@@ -699,7 +700,7 @@ class ObjectStore(object):
                 dimensions = [dimensions]
 
         if dimensions is None:
-            dimensions = (self.prefix, )
+            dimensions = (self.prefix,)
         else:
             dimensions = tuple([self.prefix] + list(dimensions))
 
@@ -710,9 +711,9 @@ class ObjectStore(object):
             **kwargs
         )
 
-# ==============================================================================
-# COLLECTIVE VARIABLE UTILITY FUNCTIONS
-# ==============================================================================
+    # ==============================================================================
+    # COLLECTIVE VARIABLE UTILITY FUNCTIONS
+    # ==============================================================================
 
     @property
     def op_idx(self):
@@ -726,10 +727,12 @@ class ObjectStore(object):
         function
             the function that reports the index (int) in this store or None if it is not stored
         """
+
         def idx(obj):
             return self.index.get(obj, None)
 
         return idx
+
 
 # =============================================================================
 # LOAD/SAVE DECORATORS FOR CACHE HANDLING
@@ -739,6 +742,7 @@ def loadcache(func):
     """
     Decorator for load functions that add the basic cache handling
     """
+
     def inner(self, idx, *args, **kwargs):
         if type(idx) is not str and idx < 0:
             return None
@@ -757,7 +761,8 @@ def loadcache(func):
                 # and give it another shot
                 if idx in self.name_idx:
                     if len(self.name_idx[idx]) > 1:
-                        logger.debug('Found name "%s" multiple (%d) times in storage! Loading first!' % (idx, len(self.cache[idx])))
+                        logger.debug('Found name "%s" multiple (%d) times in storage! Loading first!' % (
+                            idx, len(self.cache[idx])))
 
                     n_idx = self.name_idx[idx][0]
                 else:
@@ -778,9 +783,9 @@ def loadcache(func):
 
         # ATTENTION HERE!
         # Note that the wrapped function has no self as first parameter. This is because we are wrapping a bound
-        # method in an instance and this one is still bound - luckily - to the same 'self'. In a class decorator when wrapping
-        # the class method directly it is not bound yet and so we need to include the self! Took me some time to
-        # understand and figure that out
+        # method in an instance and this one is still bound - luckily - to the same 'self'. In a class decorator
+        # when wrapping the class method directly it is not bound yet and so we need to include the self! Took
+        # me some time to understand and figure that out
 
         obj = func(n_idx, *args, **kwargs)
         if obj is not None:
@@ -792,6 +797,7 @@ def loadcache(func):
                 self._update_name_in_cache(obj._name, n_idx)
 
         return obj
+
     return inner
 
 
@@ -799,7 +805,8 @@ def savecache(func):
     """
     Decorator for save functions that add the basic cache handling
     """
-    def inner(self, obj, idx = None, *args, **kwargs):
+
+    def inner(self, obj, idx=None, *args, **kwargs):
         # call the normal storage
         idx = func(obj, idx, *args, **kwargs)
 
@@ -825,6 +832,7 @@ def loadidx(func):
     """
     Decorator for load functions that add the basic indexing handling
     """
+
     def inner(self, idx, *args, **kwargs):
         if type(idx) is not str and int(idx) < 0:
             return None
@@ -835,7 +843,7 @@ def loadidx(func):
             # we want to load by name and it was not in cache
             if self.has_name:
                 raise ValueError('Load by name without caching is not supported')
-#                n_idx = self.load_by_name(idx)
+            # n_idx = self.load_by_name(idx)
             else:
                 # load by name only in named storages
                 raise ValueError('Load by name (str) is only supported in named storages')
@@ -846,9 +854,9 @@ def loadidx(func):
 
         # ATTENTION HERE!
         # Note that the wrapped function ho self as first parameter. This is because we are wrapping a bound
-        # method in an instance and this one is still bound - luckily - to the same 'self'. In a class decorator when wrapping
-        # the class method directly it is not bound yet and so we need to include the self! Took me some time to
-        # understand and figure that out
+        # method in an instance and this one is still bound - luckily - to the same 'self'. In a class
+        # decorator when wrapping the class method directly it is not bound yet and so we need to include
+        # the self! Took me some time to understand and figure that out
         logger.debug('Calling load object of type ' + self.content_class.__name__ + ' and IDX #' + str(idx))
         if n_idx >= len(self):
             logger.warning('Trying to load from IDX #' + str(n_idx) + ' > number of object ' + str(len(self)))
@@ -881,8 +889,8 @@ def saveidx(func):
     """
     Decorator for save functions that add the basic indexing handling
     """
-    def inner(self, obj, idx = None, *args, **kwargs):
-        storage = self.storage
+
+    def inner(self, obj, idx=None, *args, **kwargs):
         if idx is None:
             if obj in self.index:
                 # has been saved so quit and do nothing
@@ -909,9 +917,9 @@ def saveidx(func):
             self.storage.variables[self.identifier][idx] = obj._uid
 
         if self.has_name and hasattr(obj, '_name'):
-            #logger.debug('Object ' + str(type(obj)) + ' with IDX #' + str(idx))
-            #logger.debug(repr(obj))
-            #logger.debug("Cleaning up name; currently: " + str(obj._name))
+            # logger.debug('Object ' + str(type(obj)) + ' with IDX #' + str(idx))
+            # logger.debug(repr(obj))
+            # logger.debug("Cleaning up name; currently: " + str(obj._name))
             if obj._name is None:
                 # this should not happen!
                 logger.debug("Nameable object has not been initialized correctly. Has None in _name")

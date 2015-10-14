@@ -1,7 +1,7 @@
 '''
 Created on 03.09.2014
 
-@author: jan-hendrikprinz, David W.H. Swenson
+@author: Jan-Hendrik Prinz, David W.H. Swenson
 '''
 
 import logging

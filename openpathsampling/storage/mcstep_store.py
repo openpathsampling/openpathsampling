@@ -1,6 +1,7 @@
 from openpathsampling.storage import ObjectStore
 from openpathsampling.pathsimulator import MCStep
 
+
 class MCStepStore(ObjectStore):
     def __init__(self):
         super(MCStepStore, self).__init__(
@@ -19,7 +20,7 @@ class MCStepStore(ObjectStore):
             self.vars['mccycle'][idx] = mcstep.mccycle
 
     def load(self, idx):
-        '''
+        """
         Return a sample from the storage
 
         Parameters
@@ -31,7 +32,7 @@ class MCStepStore(ObjectStore):
         -------
         sample : Sample
             the sample
-        '''
+        """
 
         return MCStep(
             mccycle=self.vars['mccycle'][idx],
@@ -45,11 +46,11 @@ class MCStepStore(ObjectStore):
         super(MCStepStore, self)._init()
 
         # New short-hand definition
-        self.init_variable('change', 'obj.pathmovechanges', chunksizes=(1, ))
-        self.init_variable('active', 'obj.samplesets', chunksizes=(1, ))
-        self.init_variable('previous', 'obj.samplesets', chunksizes=(1, ))
-        self.init_variable('simulation', 'obj.pathsimulators', chunksizes=(1, ))
-        self.init_variable('mccycle', 'int', chunksizes=(1, ))
+        self.init_variable('change', 'obj.pathmovechanges', chunksizes=(1,))
+        self.init_variable('active', 'obj.samplesets', chunksizes=(1,))
+        self.init_variable('previous', 'obj.samplesets', chunksizes=(1,))
+        self.init_variable('simulation', 'obj.pathsimulators', chunksizes=(1,))
+        self.init_variable('mccycle', 'int', chunksizes=(1,))
 
     def all(self):
         self.cache_all()
@@ -70,21 +71,19 @@ class MCStepStore(ObjectStore):
             simulation_idxs = storage.variables[self.prefix + '_simulation'][:]
             change_idxs = storage.variables[self.prefix + '_change'][:]
 
-            [ self.add_to_cache(*v) for v in zip(
+            [self.add_to_cache(*v) for v in zip(
                 idxs,
                 steps,
                 previous_idxs,
                 active_idxs,
                 simulation_idxs,
-                change_idxs) ]
+                change_idxs)]
 
             self._cached_all = True
-
 
     def add_to_cache(self, idx, step, previous_idx,
                      active_idx, simulation_idx, change_idx):
         if idx not in self.cache:
-
             storage = self.storage
             obj = MCStep(
                 mccycle=int(step),

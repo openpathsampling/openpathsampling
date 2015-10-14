@@ -20,9 +20,8 @@ class SnapshotStore(ObjectStore):
 
         self.vars[variable][idx] = getattr(object, attribute)
 
-
     def load(self, idx=None):
-        '''
+        """
         Load a snapshot from the storage.
 
         Parameters
@@ -34,7 +33,7 @@ class SnapshotStore(ObjectStore):
         -------
         snapshot : Snapshot
             the loaded snapshot instance
-        '''
+        """
 
         s_idx = int(idx / 2) * 2
 
@@ -45,14 +44,13 @@ class SnapshotStore(ObjectStore):
                 configuration=obj.configuration,
                 momentum=obj.momentum,
                 is_reversed=not obj.is_reversed,
-                reversed_copy=LoaderProxy({self : reversed_idx})
+                reversed_copy=LoaderProxy({self: reversed_idx})
             )
             return snapshot
 
 
         except KeyError:
             pass
-
 
         configuration = self.vars['configuration'][s_idx]
         momentum = self.vars['momentum'][s_idx]
@@ -62,7 +60,7 @@ class SnapshotStore(ObjectStore):
             configuration=configuration,
             momentum=momentum,
             is_reversed=momentum_reversed,
-            reversed_copy=LoaderProxy({self : reversed_idx})
+            reversed_copy=LoaderProxy({self: reversed_idx})
         )
 
         return snapshot
@@ -98,33 +96,33 @@ class SnapshotStore(ObjectStore):
         self.vars['momentum_reversed'][reversed_idx] = not snapshot.is_reversed
 
         reversed = snapshot._reversed
-        snapshot._reversed = LoaderProxy({self : reversed_idx})
-        reversed._reversed = LoaderProxy({self : idx})
+        snapshot._reversed = LoaderProxy({self: reversed_idx})
+        reversed._reversed = LoaderProxy({self: idx})
 
         # mark reversed as stored
         self.index[reversed] = reversed_idx
 
     def _init(self):
-        '''
+        """
         Initializes the associated storage to index configuration_indices in it
-        '''
+        """
         super(SnapshotStore, self)._init()
 
         self.init_variable('configuration', 'lazyobj.configurations',
-                description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
-                chunksizes=(1, )
-        )
+                           description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
+                           chunksizes=(1,)
+                           )
 
         self.init_variable('momentum', 'lazyobj.momenta',
-                description="the snapshot index (0..n_momentum-1) 'frame' of snapshot '{idx}'.",
-                chunksizes=(1, )
-                )
+                           description="the snapshot index (0..n_momentum-1) 'frame' of snapshot '{idx}'.",
+                           chunksizes=(1,)
+                           )
 
-        self.init_variable('momentum_reversed', 'bool', chunksizes=(1, ))
+        self.init_variable('momentum_reversed', 'bool', chunksizes=(1,))
 
-#=============================================================================================
-# COLLECTIVE VARIABLE UTILITY FUNCTIONS
-#=============================================================================================
+    # =============================================================================================
+    # COLLECTIVE VARIABLE UTILITY FUNCTIONS
+    # =============================================================================================
 
     @property
     def op_configuration_idx(self):
@@ -136,6 +134,7 @@ class SnapshotStore(ObjectStore):
         function
             the function that returns the idx of the configuration
         """
+
         def idx(obj):
             return self.index[obj.configuration]
 
@@ -152,6 +151,7 @@ class SnapshotStore(ObjectStore):
             the function that returns the idx of the configuration
 
         """
+
         def idx(obj):
             return self.index[obj.momentum]
 
@@ -159,8 +159,9 @@ class SnapshotStore(ObjectStore):
 
     def all(self):
         return Trajectory([
-            LoaderProxy({self: idx})
-                for idx in range(len(self))])
+                              LoaderProxy({self: idx})
+                              for idx in range(len(self))])
+
 
 class MomentumStore(ObjectStore):
     """
@@ -170,7 +171,7 @@ class MomentumStore(ObjectStore):
     def __init__(self):
         super(MomentumStore, self).__init__(Momentum, json=False)
 
-    def save(self, momentum, idx = None):
+    def save(self, momentum, idx=None):
         """
         Save velocities and kinetic energies.
 
@@ -183,13 +184,13 @@ class MomentumStore(ObjectStore):
             instance. Might overwrite existing Momentum in the database.
         """
 
-        self.vars['velocities'][idx,:,:] = momentum.velocities
+        self.vars['velocities'][idx, :, :] = momentum.velocities
 
         if momentum.kinetic_energy is not None:
             self.vars['kinetic_energy'][idx] = momentum.kinetic_energy
 
     def load(self, idx):
-        '''
+        """
         Load a momentum from the storage
 
         Parameters
@@ -201,7 +202,7 @@ class MomentumStore(ObjectStore):
         -------
         Momentum()
             the loaded momentum instance
-        '''
+        """
 
         velocities = self.vars['velocities'][idx]
         kinetic_energy = self.vars['kinetic_energy'][idx]
@@ -230,10 +231,10 @@ class MomentumStore(ObjectStore):
         if atom_indices is None:
             atom_indices = slice(None)
 
-        return self.variables['velocities'][frame_indices,atom_indices,:].astype(np.float32).copy()
+        return self.variables['velocities'][frame_indices, atom_indices, :].astype(np.float32).copy()
 
     def velocities_as_array(self, frame_indices=None, atom_indices=None):
-        '''
+        """
         Returns a numpy array consisting of all velocities at the given indices
 
         Parameters
@@ -250,14 +251,14 @@ class MomentumStore(ObjectStore):
         numpy.ndarray, shape = (l,n)
             returns an array with `l` the number of frames and `n` the number
             of atoms
-        '''
+        """
 
         return self.velocities_as_numpy(frame_indices, atom_indices)
 
     def _init(self):
-        '''
+        """
         Initializes the associated storage to index momentums in it
-        '''
+        """
 
         super(MomentumStore, self)._init()
 
@@ -265,23 +266,24 @@ class MomentumStore(ObjectStore):
         n_spatial = self.storage.n_spatial
 
         self.init_variable('velocities', 'numpy.float32',
-                dimensions=('atom', 'spatial'),
-                description="the velocity of atom 'atom' in dimension " +
-                            "'coordinate' of momentum 'momentum'.",
-                chunksizes=(1, n_atoms, n_spatial),
-                simtk_unit = 'velocity'
-        )
+                           dimensions=('atom', 'spatial'),
+                           description="the velocity of atom 'atom' in dimension " +
+                                       "'coordinate' of momentum 'momentum'.",
+                           chunksizes=(1, n_atoms, n_spatial),
+                           simtk_unit='velocity'
+                           )
 
         self.init_variable('kinetic_energy', 'float',
-                chunksizes=(1, ),
-                simtk_unit = 'energy'
-        )
+                           chunksizes=(1,),
+                           simtk_unit='energy'
+                           )
+
 
 class ConfigurationStore(ObjectStore):
     def __init__(self):
         super(ConfigurationStore, self).__init__(Configuration, json=False)
 
-    def save(self, configuration, idx = None):
+    def save(self, configuration, idx=None):
         # Store configuration.
         self.vars['coordinates'][idx] = configuration.coordinates
 
@@ -292,14 +294,15 @@ class ConfigurationStore(ObjectStore):
             self.vars['box_vectors'][idx] = configuration.box_vectors
 
     def get(self, indices):
-        return [ self.load(idx) for idx in indices ]
+        return [self.load(idx) for idx in indices]
 
     def load(self, idx):
         coordinates = self.vars["coordinates"][idx]
         box_vectors = self.vars["box_vectors"][idx]
         potential_energy = self.vars["potential_energy"][idx]
 
-        configuration = Configuration(coordinates=coordinates, box_vectors = box_vectors, potential_energy=potential_energy)
+        configuration = Configuration(coordinates=coordinates, box_vectors=box_vectors,
+                                      potential_energy=potential_energy)
         configuration.topology = self.storage.topology
 
         return configuration
@@ -328,7 +331,8 @@ class ConfigurationStore(ObjectStore):
         if atom_indices is None:
             atom_indices = slice(None)
 
-        return self.storage.variables[self.prefix + '_coordinates'][frame_indices,atom_indices,:].astype(np.float32).copy()
+        return self.storage.variables[self.prefix + '_coordinates'][frame_indices, atom_indices, :].astype(
+            np.float32).copy()
 
     def _init(self):
         super(ConfigurationStore, self)._init()
@@ -336,20 +340,20 @@ class ConfigurationStore(ObjectStore):
         n_spatial = self.storage.n_spatial
 
         self.init_variable('coordinates', 'numpy.float32',
-                dimensions=('atom', 'spatial'),
-                description="coordinate of atom '{ix[1]}' in dimension " +
-                            "'{ix[2]}' of configuration '{ix[0]}'.",
-                chunksizes=(1,n_atoms,n_spatial),
-                simtk_unit = 'length'
-        )
+                           dimensions=('atom', 'spatial'),
+                           description="coordinate of atom '{ix[1]}' in dimension " +
+                                       "'{ix[2]}' of configuration '{ix[0]}'.",
+                           chunksizes=(1, n_atoms, n_spatial),
+                           simtk_unit='length'
+                           )
 
         self.init_variable('box_vectors', 'numpy.float32',
-                dimensions=('spatial', 'spatial'),
-                chunksizes=(1,n_spatial,n_spatial),
-                simtk_unit = 'length'
-        )
+                           dimensions=('spatial', 'spatial'),
+                           chunksizes=(1, n_spatial, n_spatial),
+                           simtk_unit='length'
+                           )
 
         self.init_variable('potential_energy', 'float',
-                chunksizes=(1, ),
-                simtk_unit = 'energy'
-        )
+                           chunksizes=(1,),
+                           simtk_unit='energy'
+                           )

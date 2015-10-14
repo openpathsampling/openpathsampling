@@ -1,9 +1,9 @@
-'''
+"""
 Created on 06.07.2014
 
 @author: JDC Chodera
 @author: JH Prinz
-'''
+"""
 
 import logging
 
@@ -14,9 +14,11 @@ import openpathsampling as paths
 import simtk.unit as u
 from netcdfplus import NetCDFPlus
 from cache import WeakLRUCache, WeakValueCache
-#=============================================================================================
+
+
+# =============================================================================================
 # OPS SPECIFIC STORAGE
-#=============================================================================================
+# =============================================================================================
 
 class Storage(NetCDFPlus):
     """
@@ -28,7 +30,7 @@ class Storage(NetCDFPlus):
         """
         Return a simtk.Unit instance from the unit_system the is of the specified dimension, e.g. length, time
         """
-        return u.Unit({self.unit_system.base_units[u.BaseDimension(dimension)] : 1.0})
+        return u.Unit({self.unit_system.base_units[u.BaseDimension(dimension)]: 1.0})
 
     @property
     def template(self):
@@ -47,14 +49,13 @@ class Storage(NetCDFPlus):
 
     def _setup_class(self):
         super(Storage, self)._setup_class()
-                # use MD units
+        # use MD units
 
         self.dimension_units = {
             'length': u.nanometers,
             'velocity': u.nanometers / u.picoseconds,
             'energy': u.kilojoules_per_mole
         }
-
 
     def clone(self, filename, subset):
         """
@@ -70,19 +71,19 @@ class Storage(NetCDFPlus):
         # Copy all configurations and momenta to new file in reduced form
 
         for obj in self.configurations:
-            storage2.configurations.save(obj.copy(subset=subset), idx = self.configurations.index[obj])
+            storage2.configurations.save(obj.copy(subset=subset), idx=self.configurations.index[obj])
         for obj in self.momenta:
-            storage2.momenta.save(obj.copy(subset=subset), idx = self.momenta.index[obj])
+            storage2.momenta.save(obj.copy(subset=subset), idx=self.momenta.index[obj])
 
         # All other should be copied one to one. We do this explicitely although we could just copy all
         # and exclude configurations and momenta, but this seems cleaner
 
         for storage_name in [
-                'pathmovers', 'topologies', 'networks', 'details', 'trajectories',
-                'shootingpoints', 'shootingpointselectors', 'engines', 'volumes',
-                'samplesets', 'ensembles', 'transitions', 'steps', 'pathmovechanges',
-                'samples', 'snapshots', 'pathsimulators', 'cvs'
-            ]:
+            'pathmovers', 'topologies', 'networks', 'details', 'trajectories',
+            'shootingpoints', 'shootingpointselectors', 'engines', 'volumes',
+            'samplesets', 'ensembles', 'transitions', 'steps', 'pathmovechanges',
+            'samples', 'snapshots', 'pathsimulators', 'cvs'
+        ]:
             self.clone_storage(storage_name, storage2)
 
         storage2.close()
@@ -102,10 +103,10 @@ class Storage(NetCDFPlus):
         storage2 = Storage(filename=filename, template=self.template, mode='w')
 
         for storage_name in [
-                'pathmovers', 'topologies', 'networks',
-                'shootingpointselectors', 'engines', 'volumes',
-                'ensembles', 'transitions', 'pathsimulators'
-            ]:
+            'pathmovers', 'topologies', 'networks',
+            'shootingpointselectors', 'engines', 'volumes',
+            'ensembles', 'transitions', 'pathsimulators'
+        ]:
             self.clone_storage(storage_name, storage2)
 
         storage2.close()
@@ -120,7 +121,7 @@ class Storage(NetCDFPlus):
 
     def __init__(self, filename, mode=None,
                  template=None, units=None):
-        '''
+        """
         Create a storage for complex objects in a netCDF file
 
         Parameters
@@ -138,7 +139,7 @@ class Storage(NetCDFPlus):
             ('length', 'velocity', 'energy') pointing to
             the simtk.unit.Unit to be used. If not None overrides the
             standard units used
-        '''
+        """
 
         self._template = template
         super(Storage, self).__init__(filename, mode, units=units)
@@ -169,16 +170,21 @@ class Storage(NetCDFPlus):
         self.add('topologies', paths.storage.ObjectStore(paths.Topology, has_uid=True, has_name=True))
         self.add('pathmovers', paths.storage.ObjectStore(paths.PathMover, has_uid=True, has_name=True))
         self.add('shootingpoints', paths.storage.ObjectStore(paths.ShootingPoint, has_uid=False))
-        self.add('shootingpointselectors', paths.storage.ObjectStore(paths.ShootingPointSelector, has_uid=False, has_name=True))
+        self.add('shootingpointselectors',
+                 paths.storage.ObjectStore(paths.ShootingPointSelector, has_uid=False, has_name=True))
         self.add('engines', paths.storage.ObjectStore(paths.DynamicsEngine, has_uid=True, has_name=True))
-        self.add('pathsimulators', paths.storage.ObjectStore(paths.PathSimulator, has_uid=True, has_name=True))
+        self.add('pathsimulators',
+                 paths.storage.ObjectStore(paths.PathSimulator, has_uid=True, has_name=True))
         self.add('transitions', paths.storage.ObjectStore(paths.Transition, has_uid=True, has_name=True))
-        self.add('networks', paths.storage.ObjectStore(paths.TransitionNetwork, has_uid=True, has_name=True))
+        self.add('networks',
+                 paths.storage.ObjectStore(paths.TransitionNetwork, has_uid=True, has_name=True))
 
         # nestable objects
 
-        self.add('volumes', paths.storage.ObjectStore(paths.Volume, has_uid=True, nestable=True, has_name=True))
-        self.add('ensembles', paths.storage.ObjectStore(paths.Ensemble, has_uid=True, nestable=True, has_name=True))
+        self.add('volumes',
+                 paths.storage.ObjectStore(paths.Volume, has_uid=True, nestable=True, has_name=True))
+        self.add('ensembles',
+                 paths.storage.ObjectStore(paths.Ensemble, has_uid=True, nestable=True, has_name=True))
 
         # special stores
 
@@ -209,9 +215,10 @@ class Storage(NetCDFPlus):
         self.dimension_units.update(paths.tools.units_from_snapshot(template))
         self._init_storages()
 
-        logger.info("Saving topology")
+        # TODO: Might not need to save topology
 
-        topology_id = self.topologies.save(self.topology)
+        logger.info("Saving topology")
+        self.topologies.save(self.topology)
 
         logger.info("Create initial template snapshot")
 
@@ -245,8 +252,8 @@ class Storage(NetCDFPlus):
             'analysis': self.analysis_cache_sizes,
             'production': self.production_cache_sizes,
             'off': self.no_cache_sizes,
-            'lowmemory' : self.lowmemory_cache_sizes,
-            'memtest' : self.memtest_cache_sizes
+            'lowmemory': self.lowmemory_cache_sizes,
+            'memtest': self.memtest_cache_sizes
         }
 
         if mode in available_cache_sizes:
@@ -267,49 +274,49 @@ class Storage(NetCDFPlus):
     @staticmethod
     def default_cache_sizes():
         return {
-            'trajectories' : WeakLRUCache(10000),
-            'snapshots' : WeakLRUCache(10000),
-            'configurations' : WeakLRUCache(10000),
-            'momenta' : WeakLRUCache(10000),
-            'samples' : WeakLRUCache(25000),
-            'samplesets' : False,
-            'cvs' : True,
-            'pathmovers' : True,
-            'shootingpoints' : WeakLRUCache(10000),
-            'shootingpointselectors' : True,
-            'engines' : True,
-            'pathsimulators' : True,
-            'volumes' : True,
-            'ensembles' : True,
-            'pathmovechanges' : False,
-            'transitions' : True,
-            'networks' : True,
-            'details' : False,
-            'steps' : WeakLRUCache(1000)
+            'trajectories': WeakLRUCache(10000),
+            'snapshots': WeakLRUCache(10000),
+            'configurations': WeakLRUCache(10000),
+            'momenta': WeakLRUCache(10000),
+            'samples': WeakLRUCache(25000),
+            'samplesets': False,
+            'cvs': True,
+            'pathmovers': True,
+            'shootingpoints': WeakLRUCache(10000),
+            'shootingpointselectors': True,
+            'engines': True,
+            'pathsimulators': True,
+            'volumes': True,
+            'ensembles': True,
+            'pathmovechanges': False,
+            'transitions': True,
+            'networks': True,
+            'details': False,
+            'steps': WeakLRUCache(1000)
         }
 
     @staticmethod
     def lowmemory_cache_sizes():
         return {
-            'trajectories' : WeakLRUCache(10),
-            'snapshots' : WeakLRUCache(100),
-            'configurations' : WeakLRUCache(10),
-            'momenta' : WeakLRUCache(10),
-            'samples' : WeakLRUCache(25),
-            'samplesets' : False,
-            'cvs' : True,
-            'pathmovers' : True,
-            'shootingpoints' : False,
-            'shootingpointselectors' : True,
-            'engines' : True,
-            'pathsimulators' : True,
-            'volumes' : True,
-            'ensembles' : True,
-            'pathmovechanges' : False,
-            'transitions' : True,
-            'networks' : True,
-            'details' : False,
-            'steps' : WeakLRUCache(10)
+            'trajectories': WeakLRUCache(10),
+            'snapshots': WeakLRUCache(100),
+            'configurations': WeakLRUCache(10),
+            'momenta': WeakLRUCache(10),
+            'samples': WeakLRUCache(25),
+            'samplesets': False,
+            'cvs': True,
+            'pathmovers': True,
+            'shootingpoints': False,
+            'shootingpointselectors': True,
+            'engines': True,
+            'pathsimulators': True,
+            'volumes': True,
+            'ensembles': True,
+            'pathmovechanges': False,
+            'transitions': True,
+            'networks': True,
+            'details': False,
+            'steps': WeakLRUCache(10)
         }
 
     # Memtest will cache everything weak to measure if there is some object left in
@@ -318,25 +325,25 @@ class Storage(NetCDFPlus):
     @staticmethod
     def memtest_cache_sizes():
         return {
-            'trajectories' : WeakLRUCache(10),
-            'snapshots' : WeakLRUCache(10),
-            'configurations' : WeakLRUCache(10),
-            'momenta' : WeakLRUCache(10),
-            'samples' : WeakLRUCache(10),
-            'samplesets' : WeakLRUCache(10),
-            'cvs' : WeakLRUCache(10),
-            'pathmovers' : WeakLRUCache(10),
-            'shootingpoints' : WeakLRUCache(10),
-            'shootingpointselectors' : WeakLRUCache(10),
-            'engines' : WeakLRUCache(10),
-            'pathsimulators' : WeakLRUCache(10),
-            'volumes' : WeakLRUCache(10),
-            'ensembles' : WeakLRUCache(10),
-            'pathmovechanges' : WeakLRUCache(10),
-            'transitions' : WeakLRUCache(10),
-            'networks' : WeakLRUCache(10),
-            'details' : WeakLRUCache(10),
-            'steps' : WeakLRUCache(10)
+            'trajectories': WeakLRUCache(10),
+            'snapshots': WeakLRUCache(10),
+            'configurations': WeakLRUCache(10),
+            'momenta': WeakLRUCache(10),
+            'samples': WeakLRUCache(10),
+            'samplesets': WeakLRUCache(10),
+            'cvs': WeakLRUCache(10),
+            'pathmovers': WeakLRUCache(10),
+            'shootingpoints': WeakLRUCache(10),
+            'shootingpointselectors': WeakLRUCache(10),
+            'engines': WeakLRUCache(10),
+            'pathsimulators': WeakLRUCache(10),
+            'volumes': WeakLRUCache(10),
+            'ensembles': WeakLRUCache(10),
+            'pathmovechanges': WeakLRUCache(10),
+            'transitions': WeakLRUCache(10),
+            'networks': WeakLRUCache(10),
+            'details': WeakLRUCache(10),
+            'steps': WeakLRUCache(10)
         }
 
     # Analysis caching is very large to allow fast processing
@@ -344,77 +351,80 @@ class Storage(NetCDFPlus):
     @staticmethod
     def analysis_cache_sizes():
         return {
-            'trajectories' : WeakLRUCache(500000),
-            'snapshots' : WeakLRUCache(100000),
-            'configurations' : WeakLRUCache(10000),
-            'momenta' : WeakLRUCache(1000),
-            'samples' : WeakLRUCache(1000000),
-            'samplesets' : WeakLRUCache(100000),
-            'cvs' : True,
-            'pathmovers' : True,
-            'shootingpoints' : WeakLRUCache(100000),
-            'shootingpointselectors' : True,
-            'engines' : True,
-            'pathsimulators' : True,
-            'volumes' : True,
-            'ensembles' : True,
-            'pathmovechanges' : WeakLRUCache(250000),
-            'transitions' : True,
-            'networks' : True,
-            'details' : False,
-            'steps' : WeakLRUCache(50000)
+            'trajectories': WeakLRUCache(500000),
+            'snapshots': WeakLRUCache(100000),
+            'configurations': WeakLRUCache(10000),
+            'momenta': WeakLRUCache(1000),
+            'samples': WeakLRUCache(1000000),
+            'samplesets': WeakLRUCache(100000),
+            'cvs': True,
+            'pathmovers': True,
+            'shootingpoints': WeakLRUCache(100000),
+            'shootingpointselectors': True,
+            'engines': True,
+            'pathsimulators': True,
+            'volumes': True,
+            'ensembles': True,
+            'pathmovechanges': WeakLRUCache(250000),
+            'transitions': True,
+            'networks': True,
+            'details': False,
+            'steps': WeakLRUCache(50000)
         }
 
     # Production. No loading, only last 1000 steps and a few other objects for error
     # testing
 
-    def production_cache_sizes(self):
+    @staticmethod
+    def production_cache_sizes():
         return {
-            'trajectories' : WeakLRUCache(100),
-            'snapshots' : WeakLRUCache(100),
-            'configurations' : WeakLRUCache(1000),
-            'momenta' : WeakLRUCache(1000),
-            'samples' : WeakLRUCache(100),
-            'samplesets' : False,
-            'cvs' : False,
-            'pathmovers' : False,
-            'shootingpoints' : False,
-            'shootingpointselectors' : False,
-            'engines' : False,
-            'pathsimulators' : False,
-            'volumes' : False,
-            'ensembles' : False,
-            'pathmovechanges' : False,
-            'transitions' : False,
-            'networks' : False,
-            'details' : False,
-            'steps' : WeakLRUCache(10)
+            'trajectories': WeakLRUCache(100),
+            'snapshots': WeakLRUCache(100),
+            'configurations': WeakLRUCache(1000),
+            'momenta': WeakLRUCache(1000),
+            'samples': WeakLRUCache(100),
+            'samplesets': False,
+            'cvs': False,
+            'pathmovers': False,
+            'shootingpoints': False,
+            'shootingpointselectors': False,
+            'engines': False,
+            'pathsimulators': False,
+            'volumes': False,
+            'ensembles': False,
+            'pathmovechanges': False,
+            'transitions': False,
+            'networks': False,
+            'details': False,
+            'steps': WeakLRUCache(10)
         }
 
     # No caching (so far only CVs internal storage is there)
 
-    def no_cache_sizes(self):
+    @staticmethod
+    def no_cache_sizes():
         return {
-            'trajectories' : False,
-            'snapshots' : False,
-            'configurations' : False,
-            'momenta' : False,
-            'samples' : False,
-            'samplesets' : False,
-            'cvs' : False,
-            'pathmovers' : False,
-            'shootingpoints' : False,
-            'shootingpointselectors' : False,
-            'engines' : False,
-            'pathsimulators' : False,
-            'volumes' : False,
-            'ensembles' : False,
-            'pathmovechanges' : False,
-            'transitions' : False,
-            'networks' : False,
-            'details' : False,
-            'steps' : False
+            'trajectories': False,
+            'snapshots': False,
+            'configurations': False,
+            'momenta': False,
+            'samples': False,
+            'samplesets': False,
+            'cvs': False,
+            'pathmovers': False,
+            'shootingpoints': False,
+            'shootingpointselectors': False,
+            'engines': False,
+            'pathsimulators': False,
+            'volumes': False,
+            'ensembles': False,
+            'pathmovechanges': False,
+            'transitions': False,
+            'networks': False,
+            'details': False,
+            'steps': False
         }
+
 
 class AnalysisStorage(Storage):
     def __init__(self, filename):

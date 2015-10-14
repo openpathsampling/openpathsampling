@@ -1,21 +1,17 @@
-'''
+"""
 
 @author: JH Prinz
-'''
+"""
 
-from openpathsampling.base import StorableObject
 
-import weakref
-
-#=============================================================================
-# SIMULATION CONFIGURATION
-#=============================================================================
+# =============================================================================
+# Loader Proxy
+# =============================================================================
 
 class LoaderProxy(object):
     """
     A proxy that loads an underlying object if attributes are accessed
     """
-
 
     def __init__(self, idx=None):
         if idx is None:

@@ -1,4 +1,4 @@
-__author__ = 'jan-hendrikprinz'
+__author__ = 'Jan-Hendrik Prinz'
 
 import logging
 
@@ -13,9 +13,9 @@ import netCDF4
 import os.path
 
 
-#=============================================================================================
+# =============================================================================================
 # Extended NetCDF Storage for multiple forked trajectories
-#=============================================================================================
+# =============================================================================================
 
 class NetCDFPlus(netCDF4.Dataset):
     """
@@ -45,7 +45,7 @@ class NetCDFPlus(netCDF4.Dataset):
         'store': 'str'
     }
 
-    class Value_Delegate(object):
+    class ValueDelegate(object):
         """
         Value delegator for objects that implement __getitem__ and __setitem__
 
@@ -66,7 +66,8 @@ class NetCDFPlus(netCDF4.Dataset):
             a reference to an object store used for convenience in some cases
 
         """
-        def __init__(self, variable, getter = None, setter = None, store=None):
+
+        def __init__(self, variable, getter=None, setter=None, store=None):
             self.variable = variable
             self.store = store
 
@@ -93,7 +94,7 @@ class NetCDFPlus(netCDF4.Dataset):
         def __repr__(self):
             return repr(self.variable)
 
-    class Key_Delegate(object):
+    class KeyDelegate(object):
         """
         Value delegator for objects that implement __getitem__ and __setitem__
 
@@ -110,6 +111,7 @@ class NetCDFPlus(netCDF4.Dataset):
             a reference to an object store used
 
         """
+
         def __init__(self, variable, store):
             self.variable = variable
             self.store = store
@@ -179,7 +181,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         """
 
-        if mode == None:
+        if mode is None:
             mode = 'a'
 
         exists = os.path.isfile(filename)
@@ -282,11 +284,11 @@ class NetCDFPlus(netCDF4.Dataset):
             setattr(self, store.prefix, store)
 
         self._objects[name] = store
-        if store.content_class is not type(None):
-            self._storages[store.content_class] = store
 
-            self._obj_store[store.content_class] = store
-            self._obj_store.update({cls: store for cls in store.content_class.descendants()})
+        self._storages[store.content_class] = store
+
+        self._obj_store[store.content_class] = store
+        self._obj_store.update({cls: store for cls in store.content_class.descendants()})
 
     def _initialize(self):
         """
@@ -339,7 +341,7 @@ class NetCDFPlus(netCDF4.Dataset):
         for storage in self._objects.values():
             storage._restore()
 
-    def _initialize_netCDF(self):
+    def _initialize_netcdf(self):
         """
         Initialize the netCDF+ file for storage itself.
         """
@@ -456,11 +458,10 @@ class NetCDFPlus(netCDF4.Dataset):
         if hasattr(obj, 'base_cls'):
             store = self._storages[obj.base_cls]
 
-        if store.json:
-            return store.variables['json'][store.idx(obj)]
+            if store.json:
+                return store.variables['json'][store.idx(obj)]
 
-        else:
-            return None
+        return None
 
     def clone_storage(self, storage_to_copy, new_storage):
         """
@@ -541,11 +542,11 @@ class NetCDFPlus(netCDF4.Dataset):
             cached objects
         """
         image = {
-            'weak' : {},
-            'strong' : {},
-            'total' : {},
-            'file' : {},
-            'index' : {}
+            'weak': {},
+            'strong': {},
+            'total': {},
+            'file': {},
+            'index': {}
         }
 
         total_strong = 0
@@ -557,12 +558,12 @@ class NetCDFPlus(netCDF4.Dataset):
             size = store.cache.size
             count = store.cache.count
             profile = {
-                'count' : count[0] + count[1],
-                'count_strong' : count[0],
-                'count_weak' : count[1],
-                'max' : size[0],
-                'size_strong' : size[0],
-                'size_weak' : size[1],
+                'count': count[0] + count[1],
+                'count_strong': count[0],
+                'count_weak': count[1],
+                'max': size[0],
+                'size_strong': size[0],
+                'size_weak': size[1],
             }
             total_strong += count[0]
             total_weak += count[1]
@@ -573,10 +574,10 @@ class NetCDFPlus(netCDF4.Dataset):
             image['weak'][name] = count[1]
             image['total'][name] = count[0] + count[1]
             image['file'][name] = len(store)
-#            if hasattr(store, 'index'):
+            #            if hasattr(store, 'index'):
             image['index'][name] = len(store.index)
-#            else:
-#                image['index'][name] = 0
+        # else:
+        #                image['index'][name] = 0
 
         image['full'] = total_weak + total_strong
         image['total_strong'] = total_strong
@@ -596,8 +597,8 @@ class NetCDFPlus(netCDF4.Dataset):
             the list of variable types
         """
         types = NetCDFPlus._type_conversion.keys()
-        types += [ 'obj.' + x for x in self.objects.keys()]
-        types += [ 'lazyobj.' + x for x in self.objects.keys()]
+        types += ['obj.' + x for x in self.objects.keys()]
+        types += ['lazyobj.' + x for x in self.objects.keys()]
         return sorted(types)
 
     @staticmethod
@@ -687,8 +688,8 @@ class NetCDFPlus(netCDF4.Dataset):
                 not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
 
             getter = lambda v: \
-                [None if int(w) < 0 else LoaderProxy({store : int(w)}) for w in v.tolist()] \
-                    if iterable(v) else None if int(v) < 0 else LoaderProxy({store : int(v)})
+                [None if int(w) < 0 else LoaderProxy({store: int(w)}) for w in v.tolist()] \
+                    if iterable(v) else None if int(v) < 0 else LoaderProxy({store: int(v)})
             setter = lambda v: \
                 np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
                     if iterable(v) else -1 if v is None else store.save(v)
@@ -723,15 +724,15 @@ class NetCDFPlus(netCDF4.Dataset):
                     def _get(my_getter):
                         import simtk.unit as u
                         if my_getter is None:
-                            return lambda v : u.Quantity(v, unit)
+                            return lambda v: u.Quantity(v, unit)
                         else:
-                            return lambda v : u.Quantity(my_getter(v), unit)
+                            return lambda v: u.Quantity(my_getter(v), unit)
 
                     def _set(my_setter):
                         if my_setter is None:
-                            return  lambda v : v / unit
+                            return lambda v: v / unit
                         else:
-                            return  lambda v : my_setter(v / unit)
+                            return lambda v: my_setter(v / unit)
 
                     getter = _get(getter)
                     setter = _set(setter)
@@ -740,8 +741,8 @@ class NetCDFPlus(netCDF4.Dataset):
                 if hasattr(var, 'maskable'):
                     def _get2(my_getter):
                         return lambda v: \
-                            [None if hasattr(w, 'mask') else my_getter(w) for w in v ] \
-                            if type(v) is not str and len(v.shape) > 0 else \
+                            [None if hasattr(w, 'mask') else my_getter(w) for w in v] \
+                                if type(v) is not str and len(v.shape) > 0 else \
                                 (None if hasattr(v, 'mask') else my_getter(v))
 
                     if getter is not None:
@@ -749,7 +750,7 @@ class NetCDFPlus(netCDF4.Dataset):
                     else:
                         getter = _get2(lambda v: v)
 
-            self.vars[var_name] = NetCDFPlus.Value_Delegate(var, getter, setter, store)
+            self.vars[var_name] = NetCDFPlus.ValueDelegate(var, getter, setter, store)
 
         else:
             raise ValueError("Variable '%s' is already taken!")
@@ -838,7 +839,7 @@ class NetCDFPlus(netCDF4.Dataset):
             ncvar = ncfile.createVariable(var_name, nc_type, dimensions,
                                           zlib=False, chunksizes=chunksizes)
 
-        setattr(ncvar,      'var_type', var_type)
+        setattr(ncvar, 'var_type', var_type)
 
         if self.support_simtk_unit and simtk_unit is not None:
 
@@ -865,11 +866,11 @@ class NetCDFPlus(netCDF4.Dataset):
             self.units[var_name] = unit_instance
 
             # Define units for a float variable
-            setattr(ncvar,      'unit_simtk', json_unit)
-            setattr(ncvar,      'unit', symbol)
+            setattr(ncvar, 'unit_simtk', json_unit)
+            setattr(ncvar, 'unit', symbol)
 
         if maskable:
-            setattr(ncvar,      'maskable', 'True')
+            setattr(ncvar, 'maskable', 'True')
 
         if description is not None:
             if type(dimensions) is str:
@@ -878,10 +879,11 @@ class NetCDFPlus(netCDF4.Dataset):
                 dim_names = map(lambda p: '#ix{0}:{1}'.format(*p), enumerate(dimensions))
 
             idx_desc = '[' + ']['.join(dim_names) + ']'
-            description = var_name + idx_desc + ' is ' + description.format(idx=dim_names[0], ix=dim_names)
+            description = var_name + idx_desc + ' is ' + description.format(idx=dim_names[0],
+                                                                            ix=dim_names)
 
             # Define long (human-readable) names for variables.
-            setattr(ncvar,    "long_str", description)
+            setattr(ncvar, "long_str", description)
 
         return ncvar
 
