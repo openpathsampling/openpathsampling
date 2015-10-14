@@ -15,9 +15,9 @@ import simtk.unit as u
 from openpathsampling.base import StorableObject, lazy
 
 
-#=============================================================================
+# =============================================================================
 # SIMULATION CONFIGURATION
-#=============================================================================
+# =============================================================================
 
 class Configuration(StorableObject):
     """
@@ -30,8 +30,8 @@ class Configuration(StorableObject):
     engine = None
     load_lazy = True
 
-    def __init__(self, coordinates = None, box_vectors = None,
-                 potential_energy = None, topology = None):
+    def __init__(self, coordinates=None, box_vectors=None,
+                 potential_energy=None, topology=None):
         """
         Create a simulation configuration from either an OpenMM context or
         individually-specified components.
@@ -70,7 +70,7 @@ class Configuration(StorableObject):
         if topology is not None:
             self.topology = topology
 
-        #TODO: Replace deepcopy by reference. Deepcopy is against immutable agreement
+        # TODO: Replace deepcopy by reference. Deepcopy is against immutable agreement
         if coordinates is not None:
             self.coordinates = copy.deepcopy(coordinates)
         if box_vectors is not None:
@@ -104,9 +104,9 @@ class Configuration(StorableObject):
             self.box_vectors = None
             self.potential_energy = None
 
-    #=========================================================================
+    # =========================================================================
     # Comparison functions
-    #=========================================================================
+    # =========================================================================
 
     def __eq__(self, other):
         if self is other:
@@ -123,7 +123,6 @@ class Configuration(StorableObject):
 
         return False
 
-
     @property
     def n_atoms(self):
         '''
@@ -131,11 +130,11 @@ class Configuration(StorableObject):
         '''
         return self.coordinates.shape[0]
 
-    #=========================================================================
+    # =========================================================================
     # Utility functions
-    #=========================================================================
+    # =========================================================================
 
-    def copy(self, subset = None):
+    def copy(self, subset=None):
         """
         Returns a deep copy of the instance itself. If this object is saved
         it will not be stored as a separate object and consume additional
@@ -148,18 +147,18 @@ class Configuration(StorableObject):
         """
 
         if subset is None:
-            this = Configuration(coordinates = self.coordinates,
-                                 box_vectors = self.box_vectors,
-                                 potential_energy = self.potential_energy,
-                                 topology = self.topology)
+            this = Configuration(coordinates=self.coordinates,
+                                 box_vectors=self.box_vectors,
+                                 potential_energy=self.potential_energy,
+                                 topology=self.topology)
         else:
             new_coordinates = self.coordinates[subset, :]
             new_topology = self.topology.subset(subset)
             # TODO: Keep old potential_energy? Is not correct but might be useful. Boxvectors are fine!
-            this = Configuration(coordinates = new_coordinates,
-                                 box_vectors = self.box_vectors,
-                                 potential_energy = self.potential_energy,
-                                 topology = new_topology)
+            this = Configuration(coordinates=new_coordinates,
+                                 box_vectors=self.box_vectors,
+                                 potential_energy=self.potential_energy,
+                                 topology=new_topology)
 
         return this
 
@@ -185,9 +184,9 @@ class Configuration(StorableObject):
         return md.Trajectory(output, self.topology)
 
 
-#=============================================================================
+# =============================================================================
 # SIMULATION MOMENTUM / VELOCITY
-#=============================================================================
+# =============================================================================
 
 class Momentum(StorableObject):
     """
@@ -200,7 +199,7 @@ class Momentum(StorableObject):
     engine = None
     load_lazy = True
 
-    def __init__(self, velocities = None, kinetic_energy = None):
+    def __init__(self, velocities=None, kinetic_energy=None):
         """
         Create a simulation momentum from either an OpenMM context or
         individually-specified components.
@@ -252,11 +251,11 @@ class Momentum(StorableObject):
         '''
         return self.velocities.shape[0]
 
-    #=========================================================================
+    # =========================================================================
     # Utility functions
-    #=========================================================================
+    # =========================================================================
 
-    def copy(self, subset = None, reversed = False):
+    def copy(self, subset=None, reversed=False):
         """
         Returns a deep copy of the instance itself. If this object will not
         be saved as a separate object and consumes additional memory. It is
@@ -280,11 +279,11 @@ class Momentum(StorableObject):
             # Note the v *= -1.0 would be in place for numpy arrays. This here makes a copy!
             new_velocities = -1.0 * new_velocities
 
-        this = Momentum(velocities = new_velocities, kinetic_energy = self.kinetic_energy)
+        this = Momentum(velocities=new_velocities, kinetic_energy=self.kinetic_energy)
 
         return this
 
-    def reversed_copy(self, subset = None):
+    def reversed_copy(self, subset=None):
         """
         Create a copy and flips the velocities and erases the stored indices.
         If stores is will be treated as a new Momentum instance.
@@ -295,12 +294,12 @@ class Momentum(StorableObject):
         Momentum()
             the deep copy with reversed velocities.
         """
-        return self.copy(subset = subset, reversed = True)
+        return self.copy(subset=subset, reversed=True)
 
 
-#=============================================================================
+# =============================================================================
 # SIMULATION SNAPSHOT (COMPLETE FRAME WITH COORDINATES AND VELOCITIES)
-#=============================================================================
+# =============================================================================
 
 def has(attr):
     def _has(func):
@@ -326,10 +325,10 @@ class Snapshot(StorableObject):
     # Hopefully these class member variables will not be needed any longer
     engine = None
 
-    def __init__(self, coordinates = None, velocities = None, box_vectors = None,
-                 potential_energy = None, kinetic_energy = None, topology = None,
-                 configuration = None, momentum = None, is_reversed = False,
-                 reversed_copy = None):
+    def __init__(self, coordinates=None, velocities=None, box_vectors=None,
+                 potential_energy=None, kinetic_energy=None, topology=None,
+                 configuration=None, momentum=None, is_reversed=False,
+                 reversed_copy=None):
         """
         Create a simulation snapshot. Initialization happens primarily in
         one of two ways:
@@ -393,10 +392,10 @@ class Snapshot(StorableObject):
 
         if reversed_copy is None:
             # this will always create the mirrored copy so we can save in pairs!
-            self._reversed = Snapshot(configuration = configuration,
-                                      momentum = momentum,
-                                      is_reversed = not self.is_reversed,
-                                      reversed_copy = self)
+            self._reversed = Snapshot(configuration=configuration,
+                                      momentum=momentum,
+                                      is_reversed=not self.is_reversed,
+                                      reversed_copy=self)
         else:
             self._reversed = reversed_copy
 
@@ -498,9 +497,9 @@ class Snapshot(StorableObject):
         '''
         return self.kinetic_energy + self.potential_energy
 
-    #==========================================================================
+    # ==========================================================================
     # Utility functions
-    #==========================================================================
+    # ==========================================================================
 
     def copy(self):
         """
@@ -514,7 +513,7 @@ class Snapshot(StorableObject):
         Snapshot()
             the deep copy
         """
-        this = Snapshot(configuration = self.configuration, momentum = self.momentum,
+        this = Snapshot(configuration=self.configuration, momentum=self.momentum,
                         is_reversed=self.is_reversed)
         return this
 
@@ -566,7 +565,7 @@ class Snapshot(StorableObject):
         So far the potential and kinetic energies are copied and are thus false but still useful!?!
         """
 
-        this = Snapshot(configuration = self.configuration.copy(subset),
-                        momentum = self.momentum.copy(subset),
-                        is_reversed = self.is_reversed)
+        this = Snapshot(configuration=self.configuration.copy(subset),
+                        momentum=self.momentum.copy(subset),
+                        is_reversed=self.is_reversed)
         return this

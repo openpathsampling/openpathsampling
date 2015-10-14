@@ -1,5 +1,5 @@
 ###############################################################
-#| CLASS Order Parameter
+# | CLASS Order Parameter
 ###############################################################
 
 import marshal
@@ -145,15 +145,14 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     def _interprete_num_type(instance):
         ty = type(instance)
 
-        types = [float, int, bool, str]
+        known_types = [float, int, bool, str]
 
-        if ty in types:
+        if ty in known_types:
             return ty.__name__
         elif ty is np.dtype:
             return 'numpy.' + instance.dtype.type.__name__
         else:
             return 'None'
-
 
     @property
     def template_value(self):
@@ -332,6 +331,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             return not self.__eq__(other)
         return NotImplemented
 
+
 class CV_Volume(CollectiveVariable):
     """ Make `Volume` into `CollectiveVariable`: maps to 0.0 or 1.0
 
@@ -371,7 +371,7 @@ class CV_Volume(CollectiveVariable):
         return {
             'name': self.name,
             'volume': self.volume,
-            'store_cache' : self.store_cache
+            'store_cache': self.store_cache
         }
 
     @classmethod
@@ -381,6 +381,7 @@ class CV_Volume(CollectiveVariable):
             volume=dct['volume'],
             store_cache=dct['store_cache']
         )
+
 
 class CV_Function(CollectiveVariable):
     """Make any function `fcn` into a `CollectiveVariable`.
@@ -475,13 +476,13 @@ class CV_Function(CollectiveVariable):
         ret = []
         while i < len(opcodes):
             if ord(opcodes[i]) == op:
-                ret.append((i, ord(opcodes[i+1]) + ord(opcodes[i+2]) * 256))
+                ret.append((i, ord(opcodes[i + 1]) + ord(opcodes[i + 2]) * 256))
             if opcodes[i] < opcode.HAVE_ARGUMENT:
                 i += 1
             else:
                 i += 3
 
-        return [ code.func_code.co_names[i[1]] for i in ret ]
+        return [code.func_code.co_names[i[1]] for i in ret]
 
     def to_dict(self):
         fcn = None
@@ -501,7 +502,7 @@ class CV_Function(CollectiveVariable):
 
                     global_vars = [
                         var for var in global_vars if var not in builtins
-                    ]
+                        ]
 
                     if len(global_vars) > 0:
                         print 'Not good. Your function relies on globally set variables ' + \
@@ -510,12 +511,12 @@ class CV_Function(CollectiveVariable):
                         print 'Check, if you can replace these by constants or variables ' + \
                               'that are defined within the function itself'
 
-                        print [ obj._idx for obj in global_vars if hasattr(obj, '_idx')]
+                        print [obj._idx for obj in global_vars if hasattr(obj, '_idx')]
 
-                        print [ obj for obj in global_vars ]
+                        print [obj for obj in global_vars]
 
-                    not_allowed_modules = [ module for module in import_vars
-                                            if module not in CV_Function._allowed_modules]
+                    not_allowed_modules = [module for module in import_vars
+                                           if module not in CV_Function._allowed_modules]
 
                     if len(not_allowed_modules) > 0:
                         print 'requires the following modules to be installed:', import_vars
@@ -540,7 +541,7 @@ class CV_Function(CollectiveVariable):
         return {
             'name': self.name,
             'fcn': fcn,
-            'template':  self.template,
+            'template': self.template,
             'dimensions': self.dimensions,
             'kwargs': self.kwargs,
             'store_cache': self.store_cache
@@ -575,7 +576,6 @@ class CV_Function(CollectiveVariable):
 
         return obj
 
-
     def __eq__(self, other):
         """Override the default Equals behavior"""
         if isinstance(other, self.__class__):
@@ -587,7 +587,7 @@ class CV_Function(CollectiveVariable):
                 return False
 
             if hasattr(self.callable_fcn.func_code, 'op_code') and \
-                    self.callable_fcn.func_code.op_code != other.callable_fcn.func_code.op_code:
+                            self.callable_fcn.func_code.op_code != other.callable_fcn.func_code.op_code:
                 # Compare Bytecode. Not perfect, but should be good enough
                 return False
 
@@ -627,7 +627,7 @@ class CV_Class(CollectiveVariable):
     >>> print psi_orderparam( traj.md() )
     """
 
-    _allowed_modules = [ 'msmbuilder' ]
+    _allowed_modules = ['msmbuilder']
 
     def __init__(
             self,
@@ -696,7 +696,7 @@ class CV_Class(CollectiveVariable):
             'name': self.name,
             'cls': cls,
             'dimensions': self.dimensions,
-            'store_cache' : self.store_cache,
+            'store_cache': self.store_cache,
             'kwargs': self.kwargs
         }
 
