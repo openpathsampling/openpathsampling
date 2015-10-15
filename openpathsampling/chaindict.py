@@ -41,8 +41,6 @@ class ChainDict(object):
     dimensions
     """
 
-    use_unique = True
-
     def __init__(self):
         self.post = None
 

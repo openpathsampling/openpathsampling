@@ -27,7 +27,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     name : string
         A descriptive name of the collectivevariable. It is used in the string
         representation.
-    dimensions : int
+    dimensions : None or tuple of int
         The number of dimensions of the output order parameter. So far this
         is not used and will be necessary or useful when storage is
         available
@@ -94,7 +94,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
                 self.unit = unit
 
             if var_type is not None:
-                self.var_type = None
+                self.var_type = var_type
 
         else:
             self.unit = unit
@@ -126,7 +126,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         post = post + self.multi_dict + self.single_dict
 
-        if 'numpy' in var_type:
+        if 'numpy' in self.var_type:
             post = post + cd.MergeNumpy()
 
         super(CollectiveVariable, self).__init__(post=post)
@@ -149,7 +149,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         if ty in known_types:
             return ty.__name__
-        elif ty is np.dtype:
+        elif hasattr(instance, 'dtype'):
             return 'numpy.' + instance.dtype.type.__name__
         else:
             return 'None'
@@ -251,7 +251,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
                 unit = test_type.unit
                 test_type = test_type._value
 
-            if type(test_type) is np.array:
+            if type(test_type) is np.ndarray:
                 dimensions = test_type.shape
             else:
                 if hasattr(test_value, '__len__'):
@@ -287,6 +287,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             self.dimensions = dimensions
             self.fnc_uses_lists = fnc_uses_lists
             self.unit = unit
+
 
     def sync(self):
         """
@@ -405,7 +406,7 @@ class CV_Function(CollectiveVariable):
             dimensions=None,
             store_cache=True,
             fnc_uses_lists=False,
-            var_type='float',
+            var_type=None,
             **kwargs
     ):
         """
