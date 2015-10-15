@@ -110,7 +110,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         self.single_dict = cd.ExpandSingle()
         self.multi_dict = cd.ExpandMulti()
-        self.cache_dict = cd.CacheChainDict(WeakLRUCache(100, weak_type='key'))
+        self.cache_dict = cd.CacheChainDict(WeakLRUCache(100000, weak_type='key'))
 
         self.store_cache = store_cache
 
@@ -489,9 +489,10 @@ class CV_Function(CollectiveVariable):
         f = self.callable_fcn
         f_module = f.__module__
         is_local = f_module == '__main__'
+        is_loaded = f_module == 'openpathsampling.collectivevariable'
         is_class = isinstance(f, (type, types.ClassType))
         if not is_class:
-            if is_local:
+            if is_local or is_loaded:
                 # this is a local function, let's see if we can save it
                 if self.allow_marshal and callable(self.callable_fcn):
                     # use marshal
@@ -586,10 +587,14 @@ class CV_Function(CollectiveVariable):
             if self.kwargs != other.kwargs:
                 return False
 
-            if hasattr(self.callable_fcn.func_code, 'op_code') and \
+            if self.callable_fcn is None or other.callable_fcn is None:
+                return False
+
+            if hasattr(self.callable_fcn.func_code, 'op_code') and hasattr(other.callable_fcn.func_code, 'op_code') and \
                             self.callable_fcn.func_code.op_code != other.callable_fcn.func_code.op_code:
                 # Compare Bytecode. Not perfect, but should be good enough
                 return False
+
 
             return True
 
