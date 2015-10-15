@@ -436,12 +436,15 @@ class AnalysisStorage(Storage):
         self.set_caching_mode('analysis')
 
         # Let's go caching
+        AnalysisStorage.cache_for_analysis(self)
 
-        self.samples.cache_all()
-        self.samplesets.cache_all()
-        self.cvs.cache_all()
-        self.volumes.cache_all()
-        self.ensembles.cache_all()
-        self.pathmovers.cache_all()
-        self.pathmovechanges.cache_all()
-        self.steps.cache_all()
+    @staticmethod
+    def cache_for_analysis(storage):
+        storage.samples.cache_all()
+        storage.samplesets.cache_all()
+        storage.cvs.cache_all()
+        storage.volumes.cache_all()
+        storage.ensembles.cache_all()
+        storage.pathmovers.cache_all()
+        storage.pathmovechanges.cache_all()
+        storage.steps.cache_all()
