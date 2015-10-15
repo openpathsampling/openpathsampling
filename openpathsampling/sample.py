@@ -276,27 +276,34 @@ class SampleSet(StorableObject):
     def translate_ensembles(sset, new_ensembles):
         """Return SampleSet using `new_ensembles` as ensembles.
 
-        This replaces the samples in TODO
+        This creates a SampleSet which replaces the ensembles in the old
+        sample set with equivalent ensembles from a given list. The string
+        description of the ensemble is used as a test.
 
-        Note that this assumes that the mapping of old ensembles to new
-        ensembles is injective. If this is not true, then there is no unique
+        Note that this assumes that there are no one-to-many or many-to-one
+        relations in the ensembles. If there are, then there is no unique
         way to translate.
+
+        The approach used here will return the SampleSet with the maximum
+        number of ensembles that overlap between the two groups.
         """
         translation = {}
         for ens1 in sset.ensemble_list():
             for ens2 in new_ensembles:
                 if ens1.__str__() == ens2.__str__():
                     translation[ens1] = ens2
-        return SampleSet(
-            [
-                Sample(
+
+        new_samples = []
+        for ens in translation:
+            old_samples = sset.all_from_ensemble(ens)
+            for s in old_samples:
+                new_samples.append(Sample(
                     replica=s.replica,
                     ensemble=translation[s.ensemble],
                     trajectory=s.trajectory
-                )
-                for s in sset
-            ]
-        )
+                ))
+        res = SampleSet.relabel_replicas_per_ensemble(SampleSet(new_samples))
+        return res
 
     @staticmethod
     def relabel_replicas_per_ensemble(ssets):
