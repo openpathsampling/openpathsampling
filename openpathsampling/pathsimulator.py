@@ -353,6 +353,13 @@ class PathSampling(PathSimulator):
         self.live_visualization = None
         self._mover = paths.PathSimulatorMover(self.move_scheme, self)
 
+    def run_until(self, nsteps):
+        if self.storage is not None:
+            if len(self.storage.steps) > 0:
+                self.step = len(self.storage.steps)
+        nsteps_to_run = nsteps - self.step
+        self.run(nsteps_to_run)
+
     def run(self, nsteps):
         mcstep = None
 
