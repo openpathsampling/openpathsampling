@@ -299,27 +299,79 @@ class StateSwapRepExStrategy(MoveStrategy):
     pass
 
 class ReplicaExchangeStrategy(MoveStrategy):
-    _level = levels.SUPERGROUP
     """
     Converts EnsembleHops to ReplicaExchange (single replica to default)
     """
+    _level = levels.SUPERGROUP
     pass
 
 class EnsembleHopStrategy(MoveStrategy):
-    _level = levels.SUPERGROUP
     """
     Converts ReplicaExchange to EnsembleHop.
+
+    from_group: can differ from output group `group` if desired
     """
-    def __init__(self, ensembles, group="repex", replace=True):
+    _level = levels.SUPERGROUP
+    def __init__(self, ensembles=None, group="repex", replace=True,
+                 from_group=None, bias=None):
         super(EnsembleHopStrategy, self).__init__(
             ensembles=ensembles, group=group, replace=replace
         )
+        self.bias = bias
+        self.from_group = from_group
 
     def make_movers(self, scheme):
-        #TODO
-        # here we'll identify all the ensembles in self.group, and figure
-        # out what the hops would be, and make them
-        pass
+        # First, check whether we're dealing with something that looks like
+        # hops, something that looks like swaps, or something that doesn't
+        # make sense
+        from_group = self.from_group
+        if from_group is None:
+            self.replace = True
+        if self.replace:
+            from_group = self.group
+        signatures = [m.ensemble_signature for m in scheme.movers[from_group]]
+
+        # nested function used for error handling
+        def sig_error(sig, errstr=""):
+            raise RuntimeError("Ensemble Hop signature error: " + errstr + 
+                               str(sig))
+
+        hop_list = []
+
+        for sig in signatures:
+            # First, a bunch of error handling. We assert things that should
+            # be, and if they aren't true, we convert the AssertionError to
+            # a RuntimeError (with clearer error messages).
+            #
+            # While we're at it, we also set up the list of hops we'll make
+            try:
+                assert(sig[0]==sig[1])
+            except AssertionError:
+                sig_error(sig)
+
+            n_ens = len(sig[0])
+
+            if n_ens == 2: # replica exchange
+                try:
+                    assert(set(sig[0])==set(sig[1]))
+                except AssertionError:
+                    sig_error(sig, errstr="Not replica exchange signature. ")
+                hop_list.extend([[sig[0][0],sig[0][1]], [sig[0][1],sig[0][0]]])
+            elif n_ens == 1: # already ensemble hop (ish)
+                hop_list.extend([[sig[0][0], sig[1][0]]])
+                # No other error checking in here. This means you can do
+                # stupid stuff like turn shooting movers into hops into the
+                # same ensemble: you have to override defaults to do that,
+                # so this is the intended behavior.
+            else:
+                sig_error(sig)
+
+        hops = [paths.EnsembleHopMover(hop[0], hop[1], bias=self.bias)
+                for hop in hop_list]
+
+        
+        return hops
+
 
 class PathReversalStrategy(MoveStrategy):
     """
