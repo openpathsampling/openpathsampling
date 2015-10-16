@@ -310,7 +310,16 @@ class EnsembleHopStrategy(MoveStrategy):
     """
     Converts ReplicaExchange to EnsembleHop.
     """
-    pass
+    def __init__(self, ensembles, group="repex", replace=True):
+        super(EnsembleHopStrategy, self).__init__(
+            ensembles=ensembles, group=group, replace=replace
+        )
+
+    def make_movers(self, scheme):
+        #TODO
+        # here we'll identify all the ensembles in self.group, and figure
+        # out what the hops would be, and make them
+        pass
 
 class PathReversalStrategy(MoveStrategy):
     """
