@@ -181,11 +181,34 @@ class testSelectedPairsRepExStrategy(MoveStrategyTestSetup):
         movers = strategy.make_movers(scheme)
         assert_equal(len(movers), 3)
         assert_equal(movers[0].ensemble_signature_set,
-                     ({ ens00, ens01 }, { ens00, ens01 }))
+                     ({ens00, ens01}, {ens00, ens01}))
         assert_equal(movers[1].ensemble_signature_set,
-                     ({ ens00, ens02 }, { ens00, ens02 }))
+                     ({ens00, ens02}, {ens00, ens02}))
         assert_equal(movers[2].ensemble_signature_set,
-                     ({ ens01, ens02 }, { ens01, ens02 }))
+                     ({ens01, ens02}, {ens01, ens02}))
+
+class testEnsembleHopStrategy(MoveStrategyTestSetup):
+    def test_make_movers(self):
+        strategy = EnsembleHopStrategy()
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        # defaults to 4 repex movers, so
+        assert_equal(len(movers), 8)
+
+        # set up the swap pairs
+        swap_pairs = []
+        for trans in self.network.sampling_transitions:
+            swap_pairs.extend([[trans.ensembles[i], trans.ensembles[i+1]] 
+                               for i in range(len(trans.ensembles)-1)])
+        assert_equal(len(swap_pairs), 4)
+
+        # check that each swap pair has a hop
+        mover_sigs = [m.ensemble_signature for m in movers]
+        for pair in swap_pairs:
+            sig1 = ((pair[0],),(pair[1],))
+            sig2 = ((pair[1],),(pair[0],))
+            assert_in(sig1, mover_sigs)
+            assert_in(sig2, mover_sigs)
 
 
 class testPathReversalStrategy(MoveStrategyTestSetup):
