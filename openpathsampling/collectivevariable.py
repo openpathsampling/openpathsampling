@@ -7,6 +7,7 @@ import base64
 import types
 import opcode
 import __builtin__
+import importlib
 
 import simtk.unit as u
 import numpy as np
@@ -407,6 +408,7 @@ class CV_Function(CollectiveVariable):
             store_cache=True,
             fnc_uses_lists=False,
             var_type=None,
+            unit=None,
             **kwargs
     ):
         """
@@ -467,7 +469,8 @@ class CV_Function(CollectiveVariable):
             dimensions=dimensions,
             store_cache=store_cache,
             fnc_uses_lists=fnc_uses_lists,
-            var_type=var_type
+            var_type=var_type,
+            unit=unit
         )
 
     @staticmethod
@@ -476,9 +479,11 @@ class CV_Function(CollectiveVariable):
         i = 0
         ret = []
         while i < len(opcodes):
-            if ord(opcodes[i]) == op:
+            int_code = ord(opcodes[i])
+            if int_code == op:
                 ret.append((i, ord(opcodes[i + 1]) + ord(opcodes[i + 2]) * 256))
-            if opcodes[i] < opcode.HAVE_ARGUMENT:
+
+            if  int_code < opcode.HAVE_ARGUMENT:
                 i += 1
             else:
                 i += 3
@@ -502,27 +507,50 @@ class CV_Function(CollectiveVariable):
 
                     builtins = dir(__builtin__)
 
-                    global_vars = [
+                    global_vars = list(set([
                         var for var in global_vars if var not in builtins
-                        ]
+                        ]))
+
+                    import_vars = list(set(import_vars))
 
                     if len(global_vars) > 0:
-                        print 'Not good. Your function relies on globally set variables ' + \
-                              'and these cannot be saved!'
-                        print 'requires the following globals to be set:', global_vars
-                        print 'Check, if you can replace these by constants or variables ' + \
-                              'that are defined within the function itself'
 
-                        print [obj._idx for obj in global_vars if hasattr(obj, '_idx')]
+                        err = 'The function you try to save relies on globally set variables' + \
+                              '\nand these cannot be saved since storage has no access to the' + \
+                              '\nglobal scope. This includes imports!'
+                        err += '\nWe require that the following globals: ' + str(global_vars) + ' either'
+                        err += '\n(1) be replaced by constants'
+                        err += '\n(2) be defined inside your function,' + \
+                               '\n' + '\n'.join(map(lambda x : '    ' + x + '= ...', global_vars))
+                        err += '\n(3) imports need to be "re"-imported inside your function' + \
+                               '\n' + '\n'.join(map(lambda x : '    import ' + x , global_vars))
+                        err += '\n(4) be passed as an external parameter (does not work for imports!), like in '
+                        err += '\n        my_cv = CV_Function("' + self.name + '", ' + f.func_name + ', ' + \
+                              ', '.join(map(lambda x : x + '=' + x, global_vars)) + ')'
+                        err += '\n    and change your function definition like this'
+                        err += '\n        def ' + f.func_name + '(snapshot, ...,  ' + \
+                              ', '.join(global_vars) + '):'
 
-                        print [obj for obj in global_vars]
+                        print err
+
+                        raise RuntimeError('Cannot store function! Dependency on global variables')
+
+                        # print [obj._idx for obj in global_vars if hasattr(obj, '_idx')]
+                        # print [obj for obj in global_vars]
 
                     not_allowed_modules = [module for module in import_vars
                                            if module not in CV_Function._allowed_modules]
 
                     if len(not_allowed_modules) > 0:
-                        print 'requires the following modules to be installed:', import_vars
-                        print 'note that some of these are not allowed so be careful', not_allowed_modules
+                        err  = 'The function you try to save requires the following modules to ' + \
+                               '\nbe installed: ' + str(not_allowed_modules) + ' which are not marked as safe!'
+                        err += '\nYou can change the list of safe modules in "CV_function._allowed_modules"'
+                        err += '\nYou can also include the import startement in your function like'
+                        err += '\n' + '\n'.join(['import ' + v for v in not_allowed_modules])
+
+                        print err
+
+                        raise RuntimeError('Cannot store function! Not allowed modules used.')
 
                     fcn = {
                         '_marshal': base64.b64encode(
@@ -546,7 +574,10 @@ class CV_Function(CollectiveVariable):
             'template': self.template,
             'dimensions': self.dimensions,
             'kwargs': self.kwargs,
-            'store_cache': self.store_cache
+            'store_cache': self.store_cache,
+            'var_type': self.var_type,
+            'fnc_uses_lists': self.fnc_uses_lists,
+            'unit': self.unit
         }
 
     @classmethod
@@ -571,6 +602,9 @@ class CV_Function(CollectiveVariable):
             fcn=f,
             dimensions=dct['dimensions'],
             store_cache=dct['store_cache'],
+            var_type=dct['var_type'],
+            fnc_uses_lists=dct['fnc_uses_lists'],
+            unit=dct['unit'],
             **dct['kwargs']
         )
 

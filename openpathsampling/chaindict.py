@@ -71,12 +71,6 @@ class ChainDict(object):
         else:
             self._set(key, value)
 
-    def _contains(self, item):
-        return dict.__contains__(self, item)
-
-    def _contains_list(self, items):
-        return [self._contains(item) for item in items]
-
     def _set(self, item, value):
         pass
 
@@ -95,33 +89,6 @@ class ChainDict(object):
     def __add__(self, other):
         other.post = self
         return other
-
-    @staticmethod
-    def _split_list_dict(dct, items):
-        nones = [dct[item] if item in dct else None for item in items]
-        missing = [item for item in items if item not in dct]
-
-        return nones, missing
-
-    @staticmethod
-    def _split_list(keys, values):
-        missing = [obj[0] for obj in zip(keys, values) if obj[1] is None]
-        nones = [None if obj[1] is None else obj[0] for obj in zip(keys, values)]
-
-        return nones, missing
-
-    @staticmethod
-    def _apply_some_list(func, items):
-        some = [item for item in items if item is not None]
-        replace = func(some)
-        it = iter(replace)
-
-        return [it.next() if obj is not None else None for obj in items]
-
-    @staticmethod
-    def _replace_none(nones, replace):
-        it = iter(replace)
-        return [obj if obj is not None else it.next() for obj in nones]
 
 
 class Wrap(ChainDict):

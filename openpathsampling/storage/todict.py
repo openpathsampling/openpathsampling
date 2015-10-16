@@ -4,6 +4,7 @@ import numpy as np
 from simtk import unit as units
 import yaml
 from openpathsampling.base import StorableObject
+import importlib
 
 __author__ = 'Jan-Hendrik Prinz'
 
@@ -22,6 +23,13 @@ class ObjectJSON(object):
         np.uint8, np.uint16, np.uint32, np.uint64,
     ]
 
+    allowed_imports = [
+        'numpy',
+        'math',
+        'pandas',
+        'mdtraj'
+    ]
+
     def __init__(self, unit_system=None):
         self.excluded_keys = []
         self.unit_system = unit_system
@@ -35,7 +43,14 @@ class ObjectJSON(object):
         return {'_cls': obj.__class__.__name__, '_dict': self.simplify(obj.to_dict(), obj.base_cls_name)}
 
     def simplify(self, obj, base_type=''):
-        if obj.__class__.__module__ != '__builtin__':
+        if obj.__class__.__name__ == 'module':
+            # store an imported module
+            if obj.__name__.split('.')[0] in self.allowed_imports:
+                return {'_module': obj.__name__}
+            else:
+                raise RuntimeError('The module reference "%s" you want to store is not allowed!' % obj.__name__)
+
+        elif obj.__class__.__module__ != '__builtin__':
             if obj.__class__ is units.Quantity:
                 # This is number with a unit so turn it into a list
                 if self.unit_system is not None:
@@ -132,6 +147,14 @@ class ObjectJSON(object):
                     self.build(key): self.build(o)
                     for key, o in self.build(obj['_dict'])
                     }
+            elif '_module' in obj:
+                module = obj['_module']
+                if module.split('.')[0] in self.allowed_imports:
+                    imp = importlib.import_module(module)
+                    return imp
+                else:
+                    return None
+
             else:
                 return {
                     key: self.build(o)
