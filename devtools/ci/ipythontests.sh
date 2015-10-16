@@ -4,9 +4,6 @@
 cd examples/ipython
 testfail=0
 #python ipynbtest.py "sliced_sequential_ensembles.ipynb" || testfail=1
-# netcdf_test is so fast that checking in the beginning is reasonable
-date
-python ipynbtest.py --strict "test_netcdfplus.ipynb" || testfail=1
 date
 python ipynbtest.py "mstis_bootstrap.ipynb" || testfail=1
 date
@@ -21,10 +18,15 @@ date
 python ipynbtest.py "mistis_analysis.ipynb" || testfail=1
 date
 python ipynbtest.py "alanine.ipynb" || testfail=1
-date
+
 # needs to run after alanine since it need the trajectory.nc file
+date
 python ipynbtest.py "storage_tutorial.ipynb" || testfail=1
 date
+python ipynbtest.py --strict "test_netcdfplus.ipynb" || testfail=1
+date
+python ipynbtest.py --strict "test_cv.ipynb" || testfail=1
+
 # python ipynbtest.py "visualization.ipynb" || testfail=1
 cd ../..
 if [ $testfail -eq 1 ]
