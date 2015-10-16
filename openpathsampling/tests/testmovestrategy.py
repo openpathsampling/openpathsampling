@@ -1,9 +1,10 @@
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, raises, assert_in)
 from nose.plugins.skip import Skip, SkipTest
-from test_helpers import (true_func, assert_equal_array_array, make_1d_traj,
-                          setify_ensemble_signature,
-                          reorder_ensemble_signature)
+from test_helpers import (
+    true_func, assert_equal_array_array, make_1d_traj, MoverWithSignature,
+    setify_ensemble_signature, reorder_ensemble_signature
+)
 
 import openpathsampling as paths
 from openpathsampling.analysis.move_scheme import MoveScheme, DefaultScheme
@@ -209,6 +210,61 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
             sig2 = ((pair[1],),(pair[0],))
             assert_in(sig1, mover_sigs)
             assert_in(sig2, mover_sigs)
+
+        scheme.movers['repex'] = movers
+        newmovers = strategy.make_movers(scheme)
+        assert_equal(len(newmovers), 8)
+        for mover in newmovers:
+            assert_in(mover.ensemble_signature, mover_sigs)
+
+
+    @raises(RuntimeError)
+    def test_different_number_input_output_ensembles(self):
+        ens0 = self.network.transition_ensembles[0]
+        ens1 = self.network.transition_ensembles[1]
+        ens2 = self.network.transition_ensembles[2]
+        weird_mover = MoverWithSignature(
+            input_ensembles=[ens0, ens1, ens2],
+            output_ensembles=[ens0, ens1]
+        )
+        assert_equal(weird_mover.ensemble_signature, 
+                     ((ens0,ens1,ens2),(ens0,ens1)))
+        scheme = MoveScheme(self.network)
+        scheme.movers['weird'] = [weird_mover]
+        strategy = EnsembleHopStrategy(group='weird')
+        strategy.make_movers(scheme)
+
+    @raises(RuntimeError)
+    def test_wrong_number_ensembles_in_signature(self):
+        ens0 = self.network.transition_ensembles[0]
+        ens1 = self.network.transition_ensembles[1]
+        ens2 = self.network.transition_ensembles[2]
+        weird_mover = MoverWithSignature(
+            input_ensembles=[ens0, ens1, ens2],
+            output_ensembles=[ens0, ens1, ens2]
+        )
+        assert_equal(weird_mover.ensemble_signature, 
+                     ((ens0,ens1,ens2),(ens0,ens1,ens2)))
+        scheme = MoveScheme(self.network)
+        scheme.movers['weird'] = [weird_mover]
+        strategy = EnsembleHopStrategy(group='weird')
+        strategy.make_movers(scheme)
+
+    @raises(RuntimeError)
+    def test_not_replica_exchange_signature(self):
+        ens0 = self.network.transition_ensembles[0]
+        ens1 = self.network.transition_ensembles[1]
+        ens2 = self.network.transition_ensembles[2]
+        weird_mover = MoverWithSignature(
+            input_ensembles=[ens0, ens1],
+            output_ensembles=[ens1, ens2]
+        )
+        assert_equal(weird_mover.ensemble_signature, 
+                     ((ens0,ens1),(ens1,ens2)))
+        scheme = MoveScheme(self.network)
+        scheme.movers['weird'] = [weird_mover]
+        strategy = EnsembleHopStrategy(group='weird')
+        strategy.make_movers(scheme)
 
 
 class testPathReversalStrategy(MoveStrategyTestSetup):

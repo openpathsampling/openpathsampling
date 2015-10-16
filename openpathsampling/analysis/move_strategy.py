@@ -339,23 +339,22 @@ class EnsembleHopStrategy(MoveStrategy):
         hop_list = []
 
         for sig in signatures:
-            # First, a bunch of error handling. We assert things that should
-            # be, and if they aren't true, we convert the AssertionError to
-            # a RuntimeError (with clearer error messages).
+            # First, a bunch of error handling. We use the fact that Python
+            # uses short-circuit logic to throw the exception if the test
+            # fails, and the assertion acts as a backup. This is faster than
+            # a try: except: version/
+            # see http://stackoverflow.com/questions/1569049/making-pythons-assert-throw-an-exception-that-i-choose/1569618#1569618
             #
             # While we're at it, we also set up the list of hops we'll make
-            try:
-                assert(sig[0]==sig[1])
-            except AssertionError:
-                sig_error(sig)
+            assert(len(sig[0])==len(sig[1]) or sig_error(sig))
 
             n_ens = len(sig[0])
 
             if n_ens == 2: # replica exchange
-                try:
-                    assert(set(sig[0])==set(sig[1]))
-                except AssertionError:
+                assert(
+                    set(sig[0])==set(sig[1]) or
                     sig_error(sig, errstr="Not replica exchange signature. ")
+                )
                 hop_list.extend([[sig[0][0],sig[0][1]], [sig[0][1],sig[0][0]]])
             elif n_ens == 1: # already ensemble hop (ish)
                 hop_list.extend([[sig[0][0], sig[1][0]]])
@@ -364,12 +363,11 @@ class EnsembleHopStrategy(MoveStrategy):
                 # same ensemble: you have to override defaults to do that,
                 # so this is the intended behavior.
             else:
-                sig_error(sig)
+                sig_error(sig, errstr="Signature contains " + str(n_ens) + 
+                          " ensembles.")
 
         hops = [paths.EnsembleHopMover(hop[0], hop[1], bias=self.bias)
                 for hop in hop_list]
-
-        
         return hops
 
 
