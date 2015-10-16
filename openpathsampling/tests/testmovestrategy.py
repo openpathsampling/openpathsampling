@@ -217,7 +217,6 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
         for mover in newmovers:
             assert_in(mover.ensemble_signature, mover_sigs)
 
-
     @raises(RuntimeError)
     def test_different_number_input_output_ensembles(self):
         ens0 = self.network.transition_ensembles[0]
@@ -265,6 +264,31 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
         scheme.movers['weird'] = [weird_mover]
         strategy = EnsembleHopStrategy(group='weird')
         strategy.make_movers(scheme)
+
+    def test_replace_nofrom(self):
+        # this is the default behavior
+        scheme = DefaultScheme(self.network)
+        scheme.append(EnsembleHopStrategy())
+
+    def test_noreplace_from(self):
+        # if replace is False and from_group is given, we end up with two
+        # groups: both the new and the old.
+        raise SkipTest
+
+    def test_noreplace_sameframe(self):
+        # if replace is False and we have the same from_group, we should
+        # raise an error
+        raise SkipTest
+
+    def test_replace_from(self):
+        # if replace is True and we have a different from_group, we should
+        # remove the old from_group from existence
+        raise SkipTest
+
+    def test_noreplace_nofrom(self):
+        # if replace==False and the from_group is not given, we have shoudl
+        # raise an error
+        raise SkipTest
 
 
 class testPathReversalStrategy(MoveStrategyTestSetup):
