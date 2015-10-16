@@ -64,6 +64,7 @@ class Storage(NetCDFPlus):
         Notes
         -----
         This is mostly used to remove water but keep the data intact.
+
         """
 
         storage2 = Storage(filename=filename, template=self.template.subset(subset), mode='w')
@@ -75,7 +76,7 @@ class Storage(NetCDFPlus):
         for obj in self.momenta:
             storage2.momenta.save(obj.copy(subset=subset), idx=self.momenta.index[obj])
 
-        # All other should be copied one to one. We do this explicitely although we could just copy all
+        # All other should be copied one to one. We do this explicitly although we could just copy all
         # and exclude configurations and momenta, but this seems cleaner
 
         for storage_name in [
@@ -92,8 +93,8 @@ class Storage(NetCDFPlus):
     def clone_empty(self, filename):
         """
         Creates a copy of the netCDF file and replicates only the static parts which I consider
-            ensembles, volumes, engines, pathmovers, shootingpointselectors. We do not need to
-            reconstruct collectivevariables since these need to be created again completely and then
+            ensembles, volumes, engines, path movers, shooting point selectors. We do not need to
+            reconstruct collective variables since these need to be created again completely and then
             the necessary arrays in the file will be created automatically anyway.
 
         Notes
@@ -122,7 +123,7 @@ class Storage(NetCDFPlus):
     def __init__(self, filename, mode=None,
                  template=None, units=None):
         """
-        Create a storage for complex objects in a netCDF file
+        Create a netdfplus storage for OPS Objects
 
         Parameters
         ----------
@@ -243,7 +244,7 @@ class Storage(NetCDFPlus):
         ----------
         caching : str
             One of the following values is allowed 'default', 'production',
-            'analysis', 'off'
+            'analysis', 'off', 'lowmemory' and 'memtest'
 
         """
 
@@ -273,6 +274,11 @@ class Storage(NetCDFPlus):
 
     @staticmethod
     def default_cache_sizes():
+        """
+        Cache sizes for standard sessions for medium production and analysis.
+
+        """
+
         return {
             'trajectories': WeakLRUCache(10000),
             'snapshots': WeakLRUCache(10000),
@@ -297,6 +303,12 @@ class Storage(NetCDFPlus):
 
     @staticmethod
     def lowmemory_cache_sizes():
+        """
+        Cache sizes for very low memory
+
+        This uses even less caching than production runs. Mostly used for debugging.
+        """
+
         return {
             'trajectories': WeakLRUCache(10),
             'snapshots': WeakLRUCache(100),
@@ -319,11 +331,16 @@ class Storage(NetCDFPlus):
             'steps': WeakLRUCache(10)
         }
 
-    # Memtest will cache everything weak to measure if there is some object left in
-    # memory that should have been disposed of.
 
     @staticmethod
     def memtest_cache_sizes():
+        """
+        Cache Sizes for memtest debugging sessions
+
+        Memtest will cache everything weak to measure if there is some object left in
+        memory that should have been disposed of.
+
+        """
         return {
             'trajectories': WeakLRUCache(10),
             'snapshots': WeakLRUCache(10),
@@ -346,10 +363,16 @@ class Storage(NetCDFPlus):
             'steps': WeakLRUCache(10)
         }
 
-    # Analysis caching is very large to allow fast processing
+    #
 
     @staticmethod
     def analysis_cache_sizes():
+        """
+        Cache Sizes for analysis sessions
+
+        Analysis caching is very large to allow fast processing
+
+        """
         return {
             'trajectories': WeakLRUCache(500000),
             'snapshots': WeakLRUCache(100000),
@@ -372,11 +395,16 @@ class Storage(NetCDFPlus):
             'steps': WeakLRUCache(50000)
         }
 
-    # Production. No loading, only last 1000 steps and a few other objects for error
-    # testing
 
     @staticmethod
     def production_cache_sizes():
+        """
+        Cache Sizes for production runs
+
+        Production. No loading assumed, only last 1000 steps and a few other
+        objects for error testing
+
+        """
         return {
             'trajectories': WeakLRUCache(100),
             'snapshots': WeakLRUCache(100),
@@ -403,6 +431,13 @@ class Storage(NetCDFPlus):
 
     @staticmethod
     def no_cache_sizes():
+        """
+        Set cache sizes to no caching at all.
+
+        Notes
+        -----
+        This is VERY SLOW and only used for debugging.
+        """
         return {
             'trajectories': False,
             'snapshots': False,
@@ -427,7 +462,16 @@ class Storage(NetCDFPlus):
 
 
 class AnalysisStorage(Storage):
+    """
+    Open a storage in read-only and do caching useful for analysis.
+    """
     def __init__(self, filename):
+        """
+        Parameters
+        ----------
+        filename : str
+            The filename of the storage to be opened
+        """
         super(AnalysisStorage, self).__init__(
             filename=filename,
             mode='r'

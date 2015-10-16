@@ -227,8 +227,7 @@ class Trajectory(list, StorableObject):
             n_atoms = len(self.atom_indices)
         return n_atoms
 
-        # =============================================================================================
-
+    # =============================================================================================
     # LIST INHERITANCE FUNCTIONS
     # =============================================================================================
 
@@ -253,7 +252,7 @@ class Trajectory(list, StorableObject):
         if type(ret) is list:
             ret = Trajectory(ret)
             ret.atom_indices = self.atom_indices
-        elif hasattr(type(ret), '_idx'):
+        elif hasattr(ret, '_idx'):
             ret = ret.__subject__
 
         return ret
