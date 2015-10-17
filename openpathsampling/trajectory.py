@@ -278,14 +278,38 @@ class Trajectory(list, StorableObject):
         return ObjectIterator()
 
     def items(self):
+        """
+        Returns all contains all actual elements
+
+        This will also return lazy proxy objects and not the references ones
+        as does __iter__, __reversed__ or __getitme__. Useful for faster access to the elements
+
+        Returns
+        -------
+        list of openpathsampling.Snapshot or openpathsampling.storage.objproxy.LoaderProxy
+        """
         return list(self.iteritems())
 
     def iteritems(self):
+        """
+        Returns an iterator over all actual elements
+
+        This will also return lazy proxy objects and not the references ones
+        as does __iter__, __reversed__ or __getitme__. Useful for faster access to the elements
+
+        Returns
+        -------
+        Iterator() over list of openpathsampling.Snapshot or openpathsampling.storage.objproxy.LoaderProxy
+
+        """
         return list.__iter__(self)
 
     def __iter__(this):
         """
         Return an iterator over all snapshots in the storage
+
+        This will always give real openpathsampling.Snapshot objects and never proxies to snapshots.
+        If you prefer proxies (if available) use `.iteritems()`
 
         Parameters
         ----------
