@@ -92,6 +92,7 @@ class MoveStrategy(object):
         self.replace_signatures = None
         self.replace_movers = None
         self.set_replace(replace)
+        self.from_group = group
 
     @property
     def level(self):
@@ -112,11 +113,14 @@ class MoveStrategy(object):
         """Sets values for replace_signatures and replace_movers."""
         self.replace_signatures = False
         self.replace_movers = False
+        self.replace_group = False
         level_type = levels.level_type(self.level)
         if level_type == levels.SIGNATURE:
             self.replace_signatures = replace
         elif level_type == levels.MOVER:
             self.replace_movers = replace
+        elif level_type == levels.SUPERGROUP:
+            self.replace_group = replace
 
     def get_ensembles(self, scheme, ensembles):
         """

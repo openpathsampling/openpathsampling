@@ -268,7 +268,12 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
     def test_replace_nofrom(self):
         # this is the default behavior
         scheme = DefaultScheme(self.network)
-        scheme.append(EnsembleHopStrategy())
+        scheme.movers ={}
+        scheme.append(EnsembleHopStrategy(replace=True, from_group=None))
+        scheme.move_decision_tree()
+        for m in scheme.movers['repex']:
+            print m.ensemble_signature
+        #assert_equal(len(scheme.movers['repex']), 8)
 
     def test_noreplace_from(self):
         # if replace is False and from_group is given, we end up with two
