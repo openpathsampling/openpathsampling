@@ -277,7 +277,10 @@ class Trajectory(list, StorableObject):
 
         return ObjectIterator()
 
-    def iter_lazy(self):
+    def items(self):
+        return list(self.iteritems())
+
+    def iteritems(self):
         return list.__iter__(self)
 
     def __iter__(this):

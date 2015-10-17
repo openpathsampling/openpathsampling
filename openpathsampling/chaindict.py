@@ -122,7 +122,7 @@ class ExpandSingle(ChainDict):
             return self.post[[items]][0]
         if hasattr(items, '__iter__'):
             if hasattr(items, 'iter_lazy'):
-                return self.post[items.iter_lazy()]
+                return self.post[items.iteritems()]
 
             return self.post[items]
         else:
@@ -277,7 +277,7 @@ class StoredDict(ChainDict):
 
     def _get_key_list(self, items):
         try:
-            return map(self._get_key, items.iter_lazy())
+            return map(self._get_key, items.iteritems())
         except AttributeError:
             return map(self._get_key, items)
 
