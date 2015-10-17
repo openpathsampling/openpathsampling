@@ -125,13 +125,16 @@ class ObjectJSON(object):
                 return np.frombuffer(base64.decodestring(obj['_data']), dtype=np.dtype(obj['_dtype'])).reshape(
                     self.build(obj['_numpy']))
             elif '_cls' in obj and '_dict' in obj:
-                if obj['_cls'] in self.class_list:
-                    attributes = self.build(obj['_dict'])
-                    return self.class_list[obj['_cls']].from_dict(attributes)
-                else:
-                    raise ValueError('Cannot create obj of class "' + obj['_cls'] + '".\n' +
-                                     'Class is not registered as creatable! You might have to define\n' +
-                                     'the class locally and call update_storable_classes() on your storage.')
+                if obj['_cls'] not in self.class_list:
+                    self.update_class_list()
+                    if obj['_cls'] not in self.class_list:
+                        # updating did not help, so there is nothing we can do.
+                        raise ValueError('Cannot create obj of class "' + obj['_cls'] + '".\n' +
+                                         'Class is not registered as creatable! You might have to define\n' +
+                                         'the class locally and call update_storable_classes() on your storage.')
+
+                attributes = self.build(obj['_dict'])
+                return self.class_list[obj['_cls']].from_dict(attributes)
             elif '_tuple' in obj:
                 return tuple([self.build(o) for o in obj['_tuple']])
             elif '_type' in obj:
