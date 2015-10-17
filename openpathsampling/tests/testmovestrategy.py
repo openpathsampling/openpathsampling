@@ -271,14 +271,20 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
         scheme.movers ={}
         scheme.append(EnsembleHopStrategy(replace=True, from_group=None))
         scheme.move_decision_tree()
-        for m in scheme.movers['repex']:
-            print m.ensemble_signature
-        #assert_equal(len(scheme.movers['repex']), 8)
+        # 4 normal repex + 2 ms-outer repex = 6 repex * 2 hop/repex = 12
+        assert_equal(len(scheme.movers['repex']), 12)
 
     def test_noreplace_from(self):
         # if replace is False and from_group is given, we end up with two
         # groups: both the new and the old.
-        raise SkipTest
+        scheme = DefaultScheme(self.network)
+        scheme.movers ={}
+        scheme.append(EnsembleHopStrategy(replace=False, 
+                                          group='hop',
+                                          from_group='repex'))
+        scheme.move_decision_tree()
+        assert_equal(len(scheme.movers['repex']), 6)
+        assert_equal(len(scheme.movers['hop']), 12)
 
     def test_noreplace_sameframe(self):
         # if replace is False and we have the same from_group, we should
