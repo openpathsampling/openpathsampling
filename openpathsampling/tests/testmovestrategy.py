@@ -287,11 +287,6 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
         assert_equal(len(scheme.movers['repex']), 6)
         assert_equal(len(scheme.movers['hop']), 12)
 
-    def test_noreplace_sameframe(self):
-        # if replace is False and we have the same from_group, we should
-        # raise an error
-        raise SkipTest
-
     def test_replace_from(self):
         # if replace is True and we have a different from_group, we should
         # remove the old from_group from existence
@@ -305,9 +300,13 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
         assert_not_in("repex", scheme.movers.keys())
 
     def test_noreplace_nofrom(self):
-        # if replace==False and the from_group is not given, we should raise
-        # an error
-        raise SkipTest
+        # if replace==False and the from_group is not given, we should
+        # act as mover replacement (but this is seriously a bad idea)
+        scheme = DefaultScheme(self.network)
+        scheme.movers ={}
+        scheme.append(EnsembleHopStrategy(replace=False, from_group=None))
+        scheme.move_decision_tree()
+        assert_equal(len(scheme.movers['repex']), 18)
 
 
 class testPathReversalStrategy(MoveStrategyTestSetup):
