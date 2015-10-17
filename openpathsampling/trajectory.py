@@ -277,6 +277,9 @@ class Trajectory(list, StorableObject):
 
         return ObjectIterator()
 
+    def iter_lazy(self):
+        return list.__iter__(self)
+
     def __iter__(this):
         """
         Return an iterator over all snapshots in the storage

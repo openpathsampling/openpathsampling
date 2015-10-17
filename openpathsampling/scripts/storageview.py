@@ -5,7 +5,7 @@ import json
 
 import openpathsampling as paths
 
-from openpathsampling.storage import Storage
+from openpathsampling.storage import AnalysisStorage
 
 if __name__ == '__main__':
 
@@ -19,15 +19,9 @@ if __name__ == '__main__':
         print file_name, 'does not exist ! ENDING!'
         exit()
 
-    storage = Storage(
-        filename=file_name,
-        mode='r'
+    storage = AnalysisStorage(
+        filename=file_name
     )
-
-    storage.samples.cache_all()
-    storage.samplesets.cache_all()
-    storage.pathmovechanges.cache_all()
-
 
     class ReadableObjectJSON(paths.storage.todict.ObjectJSON):
         def __init__(self, unit_system=None):
@@ -146,14 +140,14 @@ if __name__ == '__main__':
 
     for p_idx in range(0, len(storage.collectivevariables)):
         obj = storage.collectivevariables.load(p_idx)
-        nline(p_idx, obj.name, '')
+#        nline(p_idx, obj.name, '')
         add = ''
-    #        values = obj(all_snapshot_traj)
-    #        found_values = [ (idx, value) for idx, value in enumerate(values) if value is not None ]
-    #        if len(found_values) > 0:
-    #            add = '{ %d : %f, ... } ' % (found_values[0][0], found_values[0][1]._value )
 
-    #        nline(p_idx,obj.name, str(len(found_values)) + ' entries ' + add)
+        found_values = [ (idx, value) for idx, value in enumerate(obj.store_dict.value_store[:]) if value is not None ]
+        if len(found_values) > 0:
+           add = '{ %s, ... } ' % ( ', '.join(map(lambda val : '%d : %f' % (val[0], val[1]), found_values[0:5] )))
+
+        nline(p_idx,obj.name, str(len(found_values)) + ' entries ' + add)
 
     headline("MCSteps")
 
@@ -167,7 +161,7 @@ if __name__ == '__main__':
     for p_idx in range(0, len(storage.samplesets)):
         obj = storage.samplesets.load(p_idx)
         nline(p_idx, str(len(obj)) + ' sample(s)', [storage.idx(sample) for sample in obj])
-    #        print indent(str(obj.movepath),16)
+        # print indent(str(obj.movepath),16)
 
     headline("Samples")
 

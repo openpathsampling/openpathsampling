@@ -121,6 +121,9 @@ class ExpandSingle(ChainDict):
         if type(items) is LoaderProxy:
             return self.post[[items]][0]
         if hasattr(items, '__iter__'):
+            if hasattr(items, 'iter_lazy'):
+                return self.post[items.iter_lazy()]
+
             return self.post[items]
         else:
             return self.post[[items]][0]
@@ -272,6 +275,13 @@ class StoredDict(ChainDict):
 
         return self.key_store.index.get(item, None)
 
+    def _get_key_list(self, items):
+        try:
+            return map(self._get_key, items.iter_lazy())
+        except AttributeError:
+            return map(self._get_key, items)
+
+
     def _get(self, item):
         key = self._get_key(item)
 
@@ -286,7 +296,7 @@ class StoredDict(ChainDict):
             return self.cache[key]
 
     def _get_list(self, items):
-        keys = map(self._get_key, items)
+        keys = self._get_key_list(items)
         #        cached, missing = self._split_list(items, keys)
 
         idxs = [item for item in keys if item is not None and item not in self.cache]
