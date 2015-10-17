@@ -277,7 +277,7 @@ class Trajectory(list, StorableObject):
 
         return ObjectIterator()
 
-    def items(self):
+    def lazy(self):
         """
         Returns all contains all actual elements
 
@@ -288,9 +288,9 @@ class Trajectory(list, StorableObject):
         -------
         list of openpathsampling.Snapshot or openpathsampling.storage.objproxy.LoaderProxy
         """
-        return list(self.iteritems())
+        return list(self.iterlazy())
 
-    def iteritems(self):
+    def iterlazy(self):
         """
         Returns an iterator over all actual elements
 
