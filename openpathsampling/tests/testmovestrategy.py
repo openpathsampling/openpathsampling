@@ -1,5 +1,6 @@
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises, assert_in)
+                        assert_almost_equal, raises, assert_in,
+                        assert_not_in)
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import (
     true_func, assert_equal_array_array, make_1d_traj, MoverWithSignature,
@@ -294,11 +295,18 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
     def test_replace_from(self):
         # if replace is True and we have a different from_group, we should
         # remove the old from_group from existence
-        raise SkipTest
+        scheme = DefaultScheme(self.network)
+        scheme.movers ={}
+        scheme.append(EnsembleHopStrategy(replace=True, 
+                                          group='hop',
+                                          from_group='repex'))
+        scheme.move_decision_tree()
+        assert_equal(len(scheme.movers['hop']), 12)
+        assert_not_in("repex", scheme.movers.keys())
 
     def test_noreplace_nofrom(self):
-        # if replace==False and the from_group is not given, we have shoudl
-        # raise an error
+        # if replace==False and the from_group is not given, we should raise
+        # an error
         raise SkipTest
 
 

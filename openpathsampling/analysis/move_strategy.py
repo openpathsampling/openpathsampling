@@ -330,9 +330,8 @@ class EnsembleHopStrategy(MoveStrategy):
         # make sense
         from_group = self.from_group
         if from_group is None:
-            self.replace = True
-        if self.replace:
             from_group = self.group
+        self.set_replace(self.replace)
         signatures = [m.ensemble_signature for m in scheme.movers[from_group]]
 
         # nested function used for error handling
