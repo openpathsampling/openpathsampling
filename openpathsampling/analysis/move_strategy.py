@@ -307,67 +307,85 @@ class ReplicaExchangeStrategy(MoveStrategy):
     Converts EnsembleHops to ReplicaExchange (single replica to default)
     """
     _level = levels.SUPERGROUP
-    pass
+    def __init__(self, ensembles=None, group="repex", replace=True,
+                 from_group=None, bias=None):
+        super(ReplicaExchangeStrategy, self).__init__(
+            ensembles=ensembles, group=group, replace=replace
+        )
+        self.bias = bias
+        self.from_group = from_group
+        if self.from_group is None:
+            self.from_group = self.group
 
-class EnsembleHopStrategy(MoveStrategy):
+    def check_for_hop_repex_validity(self, signatures):
+        """
+        Checks that the given set of signatures can be either repex or hop.
+        """
+        # nested function used for error handling
+        def sig_error(sig, errstr=""):
+            raise RuntimeError("Signature error: " + errstr + str(sig))
+
+        for sig in signatures:
+            # We use the fact that Python uses short-circuit logic to throw
+            # the exception if the test fails, and the assertion acts as a
+            # backup. This is faster than a try: except: version.  see
+            # http://stackoverflow.com/questions/1569049/making-pythons-assert-throw-an-exception-that-i-choose/1569618#1569618
+            assert(len(sig[0])==len(sig[1]) or sig_error(sig))
+            n_ens = len(sig[0])
+            if n_ens == 2: # replica exchange
+                assert(
+                    set(sig[0])==set(sig[1]) or
+                    sig_error(sig, errstr="Not replica exchange signature. ")
+                )
+            elif n_ens == 1: # already ensemble hop (ish)
+                assert(
+                    # TODO: check for detailed balance partner
+                    True or
+                    sig_error(sig, errstr="No detailed balance partner. ")
+                )
+            else:
+                sig_error(sig, errstr="Signature contains " + str(n_ens) + 
+                          " ensembles.")
+
+    def make_movers(self, scheme):
+        signatures = [m.ensemble_signature 
+                      for m in scheme.movers[self.from_group]]
+        self.check_for_hop_repex_validity(signatures)
+
+        swap_list = []
+        for sig in signatures:
+            n_ens = len(sig[0])
+            if n_ens == 2:
+                pass
+            elif n_ens == 1:
+                pass
+
+        swaps = [paths.ReplicaExchangeMover(swap[0], swap[1])
+                 for swap in swap_list]
+        
+        pass
+
+class EnsembleHopStrategy(ReplicaExchangeStrategy):
     """
     Converts ReplicaExchange to EnsembleHop.
 
     from_group: can differ from output group `group` if desired
     """
     _level = levels.SUPERGROUP
-    def __init__(self, ensembles=None, group="repex", replace=True,
-                 from_group=None, bias=None):
-        super(EnsembleHopStrategy, self).__init__(
-            ensembles=ensembles, group=group, replace=replace
-        )
-        self.bias = bias
-        self.from_group = from_group
 
     def make_movers(self, scheme):
-        # First, check whether we're dealing with something that looks like
-        # hops, something that looks like swaps, or something that doesn't
-        # make sense
-        from_group = self.from_group
-        if from_group is None:
-            from_group = self.group
-        self.set_replace(self.replace)
-        signatures = [m.ensemble_signature for m in scheme.movers[from_group]]
+        signatures = [m.ensemble_signature 
+                      for m in scheme.movers[self.from_group]]
 
-        # nested function used for error handling
-        def sig_error(sig, errstr=""):
-            raise RuntimeError("Ensemble Hop signature error: " + errstr + 
-                               str(sig))
+        self.check_for_hop_repex_validity(signatures)
 
         hop_list = []
-
         for sig in signatures:
-            # First, a bunch of error handling. We use the fact that Python
-            # uses short-circuit logic to throw the exception if the test
-            # fails, and the assertion acts as a backup. This is faster than
-            # a try: except: version/
-            # see http://stackoverflow.com/questions/1569049/making-pythons-assert-throw-an-exception-that-i-choose/1569618#1569618
-            #
-            # While we're at it, we also set up the list of hops we'll make
-            assert(len(sig[0])==len(sig[1]) or sig_error(sig))
-
             n_ens = len(sig[0])
-
-            if n_ens == 2: # replica exchange
-                assert(
-                    set(sig[0])==set(sig[1]) or
-                    sig_error(sig, errstr="Not replica exchange signature. ")
-                )
+            if n_ens == 2:
                 hop_list.extend([[sig[0][0],sig[0][1]], [sig[0][1],sig[0][0]]])
-            elif n_ens == 1: # already ensemble hop (ish)
+            elif n_ens == 1:
                 hop_list.extend([[sig[0][0], sig[1][0]]])
-                # No other error checking in here. This means you can do
-                # stupid stuff like turn shooting movers into hops into the
-                # same ensemble: you have to override defaults to do that,
-                # so this is the intended behavior.
-            else:
-                sig_error(sig, errstr="Signature contains " + str(n_ens) + 
-                          " ensembles.")
 
         hops = [paths.EnsembleHopMover(hop[0], hop[1], bias=self.bias)
                 for hop in hop_list]
