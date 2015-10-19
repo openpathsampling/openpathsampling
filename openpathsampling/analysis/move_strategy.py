@@ -366,6 +366,7 @@ class ReplicaExchangeStrategy(MoveStrategy):
                  for swap in swap_list]
         return swaps
 
+
 class EnsembleHopStrategy(ReplicaExchangeStrategy):
     """
     Converts ReplicaExchange to EnsembleHop.

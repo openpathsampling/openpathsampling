@@ -198,7 +198,7 @@ class testReplicaExchangeStrategy(MoveStrategyTestSetup):
 
     def test_swap_to_hop_to_swap(self):
         scheme = DefaultScheme(self.network)
-        scheme.movers = {}
+        scheme.movers = {} #LEGACY
         root = scheme.move_decision_tree()
         assert_equal(len(scheme.movers['repex']), 6)
         old_movers = scheme.movers['repex']
@@ -214,6 +214,19 @@ class testReplicaExchangeStrategy(MoveStrategyTestSetup):
         new_sigs = [m.ensemble_signature_set for m in new_movers]
         for old in old_sigs:
             assert_in(old, new_sigs)
+
+    @raises(RuntimeError)
+    def test_detailed_balance_partners(self):
+        scheme = DefaultScheme(self.network)
+        scheme.movers = {} #LEGACY
+        scheme.append(EnsembleHopStrategy())
+        root = scheme.move_decision_tree()
+        assert_equal(len(scheme.movers['repex']), 12)
+        scheme.movers['repex'].pop()
+        assert_equal(len(scheme.movers['repex']), 11)
+        strategy = ReplicaExchangeStrategy()
+        strategy.make_movers(scheme)
+
 
 class testEnsembleHopStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
