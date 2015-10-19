@@ -400,10 +400,17 @@ class Ensemble(StorableNamedObject):
         This uses self.find_valid_slices and returns the actual sub-trajectories
         '''
 
-        indices = self.find_valid_slices(trajectory, lazy, max_length, 
-                                         min_length, overlap)
+        try:
+            indices = self.find_valid_slices(trajectory.lazy(), lazy, max_length,
+                                             min_length, overlap)
 
-        return [trajectory[part] for part in indices]
+            return [paths.Trajectory(trajectory[part]) for part in indices]
+        except AttributeError:
+            indices = self.find_valid_slices(trajectory, lazy, max_length,
+                                             min_length, overlap)
+
+            return [trajectory[part] for part in indices]
+
 
 
     def __str__(self):

@@ -3,6 +3,7 @@
 @author: JH Prinz
 """
 
+import weakref
 
 # =============================================================================
 # Loader Proxy
@@ -18,10 +19,32 @@ class LoaderProxy(object):
             idx = dict()
         super(LoaderProxy, self).__init__()
         self._idx = idx
+        self._subject = None
 
     @property
     def __subject__(self):
-        return self._load_()
+        if self._subject is not None:
+            obj = self._subject()
+            if obj is not None:
+                return obj
+
+        ref = self._load_()
+        self._subject = weakref.ref(ref)
+        return ref
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        elif self.__subject__ is other:
+            return True
+        elif type(other) is LoaderProxy:
+            store1, idx1 = self._idx.iteritems().next()
+            store2, idx2 = other._idx.iteritems().next()
+
+            if idx1 == idx2 and store1 is store2:
+                return True
+
+        return False
 
     @property
     def __class__(self):

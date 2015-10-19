@@ -59,6 +59,7 @@ class StorableObject(object):
             return store.idx(self)
 
     def __init__(self):
+        # print self.cls
         if StorableObject.observe_objects:
             StorableObject._weak_cache[self] = StorableObject._weak_index
             StorableObject._weak_index += 1

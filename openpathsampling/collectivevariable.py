@@ -743,7 +743,7 @@ class CV_Class(CollectiveVariable):
     @classmethod
     def from_dict(cls, dct):
         c = None
-        c_dict = dct['fcn']
+        c_dict = dct['cls']
         if c_dict is not None:
             if '_module' in c_dict:
                 module = c_dict['_module']
@@ -793,7 +793,17 @@ class CV_MD_Function(CV_Function):
     >>> print psi_orderparam( traj )
     """
 
-    def __init__(self, name, fcn, dimensions=None, store_cache=True, single_as_scalar=True, **kwargs):
+    def __init__(self,
+                 name,
+                 fcn,
+                 template=None,
+                 dimensions=None,
+                 store_cache=True,
+                 fnc_uses_lists=True,
+                 var_type='numpy.float32',
+                 unit=None,
+                 single_as_scalar=True,
+                 **kwargs):
         """
         Parameters
         ----------
@@ -804,15 +814,19 @@ class CV_MD_Function(CV_Function):
             atoms which define a specific distance/angle)
 
         """
+
         super(CV_MD_Function, self).__init__(
             name,
             fcn,
+            template=template,
             dimensions=dimensions,
             store_cache=store_cache,
-            fnc_uses_lists=True,
-            var_type='numpy.float32',
+            fnc_uses_lists=fnc_uses_lists,
+            var_type=var_type,
+            unit=unit,
             **kwargs
         )
+
         self.single_as_scalar = single_as_scalar
         self._topology = None
 
@@ -829,6 +843,17 @@ class CV_MD_Function(CV_Function):
         else:
             return arr
 
+    def to_dict(self):
+        dct = super(CV_MD_Function, self).to_dict()
+        dct['single_as_scalar'] = self.single_as_scalar
+        return dct
+
+    @classmethod
+    def from_dict(cls, dct):
+        obj = super(CV_MD_Function, cls).from_dict(dct)
+        obj.single_as_scalar = dct['single_as_scalar']
+
+        return obj
 
 class CV_Featurizer(CV_Class):
     """

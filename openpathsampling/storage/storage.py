@@ -64,7 +64,6 @@ class Storage(NetCDFPlus):
         Notes
         -----
         This is mostly used to remove water but keep the data intact.
-
         """
 
         storage2 = Storage(filename=filename, template=self.template.subset(subset), mode='w')
@@ -76,7 +75,7 @@ class Storage(NetCDFPlus):
         for obj in self.momenta:
             storage2.momenta.save(obj.copy(subset=subset), idx=self.momenta.index[obj])
 
-        # All other should be copied one to one. We do this explicitly although we could just copy all
+        # All other should be copied one to one. We do this explicitely although we could just copy all
         # and exclude configurations and momenta, but this seems cleaner
 
         for storage_name in [

@@ -46,7 +46,7 @@ class ObjectJSON(object):
         if obj.__class__.__name__ == 'module':
             # store an imported module
             if obj.__name__.split('.')[0] in self.allowed_imports:
-                return {'_module': obj.__name__}
+                return {'_import': obj.__name__}
             else:
                 raise RuntimeError('The module reference "%s" you want to store is not allowed!' % obj.__name__)
 
@@ -150,8 +150,8 @@ class ObjectJSON(object):
                     self.build(key): self.build(o)
                     for key, o in self.build(obj['_dict'])
                     }
-            elif '_module' in obj:
-                module = obj['_module']
+            elif '_import' in obj:
+                module = obj['_import']
                 if module.split('.')[0] in self.allowed_imports:
                     imp = importlib.import_module(module)
                     return imp

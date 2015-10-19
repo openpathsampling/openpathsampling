@@ -399,6 +399,16 @@ class Snapshot(StorableObject):
         else:
             self._reversed = reversed_copy
 
+    def __eq__(self, other):
+        if self is other:
+            return True
+        elif hasattr(other, '_idx'):
+            if other.__subject__ is self:
+                return True
+
+        return False
+
+
     @property
     @has('configuration')
     def topology(self):

@@ -31,7 +31,7 @@ class ChainDict(object):
     fnc_uses_lists : boolean
         if True then in the case that the dict is called with several object at a time. The dict
         creates a list of missing ones and passes all of these to the evaluating function at once.
-        Otherwise the fall-back is to call each item seperately. If possible always the multiple-
+        Otherwise the fall-back is to call each item separately. If possible always the multiple-
         option should be used.
 
     Attributes
@@ -111,7 +111,6 @@ class MergeNumpy(ChainDict):
     def __getitem__(self, items):
         return np.array(self.post[items])
 
-
 class ExpandSingle(ChainDict):
     """
     Will take care of iterables
@@ -121,10 +120,20 @@ class ExpandSingle(ChainDict):
         if type(items) is LoaderProxy:
             return self.post[[items]][0]
         if hasattr(items, '__iter__'):
-            if hasattr(items, 'iterlazy'):
-                return self.post[items.iterlazy()]
+            try:
+                dummy = len(items)
+            except TypeError:
+                # no length means unbound iterator and we cannot handle these
+                raise TypeError('Iterators that do not have __len__ implemented are not supported. ' +
+                                'You can wrap your iterator in list() if you know that it will finish.')
 
-            return self.post[items]
+            try:
+                return self.post[items.lazy()]
+            except AttributeError:
+                # turn possible iterators into list since we have to do it anyway.
+                # Iterators do not work
+                return self.post[list(items)]
+
         else:
             return self.post[[items]][0]
 
@@ -289,7 +298,7 @@ class StoredDict(ChainDict):
             return self.cache[key]
 
     def _get_list(self, items):
-        keys =  map(self._get_key, items)
+        keys = map(self._get_key, items)
 
         #        cached, missing = self._split_list(items, keys)
 
