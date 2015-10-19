@@ -28,6 +28,10 @@ class LoaderProxy(object):
                 return obj
 
         ref = self._load_()
+
+        if ref is None:
+            return None
+
         self._subject = weakref.ref(ref)
         return ref
 
@@ -53,6 +57,4 @@ class LoaderProxy(object):
         """
         Call the loader and get the referenced object
         """
-        obj = self._store[self._idx]
-
-        return obj
+        return self._store[self._idx]
