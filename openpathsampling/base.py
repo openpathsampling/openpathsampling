@@ -2,6 +2,7 @@ import inspect
 
 import logging
 import weakref
+from types import MethodType
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,25 @@ class StorableObject(object):
     observe_objects = False
 
     @staticmethod
+    def set_observer(active):
+        if StorableObject.observe_objects is not active:
+            return
+
+        if active:
+            # activate and add __init__
+
+            def _init(self):
+                StorableObject._weak_cache[self] = StorableObject._weak_index
+                StorableObject._weak_index += 1
+
+            StorableObject.__init__ = MethodType(_init, None, StorableObject)
+            StorableObject.observe_objects = True
+
+        if not active:
+            del StorableObject.__init__
+
+
+    @staticmethod
     def count_weaks():
         summary = dict()
         complete = list(StorableObject._weak_cache)
@@ -57,12 +77,6 @@ class StorableObject(object):
             return store.index.get(self, None)
         else:
             return store.idx(self)
-
-    def __init__(self):
-        # print self.cls
-        if StorableObject.observe_objects:
-            StorableObject._weak_cache[self] = StorableObject._weak_index
-            StorableObject._weak_index += 1
 
     @property
     def cls(self):
