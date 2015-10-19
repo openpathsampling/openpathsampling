@@ -276,11 +276,9 @@ class StoredDict(ChainDict):
         if item is None:
             return None
 
-        # TODO: This is for handling Proxies and there might be a better way
         if hasattr(item, '_idx'):
-            store, idx = item._idx.iteritems().next()
-            if store is self.key_store:
-                return idx
+            if item._store is self.key_store:
+                return item._idx
 
         return self.key_store.index.get(item, None)
 

@@ -44,7 +44,7 @@ class SnapshotStore(ObjectStore):
                 configuration=obj.configuration,
                 momentum=obj.momentum,
                 is_reversed=not obj.is_reversed,
-                reversed_copy=LoaderProxy({self: reversed_idx})
+                reversed_copy=LoaderProxy(self, reversed_idx)
             )
             return snapshot
 
@@ -60,7 +60,7 @@ class SnapshotStore(ObjectStore):
             configuration=configuration,
             momentum=momentum,
             is_reversed=momentum_reversed,
-            reversed_copy=LoaderProxy({self: reversed_idx})
+            reversed_copy=LoaderProxy(self, reversed_idx)
         )
 
         return snapshot
@@ -96,8 +96,8 @@ class SnapshotStore(ObjectStore):
         self.vars['momentum_reversed'][reversed_idx] = not snapshot.is_reversed
 
         reversed = snapshot._reversed
-        snapshot._reversed = LoaderProxy({self: reversed_idx})
-        reversed._reversed = LoaderProxy({self: idx})
+        snapshot._reversed = LoaderProxy(self, reversed_idx)
+        reversed._reversed = LoaderProxy(self, idx)
 
         # mark reversed as stored
         self.index[reversed] = reversed_idx
@@ -159,7 +159,7 @@ class SnapshotStore(ObjectStore):
 
     def all(self):
         return Trajectory([
-                              LoaderProxy({self: idx})
+                              LoaderProxy(self, idx)
                               for idx in range(len(self))])
 
 

@@ -91,14 +91,15 @@ class SampleStore(ObjectStore):
 
     def add_empty_to_cache(self, idx, trajectory_idx, replica_idx, bias,
                            ensemble_idx, parent_idx, details_idx, mover_idx):
+        storage = self.storage
         obj = Sample(
-            trajectory=self.storage.trajectories[int(trajectory_idx)],
+            trajectory=storage.trajectories[int(trajectory_idx)],
             replica=int(replica_idx),
             bias=float(bias),
-            ensemble=self.storage.ensembles[int(ensemble_idx)],
-            mover=self.storage.pathmovers[int(mover_idx)],
-            parent=LoaderProxy({self.storage.samples: int(parent_idx)}),
-            details=LoaderProxy({self.storage.details: int(details_idx)})
+            ensemble=storage.ensembles[int(ensemble_idx)],
+            mover=storage.pathmovers[int(mover_idx)],
+            parent=LoaderProxy(storage.samples, int(parent_idx)),
+            details=LoaderProxy(storage.details, int(details_idx))
         )
 
         self.index[obj] = idx
@@ -152,7 +153,7 @@ class SampleSetStore(ObjectStore):
 
         sample_set = SampleSet(
             self.vars['samples'][idx],
-            movepath=LoaderProxy({self.storage.pathmovechanges: int(self.variables['movepath'][idx])})
+            movepath=LoaderProxy(self.storage.pathmovechanges, int(self.variables['movepath'][idx]))
         )
 
         return sample_set
@@ -194,7 +195,7 @@ class SampleSetStore(ObjectStore):
         if idx not in self.cache:
             obj = SampleSet(
                 samples=[self.storage.samples[sample_idx.tolist()] for sample_idx in sample_idxs],
-                movepath=LoaderProxy({self.storage.pathmovechanges: int(pmc_idx)})
+                movepath=LoaderProxy(self.storage.pathmovechanges, int(pmc_idx))
             )
 
             self.index[obj] = idx

@@ -392,7 +392,7 @@ class ObjectStore(object):
         if idx is None:
             return item
         else:
-            return LoaderProxy({self: idx})
+            return LoaderProxy(self, idx)
 
     def __getitem__(self, item):
         """
@@ -813,7 +813,7 @@ def saveidx(func):
                 # has been saved so quit and do nothing
                 return self.index[obj]
             elif type(obj) is LoaderProxy:
-                return obj._idx.itervalues().next()
+                return obj._idx
             else:
                 idx = self.free()
         else:

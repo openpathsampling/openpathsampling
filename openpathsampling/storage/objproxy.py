@@ -13,12 +13,11 @@ class LoaderProxy(object):
     """
     A proxy that loads an underlying object if attributes are accessed
     """
+    __slots__ = ['_subject', '_idx', '_store', '__weakref__']
 
-    def __init__(self, idx=None):
-        if idx is None:
-            idx = dict()
-        super(LoaderProxy, self).__init__()
+    def __init__(self, store, idx):
         self._idx = idx
+        self._store = store
         self._subject = None
 
     @property
@@ -38,18 +37,14 @@ class LoaderProxy(object):
         elif self.__subject__ is other:
             return True
         elif type(other) is LoaderProxy:
-            store1, idx1 = self._idx.iteritems().next()
-            store2, idx2 = other._idx.iteritems().next()
-
-            if idx1 == idx2 and store1 is store2:
+            if self._idx == other._idx and self._store is other._store:
                 return True
 
         return False
 
     @property
     def __class__(self):
-        store, idx = self._idx.iteritems().next()
-        return store.content_class
+        return self._store.content_class
 
     def __getattr__(self, item):
         return getattr(self.__subject__, item)
@@ -58,7 +53,6 @@ class LoaderProxy(object):
         """
         Call the loader and get the referenced object
         """
-        store, idx = self._idx.iteritems().next()
-        obj = store[idx]
+        obj = self._store[self._idx]
 
         return obj

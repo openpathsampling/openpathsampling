@@ -31,7 +31,7 @@ class TrajectoryStore(ObjectStore):
 
         for frame, snapshot in enumerate(trajectory):
             if type(snapshot) is not LoaderProxy:
-                loader = LoaderProxy({snapshot_store: snapshot_store.index[snapshot]})
+                loader = LoaderProxy(snapshot_store, snapshot_store.index[snapshot])
                 trajectory[frame] = loader
 
     def snapshot_indices(self, idx):
