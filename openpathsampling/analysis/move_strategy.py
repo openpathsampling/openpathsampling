@@ -358,15 +358,13 @@ class ReplicaExchangeStrategy(MoveStrategy):
             if n_ens == 2:
                 swap_list.append(sig[0])
             elif n_ens == 1:
-                other_sig = ((sig[1],),(sig[0],))
-                swap_list.append(sig[0])
-                signatures.remove(other_sig) 
-                #ValueError prevented by error check at beginning?
+                swap = (sig[0][0], sig[1][0])
+                if not (swap[1], swap[0]) in swap_list:
+                    swap_list.append(swap)
 
         swaps = [paths.ReplicaExchangeMover(swap[0], swap[1])
                  for swap in swap_list]
-        
-        pass
+        return swaps
 
 class EnsembleHopStrategy(ReplicaExchangeStrategy):
     """

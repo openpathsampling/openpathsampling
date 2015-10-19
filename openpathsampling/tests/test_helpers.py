@@ -151,6 +151,7 @@ def true_func(value, *args, **kwargs):
 def setify_ensemble_signature(sig):
     return (set(sig[0]), set(sig[1]))
 
+
 def reorder_ensemble_signature(sig, match_with):
     setified = setify_ensemble_signature(sig)
     found_sigs = []

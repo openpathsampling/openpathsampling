@@ -189,6 +189,32 @@ class testSelectedPairsRepExStrategy(MoveStrategyTestSetup):
         assert_equal(movers[2].ensemble_signature_set,
                      ({ens01, ens02}, {ens01, ens02}))
 
+class testReplicaExchangeStrategy(MoveStrategyTestSetup):
+    def test_make_movers(self):
+        strategy = ReplicaExchangeStrategy()
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        assert_equal(len(movers), 4)
+
+    def test_swap_to_hop_to_swap(self):
+        scheme = DefaultScheme(self.network)
+        scheme.movers = {}
+        root = scheme.move_decision_tree()
+        assert_equal(len(scheme.movers['repex']), 6)
+        old_movers = scheme.movers['repex']
+        scheme.append(EnsembleHopStrategy())
+        root = scheme.move_decision_tree(rebuild=True)
+        assert_equal(len(scheme.movers['repex']), 12)
+        scheme.append(ReplicaExchangeStrategy())
+        root = scheme.move_decision_tree(rebuild=True)
+        assert_equal(len(scheme.movers['repex']), 6)
+        new_movers = scheme.movers['repex']
+        assert_not_equal(old_movers, new_movers)
+        old_sigs = [m.ensemble_signature_set for m in old_movers]
+        new_sigs = [m.ensemble_signature_set for m in new_movers]
+        for old in old_sigs:
+            assert_in(old, new_sigs)
+
 class testEnsembleHopStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = EnsembleHopStrategy()
