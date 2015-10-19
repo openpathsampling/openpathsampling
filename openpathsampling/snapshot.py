@@ -369,6 +369,7 @@ class Snapshot(StorableObject):
         """
 
         super(Snapshot, self).__init__()
+        self._lazy = dict()
 
         self.is_reversed = is_reversed
 
@@ -398,6 +399,8 @@ class Snapshot(StorableObject):
                                       reversed_copy=self)
         else:
             self._reversed = reversed_copy
+
+
 
     def __eq__(self, other):
         if self is other:

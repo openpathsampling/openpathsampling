@@ -46,7 +46,9 @@ class SampleSet(StorableObject):
     '''
 
     def __init__(self, samples, movepath=None):
+        self._lazy = dict()
         super(SampleSet, self).__init__()
+
         self.samples = []
         self.ensemble_dict = {}
         self.replica_dict = {}
@@ -412,6 +414,7 @@ class Sample(StorableObject):
                  mover=None
                  ):
 
+        self._lazy = dict()
         super(Sample, self).__init__()
         self.bias = bias
         self.replica = replica

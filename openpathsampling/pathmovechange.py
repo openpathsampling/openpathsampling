@@ -29,7 +29,9 @@ class PathMoveChange(TreeMixin, StorableObject):
     '''
 
     def __init__(self, subchanges=None, samples=None, mover=None, details=None):
+        self._lazy = dict()
         StorableObject.__init__(self)
+
         self._len = None
         self._collapsed = None
         self._results = None

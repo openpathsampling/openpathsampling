@@ -5,7 +5,6 @@ class ObjectDictStore(ObjectStore):
     def __init__(self, cls, key_class):
         super(ObjectDictStore, self).__init__(
             cls,
-            has_uid=True,
             json=True,
             has_name=True
         )

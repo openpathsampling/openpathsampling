@@ -64,9 +64,6 @@ class StorableObject(object):
             StorableObject._weak_cache[self] = StorableObject._weak_index
             StorableObject._weak_index += 1
 
-        self._lazy = dict()
-        self._uid = ''
-
     @property
     def cls(self):
         return self.__class__.__name__

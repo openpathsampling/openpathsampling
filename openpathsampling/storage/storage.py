@@ -166,28 +166,28 @@ class Storage(NetCDFPlus):
 
         # normal objects
 
-        self.add('details', paths.storage.ObjectStore(paths.Details, has_uid=False, has_name=False))
-        self.add('topologies', paths.storage.ObjectStore(paths.Topology, has_uid=True, has_name=True))
-        self.add('pathmovers', paths.storage.ObjectStore(paths.PathMover, has_uid=True, has_name=True))
-        self.add('shootingpoints', paths.storage.ObjectStore(paths.ShootingPoint, has_uid=False))
+        self.add('details', paths.storage.ObjectStore(paths.Details, has_name=False))
+        self.add('topologies', paths.storage.ObjectStore(paths.Topology, has_name=True))
+        self.add('pathmovers', paths.storage.ObjectStore(paths.PathMover, has_name=True))
+        self.add('shootingpoints',
+                 paths.storage.ObjectStore(paths.ShootingPoint, has_name=False))
         self.add('shootingpointselectors',
-                 paths.storage.ObjectStore(paths.ShootingPointSelector, has_uid=False, has_name=True))
-        self.add('engines', paths.storage.ObjectStore(paths.DynamicsEngine, has_uid=True, has_name=True))
+                 paths.storage.ObjectStore(paths.ShootingPointSelector, has_name=True))
+        self.add('engines', paths.storage.ObjectStore(paths.DynamicsEngine, has_name=True))
         self.add('pathsimulators',
-                 paths.storage.ObjectStore(paths.PathSimulator, has_uid=True, has_name=True))
-        self.add('transitions', paths.storage.ObjectStore(paths.Transition, has_uid=True, has_name=True))
+                 paths.storage.ObjectStore(paths.PathSimulator, has_name=True))
+        self.add('transitions', paths.storage.ObjectStore(paths.Transition, has_name=True))
         self.add('networks',
-                 paths.storage.ObjectStore(paths.TransitionNetwork, has_uid=True, has_name=True))
+                 paths.storage.ObjectStore(paths.TransitionNetwork, has_name=True))
 
         # nestable objects
 
         self.add('volumes',
-                 paths.storage.ObjectStore(paths.Volume, has_uid=True, nestable=True, has_name=True))
+                 paths.storage.ObjectStore(paths.Volume, nestable=True, has_name=True))
         self.add('ensembles',
-                 paths.storage.ObjectStore(paths.Ensemble, has_uid=True, nestable=True, has_name=True))
+                 paths.storage.ObjectStore(paths.Ensemble, nestable=True, has_name=True))
 
         # special stores
-
         # self.add('names', paths.storage.NameStore())
 
     def _initialize(self):

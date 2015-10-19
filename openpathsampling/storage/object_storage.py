@@ -39,7 +39,7 @@ class ObjectStore(object):
 
     default_cache = 10000
 
-    def __init__(self, content_class, has_uid=False, json=True,
+    def __init__(self, content_class, json=True,
                  caching=None, nestable=False, has_name=False):
 
         """
@@ -48,7 +48,6 @@ class ObjectStore(object):
         ----------
         storage
         content_class
-        has_uid
         json
         dimension_units
         caching : dict-like or bool or int or None
@@ -79,8 +78,8 @@ class ObjectStore(object):
             the reference the Storage object where all data is stored
         content_class : class
             a reference to the class type to be stored using this Storage
-        has_uid : bool
-            if `True` objects can also be loaded by a string identifier/name
+        has_name : bool
+            if `True` objects can also be loaded by a string name
         json : string
             if already computed a JSON Serialized string of the object
         simplifier : util.StorableObjectJSON
@@ -106,7 +105,6 @@ class ObjectStore(object):
         self.content_class = content_class
         self.prefix = None
         self.cache = NoCache()
-        self.has_uid = has_uid
         self.has_name = has_name
         self.json = json
         self._free = set()
@@ -157,10 +155,6 @@ class ObjectStore(object):
         self.variables = self.prefix_delegate(self.storage.variables)
         self.units = self.prefix_delegate(self.storage.units)
         self.vars = self.prefix_delegate(self.storage.vars)
-
-    @property
-    def identifier(self):
-        return self.prefix + '_uid'
 
     @property
     def storage(self):
@@ -214,45 +208,6 @@ class ObjectStore(object):
             The integer index of the given object or None if it is not stored yet
         """
         return self.index.get(obj, None)
-
-    def idx_by_name(self, needle):
-        """
-        Return the index for the (first) object with a given name from the store
-
-        Parameters
-        ----------
-        needle : str
-            The name of the object to be found in the storage
-
-        Returns
-        -------
-        int or None
-            The index of the first found object. If the name is not present,
-            None is returned
-
-        Notes
-        -----
-        Can only be applied to named storages.
-        """
-        if self.has_uid:
-            # if we need a cache we might find the index in there
-            if needle in self.cache:
-                if type(self.cache[needle]) is int:
-                    return self.cache[needle]
-                else:
-                    return self.index[self.cache[needle]]
-
-            # otherwise search the storage for the name
-            found_idx = [idx for idx, s in enumerate(self.storage.variables[
-                                                         self.identifier][:]) if s == needle
-                         ]
-
-            if len(found_idx) > 0:
-                return found_idx[0]
-
-            return None
-        else:
-            raise ValueError('Cannot search for name (str) in non-named objects')
 
     def update_name_cache(self):
         """
@@ -519,11 +474,6 @@ class ObjectStore(object):
                 if name != '':
                     self._update_name_in_cache(obj._name, idx)
 
-            if self.has_uid:
-                if not hasattr(obj, '_uid'):
-                    # get the name of the object
-                    setattr(obj, '_uid', self.get_uid(idx))
-
     def save(self, obj, idx=None):
         """
         Saves an object to the storage.
@@ -540,30 +490,7 @@ class ObjectStore(object):
 
         """
 
-        if self.has_uid and hasattr(obj, '_uid'):
-            self.storage.variables[self.identifier][idx] = obj._uid
-
         self.vars['json'][idx] = obj
-
-    def get_uid(self, idx):
-        """
-        Return the name of and object with given integer index
-
-        Parameters
-        ----------
-        idx : int
-            the integer index of the object whose name is to be returned
-
-        Returns
-        -------
-        str or None
-            Returns the name of the object for named objects. None otherwise.
-
-        """
-        if self.has_uid:
-            return self.storage.variables[self.identifier][idx]
-        else:
-            return None
 
     @property
     def last(self):
@@ -628,11 +555,6 @@ class ObjectStore(object):
         """
         # define dimensions used for the specific object
         self.storage.createDimension(self.prefix, 0)
-
-        if self.has_uid:
-            self.init_variable("uid", 'str',
-                               description='A unique identifier',
-                               chunksizes=tuple([10240]))
 
         if self.has_name:
             self.init_variable("name", 'str',
@@ -869,11 +791,6 @@ def loadidx(func):
 
         self.index[obj] = n_idx
 
-        if self.has_uid:
-            if not hasattr(obj, '_uid'):
-                # get the name of the object
-                setattr(obj, '_uid', self.get_uid(idx))
-
         if self.has_name and hasattr(obj, '_name'):
             setattr(obj, '_name',
                     self.storage.variables[self.prefix + '_name'][idx])
@@ -912,9 +829,6 @@ def saveidx(func):
         self.reserve_idx(idx)
         logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(idx))
         func(obj, idx, *args, **kwargs)
-
-        if self.has_uid and hasattr(obj, '_uid') and obj._uid != '':
-            self.storage.variables[self.identifier][idx] = obj._uid
 
         if self.has_name and hasattr(obj, '_name'):
             # logger.debug('Object ' + str(type(obj)) + ' with IDX #' + str(idx))
