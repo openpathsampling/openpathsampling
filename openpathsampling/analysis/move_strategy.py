@@ -339,8 +339,8 @@ class ReplicaExchangeStrategy(MoveStrategy):
                 )
             elif n_ens == 1: # already ensemble hop (ish)
                 assert(
-                    # TODO: check for detailed balance partner
-                    True or
+                    # TODO: add test for this
+                    (sig[1], sig[0]) in signatures or
                     sig_error(sig, errstr="No detailed balance partner. ")
                 )
             else:
@@ -356,9 +356,12 @@ class ReplicaExchangeStrategy(MoveStrategy):
         for sig in signatures:
             n_ens = len(sig[0])
             if n_ens == 2:
-                pass
+                swap_list.append(sig[0])
             elif n_ens == 1:
-                pass
+                other_sig = ((sig[1],),(sig[0],))
+                swap_list.append(sig[0])
+                signatures.remove(other_sig) 
+                #ValueError prevented by error check at beginning?
 
         swaps = [paths.ReplicaExchangeMover(swap[0], swap[1])
                  for swap in swap_list]
