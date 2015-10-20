@@ -14,13 +14,7 @@ class SnapshotStore(ObjectStore):
     def __init__(self):
         super(SnapshotStore, self).__init__(Snapshot, json=False)
 
-    def store_soft(self, variable, idx, object, attribute=None):
-        if attribute is None:
-            attribute = variable
-
-        self.vars[variable][idx] = getattr(object, attribute)
-
-    def load(self, idx=None):
+    def _load(self, idx):
         """
         Load a snapshot from the storage.
 
@@ -65,7 +59,7 @@ class SnapshotStore(ObjectStore):
 
         return snapshot
 
-    def save(self, snapshot, idx=None):
+    def _save(self, snapshot, idx):
         """
         Add the current state of the snapshot in the database.
 
@@ -171,39 +165,13 @@ class MomentumStore(ObjectStore):
     def __init__(self):
         super(MomentumStore, self).__init__(Momentum, json=False)
 
-    def save(self, momentum, idx=None):
-        """
-        Save velocities and kinetic energies.
-
-        Parameters
-        ----------
-        momentum : Momentum()
-            the actual Momentum() instance to be saved.
-        idx : int or None
-            if not None `idx`is used as the index to index the Momentum()
-            instance. Might overwrite existing Momentum in the database.
-        """
-
+    def _save(self, momentum, idx):
         self.vars['velocities'][idx, :, :] = momentum.velocities
 
         if momentum.kinetic_energy is not None:
             self.vars['kinetic_energy'][idx] = momentum.kinetic_energy
 
-    def load(self, idx):
-        """
-        Load a momentum from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the momentum in the database 'idx' > 0
-
-        Returns
-        -------
-        Momentum()
-            the loaded momentum instance
-        """
-
+    def _load(self, idx):
         velocities = self.vars['velocities'][idx]
         kinetic_energy = self.vars['kinetic_energy'][idx]
 
@@ -283,7 +251,7 @@ class ConfigurationStore(ObjectStore):
     def __init__(self):
         super(ConfigurationStore, self).__init__(Configuration, json=False)
 
-    def save(self, configuration, idx=None):
+    def _save(self, configuration, idx):
         # Store configuration.
         self.vars['coordinates'][idx] = configuration.coordinates
 
@@ -296,7 +264,7 @@ class ConfigurationStore(ObjectStore):
     def get(self, indices):
         return [self.load(idx) for idx in indices]
 
-    def load(self, idx):
+    def _load(self, idx):
         coordinates = self.vars["coordinates"][idx]
         box_vectors = self.vars["box_vectors"][idx]
         potential_energy = self.vars["potential_energy"][idx]

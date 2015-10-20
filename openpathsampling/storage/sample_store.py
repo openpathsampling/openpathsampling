@@ -8,7 +8,7 @@ class SampleStore(ObjectStore):
         super(SampleStore, self).__init__(Sample, json=False)
         self._cached_all = False
 
-    def save(self, sample, idx=None):
+    def _save(self, sample, idx):
         self.vars['trajectory'][idx] = sample.trajectory
         self.vars['ensemble'][idx] = sample.ensemble
         self.vars['replica'][idx] = sample.replica
@@ -17,21 +17,7 @@ class SampleStore(ObjectStore):
         self.vars['bias'][idx] = sample.bias
         self.vars['mover'][idx] = sample.mover
 
-    def load(self, idx):
-        """
-        Return a sample from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the sample
-
-        Returns
-        -------
-        sample : Sample
-            the sample
-        """
-
+    def _load(self, idx):
         obj = Sample(
             trajectory=self.vars['trajectory'][idx],
             replica=self.vars['replica'][idx],
@@ -77,7 +63,7 @@ class SampleStore(ObjectStore):
             mover_idxs = self.variables['mover'][:]
             details_idxs = self.variables['details'][:]
 
-            [self.add_empty_to_cache(*v) for v in zip(
+            [self._add_empty_to_cache(*v) for v in zip(
                 idxs,
                 trajectory_idxs,
                 replica_idxs,
@@ -89,7 +75,7 @@ class SampleStore(ObjectStore):
 
             self._cached_all = True
 
-    def add_empty_to_cache(self, idx, trajectory_idx, replica_idx, bias,
+    def _add_empty_to_cache(self, idx, trajectory_idx, replica_idx, bias,
                            ensemble_idx, parent_idx, details_idx, mover_idx):
         storage = self.storage
         obj = Sample(
@@ -112,12 +98,19 @@ class SampleSetStore(ObjectStore):
     def __init__(self):
         super(SampleSetStore, self).__init__(SampleSet, json=False)
 
-    def save(self, sample_set, idx=None):
-        # Check if all samples are saved
+    def _save(self, sample_set, idx):
         map(self.storage.samples.save, sample_set)
 
         self.vars['samples'][idx] = sample_set
         self.write('movepath', idx, sample_set)
+
+    def _load(self, idx):
+        sample_set = SampleSet(
+            self.vars['samples'][idx],
+            movepath=LoaderProxy(self.storage.pathmovechanges, int(self.variables['movepath'][idx]))
+        )
+
+        return sample_set
 
     def sample_indices(self, idx):
         """
@@ -135,28 +128,6 @@ class SampleSetStore(ObjectStore):
         """
 
         return self.variables['samples'][idx].tolist()
-
-    def load(self, idx):
-        """
-        Return a sample_set from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the sample_set (counts from 0)
-
-        Returns
-        -------
-        sample_set
-            the sample_set
-        """
-
-        sample_set = SampleSet(
-            self.vars['samples'][idx],
-            movepath=LoaderProxy(self.storage.pathmovechanges, int(self.variables['movepath'][idx]))
-        )
-
-        return sample_set
 
     def _init(self, units=None):
         """
@@ -183,7 +154,7 @@ class SampleSetStore(ObjectStore):
             samples_idxs = self.variables['samples'][:]
             pmc_idxs = self.variables['movepath'][:]
 
-            [self.add_empty_to_cache(*v) for v in zip(
+            [self._add_empty_to_cache(*v) for v in zip(
                 idxs,
                 samples_idxs,
                 pmc_idxs
@@ -191,7 +162,7 @@ class SampleSetStore(ObjectStore):
 
             self._cached_all = True
 
-    def add_empty_to_cache(self, idx, sample_idxs, pmc_idx):
+    def _add_empty_to_cache(self, idx, sample_idxs, pmc_idx):
         if idx not in self.cache:
             obj = SampleSet(
                 samples=[self.storage.samples[sample_idx.tolist()] for sample_idx in sample_idxs],

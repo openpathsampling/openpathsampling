@@ -119,35 +119,6 @@ class ObjectStore(object):
 
         self.index = weakref.WeakKeyDictionary()
 
-        # First, apply standard decorator for loading and saving
-        # this handles all the setting and getting of .idx and is
-        # always necessary!
-
-        _save = self.save
-        self.save = types.MethodType(saveidx(_save), self)
-
-        _load = self.load
-        self.load = types.MethodType(loadidx(_load), self)
-
-        # TODO: Combine idx and cache wrapper
-        if caching is not False:
-            # wrap load/save to make this work. I use MethodType here to bind the
-            # wrapped function to this instance. An alternative would be to
-            # add the wrapper to the class itself, which would mean that all
-            # instances have the same setting and a change would be present in all
-            # instances. E.g., first instance has caching and the second not
-            # when the second instance is created the change in the class would
-            # also disable caching in the first instance. The present way with
-            # bound methods is more flexible
-            # Should be not really important, since there will be mostly only one
-            # storage, but this way it is cleaner
-
-            _save = self.save
-            self.save = types.MethodType(savecache(_save), self)
-
-            _load = self.load
-            self.load = types.MethodType(loadcache(_load), self)
-
     def register(self, storage, name):
         self._storage = storage
         self.prefix = name
@@ -410,24 +381,7 @@ class ObjectStore(object):
         except KeyError:
             return None
 
-    def load(self, idx):
-        """
-        Returns an object from the storage. Needs to be implemented from
-        the specific storage class.
-
-        Parameters
-        ----------
-        idx : int or str
-            either the integer index of the object to be loaded or a string
-            (name) for named objects. This will always return the first object
-            found with the specified name.
-
-        Returns
-        -------
-        object
-            the loaded object
-        """
-
+    def _load(self, idx):
         obj = self.vars['json'][idx]
         return obj
 
@@ -474,22 +428,7 @@ class ObjectStore(object):
                 if name != '':
                     self._update_name_in_cache(obj._name, idx)
 
-    def save(self, obj, idx=None):
-        """
-        Saves an object to the storage.
-
-        Parameters
-        ----------
-        obj : object
-            the object to be stored
-        idx : int or string or `None`
-            the index to be used for storing. This is highly discouraged since
-            it changes an immutable object (at least in the storage). It is
-            better to store also the new object and just ignore the
-            previously stored one.
-
-        """
-
+    def _save(self, obj, idx):
         self.vars['json'][idx] = obj
 
     @property
@@ -656,31 +595,38 @@ class ObjectStore(object):
         return idx
 
 
-# =============================================================================
-# LOAD/SAVE DECORATORS FOR CACHE HANDLING
-# =============================================================================
+    # =============================================================================
+    # LOAD/SAVE DECORATORS FOR CACHE HANDLING
+    # =============================================================================
 
-def loadcache(func):
-    """
-    Decorator for load functions that add the basic cache handling
-    """
+    def load(self, idx):
+        """
+        Returns an object from the storage.
 
-    def inner(self, idx, *args, **kwargs):
+        Parameters
+        ----------
+        idx : int or str
+            either the integer index of the object to be loaded or a string
+            (name) for named objects. This will always return the first object
+            found with the specified name.
+
+        Returns
+        -------
+        object
+            the loaded object
+        """
+
         if type(idx) is not str and idx < 0:
             return None
 
         if not hasattr(self, 'cache'):
-            return func(idx, *args, **kwargs)
+            return self._load(idx)
 
         n_idx = idx
 
         if type(idx) is str:
             # we want to load by name and it was not in cache.
             if self.has_name:
-                # since it is not found in the cache before. Refresh the cache
-                self.update_name_cache()
-
-                # and give it another shot
                 if idx in self.name_idx:
                     if len(self.name_idx[idx]) > 1:
                         logger.debug('Found name "%s" multiple (%d) times in storage! Loading first!' % (
@@ -688,11 +634,21 @@ def loadcache(func):
 
                     n_idx = self.name_idx[idx][0]
                 else:
-                    raise ValueError('str "' + idx + '" not found in storage')
-        elif type(idx) is int:
-            pass
-        else:
-            raise ValueError('str "' + idx + '" as indices are only allowed in named storage')
+                    # since it is not found in the cache before. Refresh the cache
+                    self.update_name_cache()
+
+                    # and give it another shot
+                    if idx in self.name_idx:
+                        if len(self.name_idx[idx]) > 1:
+                            logger.debug('Found name "%s" multiple (%d) times in storage! Loading first!' % (
+                                idx, len(self.cache[idx])))
+
+                        n_idx = self.name_idx[idx][0]
+                    else:
+                        raise ValueError('str "' + idx + '" not found in storage')
+
+        elif type(idx) is not int:
+            raise ValueError('indices of type "%s" are not allowed in named storage' % type(idx).__name__)
 
         # if it is in the cache, return it
         try:
@@ -703,13 +659,28 @@ def loadcache(func):
         except KeyError:
             pass
 
-        # ATTENTION HERE!
-        # Note that the wrapped function has no self as first parameter. This is because we are wrapping a bound
-        # method in an instance and this one is still bound - luckily - to the same 'self'. In a class decorator
-        # when wrapping the class method directly it is not bound yet and so we need to include the self! Took
-        # me some time to understand and figure that out
+        # turn into python int if it was a numpy int (in some rare cases!)
+        n_idx = int(n_idx)
 
-        obj = func(n_idx, *args, **kwargs)
+        logger.debug('Calling load object of type ' + self.content_class.__name__ + ' and IDX #' + str(idx))
+
+        if n_idx >= len(self):
+            logger.warning('Trying to load from IDX #' + str(n_idx) + ' > number of object ' + str(len(self)))
+            return None
+        elif n_idx < 0:
+            logger.warning('Trying to load negative IDX #' + str(n_idx) + ' < 0. This should never happen!!!')
+            raise RuntimeError('Loading of negative int should result in no object. This should never happen!')
+        else:
+            obj = self._load(idx)
+
+        self.index[obj] = n_idx
+
+        if self.has_name and hasattr(obj, '_name'):
+            setattr(obj, '_name',
+                    self.storage.variables[self.prefix + '_name'][idx])
+            # make sure that you cannot change the name of loaded objects
+            obj.fix_name()
+
         if obj is not None:
             # update cache there might have been a change due to naming
             self.cache[n_idx] = obj
@@ -720,94 +691,22 @@ def loadcache(func):
 
         return obj
 
-    return inner
+    def save(self, obj, idx=None):
+        """
+        Saves an object to the storage.
 
+        Parameters
+        ----------
+        obj : object
+            the object to be stored
+        idx : int or string or `None`
+            the index to be used for storing. This is highly discouraged since
+            it changes an immutable object (at least in the storage). It is
+            better to store also the new object and just ignore the
+            previously stored one.
 
-def savecache(func):
-    """
-    Decorator for save functions that add the basic cache handling
-    """
+        """
 
-    def inner(self, obj, idx=None, *args, **kwargs):
-        # call the normal storage
-        idx = func(obj, idx, *args, **kwargs)
-
-        # store the name in the cache
-        if hasattr(self, 'cache'):
-            if type(obj) is not LoaderProxy:
-                self.cache[idx] = obj
-                if self.has_name and obj._name != '':
-                    # and also the name, if it has one so we can load by
-                    # name afterwards from cache
-                    self._update_name_in_cache(obj._name, idx)
-
-        return idx
-
-    return inner
-
-
-# =============================================================================
-# LOAD/SAVE DECORATORS FOR .idx HANDLING
-# =============================================================================
-
-def loadidx(func):
-    """
-    Decorator for load functions that add the basic indexing handling
-    """
-
-    def inner(self, idx, *args, **kwargs):
-        if type(idx) is not str and int(idx) < 0:
-            return None
-
-        n_idx = idx
-
-        if type(idx) is str:
-            # we want to load by name and it was not in cache
-            if self.has_name:
-                raise ValueError('Load by name without caching is not supported')
-            # n_idx = self.load_by_name(idx)
-            else:
-                # load by name only in named storages
-                raise ValueError('Load by name (str) is only supported in named storages')
-                pass
-
-        # turn into python int if it was a numpy int (in some rare cases!)
-        n_idx = int(n_idx)
-
-        # ATTENTION HERE!
-        # Note that the wrapped function ho self as first parameter. This is because we are wrapping a bound
-        # method in an instance and this one is still bound - luckily - to the same 'self'. In a class
-        # decorator when wrapping the class method directly it is not bound yet and so we need to include
-        # the self! Took me some time to understand and figure that out
-        logger.debug('Calling load object of type ' + self.content_class.__name__ + ' and IDX #' + str(idx))
-        if n_idx >= len(self):
-            logger.warning('Trying to load from IDX #' + str(n_idx) + ' > number of object ' + str(len(self)))
-            return None
-        elif n_idx < 0:
-            logger.warning('Trying to load negative IDX #' + str(n_idx) + ' < 0')
-            return None
-        else:
-            obj = func(n_idx, *args, **kwargs)
-
-        self.index[obj] = n_idx
-
-        if self.has_name and hasattr(obj, '_name'):
-            setattr(obj, '_name',
-                    self.storage.variables[self.prefix + '_name'][idx])
-            # make sure that you cannot change the name of loaded objects
-            obj.fix_name()
-
-        return obj
-
-    return inner
-
-
-def saveidx(func):
-    """
-    Decorator for save functions that add the basic indexing handling
-    """
-
-    def inner(self, obj, idx=None, *args, **kwargs):
         if idx is None:
             if obj in self.index:
                 # has been saved so quit and do nothing
@@ -816,19 +715,21 @@ def saveidx(func):
                 return obj._idx
             else:
                 idx = self.free()
+        elif type(idx) is str:
+            # Not yet supported
+            if self.has_name and obj._name_fixed is False:
+                obj.name = idx
         else:
-            if type(idx) is str:
-                # Not yet supported
-                raise ValueError('Saving by name not yet supported')
-            else:
-                idx = int(idx)
+            #assume int like
+            idx = int(idx)
 
         self.index[obj] = idx
 
         # make sure in nested saving that an IDX is not used twice!
         self.reserve_idx(idx)
+
         logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(idx))
-        func(obj, idx, *args, **kwargs)
+        self._save(obj, idx)
 
         if self.has_name and hasattr(obj, '_name'):
             # logger.debug('Object ' + str(type(obj)) + ' with IDX #' + str(idx))
@@ -843,6 +744,12 @@ def saveidx(func):
 
             self.storage.variables[self.prefix + '_name'][idx] = obj._name
 
-        return idx
+        # store the name in the cache
+        if hasattr(self, 'cache'):
+            self.cache[idx] = obj
+            if self.has_name and obj._name != '':
+                # and also the name, if it has one so we can load by
+                # name afterwards from cache
+                self._update_name_in_cache(obj._name, idx)
 
-    return inner
+        return idx

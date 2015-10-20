@@ -20,7 +20,7 @@ class ObjectDictStore(ObjectStore):
 
         return self._key_store
 
-    def save(self, objectdict, idx=None):
+    def _save(self, objectdict, idx):
         """
         Save the current state of the cache to the storage.
 
@@ -154,7 +154,7 @@ class ObjectDictStore(ObjectStore):
         for cv in self:
             cv.cache_all()
 
-    def load(self, idx):
+    def _load(self, idx):
         """
         Restores the cache from the storage using the name of the
         collectivevariable.

@@ -372,7 +372,7 @@ class NetCDFPlus(netCDF4.Dataset):
     def find_store(self, obj):
         return self._obj_store.get(obj.__class__, None)
 
-    def save(self, obj, *args, **kwargs):
+    def save(self, obj, idx=None):
         """
         Save a storable object into the correct Storage in the netCDF file
 
@@ -389,26 +389,26 @@ class NetCDFPlus(netCDF4.Dataset):
 
         if type(obj) is list:
             # a list of objects will be stored one by one
-            return [self.save(part, *args, **kwargs) for part in obj]
+            [self.save(part, idx) for part in obj]
+            return
 
         elif type(obj) is tuple:
             # a tuple will store all parts
-            return tuple([self.save(part, *args, **kwargs) for part in obj])
+            [self.save(part, idx) for part in obj]
+            return
 
         elif obj.__class__ in self._obj_store:
             # to store we just check if the base_class is present in the storages
             # also we assume that if a class has no base_cls
             store = self._obj_store[obj.__class__]
-            store.save(obj, *args, **kwargs)
-
-            # save has been called, all is good
-            return True
+            store.save(obj, idx)
+            return
 
         # Could not save this object.
         raise RuntimeWarning("Objects of type '%s' cannot be stored!" %
                              obj.__class__.__name__)
 
-    def load(self, obj_type, *args, **kwargs):
+    def load(self, obj_type, idx):
         """
         Load an object of the specified type from the storage
 
@@ -430,14 +430,14 @@ class NetCDFPlus(netCDF4.Dataset):
 
         if obj_type in self._storages:
             store = self._storages[obj_type]
-            return store.load(*args, **kwargs)
+            return store.load(idx)
         elif obj_type in self._obj_store:
             # check if a store for the base_cls exists and use this one
             store = self._obj_store[obj_type]
-            return store.load(*args, **kwargs)
+            return store.load(idx)
         elif obj_type in self.simplifier.class_list:
             store = self._obj_store[self.simplifier.class_list[obj_type]]
-            return store.load(*args, **kwargs)
+            return store.load(idx)
 
         raise RuntimeError("No store registered to load variable type '%s'" % obj_type)
 

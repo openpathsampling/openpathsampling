@@ -14,29 +14,14 @@ class PathMoveChangeStore(ObjectStore):
         self._cached_all = False
         self.class_list = StorableObject.objects()
 
-    def save(self, pathmovechange, idx=None):
-        if idx is not None:
-            self.vars['samples'][idx] = pathmovechange.samples
-            self.vars['subchanges'][idx] = pathmovechange.subchanges
-            self.write('details', idx, pathmovechange)
-            self.vars['mover'][idx] = pathmovechange.mover
-            self.vars['cls'][idx] = pathmovechange.__class__.__name__
+    def _save(self, pathmovechange, idx):
+        self.vars['samples'][idx] = pathmovechange.samples
+        self.vars['subchanges'][idx] = pathmovechange.subchanges
+        self.write('details', idx, pathmovechange)
+        self.vars['mover'][idx] = pathmovechange.mover
+        self.vars['cls'][idx] = pathmovechange.__class__.__name__
 
-    def load(self, idx):
-        """
-        Return a sample from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the sample
-
-        Returns
-        -------
-        sample : Sample
-            the sample
-        """
-
+    def _load(self, idx):
         cls_name = self.vars['cls'][idx]
 
         cls = self.class_list[cls_name]
@@ -85,7 +70,7 @@ class PathMoveChangeStore(ObjectStore):
             mover_idxs = self.variables['mover'][:]
             details_idxs = self.variables['details'][:]
 
-            [self.add_empty_to_cache(*v) for v in zip(
+            [self._add_empty_to_cache(*v) for v in zip(
                 idxs,
                 cls_names,
                 samples_idxss,
@@ -98,7 +83,7 @@ class PathMoveChangeStore(ObjectStore):
 
             self._cached_all = True
 
-    def add_empty_to_cache(self, idx, cls_name, samples_idxs, mover_idx, details_idx):
+    def _add_empty_to_cache(self, idx, cls_name, samples_idxs, mover_idx, details_idx):
 
         if idx not in self.cache:
             obj = self._load_partial_samples(cls_name, samples_idxs, mover_idx, details_idx)

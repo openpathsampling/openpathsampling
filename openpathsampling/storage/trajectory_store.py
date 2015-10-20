@@ -7,25 +7,7 @@ class TrajectoryStore(ObjectStore):
     def __init__(self):
         super(TrajectoryStore, self).__init__(Trajectory)
 
-    def save(self, trajectory, idx=None):
-        """
-        Add the current state of the trajectory to the storage. Saving also
-        all referenced snapshots in it
-
-        Parameters
-        ----------
-        trajectory : Trajectory()
-            the trajectory to be saved
-        idx : int or None
-            if idx is not None the index will be used for saving in the storage.
-            This might overwrite already existing trajectories!
-
-        Notes
-        -----
-        This also saves all contained frames in the trajectory if not done yet.
-        A single Trajectory object can only be saved once!
-        """
-
+    def _save(self, trajectory, idx):
         self.vars['snapshots'][idx] = trajectory
         snapshot_store = self.storage.snapshots
 
@@ -33,6 +15,10 @@ class TrajectoryStore(ObjectStore):
             if type(snapshot) is not LoaderProxy:
                 loader = LoaderProxy(snapshot_store, snapshot_store.index[snapshot])
                 trajectory[frame] = loader
+
+    def _load(self, idx):
+        trajectory = Trajectory(self.vars['snapshots'][idx])
+        return trajectory
 
     def snapshot_indices(self, idx):
         """
@@ -52,25 +38,6 @@ class TrajectoryStore(ObjectStore):
 
         # get the values
         return self.variables['snapshots'][idx].tolist()
-
-    def load(self, idx):
-        """
-        Return a trajectory from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the trajectory
-
-        Returns
-        -------
-        Trajectory
-            the trajectory
-
-        """
-
-        trajectory = Trajectory(self.vars['snapshots'][idx])
-        return trajectory
 
     def iter_snapshot_indices(this, iter_range=None):
         """

@@ -11,29 +11,14 @@ class MCStepStore(ObjectStore):
 
         self._cached_all = False
 
-    def save(self, mcstep, idx=None):
-        if idx is not None:
-            self.vars['change'][idx] = mcstep.change
-            self.vars['active'][idx] = mcstep.active
-            self.vars['previous'][idx] = mcstep.previous
-            self.vars['simulation'][idx] = mcstep.simulation
-            self.vars['mccycle'][idx] = mcstep.mccycle
+    def _save(self, mcstep, idx):
+        self.vars['change'][idx] = mcstep.change
+        self.vars['active'][idx] = mcstep.active
+        self.vars['previous'][idx] = mcstep.previous
+        self.vars['simulation'][idx] = mcstep.simulation
+        self.vars['mccycle'][idx] = mcstep.mccycle
 
-    def load(self, idx):
-        """
-        Return a sample from the storage
-
-        Parameters
-        ----------
-        idx : int
-            index of the sample
-
-        Returns
-        -------
-        sample : Sample
-            the sample
-        """
-
+    def _load(self, idx):
         return MCStep(
             mccycle=self.vars['mccycle'][idx],
             previous=self.vars['previous'][idx],
