@@ -393,7 +393,8 @@ class Sample(StorableObject):
     Attributes
     ----------
     replica : integer
-        The replica ID to which this Sample applies
+        The replica ID to which this Sample applies. This is a (positive or
+        negative) integer.
     trajectory : Trajectory
         The trajectory (path) for this sample
     ensemble : Ensemble
