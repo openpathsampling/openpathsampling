@@ -879,6 +879,7 @@ class PathTreeBuilder(object):
 
         for sample in samples:
             draw_okay = False
+            line_okay = False
             mover_type = type(sample.mover)
 
             if first is True:
@@ -899,6 +900,7 @@ class PathTreeBuilder(object):
                 # Reversal
                 color = 'blue'
                 draw_okay = True
+                line_okay = True
 
                 # self.renderer.add(
                 #     self.renderer.label(shift, t_count, 1, 'RX', align='end',color='black')
@@ -918,6 +920,7 @@ class PathTreeBuilder(object):
                 # Reversal
                 color = 'orange'
                 draw_okay = False
+                line_okay = True
 
                 self.renderer.add(
                     self.renderer.label(shift, t_count, 1, str(
@@ -928,16 +931,10 @@ class PathTreeBuilder(object):
                 self.renderer.add(
                     self.renderer.range(shift, t_count, len(sample), 'orange', "PathReversal" ))
 
-                for pos, snapshot in enumerate(sample.trajectory):
-                    conf = snapshot
-                    conf_idx = self.storage.idx(conf)
-                    p_x[conf_idx] = shift + pos
-                    p_y[conf_idx] = t_count
-
             elif mover_type in [paths.BackwardExtendMover]:
                 color = 'green'
                 draw_okay = True
-
+                line_okay = True
 
                 self.renderer.add(
                     self.renderer.range(shift, t_count, len(sample.parent), 'palegreen', "BackwardExtend" ))
@@ -953,6 +950,7 @@ class PathTreeBuilder(object):
             elif mover_type in [paths.ForwardExtendMover]:
                 color = 'red'
                 draw_okay = True
+                line_okay = True
 
                 self.renderer.add(
                     self.renderer.range(shift, t_count, len(sample.parent), 'salmon', "ForwardExtend" ))
@@ -967,6 +965,7 @@ class PathTreeBuilder(object):
             elif mover_type in [paths.FirstSubtrajectorySelectMover, paths.FinalSubtrajectorySelectMover]:
                 color = 'lightblue'
                 draw_okay = True
+                line_okay = True
 
                 self.renderer.add(
                     self.renderer.label(shift, t_count, 1, str(
@@ -974,8 +973,11 @@ class PathTreeBuilder(object):
                                         color='black')
                 )
 
+                shift = shift + sample.parent.trajectory.index(sample[0])
+
                 self.renderer.add(
-                    self.renderer.range(shift, t_count, len(sample), 'gray', "SubTrajectory" ))
+                    self.renderer.range(shift, t_count, len(sample), 'gray', mover_type.__name__[:-11] )
+                )
 
             elif mover_type in[paths.ForwardShootMover, paths.BackwardShootMover]:
                 # ShootingMove
@@ -1078,6 +1080,13 @@ class PathTreeBuilder(object):
             #                         color='black')
             # )
 
+            if line_okay:
+                for pos, snapshot in enumerate(sample.trajectory):
+                    conf = snapshot
+                    conf_idx = self.storage.idx(conf)
+                    p_x[conf_idx] = shift + pos
+                    p_y[conf_idx] = t_count
+
             t_count += 1
 
         self.p_x = p_x
@@ -1101,6 +1110,13 @@ class PathTreeBuilder(object):
                     yp = y + min_y
                     for x in range(0, (max_x - min_x + 1)):
                         xp = x + min_x
+
+                        # if matrix[y][x] is not None:
+                        #     self.renderer.pre(
+                        #         self.renderer.shade(xp, yp, 0.9,
+                        #                             'black')
+                        #     )
+
 
                         if matrix[y][x] is not None\
                             and bool(op(LoaderProxy(self.storage.snapshots, matrix[y][x]))):
