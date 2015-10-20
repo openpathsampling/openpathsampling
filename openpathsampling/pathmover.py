@@ -932,7 +932,7 @@ class StateSwapMover(SampleMover):
 ###############################################################################
 
 
-class RandomSubtrajectorySelectGeneratingMover(SampleMover):
+class RandomSubtrajectorySelectMover(SampleMover):
     """
     Samples a random subtrajectory satisfying the given subensemble.
 
@@ -954,7 +954,7 @@ class RandomSubtrajectorySelectGeneratingMover(SampleMover):
     """
     _is_ensemble_change_mover = True
     def __init__(self, ensemble, sub_ensemble, n_l=None):
-        super(RandomSubtrajectorySelectGeneratingMover, self).__init__(
+        super(RandomSubtrajectorySelectMover, self).__init__(
         )
         self.n_l = n_l
         self.ensemble = ensemble
@@ -1001,14 +1001,6 @@ class RandomSubtrajectorySelectGeneratingMover(SampleMover):
 
         return trials
 
-
-class RandomSubtrajectorySelectMover(RandomSubtrajectorySelectGeneratingMover):
-    """
-    Samples a random subtrajectory satisfying the given subensemble.
-
-    If there are no subtrajectories which satisfy the subensemble, this
-    returns the zero-length trajectory.
-    """
 
 
 class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
