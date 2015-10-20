@@ -335,6 +335,7 @@ class MoverType(object):
     pass
 
 
+# TODO: empty class. Remove
 class SwappingMover(MoverType):
     """
     A mover that swaps samples from ensembles in some way. Relevant for mixing
@@ -637,23 +638,6 @@ class BackwardShootGeneratingMover(ShootGeneratingMover):
 # TODO: This doubling might be superfluous
 
 
-class ShootMover(ShootGeneratingMover):
-    """
-    A pathmover that implements a general shooting algorithm
-    """
-
-
-class ForwardShootMover(ForwardShootGeneratingMover):
-    """
-    A pathmover that implements the forward shooting algorithm
-    """
-
-
-class BackwardShootMover(BackwardShootGeneratingMover):
-    """
-    A pathmover that implements the backward shooting algorithm
-    """
-
 
 ###############################################################################
 # EXTENDING GENERATORS
@@ -781,16 +765,6 @@ class BackwardExtendGeneratingMover(ExtendingGeneratingMover):
 
         trial_trajectory = partial_trajectory.reversed + initial_trajectory[1:]
         return trial_trajectory
-
-
-class ForwardExtendMover(ForwardExtendGeneratingMover):
-    """Creates a new sample by extending forward to a new ensemble
-    """
-
-
-class BackwardExtendMover(BackwardExtendGeneratingMover):
-    """Creates a new sample by extending backward to a new ensemble
-    """
 
 
 ###############################################################################
@@ -953,13 +927,6 @@ class StateSwapGeneratingMover(SampleGeneratingMover):
         return [trial1, trial2]
 
 
-class ReplicaExchangeMover(ReplicaExchangeGeneratingMover):
-    pass
-
-
-class StateSwapMover(StateSwapGeneratingMover):
-    pass
-
 ###############################################################################
 # SUBTRAJECTORY GENERATORS
 ###############################################################################
@@ -1111,10 +1078,6 @@ class PathReversalGeneratingMover(SampleGeneratingMover):
         return [trial]
 
 
-class PathReversalMover(PathReversalGeneratingMover):
-    pass
-
-
 class EnsembleHopGeneratingMover(SampleGeneratingMover):
     _is_ensemble_change_mover = True
     def __init__(self, ensemble, target_ensemble, change_replica=None, bias=None):
@@ -1221,12 +1184,6 @@ class EnsembleHopGeneratingMover(SampleGeneratingMover):
         setattr(details, 'bias', bias)
 
         return [trial]
-
-
-class EnsembleHopMover(EnsembleHopGeneratingMover):
-    """
-    A Mover describing a trial change of ensembles
-    """
 
 
 # ****************************************************************************
