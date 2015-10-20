@@ -149,6 +149,10 @@ class MoveScheme(OPSNamed):
                             self.movers[group][idx] = mover
                     else:
                         self.movers[group].append(mover)
+        elif strategy.replace_group:
+            if strategy.from_group is not None:
+                self.movers.pop(strategy.from_group)
+            self.movers[group] = movers
         else:
             try:
                 self.movers[group].extend(movers)
