@@ -13,6 +13,7 @@ from openpathsampling.trajectory import Trajectory
 from openpathsampling.snapshot import Snapshot
 from openpathsampling.dynamics_engine import DynamicsEngine
 from openpathsampling.topology import Topology
+import openpathsampling as paths
 import numpy as np
 
 def make_1d_traj(coordinates, velocities=None, topology=None):
@@ -57,6 +58,10 @@ def assert_same_items(list_a, list_b):
         assert_in(elem_a, list_b)
 
 
+class MoverWithSignature(paths.PathMover):
+    def __init__(self, input_ensembles, output_ensembles):
+        self._in_ensembles = input_ensembles
+        self._out_ensembles = output_ensembles
 
 class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
@@ -145,6 +150,7 @@ def true_func(value, *args, **kwargs):
 
 def setify_ensemble_signature(sig):
     return (set(sig[0]), set(sig[1]))
+
 
 def reorder_ensemble_signature(sig, match_with):
     setified = setify_ensemble_signature(sig)

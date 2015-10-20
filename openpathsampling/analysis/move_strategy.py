@@ -92,6 +92,7 @@ class MoveStrategy(object):
         self.replace_signatures = None
         self.replace_movers = None
         self.set_replace(replace)
+        self.from_group = group
 
     @property
     def level(self):
@@ -112,11 +113,14 @@ class MoveStrategy(object):
         """Sets values for replace_signatures and replace_movers."""
         self.replace_signatures = False
         self.replace_movers = False
+        self.replace_group = False
         level_type = levels.level_type(self.level)
         if level_type == levels.SIGNATURE:
             self.replace_signatures = replace
         elif level_type == levels.MOVER:
             self.replace_movers = replace
+        elif level_type == levels.SUPERGROUP:
+            self.replace_group = replace
 
     def get_ensembles(self, scheme, ensembles):
         """
@@ -299,18 +303,96 @@ class StateSwapRepExStrategy(MoveStrategy):
     pass
 
 class ReplicaExchangeStrategy(MoveStrategy):
-    _level = levels.SUPERGROUP
     """
     Converts EnsembleHops to ReplicaExchange (single replica to default)
     """
-    pass
-
-class EnsembleHopStrategy(MoveStrategy):
     _level = levels.SUPERGROUP
+    def __init__(self, ensembles=None, group="repex", replace=True,
+                 from_group=None, bias=None):
+        super(ReplicaExchangeStrategy, self).__init__(
+            ensembles=ensembles, group=group, replace=replace
+        )
+        self.bias = bias
+        self.from_group = from_group
+        if self.from_group is None:
+            self.from_group = self.group
+
+    def check_for_hop_repex_validity(self, signatures):
+        """
+        Checks that the given set of signatures can be either repex or hop.
+        """
+        # nested function used for error handling
+        def sig_error(sig, errstr=""):
+            raise RuntimeError("Signature error: " + errstr + str(sig))
+
+        for sig in signatures:
+            # We use the fact that Python uses short-circuit logic to throw
+            # the exception if the test fails, and the assertion acts as a
+            # backup. This is faster than a try: except: version.  see
+            # http://stackoverflow.com/questions/1569049/making-pythons-assert-throw-an-exception-that-i-choose/1569618#1569618
+            assert(len(sig[0])==len(sig[1]) or sig_error(sig))
+            n_ens = len(sig[0])
+            if n_ens == 2: # replica exchange
+                assert(
+                    set(sig[0])==set(sig[1]) or
+                    sig_error(sig, errstr="Not replica exchange signature. ")
+                )
+            elif n_ens == 1: # already ensemble hop (ish)
+                assert(
+                    # TODO: add test for this
+                    (sig[1], sig[0]) in signatures or
+                    sig_error(sig, errstr="No detailed balance partner. ")
+                )
+            else:
+                sig_error(sig, errstr="Signature contains " + str(n_ens) + 
+                          " ensembles.")
+
+    def make_movers(self, scheme):
+        signatures = [m.ensemble_signature 
+                      for m in scheme.movers[self.from_group]]
+        self.check_for_hop_repex_validity(signatures)
+
+        swap_list = []
+        for sig in signatures:
+            n_ens = len(sig[0])
+            if n_ens == 2:
+                swap_list.append(sig[0])
+            elif n_ens == 1:
+                swap = (sig[0][0], sig[1][0])
+                if not (swap[1], swap[0]) in swap_list:
+                    swap_list.append(swap)
+
+        swaps = [paths.ReplicaExchangeMover(swap[0], swap[1])
+                 for swap in swap_list]
+        return swaps
+
+
+class EnsembleHopStrategy(ReplicaExchangeStrategy):
     """
     Converts ReplicaExchange to EnsembleHop.
+
+    from_group: can differ from output group `group` if desired
     """
-    pass
+    _level = levels.SUPERGROUP
+
+    def make_movers(self, scheme):
+        signatures = [m.ensemble_signature 
+                      for m in scheme.movers[self.from_group]]
+
+        self.check_for_hop_repex_validity(signatures)
+
+        hop_list = []
+        for sig in signatures:
+            n_ens = len(sig[0])
+            if n_ens == 2:
+                hop_list.extend([[sig[0][0],sig[0][1]], [sig[0][1],sig[0][0]]])
+            elif n_ens == 1:
+                hop_list.extend([[sig[0][0], sig[1][0]]])
+
+        hops = [paths.EnsembleHopMover(hop[0], hop[1], bias=self.bias)
+                for hop in hop_list]
+        return hops
+
 
 class PathReversalStrategy(MoveStrategy):
     """
