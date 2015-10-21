@@ -234,9 +234,13 @@ class SampleSet(OPSNamed):
                 raise # reraises last exception
 
     def consistency_check(self):
-        '''This is mainly a sanity check for use in testing, but might be
+        '''Check that all internal dictionaries are consistent
+
+        This is mainly a sanity check for use in testing, but might be
         good to run (rarely) in the code until we're sure the tests cover
-        all use cases.'''
+        all use cases.
+        '''
+
         # check that we have the same number of samples in everything
         nsamps_ens = 0
         for ens in self.ensemble_dict.keys():
@@ -412,15 +416,15 @@ class Sample(object):
 
     Attributes
     ----------
-    replica : integer
-        The replica ID to which this Sample applies
-    trajectory : Trajectory
+    replica : int
+        The replica ID to which this Sample applies. The replica ID can also be negative.
+    trajectory : openpathsampling.Trajectory
         The trajectory (path) for this sample
-    ensemble : Ensemble
+    ensemble : openpathsampling.Ensemble
         The Ensemble this sample is drawn from
-    details : MoveDetails
+    details : openpathsampling.MoveDetails
         Object 
-    step : integer
+    step : int
         the Monte Carlo step number associated with this Sample
     """
 
