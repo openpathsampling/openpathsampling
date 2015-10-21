@@ -5,13 +5,13 @@ cd examples/ipython
 testfail=0
 #python ipynbtest.py "sliced_sequential_ensembles.ipynb" || testfail=1
 date
-python ipynbtest.py "tutorial_pathmovers.ipynb" || testfail=1
-date
 python ipynbtest.py "mstis_bootstrap.ipynb" || testfail=1
 date
 python ipynbtest.py "mstis.ipynb" || testfail=1
 date
 python ipynbtest.py "mstis_analysis.ipynb" || testfail=1
+date
+python ipynbtest.py "tutorial_pathmovers.ipynb" || testfail=1
 date
 python ipynbtest.py "repex_networks.ipynb" || testfail=1
 date
