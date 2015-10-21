@@ -273,7 +273,7 @@ class WHAM(object):
             else:
                 arg0 = e.args[0]+"\n"+failmsg
                 e.args = tuple([arg0] + list(e.args[1:]))
-                raise
+                raise e
 
         hist = self.wham_histogram()
         return hist
