@@ -14,6 +14,8 @@ class LiveVisualization(object):
         self.background = None
         self._save_bg_axes = None
 
+        self.fig = plt.figure()
+
         self.extent = self.xlim + self.ylim
 
         self.add_lines = [] # keeps state
@@ -38,13 +40,39 @@ class LiveVisualization(object):
         self.ax.plot(
             self.cv_x(frame), self.cv_y(frame), marker='o',
             markeredgecolor=self.ensemble_colors[sample.ensemble],
-            markerfacecolor=face_color, 
+            markerfacecolor=face_color,
             zorder=5
         )
 
+    def draw_samples(self, samples, accepted=True):
+        self.draw_background()
+        for sample in samples:
+            self.ax.plot(
+                self.cv_x(sample.trajectory),
+                self.cv_y(sample.trajectory),
+                linewidth=2, zorder=2,
+                color=self.ensemble_colors[sample.ensemble]
+            )
+            # draw arrowheads at the end of each active
+            self.draw_arrowhead(sample, accepted=accepted)
+        return self.fig
 
-    def draw(self, mcstep):
-        self.fig, self.ax = plt.subplots()
+    def draw_trials(self, change):
+        if self.fig != self.background:
+            self.draw_background()
+        for trial in change.trials:
+            self.ax.plot(
+                self.cv_x(trial.trajectory),
+                self.cv_y(trial.trajectory),
+                linewidth=1.0, zorder=3,
+                color=self.ensemble_colors[trial.ensemble]
+            )
+            # draw arrowheads at the end of each trial
+            self.draw_arrowhead(trial, accepted=False)
+        return self.fig
+
+
+    def draw_background(self):
         # draw the background
         if self.background is not None:
             if self._save_bg_axes is None:
@@ -56,32 +84,17 @@ class LiveVisualization(object):
                 self.fig.add_axes(ax)
             self.ax = self.fig.axes[0].twinx()
             self.ax.cla()
+        else:
+            self.fig, self.ax = plt.subplots()
 
         self.ax.set_xlim(self.xlim)
         self.ax.set_ylim(self.ylim)
+        return
 
-        # draw the active trajectories
-        for sample in mcstep.active:
-            self.ax.plot(
-                self.cv_x(sample.trajectory), 
-                self.cv_y(sample.trajectory), 
-                linewidth=2, zorder=2,
-                color=self.ensemble_colors[sample.ensemble]
-            )
-            # draw arrowheads at the end of each active
-            self.draw_arrowhead(sample, accepted=True)
 
-        # draw the trials
-        for trial in mcstep.change.trials:
-            self.ax.plot(
-                self.cv_x(trial.trajectory), 
-                self.cv_y(trial.trajectory), 
-                linewidth=1.0, zorder=3,
-                color=self.ensemble_colors[trial.ensemble]
-            )
-            # draw arrowheads at the end of each trial
-            self.draw_arrowhead(sample, accepted=False)
-
+    def draw(self, mcstep):
+        self.draw_samples(mcstep.active)
+        self.draw_trials(mcstep.change)
         return self.fig
 
 
