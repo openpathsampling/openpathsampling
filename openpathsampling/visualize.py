@@ -973,7 +973,12 @@ class PathTreeBuilder(object):
                                         color='black')
                 )
 
-                shift = shift + sample.parent.trajectory.index(sample[0])
+                # print sample.mover.cls
+                # print sample[0]
+                # print map(self.storage.idx, list(sample.parent.trajectory))
+                # print map(self.storage.idx, list(sample))
+
+                shift = shift + map(self.storage.idx, sample.parent.trajectory).index(self.storage.idx(sample[0]))
 
                 self.renderer.add(
                     self.renderer.range(shift, t_count, len(sample), 'gray', mover_type.__name__[:-11] )
