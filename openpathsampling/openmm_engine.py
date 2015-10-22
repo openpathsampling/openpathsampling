@@ -7,6 +7,57 @@ import openpathsampling as paths
 from openpathsampling.storage import Storage
 from openpathsampling.integrators import VVVRIntegrator
 
+class OpenMMRandomEngine(paths.DynamicsEngine):
+    _default_options = {}
+
+    def __init__(self, template=None):
+        self.topology = template.topology
+        self.options = {
+        }
+
+        super(OpenMMRandomEngine, self).__init__(
+            options={},
+            template=template
+        )
+
+        self.initialized = True
+
+    def _build_current_snapshot(self):
+        # TODO: Add caching for this and mark if changed
+
+        tmp = self.template
+
+        coordinates = u.Quantity(
+            tmp.coordinates._value + np.random.normal(0.0, 0.02, tmp.coordinates.shape),
+            tmp.coordinates.unit)
+        velocities = u.Quantity(
+            np.random.normal(0.0, 0.02, tmp.velocities.shape),
+            tmp.velocities.unit)
+
+        return paths.Snapshot(coordinates = coordinates,
+                        box_vectors = tmp.box_vectors,
+                        potential_energy = tmp.potential_energy,
+                        velocities = velocities,
+                        kinetic_energy = tmp.kinetic_energy,
+                        topology = self.topology
+                       )
+
+    @property
+    def current_snapshot(self):
+        if self._current_snapshot is None:
+            self._current_snapshot = self._build_current_snapshot()
+
+        return self._current_snapshot
+
+    @current_snapshot.setter
+    def current_snapshot(self, snapshot):
+        self._current_snapshot = snapshot
+
+    def generate_next_frame(self):
+        self._current_snapshot = None
+        return self.current_snapshot
+
+
 class OpenMMEngine(paths.DynamicsEngine):
     """OpenMM dynamics engine."""
 
@@ -97,10 +148,6 @@ class OpenMMEngine(paths.DynamicsEngine):
 
         options['template'] = template
 
-#        storage.init_str('simulation_options')
-#        storage.write_as_json('simulation_options', options)
-
-
         engine = OpenMMEngine(
             options=options
         )
@@ -116,14 +163,6 @@ class OpenMMEngine(paths.DynamicsEngine):
             filename=filename,
             mode='a'
         )
-
-#        options = storage.restore_object('simulation_options')
-
-#        options['template'] = storage.template
-
-#        engine = OpenMMEngine(
-#            options=options
-#        )
 
         engine = storage.engines.load(0)
 
@@ -274,27 +313,6 @@ class OpenMMEngine(paths.DynamicsEngine):
     def momentum(self):
         return self.current_snapshot.momentum
 
-    # remove setters here, because it might lead to wrong velocities
-    # because of incorrect treatment of reversed, it will also violate the
-    # immutable character of the cached snapshot!
-#    @momentum.setter
-#    def momentum(self, momentum):
-#        if momentum is not self._current_momentum:
-#            self._current_momentum = momentum
-#            self.simulation.context.setVelocities(momentum.velocities)
-
     @property
     def configuration(self):
         return self.current_snapshot.configuration
-
-#    @configuration.setter
-#    def configuration(self, config):
-#        if config is not self._current_configuration:
-#            self._current_configuration = config
-#            self.simulation.context.setPositions(config.coordinates)
-#
-#            # TODO: Check if this is the right way to make sure the box is right!
-#            if False and config.box_vectors != self._current_box_vectors:
-#                self.simulation.context.getPeriodicBoxVectors(config.box_vectors)
-#                self._current_box_vectors = config.box_vectors
-

@@ -2,7 +2,7 @@ import random
 import logging
 
 import openpathsampling as paths
-from openpathsampling.base import StorableNamedObject, StorableObject
+from openpathsampling.base import StorableObject, lazy
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,8 @@ class SampleKeyError(Exception):
         self.msg = (str(self.key) + " does not match " + str(self.sample_key)
                     + " from " + str(self.sample))
 
-class SampleSet(StorableNamedObject):
+@lazy('movepath')
+class SampleSet(StorableObject):
     '''
     SampleSet is essentially a list of samples, with a few conveniences.  It
     can be treated as a list of samples (using, e.g., .append), or as a
@@ -45,15 +46,14 @@ class SampleSet(StorableNamedObject):
     '''
 
     def __init__(self, samples, movepath=None):
+        self._lazy = dict()
         super(SampleSet, self).__init__()
+
         self.samples = []
         self.ensemble_dict = {}
         self.replica_dict = {}
         self.extend(samples)
-        if movepath is None:
-            self.movepath = paths.EmptyPathMoveChange()
-        else:
-            self.movepath = movepath
+        self.movepath = movepath
 
     @property
     def ensembles(self):
@@ -278,27 +278,34 @@ class SampleSet(StorableNamedObject):
     def translate_ensembles(sset, new_ensembles):
         """Return SampleSet using `new_ensembles` as ensembles.
 
-        This replaces the samples in TODO
+        This creates a SampleSet which replaces the ensembles in the old
+        sample set with equivalent ensembles from a given list. The string
+        description of the ensemble is used as a test.
 
-        Note that this assumes that the mapping of old ensembles to new
-        ensembles is injective. If this is not true, then there is no unique
+        Note that this assumes that there are no one-to-many or many-to-one
+        relations in the ensembles. If there are, then there is no unique
         way to translate.
+
+        The approach used here will return the SampleSet with the maximum
+        number of ensembles that overlap between the two groups.
         """
         translation = {}
         for ens1 in sset.ensemble_list():
             for ens2 in new_ensembles:
                 if ens1.__str__() == ens2.__str__():
                     translation[ens1] = ens2
-        return SampleSet(
-            [
-                Sample(
+
+        new_samples = []
+        for ens in translation:
+            old_samples = sset.all_from_ensemble(ens)
+            for s in old_samples:
+                new_samples.append(Sample(
                     replica=s.replica,
                     ensemble=translation[s.ensemble],
                     trajectory=s.trajectory
-                )
-                for s in sset
-            ]
-        )
+                ))
+        res = SampleSet.relabel_replicas_per_ensemble(SampleSet(new_samples))
+        return res
 
     @staticmethod
     def relabel_replicas_per_ensemble(ssets):
@@ -370,6 +377,7 @@ class SampleSet(StorableNamedObject):
     #         raise ValueError('Incompatible MovePaths')
 
 
+@lazy('parent', 'details', 'mover')
 class Sample(StorableObject):
     """
     A Sample represents a given "draw" from its ensemble, and is the return
@@ -385,7 +393,8 @@ class Sample(StorableObject):
     Attributes
     ----------
     replica : integer
-        The replica ID to which this Sample applies
+        The replica ID to which this Sample applies. This is a (positive or
+        negative) integer.
     trajectory : Trajectory
         The trajectory (path) for this sample
     ensemble : Ensemble
@@ -406,6 +415,7 @@ class Sample(StorableObject):
                  mover=None
                  ):
 
+        self._lazy = dict()
         super(Sample, self).__init__()
         self.bias = bias
         self.replica = replica

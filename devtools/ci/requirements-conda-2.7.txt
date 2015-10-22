@@ -15,3 +15,5 @@ openmmtools
 matplotlib
 svgwrite
 networkx
+psutil
+pandas

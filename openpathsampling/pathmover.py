@@ -394,6 +394,8 @@ class SampleGeneratingMover(PathMover):
         accepted = True
         probability = 1.0
 
+        # TODO: This isn't right. `bias` should be associated with the 
+        # change; not with each individual sample. ~~~DWHS
         for ens, sample in trial_dict.iteritems():
             valid = ens(sample.trajectory)
             if not valid:
@@ -611,6 +613,8 @@ class ForwardShootGeneratingMover(ShootGeneratingMover):
 class BackwardShootGeneratingMover(ShootGeneratingMover):
     """A Backward shooting generator
     """
+
+    #TODO: Remove use of reversed_copy. The reversed snapshot already exists!
     def _shoot(self, shooting_point, ensemble):
         shoot_str = "Shooting {sh_dir} from frame {fnum} in [0:{maxt}]"
         logger.info(shoot_str.format(
@@ -1377,7 +1381,7 @@ class RandomAllowedChoiceMover(RandomChoiceMover):
         if self.weights is None:
             weights = [1.0] * len(self.movers)
         else:
-            weights = self.weights
+            weights = list(self.weights) # make a copy
 
         # this is implemented by setting all weights locally to zero that
         # correspond to movers that will potentially fail since the required
@@ -1462,6 +1466,8 @@ class LastAllowedMover(SelectionMover):
                 weights[idx] = 0.0
 
         return weights
+
+
 
 
 class ConditionalMover(PathMover):

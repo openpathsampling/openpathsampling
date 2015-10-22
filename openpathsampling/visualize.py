@@ -4,6 +4,7 @@ import os
 import openpathsampling as paths
 import networkx as nx
 
+from openpathsampling.storage.objproxy import LoaderProxy
 
 import json
 import matplotlib.pyplot as plt
@@ -39,7 +40,7 @@ class TreeRenderer(object):
 
     def __getattr__(self, item):
         if item in ['block', 'shade', 'v_connection', 'h_connection', 'label',
-                    'connector', 'v_hook', 'vertical_label', 'text']:
+                    'connector', 'v_hook', 'vertical_label', 'text', 'range', 'h_range']:
             # This will delay the execution of the draw commands until
             # we know where to draw
             return self._delay(object.__getattribute__(self, 'draw_' + item))
@@ -99,18 +100,18 @@ class TreeRenderer(object):
 
     def draw_block(self, x, y, color="blue", text="", align="middle",
                    extend_right=True, extend_left=True, padding=None,
-                   extend_top=False, extend_bottom=False):
+                   extend_top=False, extend_bottom=False, w=1.0):
         document = self.document
         if padding is None:
             padding = self.horizontal_gap
 
-        self._pad(self._xy(x - 0.5, y - 0.3), self._wh(1.0, 0.6))
+        self._pad(self._xy(x - 0.5, y - 0.3), self._wh(1.0 * w, 0.6))
 
         ret = list()
 
         ret.append(document.rect(
             insert=self._xy(x - 0.5 + padding, y - 0.3),
-            size=self._wh(1.0 - 2 * padding, 0.6),
+            size=self._wh(1.0 * w - 2 * padding, 0.6),
             fill=color,
         ))
         if extend_left:
@@ -123,23 +124,7 @@ class TreeRenderer(object):
             ))
         if extend_right:
             ret.append(document.circle(
-                center=(self._xy(x + 0.5, y)),
-                r=self._w(padding),
-                stroke_width=0,
-                stroke=color,
-                fill=color
-            ))
-        if extend_top:
-            ret.append(document.circle(
-                center=self._xy(x, y - 0.3),
-                r=self._w(padding),
-                stroke_width=0,
-                stroke=color,
-                fill=color
-            ))
-        if extend_bottom:
-            ret.append(document.circle(
-                center=(self._xy(x, y + 0.3)),
+                center=(self._xy(x + w - 0.5, y)),
                 r=self._w(padding),
                 stroke_width=0,
                 stroke=color,
@@ -148,12 +133,124 @@ class TreeRenderer(object):
 
         ret.append(document.text(
             text=str(text)[:4],
-            insert=self._xb(x, y),
+            insert=self._xb(x + (w - 1.0) / 2.0, y),
             text_anchor=align,
             font_size=self._h(self.font_size),
             alignment_baseline='middle',
             font_family=self.font_family,
             fill='white'
+        ))
+
+        return ret
+
+    def draw_range(self, x, y, w=1.0, color="blue", text="", align="middle",
+                   extend_right=True, extend_left=True, padding=None):
+        document = self.document
+        if padding is None:
+            padding = self.horizontal_gap
+
+        self._pad(self._xy(x - 0.5, y - 0.3), self._wh(1.0 * w, 0.6))
+
+        ret = list()
+
+        ret.append(document.rect(
+            insert=self._xy(x - 0.5 + padding, y - 0.05),
+            size=self._wh(1.0 * w - 2 * padding, 0.1),
+            fill=color,
+        ))
+
+        if extend_left:
+            ret.append(document.circle(
+                center=self._xy(x - 0.5, y),
+                r=self._w(padding),
+                stroke_width=0,
+                stroke=color,
+                fill=color
+            ))
+            ret.append(document.rect(
+                insert=self._xy(x - 0.5 + padding, y - 0.3),
+                size=self._wh(0.1, 0.6),
+                fill=color,
+            ))
+
+        if extend_right:
+            ret.append(document.circle(
+                center=(self._xy(x + w - 0.5, y)),
+                r=self._w(padding),
+                stroke_width=0,
+                stroke=color,
+                fill=color
+            ))
+            ret.append(document.rect(
+                insert=self._xy(x + w - 0.6 - padding, y - 0.3),
+                size=self._wh(0.1, 0.6),
+                fill=color,
+            ))
+
+        ret.append(document.text(
+            text=str(text),
+            insert=self._xb(x + (w - 1.0) / 2.0, y - 0.3),
+            text_anchor=align,
+            font_size=self._h(self.font_size),
+            alignment_baseline='middle',
+            font_family=self.font_family,
+            fill='black'
+        ))
+
+        return ret
+
+    def draw_h_range(self, x, y, w=1.0, color="blue", text="", align="middle",
+                   extend_top=True, extend_bottom=True, padding=None):
+        document = self.document
+        if padding is None:
+            padding = self.horizontal_gap
+
+        self._pad(self._xy(x - 0.5, y - 0.3), self._wh(1.0 * w, 0.6))
+
+        ret = list()
+
+        ret.append(document.rect(
+            insert=self._xy(x, y - 0.3),
+            size=self._wh(0.1, 1.0 * w - 0.4),
+            fill=color,
+        ))
+
+        if extend_top:
+            ret.append(document.circle(
+                center=self._xy(x, y - 0.3),
+                r=self._w(padding),
+                stroke_width=0,
+                stroke=color,
+                fill=color
+            ))
+            ret.append(document.rect(
+                insert=self._xy(x - 0.5 + padding, y - 0.3),
+                size=self._wh(1.0 - 2.0 * padding, 0.1),
+                fill=color,
+            ))
+
+        if extend_bottom:
+            ret.append(document.circle(
+                center=(self._xy(x, y + (w - 1.0) + 0.3)),
+                r=self._w(padding),
+                stroke_width=0,
+                stroke=color,
+                fill=color
+            ))
+            ret.append(document.rect(
+                insert=self._xy(x - 0.5 + padding, y + (w - 1.0) + 0.3 - 0.1),
+                size=self._wh(1.0 - 2.0 * padding, 0.1),
+                fill=color,
+            ))
+
+        ret.append(document.text(
+            text=str(text),
+            insert=self._xb(x - 0.3, y  + (w - 1.0) / 2.0),
+            text_anchor=align,
+            font_size=self._h(self.font_size),
+            alignment_baseline='middle',
+            font_family=self.font_family,
+            fill='black'
         ))
 
         return ret
@@ -782,6 +879,7 @@ class PathTreeBuilder(object):
 
         for sample in samples:
             draw_okay = False
+            line_okay = False
             mover_type = type(sample.mover)
 
             if first is True:
@@ -798,19 +896,31 @@ class PathTreeBuilder(object):
                     )
                 )
 
-            elif type(sample.mover) is paths.ReplicaExchangeMover:
-                pass
+            elif mover_type is paths.ReplicaExchangeMover:
                 # Reversal
-                # color = 'blue'
+                color = 'blue'
+                draw_okay = True
+                line_okay = True
 
                 # self.renderer.add(
-                #    self.renderer.label(0, t_count, 1, 'RX', align='end',color='black')
-                #)
+                #     self.renderer.label(shift, t_count, 1, 'RX', align='end',color='black')
+                # )
 
-            elif type(sample.mover) is paths.PathReversalMover:
+                self.renderer.add(
+                    self.renderer.label(shift, t_count, 1, str(
+                        self.storage.idx(sample.trajectory)) + 'x', align='end',
+                                        color='black')
+                )
+
+
+                self.renderer.add(
+                    self.renderer.range(shift, t_count, len(sample), 'lightblue', "ReplicaExchange" ))
+
+            elif mover_type is paths.PathReversalMover:
                 # Reversal
                 color = 'orange'
-                draw_okay = True
+                draw_okay = False
+                line_okay = True
 
                 self.renderer.add(
                     self.renderer.label(shift, t_count, 1, str(
@@ -818,23 +928,76 @@ class PathTreeBuilder(object):
                                         color='black')
                 )
 
-            elif mover_type is paths.ForwardShootMover or mover_type is paths.BackwardShootMover:
+                self.renderer.add(
+                    self.renderer.range(shift, t_count, len(sample), 'orange', "PathReversal" ))
+
+            elif mover_type in [paths.BackwardExtendMover]:
+                color = 'green'
+                draw_okay = True
+                line_okay = True
+
+                self.renderer.add(
+                    self.renderer.range(shift, t_count, len(sample.parent), 'palegreen', "BackwardExtend" ))
+
+                shift = shift - len(sample) + len(sample.parent)
+
+                self.renderer.add(
+                    self.renderer.label(shift, t_count, 1, str(
+                        self.storage.idx(sample.trajectory)) + 'b', align='end',
+                                        color='black')
+                )
+
+            elif mover_type in [paths.ForwardExtendMover]:
+                color = 'red'
+                draw_okay = True
+                line_okay = True
+
+                self.renderer.add(
+                    self.renderer.range(shift, t_count, len(sample.parent), 'salmon', "ForwardExtend" ))
+
+                self.renderer.add(
+                    self.renderer.label(shift + len(sample), t_count, 1, str(
+                        self.storage.idx(sample.trajectory)) + 'f', align='start',
+                                        color='black')
+                )
+
+
+            elif mover_type in [paths.FirstSubtrajectorySelectMover, paths.FinalSubtrajectorySelectMover]:
+                color = 'lightblue'
+                draw_okay = True
+                line_okay = True
+
+                self.renderer.add(
+                    self.renderer.label(shift, t_count, 1, str(
+                        self.storage.idx(sample.trajectory)) + 'r', align='end',
+                                        color='black')
+                )
+
+                shift = shift + sample.parent.trajectory.index(sample[0])
+
+                self.renderer.add(
+                    self.renderer.range(shift, t_count, len(sample), 'gray', mover_type.__name__[:-11] )
+                )
+
+            elif mover_type in[paths.ForwardShootMover, paths.BackwardShootMover]:
                 # ShootingMove
                 old_traj = sample.details.initial_point.trajectory
                 old_index = sample.details.initial_point.index
                 old_conf = old_traj[old_index]
+                old_conf_idx = self.storage.idx(old_conf)
 
                 new_traj = sample.details.trial_point.trajectory
                 new_index = sample.details.trial_point.index
                 new_conf = new_traj[new_index]
 
+                # print type(old_conf), self.storage.snapshots.index.get(old_conf, None)
 
                 if sample.trajectory is new_traj or self.rejected:
 
-                    if old_conf not in p_x:
+                    if old_conf_idx not in p_x:
                         shift = 0
                     else:
-                        shift = p_x[old_conf] - new_index
+                        shift = p_x[old_conf_idx] - new_index
 
                     font_color = "black"
 
@@ -844,7 +1007,7 @@ class PathTreeBuilder(object):
                         color = "green"
                         self.renderer.add(
                             self.renderer.v_connection(shift + new_index + 1,
-                                                       p_y[old_conf], t_count,
+                                                       p_y[old_conf_idx], t_count,
                                                        color)
                         )
                         self.renderer.add(
@@ -859,7 +1022,7 @@ class PathTreeBuilder(object):
 
                         self.renderer.add(
                             self.renderer.v_connection(shift + new_index,
-                                                       p_y[old_conf], t_count,
+                                                       p_y[old_conf_idx], t_count,
                                                        color)
                         )
                         self.renderer.add(
@@ -870,16 +1033,18 @@ class PathTreeBuilder(object):
                         )
                         draw_okay = True
 
-
             if draw_okay:
                 for pos, snapshot in enumerate(sample.trajectory):
                     conf = snapshot
-                    if not conf in p_y:
-                        p_x[conf] = shift + pos
-                        p_y[conf] = t_count
+                    conf_idx = self.storage.idx(conf)
+                    if not conf_idx in p_y:
 
-                        pos_x = p_x[conf]
-                        pos_y = p_y[conf]
+                        p_x[conf_idx] = shift + pos
+                        p_y[conf_idx] = t_count
+
+                        pos_x = p_x[conf_idx]
+                        pos_y = p_y[conf_idx]
+
                         if self.op is not None:
                             self.renderer.add(
                                 self.renderer.block(
@@ -904,7 +1069,25 @@ class PathTreeBuilder(object):
                             self.renderer.add(
                                 self.renderer.block(pos_x, pos_y, 'gray', ""))
 
-                t_count += 1
+                        old_x = p_x[conf_idx]
+                        old_y = p_y[conf_idx]
+                        self.renderer.add(
+                            self.renderer.block(old_x, old_y - 0.3, 'blue', ""))
+
+            # self.renderer.add(
+            #     self.renderer.label(shift - 2, t_count, 1, sample.replica
+            #         , align='end',
+            #                         color='black')
+            # )
+
+            if line_okay:
+                for pos, snapshot in enumerate(sample.trajectory):
+                    conf = snapshot
+                    conf_idx = self.storage.idx(conf)
+                    p_x[conf_idx] = shift + pos
+                    p_y[conf_idx] = t_count
+
+            t_count += 1
 
         self.p_x = p_x
         self.p_y = p_y
@@ -912,10 +1095,10 @@ class PathTreeBuilder(object):
         min_x, max_x = self._get_min_max(self.p_x)
         min_y, max_y = self._get_min_max(self.p_y)
 
-        self.renderer.shift_x = min_x - 1.5
+        self.renderer.shift_x = min_x - 8.5
         self.renderer.shift_y = 0
-        self.renderer.height = max_y - min_y + 2.0
-        self.renderer.width = max_x - min_x + 3.0
+        self.renderer.height = max_y - min_y + 5.0
+        self.renderer.width = max_x - min_x + 10.0
 
         matrix = self._to_matrix()
 
@@ -928,9 +1111,17 @@ class PathTreeBuilder(object):
                     for x in range(0, (max_x - min_x + 1)):
                         xp = x + min_x
 
-                        if matrix[y][x] is not None and bool(op(matrix[y][x])):
-                            if left is None:
-                                left = xp
+                        # if matrix[y][x] is not None:
+                        #     self.renderer.pre(
+                        #         self.renderer.shade(xp, yp, 0.9,
+                        #                             'black')
+                        #     )
+
+
+                        if matrix[y][x] is not None\
+                            and bool(op(LoaderProxy(self.storage.snapshots, matrix[y][x]))):
+                                if left is None:
+                                    left = xp
                         else:
                             if left is not None:
                                 self.renderer.pre(
@@ -943,6 +1134,49 @@ class PathTreeBuilder(object):
                         self.renderer.pre(
                             self.renderer.shade(left, yp, xp - left + 1, color)
                         )
+
+        prev = samples[0].trajectory
+        old_tc = 1
+        trial_list = {}
+        for step in self.storage.steps:
+            for ch in step.change:
+                if ch.samples is not None:
+                    for trial in ch.samples:
+                        trial_list[trial] = step.mccycle
+
+        for tc, s in enumerate(samples):
+            if tc > 0 and not paths.Trajectory.is_correlated(s.trajectory, prev):
+                self.renderer.add(
+                    self.renderer.h_range(self.renderer.shift_x + 5.5, old_tc - 0.1, 1 + tc - old_tc + 0.2, 'black', "" ))
+
+
+                old_tc = 1 + tc
+
+                prev = s.trajectory
+
+            self.renderer.add(
+                self.renderer.label(self.renderer.shift_x + 5.0, 1 + tc, 1, str(
+                    self.storage.idx(s)) , align='end',
+                                    color=font_color)
+            )
+
+            if s in trial_list:
+                txt = str(trial_list[s])
+            else:
+                txt = '---'
+
+            self.renderer.add(
+                self.renderer.label(self.renderer.shift_x + 2.0, 1 + tc, 1, str(
+                    txt) , align='end',
+                                    color=font_color)
+            )
+
+        self.renderer.add(
+            self.renderer.h_range(self.renderer.shift_x + 2.0, 0.9, len(samples) + 0.2, 'black', "" ))
+
+        self.renderer.add(
+            self.renderer.h_range(self.renderer.shift_x + 5.5, old_tc - 0.1, 1 + len(samples) - old_tc + 0.2, 'black', "", extend_bottom=False))
+
 
     def _get_min_max(self, d):
         return min(d.values()), max(d.values())

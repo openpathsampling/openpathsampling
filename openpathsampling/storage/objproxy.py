@@ -1,50 +1,60 @@
-'''
+"""
 
 @author: JH Prinz
-'''
+"""
 
-from openpathsampling.base import StorableObject
+import weakref
 
-#=============================================================================
-# SIMULATION CONFIGURATION
-#=============================================================================
+# =============================================================================
+# Loader Proxy
+# =============================================================================
 
-class DelayedLoaderProxy(StorableObject):
+class LoaderProxy(object):
     """
     A proxy that loads an underlying object if attributes are accessed
     """
+    __slots__ = ['_subject', '_idx', '_store', '__weakref__']
 
-    # Class variables to store the global storage and the system context
-    # describing the system to be saved as snapshots
-    # Hopefully these class member variables will not be needed any longer
-    engine = None
+    def __init__(self, store, idx):
+        self._idx = idx
+        self._store = store
+        self._subject = None
 
-    def __init__(self):
-        super(DelayedLoaderProxy, self).__init__()
-        self.__subject__ = None
+    @property
+    def __subject__(self):
+        if self._subject is not None:
+            obj = self._subject()
+            if obj is not None:
+                return obj
+
+        ref = self._load_()
+
+        if ref is None:
+            return None
+
+        self._subject = weakref.ref(ref)
+        return ref
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        elif self.__subject__ is other:
+            return True
+        elif type(other) is LoaderProxy:
+            if self._idx == other._idx and self._store is other._store:
+                return True
+
+        return False
 
     @property
     def __class__(self):
-        return self.store.content_class
+        return self._store.content_class
 
     def __getattr__(self, item):
-        if self.__subject__ is None:
-            self.load()
-
         return getattr(self.__subject__, item)
 
-    def load(self):
+    def _load_(self):
         """
         Call the loader and get the referenced object
         """
-        if self.__subject__ is None:
-            store, idx = self.idx.iteritems().next()
-            self.__subject__ = store.get(idx) # .load would just get another Proxy
-
-            # print 'loaded %s[%d] : %s' % (store.content_class.__name__, idx, self.__subject__)
-
-    def unload(self):
-        """
-        Unload the referenced object to free memory
-        """
-        self.__subject__ = None
+        return self._store[self._idx]

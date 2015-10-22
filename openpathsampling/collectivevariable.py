@@ -1,5 +1,5 @@
 ###############################################################
-#| CLASS Order Parameter
+# | CLASS Order Parameter
 ###############################################################
 
 import marshal
@@ -7,6 +7,7 @@ import base64
 import types
 import opcode
 import __builtin__
+import importlib
 
 import simtk.unit as u
 import numpy as np
@@ -14,6 +15,7 @@ import numpy as np
 import openpathsampling as paths
 import chaindict as cd
 from openpathsampling.base import StorableNamedObject
+from openpathsampling.storage.cache import WeakLRUCache
 
 
 class CollectiveVariable(cd.Wrap, StorableNamedObject):
@@ -26,7 +28,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     name : string
         A descriptive name of the collectivevariable. It is used in the string
         representation.
-    dimensions : int
+    dimensions : None or tuple of int
         The number of dimensions of the output order parameter. So far this
         is not used and will be necessary or useful when storage is
         available
@@ -68,7 +70,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             has_fnc=True,
             fnc_uses_lists=None,
             var_type=None,
-            store_cache=True
+            store_cache=False
     ):
         if (type(name) is not str and type(name) is not unicode) or len(
                 name) == 0:
@@ -82,7 +84,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         if self.template is not None:
             self._init_from_template(self.template)
-
 
             if dimensions is not None:
                 self.dimensions = dimensions
@@ -110,7 +111,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         self.single_dict = cd.ExpandSingle()
         self.multi_dict = cd.ExpandMulti()
-        self.cache_dict = cd.ChainDict()
+        self.cache_dict = cd.CacheChainDict(WeakLRUCache(100000, weak_type='key'))
 
         self.store_cache = store_cache
 
@@ -124,12 +125,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         else:
             post = self.cache_dict
 
-        if store_cache:
-            self.store_dict = cd.MultiStore('collectivevariables', self.name,
-                                        self.dimensions, self)
-
-            post = post + self.store_dict
-
         post = post + self.multi_dict + self.single_dict
 
         if 'numpy' in self.var_type:
@@ -139,19 +134,26 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         self._stored = False
 
+    def set_cache_store(self, key_store, value_store):
+        self.store_dict = cd.StoredDict(key_store, value_store)
+        self.store_dict.post = self.cache_dict
+        self.multi_dict.post = self.store_dict
+
+    def __hash__(self):
+        return id(self) / 8
+
     @staticmethod
     def _interprete_num_type(instance):
         ty = type(instance)
 
-        types = [float, int, bool, str]
+        known_types = [float, int, bool, str]
 
-        if ty in types:
+        if ty in known_types:
             return ty.__name__
-        elif ty is np.ndarray:
+        elif hasattr(instance, 'dtype'):
             return 'numpy.' + instance.dtype.type.__name__
         else:
-            return None
-
+            return 'None'
 
     @property
     def template_value(self):
@@ -208,17 +210,16 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
             if eval_list is not False and eval_multi is not False:
                 # check if results are the same
-                if hasattr(value_list, '__iter__') and len(value_list) == 1:
-                    if hasattr(value_multi, '__iter__') and len(value_multi) == 2:
-                        # if value_list[0] == value_multi[0] \
-                        #         and value_list[0] == value_multi[1]:
-                        #     fnc_uses_lists = True
-                        # else:
-                        #     if eval_single is False:
-                        #         fnc_uses_lists = True
-                        #     else:
-                        #         fnc_uses_lists = False
-                        fnc_uses_lists = True
+                if type(value_list) is list and len(value_list) == 1:
+                    if type(value_multi) is list and len(value_multi) == 2:
+                        if value_list[0] == value_multi[0] \
+                                and value_list[0] == value_multi[1]:
+                            fnc_uses_lists = True
+                        else:
+                            if eval_single is False:
+                                fnc_uses_lists = True
+                            else:
+                                fnc_uses_lists = False
                     else:
                         if eval_single:
                             fnc_uses_lists = False
@@ -241,7 +242,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
             dimensions = None
             storable = True
-            var_type = 'None'
+            var_type = None
             unit = None
 
             test_type = test_value
@@ -288,25 +289,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             self.fnc_uses_lists = fnc_uses_lists
             self.unit = unit
 
-    def flush_cache(self, storage):
-        """
-        Copy the cache to the internal storage cache for saving
 
-        Parameters
-        ----------
-        storage : Storage()
-            the storage for which the cache should be copied
-        """
-        if hasattr(self, 'store_dict'):
-            if storage in self.store_dict.cod_stores:
-                stored = {
-                    key: value for key, value in self.cache_dict
-                    if type(key) is tuple or storage in key.idx
-                }
-                self.store_dict.cod_stores[storage].post.update(stored)
-                self.store_dict.cod_stores[storage].update(stored)
-
-    def sync(self, store):
+    def sync(self):
         """
         Sync this collectivevariable with attached storages
 
@@ -316,11 +300,9 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             the store to be used, otherwise all underlying storages are synced
         """
         if hasattr(self, 'store_dict'):
-            self.store_dict.update_nod_stores()
-            if store in self.store_dict.cod_stores:
-                self.store_dict.cod_stores[store].sync()
+            self.store_dict.sync()
 
-    def cache_all(self, store):
+    def cache_all(self):
         """
         Sync this collective variable with attached storages
 
@@ -330,9 +312,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             the store to be used, otherwise all underlying storages are synced
         """
         if hasattr(self, 'store_dict'):
-            self.store_dict.update_nod_stores()
-            if store in self.store_dict.cod_stores:
-                self.store_dict.cod_stores[store].cache_all()
+            self.store_dict.cache_all()
 
     _compare_keys = ['name', 'dimensions']
 
@@ -340,7 +320,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         """Override the default Equals behavior"""
         if isinstance(other, self.__class__):
             for key in self._compare_keys:
-                if self.__dict__[key] != other.__dict__[key]:
+                if getattr(self, key) != getattr(other, key):
                     return False
 
             return True
@@ -352,6 +332,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         if isinstance(other, self.__class__):
             return not self.__eq__(other)
         return NotImplemented
+
 
 class CV_Volume(CollectiveVariable):
     """ Make `Volume` into `CollectiveVariable`: maps to 0.0 or 1.0
@@ -392,7 +373,7 @@ class CV_Volume(CollectiveVariable):
         return {
             'name': self.name,
             'volume': self.volume,
-            'store_cache' : self.store_cache
+            'store_cache': self.store_cache
         }
 
     @classmethod
@@ -402,6 +383,7 @@ class CV_Volume(CollectiveVariable):
             volume=dct['volume'],
             store_cache=dct['store_cache']
         )
+
 
 class CV_Function(CollectiveVariable):
     """Make any function `fcn` into a `CollectiveVariable`.
@@ -432,7 +414,8 @@ class CV_Function(CollectiveVariable):
             dimensions=None,
             store_cache=True,
             fnc_uses_lists=False,
-            var_type='float',
+            var_type=None,
+            unit=None,
             **kwargs
     ):
         """
@@ -493,7 +476,8 @@ class CV_Function(CollectiveVariable):
             dimensions=dimensions,
             store_cache=store_cache,
             fnc_uses_lists=fnc_uses_lists,
-            var_type=var_type
+            var_type=var_type,
+            unit=unit
         )
 
     @staticmethod
@@ -502,56 +486,82 @@ class CV_Function(CollectiveVariable):
         i = 0
         ret = []
         while i < len(opcodes):
-            if ord(opcodes[i]) == op:
-                ret.append((i, ord(opcodes[i+1]) + ord(opcodes[i+2]) * 256))
-            if opcodes[i] < opcode.HAVE_ARGUMENT:
+            int_code = ord(opcodes[i])
+            if int_code == op:
+                ret.append((i, ord(opcodes[i + 1]) + ord(opcodes[i + 2]) * 256))
+
+            if  int_code < opcode.HAVE_ARGUMENT:
                 i += 1
             else:
                 i += 3
 
-        return [ code.func_code.co_names[i[1]] for i in ret ]
+        return [code.func_code.co_names[i[1]] for i in ret]
 
-    def _fnc_to_dict(self, callable_fcn):
+    def to_dict(self):
         fcn = None
-        f = callable_fcn
+        f = self.callable_fcn
         f_module = f.__module__
         is_local = f_module == '__main__'
+        is_loaded = f_module == 'openpathsampling.collectivevariable'
         is_class = isinstance(f, (type, types.ClassType))
         if not is_class:
-            if is_local:
+            if is_local or is_loaded:
                 # this is a local function, let's see if we can save it
-                if self.allow_marshal and callable(callable_fcn):
+                if self.allow_marshal and callable(self.callable_fcn):
                     # use marshal
                     global_vars = CV_Function._find_var(f, opcode.opmap['LOAD_GLOBAL'])
                     import_vars = CV_Function._find_var(f, opcode.opmap['IMPORT_NAME'])
 
                     builtins = dir(__builtin__)
 
-                    global_vars = [
+                    global_vars = list(set([
                         var for var in global_vars if var not in builtins
-                    ]
+                        ]))
+
+                    import_vars = list(set(import_vars))
 
                     if len(global_vars) > 0:
-                        print 'Not good. Your function relies on globally set variables ' + \
-                              'and these cannot be saved!'
-                        print 'requires the following globals to be set:', global_vars
-                        print 'Check, if you can replace these by constants or variables ' + \
-                              'that are defined within the function itself'
 
-                        print [ obj._idx for obj in global_vars if hasattr(obj, '_idx')]
+                        err = 'The function you try to save relies on globally set variables' + \
+                              '\nand these cannot be saved since storage has no access to the' + \
+                              '\nglobal scope. This includes imports!'
+                        err += '\nWe require that the following globals: ' + str(global_vars) + ' either'
+                        err += '\n(1) be replaced by constants'
+                        err += '\n(2) be defined inside your function,' + \
+                               '\n' + '\n'.join(map(lambda x : '    ' + x + '= ...', global_vars))
+                        err += '\n(3) imports need to be "re"-imported inside your function' + \
+                               '\n' + '\n'.join(map(lambda x : '    import ' + x , global_vars))
+                        err += '\n(4) be passed as an external parameter (does not work for imports!), like in '
+                        err += '\n        my_cv = CV_Function("' + self.name + '", ' + f.func_name + ', ' + \
+                              ', '.join(map(lambda x : x + '=' + x, global_vars)) + ')'
+                        err += '\n    and change your function definition like this'
+                        err += '\n        def ' + f.func_name + '(snapshot, ...,  ' + \
+                              ', '.join(global_vars) + '):'
 
-                        print [ obj for obj in global_vars ]
+                        print err
 
-                    not_allowed_modules = [ module for module in import_vars
-                                            if module not in CV_Function._allowed_modules]
+                        raise RuntimeError('Cannot store function! Dependency on global variables')
+
+                        # print [obj._idx for obj in global_vars if hasattr(obj, '_idx')]
+                        # print [obj for obj in global_vars]
+
+                    not_allowed_modules = [module for module in import_vars
+                                           if module not in CV_Function._allowed_modules]
 
                     if len(not_allowed_modules) > 0:
-                        print 'requires the following modules to be installed:', import_vars
-                        print 'note that some of these are not allowed so be careful', not_allowed_modules
+                        err  = 'The function you try to save requires the following modules to ' + \
+                               '\nbe installed: ' + str(not_allowed_modules) + ' which are not marked as safe!'
+                        err += '\nYou can change the list of safe modules in "CV_function._allowed_modules"'
+                        err += '\nYou can also include the import startement in your function like'
+                        err += '\n' + '\n'.join(['import ' + v for v in not_allowed_modules])
+
+                        print err
+
+                        raise RuntimeError('Cannot store function! Not allowed modules used.')
 
                     fcn = {
                         '_marshal': base64.b64encode(
-                            marshal.dumps(callable_fcn.func_code)),
+                            marshal.dumps(self.callable_fcn.func_code)),
                         '_global_vars': global_vars,
                         '_module_vars': import_vars
                     }
@@ -561,15 +571,26 @@ class CV_Function(CollectiveVariable):
                 if f_module.split('.')[0] in self._allowed_modules:
                     # only store the function and the module
                     fcn = {
-                        '_module': callable_fcn.__module__,
-                        '_name': callable_fcn.__name__
+                        '_module': self.callable_fcn.__module__,
+                        '_name': self.callable_fcn.__name__
                     }
 
-        return fcn
+        return {
+            'name': self.name,
+            'fcn': fcn,
+            'template': self.template,
+            'dimensions': self.dimensions,
+            'kwargs': self.kwargs,
+            'store_cache': self.store_cache,
+            'var_type': self.var_type,
+            'fnc_uses_lists': self.fnc_uses_lists,
+            'unit': self.unit
+        }
 
     @classmethod
-    def _fnc_from_dict(cls, f_dict):
+    def from_dict(cls, dct):
         f = None
+        f_dict = dct['fcn']
         if f_dict is not None:
             if '_marshal' in f_dict:
                 if cls.allow_marshal:
@@ -583,32 +604,20 @@ class CV_Function(CollectiveVariable):
                     imp = __import__(module)
                     f = getattr(imp, f_dict['_name'])
 
-        return f
-
-    def to_dict(self):
-        return {
-            'name': self.name,
-            'fcn': self._fnc_to_dict(self.callable_fcn),
-            'template':  self.template,
-            'dimensions': self.dimensions,
-            'kwargs': self.kwargs,
-            'store_cache': self.store_cache
-        }
-
-    @classmethod
-    def from_dict(cls, dct):
         obj = cls(
             name=dct['name'],
-            fcn=cls._fnc_from_dict(dct['fcn']),
+            fcn=f,
             dimensions=dct['dimensions'],
             store_cache=dct['store_cache'],
+            var_type=dct['var_type'],
+            fnc_uses_lists=dct['fnc_uses_lists'],
+            unit=dct['unit'],
             **dct['kwargs']
         )
 
         obj.template = dct['template']
 
         return obj
-
 
     def __eq__(self, other):
         """Override the default Equals behavior"""
@@ -620,10 +629,14 @@ class CV_Function(CollectiveVariable):
             if self.kwargs != other.kwargs:
                 return False
 
-            if hasattr(self.callable_fcn.func_code, 'op_code') and \
-                    self.callable_fcn.func_code.op_code != other.callable_fcn.func_code.op_code:
+            if self.callable_fcn is None or other.callable_fcn is None:
+                return False
+
+            if hasattr(self.callable_fcn.func_code, 'op_code') and hasattr(other.callable_fcn.func_code, 'op_code') and \
+                            self.callable_fcn.func_code.op_code != other.callable_fcn.func_code.op_code:
                 # Compare Bytecode. Not perfect, but should be good enough
                 return False
+
 
             return True
 
@@ -757,7 +770,7 @@ class CV_Class(CollectiveVariable):
     >>> print psi_orderparam( traj.md() )
     """
 
-    _allowed_modules = [ 'msmbuilder' ]
+    _allowed_modules = ['msmbuilder']
 
     def __init__(
             self,
@@ -826,14 +839,14 @@ class CV_Class(CollectiveVariable):
             'name': self.name,
             'cls': cls,
             'dimensions': self.dimensions,
-            'store_cache' : self.store_cache,
+            'store_cache': self.store_cache,
             'kwargs': self.kwargs
         }
 
     @classmethod
     def from_dict(cls, dct):
         c = None
-        c_dict = dct['fcn']
+        c_dict = dct['cls']
         if c_dict is not None:
             if '_module' in c_dict:
                 module = c_dict['_module']
@@ -856,16 +869,12 @@ class CV_Class(CollectiveVariable):
             if self.name != other.name:
                 return False
 
-            if self.fcn != other.fcn:
-                return False
-
             if self.kwargs != other.kwargs:
                 return False
 
             return True
 
         return NotImplemented
-
 
 
 class CV_MD_Function(CV_Function):
@@ -887,7 +896,17 @@ class CV_MD_Function(CV_Function):
     >>> print psi_orderparam( traj )
     """
 
-    def __init__(self, name, fcn, dimensions=None, store_cache=True, single_as_scalar=True, **kwargs):
+    def __init__(self,
+                 name,
+                 fcn,
+                 template=None,
+                 dimensions=None,
+                 store_cache=True,
+                 fnc_uses_lists=True,
+                 var_type='numpy.float32',
+                 unit=None,
+                 single_as_scalar=True,
+                 **kwargs):
         """
         Parameters
         ----------
@@ -898,15 +917,19 @@ class CV_MD_Function(CV_Function):
             atoms which define a specific distance/angle)
 
         """
+
         super(CV_MD_Function, self).__init__(
             name,
             fcn,
+            template=template,
             dimensions=dimensions,
             store_cache=store_cache,
-            fnc_uses_lists=True,
-            var_type='numpy.float32',
+            fnc_uses_lists=fnc_uses_lists,
+            var_type=var_type,
+            unit=unit,
             **kwargs
         )
+
         self.single_as_scalar = single_as_scalar
         self._topology = None
 
@@ -917,12 +940,23 @@ class CV_MD_Function(CV_Function):
             self._topology = trajectory.topology.md
 
         t = trajectory.md(self._topology)
-        arr =self.callable_fcn(t, **self.kwargs)
+        arr = self.callable_fcn(t, **self.kwargs)
         if self.single_as_scalar and arr.shape[-1] == 1:
             return arr.reshape(arr.shape[:-1])
         else:
             return arr
 
+    def to_dict(self):
+        dct = super(CV_MD_Function, self).to_dict()
+        dct['single_as_scalar'] = self.single_as_scalar
+        return dct
+
+    @classmethod
+    def from_dict(cls, dct):
+        obj = super(CV_MD_Function, cls).from_dict(dct)
+        obj.single_as_scalar = dct['single_as_scalar']
+
+        return obj
 
 class CV_PyEMMA_Featurizer(CV_Function):
     """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
@@ -1051,5 +1085,3 @@ class CV_Featurizer(CV_Class):
             return arr.reshape(arr.shape[:-1])
         else:
             return arr
-
-        return arr

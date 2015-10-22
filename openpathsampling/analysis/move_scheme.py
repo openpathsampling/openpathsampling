@@ -143,6 +143,7 @@ class MoveScheme(StorableNamedObject):
                 # list.
                 for mover in movers:
                     m_sig = mover.ensemble_signature
+                    print m_sig
                     if m_sig in existing_sigs.keys():
                         for idx in existing_sigs[m_sig]:
                             self.movers[group][idx] = mover
@@ -185,6 +186,10 @@ class MoveScheme(StorableNamedObject):
         """
         All ensembles which exist in the move scheme but not in the network.
 
+        Hidden ensembles are typically helper ensembles for moves; for
+        example, the minus move uses a "segment" helper ensemble which is
+        almost, but not quite, the innermost interface ensemble.
+
         Parameters
         ----------
         root : PathMover
@@ -206,6 +211,10 @@ class MoveScheme(StorableNamedObject):
         """
         All ensembles which exist in the network but not in the move scheme.
 
+        Not all move schemes will use all the ensembles. For example, a move
+        scheme might choose not to use the network's automatically generated
+        minus ensemble or multistate ensemble.
+
         Parameters
         ----------
         root : PathMover
@@ -222,6 +231,16 @@ class MoveScheme(StorableNamedObject):
         mover_ensembles = set(self.ensembles_for_move_tree(root))
         unused_ensembles = unhidden_ensembles - mover_ensembles
         return unused_ensembles
+
+    def find_used_ensembles(self, root=None):
+        """
+        All ensembles which are both in the network and in the move scheme.
+
+        """
+        unhidden_ensembles = set(self.network.all_ensembles)
+        mover_ensembles = set(self.ensembles_for_move_tree(root))
+        used_ensembles = unhidden_ensembles & mover_ensembles
+        return used_ensembles
 
     def check_for_root(self, fcn_name):
         """
@@ -393,11 +412,15 @@ class MoveScheme(StorableNamedObject):
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, indentation):
+        try:
+            acceptance = float(n_accepted) / n_trials
+        except ZeroDivisionError:
+            acceptance = "nan"
+
         line = ("* "*indentation + str(move_name) +
-                " ran " + str(float(n_trials)/n_total_trials*100) + 
-                "% of the cycles with acceptance " + str(n_accepted) + "/" + 
-                str(n_trials) + " (" + str(float(n_accepted) / n_trials) + 
-                ") \n")
+                " ran " + str(float(n_trials)/n_total_trials*100) +
+                "% of the cycles with acceptance " + str(n_accepted) + "/" +
+                str(n_trials) + " (" + str(acceptance) + ")\n")
         return line
 
     def move_acceptance(self, storage):
@@ -485,11 +508,13 @@ class DefaultScheme(MoveScheme):
     """
     def __init__(self, network):
         super(DefaultScheme, self).__init__(network)
+        n_ensembles = len(network.transition_ensembles)
         self.append(strategies.NearestNeighborRepExStrategy())
         self.append(strategies.OneWayShootingStrategy())
         self.append(strategies.PathReversalStrategy())
-        self.append(strategies.DefaultStrategy())
         self.append(strategies.MinusMoveStrategy())
+        global_strategy = strategies.OrganizeByMoveGroupStrategy()
+        self.append(global_strategy)
 
         msouters = self.network.special_ensembles['ms_outer']
         for ms in msouters.keys():
@@ -506,4 +531,6 @@ class DefaultScheme(MoveScheme):
             self.append(strategies.SelectedPairsRepExStrategy(
                 ensembles=pairs
             ))
+        #ms_outer_shoot_w = float(len(msouters)) / n_ensembles
+        #global_strategy.group_weights['ms_outer_shooting'] = ms_outer_shoot_w
 

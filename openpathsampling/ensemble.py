@@ -1,7 +1,7 @@
 '''
 Created on 03.09.2014
 
-@author: jan-hendrikprinz, David W.H. Swenson
+@author: Jan-Hendrik Prinz, David W.H. Swenson
 '''
 
 import logging
@@ -47,11 +47,17 @@ class EnsembleCache(object):
         self.prev_last_frame = None
         self.last_length = None
         self.direction = direction
-        self.contents = { }
+        self.contents = {}
 
     def bad_direction_error(self):
         raise RuntimeError("EnsembleCache.direction = " +
                            str(self.direction) + " invalid.") #nocover
+
+    # def clear(self):
+    #     self.start_frame = None
+    #     self.prev_last_frame = None
+    #     self.last_length = None
+    #     self.contents = {}
 
     def check(self, trajectory=None, reset=None):
         """Checks and resets (if necessary) the ensemble cache.
@@ -394,10 +400,17 @@ class Ensemble(StorableNamedObject):
         This uses self.find_valid_slices and returns the actual sub-trajectories
         '''
 
-        indices = self.find_valid_slices(trajectory, lazy, max_length, 
-                                         min_length, overlap)
+        try:
+            indices = self.find_valid_slices(trajectory.lazy(), lazy, max_length,
+                                             min_length, overlap)
 
-        return [trajectory[part] for part in indices]
+            return [paths.Trajectory(trajectory[part]) for part in indices]
+        except AttributeError:
+            indices = self.find_valid_slices(trajectory, lazy, max_length,
+                                             min_length, overlap)
+
+            return [trajectory[part] for part in indices]
+
 
 
     def __str__(self):
@@ -580,7 +593,6 @@ class EnsembleCombination(Ensemble):
     '''
     Logical combination of two ensembles
     '''
-    #TODO: EnsembleCombination cannot be saved alone yet!
     def __init__(self, ensemble1, ensemble2, fnc, str_fnc):
         super(EnsembleCombination, self).__init__()
         self.ensemble1 = ensemble1
@@ -1769,8 +1781,6 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
              "X" : ~self.innermost_vol})
         )
         return minus_samp
-
-
 
 class TISEnsemble(SequentialEnsemble):
     """An ensemble for TIS (or AMS).
