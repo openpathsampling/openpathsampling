@@ -171,6 +171,7 @@ class MSTISNetwork(TISNetwork):
                 # override created stuff
                 trans.ensembles = fromA.ensembles
                 trans.movers = fromA.movers
+                trans.minus_ensemble = fromA.minus_ensemble
                 self.transitions[(stateA, stateB)] = trans
 
 #    def disallow(self, stateA, stateB):

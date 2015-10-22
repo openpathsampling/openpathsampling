@@ -1,5 +1,4 @@
 import openpathsampling as paths
-from openpathsampling.todict import OPSNamed
 
 from openpathsampling.analysis.move_strategy import levels as strategy_levels
 import openpathsampling.analysis.move_strategy as strategies
@@ -15,7 +14,7 @@ except ImportError:
 import sys
 
 
-class MoveScheme(OPSNamed):
+class MoveScheme(paths.OPSNamed):
     """
     Creates a move decision tree based on `MoveStrategy` instances.
 
@@ -29,6 +28,7 @@ class MoveScheme(OPSNamed):
         Root of the move decision tree (`None` until tree is built)
     """
     def __init__(self, network):
+        super(MoveScheme, self).__init__()
         self.movers = {}
         self.movers = network.movers # TODO: legacy
         self.network = network
@@ -38,6 +38,25 @@ class MoveScheme(OPSNamed):
         self.root_mover = None
 
         self._mover_acceptance = {} # used in analysis
+
+    def to_dict(self):
+        ret_dict = {
+            # 'movers' : self.movers,
+            'network' : self.network,
+            # 'choice_probability' : self.choice_probability,
+            # 'balance_partners' : self.balance_partners,
+            # 'root_mover' : self.root_mover
+        }
+        return ret_dict
+
+    @classmethod
+    def from_dict(cls, dct):
+        scheme = cls.__new__(cls)
+        # scheme.movers = dct['movers']
+        scheme.network = dct['network']
+        # scheme.choice_probability = dct['choice_probability']
+        # scheme.balance_partners = dct['balance_partners']
+        # scheme.root_mover = dct['root_mover']
 
     def append(self, strategies, levels=None):
         """
@@ -550,4 +569,24 @@ class DefaultScheme(MoveScheme):
             ))
         #ms_outer_shoot_w = float(len(msouters)) / n_ensembles
         #global_strategy.group_weights['ms_outer_shooting'] = ms_outer_shoot_w
+
+    def to_dict(self):
+        ret_dict = {
+            # 'movers' : self.movers,
+            'network' : self.network,
+            # 'choice_probability' : self.choice_probability,
+            # 'balance_partners' : self.balance_partners,
+            # 'root_mover' : self.root_mover
+        }
+        return ret_dict
+
+    @classmethod
+    def from_dict(cls, dct):
+        scheme = cls.__new__(cls)
+        # scheme.movers = dct['movers']
+        scheme.network = dct['network']
+        # scheme.choice_probability = dct['choice_probability']
+        # scheme.balance_partners = dct['balance_partners']
+        # scheme.root_mover = dct['root_mover']
+
 

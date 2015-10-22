@@ -533,6 +533,8 @@ class RETISTransition(TISTransition):
             return self._flux
 
         self.minus_count_sides = { "in" : [], "out" : [] }
+        # NOTE: this assumes that minus mover is the only thing with the
+        # minus mover's signature
         minus_moves = (d.change for d in storage.steps
                        if self.movers['minus'][0] in
                        d.change and d.change.accepted)
