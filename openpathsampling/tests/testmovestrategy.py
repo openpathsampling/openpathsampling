@@ -1,9 +1,11 @@
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises, assert_in)
+                        assert_almost_equal, raises, assert_in,
+                        assert_not_in)
 from nose.plugins.skip import Skip, SkipTest
-from test_helpers import (true_func, assert_equal_array_array, make_1d_traj,
-                          setify_ensemble_signature,
-                          reorder_ensemble_signature)
+from test_helpers import (
+    true_func, assert_equal_array_array, make_1d_traj, MoverWithSignature,
+    setify_ensemble_signature, reorder_ensemble_signature
+)
 
 import openpathsampling as paths
 from openpathsampling.analysis.move_scheme import MoveScheme, DefaultScheme
@@ -181,11 +183,169 @@ class testSelectedPairsRepExStrategy(MoveStrategyTestSetup):
         movers = strategy.make_movers(scheme)
         assert_equal(len(movers), 3)
         assert_equal(movers[0].ensemble_signature_set,
-                     ({ ens00, ens01 }, { ens00, ens01 }))
+                     ({ens00, ens01}, {ens00, ens01}))
         assert_equal(movers[1].ensemble_signature_set,
-                     ({ ens00, ens02 }, { ens00, ens02 }))
+                     ({ens00, ens02}, {ens00, ens02}))
         assert_equal(movers[2].ensemble_signature_set,
-                     ({ ens01, ens02 }, { ens01, ens02 }))
+                     ({ens01, ens02}, {ens01, ens02}))
+
+class testReplicaExchangeStrategy(MoveStrategyTestSetup):
+    def test_make_movers(self):
+        strategy = ReplicaExchangeStrategy()
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        assert_equal(len(movers), 4)
+
+    def test_swap_to_hop_to_swap(self):
+        scheme = DefaultScheme(self.network)
+        scheme.movers = {} #LEGACY
+        root = scheme.move_decision_tree()
+        assert_equal(len(scheme.movers['repex']), 6)
+        old_movers = scheme.movers['repex']
+        scheme.append(EnsembleHopStrategy())
+        root = scheme.move_decision_tree(rebuild=True)
+        assert_equal(len(scheme.movers['repex']), 12)
+        scheme.append(ReplicaExchangeStrategy())
+        root = scheme.move_decision_tree(rebuild=True)
+        assert_equal(len(scheme.movers['repex']), 6)
+        new_movers = scheme.movers['repex']
+        assert_not_equal(old_movers, new_movers)
+        old_sigs = [m.ensemble_signature_set for m in old_movers]
+        new_sigs = [m.ensemble_signature_set for m in new_movers]
+        for old in old_sigs:
+            assert_in(old, new_sigs)
+
+    @raises(RuntimeError)
+    def test_detailed_balance_partners(self):
+        scheme = DefaultScheme(self.network)
+        scheme.movers = {} #LEGACY
+        scheme.append(EnsembleHopStrategy())
+        root = scheme.move_decision_tree()
+        assert_equal(len(scheme.movers['repex']), 12)
+        scheme.movers['repex'].pop()
+        assert_equal(len(scheme.movers['repex']), 11)
+        strategy = ReplicaExchangeStrategy()
+        strategy.make_movers(scheme)
+
+
+class testEnsembleHopStrategy(MoveStrategyTestSetup):
+    def test_make_movers(self):
+        strategy = EnsembleHopStrategy()
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        # defaults to 4 repex movers, so
+        assert_equal(len(movers), 8)
+
+        # set up the swap pairs
+        swap_pairs = []
+        for trans in self.network.sampling_transitions:
+            swap_pairs.extend([[trans.ensembles[i], trans.ensembles[i+1]] 
+                               for i in range(len(trans.ensembles)-1)])
+        assert_equal(len(swap_pairs), 4)
+
+        # check that each swap pair has a hop
+        mover_sigs = [m.ensemble_signature for m in movers]
+        for pair in swap_pairs:
+            sig1 = ((pair[0],),(pair[1],))
+            sig2 = ((pair[1],),(pair[0],))
+            assert_in(sig1, mover_sigs)
+            assert_in(sig2, mover_sigs)
+
+        scheme.movers['repex'] = movers
+        newmovers = strategy.make_movers(scheme)
+        assert_equal(len(newmovers), 8)
+        for mover in newmovers:
+            assert_in(mover.ensemble_signature, mover_sigs)
+
+    @raises(RuntimeError)
+    def test_different_number_input_output_ensembles(self):
+        ens0 = self.network.transition_ensembles[0]
+        ens1 = self.network.transition_ensembles[1]
+        ens2 = self.network.transition_ensembles[2]
+        weird_mover = MoverWithSignature(
+            input_ensembles=[ens0, ens1, ens2],
+            output_ensembles=[ens0, ens1]
+        )
+        assert_equal(weird_mover.ensemble_signature, 
+                     ((ens0,ens1,ens2),(ens0,ens1)))
+        scheme = MoveScheme(self.network)
+        scheme.movers['weird'] = [weird_mover]
+        strategy = EnsembleHopStrategy(group='weird')
+        strategy.make_movers(scheme)
+
+    @raises(RuntimeError)
+    def test_wrong_number_ensembles_in_signature(self):
+        ens0 = self.network.transition_ensembles[0]
+        ens1 = self.network.transition_ensembles[1]
+        ens2 = self.network.transition_ensembles[2]
+        weird_mover = MoverWithSignature(
+            input_ensembles=[ens0, ens1, ens2],
+            output_ensembles=[ens0, ens1, ens2]
+        )
+        assert_equal(weird_mover.ensemble_signature, 
+                     ((ens0,ens1,ens2),(ens0,ens1,ens2)))
+        scheme = MoveScheme(self.network)
+        scheme.movers['weird'] = [weird_mover]
+        strategy = EnsembleHopStrategy(group='weird')
+        strategy.make_movers(scheme)
+
+    @raises(RuntimeError)
+    def test_not_replica_exchange_signature(self):
+        ens0 = self.network.transition_ensembles[0]
+        ens1 = self.network.transition_ensembles[1]
+        ens2 = self.network.transition_ensembles[2]
+        weird_mover = MoverWithSignature(
+            input_ensembles=[ens0, ens1],
+            output_ensembles=[ens1, ens2]
+        )
+        assert_equal(weird_mover.ensemble_signature, 
+                     ((ens0,ens1),(ens1,ens2)))
+        scheme = MoveScheme(self.network)
+        scheme.movers['weird'] = [weird_mover]
+        strategy = EnsembleHopStrategy(group='weird')
+        strategy.make_movers(scheme)
+
+    def test_replace_nofrom(self):
+        # this is the default behavior
+        scheme = DefaultScheme(self.network)
+        scheme.movers ={}
+        scheme.append(EnsembleHopStrategy(replace=True, from_group=None))
+        scheme.move_decision_tree()
+        # 4 normal repex + 2 ms-outer repex = 6 repex * 2 hop/repex = 12
+        assert_equal(len(scheme.movers['repex']), 12)
+
+    def test_noreplace_from(self):
+        # if replace is False and from_group is given, we end up with two
+        # groups: both the new and the old.
+        scheme = DefaultScheme(self.network)
+        scheme.movers ={}
+        scheme.append(EnsembleHopStrategy(replace=False, 
+                                          group='hop',
+                                          from_group='repex'))
+        scheme.move_decision_tree()
+        assert_equal(len(scheme.movers['repex']), 6)
+        assert_equal(len(scheme.movers['hop']), 12)
+
+    def test_replace_from(self):
+        # if replace is True and we have a different from_group, we should
+        # remove the old from_group from existence
+        scheme = DefaultScheme(self.network)
+        scheme.movers ={}
+        scheme.append(EnsembleHopStrategy(replace=True, 
+                                          group='hop',
+                                          from_group='repex'))
+        scheme.move_decision_tree()
+        assert_equal(len(scheme.movers['hop']), 12)
+        assert_not_in("repex", scheme.movers.keys())
+
+    def test_noreplace_nofrom(self):
+        # if replace==False and the from_group is not given, we should
+        # act as mover replacement (but this is seriously a bad idea)
+        scheme = DefaultScheme(self.network)
+        scheme.movers ={}
+        scheme.append(EnsembleHopStrategy(replace=False, from_group=None))
+        scheme.move_decision_tree()
+        assert_equal(len(scheme.movers['repex']), 18)
 
 
 class testPathReversalStrategy(MoveStrategyTestSetup):

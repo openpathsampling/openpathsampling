@@ -4,8 +4,6 @@ import os
 import openpathsampling as paths
 import networkx as nx
 
-from openpathsampling.storage.objproxy import LoaderProxy
-
 import json
 import matplotlib.pyplot as plt
 import StringIO
@@ -973,7 +971,12 @@ class PathTreeBuilder(object):
                                         color='black')
                 )
 
-                shift = shift + sample.parent.trajectory.index(sample[0])
+                # print sample.mover.cls
+                # print sample[0]
+                # print map(self.storage.idx, list(sample.parent.trajectory))
+                # print map(self.storage.idx, list(sample))
+
+                shift = shift + map(self.storage.idx, sample.parent.trajectory).index(self.storage.idx(sample[0]))
 
                 self.renderer.add(
                     self.renderer.range(shift, t_count, len(sample), 'gray', mover_type.__name__[:-11] )
@@ -1102,38 +1105,38 @@ class PathTreeBuilder(object):
 
         matrix = self._to_matrix()
 
-        if hasattr(self, 'states') and len(self.states) > 0:
-            for color, op in self.states:
-                xp = None
-                for y in range(0, max_y - min_y + 1):
-                    left = None
-                    yp = y + min_y
-                    for x in range(0, (max_x - min_x + 1)):
-                        xp = x + min_x
-
-                        # if matrix[y][x] is not None:
-                        #     self.renderer.pre(
-                        #         self.renderer.shade(xp, yp, 0.9,
-                        #                             'black')
-                        #     )
-
-
-                        if matrix[y][x] is not None\
-                            and bool(op(LoaderProxy(self.storage.snapshots, matrix[y][x]))):
-                                if left is None:
-                                    left = xp
-                        else:
-                            if left is not None:
-                                self.renderer.pre(
-                                    self.renderer.shade(left, yp, xp - left,
-                                                        color)
-                                )
-                                left = None
-
-                    if left is not None:
-                        self.renderer.pre(
-                            self.renderer.shade(left, yp, xp - left + 1, color)
-                        )
+        # if False & hasattr(self, 'states') and len(self.states) > 0:
+        #     for color, op in self.states:
+        #         xp = None
+        #         for y in range(0, max_y - min_y + 1):
+        #             left = None
+        #             yp = y + min_y
+        #             for x in range(0, (max_x - min_x + 1)):
+        #                 xp = x + min_x
+        #
+        #                 # if matrix[y][x] is not None:
+        #                 #     self.renderer.pre(
+        #                 #         self.renderer.shade(xp, yp, 0.9,
+        #                 #                             'black')
+        #                 #     )
+        #
+        #
+        #                 if matrix[y][x] is not None\
+        #                     and bool(op(LoaderProxy(self.storage.snapshots, matrix[y][x]))):
+        #                         if left is None:
+        #                             left = xp
+        #                 else:
+        #                     if left is not None:
+        #                         self.renderer.pre(
+        #                             self.renderer.shade(left, yp, xp - left,
+        #                                                 color)
+        #                         )
+        #                         left = None
+        #
+        #             if left is not None:
+        #                 self.renderer.pre(
+        #                     self.renderer.shade(left, yp, xp - left + 1, color)
+        #                 )
 
         prev = samples[0].trajectory
         old_tc = 1
