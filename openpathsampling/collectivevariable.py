@@ -289,6 +289,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             self.fnc_uses_lists = fnc_uses_lists
             self.unit = unit
 
+        print self.__dict__
+
 
     def sync(self):
         """
@@ -497,9 +499,9 @@ class CV_Function(CollectiveVariable):
 
         return [code.func_code.co_names[i[1]] for i in ret]
 
-    def to_dict(self):
+    @classmethod
+    def _fnc_to_dict(cls, f):
         fcn = None
-        f = self.callable_fcn
         f_module = f.__module__
         is_local = f_module == '__main__'
         is_loaded = f_module == 'openpathsampling.collectivevariable'
@@ -507,7 +509,7 @@ class CV_Function(CollectiveVariable):
         if not is_class:
             if is_local or is_loaded:
                 # this is a local function, let's see if we can save it
-                if self.allow_marshal and callable(self.callable_fcn):
+                if cls.allow_marshal and callable(f):
                     # use marshal
                     global_vars = CV_Function._find_var(f, opcode.opmap['LOAD_GLOBAL'])
                     import_vars = CV_Function._find_var(f, opcode.opmap['IMPORT_NAME'])
@@ -532,7 +534,7 @@ class CV_Function(CollectiveVariable):
                         err += '\n(3) imports need to be "re"-imported inside your function' + \
                                '\n' + '\n'.join(map(lambda x : '    import ' + x , global_vars))
                         err += '\n(4) be passed as an external parameter (does not work for imports!), like in '
-                        err += '\n        my_cv = CV_Function("' + self.name + '", ' + f.func_name + ', ' + \
+                        err += '\n        my_cv = CV_Function("...name...", ' + f.func_name + ', ' + \
                               ', '.join(map(lambda x : x + '=' + x, global_vars)) + ')'
                         err += '\n    and change your function definition like this'
                         err += '\n        def ' + f.func_name + '(snapshot, ...,  ' + \
@@ -561,23 +563,28 @@ class CV_Function(CollectiveVariable):
 
                     fcn = {
                         '_marshal': base64.b64encode(
-                            marshal.dumps(self.callable_fcn.func_code)),
+                            marshal.dumps(f.func_code)),
                         '_global_vars': global_vars,
                         '_module_vars': import_vars
                     }
 
             elif not is_local:
                 # save the external class, e.g. msmbuilder featurizer
-                if f_module.split('.')[0] in self._allowed_modules:
+                if f_module.split('.')[0] in cls._allowed_modules:
                     # only store the function and the module
                     fcn = {
-                        '_module': self.callable_fcn.__module__,
-                        '_name': self.callable_fcn.__name__
+                        '_module': f.__module__,
+                        '_name': f.__name__
                     }
 
+        print fcn
+
+        return fcn
+
+    def to_dict(self):
         return {
             'name': self.name,
-            'fcn': fcn,
+            'fcn': self._fnc_to_dict(self.callable_fcn),
             'template': self.template,
             'dimensions': self.dimensions,
             'kwargs': self.kwargs,
@@ -588,9 +595,8 @@ class CV_Function(CollectiveVariable):
         }
 
     @classmethod
-    def from_dict(cls, dct):
+    def _fnc_from_dict(cls, f_dict):
         f = None
-        f_dict = dct['fcn']
         if f_dict is not None:
             if '_marshal' in f_dict:
                 if cls.allow_marshal:
@@ -604,9 +610,14 @@ class CV_Function(CollectiveVariable):
                     imp = __import__(module)
                     f = getattr(imp, f_dict['_name'])
 
+        return f
+
+    @classmethod
+    def from_dict(cls, dct):
+
         obj = cls(
             name=dct['name'],
-            fcn=f,
+            fcn=cls._fnc_from_dict(dct['fcn']),
             dimensions=dct['dimensions'],
             store_cache=dct['store_cache'],
             var_type=dct['var_type'],
@@ -658,7 +669,8 @@ class CV_Generator(CV_Function):
             dimensions=None,
             store_cache=True,
             fnc_uses_lists=False,
-            var_type='float',
+            var_type=None,
+            unit=None,
             **kwargs
     ):
         self.generator = generator
@@ -671,7 +683,8 @@ class CV_Generator(CV_Function):
             dimensions=dimensions,
             store_cache=store_cache,
             fnc_uses_lists=fnc_uses_lists,
-            var_type=var_type
+            var_type=var_type,
+            unit=unit
         )
 
         self.kwargs = kwargs
