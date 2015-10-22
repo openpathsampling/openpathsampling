@@ -19,8 +19,8 @@ class SampleSet(OPSNamed):
     SampleSet is essentially a list of samples, with a few conveniences.  It
     can be treated as a list of samples (using, e.g., .append), or as a
     dictionary of ensembles mapping to a list of samples, or as a dictionary
-    of replica IDs to samples. Any type is allowed as a replica ID except
-    Sample or Ensemble.
+    of replica IDs to samples. Replica ID has to an integer but it can be
+    negative or zero.
 
     The dictionaries ensemble_dict and replica_dict are conveniences which
     should be kept consistent by any method which modifies the container.
