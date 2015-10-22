@@ -13,6 +13,7 @@ from openpathsampling.trajectory import Trajectory
 from openpathsampling.snapshot import Snapshot
 from openpathsampling.dynamics_engine import DynamicsEngine
 from openpathsampling.topology import Topology
+import openpathsampling as paths
 import numpy as np
 
 def make_1d_traj(coordinates, velocities=None, topology=None):
@@ -57,6 +58,10 @@ def assert_same_items(list_a, list_b):
         assert_in(elem_a, list_b)
 
 
+class MoverWithSignature(paths.PathMover):
+    def __init__(self, input_ensembles, output_ensembles):
+        self._in_ensembles = input_ensembles
+        self._out_ensembles = output_ensembles
 
 class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
@@ -142,3 +147,21 @@ def data_filename(fname, subdir='test_data'):
 
 def true_func(value, *args, **kwargs):
     return True
+
+def setify_ensemble_signature(sig):
+    return (set(sig[0]), set(sig[1]))
+
+
+def reorder_ensemble_signature(sig, match_with):
+    setified = setify_ensemble_signature(sig)
+    found_sigs = []
+    for s in match_with:
+        if setified == setify_ensemble_signature(s):
+            found_sigs.append(s)
+    if len(found_sigs) == 0:
+        raise RuntimeError("Signature not found for matching: " + repr(sig))
+    elif len(found_sigs) > 1:
+        raise RuntimeError("More than one form found for signature: " +
+                           repr(sig) + "\n" + repr(found_sigs))
+    else:
+        return found_sigs[0]
