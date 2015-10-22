@@ -4,6 +4,14 @@ from openpathsampling.todict import OPSNamed
 from openpathsampling.analysis.move_strategy import levels as strategy_levels
 import openpathsampling.analysis.move_strategy as strategies
 
+try:
+    import pandas as pd
+    has_pandas=True
+except ImportError:
+    has_pandas=False
+
+
+
 import sys
 
 
@@ -493,14 +501,19 @@ class MoveScheme(OPSNamed):
                     stats[groupname][1] += self._mover_acceptance[k][1]
 
         for groupname in my_movers.keys():
-            line = self._move_summary_line(
-                move_name=groupname, 
-                n_accepted=stats[groupname][0],
-                n_trials=stats[groupname][1], 
-                n_total_trials=tot_trials,
-                indentation=0
-            )
-            output.write(line)
+            if has_pandas and isinstance(output, pd.DataFrame):
+                # TODO Pandas DataFrame Output
+                pass
+            else:
+                line = self._move_summary_line(
+                    move_name=groupname, 
+                    n_accepted=stats[groupname][0],
+                    n_trials=stats[groupname][1], 
+                    n_total_trials=tot_trials,
+                    indentation=0
+                )
+                output.write(line)
+                # raises AttributeError if no write function
 
 
 class DefaultScheme(MoveScheme):
