@@ -532,6 +532,7 @@ class DefaultScheme(MoveScheme):
             ))
             ms_neighbors = [t.ensembles[-1] for t in msouters[ms]]
             pairs = [[ms, neighb] for neighb in ms_neighbors]
+            print pairs
             self.append(strategies.SelectedPairsRepExStrategy(
                 ensembles=pairs
             ))
