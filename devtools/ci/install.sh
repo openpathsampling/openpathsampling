@@ -22,7 +22,7 @@ export PATH=$HOME/miniconda/bin:$PATH
 
 hash -r
 
-conda config --add channels http://conda.binstar.org/omnia
+conda config --add channels http://conda.anaconda.org/omnia
 conda create --yes -n ${python} python=${python} --file devtools/ci/requirements-conda-${python}.txt
 conda update --yes conda
 source activate $python
