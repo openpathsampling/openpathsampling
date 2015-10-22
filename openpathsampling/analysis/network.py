@@ -489,10 +489,11 @@ class MISTISNetwork(TISNetwork):
             this_outer = paths.ensemble.join_ensembles(
                 [pair[0].ensembles[-1], pair[1].ensembles[-1]]
             )
+            s_pair = [self.transition_to_sampling[p] for p in pair]
             try:
-                self.special_ensembles['ms_outer'][this_outer] = list(pair)
+                self.special_ensembles['ms_outer'][this_outer] = list(s_pair)
             except KeyError:
-                self.special_ensembles['ms_outer'] = {this_outer : list(pair)}
+                self.special_ensembles['ms_outer'] = {this_outer : list(s_pair)}
 
         
         # combining the minus interfaces
