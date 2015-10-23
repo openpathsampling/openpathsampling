@@ -13,8 +13,40 @@ class ChainDict(object):
     """
     A dictionary-like structure with a logic to generate values and pass unknown values to other instances
 
+    The default ChainDict requires a list of keys. If you want to allow also single values you need to
+    add a ChainDict that interprets single and iterables like ExpandSingle.
+
     The default for unknown keys is None. This is necessary to pass on what is unknown.
     Everything that is not known in the current instance is passed on to .post
+
+    Examples
+    --------
+    Create a CachingDict
+    >>> cd = CacheChainDict(LRUCache(2))
+    >>> cd[[1, 2]]
+    [None, None]
+
+    There will be no result since there is no logic to generate values.
+    >>> def f(x):
+    >>>     print 'eval', x
+    >>>     return x**2
+    >>> fnc_cd = Function(f, fnc_uses_lists = False)
+    >>> fnc_cd[[1, 2]]
+    eval, 1
+    eval, 2
+    [1, 4]
+
+    Combine both dicts to cache the results from the function
+    >>> combo_cd = cd + fnc_cd
+    >>> combo_cd[[1,2]]
+    eval, 1
+    eval, 2
+    [1,4]
+
+    First time the function is called and the cache filled. Second time the cache is used.
+
+    >>> combo_cd[[1,2]]
+    [1,4]
 
     Attributes
     ----------
@@ -27,9 +59,8 @@ class ChainDict(object):
         self.post = None
 
     def __getitem__(self, items):
+        # first apply the own _get functions to compute
         results = self._get_list(items)
-
-        # print 'Res', self.__class__.__name__, results
 
         if self.post is not None:
             nones = [obj[0] for obj in zip(items, results) if obj[1] is None]
