@@ -41,22 +41,23 @@ class MoveScheme(paths.OPSNamed):
 
     def to_dict(self):
         ret_dict = {
-            # 'movers' : self.movers,
+            'movers' : self.movers,
             'network' : self.network,
-            # 'choice_probability' : self.choice_probability,
-            # 'balance_partners' : self.balance_partners,
-            # 'root_mover' : self.root_mover
+            'choice_probability' : self.choice_probability,
+            'balance_partners' : self.balance_partners,
+            'root_mover' : self.root_mover
         }
         return ret_dict
 
     @classmethod
     def from_dict(cls, dct):
         scheme = cls.__new__(cls)
-        # scheme.movers = dct['movers']
-        scheme.network = dct['network']
-        # scheme.choice_probability = dct['choice_probability']
-        # scheme.balance_partners = dct['balance_partners']
-        # scheme.root_mover = dct['root_mover']
+        scheme.__init__(dct['network'])
+        scheme.movers = dct['movers']
+        scheme.choice_probability = dct['choice_probability']
+        scheme.balance_partners = dct['balance_partners']
+        scheme.root_mover = dct['root_mover']
+        return scheme
 
     def append(self, strategies, levels=None):
         """
@@ -569,24 +570,4 @@ class DefaultScheme(MoveScheme):
             ))
         #ms_outer_shoot_w = float(len(msouters)) / n_ensembles
         #global_strategy.group_weights['ms_outer_shooting'] = ms_outer_shoot_w
-
-    def to_dict(self):
-        ret_dict = {
-            # 'movers' : self.movers,
-            'network' : self.network,
-            # 'choice_probability' : self.choice_probability,
-            # 'balance_partners' : self.balance_partners,
-            # 'root_mover' : self.root_mover
-        }
-        return ret_dict
-
-    @classmethod
-    def from_dict(cls, dct):
-        scheme = cls.__new__(cls)
-        # scheme.movers = dct['movers']
-        scheme.network = dct['network']
-        # scheme.choice_probability = dct['choice_probability']
-        # scheme.balance_partners = dct['balance_partners']
-        # scheme.root_mover = dct['root_mover']
-
 
