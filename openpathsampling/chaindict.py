@@ -11,43 +11,56 @@ from openpathsampling.storage.objproxy import LoaderProxy
 
 class ChainDict(object):
     """
-    Cache attached to Configuration indices stored in Configuration storage
+    A dictionary-like structure with a logic to generate values and pass unknown values to other instances
 
-    Parameters
-    ----------
-    name : string
-        A short and unique name to be used in storage
+    The default ChainDict requires a list of keys. If you want to allow also single values you need to
+    add a ChainDict that interprets single and iterables like ExpandSingle.
+
+    The default for unknown keys is None. This is necessary to pass on what is unknown.
+    Everything that is not known in the current instance is passed on to .post
+
+    Examples
+    --------
+    Create a CachingDict
+    >>> cd = CacheChainDict(LRUCache(2))
+    >>> cd[[1, 2]]
+    [None, None]
+
+    There will be no result since there is no logic to generate values.
+    >>> def f(x):
+    >>>     print 'eval', x
+    >>>     return x**2
+    >>> fnc_cd = Function(f, fnc_uses_lists = False)
+    >>> fnc_cd[[1, 2]]
+    eval, 1
+    eval, 2
+    [1, 4]
+
+    Combine both dicts to cache the results from the function
+    >>> combo_cd = cd + fnc_cd
+    >>> combo_cd[[1,2]]
+    eval, 1
+    eval, 2
+    [1,4]
+
+    First time the function is called and the cache filled. Second time the cache is used.
+
+    >>> combo_cd[[1,2]]
+    [1,4]
 
     Attributes
     ----------
-    name
+    post : ChainDict
+        the ChainDict to be called when this instance cannot evaluate given keys
 
-    fnc : index (int) -> value (float)
-        the function used to generate the cache values for the specified index. In essence a list
-    dimensions : int
-        the dimension of the stored values. Default is `1`
-    content_class : Class
-        the class of objects that can be stored
-    fnc_uses_lists : boolean
-        if True then in the case that the dict is called with several object at a time. The dict
-        creates a list of missing ones and passes all of these to the evaluating function at once.
-        Otherwise the fall-back is to call each item separately. If possible always the multiple-
-        option should be used.
-
-    Attributes
-    ----------
-    content_class
-    fnc_uses_lists
-    dimensions
     """
 
     def __init__(self):
         self.post = None
 
     def __getitem__(self, items):
+        # first apply the own _get functions to compute
         results = self._get_list(items)
-
-        # print 'Res', self.__class__.__name__, results
 
         if self.post is not None:
             nones = [obj[0] for obj in zip(items, results) if obj[1] is None]
@@ -72,27 +85,63 @@ class ChainDict(object):
             self._set(key, value)
 
     def _set(self, item, value):
+        """
+        Implementation on how to set a single value to this chaindict
+
+        Default implementation is to not store anything.
+        This is mostly used in caching and stores
+        """
         pass
 
     def _set_list(self, items, values):
+        """
+        Implementation on how to set a list of keys to this chaindict
+
+        Default is to call _set on all single keys
+        """
         [self._set(item, value) for item, value in zip(items, values) if value is not None]
 
     def _get(self, item):
+        """
+        Implementation on how to get the value of a single key
+
+        Default implementation returns None
+        """
+        # return None
         return None
 
     def _get_list(self, items):
+        """
+        Implementation on how to get the values of a list of keys
+
+        Default is to use _get on each single key
+        """
         return [self._get(item) for item in items]
 
     def __call__(self, items):
         return self[items]
 
+    ## ToDo: We might replace + by > to make the passing direction clear
     def __add__(self, other):
+        """
+        Combine two ChainDicts first + seconds into a new one.
+
+        >>> new_dict = first_dict + fall_back
+        """
         other.post = self
         return other
 
 
 class Wrap(ChainDict):
+    """A ChainDict that passes on all request to the underlying ChainDict
+    """
     def __init__(self, post):
+        """
+        Parameters
+        ----------
+        post : chaindict
+            the underlying chain dict to be used
+        """
         super(Wrap, self).__init__()
         self.post = post
 
@@ -104,8 +153,7 @@ class Wrap(ChainDict):
 
 
 class MergeNumpy(ChainDict):
-    """
-    Will take care of iterables
+    """All returned values from underlying ChainDicts will be turned into a numpy array
     """
 
     def __getitem__(self, items):
@@ -113,7 +161,7 @@ class MergeNumpy(ChainDict):
 
 class ExpandSingle(ChainDict):
     """
-    Will take care of iterables
+    Iterables will be unrolled and passed as a list
     """
 
     def __getitem__(self, items):
@@ -122,9 +170,9 @@ class ExpandSingle(ChainDict):
         if hasattr(items, '__iter__'):
             try:
                 dummy = len(items)
-            except TypeError:
+            except AttributeError:
                 # no length means unbound iterator and we cannot handle these
-                raise TypeError('Iterators that do not have __len__ implemented are not supported. ' +
+                raise AttributeError('Iterators that do not have __len__ implemented are not supported. ' +
                                 'You can wrap your iterator in list() if you know that it will finish.')
 
             try:
@@ -140,29 +188,15 @@ class ExpandSingle(ChainDict):
     def __setitem__(self, key, value):
         self.post[key] = value
 
-
-class ExpandMulti(ChainDict):
-    """
-    Will only request the unique keys to post
-    """
-
-    def __getitem__(self, items):
-        return self.post[items]
-        # if len(items) == 0:
-        #     return []
-        #
-        # uniques = list(set(items))
-        # rep_unique = self.post[[p for p in uniques]]
-        # multi_cache = dict(zip(uniques, rep_unique))
-        #
-        # return [multi_cache[item] for item in items]
-
-    def __setitem__(self, key, value):
-        self.post[key] = value
-
-
 class Transform(ChainDict):
+    """
+    Applies a transformation to the input keys
+    """
     def __init__(self, transform):
+        """
+        transform : function
+            the function to be applied to all input keys on the underlying dicts
+        """
         super(Transform, self).__init__()
         self.transform = transform
 
@@ -174,7 +208,21 @@ class Transform(ChainDict):
 
 
 class Function(ChainDict):
+    """
+    Uses a regular function to evaluate given keys.
+
+    This works effective like a function called with square brackets
+    """
     def __init__(self, fnc, fnc_uses_lists=True):
+        """
+        Parameters
+        ----------
+        fnc : function
+            the function to be evaluated to return values to keys
+        fnc_uses_lists : bool
+            if true we assume that it is faster to pass lists to this function instead
+            of evaluating each key separately
+        """
         super(Function, self).__init__()
         self._eval = fnc
         self.fnc_uses_lists = fnc_uses_lists
@@ -185,7 +233,6 @@ class Function(ChainDict):
     def _get(self, item):
         if self._eval is None:
             return None
-        #             raise KeyError('No cached values for item - %s' % str(item))
 
         if self.fnc_uses_lists:
             result = self._eval([item])
@@ -212,7 +259,16 @@ class Function(ChainDict):
 
 
 class CacheChainDict(ChainDict):
+    """
+    Return Values from a cache filled from returned values of the underlying ChainDicts and
+    """
     def __init__(self, cache):
+        """
+        Parameters
+        ----------
+        cache : dict-like class
+            the dict or cache to be used to store the data
+        """
         super(CacheChainDict, self).__init__()
         self.cache = cache
 
@@ -235,12 +291,29 @@ class CacheChainDict(ChainDict):
 
 
 class LRUChainDict(CacheChainDict):
+    """
+    Use a LRUCache to cache values
+    """
     def __init__(self, size_limit=1000000):
         super(LRUChainDict, self).__init__(LRUCache(size_limit))
 
 
 class StoredDict(ChainDict):
+    """
+    ChainDict that has a store attached and return existing values from the store
+    """
     def __init__(self, key_store, value_store, cache=None):
+        """
+        Parameters
+        ----------
+        key_store : storage.Store
+            the store that references usable keys
+        value_store : storage.Variable
+            the store that references the store variable to store the values by index
+        cache : dict-like or cache, default: None
+            the cache used to access stored values faster. If None an LRUCache with
+            100000 entries is used
+        """
         super(StoredDict, self).__init__()
         self.value_store = value_store
         self.key_store = key_store
@@ -297,8 +370,6 @@ class StoredDict(ChainDict):
 
     def _get_list(self, items):
         keys = map(self._get_key, items)
-
-        #        cached, missing = self._split_list(items, keys)
 
         idxs = [item for item in keys if item is not None and item not in self.cache]
 

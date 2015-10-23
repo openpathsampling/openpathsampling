@@ -110,7 +110,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
                 self.var_type = 'float'
 
         self.single_dict = cd.ExpandSingle()
-        self.multi_dict = cd.ExpandMulti()
         self.cache_dict = cd.CacheChainDict(WeakLRUCache(100000, weak_type='key'))
 
         self.store_cache = store_cache
@@ -125,7 +124,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         else:
             post = self.cache_dict
 
-        post = post + self.multi_dict + self.single_dict
+        post = post + self.single_dict
 
         if 'numpy' in self.var_type:
             post = post + cd.MergeNumpy()
@@ -137,7 +136,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     def set_cache_store(self, key_store, value_store):
         self.store_dict = cd.StoredDict(key_store, value_store)
         self.store_dict.post = self.cache_dict
-        self.multi_dict.post = self.store_dict
+        self.single_dict.post = self.store_dict
 
     def __hash__(self):
         return id(self) / 8
