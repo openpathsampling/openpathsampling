@@ -202,8 +202,6 @@ class Bootstrapping(PathSimulator):
         )
 
         self.globalstate = paths.SampleSet([sample])
-        if self.storage is not None:
-            self.storage.samplesets.save(self.globalstate)
         if movers is None:
             pass # TODO: implement defaults: one per ensemble, uniform sel
         else:

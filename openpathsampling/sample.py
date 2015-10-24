@@ -19,8 +19,8 @@ class SampleSet(OPSNamed):
     SampleSet is essentially a list of samples, with a few conveniences.  It
     can be treated as a list of samples (using, e.g., .append), or as a
     dictionary of ensembles mapping to a list of samples, or as a dictionary
-    of replica IDs to samples. Any type is allowed as a replica ID except
-    Sample or Ensemble.
+    of replica IDs to samples. Replica ID has to an integer but it can be
+    negative or zero.
 
     The dictionaries ensemble_dict and replica_dict are conveniences which
     should be kept consistent by any method which modifies the container.
@@ -32,6 +32,15 @@ class SampleSet(OPSNamed):
         have some of the convenient tools in Python sequences (e.g.,
         slices). On the other hand, I'm not sure whether that is meaningful
         here.
+        Since replicas are integers we add slicing/ranges for replicas. In addition
+        we support any iterable as input in __getitem__ an it will return an iterable
+        over the results. This makes it possible to write `sset[0:5]` to get a list
+        of of ordered samples by replica_id, or sset[list_of_ensembles].
+        replica_ids can be any number do not have to be subsequent to slicing does not
+        make sense and we ignore it. We will also ignore missing replica_ids. A slice
+        `1:5` will return all existing replica ids >=1 and <5. If you want exactly
+        all replicas from 1 to 4 use `sset[xrange(1,5)]`
+
 
     Attributes
     ----------
@@ -66,8 +75,20 @@ class SampleSet(OPSNamed):
     def __getitem__(self, key):
         if isinstance(key, paths.Ensemble):
             return random.choice(self.ensemble_dict[key])
-        else:
+        elif type(key) is int:
             return random.choice(self.replica_dict[key])
+        elif hasattr(key, '__iter__'):
+            return (self[element] for element in key)
+        elif type(key) is slice:
+            rep_idxs = filter(
+                lambda x :
+                    (key.start is None or x >= key.start) and
+                    (key.stop is None or x < key.stop),
+                sorted(self.replica_dict.keys())
+
+            )
+
+            return (self[element] for element in rep_idxs)
 
     def __setitem__(self, key, value):
         # first, we check whether the key matches the sample: if no, KeyError
@@ -213,9 +234,13 @@ class SampleSet(OPSNamed):
                 raise # reraises last exception
 
     def consistency_check(self):
-        '''This is mainly a sanity check for use in testing, but might be
+        '''Check that all internal dictionaries are consistent
+
+        This is mainly a sanity check for use in testing, but might be
         good to run (rarely) in the code until we're sure the tests cover
-        all use cases.'''
+        all use cases.
+        '''
+
         # check that we have the same number of samples in everything
         nsamps_ens = 0
         for ens in self.ensemble_dict.keys():
@@ -391,15 +416,15 @@ class Sample(object):
 
     Attributes
     ----------
-    replica : integer
-        The replica ID to which this Sample applies
-    trajectory : Trajectory
+    replica : int
+        The replica ID to which this Sample applies. The replica ID can also be negative.
+    trajectory : openpathsampling.Trajectory
         The trajectory (path) for this sample
-    ensemble : Ensemble
+    ensemble : openpathsampling.Ensemble
         The Ensemble this sample is drawn from
-    details : MoveDetails
+    details : openpathsampling.MoveDetails
         Object 
-    step : integer
+    step : int
         the Monte Carlo step number associated with this Sample
     """
 
