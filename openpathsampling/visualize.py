@@ -1394,4 +1394,14 @@ class ReplicaHistoryTree(PathTreeBuilder):
         return self._samples
 
 
+    @property
+    def decorrelated_trajectories(self):
+        prev = self.samples[0].trajectory
+        decorrelated = [prev]
+        for s in self.samples:
+            if not paths.Trajectory.is_correlated(s.trajectory, prev):
+                decorrelated.append(s.trajectory)
+                prev = s.trajectory
+
+        return decorrelated
     
