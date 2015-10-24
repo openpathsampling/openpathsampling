@@ -1361,27 +1361,31 @@ class MoveTreeNX(object):
         </script>
         '''
 
-class ReplicaHistoryTree(object):
+class ReplicaHistoryTree(PathTreeBuilder):
     def __init__(self, storage, steps, replica):
         # TODO: if we implement substorages (see #330) we can remove the
         # steps variable here and just iterate over storage.
+        super(ReplicaHistoryTree, self).__init__(storage)
         self.replica = replica
-        self.storage = storage
         self.steps = steps
-        self.tree = PathTreeBuilder(self.storage)
-        self.tree.from_samples(self.samples)
-        self.view = tree.renderer
-        self.rejected = False # default
 
-    @property
-    def rejected(self):
-        return self.tree.rejected
+        # defaults:
+        self.rejected = False 
+        self.show_redundant = False
+        self.states = []
 
-    @rejected.setter
-    def rejected(self, val):
-        self.tree.rejected = rejected
+        # build the tree 
+        self.from_samples(self.samples)
+        self.view = self.renderer
 
     @property
     def samples(self):
-        return [step.active[self.replica] for step in self.steps]
+        samp = self.steps[-1].active[self.replica]
+        samples = [samp]
+        while samp.parent is not None:
+            samp = samp.parent
+            samples.append(samp)
+
+        return list(reversed(samples))
+
 
