@@ -475,8 +475,10 @@ class TISTransition(Transition):
 
 class RETISTransition(TISTransition):
     """Transition class for RETIS."""
-    def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
-        super(RETISTransition, self).__init__(stateA, stateB, interfaces, orderparameter, name)
+    def __init__(self, stateA, stateB, interfaces, orderparameter=None, 
+                 name=None):
+        super(RETISTransition, self).__init__(stateA, stateB, interfaces,
+                                              orderparameter, name)
 
         self.minus_ensemble = paths.MinusInterfaceEnsemble(
             state_vol=stateA, 
@@ -534,28 +536,45 @@ class RETISTransition(TISTransition):
 
         self.minus_count_sides = { "in" : [], "out" : [] }
         # NOTE: this assumes that minus mover is the only thing with the
-        # minus mover's signature
-        minus_moves = (d.change for d in storage.steps
-                       if self.movers['minus'][0] in
-                       d.change and d.change.accepted)
-        for move in minus_moves:
-            minus_samp = [s for s in move.results
-                          if s.ensemble is self.minus_ensemble][0]
+        # minus mover's signature. TODO: switch this back to being
+        # mover-based when we move all analysis out of the network objects
+        minus_steps = (
+            step for step in storage.steps
+            if (self.minus_ensemble in [s.ensemble for s in step.change.trials]
+                and step.change.accepted)
+        )
+        #for move in minus_moves:
+            #minus_samp = [s for s in move.results
+                          #if s.ensemble is self.minus_ensemble][0]
+        minus_movers_used = {}
+        for step in minus_steps:
+            minus_samp = step.active[self.minus_ensemble]
             minus_trajectory = minus_samp.trajectory
             minus_summ = minus_sides_summary(minus_trajectory,
                                              self.minus_ensemble)
             for key in self.minus_count_sides.keys():
                 self.minus_count_sides[key].extend(minus_summ[key])
-       
+
+            try:
+                minus_movers_used[step.change.canonical.mover] += 1
+            except KeyError:
+                minus_movers_used[step.change.canonical.mover] = 1
+
         for key in self.minus_count_sides.keys():
             if len(self.minus_count_sides[key]) == 0:
                 logger.warn("No instances of "+str(key)+" for minus move.")
 
         t_in_avg = np.array(self.minus_count_sides['in']).mean()
         t_out_avg = np.array(self.minus_count_sides['out']).mean()
-        engine_dt = self.movers['minus'][0].engine.snapshot_timestep
+        if len(minus_movers_used) != 1:
+            # TODO: someday, this may not need to be forbidden, although I
+            # don't think it will be useful. For now, this is important for
+            # testing. Minimum, important that all have the same timestep
+            raise RuntimeError(str(len(minus_movers_used)) + 
+                               " minus movers for the same ensemble?")
+
+        engine_dt = minus_movers_used.keys()[0].engine.snapshot_timestep
         flux = 1.0 / (t_in_avg + t_out_avg) / engine_dt
-        # TODO: get minus mover engine dt
         self._flux = flux
         return self._flux
 
