@@ -1368,6 +1368,7 @@ class ReplicaHistoryTree(PathTreeBuilder):
         super(ReplicaHistoryTree, self).__init__(storage)
         self.replica = replica
         self.steps = steps
+        self._samples = None
 
         # defaults:
         self.rejected = False 
@@ -1378,14 +1379,19 @@ class ReplicaHistoryTree(PathTreeBuilder):
         self.from_samples(self.samples)
         self.view = self.renderer
 
+
     @property
     def samples(self):
-        samp = self.steps[-1].active[self.replica]
-        samples = [samp]
-        while samp.parent is not None:
-            samp = samp.parent
-            samples.append(samp)
+        if self._samples is None:
+            samp = self.steps[-1].active[self.replica]
+            samples = [samp]
+            while samp.parent is not None:
+                samp = samp.parent
+                samples.append(samp)
+            
+            self._samples = list(reversed(samples))
 
-        return list(reversed(samples))
+        return self._samples
 
 
+    
