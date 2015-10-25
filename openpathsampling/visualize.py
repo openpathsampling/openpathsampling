@@ -1362,6 +1362,19 @@ class MoveTreeNX(object):
         '''
 
 class ReplicaHistoryTree(PathTreeBuilder):
+    """
+    Simplified PathTreeBuilder for the common case of tracking a replica
+    over some steps.
+
+    Intended behaviors: 
+    * The samples are determined during initialization.
+    * The defaults are as similar to the old tree representation as
+      reasonable.
+    * This object also calculates decorrelated trajectories (which is
+      usually what we look for from this tree). The number of decorrelated
+      trajectories is obtained as the length of that list, and does not
+      require an extra method.
+    """
     def __init__(self, storage, steps, replica):
         # TODO: if we implement substorages (see #330) we can remove the
         # steps variable here and just iterate over storage.
@@ -1379,9 +1392,19 @@ class ReplicaHistoryTree(PathTreeBuilder):
         self.from_samples(self.samples)
         self.view = self.renderer
 
+    def rebuild(self):
+        """Rebuild the internal structures.
+
+        It seems like some changes in the visualization require a complete
+        rebuild. That's not ideal. If that can be changed, this function
+        could be removed.
+        """
+        self.from_samples(self.samples)
+
 
     @property
     def samples(self):
+        """Returns the samples in self.steps involving self.replica"""
         if self._samples is None:
             samp = self.steps[-1].active[self.replica]
             samples = [samp]
@@ -1392,13 +1415,22 @@ class ReplicaHistoryTree(PathTreeBuilder):
             self._samples = list(reversed(samples))
 
         return self._samples
-
+ 
 
     @property
     def decorrelated_trajectories(self):
+        """List of decorrelated trajectories from the internal samples.
+
+        In path sampling, two trajectories are said to be "decorrelated" if
+        they share no frames in common. This is particularly important in
+        one-way shooting. This function returns the list of trajectories,
+        making the number (i.e., the length of the list) also easily
+        accessible.
+        """
         prev = self.samples[0].trajectory
         decorrelated = [prev]
-        for s in self.samples:
+        # TODO: this should be restricted to accepted samples
+        for s in [samp for samp in self.samples]:
             if not paths.Trajectory.is_correlated(s.trajectory, prev):
                 decorrelated.append(s.trajectory)
                 prev = s.trajectory
