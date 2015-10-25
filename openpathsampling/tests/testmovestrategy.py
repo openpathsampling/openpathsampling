@@ -193,6 +193,7 @@ class testReplicaExchangeStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = ReplicaExchangeStrategy()
         scheme = MoveScheme(self.network)
+        scheme.apply_strategy(NearestNeighborRepExStrategy())
         movers = strategy.make_movers(scheme)
         assert_equal(len(movers), 4)
 
@@ -230,6 +231,7 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = EnsembleHopStrategy()
         scheme = MoveScheme(self.network)
+        scheme.apply_strategy(NearestNeighborRepExStrategy())
         movers = strategy.make_movers(scheme)
         # defaults to 4 repex movers, so
         assert_equal(len(movers), 8)
