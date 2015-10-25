@@ -1381,7 +1381,8 @@ class ReplicaHistoryTree(PathTreeBuilder):
         super(ReplicaHistoryTree, self).__init__(storage)
         self.replica = replica
         self.steps = steps
-        self._samples = None
+        self._accepted_samples = None
+        self._trial_samples = None
 
         # defaults:
         self.rejected = False 
@@ -1403,19 +1404,45 @@ class ReplicaHistoryTree(PathTreeBuilder):
 
 
     @property
-    def samples(self):
-        """Returns the samples in self.steps involving self.replica"""
-        if self._samples is None:
+    def accepted_samples(self):
+        """
+        Returns the accepted samples in self.steps involving self.replica
+        """
+        if self._accepted_samples is None:
             samp = self.steps[-1].active[self.replica]
             samples = [samp]
             while samp.parent is not None:
                 samp = samp.parent
                 samples.append(samp)
             
-            self._samples = list(reversed(samples))
+            self._accepted_samples = list(reversed(samples))
 
-        return self._samples
+        return self._accepted_samples
  
+    @property
+    def trial_samples(self):
+        """
+        Returns trial samples from self.steps involving self.replica
+        """
+        if self._trial_samples is None:
+            samp = self.steps[0].active[self.replica]
+            samples = [samp]
+            for step in self.steps:
+                rep_trials = [s for s in step.change.trials 
+                              if s.replica==self.replica]
+                if len(rep_trials) > 0:
+                    samples.append(rep_trials[-1])
+
+            self._trial_samples = samples
+
+        return self._trial_samples
+
+    @property
+    def samples(self):
+        if self.rejected:
+            return self.trial_samples
+        else:
+            return self.accepted_samples
 
     @property
     def decorrelated_trajectories(self):
