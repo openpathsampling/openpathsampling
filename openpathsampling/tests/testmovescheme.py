@@ -158,7 +158,6 @@ class testMoveScheme(object):
             assert_equal(o is n, False)
 
     def test_move_decision_tree(self):
-        self.scheme.movers = {} # LEGACY
         shoot = OneWayShootingStrategy()
         repex = NearestNeighborRepExStrategy()
         default = OrganizeByMoveGroupStrategy()
@@ -184,7 +183,6 @@ class testMoveScheme(object):
         assert_is_not(new_root, root)
 
     def test_repex_style_switching(self):
-        self.scheme.movers = {} # LEGACY
         nn_repex = NearestNeighborRepExStrategy()
         all_repex = AllSetRepExStrategy()
         default = OrganizeByMoveGroupStrategy()
@@ -202,7 +200,6 @@ class testMoveScheme(object):
         assert_equal(len(self.scheme.movers['repex']), 4)
 
     def test_build_balance_partners(self):
-        self.scheme.movers = {} #LEGACY
         ensA = self.scheme.network.sampling_transitions[0].ensembles[0]
         ensB = self.scheme.network.sampling_transitions[0].ensembles[1]
         hopAB = paths.EnsembleHopMover(ensemble=ensA, target_ensemble=ensB)
@@ -221,7 +218,6 @@ class testMoveScheme(object):
 
     @raises(RuntimeWarning)
     def test_build_balance_partners_no_partner(self):
-        self.scheme.movers = {} #LEGACY
         ensA = self.scheme.network.sampling_transitions[0].ensembles[0]
         ensB = self.scheme.network.sampling_transitions[0].ensembles[1]
         hopAB = paths.EnsembleHopMover(ensemble=ensA, target_ensemble=ensB)
@@ -233,7 +229,6 @@ class testMoveScheme(object):
 
     @raises(RuntimeWarning)
     def test_build_balance_partners_two_partners(self):
-        self.scheme.movers = {} #LEGACY
         ensA = self.scheme.network.sampling_transitions[0].ensembles[0]
         ensB = self.scheme.network.sampling_transitions[0].ensembles[1]
         hopAB = paths.EnsembleHopMover(ensemble=ensA, target_ensemble=ensB)
@@ -245,7 +240,6 @@ class testMoveScheme(object):
         self.scheme.build_balance_partners()
 
     def test_sanity_check_sane(self):
-        self.scheme.movers = {} #LEGACY
         self.scheme.append([NearestNeighborRepExStrategy(),
                             OneWayShootingStrategy(),
                             OrganizeByMoveGroupStrategy()])
@@ -254,7 +248,6 @@ class testMoveScheme(object):
 
     @raises(AssertionError)
     def test_sanity_check_unused_sampling(self):
-        self.scheme.movers = {} #LEGACY
         ensemble_subset = self.scheme.network.sampling_transitions[0].ensembles
         self.scheme.append([
             OneWayShootingStrategy(ensembles=ensemble_subset),
@@ -265,7 +258,6 @@ class testMoveScheme(object):
 
     @raises(AssertionError)
     def test_sanity_check_choice_prob_fails(self):
-        self.scheme.movers = {} #LEGACY
         self.scheme.append([NearestNeighborRepExStrategy(),
                             OneWayShootingStrategy(),
                             OrganizeByMoveGroupStrategy()])
@@ -276,7 +268,6 @@ class testMoveScheme(object):
 
     @raises(AssertionError)
     def test_sanity_check_duplicated_movers(self):
-        self.scheme.movers = {} #LEGACY
         ensemble_subset = self.scheme.network.sampling_transitions[0].ensembles
         self.scheme.append([
             OneWayShootingStrategy(),
@@ -288,13 +279,11 @@ class testMoveScheme(object):
 
     @raises(TypeError)
     def test_select_movers_no_choice_probability(self):
-        self.scheme.movers = {} # LEGACY
         self.scheme.append([OneWayShootingStrategy(),
                             OrganizeByMoveGroupStrategy()])
         movers = self.scheme._select_movers('shooting')
 
     def test_select_movers(self):
-        self.scheme.movers = {} # LEGACY
         self.scheme.append([
             OneWayShootingStrategy(), 
             NearestNeighborRepExStrategy(),
@@ -313,7 +302,6 @@ class testMoveScheme(object):
         assert_equal(movers, [some_shooters[0]])
 
     def test_n_trials_for_steps(self):
-        self.scheme.movers = {} # LEGACY
         self.scheme.append([
             OneWayShootingStrategy(), 
             NearestNeighborRepExStrategy(),
@@ -340,7 +328,6 @@ class testMoveScheme(object):
 
 
     def test_n_steps_for_trials(self):
-        self.scheme.movers = {} # LEGACY
         self.scheme.append([
             OneWayShootingStrategy(), 
             NearestNeighborRepExStrategy(),
@@ -383,7 +370,6 @@ class testDefaultScheme(object):
     
     def test_default_scheme(self):
         scheme = DefaultScheme(self.network)
-        scheme.movers = {} # LEGACY
         root = scheme.move_decision_tree()
         chooser_type_dict = {
             'ShootingChooser' : paths.OneWayShootingMover,
@@ -427,27 +413,23 @@ class testDefaultScheme(object):
 
     def test_default_sanity(self):
         scheme = DefaultScheme(self.network)
-        scheme.movers = {} # LEGACY
         root = scheme.move_decision_tree()
         scheme.sanity_check()
 
     def test_default_hidden_ensembles(self):
         scheme = DefaultScheme(self.network)
-        scheme.movers = {} # LEGACY
         root = scheme.move_decision_tree()
         hidden = scheme.find_hidden_ensembles()
         assert_equal(len(hidden), 2)
 
     def test_default_unused_ensembles(self):
         scheme = DefaultScheme(self.network)
-        scheme.movers = {} # LEGACY
         root = scheme.move_decision_tree()
         unused = scheme.find_unused_ensembles()
         assert_equal(len(unused), 0) # will change when minus/msouter 
 
     def test_default_balance_partners(self):
         scheme = DefaultScheme(self.network)
-        scheme.movers = {} # LEGACY
         root = scheme.move_decision_tree()
         scheme.build_balance_partners()
         # by default, every mover is its own balance partner
@@ -458,7 +440,6 @@ class testDefaultScheme(object):
 
     def test_default_choice_probability(self):
         scheme = DefaultScheme(self.network)
-        scheme.movers = {} # LEGACY
         root = scheme.move_decision_tree()
         default_group_weights = {
             'shooting' : 1.0,
