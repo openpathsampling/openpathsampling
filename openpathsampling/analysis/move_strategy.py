@@ -2,8 +2,8 @@ import itertools
 import collections
 
 import openpathsampling as paths
+from openpathsampling.base import StorableNamedObject
 from openpathsampling import PathMoverFactory as pmf
-from openpathsampling.todict import OPSNamed
 
 LevelLabels = collections.namedtuple(
     "LevelLabels", 
@@ -60,7 +60,7 @@ levels = StrategyLevels(
     GLOBAL=90
 )
 
-class MoveStrategy(OPSNamed):
+class MoveStrategy(StorableNamedObject):
     """
     Each MoveStrategy describes one aspect of the approach to the overall
     MoveScheme. Within path sampling, there's a near infinity of reasonable
@@ -87,6 +87,7 @@ class MoveStrategy(OPSNamed):
     """
     _level = -1
     def __init__(self, ensembles, group, replace):
+        super(MoveStrategy, self).__init__()
         self.ensembles = ensembles
         self.group = group
         self.replace = replace
@@ -539,8 +540,8 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         return weights
 
 
-    def get_weights(self, scheme, sorted_movers, sort_weights_override={}, 
-                    mover_weights_override={}):
+    def get_weights(self, scheme, sorted_movers, sort_weights_override=None,
+                    mover_weights_override=None):
         """
         Gets sort_weights and mover_weights dictionaries.
 
@@ -564,6 +565,12 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
             to weights. See class definition for the specific formats of the
             keys.
         """
+        if sort_weights_override is None:
+            sort_weights_override = dict()
+
+        if mover_weights_override is None:
+            mover_weights_override = dict()
+
         (sorted_w, mover_w) = self.default_weights(scheme)
         sorted_weights = self.override_weights(sorted_w, sort_weights_override)
         mover_weights = self.override_weights(mover_w, mover_weights_override)
