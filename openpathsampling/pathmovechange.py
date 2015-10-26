@@ -398,9 +398,8 @@ class SequentialPathMoveChange(PathMoveChange):
         return samples
 
     def __str__(self):
-        return 'SequentialMove : %s : %d samples\n' % \
-               (self.accepted, len(self.results)) + \
-               PathMoveChange._indent('\n'.join(map(str, self.subchanges)))
+        return 'SequentialMove : %s : %d samples' % \
+               (self.accepted, len(self.results))
 
 
 class PartialAcceptanceSequentialPathMoveChange(SequentialPathMoveChange):
@@ -420,9 +419,8 @@ class PartialAcceptanceSequentialPathMoveChange(SequentialPathMoveChange):
         return changes
 
     def __str__(self):
-        return 'PartialAcceptanceMove : %s : %d samples\n' % \
-               (self.accepted, len(self.results)) + \
-               PathMoveChange._indent('\n'.join(map(str, self.subchanges)))
+        return 'PartialAcceptanceMove : %s : %d samples' % \
+               (self.accepted, len(self.results))
 
 
 class ConditionalSequentialPathMoveChange(SequentialPathMoveChange):
@@ -442,9 +440,8 @@ class ConditionalSequentialPathMoveChange(SequentialPathMoveChange):
         return changes
 
     def __str__(self):
-        return 'ConditionalSequentialMove : %s : %d samples\n' % \
-               (self.accepted, len(self.results)) + \
-               PathMoveChange._indent( '\n'.join(map(str, self.subchanges)))
+        return 'ConditionalSequentialMove : %s : %d samples' % \
+               (self.accepted, len(self.results))
 
 
 class SubPathMoveChange(PathMoveChange):
@@ -479,8 +476,7 @@ class SubPathMoveChange(PathMoveChange):
 
     def __str__(self):
         # Defaults to use the name of the used mover
-        return self.mover.__class__.__name__[:-5] + ' :\n' + PathMoveChange._indent(str(self.subchange))
-
+        return self.mover.__class__.__name__[:-5] + ' :'
 
 class RandomChoicePathMoveChange(SubPathMoveChange):
     """
@@ -520,9 +516,8 @@ class FilterByEnsemblePathMoveChange(SubPathMoveChange):
 
 
     def __str__(self):
-        return 'FilterMove : allow only ensembles [%s] from sub moves : %s : %d samples\n' % \
-               (str(self.mover.ensembles), self.accepted, len(self.results)) + \
-               PathMoveChange._indent( str(self.subchange) )
+        return 'FilterMove : allow only ensembles [%s] from sub moves : %s : %d samples' % \
+               (str(self.mover.ensembles), self.accepted, len(self.results))
 
 
 
@@ -540,9 +535,8 @@ class FilterSamplesPathMoveChange(SubPathMoveChange):
         return samples
 
     def __str__(self):
-        return 'FilterMove : pick samples [%s] from sub moves : %s : %d samples\n' % \
-               (str(self.mover.selected_samples), self.accepted, len(self.results)) + \
-               PathMoveChange._indent( str(self.subchange) )
+        return 'FilterMove : pick samples [%s] from sub moves : %s : %d samples' % \
+               str(self.mover.selected_samples), self.accepted, len(self.results)
 
 
 class KeepLastSamplePathMoveChange(SubPathMoveChange):
@@ -572,9 +566,8 @@ class KeepLastSamplePathMoveChange(SubPathMoveChange):
         return samples
 
     def __str__(self):
-        return 'Restrict to last sample : %s : %d samples\n' % \
-               (self.accepted, len(self.results)) + \
-               PathMoveChange._indent( str(self.subchange) )
+        return 'Restrict to last sample : %s : %d samples' % \
+               (self.accepted, len(self.results))
 
 
 class PathSimulatorPathMoveChange(SubPathMoveChange):
@@ -583,6 +576,5 @@ class PathSimulatorPathMoveChange(SubPathMoveChange):
     """
 
     def __str__(self):
-        return 'PathSimulatorStep : %s : Step # %d with %d samples\n' % \
-               (str(self.mover.pathsimulator.cls), self.details.step, len(self.results)) + \
-               PathMoveChange._indent( str(self.subchange) )
+        return 'PathSimulatorStep : %s : Step # %d with %d samples' % \
+               (str(self.mover.pathsimulator.cls), self.details.step, len(self.results))
