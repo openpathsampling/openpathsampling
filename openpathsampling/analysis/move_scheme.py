@@ -1,13 +1,20 @@
 import openpathsampling as paths
-from openpathsampling.todict import OPSNamed
 
 from openpathsampling.analysis.move_strategy import levels as strategy_levels
 import openpathsampling.analysis.move_strategy as strategies
 
+try:
+    import pandas as pd
+    has_pandas=True
+except ImportError:
+    has_pandas=False
+
+
+
 import sys
 
 
-class MoveScheme(OPSNamed):
+class MoveScheme(paths.OPSNamed):
     """
     Creates a move decision tree based on `MoveStrategy` instances.
 
@@ -21,6 +28,7 @@ class MoveScheme(OPSNamed):
         Root of the move decision tree (`None` until tree is built)
     """
     def __init__(self, network):
+        super(MoveScheme, self).__init__()
         self.movers = {}
         self.movers = network.movers # TODO: legacy
         self.network = network
@@ -30,6 +38,26 @@ class MoveScheme(OPSNamed):
         self.root_mover = None
 
         self._mover_acceptance = {} # used in analysis
+
+    def to_dict(self):
+        ret_dict = {
+            'movers' : self.movers,
+            'network' : self.network,
+            'choice_probability' : self.choice_probability,
+            'balance_partners' : self.balance_partners,
+            'root_mover' : self.root_mover
+        }
+        return ret_dict
+
+    @classmethod
+    def from_dict(cls, dct):
+        scheme = cls.__new__(cls)
+        scheme.__init__(dct['network'])
+        scheme.movers = dct['movers']
+        scheme.choice_probability = dct['choice_probability']
+        scheme.balance_partners = dct['balance_partners']
+        scheme.root_mover = dct['root_mover']
+        return scheme
 
     def append(self, strategies, levels=None):
         """
@@ -493,14 +521,19 @@ class MoveScheme(OPSNamed):
                     stats[groupname][1] += self._mover_acceptance[k][1]
 
         for groupname in my_movers.keys():
-            line = self._move_summary_line(
-                move_name=groupname, 
-                n_accepted=stats[groupname][0],
-                n_trials=stats[groupname][1], 
-                n_total_trials=tot_trials,
-                indentation=0
-            )
-            output.write(line)
+            if has_pandas and isinstance(output, pd.DataFrame):
+                # TODO Pandas DataFrame Output
+                pass
+            else:
+                line = self._move_summary_line(
+                    move_name=groupname, 
+                    n_accepted=stats[groupname][0],
+                    n_trials=stats[groupname][1], 
+                    n_total_trials=tot_trials,
+                    indentation=0
+                )
+                output.write(line)
+                # raises AttributeError if no write function
 
 
 class DefaultScheme(MoveScheme):
