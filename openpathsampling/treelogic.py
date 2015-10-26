@@ -786,10 +786,10 @@ class TupleTree(tuple, TreeSetMixin):
         def cmp_fnc(x, y):
             return x[0] is y
 
-        def leave_fnc(x):
+        def leaf_fnc(x):
             return [x[1:]]
 
-        return TreeSetMixin._in_tree(haystack, needle, cmp_fnc, leave_fnc)
+        return TreeSetMixin._in_tree(haystack, needle, cmp_fnc, leaf_fnc)
 
     def __contains__(self, item):
         return self.contains(item, self)
