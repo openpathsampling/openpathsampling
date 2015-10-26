@@ -2,7 +2,7 @@ import random
 import logging
 
 import openpathsampling as paths
-from openpathsampling.base import StorableObject, lazy
+from openpathsampling.base import StorableObject, lazy_loading_attributes
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ class SampleKeyError(Exception):
         self.msg = (str(self.key) + " does not match " + str(self.sample_key)
                     + " from " + str(self.sample))
 
-@lazy('movepath')
+@lazy_loading_attributes('movepath')
 class SampleSet(StorableObject):
     '''
     SampleSet is essentially a list of samples, with a few conveniences.  It
@@ -46,7 +46,6 @@ class SampleSet(StorableObject):
     '''
 
     def __init__(self, samples, movepath=None):
-        self._lazy = dict()
         super(SampleSet, self).__init__()
 
         self.samples = []
@@ -377,7 +376,7 @@ class SampleSet(StorableObject):
     #         raise ValueError('Incompatible MovePaths')
 
 
-@lazy('parent', 'details', 'mover')
+@lazy_loading_attributes('parent', 'details', 'mover')
 class Sample(StorableObject):
     """
     A Sample represents a given "draw" from its ensemble, and is the return
@@ -415,7 +414,6 @@ class Sample(StorableObject):
                  mover=None
                  ):
 
-        self._lazy = dict()
         super(Sample, self).__init__()
         self.bias = bias
         self.replica = replica

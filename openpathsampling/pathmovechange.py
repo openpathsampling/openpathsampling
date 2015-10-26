@@ -3,13 +3,13 @@ __author__ = 'Jan-Hendrik Prinz'
 import logging
 
 import openpathsampling as paths
-from openpathsampling.base import StorableObject, lazy
+from openpathsampling.base import StorableObject, lazy_loading_attributes
 from treelogic import TreeMixin
 
 logger = logging.getLogger(__name__)
 
 
-@lazy('details')
+@lazy_loading_attributes('details')
 class PathMoveChange(TreeMixin, StorableObject):
     '''
     A class that described the concrete realization of a PathMove.
@@ -29,7 +29,6 @@ class PathMoveChange(TreeMixin, StorableObject):
     '''
 
     def __init__(self, subchanges=None, samples=None, mover=None, details=None):
-        self._lazy = dict()
         StorableObject.__init__(self)
 
         self._len = None
