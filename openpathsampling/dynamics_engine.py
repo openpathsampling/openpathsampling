@@ -207,10 +207,6 @@ class DynamicsEngine(OPSNamed):
         set
             a set of runners that caused the simulation to stop
 
-        Examples
-        --------
-        >>> if engine.max_length_stopper in engine.stoppers:
-        >>>     print 'Max length was triggered'
         """
         return set([ runner for runner, result in self.running.iteritems()
                     if not result])
@@ -240,7 +236,6 @@ class DynamicsEngine(OPSNamed):
                 can_continue = condition(trajectory, trusted)
                 self.running[condition] = can_continue # JHP: is this needed?
                 stop = stop or not can_continue
-        stop = stop or not self.max_length_stopper.can_append(trajectory)
         return stop
 
 
@@ -330,7 +325,7 @@ class DynamicsEngine(OPSNamed):
                     trajectory.append(snapshot)
                 else:
                     # We are simulating forward and just build in backwards order
-                    trajectory.insert(0, snapshot.reversed)
+                    trajectory.prepend(snapshot.reversed)
 
                 # Check if we should stop. If not, continue simulation
                 stop = self.stop_conditions(trajectory=trajectory,
