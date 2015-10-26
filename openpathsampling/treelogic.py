@@ -4,6 +4,7 @@ import itertools
 import collections
 import random
 
+
 class TreeSetMixin(object):
     """
     A mixin that provides basic handling for sets of trees.
@@ -18,10 +19,27 @@ class TreeSetMixin(object):
     group of trees. The description works by assuming that all leaves are actually
     different choices of a single leave. To
 
+    Each node should have a NODE_TYPE which specifies how all branches of a node can be
+    combined to get the actual tree sets. There are 6 possibilities to make this easy.
+
+    NODE_TYPE_NONE = 0
+        Means this node has no subnodes and hence no possible choices for sets of trees
+    NODE_TYPE_ALL = 1
+        Means that each single branch is a single possible choice like in a random choice
+        picking among the branches
+    NODE_TYPE_ONE = 2
+        Means that there is only one choice and that is to run all branches in order
+    NODE_TYPE_ACCUMULATE = 3
+        Means there are N choices like in TYPE_ALL but this time the choices are accumulative
+        like [branch1]  or [branch1, branch2] or [branch1, .., branch3], ...
+    NODE_TYPE_POWER = 4
+        Means all possible combinations of branches are possible which relates to the power set
+    NODE_TYPE_CUSTOM = 5
+        This allows you to make a custom pick and it should return a list of branch
 
 
-    Attributs
-    ---------
+    Attributes
+    ----------
     head : node-type
         Returns the content of the current top-most node / the root of the current tree
     tail : node-type
@@ -85,17 +103,17 @@ class TreeSetMixin(object):
         if self._node_type == self.NODE_TYPE_ALL:
             return [[sub for sub in self._subnodes]]
         elif self._node_type == self.NODE_TYPE_ACCUMULATE:
-            return [self._subnodes[:n+1] for n in range(0, len(self._subnodes))]
+            return [self._subnodes[:n + 1] for n in range(0, len(self._subnodes))]
         elif self._node_type == self.NODE_TYPE_ONE:
             leaves = [[sub] for sub in self._subnodes]
 
-            unique_leaves = list(set([ tuple(l) for l in leaves ]))
+            unique_leaves = list(set([tuple(l) for l in leaves]))
 
             return unique_leaves
         elif self._node_type == self.NODE_TYPE_POWER:
             s = list(self._subnodes)
             return itertools.chain.from_iterable(
-                itertools.combinations(s, r) for r in range(len(s)+1)
+                itertools.combinations(s, r) for r in range(len(s) + 1)
             )
         elif self._node_type == self.NODE_TYPE_NONE:
             return []
@@ -108,7 +126,7 @@ class TreeSetMixin(object):
         """
         Return a tree-like string representation of the tree
         """
-        return str(self.head) + "\n" + TreeSetMixin._indent("\n".join(map(lambda x : x.treeprint(), self.branches)))
+        return str(self.head) + "\n" + TreeSetMixin._indent("\n".join(map(lambda x: x.treeprint(), self.branches)))
 
     def locate(self, item):
         """
@@ -206,7 +224,7 @@ class TreeSetMixin(object):
                 if len(leave) == 0:
                     yield ret
                 else:
-                    for l in itertools.product(ret, *map(lambda x : x.enum, leave)):
+                    for l in itertools.product(ret, *map(lambda x: x.enum, leave)):
                         yield TupleTree(l)
 
     @classmethod
@@ -215,20 +233,20 @@ class TreeSetMixin(object):
                  test,
                  node_match_fnc,
                  leave_fnc=None,
-                 leave_n = 0,
-                 tree_branch_n = 0,
-                 test_branch_n = 0
-    ):
+                 leave_n=0,
+                 tree_branch_n=0,
+                 test_branch_n=0
+                 ):
 
         if leave_fnc is None:
-            leave_fnc =  lambda x : x._choices
+            leave_fnc = lambda x: x._choices
 
         WILDCARDS = {
-            '*' : lambda s : slice(0,None),
-            '.' : lambda s : slice(1,2),
-            '?' : lambda s : slice(0,2),
-            ':' : lambda s : slice(*map(int, s.split(':'))),
-            None: lambda s : slice(1,2)
+            '*': lambda s: slice(0, None),
+            '.': lambda s: slice(1, 2),
+            '?': lambda s: slice(0, 2),
+            ':': lambda s: slice(*map(int, s.split(':'))),
+            None: lambda s: slice(1, 2)
         }
         MATCH_ONE = ['.', '?', '*']
 
@@ -240,7 +258,7 @@ class TreeSetMixin(object):
             if len(test) + test_branch_n < 2:
                 return True
             else:
-                sub = test[test_branch_n+1]
+                sub = test[test_branch_n + 1]
                 if type(sub) is str:
                     region = None
                     for wild in WILDCARDS:
@@ -256,7 +274,8 @@ class TreeSetMixin(object):
                         if region.start <= len(leave):
                             # check that there are enough children to match
                             for left in range(*region.indices(len(leave) - 1)):
-                                if cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n, tree_branch_n + left, test_branch_n + 1):
+                                if cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n, tree_branch_n + left,
+                                                test_branch_n + 1):
                                     return True
 
                 else:
@@ -270,7 +289,8 @@ class TreeSetMixin(object):
                                     return True
                                 else:
                                     if len(leave) > tree_branch_n + 1:
-                                        return cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n, tree_branch_n + 1, test_branch_n + 1)
+                                        return cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n,
+                                                            tree_branch_n + 1, test_branch_n + 1)
 
                 if leave_n < len(leave_fnc(tree)) - 1:
                     if cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n + 1):
@@ -388,7 +408,7 @@ class TreeSetMixin(object):
         tree (fnc(node, \*\*kwargs))
             nested list of the results of the map
         """
-        return TupleTree([fnc(self, **kwargs)] + [ ch.map_tree(fnc, **kwargs) for ch in self._subnodes])
+        return TupleTree([fnc(self, **kwargs)] + [ch.map_tree(fnc, **kwargs) for ch in self._subnodes])
 
     def locators(self):
         """
@@ -408,11 +428,11 @@ class TreeSetMixin(object):
             mp = []
             for pos, sub in enumerate(leave):
                 subtree = sub.locators()
-                leave_id = tuple(map(lambda x : x.identifier, leave[:pos+1]))
+                leave_id = tuple(map(lambda x: x.identifier, leave[:pos + 1]))
                 if leave_id not in excludes:
                     # print tuple(mp) == leave_id[:-1], tuple(mp), leave_id[:-1]
                     result.update(
-                        {TupleTree(path + mp + [key]) : m for key, m in subtree.iteritems()}
+                        {TupleTree(path + mp + [key]): m for key, m in subtree.iteritems()}
                     )
                     excludes.append(leave_id)
 
@@ -449,7 +469,7 @@ class TreeSetMixin(object):
         --------
         map_pre_order, map_post_order, level_pre_order, level_post_order
         """
-        return [ fnc(node, **kwargs) for node in reversed(self) ]
+        return [fnc(node, **kwargs) for node in reversed(self)]
 
     def depth_post_order(self, fnc, level=0, **kwargs):
         """
@@ -516,7 +536,7 @@ class TreeSetMixin(object):
         --------
         map_pre_order, map_post_order, level_pre_order, level_post_order
         """
-        return [ fnc(node, **kwargs) for node in iter(self) ]
+        return [fnc(node, **kwargs) for node in iter(self)]
 
     def depth_pre_order(self, fnc, level=0, **kwargs):
         """
@@ -589,6 +609,7 @@ class TreeSetMixin(object):
 
         if isinstance(item, tuple):
             self._last_found = None
+
             def match_find(original, test):
                 self._last_found = original
                 return self._default_match(original, test)
@@ -615,7 +636,6 @@ class TreeSetMixin(object):
                     return self
             else:
                 return None
-
 
     def __reversed__(self):
         """
@@ -685,12 +705,13 @@ class TreeSetMixin(object):
             the indented representation
         """
         spl = s.split('\n')
-        last = [ no for no, line in enumerate(spl) if len(line) > 0 and line[0] != ' ']
+        last = [no for no, line in enumerate(spl) if len(line) > 0 and line[0] != ' ']
         if len(last) > 0:
             last = last[-1]
         else:
             last = len(spl)
-        spl = [(' |  ' + p if no <= last else '    ' + p) if p[0] == ' ' else ' +- ' + p for no, p in enumerate(spl) if len(p)]
+        spl = [(' |  ' + p if no <= last else '    ' + p) if p[0] == ' ' else ' +- ' + p for no, p in enumerate(spl) if
+               len(p)]
         return '\n'.join(spl)
 
     def random(self):
@@ -706,12 +727,10 @@ class TreeSetMixin(object):
 
         this_choice = random.choice(self._choices)
 
-        return TupleTree([self] + [ ch.random() for ch in this_choice])
+        return TupleTree([self] + [ch.random() for ch in this_choice])
 
 
 class TupleTree(tuple, TreeSetMixin):
-
-
     _node_type = TreeSetMixin.NODE_TYPE_ALL
 
     @staticmethod
@@ -749,17 +768,17 @@ class TupleTree(tuple, TreeSetMixin):
                 yield x
 
     def _repr_pretty_(self, p, cycle):
-            if cycle:
-                p.text('(...)')
-            else:
-                with p.group(4, '(', ')'):
-                    p.text(str(self.head))
-                    if len(self._subnodes) > 0:
-                        for idx, item in enumerate(self._subnodes):
-                            if idx == 0 or idx < len(self._subnodes):
-                                p.text(',')
-                                p.breakable()
-                            p.pretty(item)
-                    # else:
-                    #     p.text(',')
-                    #     p.breakable()
+        if cycle:
+            p.text('(...)')
+        else:
+            with p.group(4, '(', ')'):
+                p.text(str(self.head))
+                if len(self._subnodes) > 0:
+                    for idx, item in enumerate(self._subnodes):
+                        if idx == 0 or idx < len(self._subnodes):
+                            p.text(',')
+                            p.breakable()
+                        p.pretty(item)
+                        # else:
+                        #     p.text(',')
+                        #     p.breakable()
