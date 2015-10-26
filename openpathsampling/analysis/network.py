@@ -171,6 +171,7 @@ class MSTISNetwork(TISNetwork):
                 # override created stuff
                 trans.ensembles = fromA.ensembles
                 trans.movers = fromA.movers
+                trans.minus_ensemble = fromA.minus_ensemble
                 self.transitions[(stateA, stateB)] = trans
 
 #    def disallow(self, stateA, stateB):
@@ -489,10 +490,11 @@ class MISTISNetwork(TISNetwork):
             this_outer = paths.ensemble.join_ensembles(
                 [pair[0].ensembles[-1], pair[1].ensembles[-1]]
             )
+            s_pair = [self.transition_to_sampling[p] for p in pair]
             try:
-                self.special_ensembles['ms_outer'][this_outer] = list(pair)
+                self.special_ensembles['ms_outer'][this_outer] = list(s_pair)
             except KeyError:
-                self.special_ensembles['ms_outer'] = {this_outer : list(pair)}
+                self.special_ensembles['ms_outer'] = {this_outer : list(s_pair)}
 
         
         # combining the minus interfaces

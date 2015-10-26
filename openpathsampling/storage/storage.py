@@ -82,6 +82,7 @@ class Storage(netcdf.Dataset):
         self.pathsimulators = paths.storage.ObjectStore(storage, paths.PathSimulator, has_uid=True, has_name=True)
         self.transitions = paths.storage.ObjectStore(storage, paths.Transition, has_uid=True, has_name=True)
         self.networks = paths.storage.ObjectStore(storage, paths.TransitionNetwork, has_uid=True, has_name=True)
+        self.schemes = paths.storage.ObjectStore(storage, paths.MoveScheme, has_uid=True, has_name=True)
 
         # nestable objects
 
@@ -101,7 +102,7 @@ class Storage(netcdf.Dataset):
                    'shootingpointselectors', 'engines',
                    'pathsimulators', 'volumes', 'ensembles',
                    'pathmovechanges', 'transitions', 'networks', '_details',
-                   'steps'
+                   'steps', 'schemes'
                   ]}
 
     @property

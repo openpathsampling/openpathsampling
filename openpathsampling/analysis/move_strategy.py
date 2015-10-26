@@ -1,5 +1,6 @@
 import openpathsampling as paths
 from openpathsampling import PathMoverFactory as pmf
+from openpathsampling.todict import OPSNamed
 
 import itertools
 
@@ -59,7 +60,7 @@ levels = StrategyLevels(
     GLOBAL=90
 )
 
-class MoveStrategy(object):
+class MoveStrategy(OPSNamed):
     """
     Each MoveStrategy describes one aspect of the approach to the overall
     MoveScheme. Within path sampling, there's a near infinity of reasonable
