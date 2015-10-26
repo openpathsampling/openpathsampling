@@ -36,7 +36,7 @@ class DynamicsEngine(StorableNamedObject):
     '''
 
     _default_options = {
-        'n_frames_max' : 1000
+        'n_frames_max' : None
     }
 
     units = {
@@ -81,7 +81,7 @@ class DynamicsEngine(StorableNamedObject):
 
         # TODO: switch this not needing slice; use can_append
         # this and n_atoms are the only general options we need and register
-        if hasattr(self, 'n_frames_max'):
+        if hasattr(self, 'n_frames_max') and self.n_frames_max is not None:
             self.max_length_stopper = paths.LengthEnsemble(slice(0, self.n_frames_max + 1))
         else:
             self.max_length_stopper = paths.FullEnsemble()
