@@ -3,6 +3,8 @@ import openpathsampling as paths
 from openpathsampling.analysis.move_strategy import levels as strategy_levels
 import openpathsampling.analysis.move_strategy as strategies
 
+from openpathsampling.base import StorableNamedObject
+
 try:
     import pandas as pd
     has_pandas=True
