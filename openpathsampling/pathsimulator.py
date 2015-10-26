@@ -3,6 +3,8 @@ import openpathsampling as paths
 import openpathsampling.tools
 from openpathsampling.pathmover import SubPathMover
 
+import time
+
 import logging
 from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
@@ -349,6 +351,7 @@ class PathSampling(PathSimulator):
         initialization_logging(init_log, self, 
                                ['move_scheme', 'globalstate'])
         self.live_visualization = None
+        self.visualization_frequency = 1
         self._mover = paths.PathSimulatorMover(self.move_scheme, self)
 
     def run_until(self, nsteps):
@@ -376,17 +379,25 @@ class PathSampling(PathSimulator):
             logger.info("Beginning MC cycle " + str(self.step))
             refresh=True
             if self.live_visualization is not None and mcstep is not None:
-                self.live_visualization.draw_ipynb(mcstep)
-                refresh=False
+                # do we visualize at all?
+                if self.step % self.visualization_frequency == 0:
+                    # do we visualize this step?
+                    self.live_visualization.draw_ipynb(mcstep)
+                    refresh=False
 
             paths.tools.refresh_output(
                 "Working on Monte Carlo cycle step " + str(self.step) + ".\n",
                 refresh=refresh
             )
 
+            time_start = time.time() 
             movepath = self._mover.move(self.globalstate, step=self.step)
             samples = movepath.results
             new_sampleset = self.globalstate.apply_samples(samples)
+            time_elapsed = time.time() - time_start
+            # TODO: we can save this with the MC steps for timing?
+
+            setattr(movepath.details, "timing", time_elapsed)
 
             mcstep = MCStep(
                 simulation=self,
@@ -412,6 +423,10 @@ class PathSampling(PathSimulator):
             self.globalstate = new_sampleset
 
         self.sync_storage()
+
+        if self.live_visualization is not None and mcstep is not None:
+            self.live_visualization.draw_ipynb(mcstep)
         paths.tools.refresh_output(
-            "DONE! Completed " + str(self.step) + " Monte Carlo cycles.\n"
+            "DONE! Completed " + str(self.step) + " Monte Carlo cycles.\n",
+            refresh=False
         )
