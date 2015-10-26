@@ -17,7 +17,7 @@ class TreeSetMixin(object):
 
     A tree set means that it actually does not represent a single tree but a whole
     group of trees. The description works by assuming that all leaves are actually
-    different choices of a single leave. To
+    different choices of a single leaf. To
 
     Each node should have a NODE_TYPE which specifies how all children of a node can be
     combined to get the actual tree sets. There are 6 possibilities to make this easy.
@@ -254,11 +254,11 @@ class TreeSetMixin(object):
         if self.is_deterministic:
             yield ret
         else:
-            for leave in self._choices:
-                if len(leave) == 0:
+            for leaf in self._choices:
+                if len(leaf) == 0:
                     yield ret
                 else:
-                    for l in itertools.product(ret, *map(lambda x: x._enum, leave)):
+                    for l in itertools.product(ret, *map(lambda x: x._enum, leaf)):
                         yield TupleTree(l)
 
     @property
@@ -267,11 +267,11 @@ class TreeSetMixin(object):
             return 1
         else:
             size = 0
-            for leave in self._choices:
-                if len(leave) == 0:
+            for leaf in self._choices:
+                if len(leaf) == 0:
                     size += 1
                 else:
-                    size += reduce(lambda x, y: x * y, [x.n_enum for x in leave])
+                    size += reduce(lambda x, y: x * y, [x.n_enum for x in leaf])
 
             return size
 
@@ -318,25 +318,25 @@ class TreeSetMixin(object):
                         raise ValueError('Parse error. ONLY ' + str(WILDCARDS.values()) + ' as wildcards allowed.')
 
                     if leave_n < len(leave_fnc(tree)):
-                        leave = leave_fnc(tree)[leave_n]
-                        if region.start <= len(leave):
+                        leaf = leave_fnc(tree)[leave_n]
+                        if region.start <= len(leaf):
                             # check that there are enough children to match
-                            for left in range(*region.indices(len(leave) - 1)):
+                            for left in range(*region.indices(len(leaf) - 1)):
                                 if cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n, tree_child_n + left,
                                                 test_child_n + 1):
                                     return True
 
                 else:
                     if leave_n < len(leave_fnc(tree)):
-                        leave = leave_fnc(tree)[leave_n]
+                        leaf = leave_fnc(tree)[leave_n]
 
-                        if len(leave) > tree_child_n:
-                            if cls._in_tree(leave[tree_child_n], sub, node_match_fnc, leave_fnc):
+                        if len(leaf) > tree_child_n:
+                            if cls._in_tree(leaf[tree_child_n], sub, node_match_fnc, leave_fnc):
                                 # go to next sub in child
                                 if len(test) - test_child_n < 3:
                                     return True
                                 else:
-                                    if len(leave) > tree_child_n + 1:
+                                    if len(leaf) > tree_child_n + 1:
                                         return cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n,
                                                             tree_child_n + 1, test_child_n + 1)
 
@@ -472,11 +472,11 @@ class TreeSetMixin(object):
         result = collections.OrderedDict()
         result[TupleTree(path)] = self
         excludes = []
-        for leave in self._choices:
+        for leaf in self._choices:
             mp = []
-            for pos, sub in enumerate(leave):
+            for pos, sub in enumerate(leaf):
                 subtree = sub.locators()
-                leave_id = tuple(map(lambda x: x.identifier, leave[:pos + 1]))
+                leave_id = tuple(map(lambda x: x.identifier, leaf[:pos + 1]))
                 if leave_id not in excludes:
                     # print tuple(mp) == leave_id[:-1], tuple(mp), leave_id[:-1]
                     result.update(
