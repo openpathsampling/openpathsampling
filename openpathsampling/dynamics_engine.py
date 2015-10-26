@@ -61,7 +61,6 @@ class DynamicsEngine(OPSNamed):
         super(DynamicsEngine, self).__init__()
 
         self.initialized = False
-        self.running = dict()
 
         # if there has not been created a storage by the init of a derived
         # class make sure there is at least a member variable
@@ -198,19 +197,6 @@ class DynamicsEngine(OPSNamed):
         when you hit a stop condition."""
         pass
 
-    def stoppers(self):
-        """
-        Return a set of runners that were set to stop in the last generation.
-
-        Returns
-        -------
-        set
-            a set of runners that caused the simulation to stop
-
-        """
-        return set([ runner for runner, result in self.running.iteritems()
-                    if not result])
-
     def stop_conditions(self, trajectory, continue_conditions=None, 
                         trusted=True):
         """
@@ -234,7 +220,6 @@ class DynamicsEngine(OPSNamed):
         if continue_conditions is not None:
             for condition in continue_conditions:
                 can_continue = condition(trajectory, trusted)
-                self.running[condition] = can_continue # JHP: is this needed?
                 stop = stop or not can_continue
         return stop
 
