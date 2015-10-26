@@ -16,9 +16,19 @@ class TreeSetMixin(object):
 
     A tree set means that it actually does not represent a single tree but a whole
     group of trees. The description works by assuming that all leaves are actually
-    different choices of a single leave.
+    different choices of a single leave. To
 
-    The main difficulty is that now leaves can have two meaning and we need to
+
+
+    Attributs
+    ---------
+    head : node-type
+        Returns the content of the current top-most node / the root of the current tree
+    tail : node-type
+        Returns the very last node of the tree. This useful for minimal representations since
+        the tail corresponds to the node that is pointed to
+    branches
+
     """
 
     NODE_TYPE_NONE = 0
@@ -95,9 +105,15 @@ class TreeSetMixin(object):
             raise RuntimeError('Node has no type !')
 
     def treeprint(self):
+        """
+        Return a tree-like string representation of the tree
+        """
         return str(self.head) + "\n" + TreeSetMixin._indent("\n".join(map(lambda x : x.treeprint(), self.branches)))
 
     def locate(self, item):
+        """
+        Locate an item within the tree and return a list of locations
+        """
         l = [key for key, value in self.locators().iteritems() if self._default_match(value, item)]
         if len(l) == 0:
             return None
@@ -107,6 +123,9 @@ class TreeSetMixin(object):
             return l
 
     def pick(self, item):
+        """
+
+        """
         loc = self.locate(item)
         if loc is None:
             return loc
@@ -117,17 +136,28 @@ class TreeSetMixin(object):
 
     @property
     def is_sequential(self):
+        """
+        Returns whether a node is locally sequential in the sense that it has only
+        one or more choice.
+
+        This is different from is_deterministic which checks the same for a whole tree
+        """
         return len(self._choices) < 2
 
     @property
-    def deterministic(self):
+    def is_deterministic(self):
+        """
+        Checks if a whole tree is just a single possible sequence without any choice
+
+        This checks a whole tree while is_sequential checks this locally for a node.
+        """
         if not hasattr(self, '_deterministic'):
             if not self.is_sequential:
                 self._deterministic = False
             else:
                 self._deterministic = True
                 for node in self._subnodes:
-                    if not node.deterministic:
+                    if not node.is_deterministic:
                         self._deterministic = False
 
         return self._deterministic
@@ -136,11 +166,19 @@ class TreeSetMixin(object):
     def unique(self):
         """
         Return the smallest tree of tuples that uniquely represents this tree
+
+        This will basically cut out parts that are deterministic anyway and hence
+        can only contain redundant information.
+
+        Returns
+        -------
+        TupleTree
+            The minimal subtree in TupleTree form
         """
         ret = []
         if len(self._subnodes) == 0:
             ret = [self.identifier]
-        elif self.deterministic:
+        elif self.is_deterministic:
             ret = [self.identifier]
         elif len(self._subnodes) == 1:
             ret = [self.identifier, self._subnodes[0].unique]
@@ -161,7 +199,7 @@ class TreeSetMixin(object):
         Return a generator of all possible choices of this tree
         """
         ret = TupleTree([self.identifier])
-        if self.deterministic:
+        if self.is_deterministic:
             yield ret
         else:
             for leave in self._choices:
@@ -354,12 +392,12 @@ class TreeSetMixin(object):
 
     def locators(self):
         """
-        Return a list of key : subtree tuples
+        Return an ordered dict of tree keys -> subtree
 
         Returns
         -------
-        list of tuple(key, subtree)
-            A list of all subtrees with their respective keys
+        OrderedDict(key : subtree)
+            A ordered key : subtrees pair
         """
         path = [self.identifier]
 
@@ -610,9 +648,25 @@ class TreeSetMixin(object):
         return self._len
 
     def items(self):
+        """
+        Returns a list of all locators / tree keys
+
+        These locators can be used in __getitem__ to select a specific node in the
+        tree
+
+        Returns
+        -------
+        list of minimal subtrees pointing to all nodes
+
+        Notes
+        -----
+        """
         return self.locators().items()
 
     def iteritems(self):
+        """
+        Returns a list locator / subtree tuples
+        """
         return self.locators().iteritems()
 
     @staticmethod
@@ -643,6 +697,11 @@ class TreeSetMixin(object):
         """
         Generate a random choice of a tree if it has multiple possibilities
 
+        Returns
+        -------
+        TupleTree
+            A random choice of a subtree, independent of actual choice probabilities.
+
         """
 
         this_choice = random.choice(self._choices)
@@ -651,6 +710,7 @@ class TreeSetMixin(object):
 
 
 class TupleTree(tuple, TreeSetMixin):
+
 
     _node_type = TreeSetMixin.NODE_TYPE_ALL
 
