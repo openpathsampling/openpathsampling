@@ -19,24 +19,24 @@ class TreeSetMixin(object):
     group of trees. The description works by assuming that all leaves are actually
     different choices of a single leave. To
 
-    Each node should have a NODE_TYPE which specifies how all branches of a node can be
+    Each node should have a NODE_TYPE which specifies how all children of a node can be
     combined to get the actual tree sets. There are 6 possibilities to make this easy.
 
     NODE_TYPE_NONE = 0
-        Means this node has no subnodes and hence no possible choices for sets of trees
+        Means this node has no sub nodes and hence no possible choices for sets of trees
     NODE_TYPE_ALL = 1
-        Means that each single branch is a single possible choice like in a random choice
-        picking among the branches
+        Means that each single child is a single possible choice like in a random choice
+        picking among the children
     NODE_TYPE_ONE = 2
-        Means that there is only one choice and that is to run all branches in order
+        Means that there is only one choice and that is to run all children in order
     NODE_TYPE_ACCUMULATE = 3
         Means there are N choices like in TYPE_ALL but this time the choices are accumulative
-        like [branch1]  or [branch1, branch2] or [branch1, .., branch3], ...
+        like [child1]  or [child1, child2] or [child1, .., child3], ...
     NODE_TYPE_POWER = 4
-        Means all possible combinations of branches are possible which relates to the power set
+        Means all possible combinations of children are possible which relates to the power set
     NODE_TYPE_CUSTOM = 5
-        This allows you to make a custom pick and it should return a list of branch
-
+        This allows you to make a custom pick and it should return a list of child combinations
+        or a callable function that returns a list of child lists
 
     Attributes
     ----------
@@ -45,8 +45,8 @@ class TreeSetMixin(object):
     tail : node-type
         Returns the very last node of the tree. This useful for minimal representations since
         the tail corresponds to the node that is pointed to.
-    branches
-        returns a list of all branches of a node.
+    children
+        returns a list of all children of a node.
     """
 
     NODE_TYPE_NONE = 0
@@ -67,7 +67,7 @@ class TreeSetMixin(object):
         return TupleTree._tail(self)
 
     @property
-    def branches(self):
+    def children(self):
         return self._subnodes
 
     @property
@@ -125,12 +125,27 @@ class TreeSetMixin(object):
     def treeprint(self):
         """
         Return a tree-like string representation of the tree
+
+        Returns
+        -------
+        str
+            the string representation of the tree structure
         """
-        return str(self.head) + "\n" + TreeSetMixin._indent("\n".join(map(lambda x: x.treeprint(), self.branches)))
+        return str(self.head) + "\n" + TreeSetMixin._indent("\n".join(map(lambda x: x.treeprint(), self.children)))
 
     def locate(self, item):
         """
         Locate an item within the tree and return a list of locations
+
+        Parameters
+        ----------
+        item : matchable object
+            An object that can be tested with each node using _default_match
+
+        Returns
+        -------
+        list of keys / minimal subtrees
+            A lost of locations that point to the places where the node matches the item
         """
         l = [key for key, value in self.locators().iteritems() if self._default_match(value, item)]
         if len(l) == 0:
@@ -142,7 +157,9 @@ class TreeSetMixin(object):
 
     def pick(self, item):
         """
+        Returns objects that match item within the tree
 
+        This actually calls locate(item) and returns all contained nodes at these locations.
         """
         loc = self.locate(item)
         if loc is None:
@@ -234,8 +251,8 @@ class TreeSetMixin(object):
                  node_match_fnc,
                  leave_fnc=None,
                  leave_n=0,
-                 tree_branch_n=0,
-                 test_branch_n=0
+                 tree_child_n=0,
+                 test_child_n=0
                  ):
 
         if leave_fnc is None:
@@ -250,15 +267,15 @@ class TreeSetMixin(object):
         }
         MATCH_ONE = ['.', '?', '*']
 
-        # print leave_n, '/', len(tree._leaves), start, '/', len(tree._leaves[leave_n]), tree.__class__.__name__, tree.identifier,  match(tree.identifier, branch[0]), branch
+        # print leave_n, '/', len(tree._leaves), start, '/', len(tree._leaves[leave_n]), tree.__class__.__name__, tree.identifier,  match(tree.identifier, child[0]), child
 
         if test[0] not in MATCH_ONE and not node_match_fnc(tree, test[0]):
             return False
         else:
-            if len(test) + test_branch_n < 2:
+            if len(test) + test_child_n < 2:
                 return True
             else:
-                sub = test[test_branch_n + 1]
+                sub = test[test_child_n + 1]
                 if type(sub) is str:
                     region = None
                     for wild in WILDCARDS:
@@ -274,23 +291,23 @@ class TreeSetMixin(object):
                         if region.start <= len(leave):
                             # check that there are enough children to match
                             for left in range(*region.indices(len(leave) - 1)):
-                                if cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n, tree_branch_n + left,
-                                                test_branch_n + 1):
+                                if cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n, tree_child_n + left,
+                                                test_child_n + 1):
                                     return True
 
                 else:
                     if leave_n < len(leave_fnc(tree)):
                         leave = leave_fnc(tree)[leave_n]
 
-                        if len(leave) > tree_branch_n:
-                            if cls._in_tree(leave[tree_branch_n], sub, node_match_fnc, leave_fnc):
-                                # go to next sub in branch
-                                if len(test) - test_branch_n < 3:
+                        if len(leave) > tree_child_n:
+                            if cls._in_tree(leave[tree_child_n], sub, node_match_fnc, leave_fnc):
+                                # go to next sub in child
+                                if len(test) - test_child_n < 3:
                                     return True
                                 else:
-                                    if len(leave) > tree_branch_n + 1:
+                                    if len(leave) > tree_child_n + 1:
                                         return cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n,
-                                                            tree_branch_n + 1, test_branch_n + 1)
+                                                            tree_child_n + 1, test_child_n + 1)
 
                 if leave_n < len(leave_fnc(tree)) - 1:
                     if cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n + 1):
@@ -763,8 +780,8 @@ class TupleTree(tuple, TreeSetMixin):
 
     def __iter__(self):
         yield self.head
-        for branch in self.branches:
-            for x in branch:
+        for child in self.children:
+            for x in child:
                 yield x
 
     def _repr_pretty_(self, p, cycle):
