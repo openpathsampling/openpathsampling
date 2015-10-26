@@ -49,6 +49,8 @@ class TreeSetMixin(object):
         returns a list of all children of a node.
     """
 
+    MAX_ENUM = 1024
+
     NODE_TYPE_NONE = 0
     NODE_TYPE_ALL = 1
     NODE_TYPE_ONE = 2
@@ -233,6 +235,21 @@ class TreeSetMixin(object):
         """
         Return a generator of all possible choices of this tree
         """
+
+        enum_len = self.n_enum
+
+        count = 0
+        for choice in self._enum:
+            if count < self.MAX_ENUM:
+                count += 1
+                yield choice
+            else:
+                raise RuntimeWarning('Number of potential trees %d exceeds MAX_ENUM = %d so we stop here' \
+                      % (enum_len, self.MAX_ENUM))
+
+
+    @property
+    def _enum(self):
         ret = TupleTree([self.identifier])
         if self.is_deterministic:
             yield ret
@@ -241,8 +258,22 @@ class TreeSetMixin(object):
                 if len(leave) == 0:
                     yield ret
                 else:
-                    for l in itertools.product(ret, *map(lambda x: x.enum, leave)):
+                    for l in itertools.product(ret, *map(lambda x: x._enum, leave)):
                         yield TupleTree(l)
+
+    @property
+    def n_enum(self):
+        if self.is_deterministic:
+            return 1
+        else:
+            size = 0
+            for leave in self._choices:
+                if len(leave) == 0:
+                    size += 1
+                else:
+                    size += reduce(lambda x, y: x * y, [x.n_enum for x in leave])
+
+            return size
 
     @classmethod
     def _in_tree(cls,
