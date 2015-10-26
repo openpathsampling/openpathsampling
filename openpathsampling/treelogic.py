@@ -26,9 +26,9 @@ class TreeSetMixin(object):
         Returns the content of the current top-most node / the root of the current tree
     tail : node-type
         Returns the very last node of the tree. This useful for minimal representations since
-        the tail corresponds to the node that is pointed to
+        the tail corresponds to the node that is pointed to.
     branches
-
+        returns a list of all branches of a node.
     """
 
     NODE_TYPE_NONE = 0
