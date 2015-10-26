@@ -152,9 +152,7 @@ class SnapshotStore(ObjectStore):
         return idx
 
     def all(self):
-        return Trajectory([
-                              LoaderProxy(self, idx)
-                              for idx in range(len(self))])
+        return Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
 
 
 class MomentumStore(ObjectStore):
