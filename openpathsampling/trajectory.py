@@ -99,6 +99,14 @@ class Trajectory(list):
 
         return Trajectory([snap for snap in reversed(self)])
 
+    def prepend(self, snapshot):
+        """
+        Prepend a snapshot
+
+        Just convenience method to replace insert(0, snapshot)
+        """
+        self.insert(0, snapshot)
+
     def coordinates(self):
         """
         Return all coordinates as a numpy array

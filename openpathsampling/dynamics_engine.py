@@ -35,7 +35,7 @@ class DynamicsEngine(OPSNamed):
     '''
 
     _default_options = {
-        'n_frames_max' : 0
+        'n_frames_max' : None
     }
 
     units = {
@@ -82,13 +82,6 @@ class DynamicsEngine(OPSNamed):
         # Trajectory.engine = self
 
         self._register_options(options)
-
-        # TODO: switch this not needing slice; use can_append
-        # this and n_atoms are the only general options we need and register
-        if hasattr(self, 'n_frames_max'):
-            self.max_length_stopper = paths.LengthEnsemble(slice(0, self.n_frames_max + 1))
-        else:
-            self.max_length_stopper = paths.FullEnsemble()
 
         # as default set a newly generated engine as the default engine
         self.set_as_default()
@@ -251,7 +244,21 @@ class DynamicsEngine(OPSNamed):
         return stop
 
 
-    def generate(self, snapshot, running=None):
+    def generate_forward(self, snapshot, ensemble):
+        """
+        Generate a potential trajectory in ensemble simulating forward in time
+        """
+
+        return self.generate(snapshot, ensemble.can_append, forward=True)
+
+    def generate_backward(self, snapshot, ensemble):
+        """
+        Generate a potential trajectory in ensemble simulating forward in time
+        """
+
+        return self.generate(snapshot, ensemble.can_prepend, forward=False)
+
+    def generate(self, snapshot, running=None, forward=True):
         r"""
         Generate a trajectory consisting of ntau segments of tau_steps in
         between storage of Snapshots.
@@ -259,9 +266,8 @@ class DynamicsEngine(OPSNamed):
         Parameters
         ----------
         snapshot : Snapshot 
-            initial coordinates; velocities will be assigned from
-            Maxwell-Boltzmann distribution            
-        running : list of function(Trajectory)
+            initial coordinates and velocities in form of a Snapshot object
+        running : (list of) function(Trajectory)
             callable function of a 'Trajectory' that returns True or False.
             If one of these returns False the simulation is stopped.
 
@@ -273,20 +279,32 @@ class DynamicsEngine(OPSNamed):
 
         Notes
         -----
-        Might add a return variable of the reason why the trajectory was
-        aborted. Otherwise check the length and compare to max_frames
+        If the returned trajectory has length n_frames_max it can still be
+        that it stopped because of the stopping criterion. You need to check
+        in that case.
         """
 
         # Are we ready to rumble ?
         if self.initialized:
-            
-            self.current_snapshot = snapshot
+
+            try:
+                iter(running)
+            except:
+                running = [running]
+
+            trajectory = paths.Trajectory()
+
+            if forward:
+                self.current_snapshot = snapshot
+            else:
+                # backward simulation needs reversed snapshots
+                self.current_snapshot = snapshot.reversed
+
             self.start()
 
             # Store initial state for each trajectory segment in trajectory.
-            trajectory = paths.Trajectory()
-            trajectory.append(snapshot)
-            
+            trajectory.append(self.current_snapshot)
+
             frame = 0
             # maybe we should stop before we even begin?
             stop = self.stop_conditions(trajectory=trajectory,
@@ -296,6 +314,9 @@ class DynamicsEngine(OPSNamed):
             logger.info("Starting trajectory")
             log_freq = 10 # TODO: set this from a singleton class 
             while stop == False:
+                if self.options.get('n_frames_max', None) is not None :
+                    if len(trajectory) >= self.options['n_frames_max']:
+                        break
                                 
                 # Do integrator x steps
                 snapshot = self.generate_next_frame()
@@ -305,10 +326,12 @@ class DynamicsEngine(OPSNamed):
                 
                 # Store snapshot and add it to the trajectory. Stores also
                 # final frame the last time
-#                if self.storage is not None:
-#                    self.storage.snapshots.save(snapshot)
-                trajectory.append(snapshot)
-                
+                if forward:
+                    trajectory.append(snapshot)
+                else:
+                    # We are simulating forward and just build in backwards order
+                    trajectory.insert(0, snapshot.reversed)
+
                 # Check if we should stop. If not, continue simulation
                 stop = self.stop_conditions(trajectory=trajectory,
                                             continue_conditions=running)
