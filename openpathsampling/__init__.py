@@ -1,4 +1,6 @@
-from pathsimulator import PathSimulator, Bootstrapping, PathSampling, MCStep
+from pathsimulator import (
+    PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep
+)
 
 from ensemble import (
     Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
