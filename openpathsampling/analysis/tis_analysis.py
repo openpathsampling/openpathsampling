@@ -46,42 +46,17 @@ class Transition(OPSNamed):
     """
     def __init__(self, stateA, stateB):
         super(Transition, self).__init__()
-        self.movers = {}
         self.stateA = stateA
         self.stateB = stateB
 
     @property
-    def all_movers(self):
-        """
-        All the path movers for this transition.
-        """
-        all_movers = []
-        for movetype in self.movers.keys():
-            all_movers += self.movers[movetype]
-        return all_movers
-
-    # TODO: @dwhs can this function be removed?
-    # def _assign_sample(self, sample):
-    #     if sample.ensemble in self.all_ensembles:
-    #         try:
-    #             self._samples_by_ensemble[sample.ensemble].append(sample)
-    #         except KeyError:
-    #             self._samples_by_ensemble[sample.ensemble] = [sample]
-    #         try:
-    #             self._samples_by_id[sample.replica].append(sample)
-    #         except KeyError:
-    #             self._samples_by_id[sample.replica] = [sample]
-
-    # TODO: can this be removed? Only used in _assign_sample
-    # @property
-    # def all_ensembles(self):
-    #     return self.ensembles
+    def all_ensembles(self):
+        return self.ensembles
 
     def to_dict(self):
         return {
             'stateA' : self.stateA,
             'stateB' : self.stateB,
-            'movers' : self.movers
         }
 
     @classmethod
@@ -97,9 +72,6 @@ class TPSTransition(Transition):
     """
     def __init__(self, stateA, stateB):
         super(TPSTransition, self).__init__(stateA, stateB)
-        self.movers['shooting'] = []
-        self.movers['shifting'] = []
-        self.movers['pathreversal'] = []
         #self.ensembles = [paths.TPSEnsemble(stateA, stateB)]
 
 class TISTransition(Transition):
@@ -135,7 +107,7 @@ class TISTransition(Transition):
         self.name = name
 
         # If we reload from a storage file, we want to use the
-        # ensembles/movers from the file, not the automatically generated
+        # ensembles from the file, not the automatically generated
         # ones here
 
         # build ensembles if we don't already have them
@@ -143,10 +115,6 @@ class TISTransition(Transition):
         if not hasattr(self, "ensembles"):
             self.build_ensembles(self.stateA, self.stateB, 
                                  self.interfaces, self.orderparameter)
-
-        # build movers if we don't already have them
-        if self.movers == {}:
-            self.build_movers()
 
         self.default_orderparameter = self.orderparameter
 
@@ -170,21 +138,14 @@ class TISTransition(Transition):
             )
         }
 
-    # TODO: replace with copy.copy()
+        self.minus_ensemble = paths.MinusInterfaceEnsemble(
+            state_vol=stateA, 
+            innermost_vols=interfaces[0]
+        )
+
     def copy(self, with_results=True):
         copy = self.from_dict(self.to_dict())
         copy.copy_analysis_from(self)
-        #copy.default_orderparameter = self.default_orderparameter
-        #copy.total_crossing_probability_method = self.total_crossing_probability_method
-        #copy.hist_args = self.hist_args
-        #copy.ensemble_histogram_info = self.ensemble_histogram_info
-        #copy.histograms = self.histograms
-        #copy._flux = self._flux
-        #copy._rate = self._rate
-        #if hasattr(self, "tcp"):
-            #copy.tcp = self.tcp
-        #if hasattr(self, "ctp"):
-            #copy.ctp = self.ctp
         return copy
 
     def copy_analysis_from(self, other):
@@ -214,31 +175,6 @@ class TISTransition(Transition):
         return mystr
 
 
-    def to_dict(self):
-        ret_dict = {
-            'stateA' : self.stateA,
-            'stateB' : self.stateB,
-            'orderparameter' : self.orderparameter,
-            'interfaces' : self.interfaces,
-            'name' : self.name,
-            'movers' : self.movers,
-            'ensembles' : self.ensembles
-        }
-        return ret_dict
-
-    @classmethod
-    def from_dict(cls, dct):
-        mytrans = paths.TISTransition(
-            stateA=dct['stateA'],
-            stateB=dct['stateB'],
-            interfaces=dct['interfaces'],
-            orderparameter=dct['orderparameter'],
-            name=dct['name']
-        )
-        mytrans.movers = dct['movers']
-        mytrans.ensembles = dct['ensembles']
-        return mytrans
-
     def build_ensembles(self, stateA, stateB, interfaces, orderparameter):
         self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
             stateA, stateB, self.interfaces, orderparameter
@@ -246,11 +182,6 @@ class TISTransition(Transition):
         for ensemble in self.ensembles:
             ensemble.name = "I'face "+str(self.ensembles.index(ensemble))
 
-    def build_movers(self):
-        self.movers['shooting'] = paths.PathMoverFactory.OneWayShootingSet(
-            paths.UniformSelector(), self.ensembles
-        )
-        self.movers['pathreversal'] = paths.PathReversalSet(self.ensembles)
 
     # parameters for different types of output
     def ensemble_statistics(self, ensemble, samples, weights=None, force=False):
@@ -422,8 +353,12 @@ class TISTransition(Transition):
         error : list(3) or None
         """
         # get the flux
+        if flux is None: # TODO: find a way to raise error if bad flux
+            flux = self.minus_move_flux(storage)
+
         if flux is not None:
             self._flux = flux
+
 
         if self._flux is None:
             raise ValueError("No flux available to TISTransition. Cannot calculate rate")
@@ -456,44 +391,6 @@ class TISTransition(Transition):
         self._rate = flux*outer_tcp*ctp
         return self._rate
 
-    def default_schemes(self, engine):
-        """Create reasonable default movers for a `PathSampling` pathsimulator"""
-        shoot_sel = paths.RandomChoiceMover(
-            movers=self.movers['shooting']
-        )
-        shoot_sel.name = "ShootingChooser"
-        pathrev_sel = paths.RandomChoiceMover(
-            movers=self.movers['pathreversal']
-        )
-        pathrev_sel.name = "ReversalChooser"
-        move_scheme = paths.RandomChoiceMover(
-            movers=[shoot_sel, pathrev_sel], 
-            weights=[1.0, 0.5]
-        )
-        move_scheme.name = "RootMover"
-        return move_scheme
-
-class RETISTransition(TISTransition):
-    """Transition class for RETIS."""
-    def __init__(self, stateA, stateB, interfaces, orderparameter=None, 
-                 name=None):
-        super(RETISTransition, self).__init__(stateA, stateB, interfaces,
-                                              orderparameter, name)
-
-        self.minus_ensemble = paths.MinusInterfaceEnsemble(
-            state_vol=stateA, 
-            innermost_vols=interfaces[0]
-        )
-
-        try:
-            self.movers['repex']
-        except KeyError:
-            self.movers['repex'] = paths.NeighborEnsembleReplicaExchange(self.ensembles)
-        try:
-            self.movers['minus']
-        except KeyError:
-            self.movers['minus'] = [paths.MinusMover(self.minus_ensemble, self.ensembles[0])]
-
 
     def to_dict(self):
         ret_dict = {
@@ -502,7 +399,6 @@ class RETISTransition(TISTransition):
             'orderparameter' : self.orderparameter,
             'interfaces' : self.interfaces,
             'name' : self.name,
-            'movers' : self.movers,
             'ensembles' : self.ensembles,
             'minus_ensemble' : self.minus_ensemble
         }
@@ -510,7 +406,7 @@ class RETISTransition(TISTransition):
 
     @classmethod
     def from_dict(cls, dct):
-        mytrans = RETISTransition(
+        mytrans = TISTransition(
             stateA=dct['stateA'],
             stateB=dct['stateB'],
             interfaces=dct['interfaces'],
@@ -518,7 +414,6 @@ class RETISTransition(TISTransition):
             name=dct['name']
         )
         mytrans.minus_ensemble = dct['minus_ensemble']
-        mytrans.movers = dct['movers']
         mytrans.ensembles = dct['ensembles']
         return mytrans
 
@@ -578,41 +473,6 @@ class RETISTransition(TISTransition):
         self._flux = flux
         return self._flux
 
-
-    def rate(self, storage, flux=None, outer_ensemble=None,
-             outer_lambda=None, error=None, force=False):
-        if flux is None:
-            flux = self.minus_move_flux(storage)
-
-        return super(RETISTransition, self).rate(
-            storage=storage, 
-            flux=flux, 
-            outer_ensemble=outer_ensemble,
-            outer_lambda=outer_lambda,
-            error=error,
-            force=force
-        )
-
-
-    def default_schemes(self, engine):
-        """Create reasonable default movers for a `PathSampling` pathsimulator
-        
-        Extends `TISTransition.default_schemes`.
-        """
-        repex_sel = paths.RandomChoiceMover(
-            movers=self.movers['repex']
-        )
-        repex_sel.name = "ReplicaExchange"
-        tis_move_scheme = super(RETISTransition, self).default_schemes(engine)
-        minus = self.movers['minus']
-        movers = tis_move_scheme.movers + [repex_sel] + minus
-        weights = tis_move_scheme.weights + [0.5, 0.2 / len(self.ensembles)]
-        move_scheme = paths.RandomChoiceMover(
-            movers=movers,
-            weights=weights
-        )
-        move_scheme.name = "RootMover"
-        return move_scheme
 
 
 def minus_sides_summary(trajectory, minus_ensemble):

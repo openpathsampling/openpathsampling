@@ -30,7 +30,6 @@ class MoveScheme(paths.OPSNamed):
     def __init__(self, network):
         super(MoveScheme, self).__init__()
         self.movers = {}
-        self.movers = network.movers # TODO: legacy
         self.network = network
         self.strategies = {}
         self.balance_partners = {}
