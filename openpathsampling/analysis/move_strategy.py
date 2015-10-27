@@ -344,6 +344,9 @@ class ReplicaExchangeStrategy(MoveStrategy):
     def make_movers(self, scheme):
         signatures = [m.ensemble_signature 
                       for m in scheme.movers[self.from_group]]
+        # a KeyError here indicates that there is no existing group of that
+        # name: build scheme.movers[self.from_group] before trying to use it!
+
         self.check_for_hop_repex_validity(signatures)
 
         swap_list = []
@@ -372,6 +375,8 @@ class EnsembleHopStrategy(ReplicaExchangeStrategy):
     def make_movers(self, scheme):
         signatures = [m.ensemble_signature 
                       for m in scheme.movers[self.from_group]]
+        # a KeyError here indicates that there is no existing group of that
+        # name: build scheme.movers[self.from_group] before trying to use it!
 
         self.check_for_hop_repex_validity(signatures)
 

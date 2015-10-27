@@ -874,6 +874,7 @@ class PathTreeBuilder(object):
         shift = 0
 
         lightcolor = "gray"
+        font_color = "black"
 
         first = True
 
