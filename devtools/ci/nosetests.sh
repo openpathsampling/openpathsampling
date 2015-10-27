@@ -1,6 +1,8 @@
 # This should run the nosetests in the right folder
 
 echo travis_fold:start:nosetests
+echo Run nose tests ...
+
 cd openpathsampling
 cd tests
 testfail=0
