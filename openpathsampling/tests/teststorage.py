@@ -28,8 +28,8 @@ class testStorage(object):
         self.filename_clone = data_filename("storage_test_clone.nc")
 
         self.simplifier = ObjectJSON()
-        self.template_snapshot = paths.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
-
+        self.template_snapshot = self.traj[0]
+        self.solute_indices = range(22)
 
     def teardown(self):
         if os.path.isfile(self.filename):
@@ -100,7 +100,7 @@ class testStorage(object):
 
         store.save(self.traj)
 
-        store.clone(filename=self.filename_clone, subset = self.options['solute_indices'])
+        store.clone(filename=self.filename_clone, subset = self.solute_indices)
 
         # clone the storage and reduce the number of atoms to only solute
 
@@ -110,12 +110,12 @@ class testStorage(object):
 
         compare_snapshot(
             store2.snapshots.load(0),
-            store.snapshots.load(0).subset(self.options['solute_indices'])
+            store.snapshots.load(0).subset(self.solute_indices)
         )
 
         compare_snapshot(
             store2.snapshots.load(1),
-            store.snapshots.load(1).subset(self.options['solute_indices'])
+            store.snapshots.load(1).subset(self.solute_indices)
         )
         store.close()
         store2.close()

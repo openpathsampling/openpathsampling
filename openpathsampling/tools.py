@@ -86,8 +86,9 @@ def trajectory_from_mdtraj(mdtrajectory):
         the constructed Trajectory instance
     """
     trajectory = paths.Trajectory()
-    empty_momentum = paths.Momentum()
+    empty_momentum = paths.Momentum(velocities=u.Quantity(np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond))
     topology = paths.MDTrajTopology(mdtrajectory.topology)
+
     for frame_num in range(len(mdtrajectory)):
         # mdtraj trajectories only have coordinates and box_vectors
         coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
