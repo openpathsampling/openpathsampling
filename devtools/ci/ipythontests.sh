@@ -9,9 +9,9 @@ python ipynbtest.py "mstis_bootstrap.ipynb" || testfail=1
 date
 python ipynbtest.py "mstis.ipynb" || testfail=1
 date
-python ipynbtest.py --verbose "mstis_analysis.ipynb" || testfail=1
+python ipynbtest.py "mstis_analysis.ipynb" || testfail=1
 date
-python ipynbtest.py --verbose "repex_networks.ipynb" || testfail=1
+python ipynbtest.py "repex_networks.ipynb" || testfail=1
 date
 python ipynbtest.py "mistis_setup.ipynb" || testfail=1
 date
