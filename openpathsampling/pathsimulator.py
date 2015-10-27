@@ -306,6 +306,81 @@ class Bootstrapping(PathSimulator):
                 ( self.step, ens_num + 1, len(self.ensembles) )
             )
 
+
+class FullBootstrapping(PathSimulator):
+    """
+    Takes a snapshot as input; gives you back a sample set with trajectories
+    for every ensemble in the transition.
+
+    Someday this will be combined with the regular bootstrapping code. 
+    """
+    calc_name = "FullBootstrapping"
+
+    def __init__(self, transition, snapshot, storage=None, engine=None,
+                 extra_interfaces=[], forbidden_states=[]):
+        interface0 = transition.interfaces[0]
+        ensemble0 = transition.ensembles[0]
+        state = transition.stateA
+        self.first_traj_ensemble = paths.SequentialEnsemble([
+            paths.OptionalEnsemble(paths.AllOutXEnsemble(state)),
+            paths.AllInXEnsemble(state),
+            paths.OptionalEnsemble(
+                paths.AllOutXEnsemble(state) & paths.AllInXEnsemble(interface0)
+            ),
+            paths.OptionalEnsemble(paths.AllInXEnsemble(interface0)),
+            paths.AllOutXEnsemble(interface0),
+            paths.OptionalEnsemble(paths.AllOutXEnsemble(state)),
+            paths.SingleFrameEnsemble(paths.AllInXEnsemble(state))
+        ]) & paths.AllOutXEnsemble(paths.join_volumes(forbidden_states))
+
+        self.extra_ensembles = [paths.TISEnsemble(transition.stateA,
+                                                  transition.stateB, iface,
+                                                  transition.orderparameter)
+                                for iface in extra_interfaces
+        ]
+
+        self.transition_shooters = [
+            paths.OneWayShootingMover(selector=paths.UniformSelector(), 
+                                      ensemble=ens) 
+            for ens in transition.ensembles
+        ]
+
+        self.extra_shooters = [
+            paths.OneWayShootingMover(selector=paths.UniformSelector(), 
+                                      ensemble=ens) 
+            for ens in extra_ensembles
+        ]
+
+
+    def run(self, nsteps):
+        #print first_traj_ensemble #DEBUG
+        has_AA_path = False
+        while not has_AA_path:
+            self.engine.current_snapshot = snapshot.copy()
+            self.engine.snapshot = snapshot.copy()
+            print "Building first trajectory"
+            sys.stdout.flush()
+            first_traj = engine.generate(engine.current_snapshot, 
+                                         [self.first_traj_ensemble.can_append])
+            print "Selecting segment"
+            sys.stdout.flush()
+            subtraj = self.ensemble0.split(first_traj)[0]
+            # check that this is A->A as well
+            has_AA_path = state(subtraj[-1]) and state(subtraj[0])
+            
+        print "Sampling " + str(self.n_ensembles) + " ensembles."
+        bootstrap = paths.Bootstrapping(
+            storage=storage,
+            ensembles=transition.ensembles+extra_ensembles,
+            movers=transition_shooters+extra_shooters,
+            trajectory=subtraj
+        )
+        print "Beginning bootstrapping"
+        while len(bootstrap.globalstate) < self.n_ensembles:
+            bootstrap.run(20)
+        return bootstrap.globalstate
+
+
 class PathSampling(PathSimulator):
     """
     General path sampling code. 
