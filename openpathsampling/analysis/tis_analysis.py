@@ -138,6 +138,11 @@ class TISTransition(Transition):
             )
         }
 
+        self.minus_ensemble = paths.MinusInterfaceEnsemble(
+            state_vol=stateA, 
+            innermost_vols=interfaces[0]
+        )
+
     def copy(self, with_results=True):
         copy = self.from_dict(self.to_dict())
         copy.copy_analysis_from(self)
@@ -169,29 +174,6 @@ class TISTransition(Transition):
             mystr += "Interface: " + str(iface.name) + "\n"
         return mystr
 
-
-    def to_dict(self):
-        ret_dict = {
-            'stateA' : self.stateA,
-            'stateB' : self.stateB,
-            'orderparameter' : self.orderparameter,
-            'interfaces' : self.interfaces,
-            'name' : self.name,
-            'ensembles' : self.ensembles
-        }
-        return ret_dict
-
-    @classmethod
-    def from_dict(cls, dct):
-        mytrans = paths.TISTransition(
-            stateA=dct['stateA'],
-            stateB=dct['stateB'],
-            interfaces=dct['interfaces'],
-            orderparameter=dct['orderparameter'],
-            name=dct['name']
-        )
-        mytrans.ensembles = dct['ensembles']
-        return mytrans
 
     def build_ensembles(self, stateA, stateB, interfaces, orderparameter):
         self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
@@ -371,8 +353,12 @@ class TISTransition(Transition):
         error : list(3) or None
         """
         # get the flux
+        if flux is None: # TODO: find a way to raise error if bad flux
+            flux = self.minus_move_flux(storage)
+
         if flux is not None:
             self._flux = flux
+
 
         if self._flux is None:
             raise ValueError("No flux available to TISTransition. Cannot calculate rate")
@@ -406,19 +392,6 @@ class TISTransition(Transition):
         return self._rate
 
 
-class RETISTransition(TISTransition):
-    """Transition class for RETIS."""
-    def __init__(self, stateA, stateB, interfaces, orderparameter=None, 
-                 name=None):
-        super(RETISTransition, self).__init__(stateA, stateB, interfaces,
-                                              orderparameter, name)
-
-        self.minus_ensemble = paths.MinusInterfaceEnsemble(
-            state_vol=stateA, 
-            innermost_vols=interfaces[0]
-        )
-
-
     def to_dict(self):
         ret_dict = {
             'stateA' : self.stateA,
@@ -433,7 +406,7 @@ class RETISTransition(TISTransition):
 
     @classmethod
     def from_dict(cls, dct):
-        mytrans = RETISTransition(
+        mytrans = TISTransition(
             stateA=dct['stateA'],
             stateB=dct['stateB'],
             interfaces=dct['interfaces'],
@@ -500,20 +473,6 @@ class RETISTransition(TISTransition):
         self._flux = flux
         return self._flux
 
-
-    def rate(self, storage, flux=None, outer_ensemble=None,
-             outer_lambda=None, error=None, force=False):
-        if flux is None:
-            flux = self.minus_move_flux(storage)
-
-        return super(RETISTransition, self).rate(
-            storage=storage, 
-            flux=flux, 
-            outer_ensemble=outer_ensemble,
-            outer_lambda=outer_lambda,
-            error=error,
-            force=force
-        )
 
 
 def minus_sides_summary(trajectory, minus_ensemble):

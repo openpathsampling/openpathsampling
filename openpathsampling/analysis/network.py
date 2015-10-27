@@ -148,7 +148,7 @@ class MSTISNetwork(TISNetwork):
             fromA = self.from_state[stateA]
             other_states = self.states[:state_index]+self.states[state_index+1:]
             for stateB in other_states:
-                trans = paths.RETISTransition(
+                trans = paths.TISTransition(
                     stateA=stateA,
                     stateB=stateB,
                     interfaces=fromA.interfaces,
@@ -191,7 +191,7 @@ class MSTISNetwork(TISNetwork):
             union_others = paths.volume.join_volumes(other_states)
             union_others.name = "all states except " + str(name)
 
-            this_trans = paths.RETISTransition(
+            this_trans = paths.TISTransition(
                 stateA=state, 
                 stateB=union_others,
                 interfaces=ifaces[:-1],
@@ -378,14 +378,14 @@ class MISTISNetwork(TISNetwork):
             stateA = transition.stateA
             stateB = transition.stateB
             if transition not in all_in_pairs:
-                sample_trans = paths.RETISTransition(
+                sample_trans = paths.TISTransition(
                     stateA=stateA,
                     stateB=all_states,
                     interfaces=transition.interfaces,
                     orderparameter=transition.orderparameter
                 )
             else:
-                sample_trans = paths.RETISTransition(
+                sample_trans = paths.TISTransition(
                     stateA=stateA,
                     stateB=all_states,
                     interfaces=transition.interfaces[:-1],
@@ -433,7 +433,7 @@ class MISTISNetwork(TISNetwork):
             sample_trans = self.transition_to_sampling[trans]
             stateA = trans.stateA
             stateB = trans.stateB
-            analysis_trans = paths.RETISTransition(
+            analysis_trans = paths.TISTransition(
                 stateA=stateA,
                 stateB=stateB,
                 interfaces=sample_trans.interfaces,
