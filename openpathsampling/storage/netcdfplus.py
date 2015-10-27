@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-from todict import StorableObjectJSON
+from object_json import StorableObjectJSON
 from objproxy import LoaderProxy
 
 import numpy as np

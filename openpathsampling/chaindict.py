@@ -176,7 +176,7 @@ class ExpandSingle(ChainDict):
                                 'You can wrap your iterator in list() if you know that it will finish.')
 
             try:
-                return self.post[items.lazy()]
+                return self.post[items.as_proxies()]
             except AttributeError:
                 # turn possible iterators into list since we have to do it anyway.
                 # Iterators do not work

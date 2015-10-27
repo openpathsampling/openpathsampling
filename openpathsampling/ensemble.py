@@ -424,7 +424,7 @@ class Ensemble(StorableNamedObject):
             # like the real object. If you access any attribute it will be loaded
             # and the actual attribute will be returned. Only difference is operator
             # overloading (which is not used for Snapshots) and type()
-            indices = self.find_valid_slices(trajectory.lazy(), lazy, max_length,
+            indices = self.find_valid_slices(trajectory.as_proxies(), lazy, max_length,
                                              min_length, overlap)
 
             return [paths.Trajectory(trajectory[part]) for part in indices]
