@@ -1,10 +1,7 @@
-import logging
-
 from openpathsampling.base import StorableNamedObject, StorableObject
 import openpathsampling as paths
 import openpathsampling.tools
 from openpathsampling.pathmover import SubPathMover
-from ops_logging import initialization_logging
 
 import time
 

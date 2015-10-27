@@ -83,9 +83,6 @@ class PathMoveChange(TreeMixin, StorableObject):
         else:
             return False
 
-    def __repr__(self):
-        return '%s (%s)' % (self.__class__.__name__[:-14], hex(id(self))[-6:])
-
     def movetree(self):
         """
         Return a tree with the movers of each node
