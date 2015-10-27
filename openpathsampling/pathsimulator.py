@@ -358,7 +358,7 @@ class FullBootstrapping(PathSimulator):
         self.n_ensembles = len(self.all_ensembles)
 
 
-    def run(self, nsteps):
+    def run(self, nsteps=None):
         #print first_traj_ensemble #DEBUG
         has_AA_path = False
         while not has_AA_path:
