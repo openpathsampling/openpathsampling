@@ -318,9 +318,11 @@ class FullBootstrapping(PathSimulator):
 
     def __init__(self, transition, snapshot, storage=None, engine=None,
                  extra_interfaces=[], forbidden_states=[]):
+        super(FullBootstrapping, self).__init__(storage, engine)
         interface0 = transition.interfaces[0]
         ensemble0 = transition.ensembles[0]
         state = transition.stateA
+        self.state = state
         self.first_traj_ensemble = paths.SequentialEnsemble([
             paths.OptionalEnsemble(paths.AllOutXEnsemble(state)),
             paths.AllInXEnsemble(state),
@@ -348,31 +350,37 @@ class FullBootstrapping(PathSimulator):
         self.extra_shooters = [
             paths.OneWayShootingMover(selector=paths.UniformSelector(), 
                                       ensemble=ens) 
-            for ens in extra_ensembles
+            for ens in self.extra_ensembles
         ]
+        self.snapshot = snapshot.copy()
+        self.ensemble0 = ensemble0
+        self.all_ensembles = transition.ensembles + self.extra_ensembles
+        self.n_ensembles = len(self.all_ensembles)
 
 
     def run(self, nsteps):
         #print first_traj_ensemble #DEBUG
         has_AA_path = False
         while not has_AA_path:
-            self.engine.current_snapshot = snapshot.copy()
-            self.engine.snapshot = snapshot.copy()
+            self.engine.current_snapshot = self.snapshot.copy()
+            self.engine.snapshot = self.snapshot.copy()
             print "Building first trajectory"
             sys.stdout.flush()
-            first_traj = engine.generate(engine.current_snapshot, 
-                                         [self.first_traj_ensemble.can_append])
+            first_traj = self.engine.generate(
+                self.engine.current_snapshot, 
+                [self.first_traj_ensemble.can_append]
+            )
             print "Selecting segment"
             sys.stdout.flush()
             subtraj = self.ensemble0.split(first_traj)[0]
             # check that this is A->A as well
-            has_AA_path = state(subtraj[-1]) and state(subtraj[0])
+            has_AA_path = self.state(subtraj[-1]) and self.state(subtraj[0])
             
         print "Sampling " + str(self.n_ensembles) + " ensembles."
         bootstrap = paths.Bootstrapping(
-            storage=storage,
-            ensembles=transition.ensembles+extra_ensembles,
-            movers=transition_shooters+extra_shooters,
+            storage=self.storage,
+            ensembles=self.all_ensembles,
+            movers=self.transition_shooters + self.extra_shooters,
             trajectory=subtraj
         )
         print "Beginning bootstrapping"
