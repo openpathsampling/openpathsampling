@@ -17,12 +17,19 @@ install:
 
 script:
   # Build conda package
+  - echo travis_fold:start:conda.build.package
+  - echo Build conda package
   - source deactivate
   - conda install --yes conda-build jinja2
   - conda build devtools/conda-recipe
   - source activate $python
+  - echo travis_fold:end:conda.build.package
+
+  - echo travis_fold:start:conda.install.package
+  - echo Install conda package
   - conda install --yes $HOME/miniconda/conda-bld/linux-64/openpathsampling-*
   - conda list -e
+  - echo travis_fold:end:conda.install.package
 
   # Run tests
   - source devtools/ci/nosetests.sh
