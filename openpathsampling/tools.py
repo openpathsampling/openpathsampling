@@ -87,6 +87,7 @@ def trajectory_from_mdtraj(mdtrajectory):
     """
     trajectory = paths.Trajectory()
     empty_momentum = paths.Momentum()
+    topology = paths.MDTrajTopology(mdtrajectory.topology)
     for frame_num in range(len(mdtrajectory)):
         # mdtraj trajectories only have coordinates and box_vectors
         coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
@@ -95,7 +96,8 @@ def trajectory_from_mdtraj(mdtrajectory):
                                u.nanometers)
         else:
             box_v = None
-        config = paths.Configuration(coordinates=coord, box_vectors=box_v)
+
+        config = paths.Configuration(coordinates=coord, box_vectors=box_v, topology=topology)
 
         snap = paths.Snapshot(
             configuration=config,
