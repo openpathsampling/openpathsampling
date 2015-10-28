@@ -59,7 +59,7 @@ class testCV_Function(object):
         assert params['cv_var_type'] == 'numpy.float32'
         assert params['cv_requires_lists'] == True
         assert params['cv_simtk_unit'] is None
-        assert params['cv_dimensions'] == tuple([2])
+        assert params['cv_shape'] == tuple([2])
 
     def test_from_template(self):
 

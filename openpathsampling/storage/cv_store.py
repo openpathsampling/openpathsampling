@@ -53,7 +53,7 @@ class ObjectDictStore(ObjectStore):
                 self.key_store.init_variable(
                     var_name,
                     objectdict.var_type,
-                    objectdict.dimensions,
+                    objectdict.shape,
                     maskable=True
                 )
                 self.storage.update_delegates()
