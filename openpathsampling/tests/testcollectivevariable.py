@@ -57,7 +57,7 @@ class testCV_Function(object):
 
         assert params['f'] is atom_pair_op
         assert params['var_type'] == 'numpy.float32'
-        assert params['fnc_uses_lists'] == True
+        assert params['requires_lists'] == True
         assert params['simtk_unit'] is None
         assert params['dimensions'] == tuple([2])
 

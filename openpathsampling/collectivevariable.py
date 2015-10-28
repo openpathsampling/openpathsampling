@@ -20,17 +20,19 @@ from openpathsampling.storage.cache import WeakLRUCache
 
 class CollectiveVariable(cd.Wrap, StorableNamedObject):
     """
-    Wrapper for a function that maps a snapshot or an iterable of snapshots
-    (like Trajectory) to a number or vector.
+    Wrapper for a function that acts on snapshots or iterables of snapshots
 
     Parameters
     ----------
     name : string
         A descriptive name of the collectivevariable. It is used in the string
         representation.
-    template : openpathsampling.Snapshot
-        a test snapshot that is used to determine the basic output structure
-        of the function.
+    var_type : str, default : 'float'
+        This specifies the number type of the output of the CV. All types allowed in the netcdfplus.py
+        are okay here. Needs to be one of ['bool', 'float', 'index', 'int', 'json', 'lazyobj.*',
+        'length', 'long', 'numpy.float32', 'numpy.float64', 'numpy.int16', 'numpy.int32',
+        'numpy.int64', 'numpy.int8', 'numpy.uint16', 'numpy.uint32', 'numpy.uint64',
+        'numpy.uint8', 'obj.*', 'store', 'str']
     dimensions : None or int or tuple of int, default: None
         A tuple of dimensions of the output of the collective variable.
         `tuple()` corresponds to a scalar, so it `None`. An integer corresponds
@@ -38,32 +40,29 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         array with length 1. `tuple(1,2,3)` corresponds to a 3-dimensional array of
         size 1 by 2 by 3 elements. The higher dimensional array are usually used with
         numpy arrays.
+    requires_lists : If `True` the internal function  always a list of elements instead
+        of single values. It also means that if you call the CV with a list of snapshots a list
+        of snapshot objects will be passed. If `False` a list of Snapshots like a trajectory will
+        be passed one by one.
     simtk_unit : simtk.unit.Unit, default: None
         A simtk.unit.Unit instance specifying the used unit of the output. This means the
         function should return a value with unit. When cached the unit is stripped and when
         loaded recreated.
-    has_fnc : bool, default : True
-        If `True` it means the CV has an underlying function attached that can be used
-        to compute missing values. In some cases the function cannot by stored and only
-        cache is available. In that case this would be `False`
-    fnc_uses_lists : If `True` the internal function expects always a list of elements instead
-        of single values. It also means that if you call the CV with a list of snapshots a list
-        of snapshot objects will be passed. If `False` a list of Snapshots like a trajectory will
-        be passed one snapshot by one.
-    var_type : str, default : 'float'
-        This specifies the number type of the output of the CV. All types allowed in the netcdfplus.py
-        are okay here. Needs to be one of ['bool', 'float', 'index', 'int', 'json', 'lazyobj.*',
-        'length', 'long', 'numpy.float32', 'numpy.float64', 'numpy.int16', 'numpy.int32',
-        'numpy.int64', 'numpy.int8', 'numpy.uint16', 'numpy.uint32', 'numpy.uint64',
-        'numpy.uint8', 'obj.*', 'store', 'str']
     store_cache : bool
         If `True` this CV has a cache on disk attached in form of a table in a netcdf file.
+        If set to `False` then there will be no storage created when the cv is stored
+        automatically. You can do this later on using function in the cv_store.
 
 
     Attributes
     ----------
     name
     dimensions
+    var_type
+    requires_lists
+    simtk_unit
+    store_cache
+
     _single_dict : ChainDict
         The ChainDict that takes care of using only a single element instead of
         an iterable. In the case of a single object. It will be wrapped in a list
@@ -85,10 +84,10 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     def __init__(
             self,
             name,
-            dimensions=None,
-            simtk_unit=None,
-            fnc_uses_lists=False,
             var_type='float',
+            dimensions=None,
+            requires_lists=False,
+            simtk_unit=None,
             store_cache=False
     ):
         if (type(name) is not str and type(name) is not unicode) or len(
@@ -99,7 +98,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         self.name = name
 
-        self.fnc_uses_lists = fnc_uses_lists
+        self.requires_lists = requires_lists
         self.dimensions = dimensions
         self.var_type = var_type
         self.simtk_unit = simtk_unit
@@ -111,7 +110,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         self._func_dict = cd.Function(
             self._eval,
-            fnc_uses_lists=self.fnc_uses_lists
+            requires_lists=self.requires_lists
         )
 
         post = self._func_dict + self._cache_dict + self._single_dict
@@ -156,6 +155,30 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
     @classmethod
     def parameters_from_template(cls, c, template):
+        """
+        Compute parameters suitable for a callable using a template snapshot
+
+        Parameters
+        ----------
+        c : callable (function or class with __call__)
+            the callable to be used as a function
+        template : openpathsampling.Snapshot
+            a test snapshot to be evaluated with the callable
+
+        Returns
+        -------
+        dict
+            A dictionary containing the approriate input parameters for `var_type`, `dimensions`,
+            `requires_lists` and `simtk_unit`
+
+        Notes
+        -----
+        This is a untility function to create a CV using a template
+
+        See also
+        --------
+        openpathsampling.CollectiveVariable.from_template
+        """
         eval_single = True
         value_single = None
 
@@ -165,7 +188,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         eval_multi = True
         value_multi = None
 
-        fnc_uses_lists = None
+        requires_lists = None
 
         try:
             # try use single item
@@ -195,18 +218,18 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         if eval_list and eval_multi:
             # check if results are the same
             if eval_single:
-                fnc_uses_lists = False
+                requires_lists = False
 
             #TODO: Check if first and second result are equal. Difficult for numpy
             try:
                 if len(value_list) == 1:
                     if len(value_multi) == 2:
-                                fnc_uses_lists = True
+                                requires_lists = True
 
             except TypeError:
-                fnc_uses_lists = False
+                requires_lists = False
 
-        if fnc_uses_lists is None:
+        if requires_lists is None:
             # no idea what that function does, but it does not work as
             # expected so we disable it
             return {
@@ -216,7 +239,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         # Determine if storable or not. Means values must be numeric
         # or a list of numeric values
 
-        if fnc_uses_lists:
+        if requires_lists:
             test_value = value_list[0]
         else:
             test_value = value_single
@@ -228,7 +251,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         test_type = test_value
 
         if type(test_type) is u.Quantity:
-            # could be Quantity([..])
+            # could be a Quantity([..])
             simtk_unit = test_type.unit
             test_type = test_type._value
 
@@ -260,7 +283,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
                 'c': c,
                 'var_type': var_type,
                 'dimensions': dimensions,
-                'fnc_uses_lists': fnc_uses_lists,
+                'requires_lists': requires_lists,
                 'simtk_unit': simtk_unit
             }
 
@@ -270,7 +293,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
     def sync(self):
         """
-        Sync this collectivevariable with attached storages
+        Sync this CV with the attached storages
 
         Parameters
         ----------
@@ -282,7 +305,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
     def cache_all(self):
         """
-        Sync this collective variable with attached storages
+        Sync this CV with attached storages
 
         Parameters
         ----------
@@ -317,6 +340,23 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
     @staticmethod
     def _find_var(code, op):
+        """
+        Helper function to search in python bytecode for a specific function call
+
+        Parameters
+        ----------
+        code : str
+            the python bytecode to be searched
+        op : int
+            the int code of the code to be found
+
+        Returns
+        -------
+        list of func_code.co_names
+            a list of co_names used in this function when calling op
+        """
+
+        #TODO: Clean this up. It now works only for codes that use co_names
         opcodes = code.func_code.co_code
         i = 0
         ret = []
@@ -334,6 +374,16 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
     @classmethod
     def callable_to_dict(cls, f):
+        """
+        Turn a callable function of class into a dictionary
+
+        Used for conversion to JSON
+
+        Parameters
+        ----------
+        f : callable (function or class with __call__)
+            the function to be turned into a dict representaiton
+        """
         f_module = f.__module__
         is_local = f_module == '__main__'
         is_loaded = f_module == 'openpathsampling.collectivevariable'
@@ -412,6 +462,15 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
     @classmethod
     def callable_from_dict(cls, f_dict):
+        """
+        Turn a dictionary back in a callable function or class
+
+        Used for conversion from JSON
+
+        Parameters
+        ----------
+        f_dict : the dictionary that contains the information
+        """
         f = None
 
         if f_dict is not None:
@@ -431,7 +490,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
 
 class CV_Volume(CollectiveVariable):
-    """ Make `Volume` into `CollectiveVariable`: maps to 0.0 or 1.0
+    """ Turn a `Volume` into a collective variable
 
     Attributes
     ----------
@@ -445,7 +504,7 @@ class CV_Volume(CollectiveVariable):
         ----------
         name : string
             name of the collective variable
-        volume : Volume()
+        volume : openpathsampling.Volume
             the Volume instance to be treated as a (storable) CV
 
         """
@@ -454,7 +513,7 @@ class CV_Volume(CollectiveVariable):
             name,
             dimensions=None,
             store_cache=store_cache,
-            fnc_uses_lists=True,
+            requires_lists=True,
             var_type='bool'
         )
         self.volume = volume
@@ -482,14 +541,12 @@ class CV_Volume(CollectiveVariable):
 
 
 class CV_Callable(CollectiveVariable):
-    """Make any callable object `f` into a storable `CollectiveVariable`.
+    """Turn any callable object `f` into a storable `CollectiveVariable`.
 
     Attributes
     ----------
-    name
-    f
-    dimensions
-    kwargs
+    c
+    c_kwargs
     """
 
     allow_marshal = True
@@ -502,32 +559,41 @@ class CV_Callable(CollectiveVariable):
             c_kwargs=None,
             var_type='float',
             dimensions=None,
-            fnc_uses_lists=False,
+            requires_lists=False,
             simtk_unit=None,
             store_cache=True,
     ):
         """
         Parameters
         ----------
-        name : str
-        f : function
-            The function to be used, can almost be an arbitrary function.
-        template : openpathsampling.Snapshot
-            an example single item input to test the function and
-            determine the return type
-        kwargs :
-            named arguments which should be given to `f` (for example, the
-            atoms which define a specific distance/angle). Finally
-            `f(list_of_snapshots, **kwargs)` is called
+        name
+        c : callable (function or class with __call__)
+            The callable to be used
+        c_kwargs :
+            a dictionary with named arguments which should be used
+            with `c`. Either for class creation or for calling the function
+        var_type
+        dimensions
+        requires_lists
+        simtk_unit
+        store_cache
 
         Notes
         -----
+        This function is abstract and need _eval to be implemented to work.
+        Problem is that there are two types of callable functions:
+        1. direct functions: these can be called and give the wanted value
+           `c(snapshot, **kwargs)` would be the typical call
+        2. a generating function: a function the creates the callable object
+           `c(**kwargs)(snapshot)` is the typical call. This is usually used
+           for classes. Create the instance and then use it.
+
         This function is very powerful, but need some explanation if you want
         the function to be stored alongside all other information in your
         storage. The problem is that a python function relies (usually) on
         an underlying global namespace that can be accessed. This is especially
         important when using an iPython notebook. The problem is, that the
-        function that stored your used-definited function has no knowledge
+        function that stored your used-defined function has no knowledge
         about this underlying namespace and its variables. All it can save is
         names of variables from your namespace to be used. This means you can
         store arbitrary functions, but these will only work, if you call the
@@ -549,9 +615,9 @@ class CV_Callable(CollectiveVariable):
         >>>     indices = [4,6,8,10]
         >>>     return md.compute_dihedrals(Trajectory([snapshot]).md(), [indices=indices])
 
-        >>> cv = CV_Function('my_cv', func, psi=my_global_psi_function)
+        >>> cv = CV_Function('my_cv', func, {'psi': my_global_psi_function})
 
-        We will also check if non-standard modules are imported, which are now
+        The function will also check if non-standard modules are imported, which are now
         numpy, math, msmbuilder, pandas and mdtraj
         """
 
@@ -566,7 +632,7 @@ class CV_Callable(CollectiveVariable):
             var_type=var_type,
             dimensions=dimensions,
             store_cache=store_cache,
-            fnc_uses_lists=fnc_uses_lists,
+            requires_lists=requires_lists,
             simtk_unit=simtk_unit
         )
 
@@ -578,7 +644,7 @@ class CV_Callable(CollectiveVariable):
             'c_kwargs': self.c_kwargs,
             'store_cache': self.store_cache,
             'var_type': self.var_type,
-            'fnc_uses_lists': self.fnc_uses_lists,
+            'requires_lists': self.requires_lists,
             'simtk_unit': self.simtk_unit
         }
 
@@ -591,7 +657,7 @@ class CV_Callable(CollectiveVariable):
             dimensions=dct['dimensions'],
             store_cache=dct['store_cache'],
             var_type=dct['var_type'],
-            fnc_uses_lists=dct['fnc_uses_lists'],
+            requires_lists=dct['requires_lists'],
             simtk_unit=dct['simtk_unit']
         )
         return obj
@@ -624,10 +690,8 @@ class CV_Function(CV_Callable):
 
     Attributes
     ----------
-    name
     f
-    dimensions
-    kwargs
+    f_kwargs
     """
 
     allow_marshal = True
@@ -640,7 +704,7 @@ class CV_Function(CV_Callable):
             f_kwargs=None,
             var_type='float',
             dimensions=None,
-            fnc_uses_lists=False,
+            requires_lists=False,
             simtk_unit=None,
             store_cache=True,
     ):
@@ -649,48 +713,21 @@ class CV_Function(CV_Callable):
         ----------
         name : str
         f : function
-            The function to be used, can almost be an arbitrary function.
-        template : openpathsampling.Snapshot
-            an example single item input to test the function and
-            determine the return type
-        kwargs :
-            named arguments which should be given to `f` (for example, the
+            The function to be used
+        f_kwargs :
+            a dictionary of named arguments which should be given to `f` (for example, the
             atoms which define a specific distance/angle). Finally
-            `f(list_of_snapshots, **kwargs)` is called
+            `f(snapshots, **f_kwargs)` is called
+        var_type
+        dimensions
+        requires_lists
+        simtk_unit
+        store_cache
 
-        Notes
-        -----
-        This function is very powerful, but need some explanation if you want
-        the function to be stored alongside all other information in your
-        storage. The problem is that a python function relies (usually) on
-        an underlying global namespace that can be accessed. This is especially
-        important when using an iPython notebook. The problem is, that the
-        function that stored your used-definited function has no knowledge
-        about this underlying namespace and its variables. All it can save is
-        names of variables from your namespace to be used. This means you can
-        store arbitrary functions, but these will only work, if you call the
-        reconstructed ones from the same context (scope). This is a powerful
-        feature because a function might do something different in another
-        context, but in our case we cannot store these additional information.
+        See also
+        --------
+        openpathsampling.CV_Callable
 
-        What we can do, is analyse your function and determine which variables
-        (if at all these are) and inform you, if you might run into trouble.
-        To avoid problems you should try to:
-        1. import necessary modules inside of your function
-        2. create constants inside your function
-        3. if variables from the global scope are used these need to be stored
-           with the function and this can only be done if they are passed as arguments
-           to the function and added as kwargs to the CV_Function
-
-        >>> def func(snapshot, psi):
-        >>>     import mdtraj as md
-        >>>     indices = [4,6,8,10]
-        >>>     return md.compute_dihedrals(Trajectory([snapshot]).md(), [indices=indices])
-
-        >>> cv = CV_Function('my_cv', func, psi=my_global_psi_function)
-
-        We will also check if non-standard modules are imported, which are now
-        numpy, math, msmbuilder, pandas and mdtraj
         """
 
         self.c = f
@@ -703,7 +740,7 @@ class CV_Function(CV_Callable):
             var_type=var_type,
             dimensions=dimensions,
             store_cache=store_cache,
-            fnc_uses_lists=fnc_uses_lists,
+            requires_lists=requires_lists,
             simtk_unit=simtk_unit
         )
 
@@ -728,29 +765,10 @@ class CV_Function(CV_Callable):
 
 
 class CV_Class(CV_Callable):
-    """Make any callable class `cls` into an `CollectiveVariable`.
+    """Turn any callable class into a `CollectiveVariable`.
 
-    the class instance will be called with single snapshots or a list of
-    snapshots. The instance will be created using kwargs.
-
-    Attributes
-    ----------
-    name
-    dimensions
-    cls
-    kwargs
-
-    Examples
-    --------
-    >>> # To create an order parameter which calculates the dihedral formed
-    >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
-    >>> import mdtraj as md
-    >>> traj = None
-    >>> psi_atoms = [6,8,14,16]
-    >>> psi_orderparam = CV_Function("psi", md.compute_dihedrals,
-    >>>                              trajdatafmt="mdtraj",
-    >>>                              indices=[psi_atoms])
-    >>> print psi_orderparam( traj.md() )
+    The class instance will be called with snapshots. The instance itself
+    will be created using the given c_kwargs.
     """
 
     allowed_modules = ['msmbuilder']
@@ -762,27 +780,31 @@ class CV_Class(CV_Callable):
             c_kwargs=None,
             var_type='float',
             dimensions=None,
-            fnc_uses_lists=False,
+            requires_lists=False,
             simtk_unit=None,
             store_cache=True
     ):
         """
         Parameters
         ----------
-        name : str
-        cls : Class
+        name
+        c : callable class
             a class where instances have a `__call__` attribute
-        kwargs : **kwargs
-            named arguments which should be given to `cls` (for example, the
+        c_kwargs : **kwargs
+            a dictionary of named arguments which should be given to `c` (for example, the
             atoms which define a specific distance/angle). Finally an instance
             `instance = cls(**kwargs)` is create when the CV is created and
-            using the CV will call `instance(list_of_snapshots)`
+            using the CV will call `instance(snapshots)`
+        var_type
+        dimensions
+        requires_lists
+        simtk_unit
+        store_cache
 
         Notes
         -----
         Right now you cannot store user-defined classes. Only classes
-        from external packages can be used. For the time being we allow
-        classes from msmbuilder.
+        from external packages can be used.
         """
 
         super(CV_Class, self).__init__(
@@ -792,7 +814,7 @@ class CV_Class(CV_Callable):
             var_type=var_type,
             dimensions=dimensions,
             store_cache=store_cache,
-            fnc_uses_lists=fnc_uses_lists,
+            requires_lists=requires_lists,
             simtk_unit=simtk_unit
         )
 
@@ -834,7 +856,7 @@ class CV_MD_Function(CV_Function):
                  f_kwargs=None,
                  var_type='numpy.float32',
                  dimensions=None,
-                 fnc_uses_lists=True,
+                 requires_lists=True,
                  simtk_unit=None,
                  store_cache=True,
                  single_as_scalar=True
@@ -843,10 +865,17 @@ class CV_MD_Function(CV_Function):
         Parameters
         ----------
         name : str
-        f : function
-        kwargs :
-            named arguments which should be given to `f` (for example, the
-            atoms which define a specific distance/angle)
+        f
+        f_kwargs
+        var_type
+        dimensions
+        requires_lists
+        simtk_unit
+        store_cache
+        single_as_scalar : bool, default: True
+            If `True` then arrays of length 1 will be treated as array with one dimension less.
+            e.g. [ [1], [2], [3] ] will be turned into [1, 2, 3]. This is often useful, when you
+            use en external function from mdtraj to get only a single value.
 
         """
 
@@ -856,7 +885,7 @@ class CV_MD_Function(CV_Function):
             f_kwargs=f_kwargs,
             var_type=var_type,
             dimensions=dimensions,
-            fnc_uses_lists=fnc_uses_lists,
+            requires_lists=requires_lists,
             simtk_unit=simtk_unit,
             store_cache=store_cache
         )
@@ -892,12 +921,11 @@ class CV_MD_Function(CV_Function):
 
 class CV_MSMB_Featurizer(CV_Class):
     """
-    An CollectiveVariable that uses an MSMBuilder3 featurizer as the logic
+    A CollectiveVariable that uses an MSMBuilder3 featurizer
 
     Attributes
     ----------
-    name
-    cls
+    single_as_scalar
     """
 
     def __init__(self, name, featurizer, f_kwargs=None, store_cache=True, single_as_scalar=True):
@@ -908,6 +936,20 @@ class CV_MSMB_Featurizer(CV_Class):
         name
         featurizer : msmbuilder.Featurizer
             the featurizer used as a class
+        f_kwargs : **kwargs
+            a dictionary of named arguments which should be given to `c` (for example, the
+            atoms which define a specific distance/angle). Finally an instance
+            `instance = cls(**kwargs)` is create when the CV is created and
+            using the CV will call `instance(snapshots)`
+        var_type
+        dimensions
+        requires_lists
+        simtk_unit
+        store_cache
+        single_as_scalar : bool, default: True
+            If `True` then arrays of length 1 will be treated as array with one dimension less.
+            e.g. [ [1], [2], [3] ] will be turned into [1, 2, 3]. This is often useful, when you
+            use en external function to get only a single value.
 
         Notes
         -----
@@ -936,7 +978,7 @@ class CV_MSMB_Featurizer(CV_Class):
             c_kwargs=self.c_kwargs,
             dimensions=dimensions,
             store_cache=store_cache,
-            fnc_uses_lists=True,
+            requires_lists=True,
             var_type='numpy.float32',
         )
 

@@ -30,7 +30,7 @@ class ChainDict(object):
     >>> def f(x):
     >>>     print 'eval', x
     >>>     return x**2
-    >>> fnc_cd = Function(f, fnc_uses_lists = False)
+    >>> fnc_cd = Function(f, requires_lists = False)
     >>> fnc_cd[[1, 2]]
     eval, 1
     eval, 2
@@ -213,19 +213,19 @@ class Function(ChainDict):
 
     This works effective like a function called with square brackets
     """
-    def __init__(self, fnc, fnc_uses_lists=True):
+    def __init__(self, fnc, requires_lists=True):
         """
         Parameters
         ----------
         fnc : function
             the function to be evaluated to return values to keys
-        fnc_uses_lists : bool
+        requires_lists : bool
             if true we assume that it is faster to pass lists to this function instead
             of evaluating each key separately
         """
         super(Function, self).__init__()
         self._eval = fnc
-        self.fnc_uses_lists = fnc_uses_lists
+        self.requires_lists = requires_lists
 
     def _contains(self, item):
         return False
@@ -234,7 +234,7 @@ class Function(ChainDict):
         if self._eval is None:
             return None
 
-        if self.fnc_uses_lists:
+        if self.requires_lists:
             result = self._eval([item])
             return result[0]
         else:
@@ -245,7 +245,7 @@ class Function(ChainDict):
         if self._eval is None:
             return [None] * len(items)
 
-        if self.fnc_uses_lists:
+        if self.requires_lists:
             result = self._eval(items)
             return result
         else:
