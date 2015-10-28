@@ -85,8 +85,15 @@ def trajectory_from_mdtraj(mdtrajectory):
     Trajectory
         the constructed Trajectory instance
     """
+
+    #TODO: Fix energies and move these to specialized CVs
+    #TODO: We could also allow to have empty energies
+
     trajectory = paths.Trajectory()
-    empty_momentum = paths.Momentum(velocities=u.Quantity(np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond))
+    empty_momentum = paths.Momentum(
+        velocities=u.Quantity(np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond),
+        kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole)
+    )
     topology = paths.MDTrajTopology(mdtrajectory.topology)
 
     for frame_num in range(len(mdtrajectory)):
@@ -98,7 +105,12 @@ def trajectory_from_mdtraj(mdtrajectory):
         else:
             box_v = None
 
-        config = paths.Configuration(coordinates=coord, box_vectors=box_v, topology=topology)
+        config = paths.Configuration(
+            coordinates=coord,
+            box_vectors=box_v,
+            potential_energy=u.Quantity(0.0, u.kilojoule_per_mole),
+            topology=topology
+        )
 
         snap = paths.Snapshot(
             configuration=config,
