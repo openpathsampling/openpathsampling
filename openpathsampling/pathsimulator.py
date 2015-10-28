@@ -358,7 +358,7 @@ class FullBootstrapping(PathSimulator):
         self.n_ensembles = len(self.all_ensembles)
 
 
-    def run(self, nsteps=None):
+    def run(self, max_ensemble_rounds=None, n_steps_per_round=20):
         #print first_traj_ensemble #DEBUG
         has_AA_path = False
         while not has_AA_path:
@@ -384,8 +384,23 @@ class FullBootstrapping(PathSimulator):
             trajectory=subtraj
         )
         print "Beginning bootstrapping"
-        while len(bootstrap.globalstate) < self.n_ensembles:
-            bootstrap.run(20)
+        n_rounds = 0
+        n_filled = len(bootstrap.globalstate)
+        while n_filled < self.n_ensembles:
+            bootstrap.run(n_steps_per_round)
+
+            if n_filled == len(bootstrap.globalstate):
+                n_rounds += 1
+            else:
+                n_rounds = 0
+            if n_rounds == max_ensemble_rounds:
+                # hard equality instead of inequality so that None gives us
+                # effectively infinite (rounds add one at a time
+                raise RuntimeError("Too many rounds of bootstrapping: " + 
+                                   str(n_rounds) + " round of " +
+                                   str(n_steps_per_round) + " steps.")
+            n_filled = len(bootstrap.globalstate)
+
         return bootstrap.globalstate
 
 
