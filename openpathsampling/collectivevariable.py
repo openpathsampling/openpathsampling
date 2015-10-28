@@ -77,7 +77,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         underlying function will be called with real data
     _func_dict
         The ChainDict that will call the actual function in case non of the
-        preceeding ChainDicts have returned data
+        preceding ChainDicts have returned data
 
     """
 
@@ -461,7 +461,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         raise RuntimeError('Locally defined classes are not storable yet')
 
     @classmethod
-    def callable_from_dict(cls, f_dict):
+    def callable_from_dict(cls, c_dict):
         """
         Turn a dictionary back in a callable function or class
 
@@ -471,23 +471,44 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         ----------
         f_dict : the dictionary that contains the information
         """
-        f = None
+        c = None
 
-        if f_dict is not None:
-            if '_marshal' in f_dict:
+        if c_dict is not None:
+            if '_marshal' in c_dict:
                 if cls.allow_marshal:
-                    code = marshal.loads(base64.b64decode(f_dict['_marshal']))
-                    f = types.FunctionType(code, globals(), code.co_name)
+                    code = marshal.loads(base64.b64decode(c_dict['_marshal']))
+                    c = types.FunctionType(code, globals(), code.co_name)
 
-            elif '_module' in f_dict:
-                module = f_dict['_module']
+            elif '_module' in c_dict:
+                module = c_dict['_module']
                 packages = module.split('.')
                 if packages[0] in cls.allowed_modules:
                     imp = importlib.import_module(module)
-                    f = getattr(imp, f_dict['_name'])
+                    c = getattr(imp, c_dict['_name'])
 
-        return f
+        return c
 
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'var_type': self.var_type,
+            'dimensions': self.dimensions,
+            'store_cache': self.store_cache,
+            'requires_lists': self.requires_lists,
+            'simtk_unit': self.simtk_unit
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
+        obj = cls(
+            name=dct['name'],
+            dimensions=dct['dimensions'],
+            store_cache=dct['store_cache'],
+            var_type=dct['var_type'],
+            requires_lists=dct['requires_lists'],
+            simtk_unit=dct['simtk_unit']
+        )
+        return obj
 
 class CV_Volume(CollectiveVariable):
     """ Turn a `Volume` into a collective variable
@@ -637,29 +658,16 @@ class CV_Callable(CollectiveVariable):
         )
 
     def to_dict(self):
-        return {
-            'name': self.name,
-            'c': self.callable_to_dict(self.c),
-            'dimensions': self.dimensions,
-            'c_kwargs': self.c_kwargs,
-            'store_cache': self.store_cache,
-            'var_type': self.var_type,
-            'requires_lists': self.requires_lists,
-            'simtk_unit': self.simtk_unit
-        }
+        dct = super(CV_Callable, self).to_dict()
+        dct['c'] = self.callable_to_dict(self.c),
+        dct['c_kwargs'] = self.c_kwargs,
+        return dct
 
     @classmethod
     def from_dict(cls, dct):
-        obj = cls(
-            name=dct['name'],
-            c=cls.callable_from_dict(dct['c']),
-            c_kwargs=dct['c_kwargs'],
-            dimensions=dct['dimensions'],
-            store_cache=dct['store_cache'],
-            var_type=dct['var_type'],
-            requires_lists=dct['requires_lists'],
-            simtk_unit=dct['simtk_unit']
-        )
+        obj = super(CV_Callable, cls).from_dict(dct)
+        obj.c = cls.callable_from_dict(dct['c'])
+        obj.c_kwargs = dct['c_kwargs'],
         return obj
 
     def __eq__(self, other):
@@ -730,8 +738,8 @@ class CV_Function(CV_Callable):
 
         """
 
-        self.c = f
-        self.c_kwargs = f_kwargs
+        self.f = f
+        self.f_kwargs = f_kwargs
 
         super(CV_Function, self).__init__(
             name,
@@ -751,17 +759,22 @@ class CV_Function(CV_Callable):
         del parameters['c']
         return parameters
 
-    @property
-    def f(self):
-        return self.c
-
-    @property
-    def f_kwargs(self):
-        return self.c_kwargs
-
     def _eval(self, items):
         # here the kwargs are used in the callable when it is evaluated
-        return self.c(items, **self.c_kwargs)
+        return self.c(items, **self.f_kwargs)
+
+    def to_dict(self):
+        dct = super(CV_Callable, self).to_dict()
+        dct['f'] = self.callable_to_dict(self.f),
+        dct['f_kwargs'] = self.f_kwargs,
+        return dct
+
+    @classmethod
+    def from_dict(cls, dct):
+        obj = super(CV_Callable, cls).from_dict(dct)
+        obj.f = cls.callable_from_dict(dct['f'])
+        obj.f_kwargs = dct['f_kwargs'],
+        return obj
 
 
 class CV_Class(CV_Callable):
@@ -915,6 +928,7 @@ class CV_MD_Function(CV_Function):
     def from_dict(cls, dct):
         obj = super(CV_MD_Function, cls).from_dict(dct)
         obj.single_as_scalar = dct['single_as_scalar']
+        obj._topology = None
 
         return obj
 
@@ -928,15 +942,15 @@ class CV_MSMB_Featurizer(CV_Class):
     single_as_scalar
     """
 
-    def __init__(self, name, featurizer, f_kwargs=None, store_cache=True, single_as_scalar=True):
+    def __init__(self, name, c, c_kwargs=None, store_cache=True, single_as_scalar=True):
         """
 
         Parameters
         ----------
         name
-        featurizer : msmbuilder.Featurizer
-            the featurizer used as a class
-        f_kwargs : **kwargs
+        c : msmbuilder.Featurizer
+            the featurizer used as a callable class
+        c_kwargs : **kwargs
             a dictionary of named arguments which should be given to `c` (for example, the
             atoms which define a specific distance/angle). Finally an instance
             `instance = cls(**kwargs)` is create when the CV is created and
@@ -957,15 +971,15 @@ class CV_MSMB_Featurizer(CV_Class):
         to mdtraj objects for convenience
         """
 
-        self.c_kwargs = f_kwargs
+        self.c_kwargs = c_kwargs
         # turn Snapshot and Trajectory into md.trajectory
-        for key in f_kwargs:
-            if f_kwargs[key].__class__ is paths.Snapshot:
-                f_kwargs[key] = f_kwargs[key].md()
-            elif f_kwargs[key].__class__ is paths.Trajectory:
-                f_kwargs[key] = f_kwargs[key].md()
+        for key in c_kwargs:
+            if c_kwargs[key].__class__ is paths.Snapshot:
+                c_kwargs[key] = c_kwargs[key].md()
+            elif c_kwargs[key].__class__ is paths.Trajectory:
+                c_kwargs[key] = c_kwargs[key].md()
 
-        _feat = featurizer(**f_kwargs)
+        _feat = c(**c_kwargs)
         self.single_as_scalar = single_as_scalar
 
         dimensions = _feat.n_features
@@ -974,7 +988,7 @@ class CV_MSMB_Featurizer(CV_Class):
 
         super(CV_MSMB_Featurizer, self).__init__(
             name,
-            c=featurizer,
+            c=c,
             c_kwargs=self.c_kwargs,
             dimensions=dimensions,
             store_cache=store_cache,
@@ -985,17 +999,6 @@ class CV_MSMB_Featurizer(CV_Class):
     @property
     def featurizer(self):
         return self.c
-
-    @property
-    def f_kwargs(self):
-        return self.c_kwargs
-
-    @classmethod
-    def parameters_from_template(cls, f, template):
-        parameters = super(CV_MSMB_Featurizer, cls).parameters_from_template(f, template)
-        parameters['f'] = parameters['c']
-        del parameters['c']
-        return parameters
 
     _compare_keys = ['name']
     allowed_modules = ['msmbuilder']
