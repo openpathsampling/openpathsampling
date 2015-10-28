@@ -28,34 +28,55 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     name : string
         A descriptive name of the collectivevariable. It is used in the string
         representation.
-    dimensions : None or tuple of int
-        The number of dimensions of the output order parameter. So far this
-        is not used and will be necessary or useful when storage is
-        available
     template : openpathsampling.Snapshot
         a test snapshot that is used to determine the basic output structure
         of the function.
+    dimensions : None or int or tuple of int, default: None
+        A tuple of dimensions of the output of the collective variable.
+        `tuple()` corresponds to a scalar, so it `None`. An integer corresponds
+        to one dimension of the given length, e.g. `1` corresponds to a one dimensional
+        array with length 1. `tuple(1,2,3)` corresponds to a 3-dimensional array of
+        size 1 by 2 by 3 elements. The higher dimensional array are usually used with
+        numpy arrays.
+    simtk_unit : simtk.unit.Unit, default: None
+        A simtk.unit.Unit instance specifying the used unit of the output. This means the
+        function should return a value with unit. When cached the unit is stripped and when
+        loaded recreated.
+    has_fnc : bool, default : True
+        If `True` it means the CV has an underlying function attached that can be used
+        to compute missing values. In some cases the function cannot by stored and only
+        cache is available. In that case this would be `False`
+    fnc_uses_lists : If `True` the internal function expects always a list of elements instead
+        of single values. It also means that if you call the CV with a list of snapshots a list
+        of snapshot objects will be passed. If `False` a list of Snapshots like a trajectory will
+        be passed one snapshot by one.
+    var_type : str, default : 'float'
+        This specifies the number type of the output of the CV. All types allowed in the netcdfplus.py
+        are okay here. Needs to be one of ['bool', 'float', 'index', 'int', 'json', 'lazyobj.*',
+        'length', 'long', 'numpy.float32', 'numpy.float64', 'numpy.int16', 'numpy.int32',
+        'numpy.int64', 'numpy.int8', 'numpy.uint16', 'numpy.uint32', 'numpy.uint64',
+        'numpy.uint8', 'obj.*', 'store', 'str']
+    store_cache : bool
+        If `True` this CV has a cache on disk attached in form of a table in a netcdf file.
+
 
     Attributes
     ----------
     name
     dimensions
-    single_dict : ChainDict
+    _single_dict : ChainDict
         The ChainDict that takes care of using only a single element instead of
         an iterable. In the case of a single object. It will be wrapped in a list
         and later only the single element will be returned
-    pre_dict : ChainDict
+    _pre_dict : ChainDict
         The ChainDict that will convert all possible input types into parsable
         lists of snapshots, like Trajectory, etc.
-    multi_dict
-        The ChainDict that will filter duplicate elements for faster calculation
-        and compatibility with netcdf format.
-    cache_dict
+    _cache_dict
         The ChainDict that will cache calculated values for fast access
-    expand_dict
+    _expand_dict
         The ChainDict that will turn unloaded snapshots into real ones so that the
         underlying function will be called with real data
-    func_dict
+    _func_dict
         The ChainDict that will call the actual function in case non of the
         preceeding ChainDicts have returned data
 
@@ -66,7 +87,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             name,
             template=None,
             dimensions=None,
-            unit=None,
+            simtk_unit=None,
             has_fnc=True,
             fnc_uses_lists=None,
             var_type=None,
@@ -91,14 +112,14 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             if fnc_uses_lists is not None:
                 self.fnc_uses_lists = fnc_uses_lists
 
-            if unit is not None:
-                self.unit = unit
+            if simtk_unit is not None:
+                self.unit = simtk_unit
 
             if var_type is not None:
                 self.var_type = var_type
 
         else:
-            self.unit = unit
+            self.unit = simtk_unit
             self.fnc_uses_lists = fnc_uses_lists
             self.var_type = var_type
             self.dimensions = dimensions
@@ -407,7 +428,7 @@ class CV_Function(CollectiveVariable):
             store_cache=True,
             fnc_uses_lists=False,
             var_type=None,
-            unit=None,
+            simtk_unit=None,
             **kwargs
     ):
         """
@@ -469,7 +490,7 @@ class CV_Function(CollectiveVariable):
             store_cache=store_cache,
             fnc_uses_lists=fnc_uses_lists,
             var_type=var_type,
-            unit=unit
+            simtk_unit=simtk_unit
         )
 
     @staticmethod
@@ -800,7 +821,7 @@ class CV_MD_Function(CV_Function):
                  store_cache=True,
                  fnc_uses_lists=True,
                  var_type='numpy.float32',
-                 unit=None,
+                 simtk_unit=None,
                  single_as_scalar=True,
                  **kwargs):
         """
@@ -822,7 +843,7 @@ class CV_MD_Function(CV_Function):
             store_cache=store_cache,
             fnc_uses_lists=fnc_uses_lists,
             var_type=var_type,
-            unit=unit,
+            simtk_unit=simtk_unit,
             **kwargs
         )
 
