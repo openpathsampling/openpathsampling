@@ -402,7 +402,7 @@ class FullBootstrapping(PathSimulator):
                 if self.error_max_rounds:
                     raise RuntimeError(msg)
                 else:
-                    logger.warn(msg)
+                    logger.warning(msg)
             n_filled = len(bootstrap.globalstate)
 
         return bootstrap.globalstate
