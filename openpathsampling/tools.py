@@ -24,9 +24,9 @@ def refresh_output(output_str, print_anyway=True, refresh=True):
 def updateunits(func):
     def inner(self, *args, **kwargs):
         my_units = {
-            'length': u.nanometer,
-            'velocity': u.nanometer / u.picoseconds,
-            'energy': u.kilojoules_per_mole
+            'length' : u.nanometer,
+            'velocity' : u.nanometer / u.picoseconds,
+            'energy' : u.kilojoules_per_mole
         }
 
         if 'units' in kwargs and kwargs['units'] is not None:

@@ -372,6 +372,7 @@ class Trajectory(list, StorableObject):
         last_vol = None
         count = 0
         segment_labels = []
+        # list.__iter__ for speed
         for frame in list.__iter__(self):
             in_state = []
             for key in label_dict.keys():
@@ -389,10 +390,10 @@ class Trajectory(list, StorableObject):
                 count += 1
             else:
                 if count > 0:
-                    segment_labels.append((last_vol, count))
+                    segment_labels.append( (last_vol, count) )
                 last_vol = current_vol
                 count = 1
-        segment_labels.append((last_vol, count))
+        segment_labels.append( (last_vol, count) )
         return segment_labels
 
     def summarize_by_volumes_str(self, label_dict, delimiter="-"):
