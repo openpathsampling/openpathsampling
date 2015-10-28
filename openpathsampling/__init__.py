@@ -1,4 +1,6 @@
-from pathsimulator import PathSimulator, Bootstrapping, PathSampling, MCStep
+from pathsimulator import (
+    PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep
+)
 
 from ensemble import (
     Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
@@ -71,7 +73,7 @@ from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
     LeapfrogVerletIntegrator
 
 from analysis.tis_analysis import (
-    TISTransition, RETISTransition, Transition, TPSTransition
+    TISTransition, Transition, TPSTransition
 )
 
 from analysis.move_scheme import MoveScheme, DefaultScheme
