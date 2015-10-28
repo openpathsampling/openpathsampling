@@ -85,12 +85,10 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     def __init__(
             self,
             name,
-            template=None,
             dimensions=None,
             simtk_unit=None,
-            has_fnc=True,
-            fnc_uses_lists=None,
-            var_type=None,
+            fnc_uses_lists=False,
+            var_type='float',
             store_cache=False
     ):
         if (type(name) is not str and type(name) is not unicode) or len(
@@ -100,67 +98,44 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         StorableNamedObject.__init__(self)
 
         self.name = name
-        self.template = template
-        self.has_fnc = has_fnc
 
-        if self.template is not None:
-            self._init_from_template(self.template)
-
-            if dimensions is not None:
-                self.dimensions = dimensions
-
-            if fnc_uses_lists is not None:
-                self.fnc_uses_lists = fnc_uses_lists
-
-            if simtk_unit is not None:
-                self.unit = simtk_unit
-
-            if var_type is not None:
-                self.var_type = var_type
-
-        else:
-            self.unit = simtk_unit
-            self.fnc_uses_lists = fnc_uses_lists
-            self.var_type = var_type
-            self.dimensions = dimensions
-
-            if fnc_uses_lists is None:
-                self.fnc_uses_lists = False
-
-            if var_type is None:
-                self.var_type = 'float'
-
-        self.single_dict = cd.ExpandSingle()
-        self.cache_dict = cd.CacheChainDict(WeakLRUCache(100000, weak_type='key'))
+        self.fnc_uses_lists = fnc_uses_lists
+        self.dimensions = dimensions
+        self.var_type = var_type
+        self.simtk_unit = simtk_unit
 
         self.store_cache = store_cache
 
-        if self.has_fnc:
-            self.func_dict = cd.Function(
-                self._eval,
-                fnc_uses_lists=self.fnc_uses_lists
-            )
+        self._single_dict = cd.ExpandSingle()
+        self._cache_dict = cd.CacheChainDict(WeakLRUCache(100000, weak_type='key'))
 
-            post = self.func_dict + self.cache_dict
-        else:
-            post = self.cache_dict
+        self._func_dict = cd.Function(
+            self._eval,
+            fnc_uses_lists=self.fnc_uses_lists
+        )
 
-        post = post + self.single_dict
+        post = self._func_dict + self._cache_dict + self._single_dict
 
         if 'numpy' in self.var_type:
             post = post + cd.MergeNumpy()
 
         super(CollectiveVariable, self).__init__(post=post)
 
-        self._stored = False
-
     def set_cache_store(self, key_store, value_store):
-        self.store_dict = cd.StoredDict(key_store, value_store)
-        self.store_dict.post = self.cache_dict
-        self.single_dict.post = self.store_dict
+        self._store_dict = cd.StoredDict(key_store, value_store)
+        self._store_dict.post = self._cache_dict
+        self._single_dict.post = self._store_dict
 
-    def __hash__(self):
-        return id(self) / 8
+    @classmethod
+    def from_template(cls, name, f, template, store_cache=True, **kwargs):
+        parameters = cls.parameters_from_template(f, template)
+        parameters['store_cache'] = store_cache
+        parameters.update(kwargs)
+        return cls(name, **parameters)
+
+    # This is important since we subclass from list and lists are not hashable
+    # but CVs should be
+    __hash__ = object.__hash__
 
     @staticmethod
     def _interprete_num_type(instance):
@@ -175,140 +150,123 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         else:
             return 'None'
 
-    @property
-    def template_value(self):
-        """
-        Return the value of the template.
-
-        This is mainly for sanity checking and testing
-        """
-        if self.template is not None:
-            return self[self.template]
-        else:
-            return None
-
     def _eval(self, items):
+        ### Default CVs don't do anything. Need to use subclass
         return items
 
-    def _init_from_template(self, template):
-        if self.has_fnc:
-            eval_single = True
-            value_single = None
+    @classmethod
+    def parameters_from_template(cls, c, template):
+        eval_single = True
+        value_single = None
 
-            eval_list = True
-            value_list = None
+        eval_list = True
+        value_list = None
 
-            eval_multi = True
-            value_multi = None
+        eval_multi = True
+        value_multi = None
 
-            fnc_uses_lists = None
+        fnc_uses_lists = None
 
+        try:
+            # try use single item
+            value_single = c(template)
+        except:
+            eval_single = False
+
+        try:
+            # try use list item
+            value_list = c([template])
+        except:
+            eval_list = False
+
+        try:
+            # try use multi list items
+            value_multi = c([template, template])
+        except:
+            eval_multi = False
+
+        if not eval_multi and not eval_list and not eval_single:
+            # who knows what happened (after loading), since we
+            # cannot use the function we disable the function
+            return {
+                'f': None
+            }
+
+        if eval_list and eval_multi:
+            # check if results are the same
+            if eval_single:
+                fnc_uses_lists = False
+
+            #TODO: Check if first and second result are equal. Difficult for numpy
             try:
-                # try use single item
-                value_single = self._eval(template)
-            except:
-                eval_single = False
-
-            try:
-                # try use list item
-                value_list = self._eval([template])
-            except:
-                eval_list = False
-
-            try:
-                # try use multi list items
-                value_multi = self._eval([template, template])
-            except:
-                eval_multi = False
-
-            if not eval_multi and not eval_list and not eval_single:
-                # who knows what happened (after loading), since we
-                # cannot use the function we disable the function
-                self.has_fnc = False
-                raise ValueError('Passed Function cannot be evaluated !')
-                pass
-
-            if eval_list is not False and eval_multi is not False:
-                # check if results are the same
-                if type(value_list) is list and len(value_list) == 1:
-                    if type(value_multi) is list and len(value_multi) == 2:
-                        if value_list[0] == value_multi[0] \
-                                and value_list[0] == value_multi[1]:
-                            fnc_uses_lists = True
-                        else:
-                            if eval_single is False:
+                if len(value_list) == 1:
+                    if len(value_multi) == 2:
                                 fnc_uses_lists = True
-                            else:
-                                fnc_uses_lists = False
-                    else:
-                        if eval_single:
-                            fnc_uses_lists = False
-            else:
-                if eval_single:
-                    fnc_uses_lists = False
 
-            if fnc_uses_lists is None:
-                # no idea what that function does, but it does not work as
-                # expected so we disable it
-                self.has_fnc = False
+            except TypeError:
+                fnc_uses_lists = False
 
-            # Determine if storable or not. Means values must be numeric
-            # or a list of numeric values
+        if fnc_uses_lists is None:
+            # no idea what that function does, but it does not work as
+            # expected so we disable it
+            return {
+                'c': c
+            }
 
-            if fnc_uses_lists:
-                test_value = value_list[0]
-            else:
-                test_value = value_single
+        # Determine if storable or not. Means values must be numeric
+        # or a list of numeric values
 
-            dimensions = None
-            storable = True
-            var_type = None
-            unit = None
+        if fnc_uses_lists:
+            test_value = value_list[0]
+        else:
+            test_value = value_single
 
-            test_type = test_value
+        dimensions = None
+        storable = True
+        simtk_unit = None
+
+        test_type = test_value
+
+        if type(test_type) is u.Quantity:
+            # could be Quantity([..])
+            simtk_unit = test_type.unit
+            test_type = test_type._value
+
+        if type(test_type) is np.ndarray:
+            dimensions = test_type.shape
+        else:
+            if hasattr(test_value, '__len__'):
+                dimensions = len(test_value)
+                test_type = test_value[0]
+                if type(test_type) is u.Quantity:
+                    for val in test_value:
+                        if type(val._value) is not type(test_value._value):
+                            # all values must be of same type
+                            storable = False
+                else:
+                    for val in test_value:
+                        if type(val) is not type(test_value):
+                            # all values must be of same type
+                            storable = False
 
             if type(test_type) is u.Quantity:
-                # could be Quantity([..])
-                unit = test_type.unit
+                # could also be [Quantity, ...]
+                simtk_unit = test_type.unit
                 test_type = test_type._value
 
-            if type(test_type) is np.ndarray:
-                dimensions = test_type.shape
-            else:
-                if hasattr(test_value, '__len__'):
-                    dimensions = len(test_value)
-                    test_type = test_value[0]
-                    if type(test_type) is u.Quantity:
-                        for val in test_value:
-                            if type(val._value) is not type(test_value._value):
-                                # all values must be of same type
-                                storable = False
-                    else:
-                        for val in test_value:
-                            if type(val) is not type(test_value):
-                                # all values must be of same type
-                                storable = False
+        if storable:
+            var_type = CollectiveVariable._interprete_num_type(test_type)
+            return {
+                'c': c,
+                'var_type': var_type,
+                'dimensions': dimensions,
+                'fnc_uses_lists': fnc_uses_lists,
+                'simtk_unit': simtk_unit
+            }
 
-                if type(test_type) is u.Quantity:
-                    # could also be [Quantity, ...]
-                    unit = test_type.unit
-                    test_type = test_type._value
-
-            # try:
-            #     t_value = float(test_type)
-            # except:
-            #     is_numeric = False
-
-            if storable:
-                var_type = self._interprete_num_type(test_type)
-
-            # we have determined the output type
-            self.var_type = var_type
-            self.storable = storable
-            self.dimensions = dimensions
-            self.fnc_uses_lists = fnc_uses_lists
-            self.unit = unit
-
+        return {
+            'c': c
+        }
 
     def sync(self):
         """
@@ -320,7 +278,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             the store to be used, otherwise all underlying storages are synced
         """
         if hasattr(self, 'store_dict'):
-            self.store_dict.sync()
+            self._store_dict.sync()
 
     def cache_all(self):
         """
@@ -332,7 +290,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             the store to be used, otherwise all underlying storages are synced
         """
         if hasattr(self, 'store_dict'):
-            self.store_dict.cache_all()
+            self._store_dict.cache_all()
 
     _compare_keys = ['name', 'dimensions']
 
@@ -351,7 +309,125 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         """Define a non-equality test"""
         if isinstance(other, self.__class__):
             return not self.__eq__(other)
+
         return NotImplemented
+
+    allow_marshal = False
+    allowed_modules = []
+
+    @staticmethod
+    def _find_var(code, op):
+        opcodes = code.func_code.co_code
+        i = 0
+        ret = []
+        while i < len(opcodes):
+            int_code = ord(opcodes[i])
+            if int_code == op:
+                ret.append((i, ord(opcodes[i + 1]) + ord(opcodes[i + 2]) * 256))
+
+            if int_code < opcode.HAVE_ARGUMENT:
+                i += 1
+            else:
+                i += 3
+
+        return [code.func_code.co_names[i[1]] for i in ret]
+
+    @classmethod
+    def callable_to_dict(cls, f):
+        f_module = f.__module__
+        is_local = f_module == '__main__'
+        is_loaded = f_module == 'openpathsampling.collectivevariable'
+        is_class = isinstance(f, (type, types.ClassType))
+        if not is_class:
+            if is_local or is_loaded:
+                # this is a local function, let's see if we can save it
+                if cls.allow_marshal and callable(f):
+                    # use marshal
+                    global_vars = CV_Function._find_var(f, opcode.opmap['LOAD_GLOBAL'])
+                    import_vars = CV_Function._find_var(f, opcode.opmap['IMPORT_NAME'])
+
+                    builtins = dir(__builtin__)
+
+                    global_vars = list(set([
+                                               var for var in global_vars if var not in builtins
+                                               ]))
+
+                    import_vars = list(set(import_vars))
+
+                    if len(global_vars) > 0:
+                        err = 'The function you try to save relies on globally set variables' + \
+                              '\nand these cannot be saved since storage has no access to the' + \
+                              '\nglobal scope. This includes imports!'
+                        err += '\nWe require that the following globals: ' + str(global_vars) + ' either'
+                        err += '\n(1) be replaced by constants'
+                        err += '\n(2) be defined inside your function,' + \
+                               '\n' + '\n'.join(map(lambda x: '    ' + x + '= ...', global_vars))
+                        err += '\n(3) imports need to be "re"-imported inside your function' + \
+                               '\n' + '\n'.join(map(lambda x: '    import ' + x, global_vars))
+                        err += '\n(4) be passed as an external parameter (does not work for imports!), like in '
+                        err += '\n        my_cv = CV_Function("cv_name", ' + f.func_name + ', ' + \
+                               ', '.join(map(lambda x: x + '=' + x, global_vars)) + ')'
+                        err += '\n    and change your function definition like this'
+                        err += '\n        def ' + f.func_name + '(snapshot, ...,  ' + \
+                               ', '.join(global_vars) + '):'
+
+                        print err
+
+                        raise RuntimeError('Cannot store function! Dependency on global variables')
+
+                        # print [obj._idx for obj in global_vars if hasattr(obj, '_idx')]
+                        # print [obj for obj in global_vars]
+
+                    not_allowed_modules = [module for module in import_vars
+                                           if module not in CV_Function.allowed_modules]
+
+                    if len(not_allowed_modules) > 0:
+                        err = 'The function you try to save requires the following modules to ' + \
+                              '\nbe installed: ' + str(not_allowed_modules) + ' which are not marked as safe!'
+                        err += '\nYou can change the list of safe modules in "CV_function._allowed_modules"'
+                        err += '\nYou can also include the import startement in your function like'
+                        err += '\n' + '\n'.join(['import ' + v for v in not_allowed_modules])
+
+                        print err
+
+                        raise RuntimeError('Cannot store function! Not allowed modules used.')
+
+                    return {
+                        '_marshal': base64.b64encode(
+                            marshal.dumps(f.func_code)),
+                        '_global_vars': global_vars,
+                        '_module_vars': import_vars
+                    }
+
+        if not is_local:
+            # save the external class, e.g. msmbuilder featurizer
+            if f_module.split('.')[0] in cls.allowed_modules:
+                # only store the function and the module
+                return {
+                    '_module': f.__module__,
+                    '_name': f.__name__
+                }
+
+        raise RuntimeError('Locally defined classes are not storable yet')
+
+    @classmethod
+    def callable_from_dict(cls, f_dict):
+        f = None
+
+        if f_dict is not None:
+            if '_marshal' in f_dict:
+                if cls.allow_marshal:
+                    code = marshal.loads(base64.b64decode(f_dict['_marshal']))
+                    f = types.FunctionType(code, globals(), code.co_name)
+
+            elif '_module' in f_dict:
+                module = f_dict['_module']
+                packages = module.split('.')
+                if packages[0] in cls.allowed_modules:
+                    imp = importlib.import_module(module)
+                    f = getattr(imp, f_dict['_name'])
+
+        return f
 
 
 class CV_Volume(CollectiveVariable):
@@ -405,45 +481,44 @@ class CV_Volume(CollectiveVariable):
         )
 
 
-class CV_Function(CollectiveVariable):
-    """Make any function `fcn` into a `CollectiveVariable`.
+class CV_Callable(CollectiveVariable):
+    """Make any callable object `f` into a storable `CollectiveVariable`.
 
     Attributes
     ----------
     name
-    fcn
+    f
     dimensions
     kwargs
     """
 
     allow_marshal = True
-    _allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy', 'pandas']
+    allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy', 'pandas']
 
     def __init__(
             self,
             name,
-            fcn,
-            template=None,
+            c,
+            c_kwargs=None,
+            var_type='float',
             dimensions=None,
-            store_cache=True,
             fnc_uses_lists=False,
-            var_type=None,
             simtk_unit=None,
-            **kwargs
+            store_cache=True,
     ):
         """
         Parameters
         ----------
         name : str
-        fcn : function
+        f : function
             The function to be used, can almost be an arbitrary function.
         template : openpathsampling.Snapshot
             an example single item input to test the function and
             determine the return type
         kwargs :
-            named arguments which should be given to `fcn` (for example, the
+            named arguments which should be given to `f` (for example, the
             atoms which define a specific distance/angle). Finally
-            `fnc(list_of_snapshots, **kwargs)` is called
+            `f(list_of_snapshots, **kwargs)` is called
 
         Notes
         -----
@@ -480,156 +555,45 @@ class CV_Function(CollectiveVariable):
         numpy, math, msmbuilder, pandas and mdtraj
         """
 
-        self.callable_fcn = fcn
-        self.kwargs = kwargs
+        self.c = c
 
-        super(CV_Function, self).__init__(
+        if c_kwargs is None:
+            c_kwargs = dict()
+        self.c_kwargs = c_kwargs
+
+        super(CV_Callable, self).__init__(
             name,
-            template=template,
+            var_type=var_type,
             dimensions=dimensions,
             store_cache=store_cache,
             fnc_uses_lists=fnc_uses_lists,
-            var_type=var_type,
             simtk_unit=simtk_unit
         )
 
-    @staticmethod
-    def _find_var(code, op):
-        opcodes = code.func_code.co_code
-        i = 0
-        ret = []
-        while i < len(opcodes):
-            int_code = ord(opcodes[i])
-            if int_code == op:
-                ret.append((i, ord(opcodes[i + 1]) + ord(opcodes[i + 2]) * 256))
-
-            if  int_code < opcode.HAVE_ARGUMENT:
-                i += 1
-            else:
-                i += 3
-
-        return [code.func_code.co_names[i[1]] for i in ret]
-
     def to_dict(self):
-        fcn = None
-        f = self.callable_fcn
-        f_module = f.__module__
-        is_local = f_module == '__main__'
-        is_loaded = f_module == 'openpathsampling.collectivevariable'
-        is_class = isinstance(f, (type, types.ClassType))
-        if not is_class:
-            if is_local or is_loaded:
-                # this is a local function, let's see if we can save it
-                if self.allow_marshal and callable(self.callable_fcn):
-                    # use marshal
-                    global_vars = CV_Function._find_var(f, opcode.opmap['LOAD_GLOBAL'])
-                    import_vars = CV_Function._find_var(f, opcode.opmap['IMPORT_NAME'])
-
-                    builtins = dir(__builtin__)
-
-                    global_vars = list(set([
-                        var for var in global_vars if var not in builtins
-                        ]))
-
-                    import_vars = list(set(import_vars))
-
-                    if len(global_vars) > 0:
-
-                        err = 'The function you try to save relies on globally set variables' + \
-                              '\nand these cannot be saved since storage has no access to the' + \
-                              '\nglobal scope. This includes imports!'
-                        err += '\nWe require that the following globals: ' + str(global_vars) + ' either'
-                        err += '\n(1) be replaced by constants'
-                        err += '\n(2) be defined inside your function,' + \
-                               '\n' + '\n'.join(map(lambda x : '    ' + x + '= ...', global_vars))
-                        err += '\n(3) imports need to be "re"-imported inside your function' + \
-                               '\n' + '\n'.join(map(lambda x : '    import ' + x , global_vars))
-                        err += '\n(4) be passed as an external parameter (does not work for imports!), like in '
-                        err += '\n        my_cv = CV_Function("' + self.name + '", ' + f.func_name + ', ' + \
-                              ', '.join(map(lambda x : x + '=' + x, global_vars)) + ')'
-                        err += '\n    and change your function definition like this'
-                        err += '\n        def ' + f.func_name + '(snapshot, ...,  ' + \
-                              ', '.join(global_vars) + '):'
-
-                        print err
-
-                        raise RuntimeError('Cannot store function! Dependency on global variables')
-
-                        # print [obj._idx for obj in global_vars if hasattr(obj, '_idx')]
-                        # print [obj for obj in global_vars]
-
-                    not_allowed_modules = [module for module in import_vars
-                                           if module not in CV_Function._allowed_modules]
-
-                    if len(not_allowed_modules) > 0:
-                        err  = 'The function you try to save requires the following modules to ' + \
-                               '\nbe installed: ' + str(not_allowed_modules) + ' which are not marked as safe!'
-                        err += '\nYou can change the list of safe modules in "CV_function._allowed_modules"'
-                        err += '\nYou can also include the import startement in your function like'
-                        err += '\n' + '\n'.join(['import ' + v for v in not_allowed_modules])
-
-                        print err
-
-                        raise RuntimeError('Cannot store function! Not allowed modules used.')
-
-                    fcn = {
-                        '_marshal': base64.b64encode(
-                            marshal.dumps(self.callable_fcn.func_code)),
-                        '_global_vars': global_vars,
-                        '_module_vars': import_vars
-                    }
-
-            elif not is_local:
-                # save the external class, e.g. msmbuilder featurizer
-                if f_module.split('.')[0] in self._allowed_modules:
-                    # only store the function and the module
-                    fcn = {
-                        '_module': self.callable_fcn.__module__,
-                        '_name': self.callable_fcn.__name__
-                    }
-
         return {
             'name': self.name,
-            'fcn': fcn,
-            'template': self.template,
+            'c': self.callable_to_dict(self.c),
             'dimensions': self.dimensions,
-            'kwargs': self.kwargs,
+            'c_kwargs': self.c_kwargs,
             'store_cache': self.store_cache,
             'var_type': self.var_type,
             'fnc_uses_lists': self.fnc_uses_lists,
-            'unit': self.unit
+            'simtk_unit': self.simtk_unit
         }
 
     @classmethod
     def from_dict(cls, dct):
-        f = None
-        f_dict = dct['fcn']
-        if f_dict is not None:
-            if '_marshal' in f_dict:
-                if cls.allow_marshal:
-                    code = marshal.loads(base64.b64decode(f_dict['_marshal']))
-                    f = types.FunctionType(code, globals(), code.co_name)
-
-            elif '_module' in f_dict:
-                module = f_dict['_module']
-                packages = module.split('.')
-                if packages[0] in cls._allowed_modules:
-                    imp = __import__(module)
-                    f = getattr(imp, f_dict['_name'])
-
         obj = cls(
             name=dct['name'],
-            fcn=f,
+            c=cls.callable_from_dict(dct['c']),
+            c_kwargs=dct['c_kwargs'],
             dimensions=dct['dimensions'],
             store_cache=dct['store_cache'],
             var_type=dct['var_type'],
             fnc_uses_lists=dct['fnc_uses_lists'],
-            unit=dct['unit'],
-            **dct['kwargs']
+            simtk_unit=dct['simtk_unit']
         )
-
-        obj.template = dct['template']
-
         return obj
 
     def __eq__(self, other):
@@ -639,29 +603,131 @@ class CV_Function(CollectiveVariable):
                 return False
             if self.dimensions != other.dimensions:
                 return False
-            if self.kwargs != other.kwargs:
+            if self.c_kwargs != other.c_kwargs:
                 return False
 
-            if self.callable_fcn is None or other.callable_fcn is None:
+            if self.c is None or other.c is None:
                 return False
 
-            if hasattr(self.callable_fcn.func_code, 'op_code') and hasattr(other.callable_fcn.func_code, 'op_code') and \
-                            self.callable_fcn.func_code.op_code != other.callable_fcn.func_code.op_code:
+            if hasattr(self.c.func_code, 'op_code') and hasattr(other.c.func_code, 'op_code') and \
+                            self.c.func_code.op_code != other.c.func_code.op_code:
                 # Compare Bytecode. Not perfect, but should be good enough
                 return False
-
 
             return True
 
         return NotImplemented
 
+
+class CV_Function(CV_Callable):
+    """Make any function `f` into a `CollectiveVariable`.
+
+    Attributes
+    ----------
+    name
+    f
+    dimensions
+    kwargs
+    """
+
+    allow_marshal = True
+    allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy', 'pandas']
+
+    def __init__(
+            self,
+            name,
+            f,
+            f_kwargs=None,
+            var_type='float',
+            dimensions=None,
+            fnc_uses_lists=False,
+            simtk_unit=None,
+            store_cache=True,
+    ):
+        """
+        Parameters
+        ----------
+        name : str
+        f : function
+            The function to be used, can almost be an arbitrary function.
+        template : openpathsampling.Snapshot
+            an example single item input to test the function and
+            determine the return type
+        kwargs :
+            named arguments which should be given to `f` (for example, the
+            atoms which define a specific distance/angle). Finally
+            `f(list_of_snapshots, **kwargs)` is called
+
+        Notes
+        -----
+        This function is very powerful, but need some explanation if you want
+        the function to be stored alongside all other information in your
+        storage. The problem is that a python function relies (usually) on
+        an underlying global namespace that can be accessed. This is especially
+        important when using an iPython notebook. The problem is, that the
+        function that stored your used-definited function has no knowledge
+        about this underlying namespace and its variables. All it can save is
+        names of variables from your namespace to be used. This means you can
+        store arbitrary functions, but these will only work, if you call the
+        reconstructed ones from the same context (scope). This is a powerful
+        feature because a function might do something different in another
+        context, but in our case we cannot store these additional information.
+
+        What we can do, is analyse your function and determine which variables
+        (if at all these are) and inform you, if you might run into trouble.
+        To avoid problems you should try to:
+        1. import necessary modules inside of your function
+        2. create constants inside your function
+        3. if variables from the global scope are used these need to be stored
+           with the function and this can only be done if they are passed as arguments
+           to the function and added as kwargs to the CV_Function
+
+        >>> def func(snapshot, psi):
+        >>>     import mdtraj as md
+        >>>     indices = [4,6,8,10]
+        >>>     return md.compute_dihedrals(Trajectory([snapshot]).md(), [indices=indices])
+
+        >>> cv = CV_Function('my_cv', func, psi=my_global_psi_function)
+
+        We will also check if non-standard modules are imported, which are now
+        numpy, math, msmbuilder, pandas and mdtraj
+        """
+
+        self.c = f
+        self.c_kwargs = f_kwargs
+
+        super(CV_Function, self).__init__(
+            name,
+            c=f,
+            c_kwargs=f_kwargs,
+            var_type=var_type,
+            dimensions=dimensions,
+            store_cache=store_cache,
+            fnc_uses_lists=fnc_uses_lists,
+            simtk_unit=simtk_unit
+        )
+
+    @classmethod
+    def parameters_from_template(cls, f, template):
+        parameters = super(CV_Function, cls).parameters_from_template(f, template)
+        parameters['f'] = parameters['c']
+        del parameters['c']
+        return parameters
+
+    @property
+    def f(self):
+        return self.c
+
+    @property
+    def f_kwargs(self):
+        return self.c_kwargs
+
     def _eval(self, items):
-        # trajectory = paths.Trajectory(items)
-        # return [self.callable_fcn(snap, **self.kwargs) for snap in trajectory]
-        return self.callable_fcn(items, **self.kwargs)
+        # here the kwargs are used in the callable when it is evaluated
+        return self.c(items, **self.c_kwargs)
 
 
-class CV_Class(CollectiveVariable):
+class CV_Class(CV_Callable):
     """Make any callable class `cls` into an `CollectiveVariable`.
 
     the class instance will be called with single snapshots or a list of
@@ -687,17 +753,19 @@ class CV_Class(CollectiveVariable):
     >>> print psi_orderparam( traj.md() )
     """
 
-    _allowed_modules = ['msmbuilder']
+    allowed_modules = ['msmbuilder']
 
     def __init__(
             self,
             name,
-            cls,
-            dimensions=1,
-            store_cache=True,
+            c,
+            c_kwargs=None,
+            var_type='float',
+            dimensions=None,
             fnc_uses_lists=False,
-            var_type=None,
-            **kwargs):
+            simtk_unit=None,
+            store_cache=True
+    ):
         """
         Parameters
         ----------
@@ -719,87 +787,34 @@ class CV_Class(CollectiveVariable):
 
         super(CV_Class, self).__init__(
             name,
+            c=c,
+            c_kwargs=c_kwargs,
+            var_type=var_type,
             dimensions=dimensions,
             store_cache=store_cache,
             fnc_uses_lists=fnc_uses_lists,
-            var_type=var_type
+            simtk_unit=simtk_unit
         )
-        self.callable_cls = cls
-        self.kwargs = kwargs
-        self._instance = cls(**kwargs)
-        return
+
+        self.c_kwargs = c_kwargs
+        # here the kwargs are used when the callable is created (so only once)
+        self._instance = c(**c_kwargs)
+
+    @property
+    def instance(self):
+        return self._instance
 
     def _eval(self, items):
         trajectory = paths.Trajectory(items)
-
-        return [self._instance(snap, **self.kwargs) for snap in trajectory]
-
-    def to_dict(self):
-        cls = None
-        c = self.callable_cls
-        c_module = c.__module__
-        is_local = c_module == '__main__'
-        is_class = isinstance(c, (type, types.ClassType))
-
-        if is_class:
-            if is_local:
-                raise TypeError('Locally defined classes are not storable yet')
-            elif not is_local:
-                if c_module.split('.')[0] in self._allowed_modules:
-                    # only store the function and the module
-                    cls = {
-                        '_module': c.__module__,
-                        '_name': c.__name__
-                    }
-
-        return {
-            'name': self.name,
-            'cls': cls,
-            'dimensions': self.dimensions,
-            'store_cache': self.store_cache,
-            'kwargs': self.kwargs
-        }
-
-    @classmethod
-    def from_dict(cls, dct):
-        c = None
-        c_dict = dct['cls']
-        if c_dict is not None:
-            if '_module' in c_dict:
-                module = c_dict['_module']
-                packages = module.split('.')
-                if packages[0] in cls._allowed_modules:
-                    imp = __import__(module)
-                    c = getattr(imp, c_dict['_name'])
-
-        return cls(
-            name=dct['name'],
-            cls=c,
-            dimensions=dct['dimensions'],
-            store_cache=dct['store_cache'],
-            **dct['kwargs']
-        )
-
-    def __eq__(self, other):
-        """Override the default Equals behavior"""
-        if isinstance(other, self.__class__):
-            if self.name != other.name:
-                return False
-
-            if self.kwargs != other.kwargs:
-                return False
-
-            return True
-
-        return NotImplemented
+        return [self._instance(snap) for snap in trajectory]
 
 
 class CV_MD_Function(CV_Function):
-    """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
+    """Make `CollectiveVariable` from `f` that takes mdtraj.trajectory as input.
 
     This is identical to CV_Function except that the function is called with
     an mdraj.Trajetory object instead of the openpathsampling.Trajectory one using
-    `fnc(traj.md(), **kwargs)`
+    `f(traj.md(), **kwargs)`
 
     Examples
     --------
@@ -815,36 +830,35 @@ class CV_MD_Function(CV_Function):
 
     def __init__(self,
                  name,
-                 fcn,
-                 template=None,
-                 dimensions=None,
-                 store_cache=True,
-                 fnc_uses_lists=True,
+                 f,
+                 f_kwargs=None,
                  var_type='numpy.float32',
+                 dimensions=None,
+                 fnc_uses_lists=True,
                  simtk_unit=None,
-                 single_as_scalar=True,
-                 **kwargs):
+                 store_cache=True,
+                 single_as_scalar=True
+                 ):
         """
         Parameters
         ----------
         name : str
-        fcn : function
+        f : function
         kwargs :
-            named arguments which should be given to `fcn` (for example, the
+            named arguments which should be given to `f` (for example, the
             atoms which define a specific distance/angle)
 
         """
 
         super(CV_MD_Function, self).__init__(
             name,
-            fcn,
-            template=template,
-            dimensions=dimensions,
-            store_cache=store_cache,
-            fnc_uses_lists=fnc_uses_lists,
+            f,
+            f_kwargs=f_kwargs,
             var_type=var_type,
+            dimensions=dimensions,
+            fnc_uses_lists=fnc_uses_lists,
             simtk_unit=simtk_unit,
-            **kwargs
+            store_cache=store_cache
         )
 
         self.single_as_scalar = single_as_scalar
@@ -857,7 +871,7 @@ class CV_MD_Function(CV_Function):
             self._topology = trajectory.topology.md
 
         t = trajectory.md(self._topology)
-        arr = self.callable_fcn(t, **self.kwargs)
+        arr = self.f(t, **self.c_kwargs)
         if self.single_as_scalar and arr.shape[-1] == 1:
             return arr.reshape(arr.shape[:-1])
         else:
@@ -875,7 +889,8 @@ class CV_MD_Function(CV_Function):
 
         return obj
 
-class CV_Featurizer(CV_Class):
+
+class CV_MSMB_Featurizer(CV_Class):
     """
     An CollectiveVariable that uses an MSMBuilder3 featurizer as the logic
 
@@ -885,7 +900,7 @@ class CV_Featurizer(CV_Class):
     cls
     """
 
-    def __init__(self, name, featurizer, store_cache=True, single_as_scalar=True, **kwargs):
+    def __init__(self, name, featurizer, f_kwargs=None, store_cache=True, single_as_scalar=True):
         """
 
         Parameters
@@ -900,33 +915,48 @@ class CV_Featurizer(CV_Class):
         to mdtraj objects for convenience
         """
 
-        self.kwargs = kwargs
+        self.c_kwargs = f_kwargs
         # turn Snapshot and Trajectory into md.trajectory
-        for key in kwargs:
-            if kwargs[key].__class__ is paths.Snapshot:
-                kwargs[key] = kwargs[key].md()
-            elif kwargs[key].__class__ is paths.Trajectory:
-                kwargs[key] = kwargs[key].md()
+        for key in f_kwargs:
+            if f_kwargs[key].__class__ is paths.Snapshot:
+                f_kwargs[key] = f_kwargs[key].md()
+            elif f_kwargs[key].__class__ is paths.Trajectory:
+                f_kwargs[key] = f_kwargs[key].md()
 
-        self._feat = featurizer(**kwargs)
+        _feat = featurizer(**f_kwargs)
         self.single_as_scalar = single_as_scalar
 
-        dimensions = self._feat.n_features
+        dimensions = _feat.n_features
         if self.single_as_scalar and dimensions == 1:
             dimensions = None
 
-        super(CV_Featurizer, self).__init__(
+        super(CV_MSMB_Featurizer, self).__init__(
             name,
-            cls=featurizer,
+            c=featurizer,
+            c_kwargs=self.c_kwargs,
             dimensions=dimensions,
             store_cache=store_cache,
             fnc_uses_lists=True,
             var_type='numpy.float32',
-            **self.kwargs
         )
 
+    @property
+    def featurizer(self):
+        return self.c
+
+    @property
+    def f_kwargs(self):
+        return self.c_kwargs
+
+    @classmethod
+    def parameters_from_template(cls, f, template):
+        parameters = super(CV_MSMB_Featurizer, cls).parameters_from_template(f, template)
+        parameters['f'] = parameters['c']
+        del parameters['c']
+        return parameters
+
     _compare_keys = ['name']
-    _allowed_modules = ['msmbuilder']
+    allowed_modules = ['msmbuilder']
 
     def _eval(self, items):
         trajectory = paths.Trajectory(items)
@@ -935,9 +965,21 @@ class CV_Featurizer(CV_Class):
         ptraj = trajectory.md()
 
         # run the featurizer
-        arr = self._feat.partial_transform(ptraj)
+        arr = self._instance.partial_transform(ptraj)
 
         if self.single_as_scalar and arr.shape[-1] == 1:
             return arr.reshape(arr.shape[:-1])
         else:
             return arr
+
+    def to_dict(self):
+        dct = super(CV_MSMB_Featurizer, self).to_dict()
+        dct['single_as_scalar'] = self.single_as_scalar
+        return dct
+
+    @classmethod
+    def from_dict(cls, dct):
+        obj = super(CV_MSMB_Featurizer, cls).from_dict(dct)
+        obj.single_as_scalar = dct['single_as_scalar']
+
+        return obj

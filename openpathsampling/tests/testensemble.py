@@ -485,7 +485,7 @@ class testSequentialEnsemble(EnsembleTest):
     def test_seqens_order_combo(self):
         # regression test for #229
         import numpy as np
-        op = paths.CV_Function(name="x", fcn=lambda snap : snap.xyz[0][0])
+        op = paths.CV_Function(name="x", f=lambda snap : snap.xyz[0][0])
         bigvol = paths.CVRangeVolume(collectivevariable=op,
                                     lambda_min=-100.0, lambda_max=100.0)
 
