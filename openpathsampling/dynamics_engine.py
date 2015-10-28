@@ -34,6 +34,9 @@ class DynamicsEngine(OPSNamed):
     instantiated.
     '''
 
+    FORWARD = 1
+    BACKWARD = -1
+
     _default_options = {
         'n_frames_max' : None
     }
@@ -229,16 +232,16 @@ class DynamicsEngine(OPSNamed):
         Generate a potential trajectory in ensemble simulating forward in time
         """
 
-        return self.generate(snapshot, ensemble.can_append, forward=True)
+        return self.generate(snapshot, ensemble.can_append, direction=+1)
 
     def generate_backward(self, snapshot, ensemble):
         """
         Generate a potential trajectory in ensemble simulating forward in time
         """
 
-        return self.generate(snapshot, ensemble.can_prepend, forward=False)
+        return self.generate(snapshot, ensemble.can_prepend, direction=-1)
 
-    def generate(self, snapshot, running=None, forward=True):
+    def generate(self, snapshot, running=None, direction=+1):
         r"""
         Generate a trajectory consisting of ntau segments of tau_steps in
         between storage of Snapshots.
@@ -250,6 +253,11 @@ class DynamicsEngine(OPSNamed):
         running : (list of) function(Trajectory)
             callable function of a 'Trajectory' that returns True or False.
             If one of these returns False the simulation is stopped.
+        direction : -1 or +1 (DynamicsEngine.FORWARD or DynamicsEngine.BACKWARD)
+            If +1 then this will integrate forward, if -1 it will reversed the
+            momenta of the given snapshot and then prepending generated snapshots
+            with reversed momenta. This will generate a _reversed_ trajectory that
+            effectively ends in the initial snapshot
 
         Returns
         -------    
@@ -259,7 +267,7 @@ class DynamicsEngine(OPSNamed):
 
         Notes
         -----
-        If the returned trajectory has length n_frames_max it can still be
+        If the returned trajectory has length n_frames_max it can still happen
         that it stopped because of the stopping criterion. You need to check
         in that case.
         """
@@ -274,16 +282,16 @@ class DynamicsEngine(OPSNamed):
 
             trajectory = paths.Trajectory()
 
-            if forward:
+            if direction > 0:
                 self.current_snapshot = snapshot
-            else:
+            elif direction < 0:
                 # backward simulation needs reversed snapshots
                 self.current_snapshot = snapshot.reversed
 
             self.start()
 
             # Store initial state for each trajectory segment in trajectory.
-            trajectory.append(self.current_snapshot)
+            trajectory.append(snapshot)
 
             frame = 0
             # maybe we should stop before we even begin?
@@ -306,16 +314,15 @@ class DynamicsEngine(OPSNamed):
                 
                 # Store snapshot and add it to the trajectory. Stores also
                 # final frame the last time
-                if forward:
+                if direction > 0:
                     trajectory.append(snapshot)
-                else:
+                elif direction < 0:
                     # We are simulating forward and just build in backwards order
                     trajectory.prepend(snapshot.reversed)
 
                 # Check if we should stop. If not, continue simulation
                 stop = self.stop_conditions(trajectory=trajectory,
                                             continue_conditions=running)
-
 
             # exit the while loop once we must stop, so we call the engine's
             # stop function (which should manage any end-of-trajectory
