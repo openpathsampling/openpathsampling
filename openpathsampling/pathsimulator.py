@@ -356,6 +356,7 @@ class FullBootstrapping(PathSimulator):
         self.ensemble0 = ensemble0
         self.all_ensembles = transition.ensembles + self.extra_ensembles
         self.n_ensembles = len(self.all_ensembles)
+        self.error_max_rounds = True
 
 
     def run(self, max_ensemble_rounds=None, n_steps_per_round=20):
@@ -396,9 +397,12 @@ class FullBootstrapping(PathSimulator):
             if n_rounds == max_ensemble_rounds:
                 # hard equality instead of inequality so that None gives us
                 # effectively infinite (rounds add one at a time
-                raise RuntimeError("Too many rounds of bootstrapping: " + 
-                                   str(n_rounds) + " round of " +
-                                   str(n_steps_per_round) + " steps.")
+                msg = ("Too many rounds of bootstrapping: " + str(n_rounds)
+                       + " round of " + str(n_steps_per_round) + " steps.")
+                if self.error_max_rounds:
+                    raise RuntimeError(msg)
+                else:
+                    logger.warn(msg)
             n_filled = len(bootstrap.globalstate)
 
         return bootstrap.globalstate
