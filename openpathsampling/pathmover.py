@@ -1918,7 +1918,6 @@ class MinusMover(SubPathMover):
     _is_canonical = True
 
     def __init__(self, minus_ensemble, innermost_ensembles):
-
         try:
             innermost_ensembles = list(innermost_ensembles)
         except TypeError:
@@ -1979,6 +1978,52 @@ class MinusMover(SubPathMover):
                                                 'innermost_ensembles'])
 
         super(MinusMover, self).__init__(mover)
+
+class SingleReplicaMinusMover(SubPathMover):
+    """
+    Minus mover for single replica TIS.
+    """
+    _is_canonical = True
+
+    def __init__(self, minus_ensemble, innermost_ensembles, bias=None):
+        try:
+            innermost_ensembles = list(innermost_ensembles)
+        except TypeError:
+            innermost_ensembles = [innermost_ensembles]
+
+        segment = minus_ensemble._segment_ensemble
+
+        hop_to_segment = RandomAllowedChoiceMover([
+            EnsembleHopMover(innermost, segment, bias=bias)
+            for innermost in innermost_ensembles
+        ])
+
+        forward_minus = ConditionalSequentialMover([
+            hop_to_segment,
+            ForwardExtendMover(segment, minus_ensemble),
+            FinalSubtrajectorySelectMover(minus_ensemble, segment),
+            RandomChoiceMover([
+                EnsembleHopMover(minus_ensemble, innermost, bias=bias)
+                for innermost in innermost_ensembles
+            ])
+        ])
+
+        backward_minus = ConditionalSequentialMover([
+            hop_to_segment,
+            BackwardExtendMover(segment, minus_ensemble),
+            FirstSubtrajectorySelectMover(minus_ensemble, segment),
+            RandomChoiceMover([
+                EnsembleHopMover(minus_ensemble, innermost, bias=bias)
+                for innermost in innermost_ensembles
+            ])
+        ])
+
+        mover = EnsembleFilterMover(RandomChoiceMover(backward_minus, 
+                                                      forward_minus),
+                                    ensembles=innermost_ensembles)
+
+        super(SingleReplicaMinusMover, self).__init__(mover)
+
 
 
 class PathSimulatorMover(SubPathMover):
