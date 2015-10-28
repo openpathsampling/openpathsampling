@@ -403,6 +403,7 @@ class FullBootstrapping(PathSimulator):
                     raise RuntimeError(msg)
                 else:
                     logger.warning(msg)
+                break
             n_filled = len(bootstrap.globalstate)
 
         return bootstrap.globalstate
