@@ -275,6 +275,9 @@ class DynamicsEngine(OPSNamed):
         # Are we ready to rumble ?
         if self.initialized:
 
+            if direction == 0:
+                raise RuntimeError('direction must be positive (FORWARD) or negative (BACKWARD).')
+
             try:
                 iter(running)
             except:
