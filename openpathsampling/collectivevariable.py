@@ -126,9 +126,9 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self._single_dict.post = self._store_dict
 
     @classmethod
-    def from_template(cls, name, f, template, cv_store_cache=True, **kwargs):
-        parameters = cls.parameters_from_template(f, template)
-        parameters['cv_store_cache'] = cv_store_cache
+    def from_template(cls, name, f, template, **kwargs):
+        f_kwargs = {key: value for key, value in kwargs.iteritems() if not key.startswith('cv_')}
+        parameters = cls.parameters_from_template(f, template, **f_kwargs)
         parameters.update(kwargs)
         return cls(name, **parameters)
 
@@ -154,7 +154,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         return items
 
     @classmethod
-    def parameters_from_template(cls, c, template):
+    def parameters_from_template(cls, c, template, **kwargs):
         """
         Compute parameters suitable for a callable using a template snapshot
 
@@ -192,19 +192,19 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         try:
             # try use single item
-            value_single = c(template)
+            value_single = c(template, **kwargs)
         except:
             eval_single = False
 
         try:
             # try use list item
-            value_list = c([template])
+            value_list = c([template], **kwargs)
         except:
             eval_list = False
 
         try:
             # try use multi list items
-            value_multi = c([template, template])
+            value_multi = c([template, template], **kwargs)
         except:
             eval_multi = False
 
@@ -212,13 +212,14 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             # who knows what happened (after loading), since we
             # cannot use the function we disable the function
             return {
-                'f': None
+                'c': None
             }
+
+        if eval_single:
+            cv_requires_lists = False
 
         if eval_list and eval_multi:
             # check if results are the same
-            if eval_single:
-                cv_requires_lists = False
 
             #TODO: Check if first and second result are equal. Difficult for numpy
             try:
@@ -300,7 +301,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         storage : Storage or None
             the store to be used, otherwise all underlying storages are synced
         """
-        if hasattr(self, 'store_dict'):
+        if hasattr(self, '_store_dict'):
             self._store_dict.sync()
 
     def cache_all(self):
@@ -312,7 +313,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         storage : Storage or None
             the store to be used, otherwise all underlying storages are synced
         """
-        if hasattr(self, 'store_dict'):
+        if hasattr(self, '_store_dict'):
             self._store_dict.cache_all()
 
     _compare_keys = ['name', 'cv_dimensions']
@@ -746,9 +747,9 @@ class CV_Function(CV_Callable):
             c=f,
             cv_var_type=cv_var_type,
             cv_dimensions=cv_dimensions,
-            cv_store_cache=cv_store_cache,
             cv_requires_lists=cv_requires_lists,
             cv_simtk_unit=cv_simtk_unit,
+            cv_store_cache=cv_store_cache,
             **kwargs
         )
 
@@ -757,8 +758,8 @@ class CV_Function(CV_Callable):
         return self.c
 
     @classmethod
-    def parameters_from_template(cls, f, template):
-        parameters = super(CV_Function, cls).parameters_from_template(f, template)
+    def parameters_from_template(cls, f, template, **kwargs):
+        parameters = super(CV_Function, cls).parameters_from_template(f, template, **kwargs)
         parameters['f'] = parameters['c']
         del parameters['c']
         return parameters
