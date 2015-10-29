@@ -1092,3 +1092,113 @@ class testMinusMover(object):
             len(sub[-1][0].trials[0].trajectory),
             len(traj_bad_extension)+self.dyn.n_frames_max-1
         )
+
+
+class testSingleReplicaMinusMover(object):
+    def setup(self):
+        op = CV_Function("myid", fcn=lambda snap :
+                             snap.coordinates[0][0])
+
+        volA = CVRangeVolume(op, -100, 0.0)
+        volB = CVRangeVolume(op, 1.0, 100)
+        volX = CVRangeVolume(op, -100, 0.25)
+        self.dyn = CalvinistDynamics([
+            # successful move: (backward extension then forward)
+            -0.13, 0.13, 0.33, -0.11, -0.12, 0.12, 0.32, -0.131,
+            # never leaves state: 
+            -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15,
+            -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15,
+            -0.25, 
+            -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15,
+            -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15,
+            # goes to other state:
+            1.16, 1.26, 1.16, -0.16, 1.16, 1.26, 1.16
+        ])
+        SampleGeneratingMover.engine = self.dyn
+        self.dyn.initialized = True
+        self.innermost = paths.TISEnsemble(volA, volB, volX)
+        self.minus = paths.MinusInterfaceEnsemble(volA, volX)
+        self.mover = SingleReplicaMinusMover(
+            minus_ensemble=self.minus,
+            innermost_ensembles=self.innermost
+        )
+        self.first_segment = [-0.1, 0.1, 0.3, 0.1, -0.15] 
+        self.list_innermost = [-0.11, 0.11, 0.31, 0.11, -0.12]
+        self.second_segment = [-0.25, 0.2, 0.4, 0.2, -0.2]
+        init_minus = make_1d_traj(
+            coordinates=self.first_segment + [-0.35] + self.second_segment,
+            velocities=[1.0]*11
+        )
+        self.minus_sample = Sample(
+            replica=-1,
+            trajectory=init_minus,
+            ensemble=self.minus
+        )
+
+    def test_is_ensemble_change_mover(self):
+        assert_equal(self.mover.is_ensemble_change_mover, True)
+
+    def test_is_canonical(self):
+        assert_equal(self.mover.is_canonical, True)
+
+    def test_successful_move(self):
+        init_innermost = make_1d_traj(self.list_innermost, [1.0]*5)
+        init_sample = Sample(
+            replica=0,
+            trajectory=init_innermost,
+            ensemble=self.innermost
+        )
+        gs = SampleSet([init_sample, self.minus_sample])
+
+        extend_forward =  self.list_innermost + [0.12, 0.32, -0.131]
+        extend_backward = [-0.13, 0.13, 0.33] + self.list_innermost
+
+        # assert_equal(self.minus(make_1d_traj(extend_forward)), True)
+        # assert_equal(self.minus(make_1d_traj(extend_backward)), True)
+
+        seg_dir = {}
+        for i in range(100):
+            change = self.mover.move(gs)
+            samples = change.results
+            sub_samples = change.subchange.subchange.results
+            # assert_equal(len(samples), 2)
+            # assert_equal(len(sub_samples), 4)
+            # s_inner = [s for s in sub_samples if s.ensemble==self.innermost]
+            # s_minus = [s for s in sub_samples if s.ensemble==self.minus]
+            # s_sub = [s for s in sub_samples if s.ensemble==self.minus._segment_ensemble]
+            #assert_equal(len(s_inner), 1)
+            #assert_equal(len(s_minus), 1)
+            #assert_equal(len(s_sub), 2)
+
+            #for c in change:
+            #    assert_equal(c.accepted, True)
+
+            assert_equal(change.canonical.mover, self.mover)
+
+            # key = ""
+            # s_inner0_xvals = [s.coordinates[0,0] for s in s_inner[0].trajectory]
+            # if items_equal(s_inner0_xvals, self.first_segment):
+                # key += "1"
+            # elif items_equal(s_inner0_xvals, self.second_segment):
+                # key += "2"
+            # else:
+                # print "s_inner0_xvals:", s_inner0_xvals
+                # raise RuntimeError("Chosen segment neither first nor last!")
+
+            # # final sample s_minus is accepted
+            # s_minus_xvals = [s.coordinates[0,0] for s in s_minus[-1].trajectory]
+            # if items_equal(s_minus_xvals, extend_forward):
+                # key += "f"
+            # elif items_equal(s_minus_xvals, extend_backward):
+                # key += "b"
+            # else:
+                # print "s_minus_xvals:", s_minus_xvals
+                # raise RuntimeError("Unexpected minus extension result!")
+
+            # try:
+                # seg_dir[key] += 1
+            # except KeyError:
+                # seg_dir[key] = 1
+        # # assert_equal(len(seg_dir.keys()), 4)
+
+
