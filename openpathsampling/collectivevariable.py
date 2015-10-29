@@ -778,8 +778,6 @@ class CV_Function(CV_Callable):
         obj.kwargs = dct['kwargs']
         return obj
 
-class CV_ScalarFunction(CV_Function):
-    pass
 
 class CV_Class(CV_Callable):
     """Turn any callable class into a `CollectiveVariable`.
