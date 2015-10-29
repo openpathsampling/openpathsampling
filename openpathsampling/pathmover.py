@@ -581,8 +581,7 @@ class ForwardShootGeneratingMover(ShootGeneratingMover):
                 paths.PrefixTrajectoryEnsemble(
                     ensemble,
                     shooting_point.trajectory[0:shooting_point.index]
-                ).can_append,
-                self.engine.max_length_stopper.can_append
+                ).can_append
             ]
         )
 
@@ -617,8 +616,7 @@ class BackwardShootGeneratingMover(ShootGeneratingMover):
                 paths.SuffixTrajectoryEnsemble(
                     ensemble,
                     shooting_point.trajectory[shooting_point.index + 1:]
-                ).can_prepend,
-                self.engine.max_length_stopper.can_append
+                ).can_prepend
             ]
         )
 
@@ -745,8 +743,7 @@ class ForwardExtendGeneratingMover(ExtendingGeneratingMover):
                 paths.PrefixTrajectoryEnsemble(
                     ensemble,
                     initial_trajectory[:-1]
-                ).can_append,
-                self.engine.max_length_stopper.can_append
+                ).can_append
             ]
         )
 
@@ -774,8 +771,7 @@ class BackwardExtendGeneratingMover(ExtendingGeneratingMover):
                 paths.SuffixTrajectoryEnsemble(
                     ensemble,
                     initial_trajectory[1:]
-                ).can_prepend,
-                self.engine.max_length_stopper.can_append
+                ).can_prepend
             ]
         )
 
