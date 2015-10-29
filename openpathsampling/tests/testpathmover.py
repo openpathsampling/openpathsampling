@@ -1157,26 +1157,26 @@ class testSingleReplicaMinusMover(object):
         # assert_equal(self.minus(make_1d_traj(extend_backward)), True)
 
         seg_dir = {}
-        for i in range(100):
+        for i in range(10):
             change = self.mover.move(gs)
             samples = change.results
             sub_samples = change.subchange.subchange.results
-            # assert_equal(len(samples), 2)
-            # assert_equal(len(sub_samples), 4)
-            # s_inner = [s for s in sub_samples if s.ensemble==self.innermost]
-            # s_minus = [s for s in sub_samples if s.ensemble==self.minus]
-            # s_sub = [s for s in sub_samples if s.ensemble==self.minus._segment_ensemble]
-            #assert_equal(len(s_inner), 1)
-            #assert_equal(len(s_minus), 1)
-            #assert_equal(len(s_sub), 2)
+            assert_equal(len(samples), 1)
+            assert_equal(len(sub_samples), 4)
+            s_inner = [s for s in sub_samples if s.ensemble==self.innermost]
+            s_minus = [s for s in sub_samples if s.ensemble==self.minus]
+            s_seg = [s for s in sub_samples if s.ensemble==self.minus._segment_ensemble]
+            assert_equal(len(s_inner), 1)
+            assert_equal(len(s_minus), 1)
+            assert_equal(len(s_seg), 2)
 
-            #for c in change:
-            #    assert_equal(c.accepted, True)
+            for c in change:
+               assert_equal(c.accepted, True)
 
             assert_equal(change.canonical.mover, self.mover)
 
-            # key = ""
-            # s_inner0_xvals = [s.coordinates[0,0] for s in s_inner[0].trajectory]
+            key = ""
+            s_inner0_xvals = [s.coordinates[0,0] for s in s_inner[0].trajectory]
             # if items_equal(s_inner0_xvals, self.first_segment):
                 # key += "1"
             # elif items_equal(s_inner0_xvals, self.second_segment):
@@ -1185,7 +1185,7 @@ class testSingleReplicaMinusMover(object):
                 # print "s_inner0_xvals:", s_inner0_xvals
                 # raise RuntimeError("Chosen segment neither first nor last!")
 
-            # # final sample s_minus is accepted
+            # final sample s_minus is accepted
             # s_minus_xvals = [s.coordinates[0,0] for s in s_minus[-1].trajectory]
             # if items_equal(s_minus_xvals, extend_forward):
                 # key += "f"
