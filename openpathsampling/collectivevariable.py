@@ -27,14 +27,14 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     name : string
         A descriptive name of the collectivevariable. It is used in the string
         representation.
-    cv_var_type : str, default : 'float'
+    cv_return_type : str, default : 'float'
         This specifies the number type of the output of the CV. All types allowed in the netcdfplus.py
         are okay here. Needs to be one of ['bool', 'float', 'index', 'int', 'json', 'lazyobj.*',
         'length', 'long', 'numpy.float32', 'numpy.float64', 'numpy.int16', 'numpy.int32',
         'numpy.int64', 'numpy.int8', 'numpy.uint16', 'numpy.uint32', 'numpy.uint64',
         'numpy.uint8', 'obj.*', 'store', 'str']
-    cv_shape : None or int or tuple of int, default: None
-        A tuple of cv_shape of the output of the collective variable.
+    cv_return_shape : None or int or tuple of int, default: None
+        A tuple of cv_return_shape of the output of the collective variable.
         `tuple()` corresponds to a scalar, so it `None`. An integer corresponds
         to one dimension of the given length, e.g. `1` corresponds to a one dimensional
         array with length 1. `tuple(1,2,3)` corresponds to a 3-dimensional array of
@@ -57,8 +57,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     Attributes
     ----------
     name
-    cv_shape
-    cv_var_type
+    cv_return_shape
+    cv_return_type
     cv_requires_lists
     cv_simtk_unit
     cv_store_cache
@@ -68,13 +68,10 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         an iterable. In the case of a single object. It will be wrapped in a list
         and later only the single element will be returned
     _pre_dict : ChainDict
-        The ChainDict that will convert all possible input types into parsable
+        The ChainDict that will convert all possible input types into
         lists of snapshots, like Trajectory, etc.
     _cache_dict
         The ChainDict that will cache calculated values for fast access
-    _expand_dict
-        The ChainDict that will turn unloaded snapshots into real ones so that the
-        underlying function will be called with real data
     _func_dict
         The ChainDict that will call the actual function in case non of the
         preceding ChainDicts have returned data
@@ -84,8 +81,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     def __init__(
             self,
             name,
-            cv_var_type='float',
-            cv_shape=None,
+            cv_return_type='float',
+            cv_return_shape=None,
             cv_requires_lists=False,
             cv_simtk_unit=None,
             cv_store_cache=False
@@ -99,8 +96,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self.name = name
 
         self.requires_lists = cv_requires_lists
-        self.shape = cv_shape
-        self.var_type = cv_var_type
+        self.return_shape = cv_return_shape
+        self.return_type = cv_return_type
         self.simtk_unit = cv_simtk_unit
 
         self.store_cache = cv_store_cache
@@ -115,7 +112,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         post = self._func_dict + self._cache_dict + self._single_dict
 
-        if 'numpy' in self.var_type:
+        if 'numpy' in self.return_type:
             post = post + cd.MergeNumpy()
 
         super(CollectiveVariable, self).__init__(post=post)
@@ -168,7 +165,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         Returns
         -------
         dict
-            A dictionary containing the approriate input parameters for `cv_cv_var_type`, `cv_shape`,
+            A dictionary containing the approriate input parameters for `cv_cv_return_type`, `cv_return_shape`,
             `cv_requires_lists` and `cv_simtk_unit`
 
         Notes
@@ -245,7 +242,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         else:
             test_value = value_single
 
-        cv_shape = None
+        cv_return_shape = None
         storable = True
         cv_simtk_unit = None
 
@@ -257,10 +254,10 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             test_type = test_type._value
 
         if type(test_type) is np.ndarray:
-            cv_shape = test_type.shape
+            cv_return_shape = test_type.shape
         else:
             if hasattr(test_value, '__len__'):
-                cv_shape = len(test_value)
+                cv_return_shape = len(test_value)
                 test_type = test_value[0]
                 if type(test_type) is u.Quantity:
                     for val in test_value:
@@ -279,11 +276,11 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
                 test_type = test_type._value
 
         if storable:
-            cv_var_type = CollectiveVariable._interprete_num_type(test_type)
+            cv_return_type = CollectiveVariable._interprete_num_type(test_type)
             return {
                 'c': c,
-                'cv_var_type': cv_var_type,
-                'cv_shape': cv_shape,
+                'cv_return_type': cv_return_type,
+                'cv_return_shape': cv_return_shape,
                 'cv_requires_lists': cv_requires_lists,
                 'cv_simtk_unit': cv_simtk_unit
             }
@@ -316,7 +313,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         if hasattr(self, '_store_dict'):
             self._store_dict.cache_all()
 
-    _compare_keys = ['name', 'cv_shape']
+    _compare_keys = ['name', 'cv_return_shape']
 
     def __eq__(self, other):
         """Override the default Equals behavior"""
@@ -492,8 +489,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     def to_dict(self):
         return {
             'name': self.name,
-            'var_type': self.var_type,
-            'shape': self.shape,
+            'return_type': self.return_type,
+            'return_shape': self.return_shape,
             'store_cache': self.store_cache,
             'requires_lists': self.requires_lists,
             'simtk_unit': self.simtk_unit
@@ -505,8 +502,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         CollectiveVariable.__init__(
             obj,
             name=dct['name'],
-            cv_var_type=dct['var_type'],
-            cv_shape=dct['shape'],
+            cv_return_type=dct['return_type'],
+            cv_return_shape=dct['return_shape'],
             cv_requires_lists=dct['requires_lists'],
             cv_simtk_unit=dct['simtk_unit'],
             cv_store_cache=dct['store_cache']
@@ -535,8 +532,8 @@ class CV_Volume(CollectiveVariable):
 
         super(CV_Volume, self).__init__(
             name,
-            cv_var_type='bool',
-            cv_shape=None,
+            cv_return_type='bool',
+            cv_return_shape=None,
             cv_requires_lists=True,
             cv_simtk_unit=None,
             cv_store_cache=cv_store_cache
@@ -580,8 +577,8 @@ class CV_Callable(CollectiveVariable):
             self,
             name,
             c,
-            cv_var_type='float',
-            cv_shape=None,
+            cv_return_type='float',
+            cv_return_shape=None,
             cv_requires_lists=False,
             cv_simtk_unit=None,
             cv_store_cache=True,
@@ -593,8 +590,8 @@ class CV_Callable(CollectiveVariable):
         name
         c : callable (function or class with __call__)
             The callable to be used
-        cv_var_type
-        cv_shape
+        cv_return_type
+        cv_return_shape
         cv_requires_lists
         cv_simtk_unit
         cv_store_cache
@@ -647,8 +644,8 @@ class CV_Callable(CollectiveVariable):
 
         super(CV_Callable, self).__init__(
             name,
-            cv_var_type=cv_var_type,
-            cv_shape=cv_shape,
+            cv_return_type=cv_return_type,
+            cv_return_shape=cv_return_shape,
             cv_store_cache=cv_store_cache,
             cv_requires_lists=cv_requires_lists,
             cv_simtk_unit=cv_simtk_unit
@@ -679,7 +676,7 @@ class CV_Callable(CollectiveVariable):
         if isinstance(other, self.__class__):
             if self.name != other.name:
                 return False
-            if self.shape != other.shape:
+            if self.return_shape != other.return_shape:
                 return False
             if self.kwargs != other.kwargs:
                 return False
@@ -713,8 +710,8 @@ class CV_Function(CV_Callable):
             self,
             name,
             f,
-            cv_var_type='float',
-            cv_shape=None,
+            cv_return_type='float',
+            cv_return_shape=None,
             cv_requires_lists=False,
             cv_simtk_unit=None,
             cv_store_cache=True,
@@ -726,8 +723,8 @@ class CV_Function(CV_Callable):
         name : str
         f : function
             The function to be used
-        cv_var_type
-        cv_shape
+        cv_return_type
+        cv_return_shape
         cv_requires_lists
         cv_simtk_unit
         cv_store_cache
@@ -745,8 +742,8 @@ class CV_Function(CV_Callable):
         super(CV_Function, self).__init__(
             name,
             c=f,
-            cv_var_type=cv_var_type,
-            cv_shape=cv_shape,
+            cv_return_type=cv_return_type,
+            cv_return_shape=cv_return_shape,
             cv_requires_lists=cv_requires_lists,
             cv_simtk_unit=cv_simtk_unit,
             cv_store_cache=cv_store_cache,
@@ -797,8 +794,8 @@ class CV_Class(CV_Callable):
             self,
             name,
             c,
-            cv_var_type='float',
-            cv_shape=None,
+            cv_return_type='float',
+            cv_return_shape=None,
             cv_requires_lists=False,
             cv_simtk_unit=None,
             cv_store_cache=True,
@@ -810,8 +807,8 @@ class CV_Class(CV_Callable):
         name
         c : callable class
             a class where instances have a `__call__` attribute
-        cv_var_type
-        cv_shape
+        cv_return_type
+        cv_return_shape
         cv_requires_lists
         cv_simtk_unit
         cv_store_cache
@@ -830,8 +827,8 @@ class CV_Class(CV_Callable):
         super(CV_Class, self).__init__(
             name,
             c=c,
-            cv_var_type=cv_var_type,
-            cv_shape=cv_shape,
+            cv_return_type=cv_return_type,
+            cv_return_shape=cv_return_shape,
             cv_store_cache=cv_store_cache,
             cv_requires_lists=cv_requires_lists,
             cv_simtk_unit=cv_simtk_unit,
@@ -878,8 +875,8 @@ class CV_MD_Function(CV_Function):
     def __init__(self,
                  name,
                  f,
-                 cv_var_type='numpy.float32',
-                 cv_shape=None,
+                 cv_return_type='numpy.float32',
+                 cv_return_shape=None,
                  cv_requires_lists=True,
                  cv_simtk_unit=None,
                  cv_store_cache=True,
@@ -892,8 +889,8 @@ class CV_MD_Function(CV_Function):
         name : str
         f
         f_kwargs
-        cv_var_type
-        cv_shape
+        cv_return_type
+        cv_return_shape
         cv_requires_lists
         cv_simtk_unit
         cv_store_cache
@@ -907,8 +904,8 @@ class CV_MD_Function(CV_Function):
         super(CV_MD_Function, self).__init__(
             name,
             f,
-            cv_var_type=cv_var_type,
-            cv_shape=cv_shape,
+            cv_return_type=cv_return_type,
+            cv_return_shape=cv_return_shape,
             cv_requires_lists=cv_requires_lists,
             cv_simtk_unit=cv_simtk_unit,
             cv_store_cache=cv_store_cache,
@@ -967,8 +964,8 @@ class CV_MSMB_Featurizer(CV_Class):
             atoms which define a specific distance/angle). Finally an instance
             `instance = cls(**kwargs)` is create when the CV is created and
             using the CV will call `instance(snapshots)`
-        cv_var_type
-        cv_shape
+        cv_return_type
+        cv_return_shape
         cv_requires_lists
         cv_simtk_unit
         cv_store_cache
@@ -996,17 +993,17 @@ class CV_MSMB_Featurizer(CV_Class):
         self._instance = featurizer(**md_kwargs)
         self.single_as_scalar = cv_single_as_scalar
 
-        shape = self._instance.n_features
-        if self.single_as_scalar and shape == 1:
-            shape = None
+        return_shape = self._instance.n_features
+        if self.single_as_scalar and return_shape == 1:
+            return_shape = None
 
         super(CV_Class, self).__init__(
             name,
             c=featurizer,
-            cv_shape=shape,
+            cv_return_shape=return_shape,
             cv_store_cache=cv_store_cache,
             cv_requires_lists=True,
-            cv_var_type='numpy.float32',
+            cv_return_type='numpy.float32',
             cv_simtk_unit=None,
             **kwargs
         )

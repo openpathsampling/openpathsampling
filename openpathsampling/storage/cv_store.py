@@ -52,8 +52,8 @@ class ObjectDictStore(ObjectStore):
             if var_name not in self.storage.variables:
                 self.key_store.init_variable(
                     var_name,
-                    objectdict.var_type,
-                    objectdict.shape,
+                    objectdict.return_type,
+                    objectdict.return_shape,
                     maskable=True
                 )
                 self.storage.update_delegates()
