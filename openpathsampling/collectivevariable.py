@@ -40,14 +40,14 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         array with length 1. `tuple(1,2,3)` corresponds to a 3-dimensional array of
         size 1 by 2 by 3 elements. The higher dimensional array are usually used with
         numpy arrays.
+    cv_return_simtk_unit : simtk.unit.Unit, default: None
+        A simtk.unit.Unit instance specifying the used unit of the output. This means the
+        function should return a value with unit. When cached the unit is stripped and when
+        loaded recreated.
     cv_requires_lists : If `True` the internal function  always a list of elements instead
         of single values. It also means that if you call the CV with a list of snapshots a list
         of snapshot objects will be passed. If `False` a list of Snapshots like a trajectory will
         be passed one by one.
-    cv_simtk_unit : simtk.unit.Unit, default: None
-        A simtk.unit.Unit instance specifying the used unit of the output. This means the
-        function should return a value with unit. When cached the unit is stripped and when
-        loaded recreated.
     cv_store_cache : bool
         If `True` this CV has a cache on disk attached in form of a table in a netcdf file.
         If set to `False` then there will be no storage created when the cv is stored
@@ -59,8 +59,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     name
     cv_return_shape
     cv_return_type
+    cv_return_simtk_unit
     cv_requires_lists
-    cv_simtk_unit
     cv_store_cache
 
     _single_dict : ChainDict
@@ -83,8 +83,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             name,
             cv_return_type='float',
             cv_return_shape=None,
+            cv_return_simtk_unit=None,
             cv_requires_lists=False,
-            cv_simtk_unit=None,
             cv_store_cache=False
     ):
         if (type(name) is not str and type(name) is not unicode) or len(
@@ -98,12 +98,12 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self.requires_lists = cv_requires_lists
         self.return_shape = cv_return_shape
         self.return_type = cv_return_type
-        self.simtk_unit = cv_simtk_unit
+        self.simtk_unit = cv_return_simtk_unit
 
         self.store_cache = cv_store_cache
 
         self._single_dict = cd.ExpandSingle()
-        self._cache_dict = cd.CacheChainDict(WeakLRUCache(100000, weak_type='key'))
+        self._cache_dict = cd.CacheChainDict(WeakLRUCache(1000, weak_type='key'))
 
         self._func_dict = cd.Function(
             self._eval,
@@ -118,7 +118,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         super(CollectiveVariable, self).__init__(post=post)
 
     def set_cache_store(self, key_store, value_store):
-        self._store_dict = cd.StoredDict(key_store, value_store)
+        self._store_dict = cd.StoredDict(key_store, value_store, self._cache_dict.cache)
         self._store_dict.post = self._cache_dict
         self._single_dict.post = self._store_dict
 
@@ -134,7 +134,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     __hash__ = object.__hash__
 
     @staticmethod
-    def _interprete_num_type(instance):
+    def _identify_var_type(instance):
         ty = type(instance)
 
         known_types = [float, int, bool, str]
@@ -166,7 +166,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         -------
         dict
             A dictionary containing the approriate input parameters for `cv_cv_return_type`, `cv_return_shape`,
-            `cv_requires_lists` and `cv_simtk_unit`
+            `cv_requires_lists` and `cv_return_simtk_unit`
 
         Notes
         -----
@@ -244,13 +244,13 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         cv_return_shape = None
         storable = True
-        cv_simtk_unit = None
+        cv_return_simtk_unit = None
 
         test_type = test_value
 
         if type(test_type) is u.Quantity:
             # could be a Quantity([..])
-            cv_simtk_unit = test_type.unit
+            cv_return_simtk_unit = test_type.unit
             test_type = test_type._value
 
         if type(test_type) is np.ndarray:
@@ -272,17 +272,17 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
             if type(test_type) is u.Quantity:
                 # could also be [Quantity, ...]
-                cv_simtk_unit = test_type.unit
+                cv_return_simtk_unit = test_type.unit
                 test_type = test_type._value
 
         if storable:
-            cv_return_type = CollectiveVariable._interprete_num_type(test_type)
+            cv_return_type = CollectiveVariable._identify_var_type(test_type)
             return {
                 'c': c,
                 'cv_return_type': cv_return_type,
                 'cv_return_shape': cv_return_shape,
                 'cv_requires_lists': cv_requires_lists,
-                'cv_simtk_unit': cv_simtk_unit
+                'cv_return_simtk_unit': cv_return_simtk_unit
             }
 
         return {
@@ -492,8 +492,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             'return_type': self.return_type,
             'return_shape': self.return_shape,
             'store_cache': self.store_cache,
-            'requires_lists': self.requires_lists,
-            'simtk_unit': self.simtk_unit
+            'simtk_unit': self.simtk_unit,
+            'requires_lists': self.requires_lists
         }
 
     @classmethod
@@ -504,8 +504,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             name=dct['name'],
             cv_return_type=dct['return_type'],
             cv_return_shape=dct['return_shape'],
+            cv_return_simtk_unit=dct['simtk_unit'],
             cv_requires_lists=dct['requires_lists'],
-            cv_simtk_unit=dct['simtk_unit'],
             cv_store_cache=dct['store_cache']
         )
         return obj
@@ -534,8 +534,8 @@ class CV_Volume(CollectiveVariable):
             name,
             cv_return_type='bool',
             cv_return_shape=None,
+            cv_return_simtk_unit=None,
             cv_requires_lists=True,
-            cv_simtk_unit=None,
             cv_store_cache=cv_store_cache
         )
         self.volume = volume
@@ -579,8 +579,8 @@ class CV_Callable(CollectiveVariable):
             c,
             cv_return_type='float',
             cv_return_shape=None,
+            cv_return_simtk_unit=None,
             cv_requires_lists=False,
-            cv_simtk_unit=None,
             cv_store_cache=True,
             **kwargs
     ):
@@ -592,8 +592,8 @@ class CV_Callable(CollectiveVariable):
             The callable to be used
         cv_return_type
         cv_return_shape
+        cv_return_simtk_unit
         cv_requires_lists
-        cv_simtk_unit
         cv_store_cache
         kwargs : **kwargs
             a dictionary with named arguments which should be used
@@ -646,9 +646,9 @@ class CV_Callable(CollectiveVariable):
             name,
             cv_return_type=cv_return_type,
             cv_return_shape=cv_return_shape,
-            cv_store_cache=cv_store_cache,
+            cv_return_simtk_unit=cv_return_simtk_unit,
             cv_requires_lists=cv_requires_lists,
-            cv_simtk_unit=cv_simtk_unit
+            cv_store_cache=cv_store_cache
         )
 
         self.c = c
@@ -712,8 +712,8 @@ class CV_Function(CV_Callable):
             f,
             cv_return_type='float',
             cv_return_shape=None,
+            cv_return_simtk_unit=None,
             cv_requires_lists=False,
-            cv_simtk_unit=None,
             cv_store_cache=True,
             **kwargs
     ):
@@ -725,8 +725,8 @@ class CV_Function(CV_Callable):
             The function to be used
         cv_return_type
         cv_return_shape
+        cv_return_simtk_unit
         cv_requires_lists
-        cv_simtk_unit
         cv_store_cache
         kwargs : **kwargs
             a dictionary of named arguments which should be given to `f` (for example, the
@@ -744,8 +744,8 @@ class CV_Function(CV_Callable):
             c=f,
             cv_return_type=cv_return_type,
             cv_return_shape=cv_return_shape,
+            cv_return_simtk_unit=cv_return_simtk_unit,
             cv_requires_lists=cv_requires_lists,
-            cv_simtk_unit=cv_simtk_unit,
             cv_store_cache=cv_store_cache,
             **kwargs
         )
@@ -794,8 +794,8 @@ class CV_Class(CV_Callable):
             c,
             cv_return_type='float',
             cv_return_shape=None,
+            cv_return_simtk_unit=None,
             cv_requires_lists=False,
-            cv_simtk_unit=None,
             cv_store_cache=True,
             **kwargs
     ):
@@ -807,8 +807,8 @@ class CV_Class(CV_Callable):
             a class where instances have a `__call__` attribute
         cv_return_type
         cv_return_shape
+        cv_return_simtk_unit
         cv_requires_lists
-        cv_simtk_unit
         cv_store_cache
         **kwargs : **kwargs
             a dictionary of named arguments which should be given to `c` (for example, the
@@ -827,9 +827,9 @@ class CV_Class(CV_Callable):
             c=c,
             cv_return_type=cv_return_type,
             cv_return_shape=cv_return_shape,
-            cv_store_cache=cv_store_cache,
+            cv_return_simtk_unit=cv_return_simtk_unit,
             cv_requires_lists=cv_requires_lists,
-            cv_simtk_unit=cv_simtk_unit,
+            cv_store_cache=cv_store_cache,
             **kwargs
         )
 
@@ -875,8 +875,8 @@ class CV_MD_Function(CV_Function):
                  f,
                  cv_return_type='numpy.float32',
                  cv_return_shape=None,
+                 cv_return_simtk_unit=None,
                  cv_requires_lists=True,
-                 cv_simtk_unit=None,
                  cv_store_cache=True,
                  cv_single_as_scalar=True,
                  **kwargs
@@ -890,7 +890,7 @@ class CV_MD_Function(CV_Function):
         cv_return_type
         cv_return_shape
         cv_requires_lists
-        cv_simtk_unit
+        cv_return_simtk_unit
         cv_store_cache
         single_as_scalar : bool, default: True
             If `True` then arrays of length 1 will be treated as array with one dimension less.
@@ -904,8 +904,8 @@ class CV_MD_Function(CV_Function):
             f,
             cv_return_type=cv_return_type,
             cv_return_shape=cv_return_shape,
+            cv_return_simtk_unit=cv_return_simtk_unit,
             cv_requires_lists=cv_requires_lists,
-            cv_simtk_unit=cv_simtk_unit,
             cv_store_cache=cv_store_cache,
             **kwargs
         )
@@ -964,8 +964,8 @@ class CV_MSMB_Featurizer(CV_Class):
             using the CV will call `instance(snapshots)`
         cv_return_type
         cv_return_shape
+        cv_return_simtk_unit
         cv_requires_lists
-        cv_simtk_unit
         cv_store_cache
         single_as_scalar : bool, default: True
             If `True` then arrays of length 1 will be treated as array with one dimension less.
@@ -998,11 +998,11 @@ class CV_MSMB_Featurizer(CV_Class):
         super(CV_Class, self).__init__(
             name,
             c=featurizer,
+            cv_return_type='numpy.float32',
             cv_return_shape=return_shape,
+            cv_return_simtk_unit=None,
             cv_store_cache=cv_store_cache,
             cv_requires_lists=True,
-            cv_return_type='numpy.float32',
-            cv_simtk_unit=None,
             **kwargs
         )
 

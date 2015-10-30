@@ -119,7 +119,7 @@ class LRUCache(Cache):
 
     @property
     def size(self):
-        return -1, 0
+        return self.size_limit, 0
 
     @property
     def size_limit(self):
@@ -234,6 +234,21 @@ class WeakLRUCache(Cache):
 
         self._cache[key] = value
         self._check_size_limit()
+
+    def get_silent(self, item):
+        """
+        Return item from the dict if it exists, None otherwise without reordering the LRU
+        """
+        if item is None:
+            return None
+
+        try:
+            return self._cache[item]
+        except(KeyError):
+            try:
+                return self._weak_cache[item]
+            except(KeyError):
+                return None
 
     def _check_size_limit(self):
         if self.size_limit is not None:

@@ -302,7 +302,7 @@ class StoredDict(ChainDict):
     """
     ChainDict that has a store attached and return existing values from the store
     """
-    def __init__(self, key_store, value_store, cache=None):
+    def __init__(self, key_store, value_store, main_cache, cache=None):
         """
         Parameters
         ----------
@@ -317,11 +317,13 @@ class StoredDict(ChainDict):
         super(StoredDict, self).__init__()
         self.value_store = value_store
         self.key_store = key_store
+        self.main_cache = main_cache
         self.max_save_buffer_size = None
         if cache is None:
             cache = LRUCache(100000)
         self.cache = cache
         self.storable = set()
+        self._last_n_objects = 0
 
     def _add_new(self, items, values):
         for item, value in zip(items, values):
@@ -334,11 +336,28 @@ class StoredDict(ChainDict):
             self.sync()
 
     def sync(self):
+        # Sync objects that had been saved and afterwards the CV was computed
         if len(self.storable) > 0:
             keys = [idx for idx in sorted(list(self.storable)) if idx in self.cache]
             values = [self.cache[idx] for idx in keys]
             self.value_store[keys] = values
             self.storable.clear()
+
+        # Sync objects that first had a value computed and were later stored
+        # For these we need to check the main_cache
+
+        if self._last_n_objects < len(self.key_store):
+            keys = range(self._last_n_objects, len(self.key_store))
+            objs = map(self.key_store.cache.get_silent, keys)
+            values = map(self.main_cache.get_silent, objs)
+            pairs = [(key, value) for key, value in zip(keys, values) if value is not None]
+            keys, values = zip(*pairs)
+
+            self.value_store[list(keys)] = list(values)
+            for key, value in pairs:
+                self.cache[key] = value
+            self._last_n_objects = len(self.key_store)
+
 
     def cache_all(self):
         values = self.value_store[:]

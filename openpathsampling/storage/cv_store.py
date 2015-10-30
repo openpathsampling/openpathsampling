@@ -36,6 +36,11 @@ class ObjectDictStore(ObjectStore):
         if objectdict.store_cache:
             self.create_cache(objectdict)
 
+    def force_cache_update(self):
+        """
+        After saving snapshots
+        """
+
     def cache_var_name(self, idx):
         if type(idx) is not int:
             idx = self.index.get(idx, None)

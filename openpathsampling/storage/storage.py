@@ -492,3 +492,4 @@ class AnalysisStorage(Storage):
         storage.pathmovers.cache_all()
         storage.pathmovechanges.cache_all()
         storage.steps.cache_all()
+#        storage.trajectories.cache_all()
