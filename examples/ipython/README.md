@@ -30,12 +30,11 @@ See below for a complete list of available notebooks.
 
 This is the main example illustrating the usage of OpenPathSampling for a Multi-State Transition Interface Sampling in a 2D toy potential with 3 states and using a simple Langevin integrator
 
+
 - [`mstis_bootstrap.ipynb`](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/mstis_bootstrap.ipynb)
     [Part 1] of the MSTIS (Multi State TIS) testing notebooks. This will setup the general system and create initial pathways to be used in later parts. Contains an example on how to use bootstrapping.
-
 - [`mstis.ipynb`](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/mstis.ipynb)
     [Part 2] of the MSTIS (Multi State TIS) testing notebooks. This uses the previously generated initial pathways and generates data to be analyzed later.
-
 - [`mstis_analysis.ipynb`](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/mstis_analysis.ipynb)
     [Part 3] of the MSTIS (Multi State TIS) testing notebooks. This takes the previously generated data and does a complete analysis on them. Including different visualizations, rate computations, flow analysis, etc.
 
@@ -43,10 +42,10 @@ This is the main example illustrating the usage of OpenPathSampling for a Multi-
 
 This uses a similar setup as the MSTIS example but assignes different interfaces per outgoing transition. 
 
-- [`mistis_setup.ipynb`](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/mistis_setup.ipynb)	
+- [`mistis_setup.ipynb`](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/mistis_setup.ipynb)
     [Part 1] of the MISTIS (Multi Interface Set TIS) testing notebooks. This creates the full setup and runs a few Monte Carlo steps for later analysis
 
-- [`mistis_analysis.ipynb`](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/mistis_analysis.ipynb)	
+- [`mistis_analysis.ipynb`](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/mistis_analysis.ipynb)
     [Part 2] of the MISTIS (Multi Interface Set TIS) testing notebooks. This load the previously generated data, does some analysis and visualization on the results 
 
 #### Alanine Dipeptide in explicit water example
