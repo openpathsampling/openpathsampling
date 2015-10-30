@@ -110,7 +110,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self.store_cache = cv_store_cache
 
         self._single_dict = cd.ExpandSingle()
-        self._cache_dict = cd.CacheChainDict(WeakLRUCache(1000, weak_type='key'))
+        self._cache_dict = cd.ReversibleCacheChainDict(WeakLRUCache(1000, weak_type='key'), reversible=cv_reversible)
 
         self._func_dict = cd.Function(
             self._eval,
@@ -125,7 +125,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         super(CollectiveVariable, self).__init__(post=post)
 
     def set_cache_store(self, key_store, value_store):
-        self._store_dict = cd.StoredDict(
+        self._store_dict = cd.ReversibleStoredDict(
             key_store,
             value_store,
             self._cache_dict.cache,

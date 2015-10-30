@@ -288,7 +288,28 @@ class CacheChainDict(ChainDict):
     def _add_new(self, items, values):
         for item, value in zip(items, values):
             self.cache[item] = value
+            if self.reversible:
+                self.cache[item.reversed] = value
 
+class ReversibleCacheChainDict(CacheChainDict):
+    """
+    Return Values from a cache filled from returned values of the underlying ChainDicts and
+    """
+    def __init__(self, cache, reversible=False):
+        """
+        Parameters
+        ----------
+        cache : dict-like class
+            the dict or cache to be used to store the data
+        """
+        super(ReversibleCacheChainDict, self).__init__(cache)
+        self.reversible = reversible
+
+    def _add_new(self, items, values):
+        for item, value in zip(items, values):
+            self.cache[item] = value
+            if self.reversible:
+                self.cache[item.reversed] = value
 
 class LRUChainDict(CacheChainDict):
     """
@@ -302,7 +323,7 @@ class StoredDict(ChainDict):
     """
     ChainDict that has a store attached and return existing values from the store
     """
-    def __init__(self, key_store, value_store, main_cache, cache=None, reversible=True):
+    def __init__(self, key_store, value_store, main_cache, cache=None):
         """
         Parameters
         ----------
@@ -318,7 +339,6 @@ class StoredDict(ChainDict):
         self.value_store = value_store
         self.key_store = key_store
         self.main_cache = main_cache
-        self.reversible = True
         self.max_save_buffer_size = None
         if cache is None:
             cache = LRUCache(100000)
@@ -332,9 +352,6 @@ class StoredDict(ChainDict):
             if key is not None:
                 self.cache[key] = value
                 self.storable.add(key)
-                if self.reversible:
-                    s_idx = 2 * key
-
 
         if self.max_save_buffer_size is not None and len(self.storable) > self.max_save_buffer_size:
             self.sync()
@@ -406,3 +423,67 @@ class StoredDict(ChainDict):
             replace = [None if key is None else self.cache[key] if key in self.cache else None for key in keys]
 
         return replace
+
+class ReversibleStoredDict(StoredDict):
+    """
+    ChainDict that has a store attached and return existing values from the store. Supports reversible items
+    """
+    def __init__(self, key_store, value_store, main_cache, cache=None, reversible=True):
+        """
+        Parameters
+        ----------
+        key_store : storage.Store
+            the store that references usable keys
+        value_store : storage.Variable
+            the store that references the store variable to store the values by index
+        cache : dict-like or cache, default: None
+            the cache used to access stored values faster. If None an LRUCache with
+            100000 entries is used
+        """
+        super(ReversibleStoredDict, self).__init__(key_store, value_store, main_cache)
+        self.reversible = reversible
+
+    def _add_new(self, items, values):
+        for item, value in zip(items, values):
+            key = self._get_key(item)
+            if key is not None:
+                self.cache[key] = value
+                self.storable.add(key)
+                if self.reversible:
+                    # if reversible store also for reversed
+                    s_key = key + 1 - 2 * (key % 2)
+                    self.cache[s_key] = value
+                    self.storable.add(s_key)
+
+        if self.max_save_buffer_size is not None and len(self.storable) > self.max_save_buffer_size:
+            self.sync()
+
+    def sync(self):
+        # Sync objects that had been saved and afterwards the CV was computed
+        if len(self.storable) > 0:
+            keys = [idx for idx in sorted(list(self.storable)) if idx in self.cache]
+            values = [self.cache[idx] for idx in keys]
+            self.value_store[keys] = values
+            self.storable.clear()
+
+        # Sync objects that first had a value computed and were later stored
+        # For these we need to check the main_cache
+
+        if self._last_n_objects < len(self.key_store):
+            keys = range(self._last_n_objects, len(self.key_store))
+            objs = map(self.key_store.cache.get_silent, keys)
+            values = map(self.main_cache.get_silent, objs)
+
+            if self.reversible:
+                # double all pairs of values and remove Nones
+                values = map(lambda x : x[0] or x[1], zip(values[0::2], values[1::2]))
+                values = [val for val in values for _ in (0, 1)]
+
+            pairs = [(key, value) for key, value in zip(keys, values) if value is not None]
+            keys, values = zip(*pairs)
+
+            self._last_n_objects = len(self.key_store)
+
+            self.value_store[list(keys)] = list(values)
+            for key, value in pairs:
+                self.cache[key] = value
