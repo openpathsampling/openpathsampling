@@ -480,10 +480,11 @@ class ReversibleStoredDict(StoredDict):
                 values = [val for val in values for _ in (0, 1)]
 
             pairs = [(key, value) for key, value in zip(keys, values) if value is not None]
-            keys, values = zip(*pairs)
+            if len(pairs) > 0:
+                keys, values = zip(*pairs)
 
-            self._last_n_objects = len(self.key_store)
+                self._last_n_objects = len(self.key_store)
 
-            self.value_store[list(keys)] = list(values)
-            for key, value in pairs:
-                self.cache[key] = value
+                self.value_store[list(keys)] = list(values)
+                for key, value in pairs:
+                    self.cache[key] = value
