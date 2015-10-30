@@ -20,7 +20,7 @@ from snapshot import Snapshot, Configuration, Momentum
 from trajectory import Trajectory
 from sample import Sample, SampleSet
 
-from collectivevariable import CV_Function, CV_MD_Function, CV_MSMB_Featurizer, \
+from collectivevariable import CV_Function, CV_MDTraj_Function, CV_MSMB_Featurizer, \
     CV_Volume, CollectiveVariable
 
 from pathmover import (

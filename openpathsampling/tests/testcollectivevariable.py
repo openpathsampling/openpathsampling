@@ -26,7 +26,7 @@ class testCV_Function(object):
     def test_dihedral_op(self):
         """ Create a dihedral order parameter """
         psi_atoms = [6,8,14,16]
-        dihedral_op = op.CV_MD_Function("psi", md.compute_dihedrals, indices= [psi_atoms])
+        dihedral_op = op.CV_MDTraj_Function("psi", md.compute_dihedrals, indices= [psi_atoms])
 
         md_dihed = md.compute_dihedrals(self.mdtraj, indices=[psi_atoms])
         my_dihed =  dihedral_op(self.traj)

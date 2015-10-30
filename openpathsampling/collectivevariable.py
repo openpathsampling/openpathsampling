@@ -44,7 +44,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         A simtk.unit.Unit instance specifying the used unit of the output. This means the
         function should return a value with unit. When cached the unit is stripped and when
         loaded recreated.
-    cv_reversible : bool, default: True
+    cv_time_reversible : bool, default: True
         If `True` the CV assumes that reversed snapshots have the same value. This is the
         default case when CVs do not depend on momenta reversal. This will speed up computation of
         CVs by about a factor of two. In rare cases you might want to set this to `False`
@@ -64,7 +64,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     cv_return_shape
     cv_return_type
     cv_return_simtk_unit
-    cv_reversible
+    cv_time_reversible
     cv_requires_lists
     cv_store_cache
 
@@ -89,7 +89,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             cv_return_type='float',
             cv_return_shape=None,
             cv_return_simtk_unit=None,
-            cv_reversible=True,
+            cv_time_reversible=False,
             cv_requires_lists=False,
             cv_store_cache=False
     ):
@@ -101,7 +101,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         self.name = name
 
-        self.reversible = cv_reversible
+        self.time_reversible = cv_time_reversible
         self.requires_lists = cv_requires_lists
         self.return_shape = cv_return_shape
         self.return_type = cv_return_type
@@ -110,7 +110,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self.store_cache = cv_store_cache
 
         self._single_dict = cd.ExpandSingle()
-        self._cache_dict = cd.ReversibleCacheChainDict(WeakLRUCache(1000, weak_type='key'), reversible=cv_reversible)
+        self._cache_dict = cd.ReversibleCacheChainDict(WeakLRUCache(1000, weak_type='key'), reversible=cv_time_reversible)
 
         self._func_dict = cd.Function(
             self._eval,
@@ -129,7 +129,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             key_store,
             value_store,
             self._cache_dict.cache,
-            reversible=self.reversible
+            reversible=self.time_reversible
         )
         self._store_dict.post = self._cache_dict
         self._single_dict.post = self._store_dict
@@ -188,11 +188,16 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         --------
         openpathsampling.CollectiveVariable.from_template
         """
+
+        cv_time_reversible = False
+
         eval_single = True
         value_single = None
+        value_single_reversed = None
 
         eval_list = True
         value_list = None
+        value_list_reversed = None
 
         eval_multi = True
         value_multi = None
@@ -202,12 +207,14 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         try:
             # try use single item
             value_single = c(template, **kwargs)
+            value_single_reversed = c(template.reversed, **kwargs)
         except:
             eval_single = False
 
         try:
             # try use list item
             value_list = c([template], **kwargs)
+            value_list_reversed = c([template.reversed], **kwargs)
         except:
             eval_list = False
 
@@ -224,6 +231,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
                 'c': None
             }
 
+        # Determine if we can use lists or not
         if eval_single:
             cv_requires_lists = False
 
@@ -246,13 +254,22 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
                 'c': c
             }
 
-        # Determine if storable or not. Means values must be numeric
-        # or a list of numeric values
+        # Get test values
 
         if cv_requires_lists:
             test_value = value_list[0]
+            test_value_reversed = value_list_reversed[0]
         else:
             test_value = value_single
+            test_value_reversed = value_single_reversed
+
+        # Determine of we can reverse momenta without effect
+        if cv_requires_lists:
+            try:
+                if test_value == test_value_reversed:
+                    cv_time_reversible = True
+            except:
+                pass
 
         cv_return_shape = None
         storable = True
@@ -293,8 +310,9 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
                 'c': c,
                 'cv_return_type': cv_return_type,
                 'cv_return_shape': cv_return_shape,
+                'cv_return_simtk_unit': cv_return_simtk_unit,
                 'cv_requires_lists': cv_requires_lists,
-                'cv_return_simtk_unit': cv_return_simtk_unit
+                'cv_time_reversible': cv_time_reversible
             }
 
         return {
@@ -504,7 +522,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             'return_type': self.return_type,
             'return_shape': self.return_shape,
             'simtk_unit': self.simtk_unit,
-            'reversible': self.reversible,
+            'time_reversible': self.time_reversible,
             'requires_lists': self.requires_lists,
             'store_cache': self.store_cache
         }
@@ -518,7 +536,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             cv_return_type=dct['return_type'],
             cv_return_shape=dct['return_shape'],
             cv_return_simtk_unit=dct['simtk_unit'],
-            cv_reversible=dct['reversible'],
+            cv_time_reversible=dct['time_reversible'],
             cv_requires_lists=dct['requires_lists'],
             cv_store_cache=dct['store_cache']
         )
@@ -549,7 +567,7 @@ class CV_Volume(CollectiveVariable):
             cv_return_type='bool',
             cv_return_shape=None,
             cv_return_simtk_unit=None,
-            cv_reversible=True,
+            cv_time_reversible=True,
             cv_requires_lists=True,
             cv_store_cache=cv_store_cache
         )
@@ -595,7 +613,7 @@ class CV_Callable(CollectiveVariable):
             cv_return_type='float',
             cv_return_shape=None,
             cv_return_simtk_unit=None,
-            cv_reversible=True,
+            cv_time_reversible=False,
             cv_requires_lists=False,
             cv_store_cache=True,
             **kwargs
@@ -609,7 +627,7 @@ class CV_Callable(CollectiveVariable):
         cv_return_type
         cv_return_shape
         cv_return_simtk_unit
-        cv_reversible
+        cv_time_reversible
         cv_requires_lists
         cv_store_cache
         kwargs : **kwargs
@@ -664,7 +682,7 @@ class CV_Callable(CollectiveVariable):
             cv_return_type=cv_return_type,
             cv_return_shape=cv_return_shape,
             cv_return_simtk_unit=cv_return_simtk_unit,
-            cv_reversible=cv_reversible,
+            cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
             cv_store_cache=cv_store_cache
         )
@@ -731,7 +749,7 @@ class CV_Function(CV_Callable):
             cv_return_type='float',
             cv_return_shape=None,
             cv_return_simtk_unit=None,
-            cv_reversible=True,
+            cv_time_reversible=False,
             cv_requires_lists=False,
             cv_store_cache=True,
             **kwargs
@@ -764,7 +782,7 @@ class CV_Function(CV_Callable):
             cv_return_type=cv_return_type,
             cv_return_shape=cv_return_shape,
             cv_return_simtk_unit=cv_return_simtk_unit,
-            cv_reversible=cv_reversible,
+            cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
             cv_store_cache=cv_store_cache,
             **kwargs
@@ -815,7 +833,7 @@ class CV_Class(CV_Callable):
             cv_return_type='float',
             cv_return_shape=None,
             cv_return_simtk_unit=None,
-            cv_reversible=True,
+            cv_time_reversible=False,
             cv_requires_lists=False,
             cv_store_cache=True,
             **kwargs
@@ -849,7 +867,7 @@ class CV_Class(CV_Callable):
             cv_return_type=cv_return_type,
             cv_return_shape=cv_return_shape,
             cv_return_simtk_unit=cv_return_simtk_unit,
-            cv_reversible=cv_reversible,
+            cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
             cv_store_cache=cv_store_cache,
             **kwargs
@@ -873,7 +891,7 @@ class CV_Class(CV_Callable):
         return obj
 
 
-class CV_MD_Function(CV_Function):
+class CV_MDTraj_Function(CV_Function):
     """Make `CollectiveVariable` from `f` that takes mdtraj.trajectory as input.
 
     This is identical to CV_Function except that the function is called with
@@ -898,7 +916,7 @@ class CV_MD_Function(CV_Function):
                  cv_return_type='numpy.float32',
                  cv_return_shape=None,
                  cv_return_simtk_unit=None,
-                 cv_reversible=True,
+                 cv_time_reversible=True,
                  cv_requires_lists=True,
                  cv_store_cache=True,
                  cv_single_as_scalar=True,
@@ -913,7 +931,7 @@ class CV_MD_Function(CV_Function):
         cv_return_type
         cv_return_shape
         cv_return_simtk_unit
-        cv_reversible
+        cv_time_reversible
         cv_requires_lists
         cv_store_cache
         single_as_scalar : bool, default: True
@@ -923,13 +941,13 @@ class CV_MD_Function(CV_Function):
 
         """
 
-        super(CV_MD_Function, self).__init__(
+        super(CV_MDTraj_Function, self).__init__(
             name,
             f,
             cv_return_type=cv_return_type,
             cv_return_shape=cv_return_shape,
             cv_return_simtk_unit=cv_return_simtk_unit,
-            cv_reversible=cv_reversible,
+            cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
             cv_store_cache=cv_store_cache,
             **kwargs
@@ -952,13 +970,13 @@ class CV_MD_Function(CV_Function):
             return arr
 
     def to_dict(self):
-        dct = super(CV_MD_Function, self).to_dict()
+        dct = super(CV_MDTraj_Function, self).to_dict()
         dct['single_as_scalar'] = self.single_as_scalar
         return dct
 
     @classmethod
     def from_dict(cls, dct):
-        obj = super(CV_MD_Function, cls).from_dict(dct)
+        obj = super(CV_MDTraj_Function, cls).from_dict(dct)
         obj.single_as_scalar = dct['single_as_scalar']
         obj._topology = None
 
@@ -1026,7 +1044,7 @@ class CV_MSMB_Featurizer(CV_Class):
             cv_return_type='numpy.float32',
             cv_return_shape=return_shape,
             cv_return_simtk_unit=None,
-            cv_reversible=True,
+            cv_time_reversible=True,
             cv_store_cache=cv_store_cache,
             cv_requires_lists=True,
             **kwargs
