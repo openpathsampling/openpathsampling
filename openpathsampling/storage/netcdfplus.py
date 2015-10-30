@@ -33,7 +33,7 @@ class NetCDFPlus(netCDF4.Dataset):
         'str': 'str',
         'json': 'str',
         'numpy.float32': np.float32,
-        'numpy.float64': np.float32,
+        'numpy.float64': np.float64,
         'numpy.int8': np.int8,
         'numpy.int16': np.int16,
         'numpy.int32': np.int32,

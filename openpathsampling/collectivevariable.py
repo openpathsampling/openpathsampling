@@ -264,12 +264,11 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             test_value_reversed = value_single_reversed
 
         # Determine of we can reverse momenta without effect
-        if cv_requires_lists:
-            try:
-                if test_value == test_value_reversed:
-                    cv_time_reversible = True
-            except:
-                pass
+        try:
+            if test_value == test_value_reversed:
+                cv_time_reversible = True
+        except:
+            pass
 
         cv_return_shape = None
         storable = True
