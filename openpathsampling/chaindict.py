@@ -302,7 +302,7 @@ class StoredDict(ChainDict):
     """
     ChainDict that has a store attached and return existing values from the store
     """
-    def __init__(self, key_store, value_store, main_cache, cache=None):
+    def __init__(self, key_store, value_store, main_cache, cache=None, reversible=True):
         """
         Parameters
         ----------
@@ -318,6 +318,7 @@ class StoredDict(ChainDict):
         self.value_store = value_store
         self.key_store = key_store
         self.main_cache = main_cache
+        self.reversible = True
         self.max_save_buffer_size = None
         if cache is None:
             cache = LRUCache(100000)
@@ -331,6 +332,9 @@ class StoredDict(ChainDict):
             if key is not None:
                 self.cache[key] = value
                 self.storable.add(key)
+                if self.reversible:
+                    s_idx = 2 * key
+
 
         if self.max_save_buffer_size is not None and len(self.storable) > self.max_save_buffer_size:
             self.sync()

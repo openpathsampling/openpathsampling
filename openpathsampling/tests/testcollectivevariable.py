@@ -57,9 +57,9 @@ class testCV_Function(object):
 
         assert params['f'] is atom_pair_op
         assert params['cv_return_type'] == 'numpy.float32'
-        assert params['cv_requires_lists'] == True
-        assert params['cv_simtk_unit'] is None
+        assert params['cv_return_simtk_unit'] is None
         assert params['cv_return_shape'] == tuple([2])
+        assert params['cv_requires_lists'] == True
 
     def test_from_template(self):
 
