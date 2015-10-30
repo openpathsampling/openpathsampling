@@ -16,7 +16,8 @@ jupyter notebook
 ```
 
 ## Examples
-alanine.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/alanine.ipynb)
+
+- [`alanine.ipynb`](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/alanine.ipynb)
     A simple example noteboon on how to use OpenMM to run simulations on Alanine dipeptide in explicit solvent.
 
 - [`Weina Alanine Example.ipynb`](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/Weina%20Alanine%20 Example.ipynb)
