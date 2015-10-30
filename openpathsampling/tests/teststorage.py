@@ -143,8 +143,6 @@ class testStorage(object):
             store.snapshots.load(0)
         )
 
-        print len(store.snapshots), len(store2.snapshots)
-
         # check if the reversed copy also works
         compare_snapshot(
             store2.snapshots.load(1),
