@@ -36,10 +36,6 @@ class ObjectDictStore(ObjectStore):
         if objectdict.store_cache:
             self.create_cache(objectdict)
 
-    def force_cache_update(self):
-        """
-        After saving snapshots
-        """
 
     def cache_var_name(self, idx):
         if type(idx) is not int:
@@ -55,10 +51,14 @@ class ObjectDictStore(ObjectStore):
             var_name = self.cache_var_name(idx)
 
             if var_name not in self.storage.variables:
+
+                params = objectdict.return_parameters_from_template(self.storage.template)
+
                 self.key_store.init_variable(
                     var_name,
-                    objectdict.return_type,
-                    objectdict.return_shape,
+                    var_type=params['cv_return_type'],
+                    dimensions=params['cv_return_shape'],
+                    simtk_unit=params['cv_simtk_unit'],
                     maskable=True
                 )
                 self.storage.update_delegates()

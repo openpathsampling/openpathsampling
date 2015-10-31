@@ -213,7 +213,7 @@ class Function(ChainDict):
 
     This works effective like a function called with square brackets
     """
-    def __init__(self, fnc, requires_lists=True):
+    def __init__(self, fnc, requires_lists=True, single_as_scalar=False):
         """
         Parameters
         ----------
@@ -226,6 +226,7 @@ class Function(ChainDict):
         super(Function, self).__init__()
         self._eval = fnc
         self.requires_lists = requires_lists
+        self.single_as_scalar = single_as_scalar
 
     def _contains(self, item):
         return False
@@ -235,21 +236,33 @@ class Function(ChainDict):
             return None
 
         if self.requires_lists:
-            result = self._eval([item])
-            return result[0]
+            result = self._eval([item])[0]
+
         else:
             result = self._eval(item)
-            return result
+
+        if self.single_as_scalar:
+            return result.reshape(result.shape[:-1])
+
+        return result
 
     def _get_list(self, items):
         if self._eval is None:
             return [None] * len(items)
 
         if self.requires_lists:
-            result = self._eval(items)
-            return result
+            results = self._eval(items)
+
+            if self.single_as_scalar:
+                results = results.reshape(results.shape[:-1])
+
         else:
-            return [self._eval(obj) for obj in items]
+            results = [self._eval(obj) for obj in items]
+            if self.single_as_scalar:
+                results = map(lambda x : x.reshape(x.shape[:-1]), results)
+
+        return results
+
 
     def get_transformed_view(self, transform):
         def fnc(obj):
