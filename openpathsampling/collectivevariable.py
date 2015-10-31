@@ -8,6 +8,7 @@ import types
 import opcode
 import __builtin__
 import importlib
+import pyemma.coordinates as coor
 
 import simtk.unit as u
 import numpy as np
@@ -207,9 +208,13 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         try:
             # try use single item
             value_single = c(template, **kwargs)
-            value_single_reversed = c(template.reversed, **kwargs)
         except:
             eval_single = False
+
+        try:
+            value_single_reversed = c(template.reversed, **kwargs)
+        except:
+            pass
 
         try:
             # try use list item
@@ -247,6 +252,11 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             except TypeError:
                 cv_requires_lists = False
 
+        if hasattr(template, '__len__'):
+            # if we have used a trajectory or md traj as template
+            if eval_single and not eval_list and not eval_multi:
+                cv_requires_lists = True
+
         if cv_requires_lists is None:
             # no idea what that function does, but it does not work as
             # expected so we disable it
@@ -257,8 +267,12 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         # Get test values
 
         if cv_requires_lists:
-            test_value = value_list[0]
-            test_value_reversed = value_list_reversed[0]
+            if not eval_list:
+                test_value = value_single[0]
+                test_value_reversed = value_single[0]
+            else:
+                test_value = value_list[0]
+                test_value_reversed = value_list_reversed[0]
         else:
             test_value = value_single
             test_value_reversed = value_single_reversed
@@ -889,6 +903,16 @@ class CV_Class(CV_Callable):
         obj._instance = obj.c(**obj.kwargs)
         return obj
 
+    @classmethod
+    def from_template(cls, name, c, template, **kwargs):
+        f_kwargs = {key: value for key, value in kwargs.iteritems() if not key.startswith('cv_')}
+        instance = c(**f_kwargs)
+
+        parameters = cls.parameters_from_template(instance, template)
+        parameters.update(kwargs)
+
+        return cls(name, **parameters)
+
 
 class CV_MDTraj_Function(CV_Function):
     """Make `CollectiveVariable` from `f` that takes mdtraj.trajectory as input.
@@ -981,68 +1005,6 @@ class CV_MDTraj_Function(CV_Function):
 
         return obj
 
-class CV_PyEMMA_Featurizer(CV_Function):
-    """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
-
-    This is identical to CV_Function except that the function is called with
-    an mdraj.Trajetory object instead of the openpathsampling.Trajectory one using
-    `fnc(traj.md(), **kwargs)`
-
-    Examples
-    --------
-    >>> # To create an order parameter which calculates the dihedral formed
-    >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
-    >>> import mdtraj as md
-    >>> traj = 'paths.Trajectory()'
-    >>> psi_atoms = [7,9,15,17]
-    >>> psi_orderparam = CV_Function("psi", md.compute_dihedrals,
-    >>>                              indices=[[2,4,6,8]])
-    >>> print psi_orderparam( traj )
-    """
-
-    def __init__(self, name, feat, dimensions=None, store_cache=True, single_as_scalar=True):
-        """
-        Parameters
-        ----------
-        name : str
-        feat : PyEmma.featurizer
-
-        """
-
-        if dimensions is None:
-            dimensions = feat.dimension()
-
-        super(CV_PyEMMA_Featurizer, self).__init__(
-            name,
-            feat.transform,
-            dimensions=dimensions,
-            store_cache=store_cache,
-            fnc_uses_lists=True,
-            var_type='numpy.float32'
-        )
-        self.single_as_scalar = single_as_scalar
-        self._topology = None
-
-    def _eval(self, items):
-        trajectory = paths.Trajectory(items)
-
-        if self._topology is None:
-            self._topology = trajectory.topology.md
-
-        t = trajectory.md(self._topology)
-        arr =self.callable_fcn(t, **self.kwargs)
-
-        if arr.shape[-1] != self.dimensions:
-            raise RuntimeError('The PyEmma featurizer has changed since instantiation which ' +
-                               'is not compatible with the immutable storage concept!')
-
-        if self.single_as_scalar and arr.shape[-1] == 1:
-            return arr.reshape(arr.shape[:-1])
-        else:
-            return arr
-
-
-class CV_Featurizer(CV_Class):
 
 class CV_MSMB_Featurizer(CV_Class):
     """
@@ -1151,3 +1113,103 @@ class CV_MSMB_Featurizer(CV_Class):
             **dct['kwargs']
         )
         return obj
+
+
+class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
+    """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
+
+    This is identical to CV_Class except that the function is called with
+    an mdraj.Trajetory object instead of the openpathsampling.Trajectory one using
+    `fnc(traj.md(), **kwargs)`
+
+    """
+
+    def __init__(self, name, featurizer, topology, cv_return_type='float', cv_return_shape=None, cv_store_cache=True, cv_single_as_scalar=True, **kwargs):
+        """
+
+        Parameters
+        ----------
+        name
+        c : msmbuilder.Featurizer
+            the featurizer used as a callable class
+        **kwargs : **kwargs
+            a dictionary of named arguments which should be given to `c` (for example, the
+            atoms which define a specific distance/angle). Finally an instance
+            `instance = cls(**kwargs)` is create when the CV is created and
+            using the CV will call `instance(snapshots)`
+        cv_return_type
+        cv_return_shape
+        cv_return_simtk_unit
+        cv_requires_lists
+        cv_store_cache
+        single_as_scalar : bool, default: True
+            If `True` then arrays of length 1 will be treated as array with one dimension less.
+            e.g. [ [1], [2], [3] ] will be turned into [1, 2, 3]. This is often useful, when you
+            use en external function to get only a single value.
+
+        Notes
+        -----
+        All trajectories or snapshots passed in kwargs will be converted
+        to mdtraj objects for convenience
+        """
+
+        md_kwargs = dict()
+        md_kwargs.update(kwargs)
+
+        # turn Snapshot and Trajectory into md.trajectory
+        for key in md_kwargs:
+            if md_kwargs[key].__class__ is paths.Snapshot:
+                md_kwargs[key] = md_kwargs[key].md()
+            elif md_kwargs[key].__class__ is paths.Trajectory:
+                md_kwargs[key] = md_kwargs[key].md()
+
+        self.topology = topology
+
+        self._instance = coor.featurizer(self.topology.md)
+
+        featurizer(self._instance, **md_kwargs)
+        self.single_as_scalar = cv_single_as_scalar
+
+        super(CV_Class, self).__init__(
+            name,
+            c=featurizer,
+            cv_return_type='numpy.float32',
+            cv_return_shape=cv_return_shape,
+            cv_return_simtk_unit=None,
+            cv_time_reversible=True,
+            cv_requires_lists=True,
+            cv_store_cache=cv_store_cache,
+            **kwargs
+        )
+
+    def _eval(self, items):
+        trajectory = paths.Trajectory(items)
+
+        t = trajectory.md(self.topology.md)
+        arr =self._instance.transform(t)
+
+        if self.single_as_scalar and arr.shape[-1] == 1:
+            return arr.reshape(arr.shape[:-1])
+        else:
+            return arr
+
+    @classmethod
+    def from_template(cls, name, c, template, **kwargs):
+        f_kwargs = {key: value for key, value in kwargs.iteritems() if not key.startswith('cv_')}
+        instance = coor.featurizer(template.topology.md)
+        c(instance, **f_kwargs)
+
+        print instance.transform((template.md()))
+
+        parameters = cls.parameters_from_template(instance.transform, template.md())
+        parameters['topology'] = template.topology
+        parameters['featurizer'] = c
+        del parameters['cv_return_simtk_unit']
+        del parameters['cv_requires_lists']
+        del parameters['cv_time_reversible']
+        del parameters['c']
+        parameters.update(kwargs)
+
+        print parameters
+
+        return cls(name, **parameters)
