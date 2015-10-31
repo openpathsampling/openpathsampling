@@ -24,9 +24,9 @@ def refresh_output(output_str, print_anyway=True, refresh=True):
 def updateunits(func):
     def inner(self, *args, **kwargs):
         my_units = {
-            'length': u.nanometer,
-            'velocity': u.nanometer / u.picoseconds,
-            'energy': u.kilojoules_per_mole
+            'length' : u.nanometer,
+            'velocity' : u.nanometer / u.picoseconds,
+            'energy' : u.kilojoules_per_mole
         }
 
         if 'units' in kwargs and kwargs['units'] is not None:
@@ -85,8 +85,17 @@ def trajectory_from_mdtraj(mdtrajectory):
     Trajectory
         the constructed Trajectory instance
     """
+
+    #TODO: Fix energies and move these to specialized CVs
+    #TODO: We could also allow to have empty energies
+
     trajectory = paths.Trajectory()
-    empty_momentum = paths.Momentum()
+    empty_momentum = paths.Momentum(
+        velocities=u.Quantity(np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond),
+        kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole)
+    )
+    topology = paths.MDTrajTopology(mdtrajectory.topology)
+
     for frame_num in range(len(mdtrajectory)):
         # mdtraj trajectories only have coordinates and box_vectors
         coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
@@ -95,7 +104,13 @@ def trajectory_from_mdtraj(mdtrajectory):
                                u.nanometers)
         else:
             box_v = None
-        config = paths.Configuration(coordinates=coord, box_vectors=box_v)
+
+        config = paths.Configuration(
+            coordinates=coord,
+            box_vectors=box_v,
+            potential_energy=u.Quantity(0.0, u.kilojoule_per_mole),
+            topology=topology
+        )
 
         snap = paths.Snapshot(
             configuration=config,

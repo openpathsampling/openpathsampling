@@ -92,6 +92,18 @@ class Trajectory(list, StorableObject):
 
         return Trajectory([snap for snap in reversed(self)])
 
+    def prepend(self, snapshot):
+        """
+        Prepend a snapshot
+
+        Just convenience method to replace insert(0, snapshot)
+        """
+        self.insert(0, snapshot)
+        # And a generation of scientist-programmers who grew up learning
+        # "OPS trajectories are just Python lists" scream in pain when they
+        # find this after googling "python list.prepend not working".
+        # (Blame JHP. This was his doing.)
+
     def coordinates(self):
         """
         Return all coordinates as a numpy array
@@ -277,7 +289,7 @@ class Trajectory(list, StorableObject):
 
         return ObjectIterator()
 
-    def lazy(self):
+    def as_proxies(self):
         """
         Returns all contains all actual elements
 
@@ -288,9 +300,9 @@ class Trajectory(list, StorableObject):
         -------
         list of openpathsampling.Snapshot or openpathsampling.storage.objproxy.LoaderProxy
         """
-        return list(self.iterlazy())
+        return list(self.iter_proxies())
 
-    def iterlazy(self):
+    def iter_proxies(self):
         """
         Returns an iterator over all actual elements
 
@@ -372,6 +384,7 @@ class Trajectory(list, StorableObject):
         last_vol = None
         count = 0
         segment_labels = []
+        # list.__iter__ for speed
         for frame in list.__iter__(self):
             in_state = []
             for key in label_dict.keys():
@@ -389,10 +402,10 @@ class Trajectory(list, StorableObject):
                 count += 1
             else:
                 if count > 0:
-                    segment_labels.append((last_vol, count))
+                    segment_labels.append( (last_vol, count) )
                 last_vol = current_vol
                 count = 1
-        segment_labels.append((last_vol, count))
+        segment_labels.append( (last_vol, count) )
         return segment_labels
 
     def summarize_by_volumes_str(self, label_dict, delimiter="-"):

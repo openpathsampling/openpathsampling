@@ -1,4 +1,6 @@
-from pathsimulator import PathSimulator, Bootstrapping, PathSampling, MCStep
+from pathsimulator import (
+    PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep
+)
 
 from ensemble import (
     Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
@@ -18,9 +20,8 @@ from snapshot import Snapshot, Configuration, Momentum
 from trajectory import Trajectory
 from sample import Sample, SampleSet
 
-from collectivevariable import CV_Function, CV_MD_Function, CV_Featurizer, \
-    CV_Volume, CollectiveVariable, CV_PyEMMA_Featurizer, CV_Class, CV_Generator, \
-    CV_MD_Generator
+from collectivevariable import CV_Function, CV_MDTraj_Function, CV_MSMB_Featurizer, \
+    CV_Volume, CollectiveVariable
 
 from pathmover import (
     BackwardShootMover, MinusMover, RandomChoiceMover, ForwardShootMover,
@@ -70,7 +71,7 @@ from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
     LeapfrogVerletIntegrator
 
 from analysis.tis_analysis import (
-    TISTransition, RETISTransition, Transition, TPSTransition
+    TISTransition, Transition, TPSTransition
 )
 
 from analysis.move_scheme import MoveScheme, DefaultScheme

@@ -4,10 +4,93 @@ This folder contains some example python notebooks to learn and understand the w
 For this to work you need to have `ipython` and `ipython notebooks` installed. For help consult the 
 [Installation Guide](http://ipython.org/install.html).
 
+> Note there has been a major change in ipython notebooks which now run using jupyter server. 
+
 Then open a terminal, walk to this folder (in your local copy) and run 
 ```
 ipython notebook
 ```
+or since version 4.0 you need to run a jupyter server using
+```
+jupyter notebook
+```
 
 ## Examples
-- Visualization [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/ipython/Visualization%20Example.ipynb)
+alanine.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/alanine.ipynb)
+    A simple example noteboon on how to use OpenMM to run simulations on Alanine dipeptide in explicit solvent.
+
+Weina Alanine Example.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/Weina%20Alanine%20 Example.ipynb)
+    Basic setup from the W. Du and P. Bolhuis Paper on SRTIS. Is supposed to become the setup for an example in the publication.
+
+## Tutorials
+
+fast_sample_loading.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/fast_sample_loading.ipynb)
+    ... Seems to be removed in upcoming PRs
+
+- move_strategies_and_schemes.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/move_strategies_and_schemes.ipynb)
+    A tutorial notebook to discuss the workings of move strategies and move schemes. Also a good starting point to understand how replica exchange moves are generated, detailed balance and all the little pitfalls there are about doing correct replica exchange moves.
+
+- mistis_setup.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/mistis_setup.ipynb)	
+    [Part 1] of the MISTIS (Multi Interface Set TIS) testing notebooks. This creates the full setup and runs a few Monte Carlo steps for later analysis
+
+- mistis_analysis.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/mistis_analysis.ipynb)	
+    [Part 2] of the MISTIS (Multi Interface Set TIS) testing notebooks. This load the previously generated data, does some analysis and visualization on the results 
+
+- mstis_bootstrap.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/mstis_bootstrap.ipynb)
+    [Part 1] of the MSTIS (Multi State TIS) testing notebooks. This will setup the general system and create initial pathways to be used in later parts. Contains an example on how to use bootstrapping.
+
+- mstis.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/mstis.ipynb)
+    [Part 2] of the MSTIS (Multi State TIS) testing notebooks. This uses the previously generated initial pathways and generates data to be analyzed later.
+
+- mstis_analysis.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/mstis_analysis.ipynb)
+    [Part 3] of the MSTIS (Multi State TIS) testing notebooks. This takes the previously generated data and does a complete analysis on them. Including different visualizations, rate computations, flow analysis, etc.
+
+- openmm_tutorial.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/openmm_tutorial.ipynb)
+    Is a simple openmm tutorial originally written by A. Mey 
+
+- repex_networks.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/repex_networks.ipynb)
+    A test checking analysis functions for analysis of replica networks, i.e. treating the flow of replicas between ensembles as a graph and analyze it.
+
+- sequential_ensembles.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/sequential_ensembles.ipynb)
+    Incomplete tutorial on how to use the SequentialPathMover object.
+
+- sliced_sequential_ensembles.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/sliced_sequential_ensembles.ipynb)
+    ...
+
+- storage_tutorial.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/storage_tutorial.ipynb)
+    A tutorial notebook on how to work with the storage. Explains loading, saving, caching, etc...
+
+- troubleshooting_ops.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/troubleshooting_ops.ipynb)
+    This should become the FAQs of OpenPathSampling. A quick guide so solve the most common issues.
+
+- tutorial_visualization.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/tutorial_visualization.ipynb)
+    Contains a basic tutorial on visualization function. Still incomplete
+
+- which_network.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/which_network.ipynb)
+    A tutorial for beginners on how to decide which (MISTIS or MSTIS) to use. Still incomplete.
+
+## Tests
+
+ipynbtest.py [Code](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/ipynbtest.py)
+
+ipynbtest_tutorial.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/ipynbtest_tutorial.ipynb)
+    An example notebook that explains how the ipython notebook testing script is used and what its features are. This is completely independent of _OpenPathSampling_ and it to be moved into a separate package.
+
+- langevin_integrator_check.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/langevin_integrator_check.ipynb)
+    A test notebook that checks that the toy_engine langevin integrator will actually sample from the correct distributions.
+
+## Attic
+
+- multistate_system_setup.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/multistate_system_setup.ipynb)
+    Can be removed. Used to be part of the MSTIS example
+
+- toy_bootstrapping.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/toy_bootstrapping.ipynb)
+    [Part 1] of the large ToyDynamics example. Has been replaced by the mstis examples.
+
+- toy_tis.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/toy_tis.ipynb)
+    [Part 2] of the large ToyDynamics example. Has been replaced by the mstis examples.
+
+- toy_analysis.ipynb [Notebook](http://nbviewer.ipython.org/github/jhprinz/msm-tis/blob/visualization/examples/toy_analysis.ipynb)
+    [Part 3] of the large ToyDynamics example. Has been replaced by the mstis examples.
+
+

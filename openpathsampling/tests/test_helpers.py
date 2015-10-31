@@ -15,6 +15,10 @@ from openpathsampling.dynamics_engine import DynamicsEngine
 from openpathsampling.topology import Topology
 import openpathsampling as paths
 import numpy as np
+import numpy.testing as npt
+
+import simtk.unit as u
+
 
 def make_1d_traj(coordinates, velocities=None, topology=None):
     if velocities is None:
@@ -165,3 +169,18 @@ def reorder_ensemble_signature(sig, match_with):
                            repr(sig) + "\n" + repr(found_sigs))
     else:
         return found_sigs[0]
+
+def assert_close_unit(v1, v2, *args, **kwargs):
+    if type(v1) is u.Quantity:
+        assert(v1.unit == v2.unit)
+        npt.assert_allclose(v1._value, v2._value, *args, **kwargs)
+    else:
+        npt.assert_allclose(v1, v2, *args, **kwargs)
+
+def compare_snapshot(snapshot1, snapshot2):
+    assert_close_unit(snapshot1.box_vectors, snapshot2.box_vectors, rtol=1e-7, atol=0)
+    assert_close_unit(snapshot1.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
+    assert_close_unit(snapshot1.velocities, snapshot2.velocities, rtol=1e-7, atol=0)
+
+    assert_equal(snapshot1.potential_energy, snapshot2.potential_energy)
+    assert_equal(snapshot1.kinetic_energy, snapshot2.kinetic_energy)

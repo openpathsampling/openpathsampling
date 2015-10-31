@@ -485,7 +485,7 @@ class testSequentialEnsemble(EnsembleTest):
     def test_seqens_order_combo(self):
         # regression test for #229
         import numpy as np
-        op = paths.CV_Function(name="x", fcn=lambda snap : snap.xyz[0][0])
+        op = paths.CV_Function(name="x", f=lambda snap : snap.xyz[0][0])
         bigvol = paths.CVRangeVolume(collectivevariable=op,
                                     lambda_min=-100.0, lambda_max=100.0)
 
@@ -1644,10 +1644,10 @@ class testEnsembleSplit(EnsembleTest):
     def test_split(self):
 #        raise SkipTest
         traj1 = ttraj['upper_in_out_in_in']
-        print [s for s in traj1]
+        # print [s for s in traj1]
         subtrajs_in_1 = self.inA.split(traj1)
-        print subtrajs_in_1
-        print [[s for s in t] for t in subtrajs_in_1]
+        # print subtrajs_in_1
+        # print [[s for s in t] for t in subtrajs_in_1]
         assert_equal(len(subtrajs_in_1), 2)
         assert_equal(len(subtrajs_in_1[0]), 1)
         assert_equal(len(subtrajs_in_1[1]), 2)
@@ -1655,9 +1655,9 @@ class testEnsembleSplit(EnsembleTest):
         assert_equal(len(subtrajs_out_1), 1)
 
         traj2 = ttraj['upper_in_out_in_in_out_in']
-        print [s for s in traj2]
+        # print [s for s in traj2]
         subtrajs_in_2 = self.inA.split(traj2)
-        print [[s for s in t] for t in subtrajs_in_2]
+        # print [[s for s in t] for t in subtrajs_in_2]
         assert_equal(len(subtrajs_in_2), 3)
         assert_equal(len(subtrajs_in_2[0]), 1)
         assert_equal(len(subtrajs_in_2[1]), 2)

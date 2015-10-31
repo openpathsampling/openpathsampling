@@ -2,6 +2,7 @@ import itertools
 import collections
 
 import openpathsampling as paths
+from openpathsampling.base import StorableNamedObject
 from openpathsampling import PathMoverFactory as pmf
 
 LevelLabels = collections.namedtuple(
@@ -59,7 +60,7 @@ levels = StrategyLevels(
     GLOBAL=90
 )
 
-class MoveStrategy(object):
+class MoveStrategy(StorableNamedObject):
     """
     Each MoveStrategy describes one aspect of the approach to the overall
     MoveScheme. Within path sampling, there's a near infinity of reasonable
@@ -86,6 +87,7 @@ class MoveStrategy(object):
     """
     _level = -1
     def __init__(self, ensembles, group, replace):
+        super(MoveStrategy, self).__init__()
         self.ensembles = ensembles
         self.group = group
         self.replace = replace
@@ -342,6 +344,9 @@ class ReplicaExchangeStrategy(MoveStrategy):
     def make_movers(self, scheme):
         signatures = [m.ensemble_signature 
                       for m in scheme.movers[self.from_group]]
+        # a KeyError here indicates that there is no existing group of that
+        # name: build scheme.movers[self.from_group] before trying to use it!
+
         self.check_for_hop_repex_validity(signatures)
 
         swap_list = []
@@ -370,6 +375,8 @@ class EnsembleHopStrategy(ReplicaExchangeStrategy):
     def make_movers(self, scheme):
         signatures = [m.ensemble_signature 
                       for m in scheme.movers[self.from_group]]
+        # a KeyError here indicates that there is no existing group of that
+        # name: build scheme.movers[self.from_group] before trying to use it!
 
         self.check_for_hop_repex_validity(signatures)
 
@@ -538,8 +545,8 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         return weights
 
 
-    def get_weights(self, scheme, sorted_movers, sort_weights_override={}, 
-                    mover_weights_override={}):
+    def get_weights(self, scheme, sorted_movers, sort_weights_override=None,
+                    mover_weights_override=None):
         """
         Gets sort_weights and mover_weights dictionaries.
 
@@ -563,6 +570,12 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
             to weights. See class definition for the specific formats of the
             keys.
         """
+        if sort_weights_override is None:
+            sort_weights_override = dict()
+
+        if mover_weights_override is None:
+            mover_weights_override = dict()
+
         (sorted_w, mover_w) = self.default_weights(scheme)
         sorted_weights = self.override_weights(sorted_w, sort_weights_override)
         mover_weights = self.override_weights(mover_w, mover_weights_override)

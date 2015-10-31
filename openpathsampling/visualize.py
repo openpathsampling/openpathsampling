@@ -4,6 +4,8 @@ import os
 import openpathsampling as paths
 import networkx as nx
 
+from openpathsampling.storage.objproxy import LoaderProxy
+
 import json
 import matplotlib.pyplot as plt
 import StringIO
@@ -872,6 +874,7 @@ class PathTreeBuilder(object):
         shift = 0
 
         lightcolor = "gray"
+        font_color = "black"
 
         first = True
 
@@ -971,12 +974,7 @@ class PathTreeBuilder(object):
                                         color='black')
                 )
 
-                # print sample.mover.cls
-                # print sample[0]
-                # print map(self.storage.idx, list(sample.parent.trajectory))
-                # print map(self.storage.idx, list(sample))
-
-                shift = shift + map(self.storage.idx, sample.parent.trajectory).index(self.storage.idx(sample[0]))
+                shift = shift + sample.parent.trajectory.index(sample[0])
 
                 self.renderer.add(
                     self.renderer.range(shift, t_count, len(sample), 'gray', mover_type.__name__[:-11] )
@@ -1105,38 +1103,38 @@ class PathTreeBuilder(object):
 
         matrix = self._to_matrix()
 
-        # if False & hasattr(self, 'states') and len(self.states) > 0:
-        #     for color, op in self.states:
-        #         xp = None
-        #         for y in range(0, max_y - min_y + 1):
-        #             left = None
-        #             yp = y + min_y
-        #             for x in range(0, (max_x - min_x + 1)):
-        #                 xp = x + min_x
-        #
-        #                 # if matrix[y][x] is not None:
-        #                 #     self.renderer.pre(
-        #                 #         self.renderer.shade(xp, yp, 0.9,
-        #                 #                             'black')
-        #                 #     )
-        #
-        #
-        #                 if matrix[y][x] is not None\
-        #                     and bool(op(LoaderProxy(self.storage.snapshots, matrix[y][x]))):
-        #                         if left is None:
-        #                             left = xp
-        #                 else:
-        #                     if left is not None:
-        #                         self.renderer.pre(
-        #                             self.renderer.shade(left, yp, xp - left,
-        #                                                 color)
-        #                         )
-        #                         left = None
-        #
-        #             if left is not None:
-        #                 self.renderer.pre(
-        #                     self.renderer.shade(left, yp, xp - left + 1, color)
-        #                 )
+        if hasattr(self, 'states') and len(self.states) > 0:
+            for color, op in self.states:
+                xp = None
+                for y in range(0, max_y - min_y + 1):
+                    left = None
+                    yp = y + min_y
+                    for x in range(0, (max_x - min_x + 1)):
+                        xp = x + min_x
+
+                        # if matrix[y][x] is not None:
+                        #     self.renderer.pre(
+                        #         self.renderer.shade(xp, yp, 0.9,
+                        #                             'black')
+                        #     )
+
+
+                        if matrix[y][x] is not None\
+                            and bool(op(LoaderProxy(self.storage.snapshots, matrix[y][x]))):
+                                if left is None:
+                                    left = xp
+                        else:
+                            if left is not None:
+                                self.renderer.pre(
+                                    self.renderer.shade(left, yp, xp - left,
+                                                        color)
+                                )
+                                left = None
+
+                    if left is not None:
+                        self.renderer.pre(
+                            self.renderer.shade(left, yp, xp - left + 1, color)
+                        )
 
         prev = samples[0].trajectory
         old_tc = 1
@@ -1360,3 +1358,107 @@ class MoveTreeNX(object):
 
         </script>
         '''
+
+class ReplicaHistoryTree(PathTreeBuilder):
+    """
+    Simplified PathTreeBuilder for the common case of tracking a replica
+    over some steps.
+
+    Intended behaviors: 
+    * The samples are determined during initialization.
+    * The defaults are as similar to the old tree representation as
+      reasonable.
+    * This object also calculates decorrelated trajectories (which is
+      usually what we look for from this tree). The number of decorrelated
+      trajectories is obtained as the length of that list, and does not
+      require an extra method.
+    """
+    def __init__(self, storage, steps, replica):
+        # TODO: if we implement substorages (see #330) we can remove the
+        # steps variable here and just iterate over storage.
+        super(ReplicaHistoryTree, self).__init__(storage)
+        self.replica = replica
+        self.steps = steps
+        self._accepted_samples = None
+        self._trial_samples = None
+
+        # defaults:
+        self.rejected = False 
+        self.show_redundant = False
+        self.states = []
+
+        # build the tree 
+        self.from_samples(self.samples)
+        self.view = self.renderer
+
+    def rebuild(self):
+        """Rebuild the internal structures.
+
+        It seems like some changes in the visualization require a complete
+        rebuild. That's not ideal. If that can be changed, this function
+        could be removed.
+        """
+        self.from_samples(self.samples)
+
+
+    @property
+    def accepted_samples(self):
+        """
+        Returns the accepted samples in self.steps involving self.replica
+        """
+        if self._accepted_samples is None:
+            samp = self.steps[-1].active[self.replica]
+            samples = [samp]
+            while samp.parent is not None:
+                samp = samp.parent
+                samples.append(samp)
+            
+            self._accepted_samples = list(reversed(samples))
+
+        return self._accepted_samples
+ 
+    @property
+    def trial_samples(self):
+        """
+        Returns trial samples from self.steps involving self.replica
+        """
+        if self._trial_samples is None:
+            samp = self.steps[0].active[self.replica]
+            samples = [samp]
+            for step in self.steps:
+                rep_trials = [s for s in step.change.trials 
+                              if s.replica==self.replica]
+                if len(rep_trials) > 0:
+                    samples.append(rep_trials[-1])
+
+            self._trial_samples = samples
+
+        return self._trial_samples
+
+    @property
+    def samples(self):
+        if self.rejected:
+            return self.trial_samples
+        else:
+            return self.accepted_samples
+
+    @property
+    def decorrelated_trajectories(self):
+        """List of decorrelated trajectories from the internal samples.
+
+        In path sampling, two trajectories are said to be "decorrelated" if
+        they share no frames in common. This is particularly important in
+        one-way shooting. This function returns the list of trajectories,
+        making the number (i.e., the length of the list) also easily
+        accessible.
+        """
+        prev = self.samples[0].trajectory
+        decorrelated = [prev]
+        # TODO: this should be restricted to accepted samples
+        for s in [samp for samp in self.samples]:
+            if not paths.Trajectory.is_correlated(s.trajectory, prev):
+                decorrelated.append(s.trajectory)
+                prev = s.trajectory
+
+        return decorrelated
+    

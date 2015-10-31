@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-from todict import StorableObjectJSON
+from object_json import StorableObjectJSON
 from objproxy import LoaderProxy
 
 import numpy as np
@@ -33,7 +33,7 @@ class NetCDFPlus(netCDF4.Dataset):
         'str': 'str',
         'json': 'str',
         'numpy.float32': np.float32,
-        'numpy.float64': np.float32,
+        'numpy.float64': np.float64,
         'numpy.int8': np.int8,
         'numpy.int16': np.int16,
         'numpy.int32': np.int32,
@@ -47,12 +47,12 @@ class NetCDFPlus(netCDF4.Dataset):
 
     class ValueDelegate(object):
         """
-        Value delegator for objects that implement __getitem__ and __setitem__
+        Value delegate for objects that implement __getitem__ and __setitem__
 
         It will basically just wrap values that are used in a dict like structure
         with getter and setter function to allow easier conversion
 
-        delegator[x] is equivalent to delegator.getter(delegator.variable[x])
+        delegate[x] is equivalent to delegate.getter(delegate.variable[x])
 
         Attributes
         ----------
@@ -96,12 +96,12 @@ class NetCDFPlus(netCDF4.Dataset):
 
     class KeyDelegate(object):
         """
-        Value delegator for objects that implement __getitem__ and __setitem__
+        Value delegate for objects that implement __getitem__ and __setitem__
 
         It will basically just wrap keys for objects that are used in a dict like structure
         with getter and setter function to allow easier conversion
 
-        delegator[x] is equivalent to delegator[x.idx(store)]
+        delegate[x] is equivalent to delegate[x.idx(store)]
 
         Attributes
         ----------

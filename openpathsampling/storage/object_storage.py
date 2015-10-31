@@ -20,7 +20,7 @@ class ObjectStore(object):
 
     allowed_types = [
         'int', 'float', 'long', 'str', 'bool'
-                                       'nunpy.float32', 'numpy.float64',
+                                       'numpy.float32', 'numpy.float64',
         'numpy.int8', 'numpy.inf16', 'numpy.int32', 'numpy.int64',
         'numpy.uint8', 'numpy.uinf16', 'numpy.uint32', 'numpy.uint64',
         'index', 'length'

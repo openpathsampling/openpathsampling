@@ -23,7 +23,7 @@ if __name__ == '__main__':
         filename=file_name
     )
 
-    class ReadableObjectJSON(paths.storage.todict.ObjectJSON):
+    class ReadableObjectJSON(paths.storage.object_json.ObjectJSON):
         def __init__(self, unit_system=None):
             super(ReadableObjectJSON, self).__init__(unit_system)
             self.excluded_keys = ['name', 'idx', 'json', 'identifier']
@@ -143,7 +143,7 @@ if __name__ == '__main__':
 #        nline(p_idx, obj.name, '')
         add = ''
 
-        found_values = [ (idx, value) for idx, value in enumerate(obj.store_dict.value_store[:]) if value is not None ]
+        found_values = [ (idx, value) for idx, value in enumerate(obj._store_dict.value_store[:]) if value is not None ]
         if len(found_values) > 0:
            add = '{ %s, ... } ' % ( ', '.join(map(lambda val : '%d : %f' % (val[0], val[1]), found_values[0:5] )))
 

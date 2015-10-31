@@ -179,6 +179,8 @@ class Storage(NetCDFPlus):
         self.add('transitions', paths.storage.ObjectStore(paths.Transition, has_name=True))
         self.add('networks',
                  paths.storage.ObjectStore(paths.TransitionNetwork, has_name=True))
+        self.add('schemes',
+                 paths.storage.ObjectStore(paths.MoveScheme, has_name=True))
 
         # nestable objects
 
@@ -186,7 +188,6 @@ class Storage(NetCDFPlus):
                  paths.storage.ObjectStore(paths.Volume, nestable=True, has_name=True))
         self.add('ensembles',
                  paths.storage.ObjectStore(paths.Ensemble, nestable=True, has_name=True))
-
         # special stores
         # self.add('names', paths.storage.NameStore())
 
@@ -491,3 +492,4 @@ class AnalysisStorage(Storage):
         storage.pathmovers.cache_all()
         storage.pathmovechanges.cache_all()
         storage.steps.cache_all()
+#        storage.trajectories.cache_all()

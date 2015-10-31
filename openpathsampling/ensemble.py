@@ -401,7 +401,30 @@ class Ensemble(StorableNamedObject):
         '''
 
         try:
-            indices = self.find_valid_slices(trajectory.lazy(), lazy, max_length,
+            # Note here that we use trajectory.lazy() this has the following reason
+            # If we would pass the trajectory object itself, then in iterations over
+            # snapshots the `for snap in trajectory` will load explicitly the
+            # snapshots from storage and so snap is a real Snapshot object.
+            # By real I mean that type(snap) is paths.Snapshot equal True!
+            # Internally the trajectory just keeps reference objects which are
+            # extremely fast to load and since we want the decision to load
+            # a snapshots for computing a CV not do always but only if
+            # the CV caching decides to we pass trajectory.lazy().
+            # The result is that we pass a list of snapshot.proxies for an
+            # already stored trajectory and a list of real snapshots for
+            # a just created one. The has no speed effect on non-stored
+            # trajectories, but makes it faster if the trajectory was loaded or saved
+            # and the CV is cached.
+            # One more comment, since the idea cannot be always used. The only place
+            # where this can fail is if the underlying code uses type(snap) at
+            # some point. In this case you need to be able to treat LoaderProxy
+            # objects correctly. Since split does not care about the actual snapshots
+            # we are safe to use this trick to speed up the evaluation.
+            # One last comment about the Proxies. These proxies still behave almost
+            # like the real object. If you access any attribute it will be loaded
+            # and the actual attribute will be returned. Only difference is operator
+            # overloading (which is not used for Snapshots) and type()
+            indices = self.find_valid_slices(trajectory.as_proxies(), lazy, max_length,
                                              min_length, overlap)
 
             return [paths.Trajectory(trajectory[part]) for part in indices]
