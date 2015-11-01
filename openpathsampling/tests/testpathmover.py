@@ -137,7 +137,7 @@ class testShootingMover(object):
         self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
                                       -0.1, 0.2, 0.4, 0.6, 0.8,
                                      ])
-        SampleGeneratingMover.engine = self.dyn
+        SampleMover.engine = self.dyn
         op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
         stateA = CVRangeVolume(op, -100, 0.0)
@@ -422,7 +422,7 @@ class testRandomAllowedChoiceMover(object):
                                       -0.1, 0.2, 0.4, 0.6, 0.8,
                                      ])
         self.dyn.initialized = True
-        SampleGeneratingMover.engine = self.dyn
+        SampleMover.engine = self.dyn
         op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
         stateA = CVRangeVolume(op, -100, 0.0)
@@ -896,7 +896,7 @@ class testMinusMover(object):
             # goes to other state:
             1.16, 1.26, 1.16, -0.16, 1.16, 1.26, 1.16
         ])
-        SampleGeneratingMover.engine = self.dyn
+        SampleMover.engine = self.dyn
         self.dyn.initialized = True
         self.innermost = paths.TISEnsemble(volA, volB, volX)
         self.minus = paths.MinusInterfaceEnsemble(volA, volX)
