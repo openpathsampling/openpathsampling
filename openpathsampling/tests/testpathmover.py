@@ -138,7 +138,7 @@ class testShootingMover(object):
                                       -0.1, 0.2, 0.4, 0.6, 0.8,
                                      ])
         SampleMover.engine = self.dyn
-        op = CV_Function("myid", fcn=lambda snap :
+        op = CV_Function("myid", f=lambda snap :
                              snap.coordinates[0][0])
         stateA = CVRangeVolume(op, -100, 0.0)
         stateB = CVRangeVolume(op, 0.65, 100)
@@ -423,7 +423,7 @@ class testRandomAllowedChoiceMover(object):
                                      ])
         self.dyn.initialized = True
         SampleMover.engine = self.dyn
-        op = CV_Function("myid", fcn=lambda snap :
+        op = CV_Function("myid", f=lambda snap :
                              snap.coordinates[0][0])
         stateA = CVRangeVolume(op, -100, 0.0)
         stateB = CVRangeVolume(op, 0.65, 100)
