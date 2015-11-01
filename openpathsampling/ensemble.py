@@ -1355,7 +1355,6 @@ class AllInXEnsemble(VolumeEnsemble):
         if trusted == True:
             #print "trusted"
             frame = trajectory.get_as_proxy(-1)
-            print type(frame)
             return self._volume(frame)
         else:
             #logger.debug("Calling volume untrusted "+repr(self))
@@ -1465,9 +1464,10 @@ class ExitsXEnsemble(VolumeEnsemble):
         subtraj = trajectory
         for i in range(len(subtraj)-1):
             frame_i = subtraj.get_as_proxy(i)
-            frame_iplus = subtraj.get_as_proxy(i+1)
-            if self._volume(frame_i) and not self._volume(frame_iplus):
-                return True
+            if self._volume(frame_i):
+                frame_iplus = subtraj.get_as_proxy(i+1)
+                if not self._volume(frame_iplus):
+                    return True
         return False
 
 
@@ -1486,9 +1486,10 @@ class EntersXEnsemble(ExitsXEnsemble):
         subtraj = trajectory
         for i in range(len(subtraj)-1):
             frame_i = subtraj.get_as_proxy(i)
-            frame_iplus = subtraj.get_as_proxy(i+1)
-            if not self._volume(frame_i) and self._volume(frame_iplus):
-                return True
+            if not self._volume(frame_i):
+                frame_iplus = subtraj.get_as_proxy(i+1)
+                if self._volume(frame_iplus):
+                    return True
         return False
 
 
@@ -1562,7 +1563,7 @@ class SuffixTrajectoryEnsemble(WrappedEnsemble):
     def __init__(self, ensemble, add_trajectory):
         super(SuffixTrajectoryEnsemble, self).__init__(ensemble)
         self.add_trajectory = add_trajectory
-        self._cached_trajectory = paths.Trajectory(add_trajectory)
+        self._cached_trajectory = paths.Trajectory(add_trajectory.as_proxies())
 
     def _alter(self, trajectory):
         logger.debug("Starting Suffix._alter")
@@ -1599,7 +1600,7 @@ class PrefixTrajectoryEnsemble(WrappedEnsemble):
     def __init__(self, ensemble, add_trajectory):
         super(PrefixTrajectoryEnsemble, self).__init__(ensemble)
         self.add_trajectory = add_trajectory
-        self._cached_trajectory = paths.Trajectory(add_trajectory)
+        self._cached_trajectory = paths.Trajectory(add_trajectory.as_proxies())
 
     def _alter(self, trajectory):
         logger.debug("Starting _alter")

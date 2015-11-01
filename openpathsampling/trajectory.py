@@ -46,10 +46,18 @@ class Trajectory(list, StorableObject):
                 self.atom_indices = trajectory.atom_indices
             else:
                 self.atom_indices = None
-
-            self.extend(trajectory)
+            if type(trajectory) is Trajectory:
+                self.extend(trajectory.iter_proxies())
+            else:
+                self.extend(trajectory)
         else:
             self.atom_indices = None
+
+    def extend(self, iterable):
+        if type(iterable) is Trajectory:
+            list.extend(self, iterable.iter_proxies())
+        else:
+            list.extend(self, iterable)
 
     def __str__(self):
         return 'Trajectory[' + str(len(self)) + ']'

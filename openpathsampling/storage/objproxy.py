@@ -38,11 +38,11 @@ class LoaderProxy(object):
     def __eq__(self, other):
         if self is other:
             return True
-        elif self.__subject__ is other:
-            return True
         elif type(other) is LoaderProxy:
             if self._idx == other._idx and self._store is other._store:
                 return True
+        elif self.__subject__ is other:
+            return True
 
         return False
 

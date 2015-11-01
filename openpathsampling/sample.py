@@ -293,7 +293,7 @@ class SampleSet(StorableObject):
         """
         return SampleSet(
             [Sample.initial_sample(replica=ensembles.index(e),
-                                   trajectory=paths.Trajectory(trajectory), # copy
+                                   trajectory=paths.Trajectory(trajectory.as_proxies()), # copy
                                    ensemble = e)
             for e in ensembles]
     )
