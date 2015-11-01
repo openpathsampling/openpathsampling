@@ -1153,11 +1153,14 @@ class testSingleReplicaMinusMover(object):
         extend_forward =  self.list_innermost + [0.12, 0.32, -0.131]
         extend_backward = [-0.13, 0.13, 0.33] + self.list_innermost
 
-        # assert_equal(self.minus(make_1d_traj(extend_forward)), True)
-        # assert_equal(self.minus(make_1d_traj(extend_backward)), True)
+        assert_equal(self.minus(make_1d_traj(extend_forward)), True)
+        assert_equal(self.minus(make_1d_traj(extend_backward)), True)
+
+        output_forward = [-0.12, 0.12, 0.32, -0.131]
+        output_backward = [-0.13, 0.13, 0.33, -0.11]
 
         seg_dir = {}
-        for i in range(10):
+        for i in range(100):
             change = self.mover.move(gs)
             samples = change.results
             sub_samples = change.subchange.subchange.results
@@ -1166,9 +1169,9 @@ class testSingleReplicaMinusMover(object):
             s_inner = [s for s in sub_samples if s.ensemble==self.innermost]
             s_minus = [s for s in sub_samples if s.ensemble==self.minus]
             s_seg = [s for s in sub_samples if s.ensemble==self.minus._segment_ensemble]
-            assert_equal(len(s_inner), 1)
-            assert_equal(len(s_minus), 1)
-            assert_equal(len(s_seg), 2)
+            assert_equal(len(s_inner), 1) # this is the output
+            assert_equal(len(s_minus), 1) # this is the minus version
+            assert_equal(len(s_seg), 2) # first the selected, then the final
 
             for c in change:
                assert_equal(c.accepted, True)
@@ -1176,29 +1179,36 @@ class testSingleReplicaMinusMover(object):
             assert_equal(change.canonical.mover, self.mover)
 
             key = ""
-            s_inner0_xvals = [s.coordinates[0,0] for s in s_inner[0].trajectory]
-            # if items_equal(s_inner0_xvals, self.first_segment):
-                # key += "1"
-            # elif items_equal(s_inner0_xvals, self.second_segment):
-                # key += "2"
-            # else:
-                # print "s_inner0_xvals:", s_inner0_xvals
-                # raise RuntimeError("Chosen segment neither first nor last!")
+            s_seg0_xvals = [s.coordinates[0,0] for s in s_seg[0].trajectory]
+            if items_equal(s_seg0_xvals, self.list_innermost):
+                key += "0"
+            else:
+                print "s_seg0_xvals:", s_seg0_xvals
+                raise RuntimeError("Chosen segment neither first nor last!")
 
-            # final sample s_minus is accepted
-            # s_minus_xvals = [s.coordinates[0,0] for s in s_minus[-1].trajectory]
-            # if items_equal(s_minus_xvals, extend_forward):
-                # key += "f"
-            # elif items_equal(s_minus_xvals, extend_backward):
-                # key += "b"
-            # else:
-                # print "s_minus_xvals:", s_minus_xvals
-                # raise RuntimeError("Unexpected minus extension result!")
+            # s_minus is the intermediate
+            s_minus_xvals = [s.coordinates[0,0] for s in s_minus[-1].trajectory]
+            if items_equal(s_minus_xvals, extend_forward):
+                key += "f"
+                assert_equal(
+                    [s.coordinates[0,0] for s in s_inner[0].trajectory],
+                    output_forward
+                )
+            elif items_equal(s_minus_xvals, extend_backward):
+                key += "b"
+                assert_equal(
+                    [s.coordinates[0,0] for s in s_inner[0].trajectory],
+                    output_backward
+                )
+            else:
+                print "s_minus_xvals:", s_minus_xvals
+                raise RuntimeError("Unexpected minus extension result!")
 
-            # try:
-                # seg_dir[key] += 1
-            # except KeyError:
-                # seg_dir[key] = 1
-        # # assert_equal(len(seg_dir.keys()), 4)
+
+            try:
+                seg_dir[key] += 1
+            except KeyError:
+                seg_dir[key] = 1
+        assert_equal(len(seg_dir.keys()), 2)
 
 
