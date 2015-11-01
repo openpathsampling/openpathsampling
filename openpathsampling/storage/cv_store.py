@@ -58,7 +58,7 @@ class ObjectDictStore(ObjectStore):
                     var_name,
                     var_type=params['cv_return_type'],
                     dimensions=params['cv_return_shape'],
-                    simtk_unit=params['cv_simtk_unit'],
+                    simtk_unit=params['cv_return_simtk_unit'],
                     maskable=True
                 )
                 self.storage.update_delegates()

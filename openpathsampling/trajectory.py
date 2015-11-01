@@ -289,6 +289,22 @@ class Trajectory(list, StorableObject):
 
         return ObjectIterator()
 
+    def get_as_proxy(self, item):
+        """
+        Get an actual contained element
+
+        This will also return lazy proxy objects and not the referenced ones
+        as does __iter__, __reversed__ or __getitem__. Useful for faster access to the elements
+
+        This is equal to use list.__getitem__(trajectory, item)
+
+        Returns
+        -------
+        openpthsampling.Snapshot or openpathsampling.storage.objproxy.LoaderProxy
+        """
+        return list.__getitem__(self, item)
+
+
     def as_proxies(self):
         """
         Returns all contains all actual elements

@@ -241,7 +241,7 @@ class Function(ChainDict):
         else:
             result = self._eval(item)
 
-        if self.single_as_scalar:
+        if self.single_as_scalar and result.shape[-1] == 1:
             return result.reshape(result.shape[:-1])
 
         return result
@@ -253,12 +253,12 @@ class Function(ChainDict):
         if self.requires_lists:
             results = self._eval(items)
 
-            if self.single_as_scalar:
+            if self.single_as_scalar and results.shape[-1] == 1:
                 results = results.reshape(results.shape[:-1])
 
         else:
             results = [self._eval(obj) for obj in items]
-            if self.single_as_scalar:
+            if self.single_as_scalar and results[0].shape[-1] == 1:
                 results = map(lambda x : x.reshape(x.shape[:-1]), results)
 
         return results

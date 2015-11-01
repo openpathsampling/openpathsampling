@@ -72,23 +72,23 @@ class EnsembleCache(object):
             if reset is None:
                 lentraj = len(trajectory)
                 if self.direction > 0:
-                    if trajectory[0] != self.start_frame:
+                    if trajectory.get_as_proxy(0) != self.start_frame:
                         reset = True
                     else:
                         if lentraj == self.last_length:
-                            reset = (trajectory[-1] != self.prev_last_frame)
+                            reset = (trajectory.get_as_proxy(-1) != self.prev_last_frame)
                         elif lentraj == self.last_length + 1:
-                            reset = (trajectory[-2] != self.prev_last_frame)
+                            reset = (trajectory.get_as_proxy(-2) != self.prev_last_frame)
                         else:
                             reset = True
                 elif self.direction < 0:
-                    if trajectory[-1] != self.start_frame:
+                    if trajectory.get_as_proxy(-1) != self.start_frame:
                         reset = True
                     else:
                         if lentraj == self.last_length:
-                            reset = (trajectory[0] != self.prev_last_frame)
+                            reset = (trajectory.get_as_proxy(0) != self.prev_last_frame)
                         elif lentraj == self.last_length + 1:
-                            reset = (trajectory[1] != self.prev_last_frame)
+                            reset = (trajectory.get_as_proxy(1) != self.prev_last_frame)
                         else:
                             reset = True
                 else:
@@ -101,13 +101,13 @@ class EnsembleCache(object):
         if reset:
             logger.debug("Resetting cache " + str(self))
             if self.direction > 0:
-                self.start_frame = trajectory[0]
-                self.prev_last_frame = trajectory[-1]
+                self.start_frame = trajectory.get_as_proxy(0)
+                self.prev_last_frame = trajectory.get_as_proxy(-1)
                 self.last_length = len(trajectory)
                 self.contents = { }
             elif self.direction < 0:
-                self.start_frame = trajectory[-1]
-                self.prev_last_frame = trajectory[0]
+                self.start_frame = trajectory.get_as_proxy(-1)
+                self.prev_last_frame = trajectory.get_as_proxy(0)
                 self.last_length = len(trajectory)
                 self.contents = { }
             else:
@@ -117,9 +117,9 @@ class EnsembleCache(object):
         # by returning reset, we allow the functions that call this to reset
         # other things as well
         if self.direction > 0:
-            self.prev_last_frame = trajectory[-1]
+            self.prev_last_frame = trajectory.get_as_proxy(-1)
         elif self.direction < 0:
-            self.prev_last_frame = trajectory[0]
+            self.prev_last_frame = trajectory.get_as_proxy(0)
         else:
             self.bad_direction_error()
 
@@ -1354,11 +1354,12 @@ class AllInXEnsemble(VolumeEnsemble):
             return False
         if trusted == True:
             #print "trusted"
-            frame = trajectory[-1]
+            frame = trajectory.get_as_proxy(-1)
+            print type(frame)
             return self._volume(frame)
         else:
             #logger.debug("Calling volume untrusted "+repr(self))
-            for frame in trajectory:
+            for frame in trajectory.as_proxies():
                 if not self._volume(frame):
                     return False
             return True
@@ -1367,7 +1368,7 @@ class AllInXEnsemble(VolumeEnsemble):
         # order in this one only matters if it is trusted
         if trusted:
             #print "Rev Trusted"
-            frame = trajectory[0]
+            frame = trajectory.get_as_proxy(0)
             return self._volume(frame)
         else:
             #print "Rev UnTrusted"
@@ -1414,7 +1415,7 @@ class PartInXEnsemble(VolumeEnsemble):
         trajectory : Trajectory
             The trajectory to be checked
         '''
-        for frame in trajectory:
+        for frame in trajectory.as_proxies():
             if self._volume(frame):
                 return True
         return False
@@ -1439,7 +1440,7 @@ class PartOutXEnsemble(PartInXEnsemble):
         return AllInXEnsemble(self.volume, self.frames, self.trusted)
 
     def __call__(self, trajectory, trusted=None):
-        for frame in trajectory:
+        for frame in trajectory.as_proxies():
             if self._volume(frame):
                 return True
         return False
@@ -1463,8 +1464,8 @@ class ExitsXEnsemble(VolumeEnsemble):
     def __call__(self, trajectory, trusted=None):
         subtraj = trajectory
         for i in range(len(subtraj)-1):
-            frame_i = subtraj[i]
-            frame_iplus = subtraj[i+1]
+            frame_i = subtraj.get_as_proxy(i)
+            frame_iplus = subtraj.get_as_proxy(i+1)
             if self._volume(frame_i) and not self._volume(frame_iplus):
                 return True
         return False
@@ -1484,8 +1485,8 @@ class EntersXEnsemble(ExitsXEnsemble):
     def __call__(self, trajectory, trusted=None):
         subtraj = trajectory
         for i in range(len(subtraj)-1):
-            frame_i = subtraj[i]
-            frame_iplus = subtraj[i+1]
+            frame_i = subtraj.get_as_proxy(i)
+            frame_iplus = subtraj.get_as_proxy(i+1)
             if not self._volume(frame_i) and self._volume(frame_iplus):
                 return True
         return False
@@ -1573,10 +1574,9 @@ class SuffixTrajectoryEnsemble(WrappedEnsemble):
         #reset = False
         if not reset:
             logger.debug("BackwardPrended was not reset")
-            first_frame = trajectory[-1]
-            first_frame.reversed
-            if self._cached_trajectory[0] != first_frame:
-                self._cached_trajectory.insert(0,first_frame)
+            first_frame = trajectory.get_as_proxy(-1)
+            if self._cached_trajectory.get_as_proxy(0) != first_frame:
+                self._cached_trajectory.insert(0, first_frame)
         else:
             self._cached_trajectory = trajectory.reversed + self.add_trajectory
 
@@ -1605,8 +1605,8 @@ class PrefixTrajectoryEnsemble(WrappedEnsemble):
         logger.debug("Starting _alter")
         reset = self._cache_can_append.check(trajectory)
         if not reset:
-            final_frame = trajectory[-1]
-            if self._cached_trajectory[-1] != final_frame:
+            final_frame = trajectory.get_as_proxy(-1)
+            if self._cached_trajectory.get_as_proxy(-1) != final_frame:
                 self._cached_trajectory.append(final_frame)
         else: 
             logger.debug("doing it oldstyle")
@@ -1857,12 +1857,12 @@ class TISEnsemble(SequentialEnsemble):
         initial_state_i = None
         final_state_i = None
         for state_i in range(len(self.initial_states)):
-            if self.initial_states[state_i](trajectory[0]):
+            if self.initial_states[state_i](trajectory.get_as_proxy(0)):
                 initial_state_i = state_i
                 break
         all_states = self.initial_states + self.final_states
         for state_i in range(len(all_states)):
-            if all_states[state_i](trajectory[-1]):
+            if all_states[state_i](trajectory.get_as_proxy(-1)):
                 final_state_i = state_i
                 break
 
