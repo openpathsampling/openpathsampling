@@ -1114,7 +1114,7 @@ class testSingleReplicaMinusMover(object):
             # goes to other state:
             1.16, 1.26, 1.16, -0.16, 1.16, 1.26, 1.16
         ])
-        SampleGeneratingMover.engine = self.dyn
+        SampleMover.engine = self.dyn
         self.dyn.initialized = True
         self.innermost = paths.TISEnsemble(volA, volB, volX)
         self.minus = paths.MinusInterfaceEnsemble(volA, volX)
