@@ -27,23 +27,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     name : string
         A descriptive name of the collectivevariable. It is used in the string
         representation.
-    cv_return_type : str, default : 'float'
-        This specifies the number type of the output of the CV. All types allowed in the netcdfplus.py
-        are okay here. Needs to be one of ['bool', 'float', 'index', 'int', 'json', 'lazyobj.*',
-        'length', 'long', 'numpy.float32', 'numpy.float64', 'numpy.int16', 'numpy.int32',
-        'numpy.int64', 'numpy.int8', 'numpy.uint16', 'numpy.uint32', 'numpy.uint64',
-        'numpy.uint8', 'obj.*', 'store', 'str']
-    cv_return_shape : None or int or tuple of int, default: None
-        A tuple of cv_return_shape of the output of the collective variable.
-        `tuple()` corresponds to a scalar, so it `None`. An integer corresponds
-        to one dimension of the given length, e.g. `1` corresponds to a one dimensional
-        array with length 1. `tuple(1,2,3)` corresponds to a 3-dimensional array of
-        size 1 by 2 by 3 elements. The higher dimensional array are usually used with
-        numpy arrays.
-    cv_return_simtk_unit : simtk.unit.Unit, default: None
-        A simtk.unit.Unit instance specifying the used unit of the output. This means the
-        function should return a value with unit. When cached the unit is stripped and when
-        loaded recreated.
     cv_time_reversible : bool, default: True
         If `True` the CV assumes that reversed snapshots have the same value. This is the
         default case when CVs do not depend on momenta reversal. This will speed up computation of
@@ -61,9 +44,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     Attributes
     ----------
     name
-    cv_return_shape
-    cv_return_type
-    cv_return_simtk_unit
     cv_time_reversible
     cv_requires_lists
     cv_store_cache
@@ -90,7 +70,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             cv_time_reversible=False,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
-            cv_use_numpy_scalar=False
+            cv_scalarize_numpy_singletons=False
     ):
         if (type(name) is not str and type(name) is not unicode) or len(
                 name) == 0:
@@ -104,7 +84,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self.time_reversible = cv_time_reversible
         self.requires_lists = cv_requires_lists
         self.wrap_numpy_array = cv_wrap_numpy_array
-        self.use_numpy_scalar = cv_use_numpy_scalar
+        self.scalarize_numpy_singletons = cv_scalarize_numpy_singletons
 
         self._single_dict = cd.ExpandSingle()
         self._cache_dict = cd.ReversibleCacheChainDict(WeakLRUCache(1000, weak_type='key'), reversible=cv_time_reversible)
@@ -112,7 +92,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self._func_dict = cd.Function(
             self._eval,
             self.requires_lists,
-            self.use_numpy_scalar
+            self.scalarize_numpy_singletons
         )
 
         post = self._func_dict + self._cache_dict + self._single_dict
@@ -522,7 +502,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             'time_reversible': self.time_reversible,
             'requires_lists': self.requires_lists,
             'wrap_numpy_array': self.wrap_numpy_array,
-            'use_numpy_scalar': self.use_numpy_scalar
+            'scalarize_numpy_singletons': self.scalarize_numpy_singletons
         }
 
     @classmethod
@@ -535,7 +515,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             cv_time_reversible=dct['time_reversible'],
             cv_requires_lists=dct['requires_lists'],
             cv_wrap_numpy_array=dct['wrap_numpy_array'],
-            cv_use_numpy_scalar=dct['use_numpy_scalar']
+            cv_scalarize_numpy_singletons=dct['scalarize_numpy_singletons']
         )
         return obj
 
@@ -565,7 +545,7 @@ class CV_Volume(CollectiveVariable):
             cv_time_reversible=True,
             cv_requires_lists=True,
             cv_wrap_numpy_array=False,
-            cv_use_numpy_scalar=False
+            cv_scalarize_numpy_singletons=False
         )
         self.volume = volume
 
@@ -610,7 +590,7 @@ class CV_Callable(CollectiveVariable):
             cv_time_reversible=False,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
-            cv_use_numpy_scalar=False,
+            cv_scalarize_numpy_singletons=False,
             **kwargs
     ):
         """
@@ -675,7 +655,7 @@ class CV_Callable(CollectiveVariable):
             cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
             cv_wrap_numpy_array=cv_wrap_numpy_array,
-            cv_use_numpy_scalar=cv_use_numpy_scalar
+            cv_scalarize_numpy_singletons=cv_scalarize_numpy_singletons
         )
 
         self.c = c
@@ -737,7 +717,7 @@ class CV_Function(CV_Callable):
             cv_time_reversible=False,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
-            cv_use_numpy_scalar=False,
+            cv_scalarize_numpy_singletons=False,
             **kwargs
     ):
         """
@@ -750,7 +730,7 @@ class CV_Function(CV_Callable):
         cv_time_reversible
         cv_requires_lists
         cv_wrap_numpy_array
-        cv_use_numpy_scalar
+        cv_scalarize_numpy_singletons
         kwargs : **kwargs
             a dictionary of named arguments which should be given to `f` (for example, the
             atoms which define a specific distance/angle). Finally
@@ -769,7 +749,7 @@ class CV_Function(CV_Callable):
             cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
             cv_wrap_numpy_array=cv_wrap_numpy_array,
-            cv_use_numpy_scalar=cv_use_numpy_scalar,
+            cv_scalarize_numpy_singletons=cv_scalarize_numpy_singletons,
             **kwargs
         )
 
@@ -812,7 +792,7 @@ class CV_Generator(CV_Callable):
             cv_time_reversible=False,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
-            cv_use_numpy_scalar=False,
+            cv_scalarize_numpy_singletons=False,
             **kwargs
     ):
         """
@@ -845,7 +825,7 @@ class CV_Generator(CV_Callable):
             cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
             cv_wrap_numpy_array=cv_wrap_numpy_array,
-            cv_use_numpy_scalar=cv_use_numpy_scalar,
+            cv_scalarize_numpy_singletons=cv_scalarize_numpy_singletons,
             **kwargs
         )
 
@@ -893,7 +873,7 @@ class CV_MDTraj_Function(CV_Function):
                  cv_time_reversible=True,
                  cv_requires_lists=True,
                  cv_wrap_numpy_array=True,
-                 cv_use_numpy_scalar=True,
+                 cv_scalarize_numpy_singletons=True,
                  **kwargs
                  ):
         """
@@ -906,8 +886,8 @@ class CV_MDTraj_Function(CV_Function):
         cv_time_reversible
         cv_requires_lists
         cv_wrap_numpy_array
-        cv_use_numpy_scalar
-        use_numpy_scalar : bool, default: True
+        cv_scalarize_numpy_singletons
+        scalarize_numpy_singletons : bool, default: True
             If `True` then arrays of length 1 will be treated as array with one dimension less.
             e.g. [ [1], [2], [3] ] will be turned into [1, 2, 3]. This is often useful, when you
             use en external function from mdtraj to get only a single value.
@@ -921,7 +901,7 @@ class CV_MDTraj_Function(CV_Function):
             cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
             cv_wrap_numpy_array=cv_wrap_numpy_array,
-            cv_use_numpy_scalar=cv_use_numpy_scalar,
+            cv_scalarize_numpy_singletons=cv_scalarize_numpy_singletons,
             **kwargs
         )
 
@@ -940,7 +920,7 @@ class CV_MSMB_Featurizer(CV_Generator):
 
     Attributes
     ----------
-    use_numpy_scalar
+    scalarize_numpy_singletons
     """
 
     def __init__(
@@ -949,7 +929,7 @@ class CV_MSMB_Featurizer(CV_Generator):
             featurizer,
             cv_store_cache=True,
             cv_wrap_numpy_array=True,
-            cv_use_numpy_scalar=True,
+            cv_scalarize_numpy_singletons=True,
             **kwargs
     ):
         """
@@ -966,7 +946,7 @@ class CV_MSMB_Featurizer(CV_Generator):
             using the CV will call `instance(snapshots)`
         cv_store_cache
         cv_requires_lists
-        use_numpy_scalar : bool, default: True
+        scalarize_numpy_singletons : bool, default: True
             If `True` then arrays of length 1 will be treated as array with one dimension less.
             e.g. [ [1], [2], [3] ] will be turned into [1, 2, 3]. This is often useful, when you
             use en external function to get only a single value.
@@ -996,7 +976,7 @@ class CV_MSMB_Featurizer(CV_Generator):
             cv_time_reversible=True,
             cv_requires_lists=True,
             cv_wrap_numpy_array=cv_wrap_numpy_array,
-            cv_use_numpy_scalar=cv_use_numpy_scalar,
+            cv_scalarize_numpy_singletons=cv_scalarize_numpy_singletons,
             **kwargs
         )
 
