@@ -7,7 +7,7 @@ from openpathsampling.tests.test_helpers import (assert_equal_array_array,
                           CalvinistDynamics
                          )
 from openpathsampling.shooting import *
-from openpathsampling.pathmover import ForwardShootMover, BackwardShootMover, SampleGeneratingMover
+from openpathsampling.pathmover import ForwardShootMover, BackwardShootMover, SampleMover
 from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.sample import Sample, SampleSet
 
@@ -18,7 +18,7 @@ class SelectorTest(object):
         self.dyn = CalvinistDynamics([-0.5, -0.4, -0.3, -0.2, -0.1,
                                       0.1, 0.2, 0.3, 0.4, 0.5])
                                       #0.5, 0.4, 0.3, 0.2, 0.1])
-        SampleGeneratingMover.engine = self.dyn
+        SampleMover.engine = self.dyn
         self.dyn.initialized = True
         self.ens = LengthEnsemble(5)
         self.gs = SampleSet(Sample(
