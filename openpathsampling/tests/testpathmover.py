@@ -1219,11 +1219,37 @@ class testSingleReplicaMinusMover(object):
         gs.sanity_check()
 
         change = self.mover.move(gs)
+        assert_equal(change.accepted, False)
         assert_equal(len(change.results), 0)
-        sub_trials = change.subchange.subchange.trials
+        sub_trials = change.subchange.subchange.subchange.trials
         assert_equal(len(sub_trials), 1)
         assert_equal(sub_trials[0].trajectory, crossing_traj)
         assert_equal(sub_trials[0].ensemble, self.minus._segment_ensemble)
 
     def test_extension_fails(self):
-        raise SkipTest
+        innermost_bad_extension = [-0.25, 0.1, 0.5, 0.1, -0.25]
+        traj_bad_extension = make_1d_traj(innermost_bad_extension, [1.0]*5)
+        samp_bad_extension = Sample(
+            replica=0,
+            trajectory=traj_bad_extension,
+            ensemble=self.innermost
+        )
+        
+        assert_equal(self.innermost(traj_bad_extension), True)
+
+        gs = SampleSet([self.minus_sample, samp_bad_extension])
+        change = self.mover.move(gs)
+        assert_equal(change.accepted, False) # whole minus has failed
+
+        #     Minus : Filter  :ChooseFB : CondSeq
+        sub = change.subchange.subchange.subchange
+        assert_equal(len(sub.trials), 2)
+        assert_equal(len(change.trials), 0) # no trials survive filtering
+        assert_subchanges_set_accepted(sub, [True, False])
+
+        # first two work and the extention fails
+        # this only happens due to length
+        assert_equal(
+            len(sub[-1].trials[0].trajectory),
+            len(traj_bad_extension)+self.dyn.n_frames_max-1
+        )
