@@ -62,14 +62,27 @@ class TreeSetMixin(object):
 
     @property
     def head(self):
+        """
+        Return the content of the top-most node in the tree.
+
+        Returns
+        -------
+        node
+        """
         return self[0]
 
     @property
     def tail(self):
-        return TupleTree._tail(self)
+        """
+        Return the very last node in the given tree.
+        """
+        return self._tail(self)
 
     @property
     def children(self):
+        """
+        Return all subnodes of the tree.
+        """
         return self._subnodes
 
     @property
