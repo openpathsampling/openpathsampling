@@ -995,12 +995,7 @@ class CV_MSMB_Featurizer(CV_Generator):
         ptraj = trajectory.md()
 
         # run the featurizer
-        arr = self._instance.partial_transform(ptraj)
-
-        if self.single_as_scalar and arr.shape[-1] == 1:
-            return arr.reshape(arr.shape[:-1])
-        else:
-            return arr
+        return self._instance.partial_transform(ptraj)
 
     def to_dict(self):
         return {
@@ -1032,7 +1027,14 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
 
     """
 
-    def __init__(self, name, featurizer, topology, cv_return_type='float', cv_return_shape=None, cv_store_cache=True, cv_single_as_scalar=True, **kwargs):
+    def __init__(
+            self,
+            name,
+            featurizer,
+            topology,
+            cv_store_cache=True,
+            **kwargs
+    ):
         """
 
         Parameters
@@ -1076,17 +1078,15 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
         self._instance = coor.featurizer(self.topology.md)
 
         featurizer(self._instance, **md_kwargs)
-        self.single_as_scalar = cv_single_as_scalar
 
-        super(CV_Class, self).__init__(
+        super(CV_Generator, self).__init__(
             name,
             c=featurizer,
-            cv_return_type='numpy.float32',
-            cv_return_shape=cv_return_shape,
-            cv_return_simtk_unit=None,
             cv_time_reversible=True,
             cv_requires_lists=True,
             cv_store_cache=cv_store_cache,
+            cv_wrap_numpy_array=True,
+            cv_scalarize_numpy_singletons=True,
             **kwargs
         )
 
@@ -1094,30 +1094,23 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
         trajectory = paths.Trajectory(items)
 
         t = trajectory.md(self.topology.md)
-        arr =self._instance.transform(t)
+        return self._instance.transform(t)
 
-        if self.single_as_scalar and arr.shape[-1] == 1:
-            return arr.reshape(arr.shape[:-1])
-        else:
-            return arr
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'featurizer': self.featurizer,
+            'kwargs': self.kwargs,
+            'store_cache': self.store_cache
+        }
 
     @classmethod
-    def from_template(cls, name, c, template, **kwargs):
-        f_kwargs = {key: value for key, value in kwargs.iteritems() if not key.startswith('cv_')}
-        instance = coor.featurizer(template.topology.md)
-        c(instance, **f_kwargs)
-
-        print instance.transform((template.md()))
-
-        parameters = cls.parameters_from_template(instance.transform, template.md())
-        parameters['topology'] = template.topology
-        parameters['featurizer'] = c
-        del parameters['cv_return_simtk_unit']
-        del parameters['cv_requires_lists']
-        del parameters['cv_time_reversible']
-        del parameters['c']
-        parameters.update(kwargs)
-
-        print parameters
-
-        return cls(name, **parameters)
+    def from_dict(cls, dct):
+        obj = CV_MSMB_Featurizer(
+            name=dct['name'],
+            featurizer=dct['featurizer'],
+            cv_store_cache=dct['store_cache'],
+            cv_single_as_scalar=dct['single_as_scalar'],
+            **dct['kwargs']
+        )
+        return obj
