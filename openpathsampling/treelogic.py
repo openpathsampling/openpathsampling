@@ -280,14 +280,14 @@ class TreeSetMixin(object):
                  tree,
                  test,
                  node_match_fnc,
-                 leave_fnc=None,
-                 leave_n=0,
+                 leaf_fnc=None,
+                 leaf_n=0,
                  tree_child_n=0,
                  test_child_n=0
                  ):
 
-        if leave_fnc is None:
-            leave_fnc = lambda x: x._choices
+        if leaf_fnc is None:
+            leaf_fnc = lambda x: x._choices
 
         WILDCARDS = {
             '*': lambda s: slice(0, None),
@@ -298,7 +298,7 @@ class TreeSetMixin(object):
         }
         MATCH_ONE = ['.', '?', '*']
 
-        # print leave_n, '/', len(tree._leaves), start, '/', len(tree._leaves[leave_n]), tree.__class__.__name__, tree.identifier,  match(tree.identifier, child[0]), child
+        # print leaf_n, '/', len(tree._leaves), start, '/', len(tree._leaves[leaf_n]), tree.__class__.__name__, tree.identifier,  match(tree.identifier, child[0]), child
 
         if test[0] not in MATCH_ONE and not node_match_fnc(tree, test[0]):
             return False
@@ -317,31 +317,31 @@ class TreeSetMixin(object):
                     if region is None:
                         raise ValueError('Parse error. ONLY ' + str(WILDCARDS.values()) + ' as wildcards allowed.')
 
-                    if leave_n < len(leave_fnc(tree)):
-                        leaf = leave_fnc(tree)[leave_n]
+                    if leaf_n < len(leaf_fnc(tree)):
+                        leaf = leaf_fnc(tree)[leaf_n]
                         if region.start <= len(leaf):
                             # check that there are enough children to match
                             for left in range(*region.indices(len(leaf) - 1)):
-                                if cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n, tree_child_n + left,
+                                if cls._in_tree(tree, test, node_match_fnc, leaf_fnc, leaf_n, tree_child_n + left,
                                                 test_child_n + 1):
                                     return True
 
                 else:
-                    if leave_n < len(leave_fnc(tree)):
-                        leaf = leave_fnc(tree)[leave_n]
+                    if leaf_n < len(leaf_fnc(tree)):
+                        leaf = leaf_fnc(tree)[leaf_n]
 
                         if len(leaf) > tree_child_n:
-                            if cls._in_tree(leaf[tree_child_n], sub, node_match_fnc, leave_fnc):
+                            if cls._in_tree(leaf[tree_child_n], sub, node_match_fnc, leaf_fnc):
                                 # go to next sub in child
                                 if len(test) - test_child_n < 3:
                                     return True
                                 else:
                                     if len(leaf) > tree_child_n + 1:
-                                        return cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n,
+                                        return cls._in_tree(tree, test, node_match_fnc, leaf_fnc, leaf_n,
                                                             tree_child_n + 1, test_child_n + 1)
 
-                if leave_n < len(leave_fnc(tree)) - 1:
-                    if cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n + 1):
+                if leaf_n < len(leaf_fnc(tree)) - 1:
+                    if cls._in_tree(tree, test, node_match_fnc, leaf_fnc, leaf_n + 1):
                         return True
 
                 return False
@@ -476,13 +476,13 @@ class TreeSetMixin(object):
             mp = []
             for pos, sub in enumerate(leaf):
                 subtree = sub.locators()
-                leave_id = tuple(map(lambda x: x.identifier, leaf[:pos + 1]))
-                if leave_id not in excludes:
-                    # print tuple(mp) == leave_id[:-1], tuple(mp), leave_id[:-1]
+                leaf_id = tuple(map(lambda x: x.identifier, leaf[:pos + 1]))
+                if leaf_id not in excludes:
+                    # print tuple(mp) == leaf_id[:-1], tuple(mp), leaf_id[:-1]
                     result.update(
                         {TupleTree(path + mp + [key]): m for key, m in subtree.iteritems()}
                     )
-                    excludes.append(leave_id)
+                    excludes.append(leaf_id)
 
                 mp.append(TupleTree([sub.identifier]))
 
