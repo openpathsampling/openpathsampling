@@ -123,7 +123,6 @@ class ObjectStore(object):
         self.has_uid = has_uid
         self.has_name = has_name
         self.json = json
-        self.simplifier = paths.storage.StorableObjectJSON(storage)
         self.identifier = self.db + '_uid'
         self._free = set()
         self._cached_all = False
@@ -196,6 +195,10 @@ class ObjectStore(object):
             self.load = types.MethodType(loadcache(_load), self)
 
         self._register_with_storage(nestable=nestable)
+
+    @property
+    def simplifier(self):
+        return self.storage.simplifier
 
     def __str__(self):
         return repr(self)
@@ -535,8 +538,8 @@ class ObjectStore(object):
         Returns an object from the storage. Needs to be implemented from
         the specific storage class.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         idx : int or str
             either the integer index of the object to be loaded or a string
             (name) for named objects. This will always return the first object
@@ -633,8 +636,8 @@ class ObjectStore(object):
         """
         Returns a list of objects from the given list of indices
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         indices : list of int
             the list of integers specifying the object to be returned
 
@@ -771,8 +774,8 @@ class ObjectStore(object):
         Create a new variable in the netCDF storage. This is just a helper
         function to structure the code better.
 
-        Paramters
-        =========
+        Parameters
+        ==========
         name : str
             The name of the variable to be created
         var_type : str

@@ -12,7 +12,6 @@ from test_helpers import (assert_equal_array_array, items_equal,
                           CallIdentity
                          )
 
-import openpathsampling as paths
 from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.pathmover import *
 
@@ -71,6 +70,13 @@ def assert_subchanges_set_accepted(change, results):
     for ch, result in zip(change.subchanges, results):
         assert_equal(ch.accepted, result)
 
+def assert_choice_of(result, choices):
+    for choice in choices:
+        if result is choice:
+            return
+
+    raise AssertionError("%s is not in list of choices [%s]" % (result, choices))
+
 class testPathMover(object):
     def setup(self):
         self.l1 = LengthEnsemble(1)
@@ -78,8 +84,8 @@ class testPathMover(object):
         self.l3 = LengthEnsemble(3)
         self.repsAll_ensNone = PathMover()
 #        self.reps12_ensNone = PathMover(replicas=[1, 2])
-        self.repsAll_ens1 = PathMover(ensembles=self.l1)
-        self.repsAll_ens12 = PathMover(ensembles=[self.l1, self.l2])
+        self.repsAll_ens1 = PathMover()
+        self.repsAll_ens12 = PathMover()
 #        self.reps1_ens2 = PathMover(replicas=1, ensembles=[self.l2])
         self.s1 = Sample(replica=1, ensemble=self.l2)
         self.s2 = Sample(replica=2, ensemble=self.l1)
@@ -88,16 +94,13 @@ class testPathMover(object):
         self.sset = SampleSet([self.s1, self.s2, self.s3, self.s4])
 
     def test_legal_sample_set(self):
-        assert_items_equal(self.repsAll_ensNone.legal_sample_set(self.sset),
-                           [self.s1, self.s2, self.s3, self.s4])
-#        assert_items_equal(self.reps12_ensNone.legal_sample_set(self.sset),
-#                           [self.s1, self.s2, self.s4])
-        assert_items_equal(self.repsAll_ens12.legal_sample_set(self.sset),
-                           [self.s1, self.s2, self.s3])
-        assert_items_equal(self.repsAll_ens1.legal_sample_set(self.sset),
-                           [self.s2, self.s3])
-#        assert_items_equal(self.reps1_ens2.legal_sample_set(self.sset),
-#                           [self.s1])
+#        assert_items_equal(self.repsAll_ensNone.legal_sample_set(self.sset),
+#                           [self.s1, self.s2, self.s3, self.s4])
+#        assert_items_equal(self.repsAll_ens12.legal_sample_set(self.sset),
+#                           [self.s1, self.s2, self.s3])
+#        assert_items_equal(self.repsAll_ens1.legal_sample_set(self.sset),
+#                           [self.s2, self.s3])
+
         assert_items_equal(
             self.repsAll_ensNone.legal_sample_set(self.sset, ensembles=self.l1),
             [self.s2, self.s3]
@@ -110,11 +113,10 @@ class testPathMover(object):
 
     def test_select_sample(self):
 #        assert_equal(self.reps1_ens2.select_sample(self.sset), self.s1)
-        selected = self.repsAll_ens1.select_sample(self.sset)
-        try:
-            assert_equal(selected, self.s2)
-        except AssertionError:
-            assert_equal(selected, self.s3)
+
+        for i in range(20):
+            selected = self.repsAll_ens1.select_sample(self.sset)
+            assert_choice_of(selected, [self.s1, self.s2, self.s3, self.s4])
 
     def test_is_ensemble_change_mover(self):
         pm = PathMover()
@@ -135,7 +137,7 @@ class testShootingMover(object):
         self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
                                       -0.1, 0.2, 0.4, 0.6, 0.8,
                                      ])
-        SampleGeneratingMover.engine = self.dyn
+        SampleMover.engine = self.dyn
         op = CV_Function("myid", fcn=lambda snap :
                              snap.coordinates[0][0])
         stateA = CVRangeVolume(op, -100, 0.0)
@@ -153,7 +155,10 @@ class testShootingMover(object):
 
 class testForwardShootMover(testShootingMover):
     def test_move(self):
-        mover = ForwardShootMover(UniformSelector(), ensembles=self.tps)
+        mover = ForwardShootMover(
+            ensemble=self.tps,
+            selector=UniformSelector()
+        )
         self.dyn.initialized = True
         change = mover.move(self.init_samp)
         newsamp = self.init_samp + change
@@ -163,12 +168,19 @@ class testForwardShootMover(testShootingMover):
         assert_equal(newsamp[0].trajectory, change.trials[0].trajectory)
 
     def test_is_ensemble_change_mover(self):
-        mover = ForwardShootMover(UniformSelector(), ensembles=self.tps)
+        mover = ForwardShootMover(
+            selector=UniformSelector(),
+            ensemble=self.tps
+        )
+
         assert_equal(mover.is_ensemble_change_mover, False)
 
 class testBackwardShootMover(testShootingMover):
     def test_move(self):
-        mover = BackwardShootMover(UniformSelector(), ensembles=self.tps)
+        mover = BackwardShootMover(
+            ensemble=self.tps,
+            selector=UniformSelector()
+        )
         self.dyn.initialized = True
         change = mover.move(self.init_samp)
         newsamp = self.init_samp + change
@@ -178,12 +190,18 @@ class testBackwardShootMover(testShootingMover):
         assert_equal(newsamp[0].trajectory, change.trials[0].trajectory)
 
     def test_is_ensemble_change_mover(self):
-        mover = BackwardShootMover(UniformSelector(), ensembles=self.tps)
+        mover = BackwardShootMover(
+            selector=UniformSelector(),
+            ensemble=self.tps
+        )
         assert_equal(mover.is_ensemble_change_mover, False)
 
 class testOneWayShootingMover(testShootingMover):
     def test_mover_initialization(self):
-        mover = OneWayShootingMover(UniformSelector, ensembles=self.tps)
+        mover = OneWayShootingMover(
+            ensemble=self.tps,
+            selector=UniformSelector()
+        )
         assert_equal(len(mover.movers), 2)
         assert_equal(isinstance(mover, RandomChoiceMover), True)
         assert_equal(isinstance(mover, OneWayShootingMover), True)
@@ -200,7 +218,7 @@ class testPathReversalMover(object):
         volB = CVRangeVolume(op, 1.0, 100)
         volX = CVRangeVolume(op, -100, 0.25)
         self.tis = paths.TISEnsemble(volA, volB, volX)
-        self.move = PathReversalMover()
+        self.move = PathReversalMover(ensemble=self.tis)
         self.op = op
 
     def test_is_ensemble_change_mover(self):
@@ -244,7 +262,7 @@ class testPathReversalMover(object):
                          replica=0)
         gs_BXA = SampleSet([sampBXA])
         change = self.move.move(gs_BXA)
-        print [[v.coordinates[0] for v in t.trajectory] for t in change.trials]
+        # print [[v.coordinates[0] for v in t.trajectory] for t in change.trials]
         assert_equal(change.accepted, True)
 
 
@@ -280,11 +298,17 @@ class testReplicaExchangeMover(object):
         self.gs_A0B1 = SampleSet([self.sampA0, self.sampB1])
 
     def test_is_ensemble_change_mover(self):
-        repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
+        repex_AB = ReplicaExchangeMover(
+            ensemble1=self.tisA,
+            ensemble2=self.tisB
+        )
         assert_equal(repex_AB.is_ensemble_change_mover, True)
 
     def test_repex_ens_rej(self):
-        repex_AB = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
+        repex_AB = ReplicaExchangeMover(
+            ensemble1=self.tisA,
+            ensemble2=self.tisB
+        )
         old_sset = self.gs_A0B1
         repex_change = repex_AB.move(old_sset)
         samples = repex_change.results
@@ -308,7 +332,10 @@ class testReplicaExchangeMover(object):
         assert_equal(B1[0].trajectory, self.traj0)
 
     def test_repex_ens_acc(self):
-        repex_12 = ReplicaExchangeMover(ensembles=[[self.tisA, self.tisB]])
+        repex_12 = ReplicaExchangeMover(
+            ensemble1=self.tisA,
+            ensemble2=self.tisB
+        )
         old_sset = self.gs_B1A2
         samples_B2A1_rep = repex_12.move(old_sset)
         change = samples_B2A1_rep
@@ -343,8 +370,14 @@ class testRandomChoiceMover(object):
         self.init_samp = SampleSet([Sample(trajectory=traj,
                                            ensemble=self.len3, 
                                            replica=0)])
-        self.hop_to_tis = EnsembleHopMover(ensembles=[[self.len3, self.tis]])
-        self.hop_to_tps = EnsembleHopMover(ensembles=[[self.len3, self.tps]])
+        self.hop_to_tis = EnsembleHopMover(
+            ensemble=self.len3,
+            target_ensemble=self.tis
+        )
+        self.hop_to_tps = EnsembleHopMover(
+            ensemble=self.len3,
+            target_ensemble=self.tps
+        )
         self.mover = RandomChoiceMover([self.hop_to_tis, self.hop_to_tps])
 
     def test_is_ensemble_change_mover(self):
@@ -382,6 +415,115 @@ class testRandomChoiceMover(object):
     def test_restricted_by_ensemble(self):
         raise SkipTest
 
+
+class testRandomAllowedChoiceMover(object):
+    def setup(self):
+        self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
+                                      -0.1, 0.2, 0.4, 0.6, 0.8,
+                                     ])
+        self.dyn.initialized = True
+        SampleMover.engine = self.dyn
+        op = CV_Function("myid", fcn=lambda snap :
+                             snap.coordinates[0][0])
+        stateA = CVRangeVolume(op, -100, 0.0)
+        stateB = CVRangeVolume(op, 0.65, 100)
+        volX = CVRangeVolume(op, -100, 0.25)
+        volY = CVRangeVolume(op, -100, 0.40)
+        self.ens1 = paths.TISEnsemble(stateA, stateB, volX, op)
+        self.ens2 = paths.TISEnsemble(stateA, stateB, volY, op)
+        init_traj1 = make_1d_traj(
+            coordinates=[-0.1, 0.1, 0.2, 0.3, 0.24, 0.15, 0.06, -0.07],
+            velocities=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        )
+        init_traj2 = make_1d_traj(
+            coordinates=[-0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+            velocities=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        )
+        self.samp1 = Sample(trajectory=init_traj1, replica=0, 
+                            ensemble=self.ens1)
+        self.samp2 = Sample(trajectory=init_traj2, replica=1,
+                            ensemble=self.ens2)
+
+        self.shooter = ForwardShootMover(selector=UniformSelector(),
+                                         ensemble=self.ens2)
+        self.pathrev = PathReversalMover(ensemble=self.ens1)
+
+        ens_dict = {self.ens1 : self.pathrev, self.ens2 : self.shooter}
+        # self.mover = EnsembleDictionaryMover(ens_dict)
+        self.mover = RandomAllowedChoiceMover([self.shooter, self.pathrev])
+
+    def test_move_single_replica(self):
+        sampleset = SampleSet([self.samp1])
+        change = self.mover.move(sampleset)
+        subchange = change.subchange
+        assert_equal(subchange.mover, self.pathrev)
+        assert_equal(subchange.accepted, True)
+        assert_equal(change.accepted, True)
+        assert_equal(len(subchange.samples), 1)
+
+        sampleset = SampleSet([self.samp2])
+        change = self.mover.move(sampleset)
+        subchange = change.subchange
+        assert_equal(subchange.mover, self.shooter)
+        assert_equal(subchange.accepted, True)
+        assert_equal(change.accepted, True)
+
+
+    def test_move_multiple_replicas(self):
+        sampleset = SampleSet([self.samp1, self.samp2])
+        count = {}
+        for i in range(100):
+            change = self.mover.move(sampleset)
+            subchange = change.subchange
+            assert_equal(change.accepted, True)
+            assert_equal(subchange.accepted, True)
+            assert_equal(len(subchange.samples), 1)
+            ens = subchange.trials[0].ensemble
+            try:
+                count[ens] += 1
+            except KeyError:
+                count[ens] = 1
+            if ens == self.ens1:
+                assert_equal(subchange.mover, self.pathrev)
+            elif ens == self.ens2:
+                assert_equal(subchange.mover, self.shooter)
+            else:
+                raise AssertionError("Resulting mover unknown!")
+        assert_equal(set(count.keys()), set([self.ens1, self.ens2]))
+
+
+    def test_move_multiple_replicas_weighted_ensembles(self):
+        sampleset = SampleSet([self.samp1, self.samp2])
+        ens_dict = {self.ens1 : self.pathrev, self.ens2 : self.shooter}
+        # weighted_mover = EnsembleDictionaryMover(ens_dict, [1.0, 2.0])
+        weighted_mover = RandomAllowedChoiceMover([self.pathrev,
+                                                   self.shooter], [1.0, 2.0])
+        count = {}
+        for i in range(100):
+            change = weighted_mover.move(sampleset)
+            subchange = change.subchange
+            assert_equal(change.accepted, True)
+            assert_equal(subchange.accepted, True)
+            assert_equal(len(subchange.samples), 1)
+            ens = subchange.trials[0].ensemble
+            try:
+                count[ens] += 1
+            except KeyError:
+                count[ens] = 1
+            if ens == self.ens1:
+                assert_equal(subchange.mover, self.pathrev)
+            elif ens == self.ens2:
+                assert_equal(subchange.mover, self.shooter)
+            else:
+                raise AssertionError("Resulting mover unknown!")
+        assert_equal(set(count.keys()), set([self.ens1, self.ens2]))
+        try:
+            assert(count[self.ens1] < count[self.ens2])
+        except AssertionError:
+            raise AssertionError("Not true: "+str(count[self.ens1]) + " < "
+                                 + str(count[self.ens2]))
+
+
 class testSequentialMover(object):
     def setup(self):
         traj = Trajectory([-0.5, 0.7, 1.1])
@@ -393,22 +535,38 @@ class testSequentialMover(object):
         tps = ef.A2BEnsemble(volA, volB)
         len3 = LengthEnsemble(3)
         len2 = LengthEnsemble(2)
-        self.hop_to_tis = EnsembleHopMover(ensembles=[[tis, tis],
-                                                      [tps, tis],
-                                                      [len3, tis],
-                                                      [len2, tis]])
-        self.hop_to_tps = EnsembleHopMover(ensembles=[[tis, tps],
-                                                      [tps, tps],
-                                                      [len3, tps],
-                                                      [len2, tps]])
-        self.hop_to_len3 = EnsembleHopMover(ensembles=[[tis, len3],
-                                                       [tps, len3],
-                                                       [len3, len3],
-                                                       [len2, len3]]) 
-        self.hop_to_len2 = EnsembleHopMover(ensembles=[[tis, len2],
-                                                      [tps, len2],
-                                                      [len3, len2],
-                                                      [len2, len2]])
+        self.hop_to_tis = RandomAllowedChoiceMover(
+            map(lambda ens : EnsembleHopMover(*ens),
+                [[tis, tis],
+                 [tps, tis],
+                 [len3, tis],
+                 [len2, tis]]
+            )
+        )
+        self.hop_to_tps = RandomAllowedChoiceMover(
+            map(lambda ens : EnsembleHopMover(*ens),
+                [[tis, tps],
+                 [tps, tps],
+                 [len3, tps],
+                 [len2, tps]]
+            )
+        )
+        self.hop_to_len3 = RandomAllowedChoiceMover(
+            map(lambda ens : EnsembleHopMover(*ens),
+                [[tis, len3],
+                 [tps, len3],
+                 [len3, len3],
+                 [len2, len3]]
+            )
+        )
+        self.hop_to_len2 = RandomAllowedChoiceMover(
+            map(lambda ens : EnsembleHopMover(*ens),
+                [[tis, len2],
+                 [tps, len2],
+                 [len3, len2],
+                 [len2, len2]]
+            )
+        )
         self.init_sample = Sample(trajectory=traj,
                                   ensemble=len3,
                                   replica=0)
@@ -599,7 +757,7 @@ class SubtrajectorySelectTester(object):
         self.subtraj2 = Trajectory([0.0, 2.0, 0.0])
         self.gs = SampleSet(Sample(
             replica=0,
-            ensemble=self.subensemble,
+            ensemble=self.ensemble,
             trajectory=self.traj_with_3_subtrajs
         ))
 
@@ -613,7 +771,10 @@ class SubtrajectorySelectTester(object):
 
 class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
     def test_accepts_all(self):
-        mover = RandomSubtrajectorySelectMover(self.subensemble)
+        mover = RandomSubtrajectorySelectMover(
+            ensemble=self.ensemble,
+            sub_ensemble=self.subensemble
+        )
         found = {}
         for t in range(100):
             change = mover.move(self.gs)
@@ -633,7 +794,7 @@ class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
         assert_equal(found[0] and found[1] and found[2], True)
 
     def test_is_ensemble_change_mover(self):
-        mover = RandomSubtrajectorySelectMover(self.subensemble)
+        mover = RandomSubtrajectorySelectMover(ensemble=1, sub_ensemble=1)
         assert_equal(mover.is_ensemble_change_mover, True)
 
 
@@ -641,18 +802,24 @@ class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
         raise SkipTest
 
     def test_nothing_allowed(self):
-        mover = RandomSubtrajectorySelectMover(self.subensemble)
+        mover = RandomSubtrajectorySelectMover(
+            ensemble=self.ensemble,
+            sub_ensemble=self.subensemble
+        )
         traj_with_no_subtrajs = Trajectory([0.0, 0.0, 0.0])
         self.gs[0].trajectory = traj_with_no_subtrajs
         change = mover.move(self.gs)
         samples = change.results
         assert_equal(len(samples), 0)
-        print change.samples
+        # print change.samples
         assert_equal(len(change.samples), 0)
 
 class testFirstSubtrajectorySelectMover(SubtrajectorySelectTester):
     def test_move(self):
-        mover = FirstSubtrajectorySelectMover(self.subensemble)
+        mover = FirstSubtrajectorySelectMover(
+            ensemble=self.ensemble,
+            sub_ensemble=self.subensemble
+        )
         change = mover.move(self.gs)
         samples = change.results
         assert_equal(len(samples), 1)
@@ -663,7 +830,10 @@ class testFirstSubtrajectorySelectMover(SubtrajectorySelectTester):
 
 class testFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
     def test_move(self):
-        mover = FinalSubtrajectorySelectMover(self.subensemble)
+        mover = FinalSubtrajectorySelectMover(
+            ensemble=self.ensemble,
+            sub_ensemble=self.subensemble
+        )
         change = mover.move(self.gs)
         samples = change.results
         assert_equal(len(samples), 1)
@@ -726,12 +896,14 @@ class testMinusMover(object):
             # goes to other state:
             1.16, 1.26, 1.16, -0.16, 1.16, 1.26, 1.16
         ])
-        SampleGeneratingMover.engine = self.dyn
+        SampleMover.engine = self.dyn
         self.dyn.initialized = True
         self.innermost = paths.TISEnsemble(volA, volB, volX)
         self.minus = paths.MinusInterfaceEnsemble(volA, volX)
-        self.mover = MinusMover(minus_ensemble=self.minus,
-                                innermost_ensembles=[self.innermost])
+        self.mover = MinusMover(
+            minus_ensemble=self.minus,
+            innermost_ensembles=self.innermost
+        )
         self.first_segment = [-0.1, 0.1, 0.3, 0.1, -0.15] 
         self.list_innermost = [-0.11, 0.11, 0.31, 0.11, -0.12]
         self.second_segment = [-0.25, 0.2, 0.4, 0.2, -0.2]
@@ -756,13 +928,15 @@ class testMinusMover(object):
         assert_equal(self.minus_sample.ensemble(self.minus_sample.trajectory),
                     True)
         first_subtraj = FirstSubtrajectorySelectMover(
-            subensemble=self.minus._segment_ensemble
+            ensemble=self.minus,
+            sub_ensemble=self.minus._segment_ensemble
         )
         change = first_subtraj.move(SampleSet(self.minus_sample))
         samples = change.results
         assert_equal(samples[0].ensemble(samples[0].trajectory), True)
         final_subtraj = FinalSubtrajectorySelectMover(
-            subensemble=self.minus._segment_ensemble
+            ensemble=self.minus,
+            sub_ensemble=self.minus._segment_ensemble
         )
         change = final_subtraj.move(SampleSet(self.minus_sample))
         samples = change.results

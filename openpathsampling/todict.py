@@ -125,8 +125,8 @@ class OPSNamed(OPSObject):
 
         This is only for syntactic sugar and allow for chained generation
 
-        Example
-        -------
+        Examples
+        --------
         >>> import openpathsampling as p
         >>> full = p.FullVolume().named('myFullVolume')
         """
@@ -149,6 +149,10 @@ class ObjectJSON(object):
     def __init__(self, unit_system = None):
         self.excluded_keys = []
         self.unit_system = unit_system
+        self.class_list = dict()
+        self.update_class_list()
+
+    def update_class_list(self):
         self.class_list = paths.OPSNamed.objects()
 
     def simplify_object(self, obj, base_type = ''):

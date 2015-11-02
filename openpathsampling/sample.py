@@ -19,8 +19,8 @@ class SampleSet(OPSNamed):
     SampleSet is essentially a list of samples, with a few conveniences.  It
     can be treated as a list of samples (using, e.g., .append), or as a
     dictionary of ensembles mapping to a list of samples, or as a dictionary
-    of replica IDs to samples. Any type is allowed as a replica ID except
-    Sample or Ensemble.
+    of replica IDs to samples. Replica ID has to an integer but it can be
+    negative or zero.
 
     The dictionaries ensemble_dict and replica_dict are conveniences which
     should be kept consistent by any method which modifies the container.
@@ -32,6 +32,15 @@ class SampleSet(OPSNamed):
         have some of the convenient tools in Python sequences (e.g.,
         slices). On the other hand, I'm not sure whether that is meaningful
         here.
+        Since replicas are integers we add slicing/ranges for replicas. In addition
+        we support any iterable as input in __getitem__ an it will return an iterable
+        over the results. This makes it possible to write `sset[0:5]` to get a list
+        of of ordered samples by replica_id, or sset[list_of_ensembles].
+        replica_ids can be any number do not have to be subsequent to slicing does not
+        make sense and we ignore it. We will also ignore missing replica_ids. A slice
+        `1:5` will return all existing replica ids >=1 and <5. If you want exactly
+        all replicas from 1 to 4 use `sset[xrange(1,5)]`
+
 
     Attributes
     ----------
@@ -55,11 +64,31 @@ class SampleSet(OPSNamed):
         else:
             self.movepath = movepath
 
+    @property
+    def ensembles(self):
+        return self.ensemble_dict.keys()
+
+    @property
+    def replicas(self):
+        return self.replica_dict.keys()
+
     def __getitem__(self, key):
         if isinstance(key, paths.Ensemble):
             return random.choice(self.ensemble_dict[key])
-        else:
+        elif type(key) is int:
             return random.choice(self.replica_dict[key])
+        elif hasattr(key, '__iter__'):
+            return (self[element] for element in key)
+        elif type(key) is slice:
+            rep_idxs = filter(
+                lambda x :
+                    (key.start is None or x >= key.start) and
+                    (key.stop is None or x < key.stop),
+                sorted(self.replica_dict.keys())
+
+            )
+
+            return (self[element] for element in rep_idxs)
 
     def __setitem__(self, key, value):
         # first, we check whether the key matches the sample: if no, KeyError
@@ -192,12 +221,26 @@ class SampleSet(OPSNamed):
             #assert(sample.valid)
             logger.info("Checking sanity of "+repr(sample.ensemble)+
                         " with "+str(sample.trajectory))
-            assert(sample.ensemble(sample.trajectory))
+            try:
+                assert(sample.ensemble(sample.trajectory))
+            except AssertionError as e:
+                failmsg = ("Trajectory does not match ensemble for replica "
+                           + str(sample.replica))
+                if not e.args:
+                    e.args = [failmsg]
+                else:
+                    arg0 = failmsg + e.args[0]
+                    e.args = tuple([arg0] + list(e.args[1:]))
+                raise # reraises last exception
 
     def consistency_check(self):
-        '''This is mainly a sanity check for use in testing, but might be
+        '''Check that all internal dictionaries are consistent
+
+        This is mainly a sanity check for use in testing, but might be
         good to run (rarely) in the code until we're sure the tests cover
-        all use cases.'''
+        all use cases.
+        '''
+
         # check that we have the same number of samples in everything
         nsamps_ens = 0
         for ens in self.ensemble_dict.keys():
@@ -260,27 +303,34 @@ class SampleSet(OPSNamed):
     def translate_ensembles(sset, new_ensembles):
         """Return SampleSet using `new_ensembles` as ensembles.
 
-        This replaces the samples in TODO
+        This creates a SampleSet which replaces the ensembles in the old
+        sample set with equivalent ensembles from a given list. The string
+        description of the ensemble is used as a test.
 
-        Note that this assumes that the mapping of old ensembles to new
-        ensembles is injective. If this is not true, then there is no unique
+        Note that this assumes that there are no one-to-many or many-to-one
+        relations in the ensembles. If there are, then there is no unique
         way to translate.
+
+        The approach used here will return the SampleSet with the maximum
+        number of ensembles that overlap between the two groups.
         """
         translation = {}
         for ens1 in sset.ensemble_list():
             for ens2 in new_ensembles:
                 if ens1.__str__() == ens2.__str__():
                     translation[ens1] = ens2
-        return SampleSet(
-            [
-                Sample(
+
+        new_samples = []
+        for ens in translation:
+            old_samples = sset.all_from_ensemble(ens)
+            for s in old_samples:
+                new_samples.append(Sample(
                     replica=s.replica,
                     ensemble=translation[s.ensemble],
                     trajectory=s.trajectory
-                )
-                for s in sset
-            ]
-        )
+                ))
+        res = SampleSet.relabel_replicas_per_ensemble(SampleSet(new_samples))
+        return res
 
     @staticmethod
     def relabel_replicas_per_ensemble(ssets):
@@ -366,15 +416,15 @@ class Sample(object):
 
     Attributes
     ----------
-    replica : integer
-        The replica ID to which this Sample applies
-    trajectory : Trajectory
+    replica : int
+        The replica ID to which this Sample applies. The replica ID can also be negative.
+    trajectory : openpathsampling.Trajectory
         The trajectory (path) for this sample
-    ensemble : Ensemble
+    ensemble : openpathsampling.Ensemble
         The Ensemble this sample is drawn from
-    details : MoveDetails
+    details : openpathsampling.MoveDetails
         Object 
-    step : integer
+    step : int
         the Monte Carlo step number associated with this Sample
     """
 

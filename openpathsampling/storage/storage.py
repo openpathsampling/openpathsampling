@@ -82,6 +82,7 @@ class Storage(netcdf.Dataset):
         self.pathsimulators = paths.storage.ObjectStore(storage, paths.PathSimulator, has_uid=True, has_name=True)
         self.transitions = paths.storage.ObjectStore(storage, paths.Transition, has_uid=True, has_name=True)
         self.networks = paths.storage.ObjectStore(storage, paths.TransitionNetwork, has_uid=True, has_name=True)
+        self.schemes = paths.storage.ObjectStore(storage, paths.MoveScheme, has_uid=True, has_name=True)
 
         # nestable objects
 
@@ -101,12 +102,15 @@ class Storage(netcdf.Dataset):
                    'shootingpointselectors', 'engines',
                    'pathsimulators', 'volumes', 'ensembles',
                    'pathmovechanges', 'transitions', 'networks', '_details',
-                   'steps'
+                   'steps', 'schemes'
                   ]}
 
     @property
     def objects(self):
         return self._objects
+
+    def update_storable_classes(self):
+        self.simplifier.update_class_list()
 
     def _setup_class(self):
         """
@@ -115,7 +119,7 @@ class Storage(netcdf.Dataset):
         self._storages = {}
         self._storages_base_cls = {}
         self.links = []
-        self.simplifier = paths.ObjectJSON()
+        self.simplifier = paths.storage.StorableObjectJSON(self)
         self.units = dict()
         # use no units
         self.dimension_units = {
