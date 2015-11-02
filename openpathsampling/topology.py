@@ -71,10 +71,9 @@ class MDTrajTopology(Topology):
             else:
                 element_symbol = atom.element.symbol
 
-            atom_data.append((int(atom.serial), atom.name, element_symbol,
-                              int(atom.residue.resSeq), atom.residue.name,
-                              atom.residue.chain.index))
-
+            atom_data.append((atom.serial, atom.name, element_symbol,
+                         int(atom.residue.resSeq), atom.residue.name,
+                         atom.residue.chain.index))
             # used_elements.add(atom.element)
 
         out['atom_columns'] = ["serial", "name", "element", "resSeq", "resName", "chainID"]

@@ -5,6 +5,8 @@ from simtk.openmm.app import ForceField, PME, HBonds, Simulation
 import openpathsampling as paths
 from openpathsampling.integrators import VVVRIntegrator
 
+import simtk.openmm
+
 class OpenMMRandomEngine(paths.DynamicsEngine):
     _default_options = {}
 
