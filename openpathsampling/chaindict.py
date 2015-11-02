@@ -354,7 +354,7 @@ class StoredDict(ChainDict):
         self.main_cache = main_cache
         self.max_save_buffer_size = None
         if cache is None:
-            cache = LRUCache(100000)
+            cache = LRUCache(1000000)
         self.cache = cache
         self.storable = set()
         self._last_n_objects = 0
