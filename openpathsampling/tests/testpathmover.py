@@ -1211,4 +1211,19 @@ class testSingleReplicaMinusMover(object):
                 seg_dir[key] = 1
         assert_equal(len(seg_dir.keys()), 2)
 
+    def test_first_hop_fails(self):
+        crossing_traj = make_1d_traj([-0.11, 0.11, 0.31, 1.01], [1.0]*4)
+        crossing_samp = Sample(replica=0, trajectory=crossing_traj,
+                               ensemble=self.innermost)
+        gs = SampleSet([crossing_samp])
+        gs.sanity_check()
 
+        change = self.mover.move(gs)
+        assert_equal(len(change.results), 0)
+        sub_trials = change.subchange.subchange.trials
+        assert_equal(len(sub_trials), 1)
+        assert_equal(sub_trials[0].trajectory, crossing_traj)
+        assert_equal(sub_trials[0].ensemble, self.minus._segment_ensemble)
+
+    def test_extension_fails(self):
+        raise SkipTest
