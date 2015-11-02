@@ -11,7 +11,6 @@ class OpenMMRandomEngine(paths.DynamicsEngine):
     _default_options = {}
 
     def __init__(self, template=None):
-        self.topology = template.topology
         self.options = {
         }
 
@@ -90,6 +89,7 @@ class OpenMMEngine(paths.DynamicsEngine):
         if self.options['platform'] == 'fastest':
 
             speed = 0.0
+            platform = None
 
             # determine the fastest platform
             for platform_idx in range(simtk.openmm.Platform.getNumPlatforms()):
@@ -98,7 +98,8 @@ class OpenMMEngine(paths.DynamicsEngine):
                     speed = pf.getSpeed()
                     platform = pf.getName()
 
-            self.options['platform'] = platform
+            if platform is not None:
+                self.options['platform'] = platform
 
         # set no cached snapshot, means it will be constructed from the openmm context
         self._current_snapshot = None
@@ -281,6 +282,7 @@ class SimpleOpenMMEngine(OpenMMEngine):
         if self.options['platform'] == 'fastest':
 
             speed = 0.0
+            platform = None
 
             # determine the fastest platform
             for platform_idx in range(simtk.openmm.Platform.getNumPlatforms()):
@@ -289,7 +291,8 @@ class SimpleOpenMMEngine(OpenMMEngine):
                     speed = pf.getSpeed()
                     platform = pf.getName()
 
-            self.options['platform'] = platform
+            if platform is not None:
+                self.options['platform'] = platform
 
     def equilibrate(self, nsteps):
         # TODO: rename... this is position restrained equil, right?
