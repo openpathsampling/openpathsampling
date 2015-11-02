@@ -8,7 +8,6 @@ import types
 import opcode
 import __builtin__
 import importlib
-import pyemma.coordinates as coor
 
 import simtk.unit as u
 import numpy as np
@@ -581,7 +580,7 @@ class CV_Callable(CollectiveVariable):
     """
 
     allow_marshal = True
-    allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy', 'pandas']
+    allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy', 'pandas', 'pyemma']
 
     def __init__(
             self,
@@ -1075,7 +1074,8 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
 
         self.topology = topology
 
-        self._instance = coor.featurizer(self.topology.md)
+        import pyemma.coordinates
+        self._instance = pyemma.coordinates.featurizer(self.topology.md)
 
         featurizer(self._instance, **md_kwargs)
 
