@@ -45,7 +45,7 @@ class testCV_Function(object):
 
         np.testing.assert_allclose(md_distances, my_distances, rtol=10**-6, atol=10**-10)
 
-    def test_parameters_from_template(self):
+    def test_return_parameters_from_template(self):
 
         atom_pairs = [[0,1], [10,14]]
         atom_pair_op = op.CV_MSMB_Featurizer("atom_pairs", AtomPairsFeaturizer, pair_indices=atom_pairs)
@@ -53,22 +53,8 @@ class testCV_Function(object):
         # little trick. We just predent the atom_pairs_op is a function we want to use
         # it cannot be stored though, but for from_template it is enough
 
-        params = op.CV_Function.parameters_from_template(atom_pair_op, self.traj[0])
+        params = atom_pair_op.return_parameters_from_template(self.traj[0])
 
-        assert params['f'] is atom_pair_op
         assert params['cv_return_type'] == 'numpy.float32'
         assert params['cv_return_simtk_unit'] is None
         assert params['cv_return_shape'] == tuple([2])
-        assert params['cv_requires_lists'] == True
-
-    def test_from_template(self):
-
-        atom_pairs = [[0,1], [10,14]]
-        atom_pair_op = op.CV_MSMB_Featurizer("atom_pairs", AtomPairsFeaturizer, pair_indices=atom_pairs)
-
-        # little trick. We just predent the atom_pairs_op is a function we want to use
-        # it cannot be stored though, but for from_template it is enough
-
-        new_op = op.CV_Function.from_template('test', atom_pair_op, self.traj[0])
-
-        np.testing.assert_allclose(new_op(self.traj[0]), atom_pair_op(self.traj[0]), rtol=10**-6, atol=10**-10)

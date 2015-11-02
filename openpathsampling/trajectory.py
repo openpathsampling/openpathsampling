@@ -46,10 +46,18 @@ class Trajectory(list, StorableObject):
                 self.atom_indices = trajectory.atom_indices
             else:
                 self.atom_indices = None
-
-            self.extend(trajectory)
+            if type(trajectory) is Trajectory:
+                self.extend(trajectory.iter_proxies())
+            else:
+                self.extend(trajectory)
         else:
             self.atom_indices = None
+
+    def extend(self, iterable):
+        if type(iterable) is Trajectory:
+            list.extend(self, iterable.iter_proxies())
+        else:
+            list.extend(self, iterable)
 
     def __str__(self):
         return 'Trajectory[' + str(len(self)) + ']'
@@ -288,6 +296,22 @@ class Trajectory(list, StorableObject):
                     raise StopIteration()
 
         return ObjectIterator()
+
+    def get_as_proxy(self, item):
+        """
+        Get an actual contained element
+
+        This will also return lazy proxy objects and not the referenced ones
+        as does __iter__, __reversed__ or __getitem__. Useful for faster access to the elements
+
+        This is equal to use list.__getitem__(trajectory, item)
+
+        Returns
+        -------
+        openpthsampling.Snapshot or openpathsampling.storage.objproxy.LoaderProxy
+        """
+        return list.__getitem__(self, item)
+
 
     def as_proxies(self):
         """
