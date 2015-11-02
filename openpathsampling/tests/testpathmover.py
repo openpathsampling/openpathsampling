@@ -1138,9 +1138,6 @@ class testSingleReplicaMinusMover(object):
     def test_is_ensemble_change_mover(self):
         assert_equal(self.mover.is_ensemble_change_mover, True)
 
-    def test_is_canonical(self):
-        assert_equal(self.mover.is_canonical, True)
-
     def test_successful_move(self):
         init_innermost = make_1d_traj(self.list_innermost, [1.0]*5)
         init_sample = Sample(

@@ -1924,7 +1924,7 @@ class MinusMover(SubPathMover):
 
         super(MinusMover, self).__init__(mover)
 
-class SingleReplicaMinusMover(SubPathMover):
+class SingleReplicaMinusMover(MinusMover):
     """
     Minus mover for single replica TIS.
 
@@ -1932,9 +1932,6 @@ class SingleReplicaMinusMover(SubPathMover):
     minus interface. Instead, it just puts the newly generated segment into
     the innermost ensemble.
     """
-    _is_canonical = True
-
-
     def __init__(self, minus_ensemble, innermost_ensembles, bias=None):
         try:
             innermost_ensembles = list(innermost_ensembles)
@@ -1980,7 +1977,8 @@ class SingleReplicaMinusMover(SubPathMover):
                                                        forward_minus]),
                                     ensembles=innermost_ensembles)
 
-        super(SingleReplicaMinusMover, self).__init__(mover)
+        # we skip MinusMover's init and go to the grandparent
+        super(MinusMover, self).__init__(mover)
 
 
 
