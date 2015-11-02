@@ -5,16 +5,16 @@ Created on 19.07.2014
 @author: David W. H. Swenson
 """
 
-import numpy as np
 import random
+import logging
+
+import numpy as np
 
 import openpathsampling as paths
-from openpathsampling.todict import OPSNamed, OPSObject
-
-import logging
+from openpathsampling.base import StorableNamedObject, StorableObject
 from ops_logging import initialization_logging
-
 from treelogic import TreeMixin
+
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -60,7 +60,7 @@ def make_list_of_pairs(l):
     return outlist
 
 
-class PathMover(TreeMixin, OPSNamed):
+class PathMover(TreeMixin, StorableNamedObject):
     """
     A PathMover is the description of a move in replica space.
     
@@ -96,7 +96,7 @@ class PathMover(TreeMixin, OPSNamed):
     """
 
     def __init__(self):
-        OPSNamed.__init__(self)
+        StorableNamedObject.__init__(self)
 
         self._in_ensembles = None
         self._out_ensembles = None
@@ -392,6 +392,7 @@ class SampleMover(PathMover):
             if not valid:
                 # one sample not valid reject
                 accepted = False
+                probability = 0.0
                 break
             else:
                 probability *= sample.bias
@@ -602,6 +603,8 @@ class ForwardShootMover(ShootMover):
 class BackwardShootMover(ShootMover):
     """A Backward shooting generator
     """
+
+    #TODO: Remove use of reversed_copy. The reversed snapshot already exists!
     def _shoot(self, shooting_point, ensemble):
         shoot_str = "Shooting {sh_dir} from frame {fnum} in [0:{maxt}]"
         logger.info(shoot_str.format(
@@ -1989,11 +1992,12 @@ class PathMoverFactory(object):
         pass
 
 
-class Details(OPSObject):
+class Details(StorableObject):
     """Details of an object. Can contain any data
     """
 
     def __init__(self, **kwargs):
+        super(Details, self).__init__()
         for key, value in kwargs.iteritems():
             setattr(self, key, value)
 

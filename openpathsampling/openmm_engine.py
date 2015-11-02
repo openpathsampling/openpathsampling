@@ -5,7 +5,56 @@ from simtk.openmm.app import ForceField, PME, HBonds, Simulation
 import openpathsampling as paths
 from openpathsampling.integrators import VVVRIntegrator
 
-import simtk.openmm
+class OpenMMRandomEngine(paths.DynamicsEngine):
+    _default_options = {}
+
+    def __init__(self, template=None):
+        self.topology = template.topology
+        self.options = {
+        }
+
+        super(OpenMMRandomEngine, self).__init__(
+            options={},
+            template=template
+        )
+
+        self.initialized = True
+
+    def _build_current_snapshot(self):
+        # TODO: Add caching for this and mark if changed
+
+        tmp = self.template
+
+        coordinates = u.Quantity(
+            tmp.coordinates._value + np.random.normal(0.0, 0.02, tmp.coordinates.shape),
+            tmp.coordinates.unit)
+        velocities = u.Quantity(
+            np.random.normal(0.0, 0.02, tmp.velocities.shape),
+            tmp.velocities.unit)
+
+        return paths.Snapshot(coordinates = coordinates,
+                        box_vectors = tmp.box_vectors,
+                        potential_energy = tmp.potential_energy,
+                        velocities = velocities,
+                        kinetic_energy = tmp.kinetic_energy,
+                        topology = self.topology
+                       )
+
+    @property
+    def current_snapshot(self):
+        if self._current_snapshot is None:
+            self._current_snapshot = self._build_current_snapshot()
+
+        return self._current_snapshot
+
+    @current_snapshot.setter
+    def current_snapshot(self, snapshot):
+        self._current_snapshot = snapshot
+
+    def generate_next_frame(self):
+        self._current_snapshot = None
+        return self.current_snapshot
+
 
 class OpenMMEngine(paths.DynamicsEngine):
     """OpenMM dynamics engine based on a openmmtools.testsystem object.

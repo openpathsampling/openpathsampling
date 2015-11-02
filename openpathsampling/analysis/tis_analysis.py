@@ -3,7 +3,7 @@ from wham import WHAM
 import numpy as np
 from lookup_function import LookupFunction
 import openpathsampling as paths
-from openpathsampling.todict import OPSNamed
+from openpathsampling.base import StorableNamedObject
 
 import logging
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class Histogrammer(object):
         self._hist_args = val
         self.empty_hist = Histogram(**self._hist_args)
 
-class Transition(OPSNamed):
+class Transition(StorableNamedObject):
     """
     Describes (in general) a transition between two states.
     """

@@ -1,18 +1,18 @@
-from openpathsampling.todict import OPSNamed, OPSObject
+from openpathsampling.base import StorableNamedObject, StorableObject
 import openpathsampling as paths
 import openpathsampling.tools
 from openpathsampling.pathmover import SubPathMover
 
 import time
+import sys
 
 import logging
 from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-import sys
 
-class MCStep(OPSObject):
+class MCStep(StorableObject):
     """
     A monte-carlo step in the main PathSimulation loop
 
@@ -49,7 +49,7 @@ class MCStep(OPSObject):
         self.mccycle = mccycle
 
 
-class PathSimulator(OPSNamed):
+class PathSimulator(StorableNamedObject):
 
     calc_name = "PathSimulator"
     _excluded_attr = ['globalstate', 'step', 'save_frequency']
@@ -195,7 +195,9 @@ class Bootstrapping(PathSimulator):
         """
         # TODO: Change input from trajectory to sample
         super(Bootstrapping, self).__init__(storage, engine)
+
         self.ensembles = ensembles
+        self.trajectory = trajectory
 
         sample = paths.Sample(
             replica=0,
@@ -204,6 +206,7 @@ class Bootstrapping(PathSimulator):
         )
 
         self.globalstate = paths.SampleSet([sample])
+
         if movers is None:
             pass # TODO: implement defaults: one per ensemble, uniform sel
         else:
@@ -217,7 +220,6 @@ class Bootstrapping(PathSimulator):
                                                ensembles=self.ensembles
                                               )
 
-        self.root = self.globalstate
 
     def run(self, nsteps):
         bootstrapmove = self._bootstrapmove
@@ -319,8 +321,13 @@ class FullBootstrapping(PathSimulator):
     calc_name = "FullBootstrapping"
 
     def __init__(self, transition, snapshot, storage=None, engine=None,
-                 extra_interfaces=[], forbidden_states=[]):
+                 extra_interfaces=None, forbidden_states=None):
         super(FullBootstrapping, self).__init__(storage, engine)
+        if extra_interfaces is None:
+            extra_interfaces = list()
+
+        if forbidden_states is None:
+            forbidden_states = list()
         interface0 = transition.interfaces[0]
         ensemble0 = transition.ensembles[0]
         state = transition.stateA

@@ -1,10 +1,13 @@
 import math
-import numpy as np
-from openpathsampling.todict import OPSNamed
 
-class ToyIntegrator(OPSNamed):
+import numpy as np
+
+from openpathsampling.base import StorableNamedObject
+
+
+class ToyIntegrator(StorableNamedObject):
     def __init__(self):
-        super(OPSNamed, self).__init__()
+        super(StorableNamedObject, self).__init__()
 
 class LeapfrogVerletIntegrator(ToyIntegrator):
     """Leapfrog Integrator. Not for actual use; but the momentum and

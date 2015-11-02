@@ -1,143 +1,128 @@
-'''
+"""
 Created on 06.07.2014
 
 @author: JDC Chodera
 @author: JH Prinz
-'''
-
-import netCDF4 as netcdf
-import os.path
+"""
 
 import logging
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-import numpy
-import simtk.unit as u
-
 import openpathsampling as paths
-from openpathsampling.todict import ObjectJSON
+import simtk.unit as u
+from netcdfplus import NetCDFPlus
+from cache import WeakLRUCache, WeakValueCache
 
-#=============================================================================================
-# SOURCE CONTROL
-#=============================================================================================
 
-__version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
+# =============================================================================================
+# OPS SPECIFIC STORAGE
+# =============================================================================================
 
-#=============================================================================================
-# NetCDF Storage for multiple forked trajectories
-#=============================================================================================
-
-class Storage(netcdf.Dataset):
-    '''
+class Storage(NetCDFPlus):
+    """
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
-    simulation. This allows effective storage of shooting trajectories '''
+    simulation. This allows effective storage of shooting trajectories
+    """
 
-    # I was wondering if it makes sense to just treat the stores as a
-    # variable with one index, since their basic behaviour is the same.
-    # For now I would leave it this way to make clear, that means a normal
-    # netCDF variable is accessed by storage.variables[name][idx] and the
-    # `special` variable is accessed by storage.store[idx]
-
-    def _register_storages(self, storage = None):
+    def get_unit(self, dimension):
         """
-        Register all Stores used in the OpenPathSampling Storage
-
-        Parameters
-        ----------
-        storage : Storage
-            the Storage object the store should use. Usually (default) the
-            storage itself
-
+        Return a simtk.Unit instance from the unit_system the is of the specified dimension, e.g. length, time
         """
-        if storage is None:
-            storage = self
-
-        # objects with special storages
-
-        # self.objectname = ... could also be done in the initialization
-        # automatically. But the IDE would not be able to autocomplete
-        # so we leave it this way :)
-
-        self.trajectories = paths.storage.TrajectoryStore(storage)
-        self.snapshots = paths.storage.SnapshotStore(storage)
-        self.configurations = paths.storage.ConfigurationStore(storage)
-        self.momentum = paths.storage.MomentumStore(storage)
-        self.samples = paths.storage.SampleStore(storage)
-        self.samplesets = paths.storage.SampleSetStore(storage)
-        self.pathmovechanges = paths.storage.PathMoveChangeStore(storage)
-        self.steps = paths.storage.MCStepStore(storage)
-
-        self.collectivevariables = paths.storage.ObjectDictStore(storage, paths.CollectiveVariable, paths.Snapshot)
-        self.cvs = self.collectivevariables
-
-        # normal objects
-
-        self.pathmovers = paths.storage.ObjectStore(storage, paths.PathMover, has_uid=True, has_name=True)
-        self._details = paths.storage.ObjectStore(storage, paths.Details, has_uid=False)
-        self.shootingpoints = paths.storage.ObjectStore(storage, paths.ShootingPoint, has_uid=False)
-        self.shootingpointselectors = paths.storage.ObjectStore(storage, paths.ShootingPointSelector, has_uid=False, has_name=True)
-        self.engines = paths.storage.ObjectStore(storage, paths.DynamicsEngine, has_uid=True, has_name=True)
-        self.pathsimulators = paths.storage.ObjectStore(storage, paths.PathSimulator, has_uid=True, has_name=True)
-        self.transitions = paths.storage.ObjectStore(storage, paths.Transition, has_uid=True, has_name=True)
-        self.networks = paths.storage.ObjectStore(storage, paths.TransitionNetwork, has_uid=True, has_name=True)
-        self.schemes = paths.storage.ObjectStore(storage, paths.MoveScheme, has_uid=True, has_name=True)
-
-        # nestable objects
-
-        self.volumes = paths.storage.ObjectStore(storage, paths.Volume, has_uid=True, nestable=True, has_name=True)
-        self.ensembles = paths.storage.ObjectStore(storage, paths.Ensemble, has_uid=True, nestable=True, has_name=True)
-
-        # special objects
-        # TODO: remove query? Not really needed, is it?
-
-
-        self.query = paths.storage.QueryStore(storage)
-
-        self._objects = { name : getattr(self, name) for name in
-                  ['trajectories', 'snapshots', 'configurations',
-                   'samples', 'samplesets', 'collectivevariables',
-                   'cvs', 'pathmovers', 'shootingpoints',
-                   'shootingpointselectors', 'engines',
-                   'pathsimulators', 'volumes', 'ensembles',
-                   'pathmovechanges', 'transitions', 'networks', '_details',
-                   'steps', 'schemes'
-                  ]}
+        return u.Unit({self.unit_system.base_units[u.BaseDimension(dimension)]: 1.0})
 
     @property
-    def objects(self):
-        return self._objects
+    def template(self):
+        """
+        Return the template snapshot from the storage
 
-    def update_storable_classes(self):
-        self.simplifier.update_class_list()
+        Returns
+        -------
+        Snapshot
+            the initial snapshot
+        """
+        if self._template is None:
+            self._template = self.snapshots.load(int(self.variables['template_idx'][0]))
+
+        return self._template
 
     def _setup_class(self):
-        """
-        Sets the basic properties for the storage
-        """
-        self._storages = {}
-        self._storages_base_cls = {}
-        self.links = []
-        self.simplifier = paths.storage.StorableObjectJSON(self)
-        self.units = dict()
-        # use no units
-        self.dimension_units = {
-            'length': u.Unit({}),
-            'velocity': u.Unit({}),
-            'energy': u.Unit({})
-        }
+        super(Storage, self)._setup_class()
         # use MD units
+
         self.dimension_units = {
             'length': u.nanometers,
             'velocity': u.nanometers / u.picoseconds,
             'energy': u.kilojoules_per_mole
         }
 
+    def clone(self, filename, subset):
+        """
+        Creates a copy of the netCDF file and allows to reduce the used atoms.
+
+        Notes
+        -----
+        This is mostly used to remove water but keep the data intact.
+        """
+
+        storage2 = Storage(filename=filename, template=self.template.subset(subset), mode='w')
+
+        # Copy all configurations and momenta to new file in reduced form
+
+        for obj in self.configurations:
+            storage2.configurations.save(obj.copy(subset=subset), idx=self.configurations.index[obj])
+        for obj in self.momenta:
+            storage2.momenta.save(obj.copy(subset=subset), idx=self.momenta.index[obj])
+
+        # All other should be copied one to one. We do this explicitely although we could just copy all
+        # and exclude configurations and momenta, but this seems cleaner
+
+        for storage_name in [
+            'pathmovers', 'topologies', 'networks', 'details', 'trajectories',
+            'shootingpoints', 'shootingpointselectors', 'engines', 'volumes',
+            'samplesets', 'ensembles', 'transitions', 'steps', 'pathmovechanges',
+            'samples', 'snapshots', 'pathsimulators', 'cvs'
+        ]:
+            self.clone_storage(storage_name, storage2)
+
+        storage2.close()
+
+    # TODO: Need to copy cvs without caches!
+    def clone_empty(self, filename):
+        """
+        Creates a copy of the netCDF file and replicates only the static parts which I consider
+            ensembles, volumes, engines, path movers, shooting point selectors. We do not need to
+            reconstruct collective variables since these need to be created again completely and then
+            the necessary arrays in the file will be created automatically anyway.
+
+        Notes
+        -----
+        This is mostly used to restart with a fresh file. Same setup, no results.
+        """
+        storage2 = Storage(filename=filename, template=self.template, mode='w')
+
+        for storage_name in [
+            'pathmovers', 'topologies', 'networks',
+            'shootingpointselectors', 'engines', 'volumes',
+            'ensembles', 'transitions', 'pathsimulators'
+        ]:
+            self.clone_storage(storage_name, storage2)
+
+        storage2.close()
+
+    @property
+    def n_atoms(self):
+        return self.topology.n_atoms
+
+    @property
+    def n_spatial(self):
+        return self.topology.n_spatial
+
     def __init__(self, filename, mode=None,
                  template=None, units=None):
-        '''
-        Create a storage for complex objects in a netCDF file
+        """
+        Create a netdfplus storage for OPS Objects
 
         Parameters
         ----------
@@ -154,139 +139,71 @@ class Storage(netcdf.Dataset):
             ('length', 'velocity', 'energy') pointing to
             the simtk.unit.Unit to be used. If not None overrides the
             standard units used
-        '''
-
-        if mode == None:
-            if os.path.isfile(filename):
-                logger.info("Open existing netCDF file '%s' for storage", filename)
-                mode = 'a'
-            else:
-                logger.info("Create new netCDF file '%s' for storage", filename)
-                mode = 'w'
-
-
-        self.filename = filename
-
-        super(Storage, self).__init__(filename, mode)
-
-        self._setup_class()
-
-        if units is not None:
-            self.dimension_units.update(units)
-
-        self._register_storages()
-
-        if mode == 'w':
-            logger.info("Setup netCDF file and create variables")
-
-            if template.topology is not None:
-                self.topology = template.topology
-            else:
-                raise RuntimeError("Storage need a template snapshot with topology")
-
-            self._initialize_netCDF()
-
-            # update the units for dimensions from the template
-            self.dimension_units.update(paths.tools.units_from_snapshot(template))
-            self._init_storages()
-
-            logger.info("Saving topology")
-
-            # create a json from the mdtraj.Topology() and store it
-            self.write_str('topology', self.simplifier.to_json(self.topology))
-
-            logger.info("Create initial template snapshot")
-
-            # Save the initial configuration
-            self.snapshots.save(template)
-
-            self.createVariable('template_idx', 'i4', 'scalar')
-            self.variables['template_idx'][:] = template.idx[self]
-
-            self.sync()
-
-            logger.info("Finished setting up netCDF file")
-
-        elif mode == 'a' or mode == 'r+' or mode == 'r':
-            logger.debug("Restore the dict of units from the storage")
-            # Create a dict of simtk.Unit() instances for all netCDF.Variable()
-            for variable_name in self.variables:
-                unit = None
-                variable = self.variables[variable_name]
-                if hasattr(variable, 'unit_simtk'):
-                    unit_dict = self.simplifier.from_json(getattr(variable, 'unit_simtk'))
-                    if unit_dict is not None:
-                        unit = self.simplifier.unit_from_dict(unit_dict)
-
-                self.units[str(variable_name)] = unit
-
-            # After we have restored the units we can load objects from the storage
-
-            self.topology = self.simplifier.from_json(self.variables['topology'][0])
-
-        self.sync()
-
-    def __repr__(self):
-        return "Storage @ '" + self.filename + "'"
-
-    @property
-    def n_atoms(self):
-        return self.topology.n_atoms
-
-    @property
-    def n_spatial(self):
-        return self.topology.n_spatial
-
-    @property
-    def template(self):
-        """
-        Return the template snapshot from the storage
-
-        Returns
-        -------
-        Snapshot
-            the initial snapshot
-        """
-        return self.snapshots.load(int(self.variables['template_idx'][0]))
-
-    def get_unit(self, dimension):
-        """
-        Return a simtk.Unit instance from the unit_system the is of the specified dimension, e.g. length, time
-        """
-        return u.Unit({self.unit_system.base_units[u.BaseDimension(dimension)] : 1.0})
-
-    def __getattr__(self, item):
-#        if item in self.__dict__:
-            return self.__dict__[item]
- #       else:
-  #          return super(Storage, self).__getattr__(item)
-
-    def __setattr__(self, key, value):
-        self.__dict__[key] = value
-
-    def _init_storages(self):
-        '''
-        Run the initialization on all added classes, when the storage is
-        created only!
-
-        Notes
-        -----
-        Only runs when the storage is created.
-        '''
-
-        for storage in self.links:
-            # create a member variable which is the associated Class itself
-            storage.dimension_units.update(units=self.dimension_units)
-            storage._init()
-
-    def _initialize_netCDF(self):
-        """
-        Initialize the netCDF file for storage itself.
         """
 
-        # add shared dimension for everyone. scalar and spatial
-        if 'scalar' not in self.dimensions:
-            self.createDimension('scalar', 1) # scalar dimension
+        self._template = template
+        super(Storage, self).__init__(filename, mode, units=units)
+
+    def _register_storages(self):
+        """
+        Register all Stores used in the OpenPathSampling Storage
+
+        """
+
+        # objects with special storages
+
+        self.add('trajectories', paths.storage.TrajectoryStore())
+        self.add('snapshots', paths.storage.SnapshotStore())
+        self.add('configurations', paths.storage.ConfigurationStore())
+        self.add('momenta', paths.storage.MomentumStore())
+        self.add('samples', paths.storage.SampleStore())
+        self.add('samplesets', paths.storage.SampleSetStore())
+        self.add('pathmovechanges', paths.storage.PathMoveChangeStore())
+        self.add('steps', paths.storage.MCStepStore())
+
+        self.add('cvs', paths.storage.ObjectDictStore(paths.CollectiveVariable, paths.Snapshot))
+        self.collectivevariables = self.cvs
+
+        # normal objects
+
+        self.add('details', paths.storage.ObjectStore(paths.Details, has_name=False))
+        self.add('topologies', paths.storage.ObjectStore(paths.Topology, has_name=True))
+        self.add('pathmovers', paths.storage.ObjectStore(paths.PathMover, has_name=True))
+        self.add('shootingpoints',
+                 paths.storage.ObjectStore(paths.ShootingPoint, has_name=False))
+        self.add('shootingpointselectors',
+                 paths.storage.ObjectStore(paths.ShootingPointSelector, has_name=True))
+        self.add('engines', paths.storage.ObjectStore(paths.DynamicsEngine, has_name=True))
+        self.add('pathsimulators',
+                 paths.storage.ObjectStore(paths.PathSimulator, has_name=True))
+        self.add('transitions', paths.storage.ObjectStore(paths.Transition, has_name=True))
+        self.add('networks',
+                 paths.storage.ObjectStore(paths.TransitionNetwork, has_name=True))
+        self.add('schemes',
+                 paths.storage.ObjectStore(paths.MoveScheme, has_name=True))
+
+        # nestable objects
+
+        self.add('volumes',
+                 paths.storage.ObjectStore(paths.Volume, nestable=True, has_name=True))
+        self.add('ensembles',
+                 paths.storage.ObjectStore(paths.Ensemble, nestable=True, has_name=True))
+        # special stores
+        # self.add('names', paths.storage.NameStore())
+
+    def _initialize(self):
+        # Set global attributes.
+        setattr(self, 'title', 'OpenPathSampling Storage')
+        setattr(self, 'ConventionVersion', '0.2')
+
+        self.set_caching_mode('default')
+
+        template = self._template
+
+        if template.topology is not None:
+            self.topology = template.topology
+        else:
+            raise RuntimeError("A Storage needs a template snapshot with a topology")
 
         if 'atom' not in self.dimensions:
             self.createDimension('atom', self.topology.n_atoms)
@@ -295,282 +212,284 @@ class Storage(netcdf.Dataset):
         if 'spatial' not in self.dimensions:
             self.createDimension('spatial', self.n_spatial)
 
-        # Set global attributes.
-        setattr(self, 'title', 'OpenPathSampling Storage')
-#        setattr(self, 'application', 'Host-Guest-System')
-#        setattr(self, 'program', 'run.py')
-#        setattr(self, 'programVersion', __version__)
-#        setattr(self, 'Conventions', 'Multi-State Transition Interface TPS')
-        setattr(self, 'ConventionVersion', '0.2')
+        # update the units for dimensions from the template
+        self.dimension_units.update(paths.tools.units_from_snapshot(template))
+        self._init_storages()
 
-        # Create a string to hold the topology
-        self.init_str('topology')
+        # TODO: Might not need to save topology
 
-        # Force sync to disk to avoid data loss.
-        self.sync()
+        logger.info("Saving topology")
+        self.topologies.save(self.topology)
 
-    def list_stores(self):
+        logger.info("Create initial template snapshot")
+
+        # Save the initial configuration
+        self.snapshots.save(template)
+
+        self.createVariable('template_idx', 'i4', 'scalar')
+        self.variables['template_idx'][:] = self.snapshots.index[template]
+
+    def _restore(self):
+
+        self.set_caching_mode('default')
+
+        self._restore_storages()
+        self.topology = self.topologies[0]
+
+    def set_caching_mode(self, mode='default'):
         """
-        Return a list of registered stores
-
-        Returns
-        -------
-        list of str
-            list of stores that can be accessed using `storage.[store]`
-        """
-        return [store.db for store in self.links]
-
-    def list_storable_objects(self):
-        """
-        Return a list of storable object base classes
-
-        Returns
-        -------
-        list of class
-            list of base classes that can be stored using `storage.save(obj)`
-        """
-        return [store.content_class for store in self.links]
-
-    def write_str(self, name, string):
-        '''
-        Write a string into a netCDF variable
+        Set default values for all caches
 
         Parameters
         ----------
-        name : str
-            the name of the variable
-        string : str
-            the string to store
-        '''
-        packed_data = numpy.empty(1, 'O')
-        packed_data[0] = string
-        self.variables[name][:] = packed_data
-
-    def load_str(self, name):
-        '''
-        Load a string from a netCDF variable
-
-        Parameters
-        ----------
-        name : str
-            the name of the variable
-
-        Returns
-        -------
-        str
-            the loaded str
-
-        '''
-        return self.variables[name][0]
-
-
-    def init_str(self, name):
-        '''
-        Initialize a netCDF Variable to store a single string
-
-        Parameters
-        ----------
-        name : str
-            the name of the variable
-        '''
-        self.createVariable(name, 'str', 'scalar')
-
-    def save(self, obj, *args, **kwargs):
-        """
-        Save a storable object into the correct Storage in the netCDF file
-
-        Parameters
-        ----------
-        obj : the object to store
-
-        Returns
-        -------
-        str
-            the class name of the BaseClass of the stored object, which is
-            needed when loading the object to identify the correct storage
-        """
-
-        if type(obj) is list:
-            # a list of objects will be stored one by one
-            return [ self.save(part, *args, **kwargs) for part in obj]
-        elif type(obj) is tuple:
-            # a tuple will store all parts
-            return tuple([self.save(part, *args, **kwargs) for part in obj])
-        elif hasattr(obj, 'base_cls'):
-            # to store we just check if the base_class is present in the storages
-            # also we assume that if a class has no base_cls
-            if obj.base_cls in self._storages:
-                store = self._storages[obj.base_cls]
-                store.save(obj, *args, **kwargs)
-
-                # save has been called, all is good
-                return True
-
-        # Could not save this object. Might raise an exception, but
-        # return an empty string as type
-        return False
-
-    def load(self, obj_type, *args, **kwargs):
-        """
-        Load an object of the specified type from the storage
-
-        Parameters
-        ----------
-        obj_type : str or class
-            the string or class of the base object to be loaded.
-
-        Returns
-        -------
-        object
-            the object loaded from the storage
-
-        Notes
-        -----
-        If you want to load a sub-classed Ensemble you need to load using
-        `Ensemble` or `"Ensemble"` and not use the subclass
-        """
-
-        if obj_type in self._storages:
-            store = self._storages[obj_type]
-            return store.load(*args, **kwargs)
-        elif hasattr(obj_type, 'base_cls'):
-            # check if a store for the base_cls exists and use this one
-            if obj_type.base_cls in self._storages:
-                store = self._storages[obj_type.base_cls]
-                return store.load(*args, **kwargs)
-
-        # no store found. This is bad and should be logged and raise
-        # an exception
-        return None
-
-    def idx(self, obj):
-        """
-        Return the index used to store the given object in this storage
-
-        Parameters
-        ----------
-        obj : object
-            The stored object from which the index is to be returned
-        """
-        if hasattr(obj, 'base_cls'):
-            store = self._storages[obj.base_cls]
-            return store.idx(obj)
-
-
-    def clone(self, filename, subset):
-        """
-        Creates a copy of the netCDF file and allows to reduce the used atoms.
-
-        Notes
-        -----
-        This is mostly used to remove water but keep the data intact.
-        """
-        storage2 = Storage(filename=filename, template=self.template.subset(subset), mode='w')
-
-        # Copy all configurations and momenta to new file in reduced form
-
-        for obj in self.configurations.iterator():
-#            print obj._delayed_loading
-#            [ value(obj, self.configuration) for key, value in obj._delayed_loading.iteritems() ]
-            storage2.configurations.save(obj.copy(subset), idx=obj.idx[self])
-        for obj in self.momentum.iterator():
-            storage2.momentum.save(obj.copy(subset), idx=obj.idx[self])
-
-        # All other should be copied one to one. We do this explicitely although we could just copy all
-        # and exclude configurations and momenta, but this seems cleaner
-
-        for storage_name in [
-                'trajectory', 'snapshot', 'sample', 'sampleset', 'collectivevariable',
-                'pathmover', 'engine', 'movedetails', 'shootingpoint', 'shootingpointselector',
-                'globalstate', 'volume', 'ensemble', 'movepath', 'dynamicsengine' ]:
-            self.clone_storage(storage_name, storage2)
-
-        storage2.close()
-
-    def clone_empty(self, filename):
-        """
-        Creates a copy of the netCDF file and replicates only the static parts which I consider
-            ensembles, volumes, engines, pathmovers, shootingpointselectors. We do not need to
-            reconstruct collectivevariables since these need to be created again completely and then
-            the necessary arrays in the file will be created automatically anyway.
-
-        Notes
-        -----
-        This is mostly used to restart with a fresh file. Same setup, no results.
-        """
-        storage2 = Storage(filename=filename, template=self.template, mode='w')
-
-        for storage_name in [
-                'pathmover', 'engine', 'shootingpointselector', 'volume', 'ensemble']:
-
-            self.clone_storage(storage_name, storage2)
-
-        storage2.close()
-
-
-    def clone_storage(self, storage_to_copy, new_storage):
-        """
-        Clone a store from one storage to another. Mainly used as a helper
-        for the cloning of a store
-
-        Parameters
-        ----------
-        store_to_copy : [..]Store
-            the store to be copied
-        new_storage : Storage
-            the new Storage object
+        caching : str
+            One of the following values is allowed 'default', 'production',
+            'analysis', 'off', 'lowmemory' and 'memtest'
 
         """
-        if type(storage_to_copy) is str:
-            storage_name = storage_to_copy
+
+        available_cache_sizes = {
+            'default': self.default_cache_sizes,
+            'analysis': self.analysis_cache_sizes,
+            'production': self.production_cache_sizes,
+            'off': self.no_cache_sizes,
+            'lowmemory': self.lowmemory_cache_sizes,
+            'memtest': self.memtest_cache_sizes
+        }
+
+        if mode in available_cache_sizes:
+            # We need cache sizes as a function. Otherwise we will reuse the same
+            # caches for each storage and that will cause problems! Lots of...
+            cache_sizes = available_cache_sizes[mode]()
         else:
-            storage_name = storage_to_copy.db
+            raise ValueError(
+                "mode '" + mode + "' is not supported. Try one of " +
+                str(available_cache_sizes.keys())
+            )
 
-        for variable in self.variables.keys():
-            if variable.startswith(storage_name + '_'):
-                if variable not in new_storage.variables:
-                    # collectivevariables have additional variables in the storage that need to be copied
-                    new_storage.createVariable(variable, str(self.variables[variable].dtype), self.variables[variable].dimensions)
-                    for attr in self.variables[variable].ncattrs():
-                        setattr(new_storage.variables[variable], attr, getattr(self.variables[variable], attr))
+        for store_name, caching in cache_sizes.iteritems():
+            if hasattr(self, store_name):
+                store = getattr(self, store_name)
+                store.set_caching(caching)
 
-                    new_storage.variables[variable][:] = self.variables[variable][:]
-                else:
-                    for idx in range(0, len(self.variables[variable])):
-                        new_storage.variables[variable][idx] = self.variables[variable][idx]
+    @staticmethod
+    def default_cache_sizes():
+        """
+        Cache sizes for standard sessions for medium production and analysis.
+
+        """
+
+        return {
+            'trajectories': WeakLRUCache(10000),
+            'snapshots': WeakLRUCache(10000),
+            'configurations': WeakLRUCache(10000),
+            'momenta': WeakLRUCache(10000),
+            'samples': WeakLRUCache(25000),
+            'samplesets': False,
+            'cvs': True,
+            'pathmovers': True,
+            'shootingpoints': WeakLRUCache(10000),
+            'shootingpointselectors': True,
+            'engines': True,
+            'pathsimulators': True,
+            'volumes': True,
+            'ensembles': True,
+            'pathmovechanges': False,
+            'transitions': True,
+            'networks': True,
+            'details': False,
+            'steps': WeakLRUCache(1000)
+        }
+
+    @staticmethod
+    def lowmemory_cache_sizes():
+        """
+        Cache sizes for very low memory
+
+        This uses even less caching than production runs. Mostly used for debugging.
+        """
+
+        return {
+            'trajectories': WeakLRUCache(10),
+            'snapshots': WeakLRUCache(100),
+            'configurations': WeakLRUCache(10),
+            'momenta': WeakLRUCache(10),
+            'samples': WeakLRUCache(25),
+            'samplesets': False,
+            'cvs': True,
+            'pathmovers': True,
+            'shootingpoints': False,
+            'shootingpointselectors': True,
+            'engines': True,
+            'pathsimulators': True,
+            'volumes': True,
+            'ensembles': True,
+            'pathmovechanges': False,
+            'transitions': True,
+            'networks': True,
+            'details': False,
+            'steps': WeakLRUCache(10)
+        }
 
 
-class StorableObjectJSON(ObjectJSON):
-    def __init__(self, storage, unit_system = None):
-        super(StorableObjectJSON, self).__init__(unit_system)
-        self.excluded_keys = ['idx', 'json', 'identifier']
-        self.storage = storage
+    @staticmethod
+    def memtest_cache_sizes():
+        """
+        Cache Sizes for memtest debugging sessions
 
-    def simplify(self,obj, base_type = ''):
-        if obj is self.storage:
-            return { '_storage' : 'self' }
-        if type(obj).__module__ != '__builtin__':
-            if hasattr(obj, 'idx') and (not hasattr(obj, 'nestable') or (obj.base_cls_name != base_type)):
-                # this also returns the base class name used for storage
-                # store objects only if they are not creatable. If so they will only be created in their
-                # top instance and we use the simplify from the super class ObjectJSON
-                self.storage.save(obj)
-                return { '_idx' : obj.idx[self.storage], '_cls' : obj.__class__.__name__ }
+        Memtest will cache everything weak to measure if there is some object left in
+        memory that should have been disposed of.
 
-        return super(StorableObjectJSON, self).simplify(obj, base_type)
+        """
+        return {
+            'trajectories': WeakLRUCache(10),
+            'snapshots': WeakLRUCache(10),
+            'configurations': WeakLRUCache(10),
+            'momenta': WeakLRUCache(10),
+            'samples': WeakLRUCache(10),
+            'samplesets': WeakLRUCache(10),
+            'cvs': WeakLRUCache(10),
+            'pathmovers': WeakLRUCache(10),
+            'shootingpoints': WeakLRUCache(10),
+            'shootingpointselectors': WeakLRUCache(10),
+            'engines': WeakLRUCache(10),
+            'pathsimulators': WeakLRUCache(10),
+            'volumes': WeakLRUCache(10),
+            'ensembles': WeakLRUCache(10),
+            'pathmovechanges': WeakLRUCache(10),
+            'transitions': WeakLRUCache(10),
+            'networks': WeakLRUCache(10),
+            'details': WeakLRUCache(10),
+            'steps': WeakLRUCache(10)
+        }
 
-    def build(self,obj):
-        if type(obj) is dict:
-            if '_storage' in obj:
-                if obj['_storage'] == 'self':
-                    return self.storage
-            if '_cls' in obj and '_idx' in obj:
-                if obj['_cls'] in self.class_list:
-                    base_cls = self.class_list[obj['_cls']]
-                    result = self.storage.load(base_cls, obj['_idx'])
-                else:
-                    result = self.storage.load(obj['_cls'], obj['_idx'])
+    #
 
-                return result
+    @staticmethod
+    def analysis_cache_sizes():
+        """
+        Cache Sizes for analysis sessions
 
-        return super(StorableObjectJSON, self).build(obj)
+        Analysis caching is very large to allow fast processing
+
+        """
+        return {
+            'trajectories': WeakLRUCache(500000),
+            'snapshots': WeakLRUCache(100000),
+            'configurations': WeakLRUCache(10000),
+            'momenta': WeakLRUCache(1000),
+            'samples': WeakLRUCache(1000000),
+            'samplesets': WeakLRUCache(100000),
+            'cvs': True,
+            'pathmovers': True,
+            'shootingpoints': WeakLRUCache(100000),
+            'shootingpointselectors': True,
+            'engines': True,
+            'pathsimulators': True,
+            'volumes': True,
+            'ensembles': True,
+            'pathmovechanges': WeakLRUCache(250000),
+            'transitions': True,
+            'networks': True,
+            'details': False,
+            'steps': WeakLRUCache(50000)
+        }
+
+
+    @staticmethod
+    def production_cache_sizes():
+        """
+        Cache Sizes for production runs
+
+        Production. No loading assumed, only last 1000 steps and a few other
+        objects for error testing
+
+        """
+        return {
+            'trajectories': WeakLRUCache(100),
+            'snapshots': WeakLRUCache(100),
+            'configurations': WeakLRUCache(1000),
+            'momenta': WeakLRUCache(1000),
+            'samples': WeakLRUCache(100),
+            'samplesets': False,
+            'cvs': False,
+            'pathmovers': False,
+            'shootingpoints': False,
+            'shootingpointselectors': False,
+            'engines': False,
+            'pathsimulators': False,
+            'volumes': False,
+            'ensembles': False,
+            'pathmovechanges': False,
+            'transitions': False,
+            'networks': False,
+            'details': False,
+            'steps': WeakLRUCache(10)
+        }
+
+    # No caching (so far only CVs internal storage is there)
+
+    @staticmethod
+    def no_cache_sizes():
+        """
+        Set cache sizes to no caching at all.
+
+        Notes
+        -----
+        This is VERY SLOW and only used for debugging.
+        """
+        return {
+            'trajectories': False,
+            'snapshots': False,
+            'configurations': False,
+            'momenta': False,
+            'samples': False,
+            'samplesets': False,
+            'cvs': False,
+            'pathmovers': False,
+            'shootingpoints': False,
+            'shootingpointselectors': False,
+            'engines': False,
+            'pathsimulators': False,
+            'volumes': False,
+            'ensembles': False,
+            'pathmovechanges': False,
+            'transitions': False,
+            'networks': False,
+            'details': False,
+            'steps': False
+        }
+
+
+class AnalysisStorage(Storage):
+    """
+    Open a storage in read-only and do caching useful for analysis.
+    """
+    def __init__(self, filename):
+        """
+        Parameters
+        ----------
+        filename : str
+            The filename of the storage to be opened
+        """
+        super(AnalysisStorage, self).__init__(
+            filename=filename,
+            mode='r'
+        )
+
+        self.set_caching_mode('analysis')
+
+        # Let's go caching
+        AnalysisStorage.cache_for_analysis(self)
+
+    @staticmethod
+    def cache_for_analysis(storage):
+        storage.samples.cache_all()
+        storage.samplesets.cache_all()
+        storage.cvs.cache_all()
+        storage.volumes.cache_all()
+        storage.ensembles.cache_all()
+        storage.pathmovers.cache_all()
+        storage.pathmovechanges.cache_all()
+        storage.steps.cache_all()
+#        storage.trajectories.cache_all()

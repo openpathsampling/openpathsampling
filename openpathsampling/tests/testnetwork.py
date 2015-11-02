@@ -19,7 +19,7 @@ logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 
 class testMSTISNetwork(object):
     def setup(self):
-        xval = paths.CV_Function(name="xA", fcn=lambda s : s.xyz[0][0])
+        xval = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(xval, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(xval, -0.1, 0.1)
         self.stateC = paths.CVRangeVolume(xval, 0.5, float("inf"))
