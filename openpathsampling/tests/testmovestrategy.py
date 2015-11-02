@@ -193,12 +193,12 @@ class testReplicaExchangeStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = ReplicaExchangeStrategy()
         scheme = MoveScheme(self.network)
+        scheme.apply_strategy(NearestNeighborRepExStrategy())
         movers = strategy.make_movers(scheme)
         assert_equal(len(movers), 4)
 
     def test_swap_to_hop_to_swap(self):
         scheme = DefaultScheme(self.network)
-        scheme.movers = {} #LEGACY
         root = scheme.move_decision_tree()
         assert_equal(len(scheme.movers['repex']), 6)
         old_movers = scheme.movers['repex']
@@ -218,7 +218,6 @@ class testReplicaExchangeStrategy(MoveStrategyTestSetup):
     @raises(RuntimeError)
     def test_detailed_balance_partners(self):
         scheme = DefaultScheme(self.network)
-        scheme.movers = {} #LEGACY
         scheme.append(EnsembleHopStrategy())
         root = scheme.move_decision_tree()
         assert_equal(len(scheme.movers['repex']), 12)
@@ -232,6 +231,7 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = EnsembleHopStrategy()
         scheme = MoveScheme(self.network)
+        scheme.apply_strategy(NearestNeighborRepExStrategy())
         movers = strategy.make_movers(scheme)
         # defaults to 4 repex movers, so
         assert_equal(len(movers), 8)
@@ -435,7 +435,6 @@ class testMinusMoveStrategy(MoveStrategyTestSetup):
 class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
     def scheme_setup_shooting_repex(self):
         scheme = MoveScheme(self.network)
-        scheme.movers = {} # handles LEGACY stuff
         ens0 = self.network.sampling_transitions[0].ensembles[0]
         ens1 = self.network.sampling_transitions[0].ensembles[1]
         ens2 = self.network.sampling_transitions[0].ensembles[2]
@@ -502,7 +501,6 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
     @raises(KeyError)
     def test_choice_probability_bad_group_weights(self):
         scheme = MoveScheme(self.network)
-        scheme.movers = {} # handles LEGACY stuff
         ens0 = self.network.sampling_transitions[0].ensembles[0]
         ens1 = self.network.sampling_transitions[0].ensembles[1]
         ens2 = self.network.sampling_transitions[0].ensembles[2]
@@ -552,7 +550,6 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
 
     def test_chooser_root_weights(self):
         scheme = MoveScheme(self.network)
-        scheme.movers = {} # handles LEGACY stuff
         ens0 = self.network.sampling_transitions[0].ensembles[0]
         ens1 = self.network.sampling_transitions[0].ensembles[1]
         ens2 = self.network.sampling_transitions[0].ensembles[2]
@@ -599,7 +596,6 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
 
     def test_make_movers(self):
         scheme = MoveScheme(self.network)
-        scheme.movers = {} # handles LEGACY stuff
         ens0 = self.network.sampling_transitions[0].ensembles[0]
         ens1 = self.network.sampling_transitions[0].ensembles[1]
         ens2 = self.network.sampling_transitions[0].ensembles[2]
@@ -662,7 +658,6 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
 
     def test_make_movers_unknown_group(self):
         scheme = MoveScheme(self.network)
-        scheme.movers = {} # handles LEGACY stuff
         ens0 = self.network.sampling_transitions[0].ensembles[0]
         ens1 = self.network.sampling_transitions[0].ensembles[1]
         ens2 = self.network.sampling_transitions[0].ensembles[2]
@@ -687,7 +682,6 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
 
     def test_make_movers_custom_group(self):
         scheme = MoveScheme(self.network)
-        scheme.movers = {} # handles LEGACY stuff
         ens0 = self.network.sampling_transitions[0].ensembles[0]
         ens1 = self.network.sampling_transitions[0].ensembles[1]
         ens2 = self.network.sampling_transitions[0].ensembles[2]
@@ -715,7 +709,6 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         strategy = OrganizeByMoveGroupStrategy()
 
         scheme = MoveScheme(self.network)
-        scheme.movers = {} # handles LEGACY stuff
         scheme.append(NearestNeighborRepExStrategy())
         scheme.append(OneWayShootingStrategy())
         root = scheme.move_decision_tree()
@@ -744,7 +737,6 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
 
         # check that we can reuse these in a different scheme
         scheme2 = MoveScheme(self.network)
-        scheme2.movers = {} # handles LEGACY stuff
         scheme2.append(OneWayShootingStrategy())
         root = scheme2.move_decision_tree()
         assert_equal(len(scheme2.movers), 1)
@@ -770,7 +762,6 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         ensA_sig = ((ensA,),(ensA,))
 
         scheme = MoveScheme(self.network)
-        scheme.movers = {} # handles LEGACY stuff
         scheme.append([NearestNeighborRepExStrategy(), 
                        OneWayShootingStrategy(), 
                        strategy])
@@ -822,7 +813,6 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
     def test_get_weights_group_weights_set(self):
         strategy = OrganizeByMoveGroupStrategy()
         scheme = MoveScheme(self.network)
-        scheme.movers = {} # handles LEGACY stuff
         scheme.append([NearestNeighborRepExStrategy(), 
                        OneWayShootingStrategy(), 
                        strategy])
@@ -866,7 +856,6 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
     def test_get_weights_mover_weights_set(self):
         strategy = OrganizeByMoveGroupStrategy()
         scheme = MoveScheme(self.network)
-        scheme.movers = {} # handles LEGACY stuff
         scheme.append([NearestNeighborRepExStrategy(), 
                        OneWayShootingStrategy(),
                        strategy])
@@ -904,7 +893,6 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
     def test_get_weights_internal_unset_choice_prob_set(self):
         strategy = OrganizeByMoveGroupStrategy()
         scheme = MoveScheme(self.network)
-        scheme.movers = {} # handles LEGACY stuff
         scheme.append([NearestNeighborRepExStrategy(), 
                        OneWayShootingStrategy(),
                        strategy])
@@ -964,7 +952,6 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         # with path reversal
         strategy = OrganizeByMoveGroupStrategy()
         scheme = MoveScheme(self.network)
-        scheme.movers = {} # handles LEGACY stuff
         scheme.append([NearestNeighborRepExStrategy(), 
                        PathReversalStrategy(),
                        strategy])
@@ -1004,7 +991,6 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
     def setup(self):
         super(testOrganizeByEnsembleStrategy, self).setup()
         scheme = MoveScheme(self.network)
-        scheme.movers = {} # handles LEGACY stuff
         ens0 = self.network.sampling_transitions[0].ensembles[0]
         ens1 = self.network.sampling_transitions[0].ensembles[1]
         ens2 = self.network.sampling_transitions[0].ensembles[2]

@@ -1,4 +1,6 @@
-from pathsimulator import PathSimulator, Bootstrapping, PathSampling, MCStep
+from pathsimulator import (
+    PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep
+)
 
 from ensemble import (
     Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
@@ -26,18 +28,14 @@ from pathmover import (
     PathMover, PathMoverFactory, PathReversalMover,
     ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
     PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
-    ConditionalMover, RestrictToLastSampleMover,
-    PathSimulatorMover, PathReversalSet, StateSwapGeneratingMover,
-    NeighborEnsembleReplicaExchange, SampleGeneratingMover, StateSwapMover,
-    FinalSubtrajectorySelectMover, BackwardExtendGeneratingMover,
-    BackwardShootGeneratingMover, EngineGeneratingMover, SwappingMover,
-    ExtendingGeneratingMover, FirstSubtrajectorySelectMover,
-    ForwardExtendGeneratingMover, ForwardShootGeneratingMover,
-    MultipleSetMinusMover, OneWayShootingMover, PathReversalGeneratingMover,
-    RandomSubtrajectorySelectGeneratingMover, RandomSubtrajectorySelectMover,
-    ReplicaExchangeGeneratingMover, ShootGeneratingMover, ShootMover,
-    SubPathMover, BackwardExtendMover, EnsembleFilterMover, ForwardExtendMover,
-    SelectionMover, FirstAllowedMover, LastAllowedMover, OneWayExtendMover
+    ConditionalMover, RestrictToLastSampleMover, PathSimulatorMover,
+    PathReversalSet, NeighborEnsembleReplicaExchange, SampleMover,
+    StateSwapMover, FinalSubtrajectorySelectMover, EngineMover,
+    SwappingMover, FirstSubtrajectorySelectMover, MultipleSetMinusMover,
+    OneWayShootingMover, RandomSubtrajectorySelectMover, ShootMover,
+    SubPathMover, BackwardExtendMover, EnsembleFilterMover,
+    ForwardExtendMover, SelectionMover, FirstAllowedMover, LastAllowedMover,
+    OneWayExtendMover
 )
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
@@ -71,7 +69,7 @@ from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
     LeapfrogVerletIntegrator
 
 from analysis.tis_analysis import (
-    TISTransition, RETISTransition, Transition, TPSTransition
+    TISTransition, Transition, TPSTransition
 )
 
 from analysis.move_scheme import MoveScheme, DefaultScheme

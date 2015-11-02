@@ -99,6 +99,18 @@ class Trajectory(list):
 
         return Trajectory([snap for snap in reversed(self)])
 
+    def prepend(self, snapshot):
+        """
+        Prepend a snapshot
+
+        Just convenience method to replace insert(0, snapshot)
+        """
+        self.insert(0, snapshot)
+        # And a generation of scientist-programmers who grew up learning
+        # "OPS trajectories are just Python lists" scream in pain when they
+        # find this after googling "python list.prepend not working".
+        # (Blame JHP. This was his doing.)
+
     def coordinates(self):
         """
         Return all coordinates as a numpy array
