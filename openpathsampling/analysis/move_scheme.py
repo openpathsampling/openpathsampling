@@ -3,6 +3,8 @@ import openpathsampling as paths
 from openpathsampling.analysis.move_strategy import levels as strategy_levels
 import openpathsampling.analysis.move_strategy as strategies
 
+from openpathsampling.base import StorableNamedObject
+
 try:
     import pandas as pd
     has_pandas=True
@@ -13,8 +15,7 @@ except ImportError:
 
 import sys
 
-
-class MoveScheme(paths.OPSNamed):
+class MoveScheme(StorableNamedObject):
     """
     Creates a move decision tree based on `MoveStrategy` instances.
 

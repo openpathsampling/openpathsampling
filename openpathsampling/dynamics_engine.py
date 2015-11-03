@@ -5,12 +5,13 @@ Created on 01.07.2014
 @author: JH Prinz
 '''
 
-import simtk.unit as u
-import openpathsampling as paths
-from openpathsampling.todict import OPSNamed
-
-
 import logging
+
+import simtk.unit as u
+
+import openpathsampling as paths
+from openpathsampling.base import StorableNamedObject
+
 logger = logging.getLogger(__name__)
 
 #=============================================================================
@@ -24,7 +25,7 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 #=============================================================================
 
 
-class DynamicsEngine(OPSNamed):
+class DynamicsEngine(StorableNamedObject):
     '''
     Wraps simulation tool (parameters, storage, etc.)
 
@@ -78,10 +79,6 @@ class DynamicsEngine(OPSNamed):
         # Trajectories need to know the engine as a hack to get the topology.
         # Better would be a link to the topology directly. This is needed to create
         # mdtraj.Trajectory() objects
-
-        # TODO: Remove this and put the logic outside of the engine. The engine in trajectory is only
-        # used to get the solute indices which should depend on the topology anyway
-        # Trajectory.engine = self
 
         self._register_options(options)
 
@@ -338,3 +335,7 @@ class DynamicsEngine(OPSNamed):
 
     def generate_next_frame(self):
         raise NotImplementedError('Next frame generation must be implemented!')
+
+    @property
+    def current_snapshot(self):
+        raise NotImplementedError('Getter and setter for current_snapshot must be implemented')

@@ -1,14 +1,12 @@
-from openpathsampling.todict import OPSNamed
-
 import mdtraj as md
 import numpy as np
 import pandas as pd
 
-from simtk import unit as u
-import simtk.openmm
+from openpathsampling.base import StorableNamedObject
 
-class Topology(OPSNamed):
-    '''
+
+class Topology(StorableNamedObject):
+    """
     Topology is the object that contains all information about the structure
     of the system to be simulated.
 
@@ -18,9 +16,9 @@ class Topology(OPSNamed):
         number of atoms
     spatial : int
         number of spatial dimensions, default is 3
-    '''
+    """
 
-    def __init__(self, n_atoms, n_spatial = 3):
+    def __init__(self, n_atoms, n_spatial=3):
         super(Topology, self).__init__()
         self.n_atoms = n_atoms
         self.n_spatial = n_spatial
@@ -33,22 +31,24 @@ class Topology(OPSNamed):
 
 
 class ToyTopology(Topology):
-    '''
+    """
     Attributes
     ----------
     masses : numpy.ndarray (n_atoms, dtype=float)
         The masses associated with each atom
-    '''
-    def __init__(self, n_spatial, masses, pes, n_atoms = 1):
-        super(ToyTopology, self).__init__(n_atoms = n_atoms, n_spatial=n_spatial)
+    """
+
+    def __init__(self, n_spatial, masses, pes, n_atoms=1):
+        super(ToyTopology, self).__init__(n_atoms=n_atoms, n_spatial=n_spatial)
         self.masses = masses
         self.pes = pes
 
     def subset(self, list_of_atoms):
         return self
 
+
 class MDTrajTopology(Topology):
-    def __init__(self, mdtraj_topology, subsets = None):
+    def __init__(self, mdtraj_topology, subsets=None):
         super(MDTrajTopology, self).__init__(int(mdtraj_topology.n_atoms), 3)
         self.md = mdtraj_topology
         if subsets is None:
@@ -71,17 +71,16 @@ class MDTrajTopology(Topology):
                 element_symbol = atom.element.symbol
 
             atom_data.append((int(atom.serial), atom.name, element_symbol,
-                         int(atom.residue.resSeq), atom.residue.name,
-                         atom.residue.chain.index))
+                              int(atom.residue.resSeq), atom.residue.name,
+                              atom.residue.chain.index))
 
             # used_elements.add(atom.element)
 
         out['atom_columns'] = ["serial", "name", "element", "resSeq", "resName", "chainID"]
         out['atoms'] = atom_data
         out['bonds'] = [(a.index, b.index) for (a, b) in self.md.bonds]
-        # out['elements'] = {key: tuple(el) for key, el in md.element.Element._elements_by_symbol.iteritems() if el in used_elements}
 
-        return {'md' : out, 'subsets' : self.subsets}
+        return {'md': out, 'subsets': self.subsets}
 
     @classmethod
     def from_dict(cls, dct):

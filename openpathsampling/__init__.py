@@ -20,7 +20,7 @@ from snapshot import Snapshot, Configuration, Momentum
 from trajectory import Trajectory
 from sample import Sample, SampleSet
 
-from collectivevariable import CV_Function, CV_MD_Function, CV_Featurizer, \
+from collectivevariable import CV_Function, CV_MDTraj_Function, CV_MSMB_Featurizer, \
     CV_Volume, CollectiveVariable
 
 from pathmover import (
@@ -50,8 +50,6 @@ from volume import (Volume, VolumeCombination, VolumeFactory, VoronoiVolume,
     IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
     RelativeComplementVolume, join_volumes
 )
-
-from todict import ObjectJSON, OPSNamed
 
 from tools import empty_snapshot_from_openmm_topology, snapshot_from_pdb, \
     to_openmm_topology, trajectory_from_mdtraj

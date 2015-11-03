@@ -1,9 +1,9 @@
 import random
+import logging
 
 import openpathsampling as paths
-from openpathsampling.todict import OPSNamed
+from openpathsampling.base import StorableObject, lazy_loading_attributes
 
-import logging
 logger = logging.getLogger(__name__)
 
 class SampleKeyError(Exception):
@@ -14,7 +14,8 @@ class SampleKeyError(Exception):
         self.msg = (str(self.key) + " does not match " + str(self.sample_key)
                     + " from " + str(self.sample))
 
-class SampleSet(OPSNamed):
+@lazy_loading_attributes('movepath')
+class SampleSet(StorableObject):
     '''
     SampleSet is essentially a list of samples, with a few conveniences.  It
     can be treated as a list of samples (using, e.g., .append), or as a
@@ -55,14 +56,12 @@ class SampleSet(OPSNamed):
 
     def __init__(self, samples, movepath=None):
         super(SampleSet, self).__init__()
+
         self.samples = []
         self.ensemble_dict = {}
         self.replica_dict = {}
         self.extend(samples)
-        if movepath is None:
-            self.movepath = paths.EmptyPathMoveChange()
-        else:
-            self.movepath = movepath
+        self.movepath = movepath
 
     @property
     def ensembles(self):
@@ -294,7 +293,7 @@ class SampleSet(OPSNamed):
         """
         return SampleSet(
             [Sample.initial_sample(replica=ensembles.index(e),
-                                   trajectory=paths.Trajectory(trajectory), # copy
+                                   trajectory=paths.Trajectory(trajectory.as_proxies()), # copy
                                    ensemble = e)
             for e in ensembles]
     )
@@ -402,7 +401,8 @@ class SampleSet(OPSNamed):
     #         raise ValueError('Incompatible MovePaths')
 
 
-class Sample(object):
+@lazy_loading_attributes('parent', 'details', 'mover')
+class Sample(StorableObject):
     """
     A Sample represents a given "draw" from its ensemble, and is the return
     object from a PathMover. It and contains all information about the move,
@@ -437,6 +437,8 @@ class Sample(object):
                  parent=None,
                  mover=None
                  ):
+
+        super(Sample, self).__init__()
         self.bias = bias
         self.replica = replica
         self.ensemble = ensemble

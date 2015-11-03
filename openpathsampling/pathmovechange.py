@@ -1,13 +1,16 @@
-__author__ = 'jan-hendrikprinz'
-
-import openpathsampling as paths
-from openpathsampling.todict import OPSObject
-from treelogic import TreeSetMixin
+__author__ = 'Jan-Hendrik Prinz'
 
 import logging
+
+import openpathsampling as paths
+from openpathsampling.base import StorableObject, lazy_loading_attributes
+from treelogic import TreeMixin
+
 logger = logging.getLogger(__name__)
 
-class PathMoveChange(TreeSetMixin, OPSObject):
+
+@lazy_loading_attributes('details')
+class PathMoveChange(TreeMixin, StorableObject):
     '''
     A class that described the concrete realization of a PathMove.
 
@@ -32,7 +35,8 @@ class PathMoveChange(TreeSetMixin, OPSObject):
         return self.mover.is_sequential
 
     def __init__(self, subchanges=None, samples=None, mover=None, details=None):
-        OPSObject.__init__(self)
+        StorableObject.__init__(self)
+
         self._len = None
         self._collapsed = None
         self._results = None
@@ -86,9 +90,6 @@ class PathMoveChange(TreeSetMixin, OPSObject):
             return original.identifier.__class__ is test
         else:
             return False
-
-    def __repr__(self):
-        return self.__class__.__name__[:-14] + '(' + str(self.idx.values()) + ')'
 
     def movetree(self):
         """
@@ -319,7 +320,7 @@ class SamplePathMoveChange(PathMoveChange):
         """
         super(SamplePathMoveChange, self).__init__(mover=mover, details=details)
 
-        if type(samples) is paths.Sample:
+        if samples.__class__ is paths.Sample:
             samples = [samples]
 
         self.samples = samples
