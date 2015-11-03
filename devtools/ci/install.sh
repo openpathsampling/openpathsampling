@@ -18,7 +18,7 @@ bash $MINICONDA -b
 # This might make the --yes obsolete
 # conda config --set always_yes yes --set changeps1 no
 
-export PATH=$HOME/miniconda/bin:$PATH
+export PATH=$HOME/miniconda2/bin:$PATH
 
 hash -r
 
