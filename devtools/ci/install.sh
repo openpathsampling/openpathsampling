@@ -32,4 +32,4 @@ source activate $python
 
 # install python pip packages
 PIP_ARGS="-U"
-$HOME/miniconda/envs/${python}/bin/pip install $PIP_ARGS -r devtools/ci/requirements-${python}.txt
+$HOME/miniconda2/envs/${python}/bin/pip install $PIP_ARGS -r devtools/ci/requirements-${python}.txt
