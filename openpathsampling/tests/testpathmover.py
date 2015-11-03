@@ -1096,7 +1096,7 @@ class testMinusMover(object):
 
 class testSingleReplicaMinusMover(object):
     def setup(self):
-        op = CV_Function("myid", fcn=lambda snap :
+        op = CV_Function("myid", f=lambda snap :
                              snap.coordinates[0][0])
 
         volA = CVRangeVolume(op, -100, 0.0)
