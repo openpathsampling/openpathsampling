@@ -6,7 +6,7 @@ python:
 
 install:
   - deactivate
-  # Sets up a MINIConda enviroment in the name of the selected python verson
+  # Sets up a MINIConda enviroment in the name of the selected python version
   - source devtools/ci/install.sh
   # Don't know what this is meant for
   - export PYTHONUNBUFFERED=true
@@ -21,7 +21,7 @@ script:
   - conda install --yes conda-build jinja2
   - conda build devtools/conda-recipe
   - source activate $python
-  - conda install --yes $HOME/miniconda/conda-bld/linux-64/openpathsampling-*
+  - conda install --yes $HOME/miniconda2/conda-bld/linux-64/openpathsampling-*
   - conda list -e
 
   # Run tests
