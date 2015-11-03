@@ -1863,7 +1863,6 @@ class MinusMover(SubPathMover):
     _is_canonical = True
 
     def __init__(self, minus_ensemble, innermost_ensembles):
-
         try:
             innermost_ensembles = list(innermost_ensembles)
         except TypeError:
@@ -1924,6 +1923,63 @@ class MinusMover(SubPathMover):
                                                 'innermost_ensembles'])
 
         super(MinusMover, self).__init__(mover)
+
+class SingleReplicaMinusMover(MinusMover):
+    """
+    Minus mover for single replica TIS.
+
+    In SRTIS, the minus mover doesn't actually keep an active sample in the
+    minus interface. Instead, it just puts the newly generated segment into
+    the innermost ensemble.
+    """
+    def __init__(self, minus_ensemble, innermost_ensembles, bias=None):
+        try:
+            innermost_ensembles = list(innermost_ensembles)
+        except TypeError:
+            innermost_ensembles = [innermost_ensembles]
+
+        # TODO: Until we have automated detailed balance calculations, I
+        # think this will only be valid in the case of only one innermost
+        # ensemble.  But I think you only want to use it in the case of only
+        # one innermost ensemble anyway. The following warns us:
+        if len(innermost_ensembles) > 1:
+            logger.warning("Probably shouldn't use SingleReplicaMinusMover with MISTIS")
+
+        segment = minus_ensemble._segment_ensemble
+
+        hop_innermost_to_segment = RandomAllowedChoiceMover([
+            EnsembleHopMover(innermost, segment, bias=bias)
+            for innermost in innermost_ensembles
+        ])
+
+        # TODO: again, works for single interface set, but there has to be a
+        # smarter way to do this in the MISTIS case
+        hop_segment_to_innermost = RandomChoiceMover([
+            EnsembleHopMover(segment, innermost, bias=bias)
+            for innermost in innermost_ensembles
+        ])
+
+        forward_minus = ConditionalSequentialMover([
+            hop_innermost_to_segment,
+            ForwardExtendMover(segment, minus_ensemble),
+            FinalSubtrajectorySelectMover(minus_ensemble, segment),
+            hop_segment_to_innermost
+        ])
+
+        backward_minus = ConditionalSequentialMover([
+            hop_innermost_to_segment,
+            BackwardExtendMover(segment, minus_ensemble),
+            FirstSubtrajectorySelectMover(minus_ensemble, segment),
+            hop_segment_to_innermost
+        ])
+
+        mover = EnsembleFilterMover(RandomChoiceMover([backward_minus, 
+                                                       forward_minus]),
+                                    ensembles=innermost_ensembles)
+
+        # we skip MinusMover's init and go to the grandparent
+        super(MinusMover, self).__init__(mover)
+
 
 
 class PathSimulatorMover(SubPathMover):
