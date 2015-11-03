@@ -61,7 +61,7 @@ def make_list_of_pairs(l):
     return outlist
 
 
-class PathMover(TreeMixin, StorableNamedObject):
+class PathMover(TreeSetMixin, StorableNamedObject):
     """
     A PathMover is the description of a move in replica space.
     
