@@ -459,7 +459,22 @@ class MinusMoveStrategy(MoveStrategy):
         return movers
 
 class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
-    pass
+    """
+    Takes a given scheme and makes a single-replica minus mover.
+    """
+    def make_movers(self, scheme):
+        network = scheme.network
+        ensemble_list = self.get_ensembles(scheme, self.ensembles)
+        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
+        movers = []
+        for ens in ensembles:
+            innermosts = [t.ensembles[0] 
+                          for t in network.special_ensembles['minus'][ens]]
+            movers.append(paths.SingleReplicaMinusMover(
+                minus_ensemble=ens, 
+                innermost_ensembles=innermosts
+            ))
+        return movers
 
 
 class OrganizeByMoveGroupStrategy(MoveStrategy):
