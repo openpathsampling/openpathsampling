@@ -1,4 +1,4 @@
-__author__ = 'jan-hendrikprinz'
+__author__ = 'Jan-Hendrik Prinz'
 
 import mdtraj as md
 import simtk.unit as u
@@ -6,6 +6,8 @@ import numpy as np
 import openpathsampling as paths
 
 import sys
+
+
 def refresh_output(output_str, print_anyway=True, refresh=True):
     try:
         import IPython.display
@@ -17,7 +19,6 @@ def refresh_output(output_str, print_anyway=True, refresh=True):
             IPython.display.clear_output(wait=True)
         print(output_str)
     sys.stdout.flush()
-
 
 
 def updateunits(func):
@@ -39,7 +40,7 @@ def updateunits(func):
 
 
 @updateunits
-def snapshot_from_pdb(pdb_file, units = None):
+def snapshot_from_pdb(pdb_file, units=None):
     """
     Construct a Snapshot from the first frame in a pdb file without velocities
 
@@ -69,6 +70,7 @@ def snapshot_from_pdb(pdb_file, units = None):
 
     return snapshot
 
+
 def trajectory_from_mdtraj(mdtrajectory):
     """
     Construct a Trajectory object from an mdtraj.Trajectory object
@@ -83,17 +85,32 @@ def trajectory_from_mdtraj(mdtrajectory):
     Trajectory
         the constructed Trajectory instance
     """
+
+    #TODO: Fix energies and move these to specialized CVs
+    #TODO: We could also allow to have empty energies
+
     trajectory = paths.Trajectory()
-    empty_momentum = paths.Momentum()
+    empty_momentum = paths.Momentum(
+        velocities=u.Quantity(np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond),
+        kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole)
+    )
+    topology = paths.MDTrajTopology(mdtrajectory.topology)
+
     for frame_num in range(len(mdtrajectory)):
         # mdtraj trajectories only have coordinates and box_vectors
         coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
         if mdtrajectory.unitcell_vectors is not None:
             box_v = u.Quantity(mdtrajectory.unitcell_vectors[frame_num],
-                             u.nanometers)
+                               u.nanometers)
         else:
             box_v = None
-        config = paths.Configuration(coordinates=coord, box_vectors=box_v)
+
+        config = paths.Configuration(
+            coordinates=coord,
+            box_vectors=box_v,
+            potential_energy=u.Quantity(0.0, u.kilojoule_per_mole),
+            topology=topology
+        )
 
         snap = paths.Snapshot(
             configuration=config,
@@ -103,6 +120,7 @@ def trajectory_from_mdtraj(mdtrajectory):
         trajectory.append(snap)
 
     return trajectory
+
 
 @updateunits
 def empty_snapshot_from_openmm_topology(topology, units):
@@ -135,6 +153,7 @@ def empty_snapshot_from_openmm_topology(topology, units):
     )
 
     return snapshot
+
 
 def units_from_snapshot(snapshot):
     """
@@ -172,6 +191,7 @@ def units_from_snapshot(snapshot):
             units['velocity'] = u.Unit({})
 
     return units
+
 
 def to_openmm_topology(obj):
     """

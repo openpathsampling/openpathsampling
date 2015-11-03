@@ -1,9 +1,10 @@
 import math
+import logging
+
 import numpy as np
 
-from openpathsampling.todict import OPSNamed
-import logging
-from ops_logging import initialization_logging
+from openpathsampling.base import StorableNamedObject
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
@@ -20,9 +21,8 @@ init_log = logging.getLogger('openpathsampling.initialization')
 #  
 #############################################################################
 
-class ShootingPoint(OPSNamed):
-
-    def __init__(self, selector, trajectory, index, f = None, sum_bias = None):
+class ShootingPoint(StorableNamedObject):
+    def __init__(self, selector, trajectory, index, f=None, sum_bias=None):
         '''
         Constructs a ShootingPoint object.
         
@@ -71,16 +71,16 @@ class ShootingPoint(OPSNamed):
             self._sum_bias = self.selector.sum_bias(self.trajectory)
 
         return self._sum_bias
-    
+
     @property
     def probability(self):
         return self._f / self._sum_bias
-    
+
     @property
     def f(self):
         if self._f is None:
             self._f = self.selector.f(self.snapshot, self.trajectory)
-            
+
         return self._f
 
     @property
@@ -89,14 +89,15 @@ class ShootingPoint(OPSNamed):
 
     def to_dict(self):
         return {
-            'selector' : self.selector,
-            'trajectory' : self.trajectory,
-            'index' : self.index,
-            'f' : self._f,
-            'sum_bias' : self._sum_bias
+            'selector': self.selector,
+            'trajectory': self.trajectory,
+            'index': self.index,
+            'f': self._f,
+            'sum_bias': self._sum_bias
         }
 
-class ShootingPointSelector(OPSNamed):
+
+class ShootingPointSelector(StorableNamedObject):
     def __init__(self):
         super(ShootingPointSelector, self).__init__()
 
@@ -117,17 +118,17 @@ class ShootingPointSelector(OPSNamed):
         caching if useful
         '''
         return 1.0
-    
+
     def probabilities(self, snapshot, trajectory):
         return self.f(snapshot, trajectory) / self.sum_bias(trajectory)
-    
+
     def _biases(self, trajectory):
         '''
         Returns a list of unnormalized proposal probabilities for all
         snapshots in trajectory
         '''
-        return [ self.f(s, trajectory) for s in trajectory ]
-    
+        return [self.f(s, trajectory) for s in trajectory]
+
     def sum_bias(self, trajectory):
         '''
         Returns the unnormalized probability probability of a trajectory.
@@ -144,7 +145,7 @@ class ShootingPointSelector(OPSNamed):
         '''
 
         return sum(self._biases(trajectory))
-    
+
     def pick(self, trajectory):
         '''
         Returns a ShootingPoint object from which all necessary properties about the selected point can be accessed
@@ -154,23 +155,24 @@ class ShootingPointSelector(OPSNamed):
         
         The native implementation is very slow. Simple picking algorithm should override this function.
         '''
-        
+
         prob_list = self._biases(trajectory)
         sum_bias = sum(prob_list)
-        
+
         rand = np.random.random() * sum_bias
         idx = 0
         prob = prob_list[0]
         while prob <= rand and idx < len(prob_list):
             idx += 1
             prob += prob_list[idx]
-            
-        point = ShootingPoint(self, trajectory, idx, f = prob_list[idx], sum_bias= sum_bias)
+
+        point = ShootingPoint(self, trajectory, idx, f=prob_list[idx], sum_bias=sum_bias)
 
         return point
 
+
 class GaussianBiasSelector(ShootingPointSelector):
-    def __init__(self, collectivevariable, alpha = 1.0, l0 = 0.5):
+    def __init__(self, collectivevariable, alpha=1.0, l0=0.5):
         '''
         A Selector that biasses according to a specified CollectiveVariable using a mean l0 and a variance alpha
         '''
@@ -180,7 +182,8 @@ class GaussianBiasSelector(ShootingPointSelector):
         self.l0 = l0
 
     def f(self, snapshot, trajectory):
-        return math.exp(-self.alpha*(self.collectivevariable(snapshot) - self.l0)**2)
+        return math.exp(-self.alpha * (self.collectivevariable(snapshot) - self.l0) ** 2)
+
 
 class UniformSelector(ShootingPointSelector):
     """
@@ -194,27 +197,29 @@ class UniformSelector(ShootingPointSelector):
     pad_end : int
         number of frames at end of trajectory to be excluded from selection
     """
-    def __init__(self, pad_start = 1, pad_end = 1):
+
+    def __init__(self, pad_start=1, pad_end=1):
         super(UniformSelector, self).__init__()
         self.pad_start = pad_start
         self.pad_end = pad_end
-        
+
     def f(self, frame, trajectory=None):
         '''
         Careful, this only returns a correct value for allowed frames since
         this function does not know about the position in the trajectory
         '''
         return 1.0
-    
+
     def sum_bias(self, trajectory):
         return float(len(trajectory) - self.pad_start - self.pad_end)
-        
+
     def pick(self, trajectory):
         idx = np.random.random_integers(self.pad_start, len(trajectory) - self.pad_end - 1)
-        
-        point = ShootingPoint(self, trajectory, idx, f = 1.0, sum_bias= self.sum_bias(trajectory))
-        
+
+        point = ShootingPoint(self, trajectory, idx, f=1.0, sum_bias=self.sum_bias(trajectory))
+
         return point
+
 
 class FinalFrameSelector(ShootingPointSelector):
     '''
@@ -222,15 +227,17 @@ class FinalFrameSelector(ShootingPointSelector):
 
     This is used for "forward" extension in, e.g., the minus move.
     '''
+
     def f(self, frame, trajectory):
-        if trajectory.index(frame) == len(trajectory)-1:
+        if trajectory.index(frame) == len(trajectory) - 1:
             return 1.0
         else:
             return 0.0
 
     def pick(self, trajectory):
-        point = ShootingPoint(self, trajectory, len(trajectory)-1, f=1.0, sum_bias=1.0)
+        point = ShootingPoint(self, trajectory, len(trajectory) - 1, f=1.0, sum_bias=1.0)
         return point
+
 
 class FirstFrameSelector(ShootingPointSelector):
     '''
@@ -238,6 +245,7 @@ class FirstFrameSelector(ShootingPointSelector):
 
     This is used for "backward" extension in, e.g., the minus move.
     '''
+
     def f(self, frame, trajectory):
         if trajectory.index(frame) == 0:
             return 1.0

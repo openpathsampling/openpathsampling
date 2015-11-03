@@ -1,50 +1,66 @@
-__author__ = 'jan-hendrikprinz'
+__author__ = 'Jan-Hendrik Prinz'
 
 import collections
 
+import numpy as np
+import weakref
 
-class ChainDict(dict):
+from openpathsampling.storage.cache import LRUCache
+from openpathsampling.storage.objproxy import LoaderProxy
+
+
+class ChainDict(object):
     """
-    Cache attached to Configuration indices stored in Configuration storage
+    A dictionary-like structure with a logic to generate values and pass unknown values to other instances
 
-    Parameters
-    ----------
-    name : string
-        A short and unique name to be used in storage
+    The default ChainDict requires a list of keys. If you want to allow also single values you need to
+    add a ChainDict that interprets single and iterables like ExpandSingle.
+
+    The default for unknown keys is None. This is necessary to pass on what is unknown.
+    Everything that is not known in the current instance is passed on to .post
+
+    Examples
+    --------
+    Create a CachingDict
+    >>> cd = CacheChainDict(LRUCache(2))
+    >>> cd[[1, 2]]
+    [None, None]
+
+    There will be no result since there is no logic to generate values.
+    >>> def f(x):
+    >>>     print 'eval', x
+    >>>     return x**2
+    >>> fnc_cd = Function(f, requires_lists = False)
+    >>> fnc_cd[[1, 2]]
+    eval, 1
+    eval, 2
+    [1, 4]
+
+    Combine both dicts to cache the results from the function
+    >>> combo_cd = cd + fnc_cd
+    >>> combo_cd[[1,2]]
+    eval, 1
+    eval, 2
+    [1,4]
+
+    First time the function is called and the cache filled. Second time the cache is used.
+
+    >>> combo_cd[[1,2]]
+    [1,4]
 
     Attributes
     ----------
-    name
+    post : ChainDict
+        the ChainDict to be called when this instance cannot evaluate given keys
 
-    fnc : index (int) -> value (float)
-        the function used to generate the cache values for the specified index. In essence a list
-    dimensions : int
-        the dimension of the stored values. Default is `1`
-    content_class : Class
-        the class of objects that can be stored
-    fnc_uses_lists : boolean
-        if True then in the case that the dict is called with several object at a time. The dict
-        creates a list of missing ones and passes all of these to the evaluating function at once.
-        Otherwise the fall-back is to call each item seperately. If possible always the multiple-
-        option should be used.
-
-    Attributes
-    ----------
-    content_class
-    fnc_uses_lists
-    dimensions
     """
-
-    use_unique = True
 
     def __init__(self):
-        dict.__init__(self)
         self.post = None
 
     def __getitem__(self, items):
+        # first apply the own _get functions to compute
         results = self._get_list(items)
-
-        # print 'Res', self.__class__.__name__, results
 
         if self.post is not None:
             nones = [obj[0] for obj in zip(items, results) if obj[1] is None]
@@ -60,7 +76,7 @@ class ChainDict(dict):
         return results
 
     def _add_new(self, items, values):
-        self[items] = values
+        pass
 
     def __setitem__(self, key, value):
         if isinstance(key, collections.Iterable):
@@ -68,60 +84,64 @@ class ChainDict(dict):
         else:
             self._set(key, value)
 
-    def _contains(self, item):
-        return dict.__contains__(self, item)
-
-    def _contains_list(self, items):
-        return [dict.__contains__(self, item) for item in items]
-
     def _set(self, item, value):
-        if value is not None:
-            dict.__setitem__(self, item, value)
+        """
+        Implementation on how to set a single value to this chaindict
+
+        Default implementation is to not store anything.
+        This is mostly used in caching and stores
+        """
+        pass
 
     def _set_list(self, items, values):
-        [dict.__setitem__(self, item, value) for item, value in zip(items, values) if value is not None]
+        """
+        Implementation on how to set a list of keys to this chaindict
+
+        Default is to call _set on all single keys
+        """
+        [self._set(item, value) for item, value in zip(items, values) if value is not None]
 
     def _get(self, item):
-        try:
-            return dict.__getitem__(self, item)
-        except KeyError:
-            return None
+        """
+        Implementation on how to get the value of a single key
+
+        Default implementation returns None
+        """
+        # return None
+        return None
 
     def _get_list(self, items):
-        return [ self._get(item) for item in items ]
+        """
+        Implementation on how to get the values of a list of keys
+
+        Default is to use _get on each single key
+        """
+        return [self._get(item) for item in items]
 
     def __call__(self, items):
         return self[items]
 
+    ## ToDo: We might replace + by > to make the passing direction clear
     def __add__(self, other):
+        """
+        Combine two ChainDicts first + seconds into a new one.
+
+        >>> new_dict = first_dict + fall_back
+        """
         other.post = self
         return other
 
-    def _split_list_dict(self, dct, items):
-        nones = [dct[item] if item in dct else None for item in items]
-        missing = [item for item in items if item not in dct]
-
-        return nones, missing
-
-    def _split_list(self, keys, values):
-        missing = [ obj[0] for obj in zip(keys,values) if obj[1] is None ]
-        nones = values
-
-        return nones, missing
-
-    def _apply_some_list(self, func, items):
-        some = [item for item in items if item is not None]
-        replace = func(some)
-        it = iter(replace)
-
-        return [ it.next() if obj is not None else None for obj in items ]
-
-    def _replace_none(self, nones, replace):
-        it = iter(replace)
-        return [ obj if obj is not None else it.next() for obj in nones ]
 
 class Wrap(ChainDict):
+    """A ChainDict that passes on all request to the underlying ChainDict
+    """
     def __init__(self, post):
+        """
+        Parameters
+        ----------
+        post : chaindict
+            the underlying chain dict to be used
+        """
         super(Wrap, self).__init__()
         self.post = post
 
@@ -131,48 +151,52 @@ class Wrap(ChainDict):
     def __setitem__(self, key, value):
         self.post[key] = value
 
-class ExpandSingle(ChainDict):
-    """
-    Will take care of iterables
+
+class MergeNumpy(ChainDict):
+    """All returned values from underlying ChainDicts will be turned into a numpy array
     """
 
     def __getitem__(self, items):
-        if type(items) is tuple:
+        return np.array(self.post[items])
+
+class ExpandSingle(ChainDict):
+    """
+    Iterables will be unrolled and passed as a list
+    """
+
+    def __getitem__(self, items):
+        if type(items) is LoaderProxy:
             return self.post[[items]][0]
-        elif hasattr(items, '__iter__'):
-            return self.post[items]
+        if hasattr(items, '__iter__'):
+            try:
+                dummy = len(items)
+            except AttributeError:
+                # no length means unbound iterator and we cannot handle these
+                raise AttributeError('Iterators that do not have __len__ implemented are not supported. ' +
+                                'You can wrap your iterator in list() if you know that it will finish.')
+
+            try:
+                return self.post[items.as_proxies()]
+            except AttributeError:
+                # turn possible iterators into list since we have to do it anyway.
+                # Iterators do not work
+                return self.post[list(items)]
+
         else:
             return self.post[[items]][0]
 
     def __setitem__(self, key, value):
         self.post[key] = value
 
-    def _add_new(self, items, values):
-        pass
-
-class ExpandMulti(ChainDict):
-    """
-    Will only request the unique keys to post
-    """
-
-    def __getitem__(self, items):
-        if len(items) == 0:
-            return []
-
-        uniques = list(set(items))
-        rep_unique = self.post[[p for p in uniques]]
-        multi_cache = dict(zip(uniques, rep_unique))
-
-        return [multi_cache[item] for item in items]
-
-    def __setitem__(self, key, value):
-        self.post[key] = value
-
-    def _add_new(self, items, values):
-        pass
-
 class Transform(ChainDict):
+    """
+    Applies a transformation to the input keys
+    """
     def __init__(self, transform):
+        """
+        transform : function
+            the function to be applied to all input keys on the underlying dicts
+        """
         super(Transform, self).__init__()
         self.transform = transform
 
@@ -182,20 +206,27 @@ class Transform(ChainDict):
     def __setitem__(self, key, value):
         self.post[self.transform(key)] = value
 
-    def _add_new(self, items, values):
-        pass
 
 class Function(ChainDict):
-    def __init__(self, fnc, fnc_uses_lists=True):
-        super(Function, self).__init__()
-        self._fnc = fnc
-        self.fnc_uses_lists = fnc_uses_lists
+    """
+    Uses a regular function to evaluate given keys.
 
-    def _eval(self, items):
-        if hasattr(self, '_fnc'):
-            return self._fnc(items)
-        else:
-            return None
+    This works effective like a function called with square brackets
+    """
+    def __init__(self, fnc, requires_lists=True, single_as_scalar=False):
+        """
+        Parameters
+        ----------
+        fnc : function
+            the function to be evaluated to return values to keys
+        requires_lists : bool
+            if true we assume that it is faster to pass lists to this function instead
+            of evaluating each key separately
+        """
+        super(Function, self).__init__()
+        self._eval = fnc
+        self.requires_lists = requires_lists
+        self.single_as_scalar = single_as_scalar
 
     def _contains(self, item):
         return False
@@ -203,24 +234,35 @@ class Function(ChainDict):
     def _get(self, item):
         if self._eval is None:
             return None
-#             raise KeyError('No cached values for item - %s' % str(item))
 
-        if self.fnc_uses_lists:
-            result = self._eval([item])
-            return result[0]
+        if self.requires_lists:
+            result = self._eval([item])[0]
+
         else:
             result = self._eval(item)
-            return result
+
+        if self.single_as_scalar and result.shape[-1] == 1:
+            return result.reshape(result.shape[:-1])
+
+        return result
 
     def _get_list(self, items):
         if self._eval is None:
             return [None] * len(items)
 
-        if self.fnc_uses_lists:
-            result = self._eval(items)
-            return result
+        if self.requires_lists:
+            results = self._eval(items)
+
+            if self.single_as_scalar and results.shape[-1] == 1:
+                results = results.reshape(results.shape[:-1])
+
         else:
-            return [self._eval(obj) for obj in items]
+            results = [self._eval(obj) for obj in items]
+            if self.single_as_scalar and results[0].shape[-1] == 1:
+                results = map(lambda x : x.reshape(x.shape[:-1]), results)
+
+        return results
+
 
     def get_transformed_view(self, transform):
         def fnc(obj):
@@ -228,256 +270,234 @@ class Function(ChainDict):
 
         return fnc
 
-class BufferedStore(Wrap):
-    def __init__(self, name, dimensions, store, scope=None):
-        self.storage = store.storage
-        self._store = Store(name, dimensions, store, scope)
-        self._cache = ChainDict()
 
-        super(BufferedStore, self).__init__(
-            post=self._store + self._cache
-        )
+class CacheChainDict(ChainDict):
+    """
+    Return Values from a cache filled from returned values of the underlying ChainDicts and
+    """
+    def __init__(self, cache):
+        """
+        Parameters
+        ----------
+        cache : dict-like class
+            the dict or cache to be used to store the data
+        """
+        super(CacheChainDict, self).__init__()
+        self.cache = cache
 
-    def sync(self):
-        self._store.sync()
+    def _contains(self, item):
+        return item in self.cache
+
+    def _set(self, item, value):
+        if value is not None:
+            self.cache[item] = value
+
+    def _get(self, item):
+        try:
+            return self.cache[item]
+        except KeyError:
+            return None
 
     def _add_new(self, items, values):
         for item, value in zip(items, values):
-            if value is not None:
-                if type(item) is tuple or len(item.idx) > 0 \
-                        and self.storage in item.idx:
-                    self._cache._set(item, value)
-                    self._store._set(item, value)
+            self.cache[item] = value
+            if self.reversible:
+                self.cache[item.reversed] = value
 
-    def cache_all(self):
-        all_values = self._store.store.get_list_value(self._store.scope, slice(None,None))
-        storage = self.storage
-        for idx, value in enumerate(all_values):
-            if value is not None:
-#                self._cache[storage.snapshots[idx]] = value
-                self._cache[[(storage.snapshots, idx)]] = [value]
-
-class Store(ChainDict):
-    def __init__(self, name, dimensions, store, scope=None):
-        super(Store, self).__init__()
-        self.name = name
-        self.dimensions = dimensions
-        self.store = store
-        self.key_class = store.content_class
-
-        if scope is None:
-            self.scope = self
-        else:
-            self.scope = scope
-
-        self.max_save_buffer_size = None
+class ReversibleCacheChainDict(CacheChainDict):
+    """
+    Return Values from a cache filled from returned values of the underlying ChainDicts and
+    """
+    def __init__(self, cache, reversible=False):
+        """
+        Parameters
+        ----------
+        cache : dict-like class
+            the dict or cache to be used to store the data
+        """
+        super(ReversibleCacheChainDict, self).__init__(cache)
+        self.reversible = reversible
 
     def _add_new(self, items, values):
-        [dict.__setitem__(self, item, value) for item, value in zip(items, values)]
+        for item, value in zip(items, values):
+            self.cache[item] = value
+            if self.reversible:
+                self.cache[item.reversed] = value
 
-        if self.max_save_buffer_size is not None and len(self) > self.max_save_buffer_size:
+class LRUChainDict(CacheChainDict):
+    """
+    Use a LRUCache to cache values
+    """
+    def __init__(self, size_limit=1000000):
+        super(LRUChainDict, self).__init__(LRUCache(size_limit))
+
+
+class StoredDict(ChainDict):
+    """
+    ChainDict that has a store attached and return existing values from the store
+    """
+    def __init__(self, key_store, value_store, main_cache, cache=None):
+        """
+        Parameters
+        ----------
+        key_store : storage.Store
+            the store that references usable keys
+        value_store : storage.Variable
+            the store that references the store variable to store the values by index
+        cache : dict-like or cache, default: None
+            the cache used to access stored values faster. If None an LRUCache with
+            100000 entries is used
+        """
+        super(StoredDict, self).__init__()
+        self.value_store = value_store
+        self.key_store = key_store
+        self.main_cache = main_cache
+        self.max_save_buffer_size = None
+        if cache is None:
+            cache = LRUCache(1000000)
+        self.cache = cache
+        self.storable = set()
+        self._last_n_objects = 0
+
+    def _add_new(self, items, values):
+        for item, value in zip(items, values):
+            key = self._get_key(item)
+            if key is not None:
+                self.cache[key] = value
+                self.storable.add(key)
+
+        if self.max_save_buffer_size is not None and len(self.storable) > self.max_save_buffer_size:
             self.sync()
 
-    @property
-    def storage(self):
-        return self.store.storage
-
     def sync(self):
-#        print 'Sync', len(self)
-        storable = [ (key.idx[self.storage], value)
-                            for key, value in self.iteritems()
-                            if type(key) is not tuple and len(key.idx) > 0
-                            and self.storage in key.idx]
+        # Sync objects that had been saved and afterwards the CV was computed
+        if len(self.storable) > 0:
+            keys = [idx for idx in sorted(list(self.storable)) if idx in self.cache]
+            values = [self.cache[idx] for idx in keys]
+            self.value_store[keys] = values
+            self.storable.clear()
 
-        if len(storable) > 0:
-            storable_sorted = sorted(storable, key=lambda x: x[0])
-            storable_keys = [x[0] for x in storable_sorted]
-            storable_values = [x[1] for x in storable_sorted]
-            self.store.set_list_value(self.scope, storable_keys, storable_values)
-            self.clear()
-        else:
-            self.clear()
+        # Sync objects that first had a value computed and were later stored
+        # For these we need to check the main_cache
+
+        if self._last_n_objects < len(self.key_store):
+            keys = range(self._last_n_objects, len(self.key_store))
+            objs = map(self.key_store.cache.get_silent, keys)
+            values = map(self.main_cache.get_silent, objs)
+            pairs = [(key, value) for key, value in zip(keys, values) if value is not None]
+            keys, values = zip(*pairs)
+
+            self.value_store[list(keys)] = list(values)
+            for key, value in pairs:
+                self.cache[key] = value
+            self._last_n_objects = len(self.key_store)
+
+
+    def cache_all(self):
+        values = self.value_store[:]
+        self.cache.clear()
+        [self.cache.__setitem__(key, value) for key, value in enumerate(values)]
 
     def _get_key(self, item):
         if item is None:
             return None
 
-        if type(item) is tuple:
-            if item[0].storage is self.store.storage:
-                return item[1]
-            else:
-                item = item[0][item[1]]
+        if hasattr(item, '_idx'):
+            if item._store is self.key_store:
+                return item._idx
 
-        if self.storage in item.idx:
-            return item.idx[self.storage]
-
-        return None
+        return self.key_store.index.get(item, None)
 
     def _get(self, item):
-        if dict.__contains__(self, item):
-            return dict.__getitem__(self, item)
-
         key = self._get_key(item)
 
         if key is None:
             return None
 
-        return self._load(key)
+        if key in self.cache:
+            return self.cache[key]
+        else:
+            # update cache with specific strategy
+            self.cache[key] = self.value_store[key]
+            return self.cache[key]
 
     def _get_list(self, items):
-        cached, missing = self._split_list_dict(self, items)
+        keys = map(self._get_key, items)
 
-        keys = [self._get_key(item) for item in missing]
-        replace = self._apply_some_list(self._load_list, keys)
+        idxs = [item for item in keys if item is not None and item not in self.cache]
 
-        return self._replace_none(cached, replace)
+        if len(idxs) > 0:
+            sorted_idxs = sorted(list(set(idxs)))
 
-    def _load(self, key):
-        return self.store.get_value(self.scope, key)
-
-    def _load_list(self, keys):
-        # This is to load all keys in ordered fashion since netCDF does not
-        # allow reading in unsorted order using lists
-        # TODO: Might consider moving this logic to the store, but this is faster
-        # Also requesting an empty list raises an Error
-        if len(keys) > 0:
-            keys_sorted = sorted(enumerate(keys), key=lambda x: x[1])
-            loadable_keys = [x[1] for x in keys_sorted]
-            loadable_idxs = [x[0] for x in keys_sorted]
-            values_sorted = self.store.get_list_value(self.scope, loadable_keys)
-            ret = [0.0] * len(keys)
-            [ret.__setitem__(idx, values_sorted[pos])
-                    for pos, idx in enumerate(loadable_idxs)]
-            return ret
+            sorted_values = self.value_store[sorted_idxs]
+            replace = [None if key is None else self.cache[key] if key in self.cache else
+            sorted_values[sorted_idxs.index(key)] for key in keys]
         else:
-            return []
+            replace = [None if key is None else self.cache[key] if key in self.cache else None for key in keys]
 
-    def _basetype(self, item):
-        if type(item) is tuple:
-            return item[0].content_class
-        elif hasattr(item, 'base_cls'):
-            return item.base_cls
-        else:
-            return type(item)
+        return replace
 
-class MultiStore(Store):
-    def __init__(self, store_name, name, dimensions, scope):
-        super(Store, self).__init__()
-        self.name = name
-        self.dimensions = dimensions
-        self.store_name = store_name
-        self._storages = []
-
-        if scope is None:
-            self.scope = self
-        else:
-            self.scope = scope
-
-        self.cod_stores = {}
-        self.update_nod_stores()
-
-    @property
-    def storages(self):
-        if hasattr(self.scope, 'idx'):
-            if len(self.scope.idx) != len(self._storages):
-                self._storages = self.scope.idx.keys()
-            return self._storages
-        else:
-            return []
-
-    def sync(self):
-        if len(self.storages) != len(self.cod_stores):
-            self.update_nod_stores()
-
-        if len(self.cod_stores) == 0:
-            return None
-
-        [store.sync() for store in self.cod_stores.values()]
-
-    def cache_all(self):
-        if len(self.storages) != len(self.cod_stores):
-            self.update_nod_stores()
-
-        if len(self.cod_stores) == 0:
-            return None
-
-        [store.cache_all() for store in self.cod_stores.values()]
-
-    def add_nod_store(self, storage):
-        self.cod_stores[storage] = BufferedStore(
-            self.name, self.dimensions, getattr(storage, self.store_name),
-            self.scope
-        )
-
-    def update_nod_stores(self):
-        for storage in self.cod_stores:
-            if storage not in self.storages:
-                del self.cod_stores[storage]
-
-        for storage in self.storages:
-            if storage not in self.cod_stores:
-                self.add_nod_store(storage)
+class ReversibleStoredDict(StoredDict):
+    """
+    ChainDict that has a store attached and return existing values from the store. Supports reversible items
+    """
+    def __init__(self, key_store, value_store, main_cache, cache=None, reversible=True):
+        """
+        Parameters
+        ----------
+        key_store : storage.Store
+            the store that references usable keys
+        value_store : storage.Variable
+            the store that references the store variable to store the values by index
+        cache : dict-like or cache, default: None
+            the cache used to access stored values faster. If None an LRUCache with
+            100000 entries is used
+        """
+        super(ReversibleStoredDict, self).__init__(key_store, value_store, main_cache)
+        self.reversible = reversible
 
     def _add_new(self, items, values):
-        if len(self.storages) != len(self.cod_stores):
-            self.update_nod_stores()
-        for s in self.cod_stores:
-            self.cod_stores[s]._add_new(items, values)
+        for item, value in zip(items, values):
+            key = self._get_key(item)
+            if key is not None:
+                self.cache[key] = value
+                self.storable.add(key)
+                if self.reversible:
+                    # if reversible store also for reversed
+                    s_key = key + 1 - 2 * (key % 2)
+                    self.cache[s_key] = value
+                    self.storable.add(s_key)
 
-    def _get(self, item):
-        print 'Should not appear'
-        if len(self.storages) != len(self.cod_stores):
-            self.update_nod_stores()
+        if self.max_save_buffer_size is not None and len(self.storable) > self.max_save_buffer_size:
+            self.sync()
 
-        if len(self.cod_stores) == 0:
-            return None
+    def sync(self):
+        # Sync objects that had been saved and afterwards the CV was computed
+        if len(self.storable) > 0:
+            keys = [idx for idx in sorted(list(self.storable)) if idx in self.cache]
+            values = [self.cache[idx] for idx in keys]
+            self.value_store[keys] = values
+            self.storable.clear()
 
-        results = dict()
-        for s in self.cod_stores:
-            results[s] = self.cod_stores[s][item]
+        # Sync objects that first had a value computed and were later stored
+        # For these we need to check the main_cache
 
-        output = None
+        if self._last_n_objects < len(self.key_store):
+            keys = range(self._last_n_objects, len(self.key_store))
+            objs = map(self.key_store.cache.get_silent, keys)
+            values = map(self.main_cache.get_silent, objs)
 
-        for result in results.values():
-            if result is None:
-                return None
-            elif output is None:
-                output = result
+            if self.reversible:
+                # double all pairs of values and remove Nones
+                values = map(lambda x : x[0] or x[1], zip(values[0::2], values[1::2]))
+                values = [val for val in values for _ in (0, 1)]
 
-        return output
+            pairs = [(key, value) for key, value in zip(keys, values) if value is not None]
+            if len(pairs) > 0:
+                keys, values = zip(*pairs)
 
+                self._last_n_objects = len(self.key_store)
 
-    def _get_list(self, items):
-        if len(self.storages) != len(self.cod_stores):
-            self.update_nod_stores()
-
-        if len(self.cod_stores) == 0:
-            return [None] * len(items)
-
-        results_list = dict()
-        for s in self.cod_stores:
-            results_list[s] = self.cod_stores[s][items]
-
-        first = True
-        for s, results in results_list.iteritems():
-            if first:
-                output = results
-                first = False
-            else:
-                output = [None if item is None or result is None else item
-                     for item, result in zip(output, results) ]
-
-        return output
-
-
-
-class UnwrapTuple(ChainDict):
-    def __init__(self):
-        super(UnwrapTuple, self).__init__()
-
-    def __getitem__(self, items):
-        return self.post([value[0].load(value[1])
-            if type(value) is tuple else value for value in items])
-
-    def __setitem__(self, key, value):
-        self.post[key] = value
+                self.value_store[list(keys)] = list(values)
+                for key, value in pairs:
+                    self.cache[key] = value
