@@ -431,6 +431,22 @@ class testMinusMoveStrategy(MoveStrategyTestSetup):
             )
 
 
+class testSingleReplicaMinusMoveStrategy(MoveStrategyTestSetup):
+    def test_make_movers(self):
+        strategy = SingleReplicaMinusMoveStrategy()
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        assert_equal(len(movers), 2)
+
+        minuses = self.network.special_ensembles['minus']
+        ens_minusA = minuses.keys()[0]
+        ens_innerA = [t.ensembles[0] for t in minuses[ens_minusA]]
+        sig_A = set([ens_minusA] + ens_innerA)
+        ens_minusB = minuses.keys()[1]
+        ens_innerB = [t.ensembles[0] for t in minuses[ens_minusB]]
+        sig_B = set([ens_minusB] + ens_innerB)
+        all_ens_sigs = [m.ensemble_signature_set for m in movers]
+
 
 class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
     def scheme_setup_shooting_repex(self):

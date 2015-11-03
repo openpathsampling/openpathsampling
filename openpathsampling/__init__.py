@@ -24,18 +24,18 @@ from collectivevariable import CV_Function, CV_MDTraj_Function, CV_MSMB_Featuriz
     CV_Volume, CollectiveVariable
 
 from pathmover import (
-    BackwardShootMover, MinusMover, RandomChoiceMover, ForwardShootMover,
-    PathMover, PathMoverFactory, PathReversalMover,
-    ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
-    PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
-    ConditionalMover, RestrictToLastSampleMover, PathSimulatorMover,
-    PathReversalSet, NeighborEnsembleReplicaExchange, SampleMover,
-    StateSwapMover, FinalSubtrajectorySelectMover, EngineMover,
+    RandomChoiceMover, PathMover, ConditionalSequentialMover,
+    PartialAcceptanceSequentialMover, BackwardShootMover, ForwardShootMover,
+    ShootMover, BackwardExtendMover, ForwardExtendMover, MinusMover,
+    SingleReplicaMinusMover, PathMoverFactory, PathReversalMover,
+    ReplicaExchangeMover, EnsembleHopMover, ReplicaIDChangeMover,
+    SequentialMover, ConditionalMover, RestrictToLastSampleMover,
+    PathSimulatorMover, PathReversalSet, NeighborEnsembleReplicaExchange,
+    SampleMover, StateSwapMover, FinalSubtrajectorySelectMover, EngineMover,
     SwappingMover, FirstSubtrajectorySelectMover, MultipleSetMinusMover,
-    OneWayShootingMover, RandomSubtrajectorySelectMover, ShootMover,
-    SubPathMover, BackwardExtendMover, EnsembleFilterMover,
-    ForwardExtendMover, SelectionMover, FirstAllowedMover, LastAllowedMover,
-    OneWayExtendMover
+    OneWayShootingMover, RandomSubtrajectorySelectMover, SubPathMover,
+    EnsembleFilterMover, SelectionMover, FirstAllowedMover,
+    LastAllowedMover, OneWayExtendMover
 )
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
