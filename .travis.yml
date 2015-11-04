@@ -6,7 +6,7 @@ python:
 
 install:
   - deactivate
-  # Sets up a MINIConda enviroment in the name of the selected python verson
+  # Sets up a MINIConda enviroment in the name of the selected python version
   - source devtools/ci/install.sh
   # Don't know what this is meant for
   - export PYTHONUNBUFFERED=true
