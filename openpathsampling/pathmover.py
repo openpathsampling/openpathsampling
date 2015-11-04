@@ -770,126 +770,153 @@ class BackwardShootMover(EngineMover):
 # EXTENDING GENERATORS
 ###############################################################################
 
-class ExtendingMover(EngineMover):
-    """
-    Sample Mover that creates Samples using extensions
+# class ExtendingMover(EngineMover):
+    # """
+    # Sample Mover that creates Samples using extensions
 
-    Extending will create samples in a super ensemble from samples
-    in a smaller ensemble by forward or backward extending the original
-    sample until it is in the target ensemble. This requires the the target
-    ensemble is reachable from the initial ensemble
-    """
-    def __init__(self, ensemble, target_ensemble):
-        """
-        Parameters
-        ----------
-        ensemble : openpathsampling.Ensemble
-            the initial ensemble to be started from
-        extend_ensemble : openpathsampling.Ensemble
-            the target ensemble
+    # Extending will create samples in a super ensemble from samples
+    # in a smaller ensemble by forward or backward extending the original
+    # sample until it is in the target ensemble. This requires the the target
+    # ensemble is reachable from the initial ensemble
+    # """
+    # def __init__(self, ensemble, target_ensemble):
+        # """
+        # Parameters
+        # ----------
+        # ensemble : openpathsampling.Ensemble
+            # the initial ensemble to be started from
+        # extend_ensemble : openpathsampling.Ensemble
+            # the target ensemble
 
-        """
-        super(ExtendingMover, self).__init__(
-        )
-        self.ensemble = ensemble
-        self.target_ensemble = target_ensemble
+        # """
+        # super(ExtendingMover, self).__init__(
+        # )
+        # self.ensemble = ensemble
+        # self.target_ensemble = target_ensemble
 
-    def _called_ensembles(self):
-        return [self.ensemble]
+    # def _called_ensembles(self):
+        # return [self.ensemble]
 
-    def _get_in_ensembles(self):
-        return [self.ensemble]
+    # def _get_in_ensembles(self):
+        # return [self.ensemble]
 
-    def _get_out_ensembles(self):
-        return [self.target_ensemble]
+    # def _get_out_ensembles(self):
+        # return [self.target_ensemble]
 
-    def __call__(self, trial):
-        initial_trajectory = trial.trajectory
+    # def __call__(self, trial):
+        # initial_trajectory = trial.trajectory
 
-        replica = trial.replica
-        trial_trajectory = self._extend(
-            initial_trajectory,
-            self.target_ensemble
-        )
+        # replica = trial.replica
+        # trial_trajectory = self._extend(
+            # initial_trajectory,
+            # self.target_ensemble
+        # )
 
-        trial_details = paths.SampleDetails(
-        )
+        # trial_details = paths.SampleDetails(
+        # )
 
-        # the actual bias would be 0.0 since we will never be able to do the
-        # reverse move. Since this is the opposite of subtraj we set both
-        # proposal bias for these to 100% which means no bias
+        # # the actual bias would be 0.0 since we will never be able to do the
+        # # reverse move. Since this is the opposite of subtraj we set both
+        # # proposal bias for these to 100% which means no bias
 
-        trial = paths.Sample(
-            replica=replica,
-            trajectory=trial_trajectory,
-            ensemble=self.target_ensemble,
-            parent=trial,
-            details=trial_details,
-            mover=self,
-            bias=1.0
-        )
+        # trial = paths.Sample(
+            # replica=replica,
+            # trajectory=trial_trajectory,
+            # ensemble=self.target_ensemble,
+            # parent=trial,
+            # details=trial_details,
+            # mover=self,
+            # bias=1.0
+        # )
 
-        trials = [trial]
+        # trials = [trial]
 
-        return trials
+        # return trials
 
-    def _extend(self, initial_trajectory, ensemble):
-        return initial_trajectory
+    # def _extend(self, initial_trajectory, ensemble):
+        # return initial_trajectory
 
 
-class ForwardExtendMover(ExtendingMover):
+class ForwardExtendMover(EngineMover):
     """
     A Sample Mover implementing Forward Extension
     """
-    def _extend(self, initial_trajectory, ensemble):
-        shoot_str = "Extending {sh_dir} from frame {fnum} in [0:{maxt}]"
-        logger.info(shoot_str.format(
-            fnum=len(initial_trajectory)-1,
-            maxt=len(initial_trajectory)-1,
-            sh_dir="forward"
-        ))
-
-        # Run until one of the stoppers is triggered
-        partial_trajectory = self.engine.generate(
-            initial_trajectory[-1],
-            running = [
-                paths.PrefixTrajectoryEnsemble(
-                    ensemble,
-                    initial_trajectory[:-1]
-                ).can_append
-            ]
+    def __init__(self, ensemble, target_ensemble):
+        super(ForwardExtendMover, self).__init__(
+            ensemble=ensemble,
+            target_ensemble=target_ensemble,
+            selector=paths.FinalFrameSelector(),
+            direction="forward"
         )
 
-        trial_trajectory = initial_trajectory + partial_trajectory[1:]
+    def running_ensemble(self, trajectory, shooting_point):
+        return paths.PrefixTrajectoryEnsemble(
+            self.target_ensemble, 
+            trajectory[0:shooting_point.index]
+        )
 
-        return trial_trajectory
+    # def _extend(self, initial_trajectory, ensemble):
+        # shoot_str = "Extending {sh_dir} from frame {fnum} in [0:{maxt}]"
+        # logger.info(shoot_str.format(
+            # fnum=len(initial_trajectory)-1,
+            # maxt=len(initial_trajectory)-1,
+            # sh_dir="forward"
+        # ))
+
+        # # Run until one of the stoppers is triggered
+        # partial_trajectory = self.engine.generate(
+            # initial_trajectory[-1],
+            # running = [
+                # paths.PrefixTrajectoryEnsemble(
+                    # ensemble,
+                    # initial_trajectory[:-1]
+                # ).can_append
+            # ]
+        # )
+
+        # trial_trajectory = initial_trajectory + partial_trajectory[1:]
+
+        # return trial_trajectory
 
 
-class BackwardExtendMover(ExtendingMover):
+class BackwardExtendMover(EngineMover):
     """
     A Sample Mover implementing Backward Extension
     """
-    def _extend(self, initial_trajectory, ensemble):
-        shoot_str = "Extending {sh_dir} from frame {fnum} in [0:{maxt}]"
-        logger.info(shoot_str.format(
-            fnum=0,
-            maxt=len(initial_trajectory)-1,
-            sh_dir="backward",
-        ))
-
-        # Run until one of the stoppers is triggered
-        partial_trajectory = self.engine.generate(
-            initial_trajectory[0].reversed,
-            running = [
-                paths.SuffixTrajectoryEnsemble(
-                    ensemble,
-                    initial_trajectory[1:]
-                ).can_prepend
-            ]
+    def __init__(self, ensemble, target_ensemble):
+        super(BackwardExtendMover, self).__init__(
+            ensemble=ensemble,
+            target_ensemble=target_ensemble,
+            selector=paths.FirstFrameSelector(),
+            direction="backward"
         )
 
-        trial_trajectory = partial_trajectory.reversed + initial_trajectory[1:]
-        return trial_trajectory
+    def running_ensemble(self, trajectory, shooting_point):
+        return paths.SuffixTrajectoryEnsemble(
+            self.target_ensemble,
+            trajectory[shooting_point.index + 1:]
+        )
+    # def _extend(self, initial_trajectory, ensemble):
+        # shoot_str = "Extending {sh_dir} from frame {fnum} in [0:{maxt}]"
+        # logger.info(shoot_str.format(
+            # fnum=0,
+            # maxt=len(initial_trajectory)-1,
+            # sh_dir="backward",
+        # ))
+
+        # # Run until one of the stoppers is triggered
+        # partial_trajectory = self.engine.generate(
+            # initial_trajectory[0].reversed,
+            # running = [
+                # paths.SuffixTrajectoryEnsemble(
+                    # ensemble,
+                    # initial_trajectory[1:]
+                # ).can_prepend
+            # ]
+        # )
+
+        # trial_trajectory = partial_trajectory.reversed + initial_trajectory[1:]
+        # return trial_trajectory
 
 
 ###############################################################################
