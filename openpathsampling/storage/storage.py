@@ -244,12 +244,7 @@ class Storage(NetCDFPlus):
         Under most circumstances, you want to sync `self.cvs` and `self` at
         the same time. This just makes it easier to do that.
         """
-        try:
-            self.cvs.sync()
-        except AttributeError:
-            # mainly if we don't have self.cvs; maybe if self.cvs doesn't
-            # have a sync function
-            pass 
+        self.cvs.sync()
         self.sync()
 
     def set_caching_mode(self, mode='default'):
