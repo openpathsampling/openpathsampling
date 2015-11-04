@@ -370,9 +370,3 @@ class testVolumeFactory(object):
             [lv0, lv1],
             volume.VolumeFactory.CVRangeVolumePeriodicSet(op_id, mins, maxs)
         )
-
-class testVolumeABCError(object):
-    @raises(NotImplementedError)
-    def test_ABCVolume(self):
-        ens = volume.Volume()
-        ens(1)

@@ -1,17 +1,18 @@
-from openpathsampling.todict import OPSNamed, OPSObject
+from openpathsampling.base import StorableNamedObject, StorableObject
 import openpathsampling as paths
 import openpathsampling.tools
+from openpathsampling.pathmover import SubPathMover
 
-from openpathsampling.pathmover import PathMover
+import time
+import sys
 
 import logging
 from ops_logging import initialization_logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-import sys
 
-class MCStep(OPSObject):
+class MCStep(StorableObject):
     """
     A monte-carlo step in the main PathSimulation loop
 
@@ -47,7 +48,8 @@ class MCStep(OPSObject):
         self.change = change
         self.mccycle = mccycle
 
-class PathSimulator(OPSNamed):
+
+class PathSimulator(StorableNamedObject):
 
     calc_name = "PathSimulator"
     _excluded_attr = ['globalstate', 'step', 'save_frequency']
@@ -86,7 +88,7 @@ class PathSimulator(OPSNamed):
         nsteps : int
             number of step to be run
         """
-        raise self.AbstractBaseClassError()
+        logger.warning("Running an empty pathsimulator? Try a subclass, maybe!")
 
     def save_initial(self):
         """
@@ -104,11 +106,12 @@ class PathSimulator(OPSNamed):
             self.storage.steps.save(mcstep)
             self.storage.sync()
 
-class BootstrapPromotionMove(PathMover):
-    '''
+
+class BootstrapPromotionMove(SubPathMover):
+    """
     Bootstrap promotion is the combination of an EnsembleHop (to the next
     ensemble up) with incrementing the replica ID.
-    '''
+    """
     def __init__(self, bias=None, shooters=None,
                  ensembles=None):
         """
@@ -127,11 +130,11 @@ class BootstrapPromotionMove(PathMover):
         that all ensembles have a reasonable overlab using shooting moves.
 
         """
-        super(BootstrapPromotionMove, self).__init__(ensembles=ensembles)
         self.shooters = shooters
         self.bias = bias
+        self.ensembles = ensembles
         initialization_logging(logger=init_log, obj=self,
-                               entries=['bias', 'shooters'])
+                               entries=['bias', 'shooters', 'ensembles'])
 
         ens_pairs = [[self.ensembles[i], self.ensembles[i+1]]
                      for i in range(len(self.ensembles)-1)]
@@ -142,30 +145,21 @@ class BootstrapPromotionMove(PathMover):
         
         # Create all possible hoppers so we do not have to recreate these
         # every time which will result in more efficient storage
-        self._hopper = {}
-        for (enss, shoot) in zip(ens_pairs, shooters):
-            rep_from = self._ensemble_dict[enss[0]]
-            rep_to = self._ensemble_dict[enss[1]]
+        mover = paths.LastAllowedMover([
             # writing an algorithm this convoluted can get you shot in Texas
-            self._hopper[rep_from] = paths.RestrictToLastSampleMover(
-                paths.PartialAcceptanceSequentialMover(
-                    movers=[
-                        shoot,
-                        paths.EnsembleHopMover(ensembles=enss),
-                        paths.ReplicaIDChangeMover(
-                            replica_pairs=[rep_from, rep_to]
-                        )
-                    ]
-                )
-            )
+            paths.PartialAcceptanceSequentialMover(
+                movers=[
+                    shoot,
+                    paths.EnsembleHopMover(
+                        ensemble=enss[0],
+                        target_ensemble=enss[1],
+                        change_replica=self._ensemble_dict[enss[1]]
+                    )
+                ]
+            ) for (enss, shoot) in zip(ens_pairs, shooters)
+        ])
 
-
-    def move(self, globalstate):
-        # find latest ensemble in the list
-        top_ens_idx = len(globalstate)-1
-        mover = self._hopper[top_ens_idx]
-        return mover.move(globalstate)
-
+        super(BootstrapPromotionMove, self).__init__(mover)
 
 
 class Bootstrapping(PathSimulator):
@@ -201,7 +195,9 @@ class Bootstrapping(PathSimulator):
         """
         # TODO: Change input from trajectory to sample
         super(Bootstrapping, self).__init__(storage, engine)
+
         self.ensembles = ensembles
+        self.trajectory = trajectory
 
         sample = paths.Sample(
             replica=0,
@@ -210,8 +206,7 @@ class Bootstrapping(PathSimulator):
         )
 
         self.globalstate = paths.SampleSet([sample])
-        if self.storage is not None:
-            self.storage.samplesets.save(self.globalstate)
+
         if movers is None:
             pass # TODO: implement defaults: one per ensemble, uniform sel
         else:
@@ -225,10 +220,12 @@ class Bootstrapping(PathSimulator):
                                                ensembles=self.ensembles
                                               )
 
-        self.root = self.globalstate
 
     def run(self, nsteps):
         bootstrapmove = self._bootstrapmove
+
+        cvs = []
+        n_samples = 0
 
         if self.storage is not None:
             cvs = list(self.storage.cvs)
@@ -313,6 +310,114 @@ class Bootstrapping(PathSimulator):
                 ( self.step, ens_num + 1, len(self.ensembles) )
             )
 
+
+class FullBootstrapping(PathSimulator):
+    """
+    Takes a snapshot as input; gives you back a sample set with trajectories
+    for every ensemble in the transition.
+
+    Someday this will be combined with the regular bootstrapping code. 
+    """
+    calc_name = "FullBootstrapping"
+
+    def __init__(self, transition, snapshot, storage=None, engine=None,
+                 extra_interfaces=None, forbidden_states=None):
+        super(FullBootstrapping, self).__init__(storage, engine)
+        if extra_interfaces is None:
+            extra_interfaces = list()
+
+        if forbidden_states is None:
+            forbidden_states = list()
+        interface0 = transition.interfaces[0]
+        ensemble0 = transition.ensembles[0]
+        state = transition.stateA
+        self.state = state
+        self.first_traj_ensemble = paths.SequentialEnsemble([
+            paths.OptionalEnsemble(paths.AllOutXEnsemble(state)),
+            paths.AllInXEnsemble(state),
+            paths.OptionalEnsemble(
+                paths.AllOutXEnsemble(state) & paths.AllInXEnsemble(interface0)
+            ),
+            paths.OptionalEnsemble(paths.AllInXEnsemble(interface0)),
+            paths.AllOutXEnsemble(interface0),
+            paths.OptionalEnsemble(paths.AllOutXEnsemble(state)),
+            paths.SingleFrameEnsemble(paths.AllInXEnsemble(state))
+        ]) & paths.AllOutXEnsemble(paths.join_volumes(forbidden_states))
+
+        self.extra_ensembles = [paths.TISEnsemble(transition.stateA,
+                                                  transition.stateB, iface,
+                                                  transition.orderparameter)
+                                for iface in extra_interfaces
+        ]
+
+        self.transition_shooters = [
+            paths.OneWayShootingMover(selector=paths.UniformSelector(), 
+                                      ensemble=ens) 
+            for ens in transition.ensembles
+        ]
+
+        self.extra_shooters = [
+            paths.OneWayShootingMover(selector=paths.UniformSelector(), 
+                                      ensemble=ens) 
+            for ens in self.extra_ensembles
+        ]
+        self.snapshot = snapshot.copy()
+        self.ensemble0 = ensemble0
+        self.all_ensembles = transition.ensembles + self.extra_ensembles
+        self.n_ensembles = len(self.all_ensembles)
+        self.error_max_rounds = True
+
+
+    def run(self, max_ensemble_rounds=None, n_steps_per_round=20):
+        #print first_traj_ensemble #DEBUG
+        has_AA_path = False
+        while not has_AA_path:
+            self.engine.current_snapshot = self.snapshot.copy()
+            self.engine.snapshot = self.snapshot.copy()
+            print "Building first trajectory"
+            sys.stdout.flush()
+            first_traj = self.engine.generate(
+                self.engine.current_snapshot, 
+                [self.first_traj_ensemble.can_append]
+            )
+            print "Selecting segment"
+            sys.stdout.flush()
+            subtraj = self.ensemble0.split(first_traj)[0]
+            # check that this is A->A as well
+            has_AA_path = self.state(subtraj[-1]) and self.state(subtraj[0])
+            
+        print "Sampling " + str(self.n_ensembles) + " ensembles."
+        bootstrap = paths.Bootstrapping(
+            storage=self.storage,
+            ensembles=self.all_ensembles,
+            movers=self.transition_shooters + self.extra_shooters,
+            trajectory=subtraj
+        )
+        print "Beginning bootstrapping"
+        n_rounds = 0
+        n_filled = len(bootstrap.globalstate)
+        while n_filled < self.n_ensembles:
+            bootstrap.run(n_steps_per_round)
+
+            if n_filled == len(bootstrap.globalstate):
+                n_rounds += 1
+            else:
+                n_rounds = 0
+            if n_rounds == max_ensemble_rounds:
+                # hard equality instead of inequality so that None gives us
+                # effectively infinite (rounds add one at a time
+                msg = ("Too many rounds of bootstrapping: " + str(n_rounds)
+                       + " round of " + str(n_steps_per_round) + " steps.")
+                if self.error_max_rounds:
+                    raise RuntimeError(msg)
+                else:
+                    logger.warning(msg)
+                break
+            n_filled = len(bootstrap.globalstate)
+
+        return bootstrap.globalstate
+
+
 class PathSampling(PathSimulator):
     """
     General path sampling code. 
@@ -356,10 +461,21 @@ class PathSampling(PathSimulator):
         initialization_logging(init_log, self, 
                                ['move_scheme', 'globalstate'])
         self.live_visualization = None
+        self.visualize_frequency = 1
         self._mover = paths.PathSimulatorMover(self.move_scheme, self)
+
+    def run_until(self, nsteps):
+        if self.storage is not None:
+            if len(self.storage.steps) > 0:
+                self.step = len(self.storage.steps)
+        nsteps_to_run = nsteps - self.step
+        self.run(nsteps_to_run)
 
     def run(self, nsteps):
         mcstep = None
+
+        cvs = list()
+        n_samples = 0
 
         if self.storage is not None:
             n_samples = len(self.storage.snapshots)
@@ -372,18 +488,28 @@ class PathSampling(PathSimulator):
             self.step += 1
             logger.info("Beginning MC cycle " + str(self.step))
             refresh=True
-            if self.live_visualization is not None and mcstep is not None:
-                self.live_visualization.draw_ipynb(mcstep)
-                refresh=False
+            if self.step % self.visualize_frequency == 0:
+                # do we visualize this step?
+                if self.live_visualization is not None and mcstep is not None:
+                    # do we visualize at all?
+                    self.live_visualization.draw_ipynb(mcstep)
+                    refresh=False
 
-            paths.tools.refresh_output(
-                "Working on Monte Carlo cycle step " + str(self.step) + ".\n",
-                refresh=refresh
-            )
+                paths.tools.refresh_output(
+                    "Working on Monte Carlo cycle number " + str(self.step)
+                    + ".\n", 
+                    refresh=refresh
+                )
 
+            time_start = time.time() 
             movepath = self._mover.move(self.globalstate, step=self.step)
             samples = movepath.results
             new_sampleset = self.globalstate.apply_samples(samples)
+            time_elapsed = time.time() - time_start
+
+            # TODO: we can save this with the MC steps for timing? The bit
+            # below works, but is only a temporary hack
+            setattr(movepath.details, "timing", time_elapsed)
 
             mcstep = MCStep(
                 simulation=self,
@@ -409,6 +535,10 @@ class PathSampling(PathSimulator):
             self.globalstate = new_sampleset
 
         self.sync_storage()
+
+        if self.live_visualization is not None and mcstep is not None:
+            self.live_visualization.draw_ipynb(mcstep)
         paths.tools.refresh_output(
-            "DONE! Completed " + str(self.step) + " Monte Carlo cycles.\n"
+            "DONE! Completed " + str(self.step) + " Monte Carlo cycles.\n",
+            refresh=False
         )
