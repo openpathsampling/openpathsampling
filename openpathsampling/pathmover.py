@@ -724,6 +724,12 @@ class BackwardShootMover(EngineMover):
             selector=selector,
             direction="backward"
         )
+
+    def running_ensemble(self, trajectory, shooting_point):
+        return paths.SuffixTrajectoryEnsemble(
+            self.target_ensemble,
+            trajectory[shooting_point.index + 1:]
+        )
     #TODO: Remove use of reversed_copy. The reversed snapshot already exists!
     # def _shoot(self, shooting_point, ensemble):
         # shoot_str = "Shooting {sh_dir} from frame {fnum} in [0:{maxt}]"
