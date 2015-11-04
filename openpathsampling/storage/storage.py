@@ -236,6 +236,22 @@ class Storage(NetCDFPlus):
         self._restore_storages()
         self.topology = self.topologies[0]
 
+
+    def sync_all(self):
+        """
+        Convenience function to sync `self.cvs` and `self` at once.
+
+        Under most circumstances, you want to sync `self.cvs` and `self` at
+        the same time. This just makes it easier to do that.
+        """
+        try:
+            self.cvs.sync()
+        except AttributeError:
+            # mainly if we don't have self.cvs; maybe if self.cvs doesn't
+            # have a sync function
+            pass 
+        self.sync()
+
     def set_caching_mode(self, mode='default'):
         """
         Set default values for all caches
