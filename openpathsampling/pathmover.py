@@ -483,31 +483,16 @@ class SampleMover(PathMover):
 class EngineMover(SampleMover):
     """Baseclass for Movers that use an engine
     """
-
     engine = None
-
-class ShootMover(EngineMover):
-    """Main class for Movers using ShootingMoves
-
-    Attributes
-    ----------
-    selector
-    ensemble
-    """
-    def __init__(self, ensemble, selector):
-        """
-        Parameters
-        ----------
-        ensemble : openpathsampling.Ensemble
-            the specific ensemble to be shot from
-        selector : openpathsampling.ShootingPointSelector
-            the shootingpoint selector to determine the shooting point in the
-            move
-
-        """
-        super(ShootMover, self).__init__()
+    def __init__(self, ensemble, target_ensemble, selector, direction):
+        super(EngineMover, self).__init__()
         self.selector = selector
         self.ensemble = ensemble
+        self.target_ensemble = target_ensemble
+        self.direction = direction
+
+    def running_conditions(self, input_trajectory):
+        raise NotImplementedError
 
     def _called_ensembles(self):
         # return a single ensemble
@@ -516,14 +501,17 @@ class ShootMover(EngineMover):
     def _get_in_ensembles(self):
         return [self.ensemble]
 
+    def _get_out_ensembles(self):
+        return [self.target_ensemble]
+
     def __call__(self, trial):
         initial_trajectory = trial.trajectory
 
-        dynamics_ensemble = trial.ensemble
         replica = trial.replica
 
         initial_point = self.selector.pick(initial_trajectory)
-        trial_point = self._shoot(initial_point, dynamics_ensemble)
+
+        trial_point = self._run(initial_point)
 
         bias = initial_point.sum_bias / trial_point.sum_bias
 
@@ -535,7 +523,7 @@ class ShootMover(EngineMover):
         trial = paths.Sample(
             replica=replica,
             trajectory=trial_point.trajectory,
-            ensemble=dynamics_ensemble,
+            ensemble=self.target_ensemble,
             parent=trial,
             details=trial_details,
             mover=self,
@@ -546,50 +534,48 @@ class ShootMover(EngineMover):
 
         return trials
 
-    def _shoot(self, shooting_point, ensemble):
-        """Implementation of the shooting
+    def _run(self, shooting_point):
+        shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
+        logger.info(shoot_str.format(
+            fnum=shooting_point.index,
+            maxt=len(shooting_point.trajectory)-1,
+            sh_dir=self.direction
+        ))
 
-        Parameters
-        ----------
-        shooting_point : ShootingPoint
-            the initial shooting point instance containing a reference to the
-            initial trajectory
-        ensemble : Ensemble
-            the ensemble for which the trajectory is to be created. This defines
-            the stopping criterion
+        if self.direction == "forward":
+            initial_snapshot = shooting_point.snapshot.copy()
+            run_f = self.running_ensemble(
+                shooting_point.trajectory,
+                shooting_point
+            ).can_append
+        elif self.direction == "backward":
+            # TODO: Remove use of reversed_copy. The reversed snapshot
+            # already exists!
+            initial_snapshot = shooting_point.snapshot.reversed_copy()
+            run_f = self.running_ensemble(
+                shooting_point.trajectory,
+                shooting_point
+            ).can_prepend
+        else:
+            raise RuntimeError("Unknown direction: " + str(self.direction))
 
-        Returns
-        -------
-        ShootingPoint
-            the final shooting point referencing the final trajectory
-        """
-        return shooting_point
-
-
-class ForwardShootMover(ShootMover):
-    """A forward shooting sample generator
-    """
-    def _shoot(self, shooting_point, ensemble):
-        shoot_str = "Shooting {sh_dir} from frame {fnum} in [0:{maxt}]"
-        logger.info(shoot_str.format(fnum=shooting_point.index,
-                                     maxt=len(shooting_point.trajectory)-1,
-                                     sh_dir="forward",
-                                    ))
-
-        # Run until one of the stoppers is triggered
         partial_trajectory = self.engine.generate(
-            shooting_point.snapshot.copy(),
-            running = [
-                paths.PrefixTrajectoryEnsemble(
-                    ensemble,
-                    shooting_point.trajectory[0:shooting_point.index]
-                ).can_append
-            ]
+            initial_snapshot,
+            running=[run_f]
         )
-
-        trial_trajectory = \
-            shooting_point.trajectory[0:shooting_point.index] + \
-            partial_trajectory
+        
+        if self.direction == "forward":
+            trial_trajectory = (
+                shooting_point.trajectory[0:shooting_point.index] + 
+                partial_trajectory
+            )
+        elif self.direction == "backward":
+            trial_trajectory = (
+                partial_trajectory.reversed +
+                shooting_point.trajectory[shooting_point.index + 1:]
+            )
+        else: #pragma no_cover
+            raise RuntimeError("Unknown direction: " + str(self.direction))
 
         trial_point = paths.ShootingPoint(
             shooting_point.selector,
@@ -600,41 +586,175 @@ class ForwardShootMover(ShootMover):
         return trial_point
 
 
-class BackwardShootMover(ShootMover):
+# class ShootMover(EngineMover):
+    # """Main class for Movers using ShootingMoves
+
+    # Attributes
+    # ----------
+    # selector
+    # ensemble
+    # """
+    # def __init__(self, ensemble, selector):
+        # """
+        # Parameters
+        # ----------
+        # ensemble : openpathsampling.Ensemble
+            # the specific ensemble to be shot from
+        # selector : openpathsampling.ShootingPointSelector
+            # the shootingpoint selector to determine the shooting point in the
+            # move
+
+        # """
+        # super(ShootMover, self).__init__()
+        # self.selector = selector
+        # self.ensemble = ensemble
+
+    # def _called_ensembles(self):
+        # # return a single ensemble
+        # return [self.ensemble]
+
+    # def _get_in_ensembles(self):
+        # return [self.ensemble]
+
+    # def __call__(self, trial):
+        # initial_trajectory = trial.trajectory
+
+        # dynamics_ensemble = trial.ensemble
+        # replica = trial.replica
+
+        # initial_point = self.selector.pick(initial_trajectory)
+        # trial_point = self._shoot(initial_point, dynamics_ensemble)
+
+        # bias = initial_point.sum_bias / trial_point.sum_bias
+
+        # trial_details = paths.SampleDetails(
+            # initial_point=initial_point,
+            # trial_point=trial_point,
+        # )
+
+        # trial = paths.Sample(
+            # replica=replica,
+            # trajectory=trial_point.trajectory,
+            # ensemble=dynamics_ensemble,
+            # parent=trial,
+            # details=trial_details,
+            # mover=self,
+            # bias=bias
+        # )
+
+        # trials = [trial]
+
+        # return trials
+
+    # def _shoot(self, shooting_point, ensemble):
+        # """Implementation of the shooting
+
+        # Parameters
+        # ----------
+        # shooting_point : ShootingPoint
+            # the initial shooting point instance containing a reference to the
+            # initial trajectory
+        # ensemble : Ensemble
+            # the ensemble for which the trajectory is to be created. This defines
+            # the stopping criterion
+
+        # Returns
+        # -------
+        # ShootingPoint
+            # the final shooting point referencing the final trajectory
+        # """
+        # return shooting_point
+
+
+class ForwardShootMover(EngineMover):
+    """A forward shooting sample generator
+    """
+    def __init__(self, ensemble, selector):
+        super(ForwardShootMover, self).__init__(
+            ensemble=ensemble,
+            target_ensemble=ensemble,
+            selector=selector,
+            direction="forward"
+        )
+
+    def running_ensemble(self, trajectory, shooting_point):
+        return paths.PrefixTrajectoryEnsemble(
+            self.target_ensemble, 
+            trajectory[0:shooting_point.index]
+        )
+
+    # def _shoot(self, shooting_point, ensemble):
+        # shoot_str = "Shooting {sh_dir} from frame {fnum} in [0:{maxt}]"
+        # logger.info(shoot_str.format(fnum=shooting_point.index,
+                                     # maxt=len(shooting_point.trajectory)-1,
+                                     # sh_dir="forward",
+                                    # ))
+
+        # # Run until one of the stoppers is triggered
+        # partial_trajectory = self.engine.generate(
+            # shooting_point.snapshot.copy(),
+            # running = [
+                # paths.PrefixTrajectoryEnsemble(
+                    # ensemble,
+                    # shooting_point.trajectory[0:shooting_point.index]
+                # ).can_append
+            # ]
+        # )
+
+        # trial_trajectory = \
+            # shooting_point.trajectory[0:shooting_point.index] + \
+            # partial_trajectory
+
+        # trial_point = paths.ShootingPoint(
+            # shooting_point.selector,
+            # trial_trajectory,
+            # shooting_point.index
+        # )
+
+        # return trial_point
+
+
+class BackwardShootMover(EngineMover):
     """A Backward shooting generator
     """
-
+    def __init__(self, ensemble, selector):
+        super(BackwardShootMover, self).__init__(
+            ensemble=ensemble,
+            target_ensemble=ensemble,
+            selector=selector,
+            direction="backward"
+        )
     #TODO: Remove use of reversed_copy. The reversed snapshot already exists!
-    def _shoot(self, shooting_point, ensemble):
-        shoot_str = "Shooting {sh_dir} from frame {fnum} in [0:{maxt}]"
-        logger.info(shoot_str.format(
-            fnum=shooting_point.index,
-            maxt=len(shooting_point.trajectory)-1,
-            sh_dir="backward"
-        ))
+    # def _shoot(self, shooting_point, ensemble):
+        # shoot_str = "Shooting {sh_dir} from frame {fnum} in [0:{maxt}]"
+        # logger.info(shoot_str.format(
+            # fnum=shooting_point.index,
+            # maxt=len(shooting_point.trajectory)-1,
+            # sh_dir="backward"
+        # ))
 
-        # Run until one of the stoppers is triggered
-        partial_trajectory = self.engine.generate(
-            shooting_point.snapshot.reversed_copy(),
-            running = [
-                paths.SuffixTrajectoryEnsemble(
-                    ensemble,
-                    shooting_point.trajectory[shooting_point.index + 1:]
-                ).can_prepend
-            ]
-        )
+        # # Run until one of the stoppers is triggered
+        # partial_trajectory = self.engine.generate(
+            # shooting_point.snapshot.reversed_copy(),
+            # running = [
+                # paths.SuffixTrajectoryEnsemble(
+                    # ensemble,
+                    # shooting_point.trajectory[shooting_point.index + 1:]
+                # ).can_prepend
+            # ]
+        # )
 
-        trial_trajectory = \
-            partial_trajectory.reversed + \
-            shooting_point.trajectory[shooting_point.index + 1:]
+        # trial_trajectory = \
+            # partial_trajectory.reversed + \
+            # shooting_point.trajectory[shooting_point.index + 1:]
 
-        trial_point = paths.ShootingPoint(
-            shooting_point.selector,
-            trial_trajectory,
-            len(partial_trajectory) - 1
-        )
+        # trial_point = paths.ShootingPoint(
+            # shooting_point.selector,
+            # trial_trajectory,
+            # len(partial_trajectory) - 1
+        # )
 
-        return trial_point
+        # return trial_point
 
 # TODO: This doubling might be superfluous
 
