@@ -18,7 +18,7 @@ bash $MINICONDA -b
 # This might make the --yes obsolete
 # conda config --set always_yes yes --set changeps1 no
 
-export PATH=$HOME/miniconda/bin:$PATH
+export PATH=$HOME/miniconda2/bin:$PATH
 
 hash -r
 
@@ -32,4 +32,4 @@ source activate $python
 
 # install python pip packages
 PIP_ARGS="-U"
-$HOME/miniconda/envs/${python}/bin/pip install $PIP_ARGS -r devtools/ci/requirements-${python}.txt
+$HOME/miniconda2/envs/${python}/bin/pip install $PIP_ARGS -r devtools/ci/requirements-${python}.txt
