@@ -7,6 +7,7 @@ Created on 19.07.2014
 
 import random
 import logging
+import abc
 
 import numpy as np
 
@@ -94,6 +95,8 @@ class PathMover(TreeMixin, StorableNamedObject):
     interesting. I think the best way to do this is to keep the acceptance
     in the PathMover, but have it be a separate class ~~~DWHS
     """
+
+    __metaclass__ = abc.ABCMeta
 
     def __init__(self):
         StorableNamedObject.__init__(self)
@@ -301,6 +304,7 @@ class PathMover(TreeMixin, StorableNamedObject):
                      + ")")
         return selected
 
+    @abc.abstractmethod
     def move(self, globalstate):
         """
         Run the generation starting with the initial globalstate specified.
@@ -325,21 +329,6 @@ class PathMover(TreeMixin, StorableNamedObject):
             return self.__repr__()
         else:
             return self.name
-
-
-###############################################################################
-# MOVER TYPES
-###############################################################################
-
-class MoverType(object):
-    pass
-
-
-# TODO: empty class. Remove
-class SwappingMover(MoverType):
-    """
-    A mover that swaps samples from ensembles in some way. Relevant for mixing
-    """
 
 
 ###############################################################################
@@ -455,6 +444,7 @@ class SampleMover(PathMover):
                 details=details
             )
 
+    @abc.abstractmethod
     def __call__(self, *args):
         """Generate trial samples directly
 
@@ -485,6 +475,7 @@ class EngineMover(SampleMover):
     """
 
     engine = None
+
 
 class ShootMover(EngineMover):
     """Main class for Movers using ShootingMoves
@@ -546,6 +537,7 @@ class ShootMover(EngineMover):
 
         return trials
 
+    @abc.abstractmethod
     def _shoot(self, shooting_point, ensemble):
         """Implementation of the shooting
 
@@ -707,6 +699,7 @@ class ExtendingMover(EngineMover):
 
         return trials
 
+    @abc.abstractmethod
     def _extend(self, initial_trajectory, ensemble):
         return initial_trajectory
 
@@ -930,10 +923,9 @@ class StateSwapMover(SampleMover):
 # SUBTRAJECTORY GENERATORS
 ###############################################################################
 
-
-class RandomSubtrajectorySelectMover(SampleMover):
+class SubtrajectorySelectMover(SampleMover):
     """
-    Samples a random subtrajectory satisfying the given subensemble.
+    Picks a subtrajectory satisfying the given subensemble.
 
     If there are no subtrajectories which satisfy the subensemble, this
     returns the zero-length trajectory.
@@ -951,9 +943,11 @@ class RandomSubtrajectorySelectMover(SampleMover):
         are found.
 
     """
+
     _is_ensemble_change_mover = True
+
     def __init__(self, ensemble, sub_ensemble, n_l=None):
-        super(RandomSubtrajectorySelectMover, self).__init__(
+        super(SubtrajectorySelectMover, self).__init__(
         )
         self.n_l = n_l
         self.ensemble = ensemble
@@ -968,8 +962,9 @@ class RandomSubtrajectorySelectMover(SampleMover):
     def _get_out_ensembles(self):
         return [ self.sub_ensemble ]
 
+    @abc.abstractmethod
     def _choose(self, trajectory_list):
-        return random.choice(trajectory_list)
+        pass
 
     def __call__(self, trial):
         initial_trajectory = trial.trajectory
@@ -1001,8 +996,31 @@ class RandomSubtrajectorySelectMover(SampleMover):
         return trials
 
 
+class RandomSubtrajectorySelectMover(SampleMover):
+    """
+    Samples a random subtrajectory satisfying the given subensemble.
 
-class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
+    If there are no subtrajectories which satisfy the subensemble, this
+    returns the zero-length trajectory.
+
+    Parameters
+    ----------
+    ensemble : openpathsampling.Ensemble
+        the set of allows samples to chose from
+    subensemble : openpathsampling.Ensemble
+        the subensemble to be searched for
+    n_l : int or None
+        the number of subtrajectories that need to be found. If
+        `None` every number of subtrajectories > 0 is okay.
+        Otherwise the move is only accepted if exactly n_l subtrajectories
+        are found.
+
+    """
+    def _choose(self, trajectory_list):
+        return random.choice(trajectory_list)
+
+
+class FirstSubtrajectorySelectMover(SubtrajectorySelectMover):
     """
     Samples the first subtrajectory satifying the given subensemble.
 
@@ -1013,7 +1031,7 @@ class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
         return trajectory_list[0]
 
 
-class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
+class FinalSubtrajectorySelectMover(SubtrajectorySelectMover):
     """
     Samples the final subtrajectory satifying the given subensemble.
 
@@ -1227,9 +1245,9 @@ class SelectionMover(PathMover):
     def _get_out_ensembles(self):
         return [ sub.output_ensembles for sub in self.submovers ]
 
+    @abc.abstractmethod
     def _selector(self, globalstate):
-        # Default always picks by random choice
-        return [1.0] * len(self.movers)
+        pass
 
     def move(self, globalstate):
         weights = self._selector(globalstate)
@@ -1414,8 +1432,6 @@ class LastAllowedMover(SelectionMover):
         return weights
 
 
-
-
 class ConditionalMover(PathMover):
     """
     An if-then-else structure for PathMovers.
@@ -1470,7 +1486,6 @@ class ConditionalMover(PathMover):
         return paths.SequentialPathMoveChange([ifclause, resultclause], mover=self)
 
 
-
 class SequentialMover(PathMover):
     """
     Performs each of the moves in its movers list. Returns all samples
@@ -1505,7 +1520,6 @@ class SequentialMover(PathMover):
                 sub_change = True
                 break
         return sub_change
-
 
     def _get_in_ensembles(self):
         return [ sub.input_ensembles for sub in self.submovers ]
@@ -1563,7 +1577,6 @@ class PartialAcceptanceSequentialMover(SequentialMover):
         return paths.PartialAcceptanceSequentialPathMoveChange(pathmovechanges, mover=self)
 
 
-
 class ConditionalSequentialMover(SequentialMover):
     """
     Performs each move in its movers list until complete or until one is not
@@ -1596,27 +1609,6 @@ class ConditionalSequentialMover(SequentialMover):
                 break
 
         return paths.ConditionalSequentialPathMoveChange(pathmovechanges, mover=self)
-
-
-# TODO: Restrict to last should not be used, but rather a filter by ensemble.
-# reason is that the order or samples is partially arbitrary and so the result
-# of this mover depends on the implementation of the preceeding mover!!!
-# Hence, it might cause hard to find errors!
-class RestrictToLastSampleMover(PathMover):
-    def __init__(self, mover):
-        super(RestrictToLastSampleMover, self).__init__()
-        self.mover = mover
-
-    @property
-    def submovers(self):
-        return [self.mover]
-
-    def _get_in_ensembles(self):
-        return [ sub.input_ensembles for sub in self.submovers ]
-
-    def move(self, globalstate):
-        movepath = self.mover.move(globalstate)
-        return paths.KeepLastSamplePathMoveChange(movepath, mover=self)
 
 
 class ReplicaIDChangeMover(PathMover):
@@ -1712,13 +1704,6 @@ class SubPathMover(PathMover):
         )
         return change
 
-#    @classmethod
-#    def from_dict(cls, dct):
-#        # This will always fix the mover to be the one stored for all SubPathMovers
-#        obj = PathMover.from_dict(dct)
-#        obj.mover = dct['mover']
-#
-#        return obj
 
 class EnsembleFilterMover(SubPathMover):
     """Mover that return only samples from specified ensembles
@@ -1732,10 +1717,8 @@ class EnsembleFilterMover(SubPathMover):
         ensembles : nested list of Ensemble or None
             the ensemble specification
         """
-        super(SubPathMover, self).__init__()
+        super(EnsembleFilterMover, self).__init__(mover)
         self.ensembles = ensembles
-        self.mover = mover
-
 
         if not set(self.mover.output_ensembles) & set(self.ensembles):
             # little sanity check, if the underlying move will be removed by the
