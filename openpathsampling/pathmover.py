@@ -507,7 +507,17 @@ class EngineMover(SampleMover):
 
         trial_point = self._run(initial_point)
 
-        bias = initial_point.sum_bias / trial_point.sum_bias
+        old_bias = initial_point.sum_bias / trial_point.sum_bias
+
+        trial_trajectory = trial_point.trajectory
+        bias = self.selector.probability_ratio(
+            initial_point.snapshot,
+            initial_trajectory,
+            trial_trajectory
+        )
+
+        # TODO: temporary test to make sure nothing went weird
+        assert(abs(bias - old_bias) < 10e-6)
 
         trial_details = paths.SampleDetails(
             initial_point=initial_point,
