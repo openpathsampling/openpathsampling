@@ -22,7 +22,8 @@ class OpenMMEngine(paths.DynamicsEngine):
     _default_options = {
         'nsteps_per_frame': 10,
         'n_frames_max': 5000,
-        'platform' : 'fastest'
+        'platform': 'fastest',
+        'auto_create': True
     }
 
     def __init__(self, template, system, integrator, options=None):
@@ -57,6 +58,8 @@ class OpenMMEngine(paths.DynamicsEngine):
         self._current_box_vectors = None
 
         self.simulation = None
+        if self.options['auto_create']:
+            self.create()
 
     def create(self):
         """
@@ -74,7 +77,6 @@ class OpenMMEngine(paths.DynamicsEngine):
         )
 
         self.initialized = True
-
 
     @property
     def platform(self):
