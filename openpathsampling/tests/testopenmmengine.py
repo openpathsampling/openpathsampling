@@ -1,45 +1,70 @@
 '''
 @author David W.H. Swenson
 '''
-import os
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises)
-from nose.plugins.skip import Skip, SkipTest
+import time
+
+from nose.tools import (assert_equal, assert_items_equal)
+from nose.plugins.skip import SkipTest
+
 from test_helpers import (true_func, data_filename,
                           assert_equal_array_array,
                           assert_not_equal_array_array)
-
 from openpathsampling.openmm_engine import *
 from openpathsampling.snapshot import Snapshot
 from openpathsampling.snapshot import Momentum, Configuration
 
-import simtk.unit as u
-import time
+import simtk.openmm as mm
+from simtk.openmm import app
+from simtk import unit
 
-import openmmtools
+
 
 class testOpenMMEngine(object):
     def setUp(self):
-        options = {'temperature' : 300.0 * u.kelvin,
-                   'collision_rate' : 1.0 / u.picoseconds,
-                   'timestep' : 2.0 * u.femtoseconds,
-                   'nsteps_per_frame' : 10,
-                   'n_frames_max' : 5,
-                   'start_time' : time.time(),
-                   'fn_initial_pdb' : data_filename("ala_small_traj.pdb"),
-                   'platform' : 'fastest',
-                   'solute_indices' : range(22), 
-                   'forcefield_solute' : 'amber96.xml',
-                   'forcefield_solvent' : 'tip3p.xml'
-                  }
-
         template = paths.tools.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
+        topology = paths.tools.to_openmm_topology(template)
 
-        self.engine = SimpleOpenMMEngine(
-            template=template,
-            options=options
+        # Generated using OpenMM Script Builder
+        # http://builder.openmm.org
+
+        forcefield = app.ForceField(
+            'amber96.xml',  # solute FF
+            'tip3p.xml'     # solvent FF
         )
 
+        # OpenMM System
+        system = forcefield.createSystem(
+            topology,
+            nonbondedMethod=app.PME,
+            nonbondedCutoff=1.0*unit.nanometers,
+            constraints=app.HBonds,
+            rigidWater=True,
+            ewaldErrorTolerance=0.0005
+        )
+
+        # OpenMM Integrator
+        integrator = mm.LangevinIntegrator(
+            300*unit.kelvin,
+            1.0/unit.picoseconds,
+            2.0*unit.femtoseconds
+        )
+        integrator.setConstraintTolerance(0.00001)
+
+        # Engine options
+        options = {
+            'nsteps_per_frame': 10,
+            'platform': 'fastest',
+            'solute_indices' : range(22),
+            'n_frames_max' : 5,
+            'timestep': 2.0*unit.femtoseconds
+        }
+
+        self.engine = paths.OpenMMEngine(
+            template,
+            system,
+            integrator,
+            options
+        )
         self.engine.create()
 
         context = self.engine.simulation.context
@@ -52,30 +77,6 @@ class testOpenMMEngine(object):
 
     def test_sanity(self):
         pass
-
-    def test_equilibrate(self):
-        snap0 = Snapshot(
-            configuration=self.engine.current_snapshot.configuration.copy(),
-            momentum=self.engine.current_snapshot.momentum.copy()
-        )
-        self.engine.equilibrate(5)
-        newsnap = self.engine.current_snapshot
-        old_pos = snap0.coordinates
-        new_pos = newsnap.coordinates
-        for atom_i in range(self.engine.n_atoms):
-            # NOTE: we use the engine.storage.topology instead of
-            # engine.topology because the latter is a mdtraj, former is
-            # openmm; we might change that so that engine.simulation is the
-            # only place you find an openmm topol
-            res_i = self.engine.topology.md.atom(atom_i).residue
-            if res_i in self.engine.solute_indices:
-                assert_items_equal(old_pos[atom_i], new_pos[atom_i])
-            else:
-                exist_diff = False
-                for (old, new) in zip(old_pos[atom_i], new_pos[atom_i]):
-                    if old != new:
-                        exist_diff = True
-                assert_equal(exist_diff, True)
 
     def test_snapshot_get(self):
         snap = self.engine.current_snapshot

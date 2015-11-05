@@ -1,20 +1,19 @@
 import numpy as np
 import simtk.unit as u
-from simtk.openmm.app import ForceField, PME, HBonds, Simulation
-
-import openpathsampling as paths
-from openpathsampling.integrators import VVVRIntegrator
-
+from simtk.openmm.app import Simulation
 import simtk.openmm
 
-class OpenMMRandomEngine(paths.DynamicsEngine):
+import openpathsampling as paths
+
+
+class RandomMDEngine(paths.DynamicsEngine):
     _default_options = {}
 
     def __init__(self, template=None):
         self.options = {
         }
 
-        super(OpenMMRandomEngine, self).__init__(
+        super(RandomMDEngine, self).__init__(
             options={},
             template=template
         )
@@ -216,115 +215,3 @@ class OpenMMEngine(paths.DynamicsEngine):
     @property
     def configuration(self):
         return self.current_snapshot.configuration
-
-
-class SimpleOpenMMEngine(OpenMMEngine):
-    """OpenMM dynamics engine."""
-
-    units = {
-        'length': u.nanometers,
-        'velocity': u.nanometers / u.picoseconds,
-        'energy': u.joule / u.mole
-    }
-
-    _default_options = {
-        'nsteps_per_frame': 10,
-        'solute_indices': [0],
-        'n_frames_max': 5000,
-        "temperature": 300.0 * u.kelvin,
-        'collision_rate': 1.0 / u.picoseconds,
-        'timestep': 2.0 * u.femtoseconds,
-        'platform': 'fastest',
-        'forcefield_solute': 'amber96.xml',
-        'forcefield_solvent': 'tip3p.xml'
-    }
-
-    def __init__(self, options, template=None):
-
-        if 'template' in options:
-            template = options['template']
-
-        self.options = {
-        }
-
-        super(OpenMMEngine, self).__init__(
-            options=options,
-            template=template
-        )
-
-        # set up the OpenMM simulation
-        forcefield = ForceField( self.options["forcefield_solute"],
-                                 self.options["forcefield_solvent"] )
-
-        openmm_topology = paths.to_openmm_topology(self.template)
-
-        system = forcefield.createSystem( openmm_topology,
-                                          nonbondedMethod=PME,
-                                          nonbondedCutoff=1.0 * u.nanometers,
-                                          constraints=HBonds)
-
-        integrator = VVVRIntegrator( self.options["temperature"],
-                                     self.options["collision_rate"],
-                                     self.options["timestep"])
-
-        # claim the OpenMM simulation as our own
-        self.system = system
-        self.integrator = integrator
-
-        # set no cached snapshot, menas it will be constructed from the openmm context
-        self._current_snapshot = None
-        self._current_momentum = None
-        self._current_configuration = None
-        self._current_box_vectors = None
-
-        self.simulation = None
-
-        if self.options['platform'] == 'fastest':
-
-            speed = 0.0
-            platform = None
-
-            # determine the fastest platform
-            for platform_idx in range(simtk.openmm.Platform.getNumPlatforms()):
-                pf = simtk.openmm.Platform.getPlatform(platform_idx)
-                if pf.getSpeed() > speed:
-                    speed = pf.getSpeed()
-                    platform = pf.getName()
-
-            if platform is not None:
-                self.options['platform'] = platform
-
-    def equilibrate(self, nsteps):
-        # TODO: rename... this is position restrained equil, right?
-        #self.simulation.context.setPositions(self.pdb.positions) #TODO move
-        system = self.simulation.system
-        n_solute = len(self.solute_indices)
-
-        solute_masses = u.Quantity(np.zeros(n_solute, np.double), u.dalton)
-        for i in self.solute_indices:
-            solute_masses[i] = system.getParticleMass(i)
-            system.setParticleMass(i,0.0)
-
-        self.simulation.step(nsteps)
-
-        # empty cache
-        self._current_snapshot = None
-
-        for i in self.solute_indices:
-            system.setParticleMass(i, solute_masses[i].value_in_unit(u.dalton))
-
-class OpenMMToolsEngine(OpenMMEngine):
-    """OpenMM dynamics engine based on a openmmtools.testsystem object.
-
-    This is only to allow to use the examples from openmmtools.testsystems
-    within this framework
-    """
-
-    def __init__(self, testsystem, integrator, options=None):
-
-        super(OpenMMToolsEngine, self).__init__(
-            template=paths.tools.snapshot_from_testsystem(testsystem),
-            system=testsystem.system,
-            integrator=integrator,
-            options=options
-        )

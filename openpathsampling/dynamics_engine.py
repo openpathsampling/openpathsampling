@@ -39,7 +39,8 @@ class DynamicsEngine(StorableNamedObject):
     BACKWARD = -1
 
     _default_options = {
-        'n_frames_max' : None
+        'n_frames_max' : None,
+        'timestep' : None
     }
 
     units = {
