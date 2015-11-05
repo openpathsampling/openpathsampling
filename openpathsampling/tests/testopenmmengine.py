@@ -18,7 +18,6 @@ from simtk.openmm import app
 from simtk import unit
 
 
-
 class testOpenMMEngine(object):
     def setUp(self):
         template = paths.tools.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
