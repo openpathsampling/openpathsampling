@@ -22,8 +22,7 @@ class OpenMMEngine(paths.DynamicsEngine):
     _default_options = {
         'nsteps_per_frame': 10,
         'n_frames_max': 5000,
-        'platform': 'fastest',
-        'auto_create': True
+        'platform': 'fastest'
     }
 
     def __init__(self, template, system, integrator, options=None):
@@ -58,10 +57,13 @@ class OpenMMEngine(paths.DynamicsEngine):
         self._current_box_vectors = None
 
         self.simulation = None
-        if self.options['auto_create']:
-            self.create()
 
-    def create(self):
+    @property
+    def simulation(self):
+        if self._simulation is None:
+            self.initialize()
+
+    def initialize(self):
         """
         Create the final OpenMMEngine
 
@@ -106,10 +108,6 @@ class OpenMMEngine(paths.DynamicsEngine):
             integrator=simtk.openmm.XmlSerializer.deserialize(integrator_xml),
             options=options
         )
-
-    # this property is specific to direct control simulations: other
-    # simulations might not use this
-    # TODO: Maybe remove this and put it into the creation logic
 
     @property
     def snapshot_timestep(self):

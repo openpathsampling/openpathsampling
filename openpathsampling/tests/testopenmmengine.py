@@ -64,7 +64,7 @@ class testOpenMMEngine(object):
             integrator,
             options
         )
-        self.engine.create()
+        self.engine.initialize()
 
         context = self.engine.simulation.context
         zero_array = np.zeros((self.engine.n_atoms, 3))
