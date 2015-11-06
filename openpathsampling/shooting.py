@@ -165,7 +165,7 @@ class ShootingPointSelector(StorableNamedObject):
         point = ShootingPoint(self, trajectory, idx, f=prob_list[idx],
                               sum_bias=sum_bias)
 
-        return point
+        return idx
 
 
 class GaussianBiasSelector(ShootingPointSelector):
@@ -218,7 +218,7 @@ class UniformSelector(ShootingPointSelector):
         point = ShootingPoint(self, trajectory, idx, f=1.0,
                               sum_bias=self.sum_bias(trajectory))
 
-        return point
+        return idx
 
 
 class FinalFrameSelector(ShootingPointSelector):
@@ -236,7 +236,7 @@ class FinalFrameSelector(ShootingPointSelector):
     def pick(self, trajectory):
         point = ShootingPoint(self, trajectory, len(trajectory) - 1, f=1.0,
                               sum_bias=1.0)
-        return point
+        return len(trajectory)-1
 
     def probability(self, snapshot, trajectory):
         return 1.0 # there's only one choice
@@ -261,7 +261,7 @@ class FirstFrameSelector(ShootingPointSelector):
 
     def pick(self, trajectory):
         point = ShootingPoint(self, trajectory, 0, f=1.0, sum_bias=1.0)
-        return point
+        return 0
 
     def probability(self, snapshot, trajectory):
         return 1.0 # there's only one choice

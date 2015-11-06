@@ -503,8 +503,7 @@ class EngineMover(SampleMover):
         initial_trajectory = input_sample.trajectory
         replica = input_sample.replica
 
-        initial_point = self.selector.pick(initial_trajectory)
-        shooting_index = initial_point.index
+        shooting_index = self.selector.pick(initial_trajectory)
 
         trial_point = self._run(initial_trajectory, shooting_index)
 
@@ -517,8 +516,8 @@ class EngineMover(SampleMover):
         )
 
         # temporary test to make sure nothing went weird
-        old_bias = initial_point.sum_bias / trial_point.sum_bias
-        assert(abs(bias - old_bias) < 10e-6)
+        # old_bias = initial_point.sum_bias / trial_point.sum_bias
+        # assert(abs(bias - old_bias) < 10e-6)
         assert(initial_trajectory[shooting_index] in trial_trajectory)
 
         # we need to save the initial
