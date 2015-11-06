@@ -499,37 +499,39 @@ class EngineMover(SampleMover):
     def _get_out_ensembles(self):
         return [self.target_ensemble]
 
-    def __call__(self, trial):
-        initial_trajectory = trial.trajectory
-        replica = trial.replica
+    def __call__(self, input_sample):
+        initial_trajectory = input_sample.trajectory
+        replica = input_sample.replica
 
         initial_point = self.selector.pick(initial_trajectory)
         shooting_index = initial_point.index
 
         trial_point = self._run(initial_trajectory, shooting_index)
 
-        # old_bias = initial_point.sum_bias / trial_point.sum_bias
 
         trial_trajectory = trial_point.trajectory
         bias = self.selector.probability_ratio(
-            initial_point.snapshot,
+            initial_trajectory[shooting_index],
             initial_trajectory,
             trial_trajectory
         )
 
         # temporary test to make sure nothing went weird
-        # assert(abs(bias - old_bias) < 10e-6)
+        old_bias = initial_point.sum_bias / trial_point.sum_bias
+        assert(abs(bias - old_bias) < 10e-6)
+        assert(initial_trajectory[shooting_index] in trial_trajectory)
 
+        # we need to save the initial
         trial_details = paths.SampleDetails(
-            initial_point=initial_point,
-            trial_point=trial_point,
+            initial_trajectory=initial_trajectory,
+            shooting_snapshot=initial_trajectory[shooting_index]
         )
 
         trial = paths.Sample(
             replica=replica,
-            trajectory=trial_point.trajectory,
+            trajectory=trial_trajectory,
             ensemble=self.target_ensemble,
-            parent=trial,
+            parent=input_sample,
             details=trial_details,
             mover=self,
             bias=bias
@@ -546,7 +548,9 @@ class EngineMover(SampleMover):
                                               ).can_append
         partial_trajectory = self.engine.generate(initial_snapshot, 
                                                   running=[run_f])
-        trial_trajectory = trajectory[0:shooting_index] + partial_trajectory
+        # keep the original snapshot in the trial_trajectory
+        trial_trajectory = (trajectory[0:shooting_index + 1] 
+                            + partial_trajectory[1:])
         return trial_trajectory
 
     def _make_backward_trajectory(self, trajectory, shooting_index):
@@ -556,8 +560,9 @@ class EngineMover(SampleMover):
                                               ).can_prepend
         partial_trajectory = self.engine.generate(initial_snapshot, 
                                                   running=[run_f])
-        trial_trajectory = (partial_trajectory.reversed +
-                            trajectory[shooting_index + 1:])
+        # keep the original snapshot in the trial_trajectory
+        trial_trajectory = (partial_trajectory.reversed[:-1] +
+                            trajectory[shooting_index:])
         return trial_trajectory
 
 

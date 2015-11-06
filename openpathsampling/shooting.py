@@ -9,18 +9,6 @@ logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 
-#############################################################################
-#
-#
-#
-#
-# Notes
-# -----
-# 
-#
-#  
-#############################################################################
-
 class ShootingPoint(StorableNamedObject):
     def __init__(self, selector, trajectory, index, f=None, sum_bias=None):
         '''
@@ -124,8 +112,9 @@ class ShootingPointSelector(StorableNamedObject):
         return self.f(snapshot, trajectory) / self.sum_bias(trajectory)
 
     def probability_ratio(self, snapshot, old_trajectory, new_trajectory):
-        return (self.probability(snapshot, new_trajectory) /
-                self.probability(snapshot, old_trajectory))
+        p_old = self.probability(snapshot, old_trajectory)
+        p_new = self.probability(snapshot, new_trajectory)
+        return p_new / p_old
 
     def _biases(self, trajectory):
         '''
@@ -180,18 +169,19 @@ class ShootingPointSelector(StorableNamedObject):
 
 
 class GaussianBiasSelector(ShootingPointSelector):
-    def __init__(self, collectivevariable, alpha=1.0, l0=0.5):
+    def __init__(self, collectivevariable, alpha=1.0, l_0=0.5):
         '''
-        A Selector that biasses according to a specified CollectiveVariable using a mean l0 and a variance alpha
+        A Selector that biases according to a specified CollectiveVariable
+        using a mean l_0 and a variance alpha
         '''
         super(GaussianBiasSelector, self).__init__()
         self.collectivevariable = collectivevariable
         self.alpha = alpha
-        self.l0 = l0
+        self.l_0 = l_0
 
     def f(self, snapshot, trajectory):
         l_s = self.collectivevariable(snapshot)
-        return math.exp(-self.alpha * (l_s - self.l0) ** 2)
+        return math.exp(-self.alpha * (l_s - self.l_0) ** 2)
 
 
 class UniformSelector(ShootingPointSelector):
