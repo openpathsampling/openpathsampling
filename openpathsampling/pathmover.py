@@ -501,11 +501,12 @@ class EngineMover(SampleMover):
 
     def __call__(self, trial):
         initial_trajectory = trial.trajectory
-
         replica = trial.replica
-        initial_point = self.selector.pick(initial_trajectory)
 
-        trial_point = self._run(initial_point)
+        initial_point = self.selector.pick(initial_trajectory)
+        shooting_index = initial_point.index
+
+        trial_point = self._run(initial_trajectory, shooting_index)
 
         # old_bias = initial_point.sum_bias / trial_point.sum_bias
 
@@ -560,29 +561,31 @@ class EngineMover(SampleMover):
         return trial_trajectory
 
 
-    def _run(self, shooting_point):
+    def _run(self, trajectory, shooting_index):
+        """Takes initial trajectory and shooting point; return trial
+        trajectory"""
         shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
         logger.info(shoot_str.format(
-            fnum=shooting_point.index,
-            maxt=len(shooting_point.trajectory)-1,
+            fnum=shooting_index,
+            maxt=len(trajectory)-1,
             sh_dir=self._direction
         ))
 
         if self._direction == "forward":
             trial_trajectory = self._make_forward_trajectory(
-                shooting_point.trajectory, shooting_point.index
+                trajectory, shooting_index
             )
         elif self._direction == "backward":
             trial_trajectory = self._make_backward_trajectory(
-                shooting_point.trajectory, shooting_point.index
+                trajectory, shooting_index
             )
         else:
             raise RuntimeError("Unknown direction: " + str(self._direction))
 
         trial_point = paths.ShootingPoint(
-            shooting_point.selector,
+            self.selector,
             trial_trajectory,
-            shooting_point.index
+            shooting_index # hack; this isn't actually correct to do
         )
 
         return trial_point

@@ -38,7 +38,8 @@ class ShootingPoint(StorableNamedObject):
         f : float
             The unnormalized probability for the point picked
         sum_bias : float
-            The unnormalize probability for the trajectory from which the point was picked
+            The unnormalized probability for the trajectory from which the
+            point was picked
 
         Notes
         -----
@@ -144,20 +145,22 @@ class ShootingPointSelector(StorableNamedObject):
         trajectory. In this case we can estimate the maximal accepted
         trajectory length for a given acceptance probability.
         
-        After we have generated a new trajectory the acceptance probability only for the non-symmetric proposal of
-        different snapshots is given by `probability(old_trajectory) / probability(new_trajectory)`
+        After we have generated a new trajectory the acceptance probability
+        only for the non-symmetric proposal of different snapshots is given
+        by `probability(old_trajectory) / probability(new_trajectory)`
         '''
 
         return sum(self._biases(trajectory))
 
     def pick(self, trajectory):
         '''
-        Returns a ShootingPoint object from which all necessary properties about the selected point can be accessed
+        Returns a ShootingPoint object from which all necessary properties
+        about the selected point can be accessed
         
         Notes
         -----
-        
-        The native implementation is very slow. Simple picking algorithm should override this function.
+        The native implementation is very slow. Simple picking algorithm
+        should override this function.
         '''
 
         prob_list = self._biases(trajectory)
@@ -170,7 +173,8 @@ class ShootingPointSelector(StorableNamedObject):
             idx += 1
             prob += prob_list[idx]
 
-        point = ShootingPoint(self, trajectory, idx, f=prob_list[idx], sum_bias=sum_bias)
+        point = ShootingPoint(self, trajectory, idx, f=prob_list[idx],
+                              sum_bias=sum_bias)
 
         return point
 
@@ -186,7 +190,8 @@ class GaussianBiasSelector(ShootingPointSelector):
         self.l0 = l0
 
     def f(self, snapshot, trajectory):
-        return math.exp(-self.alpha * (self.collectivevariable(snapshot) - self.l0) ** 2)
+        l_s = self.collectivevariable(snapshot)
+        return math.exp(-self.alpha * (l_s - self.l0) ** 2)
 
 
 class UniformSelector(ShootingPointSelector):
@@ -218,9 +223,10 @@ class UniformSelector(ShootingPointSelector):
         return float(len(trajectory) - self.pad_start - self.pad_end)
 
     def pick(self, trajectory):
-        idx = np.random.random_integers(self.pad_start, len(trajectory) - self.pad_end - 1)
-
-        point = ShootingPoint(self, trajectory, idx, f=1.0, sum_bias=self.sum_bias(trajectory))
+        idx = np.random.random_integers(self.pad_start, 
+                                        len(trajectory) - self.pad_end - 1)
+        point = ShootingPoint(self, trajectory, idx, f=1.0,
+                              sum_bias=self.sum_bias(trajectory))
 
         return point
 
@@ -238,7 +244,8 @@ class FinalFrameSelector(ShootingPointSelector):
             return 0.0
 
     def pick(self, trajectory):
-        point = ShootingPoint(self, trajectory, len(trajectory) - 1, f=1.0, sum_bias=1.0)
+        point = ShootingPoint(self, trajectory, len(trajectory) - 1, f=1.0,
+                              sum_bias=1.0)
         return point
 
     def probability(self, snapshot, trajectory):
