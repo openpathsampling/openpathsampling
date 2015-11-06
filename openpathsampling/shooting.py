@@ -9,83 +9,6 @@ logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 
-class ShootingPoint(StorableNamedObject):
-    def __init__(self, selector, trajectory, index, f=None, sum_bias=None):
-        '''
-        Constructs a ShootingPoint object.
-        
-        parameters
-        ----------
-        
-        selector : ShootingPointSelector()
-            The Selector used to generate the seleted point
-        trajectory : Trajectory()
-            The parent trajectory a point is selected from.
-        index : int
-            The actual index of the point picked from the trajectory
-        f : float
-            The unnormalized probability for the point picked
-        sum_bias : float
-            The unnormalized probability for the trajectory from which the
-            point was picked
-
-        Notes
-        -----
-        '''
-
-        super(ShootingPoint, self).__init__()
-        self.selector = selector
-        self.trajectory = trajectory
-        self.index = index
-        self._f = f
-        self._sum_bias = sum_bias
-
-    @property
-    def snapshot(self):
-        return self.trajectory[self.index]
-
-    @property
-    def sum_bias(self):
-        '''
-        Return the unnormalized probability for the total trajectory where
-        the point has been chosen from.
-        
-        Notes
-        -----
-        These partition function like normalizations for a trajectory should
-        only be computed only once.  Think about a way to store this. Maybe
-        use a cache for the ShootingPoint
-        '''
-        if self._sum_bias is None:
-            self._sum_bias = self.selector.sum_bias(self.trajectory)
-
-        return self._sum_bias
-
-    @property
-    def probability(self):
-        return self._f / self._sum_bias
-
-    @property
-    def f(self):
-        if self._f is None:
-            self._f = self.selector.f(self.snapshot, self.trajectory)
-
-        return self._f
-
-    @property
-    def bias(self):
-        return self.f
-
-    def to_dict(self):
-        return {
-            'selector': self.selector,
-            'trajectory': self.trajectory,
-            'index': self.index,
-            'f': self._f,
-            'sum_bias': self._sum_bias
-        }
-
-
 class ShootingPointSelector(StorableNamedObject):
     def __init__(self):
         super(ShootingPointSelector, self).__init__()
@@ -143,8 +66,7 @@ class ShootingPointSelector(StorableNamedObject):
 
     def pick(self, trajectory):
         '''
-        Returns a ShootingPoint object from which all necessary properties
-        about the selected point can be accessed
+        Returns the index of the chosen snapshot within `trajectory`
         
         Notes
         -----
@@ -161,9 +83,6 @@ class ShootingPointSelector(StorableNamedObject):
         while prob <= rand and idx < len(prob_list):
             idx += 1
             prob += prob_list[idx]
-
-        point = ShootingPoint(self, trajectory, idx, f=prob_list[idx],
-                              sum_bias=sum_bias)
 
         return idx
 
@@ -215,9 +134,6 @@ class UniformSelector(ShootingPointSelector):
     def pick(self, trajectory):
         idx = np.random.random_integers(self.pad_start, 
                                         len(trajectory) - self.pad_end - 1)
-        point = ShootingPoint(self, trajectory, idx, f=1.0,
-                              sum_bias=self.sum_bias(trajectory))
-
         return idx
 
 
@@ -234,8 +150,6 @@ class FinalFrameSelector(ShootingPointSelector):
             return 0.0
 
     def pick(self, trajectory):
-        point = ShootingPoint(self, trajectory, len(trajectory) - 1, f=1.0,
-                              sum_bias=1.0)
         return len(trajectory)-1
 
     def probability(self, snapshot, trajectory):
@@ -260,7 +174,6 @@ class FirstFrameSelector(ShootingPointSelector):
             return 0.0
 
     def pick(self, trajectory):
-        point = ShootingPoint(self, trajectory, 0, f=1.0, sum_bias=1.0)
         return 0
 
     def probability(self, snapshot, trajectory):

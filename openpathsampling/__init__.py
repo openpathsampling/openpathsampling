@@ -38,7 +38,7 @@ from pathmover import (
     LastAllowedMover, OneWayExtendMover
 )
 
-from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
+from shooting import ShootingPointSelector, UniformSelector, \
     GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
 
 from dynamics_engine import DynamicsEngine

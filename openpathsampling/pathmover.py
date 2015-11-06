@@ -585,12 +585,6 @@ class EngineMover(SampleMover):
         else:
             raise RuntimeError("Unknown direction: " + str(self._direction))
 
-        trial_point = paths.ShootingPoint(
-            self.selector,
-            trial_trajectory,
-            shooting_index # hack; this isn't actually correct to do
-        )
-
         return trial_trajectory
 
 
