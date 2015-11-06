@@ -70,9 +70,17 @@ class TPSTransition(Transition):
     """
     Transition using TPS ensembles
     """
-    def __init__(self, stateA, stateB):
+    def __init__(self, stateA, stateB, name=None):
         super(TPSTransition, self).__init__(stateA, stateB)
-        #self.ensembles = [paths.TPSEnsemble(stateA, stateB)]
+        self.name = name
+        if not hasattr(self, "ensembles"):
+            self.ensembles = [paths.SequentialEnsemble([
+                paths.AllInXEnsemble(all_initial) & paths.LengthEnsemble(1),
+                paths.AllOutXEnsemble(all_initial | all_final),
+                paths.AllInXEnsemble(all_initial) & paths.LengthEnsemble(1)
+            ])]
+
+
 
 class TISTransition(Transition):
     """

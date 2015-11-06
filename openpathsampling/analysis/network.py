@@ -1,6 +1,7 @@
 import logging
 
 import pandas as pd
+import itertools
 
 import openpathsampling as paths
 from openpathsampling.base import StorableNamedObject
@@ -19,7 +20,29 @@ class TransitionNetwork(StorableNamedObject):
 
 #    def replica_exchange_matrix(self):
 
+class TPSNetwork(TransitionNetwork):
+    def __init_(self, initial_states, final_states):
+        self.initial_states = initial_states
+        self.final_states = final_states
+        all_initial = paths.join_volumes(initial_states)
+        all_initial.name = "|".join([v.name for v in initial_states])
+        all_final = paths.join_volumes(final_states)
+        all_final.name = "|".join([v.name for v in final_states])
+        self.sampling_transitions = [
+            paths.TPSTransition(all_initial, all_final)
+        ]
+        self.transitions = [
+            paths.TPSTransition(initial, final)
+            for (initial, final) in itertools.product(initial_states,
+                                                      final_states)
+            if initial != final
+        ]
+
+
+
 class TISNetwork(TransitionNetwork):
+    # NOTE: this is an abstract class with several properties used by many
+    # TIS-based networks
     # TODO: most of the analysis stuff should end up in here; the bigger
     # differences are in setup, not analysis
     def __init__(self):
