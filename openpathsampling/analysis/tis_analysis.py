@@ -289,7 +289,7 @@ class TISTransition(Transition):
             df = histograms_to_pandas_dataframe(
                 self.histograms['max_lambda'].values(),
                 fcn="reverse_cumulative"
-            ).sort(axis=1)
+            ).sort_index(axis=1)
             wham = WHAM()
             wham.load_from_dataframe(df)
             wham.clean_leading_ones()

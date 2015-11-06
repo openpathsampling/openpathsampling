@@ -76,8 +76,7 @@ class PathSimulator(StorableNamedObject):
         Will sync all collective variables and the storage to disk
         """
         if self.storage is not None:
-            self.storage.cvs.sync()
-            self.storage.sync()
+            self.storage.sync_all()
 
     def run(self, nsteps):
         """
@@ -104,7 +103,7 @@ class PathSimulator(StorableNamedObject):
 
         if self.storage is not None:
             self.storage.steps.save(mcstep)
-            self.storage.sync()
+            self.storage.sync_all()
 
 
 class BootstrapPromotionMove(SubPathMover):

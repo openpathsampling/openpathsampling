@@ -44,15 +44,12 @@ class TISNetwork(TransitionNetwork):
         return self.special_ensembles['ms_outer'].keys()
 
     @property
-    def transition_ensembles(self):
-        ens_list = []
-        for t in self.sampling_transitions:
-            ens_list.extend(t.ensembles)
-        return ens_list
+    def sampling_ensembles(self):
+        return sum([t.ensembles for t in self.sampling_transitions], [])
 
     @property
     def all_ensembles(self):
-        all_ens = self.transition_ensembles
+        all_ens = self.sampling_ensembles
         for special_dict in self.special_ensembles.values():
             all_ens.extend(special_dict.keys())
         return all_ens

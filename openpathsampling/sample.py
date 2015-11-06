@@ -33,14 +33,15 @@ class SampleSet(StorableObject):
         have some of the convenient tools in Python sequences (e.g.,
         slices). On the other hand, I'm not sure whether that is meaningful
         here.
-        Since replicas are integers we add slicing/ranges for replicas. In addition
-        we support any iterable as input in __getitem__ an it will return an iterable
-        over the results. This makes it possible to write `sset[0:5]` to get a list
-        of of ordered samples by replica_id, or sset[list_of_ensembles].
-        replica_ids can be any number do not have to be subsequent to slicing does not
-        make sense and we ignore it. We will also ignore missing replica_ids. A slice
-        `1:5` will return all existing replica ids >=1 and <5. If you want exactly
-        all replicas from 1 to 4 use `sset[xrange(1,5)]`
+        Since replicas are integers we add slicing/ranges for replicas. In
+        addition we support any iterable as input in __getitem__ an it will
+        return an iterable over the results. This makes it possible to write
+        `sset[0:5]` to get a list of of ordered samples by replica_id, or
+        sset[list_of_ensembles].  replica_ids can be any number do not have
+        to be subsequent to slicing does not make sense and we ignore it. We
+        will also ignore missing replica_ids. A slice `1:5` will return all
+        existing replica ids >=1 and <5. If you want exactly all replicas
+        from 1 to 4 use `sset[xrange(1,5)]`
 
 
     Attributes
@@ -283,6 +284,24 @@ class SampleSet(StorableObject):
         else:
             raise ValueError('Only lists of Sample or PathMoveChanges allowed.')
 
+    def append_as_new_replica(self, sample):
+        """
+        Adds the given sample to this SampleSet, with a new replica ID.
+
+        The new replica ID is taken to be one greater than the highest
+        previous replica ID.
+        """
+        max_repID = max([s.replica for s in self.samples])
+        self.append(Sample(
+            replica=max_repID + 1,
+            trajectory=sample.trajectory,
+            ensemble=sample.ensemble,
+            bias=sample.bias,
+            details=sample.details,
+            parent=sample.parent,
+            mover=sample.mover
+        ))
+
     @staticmethod
     def map_trajectory_to_ensembles(trajectory, ensembles):
         """Return SampleSet mapping one trajectory to all ensembles.
@@ -291,12 +310,13 @@ class SampleSet(StorableObject):
         transition trajectory (which satisfies all ensembles) and use it as
         the starting point for all ensembles.
         """
-        return SampleSet(
-            [Sample.initial_sample(replica=ensembles.index(e),
-                                   trajectory=paths.Trajectory(trajectory.as_proxies()), # copy
-                                   ensemble = e)
-            for e in ensembles]
-    )
+        return SampleSet([
+            Sample.initial_sample(
+                replica=ensembles.index(e),
+                trajectory=paths.Trajectory(trajectory.as_proxies()), # copy
+                ensemble = e)
+            for e in ensembles
+        ])
 
     @staticmethod
     def translate_ensembles(sset, new_ensembles):
