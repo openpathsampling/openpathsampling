@@ -75,9 +75,9 @@ class TPSTransition(Transition):
         self.name = name
         if not hasattr(self, "ensembles"):
             self.ensembles = [paths.SequentialEnsemble([
-                paths.AllInXEnsemble(all_initial) & paths.LengthEnsemble(1),
-                paths.AllOutXEnsemble(all_initial | all_final),
-                paths.AllInXEnsemble(all_initial) & paths.LengthEnsemble(1)
+                paths.AllInXEnsemble(stateA) & paths.LengthEnsemble(1),
+                paths.AllOutXEnsemble(stateA | stateB),
+                paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
             ])]
 
 
