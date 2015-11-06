@@ -517,7 +517,7 @@ class EngineMover(SampleMover):
         # temporary test to make sure nothing went weird
         # old_bias = initial_point.sum_bias / trial_point.sum_bias
         # assert(abs(bias - old_bias) < 10e-6)
-        assert(initial_trajectory[shooting_index] in trial_trajectory)
+        # assert(initial_trajectory[shooting_index] in trial_trajectory)
 
         # we need to save the initial
         trial_details = paths.SampleDetails(
