@@ -505,10 +505,9 @@ class EngineMover(SampleMover):
 
         shooting_index = self.selector.pick(initial_trajectory)
 
-        trial_point = self._run(initial_trajectory, shooting_index)
+        trial_trajectory = self._run(initial_trajectory, shooting_index)
 
 
-        trial_trajectory = trial_point.trajectory
         bias = self.selector.probability_ratio(
             initial_trajectory[shooting_index],
             initial_trajectory,
@@ -592,7 +591,7 @@ class EngineMover(SampleMover):
             shooting_index # hack; this isn't actually correct to do
         )
 
-        return trial_point
+        return trial_trajectory
 
 
 class ForwardShootMover(EngineMover):
