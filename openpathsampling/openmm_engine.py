@@ -56,29 +56,64 @@ class OpenMMEngine(paths.DynamicsEngine):
         self._current_configuration = None
         self._current_box_vectors = None
 
-        self.simulation = None
+        self._simulation = None
+
+    def from_new_options(self, integrator=None, options=None):
+        """
+        Create a new engine with the same system, but different options and/or integrator
+
+        Notes
+        -----
+        This can be used to quickly set up simulations at various temperatures or change the
+        step sizes, etc...
+
+        """
+        if integrator is None:
+            integrator = self.integrator
+
+        new_options = dict()
+        new_options.update(self.options)
+
+        if options is not None:
+            new_options.update(options)
+
+        new_engine = OpenMMEngine(self.template, self.system, integrator, new_options)
+
+        if integrator is self.integrator and new_engine.options['platform'] == self.options['platform']:
+            # apparently we use a simulation object which is the same as the new one
+            # since we do not change the platform or change the integrator
+            # it means if it exists we copy the simulation object
+
+            new_engine._simulation = self._simulation
+
+        return new_engine
 
     @property
     def simulation(self):
         if self._simulation is None:
             self.initialize()
 
+        return self._simulation
+
     def initialize(self):
         """
         Create the final OpenMMEngine
 
+        Notes
+        -----
+        This step is OpenMM specific and will actually create the openmm.Simulation object used
+        to run the simulations. The object will be created automatically the first time the
+        engine is used. This way we will not create unnecessay Engines in memory during analysis.
+
         """
 
-        platform = self.platform
-
-        self.simulation = simtk.openmm.app.Simulation(
-            topology=self.template.topology.md.to_openmm(),
-            system=self.system,
-            integrator=self.integrator,
-            platform=simtk.openmm.Platform.getPlatformByName(platform)
-        )
-
-        self.initialized = True
+        if self._simulation is None:
+            self._simulation = simtk.openmm.app.Simulation(
+                topology=self.template.topology.md.to_openmm(),
+                system=self.system,
+                integrator=self.integrator,
+                platform=simtk.openmm.Platform.getPlatformByName(self.platform)
+            )
 
     @property
     def platform(self):
