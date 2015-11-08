@@ -504,3 +504,59 @@ class AnalysisStorage(Storage):
         storage.pathmovechanges.cache_all()
         storage.steps.cache_all()
 #        storage.trajectories.cache_all()
+
+class StorageView(object):
+
+    class Delegate(object):
+        """
+        Value delegate for objects that implement __getitem__ and __setitem__
+
+        It will basically just wrap keys for objects that are used in a dict like structure
+        with getter and setter function to allow easier conversion
+
+        delegate[x] is equivalent to delegate[x.idx(store)]
+
+        Attributes
+        ----------
+        variable : dict-like
+            the dict to be wrapped
+        store : openpathsampling.storage.ObjectStore
+            a reference to an object store used
+
+        """
+
+        def __init__(self, variable, store):
+            self.variable = variable
+            self.store = store
+
+        def __setitem__(self, key, value):
+            if hasattr(key, '__iter__'):
+                idxs = [item if type(item) is int else self.store.index[item] for item in key]
+                sorted_idxs = list(set(idxs))
+                sorted_values = [value[idxs.index(val)] for val in sorted_idxs]
+                self.variable[sorted_idxs] = sorted_values
+
+            else:
+                self.variable[key if type(key) is int else self.store.index[key]] = value
+
+        def __getitem__(self, key):
+            if hasattr(key, '__iter__'):
+                idxs = [item if type(item) is int else self.store.index[item] for item in key]
+                sorted_idxs = sorted(list(set(idxs)))
+
+                sorted_values = self.variable[sorted_idxs]
+                return [sorted_values[sorted_idxs.index(idx)] for idx in idxs]
+            else:
+                return self.variable[key if type(key) is int else self.store.index[key]]
+
+    def __init__(self, storage, subrange):
+        self._storage = storage
+
+        for name, store in self._storage._objects.iteritems():
+            setattr(self, store.prefix, store)
+
+        self.variables = self._storage.variables
+        self.units = self._storage.units
+        self.vars = self.vars = self._storage.vars
+
+        def
