@@ -105,3 +105,17 @@ class testMSTISNetwork(object):
         assert_equal(len(self.mstis.from_state[self.stateC].ensembles), 2)
 
 
+class testTPSNetwork(object):
+    def setup(self):
+        xval = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
+        self.stateA = paths.CVRangeVolume(xval, float("-inf"), -0.5)
+        self.stateB = paths.CVRangeVolume(xval, -0.1, 0.1)
+        self.stateC = paths.CVRangeVolume(xval, 0.5, float("inf"))
+
+    def test_initialization(self):
+        network1 = TPSNetwork(initial_states=[self.stateA],
+                              final_states=[self.stateB])
+        #network2 = TPSNetwork(initial_states=stateA,
+                              #final_states=stateB)
+        raise SkipTest
+
