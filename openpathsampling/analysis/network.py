@@ -187,7 +187,9 @@ class MSTISNetwork(TISNetwork):
                 state.name = name
             other_states = states[:state_index]+states[state_index+1:]
             union_others = paths.volume.join_volumes(other_states)
-            union_others.name = "all states except " + str(name)
+            # don't rename if custom name is set (probably 2-state)
+            if union_others._name == "":
+                union_others.name = "all states except " + str(name)
 
             this_trans = paths.TISTransition(
                 stateA=state, 
