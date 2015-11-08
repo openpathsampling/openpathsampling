@@ -7,10 +7,10 @@ import openpathsampling as paths
 
 
 class OpenMMEngine(paths.DynamicsEngine):
-    """OpenMM dynamics engine based on a openmmtools.testsystem object.
+    """OpenMM dynamics engine based on using an openmm system and integrator object.
 
-    This is only to allow to use the examples from openmmtools.testsystems
-    within this framework
+    The engine will create a openmm.app.Simulation instance and uses this to generate new frames.
+
     """
 
     units = {
@@ -25,7 +25,35 @@ class OpenMMEngine(paths.DynamicsEngine):
         'platform': 'fastest'
     }
 
+    #TODO: Planned to move topology to be part of engine and not snapshot
+    #TODO: Deal with cases where we load a GPU based engine, but the platform is not available
     def __init__(self, template, system, integrator, options=None):
+        """
+        Parameters
+        ----------
+        template : openpathsampling.Snapshot
+            a template snapshots which provides the topology object to be used to create the openmm engine
+        system : simtk.openmm.app.System
+            the openmm system object
+        integrator : simtk.openmm.Integrator
+            the openmm integrator object
+        options : dict
+            a dictionary that provides additional settings for the OPS engine. Allowed are
+                'n_steps_per_frame' : int, default: 10, the number of integration steps per returned snapshot
+                'n_frames_max' : int or None, default: 5000, the maximal number of frames allowed for a returned
+                trajectory object
+                `platform` : str, default: `fastest`, the openmm specification for the platform to be used, also 'fastest' is allowed
+                which will pick the currently fastest one available
+
+        Notes
+        -----
+        the `n_frames_max` does not limit Trajectory objects in length. It only limits the maximal lenght of returned
+        trajectory objects when this engine is used.
+        picking `fasted` as platform will not save `fastest` as the platform but rather replace the platform with the
+        currently fastest one (usually `OpenCL` or `CUDA` for GPU and `CPU` otherwise). If you load this engine it will
+        assume the same engine and not the currently fastest one, so you might have to create a replacement that uses
+        another engine.
+        """
 
         self.system = system
         self.integrator = integrator
