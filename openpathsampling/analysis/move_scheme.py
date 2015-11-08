@@ -571,3 +571,19 @@ class DefaultScheme(MoveScheme):
         #ms_outer_shoot_w = float(len(msouters)) / n_ensembles
         #global_strategy.group_weights['ms_outer_shooting'] = ms_outer_shoot_w
 
+class LockedMoveScheme(MoveScheme):
+    def __init__(self, root_mover, network=None, root_accepted=None):
+        pass
+
+    def append(self, strategies, levels=None):
+        raise TypeError("Locked schemes cannot append strategies")
+
+    def build_move_decision_tree(self):
+        # override with no-op
+        pass
+
+    def move_decision_tree(self, rebuild=False):
+        return self.root_mover
+    
+    def apply_strategy(self, strategy):
+        raise TypeError("Locked schemes cannot apply strategies")
