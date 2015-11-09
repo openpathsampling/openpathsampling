@@ -17,7 +17,9 @@ ipynbtest.py "mistis_setup.ipynb" || testfail=1
 date
 ipynbtest.py "mistis_analysis.ipynb" || testfail=1
 date
-ipynbtest.py "alanine.ipynb" || testfail=1
+python ipynbtest.py --strict "test_openmm_integration.ipynb" || testfail=1
+date
+python ipynbtest.py "alanine.ipynb" || testfail=1
 
 # needs to run after alanine since it need the trajectory.nc file
 date
