@@ -1,4 +1,6 @@
-from pathsimulator import PathSimulator, Bootstrapping, PathSampling, MCStep
+from pathsimulator import (
+    PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep
+)
 
 from ensemble import (
     Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
@@ -18,25 +20,22 @@ from snapshot import Snapshot, Configuration, Momentum
 from trajectory import Trajectory
 from sample import Sample, SampleSet
 
-from collectivevariable import CV_Function, CV_MD_Function, CV_Featurizer, \
+from collectivevariable import CV_Function, CV_MDTraj_Function, CV_MSMB_Featurizer, \
     CV_Volume, CollectiveVariable
 
 from pathmover import (
-    BackwardShootMover, MinusMover, RandomChoiceMover, ForwardShootMover,
-    PathMover, PathMoverFactory, PathReversalMover,
-    ReplicaExchangeMover, ConditionalSequentialMover, EnsembleHopMover,
-    PartialAcceptanceSequentialMover, ReplicaIDChangeMover, SequentialMover,
-    ConditionalMover, FilterByReplica, RestrictToLastSampleMover,
-    PathSimulatorMover, PathReversalSet, StateSwapGeneratingMover,
-    NeighborEnsembleReplicaExchange, SampleGeneratingMover, StateSwapMover,
-    FinalSubtrajectorySelectMover, BackwardExtendGeneratingMover,
-    BackwardShootGeneratingMover, EngineGeneratingMover, SwappingMover,
-    ExtendingGeneratingMover, FilterBySample, FirstSubtrajectorySelectMover,
-    ForwardExtendGeneratingMover, ForwardShootGeneratingMover,
-    MultipleSetMinusMover, OneWayShootingMover, PathReversalGeneratingMover,
-    RandomSubtrajectorySelectGeneratingMover, RandomSubtrajectorySelectMover,
-    ReplicaExchangeGeneratingMover, ShootGeneratingMover, ShootMover,
-    WrappedMover, BackwardExtendMover, EnsembleFilterMover, ForwardExtendMover
+    RandomChoiceMover, PathMover, ConditionalSequentialMover,
+    PartialAcceptanceSequentialMover, BackwardShootMover, ForwardShootMover,
+    BackwardExtendMover, ForwardExtendMover, MinusMover,
+    SingleReplicaMinusMover, PathMoverFactory, PathReversalMover,
+    ReplicaExchangeMover, EnsembleHopMover, ReplicaIDChangeMover,
+    SequentialMover, ConditionalMover, RestrictToLastSampleMover,
+    PathSimulatorMover, PathReversalSet, NeighborEnsembleReplicaExchange,
+    SampleMover, StateSwapMover, FinalSubtrajectorySelectMover, EngineMover,
+    SwappingMover, FirstSubtrajectorySelectMover, MultipleSetMinusMover,
+    OneWayShootingMover, RandomSubtrajectorySelectMover, SubPathMover,
+    EnsembleFilterMover, SelectionMover, FirstAllowedMover,
+    LastAllowedMover, OneWayExtendMover
 )
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
@@ -44,7 +43,7 @@ from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
 
 from dynamics_engine import DynamicsEngine
 
-from openmm_engine import OpenMMEngine, OpenMMToolsEngine, SimpleOpenMMEngine
+from openmm_engine import OpenMMEngine
 
 from lammps_engine import LammpsEngine
 
@@ -53,8 +52,6 @@ from volume import (Volume, VolumeCombination, VolumeFactory, VoronoiVolume,
     IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
     RelativeComplementVolume, join_volumes
 )
-
-from todict import ObjectJSON, OPSNamed
 
 from tools import empty_snapshot_from_openmm_topology, snapshot_from_pdb, \
     to_openmm_topology, trajectory_from_mdtraj
@@ -72,7 +69,7 @@ from toy_dynamics.toy_integrators import LangevinBAOABIntegrator, \
     LeapfrogVerletIntegrator
 
 from analysis.tis_analysis import (
-    TISTransition, RETISTransition, Transition, TPSTransition
+    TISTransition, Transition, TPSTransition
 )
 
 from analysis.move_scheme import MoveScheme, DefaultScheme

@@ -1,17 +1,16 @@
 import numpy as np
 import simtk.unit as u
-from simtk.openmm.app import ForceField, PME, HBonds, Simulation
-
-import openpathsampling as paths
-from openpathsampling.integrators import VVVRIntegrator
-
+from simtk.openmm.app import Simulation
 import simtk.openmm
 
-class OpenMMEngine(paths.DynamicsEngine):
-    """OpenMM dynamics engine based on a openmmtools.testsystem object.
+import openpathsampling as paths
 
-    This is only to allow to use the examples from openmmtools.testsystems
-    within this framework
+
+class OpenMMEngine(paths.DynamicsEngine):
+    """OpenMM dynamics engine based on using an openmm system and integrator object.
+
+    The engine will create a openmm.app.Simulation instance and uses this to generate new frames.
+
     """
 
     units = {
@@ -23,10 +22,38 @@ class OpenMMEngine(paths.DynamicsEngine):
     _default_options = {
         'nsteps_per_frame': 10,
         'n_frames_max': 5000,
-        'platform' : 'fastest'
+        'platform': 'fastest'
     }
 
+    #TODO: Planned to move topology to be part of engine and not snapshot
+    #TODO: Deal with cases where we load a GPU based engine, but the platform is not available
     def __init__(self, template, system, integrator, options=None):
+        """
+        Parameters
+        ----------
+        template : openpathsampling.Snapshot
+            a template snapshots which provides the topology object to be used to create the openmm engine
+        system : simtk.openmm.app.System
+            the openmm system object
+        integrator : simtk.openmm.Integrator
+            the openmm integrator object
+        options : dict
+            a dictionary that provides additional settings for the OPS engine. Allowed are
+                'n_steps_per_frame' : int, default: 10, the number of integration steps per returned snapshot
+                'n_frames_max' : int or None, default: 5000, the maximal number of frames allowed for a returned
+                trajectory object
+                `platform` : str, default: `fastest`, the openmm specification for the platform to be used, also 'fastest' is allowed
+                which will pick the currently fastest one available
+
+        Notes
+        -----
+        the `n_frames_max` does not limit Trajectory objects in length. It only limits the maximal lenght of returned
+        trajectory objects when this engine is used.
+        picking `fasted` as platform will not save `fastest` as the platform but rather replace the platform with the
+        currently fastest one (usually `OpenCL` or `CUDA` for GPU and `CPU` otherwise). If you load this engine it will
+        assume the same engine and not the currently fastest one, so you might have to create a replacement that uses
+        another engine.
+        """
 
         self.system = system
         self.integrator = integrator
@@ -39,6 +66,7 @@ class OpenMMEngine(paths.DynamicsEngine):
         if self.options['platform'] == 'fastest':
 
             speed = 0.0
+            platform = None
 
             # determine the fastest platform
             for platform_idx in range(simtk.openmm.Platform.getNumPlatforms()):
@@ -47,7 +75,8 @@ class OpenMMEngine(paths.DynamicsEngine):
                     speed = pf.getSpeed()
                     platform = pf.getName()
 
-            self.options['platform'] = platform
+            if platform is not None:
+                self.options['platform'] = platform
 
         # set no cached snapshot, means it will be constructed from the openmm context
         self._current_snapshot = None
@@ -55,25 +84,64 @@ class OpenMMEngine(paths.DynamicsEngine):
         self._current_configuration = None
         self._current_box_vectors = None
 
-        self.simulation = None
+        self._simulation = None
 
-    def create(self):
+    def from_new_options(self, integrator=None, options=None):
+        """
+        Create a new engine with the same system, but different options and/or integrator
+
+        Notes
+        -----
+        This can be used to quickly set up simulations at various temperatures or change the
+        step sizes, etc...
+
+        """
+        if integrator is None:
+            integrator = self.integrator
+
+        new_options = dict()
+        new_options.update(self.options)
+
+        if options is not None:
+            new_options.update(options)
+
+        new_engine = OpenMMEngine(self.template, self.system, integrator, new_options)
+
+        if integrator is self.integrator and new_engine.options['platform'] == self.options['platform']:
+            # apparently we use a simulation object which is the same as the new one
+            # since we do not change the platform or change the integrator
+            # it means if it exists we copy the simulation object
+
+            new_engine._simulation = self._simulation
+
+        return new_engine
+
+    @property
+    def simulation(self):
+        if self._simulation is None:
+            self.initialize()
+
+        return self._simulation
+
+    def initialize(self):
         """
         Create the final OpenMMEngine
 
+        Notes
+        -----
+        This step is OpenMM specific and will actually create the openmm.Simulation object used
+        to run the simulations. The object will be created automatically the first time the
+        engine is used. This way we will not create unnecessay Engines in memory during analysis.
+
         """
 
-        platform = self.platform
-
-        self.simulation = simtk.openmm.app.Simulation(
-            topology=self.template.topology.md.to_openmm(),
-            system=self.system,
-            integrator=self.integrator,
-            platform=simtk.openmm.Platform.getPlatformByName(platform)
-        )
-
-        self.initialized = True
-
+        if self._simulation is None:
+            self._simulation = simtk.openmm.app.Simulation(
+                topology=self.template.topology.md.to_openmm(),
+                system=self.system,
+                integrator=self.integrator,
+                platform=simtk.openmm.Platform.getPlatformByName(self.platform)
+            )
 
     @property
     def platform(self):
@@ -103,10 +171,6 @@ class OpenMMEngine(paths.DynamicsEngine):
             integrator=simtk.openmm.XmlSerializer.deserialize(integrator_xml),
             options=options
         )
-
-    # this property is specific to direct control simulations: other
-    # simulations might not use this
-    # TODO: Maybe remove this and put it into the creation logic
 
     @property
     def snapshot_timestep(self):
@@ -164,113 +228,3 @@ class OpenMMEngine(paths.DynamicsEngine):
     @property
     def configuration(self):
         return self.current_snapshot.configuration
-
-
-class SimpleOpenMMEngine(OpenMMEngine):
-    """OpenMM dynamics engine."""
-
-    units = {
-        'length': u.nanometers,
-        'velocity': u.nanometers / u.picoseconds,
-        'energy': u.joule / u.mole
-    }
-
-    _default_options = {
-        'nsteps_per_frame': 10,
-        'solute_indices': [0],
-        'n_frames_max': 5000,
-        "temperature": 300.0 * u.kelvin,
-        'collision_rate': 1.0 / u.picoseconds,
-        'timestep': 2.0 * u.femtoseconds,
-        'platform': 'fastest',
-        'forcefield_solute': 'amber96.xml',
-        'forcefield_solvent': 'tip3p.xml'
-    }
-
-    def __init__(self, options, template=None):
-
-        if 'template' in options:
-            template = options['template']
-
-        self.options = {
-        }
-
-        super(OpenMMEngine, self).__init__(
-            options=options,
-            template=template
-        )
-
-        # set up the OpenMM simulation
-        forcefield = ForceField( self.options["forcefield_solute"],
-                                 self.options["forcefield_solvent"] )
-
-        openmm_topology = paths.to_openmm_topology(self.template)
-
-        system = forcefield.createSystem( openmm_topology,
-                                          nonbondedMethod=PME,
-                                          nonbondedCutoff=1.0 * u.nanometers,
-                                          constraints=HBonds)
-
-        integrator = VVVRIntegrator( self.options["temperature"],
-                                     self.options["collision_rate"],
-                                     self.options["timestep"])
-
-        # claim the OpenMM simulation as our own
-        self.system = system
-        self.integrator = integrator
-
-        # set no cached snapshot, menas it will be constructed from the openmm context
-        self._current_snapshot = None
-        self._current_momentum = None
-        self._current_configuration = None
-        self._current_box_vectors = None
-
-        self.simulation = None
-
-        if self.options['platform'] == 'fastest':
-
-            speed = 0.0
-
-            # determine the fastest platform
-            for platform_idx in range(simtk.openmm.Platform.getNumPlatforms()):
-                pf = simtk.openmm.Platform.getPlatform(platform_idx)
-                if pf.getSpeed() > speed:
-                    speed = pf.getSpeed()
-                    platform = pf.getName()
-
-            self.options['platform'] = platform
-
-    def equilibrate(self, nsteps):
-        # TODO: rename... this is position restrained equil, right?
-        #self.simulation.context.setPositions(self.pdb.positions) #TODO move
-        system = self.simulation.system
-        n_solute = len(self.solute_indices)
-
-        solute_masses = u.Quantity(np.zeros(n_solute, np.double), u.dalton)
-        for i in self.solute_indices:
-            solute_masses[i] = system.getParticleMass(i)
-            system.setParticleMass(i,0.0)
-
-        self.simulation.step(nsteps)
-
-        # empty cache
-        self._current_snapshot = None
-
-        for i in self.solute_indices:
-            system.setParticleMass(i, solute_masses[i].value_in_unit(u.dalton))
-
-class OpenMMToolsEngine(OpenMMEngine):
-    """OpenMM dynamics engine based on a openmmtools.testsystem object.
-
-    This is only to allow to use the examples from openmmtools.testsystems
-    within this framework
-    """
-
-    def __init__(self, testsystem, integrator, options=None):
-
-        super(OpenMMToolsEngine, self).__init__(
-            template=paths.tools.snapshot_from_testsystem(testsystem),
-            system=testsystem.system,
-            integrator=integrator,
-            options=options
-        )

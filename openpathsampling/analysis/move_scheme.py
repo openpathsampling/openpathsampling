@@ -1,13 +1,21 @@
 import openpathsampling as paths
-from openpathsampling.todict import OPSNamed
 
 from openpathsampling.analysis.move_strategy import levels as strategy_levels
 import openpathsampling.analysis.move_strategy as strategies
 
+from openpathsampling.base import StorableNamedObject
+
+try:
+    import pandas as pd
+    has_pandas=True
+except ImportError:
+    has_pandas=False
+
+
+
 import sys
 
-
-class MoveScheme(OPSNamed):
+class MoveScheme(StorableNamedObject):
     """
     Creates a move decision tree based on `MoveStrategy` instances.
 
@@ -21,8 +29,8 @@ class MoveScheme(OPSNamed):
         Root of the move decision tree (`None` until tree is built)
     """
     def __init__(self, network):
+        super(MoveScheme, self).__init__()
         self.movers = {}
-        self.movers = network.movers # TODO: legacy
         self.network = network
         self.strategies = {}
         self.balance_partners = {}
@@ -30,6 +38,26 @@ class MoveScheme(OPSNamed):
         self.root_mover = None
 
         self._mover_acceptance = {} # used in analysis
+
+    def to_dict(self):
+        ret_dict = {
+            'movers' : self.movers,
+            'network' : self.network,
+            'choice_probability' : self.choice_probability,
+            'balance_partners' : self.balance_partners,
+            'root_mover' : self.root_mover
+        }
+        return ret_dict
+
+    @classmethod
+    def from_dict(cls, dct):
+        scheme = cls.__new__(cls)
+        scheme.__init__(dct['network'])
+        scheme.movers = dct['movers']
+        scheme.choice_probability = dct['choice_probability']
+        scheme.balance_partners = dct['balance_partners']
+        scheme.root_mover = dct['root_mover']
+        return scheme
 
     def append(self, strategies, levels=None):
         """
@@ -149,6 +177,10 @@ class MoveScheme(OPSNamed):
                             self.movers[group][idx] = mover
                     else:
                         self.movers[group].append(mover)
+        elif strategy.replace_group:
+            if strategy.from_group is not None:
+                self.movers.pop(strategy.from_group)
+            self.movers[group] = movers
         else:
             try:
                 self.movers[group].extend(movers)
@@ -186,6 +218,10 @@ class MoveScheme(OPSNamed):
         """
         All ensembles which exist in the move scheme but not in the network.
 
+        Hidden ensembles are typically helper ensembles for moves; for
+        example, the minus move uses a "segment" helper ensemble which is
+        almost, but not quite, the innermost interface ensemble.
+
         Parameters
         ----------
         root : PathMover
@@ -207,6 +243,10 @@ class MoveScheme(OPSNamed):
         """
         All ensembles which exist in the network but not in the move scheme.
 
+        Not all move schemes will use all the ensembles. For example, a move
+        scheme might choose not to use the network's automatically generated
+        minus ensemble or multistate ensemble.
+
         Parameters
         ----------
         root : PathMover
@@ -223,6 +263,16 @@ class MoveScheme(OPSNamed):
         mover_ensembles = set(self.ensembles_for_move_tree(root))
         unused_ensembles = unhidden_ensembles - mover_ensembles
         return unused_ensembles
+
+    def find_used_ensembles(self, root=None):
+        """
+        All ensembles which are both in the network and in the move scheme.
+
+        """
+        unhidden_ensembles = set(self.network.all_ensembles)
+        mover_ensembles = set(self.ensembles_for_move_tree(root))
+        used_ensembles = unhidden_ensembles & mover_ensembles
+        return used_ensembles
 
     def check_for_root(self, fcn_name):
         """
@@ -394,11 +444,15 @@ class MoveScheme(OPSNamed):
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, indentation):
+        try:
+            acceptance = float(n_accepted) / n_trials
+        except ZeroDivisionError:
+            acceptance = "nan"
+
         line = ("* "*indentation + str(move_name) +
-                " ran " + str(float(n_trials)/n_total_trials*100) + 
-                "% of the cycles with acceptance " + str(n_accepted) + "/" + 
-                str(n_trials) + " (" + str(float(n_accepted) / n_trials) + 
-                ") \n")
+                " ran " + str(float(n_trials)/n_total_trials*100) +
+                "% of the cycles with acceptance " + str(n_accepted) + "/" +
+                str(n_trials) + " (" + str(acceptance) + ")\n")
         return line
 
     def move_acceptance(self, storage):
@@ -467,14 +521,19 @@ class MoveScheme(OPSNamed):
                     stats[groupname][1] += self._mover_acceptance[k][1]
 
         for groupname in my_movers.keys():
-            line = self._move_summary_line(
-                move_name=groupname, 
-                n_accepted=stats[groupname][0],
-                n_trials=stats[groupname][1], 
-                n_total_trials=tot_trials,
-                indentation=0
-            )
-            output.write(line)
+            if has_pandas and isinstance(output, pd.DataFrame):
+                # TODO Pandas DataFrame Output
+                pass
+            else:
+                line = self._move_summary_line(
+                    move_name=groupname, 
+                    n_accepted=stats[groupname][0],
+                    n_trials=stats[groupname][1], 
+                    n_total_trials=tot_trials,
+                    indentation=0
+                )
+                output.write(line)
+                # raises AttributeError if no write function
 
 
 class DefaultScheme(MoveScheme):
@@ -486,11 +545,13 @@ class DefaultScheme(MoveScheme):
     """
     def __init__(self, network):
         super(DefaultScheme, self).__init__(network)
+        n_ensembles = len(network.sampling_ensembles)
         self.append(strategies.NearestNeighborRepExStrategy())
         self.append(strategies.OneWayShootingStrategy())
         self.append(strategies.PathReversalStrategy())
-        self.append(strategies.DefaultStrategy())
         self.append(strategies.MinusMoveStrategy())
+        global_strategy = strategies.OrganizeByMoveGroupStrategy()
+        self.append(global_strategy)
 
         msouters = self.network.special_ensembles['ms_outer']
         for ms in msouters.keys():
@@ -507,4 +568,6 @@ class DefaultScheme(MoveScheme):
             self.append(strategies.SelectedPairsRepExStrategy(
                 ensembles=pairs
             ))
+        #ms_outer_shoot_w = float(len(msouters)) / n_ensembles
+        #global_strategy.group_weights['ms_outer_shooting'] = ms_outer_shoot_w
 
