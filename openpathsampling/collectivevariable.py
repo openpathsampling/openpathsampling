@@ -112,20 +112,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self._store_dict.post = self._cache_dict
         self._single_dict.post = self._store_dict
 
-    @classmethod
-    def from_template(cls, name, f, template, **kwargs):
-        f_kwargs = {key: value for key, value in kwargs.iteritems() if not key.startswith('cv_')}
-        requires_lists = CollectiveVariable.function_requires_lists(f, template, **f_kwargs)
-
-        cv = cls(name, f, cv_requires_lists=requires_lists, **kwargs)
-
-        # fix cv_returns
-        parameters = cls.return_parameters_from_template(f, template, **f_kwargs)
-        for key, value in parameters.iteritems():
-            setattr(cv, key, value)
-
-        return cv
-
     # This is important since we subclass from list and lists are not hashable
     # but CVs should be
     __hash__ = object.__hash__
@@ -169,9 +155,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         -----
         This is a untility function to create a CV using a template
 
-        See also
-        --------
-        openpathsampling.CollectiveVariable.from_template
         """
 
         eval_single = True
@@ -247,9 +230,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         -----
         This is a untility function to create a CV using a template
 
-        See also
-        --------
-        openpathsampling.CollectiveVariable.from_template
         """
 
         test_value = self(template)
@@ -1002,6 +982,7 @@ class CV_MSMB_Featurizer(CV_Generator):
             'featurizer': self.callable_to_dict(self.featurizer),
             'kwargs': self.kwargs,
             'store_cache': self.store_cache,
+            'wrap_numpy_array': self.wrap_numpy_array,
             'scalarize_numpy_singletons': self.scalarize_numpy_singletons
         }
 
@@ -1011,6 +992,7 @@ class CV_MSMB_Featurizer(CV_Generator):
             name=dct['name'],
             featurizer=cls.callable_from_dict(dct['featurizer']),
             cv_store_cache=dct['store_cache'],
+            cv_wrap_numpy_array=dct['wrap_numpy_array'],
             cv_scalarize_numpy_singletons=dct['scalarize_numpy_singletons'],
             **dct['kwargs']
         )
