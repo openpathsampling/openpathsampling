@@ -70,6 +70,40 @@ def snapshot_from_pdb(pdb_file, units=None):
 
     return snapshot
 
+@updateunits
+def snapshot_from_testsystem(testsystem, units = None):
+    """
+    Construct a Snapshot from openmm topology and state objects
+
+    Parameters
+    ----------
+    omm_topology : openmm.Topology
+        The filename of the .pdb file to be used
+
+    Returns
+    -------
+    Snapshot
+        the constructed Snapshot
+
+    """
+
+    velocities = np.zeros(testsystem.positions.shape)
+    topology = testsystem.topology
+
+    box_vectors = np.array([
+                    v / units['length'] for v in
+                    testsystem.system.getDefaultPeriodicBoxVectors()]) * units['length']
+
+    snapshot = paths.Snapshot(
+        coordinates=testsystem.positions,
+        velocities=u.Quantity(velocities, units['velocity']),
+        box_vectors=box_vectors,
+        potential_energy=u.Quantity(0.0, units['energy']),
+        kinetic_energy=u.Quantity(0.0, units['energy']),
+        topology=paths.MDTrajTopology(md.Topology.from_openmm(topology))
+    )
+
+    return snapshot
 
 def trajectory_from_mdtraj(mdtrajectory):
     """

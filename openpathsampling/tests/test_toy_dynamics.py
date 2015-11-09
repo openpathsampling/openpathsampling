@@ -245,10 +245,6 @@ class testToyEngine(object):
         traj = self.sim.generate(self.sim.current_snapshot, [true_func])
         assert_equal(len(traj), self.sim.n_frames_max)
 
-    @raises(RuntimeWarning)
-    def test_generate_uninitialized(self):
-        traj = self.sim.generate(self.sim.current_snapshot, [true_func])
-
     def test_start_with_snapshot(self):
         snap = Snapshot(coordinates=np.array([1,2]), 
                         velocities=np.array([3,4]))

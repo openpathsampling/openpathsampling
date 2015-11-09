@@ -39,7 +39,8 @@ class DynamicsEngine(StorableNamedObject):
     BACKWARD = -1
 
     _default_options = {
-        'n_frames_max' : None
+        'n_frames_max' : None,
+        'timestep' : None
     }
 
     units = {
@@ -64,28 +65,22 @@ class DynamicsEngine(StorableNamedObject):
 
         super(DynamicsEngine, self).__init__()
 
-        self.initialized = False
-
-        # if there has not been created a storage by the init of a derived
-        # class make sure there is at least a member variable
-#        if not hasattr(self, 'storage'):
-#            self.storage = None
-
-#        if storage is not None:
-#            self.storage = storage
-
         self.template = template
 
         # Trajectories need to know the engine as a hack to get the topology.
         # Better would be a link to the topology directly. This is needed to create
         # mdtraj.Trajectory() objects
 
-        self._register_options(options)
+        # TODO: Remove this and put the logic outside of the engine. The engine in trajectory is only
+        # used to get the solute indices which should depend on the topology anyway
+        # Trajectory.engine = self
+
+        self._check_options(options)
 
         # as default set a newly generated engine as the default engine
         self.set_as_default()
 
-    def _register_options(self, options = None):
+    def _check_options(self, options = None):
         """
         This will register all variables in the options dict as a member variable if
         they are present in either the DynamicsEngine.default_options or this
@@ -158,19 +153,24 @@ class DynamicsEngine(StorableNamedObject):
                         raise ValueError('Type of option "' + str(variable) + '" (' + str(type(my_options[variable])) + ') is not "' + str(type(default_value)) + '"')
 
             self.options = okay_options
-
-            for variable, value in okay_options.iteritems():
-                setattr(self, variable, value)
         else:
             self.options = {}
 
+    def __getattr__(self, item):
+        # default is to look for an option and return it's value
+        return self.options[item]
+
+    @property
+    def topology(self):
+        return self.template.topology
+
     @property
     def n_atoms(self):
-        return self.template.topology.n_atoms
+        return self.topology.n_atoms
 
     @property
     def n_spatial(self):
-        return self.template.topology.n_spatial
+        return self.topology.n_spatial
 
     def to_dict(self):
         return {
@@ -269,73 +269,64 @@ class DynamicsEngine(StorableNamedObject):
         in that case.
         """
 
-        # Are we ready to rumble ?
-        if self.initialized:
+        if direction == 0:
+            raise RuntimeError('direction must be positive (FORWARD) or negative (BACKWARD).')
 
-            if direction == 0:
-                raise RuntimeError('direction must be positive (FORWARD) or negative (BACKWARD).')
+        try:
+            iter(running)
+        except:
+            running = [running]
 
-            try:
-                iter(running)
-            except:
-                running = [running]
+        trajectory = paths.Trajectory()
 
-            trajectory = paths.Trajectory()
+        if direction > 0:
+            self.current_snapshot = snapshot
+        elif direction < 0:
+            # backward simulation needs reversed snapshots
+            self.current_snapshot = snapshot.reversed
 
+        self.start()
+
+        # Store initial state for each trajectory segment in trajectory.
+        trajectory.append(snapshot)
+
+        frame = 0
+        # maybe we should stop before we even begin?
+        stop = self.stop_conditions(trajectory=trajectory,
+                                    continue_conditions=running,
+                                    trusted=False)
+
+        logger.info("Starting trajectory")
+        log_freq = 10 # TODO: set this from a singleton class
+        while stop == False:
+            if self.options.get('n_frames_max', None) is not None :
+                if len(trajectory) >= self.options['n_frames_max']:
+                    break
+
+            # Do integrator x steps
+            snapshot = self.generate_next_frame()
+            frame += 1
+            if frame % log_freq == 0:
+                logger.info("Through frame: %d", frame)
+
+            # Store snapshot and add it to the trajectory. Stores also
+            # final frame the last time
             if direction > 0:
-                self.current_snapshot = snapshot
+                trajectory.append(snapshot)
             elif direction < 0:
-                # backward simulation needs reversed snapshots
-                self.current_snapshot = snapshot.reversed
+                # We are simulating forward and just build in backwards order
+                trajectory.prepend(snapshot.reversed)
 
-            self.start()
-
-            # Store initial state for each trajectory segment in trajectory.
-            trajectory.append(snapshot)
-
-            frame = 0
-            # maybe we should stop before we even begin?
+            # Check if we should stop. If not, continue simulation
             stop = self.stop_conditions(trajectory=trajectory,
-                                        continue_conditions=running,
-                                        trusted=False)
+                                        continue_conditions=running)
 
-            logger.info("Starting trajectory")
-            log_freq = 10 # TODO: set this from a singleton class 
-            while stop == False:
-                if self.options.get('n_frames_max', None) is not None :
-                    if len(trajectory) >= self.options['n_frames_max']:
-                        break
-                                
-                # Do integrator x steps
-                snapshot = self.generate_next_frame()
-                frame += 1
-                if frame % log_freq == 0:
-                    logger.info("Through frame: %d", frame)
-                
-                # Store snapshot and add it to the trajectory. Stores also
-                # final frame the last time
-                if direction > 0:
-                    trajectory.append(snapshot)
-                elif direction < 0:
-                    # We are simulating forward and just build in backwards order
-                    trajectory.prepend(snapshot.reversed)
-
-                # Check if we should stop. If not, continue simulation
-                stop = self.stop_conditions(trajectory=trajectory,
-                                            continue_conditions=running)
-
-            # exit the while loop once we must stop, so we call the engine's
-            # stop function (which should manage any end-of-trajectory
-            # cleanup)
-            self.stop(trajectory)
-            logger.info("Finished trajectory, length: %d", frame)
-            return trajectory
-        else:
-            raise RuntimeWarning("Can't generate from an uninitialized system!")
+        # exit the while loop once we must stop, so we call the engine's
+        # stop function (which should manage any end-of-trajectory
+        # cleanup)
+        self.stop(trajectory)
+        logger.info("Finished trajectory, length: %d", frame)
+        return trajectory
 
     def generate_next_frame(self):
         raise NotImplementedError('Next frame generation must be implemented!')
-
-    @property
-    def current_snapshot(self):
-        raise NotImplementedError('Getter and setter for current_snapshot must be implemented')
