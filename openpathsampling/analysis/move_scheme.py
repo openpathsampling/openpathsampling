@@ -545,7 +545,7 @@ class DefaultScheme(MoveScheme):
     """
     def __init__(self, network):
         super(DefaultScheme, self).__init__(network)
-        n_ensembles = len(network.transition_ensembles)
+        n_ensembles = len(network.sampling_ensembles)
         self.append(strategies.NearestNeighborRepExStrategy())
         self.append(strategies.OneWayShootingStrategy())
         self.append(strategies.PathReversalStrategy())

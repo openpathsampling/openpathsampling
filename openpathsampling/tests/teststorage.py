@@ -16,6 +16,8 @@ from openpathsampling.openmm_engine import *
 from openpathsampling.snapshot import Snapshot
 from openpathsampling.storage.object_json import ObjectJSON
 
+from openpathsampling.storage import Storage
+
 import mdtraj as md
 
 

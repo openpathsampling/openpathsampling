@@ -181,7 +181,7 @@ class Configuration(StorableObject):
         output = np.zeros([1, n_atoms, 3], np.float32)
         output[0, :, :] = self.coordinates
 
-        return md.Trajectory(output, self.topology)
+        return md.Trajectory(output, self.topology.md)
 
 
 # =============================================================================
