@@ -213,7 +213,7 @@ class Function(ChainDict):
 
     This works effective like a function called with square brackets
     """
-    def __init__(self, fnc, requires_lists=True, single_as_scalar=False):
+    def __init__(self, fnc, requires_lists=True, scalarize_numpy_singletons=False):
         """
         Parameters
         ----------
@@ -226,7 +226,7 @@ class Function(ChainDict):
         super(Function, self).__init__()
         self._eval = fnc
         self.requires_lists = requires_lists
-        self.single_as_scalar = single_as_scalar
+        self.scalarize_numpy_singletons = scalarize_numpy_singletons
 
     def _contains(self, item):
         return False
@@ -241,7 +241,7 @@ class Function(ChainDict):
         else:
             result = self._eval(item)
 
-        if self.single_as_scalar and result.shape[-1] == 1:
+        if self.scalarize_numpy_singletons and result.shape[-1] == 1:
             return result.reshape(result.shape[:-1])
 
         return result
@@ -253,12 +253,12 @@ class Function(ChainDict):
         if self.requires_lists:
             results = self._eval(items)
 
-            if self.single_as_scalar and results.shape[-1] == 1:
+            if self.scalarize_numpy_singletons and results.shape[-1] == 1:
                 results = results.reshape(results.shape[:-1])
 
         else:
             results = [self._eval(obj) for obj in items]
-            if self.single_as_scalar and results[0].shape[-1] == 1:
+            if self.scalarize_numpy_singletons and results[0].shape[-1] == 1:
                 results = map(lambda x : x.reshape(x.shape[:-1]), results)
 
         return results

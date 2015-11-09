@@ -1100,17 +1100,18 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
         return {
             'name': self.name,
             'featurizer': self.callable_to_dict(self.featurizer),
-            'kwargs': self.kwargs,
-            'store_cache': self.store_cache
+            'topology': self.topology,
+            'store_cache': self.store_cache,
+            'kwargs': self.kwargs
         }
 
     @classmethod
     def from_dict(cls, dct):
-        obj = CV_MSMB_Featurizer(
+        obj = CV_PyEMMA_Featurizer(
             name=dct['name'],
             featurizer=cls.callable_from_dict(dct['featurizer']),
+            topology=dct['topology'],
             cv_store_cache=dct['store_cache'],
-            cv_scalarize_numpy_singletons=dct['scalarize_numpy_singletons'],
             **dct['kwargs']
         )
         return obj
