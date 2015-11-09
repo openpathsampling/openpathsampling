@@ -30,8 +30,8 @@ class NetCDFPlus(netCDF4.Dataset):
         'index': np.int32,
         'length': np.int32,
         'bool': np.int16,
-        'str': 'str',
-        'json': 'str',
+        'str': str,
+        'json': str,
         'numpy.float32': np.float32,
         'numpy.float64': np.float64,
         'numpy.int8': np.int8,
@@ -42,7 +42,7 @@ class NetCDFPlus(netCDF4.Dataset):
         'numpy.uint16': np.uint16,
         'numpy.uint32': np.uint32,
         'numpy.uint64': np.uint64,
-        'store': 'str'
+        'store': str
     }
 
     class ValueDelegate(object):
