@@ -112,10 +112,21 @@ class testTPSNetwork(object):
         self.stateB = paths.CVRangeVolume(xval, -0.1, 0.1)
         self.stateC = paths.CVRangeVolume(xval, 0.5, float("inf"))
 
-    def test_initialization(self):
-        network1 = TPSNetwork(initial_states=[self.stateA],
-                              final_states=[self.stateB])
-        #network2 = TPSNetwork(initial_states=stateA,
-                              #final_states=stateB)
+    def test_initialization_2state(self):
+        network2a = TPSNetwork(initial_states=[self.stateA],
+                               final_states=[self.stateB])
+        network2b = TPSNetwork(initial_states=self.stateA,
+                               final_states=self.stateB)
+        assert_equal(len(network2a.sampling_transitions), 1)
+        assert_equal(len(network2b.sampling_transitions), 1)
+        assert_equal(len(network2a.transitions), 1)
+        assert_equal(len(network2b.transitions), 1)
+        raise SkipTest
+
+    def test_initialization_3state(self):
+        states = [self.stateA, self.stateB, self.stateC]
+        network3a = TPSNetwork(initial_states=states, final_states=states)
+        assert_equal(len(network3a.sampling_transitions), 1)
+        assert_equal(len(network3a.transitions), 6)
         raise SkipTest
 

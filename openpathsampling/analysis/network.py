@@ -40,6 +40,15 @@ class TransitionNetwork(StorableNamedObject):
 class TPSNetwork(TransitionNetwork):
     def __init__(self, initial_states, final_states):
         super(TPSNetwork, self).__init__()
+        try:
+            iter(initial_states)
+        except TypeError:
+            initial_states = [initial_states]
+        try:
+            iter(final_states)
+        except TypeError:
+            final_states = [final_states]
+
         self.initial_states = initial_states
         self.final_states = final_states
         all_initial = paths.join_volumes(initial_states)
