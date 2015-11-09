@@ -489,7 +489,7 @@ class ReversibleStoredDict(StoredDict):
 
             if self.reversible:
                 # double all pairs of values and remove Nones
-                values = map(lambda x : x[0] or x[1], zip(values[0::2], values[1::2]))
+                values = map(lambda x : x[0] if x[0] is not None else x[1], zip(values[0::2], values[1::2]))
                 values = [val for val in values for _ in (0, 1)]
 
             pairs = [(key, value) for key, value in zip(keys, values) if value is not None]

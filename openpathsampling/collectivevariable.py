@@ -999,19 +999,19 @@ class CV_MSMB_Featurizer(CV_Generator):
     def to_dict(self):
         return {
             'name': self.name,
-            'featurizer': self.featurizer,
+            'featurizer': self.callable_to_dict(self.featurizer),
             'kwargs': self.kwargs,
             'store_cache': self.store_cache,
-            'single_as_scalar': self.single_as_scalar
+            'scalarize_numpy_singletons': self.scalarize_numpy_singletons
         }
 
     @classmethod
     def from_dict(cls, dct):
         obj = CV_MSMB_Featurizer(
             name=dct['name'],
-            featurizer=dct['featurizer'],
+            featurizer=cls.callable_from_dict(dct['featurizer']),
             cv_store_cache=dct['store_cache'],
-            cv_single_as_scalar=dct['single_as_scalar'],
+            cv_scalarize_numpy_singletons=dct['scalarize_numpy_singletons'],
             **dct['kwargs']
         )
         return obj
@@ -1051,7 +1051,7 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
         cv_return_simtk_unit
         cv_requires_lists
         cv_store_cache
-        single_as_scalar : bool, default: True
+        scalarize_numpy_singletons : bool, default: True
             If `True` then arrays of length 1 will be treated as array with one dimension less.
             e.g. [ [1], [2], [3] ] will be turned into [1, 2, 3]. This is often useful, when you
             use en external function to get only a single value.
@@ -1099,7 +1099,7 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
     def to_dict(self):
         return {
             'name': self.name,
-            'featurizer': self.featurizer,
+            'featurizer': self.callable_to_dict(self.featurizer),
             'kwargs': self.kwargs,
             'store_cache': self.store_cache
         }
@@ -1108,9 +1108,9 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
     def from_dict(cls, dct):
         obj = CV_MSMB_Featurizer(
             name=dct['name'],
-            featurizer=dct['featurizer'],
+            featurizer=cls.callable_from_dict(dct['featurizer']),
             cv_store_cache=dct['store_cache'],
-            cv_single_as_scalar=dct['single_as_scalar'],
+            cv_scalarize_numpy_singletons=dct['scalarize_numpy_singletons'],
             **dct['kwargs']
         )
         return obj
