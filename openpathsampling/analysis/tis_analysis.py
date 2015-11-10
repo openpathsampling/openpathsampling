@@ -80,6 +80,16 @@ class TPSTransition(Transition):
                 paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
             ])]
 
+    def add_transition(self, stateA, stateB):
+        new_ens = paths.SequentialEnsemble([
+            paths.AllInXEnsemble(stateA) & paths.LengthEnsemble(1),
+            paths.AllOutXEnsemble(stateA | stateB),
+            paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
+        ])
+        try:
+            self.ensembles[0] = self.ensembles[0] | new_ens
+        except AttributeError:
+            self.ensembles = [new_ens]
 
 
 class TISTransition(Transition):

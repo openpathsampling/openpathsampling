@@ -49,8 +49,6 @@ class TPSNetwork(TransitionNetwork):
         except TypeError:
             final_states = [final_states]
 
-        self.initial_states = initial_states
-        self.final_states = final_states
         all_initial = paths.join_volumes(initial_states)
         all_initial.name = "|".join([v.name for v in initial_states])
         all_final = paths.join_volumes(final_states)
@@ -64,6 +62,31 @@ class TPSNetwork(TransitionNetwork):
                                                       final_states)
             if initial != final
         }
+
+    @classmethod
+    def from_state_pairs(cls, state_pairs):
+        sampling = []
+        transitions = {}
+        for (initial, final) in state_pairs:
+            if len(sampling) == 1:
+                sampling[0].add_transition(initial, final)
+            elif len(sampling) == 0:
+                sampling = [paths.TPSTransition(initial, final)]
+            else:
+                raise RuntimeError("More than one sampling transition for TPS?")
+
+            transitions[(initial, final)] = paths.TPSTransition(initial, final)
+        
+        network = cls.__new__(cls)
+        super(cls, network).__init__()
+        network._sampling_transitions = sampling
+        network.transitions = transitions
+        return network
+
+
+    @classmethod
+    def from_states_all_to_all(cls, states):
+        return cls(states, states)
 
 
 

@@ -115,18 +115,31 @@ class testTPSNetwork(object):
     def test_initialization_2state(self):
         network2a = TPSNetwork(initial_states=[self.stateA],
                                final_states=[self.stateB])
+        assert_equal(len(network2a.sampling_transitions), 1)
+        assert_equal(len(network2a.transitions), 1)
         network2b = TPSNetwork(initial_states=self.stateA,
                                final_states=self.stateB)
-        assert_equal(len(network2a.sampling_transitions), 1)
         assert_equal(len(network2b.sampling_transitions), 1)
-        assert_equal(len(network2a.transitions), 1)
         assert_equal(len(network2b.transitions), 1)
-        raise SkipTest
+        network2c = TPSNetwork.from_state_pairs([(self.stateA, self.stateB)])
+        assert_equal(len(network2c.sampling_transitions), 1)
+        assert_equal(len(network2c.transitions), 1)
+
 
     def test_initialization_3state(self):
         states = [self.stateA, self.stateB, self.stateC]
         network3a = TPSNetwork(initial_states=states, final_states=states)
         assert_equal(len(network3a.sampling_transitions), 1)
         assert_equal(len(network3a.transitions), 6)
-        raise SkipTest
+        network3b = TPSNetwork.from_states_all_to_all(states)
+        assert_equal(len(network3b.sampling_transitions), 1)
+        assert_equal(len(network3b.transitions), 6)
+        network3c = TPSNetwork.from_state_pairs([(self.stateA, self.stateB),
+                                                 (self.stateA, self.stateC),
+                                                 (self.stateB, self.stateA),
+                                                 (self.stateB, self.stateC),
+                                                 (self.stateC, self.stateA),
+                                                 (self.stateC, self.stateB)])
+        assert_equal(len(network3c.sampling_transitions), 1)
+        assert_equal(len(network3c.transitions), 6)
 
