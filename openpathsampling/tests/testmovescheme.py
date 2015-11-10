@@ -479,8 +479,8 @@ class testLockedMoveScheme(object):
             (self.stateA, interfacesA, "A", cvA),
             (self.stateB, interfacesB, "B", cvB)
         ])
-        basic_scheme = DefaultScheme(self.network)
-        self.root_mover = basic_scheme.move_decision_tree()
+        self.basic_scheme = DefaultScheme(self.network)
+        self.root_mover = self.basic_scheme.move_decision_tree()
 
     def test_initialization(self):
         scheme = LockedMoveScheme(self.root_mover, self.network)
@@ -503,3 +503,22 @@ class testLockedMoveScheme(object):
         strategy = AllSetRepExStrategy()
         scheme.apply_strategy(strategy)
 
+    @raises(AttributeError)
+    def test_choice_probability_fail(self):
+        scheme = LockedMoveScheme(self.root_mover, self.network)
+        vals = scheme.choice_probability
+
+    def test_choice_probability_works(self):
+        scheme = LockedMoveScheme(self.root_mover, self.network)
+        scheme.choice_probability = self.basic_scheme.choice_probability
+        vals = scheme.choice_probability
+
+    @raises(AttributeError)
+    def test_movers_fail(self):
+        scheme = LockedMoveScheme(self.root_mover, self.network)
+        vals = scheme.movers
+
+    def test_movers_works(self):
+        scheme = LockedMoveScheme(self.root_mover, self.network)
+        scheme.movers = self.basic_scheme.movers
+        vals = scheme.movers

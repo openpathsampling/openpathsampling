@@ -588,3 +588,37 @@ class LockedMoveScheme(MoveScheme):
     
     def apply_strategy(self, strategy):
         raise TypeError("Locked schemes cannot apply strategies")
+
+    @property
+    def choice_probability(self):
+        try:
+            return self._choice_probability
+        except AttributeError as e:
+            gap = "\n                "
+            failmsg = (gap + "'choice_probability' must be manually set in " +
+                       "'LockedMoveScheme'.")
+            e.args = tuple([e.args[0] + failmsg] + list(e.args[1:]))
+            raise
+
+    @choice_probability.setter
+    def choice_probability(self, vals):
+        if vals != {}:
+            # default does not set the internal version here
+            self._choice_probability = vals
+
+    @property
+    def movers(self):
+        try:
+            return self._movers
+        except AttributeError as e:
+            gap = "\n                "
+            failmsg = (gap + "'movers' must be manually set in" + 
+                       "'LockedMoveScheme'.")
+            e.args = tuple([e.args[0] + failmsg] + list(e.args[1:]))
+            raise
+
+    @movers.setter
+    def movers(self, vals):
+        if vals != {}:
+            # default does not set the internal version here
+            self._movers = vals
