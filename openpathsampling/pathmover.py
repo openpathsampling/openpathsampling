@@ -546,9 +546,8 @@ class EngineMover(SampleMover):
                                               ).can_append
         partial_trajectory = self.engine.generate(initial_snapshot, 
                                                   running=[run_f])
-        # keep the original snapshot in the trial_trajectory
-        trial_trajectory = (trajectory[0:shooting_index + 1] 
-                            + partial_trajectory[1:])
+        trial_trajectory = (trajectory[0:shooting_index] 
+                            + partial_trajectory)
         return trial_trajectory
 
     def _make_backward_trajectory(self, trajectory, shooting_index):
@@ -558,9 +557,8 @@ class EngineMover(SampleMover):
                                               ).can_prepend
         partial_trajectory = self.engine.generate(initial_snapshot, 
                                                   running=[run_f])
-        # keep the original snapshot in the trial_trajectory
-        trial_trajectory = (partial_trajectory.reversed[:-1] +
-                            trajectory[shooting_index:])
+        trial_trajectory = (partial_trajectory.reversed +
+                            trajectory[shooting_index + 1:])
         return trial_trajectory
 
 
