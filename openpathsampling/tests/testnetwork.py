@@ -107,10 +107,12 @@ class testMSTISNetwork(object):
 
 class testTPSNetwork(object):
     def setup(self):
-        xval = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
+        from test_helpers import CallIdentity
+        xval = CallIdentity()
         self.stateA = paths.CVRangeVolume(xval, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(xval, -0.1, 0.1)
         self.stateC = paths.CVRangeVolume(xval, 0.5, float("inf"))
+        
 
     def test_initialization_2state(self):
         network2a = TPSNetwork(initial_states=[self.stateA],
@@ -142,4 +144,22 @@ class testTPSNetwork(object):
                                                  (self.stateC, self.stateB)])
         assert_equal(len(network3c.sampling_transitions), 1)
         assert_equal(len(network3c.transitions), 6)
+
+    def test_storage(self):
+        import os
+        fname = "tps_network_storage_test.nc"
+        if os.path.isfile(fname):
+            os.remove(fname)
+        topol = paths.ToyTopology(n_spatial=1, masses=[1.0], pes=None)
+        self.template = paths.Snapshot(coordinates=[[0.0]], 
+                                       velocities=[[0.0]], 
+                                       topology=topol)
+        states = [self.stateA, self.stateB, self.stateC]
+        network_a = TPSNetwork(initial_states=states, final_states=states)
+        storage_w = paths.storage.Storage(fname, "w", self.template)
+        storage_w.save(network_a)
+        storage_w.sync_all()
+
+        # storage_r = paths.storage.AnalysisStorage(fname)
+        # network_b = storage_r.networks[0]
 

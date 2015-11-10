@@ -72,13 +72,28 @@ class TPSTransition(Transition):
     """
     def __init__(self, stateA, stateB, name=None):
         super(TPSTransition, self).__init__(stateA, stateB)
-        self.name = name
+        if name is not None:
+            self.name = name
         if not hasattr(self, "ensembles"):
             self.ensembles = [paths.SequentialEnsemble([
                 paths.AllInXEnsemble(stateA) & paths.LengthEnsemble(1),
                 paths.AllOutXEnsemble(stateA | stateB),
                 paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
             ])]
+
+    def to_dict(self):
+        return {
+            'stateA' : self.stateA,
+            'stateB' : self.stateB,
+            'ensembles' : self.ensembles,
+            'name' : self.name
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
+        mytrans = TPSTransition(dct['stateA'], dct['stateB'], dct['name'])
+        mytrans.ensembles = dct['ensembles']
+        return mytrans
 
     def add_transition(self, stateA, stateB):
         new_ens = paths.SequentialEnsemble([
