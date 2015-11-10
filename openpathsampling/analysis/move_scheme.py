@@ -573,7 +573,8 @@ class DefaultScheme(MoveScheme):
 
 class LockedMoveScheme(MoveScheme):
     def __init__(self, root_mover, network=None, root_accepted=None):
-        pass
+        super(LockedMoveScheme, self).__init__(network)
+        self.root_mover = root_mover
 
     def append(self, strategies, levels=None):
         raise TypeError("Locked schemes cannot append strategies")

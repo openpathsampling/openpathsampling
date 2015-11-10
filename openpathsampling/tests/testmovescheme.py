@@ -465,3 +465,41 @@ class testDefaultScheme(object):
                 assert_almost_equal(expected_prob, test_prob)
 
 
+class testLockedMoveScheme(object):
+    def setup(self):
+        cvA = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.CV_Function(name="xB", f=lambda s : -s.xyz[0][0])
+        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
+        interfacesA = vf.CVRangeVolumeSet(cvA, float("-inf"), 
+                                          [-0.5, -0.3, -0.1, 0.0])
+        interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
+                                          [-0.5, -0.3, -0.1, 0.0])
+        self.network = paths.MSTISNetwork([
+            (self.stateA, interfacesA, "A", cvA),
+            (self.stateB, interfacesB, "B", cvB)
+        ])
+        basic_scheme = DefaultScheme(self.network)
+        self.root_mover = basic_scheme.move_decision_tree()
+
+    def test_initialization(self):
+        scheme = LockedMoveScheme(self.root_mover, self.network)
+        assert_equal(scheme.network, self.network)
+        assert_equal(scheme.move_decision_tree(), self.root_mover)
+
+    def test_build_move_decision_tree(self):
+        scheme = LockedMoveScheme(self.root_mover, self.network)
+        scheme.move_decision_tree(rebuild=True)
+        assert_equal(scheme.move_decision_tree(), self.root_mover)
+
+    @raises(TypeError)
+    def test_append(self):
+        scheme = LockedMoveScheme(self.root_mover, self.network)
+        scheme.append(AllSetRepExStrategy())
+
+    @raises(TypeError)
+    def test_apply_strategy(self):
+        scheme = LockedMoveScheme(self.root_mover, self.network)
+        strategy = AllSetRepExStrategy()
+        scheme.apply_strategy(strategy)
+
