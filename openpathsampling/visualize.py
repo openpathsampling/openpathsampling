@@ -98,7 +98,7 @@ class TreeRenderer(object):
         return self.draw_block(x, y, color, text, align, False, False, padding,
                                True, True)
 
-    def draw_block(self, x, y, color="blue", text="", align="middle",
+    def draw_block(self, x, y, text="", align="middle",
                    extend_right=True, extend_left=True, padding=None,
                    extend_top=False, extend_bottom=False, w=1.0):
         document = self.document
@@ -112,23 +112,18 @@ class TreeRenderer(object):
         ret.append(document.rect(
             insert=self._xy(x - 0.5 + padding, y - 0.3),
             size=self._wh(1.0 * w - 2 * padding, 0.6),
-            fill=color,
         ))
         if extend_left:
             ret.append(document.circle(
                 center=self._xy(x - 0.5, y),
                 r=self._w(padding),
-                stroke_width=0,
-                stroke=color,
-                fill=color
+                stroke_width=0
             ))
         if extend_right:
             ret.append(document.circle(
                 center=(self._xy(x + w - 0.5, y)),
                 r=self._w(padding),
-                stroke_width=0,
-                stroke=color,
-                fill=color
+                stroke_width=
             ))
 
         ret.append(document.text(
@@ -859,6 +854,28 @@ class PathTreeBuilder(object):
         return [samp for samp in reversed(list_of_samples)]
 
     def from_samples(self, samples, clear=True):
+
+        options = {
+            paths.ReplicaExchangeMover: {
+                'name': 'RepEx',
+                'overlap': 'line',
+                'fw': 'blocks',
+                'bw': 'blocks',
+                'all': 'hidden',
+                'overlap_label': 'RepEx',
+                'suffix': 'x'
+            },
+            'ui': {
+                'trajectory': True,
+                'step': True,
+                'correlation': True,
+                'sample': True
+            },
+            'settings': {
+                'register_rejected': False
+            }
+        }
+
         if len(samples) == 0:
             # no samples, nothing to do
             # TODO: Raise an exception or just ignore and don't output anything?
@@ -873,39 +890,67 @@ class PathTreeBuilder(object):
         t_count = 1
         shift = 0
 
-        lightcolor = "gray"
-        font_color = "black"
-
-        first = True
-
         for sample in samples:
             draw_okay = False
             line_okay = False
+            direction = 0
             mover_type = type(sample.mover)
+            traj = sample.trajectory
 
-            if first is True:
+            
+
+            # get connection to existing
+            pos_first = p_x.get(traj[0])
+            pos_last = p_x.get(traj[-1])
+
+            new_shift = shift
+            overlap_reversed = False
+
+            index_bw = None
+
+            for snap_idx in range(len(traj)):
+                snap = traj[snap_idx]
+                if snap in p_x:
+                    connect_bw = p_x[snap]
+                    index_bw = snap_idx
+                    shift_bw = connect_bw - snap_idx
+                    break
+
+            if index_bw is None:
+                # no overlap, so skip
                 first = False
                 color = 'black'
                 draw_okay = True
                 shift = 0
+            else:
+                for snap_idx in range(len(traj) - 1, -1, -1):
+                    snap = traj[snap_idx]
+                    if snap in p_x:
+                        connect_fw = p_x[snap]
+                        index_fw = snap_idx
+                        shift_fw = connect_fw - snap_idx
+                        break
 
-                self.renderer.add(
-                    self.renderer.label(0, t_count, 1,
-                        str(self.storage.trajectories.idx(sample.trajectory)) + 'b',
-                        align='end',
-                        color='black'
-                    )
-                )
+                # now we know that the overlap is between (including) [connect_bw, connect_fw]
+                # and the trajectory looks like [bw, ...] + [old, ...] + [fw, ...]
+                # with bw
+                # [0, ..., index_bw -1] + [index_bw, ..., index_fw] + [index_fw + 1, ..., len(traj) - 1]
+                # both shift_fw and shift_bw always exist and are the same if the trajectory is extended
+                # or truncated or shoot from. If the overlapping trajectory is reversed before extending
+                # then we get
+                # [0, ..., index_fw -1] + [index_fw, ..., index_bw] + [index_bw + 1, ..., len(traj) - 1]
+                # this can be checked by index_bw > index_fw or shift_fw != shift_bw
 
-            elif mover_type is paths.ReplicaExchangeMover:
+                new_shift = (shift_bw + shift_fw) / 2
+
+                if index_bw > index_fw:
+                    index_bw, index_fw = index_fw, index_bw
+                    overlap_reversed = True
+
+            if mover_type in options:
+                view_options = options[mover_type]
+
                 # Reversal
-                color = 'blue'
-                draw_okay = True
-                line_okay = True
-
-                # self.renderer.add(
-                #     self.renderer.label(shift, t_count, 1, 'RX', align='end',color='black')
-                # )
 
                 self.renderer.add(
                     self.renderer.label(shift, t_count, 1, str(
@@ -913,9 +958,9 @@ class PathTreeBuilder(object):
                                         color='black')
                 )
 
-
-                self.renderer.add(
-                    self.renderer.range(shift, t_count, len(sample), 'lightblue', "ReplicaExchange" ))
+                if view_options['overlap'] == 'line':
+                    self.renderer.add(
+                        self.renderer.range(shift, t_count, len(sample), 'black', "ReplicaExchange" ))
 
             elif mover_type is paths.PathReversalMover:
                 # Reversal
@@ -941,6 +986,8 @@ class PathTreeBuilder(object):
                     self.renderer.range(shift, t_count, len(sample.parent), 'palegreen', "BackwardExtend" ))
 
                 shift = shift - len(sample) + len(sample.parent)
+
+                direction = -1
 
                 self.renderer.add(
                     self.renderer.label(shift, t_count, 1, str(
@@ -989,6 +1036,7 @@ class PathTreeBuilder(object):
 
                 new_traj = sample.details.trial_point.trajectory
                 new_index = sample.details.trial_point.index
+                print len(new_traj), new_index, len(old_traj), old_index
                 new_conf = new_traj[new_index]
 
                 # print type(old_conf), self.storage.snapshots.index.get(old_conf, None)
@@ -1025,12 +1073,6 @@ class PathTreeBuilder(object):
                             self.renderer.v_connection(shift + new_index,
                                                        p_y[old_conf_idx], t_count,
                                                        color)
-                        )
-                        self.renderer.add(
-                            self.renderer.label(shift + len(new_traj) - 1,
-                                                t_count, 1, str(
-                                    self.storage.idx(new_traj)) + 'f',
-                                                align='start', color=font_color)
                         )
                         draw_okay = True
 
@@ -1074,6 +1116,33 @@ class PathTreeBuilder(object):
                         old_y = p_y[conf_idx]
                         self.renderer.add(
                             self.renderer.block(old_x, old_y - 0.3, 'blue', ""))
+
+                if direction < 0:
+
+                    self.renderer.add(
+                        self.renderer.label(
+                            shift,
+                            t_count,
+                            1,
+                            str(self.storage.trajectories.idx(traj)) + 'b',
+                            align='end',
+                            color='black'
+                        )
+                    )
+
+                elif direction > 0:
+                    self.renderer.add(
+                        self.renderer.label(
+                            shift + len(traj) - 1,
+                            t_count,
+                            1,
+                            str(self.storage.trajectories.idx(traj)) + 'f',
+                            align='start',
+                            color='black'
+                        )
+                    )
+
+
 
             # self.renderer.add(
             #     self.renderer.label(shift - 2, t_count, 1, sample.replica
