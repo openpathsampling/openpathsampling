@@ -67,16 +67,15 @@ class TPSNetwork(TransitionNetwork):
         ret_dict = {
             'transitions' : self.transitions,
             'x_sampling_transitions' : self._sampling_transitions,
-            'name' : self.name
         }
         return ret_dict
 
     @classmethod
     def from_dict(cls, dct):
         network = cls.__new__(cls)
+        super(TPSNetwork, network).__init__()
         network._sampling_transitions = dct['x_sampling_transitions']
         network.transitions = dct['transitions']
-        network.name = dct['name']
         return network
 
     @classmethod
