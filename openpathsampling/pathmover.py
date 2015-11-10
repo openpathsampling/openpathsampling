@@ -540,7 +540,7 @@ class EngineMover(SampleMover):
         return trials
 
     def _make_forward_trajectory(self, trajectory, shooting_index):
-        initial_snapshot = trajectory[shooting_index].copy()
+        initial_snapshot = trajectory[shooting_index]#.copy()
         run_f = paths.PrefixTrajectoryEnsemble(self.target_ensemble, 
                                                trajectory[0:shooting_index]
                                               ).can_append
@@ -552,7 +552,7 @@ class EngineMover(SampleMover):
         return trial_trajectory
 
     def _make_backward_trajectory(self, trajectory, shooting_index):
-        initial_snapshot = trajectory[shooting_index].reversed_copy()
+        initial_snapshot = trajectory[shooting_index].reversed#_copy()
         run_f = paths.SuffixTrajectoryEnsemble(self.target_ensemble,
                                                trajectory[shooting_index + 1:]
                                               ).can_prepend
