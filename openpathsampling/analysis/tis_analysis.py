@@ -70,9 +70,42 @@ class TPSTransition(Transition):
     """
     Transition using TPS ensembles
     """
-    def __init__(self, stateA, stateB):
+    def __init__(self, stateA, stateB, name=None):
         super(TPSTransition, self).__init__(stateA, stateB)
-        #self.ensembles = [paths.TPSEnsemble(stateA, stateB)]
+        if name is not None:
+            self.name = name
+        if not hasattr(self, "ensembles"):
+            self.ensembles = [paths.SequentialEnsemble([
+                paths.AllInXEnsemble(stateA) & paths.LengthEnsemble(1),
+                paths.AllOutXEnsemble(stateA | stateB),
+                paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
+            ])]
+
+    def to_dict(self):
+        return {
+            'stateA' : self.stateA,
+            'stateB' : self.stateB,
+            'ensembles' : self.ensembles,
+            'name' : self.name
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
+        mytrans = TPSTransition(dct['stateA'], dct['stateB'], dct['name'])
+        mytrans.ensembles = dct['ensembles']
+        return mytrans
+
+    def add_transition(self, stateA, stateB):
+        new_ens = paths.SequentialEnsemble([
+            paths.AllInXEnsemble(stateA) & paths.LengthEnsemble(1),
+            paths.AllOutXEnsemble(stateA | stateB),
+            paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
+        ])
+        try:
+            self.ensembles[0] = self.ensembles[0] | new_ens
+        except AttributeError:
+            self.ensembles = [new_ens]
+
 
 class TISTransition(Transition):
     """

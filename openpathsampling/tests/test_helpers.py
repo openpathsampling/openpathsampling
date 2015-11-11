@@ -124,12 +124,12 @@ class CallIdentity(object):
 class AtomCounter(object):
     '''Let's be honest: that's all we're using the simulation.system object
     for. So I'll duck-punch.'''
-    def __init__(self, natoms):
-        self.natoms = natoms
+    def __init__(self, n_atoms):
+        self.n_atoms = n_atoms
 
     def getNumParticles(self):
         '''QUAAAAACK'''
-        return self.natoms
+        return self.n_atoms
 
 class SimulationDuckPunch(object):
     '''This is what happens when you find a stranger in the Alps.'''
