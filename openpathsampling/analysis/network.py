@@ -1,6 +1,7 @@
 import logging
 
 import pandas as pd
+import itertools
 
 import openpathsampling as paths
 from openpathsampling.base import StorableNamedObject
@@ -10,16 +11,103 @@ import openpathsampling.ensemble
 logger = logging.getLogger(__name__)
 
 class TransitionNetwork(StorableNamedObject):
+    """
+    Subclasses of TransitionNetwork are the main way to set up calculations
+    """
     def __init__(self):
         super(TransitionNetwork, self).__init__()
 
     @property
-    def all_ensembles(self):
-        return None
+    def sampling_ensembles(self):
+        return sum([t.ensembles for t in self.sampling_transitions], [])
 
-#    def replica_exchange_matrix(self):
+    @property
+    def all_ensembles(self):
+        all_ens = self.sampling_ensembles
+        for special_dict in self.special_ensembles.values():
+            all_ens.extend(special_dict.keys())
+        return all_ens
+
+    @property
+    def sampling_transitions(self):
+        try:
+            return self._sampling_transitions
+        except AttributeError:
+            return None
+
+
+
+class TPSNetwork(TransitionNetwork):
+    def __init__(self, initial_states, final_states):
+        super(TPSNetwork, self).__init__()
+        try:
+            iter(initial_states)
+        except TypeError:
+            initial_states = [initial_states]
+        try:
+            iter(final_states)
+        except TypeError:
+            final_states = [final_states]
+
+        all_initial = paths.join_volumes(initial_states)
+        all_initial.name = "|".join([v.name for v in initial_states])
+        all_final = paths.join_volumes(final_states)
+        all_final.name = "|".join([v.name for v in final_states])
+        self._sampling_transitions = [
+            paths.TPSTransition(all_initial, all_final)
+        ]
+        self.transitions = {
+            (initial, final) : paths.TPSTransition(initial, final)
+            for (initial, final) in itertools.product(initial_states,
+                                                      final_states)
+            if initial != final
+        }
+
+    def to_dict(self):
+        ret_dict = {
+            'transitions' : self.transitions,
+            'x_sampling_transitions' : self._sampling_transitions,
+        }
+        return ret_dict
+
+    @classmethod
+    def from_dict(cls, dct):
+        network = cls.__new__(cls)
+        super(TPSNetwork, network).__init__()
+        network._sampling_transitions = dct['x_sampling_transitions']
+        network.transitions = dct['transitions']
+        return network
+
+    @classmethod
+    def from_state_pairs(cls, state_pairs):
+        sampling = []
+        transitions = {}
+        for (initial, final) in state_pairs:
+            if len(sampling) == 1:
+                sampling[0].add_transition(initial, final)
+            elif len(sampling) == 0:
+                sampling = [paths.TPSTransition(initial, final)]
+            else:
+                raise RuntimeError("More than one sampling transition for TPS?")
+
+            transitions[(initial, final)] = paths.TPSTransition(initial, final)
+        
+        network = cls.__new__(cls)
+        super(cls, network).__init__()
+        network._sampling_transitions = sampling
+        network.transitions = transitions
+        return network
+
+
+    @classmethod
+    def from_states_all_to_all(cls, states):
+        return cls(states, states)
+
+
 
 class TISNetwork(TransitionNetwork):
+    # NOTE: this is an abstract class with several properties used by many
+    # TIS-based networks
     # TODO: most of the analysis stuff should end up in here; the bigger
     # differences are in setup, not analysis
     def __init__(self):
@@ -42,25 +130,6 @@ class TISNetwork(TransitionNetwork):
     @property
     def ms_outers(self):
         return self.special_ensembles['ms_outer'].keys()
-
-    @property
-    def sampling_ensembles(self):
-        return sum([t.ensembles for t in self.sampling_transitions], [])
-
-    @property
-    def all_ensembles(self):
-        all_ens = self.sampling_ensembles
-        for special_dict in self.special_ensembles.values():
-            all_ens.extend(special_dict.keys())
-        return all_ens
-
-
-    @property
-    def sampling_transitions(self):
-        try:
-            return self._sampling_transitions
-        except AttributeError:
-            return None
 
 
 #def join_mis_minus(minuses):
