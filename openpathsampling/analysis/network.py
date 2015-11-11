@@ -251,21 +251,22 @@ class MSTISNetwork(TISNetwork):
             See description in __init__.
 
         """
-        states, interfaces, names, orderparams = zip(*trans_info)
-        # NAMING STATES (future: give default names)
+        states, interfaces, orderparams = zip(*trans_info)
+        # NAMING STATES (give default names)
         all_states = paths.volume.join_volumes(states).named("all states")
         all_names = list(set([s.name for s in states]))
-        unnamed_states = [s for s in states if s.name==""]
+        unnamed_states = [s for s in states if s.is_named]
         name_index = 0
         for state in unnamed_states:
             while index_to_string(name_index) in all_names:
                 name_index += 1
             state.named(index_to_string(name_index))
+            name_index += 1
 
         # BUILDING ENSEMBLES
         outer_ensembles = []
         self.states = states
-        for (state, ifaces, name, op) in trans_info:
+        for (state, ifaces, op) in trans_info:
             state_index = states.index(state)
             other_states = states[:state_index]+states[state_index+1:]
             union_others = paths.volume.join_volumes(other_states)

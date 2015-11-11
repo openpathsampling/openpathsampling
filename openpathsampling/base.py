@@ -216,6 +216,14 @@ class StorableNamedObject(StorableObject):
         else:
             self._name = name
 
+    @property
+    def is_named(self):
+        """True if this object has a custom name.
+
+        This distinguishes default algorithmic names from assigned names.
+        """
+        return self._name == ""
+
     def named(self, name):
         """Name an unnamed object.
 
