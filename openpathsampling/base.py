@@ -222,7 +222,7 @@ class StorableNamedObject(StorableObject):
 
         This distinguishes default algorithmic names from assigned names.
         """
-        return self._name == ""
+        return self._name != ""
 
     def named(self, name):
         """Name an unnamed object.

@@ -255,7 +255,7 @@ class MSTISNetwork(TISNetwork):
         # NAMING STATES (give default names)
         all_states = paths.volume.join_volumes(states).named("all states")
         all_names = list(set([s.name for s in states]))
-        unnamed_states = [s for s in states if s.is_named]
+        unnamed_states = [s for s in states if not s.is_named]
         name_index = 0
         for state in unnamed_states:
             while index_to_string(name_index) in all_names:
