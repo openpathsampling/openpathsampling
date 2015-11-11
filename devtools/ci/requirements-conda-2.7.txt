@@ -17,3 +17,4 @@ svgwrite
 networkx
 psutil
 pandas
+ipynbtest

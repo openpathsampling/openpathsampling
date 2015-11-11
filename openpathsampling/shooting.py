@@ -119,8 +119,12 @@ class ShootingPointSelector(StorableNamedObject):
         '''
         return 1.0
 
-    def probabilities(self, snapshot, trajectory):
+    def probability(self, snapshot, trajectory):
         return self.f(snapshot, trajectory) / self.sum_bias(trajectory)
+
+    def probability_ratio(self, snapshot, old_trajectory, new_trajectory):
+        return (self.probability(snapshot, new_trajectory) /
+                self.probability(snapshot, old_trajectory))
 
     def _biases(self, trajectory):
         '''
@@ -227,7 +231,6 @@ class FinalFrameSelector(ShootingPointSelector):
 
     This is used for "forward" extension in, e.g., the minus move.
     '''
-
     def f(self, frame, trajectory):
         if trajectory.index(frame) == len(trajectory) - 1:
             return 1.0
@@ -237,6 +240,13 @@ class FinalFrameSelector(ShootingPointSelector):
     def pick(self, trajectory):
         point = ShootingPoint(self, trajectory, len(trajectory) - 1, f=1.0, sum_bias=1.0)
         return point
+
+    def probability(self, snapshot, trajectory):
+        return 1.0 # there's only one choice
+
+    def probability_ratio(self, snapshot, old_trajectory, new_trajectory):
+        # must be matched by a final-frame selector somewhere
+        return 1.0
 
 
 class FirstFrameSelector(ShootingPointSelector):
@@ -255,3 +265,11 @@ class FirstFrameSelector(ShootingPointSelector):
     def pick(self, trajectory):
         point = ShootingPoint(self, trajectory, 0, f=1.0, sum_bias=1.0)
         return point
+
+    def probability(self, snapshot, trajectory):
+        return 1.0 # there's only one choice
+
+    def probability_ratio(self, snapshot, old_trajectory, new_trajectory):
+        # must be matched by a first-frame selector somewhere
+        return 1.0
+
