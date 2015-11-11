@@ -10,6 +10,12 @@ import openpathsampling.ensemble
 
 logger = logging.getLogger(__name__)
 
+def index_to_string(index):
+    n_underscore = index / 26
+    letter_value = index % 26
+    mystr = "_"*n_underscore + chr(65+letter_value)
+    return mystr
+
 class TransitionNetwork(StorableNamedObject):
     """
     Subclasses of TransitionNetwork are the main way to set up calculations
@@ -186,10 +192,10 @@ class MSTISNetwork(TISNetwork):
         Parameters
         ----------
         trans_info : list of tuple
-            Details of each state-based ensemble set. 4-tuple in the order
-            (state, interfaces, state_name, orderparameter) where state is a
-            Volume, interfaces is a list of Volumes, state_name is a string,
-            and orderparameters is a CollectiveVariable
+            Details of each state-based ensemble set. 3-tuple in the order
+            (state, interfaces, orderparameter) where state is a Volume,
+            interfaces is a list of Volumes, and orderparameters is a
+            CollectiveVariable
         """
         super(MSTISNetwork, self).__init__()
         self.trans_info = trans_info
@@ -248,8 +254,13 @@ class MSTISNetwork(TISNetwork):
         states, interfaces, names, orderparams = zip(*trans_info)
         # NAMING STATES (future: give default names)
         all_states = paths.volume.join_volumes(states).named("all states")
-        for (state, name) in zip(states, names):
-            state.named(name)
+        all_names = list(set([s.name for s in states]))
+        unnamed_states = [s for s in states if s.name==""]
+        name_index = 0
+        for state in unnamed_states:
+            while index_to_string(name_index) in all_names:
+                name_index += 1
+            state.named(index_to_string(name_index))
 
         # BUILDING ENSEMBLES
         outer_ensembles = []
@@ -258,13 +269,13 @@ class MSTISNetwork(TISNetwork):
             state_index = states.index(state)
             other_states = states[:state_index]+states[state_index+1:]
             union_others = paths.volume.join_volumes(other_states)
-            union_others.named("all states except " + str(name))
+            union_others.named("all states except " + str(state.name))
 
             this_trans = paths.TISTransition(
                 stateA=state, 
                 stateB=union_others,
                 interfaces=ifaces[:-1],
-                name="Out "+name,
+                name="Out " + state.name,
                 orderparameter=op
             )
 
