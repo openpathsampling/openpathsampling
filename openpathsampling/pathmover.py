@@ -1756,7 +1756,7 @@ class MinusMover(SubPathMover):
                 n_l=minus_ensemble.n_l
                 ),
         ])
-        sub_trajectory_selector.name = "MinusSubtrajectoryChooser"
+        sub_trajectory_selector.named("MinusSubtrajectoryChooser")
 
         repexs = [ReplicaExchangeMover(
             ensemble1=segment,
@@ -1764,7 +1764,7 @@ class MinusMover(SubPathMover):
         ) for inner in innermost_ensembles]
 
         repex_chooser = RandomChoiceMover(repexs)
-        repex_chooser.name = "InterfaceSetChooser"
+        repex_chooser.named("InterfaceSetChooser")
 
         extension_mover = RandomChoiceMover([
             ForwardExtendMover(
@@ -1777,7 +1777,7 @@ class MinusMover(SubPathMover):
             )
         ])
 
-        extension_mover.name = "MinusExtensionDirectionChooser"
+        extension_mover.named("MinusExtensionDirectionChooser")
         self.engine = extension_mover.movers[0].engine
         if self.engine is not extension_mover.movers[1].engine:
             raise RuntimeWarning("Forward and backward engines differ?!?!")
@@ -1906,7 +1906,7 @@ class PathMoverFactory(object):
                 selector=selector,
                 ensemble=iface
             )
-            mover.name = "OneWayShootingMover " + str(iface.name)
+            mover.named("OneWayShootingMover " + str(iface.name))
             mover_set.append(mover)
 
         return mover_set
