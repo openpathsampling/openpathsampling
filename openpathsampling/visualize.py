@@ -11,6 +11,12 @@ import matplotlib.pyplot as plt
 import StringIO
 from networkx.readwrite import json_graph
 
+# CSS attributes
+# text_anchor=align,
+# alignment_baseline='middle',
+# font_family=self.font_family,
+# fill=color
+
 class TreeRenderer(object):
     def __init__(self):
         self.start_x = 0
@@ -18,8 +24,6 @@ class TreeRenderer(object):
         self.scale_x = 24
         self.scale_y = 24
         self.scale_th = 24
-        self.font_family = "Futura"
-        self.font_size = 0.3
         self.document = None
         self.font_baseline_shift = +0.05
         self.stroke_width = 0.05
@@ -93,318 +97,315 @@ class TreeRenderer(object):
         self.max_x = max(self.max_x, xy[0] + wh[0], xy[0])
         self.max_y = max(self.max_y, xy[1] + wh[1], xy[1])
 
-    def draw_connector(self, x, y, color="blue", text="", align="middle",
-                       padding=None):
-        return self.draw_block(x, y, color, text, align, False, False, padding,
-                               True, True)
+    def draw_connector(self, x, y, text="", cls=None):
 
-    def draw_block(self, x, y, text="", align="middle",
-                   extend_right=True, extend_left=True, padding=None,
-                   extend_top=False, extend_bottom=False, w=1.0):
+        if cls is None:
+            cls=list()
+
+        cls += ['connector']
+
+        return self.draw_block(x, y, text, False, False, True, True, cls=cls)
+
+    def draw_block(self, x, y, text="",
+                   extend_right=True, extend_left=True,
+                   extend_top=False, extend_bottom=False,
+                   w=1.0, cls=None):
+
+        if cls is None:
+            cls=list()
+
+        cls += ['block']
+
         document = self.document
-        if padding is None:
-            padding = self.horizontal_gap
+        padding = self.horizontal_gap
 
         self._pad(self._xy(x - 0.5, y - 0.3), self._wh(1.0 * w, 0.6))
 
         ret = list()
 
         ret.append(document.rect(
+            class_= cls,
             insert=self._xy(x - 0.5 + padding, y - 0.3),
             size=self._wh(1.0 * w - 2 * padding, 0.6),
         ))
         if extend_left:
             ret.append(document.circle(
+                class_= cls,
                 center=self._xy(x - 0.5, y),
-                r=self._w(padding),
-                stroke_width=0
+                r=self._w(padding)
             ))
         if extend_right:
             ret.append(document.circle(
+                class_= cls,
                 center=(self._xy(x + w - 0.5, y)),
-                r=self._w(padding),
-                stroke_width=
+                r=self._w(padding)
             ))
 
+        classes =
+
         ret.append(document.text(
+            class_="block",
             text=str(text)[:4],
-            insert=self._xb(x + (w - 1.0) / 2.0, y),
-            text_anchor=align,
-            font_size=self._h(self.font_size),
-            alignment_baseline='middle',
-            font_family=self.font_family,
-            fill='white'
+            insert=self._xb(x + (w - 1.0) / 2.0, y)
         ))
 
         return ret
 
+    @staticmethod
+    def c(cls):
+        return ' '.join(cls)
+
     def draw_range(self, x, y, w=1.0, color="blue", text="", align="middle",
-                   extend_right=True, extend_left=True, padding=None):
+                   extend_right=True, extend_left=True, cls=None):
+
+        if cls is None:
+            cls=list()
+
+        cls += ['range']
+
         document = self.document
-        if padding is None:
-            padding = self.horizontal_gap
+        padding = self.horizontal_gap
 
         self._pad(self._xy(x - 0.5, y - 0.3), self._wh(1.0 * w, 0.6))
 
         ret = list()
 
         ret.append(document.rect(
+            class_=self.c(cls),
             insert=self._xy(x - 0.5 + padding, y - 0.05),
-            size=self._wh(1.0 * w - 2 * padding, 0.1),
-            fill=color,
+            size=self._wh(1.0 * w - 2 * padding, 0.1)
         ))
 
         if extend_left:
             ret.append(document.circle(
+                class_=self.c(cls),
                 center=self._xy(x - 0.5, y),
-                r=self._w(padding),
-                stroke_width=0,
-                stroke=color,
-                fill=color
+                r=self._w(padding)
             ))
             ret.append(document.rect(
+                class_=self.c(cls),
                 insert=self._xy(x - 0.5 + padding, y - 0.3),
-                size=self._wh(0.1, 0.6),
-                fill=color,
+                size=self._wh(0.1, 0.6)
             ))
 
         if extend_right:
             ret.append(document.circle(
+                class_=self.c(cls),
                 center=(self._xy(x + w - 0.5, y)),
-                r=self._w(padding),
-                stroke_width=0,
-                stroke=color,
-                fill=color
+                r=self._w(padding)
             ))
             ret.append(document.rect(
+                class_=self.c(cls),
                 insert=self._xy(x + w - 0.6 - padding, y - 0.3),
-                size=self._wh(0.1, 0.6),
-                fill=color,
+                size=self._wh(0.1, 0.6)
             ))
 
         ret.append(document.text(
+            class_=self.c(cls),
             text=str(text),
-            insert=self._xb(x + (w - 1.0) / 2.0, y - 0.3),
-            text_anchor=align,
-            font_size=self._h(self.font_size),
-            alignment_baseline='middle',
-            font_family=self.font_family,
-            fill='black'
+            insert=self._xb(x + (w - 1.0) / 2.0, y - 0.3)
         ))
 
         return ret
 
     def draw_h_range(self, x, y, w=1.0, color="blue", text="", align="middle",
-                   extend_top=True, extend_bottom=True, padding=None):
+                   extend_top=True, extend_bottom=True, cls=None):
+
+        if cls is None:
+            cls=list()
+
+        cls += ['h-range']
+
         document = self.document
-        if padding is None:
-            padding = self.horizontal_gap
+        padding = self.horizontal_gap
 
         self._pad(self._xy(x - 0.5, y - 0.3), self._wh(1.0 * w, 0.6))
 
         ret = list()
 
         ret.append(document.rect(
+            class_=self.c(cls),
             insert=self._xy(x, y - 0.3),
-            size=self._wh(0.1, 1.0 * w - 0.4),
-            fill=color,
+            size=self._wh(0.1, 1.0 * w - 0.4)
         ))
 
         if extend_top:
             ret.append(document.circle(
+                class_=self.c(cls),
                 center=self._xy(x, y - 0.3),
-                r=self._w(padding),
-                stroke_width=0,
-                stroke=color,
-                fill=color
+                r=self._w(padding)
             ))
             ret.append(document.rect(
+                class_=self.c(cls),
                 insert=self._xy(x - 0.5 + padding, y - 0.3),
-                size=self._wh(1.0 - 2.0 * padding, 0.1),
-                fill=color,
+                size=self._wh(1.0 - 2.0 * padding, 0.1)
             ))
 
         if extend_bottom:
             ret.append(document.circle(
+                class_=self.c(cls),
                 center=(self._xy(x, y + (w - 1.0) + 0.3)),
-                r=self._w(padding),
-                stroke_width=0,
-                stroke=color,
-                fill=color
+                r=self._w(padding)
             ))
             ret.append(document.rect(
+                class_=self.c(cls),
                 insert=self._xy(x - 0.5 + padding, y + (w - 1.0) + 0.3 - 0.1),
-                size=self._wh(1.0 - 2.0 * padding, 0.1),
-                fill=color,
+                size=self._wh(1.0 - 2.0 * padding, 0.1)
             ))
 
         ret.append(document.text(
+            class_=self.c(cls),
             text=str(text),
-            insert=self._xb(x - 0.3, y  + (w - 1.0) / 2.0),
-            text_anchor=align,
-            font_size=self._h(self.font_size),
-            alignment_baseline='middle',
-            font_family=self.font_family,
-            fill='black'
+            insert=self._xb(x - 0.3, y  + (w - 1.0) / 2.0)
         ))
 
         return ret
 
-    def draw_text(self, x, y, color="blue", text="", align="middle",
-                padding=None,
-    ):
-        document = self.document
-        if padding is None:
-            padding = self.horizontal_gap
+    def draw_text(self, x, y, text="", cls=None):
 
+        if cls is None:
+            cls=list()
+
+        cls += ['text']
+
+        document = self.document
         self._pad(self._xy(x - 0.5, y), self._wh(1.0, 5.0))
 
         ret = list()
 
         ret.append(document.text(
+            class_=self.c(cls),
             text=str(text)[:4],
             insert=self._xb(x, y),
-            text_anchor=align,
-            font_size=self._h(self.font_size),
-            alignment_baseline='middle',
-            font_family=self.font_family,
-            fill=color,
             transform='rotate(90deg)'
         ))
 
         return ret
 
-    def draw_shade(self, x, y, w, color, stroke_width=None):
-        document = self.document
-        if stroke_width is None:
-            stroke_width = self.stroke_width
+    def draw_shade(self, x, y, w, cls=None):
+        if cls is None:
+            cls=list()
 
+        cls += ['shade']
+
+        document = self.document
         self._pad(self._xy(x - 0.5, y - 0.35), self._wh(1.0, 0.7))
 
         return [document.rect(
+            class_=self.c(cls),
             insert=self._xy(x - 0.5, y + 0.35),
-            size=self._wh(w, 0.1),
-            fill=color,
-            stroke=color,
-            stroke_width=self._th(stroke_width)
+            size=self._wh(w, 0.1)
         )]
 
-    def draw_shade_alt(self, x, y, w, color, stroke_width=None):
+    def draw_shade_alt(self, x, y, w, cls=None):
+        if cls is None:
+            cls=list()
+
+        cls += ['shade-alt']
+
         document = self.document
-        if stroke_width is None:
-            stroke_width = self.stroke_width
 
         self._pad(self._xy(x - 0.5, y - 0.35), self._wh(1.0, 0.7))
 
         return [document.rect(
+            class_=self.c(cls),
             insert=self._xy(x - 0.5, y - 0.35),
             size=self._wh(w, 0.7),
-            fill='none',
-            stroke=color,
-            stroke_width=self._th(stroke_width)
         )]
 
-    def draw_v_connection(self, x, y1, y2, color, stroke_width=None,
-                          padding=None):
+    def draw_v_connection(self, x, y1, y2, cls=None):
+        if cls is None:
+            cls=list()
+
+        cls += ['v-connection']
+
         document = self.document
-        if stroke_width is None:
-            stroke_width = self.stroke_width
-        if padding is None:
-            padding = self.horizontal_gap
+        stroke_width = self.stroke_width
+        padding = self.horizontal_gap
 
         self._pad(self._xy(x - 0.5 - stroke_width, y1),
                   self._wh(2 * stroke_width, y2 - y1))
 
         return [document.line(
+            class_=self.c(cls),
             start=self._xy(x - 0.5, y1 + padding),
-            end=self._xy(x - 0.5, y2 - padding),
-            stroke_width=self._th(stroke_width),
-            stroke=color,
+            end=self._xy(x - 0.5, y2 - padding)
         )]
 
-    def draw_v_hook(self, x1, y1, x2, y2, color, stroke_width=None,
-                    padding=None):
+    def draw_v_hook(self, x1, y1, x2, y2, cls=None):
+        if cls is None:
+            cls=list()
+
+        cls += ['v-hook']
+
         document = self.document
-        if stroke_width is None:
-            stroke_width = self.stroke_width
-        if padding is None:
-            padding = self.horizontal_gap
+        stroke_width = self.stroke_width
+        padding = self.horizontal_gap
 
         self._pad(self._xy(x1 - stroke_width, y1),
                   self._wh(2 * stroke_width + x2 - x1, y2 - y1))
 
         return [document.line(
+            class_=self.c(cls),
             start=self._xy(x1, y1 + padding + 0.3),
-            end=self._xy(x2, y2 - padding - 0.3),
-            stroke_width=self._th(stroke_width),
-            stroke=color,
+            end=self._xy(x2, y2 - padding - 0.3)
         )]
 
-    def draw_h_connection(self, x1, x2, y, color, stroke_width=None,
-                          padding=None):
+    def draw_h_connection(self, x1, x2, y, cls=None):
+        if cls is None:
+            cls=list()
+
+        cls += ['h-connection']
+
         document = self.document
-        if stroke_width is None:
-            stroke_width = self.stroke_width
-        if padding is None:
-            padding = self.horizontal_gap
+        stroke_width = self.stroke_width
+        padding = self.horizontal_gap
 
         self._pad(self._xy(x1, y - stroke_width),
                   self._wh(x2 - x1, 2 * stroke_width))
 
         return [document.line(
+            class_=self.c(cls),
             start=self._xy(x1 + 0.5 + padding, y),
-            end=self._xy(x2 - 0.5, y),
-            stroke_width=self._th(stroke_width),
-            stroke=color,
+            end=self._xy(x2 - 0.5, y)
         )]
 
-    @staticmethod
-    def _text_align_to_int(s):
-        if s == "start":
-            return 1
-        elif s == "end":
-            return -1
-        else:
-            return 0
+    def draw_label(self, x, y, w, text, cls=None):
+        if cls is None:
+            cls=list()
 
-    def draw_label(self, x, y, w, text, align="middle", color="black",
-                   shift=0.7):
+        cls += ['label']
+
         document = self.document
 
         self._pad(
-            self._xy(x + shift * self._text_align_to_int(align), y),
-            self._wh(w * self._text_align_to_int(align), 0.6)
+            self._xy(x, y), self._wh(w, 0.6)
         )
 
         return [document.text(
+            class_=self.c(cls),
             text=str(text),
-            insert=self._xb(x + shift * self._text_align_to_int(align), y),
-            text_anchor=align,
-            font_size=self._h(self.font_size),
-            alignment_baseline='middle',
-            font_family=self.font_family,
-            fill=color
+            insert=self._xb(x, y),
         )]
 
-    def draw_vertical_label(self, x, y, w, text, align="middle", color="black",
-                   shift=0.0):
+    def draw_vertical_label(self, x, y, w, text):
+        if cls is None:
+            cls=list()
+
+        cls += ['v-label']
+
         document = self.document
 
         self._pad(
-            self._xy(x + shift * self._text_align_to_int(align), y),
-            self._wh(w * self._text_align_to_int(align), 0.6)
+            self._xy(x, y),
+            self._wh(w, 0.6)
         )
 
         return [document.text(
             text=str(text),
             insert=(0,0),
-            text_anchor=align,
-            font_size=self._h(self.font_size),
-            alignment_baseline='middle',
-            font_family=self.font_family,
-            fill=color,
             transform='translate(' +
-                ' '.join(map(str, self._xb(x + shift * self._text_align_to_int(align), y))) +
+                ' '.join(map(str, self._xb(x, y))) +
                 ')rotate(270)'
         )]
 
@@ -418,17 +419,11 @@ class TreeRenderer(object):
         self.document = svgwrite.Drawing()
         self.document['width'] = str(self._width()) + 'px'
         self.document['height'] = str(self._height()) + 'px'
+        self.document['class'] = 'opstree'
 
         for obj in self.obj:
             parts = obj()
             map(self.document.add, parts)
-
-        # self.document.add(self.document.rect(
-        #            insert = (0, 0),
-        #            size = (self._width(), self._height()),
-        #            fill = 'none',
-        #            stroke = 'black'
-        #        ))
 
         return self.document
 
@@ -863,7 +858,8 @@ class PathTreeBuilder(object):
                 'bw': 'blocks',
                 'all': 'hidden',
                 'overlap_label': 'RepEx',
-                'suffix': 'x'
+                'suffix': 'x',
+                'label_position': 'bw'
             },
             'ui': {
                 'trajectory': True,
@@ -952,131 +948,33 @@ class PathTreeBuilder(object):
 
                 # Reversal
 
-                self.renderer.add(
-                    self.renderer.label(shift, t_count, 1, str(
-                        self.storage.idx(sample.trajectory)) + 'x', align='end',
-                                        color='black')
-                )
+                traj_str = str(self.storage.idx(sample.trajectory)) + view_options['suffix']
+
+                if view_options['label_position'] == 'bw':
+                    self.renderer.add(
+                        self.renderer.label(shift, t_count, 1, traj_str)
+                    )
+                elif view_options['label_position'] == 'fw':
+                    self.renderer.add(
+                        self.renderer.label(shift + len(traj), t_count, 1, traj_str)
+                    )
 
                 if view_options['overlap'] == 'line':
                     self.renderer.add(
-                        self.renderer.range(shift, t_count, len(sample), 'black', "ReplicaExchange" ))
+                        self.renderer.range(new_shift + index_bw, t_count, new_shift + index_fw - index_bw,
+                                            view_options['name'], cls=['overlap'] )
+                    )
 
-            elif mover_type is paths.PathReversalMover:
-                # Reversal
-                color = 'orange'
-                draw_okay = False
-                line_okay = True
+                if view_options['bw'] == 'line':
+                    self.renderer.add(
+                        self.renderer.range(new_shift + 0, t_count, new_shift + index_bw, cls=['fw'])
+                    )
 
-                self.renderer.add(
-                    self.renderer.label(shift, t_count, 1, str(
-                        self.storage.idx(sample.trajectory)) + 'r', align='end',
-                                        color='black')
-                )
+                if view_options['fw'] == 'line':
+                    self.renderer.add(
+                        self.renderer.range(new_shift + 0, t_count, new_shift + index_bw, cls=['bw'])
+                    )
 
-                self.renderer.add(
-                    self.renderer.range(shift, t_count, len(sample), 'orange', "PathReversal" ))
-
-            elif mover_type in [paths.BackwardExtendMover]:
-                color = 'green'
-                draw_okay = True
-                line_okay = True
-
-                self.renderer.add(
-                    self.renderer.range(shift, t_count, len(sample.parent), 'palegreen', "BackwardExtend" ))
-
-                shift = shift - len(sample) + len(sample.parent)
-
-                direction = -1
-
-                self.renderer.add(
-                    self.renderer.label(shift, t_count, 1, str(
-                        self.storage.idx(sample.trajectory)) + 'b', align='end',
-                                        color='black')
-                )
-
-            elif mover_type in [paths.ForwardExtendMover]:
-                color = 'red'
-                draw_okay = True
-                line_okay = True
-
-                self.renderer.add(
-                    self.renderer.range(shift, t_count, len(sample.parent), 'salmon', "ForwardExtend" ))
-
-                self.renderer.add(
-                    self.renderer.label(shift + len(sample), t_count, 1, str(
-                        self.storage.idx(sample.trajectory)) + 'f', align='start',
-                                        color='black')
-                )
-
-
-            elif mover_type in [paths.FirstSubtrajectorySelectMover, paths.FinalSubtrajectorySelectMover]:
-                color = 'lightblue'
-                draw_okay = True
-                line_okay = True
-
-                self.renderer.add(
-                    self.renderer.label(shift, t_count, 1, str(
-                        self.storage.idx(sample.trajectory)) + 'r', align='end',
-                                        color='black')
-                )
-
-                shift = shift + sample.parent.trajectory.index(sample[0])
-
-                self.renderer.add(
-                    self.renderer.range(shift, t_count, len(sample), 'gray', mover_type.__name__[:-11] )
-                )
-
-            elif mover_type in[paths.ForwardShootMover, paths.BackwardShootMover]:
-                # ShootingMove
-                old_traj = sample.details.initial_point.trajectory
-                old_index = sample.details.initial_point.index
-                old_conf = old_traj[old_index]
-                old_conf_idx = self.storage.idx(old_conf)
-
-                new_traj = sample.details.trial_point.trajectory
-                new_index = sample.details.trial_point.index
-                print len(new_traj), new_index, len(old_traj), old_index
-                new_conf = new_traj[new_index]
-
-                # print type(old_conf), self.storage.snapshots.index.get(old_conf, None)
-
-                if sample.trajectory is new_traj or self.rejected:
-
-                    if old_conf_idx not in p_x:
-                        shift = 0
-                    else:
-                        shift = p_x[old_conf_idx] - new_index
-
-                    font_color = "black"
-
-                    draw_okay = False
-
-                    if mover_type is paths.BackwardShootMover:
-                        color = "green"
-                        self.renderer.add(
-                            self.renderer.v_connection(shift + new_index + 1,
-                                                       p_y[old_conf_idx], t_count,
-                                                       color)
-                        )
-                        self.renderer.add(
-                            self.renderer.label(shift, t_count, 1, str(
-                                self.storage.idx(new_traj)) + 'b', align='end',
-                                                color=font_color)
-                        )
-                        draw_okay = True
-
-                    elif mover_type is paths.ForwardShootMover:
-                        color = "red"
-
-                        self.renderer.add(
-                            self.renderer.v_connection(shift + new_index,
-                                                       p_y[old_conf_idx], t_count,
-                                                       color)
-                        )
-                        draw_okay = True
-
-            if draw_okay:
                 for pos, snapshot in enumerate(sample.trajectory):
                     conf = snapshot
                     conf_idx = self.storage.idx(conf)
@@ -1088,67 +986,20 @@ class PathTreeBuilder(object):
                         pos_x = p_x[conf_idx]
                         pos_y = p_y[conf_idx]
 
-                        if self.op is not None:
-                            self.renderer.add(
-                                self.renderer.block(
-                                    pos_x,
-                                    pos_y,
-                                    color,
-                                    self.op(snapshot),
-                                    extend_left = pos > 0,
-                                    extend_right = pos < len(sample.trajectory) - 1
-                                ))
-                        else:
-                            self.renderer.add(
-                                self.renderer.block(pos_x, pos_y, color, ""))
-                    elif self.show_redundant:
-                        pos_y = t_count
-                        pos_x = shift + pos
-                        if self.op is not None:
-                            self.renderer.add(
-                                self.renderer.block(pos_x, pos_y, 'gray',
-                                                    self.op(snapshot)))
-                        else:
-                            self.renderer.add(
-                                self.renderer.block(pos_x, pos_y, 'gray', ""))
+                        txt = ''
 
-                        old_x = p_x[conf_idx]
-                        old_y = p_y[conf_idx]
+                        if self.op is not None:
+                            txt = self.op(snapshot)
+
                         self.renderer.add(
-                            self.renderer.block(old_x, old_y - 0.3, 'blue', ""))
-
-                if direction < 0:
-
-                    self.renderer.add(
-                        self.renderer.label(
-                            shift,
-                            t_count,
-                            1,
-                            str(self.storage.trajectories.idx(traj)) + 'b',
-                            align='end',
-                            color='black'
-                        )
-                    )
-
-                elif direction > 0:
-                    self.renderer.add(
-                        self.renderer.label(
-                            shift + len(traj) - 1,
-                            t_count,
-                            1,
-                            str(self.storage.trajectories.idx(traj)) + 'f',
-                            align='start',
-                            color='black'
-                        )
-                    )
-
-
-
-            # self.renderer.add(
-            #     self.renderer.label(shift - 2, t_count, 1, sample.replica
-            #         , align='end',
-            #                         color='black')
-            # )
+                            self.renderer.block(
+                                pos_x,
+                                pos_y,
+                                color,
+                                txt,
+                                extend_left = pos > 0,
+                                extend_right = pos < len(sample.trajectory) - 1
+                            ))
 
             if line_okay:
                 for pos, snapshot in enumerate(sample.trajectory):
