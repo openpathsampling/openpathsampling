@@ -180,7 +180,7 @@ class TISTransition(Transition):
             stateA, stateB, self.interfaces, orderparameter
         )
         for ensemble in self.ensembles:
-            ensemble.name = "I'face "+str(self.ensembles.index(ensemble))
+            ensemble.named("I'face "+str(self.ensembles.index(ensemble)))
 
 
     # parameters for different types of output
