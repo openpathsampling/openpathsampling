@@ -231,7 +231,8 @@ class StorableNamedObject(StorableObject):
         #        if hasattr(copied_object, 'idx'):
         #            copied_object.idx = dict()
 
-        self._name = name
+        if self._name == "":
+            self._name = name
 
         return self
 
