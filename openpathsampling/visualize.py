@@ -4,11 +4,10 @@ import os
 import openpathsampling as paths
 import networkx as nx
 
-from openpathsampling.storage.objproxy import LoaderProxy
-
 import json
 import matplotlib.pyplot as plt
 import StringIO
+
 from networkx.readwrite import json_graph
 
 # CSS attributes
@@ -25,7 +24,7 @@ class TreeRenderer(object):
         self.scale_y = 24
         self.scale_th = 24
         self.document = None
-        self.font_baseline_shift = +0.05
+        self.font_baseline_shift = +0.00
         self.stroke_width = 0.05
         self.horizontal_gap = 0.05
         self.min_x = 10000
@@ -43,7 +42,7 @@ class TreeRenderer(object):
         self.zoom = 1.0
 
     def __getattr__(self, item):
-        if item in ['block', 'shade', 'v_connection', 'h_connection', 'label',
+        if item in ['block', 'shade', 'v_connection', 'h_connection', 'label', 'rect',
                     'connector', 'v_hook', 'vertical_label', 'text', 'range', 'h_range']:
             # This will delay the execution of the draw commands until
             # we know where to draw
@@ -91,11 +90,11 @@ class TreeRenderer(object):
     def _xb(self, x, y):
         return self._x(x), self._y(y + self.font_baseline_shift)
 
-    def _pad(self, xy, wh):
-        self.min_x = min(self.min_x, xy[0], xy[0] + wh[0])
-        self.min_y = min(self.min_y, xy[1], xy[1] + wh[1])
-        self.max_x = max(self.max_x, xy[0] + wh[0], xy[0])
-        self.max_y = max(self.max_y, xy[1] + wh[1], xy[1])
+    def _pad(self, x, y, w, h):
+        self.min_x = min(self.min_x, x, x + w)
+        self.min_y = min(self.min_y, y, y + h)
+        self.max_x = max(self.max_x, x + w, x)
+        self.max_y = max(self.max_y, y + h, y)
 
     def draw_connector(self, x, y, text="", cls=None):
 
@@ -105,6 +104,7 @@ class TreeRenderer(object):
         cls += ['connector']
 
         return self.draw_block(x, y, text, False, False, True, True, cls=cls)
+
 
     def draw_block(self, x, y, text="",
                    extend_right=True, extend_left=True,
@@ -119,32 +119,30 @@ class TreeRenderer(object):
         document = self.document
         padding = self.horizontal_gap
 
-        self._pad(self._xy(x - 0.5, y - 0.3), self._wh(1.0 * w, 0.6))
+        self._pad(x - 0.5 - padding, y - 0.3, 1.0 * w + 2* padding, 0.6)
 
         ret = list()
 
         ret.append(document.rect(
-            class_= cls,
+            class_= self.c(cls),
             insert=self._xy(x - 0.5 + padding, y - 0.3),
             size=self._wh(1.0 * w - 2 * padding, 0.6),
         ))
         if extend_left:
             ret.append(document.circle(
-                class_= cls,
+                class_= self.c(cls),
                 center=self._xy(x - 0.5, y),
                 r=self._w(padding)
             ))
         if extend_right:
             ret.append(document.circle(
-                class_= cls,
+                class_= self.c(cls),
                 center=(self._xy(x + w - 0.5, y)),
                 r=self._w(padding)
             ))
 
-        classes =
-
         ret.append(document.text(
-            class_="block",
+            class_= self.c(cls),
             text=str(text)[:4],
             insert=self._xb(x + (w - 1.0) / 2.0, y)
         ))
@@ -155,7 +153,7 @@ class TreeRenderer(object):
     def c(cls):
         return ' '.join(cls)
 
-    def draw_range(self, x, y, w=1.0, color="blue", text="", align="middle",
+    def draw_range(self, x, y, w=1.0, text="",
                    extend_right=True, extend_left=True, cls=None):
 
         if cls is None:
@@ -163,10 +161,13 @@ class TreeRenderer(object):
 
         cls += ['range']
 
+        if w == 0:
+            return []
+
         document = self.document
         padding = self.horizontal_gap
 
-        self._pad(self._xy(x - 0.5, y - 0.3), self._wh(1.0 * w, 0.6))
+        self._pad(x - 0.5, y - 0.3, 1.0 * w, 0.6)
 
         ret = list()
 
@@ -219,7 +220,7 @@ class TreeRenderer(object):
         document = self.document
         padding = self.horizontal_gap
 
-        self._pad(self._xy(x - 0.5, y - 0.3), self._wh(1.0 * w, 0.6))
+        self._pad(x - 0.5, y - 0.3, 1.0 * w, 0.6)
 
         ret = list()
 
@@ -269,7 +270,7 @@ class TreeRenderer(object):
         cls += ['text']
 
         document = self.document
-        self._pad(self._xy(x - 0.5, y), self._wh(1.0, 5.0))
+        self._pad(x - 0.5, y, 1.0, 5.0)
 
         ret = list()
 
@@ -289,7 +290,7 @@ class TreeRenderer(object):
         cls += ['shade']
 
         document = self.document
-        self._pad(self._xy(x - 0.5, y - 0.35), self._wh(1.0, 0.7))
+        self._pad(x - 0.5, y - 0.35, 1.0, 0.7)
 
         return [document.rect(
             class_=self.c(cls),
@@ -305,7 +306,7 @@ class TreeRenderer(object):
 
         document = self.document
 
-        self._pad(self._xy(x - 0.5, y - 0.35), self._wh(1.0, 0.7))
+        self._pad(x - 0.5, y - 0.35, 1.0, 0.7)
 
         return [document.rect(
             class_=self.c(cls),
@@ -323,8 +324,8 @@ class TreeRenderer(object):
         stroke_width = self.stroke_width
         padding = self.horizontal_gap
 
-        self._pad(self._xy(x - 0.5 - stroke_width, y1),
-                  self._wh(2 * stroke_width, y2 - y1))
+        self._pad(x - 0.5 - stroke_width, y1,
+                  2 * stroke_width, y2 - y1)
 
         return [document.line(
             class_=self.c(cls),
@@ -342,8 +343,8 @@ class TreeRenderer(object):
         stroke_width = self.stroke_width
         padding = self.horizontal_gap
 
-        self._pad(self._xy(x1 - stroke_width, y1),
-                  self._wh(2 * stroke_width + x2 - x1, y2 - y1))
+        self._pad(x1 - stroke_width, y1,
+                  2 * stroke_width + x2 - x1, y2 - y1)
 
         return [document.line(
             class_=self.c(cls),
@@ -361,8 +362,8 @@ class TreeRenderer(object):
         stroke_width = self.stroke_width
         padding = self.horizontal_gap
 
-        self._pad(self._xy(x1, y - stroke_width),
-                  self._wh(x2 - x1, 2 * stroke_width))
+        self._pad(x1, y - stroke_width,
+                  x2 - x1, 2 * stroke_width)
 
         return [document.line(
             class_=self.c(cls),
@@ -379,7 +380,7 @@ class TreeRenderer(object):
         document = self.document
 
         self._pad(
-            self._xy(x, y), self._wh(w, 0.6)
+            x-w, y-0.4, w, 0.8
         )
 
         return [document.text(
@@ -388,7 +389,7 @@ class TreeRenderer(object):
             insert=self._xb(x, y),
         )]
 
-    def draw_vertical_label(self, x, y, w, text):
+    def draw_vertical_label(self, x, y, w, text, cls=None):
         if cls is None:
             cls=list()
 
@@ -397,8 +398,8 @@ class TreeRenderer(object):
         document = self.document
 
         self._pad(
-            self._xy(x, y),
-            self._wh(w, 0.6)
+            x, y,
+            w, 0.6
         )
 
         return [document.text(
@@ -409,23 +410,44 @@ class TreeRenderer(object):
                 ')rotate(270)'
         )]
 
+    def draw_rect(self, x, y, w, h, cls=None):
+        if cls is None:
+            cls=list()
 
+        return [self.document.rect(
+            class_=self.c(cls),
+            insert=self._xy(x, y),
+            size=self._wh(w, h),
+        )]
 
     def to_document(self):
 
         self.start_x = self.margin
         self.start_y = self.margin
 
-        self.document = svgwrite.Drawing()
-        self.document['width'] = str(self._width()) + 'px'
-        self.document['height'] = str(self._height()) + 'px'
-        self.document['class'] = 'opstree'
+        doc = svgwrite.Drawing()
+        self.document = doc
+
+        doc.defs.add(doc.style(
+            self.style
+        ))
+#        doc['width'] = str(self._width()) + 'px'
+#        doc['height'] = str(self._height()) + 'px'
+#        doc['width'] = '100%'
+#        doc['height'] = '100%'
+
+        doc['class'] = 'opstree'
 
         for obj in self.obj:
             parts = obj()
-            map(self.document.add, parts)
+            map(doc.add, parts)
 
-        return self.document
+        # adjust viewbox to fit full image
+        doc['viewBox'] = '%.2f %.2f %.2f %.2f' % (
+            self._xy(self.min_x, self.min_y) + self._wh(self.max_x - self.min_x, self.max_y - self.min_y)
+        )
+
+        return doc
 
     def to_svg(self):
         doc = self.to_document()
@@ -834,6 +856,69 @@ class PathTreeBuilder(object):
             states = []
         self.states = states
 
+        self.renderer.style = '''
+            .opstree text {
+                alignment-baseline: central;
+                font-size: 10px;
+                text-anchor: middle;
+            }
+            .opstree text.bw.label {
+                text-anchor: end;
+            }
+            .opstree text.fw.label {
+                text-anchor: start;
+            }
+            .opstree text.block {
+                fill: white !important;
+                stroke: none !important;
+            }
+            .opstree .repex {
+                fill: blue;
+            }
+            .opstree .new {
+                fill: black;
+            }
+            .opstree .hop {
+                fill: blue;
+            }
+            .opstree .shooting.bw {
+                fill: green;
+                stroke: green;
+            }
+            .opstree .shooting.fw {
+                fill: red;
+                stroke: red;
+            }
+            .opstree .reversal {
+                fill: yellow;
+            }
+            .opstree line {
+                stroke-width: 2px;
+            }
+            .opstree .label {
+                fill: black !important;
+            }
+            .opstree .connection {
+                stroke-dasharray: 3 3;
+            }
+            .opstree .rejected {
+                opacity: 0.3;
+            }
+            .opstree text {
+                font-family: Impact;
+            }
+            .opstree .orange {
+                fill: orange;
+            }
+            .tableline {
+                fill: gray;
+                opacity: 0.0;
+            }
+            .tableline:hover {
+                opacity: 0.2;
+            }
+            '''
+
     @staticmethod
     def construct_heritage(sample):
         list_of_samples = []
@@ -859,7 +944,63 @@ class PathTreeBuilder(object):
                 'all': 'hidden',
                 'overlap_label': 'RepEx',
                 'suffix': 'x',
-                'label_position': 'bw'
+                'label_position': 'left',
+                'cls' : ['repex']
+            },
+            paths.BackwardShootMover: {
+                'name': 'Shooting',
+                'overlap': 'none',
+                'fw': 'blocks',
+                'bw': 'blocks',
+                'all': 'hidden',
+                'overlap_label': '',
+                'suffix': 'b',
+                'label_position': 'left',
+                'cls' : ['shooting']
+            },
+            paths.ForwardShootMover: {
+                'name': 'Shooting',
+                'overlap': 'none',
+                'fw': 'blocks',
+                'bw': 'blocks',
+                'all': 'hidden',
+                'overlap_label': '',
+                'suffix': 'f',
+                'label_position': 'left',
+                'cls' : ['shooting']
+            },
+            paths.EnsembleHopMover: {
+                'name': 'hop',
+                'overlap': 'line',
+                'fw': 'blocks',
+                'bw': 'blocks',
+                'all': 'hidden',
+                'overlap_label': 'EnsembleHop',
+                'suffix': 'h',
+                'label_position': 'left',
+                'cls' : ['hop']
+            },
+            'new': {
+                'name': 'new',
+                'overlap': 'line',
+                'fw': 'blocks',
+                'bw': 'blocks',
+                'all': 'blocks',
+                'suffix': '+',
+                'overlap_label': '',
+                'label_position': 'left',
+                'cls' : ['unknown']
+            },
+            'unknown': {
+                'name': '???',
+                'overlap': 'line',
+                'fw': 'blocks',
+                'bw': 'blocks',
+                'all': 'hidden',
+                'overlap_label': 'RepEx',
+                'suffix': '?',
+                'label_position': 'left',
+                'cls' : ['repex']
             },
             'ui': {
                 'trajectory': True,
@@ -877,6 +1018,17 @@ class PathTreeBuilder(object):
             # TODO: Raise an exception or just ignore and don't output anything?
             return
 
+        prev = samples[0].trajectory
+        old_tc = 1
+        move_list = {}
+        step_list = {}
+        for step in self.storage.steps:
+            for ch in step.change:
+                if ch.samples is not None:
+                    for trial in ch.samples:
+                        step_list[trial] = step
+                        move_list[trial] = ch
+
         p_x = dict()
         p_y = dict()
 
@@ -890,10 +1042,9 @@ class PathTreeBuilder(object):
             draw_okay = False
             line_okay = False
             direction = 0
+            cls = []
             mover_type = type(sample.mover)
             traj = sample.trajectory
-
-            
 
             # get connection to existing
             pos_first = p_x.get(traj[0])
@@ -912,11 +1063,12 @@ class PathTreeBuilder(object):
                     shift_bw = connect_bw - snap_idx
                     break
 
+            new_sample = False
             if index_bw is None:
                 # no overlap, so skip
-                first = False
-                color = 'black'
-                draw_okay = True
+                new_sample = True
+                index_bw = 0
+                index_fw = len(traj) - 1
                 shift = 0
             else:
                 for snap_idx in range(len(traj) - 1, -1, -1):
@@ -937,76 +1089,110 @@ class PathTreeBuilder(object):
                 # [0, ..., index_fw -1] + [index_fw, ..., index_bw] + [index_bw + 1, ..., len(traj) - 1]
                 # this can be checked by index_bw > index_fw or shift_fw != shift_bw
 
-                new_shift = (shift_bw + shift_fw) / 2
+                shift = (shift_bw + shift_fw) / 2
 
                 if index_bw > index_fw:
                     index_bw, index_fw = index_fw, index_bw
                     overlap_reversed = True
 
-            if mover_type in options:
+#            print sample.mover.__class__.__name__, 0, index_bw, index_fw, len(traj)-1
+
+            if new_sample:
+                view_options = options['new']
+            elif mover_type in options:
                 view_options = options[mover_type]
+            else:
+                view_options = options['unknown']
 
-                # Reversal
+#            print shift, index_bw, index_fw
 
-                traj_str = str(self.storage.idx(sample.trajectory)) + view_options['suffix']
+            traj_str = str(self.storage.idx(sample.trajectory)) + view_options['suffix']
 
-                if view_options['label_position'] == 'bw':
-                    self.renderer.add(
-                        self.renderer.label(shift, t_count, 1, traj_str)
-                    )
-                elif view_options['label_position'] == 'fw':
-                    self.renderer.add(
-                        self.renderer.label(shift + len(traj), t_count, 1, traj_str)
-                    )
+            cls = [] + view_options['cls']
 
-                if view_options['overlap'] == 'line':
-                    self.renderer.add(
-                        self.renderer.range(new_shift + index_bw, t_count, new_shift + index_fw - index_bw,
-                                            view_options['name'], cls=['overlap'] )
-                    )
+            if sample in move_list:
+                move = step_list[sample].change
+                accepted = move.accepted
+                if not accepted:
+                    cls += ['rejected']
 
-                if view_options['bw'] == 'line':
-                    self.renderer.add(
-                        self.renderer.range(new_shift + 0, t_count, new_shift + index_bw, cls=['fw'])
-                    )
+            if view_options['label_position'] == 'left':
+                self.renderer.add(
+                    self.renderer.label(shift - 1, t_count, 1, traj_str, cls=cls + ['left'])
+                )
+            elif view_options['label_position'] == 'right':
+                self.renderer.add(
+                    self.renderer.label(shift + len(traj), t_count, 1, traj_str, cls=cls + ['right'])
+                )
 
-                if view_options['fw'] == 'line':
-                    self.renderer.add(
-                        self.renderer.range(new_shift + 0, t_count, new_shift + index_bw, cls=['bw'])
-                    )
+            if index_bw > 0:
+                self.renderer.add(
+                    self.renderer.v_connection(shift + index_bw, p_y[traj[index_bw]], t_count, cls=cls + ['bw', 'connection'])
+                )
+            if index_fw < len(traj) - 1:
+                self.renderer.add(
+                    self.renderer.v_connection(shift + index_fw + 1, p_y[traj[index_fw]], t_count, cls=cls + ['fw', 'connection'])
+                )
 
-                for pos, snapshot in enumerate(sample.trajectory):
-                    conf = snapshot
-                    conf_idx = self.storage.idx(conf)
-                    if not conf_idx in p_y:
+            if view_options['overlap'] == 'line':
+                self.renderer.add(
+                    self.renderer.range(shift + index_bw, t_count, index_fw - index_bw + 1,
+                                        view_options['overlap_label'], cls=cls + ['overlap'] )
+                )
+                for pos, snapshot in enumerate(sample.trajectory[index_bw:index_fw + 1]):
+                    if snapshot not in p_x:
+                        p_x[snapshot] = shift + pos + index_bw
+                        p_y[snapshot] = t_count
 
-                        p_x[conf_idx] = shift + pos
-                        p_y[conf_idx] = t_count
+            if view_options['bw'] == 'line':
+                self.renderer.add(
+                    self.renderer.range(shift + 0, t_count, index_bw, cls=cls + ['bw'])
+                )
+                for pos, snapshot in enumerate(sample.trajectory[0:index_bw]):
+                    p_x[snapshot] = shift + pos
+                    p_y[snapshot] = t_count
 
-                        pos_x = p_x[conf_idx]
-                        pos_y = p_y[conf_idx]
+            if view_options['fw'] == 'line':
+                self.renderer.add(
+                    self.renderer.range(shift + index_fw + 1, t_count, len(traj) - (index_fw + 1), cls=cls + ['fw'])
+                )
+                for pos, snapshot in enumerate(sample.trajectory[index_fw+1:]):
+                    p_x[snapshot] = shift + pos + index_fw + 1
+                    p_y[snapshot] = t_count
 
-                        txt = ''
+            for pos, snapshot in enumerate(sample.trajectory):
+                conf_idx = snapshot
+                if not conf_idx in p_y or True:
+                    pos_x = shift + pos
+                    pos_y = t_count
 
-                        if self.op is not None:
-                            txt = self.op(snapshot)
+                    txt = ''
 
+                    if self.op is not None:
+                        txt = self.op(snapshot)
+
+                    b_cls = []
+
+                    if view_options['bw'] == 'blocks' and pos < index_bw:
+                        b_cls += ['bw']
+                    elif view_options['fw'] == 'blocks' and pos > index_fw:
+                        b_cls += ['fw']
+                    elif view_options['overlap'] == 'blocks':
+                        b_cls += ['overlap']
+
+                    if len(b_cls) > 0:
                         self.renderer.add(
                             self.renderer.block(
                                 pos_x,
                                 pos_y,
-                                color,
                                 txt,
                                 extend_left = pos > 0,
-                                extend_right = pos < len(sample.trajectory) - 1
+                                extend_right = pos < len(sample.trajectory) - 1,
+                                cls = cls + b_cls
                             ))
 
-            if line_okay:
-                for pos, snapshot in enumerate(sample.trajectory):
-                    conf = snapshot
-                    conf_idx = self.storage.idx(conf)
-                    p_x[conf_idx] = shift + pos
-                    p_y[conf_idx] = t_count
+                        p_x[conf_idx] = pos_x
+                        p_y[conf_idx] = pos_y
 
             t_count += 1
 
@@ -1017,14 +1203,14 @@ class PathTreeBuilder(object):
         min_y, max_y = self._get_min_max(self.p_y)
 
         self.renderer.shift_x = min_x - 8.5
-        self.renderer.shift_y = 0
+        self.renderer.shift_y = 2
         self.renderer.height = max_y - min_y + 5.0
         self.renderer.width = max_x - min_x + 10.0
 
         matrix = self._to_matrix()
 
         if hasattr(self, 'states') and len(self.states) > 0:
-            for color, op in self.states:
+            for color, op in self.states.iteritems():
                 xp = None
                 for y in range(0, max_y - min_y + 1):
                     left = None
@@ -1038,66 +1224,64 @@ class PathTreeBuilder(object):
                         #                             'black')
                         #     )
 
-
-                        if matrix[y][x] is not None\
-                            and bool(op(LoaderProxy(self.storage.snapshots, matrix[y][x]))):
-                                if left is None:
-                                    left = xp
+                        if matrix[y][x] is not None and bool(op(matrix[y][x])):
+                            if left is None:
+                                left = xp
                         else:
                             if left is not None:
                                 self.renderer.pre(
-                                    self.renderer.shade(left, yp, xp - left,
-                                                        color)
+                                    self.renderer.shade(left, yp, xp - left, cls=[color])
                                 )
                                 left = None
 
                     if left is not None:
                         self.renderer.pre(
-                            self.renderer.shade(left, yp, xp - left + 1, color)
+                            self.renderer.shade(left, yp, xp - left + 1, cls=[color])
                         )
 
-        prev = samples[0].trajectory
-        old_tc = 1
-        trial_list = {}
-        for step in self.storage.steps:
-            for ch in step.change:
-                if ch.samples is not None:
-                    for trial in ch.samples:
-                        trial_list[trial] = step.mccycle
+        self.renderer.add(
+            self.renderer.label(self.renderer.shift_x + 5.0, 0, 1, 'smp')
+        )
+
+        self.renderer.add(
+            self.renderer.label(self.renderer.shift_x + 4.0, 0, 1, 'cyc')
+        )
+
+        self.renderer.add(
+            self.renderer.label(self.renderer.shift_x + 6.5, 0, 1, 'cor')
+        )
 
         for tc, s in enumerate(samples):
+            self.renderer.add(
+                self.renderer.rect(-10.0 + min_x, 1 + tc - 0.45, max_x - min_x + 11, 1, cls=['tableline'])
+            )
             if tc > 0 and not paths.Trajectory.is_correlated(s.trajectory, prev):
                 self.renderer.add(
-                    self.renderer.h_range(self.renderer.shift_x + 5.5, old_tc - 0.1, 1 + tc - old_tc + 0.2, 'black', "" ))
-
+                    self.renderer.h_range(self.renderer.shift_x + 6.5, old_tc - 0.1, 1 + tc - old_tc + 0.2, 'black', "" ))
 
                 old_tc = 1 + tc
-
                 prev = s.trajectory
 
             self.renderer.add(
                 self.renderer.label(self.renderer.shift_x + 5.0, 1 + tc, 1, str(
-                    self.storage.idx(s)) , align='end',
-                                    color=font_color)
+                    self.storage.idx(s)))
             )
 
-            if s in trial_list:
-                txt = str(trial_list[s])
+            if s in step_list:
+                txt = str(step_list[s].mccycle)
             else:
                 txt = '---'
 
             self.renderer.add(
-                self.renderer.label(self.renderer.shift_x + 2.0, 1 + tc, 1, str(
-                    txt) , align='end',
-                                    color=font_color)
+                self.renderer.label(self.renderer.shift_x + 4.0, 1 + tc, 1, str(
+                    txt))
             )
 
-        self.renderer.add(
-            self.renderer.h_range(self.renderer.shift_x + 2.0, 0.9, len(samples) + 0.2, 'black', "" ))
+        # self.renderer.add(
+        #     self.renderer.h_range(self.renderer.shift_x + 2.0, 0.9, len(samples) + 0.2, 'black', "" ))
 
         self.renderer.add(
-            self.renderer.h_range(self.renderer.shift_x + 5.5, old_tc - 0.1, 1 + len(samples) - old_tc + 0.2, 'black', "", extend_bottom=False))
-
+            self.renderer.h_range(self.renderer.shift_x + 6.5, old_tc - 0.1, 1 + len(samples) - old_tc + 0.2, 'black', "", extend_bottom=False))
 
     def _get_min_max(self, d):
         return min(d.values()), max(d.values())
