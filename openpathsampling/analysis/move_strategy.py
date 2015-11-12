@@ -510,7 +510,7 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
             movers=mover_weights.keys(),
             weights=mover_weights.values()
         )
-        chooser.name = choosername
+        chooser.named(choosername)
         return chooser
 
     def default_weights(self, scheme):
@@ -724,7 +724,7 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         (root_weights, choosers) = zip(*root_couples)
         root_chooser = paths.RandomChoiceMover(movers=choosers,
                                                weights=root_weights)
-        root_chooser.name = "RootMover"
+        root_chooser.named("RootMover")
         scheme.root_mover = root_chooser
         return root_chooser
 
@@ -928,7 +928,7 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
         (root_weights, choosers) = zip(*root_couples)
         root_chooser = paths.RandomChoiceMover(movers=choosers,
                                                weights=root_weights)
-        root_chooser.name = "RootMover"
+        root_chooser.named("RootMover")
         scheme.root_mover = root_chooser
         return root_chooser
 
