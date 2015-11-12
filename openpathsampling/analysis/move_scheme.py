@@ -571,3 +571,54 @@ class DefaultScheme(MoveScheme):
         #ms_outer_shoot_w = float(len(msouters)) / n_ensembles
         #global_strategy.group_weights['ms_outer_shooting'] = ms_outer_shoot_w
 
+class LockedMoveScheme(MoveScheme):
+    def __init__(self, root_mover, network=None, root_accepted=None):
+        super(LockedMoveScheme, self).__init__(network)
+        self.root_mover = root_mover
+
+    def append(self, strategies, levels=None):
+        raise TypeError("Locked schemes cannot append strategies")
+
+    def build_move_decision_tree(self):
+        # override with no-op
+        pass
+
+    def move_decision_tree(self, rebuild=False):
+        return self.root_mover
+    
+    def apply_strategy(self, strategy):
+        raise TypeError("Locked schemes cannot apply strategies")
+
+    @property
+    def choice_probability(self):
+        try:
+            return self._choice_probability
+        except AttributeError as e:
+            gap = "\n                "
+            failmsg = (gap + "'choice_probability' must be manually set in " +
+                       "'LockedMoveScheme'.")
+            e.args = tuple([e.args[0] + failmsg] + list(e.args[1:]))
+            raise
+
+    @choice_probability.setter
+    def choice_probability(self, vals):
+        if vals != {}:
+            # default does not set the internal version here
+            self._choice_probability = vals
+
+    @property
+    def movers(self):
+        try:
+            return self._movers
+        except AttributeError as e:
+            gap = "\n                "
+            failmsg = (gap + "'movers' must be manually set in" + 
+                       "'LockedMoveScheme'.")
+            e.args = tuple([e.args[0] + failmsg] + list(e.args[1:]))
+            raise
+
+    @movers.setter
+    def movers(self, vals):
+        if vals != {}:
+            # default does not set the internal version here
+            self._movers = vals
