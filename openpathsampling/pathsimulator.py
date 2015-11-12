@@ -103,7 +103,6 @@ class PathSimulator(StorableNamedObject):
 
         if self.storage is not None:
             self.storage.steps.save(mcstep)
-            self.storage.save(self.move_scheme)
             self.storage.sync_all()
 
 
@@ -483,6 +482,8 @@ class PathSampling(PathSimulator):
             cvs = list(self.storage.cvs)
 
         if self.step == 0:
+            if self.storage is not None:
+                self.storage.save(self.move_scheme)
             self.save_initial()
 
         for nn in range(nsteps):
