@@ -137,7 +137,8 @@ class TISTransition(Transition):
         self.stateA = stateA
         self.stateB = stateB
         self.interfaces = interfaces
-        self.name = name
+        if name is not None:
+            self.name = name
 
         # If we reload from a storage file, we want to use the
         # ensembles from the file, not the automatically generated
@@ -213,7 +214,7 @@ class TISTransition(Transition):
             stateA, stateB, self.interfaces, orderparameter
         )
         for ensemble in self.ensembles:
-            ensemble.name = "I'face "+str(self.ensembles.index(ensemble))
+            ensemble.named("I'face "+str(self.ensembles.index(ensemble)))
 
 
     # parameters for different types of output

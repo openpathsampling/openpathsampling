@@ -246,19 +246,19 @@ class MSTISNetwork(TISNetwork):
 
         """
         states, interfaces, names, orderparams = zip(*trans_info)
-        self.states = states
-        all_states = paths.volume.join_volumes(states)
-        all_states.name = "all states"
+        # NAMING STATES (future: give default names)
+        all_states = paths.volume.join_volumes(states).named("all states")
+        for (state, name) in zip(states, names):
+            state.named(name)
+
+        # BUILDING ENSEMBLES
         outer_ensembles = []
+        self.states = states
         for (state, ifaces, name, op) in trans_info:
             state_index = states.index(state)
-            if state.name != name:
-                state.name = name
             other_states = states[:state_index]+states[state_index+1:]
             union_others = paths.volume.join_volumes(other_states)
-            # don't rename if custom name is set (probably 2-state)
-            if union_others._name == "":
-                union_others.name = "all states except " + str(name)
+            union_others.named("all states except " + str(name))
 
             this_trans = paths.TISTransition(
                 stateA=state, 
@@ -283,7 +283,7 @@ class MSTISNetwork(TISNetwork):
                 final_states=all_states,
                 interface=ifaces[-1]
             )
-            outer_ensemble.name = "outer " + str(state)
+            outer_ensemble.named("outer " + str(state))
             outer_ensembles.append(outer_ensemble)
 
         ms_outer = paths.ensemble.join_ensembles(outer_ensembles)
@@ -460,7 +460,7 @@ class MISTISNetwork(TISNetwork):
                     interfaces=transition.interfaces[:-1],
                     orderparameter=transition.orderparameter
                 )
-            sample_trans.name = "Sampling " + str(stateA) + "->" + str(stateB)
+            sample_trans.named("Sampling " + str(stateA) + "->" + str(stateB))
             self.transition_to_sampling[transition] = sample_trans
         self.x_sampling_transitions = self.transition_to_sampling.values()
 
@@ -509,7 +509,7 @@ class MISTISNetwork(TISNetwork):
                 orderparameter=sample_trans.orderparameter
             )
             analysis_trans.ensembles = sample_trans.ensembles
-            analysis_trans.name = trans.name
+            analysis_trans.named(trans.name)
             #analysis_trans.special_ensembles = sample_trans.special_ensembles
             self.transitions[(stateA, stateB)] = analysis_trans
 
