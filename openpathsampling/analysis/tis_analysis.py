@@ -137,7 +137,8 @@ class TISTransition(Transition):
         self.stateA = stateA
         self.stateB = stateB
         self.interfaces = interfaces
-        self.name = name
+        if name is not None:
+            self.name = name
 
         # If we reload from a storage file, we want to use the
         # ensembles from the file, not the automatically generated
