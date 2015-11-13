@@ -118,7 +118,6 @@ class PathMover(TreeMixin, StorableNamedObject):
     def is_canonical(self):
         return self._is_canonical
 
-
     @property
     def default_name(self):
         return self.__class__.__name__[:-5]

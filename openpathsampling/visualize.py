@@ -24,9 +24,8 @@ class TreeRenderer(object):
         self.scale_y = 24
         self.scale_th = 24
         self.document = None
-        self.font_baseline_shift = +0.00
-        self.stroke_width = 0.05
         self.horizontal_gap = 0.05
+        self.stroke_width = 0.1
         self.min_x = 10000
         self.min_y = 10000
         self.max_x = -10000
@@ -49,6 +48,12 @@ class TreeRenderer(object):
             return self._delay(object.__getattribute__(self, 'draw_' + item))
         else:
             return object.__getattribute__(self, item)
+
+    def reset_pad(self):
+        self.min_x = 10000
+        self.min_y = 10000
+        self.max_x = -10000
+        self.max_y = -10000
 
     @staticmethod
     def _delay(func):
@@ -88,7 +93,7 @@ class TreeRenderer(object):
         return self._w(w), self._h(h)
 
     def _xb(self, x, y):
-        return self._x(x), self._y(y + self.font_baseline_shift)
+        return self._x(x), self._y(y)
 
     def _pad(self, x, y, w, h):
         self.min_x = min(self.min_x, x, x + w)
@@ -890,7 +895,7 @@ class PathTreeBuilder(object):
                 stroke: red;
             }
             .opstree .reversal {
-                fill: yellow;
+                fill: gold;
             }
             .opstree line {
                 stroke-width: 2px;
@@ -919,6 +924,103 @@ class PathTreeBuilder(object):
             }
             '''
 
+        self.options = {
+            'mover': {
+                paths.ReplicaExchangeMover: {
+                    'name': 'RepEx',
+                    'overlap': 'line',
+                    'fw': 'blocks',
+                    'bw': 'blocks',
+                    'all': 'hidden',
+                    'overlap_label': 'RepEx',
+                    'suffix': 'x',
+                    'label_position': 'left',
+                    'cls' : ['repex']
+                },
+                paths.BackwardShootMover: {
+                    'name': 'Shooting',
+                    'overlap': 'none',
+                    'fw': 'blocks',
+                    'bw': 'blocks',
+                    'all': 'hidden',
+                    'overlap_label': '',
+                    'suffix': 'b',
+                    'label_position': 'left',
+                    'cls' : ['shooting']
+                },
+                paths.ForwardShootMover: {
+                    'name': 'Shooting',
+                    'overlap': 'none',
+                    'fw': 'blocks',
+                    'bw': 'blocks',
+                    'all': 'hidden',
+                    'overlap_label': '',
+                    'suffix': 'f',
+                    'label_position': 'left',
+                    'cls' : ['shooting']
+                },
+                paths.EnsembleHopMover: {
+                    'name': 'hop',
+                    'overlap': 'line',
+                    'fw': 'blocks',
+                    'bw': 'blocks',
+                    'all': 'hidden',
+                    'overlap_label': 'EnsembleHop',
+                    'suffix': 'h',
+                    'label_position': 'left',
+                    'cls' : ['hop']
+                },
+                paths.PathReversalMover: {
+                    'name': 'hop',
+                    'overlap': 'line',
+                    'fw': '',
+                    'bw': '',
+                    'all': 'hidden',
+                    'overlap_label': 'Reversal',
+                    'suffix': 'h',
+                    'label_position': 'left',
+                    'cls' : ['reversal']
+                },
+                'new': {
+                    'name': 'new',
+                    'overlap': 'line',
+                    'fw': 'blocks',
+                    'bw': 'blocks',
+                    'all': 'blocks',
+                    'suffix': '+',
+                    'overlap_label': '',
+                    'label_position': 'left',
+                    'cls' : ['unknown']
+                },
+                'unknown': {
+                    'name': '???',
+                    'overlap': 'line',
+                    'fw': 'blocks',
+                    'bw': 'blocks',
+                    'all': 'hidden',
+                    'overlap_label': 'RepEx',
+                    'suffix': '?',
+                    'label_position': 'left',
+                    'cls' : ['repex']
+                }
+            },
+            'ui': {
+                'trajectory': True,
+                'step': True,
+                'correlation': True,
+                'sample': True
+            },
+            'settings': {
+                'register_rejected': False,
+                'time_symmetric': True,
+            },
+            'geometry': {
+                'scale_x' : 12,
+                'scale_y' : 24,
+                'horizontal_gap' : 0.05
+            }
+        }
+
     @staticmethod
     def construct_heritage(sample):
         list_of_samples = []
@@ -935,83 +1037,10 @@ class PathTreeBuilder(object):
 
     def from_samples(self, samples, clear=True):
 
-        options = {
-            paths.ReplicaExchangeMover: {
-                'name': 'RepEx',
-                'overlap': 'line',
-                'fw': 'blocks',
-                'bw': 'blocks',
-                'all': 'hidden',
-                'overlap_label': 'RepEx',
-                'suffix': 'x',
-                'label_position': 'left',
-                'cls' : ['repex']
-            },
-            paths.BackwardShootMover: {
-                'name': 'Shooting',
-                'overlap': 'none',
-                'fw': 'blocks',
-                'bw': 'blocks',
-                'all': 'hidden',
-                'overlap_label': '',
-                'suffix': 'b',
-                'label_position': 'left',
-                'cls' : ['shooting']
-            },
-            paths.ForwardShootMover: {
-                'name': 'Shooting',
-                'overlap': 'none',
-                'fw': 'blocks',
-                'bw': 'blocks',
-                'all': 'hidden',
-                'overlap_label': '',
-                'suffix': 'f',
-                'label_position': 'left',
-                'cls' : ['shooting']
-            },
-            paths.EnsembleHopMover: {
-                'name': 'hop',
-                'overlap': 'line',
-                'fw': 'blocks',
-                'bw': 'blocks',
-                'all': 'hidden',
-                'overlap_label': 'EnsembleHop',
-                'suffix': 'h',
-                'label_position': 'left',
-                'cls' : ['hop']
-            },
-            'new': {
-                'name': 'new',
-                'overlap': 'line',
-                'fw': 'blocks',
-                'bw': 'blocks',
-                'all': 'blocks',
-                'suffix': '+',
-                'overlap_label': '',
-                'label_position': 'left',
-                'cls' : ['unknown']
-            },
-            'unknown': {
-                'name': '???',
-                'overlap': 'line',
-                'fw': 'blocks',
-                'bw': 'blocks',
-                'all': 'hidden',
-                'overlap_label': 'RepEx',
-                'suffix': '?',
-                'label_position': 'left',
-                'cls' : ['repex']
-            },
-            'ui': {
-                'trajectory': True,
-                'step': True,
-                'correlation': True,
-                'sample': True
-            },
-            'settings': {
-                'register_rejected': False
-            }
-        }
+        self.renderer.scale_x = self.options['geometry']['scale_x']
+        self.renderer.scale_y = self.options['geometry']['scale_y']
+        self.renderer.horizontal_gap = self.options['geometry']['horizontal_gap']
+
 
         if len(samples) == 0:
             # no samples, nothing to do
@@ -1038,43 +1067,41 @@ class PathTreeBuilder(object):
         t_count = 1
         shift = 0
 
+        options = self.options
+
+        x_text_stretch = options['geometry']['scale_y'] / options['geometry']['scale_x']
+
+        assume_reversed_as_same = options['settings']['time_symmetric']
+
         for sample in samples:
-            draw_okay = False
-            line_okay = False
-            direction = 0
-            cls = []
             mover_type = type(sample.mover)
             traj = sample.trajectory
 
             # get connection to existing
-            pos_first = p_x.get(traj[0])
-            pos_last = p_x.get(traj[-1])
-
-            new_shift = shift
             overlap_reversed = False
 
             index_bw = None
 
             for snap_idx in range(len(traj)):
                 snap = traj[snap_idx]
-                if snap in p_x:
-                    connect_bw = p_x[snap]
+                if snap in p_x or assume_reversed_as_same and snap.reversed in p_x:
+                    connect_bw = p_x[snap] if snap in p_x else p_x[snap.reversed]
                     index_bw = snap_idx
                     shift_bw = connect_bw - snap_idx
                     break
 
             new_sample = False
             if index_bw is None:
-                # no overlap, so skip
-                new_sample = True
                 index_bw = 0
                 index_fw = len(traj) - 1
+                # no overlap, so skip
+                new_sample = True
                 shift = 0
             else:
                 for snap_idx in range(len(traj) - 1, -1, -1):
                     snap = traj[snap_idx]
-                    if snap in p_x:
-                        connect_fw = p_x[snap]
+                    if snap in p_x or (assume_reversed_as_same and snap.reversed in p_x):
+                        connect_fw = p_x[snap] if snap in p_x else p_x[snap.reversed]
                         index_fw = snap_idx
                         shift_fw = connect_fw - snap_idx
                         break
@@ -1098,11 +1125,11 @@ class PathTreeBuilder(object):
 #            print sample.mover.__class__.__name__, 0, index_bw, index_fw, len(traj)-1
 
             if new_sample:
-                view_options = options['new']
-            elif mover_type in options:
-                view_options = options[mover_type]
+                view_options = options['mover']['new']
+            elif mover_type in options['mover']:
+                view_options = options['mover'][mover_type]
             else:
-                view_options = options['unknown']
+                view_options = options['mover']['unknown']
 
 #            print shift, index_bw, index_fw
 
@@ -1118,11 +1145,11 @@ class PathTreeBuilder(object):
 
             if view_options['label_position'] == 'left':
                 self.renderer.add(
-                    self.renderer.label(shift - 1, t_count, 1, traj_str, cls=cls + ['left'])
+                    self.renderer.label(shift - x_text_stretch, t_count, 1, traj_str, cls=cls + ['left'])
                 )
             elif view_options['label_position'] == 'right':
                 self.renderer.add(
-                    self.renderer.label(shift + len(traj), t_count, 1, traj_str, cls=cls + ['right'])
+                    self.renderer.label(shift + len(traj) - 1 + x_text_stretch, t_count, 1, traj_str, cls=cls + ['right'])
                 )
 
             if index_bw > 0:
@@ -1202,10 +1229,10 @@ class PathTreeBuilder(object):
         min_x, max_x = self._get_min_max(self.p_x)
         min_y, max_y = self._get_min_max(self.p_y)
 
-        self.renderer.shift_x = min_x - 8.5
+        self.renderer.shift_x = min_x - 8.5 * x_text_stretch
         self.renderer.shift_y = 2
         self.renderer.height = max_y - min_y + 5.0
-        self.renderer.width = max_x - min_x + 10.0
+        self.renderer.width = max_x - min_x + 10.0 * x_text_stretch
 
         matrix = self._to_matrix()
 
@@ -1240,30 +1267,30 @@ class PathTreeBuilder(object):
                         )
 
         self.renderer.add(
-            self.renderer.label(self.renderer.shift_x + 5.0, 0, 1, 'smp')
+            self.renderer.label(self.renderer.shift_x + 5.0 * x_text_stretch, 0, 1, 'smp')
         )
 
         self.renderer.add(
-            self.renderer.label(self.renderer.shift_x + 4.0, 0, 1, 'cyc')
+            self.renderer.label(self.renderer.shift_x + 4.0 * x_text_stretch, 0, 1, 'cyc')
         )
 
         self.renderer.add(
-            self.renderer.label(self.renderer.shift_x + 6.5, 0, 1, 'cor')
+            self.renderer.label(self.renderer.shift_x + 6.5 * x_text_stretch, 0, 1, 'cor')
         )
 
         for tc, s in enumerate(samples):
             self.renderer.add(
-                self.renderer.rect(-10.0 + min_x, 1 + tc - 0.45, max_x - min_x + 11, 1, cls=['tableline'])
+                self.renderer.rect(-10.0 * x_text_stretch + min_x, 1 + tc - 0.45, max_x - min_x + 11 * x_text_stretch, 1, cls=['tableline'])
             )
             if tc > 0 and not paths.Trajectory.is_correlated(s.trajectory, prev):
                 self.renderer.add(
-                    self.renderer.h_range(self.renderer.shift_x + 6.5, old_tc - 0.1, 1 + tc - old_tc + 0.2, 'black', "" ))
+                    self.renderer.h_range(self.renderer.shift_x + 6.5 * x_text_stretch, old_tc - 0.1, 1 + tc - old_tc + 0.2, 'black', "" ))
 
                 old_tc = 1 + tc
                 prev = s.trajectory
 
             self.renderer.add(
-                self.renderer.label(self.renderer.shift_x + 5.0, 1 + tc, 1, str(
+                self.renderer.label(self.renderer.shift_x + 5.0 * x_text_stretch, 1 + tc, 1, str(
                     self.storage.idx(s)))
             )
 
@@ -1273,7 +1300,7 @@ class PathTreeBuilder(object):
                 txt = '---'
 
             self.renderer.add(
-                self.renderer.label(self.renderer.shift_x + 4.0, 1 + tc, 1, str(
+                self.renderer.label(self.renderer.shift_x + 4.0 * x_text_stretch, 1 + tc, 1, str(
                     txt))
             )
 
@@ -1281,7 +1308,11 @@ class PathTreeBuilder(object):
         #     self.renderer.h_range(self.renderer.shift_x + 2.0, 0.9, len(samples) + 0.2, 'black', "" ))
 
         self.renderer.add(
-            self.renderer.h_range(self.renderer.shift_x + 6.5, old_tc - 0.1, 1 + len(samples) - old_tc + 0.2, 'black', "", extend_bottom=False))
+            self.renderer.h_range(self.renderer.shift_x + 6.5 * x_text_stretch, old_tc - 0.1, 1 + len(samples) - old_tc + 0.2, 'black', "", extend_bottom=False))
+
+        self.renderer.add(
+            self.renderer.label(self.renderer.shift_x + 3.0 * x_text_stretch, 1 + tc, 1, '')
+        )
 
     def _get_min_max(self, d):
         return min(d.values()), max(d.values())
@@ -1501,7 +1532,9 @@ class ReplicaHistoryTree(PathTreeBuilder):
         It seems like some changes in the visualization require a complete
         rebuild. That's not ideal. If that can be changed, this function
         could be removed.
+
         """
+        self.view.reset_pad()
         self.from_samples(self.samples)
 
 
