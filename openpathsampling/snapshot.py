@@ -670,7 +670,7 @@ class ToySnapshot(AbstractSnapshot):
     # Hopefully these class member variables will not be needed any longer
     engine = None
 
-    def __init__(self, coordinates=None, velocities=None, is_reversed=False,
+    def __init__(self, coordinates=None, velocities=None, is_reversed=False, topology=None,
                  reversed_copy=None):
         """
         Create a simulation snapshot. Initialization happens primarily in
@@ -715,6 +715,8 @@ class ToySnapshot(AbstractSnapshot):
 
         self.coordinates = coordinates
         self.velocities = velocities
+
+        self.topology = topology
 
         if reversed_copy is None:
             self._reversed.coordinates = self.coordinates

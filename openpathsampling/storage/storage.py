@@ -141,7 +141,12 @@ class Storage(NetCDFPlus):
         # objects with special storages
 
         self.create_store('trajectories', paths.storage.TrajectoryStore())
-        self.create_store('snapshots', paths.storage.SnapshotStore())
+
+        if type(self._template) is paths.Snapshot:
+            self.create_store('snapshots', paths.storage.SnapshotStore())
+        elif type(self._template) is paths.ToySnapshot:
+            self.create_store('snapshots', paths.storage.ToySnapshotStore())
+
         self.create_store('samples', paths.storage.SampleStore())
         self.create_store('samplesets', paths.storage.SampleSetStore())
         self.create_store('pathmovechanges', paths.storage.PathMoveChangeStore())

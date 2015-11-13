@@ -199,6 +199,114 @@ class SnapshotStore(AbstractSnapshotStore):
 
         return idx
 
+class ToySnapshotStore(AbstractSnapshotStore):
+    """
+    An ObjectStore for Snapshots in netCDF files.
+    """
+
+    def __init__(self):
+        super(ToySnapshotStore, self).__init__(ToySnapshot)
+
+    def to_dict(self):
+        return {}
+
+    def _put(self, idx, snapshot):
+        self.vars['coordinates'][idx] = snapshot.coordinates
+        self.vars['velocities'][idx] = snapshot.velocities
+        self.write('coordinates', idx ^ 1, snapshot)
+        self.write('velocities', idx ^ 1, snapshot)
+
+        self.vars['momentum_reversed'][idx] = snapshot.is_reversed
+        self.vars['momentum_reversed'][idx ^ 1] = not snapshot.is_reversed
+
+
+    def _get(self, idx, from_reversed=False):
+        if from_reversed:
+            obj = self.cache[idx ^ 1]
+
+            return self.content_class(
+                coordinates=obj.coordinates,
+                velocities=obj.velocities,
+                is_reversed=not obj.is_reversed,
+                topology=self.storage.topology,
+                reversed_copy=LoaderProxy(self, idx ^ 1)
+            )
+        else:
+            coordinates = self.vars['coordinates'][idx]
+            velocities = self.vars['velocities'][idx]
+            momentum_reversed = self.vars['momentum_reversed'][idx]
+
+            return self.content_class(
+                coordinates=coordinates,
+                velocities=velocities,
+                is_reversed=momentum_reversed,
+                topology=self.storage.topology,
+                reversed_copy=LoaderProxy(self, idx ^ 1)
+            )
+
+
+    def _init(self):
+        """
+        Initializes the associated storage to index configuration_indices in it
+        """
+        super(ToySnapshotStore, self)._init()
+
+        n_atoms = self.storage.n_atoms
+        n_spatial = self.storage.n_spatial
+
+        self.init_variable('coordinates', 'numpy.float32',
+                           dimensions=('atom', 'spatial'),
+                           description="coordinate of atom '{ix[1]}' in dimension " +
+                                       "'{ix[2]}' of configuration '{ix[0]}'.",
+                           chunksizes=(1, n_atoms, n_spatial)
+                           )
+
+        self.init_variable('velocities', 'numpy.float32',
+                           dimensions=('atom', 'spatial'),
+                           description="the velocity of atom 'atom' in dimension " +
+                                       "'coordinate' of momentum 'momentum'.",
+                           chunksizes=(1, n_atoms, n_spatial)
+                           )
+
+
+
+    # =============================================================================================
+    # COLLECTIVE VARIABLE UTILITY FUNCTIONS
+    # =============================================================================================
+
+    @property
+    def op_configuration_idx(self):
+        """
+        Returns aa function that returns for an object of this storage the idx
+
+        Returns
+        -------
+        function
+            the function that returns the idx of the configuration
+        """
+
+        def idx(obj):
+            return self.index[obj.configuration]
+
+        return idx
+
+    @property
+    def op_momentum_idx(self):
+        """
+        Returns aa function that returns for an object of this storage the idx
+
+        Returns
+        -------
+        function
+            the function that returns the idx of the configuration
+
+        """
+
+        def idx(obj):
+            return self.index[obj.momentum]
+
+        return idx
+
 
 class MomentumStore(ObjectStore):
     """
@@ -368,3 +476,4 @@ class ConfigurationStore(ObjectStore):
                            chunksizes=(1,),
                            simtk_unit=u.kilocalories_per_mole
                            )
+
