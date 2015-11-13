@@ -1,7 +1,7 @@
-from openpathsampling.netcdfplus.object_storage import ObjectStore
+from openpathsampling.netcdfplus.objects import ObjectStore
 from openpathsampling.pathmovechange import PathMoveChange
 from openpathsampling.netcdfplus.base import StorableObject
-from openpathsampling.netcdfplus.objproxy import LoaderProxy
+from openpathsampling.netcdfplus.proxy import LoaderProxy
 
 
 class PathMoveChangeStore(ObjectStore):

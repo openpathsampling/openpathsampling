@@ -5,7 +5,7 @@ Created on 03.09.2014
 '''
 
 import range_logic
-from openpathsampling.netcdfplus.base import StorableNamedObject
+from openpathsampling.netcdfplus import StorableNamedObject
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 

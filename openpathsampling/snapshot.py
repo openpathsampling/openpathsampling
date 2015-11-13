@@ -9,10 +9,9 @@ import copy
 import numpy as np
 import mdtraj as md
 
-# THIS SHOULD NOT BE NECESSARY! SEE XYZ BELOW
 import simtk.unit as u
 
-from openpathsampling.netcdfplus.base import StorableObject, lazy_loading_attributes
+from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
 
 
 # =============================================================================

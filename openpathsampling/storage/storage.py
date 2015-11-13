@@ -15,7 +15,7 @@ import simtk.unit as u
 
 from openpathsampling.netcdfplus.netcdfplus import NetCDFPlus
 from openpathsampling.netcdfplus.cache import WeakLRUCache, WeakValueCache
-from openpathsampling.netcdfplus.object_storage import ObjectStore
+from openpathsampling.netcdfplus.objects import ObjectStore
 
 # =============================================================================================
 # OPS SPECIFIC STORAGE

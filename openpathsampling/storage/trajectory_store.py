@@ -1,6 +1,6 @@
-from openpathsampling.netcdfplus.object_storage import ObjectStore
+from openpathsampling.netcdfplus.objects import ObjectStore
 from openpathsampling.trajectory import Trajectory
-from openpathsampling.netcdfplus.objproxy import LoaderProxy
+from openpathsampling.netcdfplus.proxy import LoaderProxy
 
 
 class TrajectoryStore(ObjectStore):

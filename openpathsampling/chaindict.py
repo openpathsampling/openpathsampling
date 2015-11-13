@@ -1,11 +1,9 @@
 __author__ = 'Jan-Hendrik Prinz'
 
 import collections
-
 import numpy as np
 
-from openpathsampling.netcdfplus.cache import LRUCache
-from openpathsampling.netcdfplus.objproxy import LoaderProxy
+from openpathsampling.netcdfplus import LRUCache, LoaderProxy
 
 
 class ChainDict(object):

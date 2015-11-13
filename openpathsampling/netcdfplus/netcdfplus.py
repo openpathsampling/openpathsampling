@@ -5,10 +5,10 @@ import logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-from object_json import StorableObjectJSON
-from objproxy import LoaderProxy
+from json import StorableObjectJSON
+from proxy import LoaderProxy
 
-from object_storage import ObjectStore
+from objects import ObjectStore
 
 import numpy as np
 import netCDF4

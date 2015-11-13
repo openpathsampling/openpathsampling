@@ -11,7 +11,7 @@ from test_helpers import (data_filename,
                           )
 from openpathsampling.openmm_engine import *
 from openpathsampling.snapshot import Snapshot
-from openpathsampling.netcdfplus.object_json import ObjectJSON
+from openpathsampling.netcdfplus.json import ObjectJSON
 from openpathsampling.storage import Storage
 
 
