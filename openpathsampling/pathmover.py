@@ -121,7 +121,6 @@ class PathMover(TreeMixin, StorableNamedObject):
     def is_canonical(self):
         return self._is_canonical
 
-
     @property
     def default_name(self):
         return self.__class__.__name__[:-5]
@@ -240,7 +239,8 @@ class PathMover(TreeMixin, StorableNamedObject):
         """
         return self._get_in_ensembles()
 
-    def legal_sample_set(self, globalstate, ensembles=None, replicas='all'):
+    @staticmethod
+    def legal_sample_set(globalstate, ensembles=None, replicas='all'):
         """
         This returns all the samples from globalstate which are in both
         self.replicas and the parameter ensembles. If ensembles is None, we
@@ -279,7 +279,8 @@ class PathMover(TreeMixin, StorableNamedObject):
 
         return legal_samples
 
-    def select_sample(self, globalstate, ensembles=None, replicas=None):
+    @staticmethod
+    def select_sample(globalstate, ensembles=None, replicas=None):
         """
         Returns one of the legal samples given self.replica and the ensemble
         set in ensembles.
@@ -291,7 +292,7 @@ class PathMover(TreeMixin, StorableNamedObject):
             replicas = 'all'
 
         logger.debug("replicas: "+str(replicas)+" ensembles: "+repr(ensembles))
-        legal = self.legal_sample_set(globalstate, ensembles, replicas)
+        legal = PathMover.legal_sample_set(globalstate, ensembles, replicas)
         for sample in legal:
             logger.debug("legal: (" + str(sample.replica)
                          + "," + str(sample.trajectory)
@@ -329,6 +330,18 @@ class PathMover(TreeMixin, StorableNamedObject):
             return self.__repr__()
         else:
             return self.name
+
+class IdentityPathMover(PathMover):
+    """
+    The simplest Mover that does nothing !
+
+    Notes
+    -----
+    Since is does nothing it is considered rejected everytime! It can be used to test
+    function of PathMover
+    """
+    def move(self, globalstate):
+        return paths.EmptyPathMoveChange()
 
 
 ###############################################################################
@@ -996,7 +1009,7 @@ class SubtrajectorySelectMover(SampleMover):
         return trials
 
 
-class RandomSubtrajectorySelectMover(SampleMover):
+class RandomSubtrajectorySelectMover(SubtrajectorySelectMover):
     """
     Samples a random subtrajectory satisfying the given subensemble.
 
@@ -1558,7 +1571,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     """
     def move(self, globalstate):
         logger.debug("==== BEGINNING " + self.name + " ====")
-        subglobal = paths.SampleSet(self.legal_sample_set(globalstate))
+        subglobal = paths.SampleSet(globalstate)
         pathmovechanges = []
         for mover in self.movers:
             logger.info(str(self.name)

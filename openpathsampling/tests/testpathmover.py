@@ -82,11 +82,6 @@ class testPathMover(object):
         self.l1 = LengthEnsemble(1)
         self.l2 = LengthEnsemble(2)
         self.l3 = LengthEnsemble(3)
-        self.repsAll_ensNone = PathMover()
-#        self.reps12_ensNone = PathMover(replicas=[1, 2])
-        self.repsAll_ens1 = PathMover()
-        self.repsAll_ens12 = PathMover()
-#        self.reps1_ens2 = PathMover(replicas=1, ensembles=[self.l2])
         self.s1 = Sample(replica=1, ensemble=self.l2)
         self.s2 = Sample(replica=2, ensemble=self.l1)
         self.s3 = Sample(replica=3, ensemble=self.l1)
@@ -94,39 +89,29 @@ class testPathMover(object):
         self.sset = SampleSet([self.s1, self.s2, self.s3, self.s4])
 
     def test_legal_sample_set(self):
-#        assert_items_equal(self.repsAll_ensNone.legal_sample_set(self.sset),
-#                           [self.s1, self.s2, self.s3, self.s4])
-#        assert_items_equal(self.repsAll_ens12.legal_sample_set(self.sset),
-#                           [self.s1, self.s2, self.s3])
-#        assert_items_equal(self.repsAll_ens1.legal_sample_set(self.sset),
-#                           [self.s2, self.s3])
-
         assert_items_equal(
-            self.repsAll_ensNone.legal_sample_set(self.sset, ensembles=self.l1),
+            paths.PathMover.legal_sample_set(self.sset, ensembles=self.l1),
             [self.s2, self.s3]
         )
         assert_items_equal(
-            self.repsAll_ensNone.legal_sample_set(self.sset, ensembles=[self.l1]),
+            paths.PathMover.legal_sample_set(self.sset, ensembles=[self.l1]),
             [self.s2, self.s3]
         )
-
 
     def test_select_sample(self):
-#        assert_equal(self.reps1_ens2.select_sample(self.sset), self.s1)
-
         for i in range(20):
-            selected = self.repsAll_ens1.select_sample(self.sset)
+            selected = PathMover.select_sample(self.sset)
             assert_choice_of(selected, [self.s1, self.s2, self.s3, self.s4])
 
     def test_is_ensemble_change_mover(self):
-        pm = PathMover()
+        pm = IdentityPathMover()
         assert_equal(pm.is_ensemble_change_mover, False)
         assert_equal(pm._is_ensemble_change_mover, None)
         pm._is_ensemble_change_mover = True
         assert_equal(pm.is_ensemble_change_mover, True)
 
     def test_is_canonical(self):
-        pm = PathMover()
+        pm = IdentityPathMover()
         assert_equal(pm.is_canonical, None)
         pm._is_canonical = True
         assert_equal(pm.is_canonical, True)
@@ -1250,3 +1235,7 @@ class testSingleReplicaMinusMover(object):
             len(sub[-1].trials[0].trajectory),
             len(traj_bad_extension)+self.dyn.n_frames_max-1
         )
+
+    @raises(TypeError)
+    def test_abstract_pathmover(self):
+        mover = paths.PathMover()
