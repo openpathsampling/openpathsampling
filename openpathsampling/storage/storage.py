@@ -163,7 +163,6 @@ class Storage(NetCDFPlus):
         self.create_store('steps', paths.storage.MCStepStore())
 
         self.create_store('cvs', paths.storage.ObjectDictStore(paths.CollectiveVariable, paths.Snapshot))
-        self.collectivevariables = self.cvs
 
         # normal objects
 
@@ -215,7 +214,7 @@ class Storage(NetCDFPlus):
 
         # update the units for dimensions from the template
         self.dimension_units.update(paths.tools.units_from_snapshot(template))
-        self._init_storages()
+        self.finalize_stores()
 
         # TODO: Might not need to save topology
 

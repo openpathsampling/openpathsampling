@@ -14,6 +14,9 @@ class SnapshotStore(ObjectStore):
     def __init__(self):
         super(SnapshotStore, self).__init__(Snapshot, json=False)
 
+    def to_dict(self):
+        return {}
+
     def _load(self, idx):
         """
         Load a snapshot from the storage.

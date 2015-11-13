@@ -89,6 +89,7 @@ class ObjectStore(StorableNamedObject):
 
         """
 
+        super(ObjectStore, self).__init__()
         self._storage = None
         self.content_class = content_class
         self.prefix = None
@@ -100,6 +101,7 @@ class ObjectStore(StorableNamedObject):
         self._names_loaded = False
         self.nestable = nestable
         self.name_idx = dict()
+        self._created = False
 
         self.variables = dict()
         self.vars = dict()
@@ -109,7 +111,6 @@ class ObjectStore(StorableNamedObject):
 
     def to_dict(self):
         return {
-            'prefix': self.prefix,
             'content_class': self.content_class,
             'has_name': self.has_name,
             'json': self.json,
@@ -501,6 +502,8 @@ class ObjectStore(StorableNamedObject):
             self.init_variable("json", 'json',
                                description='A json serialized version of the object',
                                chunksizes=tuple([10240]))
+
+        self._created = True
 
     def _restore(self):
         pass

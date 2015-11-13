@@ -7,6 +7,9 @@ class TrajectoryStore(ObjectStore):
     def __init__(self):
         super(TrajectoryStore, self).__init__(Trajectory)
 
+    def to_dict(self):
+        return {}
+
     def _save(self, trajectory, idx):
         self.vars['snapshots'][idx] = trajectory
         snapshot_store = self.storage.snapshots

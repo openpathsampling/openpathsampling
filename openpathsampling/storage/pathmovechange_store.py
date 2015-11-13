@@ -14,6 +14,9 @@ class PathMoveChangeStore(ObjectStore):
         self._cached_all = False
         self.class_list = StorableObject.objects()
 
+    def to_dict(self):
+        return {}
+
     def _save(self, pathmovechange, idx):
         self.vars['samples'][idx] = pathmovechange.samples
         self.vars['subchanges'][idx] = pathmovechange.subchanges

@@ -8,6 +8,9 @@ class SampleStore(ObjectStore):
         super(SampleStore, self).__init__(Sample, json=False)
         self._cached_all = False
 
+    def to_dict(self):
+        return {}
+
     def _save(self, sample, idx):
         self.vars['trajectory'][idx] = sample.trajectory
         self.vars['ensemble'][idx] = sample.ensemble

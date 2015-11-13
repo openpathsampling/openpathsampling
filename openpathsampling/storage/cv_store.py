@@ -13,6 +13,12 @@ class ObjectDictStore(ObjectStore):
 
         self._cache_stores = dict()
 
+    def to_dict(self):
+        return {
+            'content_class': self.content_class,
+            'key_class': self.key_class
+        }
+
     @property
     def key_store(self):
         if self._key_store is None:
