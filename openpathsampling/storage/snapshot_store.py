@@ -11,11 +11,27 @@ class AbstractSnapshotStore(ObjectStore):
     An ObjectStore for Snapshots in netCDF files.
     """
 
-    def __init__(self):
-        super(SnapshotStore, self).__init__(AbstractSnapshot, json=False)
+    def __init__(self, snapshot_class = AbstractSnapshot):
+        super(AbstractSnapshotStore, self).__init__(snapshot_class, json=False)
 
     def to_dict(self):
         return {}
+
+    def _get(self, idx, from_reversed=False):
+        if from_reversed:
+            obj = self.cache[idx ^ 1]
+
+            return AbstractSnapshot(
+                is_reversed=not obj.is_reversed,
+                reversed_copy=LoaderProxy(self, idx ^ 1)
+            )
+        else:
+            momentum_reversed = self.vars['momentum_reversed'][idx]
+
+            return AbstractSnapshot(
+                is_reversed=momentum_reversed,
+                reversed_copy=LoaderProxy(self, idx ^ 1)
+            )
 
     def _load(self, idx):
         """
@@ -32,35 +48,14 @@ class AbstractSnapshotStore(ObjectStore):
             the loaded snapshot instance
         """
 
-        s_idx = int(idx / 2) * 2
-
-        reversed_idx = 2 * s_idx + 1 - idx
         try:
-            obj = self.cache[reversed_idx]
-            snapshot = Snapshot(
-                configuration=obj.configuration,
-                momentum=obj.momentum,
-                is_reversed=not obj.is_reversed,
-                reversed_copy=LoaderProxy(self, reversed_idx)
-            )
-            return snapshot
-
-
+            return self._get(idx, True)
         except KeyError:
-            pass
+            return self._get(idx)
 
-        configuration = self.vars['configuration'][s_idx]
-        momentum = self.vars['momentum'][s_idx]
-        momentum_reversed = self.vars['momentum_reversed'][idx]
-
-        snapshot = Snapshot(
-            configuration=configuration,
-            momentum=momentum,
-            is_reversed=momentum_reversed,
-            reversed_copy=LoaderProxy(self, reversed_idx)
-        )
-
-        return snapshot
+    def _put(self, idx, snapshot):
+        self.vars['momentum_reversed'][idx] = snapshot.is_reversed
+        self.vars['momentum_reversed'][idx ^ 1] = not snapshot.is_reversed
 
     def _save(self, snapshot, idx):
         """
@@ -80,40 +75,20 @@ class AbstractSnapshotStore(ObjectStore):
         A single Snapshot object can only be saved once!
         """
 
-        s_idx = int(idx / 2) * 2
-
-        reversed_idx = 2 * s_idx + 1 - idx
-
-        self.vars['configuration'][s_idx + 1] = snapshot.configuration
-        self.vars['momentum'][s_idx + 1] = snapshot.momentum
-        self.write('configuration', s_idx, snapshot)
-        self.write('momentum', s_idx, snapshot)
-
-        self.vars['momentum_reversed'][idx] = snapshot.is_reversed
-        self.vars['momentum_reversed'][reversed_idx] = not snapshot.is_reversed
+        self._put(idx, snapshot)
 
         reversed = snapshot._reversed
-        snapshot._reversed = LoaderProxy(self, reversed_idx)
+        snapshot._reversed = LoaderProxy(self, idx ^ 1)
         reversed._reversed = LoaderProxy(self, idx)
 
         # mark reversed as stored
-        self.index[reversed] = reversed_idx
+        self.index[reversed] = idx ^ 1
 
     def _init(self):
         """
         Initializes the associated storage to index configuration_indices in it
         """
-        super(SnapshotStore, self)._init()
-
-        self.init_variable('configuration', 'lazyobj.configurations',
-                           description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
-                           chunksizes=(1,)
-                           )
-
-        self.init_variable('momentum', 'lazyobj.momenta',
-                           description="the snapshot index (0..n_momentum-1) 'frame' of snapshot '{idx}'.",
-                           chunksizes=(1,)
-                           )
+        super(AbstractSnapshotStore, self)._init()
 
         self.init_variable('momentum_reversed', 'bool', chunksizes=(1,))
 
@@ -121,140 +96,61 @@ class AbstractSnapshotStore(ObjectStore):
     # COLLECTIVE VARIABLE UTILITY FUNCTIONS
     # =============================================================================================
 
-    @property
-    def op_configuration_idx(self):
-        """
-        Returns aa function that returns for an object of this storage the idx
-
-        Returns
-        -------
-        function
-            the function that returns the idx of the configuration
-        """
-
-        def idx(obj):
-            return self.index[obj.configuration]
-
-        return idx
-
-    @property
-    def op_momentum_idx(self):
-        """
-        Returns aa function that returns for an object of this storage the idx
-
-        Returns
-        -------
-        function
-            the function that returns the idx of the configuration
-
-        """
-
-        def idx(obj):
-            return self.index[obj.momentum]
-
-        return idx
-
     def all(self):
         return Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
 
-class SnapshotStore(ObjectStore):
+class SnapshotStore(AbstractSnapshotStore):
     """
     An ObjectStore for Snapshots in netCDF files.
     """
 
     def __init__(self):
-        super(SnapshotStore, self).__init__(Snapshot, json=False)
+        super(SnapshotStore, self).__init__(Snapshot)
 
     def to_dict(self):
         return {}
 
-    def _load(self, idx):
-        """
-        Load a snapshot from the storage.
+    def _put(self, idx, snapshot):
+        self.vars['configuration'][idx] = snapshot.configuration
+        self.vars['momentum'][idx] = snapshot.momentum
+        self.write('configuration', idx ^ 1, snapshot)
+        self.write('momentum', idx ^ 1, snapshot)
 
-        Parameters
-        ----------
-        idx : int
-            the integer index of the snapshot to be loaded
+        self.vars['momentum_reversed'][idx] = snapshot.is_reversed
+        self.vars['momentum_reversed'][idx ^ 1] = not snapshot.is_reversed
 
-        Returns
-        -------
-        snapshot : Snapshot
-            the loaded snapshot instance
-        """
 
-        s_idx = int(idx / 2) * 2
+    def _get(self, idx, from_reversed=False):
+        if from_reversed:
+            obj = self.cache[idx ^ 1]
 
-        reversed_idx = 2 * s_idx + 1 - idx
-        try:
-            obj = self.cache[reversed_idx]
-            snapshot = Snapshot(
+            return self.content_class(
                 configuration=obj.configuration,
                 momentum=obj.momentum,
                 is_reversed=not obj.is_reversed,
-                reversed_copy=LoaderProxy(self, reversed_idx)
+                reversed_copy=LoaderProxy(self, idx ^ 1)
             )
-            return snapshot
+        else:
+            configuration = self.vars['configuration'][idx]
+            momentum = self.vars['momentum'][idx]
+            momentum_reversed = self.vars['momentum_reversed'][idx]
 
+            return self.content_class(
+                configuration=configuration,
+                momentum=momentum,
+                is_reversed=momentum_reversed,
+                reversed_copy=LoaderProxy(self, idx ^ 1)
+            )
 
-        except KeyError:
-            pass
-
-        configuration = self.vars['configuration'][s_idx]
-        momentum = self.vars['momentum'][s_idx]
-        momentum_reversed = self.vars['momentum_reversed'][idx]
-
-        snapshot = Snapshot(
-            configuration=configuration,
-            momentum=momentum,
-            is_reversed=momentum_reversed,
-            reversed_copy=LoaderProxy(self, reversed_idx)
-        )
-
-        return snapshot
-
-    def _save(self, snapshot, idx):
-        """
-        Add the current state of the snapshot in the database.
-
-        Parameters
-        ----------
-        snapshot : Snapshot()
-            the snapshot to be saved
-        idx : int or None
-            if idx is not None the index will be used for saving in the storage.
-            This might overwrite already existing trajectories!
-
-        Notes
-        -----
-        This also saves all contained frames in the snapshot if not done yet.
-        A single Snapshot object can only be saved once!
-        """
-
-        s_idx = int(idx / 2) * 2
-
-        reversed_idx = 2 * s_idx + 1 - idx
-
-        self.vars['configuration'][s_idx + 1] = snapshot.configuration
-        self.vars['momentum'][s_idx + 1] = snapshot.momentum
-        self.write('configuration', s_idx, snapshot)
-        self.write('momentum', s_idx, snapshot)
-
-        self.vars['momentum_reversed'][idx] = snapshot.is_reversed
-        self.vars['momentum_reversed'][reversed_idx] = not snapshot.is_reversed
-
-        reversed = snapshot._reversed
-        snapshot._reversed = LoaderProxy(self, reversed_idx)
-        reversed._reversed = LoaderProxy(self, idx)
-
-        # mark reversed as stored
-        self.index[reversed] = reversed_idx
 
     def _init(self):
         """
         Initializes the associated storage to index configuration_indices in it
         """
         super(SnapshotStore, self)._init()
+
+        self.storage.create_store('configurations', ConfigurationStore())
+        self.storage.create_store('momenta', MomentumStore())
 
         self.init_variable('configuration', 'lazyobj.configurations',
                            description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
@@ -265,8 +161,6 @@ class SnapshotStore(ObjectStore):
                            description="the snapshot index (0..n_momentum-1) 'frame' of snapshot '{idx}'.",
                            chunksizes=(1,)
                            )
-
-        self.init_variable('momentum_reversed', 'bool', chunksizes=(1,))
 
     # =============================================================================================
     # COLLECTIVE VARIABLE UTILITY FUNCTIONS
@@ -304,9 +198,6 @@ class SnapshotStore(ObjectStore):
             return self.index[obj.momentum]
 
         return idx
-
-    def all(self):
-        return Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
 
 
 class MomentumStore(ObjectStore):
@@ -470,7 +361,7 @@ class ConfigurationStore(ObjectStore):
         self.init_variable('box_vectors', 'numpy.float32',
                            dimensions=('spatial', 'spatial'),
                            chunksizes=(1, n_spatial, n_spatial),
-                           simtk_unit=u.nanometers / u.picoseconds
+                           simtk_unit=u.nanometers
                            )
 
         self.init_variable('potential_energy', 'float',
