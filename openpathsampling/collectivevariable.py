@@ -14,8 +14,8 @@ import numpy as np
 
 import openpathsampling as paths
 import chaindict as cd
-from openpathsampling.base import StorableNamedObject
-from openpathsampling.storage.cache import WeakLRUCache
+from openpathsampling.netcdfplus.base import StorableNamedObject
+from openpathsampling.netcdfplus.cache import WeakLRUCache
 
 
 class CollectiveVariable(cd.Wrap, StorableNamedObject):

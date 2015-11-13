@@ -1,6 +1,6 @@
 import numpy as np
 
-from openpathsampling.base import StorableObject
+from openpathsampling.netcdfplus.base import StorableObject
 
 
 # The decorator @restores_ allows us to restore the object from a JSON

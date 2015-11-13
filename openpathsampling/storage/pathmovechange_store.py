@@ -1,7 +1,7 @@
-from openpathsampling.storage import ObjectStore
+from openpathsampling.netcdfplus.objects import ObjectStore
 from openpathsampling.pathmovechange import PathMoveChange
-from openpathsampling.base import StorableObject
-from objproxy import LoaderProxy
+from openpathsampling.netcdfplus.base import StorableObject
+from openpathsampling.netcdfplus.proxy import LoaderProxy
 
 
 class PathMoveChangeStore(ObjectStore):
@@ -13,6 +13,9 @@ class PathMoveChangeStore(ObjectStore):
 
         self._cached_all = False
         self.class_list = StorableObject.objects()
+
+    def to_dict(self):
+        return {}
 
     def _save(self, pathmovechange, idx):
         self.vars['samples'][idx] = pathmovechange.samples

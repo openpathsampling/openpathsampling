@@ -12,9 +12,10 @@ init_log = logging.getLogger('openpathsampling.initialization')
 
 import openpathsampling as paths
 import simtk.unit as u
-from netcdfplus import NetCDFPlus
-from cache import WeakLRUCache, WeakValueCache
 
+from openpathsampling.netcdfplus.netcdfplus import NetCDFPlus
+from openpathsampling.netcdfplus.cache import WeakLRUCache, WeakValueCache
+from openpathsampling.netcdfplus.objects import ObjectStore
 
 # =============================================================================================
 # OPS SPECIFIC STORAGE
@@ -152,42 +153,41 @@ class Storage(NetCDFPlus):
 
         # objects with special storages
 
-        self.add('trajectories', paths.storage.TrajectoryStore())
-        self.add('snapshots', paths.storage.SnapshotStore())
-        self.add('configurations', paths.storage.ConfigurationStore())
-        self.add('momenta', paths.storage.MomentumStore())
-        self.add('samples', paths.storage.SampleStore())
-        self.add('samplesets', paths.storage.SampleSetStore())
-        self.add('pathmovechanges', paths.storage.PathMoveChangeStore())
-        self.add('steps', paths.storage.MCStepStore())
+        self.create_store('trajectories', paths.storage.TrajectoryStore())
+        self.create_store('snapshots', paths.storage.SnapshotStore())
+        self.create_store('configurations', paths.storage.ConfigurationStore())
+        self.create_store('momenta', paths.storage.MomentumStore())
+        self.create_store('samples', paths.storage.SampleStore())
+        self.create_store('samplesets', paths.storage.SampleSetStore())
+        self.create_store('pathmovechanges', paths.storage.PathMoveChangeStore())
+        self.create_store('steps', paths.storage.MCStepStore())
 
-        self.add('cvs', paths.storage.ObjectDictStore(paths.CollectiveVariable, paths.Snapshot))
-        self.collectivevariables = self.cvs
+        self.create_store('cvs', paths.storage.ObjectDictStore(paths.CollectiveVariable, paths.Snapshot))
 
         # normal objects
 
-        self.add('details', paths.storage.ObjectStore(paths.Details, has_name=False))
-        self.add('topologies', paths.storage.ObjectStore(paths.Topology, has_name=True))
-        self.add('pathmovers', paths.storage.ObjectStore(paths.PathMover, has_name=True))
-        self.add('shootingpoints',
-                 paths.storage.ObjectStore(paths.ShootingPoint, has_name=False))
-        self.add('shootingpointselectors',
-                 paths.storage.ObjectStore(paths.ShootingPointSelector, has_name=True))
-        self.add('engines', paths.storage.ObjectStore(paths.DynamicsEngine, has_name=True))
-        self.add('pathsimulators',
-                 paths.storage.ObjectStore(paths.PathSimulator, has_name=True))
-        self.add('transitions', paths.storage.ObjectStore(paths.Transition, has_name=True))
-        self.add('networks',
-                 paths.storage.ObjectStore(paths.TransitionNetwork, has_name=True))
-        self.add('schemes',
-                 paths.storage.ObjectStore(paths.MoveScheme, has_name=True))
+        self.create_store('details', ObjectStore(paths.Details, has_name=False))
+        self.create_store('topologies', ObjectStore(paths.Topology, has_name=True))
+        self.create_store('pathmovers', ObjectStore(paths.PathMover, has_name=True))
+        self.create_store('shootingpoints',
+                 ObjectStore(paths.ShootingPoint, has_name=False))
+        self.create_store('shootingpointselectors',
+                 ObjectStore(paths.ShootingPointSelector, has_name=True))
+        self.create_store('engines', ObjectStore(paths.DynamicsEngine, has_name=True))
+        self.create_store('pathsimulators',
+                 ObjectStore(paths.PathSimulator, has_name=True))
+        self.create_store('transitions', ObjectStore(paths.Transition, has_name=True))
+        self.create_store('networks',
+                 ObjectStore(paths.TransitionNetwork, has_name=True))
+        self.create_store('schemes',
+                 ObjectStore(paths.MoveScheme, has_name=True))
 
         # nestable objects
 
-        self.add('volumes',
-                 paths.storage.ObjectStore(paths.Volume, nestable=True, has_name=True))
-        self.add('ensembles',
-                 paths.storage.ObjectStore(paths.Ensemble, nestable=True, has_name=True))
+        self.create_store('volumes',
+                 ObjectStore(paths.Volume, nestable=True, has_name=True))
+        self.create_store('ensembles',
+                 ObjectStore(paths.Ensemble, nestable=True, has_name=True))
         # special stores
         # self.add('names', paths.storage.NameStore())
 
@@ -214,7 +214,9 @@ class Storage(NetCDFPlus):
 
         # update the units for dimensions from the template
         self.dimension_units.update(paths.tools.units_from_snapshot(template))
-        self._init_storages()
+
+        # since we want to store stuff we need to finalize stores that have not been initialized yet
+        self.finalize_stores()
 
         # TODO: Might not need to save topology
 
@@ -230,12 +232,8 @@ class Storage(NetCDFPlus):
         self.variables['template_idx'][:] = self.snapshots.index[template]
 
     def _restore(self):
-
         self.set_caching_mode('default')
-
-        self._restore_storages()
         self.topology = self.topologies[0]
-
 
     def sync_all(self):
         """

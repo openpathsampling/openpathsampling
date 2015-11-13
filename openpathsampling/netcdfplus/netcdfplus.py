@@ -5,8 +5,10 @@ import logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-from object_json import StorableObjectJSON
-from objproxy import LoaderProxy
+from json import StorableObjectJSON
+from proxy import LoaderProxy
+
+from objects import ObjectStore
 
 import numpy as np
 import netCDF4
@@ -209,20 +211,34 @@ class NetCDFPlus(netCDF4.Dataset):
         if units is not None:
             self.dimension_units.update(units)
 
-        self._register_storages()
-
         if mode == 'w':
             logger.info("Setup netCDF file and create variables")
 
             # add shared scalar dimension for everyone
             self.create_dimension('scalar', 1)
 
+            self.register_store('stores', ObjectStore(ObjectStore, has_name=True))
+            self.stores._init()
+            self.stores.set_caching(True)
+            self.update_delegates()
+
+
+            self._register_storages()
+
+            # this will create all variables in the store
+
             self._initialize()
+            self.finalize_stores()
 
             logger.info("Finished setting up netCDF file")
 
         elif mode == 'a' or mode == 'r+' or mode == 'r':
             logger.debug("Restore the dict of units from the storage")
+
+            self.register_store('stores', ObjectStore(ObjectStore, has_name=True))
+            self.stores.set_caching(True)
+            self.create_variable_delegate('stores_json')
+            self.create_variable_delegate('stores_name')
 
             # Create a dict of simtk.Unit() instances for all netCDF.Variable()
             for variable_name in self.variables:
@@ -239,9 +255,13 @@ class NetCDFPlus(netCDF4.Dataset):
 
                         self.units[str(variable_name)] = unit
 
-            self.update_delegates()
+            for store in self.stores:
+                self.register_store(store.name, store)
+                store.register(self, store.name)
 
-            # After we have restored the units we can load objects from the storage
+            self.update_delegates()
+            self._restore_storages()
+
             self._restore()
 
         self.sync()
@@ -260,7 +280,23 @@ class NetCDFPlus(netCDF4.Dataset):
 
         self.dimension_units = dict()
 
-    def add(self, name, store, register_attr=True):
+    def create_store(self, name, store):
+        """
+        Create a special variable type `obj.name` that can hold storable objects
+        """
+        self.register_store(name, store)
+        store.name = name
+        self.stores.save(store)
+
+    def finalize_stores(self):
+        for store in self._storages.values():
+            if not store._created:
+                logger.info("Initializing store '%s'" % store.name)
+                store._init()
+
+        self.update_delegates()
+
+    def register_store(self, name, store, register_attr=True):
         """
         Add a object store to the file
 
@@ -340,12 +376,6 @@ class NetCDFPlus(netCDF4.Dataset):
 
         for storage in self._objects.values():
             storage._restore()
-
-    def _initialize_netcdf(self):
-        """
-        Initialize the netCDF+ file for storage itself.
-        """
-        pass
 
     def list_stores(self):
         """

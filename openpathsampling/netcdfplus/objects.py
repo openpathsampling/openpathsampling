@@ -1,18 +1,17 @@
-import types
 import logging
+import weakref
 
 import yaml
 
 from cache import MaxCache, Cache, NoCache, WeakLRUCache
-from objproxy import LoaderProxy
-
-import weakref
+from proxy import LoaderProxy
+from base import StorableNamedObject
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 
-class ObjectStore(object):
+class ObjectStore(StorableNamedObject):
     """
     Base Class for storing complex objects in a netCDF4 file. It holds a
     reference to the store file.
@@ -39,9 +38,7 @@ class ObjectStore(object):
 
     default_cache = 10000
 
-    def __init__(self, content_class, json=True,
-                 caching=None, nestable=False, has_name=False):
-
+    def __init__(self, content_class, json=True, nestable=False, has_name=False):
         """
 
         Parameters
@@ -50,15 +47,6 @@ class ObjectStore(object):
         content_class
         json
         dimension_units
-        caching : dict-like or bool or int or None
-            this is the dict used for caching.
-            `True` means to use a python built-in dict which unlimited caching.
-            Be careful.
-            `False` means no caching at all. If a dict-like object is passed,
-            it will be used.
-            An integer `n` means to use LRU Caching with maximal n elements and is
-            equal to `cache=LRUCache(n)`
-            Default (None) is equivalent to `cache=ObjectStore.default_cache`
         nestable : bool
             if true this marks the content_class to be saved as nested dict
             objects and not a pointing to saved objects. So the saved complex
@@ -101,6 +89,7 @@ class ObjectStore(object):
 
         """
 
+        super(ObjectStore, self).__init__()
         self._storage = None
         self.content_class = content_class
         self.prefix = None
@@ -112,12 +101,21 @@ class ObjectStore(object):
         self._names_loaded = False
         self.nestable = nestable
         self.name_idx = dict()
+        self._created = False
 
         self.variables = dict()
         self.vars = dict()
         self.units = dict()
 
         self.index = weakref.WeakKeyDictionary()
+
+    def to_dict(self):
+        return {
+            'content_class': self.content_class,
+            'has_name': self.has_name,
+            'json': self.json,
+            'nestable': self.nestable
+        }
 
     def register(self, storage, name):
         self._storage = storage
@@ -504,6 +502,8 @@ class ObjectStore(object):
             self.init_variable("json", 'json',
                                description='A json serialized version of the object',
                                chunksizes=tuple([10240]))
+
+        self._created = True
 
     def _restore(self):
         pass
