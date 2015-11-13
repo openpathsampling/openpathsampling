@@ -39,9 +39,7 @@ class ObjectStore(object):
 
     default_cache = 10000
 
-    def __init__(self, content_class, json=True,
-                 caching=None, nestable=False, has_name=False):
-
+    def __init__(self, content_class, json=True, nestable=False, has_name=False):
         """
 
         Parameters
@@ -50,15 +48,6 @@ class ObjectStore(object):
         content_class
         json
         dimension_units
-        caching : dict-like or bool or int or None
-            this is the dict used for caching.
-            `True` means to use a python built-in dict which unlimited caching.
-            Be careful.
-            `False` means no caching at all. If a dict-like object is passed,
-            it will be used.
-            An integer `n` means to use LRU Caching with maximal n elements and is
-            equal to `cache=LRUCache(n)`
-            Default (None) is equivalent to `cache=ObjectStore.default_cache`
         nestable : bool
             if true this marks the content_class to be saved as nested dict
             objects and not a pointing to saved objects. So the saved complex
@@ -118,6 +107,15 @@ class ObjectStore(object):
         self.units = dict()
 
         self.index = weakref.WeakKeyDictionary()
+
+    def to_dict(self):
+        return {
+            'prefix': self.prefix,
+            'content_class': self.content_class,
+            'has_name': self.has_name,
+            'json': self.json,
+            'nestable': self.nestable
+        }
 
     def register(self, storage, name):
         self._storage = storage

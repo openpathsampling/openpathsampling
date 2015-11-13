@@ -260,7 +260,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         self.dimension_units = dict()
 
-    def add(self, name, store, register_attr=True):
+    def create_store(self, name, store, register_attr=True):
         """
         Add a object store to the file
 

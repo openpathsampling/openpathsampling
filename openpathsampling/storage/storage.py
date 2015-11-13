@@ -152,41 +152,41 @@ class Storage(NetCDFPlus):
 
         # objects with special storages
 
-        self.add('trajectories', paths.storage.TrajectoryStore())
-        self.add('snapshots', paths.storage.SnapshotStore())
-        self.add('configurations', paths.storage.ConfigurationStore())
-        self.add('momenta', paths.storage.MomentumStore())
-        self.add('samples', paths.storage.SampleStore())
-        self.add('samplesets', paths.storage.SampleSetStore())
-        self.add('pathmovechanges', paths.storage.PathMoveChangeStore())
-        self.add('steps', paths.storage.MCStepStore())
+        self.create_store('trajectories', paths.storage.TrajectoryStore())
+        self.create_store('snapshots', paths.storage.SnapshotStore())
+        self.create_store('configurations', paths.storage.ConfigurationStore())
+        self.create_store('momenta', paths.storage.MomentumStore())
+        self.create_store('samples', paths.storage.SampleStore())
+        self.create_store('samplesets', paths.storage.SampleSetStore())
+        self.create_store('pathmovechanges', paths.storage.PathMoveChangeStore())
+        self.create_store('steps', paths.storage.MCStepStore())
 
-        self.add('cvs', paths.storage.ObjectDictStore(paths.CollectiveVariable, paths.Snapshot))
+        self.create_store('cvs', paths.storage.ObjectDictStore(paths.CollectiveVariable, paths.Snapshot))
         self.collectivevariables = self.cvs
 
         # normal objects
 
-        self.add('details', paths.storage.ObjectStore(paths.Details, has_name=False))
-        self.add('topologies', paths.storage.ObjectStore(paths.Topology, has_name=True))
-        self.add('pathmovers', paths.storage.ObjectStore(paths.PathMover, has_name=True))
-        self.add('shootingpoints',
+        self.create_store('details', paths.storage.ObjectStore(paths.Details, has_name=False))
+        self.create_store('topologies', paths.storage.ObjectStore(paths.Topology, has_name=True))
+        self.create_store('pathmovers', paths.storage.ObjectStore(paths.PathMover, has_name=True))
+        self.create_store('shootingpoints',
                  paths.storage.ObjectStore(paths.ShootingPoint, has_name=False))
-        self.add('shootingpointselectors',
+        self.create_store('shootingpointselectors',
                  paths.storage.ObjectStore(paths.ShootingPointSelector, has_name=True))
-        self.add('engines', paths.storage.ObjectStore(paths.DynamicsEngine, has_name=True))
-        self.add('pathsimulators',
+        self.create_store('engines', paths.storage.ObjectStore(paths.DynamicsEngine, has_name=True))
+        self.create_store('pathsimulators',
                  paths.storage.ObjectStore(paths.PathSimulator, has_name=True))
-        self.add('transitions', paths.storage.ObjectStore(paths.Transition, has_name=True))
-        self.add('networks',
+        self.create_store('transitions', paths.storage.ObjectStore(paths.Transition, has_name=True))
+        self.create_store('networks',
                  paths.storage.ObjectStore(paths.TransitionNetwork, has_name=True))
-        self.add('schemes',
+        self.create_store('schemes',
                  paths.storage.ObjectStore(paths.MoveScheme, has_name=True))
 
         # nestable objects
 
-        self.add('volumes',
+        self.create_store('volumes',
                  paths.storage.ObjectStore(paths.Volume, nestable=True, has_name=True))
-        self.add('ensembles',
+        self.create_store('ensembles',
                  paths.storage.ObjectStore(paths.Ensemble, nestable=True, has_name=True))
         # special stores
         # self.add('names', paths.storage.NameStore())
