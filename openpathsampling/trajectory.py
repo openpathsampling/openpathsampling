@@ -690,42 +690,6 @@ class Trajectory(list, StorableObject):
 
         return md.Trajectory(output, topology)
 
-    @staticmethod
-    def from_mdtraj(mdtrajectory):
-        """
-        Construct a Trajectory object from an mdtraj.Trajectory object
-
-        Parameters
-        ----------
-        mdtrajectory : mdtraj.Trajectory
-            Input mdtraj.Trajectory
-
-        Returns
-        -------
-        Trajectory
-        """
-        trajectory = Trajectory()
-
-        velocities = \
-            u.Quantity(np.zeros(mdtrajectory.xyz[0].shape, dtype=np.float32), u.nanometers / u.picoseconds)
-
-        zero_momentum = paths.Momentum(velocities=velocities)
-
-        for frame_num in range(len(mdtrajectory)):
-            # mdtraj trajectories only have coordinates and box_vectors
-            coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
-            if mdtrajectory.unitcell_vectors is not None:
-                box_v = u.Quantity(mdtrajectory.unitcell_vectors[frame_num],
-                                   u.nanometers)
-            else:
-                box_v = None
-            config = paths.Configuration(coordinates=coord, box_vectors=box_v)
-
-            snap = paths.Snapshot(configuration=config, momentum=zero_momentum)
-            trajectory.append(snap)
-
-        return trajectory
-
     @property
     def topology(self):
         """
