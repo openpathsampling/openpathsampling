@@ -260,8 +260,8 @@ class NetCDFPlus(netCDF4.Dataset):
                 store.register(self, store.name)
 
             self.update_delegates()
+            self._restore_storages()
 
-            # After we have restored the units we can load objects from the storage
             self._restore()
 
         self.sync()

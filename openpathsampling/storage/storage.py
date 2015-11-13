@@ -214,6 +214,8 @@ class Storage(NetCDFPlus):
 
         # update the units for dimensions from the template
         self.dimension_units.update(paths.tools.units_from_snapshot(template))
+
+        # since we want to store stuff we need to finalize stores that have not been initialized yet
         self.finalize_stores()
 
         # TODO: Might not need to save topology
@@ -230,12 +232,8 @@ class Storage(NetCDFPlus):
         self.variables['template_idx'][:] = self.snapshots.index[template]
 
     def _restore(self):
-
         self.set_caching_mode('default')
-
-        self._restore_storages()
         self.topology = self.topologies[0]
-
 
     def sync_all(self):
         """

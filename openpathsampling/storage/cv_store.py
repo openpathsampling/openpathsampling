@@ -2,9 +2,9 @@ from openpathsampling.netcdfplus.object_storage import ObjectStore
 
 
 class ObjectDictStore(ObjectStore):
-    def __init__(self, cls, key_class):
+    def __init__(self, content_class, key_class):
         super(ObjectDictStore, self).__init__(
-            cls,
+            content_class,
             json=True,
             has_name=True
         )

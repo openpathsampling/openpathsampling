@@ -5,7 +5,6 @@ from openpathsampling.trajectory import Trajectory
 from openpathsampling.netcdfplus.object_storage import ObjectStore
 from openpathsampling.netcdfplus.objproxy import LoaderProxy
 
-
 class SnapshotStore(ObjectStore):
     """
     An ObjectStore for Snapshots in netCDF files.
