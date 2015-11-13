@@ -68,9 +68,9 @@ class testMSTISNetwork(object):
         )
 
         self.mstis = MSTISNetwork([
-            (self.stateA, ifacesA, "A", xval),
-            (self.stateB, ifacesB, "B", xval),
-            (self.stateC, ifacesC, "C", xval)
+            (self.stateA, ifacesA, xval),
+            (self.stateB, ifacesB, xval),
+            (self.stateC, ifacesC, xval)
         ])
 
     def test_trajectories(self):
