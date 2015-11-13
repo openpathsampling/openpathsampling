@@ -87,7 +87,7 @@ This uses a similar setup as the MSTIS example but assignes different interfaces
 Many of these notebooks are also used at integration tests. We use the
 [`ipynbtest.py`](http://github.com/jhprinz/ipynb-test) script to run
 notebooks from the command line, and, when appropriate, check the
-corrcectness results.
+correctness of the results.
 
 - [`localtest.sh`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/localtest.sh)
     A test script to run *all* the notebooks listed here. Only a subset are
