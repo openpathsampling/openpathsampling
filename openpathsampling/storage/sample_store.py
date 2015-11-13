@@ -1,6 +1,5 @@
-from openpathsampling.netcdfplus.objects import ObjectStore
 from openpathsampling.sample import SampleSet, Sample
-from openpathsampling.netcdfplus.proxy import LoaderProxy
+from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
 
 
 class SampleStore(ObjectStore):

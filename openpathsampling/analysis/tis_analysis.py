@@ -6,7 +6,7 @@ from histogram import Histogram, histograms_to_pandas_dataframe
 from wham import WHAM
 from lookup_function import LookupFunction
 import openpathsampling as paths
-from openpathsampling.netcdfplus.base import StorableNamedObject
+from openpathsampling.netcdfplus import StorableNamedObject
 
 logger = logging.getLogger(__name__)
 

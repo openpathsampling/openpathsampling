@@ -46,7 +46,6 @@ class ObjectStore(StorableNamedObject):
         storage
         content_class
         json
-        dimension_units
         nestable : bool
             if true this marks the content_class to be saved as nested dict
             objects and not a pointing to saved objects. So the saved complex
@@ -131,10 +130,6 @@ class ObjectStore(StorableNamedObject):
             raise RuntimeError('A store need to be added to a storage to be used!')
 
         return self._storage
-
-    @property
-    def dimension_units(self):
-        return self.storage.dimension_units
 
     def __str__(self):
         return repr(self)

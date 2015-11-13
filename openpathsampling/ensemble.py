@@ -6,7 +6,7 @@ Created on 03.09.2014
 
 import logging
 
-from openpathsampling.netcdfplus.base import StorableNamedObject
+from openpathsampling.netcdfplus import StorableNamedObject
 import openpathsampling as paths
 
 logger = logging.getLogger(__name__)

@@ -4,7 +4,7 @@ import itertools
 import pandas as pd
 
 import openpathsampling as paths
-from openpathsampling.netcdfplus.base import StorableNamedObject
+from openpathsampling.netcdfplus import StorableNamedObject
 import openpathsampling.volume
 import openpathsampling.ensemble
 

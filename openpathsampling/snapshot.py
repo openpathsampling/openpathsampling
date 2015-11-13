@@ -312,9 +312,126 @@ def has(attr):
 
     return _has
 
+@lazy_loading_attributes('_reversed')
+class Snapshot(StorableObject):
+    """
+    Simulation snapshot. Contains references to a configuration and momentum
+    """
+
+    # Class variables to store the global storage and the system context
+    # describing the system to be saved as snapshots
+    # Hopefully these class member variables will not be needed any longer
+    engine = None
+
+    def __init__(self, is_reversed=False, reversed_copy=None):
+        """
+        Create a simulation snapshot. Initialization happens primarily in
+        one of two ways:
+            1. Specify `Configuration` and `Momentum` objects
+            2. Specify the things which make up `Configuration` and
+               `Momentum` objects, i.e., coordinates, velocities, box
+               vectors, etc.
+        If you want to obtain a snapshot from a currently-running MD engine,
+        use that engine's .current_snapshot property.
+
+        Parameters
+        ----------
+        coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
+            atomic coordinates (default: None)
+        velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
+            atomic velocities (default: None)
+        box_vectors : periodic box vectors (default: None)
+            the periodic box vectors at current timestep (defautl: None)
+        potential_energy : simtk.unit.Quantity of units energy/mole
+            potential energy at current timestep (default: None)
+        kinetic_energy : simtk.unit.Quantity of units energy/mole
+            kinetic energy at current timestep (default: None)
+
+        Attributes
+        ----------
+        coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
+            atomic coordinates
+        velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
+            atomic velocities
+        box_vectors : periodic box vectors
+            the periodic box vectors
+        potential_energy : simtk.unit.Quantity of units energy/mole
+            potential energy
+        kinetic_energy : simtk.unit.Quantity of units energy/mole
+            kinetic energy
+        idx : dict( Storage() : int )
+            dict for storing the used index per storage
+        """
+
+        super(Snapshot, self).__init__()
+
+        self.is_reversed = is_reversed
+
+        if reversed_copy is None:
+            # this will always create the mirrored copy so we can save in pairs!
+            self._reversed = Snapshot(is_reversed=not self.is_reversed,
+                                      reversed_copy=self)
+        else:
+            self._reversed = reversed_copy
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        elif hasattr(other, '_idx'):
+            if other.__subject__ is self:
+                return True
+
+        return False
+
+    # ==========================================================================
+    # Utility functions
+    # ==========================================================================
+
+    def copy(self):
+        """
+        Returns a shallow copy of the instance itself. The contained
+        configuration and momenta are not copied.
+
+        This will also lead to a new reversed copy when using reversed!
+
+        Returns
+        -------
+        Snapshot()
+            the deep copy
+        """
+        this = Snapshot(is_reversed=self.is_reversed)
+        return this
+
+    def reversed_copy(self):
+        """
+        Returns a shallow reversed copy of the instance itself. The
+        contained configuration and momenta are not copied and the momenta
+        are marked reversed.
+
+        This will also lead to a new (non-)reversed copy!
+
+        Returns
+        -------
+        Snapshot()
+            the deep copy
+        """
+
+        obj = self.copy()
+        obj.is_reversed = not obj.is_reversed
+        return obj
+
+    @property
+    def reversed(self):
+        """
+        Reversed the momenta. This only flips a boolean and marks the given
+        snapshot are reversed. This is fast and should be used instead of
+        read velocity inversion.
+        """
+        return self._reversed
+
 
 @lazy_loading_attributes('configuration', 'momentum', '_reversed')
-class Snapshot(StorableObject):
+class MDSnapshot(Snapshot):
     """
     Simulation snapshot. Contains references to a configuration and momentum
     """
@@ -367,9 +484,7 @@ class Snapshot(StorableObject):
             dict for storing the used index per storage
         """
 
-        super(Snapshot, self).__init__()
-
-        self.is_reversed = is_reversed
+        super(MDSnapshot, self).__init__(is_reversed, reversed_copy)
 
         if configuration is None and momentum is None:
             if coordinates is not None:
@@ -390,23 +505,8 @@ class Snapshot(StorableObject):
         self.momentum = momentum
 
         if reversed_copy is None:
-            # this will always create the mirrored copy so we can save in pairs!
-            self._reversed = Snapshot(configuration=configuration,
-                                      momentum=momentum,
-                                      is_reversed=not self.is_reversed,
-                                      reversed_copy=self)
-        else:
-            self._reversed = reversed_copy
-
-    def __eq__(self, other):
-        if self is other:
-            return True
-        elif hasattr(other, '_idx'):
-            if other.__subject__ is self:
-                return True
-
-        return False
-
+            self._reversed.configuration=self.configuration
+            self._reversed.momentum=self.momentum
 
     @property
     @has('configuration')
@@ -522,36 +622,12 @@ class Snapshot(StorableObject):
         Snapshot()
             the deep copy
         """
-        this = Snapshot(configuration=self.configuration, momentum=self.momentum,
-                        is_reversed=self.is_reversed)
+        this = self.__class__(
+            configuration=self.configuration,
+            momentum=self.momentum,
+            is_reversed=self.is_reversed
+        )
         return this
-
-    def reversed_copy(self):
-        """
-        Returns a shallow reversed copy of the instance itself. The
-        contained configuration and momenta are not copied and the momenta
-        are marked reversed.
-
-        This will also lead to a new (non-)reversed copy!
-
-        Returns
-        -------
-        Snapshot()
-            the deep copy
-        """
-
-        obj = self.copy()
-        obj.is_reversed = not obj.is_reversed
-        return obj
-
-    @property
-    def reversed(self):
-        """
-        Reversed the momenta. This only flips a boolean and marks the given
-        snapshot are reversed. This is fast and should be used instead of
-        read velocity inversion.
-        """
-        return self._reversed
 
     @has('configuration')
     def md(self):
@@ -574,7 +650,117 @@ class Snapshot(StorableObject):
         So far the potential and kinetic energies are copied and are thus false but still useful!?!
         """
 
-        this = Snapshot(configuration=self.configuration.copy(subset),
-                        momentum=self.momentum.copy(subset),
-                        is_reversed=self.is_reversed)
+        this = MDSnapshot(
+            configuration=self.configuration.copy(subset),
+            momentum=self.momentum.copy(subset),
+            is_reversed=self.is_reversed
+        )
+        return this
+
+
+
+@lazy_loading_attributes('_reversed')
+class ToySnapshot(Snapshot):
+    """
+    Simulation snapshot. Contains references to a configuration and momentum
+    """
+
+    # Class variables to store the global storage and the system context
+    # describing the system to be saved as snapshots
+    # Hopefully these class member variables will not be needed any longer
+    engine = None
+
+    def __init__(self, coordinates=None, velocities=None, is_reversed=False,
+                 reversed_copy=None):
+        """
+        Create a simulation snapshot. Initialization happens primarily in
+        one of two ways:
+            1. Specify `Configuration` and `Momentum` objects
+            2. Specify the things which make up `Configuration` and
+               `Momentum` objects, i.e., coordinates, velocities, box
+               vectors, etc.
+        If you want to obtain a snapshot from a currently-running MD engine,
+        use that engine's .current_snapshot property.
+
+        Parameters
+        ----------
+        coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
+            atomic coordinates (default: None)
+        velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
+            atomic velocities (default: None)
+        box_vectors : periodic box vectors (default: None)
+            the periodic box vectors at current timestep (defautl: None)
+        potential_energy : simtk.unit.Quantity of units energy/mole
+            potential energy at current timestep (default: None)
+        kinetic_energy : simtk.unit.Quantity of units energy/mole
+            kinetic energy at current timestep (default: None)
+
+        Attributes
+        ----------
+        coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
+            atomic coordinates
+        velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
+            atomic velocities
+        box_vectors : periodic box vectors
+            the periodic box vectors
+        potential_energy : simtk.unit.Quantity of units energy/mole
+            potential energy
+        kinetic_energy : simtk.unit.Quantity of units energy/mole
+            kinetic energy
+        idx : dict( Storage() : int )
+            dict for storing the used index per storage
+        """
+
+        super(ToySnapshot, self).__init__()
+
+        self.is_reversed = is_reversed
+
+        self.coordinates = coordinates
+        self.velocities = velocities
+
+        if reversed_copy is None:
+            self._reversed.coordinates = self.coordinates
+            self._reversed.velocities = -1.0 * self.velocities
+        else:
+            self._reversed = reversed_copy
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        elif hasattr(other, '_idx'):
+            if other.__subject__ is self:
+                return True
+
+        return False
+
+    # TODO: Can be removed. We don't need this anymore. Still here for legacy reasons
+    @property
+    def xyz(self):
+        """
+        Coordinates without dimensions.
+
+        """
+        return self.coordinates
+
+    # ==========================================================================
+    # Utility functions
+    # ==========================================================================
+
+    def copy(self):
+        """
+        Returns a shallow copy of the instance itself. The contained
+        configuration and momenta are not copied.
+
+        This will also lead to a new reversed copy when using reversed!
+
+        Returns
+        -------
+        Snapshot()
+            the deep copy
+        """
+        this = ToySnapshot(
+            self.coordinates,
+            self.velocities,
+            self.is_reversed
+        )
         return this

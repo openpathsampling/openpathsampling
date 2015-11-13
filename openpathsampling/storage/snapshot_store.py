@@ -2,8 +2,9 @@ import numpy as np
 
 from openpathsampling.snapshot import Snapshot, Configuration, Momentum
 from openpathsampling.trajectory import Trajectory
-from openpathsampling.netcdfplus.objects import ObjectStore
-from openpathsampling.netcdfplus.proxy import LoaderProxy
+from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
+
+import simtk.unit as u
 
 class SnapshotStore(ObjectStore):
     """
@@ -238,12 +239,12 @@ class MomentumStore(ObjectStore):
                            description="the velocity of atom 'atom' in dimension " +
                                        "'coordinate' of momentum 'momentum'.",
                            chunksizes=(1, n_atoms, n_spatial),
-                           simtk_unit='velocity'
+                           simtk_unit=u.nanometers / u.picoseconds
                            )
 
         self.init_variable('kinetic_energy', 'float',
                            chunksizes=(1,),
-                           simtk_unit='energy'
+                           simtk_unit=u.kilocalories_per_mole
                            )
 
 
@@ -312,16 +313,16 @@ class ConfigurationStore(ObjectStore):
                            description="coordinate of atom '{ix[1]}' in dimension " +
                                        "'{ix[2]}' of configuration '{ix[0]}'.",
                            chunksizes=(1, n_atoms, n_spatial),
-                           simtk_unit='length'
+                           simtk_unit=u.nanometers
                            )
 
         self.init_variable('box_vectors', 'numpy.float32',
                            dimensions=('spatial', 'spatial'),
                            chunksizes=(1, n_spatial, n_spatial),
-                           simtk_unit='length'
+                           simtk_unit=u.nanometers / u.picoseconds
                            )
 
         self.init_variable('potential_energy', 'float',
                            chunksizes=(1,),
-                           simtk_unit='energy'
+                           simtk_unit=u.kilocalories_per_mole
                            )

@@ -3,7 +3,7 @@ import logging
 
 import numpy as np
 
-from openpathsampling.netcdfplus.base import StorableNamedObject
+from openpathsampling.netcdfplus import StorableNamedObject
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')

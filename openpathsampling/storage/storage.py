@@ -13,9 +13,7 @@ init_log = logging.getLogger('openpathsampling.initialization')
 import openpathsampling as paths
 import simtk.unit as u
 
-from openpathsampling.netcdfplus.netcdfplus import NetCDFPlus
-from openpathsampling.netcdfplus.cache import WeakLRUCache, WeakValueCache
-from openpathsampling.netcdfplus.objects import ObjectStore
+from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore
 
 # =============================================================================================
 # OPS SPECIFIC STORAGE
@@ -47,16 +45,6 @@ class Storage(NetCDFPlus):
             self._template = self.snapshots.load(int(self.variables['template_idx'][0]))
 
         return self._template
-
-    def _setup_class(self):
-        super(Storage, self)._setup_class()
-        # use MD units
-
-        self.dimension_units = {
-            'length': u.nanometers,
-            'velocity': u.nanometers / u.picoseconds,
-            'energy': u.kilojoules_per_mole
-        }
 
     def clone(self, filename, subset):
         """
@@ -120,8 +108,7 @@ class Storage(NetCDFPlus):
     def n_spatial(self):
         return self.topology.n_spatial
 
-    def __init__(self, filename, mode=None,
-                 template=None, units=None):
+    def __init__(self, filename, mode=None, template=None):
         """
         Create a netdfplus storage for OPS Objects
 
@@ -143,9 +130,9 @@ class Storage(NetCDFPlus):
         """
 
         self._template = template
-        super(Storage, self).__init__(filename, mode, units=units)
+        super(Storage, self).__init__(filename, mode)
 
-    def _register_storages(self):
+    def _create_storages(self):
         """
         Register all Stores used in the OpenPathSampling Storage
 
@@ -211,9 +198,6 @@ class Storage(NetCDFPlus):
         # spatial dimensions
         if 'spatial' not in self.dimensions:
             self.createDimension('spatial', self.n_spatial)
-
-        # update the units for dimensions from the template
-        self.dimension_units.update(paths.tools.units_from_snapshot(template))
 
         # since we want to store stuff we need to finalize stores that have not been initialized yet
         self.finalize_stores()

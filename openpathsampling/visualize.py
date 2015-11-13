@@ -8,8 +8,7 @@ import matplotlib.pyplot as plt
 from networkx.readwrite import json_graph
 
 import openpathsampling as paths
-from openpathsampling.netcdfplus.proxy import LoaderProxy
-
+from openpathsampling.netcdfplus import LoaderProxy
 
 class TreeRenderer(object):
     def __init__(self):

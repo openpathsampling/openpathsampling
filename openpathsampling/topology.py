@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from simtk.openmm import XmlSerializer
 
-from openpathsampling.netcdfplus.base import StorableNamedObject
+from openpathsampling.netcdfplus import StorableNamedObject
 
 
 class Topology(StorableNamedObject):

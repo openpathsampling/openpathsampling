@@ -1,4 +1,4 @@
-from openpathsampling.netcdfplus.objects import ObjectStore
+from openpathsampling.netcdfplus import ObjectStore
 from openpathsampling.pathsimulator import MCStep
 
 
