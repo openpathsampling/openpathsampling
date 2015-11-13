@@ -35,7 +35,7 @@ from pathmover import (
     FirstSubtrajectorySelectMover, MultipleSetMinusMover,
     OneWayShootingMover, RandomSubtrajectorySelectMover, SubPathMover,
     EnsembleFilterMover, SelectionMover, FirstAllowedMover,
-    LastAllowedMover, OneWayExtendMover
+    LastAllowedMover, OneWayExtendMover, SubtrajectorySelectMover
 )
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \

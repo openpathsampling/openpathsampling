@@ -16,7 +16,6 @@ from openpathsampling.base import StorableNamedObject, StorableObject
 from ops_logging import initialization_logging
 from treelogic import TreeMixin
 
-
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
@@ -331,26 +330,12 @@ class PathMover(TreeMixin, StorableNamedObject):
         else:
             return self.name
 
-class IdentityPathMover(PathMover):
-    """
-    The simplest Mover that does nothing !
-
-    Notes
-    -----
-    Since is does nothing it is considered rejected everytime! It can be used to test
-    function of PathMover
-    """
-    def move(self, globalstate):
-        return paths.EmptyPathMoveChange()
-
 
 ###############################################################################
 # GENERATORS
 ###############################################################################
 
 class SampleMover(PathMover):
-    engine = None
-
     def __init__(self):
         super(SampleMover, self).__init__()
 
@@ -486,7 +471,9 @@ class SampleMover(PathMover):
 class EngineMover(SampleMover):
     """Baseclass for Movers that use an engine
     """
+
     engine = None
+
     def __init__(self, ensemble, target_ensemble, selector):
         super(EngineMover, self).__init__()
         self.selector = selector
@@ -562,25 +549,32 @@ class EngineMover(SampleMover):
                             trajectory[shooting_index + 1:])
         return trial_trajectory
 
+    # direction is an abstract property to disallow instantiation of the EngineMover unless we use
+    # a concrete subclass that sets this. This is not super elegant but is the way to do it with
+    # abstract classes
+
+    @abc.abstractproperty
+    def direction(self):
+        return 'unknown'
 
     def _run(self, shooting_point):
         shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
         logger.info(shoot_str.format(
             fnum=shooting_point.index,
             maxt=len(shooting_point.trajectory)-1,
-            sh_dir=self._direction
+            sh_dir=self.direction
         ))
 
-        if self._direction == "forward":
+        if self.direction == "forward":
             trial_trajectory = self._make_forward_trajectory(
                 shooting_point.trajectory, shooting_point.index
             )
-        elif self._direction == "backward":
+        elif self.direction == "backward":
             trial_trajectory = self._make_backward_trajectory(
                 shooting_point.trajectory, shooting_point.index
             )
         else:
-            raise RuntimeError("Unknown direction: " + str(self._direction))
+            raise RuntimeError("Unknown direction: " + str(self.direction))
 
         trial_point = paths.ShootingPoint(
             shooting_point.selector,
@@ -594,7 +588,6 @@ class EngineMover(SampleMover):
 class ForwardShootMover(EngineMover):
     """A forward shooting sample generator
     """
-    _direction = "forward"
     def __init__(self, ensemble, selector):
         super(ForwardShootMover, self).__init__(
             ensemble=ensemble,
@@ -602,17 +595,23 @@ class ForwardShootMover(EngineMover):
             selector=selector
         )
 
+    @property
+    def direction(self):
+        return 'forward'
 
 class BackwardShootMover(EngineMover):
     """A Backward shooting generator
     """
-    _direction = "backward"
     def __init__(self, ensemble, selector):
         super(BackwardShootMover, self).__init__(
             ensemble=ensemble,
             target_ensemble=ensemble,
             selector=selector
         )
+
+    @property
+    def direction(self):
+        return 'backward'
 
 
 class ForwardExtendMover(EngineMover):
@@ -627,6 +626,10 @@ class ForwardExtendMover(EngineMover):
             selector=paths.FinalFrameSelector(),
         )
 
+    @property
+    def direction(self):
+        return 'forward'
+
 
 class BackwardExtendMover(EngineMover):
     """
@@ -639,6 +642,10 @@ class BackwardExtendMover(EngineMover):
             target_ensemble=target_ensemble,
             selector=paths.FirstFrameSelector(),
         )
+
+    @property
+    def direction(self):
+        return 'backward'
 
 
 ###############################################################################

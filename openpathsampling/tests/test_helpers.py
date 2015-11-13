@@ -16,6 +16,9 @@ from openpathsampling.topology import Topology
 import openpathsampling as paths
 import numpy as np
 import numpy.testing as npt
+from nose.tools import make_decorator
+
+from functools import wraps
 
 import simtk.unit as u
 
@@ -237,3 +240,40 @@ class RandomMDEngine(paths.DynamicsEngine):
     def generate_next_frame(self):
         self._current_snapshot = None
         return self.current_snapshot
+
+
+class IdentityPathMover(paths.PathMover):
+    """
+    The simplest Mover that does nothing !
+
+    Notes
+    -----
+    Since is does nothing it is considered rejected everytime! It can be used to test
+    function of PathMover
+    """
+    def move(self, globalstate):
+        return paths.EmptyPathMoveChange()
+
+
+def raises_with_message_like(err, message=None):
+    """
+    Decorator that allows to run nosetests with raises and testing if the message starts with a txt.
+
+    Notes
+    -----
+    We use this to check for abstract classes using
+    >>> @raises_with_message_like(TypeError, "Can't instantiate abstract class")
+    """
+    def decorator(fnc):
+
+        @wraps(fnc)
+        def _wrapper(*args, **kwargs):
+            try:
+                fnc(*args, **kwargs)
+            except err as e:
+                if message is not None and not str(e).startswith(message):
+                    raise
+
+        return _wrapper
+
+    return decorator

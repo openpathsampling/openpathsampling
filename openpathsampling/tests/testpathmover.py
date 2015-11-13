@@ -3,29 +3,24 @@
 '''
 
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises)
-from nose.plugins.skip import Skip, SkipTest
-from test_helpers import (assert_equal_array_array, items_equal,
-                          assert_not_equal_array_array,
-                          make_1d_traj,
-                          CalvinistDynamics,
-                          CallIdentity
-                         )
+                        raises)
+from nose.plugins.skip import SkipTest
 
+from test_helpers import (assert_equal_array_array, items_equal,
+                          make_1d_traj,
+                          CalvinistDynamics
+                          )
 from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.pathmover import *
-
 from openpathsampling.sample import Sample, SampleSet
-
 from openpathsampling.shooting import UniformSelector
-
 from openpathsampling.volume import CVRangeVolume
-from test_helpers import CallIdentity
+from test_helpers import CallIdentity, IdentityPathMover, raises_with_message_like
 from openpathsampling.trajectory import Trajectory
 from openpathsampling.ensemble import EnsembleFactory as ef
-from openpathsampling.collectivevariable import CV_Function, CollectiveVariable
+from openpathsampling.collectivevariable import CV_Function
 
-import logging
+
 #logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
@@ -1236,6 +1231,25 @@ class testSingleReplicaMinusMover(object):
             len(traj_bad_extension)+self.dyn.n_frames_max-1
         )
 
-    @raises(TypeError)
+
+class testAbstract(object):
+    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_pathmover(self):
         mover = paths.PathMover()
+
+    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
+    def test_abstract_samplemover(self):
+        mover = paths.SampleMover()
+
+    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
+    def test_abstract_enginemover(self):
+        mover = paths.EngineMover()
+
+    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
+    def test_abstract_selectionmover(self):
+        mover = paths.SelectionMover()
+
+    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
+    def test_abstract_subtrajectoryselectmover(self):
+        mover = paths.SubtrajectorySelectMover()
+
