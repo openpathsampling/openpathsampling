@@ -330,7 +330,8 @@ class PathMover(TreeMixin, StorableNamedObject):
         else:
             return self.name
 
-class IdentityPathMover(paths.PathMover):
+
+class IdentityPathMover(PathMover):
     """
     The simplest Mover that does nothing !
 
