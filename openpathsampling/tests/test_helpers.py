@@ -6,21 +6,19 @@ a duck.
 """
 
 import os
-from pkg_resources import resource_filename 
+from functools import wraps
+
+from pkg_resources import resource_filename
 from nose.tools import assert_items_equal, assert_equal, assert_in
+import numpy as np
+import numpy.testing as npt
+import simtk.unit as u
 
 from openpathsampling.trajectory import Trajectory
 from openpathsampling.snapshot import Snapshot
 from openpathsampling.dynamics_engine import DynamicsEngine
 from openpathsampling.topology import Topology
 import openpathsampling as paths
-import numpy as np
-import numpy.testing as npt
-from nose.tools import make_decorator
-
-from functools import wraps
-
-import simtk.unit as u
 
 
 def make_1d_traj(coordinates, velocities=None, topology=None):
@@ -240,20 +238,6 @@ class RandomMDEngine(paths.DynamicsEngine):
     def generate_next_frame(self):
         self._current_snapshot = None
         return self.current_snapshot
-
-
-class IdentityPathMover(paths.PathMover):
-    """
-    The simplest Mover that does nothing !
-
-    Notes
-    -----
-    Since is does nothing it is considered rejected everytime! It can be used to test
-    function of PathMover
-    """
-    def move(self, globalstate):
-        return paths.EmptyPathMoveChange()
-
 
 def raises_with_message_like(err, message=None):
     """

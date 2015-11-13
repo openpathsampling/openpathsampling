@@ -330,6 +330,17 @@ class PathMover(TreeMixin, StorableNamedObject):
         else:
             return self.name
 
+class IdentityPathMover(paths.PathMover):
+    """
+    The simplest Mover that does nothing !
+
+    Notes
+    -----
+    Since is does nothing it is considered rejected everytime! It can be used to test
+    function of PathMover
+    """
+    def move(self, globalstate):
+        return paths.EmptyPathMoveChange()
 
 ###############################################################################
 # GENERATORS

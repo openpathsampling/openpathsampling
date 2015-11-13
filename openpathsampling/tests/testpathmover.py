@@ -15,7 +15,8 @@ from openpathsampling.pathmover import *
 from openpathsampling.sample import Sample, SampleSet
 from openpathsampling.shooting import UniformSelector
 from openpathsampling.volume import CVRangeVolume
-from test_helpers import CallIdentity, IdentityPathMover, raises_with_message_like
+from test_helpers import CallIdentity, raises_with_message_like
+from openpathsampling.pathmover import IdentityPathMover
 from openpathsampling.trajectory import Trajectory
 from openpathsampling.ensemble import EnsembleFactory as ef
 from openpathsampling.collectivevariable import CV_Function
