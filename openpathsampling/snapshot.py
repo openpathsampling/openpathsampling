@@ -313,7 +313,7 @@ def has(attr):
     return _has
 
 @lazy_loading_attributes('_reversed')
-class Snapshot(StorableObject):
+class AbstractSnapshot(StorableObject):
     """
     Simulation snapshot. Contains references to a configuration and momentum
     """
@@ -363,14 +363,15 @@ class Snapshot(StorableObject):
             dict for storing the used index per storage
         """
 
-        super(Snapshot, self).__init__()
+        super(AbstractSnapshot, self).__init__()
 
         self.is_reversed = is_reversed
 
         if reversed_copy is None:
             # this will always create the mirrored copy so we can save in pairs!
-            self._reversed = Snapshot(is_reversed=not self.is_reversed,
-                                      reversed_copy=self)
+            self._reversed = self.__class__.__new__(self.__class__)
+            AbstractSnapshot.__init__(self, is_reversed=not self.is_reversed, reversed_copy=self)
+
         else:
             self._reversed = reversed_copy
 
@@ -399,7 +400,7 @@ class Snapshot(StorableObject):
         Snapshot()
             the deep copy
         """
-        this = Snapshot(is_reversed=self.is_reversed)
+        this = AbstractSnapshot(is_reversed=self.is_reversed)
         return this
 
     def reversed_copy(self):
@@ -431,7 +432,7 @@ class Snapshot(StorableObject):
 
 
 @lazy_loading_attributes('configuration', 'momentum', '_reversed')
-class MDSnapshot(Snapshot):
+class Snapshot(AbstractSnapshot):
     """
     Simulation snapshot. Contains references to a configuration and momentum
     """
@@ -484,7 +485,7 @@ class MDSnapshot(Snapshot):
             dict for storing the used index per storage
         """
 
-        super(MDSnapshot, self).__init__(is_reversed, reversed_copy)
+        super(Snapshot, self).__init__(is_reversed, reversed_copy)
 
         if configuration is None and momentum is None:
             if coordinates is not None:
@@ -650,7 +651,7 @@ class MDSnapshot(Snapshot):
         So far the potential and kinetic energies are copied and are thus false but still useful!?!
         """
 
-        this = MDSnapshot(
+        this = Snapshot(
             configuration=self.configuration.copy(subset),
             momentum=self.momentum.copy(subset),
             is_reversed=self.is_reversed
@@ -658,9 +659,8 @@ class MDSnapshot(Snapshot):
         return this
 
 
-
 @lazy_loading_attributes('_reversed')
-class ToySnapshot(Snapshot):
+class ToySnapshot(AbstractSnapshot):
     """
     Simulation snapshot. Contains references to a configuration and momentum
     """
@@ -711,9 +711,7 @@ class ToySnapshot(Snapshot):
             dict for storing the used index per storage
         """
 
-        super(ToySnapshot, self).__init__()
-
-        self.is_reversed = is_reversed
+        super(ToySnapshot, self).__init__(is_reversed, reversed_copy)
 
         self.coordinates = coordinates
         self.velocities = velocities
@@ -721,17 +719,7 @@ class ToySnapshot(Snapshot):
         if reversed_copy is None:
             self._reversed.coordinates = self.coordinates
             self._reversed.velocities = -1.0 * self.velocities
-        else:
-            self._reversed = reversed_copy
 
-    def __eq__(self, other):
-        if self is other:
-            return True
-        elif hasattr(other, '_idx'):
-            if other.__subject__ is self:
-                return True
-
-        return False
 
     # TODO: Can be removed. We don't need this anymore. Still here for legacy reasons
     @property
