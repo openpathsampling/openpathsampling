@@ -12,9 +12,10 @@ init_log = logging.getLogger('openpathsampling.initialization')
 
 import openpathsampling as paths
 import simtk.unit as u
-from netcdfplus import NetCDFPlus
-from cache import WeakLRUCache, WeakValueCache
 
+from openpathsampling.netcdfplus.netcdfplus import NetCDFPlus
+from openpathsampling.netcdfplus.cache import WeakLRUCache, WeakValueCache
+from openpathsampling.netcdfplus.object_storage import ObjectStore
 
 # =============================================================================================
 # OPS SPECIFIC STORAGE
@@ -166,28 +167,28 @@ class Storage(NetCDFPlus):
 
         # normal objects
 
-        self.create_store('details', paths.storage.ObjectStore(paths.Details, has_name=False))
-        self.create_store('topologies', paths.storage.ObjectStore(paths.Topology, has_name=True))
-        self.create_store('pathmovers', paths.storage.ObjectStore(paths.PathMover, has_name=True))
+        self.create_store('details', ObjectStore(paths.Details, has_name=False))
+        self.create_store('topologies', ObjectStore(paths.Topology, has_name=True))
+        self.create_store('pathmovers', ObjectStore(paths.PathMover, has_name=True))
         self.create_store('shootingpoints',
-                 paths.storage.ObjectStore(paths.ShootingPoint, has_name=False))
+                 ObjectStore(paths.ShootingPoint, has_name=False))
         self.create_store('shootingpointselectors',
-                 paths.storage.ObjectStore(paths.ShootingPointSelector, has_name=True))
-        self.create_store('engines', paths.storage.ObjectStore(paths.DynamicsEngine, has_name=True))
+                 ObjectStore(paths.ShootingPointSelector, has_name=True))
+        self.create_store('engines', ObjectStore(paths.DynamicsEngine, has_name=True))
         self.create_store('pathsimulators',
-                 paths.storage.ObjectStore(paths.PathSimulator, has_name=True))
-        self.create_store('transitions', paths.storage.ObjectStore(paths.Transition, has_name=True))
+                 ObjectStore(paths.PathSimulator, has_name=True))
+        self.create_store('transitions', ObjectStore(paths.Transition, has_name=True))
         self.create_store('networks',
-                 paths.storage.ObjectStore(paths.TransitionNetwork, has_name=True))
+                 ObjectStore(paths.TransitionNetwork, has_name=True))
         self.create_store('schemes',
-                 paths.storage.ObjectStore(paths.MoveScheme, has_name=True))
+                 ObjectStore(paths.MoveScheme, has_name=True))
 
         # nestable objects
 
         self.create_store('volumes',
-                 paths.storage.ObjectStore(paths.Volume, nestable=True, has_name=True))
+                 ObjectStore(paths.Volume, nestable=True, has_name=True))
         self.create_store('ensembles',
-                 paths.storage.ObjectStore(paths.Ensemble, nestable=True, has_name=True))
+                 ObjectStore(paths.Ensemble, nestable=True, has_name=True))
         # special stores
         # self.add('names', paths.storage.NameStore())
 

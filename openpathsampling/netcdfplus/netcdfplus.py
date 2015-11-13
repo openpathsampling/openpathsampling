@@ -209,7 +209,6 @@ class NetCDFPlus(netCDF4.Dataset):
         if units is not None:
             self.dimension_units.update(units)
 
-        self._register_storages()
 
         if mode == 'w':
             logger.info("Setup netCDF file and create variables")
@@ -217,7 +216,13 @@ class NetCDFPlus(netCDF4.Dataset):
             # add shared scalar dimension for everyone
             self.create_dimension('scalar', 1)
 
+            self.create_store('stores', )
+            self.create_store('details', ObjectStore(ObjectStore, has_name=False))
+
             self._initialize()
+
+            self._register_storages()
+
 
             logger.info("Finished setting up netCDF file")
 
@@ -340,12 +345,6 @@ class NetCDFPlus(netCDF4.Dataset):
 
         for storage in self._objects.values():
             storage._restore()
-
-    def _initialize_netcdf(self):
-        """
-        Initialize the netCDF+ file for storage itself.
-        """
-        pass
 
     def list_stores(self):
         """

@@ -1,4 +1,4 @@
-from object_storage import ObjectStore
+from openpathsampling.netcdfplus.object_storage import ObjectStore
 
 
 class ObjectDictStore(ObjectStore):

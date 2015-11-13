@@ -1,10 +1,12 @@
 import base64
 import json
+import importlib
+
 import numpy as np
 from simtk import unit as units
 import yaml
-from openpathsampling.base import StorableObject
-import importlib
+
+from base import StorableObject
 
 __author__ = 'Jan-Hendrik Prinz'
 

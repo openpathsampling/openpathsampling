@@ -4,7 +4,6 @@ import os
 import json
 
 import openpathsampling as paths
-
 from openpathsampling.storage import AnalysisStorage
 
 if __name__ == '__main__':
@@ -23,7 +22,7 @@ if __name__ == '__main__':
         filename=file_name
     )
 
-    class ReadableObjectJSON(paths.storage.object_json.ObjectJSON):
+    class ReadableObjectJSON(openpathsampling.netcdfplus.object_json.ObjectJSON):
         def __init__(self, unit_system=None):
             super(ReadableObjectJSON, self).__init__(unit_system)
             self.excluded_keys = ['name', 'idx', 'json', 'identifier']

@@ -1,18 +1,17 @@
-import types
 import logging
+import weakref
 
 import yaml
 
 from cache import MaxCache, Cache, NoCache, WeakLRUCache
 from objproxy import LoaderProxy
-
-import weakref
+from base import StorableNamedObject
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 
-class ObjectStore(object):
+class ObjectStore(StorableNamedObject):
     """
     Base Class for storing complex objects in a netCDF4 file. It holds a
     reference to the store file.
