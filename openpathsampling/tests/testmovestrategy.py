@@ -259,9 +259,9 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
 
     @raises(RuntimeError)
     def test_different_number_input_output_ensembles(self):
-        ens0 = self.network.transition_ensembles[0]
-        ens1 = self.network.transition_ensembles[1]
-        ens2 = self.network.transition_ensembles[2]
+        ens0 = self.network.sampling_ensembles[0]
+        ens1 = self.network.sampling_ensembles[1]
+        ens2 = self.network.sampling_ensembles[2]
         weird_mover = MoverWithSignature(
             input_ensembles=[ens0, ens1, ens2],
             output_ensembles=[ens0, ens1]
@@ -275,9 +275,9 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
 
     @raises(RuntimeError)
     def test_wrong_number_ensembles_in_signature(self):
-        ens0 = self.network.transition_ensembles[0]
-        ens1 = self.network.transition_ensembles[1]
-        ens2 = self.network.transition_ensembles[2]
+        ens0 = self.network.sampling_ensembles[0]
+        ens1 = self.network.sampling_ensembles[1]
+        ens2 = self.network.sampling_ensembles[2]
         weird_mover = MoverWithSignature(
             input_ensembles=[ens0, ens1, ens2],
             output_ensembles=[ens0, ens1, ens2]
@@ -291,9 +291,9 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
 
     @raises(RuntimeError)
     def test_not_replica_exchange_signature(self):
-        ens0 = self.network.transition_ensembles[0]
-        ens1 = self.network.transition_ensembles[1]
-        ens2 = self.network.transition_ensembles[2]
+        ens0 = self.network.sampling_ensembles[0]
+        ens1 = self.network.sampling_ensembles[1]
+        ens2 = self.network.sampling_ensembles[2]
         weird_mover = MoverWithSignature(
             input_ensembles=[ens0, ens1],
             output_ensembles=[ens1, ens2]

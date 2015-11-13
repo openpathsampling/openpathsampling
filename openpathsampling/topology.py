@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 from openpathsampling.base import StorableNamedObject
+from simtk.openmm import XmlSerializer
 
 
 class Topology(StorableNamedObject):
@@ -70,10 +71,9 @@ class MDTrajTopology(Topology):
             else:
                 element_symbol = atom.element.symbol
 
-            atom_data.append((int(atom.serial), atom.name, element_symbol,
-                              int(atom.residue.resSeq), atom.residue.name,
-                              atom.residue.chain.index))
-
+            atom_data.append((atom.serial, atom.name, element_symbol,
+                         int(atom.residue.resSeq), atom.residue.name,
+                         atom.residue.chain.index))
             # used_elements.add(atom.element)
 
         out['atom_columns'] = ["serial", "name", "element", "resSeq", "resName", "chainID"]
@@ -105,3 +105,30 @@ class MDTrajTopology(Topology):
         md_topology = md.Topology.from_dataframe(atoms, bonds)
 
         return cls(md_topology, dct['subsets'])
+
+class OpenMMSystemTopology(Topology):
+    """A Topology that is based on an openmm.system object
+
+    """
+    def __init__(self, openmm_system, subsets = None):
+        self.system = openmm_system
+        self.n_atoms = int(self.system.getNumParticles())
+        self.n_spatial = 3
+        if subsets is None:
+            self.subsets = {}
+        else:
+            self.subsets = subsets
+
+    def subset(self, list_of_atoms):
+        return self
+
+    def to_dict(self):
+        system_xml = XmlSerializer.serialize(self.system)
+        return {'system_xml' : system_xml, 'subsets' : self.subsets}
+
+    @classmethod
+    def from_dict(cls, dct):
+        system_xml = dct['system_xml']
+        subsets = dct['subsets']
+
+        return cls(XmlSerializer.deserialize(system_xml), subsets)

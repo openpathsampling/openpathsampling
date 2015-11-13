@@ -26,7 +26,7 @@ from collectivevariable import CV_Function, CV_MDTraj_Function, CV_MSMB_Featuriz
 from pathmover import (
     RandomChoiceMover, PathMover, ConditionalSequentialMover,
     PartialAcceptanceSequentialMover, BackwardShootMover, ForwardShootMover,
-    ShootMover, BackwardExtendMover, ForwardExtendMover, MinusMover,
+    BackwardExtendMover, ForwardExtendMover, MinusMover,
     SingleReplicaMinusMover, PathMoverFactory, PathReversalMover,
     ReplicaExchangeMover, EnsembleHopMover, ReplicaIDChangeMover,
     SequentialMover, ConditionalMover,
@@ -70,10 +70,10 @@ from analysis.tis_analysis import (
     TISTransition, Transition, TPSTransition
 )
 
-from analysis.move_scheme import MoveScheme, DefaultScheme
+from analysis.move_scheme import MoveScheme, DefaultScheme, LockedMoveScheme
 
 from analysis.network import (
-    MSTISNetwork, TransitionNetwork, MISTISNetwork
+    MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork
 )
 
 from analysis.replica_network import (

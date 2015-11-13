@@ -78,8 +78,7 @@ class PathSimulator(StorableNamedObject):
         Will sync all collective variables and the storage to disk
         """
         if self.storage is not None:
-            self.storage.cvs.sync()
-            self.storage.sync()
+            self.storage.sync_all()
 
     @abc.abstractmethod
     def run(self, nsteps):
@@ -107,7 +106,7 @@ class PathSimulator(StorableNamedObject):
 
         if self.storage is not None:
             self.storage.steps.save(mcstep)
-            self.storage.sync()
+            self.storage.sync_all()
 
 
 class BootstrapPromotionMove(SubPathMover):
@@ -444,13 +443,14 @@ class PathSampling(PathSimulator):
             the storage where all results should be stored in
         engine : openpathsampling.DynamicsEngine
             the engine to be used with shooting moves
-        move_scheme : openpathsampling.PathMover
-            the mover used for the pathsampling cycle
+        move_scheme : openpathsampling.MoveScheme
+            the move scheme used for the pathsampling cycle
         globalstate : openpathsampling.SampleSet
             the initial SampleSet for the Simulator
         """
         super(PathSampling, self).__init__(storage, engine)
         self.move_scheme = move_scheme
+        self.root_mover = move_scheme.move_decision_tree()
 #        self.move_scheme.name = "PathSamplingRoot"
 
         samples = []
@@ -465,7 +465,7 @@ class PathSampling(PathSimulator):
                                ['move_scheme', 'globalstate'])
         self.live_visualization = None
         self.visualize_frequency = 1
-        self._mover = paths.PathSimulatorMover(self.move_scheme, self)
+        self._mover = paths.PathSimulatorMover(self.root_mover, self)
 
     def run_until(self, nsteps):
         if self.storage is not None:
@@ -485,6 +485,8 @@ class PathSampling(PathSimulator):
             cvs = list(self.storage.cvs)
 
         if self.step == 0:
+            if self.storage is not None:
+                self.storage.save(self.move_scheme)
             self.save_initial()
 
         for nn in range(nsteps):
