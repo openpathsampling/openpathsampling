@@ -29,13 +29,13 @@ from pathmover import (
     BackwardExtendMover, ForwardExtendMover, MinusMover,
     SingleReplicaMinusMover, PathMoverFactory, PathReversalMover,
     ReplicaExchangeMover, EnsembleHopMover, ReplicaIDChangeMover,
-    SequentialMover, ConditionalMover, RestrictToLastSampleMover,
+    SequentialMover, ConditionalMover,
     PathSimulatorMover, PathReversalSet, NeighborEnsembleReplicaExchange,
     SampleMover, StateSwapMover, FinalSubtrajectorySelectMover, EngineMover,
-    SwappingMover, FirstSubtrajectorySelectMover, MultipleSetMinusMover,
+    FirstSubtrajectorySelectMover, MultipleSetMinusMover,
     OneWayShootingMover, RandomSubtrajectorySelectMover, SubPathMover,
     EnsembleFilterMover, SelectionMover, FirstAllowedMover,
-    LastAllowedMover, OneWayExtendMover
+    LastAllowedMover, OneWayExtendMover, SubtrajectorySelectMover
 )
 
 from shooting import ShootingPoint, ShootingPointSelector, UniformSelector, \
