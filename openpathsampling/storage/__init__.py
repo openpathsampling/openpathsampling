@@ -1,5 +1,5 @@
 from storage import Storage, AnalysisStorage
-from snapshot_store import SnapshotStore, ConfigurationStore, MomentumStore, ToySnapshotStore, AbstractSnapshotStore
+from snapshot_store import SnapshotStore, ConfigurationStore, MomentumStore, ToySnapshotStore, AbstractSnapshotStore, FeatureSnapshotStore
 from trajectory_store import TrajectoryStore
 from sample_store import SampleStore, SampleSetStore
 from cv_store import ObjectDictStore

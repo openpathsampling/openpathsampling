@@ -1,13 +1,11 @@
-import numpy as np
-
 from openpathsampling.snapshot import Snapshot, AbstractSnapshot, ToySnapshot
 from openpathsampling.trajectory import Trajectory
-from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
+from openpathsampling.netcdfplus import ObjectStore, LoaderProxy, lazy_loading_attributes
 
 import features as ft
-
 from features import ConfigurationStore, MomentumStore
 
+@lazy_loading_attributes('')
 class AbstractSnapshotStore(ObjectStore):
     """
     An ObjectStore for Snapshots in netCDF files.
@@ -317,22 +315,28 @@ class FeatureSnapshotStore(AbstractSnapshotStore):
     An ObjectStore for Snapshots in netCDF files.
     """
 
-    def __init__(self, content_class):
-        super(FeatureSnapshotStore, self).__init__(content_class)
+    def __init__(self, snapshot_class):
+        super(FeatureSnapshotStore, self).__init__(snapshot_class)
+
+        self._variables = list()
+
+        for feature in self.features:
+            self._variables += getattr(ft, feature)._variables
 
     @property
     def features(self):
-        return self.content_class.__features__
+        return self.snapshot_class.__features__
+
 
     def to_dict(self):
         return {
-            'snapshot_class': self.content_class
+            'snapshot_class': self.snapshot_class
         }
 
     def _put(self, idx, snapshot):
-        for feature in self.features:
-            self.vars[feature][idx] = getattr(snapshot, feature)
-            self.write(feature, idx ^ 1, snapshot)
+        for variable in self._variables:
+            self.vars[variable][idx] = getattr(snapshot, variable)
+            self.write(variable, idx ^ 1, snapshot)
 
         self.vars['momentum_reversed'][idx] = snapshot.is_reversed
         self.vars['momentum_reversed'][idx ^ 1] = not snapshot.is_reversed
@@ -342,26 +346,22 @@ class FeatureSnapshotStore(AbstractSnapshotStore):
         if from_reversed:
             obj = self.cache[idx ^ 1]
 
-            snapshot = self.snapshot_class.__new__(self.content_class)
+            snapshot = self.snapshot_class.__new__(self.snapshot_class)
+            AbstractSnapshot.__init__(snapshot, not obj.is_reversed, LoaderProxy(self, idx ^ 1))
 
-            for feature in self.features:
-                setattr(snapshot, feature, getattr(obj, feature))
+            for variables in self._variables:
+                setattr(snapshot, variables, getattr(obj, variables))
 
-            snapshot.is_reversed = not obj.is_reversed
         else:
-            snapshot = self.snapshot_class.__new__(self.content_class)
+            snapshot = self.snapshot_class.__new__(self.snapshot_class)
+            AbstractSnapshot.__init__(snapshot, self.vars['momentum_reversed'][idx], LoaderProxy(self, idx ^ 1))
 
-            for feature in self.features:
-                setattr(snapshot, feature, self.vars[feature][idx])
+            for variables in self._variables:
+                setattr(snapshot, variables, self.vars[variables][idx])
 
-                coordinates = self.vars['coordinates'][idx]
-                velocities = self.vars['velocities'][idx]
+#        snapshot.topology = self.storage.topology
 
-            snapshot.is_reversed = self.vars['momentum_reversed'][idx]
-
-        snapshot.topology = self.storage.topology
-        snapshot._reversed = LoaderProxy(self, idx ^ 1)
-
+        return snapshot
 
     def _init(self):
         super(FeatureSnapshotStore, self)._init()

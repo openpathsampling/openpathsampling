@@ -30,7 +30,7 @@ class Configuration(StorableObject):
     load_lazy = True
 
     def __init__(self, coordinates=None, box_vectors=None,
-                 potential_energy=None, topology=None):
+                 potential_energy=None):
         """
         Create a simulation configuration from either an OpenMM context or
         individually-specified components.
@@ -66,9 +66,6 @@ class Configuration(StorableObject):
         self.potential_energy = None
         self.topology = None
 
-        if topology is not None:
-            self.topology = topology
-
         # TODO: Replace deepcopy by reference. Deepcopy is against immutable agreement
         if coordinates is not None:
             self.coordinates = copy.deepcopy(coordinates)
@@ -90,18 +87,6 @@ class Configuration(StorableObject):
                     "Some coordinates became 'nan'; simulation is unstable or buggy.")
 
         return
-
-    def forget(self):
-        """
-        Will remove the stored coordinates from memory if they are stored in
-        a file to save memory.  Once the coordinates are accessed they are
-        reloaded automatically
-        """
-
-        if Configuration.load_lazy and hasattr(self, '_loaded_from'):
-            self.coordinates = None
-            self.box_vectors = None
-            self.potential_energy = None
 
     # =========================================================================
     # Comparison functions
@@ -161,28 +146,6 @@ class Configuration(StorableObject):
 
         return this
 
-    def md(self):
-        '''
-        Returns a mdtraj.Trajectory() object that contains only one frame
-
-        Returns
-        -------
-        mdtraj.Tractory
-            the actual trajectory object. Can be used with all functions from mdtraj
-
-        Notes
-        -----
-        Rather slow since the topology has to be made each time. Try to avoid it
-        '''
-
-        n_atoms = self.n_atoms
-
-        output = np.zeros([1, n_atoms, 3], np.float32)
-        output[0, :, :] = self.coordinates
-
-        return md.Trajectory(output, self.topology.md)
-
-
 # =============================================================================
 # SIMULATION MOMENTUM / VELOCITY
 # =============================================================================
@@ -231,17 +194,6 @@ class Momentum(StorableObject):
             self.kinetic_energy = copy.deepcopy(kinetic_energy)
 
         return
-
-    def forget(self):
-        """
-        Will remove the stored Momentum data from memory if they are stored
-        in a file to save memory.  Once the coordinates are accessed they
-        are reloaded automatically
-        """
-
-        if Momentum.load_lazy and hasattr(self, '_loaded_store') > 0:
-            self.velocities = None
-            self.kinetic_energy = None
 
     @property
     def n_atoms(self):
@@ -323,7 +275,7 @@ class AbstractSnapshot(StorableObject):
     # Hopefully these class member variables will not be needed any longer
     engine = None
 
-    def __init__(self, is_reversed=False, reversed_copy=None):
+    def __init__(self, is_reversed=False, reversed_copy=None, engine=None):
         """
         Create a simulation snapshot. Initialization happens primarily in
         one of two ways:
@@ -366,11 +318,17 @@ class AbstractSnapshot(StorableObject):
         super(AbstractSnapshot, self).__init__()
 
         self.is_reversed = is_reversed
+        self.engine = engine
 
         if reversed_copy is None:
             # this will always create the mirrored copy so we can save in pairs!
             self._reversed = self.__class__.__new__(self.__class__)
-            AbstractSnapshot.__init__(self._reversed, is_reversed=not self.is_reversed, reversed_copy=self)
+            AbstractSnapshot.__init__(
+                self._reversed,
+                is_reversed=not self.is_reversed,
+                reversed_copy=self,
+                engine=self.engine
+            )
 
         else:
             self._reversed = reversed_copy
@@ -418,8 +376,7 @@ class AbstractSnapshot(StorableObject):
         """
 
         obj = self.copy()
-        obj.is_reversed = not obj.is_reversed
-        return obj
+        return obj.reversed
 
     @property
     def reversed(self):
@@ -445,9 +402,9 @@ class Snapshot(AbstractSnapshot):
     __features__ = ['Configurations', 'Momenta']
 
     def __init__(self, coordinates=None, velocities=None, box_vectors=None,
-                 potential_energy=None, kinetic_energy=None, topology=None,
+                 potential_energy=None, kinetic_energy=None,
                  configuration=None, momentum=None, is_reversed=False,
-                 reversed_copy=None):
+                 reversed_copy=None, engine=None):
         """
         Create a simulation snapshot. Initialization happens primarily in
         one of two ways:
@@ -487,15 +444,14 @@ class Snapshot(AbstractSnapshot):
             dict for storing the used index per storage
         """
 
-        super(Snapshot, self).__init__(is_reversed, reversed_copy)
+        super(Snapshot, self).__init__(is_reversed, reversed_copy, engine)
 
         if configuration is None and momentum is None:
             if coordinates is not None:
                 configuration = Configuration(
                     coordinates=coordinates,
                     box_vectors=box_vectors,
-                    potential_energy=potential_energy,
-                    topology=topology
+                    potential_energy=potential_energy
                 )
 
             if velocities is not None:
@@ -512,12 +468,12 @@ class Snapshot(AbstractSnapshot):
             self._reversed.momentum=self.momentum
 
     @property
-    @has('configuration')
+    @has('engine')
     def topology(self):
         """
         The mdtraj.Topology store in the configuration if present.
         """
-        return self.configuration.topology
+        return self.engine.topology
 
     @property
     @has('configuration')
@@ -628,7 +584,8 @@ class Snapshot(AbstractSnapshot):
         this = self.__class__(
             configuration=self.configuration,
             momentum=self.momentum,
-            is_reversed=self.is_reversed
+            is_reversed=self.is_reversed,
+            engine=self.engine
         )
         return this
 
@@ -636,12 +593,24 @@ class Snapshot(AbstractSnapshot):
     def md(self):
         '''
         Returns a mdtraj Trajectory object that contains only one frame
-        
+
+        Returns
+        -------
+        mdtraj.Trajectory
+            the actual trajectory object. Can be used with all functions from mdtraj
+
         Notes
-        -----        
+        -----
         Rather slow since the topology has to be made each time. Try to avoid it
         '''
-        return self.configuration.md()
+
+        n_atoms = self.n_atoms
+
+        output = np.zeros([1, n_atoms, 3], np.float32)
+        output[0, :, :] = self.coordinates
+
+        return md.Trajectory(output, self.topology.md)
+
 
     def subset(self, subset):
         """
@@ -656,7 +625,8 @@ class Snapshot(AbstractSnapshot):
         this = Snapshot(
             configuration=self.configuration.copy(subset),
             momentum=self.momentum.copy(subset),
-            is_reversed=self.is_reversed
+            is_reversed=self.is_reversed,
+            engine=self.engine
         )
         return this
 
@@ -670,12 +640,11 @@ class ToySnapshot(AbstractSnapshot):
     # Class variables to store the global storage and the system context
     # describing the system to be saved as snapshots
     # Hopefully these class member variables will not be needed any longer
-    engine = None
 
     __features__ = ['Velocities', 'Coordinates']
 
     def __init__(self, coordinates=None, velocities=None, is_reversed=False, topology=None,
-                 reversed_copy=None):
+                 reversed_copy=None, engine=None):
         """
         Create a simulation snapshot. Initialization happens primarily in
         one of two ways:
@@ -715,12 +684,10 @@ class ToySnapshot(AbstractSnapshot):
             dict for storing the used index per storage
         """
 
-        super(ToySnapshot, self).__init__(is_reversed, reversed_copy)
+        super(ToySnapshot, self).__init__(is_reversed, reversed_copy, engine)
 
         self.coordinates = coordinates
         self.velocities = velocities
-
-        self.topology = topology
 
         if reversed_copy is None:
             self._reversed.coordinates = self.coordinates
@@ -755,6 +722,7 @@ class ToySnapshot(AbstractSnapshot):
         this = ToySnapshot(
             self.coordinates,
             self.velocities,
-            self.is_reversed
+            self.is_reversed,
+            self.engine
         )
         return this
