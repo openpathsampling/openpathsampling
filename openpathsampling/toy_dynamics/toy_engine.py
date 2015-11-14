@@ -117,8 +117,7 @@ class ToyEngine(DynamicsEngine):
     def configuration(self):
         return Configuration(coordinates=np.array([self.positions]),
                              box_vectors=None,
-                             potential_energy=self.pes.V(self),
-                             topology=self.template.topology
+                             potential_energy=self.pes.V(self)
                             )
 
     @configuration.setter

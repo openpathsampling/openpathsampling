@@ -596,7 +596,7 @@ class Trajectory(list, StorableObject):
         set of Snapshot()
             the set of common snapshots
         """
-        return set([snap.configuration for snap in self]) & set([snap.configuration for snap in other])
+        return set([snap for snap in self]) & set([snap for snap in other])
 
     def shared_subtrajectory(self, other):
         """
@@ -613,7 +613,7 @@ class Trajectory(list, StorableObject):
             the shared subtrajectory
         """
         shared = self.shared_configurations(other)
-        return Trajectory([snap for snap in self if snap.configuration in shared])
+        return Trajectory([snap for snap in self if snap in shared])
 
     # =============================================================================================
     # UTILITY FUNCTIONS

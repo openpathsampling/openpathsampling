@@ -142,14 +142,13 @@ def trajectory_from_mdtraj(mdtrajectory):
         config = paths.Configuration(
             coordinates=coord,
             box_vectors=box_v,
-            potential_energy=u.Quantity(0.0, u.kilojoule_per_mole),
-            topology=topology
+            potential_energy=u.Quantity(0.0, u.kilojoule_per_mole)
         )
 
         snap = paths.Snapshot(
             configuration=config,
             momentum=empty_momentum,
-            topology=paths.MDTrajTopology(mdtrajectory.topology)
+            topology=topology
         )
         trajectory.append(snap)
 

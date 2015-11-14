@@ -26,8 +26,6 @@ class Configuration(StorableObject):
 
     # Class variables to store the global storage and the system context
     # describing the system to be safed as configuration_indices
-    engine = None
-    load_lazy = True
 
     def __init__(self, coordinates=None, box_vectors=None,
                  potential_energy=None):
@@ -132,16 +130,15 @@ class Configuration(StorableObject):
         if subset is None:
             this = Configuration(coordinates=self.coordinates,
                                  box_vectors=self.box_vectors,
-                                 potential_energy=self.potential_energy,
-                                 topology=self.topology)
+                                 potential_energy=self.potential_energy
+                                 )
         else:
             new_coordinates = self.coordinates[subset, :]
-            new_topology = self.topology.subset(subset)
             # TODO: Keep old potential_energy? Is not correct but might be useful. Boxvectors are fine!
             this = Configuration(coordinates=new_coordinates,
                                  box_vectors=self.box_vectors,
-                                 potential_energy=self.potential_energy,
-                                 topology=new_topology)
+                                 potential_energy=self.potential_energy
+                                 )
 
         return this
 
@@ -157,8 +154,6 @@ class Momentum(StorableObject):
 
     # Class variables to store the global storage and the system context
     # describing the system to be safed as momentums
-    engine = None
-    load_lazy = True
 
     def __init__(self, velocities=None, kinetic_energy=None):
         """
@@ -254,7 +249,7 @@ class Momentum(StorableObject):
 def has(attr):
     def _has(func):
         def inner(self, *args, **kwargs):
-            if hasattr(self, attr):
+            if hasattr(self, attr) and getattr(self, attr) is not None:
                 return func(self, *args, **kwargs)
             else:
                 return None
@@ -269,12 +264,7 @@ class AbstractSnapshot(StorableObject):
     Simulation snapshot. Contains references to a configuration and momentum
     """
 
-    # Class variables to store the global storage and the system context
-    # describing the system to be saved as snapshots
-    # Hopefully these class member variables will not be needed any longer
-    engine = None
-
-    def __init__(self, is_reversed=False, reversed_copy=None, engine=None):
+    def __init__(self, is_reversed=False, reversed_copy=None, topology=None):
         """
         Create a simulation snapshot. Initialization happens primarily in
         one of two ways:
@@ -317,7 +307,7 @@ class AbstractSnapshot(StorableObject):
         super(AbstractSnapshot, self).__init__()
 
         self.is_reversed = is_reversed
-        self.engine = engine
+        self.topology = topology
 
         if reversed_copy is None:
             # this will always create the mirrored copy so we can save in pairs!
@@ -326,7 +316,7 @@ class AbstractSnapshot(StorableObject):
                 self._reversed,
                 is_reversed=not self.is_reversed,
                 reversed_copy=self,
-                engine=self.engine
+                topology=topology
             )
 
         else:
@@ -357,7 +347,7 @@ class AbstractSnapshot(StorableObject):
         Snapshot()
             the deep copy
         """
-        this = AbstractSnapshot(is_reversed=self.is_reversed)
+        this = AbstractSnapshot(is_reversed=self.is_reversed, topology=self.topology)
         return this
 
     def reversed_copy(self):
@@ -392,11 +382,6 @@ class Snapshot(AbstractSnapshot):
     """
     Simulation snapshot. Contains references to a configuration and momentum
     """
-
-    # Class variables to store the global storage and the system context
-    # describing the system to be saved as snapshots
-    # Hopefully these class member variables will not be needed any longer
-    engine = None
 
     __features__ = ['Configurations', 'Momenta']
 
@@ -443,7 +428,7 @@ class Snapshot(AbstractSnapshot):
             dict for storing the used index per storage
         """
 
-        super(Snapshot, self).__init__(is_reversed, reversed_copy, engine)
+        super(Snapshot, self).__init__(is_reversed, reversed_copy, topology)
 
         if configuration is None and momentum is None:
             if coordinates is not None:
@@ -461,19 +446,10 @@ class Snapshot(AbstractSnapshot):
 
         self.configuration = configuration
         self.momentum = momentum
-        self.topology = topology
 
         if reversed_copy is None:
             self._reversed.configuration=self.configuration
             self._reversed.momentum=self.momentum
-
-    @property
-    @has('engine')
-    def topology(self):
-        """
-        The mdtraj.Topology store in the configuration if present.
-        """
-        return self.engine.topology
 
     @property
     @has('configuration')
@@ -518,10 +494,7 @@ class Snapshot(AbstractSnapshot):
         """
         The box_vectors in the configuration
         """
-        if self.configuration is not None:
-            return self.configuration.box_vectors
-        else:
-            return None
+        return self.configuration.box_vectors
 
     @property
     @has('configuration')
@@ -529,10 +502,7 @@ class Snapshot(AbstractSnapshot):
         """
         The potential_energy in the configuration
         """
-        if self.configuration is not None:
-            return self.configuration.potential_energy
-        else:
-            return None
+        return self.configuration.potential_energy
 
     @property
     @has('momentum')
@@ -540,10 +510,7 @@ class Snapshot(AbstractSnapshot):
         """
         The kinetic_energy in the momentum
         """
-        if self.momentum is not None:
-            return self.momentum.kinetic_energy
-        else:
-            return None
+        return self.momentum.kinetic_energy
 
     @property
     @has('configuration')
@@ -551,10 +518,7 @@ class Snapshot(AbstractSnapshot):
         '''
         The number of atoms in the snapshot
         '''
-        if self.configuration is not None:
-            return self.coordinates.shape[0]
-        else:
-            return None
+        return self.coordinates.shape[0]
 
     @property
     @has('configuration')
@@ -585,7 +549,7 @@ class Snapshot(AbstractSnapshot):
             configuration=self.configuration,
             momentum=self.momentum,
             is_reversed=self.is_reversed,
-            engine=self.engine
+            topology=self.topology
         )
         return this
 
@@ -626,7 +590,7 @@ class Snapshot(AbstractSnapshot):
             configuration=self.configuration.copy(subset),
             momentum=self.momentum.copy(subset),
             is_reversed=self.is_reversed,
-            engine=self.engine
+            topology=self.topology.subset(subset)
         )
         return this
 
@@ -636,10 +600,6 @@ class ToySnapshot(AbstractSnapshot):
     """
     Simulation snapshot. Contains references to a configuration and momentum
     """
-
-    # Class variables to store the global storage and the system context
-    # describing the system to be saved as snapshots
-    # Hopefully these class member variables will not be needed any longer
 
     __features__ = ['Velocities', 'Coordinates']
 
@@ -684,7 +644,7 @@ class ToySnapshot(AbstractSnapshot):
             dict for storing the used index per storage
         """
 
-        super(ToySnapshot, self).__init__(is_reversed, reversed_copy, engine)
+        super(ToySnapshot, self).__init__(is_reversed, reversed_copy, topology)
 
         self.coordinates = coordinates
         self.velocities = velocities
@@ -722,7 +682,7 @@ class ToySnapshot(AbstractSnapshot):
         this = ToySnapshot(
             self.coordinates,
             self.velocities,
-            self.is_reversed,
-            self.engine
+            is_reversed=self.is_reversed,
+            topology=self.topology
         )
         return this
