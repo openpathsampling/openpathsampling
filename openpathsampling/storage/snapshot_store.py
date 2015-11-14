@@ -1,11 +1,15 @@
 from openpathsampling.snapshot import Snapshot, AbstractSnapshot, ToySnapshot
 from openpathsampling.trajectory import Trajectory
-from openpathsampling.netcdfplus import ObjectStore, LoaderProxy, lazy_loading_attributes
+from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
 
 import features as ft
 from features import ConfigurationStore, MomentumStore
 
-@lazy_loading_attributes('')
+
+# =============================================================================================
+# ABSTRACT BASE CLASS FOR SNAPSHOTS
+# =============================================================================================
+
 class AbstractSnapshotStore(ObjectStore):
     """
     An ObjectStore for Snapshots in netCDF files.
@@ -98,12 +102,13 @@ class AbstractSnapshotStore(ObjectStore):
 
         self.init_variable('momentum_reversed', 'bool', chunksizes=(1,))
 
-    # =============================================================================================
-    # COLLECTIVE VARIABLE UTILITY FUNCTIONS
-    # =============================================================================================
-
     def all(self):
         return Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
+
+
+# =============================================================================================
+# CONCRETE CLASSES FOR SNAPSHOT TYPES
+# =============================================================================================
 
 class SnapshotStore(AbstractSnapshotStore):
     """
@@ -314,6 +319,11 @@ class ToySnapshotStore(AbstractSnapshotStore):
 
         return idx
 
+
+# =============================================================================================
+# FEATURE BASED SINGLE CLASS FOR ALL SNAPSHOT TYPES
+# =============================================================================================
+
 class FeatureSnapshotStore(AbstractSnapshotStore):
     """
     An ObjectStore for Snapshots in netCDF files.
@@ -331,12 +341,6 @@ class FeatureSnapshotStore(AbstractSnapshotStore):
     def features(self):
         return self.snapshot_class.__features__
 
-
-    def to_dict(self):
-        return {
-            'snapshot_class': self.snapshot_class
-        }
-
     def _put(self, idx, snapshot):
         for variable in self._variables:
             self.vars[variable][idx] = getattr(snapshot, variable)
@@ -344,7 +348,6 @@ class FeatureSnapshotStore(AbstractSnapshotStore):
 
         self.vars['momentum_reversed'][idx] = snapshot.is_reversed
         self.vars['momentum_reversed'][idx ^ 1] = not snapshot.is_reversed
-
 
     def _get(self, idx, from_reversed=False):
         if from_reversed:
@@ -362,8 +365,6 @@ class FeatureSnapshotStore(AbstractSnapshotStore):
 
             for variables in self._variables:
                 setattr(snapshot, variables, self.vars[variables][idx])
-
-#        snapshot.topology = self.storage.topology
 
         return snapshot
 

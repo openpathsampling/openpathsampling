@@ -25,6 +25,8 @@ class Storage(NetCDFPlus):
     simulation. This allows effective storage of shooting trajectories
     """
 
+    USE_FEATURE_SNAPSHOTS = False
+
     def get_unit(self, dimension):
         """
         Return a simtk.Unit instance from the unit_system the is of the specified dimension, e.g. length, time
@@ -142,12 +144,13 @@ class Storage(NetCDFPlus):
 
         self.create_store('trajectories', paths.storage.TrajectoryStore())
 
-        if type(self._template) is paths.Snapshot:
-            self.create_store('snapshots', paths.storage.SnapshotStore())
-        elif type(self._template) is paths.ToySnapshot:
-            self.create_store('snapshots', paths.storage.ToySnapshotStore())
-
-        # self.create_store('snapshots', paths.storage.FeatureSnapshotStore(self._template.__class__))
+        if Storage.USE_FEATURE_SNAPSHOTS:
+            self.create_store('snapshots', paths.storage.FeatureSnapshotStore(self._template.__class__))
+        else:
+            if type(self._template) is paths.Snapshot:
+                self.create_store('snapshots', paths.storage.SnapshotStore())
+            elif type(self._template) is paths.ToySnapshot:
+                self.create_store('snapshots', paths.storage.ToySnapshotStore())
 
         self.create_store('samples', paths.storage.SampleStore())
         self.create_store('samplesets', paths.storage.SampleSetStore())
