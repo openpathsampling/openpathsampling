@@ -64,7 +64,6 @@ class Configuration(StorableObject):
         self.coordinates = None
         self.box_vectors = None
         self.potential_energy = None
-        self.topology = None
 
         # TODO: Replace deepcopy by reference. Deepcopy is against immutable agreement
         if coordinates is not None:
@@ -402,7 +401,7 @@ class Snapshot(AbstractSnapshot):
     __features__ = ['Configurations', 'Momenta']
 
     def __init__(self, coordinates=None, velocities=None, box_vectors=None,
-                 potential_energy=None, kinetic_energy=None,
+                 potential_energy=None, kinetic_energy=None, topology=None,
                  configuration=None, momentum=None, is_reversed=False,
                  reversed_copy=None, engine=None):
         """
@@ -462,6 +461,7 @@ class Snapshot(AbstractSnapshot):
 
         self.configuration = configuration
         self.momentum = momentum
+        self.topology = topology
 
         if reversed_copy is None:
             self._reversed.configuration=self.configuration
