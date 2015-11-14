@@ -228,12 +228,11 @@ class ToySnapshotStore(AbstractSnapshotStore):
         self.vars['momentum_reversed'][idx] = snapshot.is_reversed
         self.vars['momentum_reversed'][idx ^ 1] = not snapshot.is_reversed
 
-
     def _get(self, idx, from_reversed=False):
         if from_reversed:
             obj = self.cache[idx ^ 1]
 
-            return self.content_class(
+            return ToySnapshot(
                 coordinates=obj.coordinates,
                 velocities=obj.velocities,
                 is_reversed=not obj.is_reversed,
@@ -245,14 +244,13 @@ class ToySnapshotStore(AbstractSnapshotStore):
             velocities = self.vars['velocities'][idx]
             momentum_reversed = self.vars['momentum_reversed'][idx]
 
-            return self.content_class(
+            return ToySnapshot(
                 coordinates=coordinates,
                 velocities=velocities,
                 is_reversed=momentum_reversed,
                 topology=self.storage.topology,
                 reversed_copy=LoaderProxy(self, idx ^ 1)
             )
-
 
     def _init(self):
         """
