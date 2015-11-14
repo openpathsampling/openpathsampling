@@ -9,6 +9,7 @@ import openpathsampling.tools
 
 from openpathsampling.pathmover import SubPathMover
 from ops_logging import initialization_logging
+import abc
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -52,6 +53,7 @@ class MCStep(StorableObject):
 
 
 class PathSimulator(StorableNamedObject):
+    __metaclass__ = abc.ABCMeta
 
     calc_name = "PathSimulator"
     _excluded_attr = ['globalstate', 'step', 'save_frequency']
@@ -80,6 +82,7 @@ class PathSimulator(StorableNamedObject):
         if self.storage is not None:
             self.storage.sync_all()
 
+    @abc.abstractmethod
     def run(self, nsteps):
         """
         Run the simulator for a number of steps
@@ -89,7 +92,7 @@ class PathSimulator(StorableNamedObject):
         nsteps : int
             number of step to be run
         """
-        logger.warning("Running an empty pathsimulator? Try a subclass, maybe!")
+        pass
 
     def save_initial(self):
         """

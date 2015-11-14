@@ -1,5 +1,6 @@
 import itertools
 import collections
+import abc
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
@@ -86,6 +87,9 @@ class MoveStrategy(StorableNamedObject):
     level
     """
     _level = -1
+
+    __metaclass__ = abc.ABCMeta
+
     def __init__(self, ensembles, group, replace):
         super(MoveStrategy, self).__init__()
         self.ensembles = ensembles
@@ -174,6 +178,7 @@ class MoveStrategy(StorableNamedObject):
 
         return res_ensembles
 
+    @abc.abstractmethod
     def make_movers(self, scheme):
         """
         Makes the movers associated with this strategy.
