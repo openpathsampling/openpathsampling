@@ -370,7 +370,7 @@ class AbstractSnapshot(StorableObject):
         if reversed_copy is None:
             # this will always create the mirrored copy so we can save in pairs!
             self._reversed = self.__class__.__new__(self.__class__)
-            AbstractSnapshot.__init__(self, is_reversed=not self.is_reversed, reversed_copy=self)
+            AbstractSnapshot.__init__(self._reversed, is_reversed=not self.is_reversed, reversed_copy=self)
 
         else:
             self._reversed = reversed_copy
@@ -441,6 +441,8 @@ class Snapshot(AbstractSnapshot):
     # describing the system to be saved as snapshots
     # Hopefully these class member variables will not be needed any longer
     engine = None
+
+    __features__ = ['Configurations', 'Momenta']
 
     def __init__(self, coordinates=None, velocities=None, box_vectors=None,
                  potential_energy=None, kinetic_energy=None, topology=None,
@@ -669,6 +671,8 @@ class ToySnapshot(AbstractSnapshot):
     # describing the system to be saved as snapshots
     # Hopefully these class member variables will not be needed any longer
     engine = None
+
+    __features__ = ['Velocities', 'Coordinates']
 
     def __init__(self, coordinates=None, velocities=None, is_reversed=False, topology=None,
                  reversed_copy=None):

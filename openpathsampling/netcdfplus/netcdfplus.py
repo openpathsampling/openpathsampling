@@ -864,6 +864,15 @@ class NetCDFPlus(netCDF4.Dataset):
 
         dimensions = tuple(dimensions)
 
+        # if chunksizes are strings then replace by the actual size of the dimension
+        if chunksizes is not None:
+            for ix, dim in enumerate(chunksizes):
+                if type == -1:
+                    chunksizes[ix] = len(ncfile.dimensions[dimensions[ix]])
+
+                if type(dim) is str:
+                    chunksizes[ix] = len(ncfile.dimensions[dim])
+
         if variable_length:
             vlen_t = ncfile.createVLType(nc_type, var_name + '_vlen')
             ncvar = ncfile.createVariable(var_name, vlen_t, dimensions,
