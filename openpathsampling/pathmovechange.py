@@ -86,7 +86,7 @@ class PathMoveChange(TreeSetMixin, StorableObject):
             return original.identifier is test
         elif isinstance(test, paths.PathMover):
             return original.identifier is test
-        elif type(test) is type and issubclass(test, paths.PathMover):
+        elif hasattr(test, '__name__') and issubclass(test, paths.PathMover):
             return original.identifier.__class__ is test
         else:
             return False
