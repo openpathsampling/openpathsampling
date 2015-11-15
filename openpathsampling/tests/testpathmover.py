@@ -3,29 +3,25 @@
 '''
 
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises)
-from nose.plugins.skip import Skip, SkipTest
-from test_helpers import (assert_equal_array_array, items_equal,
-                          assert_not_equal_array_array,
-                          make_1d_traj,
-                          CalvinistDynamics,
-                          CallIdentity
-                         )
+                        raises)
+from nose.plugins.skip import SkipTest
 
+from test_helpers import (assert_equal_array_array, items_equal,
+                          make_1d_traj,
+                          CalvinistDynamics
+                          )
 from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.pathmover import *
-
 from openpathsampling.sample import Sample, SampleSet
-
 from openpathsampling.shooting import UniformSelector
-
 from openpathsampling.volume import CVRangeVolume
-from test_helpers import CallIdentity
+from test_helpers import CallIdentity, raises_with_message_like
+from openpathsampling.pathmover import IdentityPathMover
 from openpathsampling.trajectory import Trajectory
 from openpathsampling.ensemble import EnsembleFactory as ef
-from openpathsampling.collectivevariable import CV_Function, CollectiveVariable
+from openpathsampling.collectivevariable import CV_Function
 
-import logging
+
 #logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
@@ -82,11 +78,6 @@ class testPathMover(object):
         self.l1 = LengthEnsemble(1)
         self.l2 = LengthEnsemble(2)
         self.l3 = LengthEnsemble(3)
-        self.repsAll_ensNone = PathMover()
-#        self.reps12_ensNone = PathMover(replicas=[1, 2])
-        self.repsAll_ens1 = PathMover()
-        self.repsAll_ens12 = PathMover()
-#        self.reps1_ens2 = PathMover(replicas=1, ensembles=[self.l2])
         self.s1 = Sample(replica=1, ensemble=self.l2)
         self.s2 = Sample(replica=2, ensemble=self.l1)
         self.s3 = Sample(replica=3, ensemble=self.l1)
@@ -94,39 +85,29 @@ class testPathMover(object):
         self.sset = SampleSet([self.s1, self.s2, self.s3, self.s4])
 
     def test_legal_sample_set(self):
-#        assert_items_equal(self.repsAll_ensNone.legal_sample_set(self.sset),
-#                           [self.s1, self.s2, self.s3, self.s4])
-#        assert_items_equal(self.repsAll_ens12.legal_sample_set(self.sset),
-#                           [self.s1, self.s2, self.s3])
-#        assert_items_equal(self.repsAll_ens1.legal_sample_set(self.sset),
-#                           [self.s2, self.s3])
-
         assert_items_equal(
-            self.repsAll_ensNone.legal_sample_set(self.sset, ensembles=self.l1),
+            paths.PathMover.legal_sample_set(self.sset, ensembles=self.l1),
             [self.s2, self.s3]
         )
         assert_items_equal(
-            self.repsAll_ensNone.legal_sample_set(self.sset, ensembles=[self.l1]),
+            paths.PathMover.legal_sample_set(self.sset, ensembles=[self.l1]),
             [self.s2, self.s3]
         )
-
 
     def test_select_sample(self):
-#        assert_equal(self.reps1_ens2.select_sample(self.sset), self.s1)
-
         for i in range(20):
-            selected = self.repsAll_ens1.select_sample(self.sset)
+            selected = PathMover.select_sample(self.sset)
             assert_choice_of(selected, [self.s1, self.s2, self.s3, self.s4])
 
     def test_is_ensemble_change_mover(self):
-        pm = PathMover()
+        pm = IdentityPathMover()
         assert_equal(pm.is_ensemble_change_mover, False)
         assert_equal(pm._is_ensemble_change_mover, None)
         pm._is_ensemble_change_mover = True
         assert_equal(pm.is_ensemble_change_mover, True)
 
     def test_is_canonical(self):
-        pm = PathMover()
+        pm = IdentityPathMover()
         assert_equal(pm.is_canonical, None)
         pm._is_canonical = True
         assert_equal(pm.is_canonical, True)
@@ -1250,3 +1231,26 @@ class testSingleReplicaMinusMover(object):
             len(sub[-1].trials[0].trajectory),
             len(traj_bad_extension)+self.dyn.n_frames_max-1
         )
+
+
+class testAbstract(object):
+    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
+    def test_abstract_pathmover(self):
+        mover = paths.PathMover()
+
+    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
+    def test_abstract_samplemover(self):
+        mover = paths.SampleMover()
+
+    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
+    def test_abstract_enginemover(self):
+        mover = paths.EngineMover()
+
+    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
+    def test_abstract_selectionmover(self):
+        mover = paths.SelectionMover()
+
+    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
+    def test_abstract_subtrajectoryselectmover(self):
+        mover = paths.SubtrajectorySelectMover()
+

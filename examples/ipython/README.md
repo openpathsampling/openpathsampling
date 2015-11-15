@@ -58,14 +58,8 @@ This uses a similar setup as the MSTIS example but assignes different interfaces
 
 ## Tutorials
 
-- [`fast_sample_loading.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/fast_sample_loading.ipynb)
-    ... Seems to be removed in upcoming PRs
-
 -  [`move_strategies_and_schemes.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/move_strategies_and_schemes.ipynb)
     A tutorial notebook to discuss the workings of move strategies and move schemes. Also a good starting point to understand how replica exchange moves are generated, detailed balance and all the little pitfalls there are about doing correct replica exchange moves.
-
-- [`openmm_tutorial.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/openmm_tutorial.ipynb)
-    Is a simple openmm tutorial originally written by A. Mey 
 
 - [`repex_networks.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/repex_networks.ipynb)
     A test checking analysis functions for analysis of replica networks, i.e. treating the flow of replicas between ensembles as a graph and analyze it.
@@ -82,7 +76,7 @@ This uses a similar setup as the MSTIS example but assignes different interfaces
 - [`troubleshooting_ops.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/troubleshooting_ops.ipynb)
     This should become the FAQs of OpenPathSampling. A quick guide so solve the most common issues.
 
-- [`tutorial_master.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/tutorial_visualization.ipynb)
+- [`tutorial_visualization.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/tutorial_visualization.ipynb)
     Contains a basic tutorial on visualization function. Still incomplete
 
 - [`which_network.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/which_network.ipynb)
@@ -90,11 +84,15 @@ This uses a similar setup as the MSTIS example but assignes different interfaces
 
 ## Tests
 
-- [`ipynbtest.py`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/ipynbtest.py)
-    The python script to run and test ipython notebooks inside of travis. It is used to test the existing notebooks and use them as integration tests.
+Many of these notebooks are also used at integration tests. We use the
+[`ipynbtest.py`](http://github.com/jhprinz/ipynb-test) script to run
+notebooks from the command line, and, when appropriate, check the
+correctness of the results.
 
--  [`ipynbtest_tutorial.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/ipynbtest_tutorial.ipynb)
-    An example notebook that explains how the ipython notebook testing script is used and what its features are. This is completely independent of _OpenPathSampling_ and it to be moved into a separate package.
+- [`localtest.sh`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/localtest.sh)
+    A test script to run *all* the notebooks listed here. Only a subset are
+    used as continuous integration tests. Requires
+    [`ipynbtest.py`](http://github.com/jhprinz/ipynb-test).
 
 - [`langevin_integrator_check.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/langevin_integrator_check.ipynb)
     A test notebook that checks that the toy_engine langevin integrator will actually sample from the correct distributions.
