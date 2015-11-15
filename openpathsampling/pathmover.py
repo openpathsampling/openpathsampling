@@ -591,7 +591,7 @@ class EngineMover(SampleMover):
         trial_point = paths.ShootingPoint(
             shooting_point.selector,
             trial_trajectory,
-            shooting_point.index
+            trial_trajectory.index(shooting_point.snapshot)
         )
 
         return trial_point
