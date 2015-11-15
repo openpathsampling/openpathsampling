@@ -128,7 +128,7 @@ if __name__ == '__main__':
         nline(p_idx, obj.cls, '')
     #        print indent(format_by_json(simplifier.from_json(obj.json)), 16)
 
-    headline("ShootingPoints (" + str(len(storage.shootingpoints)) + ")")
+    # headline("ShootingPoints (" + str(len(storage.shootingpoints)) + ")")
 
     #    for p_idx in range(0, storage.shootingpoints.count()):
     #        obj = storage.shootingpoints.load(p_idx)

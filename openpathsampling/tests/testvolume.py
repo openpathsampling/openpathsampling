@@ -4,7 +4,9 @@
 
 from nose.tools import assert_equal, assert_not_equal, assert_is, raises
 from nose.plugins.skip import Skip, SkipTest
-from test_helpers import CallIdentity
+from test_helpers import CallIdentity, raises_with_message_like
+
+import unittest
 
 import openpathsampling.volume as volume
 
@@ -370,3 +372,8 @@ class testVolumeFactory(object):
             [lv0, lv1],
             volume.VolumeFactory.CVRangeVolumePeriodicSet(op_id, mins, maxs)
         )
+
+class testAbstract(object):
+    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
+    def test_abstract_volume(self):
+        mover = volume.Volume()

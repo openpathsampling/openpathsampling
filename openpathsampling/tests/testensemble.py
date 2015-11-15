@@ -1,6 +1,6 @@
 from nose.tools import assert_equal, assert_not_equal, assert_items_equal, raises
 from nose.plugins.skip import SkipTest
-from test_helpers import CallIdentity, prepend_exception_message, make_1d_traj
+from test_helpers import CallIdentity, prepend_exception_message, make_1d_traj, raises_with_message_like
 
 import openpathsampling as paths
 from openpathsampling.ensemble import *
@@ -1666,3 +1666,13 @@ class testEnsembleSplit(EnsembleTest):
         assert_equal(len(subtrajs_out_2), 2)
         assert_equal(len(subtrajs_out_2[0]), 1)
         assert_equal(len(subtrajs_out_2[1]), 1)
+
+class testAbstract(object):
+    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
+    def test_abstract_ensemble(self):
+        mover = paths.Ensemble()
+
+    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
+    def test_abstract_volumeensemble(self):
+        mover = paths.VolumeEnsemble()
+
