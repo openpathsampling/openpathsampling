@@ -1021,17 +1021,19 @@ class PathTreeBuilder(object):
                     self.renderer.range(shift, t_count, len(sample), 'gray', mover_type.__name__[:-11] )
                 )
 
-            elif mover_type in[paths.ForwardShootMover, paths.BackwardShootMover]:
+            elif mover_type in [paths.ForwardShootMover, paths.BackwardShootMover]:
                 # ShootingMove
-                old_traj = sample.details.initial_point.trajectory
-                old_index = sample.details.initial_point.index
-                old_conf = old_traj[old_index]
+                old_traj = sample.details.initial_trajectory
+                old_conf = sample.details.shooting_snapshot
+                old_index = sample.details.initial_trajectory.index(old_conf)
                 old_conf_idx = self.storage.idx(old_conf)
 
-                new_traj = sample.details.trial_point.trajectory
-                new_index = sample.details.trial_point.index
-                print len(new_traj), new_index, len(old_traj), old_index
-                new_conf = new_traj[new_index]
+                # print old_conf
+                # print "Initial:", [hex(id(s)) for s in old_traj]
+                # print "Trial:", [hex(id(s)) for s in sample.trajectory]
+
+                new_traj = sample.trajectory
+                new_index = new_traj.index(old_conf)
 
                 # print type(old_conf), self.storage.snapshots.index.get(old_conf, None)
 
@@ -1040,7 +1042,7 @@ class PathTreeBuilder(object):
                     if old_conf_idx not in p_x:
                         shift = 0
                     else:
-                        shift = p_x[old_conf_idx] - new_index
+                        shift = p_x[old_conf_idx] - new_index 
 
                     font_color = "black"
 
@@ -1049,7 +1051,7 @@ class PathTreeBuilder(object):
                     if mover_type is paths.BackwardShootMover:
                         color = "green"
                         self.renderer.add(
-                            self.renderer.v_connection(shift + new_index + 1,
+                            self.renderer.v_connection(shift + new_index,
                                                        p_y[old_conf_idx], t_count,
                                                        color)
                         )
@@ -1064,7 +1066,7 @@ class PathTreeBuilder(object):
                         color = "red"
 
                         self.renderer.add(
-                            self.renderer.v_connection(shift + new_index,
+                            self.renderer.v_connection(shift + new_index + 1,
                                                        p_y[old_conf_idx], t_count,
                                                        color)
                         )

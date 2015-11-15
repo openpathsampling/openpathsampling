@@ -217,9 +217,12 @@ class StorableNamedObject(StorableObject):
             self._name = name
 
     def named(self, name):
-        """Set the name
+        """Name an unnamed object.
 
-        This is only for syntactic sugar and allow for chained generation
+        This only renames the object if it does not yet have a name. It can
+        be used to chain the naming onto the object creation. It should also
+        be used when naming things algorithmically: directly setting the
+        .name attribute could override a user-defined name.
 
         Examples
         --------
@@ -231,7 +234,8 @@ class StorableNamedObject(StorableObject):
         #        if hasattr(copied_object, 'idx'):
         #            copied_object.idx = dict()
 
-        self._name = name
+        if self._name == "":
+            self._name = name
 
         return self
 
