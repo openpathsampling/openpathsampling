@@ -516,36 +516,37 @@ class EngineMover(SampleMover):
     def _get_out_ensembles(self):
         return [self.target_ensemble]
 
-    def __call__(self, trial):
-        initial_trajectory = trial.trajectory
+    def __call__(self, input_sample):
+        initial_trajectory = input_sample.trajectory
+        replica = input_sample.replica
 
-        replica = trial.replica
-        initial_point = self.selector.pick(initial_trajectory)
+        shooting_index = self.selector.pick(initial_trajectory)
 
-        trial_point = self._run(initial_point)
+        trial_trajectory = self._run(initial_trajectory, shooting_index)
 
-        # old_bias = initial_point.sum_bias / trial_point.sum_bias
 
-        trial_trajectory = trial_point.trajectory
         bias = self.selector.probability_ratio(
-            initial_point.snapshot,
+            initial_trajectory[shooting_index],
             initial_trajectory,
             trial_trajectory
         )
 
         # temporary test to make sure nothing went weird
+        # old_bias = initial_point.sum_bias / trial_point.sum_bias
         # assert(abs(bias - old_bias) < 10e-6)
+        # assert(initial_trajectory[shooting_index] in trial_trajectory)
 
+        # we need to save the initial
         trial_details = paths.SampleDetails(
-            initial_point=initial_point,
-            trial_point=trial_point,
+            initial_trajectory=initial_trajectory,
+            shooting_snapshot=initial_trajectory[shooting_index]
         )
 
         trial = paths.Sample(
             replica=replica,
-            trajectory=trial_point.trajectory,
+            trajectory=trial_trajectory,
             ensemble=self.target_ensemble,
-            parent=trial,
+            parent=input_sample,
             details=trial_details,
             mover=self,
             bias=bias
@@ -562,7 +563,8 @@ class EngineMover(SampleMover):
                                               ).can_append
         partial_trajectory = self.engine.generate(initial_snapshot, 
                                                   running=[run_f])
-        trial_trajectory = trajectory[0:shooting_index] + partial_trajectory
+        trial_trajectory = (trajectory[0:shooting_index] 
+                            + partial_trajectory)
         return trial_trajectory
 
     def _make_backward_trajectory(self, trajectory, shooting_index):
@@ -584,32 +586,28 @@ class EngineMover(SampleMover):
     def direction(self):
         return 'unknown'
 
-    def _run(self, shooting_point):
+    def _run(self, trajectory, shooting_index):
+        """Takes initial trajectory and shooting point; return trial
+        trajectory"""
         shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
         logger.info(shoot_str.format(
-            fnum=shooting_point.index,
-            maxt=len(shooting_point.trajectory)-1,
+            fnum=shooting_index,
+            maxt=len(trajectory)-1,
             sh_dir=self.direction
         ))
 
         if self.direction == "forward":
             trial_trajectory = self._make_forward_trajectory(
-                shooting_point.trajectory, shooting_point.index
+                trajectory, shooting_index
             )
         elif self.direction == "backward":
             trial_trajectory = self._make_backward_trajectory(
-                shooting_point.trajectory, shooting_point.index
+                trajectory, shooting_index
             )
         else:
             raise RuntimeError("Unknown direction: " + str(self.direction))
 
-        trial_point = paths.ShootingPoint(
-            shooting_point.selector,
-            trial_trajectory,
-            trial_trajectory.index(shooting_point.snapshot)
-        )
-
-        return trial_point
+        return trial_trajectory
 
 
 class ForwardShootMover(EngineMover):
