@@ -571,7 +571,7 @@ class EngineMover(SampleMover):
     def direction(self):
         return 'unknown'
 
-    def _run(self, shooting_point):
+    def _run(self, trajectory, shooting_index):
         """Takes initial trajectory and shooting point; return trial
         trajectory"""
         shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
