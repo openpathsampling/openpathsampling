@@ -1010,7 +1010,7 @@ class PathTreeBuilder(object):
                     if mover_type is paths.BackwardShootMover:
                         color = "green"
                         self.renderer.add(
-                            self.renderer.v_connection(shift + new_index + 1,
+                            self.renderer.v_connection(shift + new_index,
                                                        p_y[old_conf_idx], t_count,
                                                        color)
                         )
@@ -1025,7 +1025,7 @@ class PathTreeBuilder(object):
                         color = "red"
 
                         self.renderer.add(
-                            self.renderer.v_connection(shift + new_index,
+                            self.renderer.v_connection(shift + new_index + 1,
                                                        p_y[old_conf_idx], t_count,
                                                        color)
                         )
