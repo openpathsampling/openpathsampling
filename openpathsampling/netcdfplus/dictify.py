@@ -5,6 +5,7 @@ import importlib
 import numpy as np
 from simtk import unit as units
 import yaml
+import abc
 
 from base import StorableObject
 
@@ -56,6 +57,12 @@ class ObjectJSON(object):
                 return {'_import': obj.__name__}
             else:
                 raise RuntimeError('The module reference "%s" you want to store is not allowed!' % obj.__name__)
+        elif type(obj) is type or type(obj) is abc.ABCMeta:
+            # store a storable number type
+            if obj in self.type_classes:
+                return {'_type': obj.__name__}
+            else:
+                return None
 
         elif obj.__class__.__module__ != '__builtin__':
             if obj.__class__ is units.Quantity:
@@ -77,12 +84,6 @@ class ObjectJSON(object):
             return [self.simplify(o, base_type) for o in obj]
         elif type(obj) is tuple:
             return {'_tuple': [self.simplify(o, base_type) for o in obj]}
-        elif type(obj) is type:
-            # store a storable number type
-            if obj in self.type_classes:
-                return {'_type': obj.__name__}
-            else:
-                return None
         elif type(obj) is dict:
             # we want to support storable objects as keys so we need to wrap
             # dicts with care and store them using tuples
@@ -210,7 +211,7 @@ class ObjectJSON(object):
         return json.dumps(simplified)
 
     def to_json_object(self, obj):
-        if hasattr(obj, 'base_cls'):
+        if hasattr(obj, 'base_cls') and type(obj) is not type and type(obj) is not abc.ABCMeta:
             simplified = self.simplify_object(obj)
         else:
             simplified = self.simplify(obj)

@@ -288,13 +288,11 @@ class NetCDFPlus(netCDF4.Dataset):
         for store in self._storages.values():
             if not store._created:
                 logger.info("Initializing store '%s'" % store.name)
-#                print store.name
                 store._init()
 
         for store in self._storages.values():
             if not store._created:
                 logger.info("Initializing store '%s'" % store.name)
-#                print store.name
                 store._init()
 
         self.update_delegates()
