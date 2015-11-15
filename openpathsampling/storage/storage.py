@@ -27,12 +27,6 @@ class Storage(NetCDFPlus):
 
     USE_FEATURE_SNAPSHOTS = False
 
-    def get_unit(self, dimension):
-        """
-        Return a simtk.Unit instance from the unit_system the is of the specified dimension, e.g. length, time
-        """
-        return u.Unit({self.unit_system.base_units[u.BaseDimension(dimension)]: 1.0})
-
     @property
     def template(self):
         """
