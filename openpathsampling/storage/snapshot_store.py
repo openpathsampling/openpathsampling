@@ -2,8 +2,7 @@ import numpy as np
 
 from openpathsampling.snapshot import Snapshot, Configuration, Momentum
 from openpathsampling.trajectory import Trajectory
-from object_storage import ObjectStore
-from objproxy import LoaderProxy
+from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
 
 
 class SnapshotStore(ObjectStore):

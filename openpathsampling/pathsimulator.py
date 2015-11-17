@@ -1,14 +1,16 @@
-from openpathsampling.base import StorableNamedObject, StorableObject
-import openpathsampling as paths
-import openpathsampling.tools
-from openpathsampling.pathmover import SubPathMover
-import abc
-
 import time
 import sys
-
 import logging
+
+from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
+
+import openpathsampling as paths
+import openpathsampling.tools
+
+from openpathsampling.pathmover import SubPathMover
 from ops_logging import initialization_logging
+import abc
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
