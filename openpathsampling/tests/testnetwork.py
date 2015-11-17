@@ -151,8 +151,8 @@ class testTPSNetwork(object):
         if os.path.isfile(fname):
             os.remove(fname)
         topol = paths.ToyTopology(n_spatial=1, masses=[1.0], pes=None)
-        self.template = paths.Snapshot(coordinates=[[0.0]], 
-                                       velocities=[[0.0]], 
+        self.template = paths.ToySnapshot(coordinates=np.array([[0.0]]),
+                                       velocities=np.array([[0.0]]),
                                        topology=topol)
         states = [self.stateA, self.stateB, self.stateC]
         network_a = TPSNetwork(initial_states=states, final_states=states)
