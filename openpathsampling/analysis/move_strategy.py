@@ -741,6 +741,7 @@ class SingleReplicaStrategy(MoveStrategy):
     """
     pass
 
+
 class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
     """
     Global strategy to organize by ensemble first. Needed for SRTIS.
@@ -936,4 +937,21 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
         root_chooser.named("RootMover")
         scheme.root_mover = root_chooser
         return root_chooser
+
+class PoorSingleReplicaStrategy(OrganizeByEnsembleStrategy):
+    """
+    Organizes by ensemble, then readjusts the weights to have a bunch of
+    null moves.
+    """
+    def __init__(self, ensembles=None, group=None, replace=True):
+        super(PoorSingleReplicaStrategy, self).__init(
+            ensembles=ensembles, group=group, replace=replace
+        )
+        self.null_mover = paths.IdentityPathMover()
+
+    def make_movers(self, scheme):
+        root = super(PoorSingleReplicaStrategy, self).make_movers(scheme)
+        # TODO
+        return root
+
 
