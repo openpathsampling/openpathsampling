@@ -944,14 +944,30 @@ class PoorSingleReplicaStrategy(OrganizeByEnsembleStrategy):
     null moves.
     """
     def __init__(self, ensembles=None, group=None, replace=True):
-        super(PoorSingleReplicaStrategy, self).__init(
+        super(PoorSingleReplicaStrategy, self).__init__(
             ensembles=ensembles, group=group, replace=replace
         )
         self.null_mover = paths.IdentityPathMover()
 
+    def chooser_mover_weights(self, scheme, ensemble, mover_weights):
+        # this is where I'll have to pad with the null_mover
+        weights = {}
+        for sig in [s for s in mover_weights if s[2] == ensemble]:
+            group = sig[0]
+            ens_sig = sig[1]
+            #ens = sig[2]
+            # there can be only one
+            mover = [m for m in scheme.movers[group]
+                     if m.ensemble_signature == ens_sig][0]
+            weights[mover] = mover_weights[sig]
+        sum_weights = sum(weights.values())
+        weights[self.null_mover] = 1.0 - sum_weights
+        return weights
+
+
     def make_movers(self, scheme):
         root = super(PoorSingleReplicaStrategy, self).make_movers(scheme)
-        # TODO
+        # TODO: set real_chooser_probability 
         return root
 
 

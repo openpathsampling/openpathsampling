@@ -35,6 +35,7 @@ class MoveScheme(StorableNamedObject):
         self.strategies = {}
         self.balance_partners = {}
         self.choice_probability = {}
+        self._real_choice_probability = {} # used as override, e.g., in SRTIS
         self.root_mover = None
 
         self._mover_acceptance = {} # used in analysis
@@ -58,6 +59,17 @@ class MoveScheme(StorableNamedObject):
         scheme.balance_partners = dct['balance_partners']
         scheme.root_mover = dct['root_mover']
         return scheme
+
+    @property
+    def real_choice_probability(self):
+        if self._real_choice_probability == {}:
+            return self.choice_probability
+        else:
+            return self.real_choice_probability
+
+    @real_choice_probability.setter
+    def real_choice_probability(self, value):
+        self._real_choice_probability = value
 
     def append(self, strategies, levels=None):
         """
