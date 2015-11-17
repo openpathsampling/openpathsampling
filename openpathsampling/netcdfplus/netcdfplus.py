@@ -210,6 +210,7 @@ class NetCDFPlus(netCDF4.Dataset):
             self.dimension_units.update(units)
 
         self._register_storages()
+        self.simplifier.update_class_list()
 
         if mode == 'w':
             logger.info("Setup netCDF file and create variables")
