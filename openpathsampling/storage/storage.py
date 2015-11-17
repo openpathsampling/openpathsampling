@@ -65,7 +65,7 @@ class Storage(NetCDFPlus):
 
         for storage_name in [
             'pathmovers', 'topologies', 'networks', 'details', 'trajectories',
-            'shootingpoints', 'shootingpointselectors', 'engines', 'volumes',
+            'shootingpointselectors', 'engines', 'volumes',
             'samplesets', 'ensembles', 'transitions', 'steps', 'pathmovechanges',
             'samples', 'snapshots', 'pathsimulators', 'cvs'
         ]:
@@ -155,21 +155,21 @@ class Storage(NetCDFPlus):
 
         # normal objects
 
-        self.create_store('details', ObjectStore(paths.Details, has_name=False))
-        self.create_store('topologies', ObjectStore(paths.Topology, has_name=True))
-        self.create_store('pathmovers', ObjectStore(paths.PathMover, has_name=True))
-        self.create_store('shootingpoints',
-                 ObjectStore(paths.ShootingPoint, has_name=False))
-        self.create_store('shootingpointselectors',
-                 ObjectStore(paths.ShootingPointSelector, has_name=True))
-        self.create_store('engines', ObjectStore(paths.DynamicsEngine, has_name=True))
-        self.create_store('pathsimulators',
-                 ObjectStore(paths.PathSimulator, has_name=True))
-        self.create_store('transitions', ObjectStore(paths.Transition, has_name=True))
-        self.create_store('networks',
-                 ObjectStore(paths.TransitionNetwork, has_name=True))
-        self.create_store('schemes',
-                 ObjectStore(paths.MoveScheme, has_name=True))
+        self.add('details', paths.storage.ObjectStore(paths.Details, has_name=False))
+        self.add('topologies', paths.storage.ObjectStore(paths.Topology, has_name=True))
+        self.add('pathmovers', paths.storage.ObjectStore(paths.PathMover, has_name=True))
+        # self.add('shootingpoints'
+                 # paths.storage.ObjectStore(paths.ShootingPoint, has_name=False))
+        self.add('shootingpointselectors',
+                 paths.storage.ObjectStore(paths.ShootingPointSelector, has_name=True))
+        self.add('engines', paths.storage.ObjectStore(paths.DynamicsEngine, has_name=True))
+        self.add('pathsimulators',
+                 paths.storage.ObjectStore(paths.PathSimulator, has_name=True))
+        self.add('transitions', paths.storage.ObjectStore(paths.Transition, has_name=True))
+        self.add('networks',
+                 paths.storage.ObjectStore(paths.TransitionNetwork, has_name=True))
+        self.add('schemes',
+                 paths.storage.ObjectStore(paths.MoveScheme, has_name=True))
 
         # nestable objects
 
@@ -283,7 +283,6 @@ class Storage(NetCDFPlus):
             'samplesets': False,
             'cvs': True,
             'pathmovers': True,
-            'shootingpoints': WeakLRUCache(10000),
             'shootingpointselectors': True,
             'engines': True,
             'pathsimulators': True,
@@ -313,7 +312,6 @@ class Storage(NetCDFPlus):
             'samplesets': False,
             'cvs': True,
             'pathmovers': True,
-            'shootingpoints': False,
             'shootingpointselectors': True,
             'engines': True,
             'pathsimulators': True,
@@ -345,7 +343,6 @@ class Storage(NetCDFPlus):
             'samplesets': WeakLRUCache(10),
             'cvs': WeakLRUCache(10),
             'pathmovers': WeakLRUCache(10),
-            'shootingpoints': WeakLRUCache(10),
             'shootingpointselectors': WeakLRUCache(10),
             'engines': WeakLRUCache(10),
             'pathsimulators': WeakLRUCache(10),
@@ -377,7 +374,6 @@ class Storage(NetCDFPlus):
             'samplesets': WeakLRUCache(100000),
             'cvs': True,
             'pathmovers': True,
-            'shootingpoints': WeakLRUCache(100000),
             'shootingpointselectors': True,
             'engines': True,
             'pathsimulators': True,
@@ -409,7 +405,6 @@ class Storage(NetCDFPlus):
             'samplesets': False,
             'cvs': False,
             'pathmovers': False,
-            'shootingpoints': False,
             'shootingpointselectors': False,
             'engines': False,
             'pathsimulators': False,
@@ -442,7 +437,6 @@ class Storage(NetCDFPlus):
             'samplesets': False,
             'cvs': False,
             'pathmovers': False,
-            'shootingpoints': False,
             'shootingpointselectors': False,
             'engines': False,
             'pathsimulators': False,
