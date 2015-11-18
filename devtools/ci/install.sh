@@ -18,7 +18,7 @@ bash $MINICONDA -b
 
 echo travis_fold:end:install.conda
 
-## Install conda pacakages
+## Install conda packages
 
 # This might make the --yes obsolete
 # conda config --set always_yes yes --set changeps1 no
@@ -26,6 +26,12 @@ echo travis_fold:end:install.conda
 export PATH=$HOME/miniconda2/bin:$PATH
 
 hash -r
+
+echo travis_fold:start:install.lammps
+sudo add-apt-repository ppa:gladky-anton/lammps
+sudo apt-get update
+sudo apt-get install lammps-daily
+echo travis_fold:end:install.lammps
 
 echo travis_fold:start:install.conda.packages
 echo Install conda packages
