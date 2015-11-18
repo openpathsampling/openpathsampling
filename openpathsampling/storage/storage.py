@@ -137,6 +137,8 @@ class Storage(NetCDFPlus):
         self.create_store('trajectories', paths.storage.TrajectoryStore())
 
         self.create_store('snapshots', paths.storage.SnapshotStore())
+        self.create_store('configurations', paths.storage.ConfigurationStore())
+        self.create_store('momenta', paths.storage.MomentumStore())
 
         self.create_store('samples', paths.storage.SampleStore())
         self.create_store('samplesets', paths.storage.SampleSetStore())

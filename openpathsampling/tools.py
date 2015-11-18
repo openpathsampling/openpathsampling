@@ -142,13 +142,14 @@ def trajectory_from_mdtraj(mdtrajectory):
         config = paths.Configuration(
             coordinates=coord,
             box_vectors=box_v,
-            potential_energy=u.Quantity(0.0, u.kilojoule_per_mole)
+            potential_energy=u.Quantity(0.0, u.kilojoule_per_mole),
+            topology=topology
         )
 
         snap = paths.Snapshot(
             configuration=config,
             momentum=empty_momentum,
-            topology=topology
+            topology=paths.MDTrajTopology(mdtrajectory.topology)
         )
         trajectory.append(snap)
 
@@ -204,24 +205,20 @@ def units_from_snapshot(snapshot):
         the simtk.unit.Unit to be used
     """
 
-    units = {}
+    units = {'velocity': None, 'energy': None, 'length': None}
+
     if snapshot.coordinates is not None:
         if hasattr(snapshot.coordinates, 'unit'):
             units['length'] = snapshot.coordinates.unit
-        else:
-            units['length'] = u.Unit({})
+
 
     if snapshot.potential_energy is not None:
         if hasattr(snapshot.potential_energy, 'unit'):
             units['energy'] = snapshot.potential_energy.unit
-        else:
-            units['energy'] = u.Unit({})
 
     if snapshot.velocities is not None:
         if hasattr(snapshot.velocities, 'unit'):
             units['velocity'] = snapshot.velocities.unit
-        else:
-            units['velocity'] = u.Unit({})
 
     return units
 
