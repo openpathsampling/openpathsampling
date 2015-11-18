@@ -951,6 +951,10 @@ class PoorSingleReplicaStrategy(OrganizeByEnsembleStrategy):
 
     def chooser_mover_weights(self, scheme, ensemble, mover_weights):
         # this is where I'll have to pad with the null_mover
+        if scheme.choice_probability == {}:
+            msg = "Set choice probability before chooser_mover_weights"
+            raise RuntimeError(msg)
+
         weights = {}
         for sig in [s for s in mover_weights if s[2] == ensemble]:
             group = sig[0]
@@ -959,7 +963,8 @@ class PoorSingleReplicaStrategy(OrganizeByEnsembleStrategy):
             # there can be only one
             mover = [m for m in scheme.movers[group]
                      if m.ensemble_signature == ens_sig][0]
-            weights[mover] = mover_weights[sig]
+            weights[mover] = scheme.choice_probability[mover]
+
         sum_weights = sum(weights.values())
         weights[self.null_mover] = 1.0 - sum_weights
         return weights

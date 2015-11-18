@@ -1125,7 +1125,7 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         minus = self.network.minus_ensembles[0]
         strategy = self.StrategyClass()
 
-        (ensemble_weights, mover_weights)= strategy.default_weights(scheme)
+        (ensemble_weights, mover_weights) = strategy.default_weights(scheme)
 
         for ens in [ens0, ens1, ens2, minus]:
             chooser_mweights = strategy.chooser_mover_weights(scheme, ens, 
@@ -1281,7 +1281,34 @@ class testPoorSingleReplicaStrategy(testOrganizeByEnsembleStrategy):
     StrategyClass = PoorSingleReplicaStrategy
 
     def test_chooser_mover_weights(self):
-        raise SkipTest
+        scheme = self.scheme
+        ens0 = self.network.sampling_transitions[0].ensembles[0]
+        ens1 = self.network.sampling_transitions[0].ensembles[1]
+        ens2 = self.network.sampling_transitions[0].ensembles[2]
+        minus = self.network.minus_ensembles[0]
+        strategy = self.StrategyClass()
+
+        (ensemble_weights, mover_weights) = strategy.default_weights(scheme)
+        (ens_w, mov_w) = strategy.get_weights(scheme, scheme.movers,
+                                              strategy.ensemble_weights,
+                                              strategy.mover_weights)
+        scheme.choice_probability = strategy.choice_probability(scheme, 
+                                                                ens_w, mov_w)
+        for ens in [ens0, ens1, ens2, minus]:
+            chooser_mweights = strategy.chooser_mover_weights(scheme, ens, 
+                                                              mover_weights)
+            if ens in [ens0, ens1]:
+                assert_equal(len(chooser_mweights), 5)
+            elif ens is minus:
+                assert_equal(len(chooser_mweights), 2)
+            elif ens is ens2:
+                assert_equal(len(chooser_mweights), 4)
+
+            real_movers = [m for m in chooser_mweights.keys() 
+                           if m != strategy.null_mover]
+            for m in real_movers:
+                assert_equal(scheme.choice_probability[m], chooser_mweights[m])
+            assert_almost_equal(sum(chooser_mweights.values()), 1.0)
 
     def test_real_choice_probability(self):
         raise SkipTest
