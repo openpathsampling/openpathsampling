@@ -3,7 +3,7 @@ import simtk.unit as u
 
 import openpathsampling as paths
 
-from lammps import lammps
+from lammps_daily import lammps
 
 class LammpsEngine(paths.DynamicsEngine):
     """OpenMM dynamics engine based on a openmmtools.testsystem object.
