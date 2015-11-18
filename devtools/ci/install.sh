@@ -28,7 +28,7 @@ export PATH=$HOME/miniconda2/bin:$PATH
 hash -r
 
 echo travis_fold:start:install.lammps
-sudo add-apt-repository ppa:gladky-anton/lammps
+sudo add-apt-repository ppa:gladky-anton/lammps -y
 sudo apt-get update
 sudo apt-get install lammps-daily
 echo travis_fold:end:install.lammps
