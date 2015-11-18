@@ -105,12 +105,15 @@ def buildKeywordDictionary():
                                           'openpathsampling.storage',
                                           'openpathsampling.toy_dynamics',
                                           'openpathsampling.tests',
-                                          'openpathsampling.analysis']
+                                          'openpathsampling.analysis',
+                                          'openpathsampling.netcdfplus'
+                                          ]
     setupKeywords["package_dir"]       = {
         'openpathsampling' : 'openpathsampling',
         'openpathsampling.storage' : 'openpathsampling/storage',
         'openpathsampling.toy_dynamics' : 'openpathsampling/toy_dynamics',
-        'openpathsampling.tests' : 'openpathsampling/tests'
+        'openpathsampling.tests' : 'openpathsampling/tests',
+        'openpathsampling.netcdfplus' : 'openpathsampling/netcdfplus'
     }
     #setupKeywords["py_modules"]        = ["pymbar", "timeseries", "testsystems", "confidenceintervals"]
     setupKeywords["data_files"]        = []

@@ -1,12 +1,14 @@
-from object_storage import ObjectStore
 from openpathsampling.sample import SampleSet, Sample
-from objproxy import LoaderProxy
+from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
 
 
 class SampleStore(ObjectStore):
     def __init__(self):
         super(SampleStore, self).__init__(Sample, json=False)
         self._cached_all = False
+
+    def to_dict(self):
+        return {}
 
     def _save(self, sample, idx):
         self.vars['trajectory'][idx] = sample.trajectory

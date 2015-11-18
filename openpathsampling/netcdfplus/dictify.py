@@ -3,7 +3,7 @@ import json
 import numpy as np
 from simtk import unit as units
 import yaml
-from openpathsampling.base import StorableObject
+from base import StorableObject
 import importlib
 
 __author__ = 'Jan-Hendrik Prinz'
