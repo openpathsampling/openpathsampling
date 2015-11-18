@@ -1,9 +1,9 @@
 import mdtraj as md
 import numpy as np
 import pandas as pd
-
-from openpathsampling.base import StorableNamedObject
 from simtk.openmm import XmlSerializer
+
+from openpathsampling.netcdfplus import StorableNamedObject
 
 
 class Topology(StorableNamedObject):

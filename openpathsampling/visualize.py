@@ -1,15 +1,14 @@
-import svgwrite
 import os
+import json
+import StringIO
+
+import svgwrite
+import networkx as nx
+import matplotlib.pyplot as plt
+from networkx.readwrite import json_graph
 
 import openpathsampling as paths
-import networkx as nx
-
-from openpathsampling.storage.objproxy import LoaderProxy
-
-import json
-import matplotlib.pyplot as plt
-import StringIO
-from networkx.readwrite import json_graph
+from openpathsampling.netcdfplus import LoaderProxy
 
 class TreeRenderer(object):
     def __init__(self):

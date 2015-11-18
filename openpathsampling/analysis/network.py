@@ -1,14 +1,20 @@
 import logging
-
-import pandas as pd
 import itertools
 
+import pandas as pd
+
 import openpathsampling as paths
-from openpathsampling.base import StorableNamedObject
+from openpathsampling.netcdfplus import StorableNamedObject
 import openpathsampling.volume
 import openpathsampling.ensemble
 
 logger = logging.getLogger(__name__)
+
+def index_to_string(index):
+    n_underscore = index / 26
+    letter_value = index % 26
+    mystr = "_"*n_underscore + chr(65+letter_value)
+    return mystr
 
 class TransitionNetwork(StorableNamedObject):
     """
@@ -186,10 +192,10 @@ class MSTISNetwork(TISNetwork):
         Parameters
         ----------
         trans_info : list of tuple
-            Details of each state-based ensemble set. 4-tuple in the order
-            (state, interfaces, state_name, orderparameter) where state is a
-            Volume, interfaces is a list of Volumes, state_name is a string,
-            and orderparameters is a CollectiveVariable
+            Details of each state-based ensemble set. 3-tuple in the order
+            (state, interfaces, orderparameter) where state is a Volume,
+            interfaces is a list of Volumes, and orderparameters is a
+            CollectiveVariable
         """
         super(MSTISNetwork, self).__init__()
         self.trans_info = trans_info
@@ -245,26 +251,32 @@ class MSTISNetwork(TISNetwork):
             See description in __init__.
 
         """
-        states, interfaces, names, orderparams = zip(*trans_info)
-        # NAMING STATES (future: give default names)
+        states, interfaces, orderparams = zip(*trans_info)
+        # NAMING STATES (give default names)
         all_states = paths.volume.join_volumes(states).named("all states")
-        for (state, name) in zip(states, names):
-            state.named(name)
+        all_names = list(set([s.name for s in states]))
+        unnamed_states = [s for s in states if not s.is_named]
+        name_index = 0
+        for state in unnamed_states:
+            while index_to_string(name_index) in all_names:
+                name_index += 1
+            state.named(index_to_string(name_index))
+            name_index += 1
 
         # BUILDING ENSEMBLES
         outer_ensembles = []
         self.states = states
-        for (state, ifaces, name, op) in trans_info:
+        for (state, ifaces, op) in trans_info:
             state_index = states.index(state)
             other_states = states[:state_index]+states[state_index+1:]
             union_others = paths.volume.join_volumes(other_states)
-            union_others.named("all states except " + str(name))
+            union_others.named("all states except " + str(state.name))
 
             this_trans = paths.TISTransition(
                 stateA=state, 
                 stateB=union_others,
                 interfaces=ifaces[:-1],
-                name="Out "+name,
+                name="Out " + state.name,
                 orderparameter=op
             )
 
@@ -353,6 +365,11 @@ class MISTISNetwork(TISNetwork):
     """
     Multiple interface set TIS network.
 
+    Input is given as a list of 4-tuples. Each 4-tuple represents a
+    transition, and is in the order: 
+        (initial_state, interfaces, order_parameter, final_states)
+    This will create the `input_transitions` objects.
+
     Attributes
     ----------
     input_transitions : list of TISTransition
@@ -372,19 +389,36 @@ class MISTISNetwork(TISNetwork):
     """
     # NOTE: input_transitions are in addition to the sampling_transitions
     # and the transitions (analysis transitions)
-    def __init__(self, input_transitions):
+    def __init__(self, trans_info):
         super(MISTISNetwork, self).__init__()
-        self.input_transitions = input_transitions
+        self.trans_info = trans_info
+        states_A, interfaces, orderparams, states_B = zip(*trans_info)
+        self.initial_states = list(set(states_A))
+        self.final_states = list(set(states_B))
+        list_all_states = list(set(self.initial_states + self.final_states))
 
-        # use dictionaries so we only have one instance of each, even if the
-        # same state shows up in many transitions TODO: replace with sets?
-        self.initial_states = {trans.stateA : 1 
-                               for trans in input_transitions}.keys()
-        self.final_states = {trans.stateB : 1 
-                             for trans in input_transitions}.keys()
+        # name states
+        all_state_names = list(set([s.name for s in list_all_states]))
+        unnamed_states = [s for s in list_all_states if not s.is_named]
+        name_index = 0
+        for state in unnamed_states:
+            while index_to_string(name_index) in all_names:
+                name_index += 1
+            state.named(index_to_string(name_index))
+            name_index += 1
+
+
+        if not hasattr(self, "input_transitions"):
+            self.input_transitions = {
+                (stateA, stateB) :
+                paths.TISTransition(stateA, stateB, interface, orderparam,
+                                    name=stateA.name+"->"+stateB.name)
+                for (stateA, interface, orderparam, stateB) in self.trans_info
+            }
+
         if not hasattr(self, 'x_sampling_transitions'):
             self.special_ensembles = {}
-            self.build_sampling_transitions(input_transitions)
+            self.build_sampling_transitions(self.input_transitions.values())
         self._sampling_transitions = self.x_sampling_transitions
 
         # by default, we set assign these values to all ensembles
@@ -399,7 +433,8 @@ class MISTISNetwork(TISNetwork):
             'transition_pairs' : self.transition_pairs,
             'x_sampling_transitions' : self.x_sampling_transitions,
             'transition_to_sampling' : self.transition_to_sampling,
-            'input_transitions' : self.input_transitions
+            'input_transitions' : self.input_transitions,
+            'trans_info' : self.trans_info
         }
         return ret_dict
 
@@ -409,8 +444,9 @@ class MISTISNetwork(TISNetwork):
         network.special_ensembles = dct['special_ensembles']
         network.transition_pairs = dct['transition_pairs']
         network.transition_to_sampling = dct['transition_to_sampling']
+        network.input_transitions = dct['input_transitions']
         network.x_sampling_transitions = dct['x_sampling_transitions']
-        network.__init__(dct['input_transitions'])
+        network.__init__(dct['trans_info'])
         return network
 
 
@@ -498,7 +534,7 @@ class MISTISNetwork(TISNetwork):
 
     def build_analysis_transitions(self):
         self.transitions = {}
-        for trans in self.input_transitions:
+        for trans in self.input_transitions.values():
             sample_trans = self.transition_to_sampling[trans]
             stateA = trans.stateA
             stateB = trans.stateB

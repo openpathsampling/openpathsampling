@@ -1,38 +1,9 @@
 import inspect
-
 import logging
 import weakref
 from types import MethodType
 
-import functools
-
 logger = logging.getLogger(__name__)
-
-
-class DelayedLoader(object):
-    """
-    Descriptor class to handle proxy objects in attributes
-
-    If a proxy is stored in an attribute then the full object will be returned
-    """
-    def __get__(self, instance, owner):
-        if instance is not None:
-            obj = instance._lazy[self]
-            if type(obj) is tuple:
-                (store, idx) = obj
-                return store[idx]
-            elif hasattr(obj, '_idx'):
-                return obj.__subject__
-            else:
-                return obj
-        else:
-            return self
-
-    def __set__(self, instance, value):
-        if type(value) is tuple:
-            instance._lazy[self] = value
-        else:
-            instance._lazy[self] = value
 
 
 class StorableObject(object):
@@ -216,6 +187,14 @@ class StorableNamedObject(StorableObject):
         else:
             self._name = name
 
+    @property
+    def is_named(self):
+        """True if this object has a custom name.
+
+        This distinguishes default algorithmic names from assigned names.
+        """
+        return self._name != ""
+
     def named(self, name):
         """Name an unnamed object.
 
@@ -240,47 +219,3 @@ class StorableNamedObject(StorableObject):
         return self
 
 
-def lazy_loading_attributes(*attributes):
-    """
-    Set attributes in the decorated class to be handled as lazy loaded objects.
-
-    An attribute that is added here will be turned into a special descriptor that
-    will dynamically load an objects if it is represented internally as a LoaderProxy
-    object and will return the real object, not the proxy!
-
-    The second thing you can do is that saving using the `.write()` command will
-    automatically remove the real object and turn the stored object into a proxy.
-
-    Examples
-    --------
-    Set an attribute to a LoaderProxy
-
-    >>> my_obj.lazy_attribute = LoaderProxy(snapshot_store, 13)
-
-    >>> print my_obj.lazy_attribute
-    openpathsampling.Snapshot object
-
-    It will not return the proxy. This is completely hidden.
-
-    If you want to use the intelligent saving that will remove the reference to the
-    object you can do
-    >>> sample_store.write('parent', index, my_sample)
-
-    After this call the attribute `my_sample.parent` will be turned into a proxy.
-
-    """
-    def _decorator(cls):
-        for attr in attributes:
-            setattr(cls, attr, DelayedLoader())
-
-        _super_init = cls.__init__
-
-        @functools.wraps(cls.__init__)
-        def _init(self, *args, **kwargs):
-            self._lazy = dict()
-            _super_init(self, *args, **kwargs)
-
-        cls.__init__ = _init
-        return cls
-
-    return _decorator

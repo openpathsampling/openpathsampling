@@ -3,7 +3,7 @@ __author__ = 'Jan-Hendrik Prinz'
 import logging
 
 import openpathsampling as paths
-from openpathsampling.base import StorableObject, lazy_loading_attributes
+from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
 from treelogic import TreeMixin
 
 logger = logging.getLogger(__name__)
