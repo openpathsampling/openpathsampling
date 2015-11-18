@@ -5,8 +5,8 @@ import logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-from object_json import StorableObjectJSON
-from objproxy import LoaderProxy
+from dictify import StorableObjectJSON
+from proxy import LoaderProxy
 
 import numpy as np
 import netCDF4
@@ -210,6 +210,7 @@ class NetCDFPlus(netCDF4.Dataset):
             self.dimension_units.update(units)
 
         self._register_storages()
+        self.simplifier.update_class_list()
 
         if mode == 'w':
             logger.info("Setup netCDF file and create variables")

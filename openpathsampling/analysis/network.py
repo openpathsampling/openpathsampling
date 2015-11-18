@@ -1,10 +1,10 @@
 import logging
-
-import pandas as pd
 import itertools
 
+import pandas as pd
+
 import openpathsampling as paths
-from openpathsampling.base import StorableNamedObject
+from openpathsampling.netcdfplus import StorableNamedObject
 import openpathsampling.volume
 import openpathsampling.ensemble
 

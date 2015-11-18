@@ -8,7 +8,7 @@ import mdtraj as md
 import simtk.unit as u
 
 import openpathsampling as paths
-from openpathsampling.base import StorableObject
+from openpathsampling.netcdfplus import StorableObject
 
 
 # =============================================================================================

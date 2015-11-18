@@ -6,18 +6,19 @@ a duck.
 """
 
 import os
-from pkg_resources import resource_filename 
+from functools import wraps
+
+from pkg_resources import resource_filename
 from nose.tools import assert_items_equal, assert_equal, assert_in
+import numpy as np
+import numpy.testing as npt
+import simtk.unit as u
 
 from openpathsampling.trajectory import Trajectory
 from openpathsampling.snapshot import Snapshot
 from openpathsampling.dynamics_engine import DynamicsEngine
 from openpathsampling.topology import Topology
 import openpathsampling as paths
-import numpy as np
-import numpy.testing as npt
-
-import simtk.unit as u
 
 
 def make_1d_traj(coordinates, velocities=None, topology=None):
@@ -66,6 +67,10 @@ class MoverWithSignature(paths.PathMover):
     def __init__(self, input_ensembles, output_ensembles):
         self._in_ensembles = input_ensembles
         self._out_ensembles = output_ensembles
+
+    def move(self, globalstate):
+        # need to implement a fake move or this class will be considered abstract
+        pass
 
 class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
@@ -233,3 +238,26 @@ class RandomMDEngine(paths.DynamicsEngine):
     def generate_next_frame(self):
         self._current_snapshot = None
         return self.current_snapshot
+
+def raises_with_message_like(err, message=None):
+    """
+    Decorator that allows to run nosetests with raises and testing if the message starts with a txt.
+
+    Notes
+    -----
+    We use this to check for abstract classes using
+    >>> @raises_with_message_like(TypeError, "Can't instantiate abstract class")
+    """
+    def decorator(fnc):
+
+        @wraps(fnc)
+        def _wrapper(*args, **kwargs):
+            try:
+                fnc(*args, **kwargs)
+            except err as e:
+                if message is not None and not str(e).startswith(message):
+                    raise
+
+        return _wrapper
+
+    return decorator
