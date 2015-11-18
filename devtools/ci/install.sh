@@ -33,6 +33,8 @@ sudo apt-get update
 sudo apt-get install lammps-daily
 echo travis_fold:end:install.lammps
 
+conda list
+
 echo travis_fold:start:install.conda.packages
 echo Install conda packages
 
