@@ -18,3 +18,4 @@ networkx
 psutil
 pandas
 ipynbtest
+pyemma
