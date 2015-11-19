@@ -802,7 +802,7 @@ class VariableStore(ObjectStore):
                 for var in self.variables
             ]
 
-            [self.add_to_cache(*v) for v in enumerate(zip(*data), start)]
+            [self.add_to_cache(idx, *v) for idx, v in enumerate(zip(*data), start)]
 
             self._cached_all = True
 
@@ -814,7 +814,6 @@ class VariableStore(ObjectStore):
             storage = self.storage
 
             idxs = range(len(self))
-
 
             steps = storage.variables[self.prefix + '_mccycle'][:]
             previous_idxs = storage.variables[self.prefix + '_previous'][:]
