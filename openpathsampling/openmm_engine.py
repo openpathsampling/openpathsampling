@@ -27,7 +27,7 @@ class OpenMMEngine(paths.DynamicsEngine):
 
     #TODO: Planned to move topology to be part of engine and not snapshot
     #TODO: Deal with cases where we load a GPU based engine, but the platform is not available
-    def __init__(self, template, system, integrator, options=None):
+    def __init__(self, template, system, integrator, options=None, properties=None):
         """
         Parameters
         ----------
@@ -77,6 +77,11 @@ class OpenMMEngine(paths.DynamicsEngine):
 
             if platform is not None:
                 self.options['platform'] = platform
+
+        if properties is None:
+            properties = dict()
+
+        self.properties = properties
 
         # set no cached snapshot, means it will be constructed from the openmm context
         self._current_snapshot = None
@@ -155,7 +160,8 @@ class OpenMMEngine(paths.DynamicsEngine):
             'system_xml' : system_xml,
             'integrator_xml' : integrator_xml,
             'template' : self.template,
-            'options' : self.options
+            'options' : self.options,
+            'properties' : self.properties
         }
 
     @classmethod
@@ -164,12 +170,14 @@ class OpenMMEngine(paths.DynamicsEngine):
         integrator_xml = dct['integrator_xml']
         template = dct['template']
         options = dct['options']
+        properties = dct['properties']
 
         return OpenMMEngine(
             template=template,
             system=simtk.openmm.XmlSerializer.deserialize(system_xml),
             integrator=simtk.openmm.XmlSerializer.deserialize(integrator_xml),
-            options=options
+            options=options,
+            properties=properties
         )
 
     @property
@@ -228,3 +236,7 @@ class OpenMMEngine(paths.DynamicsEngine):
     @property
     def configuration(self):
         return self.current_snapshot.configuration
+
+    def minimize(self):
+        self.simulation.minimizeEnergy()
+
