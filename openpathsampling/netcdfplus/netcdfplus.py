@@ -45,7 +45,8 @@ class NetCDFPlus(netCDF4.Dataset):
         'numpy.uint32': np.uint32,
         'numpy.uint64': np.uint64,
         'store': str,
-        'obj': np.int32
+        'obj': np.int32,
+        'lazyobj': np.int32
     }
 
     class ValueDelegate(object):
@@ -675,7 +676,7 @@ class NetCDFPlus(netCDF4.Dataset):
         setter = None
         store = None
 
-        if '.' in var_type:
+        if var_type.startswith('obj.') or var_type.startswith('lazyobj.'):
             store = getattr(self, var_type.split('.')[1])
             base_type = store.content_class
 
@@ -742,6 +743,20 @@ class NetCDFPlus(netCDF4.Dataset):
             setter = lambda v: \
                 np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
                     if set_iterable(v) else -1 if v is None else store.save(v)
+
+        elif var_type == 'lazyobj':
+            # arbitrary object
+
+            set_iterable_simple = lambda v: \
+                False if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+
+            getter = lambda v: \
+                [None if int(w[1]) < 0 else LoaderProxy(self.stores[int(w[0])],int(w[1])) for w in v.tolist()] \
+                    if len(v.shape) > 1 else None if int(v[1]) < 0 else LoaderProxy(self.stores[int(v[0])],int(v[1]))
+
+            setter = lambda v: \
+                np.array([(-1, -1) if w is None else self.save(w)[1:] for w in v], dtype=np.int32) \
+                    if set_iterable_simple(v) else (-1, -1) if v is None else self.save(v)[1:]
 
         elif var_type == 'store':
             setter = lambda v: v.prefix
@@ -873,7 +888,7 @@ class NetCDFPlus(netCDF4.Dataset):
         else:
             variable_length = False
 
-        if var_type == 'obj':
+        if var_type == 'obj' or var_type == 'lazyobj':
             dimensions.append('pair')
             if chunksizes is not None:
                 chunksizes = tuple(list(chunksizes) + [2])
@@ -947,6 +962,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
             # Define long (human-readable) names for variables.
             setattr(ncvar, "long_str", description)
+
+        self.update_delegates()
 
         return ncvar
 
