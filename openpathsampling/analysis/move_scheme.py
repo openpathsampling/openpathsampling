@@ -65,7 +65,7 @@ class MoveScheme(StorableNamedObject):
         if self._real_choice_probability == {}:
             return self.choice_probability
         else:
-            return self.real_choice_probability
+            return self._real_choice_probability
 
     @real_choice_probability.setter
     def real_choice_probability(self, value):
@@ -384,7 +384,8 @@ class MoveScheme(StorableNamedObject):
             expected number of steps to get `n_attempts` of `mover`
         """
         movers = self._select_movers(mover)
-        total_probability = sum([self.choice_probability[m] for m in movers])
+        total_probability = sum([self.real_choice_probability[m] 
+                                 for m in movers])
         return (n_attempts / total_probability)
 
     def n_trials_for_steps(self, mover, n_steps):
@@ -410,7 +411,8 @@ class MoveScheme(StorableNamedObject):
             expected number of trials of `mover` in `n_steps` MC steps
         """
         movers = self._select_movers(mover)
-        total_probability = sum([self.choice_probability[m] for m in movers])
+        total_probability = sum([self.real_choice_probability[m] 
+                                 for m in movers])
         return (total_probability * n_steps)
 
 

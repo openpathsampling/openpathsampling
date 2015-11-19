@@ -1310,10 +1310,18 @@ class testPoorSingleReplicaStrategy(testOrganizeByEnsembleStrategy):
                 assert_equal(scheme.choice_probability[m], chooser_mweights[m])
             assert_almost_equal(sum(chooser_mweights.values()), 1.0)
 
-    def test_real_choice_probability(self):
-        raise SkipTest
-
     def test_make_movers(self):
-        raise SkipTest
+        scheme = self.scheme
+        strategy = self.StrategyClass()
+        root = strategy.make_movers(scheme)
+
+        assert_equal(len(root.movers), 4)
+
+        for mover in scheme.choice_probability.keys():
+            assert_almost_equal(
+                scheme.choice_probability[mover] * 0.25,
+                scheme.real_choice_probability[mover]
+            )
+
 
 

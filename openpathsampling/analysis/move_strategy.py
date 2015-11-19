@@ -972,6 +972,10 @@ class PoorSingleReplicaStrategy(OrganizeByEnsembleStrategy):
 
     def make_movers(self, scheme):
         root = super(PoorSingleReplicaStrategy, self).make_movers(scheme)
+        scheme.real_choice_probability = {
+            m : scheme.choice_probability[m] / float(len(root.movers))
+            for m in scheme.choice_probability.keys()
+        }
         # TODO: set real_chooser_probability 
         return root
 
