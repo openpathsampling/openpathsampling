@@ -288,14 +288,14 @@ class NetCDFPlus(netCDF4.Dataset):
         self.stores.save(store)
 
     def finalize_stores(self):
-        for store in self._storages.values():
+        for store in self._objects.values():
             if not store._created:
                 logger.info("Initializing store '%s'" % store.name)
                 store._init()
         # we need to run this twice because in the first round some stores could have
         # added more stores which we would have missed
 
-        for store in self._storages.values():
+        for store in self._objects.values():
             if not store._created:
                 logger.info("Initializing store '%s'" % store.name)
                 store._init()
@@ -326,11 +326,12 @@ class NetCDFPlus(netCDF4.Dataset):
             setattr(self, store.prefix, store)
 
         self._objects[name] = store
+        self.assign_primary_store(store, store.content_class)
 
-        self._storages[store.content_class] = store
-
-        self._obj_store[store.content_class] = store
-        self._obj_store.update({cls: store for cls in store.content_class.descendants()})
+    def assign_primary_store(self, store, cls):
+        self._storages[cls] = store
+        self._obj_store[cls] = store
+        self._obj_store.update({c: store for c in cls.descendants()})
 
     def _initialize(self):
         """
@@ -438,6 +439,7 @@ class NetCDFPlus(netCDF4.Dataset):
             # also we assume that if a class has no base_cls
             store = self._obj_store[obj.__class__]
             store_idx = self.stores.index[store]
+
             return store, store_idx, store.save(obj, idx)
 
 
@@ -681,11 +683,10 @@ class NetCDFPlus(netCDF4.Dataset):
             base_type = store.content_class
 
             get_iterable = lambda v: \
-                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+                hasattr(v, '__iter__')
 
             set_iterable = lambda v: \
-                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
-
+                False if not hasattr(v, '__iter__') else not v.base_cls is base_type if hasattr(v, 'base_cls') else True
 
         if var_type == 'int':
             getter = lambda v: v.tolist()

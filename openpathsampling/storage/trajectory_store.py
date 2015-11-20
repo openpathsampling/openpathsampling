@@ -14,7 +14,7 @@ class TrajectoryStore(ObjectStore):
         snapshot_store = self.storage.snapshots
 
         for frame, snapshot in enumerate(trajectory):
-            if type(snapshot) is not LoaderProxy:
+            if not hasattr(snapshot, '_idx'):
                 loader = LoaderProxy(snapshot_store, snapshot_store.index[snapshot])
                 trajectory[frame] = loader
 

@@ -13,7 +13,7 @@ init_log = logging.getLogger('openpathsampling.initialization')
 import openpathsampling as paths
 import simtk.unit as u
 
-from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore
+from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, ExternalFileStore
 
 # =============================================================================================
 # OPS SPECIFIC STORAGE
@@ -137,7 +137,14 @@ class Storage(NetCDFPlus):
         self.create_store('trajectories', paths.storage.TrajectoryStore())
 
         self.create_store('snapshots', paths.storage.SnapshotStore())
-        self.create_store('configurations', paths.storage.ConfigurationStore())
+
+        self.create_store('mdfiles', ExternalFileStore(paths.storage.ExternalMDFile))
+        self.create_store('mdconfiguration', paths.storage.ExternalMDConfigurationStore())
+
+        self.create_store('intconf', paths.storage.ConfigurationStore())
+        self.create_store('extconf', paths.storage.ExternalMDConfigurationStore())
+
+        self.create_store('configurations', paths.storage.MultiConfigurationStore())
         self.create_store('momenta', paths.storage.MomentumStore())
 
         self.create_store('samples', paths.storage.SampleStore())

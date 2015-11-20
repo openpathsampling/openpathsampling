@@ -162,7 +162,7 @@ class ExpandSingle(ChainDict):
     """
 
     def __getitem__(self, items):
-        if type(items) is LoaderProxy:
+        if hasattr(items, '_idx'):
             return self.post[[items]][0]
         if hasattr(items, '__iter__'):
             try:
