@@ -1,169 +1,247 @@
 __author__ = 'Jan-Hendrik Prinz'
 
+import itertools
+import collections
+import random
+
 class TreeMixin(object):
     """
-    A mixin that provides basic tree handling.
+    A mixin that provides basic handling for sets of trees.
 
     A tree is basically a node with children of the same type. The mixin
     requires to implement `.subnodes` to contain a list of children.
 
     The `__contains__` operator requires `_default_match` to be implemented.
     Otherwise is defaults to a comparison between two elements.
+
+    A tree set means that it actually does not represent a single tree but a whole
+    group of trees. The description works by assuming that all leaves are actually
+    different choices of a single leave.
+
+    The main difficulty is that now leaves can have two meaning and we need to
     """
 
-    @staticmethod
-    def _indent(s):
-        """
-        Helper function to print indented subtrees
+    NODE_TYPE_NONE = 0
+    NODE_TYPE_ALL = 1
+    NODE_TYPE_ONE = 2
+    NODE_TYPE_ACCUMULATE = 3
+    NODE_TYPE_POWER = 4
+    NODE_TYPE_CUSTOM = 5
 
-        Parameters
-        ----------
-        s : str
-            string representation of a tree to be indented
+    _node_type = NODE_TYPE_NONE
 
-        Returns
-        -------
-        str
-            the indented representation
-        """
-        spl = s.split('\n')
-        spl = [' |  ' + p if p[0] == ' ' else ' +- ' + p for p in spl]
-        return '\n'.join(spl)
+    @property
+    def head(self):
+        return self[0]
+
+    @property
+    def tail(self):
+        return TupleTree._tail(self)
+
+    @property
+    def branches(self):
+        return self._subnodes
 
     @property
     def _subnodes(self):
         return []
 
-    def __iter__(self):
+    @staticmethod
+    def _tail(obj):
+        if len(obj._subnodes) > 0:
+            return TreeMixin._tail(obj[-1])
+
+        return obj[0]
+
+    @property
+    def identifier(self):
         """
-        Traverse the whole tree in pre-order
+        A unique identifier to build the unique key for a position in a tree
 
         Returns
         -------
-        Iterator
-            an iterator that traverses the tree in pre-order
-        """
-        yield self
-        for subchange in self._subnodes:
-            for change in subchange:
-                yield change
+        hashable object
+            the unique (hashable) key to identify each node
 
-    def __getitem__(self, item):
+        Notes
+        -----
+        This is often specific to the node type and hence overridden by the
+        target tree
         """
-        Return the n-th subchange
+        return hex(id(self))
 
-        Returns
-        -------
-        PathMoveChange
-            the n-th subchange if this PathMoveChange uses underlying changes
-        """
-        if type(item) is int:
-            return self._subnodes[item]
+    @property
+    def _choices(self):
+        if self._node_type == self.NODE_TYPE_ALL:
+            return [[sub for sub in self._subnodes]]
+        elif self._node_type == self.NODE_TYPE_ACCUMULATE:
+            return [self._subnodes[:n+1] for n in range(0, len(self._subnodes))]
+        elif self._node_type == self.NODE_TYPE_ONE:
+            leaves = [[sub] for sub in self._subnodes]
 
-        if type(item) is list:
-            # this is assumed to be a tree
-            if self._default_match(item[0], self):
-                if len(item) > 1:
-                    for ch in self._subnodes:
-                        r = ch[item[1]]
-                        if r is not None:
-                            return r
-                    return None
-                else:
-                    return self
+            unique_leaves = list(set([ tuple(l) for l in leaves ]))
+
+            return unique_leaves
+        elif self._node_type == self.NODE_TYPE_POWER:
+            s = list(self._subnodes)
+            return itertools.chain.from_iterable(
+                itertools.combinations(s, r) for r in range(len(s)+1)
+            )
+        elif self._node_type == self.NODE_TYPE_NONE:
+            return []
+        elif hasattr(self._node_type, '__call__'):
+            return self._node_type()
+        else:
+            raise RuntimeError('Node has no type !')
+
+    def treeprint(self):
+        return str(self.head) + "\n" + TreeMixin._indent("\n".join(map(lambda x : x.treeprint(), self.branches)))
+
+    def locate(self, item):
+        l = [key for key, value in self.locators().iteritems() if self._default_match(value, item)]
+        if len(l) == 0:
+            return None
+        elif len(l) == 1:
+            return l[0]
+        else:
+            return l
+
+    def pick(self, item):
+        loc = self.locate(item)
+        if loc is None:
+            return loc
+        elif type(loc) is list:
+            return [self[l] for l in loc]
+        else:
+            return self[loc]
+
+    @property
+    def is_sequential(self):
+        return len(self._choices) < 2
+
+    @property
+    def deterministic(self):
+        if not hasattr(self, '_deterministic'):
+            if not self.is_sequential:
+                self._deterministic = False
             else:
-                return None
+                self._deterministic = True
+                for node in self._subnodes:
+                    if not node.deterministic:
+                        self._deterministic = False
 
+        return self._deterministic
 
-    def __reversed__(self):
+    @property
+    def unique(self):
         """
-        Traverse the whole tree in post-order
-
-        Returns
-        -------
-        Iterator
-            an iterator that traverses the tree in post-order
+        Return the smallest tree of tuples that uniquely represents this tree
         """
-        for subchange in self._subnodes:
-            for change in reversed(subchange):
-                yield change
+        ret = []
+        if len(self._subnodes) == 0:
+            ret = [self.identifier]
+        elif self.deterministic:
+            ret = [self.identifier]
+        elif len(self._subnodes) == 1:
+            ret = [self.identifier, self._subnodes[0].unique]
+        else:
+            ret = [self.identifier]
+            if self.is_sequential:
+                for sub in self._subnodes:
+                    ret.append(sub.unique)
+            else:
+                for sub in self._subnodes:
+                    ret.append(sub.unique)
 
-        yield self
+        return TupleTree(ret)
 
-    def __len__(self):
+    @property
+    def enum(self):
         """
-        Returns the total number of Changes mad in a move.
-
-        Returns
-        -------
-        int
-            the number of (Sub)PathMoveChanges in this PathMoveChange
-
+        Return a generator of all possible choices of this tree
         """
-        if self._len is None:
-            self._len = len(list(iter(self)))
-
-        return self._len
-
-    def key(self, change):
-        tree = self.keylist()
-        return [leave for leave in tree if leave[1] is change ][0][0]
+        ret = TupleTree([self.identifier])
+        if self.deterministic:
+            yield ret
+        else:
+            for leave in self._choices:
+                if len(leave) == 0:
+                    yield ret
+                else:
+                    for l in itertools.product(ret, *map(lambda x : x.enum, leave)):
+                        yield TupleTree(l)
 
     @classmethod
-    def _check_tree(cls, tree, branch, match):
-        WILDCATS = {
+    def _in_tree(cls,
+                 tree,
+                 test,
+                 node_match_fnc,
+                 leave_fnc=None,
+                 leave_n = 0,
+                 tree_branch_n = 0,
+                 test_branch_n = 0
+    ):
+
+        if leave_fnc is None:
+            leave_fnc =  lambda x : x._choices
+
+        WILDCARDS = {
             '*' : lambda s : slice(0,None),
             '.' : lambda s : slice(1,2),
             '?' : lambda s : slice(0,2),
-            ':' : lambda s : slice(*map(int, s.split(':')))
+            ':' : lambda s : slice(*map(int, s.split(':'))),
+            None: lambda s : slice(1,2)
         }
         MATCH_ONE = ['.', '?', '*']
 
-        if branch[0] not in MATCH_ONE and not match(tree[0], branch[0]):
+        # print leave_n, '/', len(tree._leaves), start, '/', len(tree._leaves[leave_n]), tree.__class__.__name__, tree.identifier,  match(tree.identifier, branch[0]), branch
+
+        if test[0] not in MATCH_ONE and not node_match_fnc(tree, test[0]):
             return False
         else:
-            if len(branch) > 1:
-                sub = branch[1]
-                sub_branch = [branch[0]] + branch[2:]
+            if len(test) + test_branch_n < 2:
+                return True
+            else:
+                sub = test[test_branch_n+1]
                 if type(sub) is str:
                     region = None
-                    for wild in WILDCATS:
+                    for wild in WILDCARDS:
                         if wild in sub:
-                            region = WILDCATS[wild](sub)
+                            region = WILDCARDS[wild](sub)
                             break
 
                     if region is None:
-                        raise ValueError('Parse error. ONLY ' + str(WILDCATS.values()) + ' as wildcats allowed.')
+                        raise ValueError('Parse error. ONLY ' + str(WILDCARDS.values()) + ' as wildcards allowed.')
 
-                    if region.start < len(tree):
-                        # check that there are enough children to match
-                        for left in range(*region.indices(len(tree))):
+                    if leave_n < len(leave_fnc(tree)):
+                        leave = leave_fnc(tree)[leave_n]
+                        if region.start <= len(leave):
+                            # check that there are enough children to match
+                            for left in range(*region.indices(len(leave) - 1)):
+                                if cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n, tree_branch_n + left, test_branch_n + 1):
+                                    return True
 
-                            sub_tree = [tree[0]] + tree[1+left:]
-                            if cls._check_tree(sub_tree, sub_branch, match):
-                                return True
-
-                    return False
                 else:
-                    if len(tree) > 1:
-                        if not cls._check_tree(tree[1], sub, match):
-                            return False
-                        else:
-                            # go to next sub in branch
-                            if len(branch) > 2:
-                                if len(tree) > 2:
-                                    return cls._check_tree([tree[0]] + tree[2:], sub_branch, match)
-                                else:
-                                    return False
-                    else:
-                        # still branch, but no more tree
-                        return False
+                    if leave_n < len(leave_fnc(tree)):
+                        leave = leave_fnc(tree)[leave_n]
 
-        return True
+                        if len(leave) > tree_branch_n:
+                            if cls._in_tree(leave[tree_branch_n], sub, node_match_fnc, leave_fnc):
+                                # go to next sub in branch
+                                if len(test) - test_branch_n < 3:
+                                    return True
+                                else:
+                                    if len(leave) > tree_branch_n + 1:
+                                        return cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n, tree_branch_n + 1, test_branch_n + 1)
+
+                if leave_n < len(leave_fnc(tree)) - 1:
+                    if cls._in_tree(tree, test, node_match_fnc, leave_fnc, leave_n + 1):
+                        return True
+
+                return False
 
     def _check_head_node(self, items):
-        tree = self.tree()
-        return self._check_tree(tree, items, self._default_match)
+        return self._in_tree(self, items, self._default_match)
 
     @staticmethod
     def _default_match(original, test):
@@ -219,7 +297,7 @@ class TreeMixin(object):
         fits on top of the tree to match. Here child nodes are ignored as long
         as the mask of the subtree fits.
 
-        In searching wildcats are allowed. This works as
+        In searching wildcards are allowed. This works as
 
         1. slice(start, end) means a number of arbitrary children between
             start and end-1
@@ -246,16 +324,8 @@ class TreeMixin(object):
             True if the node is in the tree or if the subtree is in the tree
 
         """
-        if type(item) is list:
+        if isinstance(item, tuple) or type(item) is list:
             return self._check_head_node(item)
-
-            # Disable checking for submoves for now. I think we will not
-            # use this ?!?
-
-            # the head node did not fit so continue trying subnodes
-#            for sub in self.subnodes:
-#                if item in sub:
-#                    return True
         else:
             for x in self:
                 if self._default_match(x, item):
@@ -263,18 +333,7 @@ class TreeMixin(object):
 
         return False
 
-    def tree(self):
-        """
-        Return the object as a tree structure of nested lists of nodes
-
-        Returns
-        -------
-        nested list of nodes
-            the tree in nested list format
-        """
-        return [self] + [ ch.tree() for ch in self._subnodes]
-
-    def map_tree(self, fnc):
+    def map_tree(self, fnc, **kwargs):
         """
         Apply a function to each node and return a nested tree of results
 
@@ -291,26 +350,9 @@ class TreeMixin(object):
         tree (fnc(node, \*\*kwargs))
             nested list of the results of the map
         """
-        return [fnc(self)] + [ ch.map_tree(fnc) for ch in self._subnodes]
+        return TupleTree([fnc(self, **kwargs)] + [ ch.map_tree(fnc, **kwargs) for ch in self._subnodes])
 
-    @property
-    def identifier(self):
-        """
-        A unique identifier to build the unique key for a position in a tree
-
-        Returns
-        -------
-        hashable object
-            the unique (hashable) key to identify each node
-
-        Notes
-        -----
-        This is often specific to the node type and hence overridden by the
-        target tree
-        """
-        return hex(id(self))
-
-    def keylist(self):
+    def locators(self):
         """
         Return a list of key : subtree tuples
 
@@ -321,13 +363,22 @@ class TreeMixin(object):
         """
         path = [self.identifier]
 
-        result = list()
-        result.append( ( path, self ) )
-        mp = []
-        for sub in self._subnodes:
-            subtree = sub.keylist()
-            result.extend([ ( path + mp + [m[0]], m[1] ) for m in subtree ])
-            mp.extend([subtree[-1][0]])
+        result = collections.OrderedDict()
+        result[TupleTree(path)] = self
+        excludes = []
+        for leave in self._choices:
+            mp = []
+            for pos, sub in enumerate(leave):
+                subtree = sub.locators()
+                leave_id = tuple(map(lambda x : x.identifier, leave[:pos+1]))
+                if leave_id not in excludes:
+                    # print tuple(mp) == leave_id[:-1], tuple(mp), leave_id[:-1]
+                    result.update(
+                        {TupleTree(path + mp + [key]) : m for key, m in subtree.iteritems()}
+                    )
+                    excludes.append(leave_id)
+
+                mp.append(TupleTree([sub.identifier]))
 
         return result
 
@@ -465,3 +516,190 @@ class TreeMixin(object):
             output.extend(mp.depth_pre_order(fnc, level + 1, **kwargs))
 
         return output
+
+    def __iter__(self):
+        """
+        Traverse the whole tree in pre-order
+
+        Returns
+        -------
+        Iterator
+            an iterator that traverses the tree in pre-order
+        """
+        yield self
+        for subchange in self._subnodes:
+            for change in subchange:
+                yield change
+
+    def __getitem__(self, item):
+        """
+        Return the n-th subchange
+
+        Returns
+        -------
+        PathMoveChange
+            the n-th subchange if this PathMoveChange uses underlying changes
+        """
+
+        if type(item) is int:
+            if item == 0:
+                return self
+            elif item > 0:
+                return self._subnodes[item - 1]
+            elif item < 0:
+                return self._subnodes[item]
+
+        if isinstance(item, tuple):
+            self._last_found = None
+            def match_find(original, test):
+                self._last_found = original
+                return self._default_match(original, test)
+
+            find_match = TreeMixin._in_tree(
+                self, item, match_find
+            )
+
+            if find_match:
+                return self._last_found
+            else:
+                raise KeyError('Key %s not found in tree' % item)
+
+        if type(item) is list:
+            # this is assumed to be a tree
+            if self._default_match(item[0], self):
+                if len(item) > 1:
+                    for ch in self._subnodes:
+                        r = ch[item[1]]
+                        if r is not None:
+                            return r
+                    return None
+                else:
+                    return self
+            else:
+                return None
+
+
+    def __reversed__(self):
+        """
+        Traverse the whole tree in post-order
+
+        Returns
+        -------
+        Iterator
+            an iterator that traverses the tree in post-order
+        """
+        for subchange in self._subnodes:
+            for change in reversed(subchange):
+                yield change
+
+        yield self
+
+    def __len__(self):
+        """
+        Returns the total number of Changes mad in a move.
+
+        Returns
+        -------
+        int
+            the number of (Sub)PathMoveChanges in this PathMoveChange
+
+        """
+        if self._len is None:
+            self._len = len(list(iter(self)))
+
+        return self._len
+
+    def items(self):
+        return self.locators().items()
+
+    def iteritems(self):
+        return self.locators().iteritems()
+
+    @staticmethod
+    def _indent(s):
+        """
+        Helper function to print indented subtrees
+
+        Parameters
+        ----------
+        s : str
+            string representation of a tree to be indented
+
+        Returns
+        -------
+        str
+            the indented representation
+        """
+        spl = s.split('\n')
+        last = [ no for no, line in enumerate(spl) if len(line) > 0 and line[0] != ' ']
+        if len(last) > 0:
+            last = last[-1]
+        else:
+            last = len(spl)
+        spl = [(' |  ' + p if no <= last else '    ' + p) if p[0] == ' ' else ' +- ' + p for no, p in enumerate(spl) if len(p)]
+        return '\n'.join(spl)
+
+    def random(self):
+        """
+        Generate a random choice of a tree if it has multiple possibilities
+
+        """
+
+        this_choice = random.choice(self._choices)
+
+        return TupleTree([self] + [ ch.random() for ch in this_choice])
+
+
+class TupleTree(tuple, TreeMixin):
+
+    _node_type = TreeMixin.NODE_TYPE_ALL
+
+    @staticmethod
+    def contains(needle, haystack):
+        def cmp_fnc(x, y):
+            return x[0] is y
+
+        def leave_fnc(x):
+            return [x[1:]]
+
+        return TreeMixin._in_tree(haystack, needle, cmp_fnc, leave_fnc)
+
+    def __contains__(self, item):
+        return self.contains(item, self)
+
+    def __str__(self):
+        return self.treeprint()
+
+    @property
+    def _leaves(self):
+        return [self[1:]]
+
+    @property
+    def _subnodes(self):
+        return list(self[1:])
+
+    @property
+    def identifier(self):
+        return self[0]
+
+    def __iter__(self):
+        yield self.head
+        for branch in self.branches:
+            for x in branch:
+                yield x
+
+    def _repr_pretty_(self, p, cycle):
+            if cycle:
+                p.text('(...)')
+            else:
+                with p.group(4, '(', ')'):
+                    p.text(str(self.head))
+                    if len(self._subnodes) > 0:
+                        for idx, item in enumerate(self._subnodes):
+                            if idx == 0 or idx < len(self._subnodes):
+                                p.text(',')
+                                p.breakable()
+                            p.pretty(item)
+                    # else:
+                    #     p.text(',')
+                    #     p.breakable()

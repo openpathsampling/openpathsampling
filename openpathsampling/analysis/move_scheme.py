@@ -458,9 +458,9 @@ class MoveScheme(StorableNamedObject):
     def move_acceptance(self, storage):
         for step in storage.steps:
             delta = step.change
-            for m in delta:
+            for key, m in delta.iteritems():
                 acc = 1 if m.accepted else 0
-                key = (m.mover, str(delta.key(m)))
+
                 try:
                     self._mover_acceptance[key][0] += acc
                     self._mover_acceptance[key][1] += 1
@@ -514,7 +514,7 @@ class MoveScheme(StorableNamedObject):
             group = my_movers[groupname]
             for mover in group:
                 key_iter = (k for k in self._mover_acceptance.keys()
-                            if k[0] is mover)
+                            if k.tail is mover)
 
                 for k in key_iter:
                     stats[groupname][0] += self._mover_acceptance[k][0]
