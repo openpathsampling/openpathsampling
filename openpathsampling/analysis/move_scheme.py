@@ -636,3 +636,11 @@ class LockedMoveScheme(MoveScheme):
         if vals != {}:
             # default does not set the internal version here
             self._movers = vals
+
+class SRTISScheme(DefaultMoveScheme):
+    """
+    This gives exactly the DefaultMoveScheme, but as an SRTIS setup.
+    """
+    def __init__(self, network):
+        super(SRTISScheme, self).__init__(network)
+        self.append(strategies.PoorSingleReplicaStrategy())
