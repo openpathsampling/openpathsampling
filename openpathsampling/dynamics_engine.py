@@ -10,7 +10,7 @@ import logging
 import simtk.unit as u
 
 import openpathsampling as paths
-from openpathsampling.base import StorableNamedObject
+from openpathsampling.netcdfplus import StorableNamedObject
 
 logger = logging.getLogger(__name__)
 

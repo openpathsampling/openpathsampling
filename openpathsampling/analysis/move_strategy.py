@@ -3,7 +3,7 @@ import collections
 import abc
 
 import openpathsampling as paths
-from openpathsampling.base import StorableNamedObject
+from openpathsampling.netcdfplus import StorableNamedObject
 from openpathsampling import PathMoverFactory as pmf
 
 LevelLabels = collections.namedtuple(

@@ -31,8 +31,8 @@ class testMoveScheme(object):
         interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
                                           [-0.5, -0.3, -0.1, 0.0])
         network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, "A", cvA),
-            (self.stateB, interfacesB, "B", cvB)
+            (self.stateA, interfacesA, cvA),
+            (self.stateB, interfacesB, cvB)
         ])
         self.scheme = MoveScheme(network)
 
@@ -364,8 +364,8 @@ class testDefaultScheme(object):
         interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
                                           [-0.5, -0.3, -0.1, 0.0])
         self.network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, "A", cvA),
-            (self.stateB, interfacesB, "B", cvB)
+            (self.stateA, interfacesA, cvA),
+            (self.stateB, interfacesB, cvB)
         ])
     
     def test_default_scheme(self):
@@ -476,8 +476,8 @@ class testLockedMoveScheme(object):
         interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
                                           [-0.5, -0.3, -0.1, 0.0])
         self.network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, "A", cvA),
-            (self.stateB, interfacesB, "B", cvB)
+            (self.stateA, interfacesA, cvA),
+            (self.stateB, interfacesB, cvB)
         ])
         self.basic_scheme = DefaultScheme(self.network)
         self.root_mover = self.basic_scheme.move_decision_tree()
