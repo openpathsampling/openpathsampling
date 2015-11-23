@@ -498,8 +498,8 @@ class EngineMover(SampleMover):
             self.engine = EngineMover.default_engine
 
             if self.engine is None:
-                raise RuntimeError("Class '%s' requires an engine. Set either EngineMover.default_engine or passe" +
-                                   "an engine parameter to this classes constructor." % self.__class__.__name__)
+                raise RuntimeError(("Class '%s' requires an engine. Set either EngineMover.default_engine or pass" +
+                                   "an engine parameter to this classes constructor.") % self.__class__.__name__)
 
     def _called_ensembles(self):
         return [self.ensemble]
