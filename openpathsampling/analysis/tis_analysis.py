@@ -388,6 +388,7 @@ class TISTransition(Transition):
         outer_ensemble : openpathsampling.TISEnsemble
         error : list(3) or None
         """
+        logger.info("Rate for " + self.stateA.name + " -> " + self.stateB.name)
         # get the flux
         if flux is None: # TODO: find a way to raise error if bad flux
             flux = self.minus_move_flux(storage)
