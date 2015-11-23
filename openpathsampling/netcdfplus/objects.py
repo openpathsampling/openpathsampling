@@ -616,6 +616,8 @@ class ObjectStore(object):
             the loaded object
         """
 
+        # print "%s loading idx %d" % (self.prefix, idx)
+
         if type(idx) is not str and idx < 0:
             return None
 

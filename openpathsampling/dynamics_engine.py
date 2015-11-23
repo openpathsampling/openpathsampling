@@ -179,7 +179,7 @@ class DynamicsEngine(StorableNamedObject):
         }
 
     def set_as_default(self):
-        paths.EngineMover.engine = self
+        paths.EngineMover.default_engine = self
 
     @property
     def default_options(self):
