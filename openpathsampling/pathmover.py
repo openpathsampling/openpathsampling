@@ -516,6 +516,7 @@ class EngineMover(SampleMover):
             initial_trajectory,
             trial_trajectory
         )
+        n_new_frames = len(set(trial_trajectory) - set(initial_trajectory))
 
         # temporary test to make sure nothing went weird
         # old_bias = initial_point.sum_bias / trial_point.sum_bias
@@ -525,7 +526,8 @@ class EngineMover(SampleMover):
         # we need to save the initial
         trial_details = paths.SampleDetails(
             initial_trajectory=initial_trajectory,
-            shooting_snapshot=initial_trajectory[shooting_index]
+            shooting_snapshot=initial_trajectory[shooting_index],
+            n_new_frames=n_new_frames
         )
 
         trial = paths.Sample(
