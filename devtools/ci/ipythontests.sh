@@ -5,6 +5,13 @@ cd examples/ipython
 testfail=0
 #python ipynbtest.py "sliced_sequential_ensembles.ipynb" || testfail=1
 date
+ipynbtest.py "alanine.ipynb" || testfail=1
+
+# needs to run after alanine since it need the trajectory.nc file
+date
+ipynbtest.py --strict --verbose "test_pyemma.ipynb" || testfail=1
+
+date
 ipynbtest.py "mstis_bootstrap.ipynb" || testfail=1
 date
 ipynbtest.py "mstis.ipynb" || testfail=1
@@ -19,17 +26,11 @@ ipynbtest.py "mistis_analysis.ipynb" || testfail=1
 date
 ipynbtest.py --strict "test_openmm_integration.ipynb" || testfail=1
 date
-ipynbtest.py "alanine.ipynb" || testfail=1
-
-# needs to run after alanine since it need the trajectory.nc file
-date
 ipynbtest.py "storage_tutorial.ipynb" || testfail=1
 date
 ipynbtest.py --strict "test_netcdfplus.ipynb" || testfail=1
 date
 ipynbtest.py --strict "test_cv.ipynb" || testfail=1
-date
-ipynbtest.py --strict "test_pyemma.ipynb" || testfail=1
 
 # python ipynbtest.py "visualization.ipynb" || testfail=1
 cd ../..
