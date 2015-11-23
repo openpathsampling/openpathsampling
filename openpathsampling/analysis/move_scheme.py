@@ -637,7 +637,7 @@ class LockedMoveScheme(MoveScheme):
             # default does not set the internal version here
             self._movers = vals
 
-class SRTISScheme(DefaultMoveScheme):
+class SRTISScheme(DefaultScheme):
     """
     This gives exactly the DefaultMoveScheme, but as an SRTIS setup.
     """
