@@ -492,7 +492,7 @@ class EngineMover(SampleMover):
         self.selector = selector
         self.ensemble = ensemble
         self.target_ensemble = target_ensemble
-        if engine is None:
+        if engine is not None:
             self.engine = engine
         else:
             self.engine = EngineMover.default_engine
