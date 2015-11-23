@@ -20,9 +20,6 @@ class ExternalFileStore(ObjectStore):
         self.file_class = file_class
         self._cached_all = False
 
-    def to_dict(self):
-        return {}
-
     def _save(self, mcstep, idx):
         self.vars['url'][idx] = mcstep.url
 
