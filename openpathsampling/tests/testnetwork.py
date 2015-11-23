@@ -68,9 +68,9 @@ class testMSTISNetwork(object):
         )
 
         self.mstis = MSTISNetwork([
-            (self.stateA, ifacesA, "A", xval),
-            (self.stateB, ifacesB, "B", xval),
-            (self.stateC, ifacesC, "C", xval)
+            (self.stateA, ifacesA, xval),
+            (self.stateB, ifacesB, xval),
+            (self.stateC, ifacesC, xval)
         ])
 
     def test_trajectories(self):
@@ -103,6 +103,33 @@ class testMSTISNetwork(object):
         assert_equal(len(self.mstis.from_state[self.stateA].ensembles), 2)
         assert_equal(len(self.mstis.from_state[self.stateB].ensembles), 2)
         assert_equal(len(self.mstis.from_state[self.stateC].ensembles), 2)
+
+    def test_autonaming(self):
+        assert_equal(self.stateA.name, "A")
+        assert_equal(self.stateB.name, "B")
+        assert_equal(self.stateC.name, "C")
+
+        # check that (1) given names stay unchanged; (2) code knows to skip
+        # over any default names that have been assigned (i.e., it renames
+        # stateC to "C", not to "A"
+
+        # force renaming to weirdness
+        self.stateA.name = "B"
+        self.stateB.name = "A"
+        self.stateC._name = ""
+        xval = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
+        ifacesA = vf.CVRangeVolumeSet(xval, float("-inf"), [-0.5, -0.4, -0.3])
+        ifacesB = vf.CVRangeVolumeSet(xval, [-0.2, -0.15, -0.1], [0.2, 0.15, 0.1])
+        ifacesC = vf.CVRangeVolumeSet(xval, [0.5, 0.4, 0.3], float("inf"))
+        new_network = MSTISNetwork([
+            (self.stateA, ifacesA, xval),
+            (self.stateB, ifacesB, xval),
+            (self.stateC, ifacesC, xval)
+        ])
+        assert_equal(self.stateA.name, "B")
+        assert_equal(self.stateB.name, "A")
+        assert_equal(self.stateC.name, "C")
+
 
 
 class testTPSNetwork(object):
