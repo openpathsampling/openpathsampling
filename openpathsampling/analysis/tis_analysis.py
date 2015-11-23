@@ -410,13 +410,17 @@ class TISTransition(Transition):
         # get the conditional transition probability
         if outer_ensemble is None:
             outer_ensemble = self.ensembles[-1]
+        logger.info("outer ensemble: " + outer_ensemble.name + " " 
+                    + repr(outer_ensemble))
         outer_cross_prob = self.histograms['max_lambda'][outer_ensemble]
         if outer_lambda is None:
             lambda_bin = -1
             outer_cp_vals = outer_cross_prob.reverse_cumulative().values()
-            while (outer_cp_vals[lambda_bin+1] == 1.0):
+            # should be (almost) 1.0 for anything before correct lambda
+            while (abs(outer_cp_vals[lambda_bin+1] - 1.0) < 1e-7):
                 lambda_bin += 1
             outer_lambda = outer_cross_prob.bins[lambda_bin]
+        logger.info("outer lambda: " + str(outer_lambda))
 
         ctp = self.conditional_transition_probability(storage,
                                                       outer_ensemble,
@@ -425,6 +429,9 @@ class TISTransition(Transition):
         #print outer_lambda
         #print flux, outer_tcp, ctp
         self._rate = flux*outer_tcp*ctp
+        logger.info("RATE = " + str(self._rate))
+        logger.info("flux * outer_tcp * ctp = " + str(flux) + " * " +
+                    str(outer_tcp) + " * " + str(ctp))
         return self._rate
 
 
