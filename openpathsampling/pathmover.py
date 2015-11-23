@@ -485,13 +485,21 @@ class EngineMover(SampleMover):
     """Baseclass for Movers that use an engine
     """
 
-    engine = None
+    default_engine = None
 
-    def __init__(self, ensemble, target_ensemble, selector):
+    def __init__(self, ensemble, target_ensemble, selector, engine=None):
         super(EngineMover, self).__init__()
         self.selector = selector
         self.ensemble = ensemble
         self.target_ensemble = target_ensemble
+        if engine is not None:
+            self.engine = engine
+        else:
+            self.engine = EngineMover.default_engine
+
+            if self.engine is None:
+                raise RuntimeError(("Class '%s' requires an engine. Set either EngineMover.default_engine or pass" +
+                                   "an engine parameter to this classes constructor.") % self.__class__.__name__)
 
     def _called_ensembles(self):
         return [self.ensemble]
@@ -547,7 +555,7 @@ class EngineMover(SampleMover):
         run_f = paths.PrefixTrajectoryEnsemble(self.target_ensemble, 
                                                trajectory[0:shooting_index]
                                               ).can_append
-        partial_trajectory = self.engine.generate(initial_snapshot, 
+        partial_trajectory = self.engine.generate(initial_snapshot,
                                                   running=[run_f])
         trial_trajectory = (trajectory[0:shooting_index] 
                             + partial_trajectory)
@@ -558,7 +566,7 @@ class EngineMover(SampleMover):
         run_f = paths.SuffixTrajectoryEnsemble(self.target_ensemble,
                                                trajectory[shooting_index + 1:]
                                               ).can_prepend
-        partial_trajectory = self.engine.generate(initial_snapshot, 
+        partial_trajectory = self.engine.generate(initial_snapshot,
                                                   running=[run_f])
         trial_trajectory = (partial_trajectory.reversed +
                             trajectory[shooting_index + 1:])
@@ -599,11 +607,12 @@ class EngineMover(SampleMover):
 class ForwardShootMover(EngineMover):
     """A forward shooting sample generator
     """
-    def __init__(self, ensemble, selector):
+    def __init__(self, ensemble, selector, engine=None):
         super(ForwardShootMover, self).__init__(
             ensemble=ensemble,
             target_ensemble=ensemble,
-            selector=selector
+            selector=selector,
+            engine=engine
         )
 
     @property
@@ -613,11 +622,12 @@ class ForwardShootMover(EngineMover):
 class BackwardShootMover(EngineMover):
     """A Backward shooting generator
     """
-    def __init__(self, ensemble, selector):
+    def __init__(self, ensemble, selector, engine=None):
         super(BackwardShootMover, self).__init__(
             ensemble=ensemble,
             target_ensemble=ensemble,
-            selector=selector
+            selector=selector,
+            engine=engine
         )
 
     @property
@@ -630,11 +640,12 @@ class ForwardExtendMover(EngineMover):
     A Sample Mover implementing Forward Extension
     """
     _direction = "forward"
-    def __init__(self, ensemble, target_ensemble):
+    def __init__(self, ensemble, target_ensemble, engine=None):
         super(ForwardExtendMover, self).__init__(
             ensemble=ensemble,
             target_ensemble=target_ensemble,
             selector=paths.FinalFrameSelector(),
+            engine=engine
         )
 
     @property
@@ -647,11 +658,12 @@ class BackwardExtendMover(EngineMover):
     A Sample Mover implementing Backward Extension
     """
     _direction = "backward"
-    def __init__(self, ensemble, target_ensemble):
+    def __init__(self, ensemble, target_ensemble, engine=None):
         super(BackwardExtendMover, self).__init__(
             ensemble=ensemble,
             target_ensemble=target_ensemble,
             selector=paths.FirstFrameSelector(),
+            engine=engine
         )
 
     @property
@@ -1748,7 +1760,7 @@ class MinusMover(SubPathMover):
     """
     _is_canonical = True
 
-    def __init__(self, minus_ensemble, innermost_ensembles):
+    def __init__(self, minus_ensemble, innermost_ensembles, engine=None):
         try:
             innermost_ensembles = list(innermost_ensembles)
         except TypeError:
@@ -1780,18 +1792,17 @@ class MinusMover(SubPathMover):
         extension_mover = RandomChoiceMover([
             ForwardExtendMover(
                 ensemble=segment,
-                target_ensemble=minus_ensemble
+                target_ensemble=minus_ensemble,
+                engine=engine
             ),
             BackwardExtendMover(
                 ensemble=segment,
-                target_ensemble=minus_ensemble
+                target_ensemble=minus_ensemble,
+                engine=engine
             )
         ])
 
         extension_mover.named("MinusExtensionDirectionChooser")
-        self.engine = extension_mover.movers[0].engine
-        if self.engine is not extension_mover.movers[1].engine:
-            raise RuntimeWarning("Forward and backward engines differ?!?!")
 
         mover = \
             EnsembleFilterMover(
