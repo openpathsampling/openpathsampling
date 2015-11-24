@@ -84,7 +84,6 @@ class AbstractSnapshotStore(ObjectStore):
         This also saves all contained frames in the snapshot if not done yet.
         A single Snapshot object can only be saved once!
         """
-
         self._put(idx, snapshot)
 
         reversed = snapshot._reversed
@@ -127,9 +126,7 @@ class SnapshotStore(AbstractSnapshotStore):
         self.write('configuration', idx ^ 1, snapshot)
         self.write('momentum', idx ^ 1, snapshot)
 
-        self.vars['momentum_reversed'][idx] = snapshot.is_reversed
-        self.vars['momentum_reversed'][idx ^ 1] = not snapshot.is_reversed
-
+        super(SnapshotStore, self)._put(idx, snapshot)
 
     def _get(self, idx, from_reversed=False):
         if from_reversed:
@@ -230,8 +227,7 @@ class ToySnapshotStore(AbstractSnapshotStore):
         self.write('coordinates', idx ^ 1, snapshot)
         self.write('velocities', idx ^ 1, snapshot)
 
-        self.vars['momentum_reversed'][idx] = snapshot.is_reversed
-        self.vars['momentum_reversed'][idx ^ 1] = not snapshot.is_reversed
+        super(ToySnapshotStore, self)._put(idx, snapshot)
 
     def _get(self, idx, from_reversed=False):
         if from_reversed:
