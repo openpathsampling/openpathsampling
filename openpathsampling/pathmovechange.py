@@ -267,6 +267,14 @@ class PathMoveChange(TreeMixin, StorableObject):
         else:
             return ':'.join([sub.description for sub in subs])
 
+    @property
+    def n_timesteps_used(self):
+        try:
+            return self.details.n_new_frames
+        except AttributeError:
+            return dict()
+
+
 
 class EmptyPathMoveChange(PathMoveChange):
     """
@@ -387,6 +395,14 @@ class SequentialPathMoveChange(PathMoveChange):
         for subchange in self.subchanges:
             samples = samples + subchange.trials
         return samples
+
+    @property
+    def n_timesteps_used(self):
+        ret_dict = {}
+        for subchange in self.subchanges:
+            ret_dict.update(subchange.n_timesteps_used)
+        return ret_dict
+
 
     def __str__(self):
         return 'SequentialMove : %s : %d samples\n' % \

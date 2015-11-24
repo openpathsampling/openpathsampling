@@ -527,7 +527,7 @@ class EngineMover(SampleMover):
         trial_details = paths.SampleDetails(
             initial_trajectory=initial_trajectory,
             shooting_snapshot=initial_trajectory[shooting_index],
-            n_new_frames=n_new_frames
+            n_new_frames={self.engine : n_new_frames}
         )
 
         trial = paths.Sample(
