@@ -1,65 +1,17 @@
-import os
 import numpy as np
 import simtk.unit as u
-from simtk.openmm.app import ForceField, PME, HBonds, PDBFile, Simulation
+from simtk.openmm.app import Simulation
+import simtk.openmm
 
 import openpathsampling as paths
-from openpathsampling.storage import Storage
-from openpathsampling.integrators import VVVRIntegrator
-
-class OpenMMRandomEngine(paths.DynamicsEngine):
-    _default_options = {}
-
-    def __init__(self, template=None):
-        self.topology = template.topology
-        self.options = {
-        }
-
-        super(OpenMMRandomEngine, self).__init__(
-            options={},
-            template=template
-        )
-
-        self.initialized = True
-
-    def _build_current_snapshot(self):
-        # TODO: Add caching for this and mark if changed
-
-        tmp = self.template
-
-        coordinates = u.Quantity(
-            tmp.coordinates._value + np.random.normal(0.0, 0.02, tmp.coordinates.shape),
-            tmp.coordinates.unit)
-        velocities = u.Quantity(
-            np.random.normal(0.0, 0.02, tmp.velocities.shape),
-            tmp.velocities.unit)
-
-        return paths.Snapshot(coordinates = coordinates,
-                        box_vectors = tmp.box_vectors,
-                        potential_energy = tmp.potential_energy,
-                        velocities = velocities,
-                        kinetic_energy = tmp.kinetic_energy,
-                        topology = self.topology
-                       )
-
-    @property
-    def current_snapshot(self):
-        if self._current_snapshot is None:
-            self._current_snapshot = self._build_current_snapshot()
-
-        return self._current_snapshot
-
-    @current_snapshot.setter
-    def current_snapshot(self, snapshot):
-        self._current_snapshot = snapshot
-
-    def generate_next_frame(self):
-        self._current_snapshot = None
-        return self.current_snapshot
 
 
 class OpenMMEngine(paths.DynamicsEngine):
-    """OpenMM dynamics engine."""
+    """OpenMM dynamics engine based on using an openmm system and integrator object.
+
+    The engine will create a openmm.app.Simulation instance and uses this to generate new frames.
+
+    """
 
     units = {
         'length': u.nanometers,
@@ -69,187 +21,156 @@ class OpenMMEngine(paths.DynamicsEngine):
 
     _default_options = {
         'nsteps_per_frame': 10,
-        'solute_indices': [0],
         'n_frames_max': 5000,
-        "temperature": 300.0 * u.kelvin,
-        'collision_rate': 1.0 / u.picoseconds,
-        'timestep': 2.0 * u.femtoseconds,
-        'platform': 'fastest',
-        'forcefield_solute': 'amber96.xml',
-        'forcefield_solvent': 'tip3p.xml'
+        'platform': 'fastest'
     }
 
-    @staticmethod
-    def auto(filename, template, options, mode='auto', units=None):
+    #TODO: Planned to move topology to be part of engine and not snapshot
+    #TODO: Deal with cases where we load a GPU based engine, but the platform is not available
+    def __init__(self, template, system, integrator, options=None):
         """
-        Create or Restore a OpenMMEngine
-
         Parameters
         ----------
-        filename : str
-            the filename of the storage
-        template : Snapshot
-            the template Snapshot to be used. It contains the necessary
-            units as well as the topology
-        options : dict of { str : str }
-            a dictionary that contains the parameters used in the
-            construction of the OpenMMEngine
-        mode : str ('restore', 'create' or 'auto')
-            a string setting the mode of creation or restoration. The option
-            'auto' (default) will only create a new storage if the file does
-            not exist yet
-        units : dict of {str : simtk.unit.Unit } or None (default)
-            representing a dict of string representing a dimension
-            ('length', 'velocity', 'energy') pointing the the
-            simtk.unit.Unit to be used. This overrides the units used in the
-            template
+        template : openpathsampling.Snapshot
+            a template snapshots which provides the topology object to be used to create the openmm engine
+        system : simtk.openmm.app.System
+            the openmm system object
+        integrator : simtk.openmm.Integrator
+            the openmm integrator object
+        options : dict
+            a dictionary that provides additional settings for the OPS engine. Allowed are
+                'n_steps_per_frame' : int, default: 10, the number of integration steps per returned snapshot
+                'n_frames_max' : int or None, default: 5000, the maximal number of frames allowed for a returned
+                trajectory object
+                `platform` : str, default: `fastest`, the openmm specification for the platform to be used, also 'fastest' is allowed
+                which will pick the currently fastest one available
 
-        Returns
-        -------
-        OpenMMEngine
-            the created or restored OpenMMEngine instance
-
+        Notes
+        -----
+        the `n_frames_max` does not limit Trajectory objects in length. It only limits the maximal lenght of returned
+        trajectory objects when this engine is used.
+        picking `fasted` as platform will not save `fastest` as the platform but rather replace the platform with the
+        currently fastest one (usually `OpenCL` or `CUDA` for GPU and `CPU` otherwise). If you load this engine it will
+        assume the same engine and not the currently fastest one, so you might have to create a replacement that uses
+        another engine.
         """
-        if mode == 'auto':
-            if os.path.isfile(filename):
-                mode = 'restore'
-            else:
-                mode = 'create'
 
-        if mode == 'create':
-            return OpenMMEngine._create_with_storage(filename, template, options, units)
-        elif mode == 'restore':
-            return OpenMMEngine._restore_from_storage(filename)
-        else:
-            raise ValueError('Unknown mode: ' + mode)
-            return None
-
-
-    @staticmethod
-    def _create_with_storage(filename, template, options, units=None):
-        # for openmm we will create a suitable for configuration with
-        # attached box_vectors and topology
-
-        if type(template) is str:
-            template = paths.snapshot_from_pdb(template, units=units)
-
-        # once we have a template configuration (coordinates to not really
-        # matter) we can create a storage. We might move this logic out of
-        # the dynamics engine and keep storage and engine generation
-        # completely separate!
-
-        storage = Storage(
-            filename=filename,
-            template=template,
-            mode='w'
-        )
-
-        # save simulator options, should be replaced by just saving the simulator object
-
-        options['template'] = template
-
-        engine = OpenMMEngine(
-            options=options
-        )
-        engine.storage = storage
-        storage.engines.save(engine)
-
-        return engine
-
-    @staticmethod
-    def _restore_from_storage(filename):
-        # open storage, which also gets the topology!
-        storage = Storage(
-            filename=filename,
-            mode='a'
-        )
-
-        engine = storage.engines.load(0)
-
-        engine.storage = storage
-        return engine
-
-
-    def __init__(self, options, template=None):
-
-        if 'template' in options:
-            template = options['template']
-
-        self.topology = template.topology
-        self.options = {
-        }
+        self.system = system
+        self.integrator = integrator
 
         super(OpenMMEngine, self).__init__(
             options=options,
             template=template
         )
 
-        # set up the OpenMM simulation
-        forcefield = ForceField( self.options["forcefield_solute"],
-                                 self.options["forcefield_solvent"] )
+        if self.options['platform'] == 'fastest':
 
-        openmm_topology = paths.to_openmm_topology(self.template)
+            speed = 0.0
+            platform = None
 
-        system = forcefield.createSystem( openmm_topology,
-                                          nonbondedMethod=PME,
-                                          nonbondedCutoff=1.0 * u.nanometers,
-                                          constraints=HBonds )
+            # determine the fastest platform
+            for platform_idx in range(simtk.openmm.Platform.getNumPlatforms()):
+                pf = simtk.openmm.Platform.getPlatform(platform_idx)
+                if pf.getSpeed() > speed:
+                    speed = pf.getSpeed()
+                    platform = pf.getName()
 
-        integrator = VVVRIntegrator( self.options["temperature"],
-                                     self.options["collision_rate"],
-                                     self.options["timestep"] )
+            if platform is not None:
+                self.options['platform'] = platform
 
-        simulation = Simulation(openmm_topology, system,
-                                           integrator)
-
-        # claim the OpenMM simulation as our own
-        self.simulation = simulation
-
-        # set no cached snapshot, menas it will be constructed from the openmm context
+        # set no cached snapshot, means it will be constructed from the openmm context
         self._current_snapshot = None
         self._current_momentum = None
         self._current_configuration = None
         self._current_box_vectors = None
 
-    def equilibrate(self, nsteps):
-        # TODO: rename... this is position restrained equil, right?
-        #self.simulation.context.setPositions(self.pdb.positions) #TODO move
-        system = self.simulation.system
-        n_solute = len(self.solute_indices)
+        self._simulation = None
 
-        solute_masses = u.Quantity(np.zeros(n_solute, np.double), u.dalton)
-        for i in self.solute_indices:
-            solute_masses[i] = system.getParticleMass(i)
-            system.setParticleMass(i,0.0)
+    def from_new_options(self, integrator=None, options=None):
+        """
+        Create a new engine with the same system, but different options and/or integrator
 
-        self.simulation.step(nsteps)
+        Notes
+        -----
+        This can be used to quickly set up simulations at various temperatures or change the
+        step sizes, etc...
 
-        # empty cache
-        self._current_snapshot = None
+        """
+        if integrator is None:
+            integrator = self.integrator
 
-        for i in self.solute_indices:
-            system.setParticleMass(i, solute_masses[i].value_in_unit(u.dalton))
+        new_options = dict()
+        new_options.update(self.options)
 
+        if options is not None:
+            new_options.update(options)
 
-    # this property is specific to direct control simulations: other
-    # simulations might not use this
-    # TODO: Maybe remove this and put it into the creation logic
+        new_engine = OpenMMEngine(self.template, self.system, integrator, new_options)
+
+        if integrator is self.integrator and new_engine.options['platform'] == self.options['platform']:
+            # apparently we use a simulation object which is the same as the new one
+            # since we do not change the platform or change the integrator
+            # it means if it exists we copy the simulation object
+
+            new_engine._simulation = self._simulation
+
+        return new_engine
+
     @property
-    def nsteps_per_frame(self):
-        return self._nsteps_per_frame
+    def simulation(self):
+        if self._simulation is None:
+            self.initialize()
 
-    @nsteps_per_frame.setter
-    def nsteps_per_frame(self, value):
-        self._nsteps_per_frame = value
+        return self._simulation
 
-    # TODO: there are two reasonable approaches to this: 
-    # 1. require that part of the engine.next_frame() function be that the
-    #    user saves a snapshot object called `self._current_snapshot`
-    # 2. build the current snapshot on the fly every time the snapshot is
-    #    needed
-    # The trade-off is that (1) will be faster if we ask for the snapshot
-    # frequently, but it is also much more likely to be a source of errors
-    # for users who forget to implement that last step.
+    def initialize(self):
+        """
+        Create the final OpenMMEngine
+
+        Notes
+        -----
+        This step is OpenMM specific and will actually create the openmm.Simulation object used
+        to run the simulations. The object will be created automatically the first time the
+        engine is used. This way we will not create unnecessay Engines in memory during analysis.
+
+        """
+
+        if self._simulation is None:
+            self._simulation = simtk.openmm.app.Simulation(
+                topology=self.template.topology.md.to_openmm(),
+                system=self.system,
+                integrator=self.integrator,
+                platform=simtk.openmm.Platform.getPlatformByName(self.platform)
+            )
+
+    @property
+    def platform(self):
+        return self.options['platform']
+
+    def to_dict(self):
+        system_xml = simtk.openmm.XmlSerializer.serialize(self.system)
+        integrator_xml = simtk.openmm.XmlSerializer.serialize(self.integrator)
+
+        return {
+            'system_xml' : system_xml,
+            'integrator_xml' : integrator_xml,
+            'template' : self.template,
+            'options' : self.options
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
+        system_xml = dct['system_xml']
+        integrator_xml = dct['integrator_xml']
+        template = dct['template']
+        options = dct['options']
+
+        return OpenMMEngine(
+            template=template,
+            system=simtk.openmm.XmlSerializer.deserialize(system_xml),
+            integrator=simtk.openmm.XmlSerializer.deserialize(integrator_xml),
+            options=options
+        )
 
     @property
     def snapshot_timestep(self):
@@ -288,16 +209,8 @@ class OpenMMEngine(paths.DynamicsEngine):
                     # new snapshot has a different configuration so update
                     self.simulation.context.setPositions(snapshot.coordinates)
 
-                    # TODO: Check if this is the right way to make sure the box is right!
-#                    if self._current_snapshot is None or snapshot.box_vectors != self._current_snapshot.box_vectors:
-#                        self.simulation.context.getPeriodicBoxVectors(snapshot.box_vectors)
-
             if snapshot.momentum is not None:
                 if self._current_snapshot is None or snapshot.momentum is not self._current_snapshot.momentum or snapshot.is_reversed != self._current_snapshot.is_reversed:
-                    # new snapshot has a different momenta (different coordinates and reverse setting)
-                    # so update. Note snapshot.velocities is different from snapshot.momenta.velocities!!!
-                    # The first includes the reversal setting in the snapshot the second does not.
-#                    print snapshot.momentum.velocities
                     self.simulation.context.setVelocities(snapshot.velocities)
 
             # After the updates cache the new snapshot
@@ -308,7 +221,6 @@ class OpenMMEngine(paths.DynamicsEngine):
         self._current_snapshot = None
         return self.current_snapshot
 
-    # (possibly temporary) shortcuts for momentum and configuration
     @property
     def momentum(self):
         return self.current_snapshot.momentum

@@ -12,7 +12,7 @@ import mdtraj as md
 # THIS SHOULD NOT BE NECESSARY! SEE XYZ BELOW
 import simtk.unit as u
 
-from openpathsampling.base import StorableObject, lazy_loading_attributes
+from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
 
 
 # =============================================================================
@@ -181,7 +181,7 @@ class Configuration(StorableObject):
         output = np.zeros([1, n_atoms, 3], np.float32)
         output[0, :, :] = self.coordinates
 
-        return md.Trajectory(output, self.topology)
+        return md.Trajectory(output, self.topology.md)
 
 
 # =============================================================================

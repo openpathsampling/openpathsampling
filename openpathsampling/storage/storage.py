@@ -12,9 +12,8 @@ init_log = logging.getLogger('openpathsampling.initialization')
 
 import openpathsampling as paths
 import simtk.unit as u
-from netcdfplus import NetCDFPlus
-from cache import WeakLRUCache, WeakValueCache
-
+from openpathsampling.netcdfplus import NetCDFPlus
+from openpathsampling.netcdfplus import WeakLRUCache, WeakValueCache
 
 # =============================================================================================
 # OPS SPECIFIC STORAGE
@@ -80,7 +79,7 @@ class Storage(NetCDFPlus):
 
         for storage_name in [
             'pathmovers', 'topologies', 'networks', 'details', 'trajectories',
-            'shootingpoints', 'shootingpointselectors', 'engines', 'volumes',
+            'shootingpointselectors', 'engines', 'volumes',
             'samplesets', 'ensembles', 'transitions', 'steps', 'pathmovechanges',
             'samples', 'snapshots', 'pathsimulators', 'cvs'
         ]:
@@ -166,28 +165,28 @@ class Storage(NetCDFPlus):
 
         # normal objects
 
-        self.add('details', paths.storage.ObjectStore(paths.Details, has_name=False))
-        self.add('topologies', paths.storage.ObjectStore(paths.Topology, has_name=True))
-        self.add('pathmovers', paths.storage.ObjectStore(paths.PathMover, has_name=True))
-        self.add('shootingpoints',
-                 paths.storage.ObjectStore(paths.ShootingPoint, has_name=False))
+        self.add('details', paths.netcdfplus.ObjectStore(paths.Details, has_name=False))
+        self.add('topologies', paths.netcdfplus.ObjectStore(paths.Topology, has_name=True))
+        self.add('pathmovers', paths.netcdfplus.ObjectStore(paths.PathMover, has_name=True))
+        # self.add('shootingpoints'
+                 # paths.storage.ObjectStore(paths.ShootingPoint, has_name=False))
         self.add('shootingpointselectors',
-                 paths.storage.ObjectStore(paths.ShootingPointSelector, has_name=True))
-        self.add('engines', paths.storage.ObjectStore(paths.DynamicsEngine, has_name=True))
+                 paths.netcdfplus.ObjectStore(paths.ShootingPointSelector, has_name=True))
+        self.add('engines', paths.netcdfplus.ObjectStore(paths.DynamicsEngine, has_name=True))
         self.add('pathsimulators',
-                 paths.storage.ObjectStore(paths.PathSimulator, has_name=True))
-        self.add('transitions', paths.storage.ObjectStore(paths.Transition, has_name=True))
+                 paths.netcdfplus.ObjectStore(paths.PathSimulator, has_name=True))
+        self.add('transitions', paths.netcdfplus.ObjectStore(paths.Transition, has_name=True))
         self.add('networks',
-                 paths.storage.ObjectStore(paths.TransitionNetwork, has_name=True))
+                 paths.netcdfplus.ObjectStore(paths.TransitionNetwork, has_name=True))
         self.add('schemes',
-                 paths.storage.ObjectStore(paths.MoveScheme, has_name=True))
+                 paths.netcdfplus.ObjectStore(paths.MoveScheme, has_name=True))
 
         # nestable objects
 
         self.add('volumes',
-                 paths.storage.ObjectStore(paths.Volume, nestable=True, has_name=True))
+                 paths.netcdfplus.ObjectStore(paths.Volume, nestable=True, has_name=True))
         self.add('ensembles',
-                 paths.storage.ObjectStore(paths.Ensemble, nestable=True, has_name=True))
+                 paths.netcdfplus.ObjectStore(paths.Ensemble, nestable=True, has_name=True))
         # special stores
         # self.add('names', paths.storage.NameStore())
 
@@ -299,7 +298,6 @@ class Storage(NetCDFPlus):
             'samplesets': False,
             'cvs': True,
             'pathmovers': True,
-            'shootingpoints': WeakLRUCache(10000),
             'shootingpointselectors': True,
             'engines': True,
             'pathsimulators': True,
@@ -329,7 +327,6 @@ class Storage(NetCDFPlus):
             'samplesets': False,
             'cvs': True,
             'pathmovers': True,
-            'shootingpoints': False,
             'shootingpointselectors': True,
             'engines': True,
             'pathsimulators': True,
@@ -361,7 +358,6 @@ class Storage(NetCDFPlus):
             'samplesets': WeakLRUCache(10),
             'cvs': WeakLRUCache(10),
             'pathmovers': WeakLRUCache(10),
-            'shootingpoints': WeakLRUCache(10),
             'shootingpointselectors': WeakLRUCache(10),
             'engines': WeakLRUCache(10),
             'pathsimulators': WeakLRUCache(10),
@@ -393,7 +389,6 @@ class Storage(NetCDFPlus):
             'samplesets': WeakLRUCache(100000),
             'cvs': True,
             'pathmovers': True,
-            'shootingpoints': WeakLRUCache(100000),
             'shootingpointselectors': True,
             'engines': True,
             'pathsimulators': True,
@@ -425,7 +420,6 @@ class Storage(NetCDFPlus):
             'samplesets': False,
             'cvs': False,
             'pathmovers': False,
-            'shootingpoints': False,
             'shootingpointselectors': False,
             'engines': False,
             'pathsimulators': False,
@@ -458,7 +452,6 @@ class Storage(NetCDFPlus):
             'samplesets': False,
             'cvs': False,
             'pathmovers': False,
-            'shootingpoints': False,
             'shootingpointselectors': False,
             'engines': False,
             'pathsimulators': False,

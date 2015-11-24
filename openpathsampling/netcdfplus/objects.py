@@ -4,7 +4,7 @@ import logging
 import yaml
 
 from cache import MaxCache, Cache, NoCache, WeakLRUCache
-from objproxy import LoaderProxy
+from proxy import LoaderProxy
 
 import weakref
 

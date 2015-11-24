@@ -6,18 +6,19 @@ a duck.
 """
 
 import os
-from pkg_resources import resource_filename 
+from functools import wraps
+
+from pkg_resources import resource_filename
 from nose.tools import assert_items_equal, assert_equal, assert_in
+import numpy as np
+import numpy.testing as npt
+import simtk.unit as u
 
 from openpathsampling.trajectory import Trajectory
 from openpathsampling.snapshot import Snapshot
 from openpathsampling.dynamics_engine import DynamicsEngine
 from openpathsampling.topology import Topology
 import openpathsampling as paths
-import numpy as np
-import numpy.testing as npt
-
-import simtk.unit as u
 
 
 def make_1d_traj(coordinates, velocities=None, topology=None):
@@ -66,6 +67,10 @@ class MoverWithSignature(paths.PathMover):
     def __init__(self, input_ensembles, output_ensembles):
         self._in_ensembles = input_ensembles
         self._out_ensembles = output_ensembles
+
+    def move(self, globalstate):
+        # need to implement a fake move or this class will be considered abstract
+        pass
 
 class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
@@ -124,12 +129,12 @@ class CallIdentity(object):
 class AtomCounter(object):
     '''Let's be honest: that's all we're using the simulation.system object
     for. So I'll duck-punch.'''
-    def __init__(self, natoms):
-        self.natoms = natoms
+    def __init__(self, n_atoms):
+        self.n_atoms = n_atoms
 
     def getNumParticles(self):
         '''QUAAAAACK'''
-        return self.natoms
+        return self.n_atoms
 
 class SimulationDuckPunch(object):
     '''This is what happens when you find a stranger in the Alps.'''
@@ -184,3 +189,75 @@ def compare_snapshot(snapshot1, snapshot2):
 
     assert_equal(snapshot1.potential_energy, snapshot2.potential_energy)
     assert_equal(snapshot1.kinetic_energy, snapshot2.kinetic_energy)
+
+class RandomMDEngine(paths.DynamicsEngine):
+    _default_options = {}
+
+    def __init__(self, template=None):
+        self.options = {
+        }
+
+        super(RandomMDEngine, self).__init__(
+            options={},
+            template=template
+        )
+
+        self.initialized = True
+
+    def _build_current_snapshot(self):
+        # TODO: Add caching for this and mark if changed
+
+        tmp = self.template
+
+        coordinates = u.Quantity(
+            tmp.coordinates._value + np.random.normal(0.0, 0.02, tmp.coordinates.shape),
+            tmp.coordinates.unit)
+        velocities = u.Quantity(
+            np.random.normal(0.0, 0.02, tmp.velocities.shape),
+            tmp.velocities.unit)
+
+        return paths.Snapshot(coordinates = coordinates,
+                        box_vectors = tmp.box_vectors,
+                        potential_energy = tmp.potential_energy,
+                        velocities = velocities,
+                        kinetic_energy = tmp.kinetic_energy,
+                        topology = self.topology
+                       )
+
+    @property
+    def current_snapshot(self):
+        if self._current_snapshot is None:
+            self._current_snapshot = self._build_current_snapshot()
+
+        return self._current_snapshot
+
+    @current_snapshot.setter
+    def current_snapshot(self, snapshot):
+        self._current_snapshot = snapshot
+
+    def generate_next_frame(self):
+        self._current_snapshot = None
+        return self.current_snapshot
+
+def raises_with_message_like(err, message=None):
+    """
+    Decorator that allows to run nosetests with raises and testing if the message starts with a txt.
+
+    Notes
+    -----
+    We use this to check for abstract classes using
+    >>> @raises_with_message_like(TypeError, "Can't instantiate abstract class")
+    """
+    def decorator(fnc):
+
+        @wraps(fnc)
+        def _wrapper(*args, **kwargs):
+            try:
+                fnc(*args, **kwargs)
+            except err as e:
+                if message is not None and not str(e).startswith(message):
+                    raise
+
+        return _wrapper
+
+    return decorator

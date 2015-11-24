@@ -7,14 +7,15 @@ Created on 19.07.2014
 
 import random
 import logging
+import abc
 
 import numpy as np
 
-import openpathsampling as paths
-from openpathsampling.base import StorableNamedObject, StorableObject
 from ops_logging import initialization_logging
 from treelogic import TreeMixin
 
+import openpathsampling as paths
+from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -95,6 +96,8 @@ class PathMover(TreeMixin, StorableNamedObject):
     in the PathMover, but have it be a separate class ~~~DWHS
     """
 
+    __metaclass__ = abc.ABCMeta
+
     def __init__(self):
         StorableNamedObject.__init__(self)
 
@@ -117,7 +120,6 @@ class PathMover(TreeMixin, StorableNamedObject):
     @property
     def is_canonical(self):
         return self._is_canonical
-
 
     @property
     def default_name(self):
@@ -237,7 +239,8 @@ class PathMover(TreeMixin, StorableNamedObject):
         """
         return self._get_in_ensembles()
 
-    def legal_sample_set(self, globalstate, ensembles=None, replicas='all'):
+    @staticmethod
+    def legal_sample_set(globalstate, ensembles=None, replicas='all'):
         """
         This returns all the samples from globalstate which are in both
         self.replicas and the parameter ensembles. If ensembles is None, we
@@ -276,7 +279,8 @@ class PathMover(TreeMixin, StorableNamedObject):
 
         return legal_samples
 
-    def select_sample(self, globalstate, ensembles=None, replicas=None):
+    @staticmethod
+    def select_sample(globalstate, ensembles=None, replicas=None):
         """
         Returns one of the legal samples given self.replica and the ensemble
         set in ensembles.
@@ -288,7 +292,7 @@ class PathMover(TreeMixin, StorableNamedObject):
             replicas = 'all'
 
         logger.debug("replicas: "+str(replicas)+" ensembles: "+repr(ensembles))
-        legal = self.legal_sample_set(globalstate, ensembles, replicas)
+        legal = PathMover.legal_sample_set(globalstate, ensembles, replicas)
         for sample in legal:
             logger.debug("legal: (" + str(sample.replica)
                          + "," + str(sample.trajectory)
@@ -301,6 +305,7 @@ class PathMover(TreeMixin, StorableNamedObject):
                      + ")")
         return selected
 
+    @abc.abstractmethod
     def move(self, globalstate):
         """
         Run the generation starting with the initial globalstate specified.
@@ -327,28 +332,23 @@ class PathMover(TreeMixin, StorableNamedObject):
             return self.name
 
 
-###############################################################################
-# MOVER TYPES
-###############################################################################
-
-class MoverType(object):
-    pass
-
-
-# TODO: empty class. Remove
-class SwappingMover(MoverType):
+class IdentityPathMover(PathMover):
     """
-    A mover that swaps samples from ensembles in some way. Relevant for mixing
-    """
+    The simplest Mover that does nothing !
 
+    Notes
+    -----
+    Since is does nothing it is considered rejected everytime! It can be used to test
+    function of PathMover
+    """
+    def move(self, globalstate):
+        return paths.EmptyPathMoveChange()
 
 ###############################################################################
 # GENERATORS
 ###############################################################################
 
 class SampleMover(PathMover):
-    engine = None
-
     def __init__(self):
         super(SampleMover, self).__init__()
 
@@ -455,6 +455,7 @@ class SampleMover(PathMover):
                 details=details
             )
 
+    @abc.abstractmethod
     def __call__(self, *args):
         """Generate trial samples directly
 
@@ -486,185 +487,9 @@ class EngineMover(SampleMover):
 
     engine = None
 
-class ShootMover(EngineMover):
-    """Main class for Movers using ShootingMoves
-
-    Attributes
-    ----------
-    selector
-    ensemble
-    """
-    def __init__(self, ensemble, selector):
-        """
-        Parameters
-        ----------
-        ensemble : openpathsampling.Ensemble
-            the specific ensemble to be shot from
-        selector : openpathsampling.ShootingPointSelector
-            the shootingpoint selector to determine the shooting point in the
-            move
-
-        """
-        super(ShootMover, self).__init__()
+    def __init__(self, ensemble, target_ensemble, selector):
+        super(EngineMover, self).__init__()
         self.selector = selector
-        self.ensemble = ensemble
-
-    def _called_ensembles(self):
-        # return a single ensemble
-        return [self.ensemble]
-
-    def _get_in_ensembles(self):
-        return [self.ensemble]
-
-    def __call__(self, trial):
-        initial_trajectory = trial.trajectory
-
-        dynamics_ensemble = trial.ensemble
-        replica = trial.replica
-
-        initial_point = self.selector.pick(initial_trajectory)
-        trial_point = self._shoot(initial_point, dynamics_ensemble)
-
-        bias = initial_point.sum_bias / trial_point.sum_bias
-
-        trial_details = paths.SampleDetails(
-            initial_point=initial_point,
-            trial_point=trial_point,
-        )
-
-        trial = paths.Sample(
-            replica=replica,
-            trajectory=trial_point.trajectory,
-            ensemble=dynamics_ensemble,
-            parent=trial,
-            details=trial_details,
-            mover=self,
-            bias=bias
-        )
-
-        trials = [trial]
-
-        return trials
-
-    def _shoot(self, shooting_point, ensemble):
-        """Implementation of the shooting
-
-        Parameters
-        ----------
-        shooting_point : ShootingPoint
-            the initial shooting point instance containing a reference to the
-            initial trajectory
-        ensemble : Ensemble
-            the ensemble for which the trajectory is to be created. This defines
-            the stopping criterion
-
-        Returns
-        -------
-        ShootingPoint
-            the final shooting point referencing the final trajectory
-        """
-        return shooting_point
-
-
-class ForwardShootMover(ShootMover):
-    """A forward shooting sample generator
-    """
-    def _shoot(self, shooting_point, ensemble):
-        shoot_str = "Shooting {sh_dir} from frame {fnum} in [0:{maxt}]"
-        logger.info(shoot_str.format(fnum=shooting_point.index,
-                                     maxt=len(shooting_point.trajectory)-1,
-                                     sh_dir="forward",
-                                    ))
-
-        # Run until one of the stoppers is triggered
-        partial_trajectory = self.engine.generate(
-            shooting_point.snapshot.copy(),
-            running = [
-                paths.PrefixTrajectoryEnsemble(
-                    ensemble,
-                    shooting_point.trajectory[0:shooting_point.index]
-                ).can_append
-            ]
-        )
-
-        trial_trajectory = \
-            shooting_point.trajectory[0:shooting_point.index] + \
-            partial_trajectory
-
-        trial_point = paths.ShootingPoint(
-            shooting_point.selector,
-            trial_trajectory,
-            shooting_point.index
-        )
-
-        return trial_point
-
-
-class BackwardShootMover(ShootMover):
-    """A Backward shooting generator
-    """
-
-    #TODO: Remove use of reversed_copy. The reversed snapshot already exists!
-    def _shoot(self, shooting_point, ensemble):
-        shoot_str = "Shooting {sh_dir} from frame {fnum} in [0:{maxt}]"
-        logger.info(shoot_str.format(
-            fnum=shooting_point.index,
-            maxt=len(shooting_point.trajectory)-1,
-            sh_dir="backward"
-        ))
-
-        # Run until one of the stoppers is triggered
-        partial_trajectory = self.engine.generate(
-            shooting_point.snapshot.reversed_copy(),
-            running = [
-                paths.SuffixTrajectoryEnsemble(
-                    ensemble,
-                    shooting_point.trajectory[shooting_point.index + 1:]
-                ).can_prepend
-            ]
-        )
-
-        trial_trajectory = \
-            partial_trajectory.reversed + \
-            shooting_point.trajectory[shooting_point.index + 1:]
-
-        trial_point = paths.ShootingPoint(
-            shooting_point.selector,
-            trial_trajectory,
-            len(partial_trajectory) - 1
-        )
-
-        return trial_point
-
-# TODO: This doubling might be superfluous
-
-
-
-###############################################################################
-# EXTENDING GENERATORS
-###############################################################################
-
-class ExtendingMover(EngineMover):
-    """
-    Sample Mover that creates Samples using extensions
-
-    Extending will create samples in a super ensemble from samples
-    in a smaller ensemble by forward or backward extending the original
-    sample until it is in the target ensemble. This requires the the target
-    ensemble is reachable from the initial ensemble
-    """
-    def __init__(self, ensemble, target_ensemble):
-        """
-        Parameters
-        ----------
-        ensemble : openpathsampling.Ensemble
-            the initial ensemble to be started from
-        extend_ensemble : openpathsampling.Ensemble
-            the target ensemble
-
-        """
-        super(ExtendingMover, self).__init__(
-        )
         self.ensemble = ensemble
         self.target_ensemble = target_ensemble
 
@@ -677,93 +502,161 @@ class ExtendingMover(EngineMover):
     def _get_out_ensembles(self):
         return [self.target_ensemble]
 
-    def __call__(self, trial):
-        initial_trajectory = trial.trajectory
+    def __call__(self, input_sample):
+        initial_trajectory = input_sample.trajectory
+        replica = input_sample.replica
 
-        replica = trial.replica
-        trial_trajectory = self._extend(
+        shooting_index = self.selector.pick(initial_trajectory)
+
+        trial_trajectory = self._run(initial_trajectory, shooting_index)
+
+
+        bias = self.selector.probability_ratio(
+            initial_trajectory[shooting_index],
             initial_trajectory,
-            self.target_ensemble
+            trial_trajectory
         )
 
+        # temporary test to make sure nothing went weird
+        # old_bias = initial_point.sum_bias / trial_point.sum_bias
+        # assert(abs(bias - old_bias) < 10e-6)
+        # assert(initial_trajectory[shooting_index] in trial_trajectory)
+
+        # we need to save the initial
         trial_details = paths.SampleDetails(
+            initial_trajectory=initial_trajectory,
+            shooting_snapshot=initial_trajectory[shooting_index]
         )
-
-        # the actual bias would be 0.0 since we will never be able to do the
-        # reverse move. Since this is the opposite of subtraj we set both
-        # proposal bias for these to 100% which means no bias
 
         trial = paths.Sample(
             replica=replica,
             trajectory=trial_trajectory,
             ensemble=self.target_ensemble,
-            parent=trial,
+            parent=input_sample,
             details=trial_details,
             mover=self,
-            bias=1.0
+            bias=bias
         )
 
         trials = [trial]
 
         return trials
 
-    def _extend(self, initial_trajectory, ensemble):
-        return initial_trajectory
+    def _make_forward_trajectory(self, trajectory, shooting_index):
+        initial_snapshot = trajectory[shooting_index]#.copy()
+        run_f = paths.PrefixTrajectoryEnsemble(self.target_ensemble, 
+                                               trajectory[0:shooting_index]
+                                              ).can_append
+        partial_trajectory = self.engine.generate(initial_snapshot, 
+                                                  running=[run_f])
+        trial_trajectory = (trajectory[0:shooting_index] 
+                            + partial_trajectory)
+        return trial_trajectory
+
+    def _make_backward_trajectory(self, trajectory, shooting_index):
+        initial_snapshot = trajectory[shooting_index].reversed#_copy()
+        run_f = paths.SuffixTrajectoryEnsemble(self.target_ensemble,
+                                               trajectory[shooting_index + 1:]
+                                              ).can_prepend
+        partial_trajectory = self.engine.generate(initial_snapshot, 
+                                                  running=[run_f])
+        trial_trajectory = (partial_trajectory.reversed +
+                            trajectory[shooting_index + 1:])
+        return trial_trajectory
+
+    # direction is an abstract property to disallow instantiation of the EngineMover unless we use
+    # a concrete subclass that sets this. This is not super elegant but is the way to do it with
+    # abstract classes
+
+    @abc.abstractproperty
+    def direction(self):
+        return 'unknown'
+
+    def _run(self, trajectory, shooting_index):
+        """Takes initial trajectory and shooting point; return trial
+        trajectory"""
+        shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
+        logger.info(shoot_str.format(
+            fnum=shooting_index,
+            maxt=len(trajectory)-1,
+            sh_dir=self.direction
+        ))
+
+        if self.direction == "forward":
+            trial_trajectory = self._make_forward_trajectory(
+                trajectory, shooting_index
+            )
+        elif self.direction == "backward":
+            trial_trajectory = self._make_backward_trajectory(
+                trajectory, shooting_index
+            )
+        else:
+            raise RuntimeError("Unknown direction: " + str(self.direction))
+
+        return trial_trajectory
 
 
-class ForwardExtendMover(ExtendingMover):
+class ForwardShootMover(EngineMover):
+    """A forward shooting sample generator
+    """
+    def __init__(self, ensemble, selector):
+        super(ForwardShootMover, self).__init__(
+            ensemble=ensemble,
+            target_ensemble=ensemble,
+            selector=selector
+        )
+
+    @property
+    def direction(self):
+        return 'forward'
+
+class BackwardShootMover(EngineMover):
+    """A Backward shooting generator
+    """
+    def __init__(self, ensemble, selector):
+        super(BackwardShootMover, self).__init__(
+            ensemble=ensemble,
+            target_ensemble=ensemble,
+            selector=selector
+        )
+
+    @property
+    def direction(self):
+        return 'backward'
+
+
+class ForwardExtendMover(EngineMover):
     """
     A Sample Mover implementing Forward Extension
     """
-    def _extend(self, initial_trajectory, ensemble):
-        shoot_str = "Extending {sh_dir} from frame {fnum} in [0:{maxt}]"
-        logger.info(shoot_str.format(
-            fnum=len(initial_trajectory)-1,
-            maxt=len(initial_trajectory)-1,
-            sh_dir="forward"
-        ))
-
-        # Run until one of the stoppers is triggered
-        partial_trajectory = self.engine.generate(
-            initial_trajectory[-1],
-            running = [
-                paths.PrefixTrajectoryEnsemble(
-                    ensemble,
-                    initial_trajectory[:-1]
-                ).can_append
-            ]
+    _direction = "forward"
+    def __init__(self, ensemble, target_ensemble):
+        super(ForwardExtendMover, self).__init__(
+            ensemble=ensemble,
+            target_ensemble=target_ensemble,
+            selector=paths.FinalFrameSelector(),
         )
 
-        trial_trajectory = initial_trajectory + partial_trajectory[1:]
+    @property
+    def direction(self):
+        return 'forward'
 
-        return trial_trajectory
 
-
-class BackwardExtendMover(ExtendingMover):
+class BackwardExtendMover(EngineMover):
     """
     A Sample Mover implementing Backward Extension
     """
-    def _extend(self, initial_trajectory, ensemble):
-        shoot_str = "Extending {sh_dir} from frame {fnum} in [0:{maxt}]"
-        logger.info(shoot_str.format(
-            fnum=0,
-            maxt=len(initial_trajectory)-1,
-            sh_dir="backward",
-        ))
-
-        # Run until one of the stoppers is triggered
-        partial_trajectory = self.engine.generate(
-            initial_trajectory[0].reversed,
-            running = [
-                paths.SuffixTrajectoryEnsemble(
-                    ensemble,
-                    initial_trajectory[1:]
-                ).can_prepend
-            ]
+    _direction = "backward"
+    def __init__(self, ensemble, target_ensemble):
+        super(BackwardExtendMover, self).__init__(
+            ensemble=ensemble,
+            target_ensemble=target_ensemble,
+            selector=paths.FirstFrameSelector(),
         )
 
-        trial_trajectory = partial_trajectory.reversed + initial_trajectory[1:]
-        return trial_trajectory
+    @property
+    def direction(self):
+        return 'backward'
 
 
 ###############################################################################
@@ -930,10 +823,9 @@ class StateSwapMover(SampleMover):
 # SUBTRAJECTORY GENERATORS
 ###############################################################################
 
-
-class RandomSubtrajectorySelectMover(SampleMover):
+class SubtrajectorySelectMover(SampleMover):
     """
-    Samples a random subtrajectory satisfying the given subensemble.
+    Picks a subtrajectory satisfying the given subensemble.
 
     If there are no subtrajectories which satisfy the subensemble, this
     returns the zero-length trajectory.
@@ -951,9 +843,11 @@ class RandomSubtrajectorySelectMover(SampleMover):
         are found.
 
     """
+
     _is_ensemble_change_mover = True
+
     def __init__(self, ensemble, sub_ensemble, n_l=None):
-        super(RandomSubtrajectorySelectMover, self).__init__(
+        super(SubtrajectorySelectMover, self).__init__(
         )
         self.n_l = n_l
         self.ensemble = ensemble
@@ -968,8 +862,9 @@ class RandomSubtrajectorySelectMover(SampleMover):
     def _get_out_ensembles(self):
         return [ self.sub_ensemble ]
 
+    @abc.abstractmethod
     def _choose(self, trajectory_list):
-        return random.choice(trajectory_list)
+        pass
 
     def __call__(self, trial):
         initial_trajectory = trial.trajectory
@@ -1001,8 +896,31 @@ class RandomSubtrajectorySelectMover(SampleMover):
         return trials
 
 
+class RandomSubtrajectorySelectMover(SubtrajectorySelectMover):
+    """
+    Samples a random subtrajectory satisfying the given subensemble.
 
-class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
+    If there are no subtrajectories which satisfy the subensemble, this
+    returns the zero-length trajectory.
+
+    Parameters
+    ----------
+    ensemble : openpathsampling.Ensemble
+        the set of allows samples to chose from
+    subensemble : openpathsampling.Ensemble
+        the subensemble to be searched for
+    n_l : int or None
+        the number of subtrajectories that need to be found. If
+        `None` every number of subtrajectories > 0 is okay.
+        Otherwise the move is only accepted if exactly n_l subtrajectories
+        are found.
+
+    """
+    def _choose(self, trajectory_list):
+        return random.choice(trajectory_list)
+
+
+class FirstSubtrajectorySelectMover(SubtrajectorySelectMover):
     """
     Samples the first subtrajectory satifying the given subensemble.
 
@@ -1013,7 +931,7 @@ class FirstSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
         return trajectory_list[0]
 
 
-class FinalSubtrajectorySelectMover(RandomSubtrajectorySelectMover):
+class FinalSubtrajectorySelectMover(SubtrajectorySelectMover):
     """
     Samples the final subtrajectory satifying the given subensemble.
 
@@ -1227,9 +1145,9 @@ class SelectionMover(PathMover):
     def _get_out_ensembles(self):
         return [ sub.output_ensembles for sub in self.submovers ]
 
+    @abc.abstractmethod
     def _selector(self, globalstate):
-        # Default always picks by random choice
-        return [1.0] * len(self.movers)
+        pass
 
     def move(self, globalstate):
         weights = self._selector(globalstate)
@@ -1414,8 +1332,6 @@ class LastAllowedMover(SelectionMover):
         return weights
 
 
-
-
 class ConditionalMover(PathMover):
     """
     An if-then-else structure for PathMovers.
@@ -1470,7 +1386,6 @@ class ConditionalMover(PathMover):
         return paths.SequentialPathMoveChange([ifclause, resultclause], mover=self)
 
 
-
 class SequentialMover(PathMover):
     """
     Performs each of the moves in its movers list. Returns all samples
@@ -1505,7 +1420,6 @@ class SequentialMover(PathMover):
                 sub_change = True
                 break
         return sub_change
-
 
     def _get_in_ensembles(self):
         return [ sub.input_ensembles for sub in self.submovers ]
@@ -1544,7 +1458,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     """
     def move(self, globalstate):
         logger.debug("==== BEGINNING " + self.name + " ====")
-        subglobal = paths.SampleSet(self.legal_sample_set(globalstate))
+        subglobal = paths.SampleSet(globalstate)
         pathmovechanges = []
         for mover in self.movers:
             logger.info(str(self.name)
@@ -1561,7 +1475,6 @@ class PartialAcceptanceSequentialMover(SequentialMover):
 
         logger.debug("==== FINISHING " + self.name + " ====")
         return paths.PartialAcceptanceSequentialPathMoveChange(pathmovechanges, mover=self)
-
 
 
 class ConditionalSequentialMover(SequentialMover):
@@ -1596,27 +1509,6 @@ class ConditionalSequentialMover(SequentialMover):
                 break
 
         return paths.ConditionalSequentialPathMoveChange(pathmovechanges, mover=self)
-
-
-# TODO: Restrict to last should not be used, but rather a filter by ensemble.
-# reason is that the order or samples is partially arbitrary and so the result
-# of this mover depends on the implementation of the preceeding mover!!!
-# Hence, it might cause hard to find errors!
-class RestrictToLastSampleMover(PathMover):
-    def __init__(self, mover):
-        super(RestrictToLastSampleMover, self).__init__()
-        self.mover = mover
-
-    @property
-    def submovers(self):
-        return [self.mover]
-
-    def _get_in_ensembles(self):
-        return [ sub.input_ensembles for sub in self.submovers ]
-
-    def move(self, globalstate):
-        movepath = self.mover.move(globalstate)
-        return paths.KeepLastSamplePathMoveChange(movepath, mover=self)
 
 
 class ReplicaIDChangeMover(PathMover):
@@ -1712,13 +1604,6 @@ class SubPathMover(PathMover):
         )
         return change
 
-#    @classmethod
-#    def from_dict(cls, dct):
-#        # This will always fix the mover to be the one stored for all SubPathMovers
-#        obj = PathMover.from_dict(dct)
-#        obj.mover = dct['mover']
-#
-#        return obj
 
 class EnsembleFilterMover(SubPathMover):
     """Mover that return only samples from specified ensembles
@@ -1732,10 +1617,8 @@ class EnsembleFilterMover(SubPathMover):
         ensembles : nested list of Ensemble or None
             the ensemble specification
         """
-        super(SubPathMover, self).__init__()
+        super(EnsembleFilterMover, self).__init__(mover)
         self.ensembles = ensembles
-        self.mover = mover
-
 
         if not set(self.mover.output_ensembles) & set(self.ensembles):
             # little sanity check, if the underlying move will be removed by the
@@ -1884,7 +1767,7 @@ class MinusMover(SubPathMover):
                 n_l=minus_ensemble.n_l
                 ),
         ])
-        sub_trajectory_selector.name = "MinusSubtrajectoryChooser"
+        sub_trajectory_selector.named("MinusSubtrajectoryChooser")
 
         repexs = [ReplicaExchangeMover(
             ensemble1=segment,
@@ -1892,7 +1775,7 @@ class MinusMover(SubPathMover):
         ) for inner in innermost_ensembles]
 
         repex_chooser = RandomChoiceMover(repexs)
-        repex_chooser.name = "InterfaceSetChooser"
+        repex_chooser.named("InterfaceSetChooser")
 
         extension_mover = RandomChoiceMover([
             ForwardExtendMover(
@@ -1905,7 +1788,7 @@ class MinusMover(SubPathMover):
             )
         ])
 
-        extension_mover.name = "MinusExtensionDirectionChooser"
+        extension_mover.named("MinusExtensionDirectionChooser")
         self.engine = extension_mover.movers[0].engine
         if self.engine is not extension_mover.movers[1].engine:
             raise RuntimeWarning("Forward and backward engines differ?!?!")
@@ -2034,7 +1917,7 @@ class PathMoverFactory(object):
                 selector=selector,
                 ensemble=iface
             )
-            mover.name = "OneWayShootingMover " + str(iface.name)
+            mover.named("OneWayShootingMover " + str(iface.name))
             mover_set.append(mover)
 
         return mover_set

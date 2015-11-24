@@ -2,7 +2,7 @@ import random
 import logging
 
 import openpathsampling as paths
-from openpathsampling.base import StorableObject, lazy_loading_attributes
+from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
 
 logger = logging.getLogger(__name__)
 
