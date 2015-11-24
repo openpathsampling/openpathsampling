@@ -488,6 +488,14 @@ class AnalysisStorage(Storage):
 
     @staticmethod
     def cache_for_analysis(storage):
+        """
+
+        Parameters
+        ----------
+        storage : Storage
+            The storage the caching should act upon.
+
+        """
         storage.samples.cache_all()
         storage.samplesets.cache_all()
         storage.cvs.cache_all()
@@ -499,50 +507,51 @@ class AnalysisStorage(Storage):
 #        storage.trajectories.cache_all()
 
 class StorageView(object):
+    """
+    A View on a storage that only changes the iteration over steps.
 
-    class Delegate(object):
+    Can be used for bootstrapping on subsets of steps and pass this object
+    to analysis routines.
+    """
+
+    class StepDelegate(object):
         """
-        Value delegate for objects that implement __getitem__ and __setitem__
-
-        It will basically just wrap keys for objects that are used in a dict like structure
-        with getter and setter function to allow easier conversion
-
-        delegate[x] is equivalent to delegate[x.idx(store)]
+        Delegate that will alter the __iter__ behaviour of the underlying store
 
         Attributes
         ----------
-        variable : dict-like
+        store : dict-like
             the dict to be wrapped
         store : openpathsampling.storage.ObjectStore
             a reference to an object store used
 
         """
 
-        def __init__(self, variable, store):
-            self.variable = variable
+        def __init__(self, store, step_range):
             self.store = store
+            self.step_range = step_range
+
+        def __iter__(self):
+            for idx in self.step_range:
+                yield self.store[idx]
+
+        def __getitem__(self, item):
+            return self.store[item]
 
         def __setitem__(self, key, value):
-            if hasattr(key, '__iter__'):
-                idxs = [item if type(item) is int else self.store.index[item] for item in key]
-                sorted_idxs = list(set(idxs))
-                sorted_values = [value[idxs.index(val)] for val in sorted_idxs]
-                self.variable[sorted_idxs] = sorted_values
+            self.store[key] = value
 
-            else:
-                self.variable[key if type(key) is int else self.store.index[key]] = value
+    def __init__(self, storage, step_range):
+        """
+        Attributes
+        ----------
+            storage : openpathsampling.Storage
+                The storage the view is watching
+            step_range : iterable
+                An iterable object that species the step indices to be iterated over
+                when using the view
 
-        def __getitem__(self, key):
-            if hasattr(key, '__iter__'):
-                idxs = [item if type(item) is int else self.store.index[item] for item in key]
-                sorted_idxs = sorted(list(set(idxs)))
-
-                sorted_values = self.variable[sorted_idxs]
-                return [sorted_values[sorted_idxs.index(idx)] for idx in idxs]
-            else:
-                return self.variable[key if type(key) is int else self.store.index[key]]
-
-    def __init__(self, storage, subrange):
+        """
         self._storage = storage
 
         for name, store in self._storage._objects.iteritems():
@@ -550,6 +559,6 @@ class StorageView(object):
 
         self.variables = self._storage.variables
         self.units = self._storage.units
-        self.vars = self.vars = self._storage.vars
+        self.vars = self._storage.vars
 
-        def
+        self.steps = StorageView.StepDelegate(self._storage.steps, step_range)
