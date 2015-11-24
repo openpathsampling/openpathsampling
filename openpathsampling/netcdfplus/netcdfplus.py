@@ -25,6 +25,8 @@ class NetCDFPlus(netCDF4.Dataset):
     """
     support_simtk_unit = True
 
+    _netcdfplus_version_ = '0.1.0'
+
     _type_conversion = {
         'float': np.float32,
         'int': np.int32,
@@ -206,6 +208,11 @@ class NetCDFPlus(netCDF4.Dataset):
         if mode == 'w':
             logger.info("Setup netCDF file and create variables")
 
+            self.setncattr('format', 'netcdf+')
+            self.setncattr('version', self._netcdfplus_version_)
+
+            self.write_meta()
+
             # add shared scalar dimension for everyone
             self.create_dimension('scalar', 1)
 
@@ -229,6 +236,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
         elif mode == 'a' or mode == 'r+' or mode == 'r':
             logger.debug("Restore the dict of units from the storage")
+
+            self.check_version()
 
             # open the store that contains all stores
             self.register_store('stores', ObjectStore(ObjectStore, has_name=True))
@@ -263,6 +272,36 @@ class NetCDFPlus(netCDF4.Dataset):
             self._restore()
 
         self.sync()
+
+    @staticmethod
+    def _cmp_version(v1, v2):
+        q1 = v1.split('-')[0].split('.')
+        q2 = v2.split('-')[0].split('.')
+        for v1, v2 in zip(q1, q2):
+            if int(v1) > int(v2):
+                return +1
+            elif int(v1) < int(v2):
+                return -1
+
+        return 0
+
+    def check_version(self):
+        s1 = self.getncattr('version')
+        s2 = self._netcdfplus_version_
+
+        cp = self._cmp_version(s1, s2)
+
+        if cp != 0:
+            logger.info('Loading different netcdf version. Installed version is %s and loaded version is %s' % s2, s1)
+            if cp > 0:
+                logger.info('Loaded version is newer consider upgrading your conda package!')
+            else:
+                logger.info('Loaded version is older. Should be no problem other then missing features and information')
+
+
+
+    def write_meta(self):
+        pass
 
     def _setup_class(self):
         """
@@ -747,7 +786,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
             getter, setter, store = self.create_type_delegate(var.var_type)
 
-            if True or self.support_simtk_unit:
+            if self.support_simtk_unit:
                 if hasattr(var, 'unit_simtk'):
                     if var_name not in self.units:
                         self.update_simtk_unit(var_name)
@@ -937,4 +976,12 @@ class NetCDFPlus(netCDF4.Dataset):
         """
         for name in self.variables:
             if name not in self.vars:
-                self.create_variable_delegate(name)
+                try:
+                    self.create_variable_delegate(name)
+                except:
+                    # if we encounter problems just continue since we want to make
+                    # sure we can still open the file
+                    logger.warning("There was a problem creating a the '%s' variable delegate. You might be " % name +
+                                   "opening an older version.")
+
+                    pass

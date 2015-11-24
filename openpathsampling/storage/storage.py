@@ -11,8 +11,6 @@ logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 import openpathsampling as paths
-import simtk.unit as u
-
 from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore
 
 # =============================================================================================
@@ -24,6 +22,8 @@ class Storage(NetCDFPlus):
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
     simulation. This allows effective storage of shooting trajectories
     """
+
+    _ops_version = '0.1.0'
 
     @property
     def template(self):
@@ -174,6 +174,10 @@ class Storage(NetCDFPlus):
         # special stores
         # self.add('names', paths.storage.NameStore())
 
+    def write_meta(self):
+        self.setncattr('storage_format', 'openpathsampling')
+        self.setncattr('storage_version', self._ops_version)
+
     def _initialize(self):
         # Set global attributes.
         setattr(self, 'title', 'OpenPathSampling Storage')
@@ -260,6 +264,20 @@ class Storage(NetCDFPlus):
             if hasattr(self, store_name):
                 store = getattr(self, store_name)
                 store.set_caching(caching)
+
+    def check_version(self):
+        super(Storage, self).check_version()
+        s1 = self.getncattr('storage_version')
+        s2 = self._ops_version_
+
+        cp = self._cmp_version(s1, s2)
+
+        if cp != 0:
+            logger.info('Loading different OPS storage version. Installed version is %s and loaded version is %s' % s2, s1)
+            if cp > 0:
+                logger.info('Loaded version is newer consider upgrading OPS conda package!')
+            else:
+                logger.info('Loaded version is older. Should be no problem other then missing features and information')
 
     @staticmethod
     def default_cache_sizes():
