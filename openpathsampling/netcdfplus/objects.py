@@ -777,7 +777,7 @@ class VariableStore(ObjectStore):
         attr = {var: self.vars[var][idx] for var in self.var_names}
         return self.content_class(**attr)
 
-    def _init(self, units=None):
+    def _init(self):
         super(VariableStore, self)._init()
 
         # Add here the stores to be imported
