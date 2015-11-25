@@ -98,8 +98,8 @@ class testOpenMMEngine(object):
             testvel.append([0.1*i, 0.1*i, 0.1*i])
 
         self.engine.current_snapshot = Snapshot(
-            coordinates=testpos,
-            velocities=testvel
+            coordinates=np.array(testpos) * u.nanometers,
+            velocities=np.array(testvel) * u.nanometers / u.picoseconds
         )
         state = self.engine.simulation.context.getState(getPositions=True,
                                                         getVelocities=True)

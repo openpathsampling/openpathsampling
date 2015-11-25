@@ -1,18 +1,17 @@
-import types
 import logging
+import weakref
 
 import yaml
 
 from cache import MaxCache, Cache, NoCache, WeakLRUCache
 from proxy import LoaderProxy
-
-import weakref
+from base import StorableNamedObject
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 
-class ObjectStore(object):
+class ObjectStore(StorableNamedObject):
     """
     Base Class for storing complex objects in a netCDF4 file. It holds a
     reference to the store file.
@@ -39,9 +38,7 @@ class ObjectStore(object):
 
     default_cache = 10000
 
-    def __init__(self, content_class, json=True,
-                 caching=None, nestable=False, has_name=False):
-
+    def __init__(self, content_class, json=True, nestable=False, has_name=False):
         """
 
         Parameters
@@ -49,16 +46,6 @@ class ObjectStore(object):
         storage
         content_class
         json
-        dimension_units
-        caching : dict-like or bool or int or None
-            this is the dict used for caching.
-            `True` means to use a python built-in dict which unlimited caching.
-            Be careful.
-            `False` means no caching at all. If a dict-like object is passed,
-            it will be used.
-            An integer `n` means to use LRU Caching with maximal n elements and is
-            equal to `cache=LRUCache(n)`
-            Default (None) is equivalent to `cache=ObjectStore.default_cache`
         nestable : bool
             if true this marks the content_class to be saved as nested dict
             objects and not a pointing to saved objects. So the saved complex
@@ -101,6 +88,7 @@ class ObjectStore(object):
 
         """
 
+        super(ObjectStore, self).__init__()
         self._storage = None
         self.content_class = content_class
         self.prefix = None
@@ -112,12 +100,21 @@ class ObjectStore(object):
         self._names_loaded = False
         self.nestable = nestable
         self.name_idx = dict()
+        self._created = False
 
         self.variables = dict()
         self.vars = dict()
         self.units = dict()
 
         self.index = weakref.WeakKeyDictionary()
+
+    def to_dict(self):
+        return {
+            'content_class': self.content_class,
+            'has_name': self.has_name,
+            'json': self.json,
+            'nestable': self.nestable
+        }
 
     def register(self, storage, name):
         self._storage = storage
@@ -133,10 +130,6 @@ class ObjectStore(object):
             raise RuntimeError('A store need to be added to a storage to be used!')
 
         return self._storage
-
-    @property
-    def dimension_units(self):
-        return self.storage.dimension_units
 
     def __str__(self):
         return repr(self)
@@ -505,6 +498,8 @@ class ObjectStore(object):
                                description='A json serialized version of the object',
                                chunksizes=tuple([10240]))
 
+        self._created = True
+
     def _restore(self):
         pass
 
@@ -618,9 +613,6 @@ class ObjectStore(object):
 
         if type(idx) is not str and idx < 0:
             return None
-
-        if not hasattr(self, 'cache'):
-            return self._load(idx)
 
         n_idx = idx
 
@@ -753,3 +745,105 @@ class ObjectStore(object):
                 self._update_name_in_cache(obj._name, idx)
 
         return idx
+
+    def load_single(self, idx):
+        return self._load(idx)
+
+    def load_range(self, start, end):
+        return map(self._load, range(start, end))
+
+
+class VariableStore(ObjectStore):
+    def __init__(self, content_class, variables):
+        super(VariableStore, self).__init__(
+            content_class,
+            json=False
+        )
+
+        self._cached_all = False
+
+    def to_dict(self):
+        return {
+            'content_class': self.content_class,
+            'variables': self.variables
+        }
+
+    def _save(self, obj, idx):
+        for var in self.variables:
+            self.write(var, idx, obj)
+
+    def _load(self, idx):
+        attr = {var: self.vars[var][idx] for var in self.variables}
+        return self.content_class(**attr)
+
+    def _init(self, units=None):
+        super(VariableStore, self)._init()
+
+        # New short-hand definition
+        self.init_variable('change', 'obj.pathmovechanges', chunksizes=(1,))
+        self.init_variable('active', 'obj.samplesets', chunksizes=(1,))
+        self.init_variable('previous', 'obj.samplesets', chunksizes=(1,))
+        self.init_variable('simulation', 'obj.pathsimulators', chunksizes=(1,))
+        self.init_variable('mccycle', 'int', chunksizes=(1,))
+
+    def all(self):
+        self.cache_all()
+        return self
+
+    def cache_range(self, start, end):
+        """Load all samples as fast as possible into the cache
+
+        """
+        if not self._cached_all:
+            storage = self.storage
+
+            data = [
+                storage.variables[self.prefix + '_' + var][range(start, end)]
+                for var in self.variables
+            ]
+
+            [self.add_to_cache(*v) for v in enumerate(zip(*data), start)]
+
+            self._cached_all = True
+
+    def cache_all(self):
+        """Load all samples as fast as possible into the cache
+
+        """
+        if not self._cached_all:
+            storage = self.storage
+
+            idxs = range(len(self))
+
+
+            steps = storage.variables[self.prefix + '_mccycle'][:]
+            previous_idxs = storage.variables[self.prefix + '_previous'][:]
+            active_idxs = storage.variables[self.prefix + '_active'][:]
+            simulation_idxs = storage.variables[self.prefix + '_simulation'][:]
+            change_idxs = storage.variables[self.prefix + '_change'][:]
+
+            [self.add_to_cache(*v) for v in zip(
+                idxs,
+                steps,
+                previous_idxs,
+                active_idxs,
+                simulation_idxs,
+                change_idxs)]
+
+            self._cached_all = True
+
+
+    def add_to_cache(self, idx, step, previous_idx,
+                     active_idx, simulation_idx, change_idx):
+        if idx not in self.cache:
+            storage = self.storage
+            obj = MCStep(
+                mccycle=int(step),
+                previous=storage.samplesets[int(previous_idx)],
+                active=storage.samplesets[int(active_idx)],
+                simulation=storage.pathsimulators[int(simulation_idx)],
+                change=storage.pathmovechanges[int(change_idx)]
+            )
+
+            self.index[obj] = idx
+            self.cache[idx] = obj
