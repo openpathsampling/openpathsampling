@@ -99,7 +99,7 @@ class AbstractSnapshotStore(ObjectStore):
         """
         super(AbstractSnapshotStore, self)._init()
 
-        self.init_variable('momentum_reversed', 'bool', chunksizes=(1,))
+        self.init_variable('momentum_reversed', 'bool')
 
     def all(self):
         return Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])

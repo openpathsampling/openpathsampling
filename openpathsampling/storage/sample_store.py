@@ -16,13 +16,13 @@ class SampleStore(VariableStore):
         super(SampleStore, self)._init()
 
         # New short-hand definition
-        self.init_variable('trajectory', 'obj.trajectories', chunksizes=(1,))
-        self.init_variable('ensemble', 'obj.ensembles', chunksizes=(1,))
-        self.init_variable('replica', 'int', chunksizes=(1,))
-        self.init_variable('parent', 'lazyobj.samples', chunksizes=(1,))
-        self.init_variable('details', 'lazyobj.details', chunksizes=(1,))
-        self.init_variable('bias', 'float', chunksizes=(1,))
-        self.init_variable('mover', 'obj.pathmovers', chunksizes=(1,))
+        self.init_variable('trajectory', 'obj.trajectories')
+        self.init_variable('ensemble', 'obj.ensembles')
+        self.init_variable('replica', 'int')
+        self.init_variable('parent', 'lazyobj.samples')
+        self.init_variable('details', 'lazyobj.details')
+        self.init_variable('bias', 'float')
+        self.init_variable('mover', 'obj.pathmovers')
 
 
 class SampleSetStore(VariableStore):
@@ -64,4 +64,4 @@ class SampleSetStore(VariableStore):
                            chunksizes=(1024,)
                            )
 
-        self.init_variable('movepath', 'lazyobj.pathmovechanges', chunksizes=(1,))
+        self.init_variable('movepath', 'lazyobj.pathmovechanges')

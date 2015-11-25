@@ -13,8 +13,8 @@ class MCStepStore(VariableStore):
         super(MCStepStore, self)._init()
 
         # New short-hand definition
-        self.init_variable('change', 'obj.pathmovechanges', chunksizes=(1,))
-        self.init_variable('active', 'obj.samplesets', chunksizes=(1,))
-        self.init_variable('previous', 'obj.samplesets', chunksizes=(1,))
-        self.init_variable('simulation', 'obj.pathsimulators', chunksizes=(1,))
-        self.init_variable('mccycle', 'int', chunksizes=(1,))
+        self.init_variable('change', 'obj.pathmovechanges')
+        self.init_variable('active', 'obj.samplesets')
+        self.init_variable('previous', 'obj.samplesets')
+        self.init_variable('simulation', 'obj.pathsimulators')
+        self.init_variable('mccycle', 'int')

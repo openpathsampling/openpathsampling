@@ -507,7 +507,7 @@ class ObjectStore(StorableNamedObject):
     # INITIALISATION UTILITY FUNCTIONS
     # ==============================================================================
 
-    def init_variable(self, name, var_type, dimensions=None, **kwargs):
+    def init_variable(self, name, var_type, dimensions=None, chunksizes=None, **kwargs):
         """
         Create a new variable in the netCDF storage. This is just a helper
         function to structure the code better.
@@ -560,10 +560,14 @@ class ObjectStore(StorableNamedObject):
         else:
             dimensions = tuple([self.prefix] + list(dimensions))
 
+        if chunksizes is None:
+            chunksizes = (1, )
+
         self.storage.create_variable(
             self.prefix + '_' + name,
             var_type=var_type,
             dimensions=dimensions,
+            chunksizes=chunksizes,
             **kwargs
         )
 
@@ -781,7 +785,7 @@ class VariableStore(ObjectStore):
         super(VariableStore, self)._init()
 
         # Add here the stores to be imported
-        # self.init_variable('name', 'var_type', chunksizes=(1,))
+        # self.init_variable('name', 'var_type')
 
     def all(self):
         self.cache_all()

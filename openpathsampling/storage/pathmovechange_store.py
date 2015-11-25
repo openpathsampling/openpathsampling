@@ -39,9 +39,9 @@ class PathMoveChangeStore(ObjectStore):
         super(PathMoveChangeStore, self)._init()
 
         # New short-hand definition
-        self.init_variable('details', 'lazyobj.details', chunksizes=(1,))
-        self.init_variable('mover', 'obj.pathmovers', chunksizes=(1,))
-        self.init_variable('cls', 'str', chunksizes=(1,))
+        self.init_variable('details', 'lazyobj.details')
+        self.init_variable('mover', 'obj.pathmovers')
+        self.init_variable('cls', 'str')
 
         self.init_variable('subchanges', 'obj.pathmovechanges',
                            dimensions=('...'),
