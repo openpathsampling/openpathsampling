@@ -754,96 +754,65 @@ class ObjectStore(StorableNamedObject):
 
 
 class VariableStore(ObjectStore):
-    def __init__(self, content_class, variables):
+    def __init__(self, content_class, var_names):
         super(VariableStore, self).__init__(
             content_class,
             json=False
         )
 
+        self.var_names = var_names
         self._cached_all = False
 
     def to_dict(self):
         return {
             'content_class': self.content_class,
-            'variables': self.variables
+            'var_names': self.var_names
         }
 
     def _save(self, obj, idx):
-        for var in self.variables:
+        for var in self.var_names:
             self.write(var, idx, obj)
 
     def _load(self, idx):
-        attr = {var: self.vars[var][idx] for var in self.variables}
+        attr = {var: self.vars[var][idx] for var in self.var_names}
         return self.content_class(**attr)
 
     def _init(self, units=None):
         super(VariableStore, self)._init()
 
-        # New short-hand definition
-        self.init_variable('change', 'obj.pathmovechanges', chunksizes=(1,))
-        self.init_variable('active', 'obj.samplesets', chunksizes=(1,))
-        self.init_variable('previous', 'obj.samplesets', chunksizes=(1,))
-        self.init_variable('simulation', 'obj.pathsimulators', chunksizes=(1,))
-        self.init_variable('mccycle', 'int', chunksizes=(1,))
+        # Add here the stores to be imported
+        # self.init_variable('name', 'var_type', chunksizes=(1,))
 
     def all(self):
         self.cache_all()
         return self
 
-    def cache_range(self, start, end):
+    def cache_all(self, part=None):
         """Load all samples as fast as possible into the cache
 
         """
+        if part is None:
+            part = range(len(self))
+        else:
+            part = sorted(list(set(list(part))))
+
+        if not part:
+            return
+
         if not self._cached_all:
-            storage = self.storage
+            data = zip(*[
+                self.storage.variables[self.prefix + '_' + var][part]
+                for var in self.var_names
+            ])
 
-            data = [
-                storage.variables[self.prefix + '_' + var][range(start, end)]
-                for var in self.variables
-            ]
-
-            [self.add_to_cache(*v) for v in enumerate(zip(*data), start)]
+            [self.add_to_cache(idx, v) for idx, v in zip(part, data)]
 
             self._cached_all = True
 
-    def cache_all(self):
-        """Load all samples as fast as possible into the cache
-
-        """
-        if not self._cached_all:
-            storage = self.storage
-
-            idxs = range(len(self))
-
-
-            steps = storage.variables[self.prefix + '_mccycle'][:]
-            previous_idxs = storage.variables[self.prefix + '_previous'][:]
-            active_idxs = storage.variables[self.prefix + '_active'][:]
-            simulation_idxs = storage.variables[self.prefix + '_simulation'][:]
-            change_idxs = storage.variables[self.prefix + '_change'][:]
-
-            [self.add_to_cache(*v) for v in zip(
-                idxs,
-                steps,
-                previous_idxs,
-                active_idxs,
-                simulation_idxs,
-                change_idxs)]
-
-            self._cached_all = True
-
-
-    def add_to_cache(self, idx, step, previous_idx,
-                     active_idx, simulation_idx, change_idx):
+    def add_to_cache(self, idx, data):
         if idx not in self.cache:
-            storage = self.storage
-            obj = MCStep(
-                mccycle=int(step),
-                previous=storage.samplesets[int(previous_idx)],
-                active=storage.samplesets[int(active_idx)],
-                simulation=storage.pathsimulators[int(simulation_idx)],
-                change=storage.pathmovechanges[int(change_idx)]
-            )
+            attr = {var: self.vars[var].getter(data[nn]) for nn, var in enumerate(self.var_names)}
+            obj = self.content_class(**attr)
 
             self.index[obj] = idx
             self.cache[idx] = obj

@@ -6,17 +6,17 @@ import numpy as np
 from openpathsampling import Configuration, Momentum
 from openpathsampling.netcdfplus import ObjectStore
 
-from openpathsampling.tools import units_from_snapshot
+from openpathsampling.tools import simtk_units_from_md_snapshot
 
 
-class Feature(object):
+class SnapshotFeature(object):
     _variables = []
 
     @staticmethod
     def _init(self):
         pass
 
-class Coordinates(Feature):
+class Coordinates(SnapshotFeature):
     _variables = ['coordinates']
 
     @staticmethod
@@ -28,7 +28,7 @@ class Coordinates(Feature):
                            chunksizes=(1, 'atom', 'spatial')
                            )
 
-class Velocities(Feature):
+class Velocities(SnapshotFeature):
     _variables = ['velocities']
 
     @staticmethod
@@ -41,7 +41,7 @@ class Velocities(Feature):
                            chunksizes=(1, 'atom', 'spatial')
                            )
 
-class Configurations(Feature):
+class Configurations(SnapshotFeature):
     _variables = ['configuration']
 
     @staticmethod
@@ -53,7 +53,7 @@ class Configurations(Feature):
                            chunksizes=(1,)
                            )
 
-class Momenta(Feature):
+class Momenta(SnapshotFeature):
     _variables = ['momentum']
 
     @staticmethod
@@ -141,7 +141,7 @@ class MomentumStore(ObjectStore):
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
-        units = units_from_snapshot(self.storage._template)
+        units = simtk_units_from_md_snapshot(self.storage._template)
 
         self.init_variable('velocities', 'numpy.float32',
                            dimensions=('atom', 'spatial'),
@@ -170,9 +170,6 @@ class ConfigurationStore(ObjectStore):
 
         if configuration.box_vectors is not None:
             self.vars['box_vectors'][idx] = configuration.box_vectors
-
-    def get(self, indices):
-        return [self.load(idx) for idx in indices]
 
     def _load(self, idx):
         coordinates = self.vars["coordinates"][idx]
@@ -217,7 +214,7 @@ class ConfigurationStore(ObjectStore):
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
-        units = units_from_snapshot(self.storage._template)
+        units = simtk_units_from_md_snapshot(self.storage._template)
 
         self.init_variable('coordinates', 'numpy.float32',
                            dimensions=('atom', 'spatial'),
