@@ -1069,7 +1069,7 @@ class PathTreeBuilder(object):
 
         options = self.options
 
-        x_text_stretch = options['geometry']['scale_y'] / options['geometry']['scale_x']
+        x_text_stretch = (1.0 * options['geometry']['scale_y']) / options['geometry']['scale_x']
 
         assume_reversed_as_same = options['settings']['time_symmetric']
 
