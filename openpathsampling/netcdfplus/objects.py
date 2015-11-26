@@ -483,12 +483,12 @@ class ObjectStore(StorableNamedObject):
         self.storage.createDimension(self.prefix, 0)
 
         if self.has_name:
-            self.init_variable("name", 'str',
+            self.create_variable("name", 'str',
                                description='A name',
                                chunksizes=tuple([10240]))
 
         if self.json:
-            self.init_variable("json", 'json',
+            self.create_variable("json", 'json',
                                description='A json serialized version of the object',
                                chunksizes=tuple([10240]))
 
@@ -501,7 +501,7 @@ class ObjectStore(StorableNamedObject):
     # INITIALISATION UTILITY FUNCTIONS
     # ==============================================================================
 
-    def init_variable(self, name, var_type, dimensions=None, **kwargs):
+    def create_variable(self, name, var_type, dimensions=None, **kwargs):
         """
         Create a new variable in the netCDF storage. This is just a helper
         function to structure the code better.
