@@ -43,14 +43,17 @@ class ObjectStore(StorableNamedObject):
 
         Parameters
         ----------
-        storage
         content_class
-        json
-        nestable : bool
-            if true this marks the content_class to be saved as nested dict
+        json : bool, default: True
+            if True the store will use the json pickling to store objects
+        nestable : bool, default: False
+            if `True` this marks the content_class to be saved as nested dict
             objects and not a pointing to saved objects. So the saved complex
             object is only stored once and not split into several objects that
             are referenced by each other in a tree-like fashion
+        has_name : bool, default: False
+            if `True` the store will save the objects `.name` property separatley
+            and allow to load by this name.
 
         Notes
         -----
@@ -60,7 +63,6 @@ class ObjectStore(StorableNamedObject):
 
         Attributes
         ----------
-
         storage : Storage
             the reference the Storage object where all data is stored
         content_class : class
@@ -476,14 +478,6 @@ class ObjectStore(StorableNamedObject):
         """
         Initialize the associated storage to allow for object storage. Mainly
         creates an index dimension with the name of the object.
-
-        Parameters
-        ----------
-        units : dict of {str : simtk.unit.Unit} or None
-            representing a dict of string representing a dimension
-            ('length', 'velocity', 'energy') pointing to
-            the simtk.unit.Unit to be used. If not None overrides the standard
-            units used in the storage
         """
         # define dimensions used for the specific object
         self.storage.createDimension(self.prefix, 0)
@@ -693,7 +687,7 @@ class ObjectStore(StorableNamedObject):
 
         Parameters
         ----------
-        obj : object
+        obj : StorableObject
             the object to be stored
         idx : int or string or `None`
             the index to be used for storing. This is highly discouraged since
@@ -707,7 +701,7 @@ class ObjectStore(StorableNamedObject):
             if obj in self.index:
                 # has been saved so quit and do nothing
                 return self.index[obj]
-            elif type(obj) is LoaderProxy:
+            elif hasattr(obj, '_idx'):
                 return obj._idx
             else:
                 idx = self.free()

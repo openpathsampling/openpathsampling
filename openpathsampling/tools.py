@@ -1,3 +1,5 @@
+import openpathsampling.snapshot_content
+
 __author__ = 'Jan-Hendrik Prinz'
 
 import mdtraj as md
@@ -124,7 +126,7 @@ def trajectory_from_mdtraj(mdtrajectory):
     #TODO: We could also allow to have empty energies
 
     trajectory = paths.Trajectory()
-    empty_momentum = paths.Momentum(
+    empty_momentum = openpathsampling.snapshot_content.Momentum(
         velocities=u.Quantity(np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond),
         kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole)
     )
@@ -139,7 +141,7 @@ def trajectory_from_mdtraj(mdtrajectory):
         else:
             box_v = None
 
-        config = paths.Configuration(
+        config = openpathsampling.snapshot_content.Configuration(
             coordinates=coord,
             box_vectors=box_v,
             potential_energy=u.Quantity(0.0, u.kilojoule_per_mole)

@@ -10,6 +10,9 @@ from openpathsampling.tools import simtk_units_from_md_snapshot
 
 
 class SnapshotFeature(object):
+    """
+    Implements a storable feature that includes a list of variables to be stored.
+    """
     _variables = []
 
     @staticmethod
@@ -17,6 +20,9 @@ class SnapshotFeature(object):
         pass
 
 class Coordinates(SnapshotFeature):
+    """
+    Feature that will directly store a numpy array in `.coordinates`
+    """
     _variables = ['coordinates']
 
     @staticmethod
@@ -29,6 +35,9 @@ class Coordinates(SnapshotFeature):
                            )
 
 class Velocities(SnapshotFeature):
+    """
+    Feature that will directly store a numpy array in `.velocities`
+    """
     _variables = ['velocities']
 
     @staticmethod
@@ -42,6 +51,9 @@ class Velocities(SnapshotFeature):
                            )
 
 class Configurations(SnapshotFeature):
+    """
+    Feature that will store a Configuration object in `.configuration`
+    """
     _variables = ['configuration']
 
     @staticmethod
@@ -158,6 +170,9 @@ class MomentumStore(ObjectStore):
 
 
 class ConfigurationStore(ObjectStore):
+    """
+    An ObjectStore for Configuration. Allows to store Configuration() instances in a netcdf file.
+    """
     def __init__(self):
         super(ConfigurationStore, self).__init__(Configuration, json=False)
 
