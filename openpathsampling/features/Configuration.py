@@ -100,4 +100,3 @@ class ConfigurationStore(ObjectStore):
                            chunksizes=(1,),
                            simtk_unit=units['energy']
                            )
-
