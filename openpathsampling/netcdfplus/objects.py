@@ -43,14 +43,17 @@ class ObjectStore(StorableNamedObject):
 
         Parameters
         ----------
-        storage
         content_class
-        json
-        nestable : bool
-            if true this marks the content_class to be saved as nested dict
+        json : bool, default: True
+            if True the store will use the json pickling to store objects
+        nestable : bool, default: False
+            if `True` this marks the content_class to be saved as nested dict
             objects and not a pointing to saved objects. So the saved complex
             object is only stored once and not split into several objects that
             are referenced by each other in a tree-like fashion
+        has_name : bool, default: False
+            if `True` the store will save the objects `.name` property separatley
+            and allow to load by this name.
 
         Notes
         -----
@@ -60,7 +63,6 @@ class ObjectStore(StorableNamedObject):
 
         Attributes
         ----------
-
         storage : Storage
             the reference the Storage object where all data is stored
         content_class : class
