@@ -9,14 +9,20 @@ from openpathsampling.netcdfplus import ObjectStore
 from openpathsampling.tools import units_from_snapshot
 
 
-class Feature(object):
+class SnapshotFeature(object):
+    """
+    Implements a storable feature that includes a list of variables to be stored.
+    """
     _variables = []
 
     @staticmethod
     def _init(self):
         pass
 
-class Coordinates(Feature):
+class Coordinates(SnapshotFeature):
+    """
+    Feature that will directly store a numpy array in `.coordinates`
+    """
     _variables = ['coordinates']
 
     @staticmethod
@@ -28,7 +34,10 @@ class Coordinates(Feature):
                            chunksizes=(1, 'atom', 'spatial')
                            )
 
-class Velocities(Feature):
+class Velocities(SnapshotFeature):
+    """
+    Feature that will directly store a numpy array in `.velocities`
+    """
     _variables = ['velocities']
 
     @staticmethod
@@ -41,7 +50,10 @@ class Velocities(Feature):
                            chunksizes=(1, 'atom', 'spatial')
                            )
 
-class Configurations(Feature):
+class Configurations(SnapshotFeature):
+    """
+    Feature that will store a Configuration object in `.configuration`
+    """
     _variables = ['configuration']
 
     @staticmethod
@@ -53,7 +65,7 @@ class Configurations(Feature):
                            chunksizes=(1,)
                            )
 
-class Momenta(Feature):
+class Momenta(SnapshotFeature):
     _variables = ['momentum']
 
     @staticmethod
@@ -158,6 +170,9 @@ class MomentumStore(ObjectStore):
 
 
 class ConfigurationStore(ObjectStore):
+    """
+    An ObjectStore for Configuration. Allows to store Configuration() instances in a netcdf file.
+    """
     def __init__(self):
         super(ConfigurationStore, self).__init__(Configuration, json=False)
 
