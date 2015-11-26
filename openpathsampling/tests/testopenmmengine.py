@@ -21,29 +21,32 @@ import simtk.openmm as mm
 from simtk.openmm import app
 from simtk import unit as u
 
+def setUp():
+    global topology, template, system
+    template = paths.tools.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
+    topology = paths.tools.to_openmm_topology(template)
+
+    # Generated using OpenMM Script Builder
+    # http://builder.openmm.org
+
+    forcefield = app.ForceField(
+        'amber96.xml',  # solute FF
+        'tip3p.xml'     # solvent FF
+    )
+
+    # OpenMM System
+    system = forcefield.createSystem(
+        topology,
+        nonbondedMethod=app.PME,
+        nonbondedCutoff=1.0*u.nanometers,
+        constraints=app.HBonds,
+        rigidWater=True,
+        ewaldErrorTolerance=0.0005
+    )
 
 class testOpenMMEngine(object):
     def setUp(self):
-        template = paths.tools.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
-        topology = paths.tools.to_openmm_topology(template)
-
-        # Generated using OpenMM Script Builder
-        # http://builder.openmm.org
-
-        forcefield = app.ForceField(
-            'amber96.xml',  # solute FF
-            'tip3p.xml'     # solvent FF
-        )
-
-        # OpenMM System
-        system = forcefield.createSystem(
-            topology,
-            nonbondedMethod=app.PME,
-            nonbondedCutoff=1.0*u.nanometers,
-            constraints=app.HBonds,
-            rigidWater=True,
-            ewaldErrorTolerance=0.0005
-        )
+        t1 = time.time()
 
         # OpenMM Integrator
         integrator = mm.LangevinIntegrator(
@@ -53,6 +56,7 @@ class testOpenMMEngine(object):
         )
         integrator.setConstraintTolerance(0.00001)
 
+
         # Engine options
         options = {
             'nsteps_per_frame': 10,
@@ -61,6 +65,8 @@ class testOpenMMEngine(object):
             'n_frames_max' : 5,
             'timestep': 2.0*u.femtoseconds
         }
+
+        t2 = time.time()
 
         self.engine = OpenMMEngine(
             template,
@@ -73,6 +79,8 @@ class testOpenMMEngine(object):
         zero_array = np.zeros((self.engine.n_atoms, 3))
         context.setPositions(self.engine.template.coordinates)
         context.setVelocities(u.Quantity(zero_array, u.nanometers / u.picoseconds))
+
+        t3 = time.time()
 
     def teardown(self):
         pass
