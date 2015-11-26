@@ -1,10 +1,13 @@
 import base64
 import json
+import importlib
+
 import numpy as np
 from simtk import unit as units
 import yaml
-from openpathsampling.base import StorableObject
-import importlib
+import abc
+
+from base import StorableObject
 
 __author__ = 'Jan-Hendrik Prinz'
 
@@ -16,7 +19,7 @@ class ObjectJSON(object):
 
     allow_marshal = True
 
-    allowed_storable_types = [
+    allowed_storable_atomic_types = [
         int, float, bool, long, str,
         np.float32, np.float64,
         np.int8, np.int16, np.int32, np.int64,
@@ -34,10 +37,15 @@ class ObjectJSON(object):
         self.excluded_keys = []
         self.unit_system = unit_system
         self.class_list = dict()
+        self.allowed_storable_types = dict()
+
         self.update_class_list()
 
     def update_class_list(self):
         self.class_list = StorableObject.objects()
+        self.type_names = {cls.__name__: cls for cls in self.allowed_storable_atomic_types}
+        self.type_names.update(self.class_list)
+        self.type_classes = {cls: name for name, cls in self.type_names.iteritems()}
 
     def simplify_object(self, obj):
         return {'_cls': obj.__class__.__name__, '_dict': self.simplify(obj.to_dict(), obj.base_cls_name)}
@@ -49,6 +57,12 @@ class ObjectJSON(object):
                 return {'_import': obj.__name__}
             else:
                 raise RuntimeError('The module reference "%s" you want to store is not allowed!' % obj.__name__)
+        elif type(obj) is type or type(obj) is abc.ABCMeta:
+            # store a storable number type
+            if obj in self.type_classes:
+                return {'_type': obj.__name__}
+            else:
+                return None
 
         elif obj.__class__.__module__ != '__builtin__':
             if obj.__class__ is units.Quantity:
@@ -70,10 +84,6 @@ class ObjectJSON(object):
             return [self.simplify(o, base_type) for o in obj]
         elif type(obj) is tuple:
             return {'_tuple': [self.simplify(o, base_type) for o in obj]}
-        elif type(obj) is type:
-            # store a storable number type
-            if obj in self.allowed_storable_types:
-                return {'_type': obj.__name__}
         elif type(obj) is dict:
             # we want to support storable objects as keys so we need to wrap
             # dicts with care and store them using tuples
@@ -139,12 +149,8 @@ class ObjectJSON(object):
                 return tuple([self.build(o) for o in obj['_tuple']])
             elif '_type' in obj:
                 # return a type of a built-in type that represents a type in netcdf
-                ret = [t for t in self.allowed_storable_types if str(t) == obj['_type']]
+                return self.type_names.get(obj['_type'])
 
-                if len(ret) > 0:
-                    return ret[0]
-                else:
-                    return None
             elif '_dict' in obj:
                 return {
                     self.build(key): self.build(o)
@@ -205,7 +211,7 @@ class ObjectJSON(object):
         return json.dumps(simplified)
 
     def to_json_object(self, obj):
-        if hasattr(obj, 'base_cls'):
+        if hasattr(obj, 'base_cls') and type(obj) is not type and type(obj) is not abc.ABCMeta:
             simplified = self.simplify_object(obj)
         else:
             simplified = self.simplify(obj)

@@ -2,9 +2,8 @@ import numpy as np
 
 from openpathsampling.snapshot import Snapshot, Configuration, Momentum
 from openpathsampling.trajectory import Trajectory
-from object_storage import ObjectStore
-from objproxy import LoaderProxy
-
+from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
+from openpathsampling.tools import units_from_snapshot
 
 class SnapshotStore(ObjectStore):
     """
@@ -231,17 +230,19 @@ class MomentumStore(ObjectStore):
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
+        units = units_from_snapshot(self.storage._template)
+
         self.init_variable('velocities', 'numpy.float32',
                            dimensions=('atom', 'spatial'),
                            description="the velocity of atom 'atom' in dimension " +
                                        "'coordinate' of momentum 'momentum'.",
                            chunksizes=(1, n_atoms, n_spatial),
-                           simtk_unit='velocity'
+                           simtk_unit=units['velocity']
                            )
 
         self.init_variable('kinetic_energy', 'float',
                            chunksizes=(1,),
-                           simtk_unit='energy'
+                           simtk_unit=units['energy']
                            )
 
 
@@ -305,21 +306,23 @@ class ConfigurationStore(ObjectStore):
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
+        units = units_from_snapshot(self.storage._template)
+
         self.init_variable('coordinates', 'numpy.float32',
                            dimensions=('atom', 'spatial'),
                            description="coordinate of atom '{ix[1]}' in dimension " +
                                        "'{ix[2]}' of configuration '{ix[0]}'.",
                            chunksizes=(1, n_atoms, n_spatial),
-                           simtk_unit='length'
+                           simtk_unit=units['length']
                            )
 
         self.init_variable('box_vectors', 'numpy.float32',
                            dimensions=('spatial', 'spatial'),
                            chunksizes=(1, n_spatial, n_spatial),
-                           simtk_unit='length'
+                           simtk_unit=units['length']
                            )
 
         self.init_variable('potential_energy', 'float',
                            chunksizes=(1,),
-                           simtk_unit='energy'
+                           simtk_unit=units['energy']
                            )

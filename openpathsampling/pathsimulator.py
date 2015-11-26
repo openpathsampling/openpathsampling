@@ -1,13 +1,16 @@
-from openpathsampling.base import StorableNamedObject, StorableObject
-import openpathsampling as paths
-import openpathsampling.tools
-from openpathsampling.pathmover import SubPathMover
-
 import time
 import sys
-
 import logging
+
+from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
+
+import openpathsampling as paths
+import openpathsampling.tools
+
+from openpathsampling.pathmover import SubPathMover
 from ops_logging import initialization_logging
+import abc
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
@@ -50,6 +53,7 @@ class MCStep(StorableObject):
 
 
 class PathSimulator(StorableNamedObject):
+    __metaclass__ = abc.ABCMeta
 
     calc_name = "PathSimulator"
     _excluded_attr = ['globalstate', 'step', 'save_frequency']
@@ -78,6 +82,7 @@ class PathSimulator(StorableNamedObject):
         if self.storage is not None:
             self.storage.sync_all()
 
+    @abc.abstractmethod
     def run(self, nsteps):
         """
         Run the simulator for a number of steps
@@ -87,7 +92,7 @@ class PathSimulator(StorableNamedObject):
         nsteps : int
             number of step to be run
         """
-        logger.warning("Running an empty pathsimulator? Try a subclass, maybe!")
+        pass
 
     def save_initial(self):
         """
@@ -440,13 +445,14 @@ class PathSampling(PathSimulator):
             the storage where all results should be stored in
         engine : openpathsampling.DynamicsEngine
             the engine to be used with shooting moves
-        move_scheme : openpathsampling.PathMover
-            the mover used for the pathsampling cycle
+        move_scheme : openpathsampling.MoveScheme
+            the move scheme used for the pathsampling cycle
         globalstate : openpathsampling.SampleSet
             the initial SampleSet for the Simulator
         """
         super(PathSampling, self).__init__(storage, engine)
         self.move_scheme = move_scheme
+        self.root_mover = move_scheme.move_decision_tree()
 #        self.move_scheme.name = "PathSamplingRoot"
 
         samples = []
@@ -461,7 +467,7 @@ class PathSampling(PathSimulator):
                                ['move_scheme', 'globalstate'])
         self.live_visualization = None
         self.visualize_frequency = 1
-        self._mover = paths.PathSimulatorMover(self.move_scheme, self)
+        self._mover = paths.PathSimulatorMover(self.root_mover, self)
 
     def run_until(self, nsteps):
         if self.storage is not None:
@@ -481,6 +487,8 @@ class PathSampling(PathSimulator):
             cvs = list(self.storage.cvs)
 
         if self.step == 0:
+            if self.storage is not None:
+                self.storage.save(self.move_scheme)
             self.save_initial()
 
         for nn in range(nsteps):

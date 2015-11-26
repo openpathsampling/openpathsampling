@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from openpathsampling.base import StorableNamedObject
+from openpathsampling.netcdfplus import StorableNamedObject
 
 
 class ToyIntegrator(StorableNamedObject):

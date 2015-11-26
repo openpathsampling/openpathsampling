@@ -1,11 +1,13 @@
+import logging
+
+import numpy as np
+
 from histogram import Histogram, histograms_to_pandas_dataframe
 from wham import WHAM
-import numpy as np
 from lookup_function import LookupFunction
 import openpathsampling as paths
-from openpathsampling.base import StorableNamedObject
+from openpathsampling.netcdfplus import StorableNamedObject
 
-import logging
 logger = logging.getLogger(__name__)
 
 
@@ -70,9 +72,42 @@ class TPSTransition(Transition):
     """
     Transition using TPS ensembles
     """
-    def __init__(self, stateA, stateB):
+    def __init__(self, stateA, stateB, name=None):
         super(TPSTransition, self).__init__(stateA, stateB)
-        #self.ensembles = [paths.TPSEnsemble(stateA, stateB)]
+        if name is not None:
+            self.name = name
+        if not hasattr(self, "ensembles"):
+            self.ensembles = [paths.SequentialEnsemble([
+                paths.AllInXEnsemble(stateA) & paths.LengthEnsemble(1),
+                paths.AllOutXEnsemble(stateA | stateB),
+                paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
+            ])]
+
+    def to_dict(self):
+        return {
+            'stateA' : self.stateA,
+            'stateB' : self.stateB,
+            'ensembles' : self.ensembles,
+            'name' : self.name
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
+        mytrans = TPSTransition(dct['stateA'], dct['stateB'], dct['name'])
+        mytrans.ensembles = dct['ensembles']
+        return mytrans
+
+    def add_transition(self, stateA, stateB):
+        new_ens = paths.SequentialEnsemble([
+            paths.AllInXEnsemble(stateA) & paths.LengthEnsemble(1),
+            paths.AllOutXEnsemble(stateA | stateB),
+            paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
+        ])
+        try:
+            self.ensembles[0] = self.ensembles[0] | new_ens
+        except AttributeError:
+            self.ensembles = [new_ens]
+
 
 class TISTransition(Transition):
     """
@@ -104,7 +139,8 @@ class TISTransition(Transition):
         self.stateA = stateA
         self.stateB = stateB
         self.interfaces = interfaces
-        self.name = name
+        if name is not None:
+            self.name = name
 
         # If we reload from a storage file, we want to use the
         # ensembles from the file, not the automatically generated
@@ -180,7 +216,7 @@ class TISTransition(Transition):
             stateA, stateB, self.interfaces, orderparameter
         )
         for ensemble in self.ensembles:
-            ensemble.name = "I'face "+str(self.ensembles.index(ensemble))
+            ensemble.named("I'face "+str(self.ensembles.index(ensemble)))
 
 
     # parameters for different types of output
@@ -352,6 +388,7 @@ class TISTransition(Transition):
         outer_ensemble : openpathsampling.TISEnsemble
         error : list(3) or None
         """
+        logger.info("Rate for " + self.stateA.name + " -> " + self.stateB.name)
         # get the flux
         if flux is None: # TODO: find a way to raise error if bad flux
             flux = self.minus_move_flux(storage)
@@ -374,13 +411,17 @@ class TISTransition(Transition):
         # get the conditional transition probability
         if outer_ensemble is None:
             outer_ensemble = self.ensembles[-1]
+        logger.info("outer ensemble: " + outer_ensemble.name + " " 
+                    + repr(outer_ensemble))
         outer_cross_prob = self.histograms['max_lambda'][outer_ensemble]
         if outer_lambda is None:
             lambda_bin = -1
             outer_cp_vals = outer_cross_prob.reverse_cumulative().values()
-            while (outer_cp_vals[lambda_bin+1] == 1.0):
+            # should be (almost) 1.0 for anything before correct lambda
+            while (abs(outer_cp_vals[lambda_bin+1] - 1.0) < 1e-7):
                 lambda_bin += 1
             outer_lambda = outer_cross_prob.bins[lambda_bin]
+        logger.info("outer lambda: " + str(outer_lambda))
 
         ctp = self.conditional_transition_probability(storage,
                                                       outer_ensemble,
@@ -389,6 +430,9 @@ class TISTransition(Transition):
         #print outer_lambda
         #print flux, outer_tcp, ctp
         self._rate = flux*outer_tcp*ctp
+        logger.info("RATE = " + str(self._rate))
+        logger.info("flux * outer_tcp * ctp = " + str(flux) + " * " +
+                    str(outer_tcp) + " * " + str(ctp))
         return self._rate
 
 

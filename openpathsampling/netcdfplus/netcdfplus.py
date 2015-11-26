@@ -5,8 +5,10 @@ import logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-from object_json import StorableObjectJSON
-from objproxy import LoaderProxy
+from dictify import StorableObjectJSON
+from proxy import LoaderProxy
+
+from objects import ObjectStore
 
 import numpy as np
 import netCDF4
@@ -150,7 +152,7 @@ class NetCDFPlus(netCDF4.Dataset):
     def update_storable_classes(self):
         self.simplifier.update_class_list()
 
-    def _register_storages(self):
+    def _create_storages(self):
         """
         Function to be called automatically to register all object stores
 
@@ -158,7 +160,7 @@ class NetCDFPlus(netCDF4.Dataset):
         """
         pass
 
-    def __init__(self, filename, mode=None, units=None):
+    def __init__(self, filename, mode=None):
         """
         Create a storage for complex objects in a netCDF file
 
@@ -169,11 +171,6 @@ class NetCDFPlus(netCDF4.Dataset):
         mode : string, default: None
             the mode of file creation, one of 'w' (write), 'a' (append) or 'r' (read-only)
             None, which will append any existing files.
-        units : dict of {str : simtk.unit.Unit } or None
-            representing a dict of string representing a dimension
-            ('length', 'velocity', 'energy') pointing to
-            the simtk.unit.Unit to be used. If not `None` it overrides the
-            standard units used
 
         Notes
         -----
@@ -206,23 +203,38 @@ class NetCDFPlus(netCDF4.Dataset):
 
         self._setup_class()
 
-        if units is not None:
-            self.dimension_units.update(units)
-
-        self._register_storages()
-
         if mode == 'w':
             logger.info("Setup netCDF file and create variables")
 
             # add shared scalar dimension for everyone
             self.create_dimension('scalar', 1)
 
+            # create the store that holds stores
+            self.register_store('stores', ObjectStore(ObjectStore, has_name=True))
+            self.stores._init()
+            self.stores.set_caching(True)
+            self.update_delegates()
+
+            # now create all storages in subclasses
+            self._create_storages()
+
+            # call the subclass specific initialization
             self._initialize()
+
+            # this will create all variables in the storage for all new added stores
+            # this is often already call inside of _initialize. If not we just make sure
+            self.finalize_stores()
 
             logger.info("Finished setting up netCDF file")
 
         elif mode == 'a' or mode == 'r+' or mode == 'r':
             logger.debug("Restore the dict of units from the storage")
+
+            # open the store that contains all stores
+            self.register_store('stores', ObjectStore(ObjectStore, has_name=True))
+            self.stores.set_caching(True)
+            self.create_variable_delegate('stores_json')
+            self.create_variable_delegate('stores_name')
 
             # Create a dict of simtk.Unit() instances for all netCDF.Variable()
             for variable_name in self.variables:
@@ -239,9 +251,15 @@ class NetCDFPlus(netCDF4.Dataset):
 
                         self.units[str(variable_name)] = unit
 
-            self.update_delegates()
+            # register all stores that are listed in self.stores
+            for store in self.stores:
+                self.register_store(store.name, store)
+                store.register(self, store.name)
 
-            # After we have restored the units we can load objects from the storage
+            self.update_delegates()
+            self._restore_storages()
+
+            # call the subclass specific restore in case there is more stuff the prepare
             self._restore()
 
         self.sync()
@@ -258,9 +276,30 @@ class NetCDFPlus(netCDF4.Dataset):
         self.vars = dict()
         self.units = dict()
 
-        self.dimension_units = dict()
+    def create_store(self, name, store):
+        """
+        Create a special variable type `obj.name` that can hold storable objects
+        """
+        self.register_store(name, store)
+        store.name = name
+        self.stores.save(store)
 
-    def add(self, name, store, register_attr=True):
+    def finalize_stores(self):
+        for store in self._storages.values():
+            if not store._created:
+                logger.info("Initializing store '%s'" % store.name)
+                store._init()
+        # we need to run this twice because in the first round some stores could have
+        # added more stores which we would have missed
+
+        for store in self._storages.values():
+            if not store._created:
+                logger.info("Initializing store '%s'" % store.name)
+                store._init()
+
+        self.update_delegates()
+
+    def register_store(self, name, store, register_attr=True):
         """
         Add a object store to the file
 
@@ -340,12 +379,6 @@ class NetCDFPlus(netCDF4.Dataset):
 
         for storage in self._objects.values():
             storage._restore()
-
-    def _initialize_netcdf(self):
-        """
-        Initialize the netCDF+ file for storage itself.
-        """
-        pass
 
     def list_stores(self):
         """
@@ -831,6 +864,18 @@ class NetCDFPlus(netCDF4.Dataset):
 
         dimensions = tuple(dimensions)
 
+        # if chunksizes are strings then replace by the actual size of the dimension
+        if chunksizes is not None:
+            chunksizes = list(chunksizes)
+            for ix, dim in enumerate(chunksizes):
+                if type == -1:
+                    chunksizes[ix] = len(ncfile.dimensions[dimensions[ix]])
+
+                if type(dim) is str:
+                    chunksizes[ix] = len(ncfile.dimensions[dim])
+
+            chunksizes = tuple(chunksizes)
+
         if variable_length:
             vlen_t = ncfile.createVLType(nc_type, var_name + '_vlen')
             ncvar = ncfile.createVariable(var_name, vlen_t, dimensions,
@@ -853,9 +898,6 @@ class NetCDFPlus(netCDF4.Dataset):
                 symbol = unit_instance.get_symbol()
             elif type(simtk_unit) is str and hasattr(u, simtk_unit):
                 unit_instance = getattr(u, simtk_unit)
-                symbol = unit_instance.get_symbol()
-            elif type(simtk_unit) is str and simtk_unit in self.dimension_units:
-                unit_instance = self.dimension_units[simtk_unit]
                 symbol = unit_instance.get_symbol()
             else:
                 raise NotImplementedError('Unit by abbreviated string representation is not yet supported')

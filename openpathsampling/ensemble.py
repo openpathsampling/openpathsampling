@@ -6,8 +6,10 @@ Created on 03.09.2014
 
 import logging
 
-from openpathsampling.base import StorableNamedObject
+from openpathsampling.netcdfplus import StorableNamedObject
 import openpathsampling as paths
+
+import abc
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -147,6 +149,8 @@ class Ensemble(StorableNamedObject):
     Maybe replace - by / to get better notation. So far it has not been used
     '''
 
+    __metaclass__ = abc.ABCMeta
+
     use_shortcircuit = True
 
     def __init__(self):
@@ -160,6 +164,7 @@ class Ensemble(StorableNamedObject):
             return True
         return str(self) == str(other)
 
+    @abc.abstractmethod
     def __call__(self, trajectory, trusted=None):
         '''
         Return `True` if the trajectory is part of the path ensemble.
@@ -1551,7 +1556,6 @@ class SlicedTrajectoryEnsemble(WrappedEnsemble):
         step = "" if self.region.step is None else " every "+str(self.region.step)
         return ("(" + self.ensemble.__str__() +
                 " in {" + start + ":" + stop + "}" + step + ")")
-
 
 
 class SuffixTrajectoryEnsemble(WrappedEnsemble):

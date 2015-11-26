@@ -19,6 +19,10 @@ logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 
+class MockMoveStrategy(MoveStrategy):
+    def make_movers(self, scheme):
+        return None
+
 def find_mover(scheme, group, sig):
     mover = None
     for m in scheme.movers[group]:
@@ -49,14 +53,14 @@ class MoveStrategyTestSetup(object):
         interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
                                           [-0.5, -0.3, -0.1, 0.0])
         self.network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, "A", cvA),
-            (self.stateB, interfacesB, "B", cvB)
+            (self.stateA, interfacesA, cvA),
+            (self.stateB, interfacesB, cvB)
         ])
 
 
 class testMoveStrategy(MoveStrategyTestSetup):
     def test_levels(self):
-        strategy = MoveStrategy(ensembles=None, group="test", replace=True)
+        strategy = MockMoveStrategy(ensembles=None, group="test", replace=True)
         assert_equal(strategy.level, -1)
         assert_equal(strategy.replace_signatures, False)
         assert_equal(strategy.replace_movers, False)
@@ -74,7 +78,8 @@ class testMoveStrategy(MoveStrategyTestSetup):
         assert_equal(strategy.replace_movers, False)
 
     def test_get_ensembles(self):
-        self.strategy = MoveStrategy(ensembles=None, group="test", replace=True)
+        self.strategy = MockMoveStrategy(ensembles=None, group="test", 
+                                         replace=True)
         scheme = MoveScheme(self.network)
         # load up the relevant ensembles to test against
         transition_ensembles = []

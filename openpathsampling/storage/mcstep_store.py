@@ -1,4 +1,4 @@
-from openpathsampling.storage import ObjectStore
+from openpathsampling.netcdfplus import ObjectStore
 from openpathsampling.pathsimulator import MCStep
 
 
@@ -10,6 +10,9 @@ class MCStepStore(ObjectStore):
         )
 
         self._cached_all = False
+
+    def to_dict(self):
+        return {}
 
     def _save(self, mcstep, idx):
         self.vars['change'][idx] = mcstep.change

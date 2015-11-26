@@ -5,7 +5,8 @@ Created on 03.09.2014
 '''
 
 import range_logic
-from openpathsampling.base import StorableNamedObject
+import abc
+from openpathsampling.netcdfplus import StorableNamedObject
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
@@ -35,9 +36,13 @@ class Volume(StorableNamedObject):
     """
     A Volume describes a set of snapshots 
     """
+
+    __metaclass__ = abc.ABCMeta
+
     def __init__(self):
         super(Volume, self).__init__()
 
+    @abc.abstractmethod
     def __call__(self, snapshot):
         '''
         Returns `True` if the given snapshot is part of the defined Region
@@ -144,7 +149,6 @@ class RelativeComplementVolume(VolumeCombination):
     """ "Subtraction" combination (relative complement) of two volumes."""
     def __init__(self, volume1, volume2):
         super(RelativeComplementVolume, self).__init__(volume1, volume2, lambda a,b : a and not b, str_fnc = '{0} and not {1}')
-
 
 
 class NegatedVolume(Volume):
