@@ -93,41 +93,33 @@ class Configuration(StorableObject):
 
     @property
     def n_atoms(self):
-        '''
+        """
         Returns the number of atoms in the configuration
-        '''
+        """
         return self.coordinates.shape[0]
 
     # =========================================================================
     # Utility functions
     # =========================================================================
 
-    def copy(self, subset=None):
+    def copy(self, subset):
         """
-        Returns a deep copy of the instance itself. If this object is saved
-        it will not be stored as a separate object and consume additional
-        memory. Should be avoided!
+        Returns a deep copy of the instance itself using a subset of coordinates.
+        If this object is saved it will be stored as a separate object and
+        consume additional memory.
 
         Returns
         -------
         Configuration()
-            the deep copy
+            the reduced deep copy
         """
 
-        if subset is None:
-            this = Configuration(coordinates=self.coordinates,
-                                 box_vectors=self.box_vectors,
-                                 potential_energy=self.potential_energy
-                                 )
-        else:
-            new_coordinates = self.coordinates[subset, :]
-            # TODO: Keep old potential_energy? Is not correct but might be useful. Boxvectors are fine!
-            this = Configuration(coordinates=new_coordinates,
-                                 box_vectors=self.box_vectors,
-                                 potential_energy=self.potential_energy
-                                 )
-
-        return this
+        new_coordinates = self.coordinates[subset, :]
+        # TODO: Keep old potential_energy? Is not correct but might be useful. Boxvectors are fine!
+        return Configuration(coordinates=new_coordinates,
+                             box_vectors=self.box_vectors,
+                             potential_energy=self.potential_energy
+                             )
 
 
 # =============================================================================
@@ -188,13 +180,8 @@ class Momentum(StorableObject):
 
     def copy(self, subset):
         """
-        Returns a deep copy of the instance itself. If this object will
-        be saved as a separate object it consumes additional memory. It is
-        used to construct a reversed copy that can be stored.
-
-        Notes
-        -----
-        The use of this should be avoided unless you really use a subset
+        Returns a deep copy of the instance itself. If saved this object will
+        be stored as a separate object and consume additional memory.
 
         Parameters
         ----------
