@@ -16,7 +16,7 @@ from ensemble import (
 )
 
 from snapshot import Snapshot, Momentum, ToySnapshot, AbstractSnapshot
-from openpathsampling.snapshot_content import Configuration, Momentum
+from snapshot_content import Configuration, Momentum
 from trajectory import Trajectory
 from sample import Sample, SampleSet
 

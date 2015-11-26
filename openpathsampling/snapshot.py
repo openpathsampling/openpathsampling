@@ -9,7 +9,7 @@ import numpy as np
 import simtk.unit as u
 import abc
 
-from openpathsampling import Configuration, Momentum
+from snapshot_content import Configuration, Momentum
 from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
 
 
