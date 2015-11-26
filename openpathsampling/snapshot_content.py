@@ -108,6 +108,11 @@ class Configuration(StorableObject):
         If this object is saved it will be stored as a separate object and
         consume additional memory.
 
+        Parameters
+        ----------
+        subset : list of int
+            a list of atom indices to be kept
+
         Returns
         -------
         Configuration()
