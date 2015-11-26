@@ -1,17 +1,17 @@
-'''
+"""
 
 @author: JD Chodera
 @author: JH Prinz
-'''
+"""
 
 import mdtraj as md
 import numpy as np
 import simtk.unit as u
-
 import abc
 
 from openpathsampling import Configuration, Momentum
 from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
+
 
 def has(attr):
     def _has(func):
@@ -81,10 +81,22 @@ class AbstractSnapshot(StorableObject):
 
         return False
 
+    @property
+    def reversed(self):
+        """
+        Get the reversed copy.
+
+        Snapshots exist in pairs and this returns the reversed counter part.
+        No actual velocities are changed. Only if you ask for the velocities of
+        a reversed object the velocities will be multiplied by -1.
+        """
+        return self._reversed
+
     # ==========================================================================
     # Utility functions
     # ==========================================================================
 
+    @abc.abstractmethod
     def copy(self):
         """
         Returns a shallow copy of the instance itself. The contained
@@ -94,7 +106,7 @@ class AbstractSnapshot(StorableObject):
 
         Returns
         -------
-        Snapshot()
+        openpathsampling.AbstractSnapshot()
             the shallow object
 
         Notes
@@ -124,17 +136,6 @@ class AbstractSnapshot(StorableObject):
 
         obj = self.copy()
         return obj.reversed
-
-    @property
-    def reversed(self):
-        """
-        Get the reversed copy.
-
-        Snapshots exist in pairs and this returns the reversed counter part.
-        No actual velocities are changed. Only if you ask for the velocities of
-        a reversed object the velocities will be multiplied by -1.
-        """
-        return self._reversed
 
 
 # =============================================================================
@@ -210,8 +211,8 @@ class Snapshot(AbstractSnapshot):
         self.momentum = momentum
 
         if reversed_copy is None:
-            self._reversed.configuration=self.configuration
-            self._reversed.momentum=self.momentum
+            self._reversed.configuration = self.configuration
+            self._reversed.momentum = self.momentum
 
     @property
     @has('configuration')
@@ -261,18 +262,18 @@ class Snapshot(AbstractSnapshot):
     @property
     @has('configuration')
     def n_atoms(self):
-        '''
+        """
         The number of atoms in the snapshot
-        '''
+        """
         return self.coordinates.shape[0]
 
     @property
     @has('configuration')
     @has('momentum')
     def total_energy(self):
-        '''
+        """
         The total energy (sum of potential and kinetic) of the snapshot
-        '''
+        """
         return self.kinetic_energy + self.potential_energy
 
     # ==========================================================================
@@ -306,7 +307,7 @@ class Snapshot(AbstractSnapshot):
 
     @has('configuration')
     def md(self):
-        '''
+        """
         Returns a mdtraj Trajectory object that contains only one frame
 
         Returns
@@ -317,7 +318,7 @@ class Snapshot(AbstractSnapshot):
         Notes
         -----
         Rather slow since the topology has to be made each time. Try to avoid it
-        '''
+        """
 
         n_atoms = self.n_atoms
 
@@ -326,15 +327,20 @@ class Snapshot(AbstractSnapshot):
 
         return md.Trajectory(output, self.topology.md)
 
-
     def subset(self, subset):
         """
         Return a deep copy of the snapshot with reduced set of coordinates. Takes also care
         of adjusting the topology.
 
+        Parameters
+        ----------
+        subset : list of int
+            a list of atomic indices specifying which entries to keep.
+
         Notes
         -----
         So far the potential and kinetic energies are copied and are thus false but still useful!?!
+
         """
 
         this = Snapshot(
@@ -355,12 +361,12 @@ class ToySnapshot(AbstractSnapshot):
     __features__ = ['Velocities', 'Coordinates']
 
     def __init__(self, coordinates=None, velocities=None, is_reversed=False, topology=None,
-                 reversed_copy=None, engine=None):
+                 reversed_copy=None):
         """
         Create a toy snapshot
 
         If you want to obtain a snapshot from a currently-running MD engine,
-        use that engine's .current_snapshot property.
+        use that engine's `.current_snapshot property`.
 
         Parameters
         ----------
