@@ -168,7 +168,7 @@ class SnapshotStore(AbstractSnapshotStore):
                 momentum=obj.momentum,
                 is_reversed=not obj.is_reversed,
                 topology=obj.topology,
-                reversed_copy=LoaderProxy(self, idx ^ 1)
+                reversed_copy=LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
             )
         else:
             configuration = self.vars['configuration'][idx]
@@ -181,7 +181,7 @@ class SnapshotStore(AbstractSnapshotStore):
                 momentum=momentum,
                 is_reversed=momentum_reversed,
                 topology=topology,
-                reversed_copy=LoaderProxy(self, idx ^ 1)
+                reversed_copy=LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
             )
 
 
@@ -269,7 +269,7 @@ class ToySnapshotStore(AbstractSnapshotStore):
                 velocities=obj.velocities,
                 is_reversed=not obj.is_reversed,
                 topology=obj.topology,
-                reversed_copy=LoaderProxy(self, idx ^ 1)
+                reversed_copy=LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
             )
         else:
             coordinates = self.vars['coordinates'][idx]
@@ -281,7 +281,7 @@ class ToySnapshotStore(AbstractSnapshotStore):
                 velocities=velocities,
                 is_reversed=momentum_reversed,
                 topology=self.storage.topology,
-                reversed_copy=LoaderProxy(self, idx ^ 1)
+                reversed_copy=LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
             )
 
     def _init(self):
@@ -371,24 +371,38 @@ class FeatureSnapshotStore(AbstractSnapshotStore):
     def _set(self, idx, snapshot):
         for variable in self._variables:
             self.vars[variable][idx] = getattr(snapshot, variable)
-            self.write(variable, idx ^ 1, snapshot)
+            self.write(variable, AbstractSnapshotStore.paired_idx(idx), snapshot)
 
-        self.vars['momentum_reversed'][idx] = snapshot.is_reversed
-        self.vars['momentum_reversed'][idx ^ 1] = not snapshot.is_reversed
+        super(FeatureSnapshotStore, self)._set(idx, snapshot)
 
     def _get(self, idx, from_reversed=False):
+        snapshot = self.snapshot_class.__new__(self.snapshot_class)
         if from_reversed:
             obj = self.cache[idx ^ 1]
 
-            snapshot = self.snapshot_class.__new__(self.snapshot_class)
-            AbstractSnapshot.__init__(snapshot, not obj.is_reversed, LoaderProxy(self, idx ^ 1), self.storage.topology)
+            AbstractSnapshot.__init__(
+                snapshot,
+                not obj.is_reversed,
+                LoaderProxy(
+                    self,
+                    AbstractSnapshotStore.paired_idx(idx)
+                ),
+                self.storage.topology
+            )
 
             for variables in self._variables:
                 setattr(snapshot, variables, getattr(obj, variables))
 
         else:
-            snapshot = self.snapshot_class.__new__(self.snapshot_class)
-            AbstractSnapshot.__init__(snapshot, self.vars['momentum_reversed'][idx], LoaderProxy(self, idx ^ 1), self.storage.topology)
+            AbstractSnapshot.__init__(
+                snapshot,
+                self.vars['momentum_reversed'][idx],
+                LoaderProxy(
+                    self,
+                    AbstractSnapshotStore.paired_idx(idx)
+                ),
+                self.storage.topology
+            )
 
             for variables in self._variables:
                 setattr(snapshot, variables, self.vars[variables][idx])
