@@ -1,0 +1,66 @@
+.opstree text {
+    alignment-baseline: central;
+    font-size: 10px;
+    text-anchor: middle;
+}
+.opstree text.bw.label {
+    text-anchor: end;
+}
+.opstree text.fw.label {
+    text-anchor: start;
+}
+.opstree .block text{
+    fill: white !important;
+    stroke: none !important;
+}
+.opstree .repex {
+    fill: blue;
+}
+.opstree .new {
+    fill: black;
+}
+.opstree .hop {
+    fill: blue;
+}
+.opstree .shooting.bw {
+    fill: green;
+    stroke: green;
+}
+.opstree .shooting.fw {
+    fill: red;
+    stroke: red;
+}
+.opstree .reversal {
+    fill: gold;
+}
+.opstree line {
+    stroke-width: 2px;
+}
+.opstree .label {
+    fill: black !important;
+}
+.opstree .connection {
+/*                stroke-dasharray: 3 3; */
+}
+.opstree .rejected {
+    opacity: 0.3;
+}
+.opstree text {
+    font-family: Impact;
+}
+.opstree .orange {
+    fill: orange;
+}
+.tableline {
+    fill: gray;
+    opacity: 0.0;
+}
+.tableline:hover {
+    opacity: 0.2;
+}
+g.left.label {
+    transform: translateX(-32px)
+}
+g.right.label {
+    transform: translateX(+32px)
+}
