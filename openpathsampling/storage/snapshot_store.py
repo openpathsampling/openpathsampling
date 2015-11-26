@@ -71,7 +71,8 @@ class AbstractSnapshotStore(ObjectStore):
         except KeyError:
             return self._get(idx)
 
-    def paired_idx(self, idx):
+    @staticmethod
+    def paired_idx(idx):
         """
         Return the paired index
 

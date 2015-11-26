@@ -5,6 +5,7 @@ from simtk import unit as u
 
 from openpathsampling.netcdfplus import StorableObject
 
+
 # =============================================================================
 # SIMULATION CONFIGURATION
 # =============================================================================
@@ -41,11 +42,6 @@ class Configuration(StorableObject):
             the periodic box vectors
         potential_energy : simtk.unit.Quantity of units energy/mole
             potential energy
-        idx : dict( Storage() : int )
-            dict for storing the used index per storage
-        topology : mdtraj.Topology()
-            a reference to the used topology. This is necessary to allow
-            export to mdtraj objects
         """
 
         super(Configuration, self).__init__()
@@ -165,8 +161,6 @@ class Momentum(StorableObject):
             atomic velocities
         kinetic_energy : simtk.unit.Quantity of units energy/mole
             kinetic energy
-        idx : dict( Storage() : int )
-            dict for storing the used index per storage
         """
 
         super(Momentum, self).__init__()
@@ -183,22 +177,29 @@ class Momentum(StorableObject):
 
     @property
     def n_atoms(self):
-        '''
+        """
         Returns the number of atoms in the momentum
-        '''
+        """
         return self.velocities.shape[0]
 
     # =========================================================================
     # Utility functions
     # =========================================================================
 
-    def copy(self, subset=None, reversed=False):
+    def copy(self, subset):
         """
-        Returns a deep copy of the instance itself. If this object will not
-        be saved as a separate object and consumes additional memory. It is
-        used to construct a reversed copy that can be stored or used to
-        start a simulation. If the momentum is shallow it will be loaded for
-        the copy
+        Returns a deep copy of the instance itself. If this object will
+        be saved as a separate object it consumes additional memory. It is
+        used to construct a reversed copy that can be stored.
+
+        Notes
+        -----
+        The use of this should be avoided unless you really use a subset
+
+        Parameters
+        ----------
+        subset : list of int
+            a list of atom indices to be kept
 
         Returns
         -------
@@ -212,25 +213,6 @@ class Momentum(StorableObject):
             new_velocities = self.velocities[subset, :]
             # TODO: Keep old kinetic_energy? Is not correct but might be useful.
 
-        if reversed:
-            # Note the v *= -1.0 would be in place for numpy arrays. This here makes a copy!
-            new_velocities = -1.0 * new_velocities
-
         this = Momentum(velocities=new_velocities, kinetic_energy=self.kinetic_energy)
 
         return this
-
-    def reversed_copy(self, subset=None):
-        """
-        Create a copy and flips the velocities and erases the stored indices.
-        If stores is will be treated as a new Momentum instance.
-        Should be avoided.
-
-        Returns
-        -------
-        Momentum()
-            the deep copy with reversed velocities.
-        """
-        return self.copy(subset=subset, reversed=True)
-
-

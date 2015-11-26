@@ -683,7 +683,7 @@ class ObjectStore(StorableNamedObject):
 
         Parameters
         ----------
-        obj : object
+        obj : StorableObject
             the object to be stored
         idx : int or string or `None`
             the index to be used for storing. This is highly discouraged since
@@ -739,9 +739,3 @@ class ObjectStore(StorableNamedObject):
                 self._update_name_in_cache(obj._name, idx)
 
         return idx
-
-    def load_single(self, idx):
-        return self._load(idx)
-
-    def load_range(self, start, end):
-        return map(self._load, range(start, end))
