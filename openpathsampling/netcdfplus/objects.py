@@ -478,14 +478,6 @@ class ObjectStore(StorableNamedObject):
         """
         Initialize the associated storage to allow for object storage. Mainly
         creates an index dimension with the name of the object.
-
-        Parameters
-        ----------
-        units : dict of {str : simtk.unit.Unit} or None
-            representing a dict of string representing a dimension
-            ('length', 'velocity', 'energy') pointing to
-            the simtk.unit.Unit to be used. If not None overrides the standard
-            units used in the storage
         """
         # define dimensions used for the specific object
         self.storage.createDimension(self.prefix, 0)
@@ -705,7 +697,7 @@ class ObjectStore(StorableNamedObject):
             if obj in self.index:
                 # has been saved so quit and do nothing
                 return self.index[obj]
-            elif type(obj) is LoaderProxy:
+            elif hasattr(obj, '_idx'):
                 return obj._idx
             else:
                 idx = self.free()
