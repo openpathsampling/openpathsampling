@@ -23,7 +23,7 @@ class Storage(NetCDFPlus):
     simulation. This allows effective storage of shooting trajectories
     """
 
-    USE_FEATURE_SNAPSHOTS = False
+    USE_FEATURE_SNAPSHOTS = True
 
     @property
     def template(self):

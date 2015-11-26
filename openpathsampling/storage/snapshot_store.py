@@ -363,7 +363,7 @@ class FeatureSnapshotStore(AbstractSnapshotStore):
         self._variables = list()
 
         for feature in self.features:
-            self._variables += getattr(ft, feature)._variables
+            self._variables += feature._variables
 
     @property
     def features(self):
@@ -414,4 +414,4 @@ class FeatureSnapshotStore(AbstractSnapshotStore):
         super(FeatureSnapshotStore, self)._init()
 
         for feature in self.features:
-            getattr(ft, feature)._init(self)
+            feature._init(self)
