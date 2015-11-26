@@ -96,3 +96,5 @@ from pathmovechange import (
     RejectedSamplePathMoveChange, SubPathMoveChange,
     FilterByEnsemblePathMoveChange
 )
+
+from storage.storage import Storage, AnalysisStorage
