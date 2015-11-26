@@ -9,13 +9,17 @@ from nose.plugins.skip import SkipTest
 from test_helpers import (true_func, data_filename,
                           assert_equal_array_array,
                           assert_not_equal_array_array)
-from openpathsampling.openmm_engine import *
-from openpathsampling.snapshot import Snapshot
-from openpathsampling.snapshot import Momentum
-from openpathsampling import Configuration, Momentum
+
+from openpathsampling.openmm_engine import OpenMMEngine
+from openpathsampling import Configuration, Momentum, Snapshot
+
+import openpathsampling as paths
+
+import numpy as np
+
 import simtk.openmm as mm
 from simtk.openmm import app
-from simtk import unit
+from simtk import unit as u
 
 
 class testOpenMMEngine(object):
@@ -35,7 +39,7 @@ class testOpenMMEngine(object):
         system = forcefield.createSystem(
             topology,
             nonbondedMethod=app.PME,
-            nonbondedCutoff=1.0*unit.nanometers,
+            nonbondedCutoff=1.0*u.nanometers,
             constraints=app.HBonds,
             rigidWater=True,
             ewaldErrorTolerance=0.0005
@@ -43,9 +47,9 @@ class testOpenMMEngine(object):
 
         # OpenMM Integrator
         integrator = mm.LangevinIntegrator(
-            300*unit.kelvin,
-            1.0/unit.picoseconds,
-            2.0*unit.femtoseconds
+            300*u.kelvin,
+            1.0/u.picoseconds,
+            2.0*u.femtoseconds
         )
         integrator.setConstraintTolerance(0.00001)
 
@@ -55,16 +59,15 @@ class testOpenMMEngine(object):
             'platform': 'fastest',
             'solute_indices' : range(22),
             'n_frames_max' : 5,
-            'timestep': 2.0*unit.femtoseconds
+            'timestep': 2.0*u.femtoseconds
         }
 
-        self.engine = paths.OpenMMEngine(
+        self.engine = OpenMMEngine(
             template,
             system,
             integrator,
             options
         )
-        self.engine.initialize()
 
         context = self.engine.simulation.context
         zero_array = np.zeros((self.engine.n_atoms, 3))
@@ -111,10 +114,13 @@ class testOpenMMEngine(object):
 
     def test_generate_next_frame(self):
         snap0 = Snapshot(
-            configuration=self.engine.current_snapshot.configuration.copy(),
-            momentum=self.engine.current_snapshot.momentum.copy()
+            configuration=self.engine.current_snapshot.configuration,
+            momentum=self.engine.current_snapshot.momentum
         )
         new_snap = self.engine.generate_next_frame()
+        assert(new_snap is not snap0)
+        assert(new_snap.configuration is not snap0.configuration)
+        assert(new_snap.momentum is not snap0.momentum)
         old_pos = snap0.coordinates / u.nanometers
         new_pos = new_snap.coordinates / u.nanometers
         old_vel = snap0.velocities / (u.nanometers / u.picoseconds)
@@ -152,7 +158,7 @@ class testOpenMMEngine(object):
 
     def test_configuration_setter(self):
         raise SkipTest()
-        pdb_pos = (self.engine.template.coordinates / u.nanometers)
+        pdb_pos = self.engine.template.coordinates / u.nanometers
         testpos = []
         for i in range(len(pdb_pos)):
             testpos.append(list(np.array(pdb_pos[i]) + 
