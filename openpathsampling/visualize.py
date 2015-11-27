@@ -20,6 +20,7 @@ class TreeRenderer(svg.Drawing):
         self.defs.add(self.style(
             self.css_style
         ))
+        self.horizontal_gap = 0.05
 
     @staticmethod
     def c(cls):
@@ -163,55 +164,44 @@ class TreeRenderer(svg.Drawing):
         cls += ['v-region']
 
         padding = self.horizontal_gap
+        width = 0.3
+        gap = 0.0
 
         group = Group(
             class_=self.c(cls)
         )
 
         group.add(self.line(
-            start=self._xy(x, y - 0.3),
-            end=self._xy(x, y + w - 1 + 0.3)
+            start=self._xy(x, y - 0.5 + gap),
+            end=self._xy(x, y + w - 1 + 0.5 - gap)
         ))
 
         if extend_top:
             group.add(self.circle(
-                center=self._xy(x, y - 0.3),
+                center=self._xy(x, y - 0.5 + gap),
                 r=self._w(padding)
             ))
             group.add(self.line(
-                start=self._xy(x - 0.3 + padding, y - 0.3),
-                end=self._xy(x + 0.3 - padding, y - 0.3)
+                start=self._xy(x - width, y - 0.5 + gap),
+                end=self._xy(x + width, y - 0.5 + gap)
             ))
 
         if extend_bottom:
             group.add(self.circle(
-                center=(self._xy(x, y + (w - 1.0) + 0.3)),
+                center=(self._xy(x, y + (w - 1.0) + 0.5 - gap)),
                 r=self._w(padding)
             ))
             group.add(self.line(
-                start=self._xy(x - 0.3 + padding, y + w - 1.0 + 0.3),
-                end=self._xy(x + 0.3 - padding, y + w - 1.0 + 0.3)
+                start=self._xy(x - width, y + w - 1.0 + 0.5 - gap),
+                end=self._xy(x + width, y + w - 1.0 + 0.5 - gap)
             ))
 
         group.add(self.text(
             text=str(text),
-            insert=self._xy(x - 0.3, y + (w - 1.0) / 2.0)
+            insert=self._xy(x - width, y + (w - 1.0) / 2.0)
         ))
 
         return group
-
-    def textual(self, x, y, text="", cls=None):
-
-        if cls is None:
-            cls = list()
-
-        cls += ['textual']
-
-        return self.text(
-            class_=self.c(cls),
-            text=str(text)[:4],
-            insert=self._xy(x, y),
-        )
 
     def shade(self, x, y, w, cls=None):
         if cls is None:
@@ -267,7 +257,7 @@ class TreeRenderer(svg.Drawing):
             end=self._xy(x2 - 0.5, y)
         )
 
-    def label(self, x, y, w, text, cls=None):
+    def label(self, x, y, text, cls=None):
         if cls is None:
             cls = list()
 
@@ -277,11 +267,21 @@ class TreeRenderer(svg.Drawing):
             class_=self.c(cls)
         )
 
-        group.add(
-            self.text(
-                text=str(text),
-                insert=self._xy(x, y)
+        group.translate(self._x(x), self._y(y))
+
+        group2 = self.g(
+            class_='shift'
+        )
+
+        group2.add(
+                self.text(
+                    text=str(text),
+                    insert=(0, 0)
+                )
             )
+
+        group.add(
+            group2
         )
 
         return group
@@ -296,13 +296,12 @@ class TreeRenderer(svg.Drawing):
             class_=self.c(cls)
         )
 
+        group.translate(x, y)
+
         group.add(
             self.text(
                 text=str(text),
                 insert=(0, 0),
-                transform='translate(' +
-                          ' '.join(map(str, self._xy(x, y))) +
-                          ')rotate(270)'
             )
         )
 
@@ -367,17 +366,12 @@ class TreeRenderer(svg.Drawing):
 
 
 class MoveTreeBuilder(object):
-    def __init__(self, storage=None, op=None, states=None):
+    def __init__(self, storage=None):
         self.rejected = False
         self.p_x = dict()
         self.p_y = dict()
         self.obj = list()
         self.storage = storage
-        self.renderer = TreeRenderer()
-        self.op = op
-        if states is None:
-            states = {}
-        self.states = states
 
         self.t_count = 0
         self.traj_ens_x = dict()
@@ -389,93 +383,109 @@ class MoveTreeBuilder(object):
         self.ens_x = list()
         self.repl_x = list()
 
-    def mover(self, pathmover, ensembles):
+        css_file = os.path.join(os.path.dirname(__file__), 'vis.css')
+
+        with open(css_file, 'r') as content_file:
+            self.css_style = content_file.read()
+
+
+    def set_ensembles(self, ensembles):
+        self.ensembles = ensembles
+
+    def set_mover(self, pathmover):
+        self.pathmover = pathmover
+
+    def render(self):
+        doc = TreeRenderer(self.css_style)
+        self.doc = doc
 
         level_y = dict()
 
         self.t_count = 1
 
-        self.ens_x = [None] * len(ensembles)
-        self.repl_x = [None] * len(ensembles)
+        self.ens_x = [None] * len(self.ensembles)
+        self.repl_x = [None] * len(self.ensembles)
 
-        path = pathmover
+        path = self.pathmover
 
-        self.render_ensemble_mover_head(ensembles, 5)
-
-        self.t_count = 5
+        self.t_count = 0
 
         total = len(path)
 
-        for ens_idx, ens in enumerate(ensembles):
-            self.renderer.add(
-                self.renderer.vertical_hook(ens_idx, self.t_count, ens_idx,
-                                            self.t_count + total + 1, 'gray')
-            )
+        print path
+
+        group = doc.g(
+            class_='tree'
+        )
 
         for level, sub in path.depth_pre_order(lambda this: tuple(
                 [this, None])):
             self.t_count += 1
 
+            x_pos = - level
+
             sub_mp, sub_set = sub
 
-            name = sub_mp.name
+            sub_type = sub_mp.__class__
+            sub_name = sub_type.__name__[:-5]
 
-            if sub_mp.__class__ is paths.SamplePathMoveChange:
-                self.renderer.add(
-                    self.renderer.block(-8.0 + level, self.t_count, 'blue'))
-                self.renderer.add(
-                    self.renderer.label(
-                        -8.0 + level, self.t_count, 3,
-                        sub_mp.mover.__class__.__name__[:-5],
-                        align='start', color='black')
+            if sub_type is paths.SamplePathMoveChange:
+                group.add(
+                    doc.block(level, self.t_count))
+
+                group.add(
+                    doc.label(
+                        x_pos,
+                        self.t_count,
+                        sub_name,
+                        cls=['name'] + [sub_type.__name__]
+                    )
                 )
             else:
-                self.renderer.add(
-                    self.renderer.block(-8.0 + level, self.t_count,
-                                        'green'))
-                self.renderer.add(
-                    self.renderer.label(-8.0 + level, self.t_count, 3,
-                                        sub_mp.__class__.__name__[:-5],
-                                        align='start', color='black')
+                group.add(
+                    doc.block(
+                        x_pos,
+                        self.t_count,
+                    )
+                )
+                group.add(
+                    doc.label(
+                        x_pos,
+                        self.t_count,
+                        sub_name
+                    )
                 )
 
-            if False:
-                if level + 1 in level_y \
-                        and level_y[level + 1] == self.t_count - 1:
-                    self.renderer.add(
-                        self.renderer.vertical_connector(-7.0 + level, self.t_count,
-                                                         self.t_count - 1, 'orange')
+            if level - 1 in level_y \
+                    and level_y[level - 1] == self.t_count - 1:
+                group.add(
+                    doc.vertical_connector(
+                        x_pos + 1,
+                        self.t_count,
+                        self.t_count - 1
                     )
-                    del level_y[level + 1]
+                )
 
-                if level in level_y and level_y[level]:
-                    self.renderer.add(
-                        self.renderer.vertical_connector(-8.0 + level, self.t_count,
-                                                         level_y[level], 'black')
-                    )
+            if level + 1 in level_y:
+                del level_y[level + 1]
 
-            if True:
-                if level - 1 in level_y \
-                        and level_y[level - 1] == self.t_count - 1:
-                    self.renderer.add(
-                        self.renderer.vertical_connector(-8.0 + level, self.t_count,
-                                                         self.t_count - 1, 'black')
+            if level in level_y and level_y[level]:
+                group.add(
+                    doc.vertical_connector(
+                        x_pos + 1,
+                        self.t_count,
+                        level_y[level]
                     )
-                if level + 1 in level_y:
-                    del level_y[level + 1]
-
-                if level in level_y and level_y[level]:
-                    self.renderer.add(
-                        self.renderer.vertical_connector(-8.0 + level, self.t_count,
-                                                         level_y[level], 'black')
-                    )
+                )
 
             level_y[level] = self.t_count
 
-            self.render_ensemble_mover_line(ensembles, sub_mp, color='gray')
+        doc.add(group)
+
+
         # self.render_replica_line(len(ensembles), sub_set, color='gray')
 
-        self.t_count += 1
+        # self.t_count += 1
 
         #        self.render_ensemble_line(ensembles, sset)
         #        self.render_replica_line(len(ensembles), sset)
@@ -487,25 +497,115 @@ class MoveTreeBuilder(object):
         #                                align='start', color='black')
         #        )
 
-        self.t_count += 1
+        group = doc.g(
+            class_='ensembles'
+        )
+        
+        self.t_count = 0
 
-        self.renderer.shift_x = - 9.0
-        self.renderer.shift_y = -0.5
-        self.renderer.height = 1.0 * self.t_count + 1.0
-        self.renderer.width = 1.0 * len(ensembles) + 20.5
-
-    def render_ensemble_mover_head(self, ensembles, yp=None):
-        for ens_idx, ens in enumerate(ensembles):
+        for ens_idx, ens in enumerate(self.ensembles):
             txt = chr(ens_idx + 65)
 
             label = ens.name if hasattr(ens, 'name') else ens.__class__.__name__[:-8]
 
-            self.renderer.add(
-                self.renderer.vertical_label(
-                    ens_idx, yp, 5, '[' + txt + '] ' + label,
-                    align='start'
+            group.add(
+                doc.label(
+                    ens_idx,
+                    0,
+                    '[' + txt + '] ' + label,
+                    cls=['head']
                 )
             )
+
+        for ens_idx, ens in enumerate(self.ensembles):
+            group.add(
+                doc.vertical_hook(
+                    ens_idx,
+                    0,
+                    ens_idx,
+                    total + 1
+                )
+            )
+
+        max_level = 0
+
+        for level, sub in path.depth_pre_order(lambda this: tuple(
+                [this, None])):
+            if level > max_level:
+                max_level = level
+
+            self.t_count += 1
+
+            sub_mp, sub_set = sub
+
+            in_ens = sub_mp.input_ensembles
+            out_ens = sub_mp.output_ensembles
+
+            yp = self.t_count
+    
+            for ens_idx, ens in enumerate(self.ensembles):
+                txt = chr(ens_idx + 65)
+                show = False
+
+
+                if in_ens is None or None in in_ens or ens in in_ens:
+                    group.add(
+                        doc.connector(
+                            ens_idx,
+                            yp - 0.1,
+                            '',
+                            cls=['input']
+                        )
+                    )
+    
+                    show = True
+
+
+                if out_ens is None or None in out_ens or ens in out_ens:
+                    group.add(
+                        doc.connector(
+                            ens_idx,
+                            yp + 0.1,
+                            '',
+                            cls=['output'])
+                    )
+    
+                    show = True
+    
+                if show or True:
+                    group.add(
+                        doc.connector(
+                            ens_idx,
+                            yp,
+                            txt,
+                            cls=['unknown']
+                        )
+                    )
+
+        group.translate(50, 0)
+
+        doc.add(group)
+
+        doc['class'] = 'movetree'
+
+        left_x = -max_level * doc.scale_x - 80
+        top_y = - 80
+        width = len(self.ensembles) * doc.scale_x - left_x + 50
+        height = (total + 1) * doc.scale_y - top_y
+
+        print left_x, width, top_y, height
+
+        # adjust viewbox to fit full image
+        doc['viewBox'] = '%.2f %.2f %.2f %.2f' % (
+            left_x,
+            top_y,
+            width,
+            height
+        )
+        doc['width'] = '100%'
+
+        return doc
+
 
     def render_ensemble_mover_line(self, ensembles, mover, yp=None, color='black'):
         if yp is None:
@@ -930,11 +1030,11 @@ class PathTreeBuilder(object):
 
             if view_options['label_position'] == 'left':
                 group.add(
-                    doc.label(shift, t_count, 1, traj_str, cls=cls + ['left'])
+                    doc.label(shift, t_count, traj_str, cls=cls + ['left'])
                 )
             elif view_options['label_position'] == 'right':
                 group.add(
-                    doc.label(shift + len(traj) - 1, t_count, 1, traj_str,
+                    doc.label(shift + len(traj) - 1, t_count, traj_str,
                               cls=cls + ['right'])
                 )
 
@@ -1077,7 +1177,7 @@ class PathTreeBuilder(object):
         )
 
         group.add(
-            doc.label(0, 0, 1, 'Information', cls=['infobox'])
+            doc.label(0, 0, 'Information', cls=['infobox'])
         )
 
 
@@ -1105,17 +1205,17 @@ class PathTreeBuilder(object):
 
         if smp_x is not None:
             group.add(
-                doc.label(smp_x, 0, 1, 'smp')
+                doc.label(smp_x, 0, 'smp')
             )
 
         if cyc_x is not None:
             group.add(
-                doc.label(cyc_x, 0, 1, 'cyc')
+                doc.label(cyc_x, 0, 'cyc')
             )
 
         if cor_x is not None:
             group.add(
-                doc.label(cor_x, 0, 1, 'cor')
+                doc.label(cor_x, 0, 'cor')
             )
 
         prev = samples[0].trajectory
@@ -1143,8 +1243,8 @@ class PathTreeBuilder(object):
                         group.add(
                             doc.vertical_region(
                                 cor_x,
-                                old_tc - 0.1,
-                                1 + tc - old_tc + 0.2,
+                                old_tc,
+                                1 + tc - old_tc,
                                 "",
                                 cls=['correlation']
                             )
@@ -1155,7 +1255,7 @@ class PathTreeBuilder(object):
 
             if smp_x is not None:
                 group.add(
-                    doc.label(smp_x, 1 + tc, 1, str(
+                    doc.label(smp_x, 1 + tc, str(
                         self.storage.idx(s)))
                 )
 
@@ -1166,7 +1266,7 @@ class PathTreeBuilder(object):
                     txt = '---'
 
                 group.add(
-                    doc.label(cyc_x, 1 + tc, 1, str(
+                    doc.label(cyc_x, 1 + tc, str(
                         txt))
                 )
 
@@ -1174,8 +1274,8 @@ class PathTreeBuilder(object):
             group.add(
                 doc.vertical_region(
                     cor_x,
-                    old_tc - 0.1,
-                    1 + len(samples) - old_tc + 0.2,
+                    old_tc,
+                    1 + len(samples) - old_tc,
                     "",
                     extend_bottom=False,
                     cls=['correlation']))
