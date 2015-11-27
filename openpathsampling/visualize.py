@@ -340,24 +340,10 @@ class TreeRenderer(svg.Drawing):
             f.write(self.to_html())
 
     def save_pdf(self, file_name='tree.pdf'):
-        # h = self._height()
-        # w = self._width()
-        #
-        # h_margin = 3.5
-        # v_margin = 3.5
-        #
-        # page_height = str(25.4 / 75.0 * h + v_margin) + 'mm'
-        # page_width = str(25.4 / 75.0 * w + h_margin) + 'mm'
-
         with open('tree_xxx.html', 'w') as f:
             f.write(self.to_html())
 
-        # bash_command = "wkhtmltopdf -l --page-width " + page_width + \
-        #                " --page-height " + page_height + \
-        #                " --disable-smart-shrinking " + \
-        #                "-B 1mm -L 1mm -R 1mm -T 1mm tree_xxx.html " + file_name
-
-        bash_command = "wkhtmltopdf tree_xxx.html " + file_name
+        bash_command = "open tree_xxx.html " + file_name
 
         os.system(bash_command)
 
@@ -482,21 +468,6 @@ class MoveTreeBuilder(object):
 
         doc.add(group)
 
-
-        # self.render_replica_line(len(ensembles), sub_set, color='gray')
-
-        # self.t_count += 1
-
-        #        self.render_ensemble_line(ensembles, sset)
-        #        self.render_replica_line(len(ensembles), sset)
-
-        #        self.renderer.add(self.renderer.block(-8.0, self.t_count, 'black'))
-        #        self.renderer.add(
-        #            self.renderer.label(-8.0, self.t_count, 3,
-        #                                'storage.sampleset[%d]' % sset.idx[storage],
-        #                                align='start', color='black')
-        #        )
-
         group = doc.g(
             class_='ensembles'
         )
@@ -602,125 +573,9 @@ class MoveTreeBuilder(object):
             width,
             height
         )
-        doc['width'] = '100%'
+        doc['width'] = width
 
         return doc
-
-
-    def render_ensemble_mover_line(self, ensembles, mover, yp=None, color='black'):
-        if yp is None:
-            yp = self.t_count
-
-        storage = self.storage
-        for ens_idx, ens in enumerate(ensembles):
-            txt = chr(ens_idx + 65)
-            show = False
-            in_ens = mover.input_ensembles
-            out_ens = mover.output_ensembles
-            if in_ens is None or None in in_ens or ens in in_ens:
-                self.renderer.add(
-                    self.renderer.connector(ens_idx, yp - 0.12, 'green', ''))
-
-                show = True
-
-            if out_ens is None or None in out_ens or ens in out_ens:
-                self.renderer.add(
-                    self.renderer.connector(ens_idx, yp + 0.12, 'red', ''))
-
-                show = True
-
-            if show:
-                self.renderer.add(
-                    self.renderer.block(ens_idx, yp, 'rgb(200,200,200)', txt))
-
-
-                #        for ens_idx, ens in enumerate(ensembles):
-                #            samp_ens = [samp for samp in sset if samp.ensemble is ens]
-                #            if len(samp_ens) > 0:
-                #                traj_idx = samp_ens[0].trajectory.idx[storage]
-                #                self.ens_x[ens_idx] = traj_idx
-                #                self.traj_ens_x[traj_idx] = ens_idx
-                #                self.traj_ens_y[traj_idx] = self.t_count
-
-    def render_ensemble_line(self, ensembles, sset, yp=None, color='black'):
-        if yp is None:
-            yp = self.t_count
-
-        storage = self.storage
-        for ens_idx, ens in enumerate(ensembles):
-            samp_ens = [samp for samp in sset if samp.ensemble is ens]
-            if len(samp_ens) > 0:
-                traj_idx = samp_ens[0].trajectory.idx[storage.trajectories]
-                txt = str(traj_idx)
-                if len(samp_ens) > 1:
-                    txt += '+'
-
-                my_color = color
-
-                if traj_idx in self.ens_x:
-                    self.renderer.add(
-                        self.renderer.vertical_hook(self.traj_ens_x[traj_idx],
-                                                    self.traj_ens_y[traj_idx], ens_idx,
-                                                    self.t_count, 'black'))
-                    if self.traj_ens_x[traj_idx] != ens_idx:
-                        my_color = 'red'
-                else:
-                    if len(self.ens_x) > 0:
-                        my_color = 'red'
-
-                if my_color != 'gray':
-                    self.renderer.add(
-                        self.renderer.connector(ens_idx, yp, my_color, txt))
-
-        for ens_idx, ens in enumerate(ensembles):
-            samp_ens = [samp for samp in sset if samp.ensemble is ens]
-            if len(samp_ens) > 0:
-                traj_idx = samp_ens[0].trajectory.idx[storage.trajectories]
-                self.ens_x[ens_idx] = traj_idx
-                self.traj_ens_x[traj_idx] = ens_idx
-                self.traj_ens_y[traj_idx] = self.t_count
-
-    def render_replica_line(self, replica, sset, yp=None, color='black'):
-        if yp is None:
-            yp = self.t_count
-
-        storage = self.storage
-        for repl_idx in range(0, replica):
-            samp_repl = [samp for samp in sset if samp.replica == repl_idx - 1]
-            xp = repl_idx + 10
-            if len(samp_repl) > 0:
-                traj_idx = samp_repl[0].trajectory.idx[storage.trajectories]
-                txt = str(traj_idx)
-                if len(samp_repl) > 1:
-                    txt += '+'
-                my_color = color
-                if traj_idx in self.repl_x:
-                    self.renderer.add(
-                        self.renderer.vertical_hook(self.traj_repl_x[traj_idx],
-                                                    self.traj_repl_y[traj_idx], xp,
-                                                    self.t_count, 'black'))
-                    if self.traj_repl_x[traj_idx] != xp:
-                        my_color = 'red'
-                else:
-                    if len(self.repl_x) > 0:
-                        my_color = 'red'
-
-                if my_color != 'gray':
-                    self.renderer.add(
-                        self.renderer.connector(xp, yp, my_color, txt))
-
-        for repl_idx in range(replica):
-            samp_repl = [samp for samp in sset if samp.replica == repl_idx - 1]
-            xp = repl_idx + 10
-            if len(samp_repl) > 0:
-                traj_idx = samp_repl[0].trajectory.idx[storage.trajectories]
-                self.repl_x[repl_idx] = traj_idx
-                self.traj_repl_x[traj_idx] = xp
-                self.traj_repl_y[traj_idx] = self.t_count
-
-    @staticmethod
-    def _get_min_max(d):
-        return min(d.values()), max(d.values())
 
 
 class PathTreeBuilder(object):
