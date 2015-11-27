@@ -389,95 +389,8 @@ class MoveTreeBuilder(object):
         self.ens_x = list()
         self.repl_x = list()
 
-    def full(self, ensembles, clear=True):
+    def mover(self, pathmover, ensembles):
 
-        storage = self.storage
-
-        if clear:
-            self.renderer.clear()
-        level_y = dict()
-
-        old_sset = paths.SampleSet([])
-
-        self.t_count = 1
-
-        self.ens_x = [None] * len(ensembles)
-        self.repl_x = [None] * len(ensembles)
-
-        for sset in storage.samplesets[0:2]:
-            path = sset.movepath
-            # level_y = dict()
-
-            for level, sub in path.depth_post_order(lambda this: tuple(
-                    [this, old_sset.apply_samples(this.samples)])):
-                self.t_count += 1
-
-                sub_mp, sub_set = sub
-
-                if sub_mp.__class__ is paths.SamplePathMoveChange:
-                    self.renderer.add(
-                        self.renderer.block(-8.0 + level, self.t_count, 'blue'))
-                    self.renderer.add(
-                        self.renderer.label(
-                            -8.0 + level, self.t_count, 3,
-                            sub_mp.mover.__class__.__name__[:-5],
-                            align='start', color='black')
-                    )
-                else:
-                    self.renderer.add(
-                        self.renderer.block(-8.0 + level, self.t_count,
-                                            'green'))
-                    self.renderer.add(
-                        self.renderer.label(-8.0 + level, self.t_count, 3,
-                                            sub_mp.__class__.__name__[:-8],
-                                            align='start', color='black')
-                    )
-
-                if level + 1 in level_y \
-                        and level_y[level + 1] == self.t_count - 1:
-                    self.renderer.add(
-                        self.renderer.vertical_connector(-7.0 + level, self.t_count,
-                                                         self.t_count - 1, 'black')
-                    )
-                    del level_y[level + 1]
-
-                if level in level_y and level_y[level]:
-                    self.renderer.add(
-                        self.renderer.vertical_connector(-8.0 + level, self.t_count,
-                                                         level_y[level], 'black')
-                    )
-
-                level_y[level] = self.t_count
-
-                self.render_ensemble_line(ensembles, sub_set, color='gray')
-                self.render_replica_line(len(ensembles), sub_set, color='gray')
-
-            self.t_count += 1
-
-            self.render_ensemble_line(ensembles, sset)
-            self.render_replica_line(len(ensembles), sset)
-
-            self.renderer.add(self.renderer.block(-8.0, self.t_count, 'black'))
-            self.renderer.add(
-                self.renderer.label(-8.0, self.t_count, 3,
-                                    'storage.sampleset[%d]' % sset.idx[storage.samplesets],
-                                    align='start', color='black')
-            )
-
-            old_sset = sset
-            self.t_count += 1
-
-        self.renderer.shift_x = - 9.0
-        self.renderer.shift_y = -0.5
-        self.renderer.height = 1.0 * self.t_count + 1.0
-        self.renderer.width = 1.0 * len(ensembles) + 20.5
-
-    def mover(self, pathmover, ensembles, clear=True):
-
-        storage = self.storage
-
-        if clear:
-            self.renderer.clear()
         level_y = dict()
 
         self.t_count = 1
@@ -717,13 +630,17 @@ class PathTreeBuilder(object):
         self.p_y = dict()
         self.obj = list()
         self.storage = storage
+        self.doc = None
+
+        self.move_list = {}
+        self.step_list = {}
+        self.samp_list = {}
 
         css_file = os.path.join(os.path.dirname(__file__), 'vis.css')
 
         with open(css_file, 'r') as content_file:
-            css_style = content_file.read()
+            self.css_style = content_file.read()
 
-        self.renderer = TreeRenderer(css_style)
         self.op = op
         self.show_redundant = False
         if states is None:
@@ -843,73 +760,38 @@ class PathTreeBuilder(object):
         # reverse to get origin first
         return [samp for samp in reversed(list_of_samples)]
 
-    def from_samples(self, samples):
+    def set_samples(self, samples):
+        self._samples = samples
+        self.analyze()
 
-        doc = self.renderer
+    def analyze(self):
+        samples = self._samples
+        self.move_list = {}
+        self.step_list = {}
 
-        doc.scale_x = self.options['geometry']['scale_x']
-        doc.scale_y = self.options['geometry']['scale_y']
-        doc.horizontal_gap = 0.05 if self.options['geometry']['horizontal_gap'] else 0.0
-
-        doc.defs.add(doc.script(
-            content='''
-               box = $('.opstree .infobox text')[0];
-               var kernel = IPython.notebook.kernel;
-               $('.opstree .block').each(
-                function() {
-                json = JSON.parse($(this)[0].firstChild.textContent);
-                 $(this).data(json);
-                }
-               );
-               $('.opstree .block').hover(
-                function(){
-                  box.textContent =
-                  'Snapshot(' + $(this).data('snp') + ')' + ' ' +
-                  'Trajectoy(' + $(this).data('trj') + ')';
-                 },
-                 function(){
-                  box.textContent = '';
-                 });
-        '''))
-
-        # /#                  kernel.execute('tv.frame = ' + $(this).data('snp')); /#
+        options = self.options
+        assume_reversed_as_same = options['settings']['time_symmetric']
 
         if len(samples) == 0:
             # no samples, nothing to do
             # TODO: Raise an exception or just ignore and don't output anything?
             return
 
-        move_list = {}
-        step_list = {}
         for step in self.storage.steps:
             for ch in step.change:
                 if ch.samples is not None:
                     for trial in ch.samples:
-                        step_list[trial] = step
-                        move_list[trial] = ch
+                        self.step_list[trial] = step
+                        self.move_list[trial] = ch
 
+        self.samp_list = {}
         p_x = dict()
-        p_y = dict()
-
-        min_range_x = 10000
-        max_range_x = -10000
-
-        t_count = 1
-
-        group = doc.g(
-            class_='tree'
-        )
-
-        options = self.options
-        assume_reversed_as_same = options['settings']['time_symmetric']
 
         for sample in samples:
             mover_type = type(sample.mover)
             traj = sample.trajectory
 
-            # get connection to existing
             overlap_reversed = False
-
             index_bw = None
 
             for snapshot in range(len(traj)):
@@ -954,6 +836,79 @@ class PathTreeBuilder(object):
 
                     #            print sample.mover.__class__.__name__, 0, index_bw, index_fw, len(traj)-1
 
+            for pos, snapshot in enumerate(sample.trajectory):
+                pos_x = shift + pos
+                p_x[snapshot] = pos_x
+
+
+            self.samp_list[sample] = {
+                'shift': shift,
+                'index_fw': index_fw,
+                'index_bw': index_bw,
+                'overlap_reversed': overlap_reversed,
+                'new_sample': new_sample,
+                'mover_type': mover_type
+            }
+
+    def to_svg(self):
+        return self.render().tostring()
+
+    def render(self):
+        samples = self._samples
+        doc = TreeRenderer(self.css_style)
+        self.doc = doc
+
+        doc.scale_x = self.options['geometry']['scale_x']
+        doc.scale_y = self.options['geometry']['scale_y']
+        doc.horizontal_gap = 0.05 if self.options['geometry']['horizontal_gap'] else 0.0
+
+        doc.defs.add(doc.script(
+            content='''
+               box = $('.opstree .infobox text')[0];
+               var kernel = IPython.notebook.kernel;
+               $('.opstree .block').each(
+                function() {
+                json = JSON.parse($(this)[0].firstChild.textContent);
+                 $(this).data(json);
+                }
+               );
+               $('.opstree .block').hover(
+                function(){
+                  box.textContent =
+                  'Snapshot(' + $(this).data('snp') + ')' + ' ' +
+                  'Trajectoy(' + $(this).data('trj') + ')';
+                 },
+                 function(){
+                  box.textContent = '';
+                 });
+        '''))
+
+        # /#                  kernel.execute('tv.frame = ' + $(this).data('snp')); /#
+
+        p_x = dict()
+        p_y = dict()
+
+        min_range_x = 10000
+        max_range_x = -10000
+
+        t_count = 1
+
+        group = doc.g(
+            class_='tree'
+        )
+
+        options = self.options
+        assume_reversed_as_same = options['settings']['time_symmetric']
+
+        for sample in samples:
+            info = self.samp_list[sample]
+            mover_type = info['mover_type']
+            new_sample = info['new_sample']
+            shift = info['shift']
+            index_fw = info['index_fw']
+            index_bw = info['index_bw']
+            traj = sample.trajectory
+
             if new_sample:
                 view_options = options['mover']['new']
             elif mover_type in options['mover']:
@@ -967,8 +922,8 @@ class PathTreeBuilder(object):
 
             cls = [] + view_options['cls']
 
-            if sample in move_list:
-                move = step_list[sample].change
+            if sample in self.move_list:
+                move = self.step_list[sample].change
                 accepted = move.accepted
                 if not accepted:
                     cls += ['rejected']
@@ -1205,8 +1160,8 @@ class PathTreeBuilder(object):
                 )
 
             if cyc_x is not None:
-                if s in step_list:
-                    txt = str(step_list[s].mccycle)
+                if s in self.step_list:
+                    txt = str(self.step_list[s].mccycle)
                 else:
                     txt = '---'
 
@@ -1238,6 +1193,8 @@ class PathTreeBuilder(object):
             width,
             height
         )
+
+        return doc
 
     def _get_min_max(self, d):
         return min(d.values()), max(d.values())
@@ -1453,7 +1410,6 @@ class ReplicaHistoryTree(PathTreeBuilder):
 
         # build the tree 
         self.from_samples(self.samples)
-        self.view = self.renderer
 
     def rebuild(self):
         """Rebuild the internal structures.
@@ -1463,7 +1419,6 @@ class ReplicaHistoryTree(PathTreeBuilder):
         could be removed.
 
         """
-        self.view.reset_pad()
         self.from_samples(self.samples)
 
     @property
