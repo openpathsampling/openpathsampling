@@ -843,7 +843,7 @@ class PathTreeBuilder(object):
         # reverse to get origin first
         return [samp for samp in reversed(list_of_samples)]
 
-    def from_samples(self, samples, clear=True):
+    def from_samples(self, samples):
 
         doc = self.renderer
 
