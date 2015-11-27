@@ -13,14 +13,28 @@
     fill: white !important;
     stroke: none !important;
 }
+.opstree .block :hover {
+    opacity: 0.5;
+}
 .opstree .repex {
     fill: blue;
+    stroke: blue;
 }
 .opstree .new {
     fill: black;
+    stroke: black;
+}
+.opstree .unknown {
+    fill: gray;
+    stroke: gray;
 }
 .opstree .hop {
     fill: blue;
+    stroke: blue;
+}
+.opstree .correlation {
+    fill: black;
+    stroke: black;
 }
 .opstree .shooting.bw {
     fill: green;
@@ -33,20 +47,27 @@
 .opstree .reversal {
     fill: gold;
 }
+.opstree .virtual {
+    opacity: 0.1;
+    fill:gray;
+    stroke: none;
+}
 .opstree line {
     stroke-width: 2px;
 }
 .opstree .label {
     fill: black !important;
 }
-.opstree .connection {
+.opstree .h-connector {
 /*                stroke-dasharray: 3 3; */
 }
 .opstree .rejected {
     opacity: 0.3;
 }
 .opstree text {
-    font-family: Impact;
+    font-family: Futura-CondensedMedium;
+    font-weight: lighter;
+    stroke: none !important;
 }
 .opstree .orange {
     fill: orange;
@@ -58,9 +79,14 @@
 .tableline:hover {
     opacity: 0.2;
 }
-g.left.label {
-    transform: translateX(-32px)
+.opstree g.left.label {
+    transform: translateX(-24px);
+    text-anchor: start;
 }
-g.right.label {
-    transform: translateX(+32px)
+.opstree g.right.label {
+    transform: translateX(+24px);
+    text-anchor: end;
+}
+.opstree .infobox text {
+    text-anchor: start;
 }

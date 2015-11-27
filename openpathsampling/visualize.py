@@ -8,13 +8,22 @@ import matplotlib.pyplot as plt
 import StringIO
 from networkx.readwrite import json_graph
 
+
 class TreeRenderer(svg.Drawing):
-    def __init__(self):
+    def __init__(self, css_style=''):
         super(TreeRenderer, self).__init__()
         self.scale_x = 20.0
         self.scale_y = 20.0
-        self.document = None
-        self.css_style = ''
+
+        # Add the CSS Stylesheet
+        self.css_style = css_style
+        self.defs.add(self.style(
+            self.css_style
+        ))
+
+    @staticmethod
+    def c(cls):
+        return ' '.join(cls)
 
     def _x(self, x):
         return self._w(x)
@@ -34,9 +43,6 @@ class TreeRenderer(svg.Drawing):
     def _wh(self, w, h):
         return self._w(w), self._h(h)
 
-    def _xb(self, x, y):
-        return self._x(x), self._y(y)
-
     def connector(self, x, y, text="", cls=None):
 
         if cls is None:
@@ -49,7 +55,7 @@ class TreeRenderer(svg.Drawing):
     def block(self, x, y, text="",
               extend_right=True, extend_left=True,
               extend_top=False, extend_bottom=False,
-              w=1.0, cls=None):
+              w=1.0, cls=None, data=None):
 
         if cls is None:
             cls = list()
@@ -58,43 +64,54 @@ class TreeRenderer(svg.Drawing):
 
         padding = self.horizontal_gap
 
-        ret = self.g(
+        group = self.g(
             class_=self.c(cls)
         )
 
-        ret.add(self.rect(
+        if data is not None:
+            group.set_desc(desc=json.dumps(data))
+
+        group.add(self.rect(
             insert=self._xy(x - 0.5 + padding, y - 0.3),
             size=self._wh(1.0 * w - 2 * padding, 0.6),
         ))
+
         if extend_left:
-            ret.add(self.circle(
+            group.add(self.circle(
                 center=self._xy(x - 0.5, y),
                 r=self._w(padding)
             ))
         if extend_right:
-            ret.add(self.circle(
+            group.add(self.circle(
                 center=(self._xy(x + w - 0.5, y)),
                 r=self._w(padding)
             ))
 
-        ret.add(self.text(
+        if extend_top:
+            group.add(self.circle(
+                center=self._xy(x, y - 0.3),
+                r=self._w(padding)
+            ))
+        if extend_bottom:
+            group.add(self.circle(
+                center=(self._xy(x + w - 1.0, y + 0.3)),
+                r=self._w(padding)
+            ))
+
+        group.add(self.text(
             text=str(text)[:4],
-            insert=self._xb(x + (w - 1.0) / 2.0, y)
+            insert=self._xy(x + (w - 1.0) / 2.0, y)
         ))
 
-        return ret
+        return group
 
-    @staticmethod
-    def c(cls):
-        return ' '.join(cls)
-
-    def region(self, x, y, w=1.0, text="",
-               extend_right=True, extend_left=True, cls=None):
+    def horizontal_region(self, x, y, w=1.0, text="",
+                          extend_right=True, extend_left=True, cls=None):
 
         if cls is None:
             cls = list()
 
-        cls += ['range']
+        cls += ['h-region']
 
         if w == 0:
             return []
@@ -105,9 +122,9 @@ class TreeRenderer(svg.Drawing):
             class_=self.c(cls)
         )
 
-        group.add(self.rect(
-            insert=self._xy(x - 0.5 + padding, y - 0.05),
-            size=self._wh(1.0 * w - 2 * padding, 0.1)
+        group.add(self.line(
+            start=self._xy(x - 0.5 + padding, y),
+            end=self._xy(x - 0.5 + w - padding, y)
         ))
 
         if extend_left:
@@ -115,9 +132,9 @@ class TreeRenderer(svg.Drawing):
                 center=self._xy(x - 0.5, y),
                 r=self._w(padding)
             ))
-            group.add(self.rect(
-                insert=self._xy(x - 0.5 + padding, y - 0.3),
-                size=self._wh(0.1, 0.6)
+            group.add(self.line(
+                start=self._xy(x - 0.5, y - 0.3),
+                end=self._xy(x - 0.5, y + 0.3)
             ))
 
         if extend_right:
@@ -125,25 +142,25 @@ class TreeRenderer(svg.Drawing):
                 center=(self._xy(x + w - 0.5, y)),
                 r=self._w(padding)
             ))
-            group.add(self.rect(
-                insert=self._xy(x + w - 0.6 - padding, y - 0.3),
-                size=self._wh(0.1, 0.6)
+            group.add(self.line(
+                start=self._xy(x + w - 0.5, y - 0.3),
+                end=self._xy(x + w - 0.5, y + 0.3)
             ))
 
         group.add(self.text(
             text=str(text),
-            insert=self._xb(x + (w - 1.0) / 2.0, y - 0.3)
+            insert=self._xy(x + (w - 1.0) / 2.0, y - 0.3)
         ))
 
         return group
 
-    def h_range(self, x, y, w=1.0, color="blue", text="", align="middle",
-                extend_top=True, extend_bottom=True, cls=None):
+    def vertical_region(self, x, y, w=1.0, text="", align="middle",
+                        extend_top=True, extend_bottom=True, cls=None):
 
         if cls is None:
             cls = list()
 
-        cls += ['h-range']
+        cls += ['v-region']
 
         padding = self.horizontal_gap
 
@@ -151,9 +168,9 @@ class TreeRenderer(svg.Drawing):
             class_=self.c(cls)
         )
 
-        group.add(self.rect(
-            insert=self._xy(x, y - 0.3),
-            size=self._wh(0.1, 1.0 * w - 0.4)
+        group.add(self.line(
+            start=self._xy(x, y - 0.3),
+            end=self._xy(x, y + w - 1 + 0.3)
         ))
 
         if extend_top:
@@ -161,9 +178,9 @@ class TreeRenderer(svg.Drawing):
                 center=self._xy(x, y - 0.3),
                 r=self._w(padding)
             ))
-            group.add(self.rect(
-                insert=self._xy(x - 0.5 + padding, y - 0.3),
-                size=self._wh(1.0 - 2.0 * padding, 0.1)
+            group.add(self.line(
+                start=self._xy(x - 0.3 + padding, y - 0.3),
+                end=self._xy(x + 0.3 - padding, y - 0.3)
             ))
 
         if extend_bottom:
@@ -171,14 +188,14 @@ class TreeRenderer(svg.Drawing):
                 center=(self._xy(x, y + (w - 1.0) + 0.3)),
                 r=self._w(padding)
             ))
-            group.add(self.rect(
-                insert=self._xy(x - 0.5 + padding, y + (w - 1.0) + 0.3 - 0.1),
-                size=self._wh(1.0 - 2.0 * padding, 0.1)
+            group.add(self.line(
+                start=self._xy(x - 0.3 + padding, y + w - 1.0 + 0.3),
+                end=self._xy(x + 0.3 - padding, y + w - 1.0 + 0.3)
             ))
 
         group.add(self.text(
             text=str(text),
-            insert=self._xb(x - 0.3, y + (w - 1.0) / 2.0)
+            insert=self._xy(x - 0.3, y + (w - 1.0) / 2.0)
         ))
 
         return group
@@ -188,12 +205,12 @@ class TreeRenderer(svg.Drawing):
         if cls is None:
             cls = list()
 
-        cls += ['text']
+        cls += ['textual']
 
         return self.text(
             class_=self.c(cls),
             text=str(text)[:4],
-            insert=self._xb(x, y),
+            insert=self._xy(x, y),
         )
 
     def shade(self, x, y, w, cls=None):
@@ -208,23 +225,11 @@ class TreeRenderer(svg.Drawing):
             size=self._wh(w, 0.1)
         )
 
-    def shade_alt(self, x, y, w, cls=None):
+    def vertical_connector(self, x, y1, y2, cls=None):
         if cls is None:
             cls = list()
 
-        cls += ['shade-alt']
-
-        return self.rect(
-            class_=self.c(cls),
-            insert=self._xy(x - 0.5, y - 0.35),
-            size=self._wh(w, 0.7),
-        )
-
-    def v_connection(self, x, y1, y2, cls=None):
-        if cls is None:
-            cls = list()
-
-        cls += ['v-connection']
+        cls += ['v-connector']
 
         padding = self.horizontal_gap
 
@@ -234,7 +239,7 @@ class TreeRenderer(svg.Drawing):
             end=self._xy(x - 0.5, y2 - padding)
         )
 
-    def v_hook(self, x1, y1, x2, y2, cls=None):
+    def vertical_hook(self, x1, y1, x2, y2, cls=None):
         if cls is None:
             cls = list()
 
@@ -248,11 +253,11 @@ class TreeRenderer(svg.Drawing):
             end=self._xy(x2, y2 - padding - 0.3)
         )
 
-    def h_connection(self, x1, x2, y, cls=None):
+    def horizontal_connector(self, x1, x2, y, cls=None):
         if cls is None:
             cls = list()
 
-        cls += ['h-connection']
+        cls += ['h-connector']
 
         padding = self.horizontal_gap
 
@@ -269,13 +274,13 @@ class TreeRenderer(svg.Drawing):
         cls += ['label']
 
         group = self.g(
-                class_=self.c(cls)
+            class_=self.c(cls)
         )
 
         group.add(
             self.text(
                 text=str(text),
-                insert=self._xb(x, y)
+                insert=self._xy(x, y)
             )
         )
 
@@ -287,13 +292,21 @@ class TreeRenderer(svg.Drawing):
 
         cls += ['v-label']
 
-        return self.text(
-            text=str(text),
-            insert=(0, 0),
-            transform='translate(' +
-                      ' '.join(map(str, self._xb(x, y))) +
-                      ')rotate(270)'
+        group = self.g(
+            class_=self.c(cls)
         )
+
+        group.add(
+            self.text(
+                text=str(text),
+                insert=(0, 0),
+                transform='translate(' +
+                          ' '.join(map(str, self._xy(x, y))) +
+                          ')rotate(270)'
+            )
+        )
+
+        return group
 
     def rectangle(self, x, y, w, h, cls=None):
         if cls is None:
@@ -305,15 +318,7 @@ class TreeRenderer(svg.Drawing):
             size=self._wh(w, h),
         )
 
-    def to_document(self):
-        self.defs.add(self.style(
-            self.css_style
-        ))
-
-        return self
-
     def to_svg(self):
-        self.to_document()
         return self.tostring()
 
     def to_html(self, svg=None):
@@ -336,22 +341,24 @@ class TreeRenderer(svg.Drawing):
             f.write(self.to_html())
 
     def save_pdf(self, file_name='tree.pdf'):
-        h = self._height()
-        w = self._width()
-
-        h_margin = 3.5
-        v_margin = 3.5
-
-        page_height = str(25.4 / 75.0 * h + v_margin) + 'mm'
-        page_width = str(25.4 / 75.0 * w + h_margin) + 'mm'
+        # h = self._height()
+        # w = self._width()
+        #
+        # h_margin = 3.5
+        # v_margin = 3.5
+        #
+        # page_height = str(25.4 / 75.0 * h + v_margin) + 'mm'
+        # page_width = str(25.4 / 75.0 * w + h_margin) + 'mm'
 
         with open('tree_xxx.html', 'w') as f:
             f.write(self.to_html())
 
-        bash_command = "wkhtmltopdf -l --page-width " + page_width + \
-                       " --page-height " + page_height + \
-                       " --disable-smart-shrinking " + \
-                       "-B 1mm -L 1mm -R 1mm -T 1mm tree_xxx.html " + file_name
+        # bash_command = "wkhtmltopdf -l --page-width " + page_width + \
+        #                " --page-height " + page_height + \
+        #                " --disable-smart-shrinking " + \
+        #                "-B 1mm -L 1mm -R 1mm -T 1mm tree_xxx.html " + file_name
+
+        bash_command = "wkhtmltopdf tree_xxx.html " + file_name
 
         os.system(bash_command)
 
@@ -429,15 +436,15 @@ class MoveTreeBuilder(object):
                 if level + 1 in level_y \
                         and level_y[level + 1] == self.t_count - 1:
                     self.renderer.add(
-                        self.renderer.v_connection(-7.0 + level, self.t_count,
-                                                   self.t_count - 1, 'black')
+                        self.renderer.vertical_connector(-7.0 + level, self.t_count,
+                                                         self.t_count - 1, 'black')
                     )
                     del level_y[level + 1]
 
                 if level in level_y and level_y[level]:
                     self.renderer.add(
-                        self.renderer.v_connection(-8.0 + level, self.t_count,
-                                                   level_y[level], 'black')
+                        self.renderer.vertical_connector(-8.0 + level, self.t_count,
+                                                         level_y[level], 'black')
                     )
 
                 level_y[level] = self.t_count
@@ -488,8 +495,8 @@ class MoveTreeBuilder(object):
 
         for ens_idx, ens in enumerate(ensembles):
             self.renderer.add(
-                self.renderer.v_hook(ens_idx, self.t_count, ens_idx,
-                                     self.t_count + total + 1, 'gray')
+                self.renderer.vertical_hook(ens_idx, self.t_count, ens_idx,
+                                            self.t_count + total + 1, 'gray')
             )
 
         for level, sub in path.depth_pre_order(lambda this: tuple(
@@ -523,37 +530,37 @@ class MoveTreeBuilder(object):
                 if level + 1 in level_y \
                         and level_y[level + 1] == self.t_count - 1:
                     self.renderer.add(
-                        self.renderer.v_connection(-7.0 + level, self.t_count,
-                                                   self.t_count - 1, 'orange')
+                        self.renderer.vertical_connector(-7.0 + level, self.t_count,
+                                                         self.t_count - 1, 'orange')
                     )
                     del level_y[level + 1]
 
                 if level in level_y and level_y[level]:
                     self.renderer.add(
-                        self.renderer.v_connection(-8.0 + level, self.t_count,
-                                                   level_y[level], 'black')
+                        self.renderer.vertical_connector(-8.0 + level, self.t_count,
+                                                         level_y[level], 'black')
                     )
 
             if True:
                 if level - 1 in level_y \
                         and level_y[level - 1] == self.t_count - 1:
                     self.renderer.add(
-                        self.renderer.v_connection(-8.0 + level, self.t_count,
-                                                   self.t_count - 1, 'black')
+                        self.renderer.vertical_connector(-8.0 + level, self.t_count,
+                                                         self.t_count - 1, 'black')
                     )
                 if level + 1 in level_y:
                     del level_y[level + 1]
 
                 if level in level_y and level_y[level]:
                     self.renderer.add(
-                        self.renderer.v_connection(-8.0 + level, self.t_count,
-                                                   level_y[level], 'black')
+                        self.renderer.vertical_connector(-8.0 + level, self.t_count,
+                                                         level_y[level], 'black')
                     )
 
             level_y[level] = self.t_count
 
             self.render_ensemble_mover_line(ensembles, sub_mp, color='gray')
-        #            self.render_replica_line(len(ensembles), sub_set, color='gray')
+        # self.render_replica_line(len(ensembles), sub_set, color='gray')
 
         self.t_count += 1
 
@@ -614,13 +621,13 @@ class MoveTreeBuilder(object):
                     self.renderer.block(ens_idx, yp, 'rgb(200,200,200)', txt))
 
 
-            #        for ens_idx, ens in enumerate(ensembles):
-            #            samp_ens = [samp for samp in sset if samp.ensemble is ens]
-            #            if len(samp_ens) > 0:
-            #                traj_idx = samp_ens[0].trajectory.idx[storage]
-            #                self.ens_x[ens_idx] = traj_idx
-            #                self.traj_ens_x[traj_idx] = ens_idx
-            #                self.traj_ens_y[traj_idx] = self.t_count
+                #        for ens_idx, ens in enumerate(ensembles):
+                #            samp_ens = [samp for samp in sset if samp.ensemble is ens]
+                #            if len(samp_ens) > 0:
+                #                traj_idx = samp_ens[0].trajectory.idx[storage]
+                #                self.ens_x[ens_idx] = traj_idx
+                #                self.traj_ens_x[traj_idx] = ens_idx
+                #                self.traj_ens_y[traj_idx] = self.t_count
 
     def render_ensemble_line(self, ensembles, sset, yp=None, color='black'):
         if yp is None:
@@ -639,9 +646,9 @@ class MoveTreeBuilder(object):
 
                 if traj_idx in self.ens_x:
                     self.renderer.add(
-                        self.renderer.v_hook(self.traj_ens_x[traj_idx],
-                                             self.traj_ens_y[traj_idx], ens_idx,
-                                             self.t_count, 'black'))
+                        self.renderer.vertical_hook(self.traj_ens_x[traj_idx],
+                                                    self.traj_ens_y[traj_idx], ens_idx,
+                                                    self.t_count, 'black'))
                     if self.traj_ens_x[traj_idx] != ens_idx:
                         my_color = 'red'
                 else:
@@ -676,9 +683,9 @@ class MoveTreeBuilder(object):
                 my_color = color
                 if traj_idx in self.repl_x:
                     self.renderer.add(
-                        self.renderer.v_hook(self.traj_repl_x[traj_idx],
-                                             self.traj_repl_y[traj_idx], xp,
-                                             self.t_count, 'black'))
+                        self.renderer.vertical_hook(self.traj_repl_x[traj_idx],
+                                                    self.traj_repl_y[traj_idx], xp,
+                                                    self.t_count, 'black'))
                     if self.traj_repl_x[traj_idx] != xp:
                         my_color = 'red'
                 else:
@@ -710,17 +717,18 @@ class PathTreeBuilder(object):
         self.p_y = dict()
         self.obj = list()
         self.storage = storage
-        self.renderer = TreeRenderer()
+
+        css_file = os.path.join(os.path.dirname(__file__), 'vis.css')
+
+        with open(css_file, 'r') as content_file:
+            css_style = content_file.read()
+
+        self.renderer = TreeRenderer(css_style)
         self.op = op
         self.show_redundant = False
         if states is None:
             states = []
         self.states = states
-
-        css_file = os.path.join(os.path.dirname(__file__), 'vis.css')
-
-        with open(css_file, 'r') as content_file:
-            self.renderer.css_style = content_file.read()
 
         self.options = {
             'mover': {
@@ -806,16 +814,18 @@ class PathTreeBuilder(object):
                 'trajectory': True,
                 'step': True,
                 'correlation': True,
-                'sample': True
+                'sample': True,
+                'virtual': True,
+                'cv': True,
             },
             'settings': {
                 'register_rejected': False,
                 'time_symmetric': True,
             },
             'geometry': {
-                'scale_x': 12,
-                'scale_y': 24,
-                'horizontal_gap': 0.05
+                'scale_x': 15,
+                'scale_y': 20,
+                'horizontal_gap': True
             }
         }
 
@@ -839,7 +849,30 @@ class PathTreeBuilder(object):
 
         doc.scale_x = self.options['geometry']['scale_x']
         doc.scale_y = self.options['geometry']['scale_y']
-        doc.horizontal_gap = self.options['geometry']['horizontal_gap']
+        doc.horizontal_gap = 0.05 if self.options['geometry']['horizontal_gap'] else 0.0
+
+        doc.defs.add(doc.script(
+            content='''
+               box = $('.opstree .infobox text')[0];
+               var kernel = IPython.notebook.kernel;
+               $('.opstree .block').each(
+                function() {
+                json = JSON.parse($(this)[0].firstChild.textContent);
+                 $(this).data(json);
+                }
+               );
+               $('.opstree .block').hover(
+                function(){
+                  box.textContent =
+                  'Snapshot(' + $(this).data('snp') + ')' + ' ' +
+                  'Trajectoy(' + $(this).data('trj') + ')';
+                 },
+                 function(){
+                  box.textContent = '';
+                 });
+        '''))
+
+        # /#                  kernel.execute('tv.frame = ' + $(this).data('snp')); /#
 
         if len(samples) == 0:
             # no samples, nothing to do
@@ -868,9 +901,6 @@ class PathTreeBuilder(object):
         )
 
         options = self.options
-
-        x_text_stretch = (1.0 * options['geometry']['scale_y']) / options['geometry']['scale_x']
-
         assume_reversed_as_same = options['settings']['time_symmetric']
 
         for sample in samples:
@@ -882,12 +912,12 @@ class PathTreeBuilder(object):
 
             index_bw = None
 
-            for snap_idx in range(len(traj)):
-                snap = traj[snap_idx]
+            for snapshot in range(len(traj)):
+                snap = traj[snapshot]
                 if snap in p_x or assume_reversed_as_same and snap.reversed in p_x:
                     connect_bw = p_x[snap] if snap in p_x else p_x[snap.reversed]
-                    index_bw = snap_idx
-                    shift_bw = connect_bw - snap_idx
+                    index_bw = snapshot
+                    shift_bw = connect_bw - snapshot
                     break
 
             new_sample = False
@@ -898,12 +928,12 @@ class PathTreeBuilder(object):
                 new_sample = True
                 shift = 0
             else:
-                for snap_idx in range(len(traj) - 1, -1, -1):
-                    snap = traj[snap_idx]
+                for snapshot in range(len(traj) - 1, -1, -1):
+                    snap = traj[snapshot]
                     if snap in p_x or (assume_reversed_as_same and snap.reversed in p_x):
                         connect_fw = p_x[snap] if snap in p_x else p_x[snap.reversed]
-                        index_fw = snap_idx
-                        shift_fw = connect_fw - snap_idx
+                        index_fw = snapshot
+                        shift_fw = connect_fw - snapshot
                         break
 
                 # now we know that the overlap is between (including) [connect_bw, connect_fw]
@@ -922,7 +952,7 @@ class PathTreeBuilder(object):
                     index_bw, index_fw = index_fw, index_bw
                     overlap_reversed = True
 
-                #            print sample.mover.__class__.__name__, 0, index_bw, index_fw, len(traj)-1
+                    #            print sample.mover.__class__.__name__, 0, index_bw, index_fw, len(traj)-1
 
             if new_sample:
                 view_options = options['mover']['new']
@@ -931,7 +961,7 @@ class PathTreeBuilder(object):
             else:
                 view_options = options['mover']['unknown']
 
-            #            print shift, index_bw, index_fw
+            # print shift, index_bw, index_fw
 
             traj_str = str(self.storage.idx(sample.trajectory)) + view_options['suffix']
 
@@ -950,24 +980,24 @@ class PathTreeBuilder(object):
             elif view_options['label_position'] == 'right':
                 group.add(
                     doc.label(shift + len(traj) - 1, t_count, 1, traj_str,
-                                        cls=cls + ['right'])
+                              cls=cls + ['right'])
                 )
 
             if index_bw > 0:
                 group.add(
-                    doc.v_connection(shift + index_bw, p_y[traj[index_bw]], t_count,
-                                               cls=cls + ['bw', 'connection'])
+                    doc.vertical_connector(shift + index_bw, p_y[traj[index_bw]], t_count,
+                                           cls=cls + ['bw', 'connection'])
                 )
             if index_fw < len(traj) - 1:
                 group.add(
-                    doc.v_connection(shift + index_fw + 1, p_y[traj[index_fw]], t_count,
-                                               cls=cls + ['fw', 'connection'])
+                    doc.vertical_connector(shift + index_fw + 1, p_y[traj[index_fw]], t_count,
+                                           cls=cls + ['fw', 'connection'])
                 )
 
             if view_options['overlap'] == 'line':
                 group.add(
-                    doc.region(shift + index_bw, t_count, index_fw - index_bw + 1,
-                                         view_options['overlap_label'], cls=cls + ['overlap'])
+                    doc.horizontal_region(shift + index_bw, t_count, index_fw - index_bw + 1,
+                                          view_options['overlap_label'], cls=cls + ['overlap'])
                 )
                 for pos, snapshot in enumerate(sample.trajectory[index_bw:index_fw + 1]):
                     if snapshot not in p_x:
@@ -976,7 +1006,7 @@ class PathTreeBuilder(object):
 
             if view_options['bw'] == 'line':
                 group.add(
-                    doc.region(shift + 0, t_count, index_bw, cls=cls + ['bw'])
+                    doc.horizontal_region(shift + 0, t_count, index_bw, cls=cls + ['bw'])
                 )
                 for pos, snapshot in enumerate(sample.trajectory[0:index_bw]):
                     p_x[snapshot] = shift + pos
@@ -984,18 +1014,23 @@ class PathTreeBuilder(object):
 
             if view_options['fw'] == 'line':
                 group.add(
-                    doc.region(shift + index_fw + 1, t_count, len(traj) - (index_fw + 1), cls=cls + ['fw'])
+                    doc.horizontal_region(shift + index_fw + 1, t_count, len(traj) - (index_fw + 1), cls=cls + ['fw'])
                 )
                 for pos, snapshot in enumerate(sample.trajectory[index_fw + 1:]):
                     p_x[snapshot] = shift + pos + index_fw + 1
                     p_y[snapshot] = t_count
 
             for pos, snapshot in enumerate(sample.trajectory):
-                conf_idx = snapshot
                 pos_x = shift + pos
                 pos_y = t_count
 
-                if not conf_idx in p_y or True:
+                data = {
+                    'smp': self.storage.idx(sample),
+                    'snp': self.storage.idx(snapshot),
+                    'trj': self.storage.idx(sample.trajectory)
+                }
+
+                if not snapshot in p_y or True:
                     txt = ''
 
                     if self.op is not None:
@@ -1018,11 +1053,25 @@ class PathTreeBuilder(object):
                                 txt,
                                 extend_left=pos > 0,
                                 extend_right=pos < len(sample.trajectory) - 1,
-                                cls=cls + b_cls
+                                cls=cls + b_cls,
+                                data=data
                             ))
 
-                        p_x[conf_idx] = pos_x
-                        p_y[conf_idx] = pos_y
+                        p_x[snapshot] = pos_x
+                        p_y[snapshot] = pos_y
+
+                    else:
+                        if self.options['ui']['virtual']:
+                            group.add(
+                                doc.block(
+                                    pos_x,
+                                    pos_y,
+                                    txt,
+                                    extend_left=pos > 0,
+                                    extend_right=pos < len(sample.trajectory) - 1,
+                                    cls=cls + ['virtual'],
+                                    data=data
+                                ))
 
                 if pos_x < min_range_x:
                     min_range_x = pos_x
@@ -1066,76 +1115,129 @@ class PathTreeBuilder(object):
 
         group.translate(32 + doc._w(1 + min_range_x), 0)
 
-        doc.add(group)
+        tree_group = group
 
         group = doc.g(
             class_='legend'
         )
 
+        group.add(
+            doc.label(0, 0, 1, 'Information', cls=['infobox'])
+        )
+
+
+        columns = 0
         tree_scale = self.options['geometry']['scale_x']
         doc.scale_x = 32
 
-        group.add(
-            doc.label(-2.0, 0, 1, 'smp')
-        )
+        if self.options['ui']['correlation']:
+            columns += 1
+            cor_x = -columns
+        else:
+            cor_x = None
 
-        group.add(
-            doc.label(-1.0, 0, 1, 'cyc')
-        )
+        if self.options['ui']['sample']:
+            columns += 1
+            smp_x = -columns
+        else:
+            smp_x = None
 
-        group.add(
-            doc.label(-3, 0, 1, 'cor')
-        )
+        if self.options['ui']['step']:
+            columns += 1
+            cyc_x = -columns
+        else:
+            cyc_x = None
+
+        if smp_x is not None:
+            group.add(
+                doc.label(smp_x, 0, 1, 'smp')
+            )
+
+        if cyc_x is not None:
+            group.add(
+                doc.label(cyc_x, 0, 1, 'cyc')
+            )
+
+        if cor_x is not None:
+            group.add(
+                doc.label(cor_x, 0, 1, 'cor')
+            )
 
         prev = samples[0].trajectory
         old_tc = 1
 
+        width = 64 + tree_scale * (max_range_x - min_range_x + 2) - doc.scale_x * (-0.5 - columns)
+        height = doc.scale_y * (max_y + 1.0)
+        left_x = (-0.5 - columns) * doc.scale_x
+        top_y = -0.5 * doc.scale_y
+
         for tc, s in enumerate(samples):
             group.add(
                 doc.rect(
-                class_=doc.c(['tableline']),
-                insert=doc._xy(-4, 1 + tc - 0.45),
-                size=(tree_scale * (max_range_x - min_range_x) + doc.scale_x * 4, doc.scale_y * 0.9),
+                    class_=doc.c(['tableline']),
+                    insert=doc._xy(-0.5 - columns, 1 + tc - 0.45),
+                    size=(
+                        width,
+                        doc.scale_y * 0.9
+                    )
                 )
             )
             if tc > 0:
                 if not paths.Trajectory.is_correlated(s.trajectory, prev):
-                    group.add(
-                        doc.h_range(-3, old_tc - 0.1,
-                                              1 + tc - old_tc + 0.2, 'black', ""))
+                    if cor_x is not None:
+                        group.add(
+                            doc.vertical_region(
+                                cor_x,
+                                old_tc - 0.1,
+                                1 + tc - old_tc + 0.2,
+                                "",
+                                cls=['correlation']
+                            )
+                        )
 
                     old_tc = 1 + tc
                     prev = s.trajectory
 
+            if smp_x is not None:
+                group.add(
+                    doc.label(smp_x, 1 + tc, 1, str(
+                        self.storage.idx(s)))
+                )
+
+            if cyc_x is not None:
+                if s in step_list:
+                    txt = str(step_list[s].mccycle)
+                else:
+                    txt = '---'
+
+                group.add(
+                    doc.label(cyc_x, 1 + tc, 1, str(
+                        txt))
+                )
+
+        if cor_x is not None:
             group.add(
-                doc.label(-2, 1 + tc, 1, str(
-                    self.storage.idx(s)))
-            )
-
-            if s in step_list:
-                txt = str(step_list[s].mccycle)
-            else:
-                txt = '---'
-
-            group.add(
-                doc.label(-1, 1 + tc, 1, str(
-                    txt))
-            )
-
-        group.add(
-            doc.h_range(-3, old_tc - 0.1,
-                                  1 + len(samples) - old_tc + 0.2, 'black', "", extend_bottom=False))
+                doc.vertical_region(
+                    cor_x,
+                    old_tc - 0.1,
+                    1 + len(samples) - old_tc + 0.2,
+                    "",
+                    extend_bottom=False,
+                    cls=['correlation']))
 
         doc.add(group)
+        doc.add(tree_group)
 
+        # set the overall OPS tree class
         doc['class'] = 'opstree'
 
         # adjust viewbox to fit full image
         doc['viewBox'] = '%.2f %.2f %.2f %.2f' % (
-#            self._xy(self.min_x, self.min_y) + self._wh(self.max_x - self.min_x, self.max_y - self.min_y)
-            -150, -10, 1000, 1000
+            left_x,
+            top_y,
+            width,
+            height
         )
-
 
     def _get_min_max(self, d):
         return min(d.values()), max(d.values())
