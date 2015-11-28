@@ -438,6 +438,9 @@ class SampleMover(PathMover):
         # 3. pass these samples to the generator
         trials = self(*samples)
 
+        # this ugliness is to get the n_new_frames out of the sample details
+        # and into a MoveDetails object. The better approach is just to have
+        # this it be in the move details of an undecided PMC.
         n_new_frames = {}
         for t in trials:
             try:
