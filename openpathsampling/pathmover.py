@@ -438,8 +438,22 @@ class SampleMover(PathMover):
         # 3. pass these samples to the generator
         trials = self(*samples)
 
+        n_new_frames = {}
+        for t in trials:
+            try:
+                trial_new_frames = t.details.n_new_frames
+            except AttributeError:
+                pass
+            else:
+                for e in t.details.n_new_frames.keys():
+                    try:
+                        n_new_frames[e] += t.details.n_new_frames[e]
+                    except KeyError:
+                        n_new_frames[e] = t.details.n_new_frames[e]
+
         # 4. accept/reject
         accepted, details = self._accept(trials)
+        details.n_new_frames = n_new_frames
 
         # 5. and return a PMC
         if accepted:
