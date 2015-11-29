@@ -147,6 +147,9 @@ class testForwardShootMover(testShootingMover):
         assert_equal(change.accepted, True)
         assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
         assert_equal(newsamp[0].trajectory, change.trials[0].trajectory)
+        n_new_frames = len(set(newsamp[0].trajectory) - 
+                           set(self.init_samp[0].trajectory))
+        assert_equal(change.details.n_new_frames, {self.dyn : n_new_frames})
 
     def test_is_ensemble_change_mover(self):
         mover = ForwardShootMover(
@@ -169,6 +172,9 @@ class testBackwardShootMover(testShootingMover):
         assert_equal(change.accepted, True)
         assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
         assert_equal(newsamp[0].trajectory, change.trials[0].trajectory)
+        n_new_frames = len(set(newsamp[0].trajectory) - 
+                           set(self.init_samp[0].trajectory))
+        assert_equal(change.details.n_new_frames, {self.dyn : n_new_frames})
 
     def test_is_ensemble_change_mover(self):
         mover = BackwardShootMover(
