@@ -1,4 +1,3 @@
-from openpathsampling import features as ft
 from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
 from openpathsampling.snapshot import Snapshot, AbstractSnapshot, ToySnapshot
 from openpathsampling.features.configuration import ConfigurationStore
