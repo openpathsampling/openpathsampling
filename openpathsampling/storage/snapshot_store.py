@@ -1,9 +1,8 @@
-from openpathsampling.snapshot import Snapshot, AbstractSnapshot, ToySnapshot
-from openpathsampling.trajectory import Trajectory
 from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
-
-import snapshot_features as ft
-from snapshot_features import ConfigurationStore, MomentumStore
+from openpathsampling.snapshot import Snapshot, AbstractSnapshot, ToySnapshot
+from openpathsampling.features.configuration import ConfigurationStore
+from openpathsampling.features.momentum import MomentumStore
+from openpathsampling.trajectory import Trajectory
 
 
 # =============================================================================================
@@ -363,7 +362,7 @@ class FeatureSnapshotStore(AbstractSnapshotStore):
         self._variables = list()
 
         for feature in self.features:
-            self._variables += getattr(ft, feature)._variables
+            self._variables += feature._variables
 
     @property
     def features(self):
@@ -414,4 +413,4 @@ class FeatureSnapshotStore(AbstractSnapshotStore):
         super(FeatureSnapshotStore, self)._init()
 
         for feature in self.features:
-            getattr(ft, feature)._init(self)
+            feature._init(self)

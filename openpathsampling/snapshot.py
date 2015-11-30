@@ -12,6 +12,7 @@ import abc
 from snapshot_content import Configuration, Momentum
 from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
 
+import features
 
 def has(attr):
     def _has(func):
@@ -148,7 +149,11 @@ class Snapshot(AbstractSnapshot):
     Simulation snapshot. Contains references to a configuration and momentum
     """
 
-    __features__ = ['Configurations', 'Momenta']
+    __features__ = [
+        features.configuration,
+        features.momentum
+    ]
+
 
     def __init__(self, coordinates=None, velocities=None, box_vectors=None,
                  potential_energy=None, kinetic_energy=None, topology=None,
@@ -358,7 +363,10 @@ class ToySnapshot(AbstractSnapshot):
     Simulation snapshot. Contains references to a configuration and momentum
     """
 
-    __features__ = ['Velocities', 'Coordinates']
+    __features__ = [
+        features.coordinates,
+        features.velocities
+    ]
 
     def __init__(self, coordinates=None, velocities=None, is_reversed=False, topology=None,
                  reversed_copy=None):
