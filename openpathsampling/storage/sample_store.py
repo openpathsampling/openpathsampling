@@ -16,13 +16,13 @@ class SampleStore(VariableStore):
         super(SampleStore, self)._init()
 
         # New short-hand definition
-        self.init_variable('trajectory', 'obj.trajectories')
-        self.init_variable('ensemble', 'obj.ensembles')
-        self.init_variable('replica', 'int')
-        self.init_variable('parent', 'lazyobj.samples')
-        self.init_variable('details', 'lazyobj.details')
-        self.init_variable('bias', 'float')
-        self.init_variable('mover', 'obj.pathmovers')
+        self.create_variable('trajectory', 'obj.trajectories')
+        self.create_variable('ensemble', 'obj.ensembles')
+        self.create_variable('replica', 'int')
+        self.create_variable('parent', 'lazyobj.samples')
+        self.create_variable('details', 'lazyobj.details')
+        self.create_variable('bias', 'float')
+        self.create_variable('mover', 'obj.pathmovers')
 
 
 class SampleSetStore(VariableStore):
@@ -57,11 +57,11 @@ class SampleSetStore(VariableStore):
         """
         super(SampleSetStore, self)._init()
 
-        self.init_variable('samples', 'obj.samples',
+        self.create_variable('samples', 'obj.samples',
                            dimensions='...',
                            description="sampleset[sampleset][frame] is the sample index " +
                                        "(0..nspanshots-1) of frame 'frame' of sampleset 'sampleset'.",
                            chunksizes=(1024,)
                            )
 
-        self.init_variable('movepath', 'lazyobj.pathmovechanges')
+        self.create_variable('movepath', 'lazyobj.pathmovechanges')

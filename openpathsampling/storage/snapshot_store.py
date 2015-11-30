@@ -130,7 +130,7 @@ class AbstractSnapshotStore(ObjectStore):
         """
         super(AbstractSnapshotStore, self)._init()
 
-        self.init_variable('momentum_reversed', 'bool')
+        self.create_variable('momentum_reversed', 'bool')
 
     def all(self):
         return Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
@@ -194,12 +194,12 @@ class SnapshotStore(AbstractSnapshotStore):
         self.storage.create_store('configurations', ConfigurationStore())
         self.storage.create_store('momenta', MomentumStore())
 
-        self.init_variable('configuration', 'lazyobj.configurations',
+        self.create_variable('configuration', 'lazyobj.configurations',
                            description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
                            chunksizes=(1,)
                            )
 
-        self.init_variable('momentum', 'lazyobj.momenta',
+        self.create_variable('momentum', 'lazyobj.momenta',
                            description="the snapshot index (0..n_momentum-1) 'frame' of snapshot '{idx}'.",
                            chunksizes=(1,)
                            )
@@ -293,14 +293,14 @@ class ToySnapshotStore(AbstractSnapshotStore):
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
-        self.init_variable('coordinates', 'numpy.float32',
+        self.create_variable('coordinates', 'numpy.float32',
                            dimensions=('atom', 'spatial'),
                            description="coordinate of atom '{ix[1]}' in dimension " +
                                        "'{ix[2]}' of configuration '{ix[0]}'.",
                            chunksizes=(1, n_atoms, n_spatial)
                            )
 
-        self.init_variable('velocities', 'numpy.float32',
+        self.create_variable('velocities', 'numpy.float32',
                            dimensions=('atom', 'spatial'),
                            description="the velocity of atom 'atom' in dimension " +
                                        "'coordinate' of momentum 'momentum'.",
