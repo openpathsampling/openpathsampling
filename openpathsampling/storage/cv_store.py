@@ -60,7 +60,7 @@ class ObjectDictStore(ObjectStore):
 
                 params = objectdict.return_parameters_from_template(self.storage.template)
 
-                self.key_store.init_variable(
+                self.key_store.create_variable(
                     var_name,
                     var_type=params['cv_return_type'],
                     dimensions=params['cv_return_shape'],
