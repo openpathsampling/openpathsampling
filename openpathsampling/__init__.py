@@ -71,7 +71,9 @@ from analysis.tis_analysis import (
     TISTransition, Transition, TPSTransition
 )
 
-from analysis.move_scheme import MoveScheme, DefaultScheme, LockedMoveScheme
+from analysis.move_scheme import (
+    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme
+)
 
 from analysis.network import (
     MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork
