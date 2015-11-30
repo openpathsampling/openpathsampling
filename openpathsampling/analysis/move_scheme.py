@@ -643,4 +643,5 @@ class SRTISScheme(DefaultScheme):
     """
     def __init__(self, network):
         super(SRTISScheme, self).__init__(network)
-        self.append(strategies.PoorSingleReplicaStrategy())
+        self.append([strategies.PoorSingleReplicaStrategy(),
+                     strategies.EnsembleHopStrategy()])

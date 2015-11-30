@@ -737,7 +737,8 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
 class SingleReplicaStrategy(MoveStrategy):
     """
     Converts ReplicaExchange to EnsembleHop, and changes overall structure
-    to SRTIS approach.
+    to SRTIS approach. [I think this happens as part of the org-by-ensemble
+    strategy, and is no longer needed?]
     """
     pass
 
