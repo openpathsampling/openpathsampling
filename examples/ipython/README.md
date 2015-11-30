@@ -26,17 +26,30 @@ See below for a complete list of available notebooks.
 
 ## Examples
 
-#### MSTIS example (3 parts)
+#### MSTIS example (4 parts)
 
 This is the main example illustrating the usage of OpenPathSampling for a Multi-State Transition Interface Sampling in a 2D toy potential with 3 states and using a simple Langevin integrator
 
 
 - [`mstis_bootstrap.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/mstis_bootstrap.ipynb)
-    [Part 1] of the MSTIS (Multi State TIS) testing notebooks. This will setup the general system and create initial pathways to be used in later parts. Contains an example on how to use bootstrapping.
+    [Part 1] of the MSTIS (Multiple State TIS) testing notebooks. This will
+    setup the general system and create initial pathways to be used in later
+    parts. Contains an example on how to use bootstrapping.
 - [`mstis.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/mstis.ipynb)
-    [Part 2] of the MSTIS (Multi State TIS) testing notebooks. This uses the previously generated initial pathways and generates data to be analyzed later.
+    [Part 2] of the MSTIS (Multiple State TIS) testing notebooks. This uses the
+    previously generated initial pathways and generates data to be analyzed
+    later.
 - [`mstis_analysis.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/mstis_analysis.ipynb)
-    [Part 3] of the MSTIS (Multi State TIS) testing notebooks. This takes the previously generated data and does a complete analysis on them. Including different visualizations, rate computations, flow analysis, etc.
+    [Part 3] of the MSTIS (Multiple State TIS) testing notebooks. This takes
+    the previously generated data and does a complete analysis on them.
+    Including different visualizations, rate computations, flow analysis,
+    etc.
+- [`srtis.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/srtis.ipynb)
+    [Part 4] of the MSTIS (Multiple State TIS) testing notebooks. This takes
+    the same network as used in `mstis.ipynb`, but uses it in a
+    single-replica TIS scheme. This notebook also includes some analysis of
+    the SRTIS results.
+
 
 #### MISTIS example (2 parts)
 
