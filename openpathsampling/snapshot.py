@@ -150,8 +150,8 @@ class Snapshot(AbstractSnapshot):
     """
 
     __features__ = [
-        features.Configuration,
-        features.Momentum
+        features.configuration,
+        features.momentum
     ]
 
 
@@ -364,8 +364,8 @@ class ToySnapshot(AbstractSnapshot):
     """
 
     __features__ = [
-        features.Coordinates,
-        features.Velocities
+        features.coordinates,
+        features.velocities
     ]
 
     def __init__(self, coordinates=None, velocities=None, is_reversed=False, topology=None,

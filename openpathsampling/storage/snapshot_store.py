@@ -1,8 +1,8 @@
 from openpathsampling import features as ft
 from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
 from openpathsampling.snapshot import Snapshot, AbstractSnapshot, ToySnapshot
-from openpathsampling.features.Configuration import ConfigurationStore
-from openpathsampling.features.Momentum import MomentumStore
+from openpathsampling.features.configuration import ConfigurationStore
+from openpathsampling.features.momentum import MomentumStore
 from openpathsampling.trajectory import Trajectory
 
 

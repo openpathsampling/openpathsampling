@@ -230,7 +230,7 @@ def to_openmm_topology(obj):
 
     Parameters
     ----------
-    obj : Snapshot or Configuration
+    obj : Snapshot or configuration
         the object to be used in the topology construction
 
     Returns
