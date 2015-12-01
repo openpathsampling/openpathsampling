@@ -1663,6 +1663,8 @@ class OneWayShootingMover(RandomChoiceMover):
     ensemble : paths.Ensemble
         Ensemble for this shooting mover
     """
+    _is_canonical = True
+
     def __init__(self, ensemble, selector):
         movers = [
             ForwardShootMover(

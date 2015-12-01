@@ -359,7 +359,7 @@ class MoveTreeBuilder(object):
         self.obj = list()
         self.storage = storage
 
-        self.t_count = 0
+        yp = 0
         self.traj_ens_x = dict()
         self.traj_ens_y = dict()
 
@@ -387,42 +387,33 @@ class MoveTreeBuilder(object):
 
         level_y = dict()
 
-        self.t_count = 1
-
         self.ens_x = [None] * len(self.ensembles)
         self.repl_x = [None] * len(self.ensembles)
 
         path = self.pathmover
 
-        self.t_count = 0
-
-        total = len(path)
-
-        print path
-
         group = doc.g(
             class_='tree'
         )
 
-        for level, sub in path.depth_pre_order(lambda this: tuple(
-                [this, None])):
-            self.t_count += 1
+        tree = path.depth_pre_order(lambda this: this, only_canonical=True)
 
+        total = len(tree)
+
+        for yp, (level, sub_mp) in enumerate(tree):
             x_pos = - level
-
-            sub_mp, sub_set = sub
 
             sub_type = sub_mp.__class__
             sub_name = sub_type.__name__[:-5]
 
             if sub_type is paths.SamplePathMoveChange:
                 group.add(
-                    doc.block(level, self.t_count))
+                    doc.block(level, yp))
 
                 group.add(
                     doc.label(
                         x_pos,
-                        self.t_count,
+                        yp,
                         sub_name,
                         cls=['name'] + [sub_type.__name__]
                     )
@@ -431,24 +422,24 @@ class MoveTreeBuilder(object):
                 group.add(
                     doc.block(
                         x_pos,
-                        self.t_count,
+                        yp,
                     )
                 )
                 group.add(
                     doc.label(
                         x_pos,
-                        self.t_count,
+                        yp,
                         sub_name
                     )
                 )
 
             if level - 1 in level_y \
-                    and level_y[level - 1] == self.t_count - 1:
+                    and level_y[level - 1] == yp - 1:
                 group.add(
                     doc.vertical_connector(
                         x_pos + 1,
-                        self.t_count,
-                        self.t_count - 1
+                        yp,
+                        yp - 1
                     )
                 )
 
@@ -459,20 +450,18 @@ class MoveTreeBuilder(object):
                 group.add(
                     doc.vertical_connector(
                         x_pos + 1,
-                        self.t_count,
+                        yp,
                         level_y[level]
                     )
                 )
 
-            level_y[level] = self.t_count
+            level_y[level] = yp
 
         doc.add(group)
 
         group = doc.g(
             class_='ensembles'
         )
-        
-        self.t_count = 0
 
         for ens_idx, ens in enumerate(self.ensembles):
             txt = chr(ens_idx + 65)
@@ -482,38 +471,29 @@ class MoveTreeBuilder(object):
             group.add(
                 doc.label(
                     ens_idx,
-                    0,
+                    -1,
                     '[' + txt + '] ' + label,
                     cls=['head']
                 )
             )
-
-        for ens_idx, ens in enumerate(self.ensembles):
             group.add(
                 doc.vertical_hook(
                     ens_idx,
-                    0,
+                    -1,
                     ens_idx,
-                    total + 1
+                    total
                 )
             )
 
         max_level = 0
 
-        for level, sub in path.depth_pre_order(lambda this: tuple(
-                [this, None])):
+        for yp, (level, sub_mp) in enumerate(path.depth_pre_order(lambda this: this, only_canonical=True)):
             if level > max_level:
                 max_level = level
-
-            self.t_count += 1
-
-            sub_mp, sub_set = sub
 
             in_ens = sub_mp.input_ensembles
             out_ens = sub_mp.output_ensembles
 
-            yp = self.t_count
-    
             for ens_idx, ens in enumerate(self.ensembles):
                 txt = chr(ens_idx + 65)
                 show = False
@@ -523,7 +503,7 @@ class MoveTreeBuilder(object):
                     group.add(
                         doc.connector(
                             ens_idx,
-                            yp - 0.1,
+                            yp - 0.15,
                             '',
                             cls=['input']
                         )
@@ -536,14 +516,14 @@ class MoveTreeBuilder(object):
                     group.add(
                         doc.connector(
                             ens_idx,
-                            yp + 0.1,
+                            yp + 0.15,
                             '',
                             cls=['output'])
                     )
     
                     show = True
     
-                if show or True:
+                if show:
                     group.add(
                         doc.connector(
                             ens_idx,
@@ -559,12 +539,10 @@ class MoveTreeBuilder(object):
 
         doc['class'] = 'movetree'
 
-        left_x = -max_level * doc.scale_x - 80
-        top_y = - 80
+        left_x = -max_level * doc.scale_x - 120
+        top_y = - 120
         width = len(self.ensembles) * doc.scale_x - left_x + 50
         height = (total + 1) * doc.scale_y - top_y
-
-        print left_x, width, top_y, height
 
         # adjust viewbox to fit full image
         doc['viewBox'] = '%.2f %.2f %.2f %.2f' % (

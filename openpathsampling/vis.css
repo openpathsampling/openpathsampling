@@ -16,7 +16,7 @@
     fill: white !important;
     stroke: none !important;
 }
-.opstree .block :hover {
+.opstree g.block:hover rect {
     opacity: 0.5;
 }
 .opstree .repex {
