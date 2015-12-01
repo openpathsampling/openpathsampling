@@ -1,12 +1,11 @@
-__author__ = 'Jan-Hendrik Prinz'
-
-import logging
-
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
 from treelogic import TreeSetMixin
 
+import logging
 logger = logging.getLogger(__name__)
+
+__author__ = 'Jan-Hendrik Prinz'
 
 
 @lazy_loading_attributes('details')

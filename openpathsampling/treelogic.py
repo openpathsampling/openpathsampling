@@ -188,7 +188,7 @@ class TreeSetMixin(object):
     def is_sequential(self):
         """
         Returns whether a node is locally sequential in the sense that it has only
-        one or more choice.
+        one or no choice.
 
         This is different from is_deterministic which checks the same for a whole tree
         """
@@ -793,6 +793,10 @@ class TreeSetMixin(object):
 
 class TupleTree(tuple, TreeSetMixin):
     _node_type = TreeSetMixin.NODE_TYPE_ALL
+
+    def __new__ (cls, seq):
+        seq2 = [seq[0]] + [TupleTree(s) if type(s) is not TupleTree else s for s in seq[1:]]
+        return super(TupleTree, cls).__new__(cls, tuple(seq2))
 
     @staticmethod
     def contains(needle, haystack):
