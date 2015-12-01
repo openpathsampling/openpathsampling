@@ -1824,6 +1824,11 @@ class SingleReplicaMinusMover(MinusMover):
         except TypeError:
             innermost_ensembles = [innermost_ensembles]
 
+        if bias is None: bias = "" # TODO temp for storage until real bias
+        self.bias = bias
+        self.minus_ensemble = minus_ensemble
+        self.innermost_ensembles = innermost_ensembles
+
         # TODO: Until we have automated detailed balance calculations, I
         # think this will only be valid in the case of only one innermost
         # ensemble.  But I think you only want to use it in the case of only
