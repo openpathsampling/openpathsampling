@@ -1,8 +1,5 @@
-from openpathsampling.storage import ObjectStore
 from openpathsampling.pathmovechange import PathMoveChange
-from openpathsampling.base import StorableObject
-from objproxy import LoaderProxy
-
+from openpathsampling.netcdfplus import StorableObject, LoaderProxy, ObjectStore
 
 class PathMoveChangeStore(ObjectStore):
     def __init__(self):
@@ -13,6 +10,9 @@ class PathMoveChangeStore(ObjectStore):
 
         self._cached_all = False
         self.class_list = StorableObject.objects()
+
+    def to_dict(self):
+        return {}
 
     def _save(self, pathmovechange, idx):
         self.vars['samples'][idx] = pathmovechange.samples
@@ -39,16 +39,16 @@ class PathMoveChangeStore(ObjectStore):
         super(PathMoveChangeStore, self)._init()
 
         # New short-hand definition
-        self.init_variable('details', 'lazyobj.details', chunksizes=(1,))
-        self.init_variable('mover', 'obj.pathmovers', chunksizes=(1,))
-        self.init_variable('cls', 'str', chunksizes=(1,))
+        self.create_variable('details', 'lazyobj.details', chunksizes=(1,))
+        self.create_variable('mover', 'obj.pathmovers', chunksizes=(1,))
+        self.create_variable('cls', 'str', chunksizes=(1,))
 
-        self.init_variable('subchanges', 'obj.pathmovechanges',
+        self.create_variable('subchanges', 'obj.pathmovechanges',
                            dimensions=('...'),
                            chunksizes=(10240,)
                            )
 
-        self.init_variable('samples', 'obj.samples',
+        self.create_variable('samples', 'obj.samples',
                            dimensions=('...'),
                            chunksizes=(10240,)
                            )

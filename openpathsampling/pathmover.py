@@ -11,12 +11,13 @@ import abc
 
 import numpy as np
 
-import openpathsampling as paths
-from openpathsampling.base import StorableNamedObject, StorableObject
 from ops_logging import initialization_logging
 
 from treelogic import TreeSetMixin
 
+
+import openpathsampling as paths
+from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')

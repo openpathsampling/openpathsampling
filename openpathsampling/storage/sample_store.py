@@ -1,12 +1,14 @@
-from object_storage import ObjectStore
 from openpathsampling.sample import SampleSet, Sample
-from objproxy import LoaderProxy
+from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
 
 
 class SampleStore(ObjectStore):
     def __init__(self):
         super(SampleStore, self).__init__(Sample, json=False)
         self._cached_all = False
+
+    def to_dict(self):
+        return {}
 
     def _save(self, sample, idx):
         self.vars['trajectory'][idx] = sample.trajectory
@@ -37,13 +39,13 @@ class SampleStore(ObjectStore):
         super(SampleStore, self)._init()
 
         # New short-hand definition
-        self.init_variable('trajectory', 'obj.trajectories', chunksizes=(1,))
-        self.init_variable('ensemble', 'obj.ensembles', chunksizes=(1,))
-        self.init_variable('replica', 'int', chunksizes=(1,))
-        self.init_variable('parent', 'lazyobj.samples', chunksizes=(1,))
-        self.init_variable('details', 'lazyobj.details', chunksizes=(1,))
-        self.init_variable('bias', 'float', chunksizes=(1,))
-        self.init_variable('mover', 'obj.pathmovers', chunksizes=(1,))
+        self.create_variable('trajectory', 'obj.trajectories', chunksizes=(1,))
+        self.create_variable('ensemble', 'obj.ensembles', chunksizes=(1,))
+        self.create_variable('replica', 'int', chunksizes=(1,))
+        self.create_variable('parent', 'lazyobj.samples', chunksizes=(1,))
+        self.create_variable('details', 'lazyobj.details', chunksizes=(1,))
+        self.create_variable('bias', 'float', chunksizes=(1,))
+        self.create_variable('mover', 'obj.pathmovers', chunksizes=(1,))
 
     def all(self):
         self.cache_all()
@@ -136,14 +138,14 @@ class SampleSetStore(ObjectStore):
         """
         super(SampleSetStore, self)._init()
 
-        self.init_variable('samples', 'obj.samples',
+        self.create_variable('samples', 'obj.samples',
                            dimensions='...',
                            description="sampleset[sampleset][frame] is the sample index " +
                                        "(0..nspanshots-1) of frame 'frame' of sampleset 'sampleset'.",
                            chunksizes=(1024,)
                            )
 
-        self.init_variable('movepath', 'obj.pathmovechanges', chunksizes=(1,))
+        self.create_variable('movepath', 'obj.pathmovechanges', chunksizes=(1,))
 
     def cache_all(self):
         """Load all samples as fast as possible into the cache

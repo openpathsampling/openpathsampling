@@ -1,18 +1,17 @@
-import types
 import logging
+import weakref
 
 import yaml
 
 from cache import MaxCache, Cache, NoCache, WeakLRUCache
-from objproxy import LoaderProxy
-
-import weakref
+from proxy import LoaderProxy
+from base import StorableNamedObject
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 
-class ObjectStore(object):
+class ObjectStore(StorableNamedObject):
     """
     Base Class for storing complex objects in a netCDF4 file. It holds a
     reference to the store file.
@@ -39,31 +38,22 @@ class ObjectStore(object):
 
     default_cache = 10000
 
-    def __init__(self, content_class, json=True,
-                 caching=None, nestable=False, has_name=False):
-
+    def __init__(self, content_class, json=True, nestable=False, has_name=False):
         """
 
         Parameters
         ----------
-        storage
         content_class
-        json
-        dimension_units
-        caching : dict-like or bool or int or None
-            this is the dict used for caching.
-            `True` means to use a python built-in dict which unlimited caching.
-            Be careful.
-            `False` means no caching at all. If a dict-like object is passed,
-            it will be used.
-            An integer `n` means to use LRU Caching with maximal n elements and is
-            equal to `cache=LRUCache(n)`
-            Default (None) is equivalent to `cache=ObjectStore.default_cache`
-        nestable : bool
-            if true this marks the content_class to be saved as nested dict
+        json : bool, default: True
+            if True the store will use the json pickling to store objects
+        nestable : bool, default: False
+            if `True` this marks the content_class to be saved as nested dict
             objects and not a pointing to saved objects. So the saved complex
             object is only stored once and not split into several objects that
             are referenced by each other in a tree-like fashion
+        has_name : bool, default: False
+            if `True` the store will save the objects `.name` property separatley
+            and allow to load by this name.
 
         Notes
         -----
@@ -73,7 +63,6 @@ class ObjectStore(object):
 
         Attributes
         ----------
-
         storage : Storage
             the reference the Storage object where all data is stored
         content_class : class
@@ -101,6 +90,7 @@ class ObjectStore(object):
 
         """
 
+        super(ObjectStore, self).__init__()
         self._storage = None
         self.content_class = content_class
         self.prefix = None
@@ -112,12 +102,21 @@ class ObjectStore(object):
         self._names_loaded = False
         self.nestable = nestable
         self.name_idx = dict()
+        self._created = False
 
         self.variables = dict()
         self.vars = dict()
         self.units = dict()
 
         self.index = weakref.WeakKeyDictionary()
+
+    def to_dict(self):
+        return {
+            'content_class': self.content_class,
+            'has_name': self.has_name,
+            'json': self.json,
+            'nestable': self.nestable
+        }
 
     def register(self, storage, name):
         self._storage = storage
@@ -133,10 +132,6 @@ class ObjectStore(object):
             raise RuntimeError('A store need to be added to a storage to be used!')
 
         return self._storage
-
-    @property
-    def dimension_units(self):
-        return self.storage.dimension_units
 
     def __str__(self):
         return repr(self)
@@ -483,27 +478,21 @@ class ObjectStore(object):
         """
         Initialize the associated storage to allow for object storage. Mainly
         creates an index dimension with the name of the object.
-
-        Parameters
-        ----------
-        units : dict of {str : simtk.unit.Unit} or None
-            representing a dict of string representing a dimension
-            ('length', 'velocity', 'energy') pointing to
-            the simtk.unit.Unit to be used. If not None overrides the standard
-            units used in the storage
         """
         # define dimensions used for the specific object
         self.storage.createDimension(self.prefix, 0)
 
         if self.has_name:
-            self.init_variable("name", 'str',
+            self.create_variable("name", 'str',
                                description='A name',
                                chunksizes=tuple([10240]))
 
         if self.json:
-            self.init_variable("json", 'json',
+            self.create_variable("json", 'json',
                                description='A json serialized version of the object',
                                chunksizes=tuple([10240]))
+
+        self._created = True
 
     def _restore(self):
         pass
@@ -512,7 +501,7 @@ class ObjectStore(object):
     # INITIALISATION UTILITY FUNCTIONS
     # ==============================================================================
 
-    def init_variable(self, name, var_type, dimensions=None, **kwargs):
+    def create_variable(self, name, var_type, dimensions=None, **kwargs):
         """
         Create a new variable in the netCDF storage. This is just a helper
         function to structure the code better.
@@ -619,9 +608,6 @@ class ObjectStore(object):
         if type(idx) is not str and idx < 0:
             return None
 
-        if not hasattr(self, 'cache'):
-            return self._load(idx)
-
         n_idx = idx
 
         if type(idx) is str:
@@ -697,7 +683,7 @@ class ObjectStore(object):
 
         Parameters
         ----------
-        obj : object
+        obj : StorableObject
             the object to be stored
         idx : int or string or `None`
             the index to be used for storing. This is highly discouraged since
@@ -711,7 +697,7 @@ class ObjectStore(object):
             if obj in self.index:
                 # has been saved so quit and do nothing
                 return self.index[obj]
-            elif type(obj) is LoaderProxy:
+            elif hasattr(obj, '_idx'):
                 return obj._idx
             else:
                 idx = self.free()

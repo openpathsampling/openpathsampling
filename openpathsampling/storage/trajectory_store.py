@@ -1,11 +1,13 @@
-from object_storage import ObjectStore
 from openpathsampling.trajectory import Trajectory
-from openpathsampling.storage.objproxy import LoaderProxy
+from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
 
 
 class TrajectoryStore(ObjectStore):
     def __init__(self):
         super(TrajectoryStore, self).__init__(Trajectory)
+
+    def to_dict(self):
+        return {}
 
     def _save(self, trajectory, idx):
         self.vars['snapshots'][idx] = trajectory
@@ -89,7 +91,7 @@ class TrajectoryStore(ObjectStore):
 
         # index associated storage in class variable for all Trajectory instances to access
 
-        self.init_variable('snapshots', 'lazyobj.snapshots',
+        self.create_variable('snapshots', 'lazyobj.snapshots',
                            dimensions=('...',),
                            description="trajectory[trajectory][frame] is the snapshot index " +
                                        "(0..nspanshots-1) of frame 'frame' of trajectory 'trajectory'.",
