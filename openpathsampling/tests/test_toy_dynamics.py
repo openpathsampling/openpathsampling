@@ -14,7 +14,7 @@ from openpathsampling.toy_dynamics.toy_pes import *
 from openpathsampling.toy_dynamics.toy_integrators import *
 from openpathsampling.toy_dynamics.toy_engine import *
 from openpathsampling.topology import ToyTopology
-from openpathsampling.snapshot import Snapshot, Momentum, Configuration
+from openpathsampling.snapshot import ToySnapshot
 
 
 # =========================================================================
@@ -146,11 +146,9 @@ class testToyEngine(object):
             masses = sys_mass,
             pes = pes
         )
-        template = Snapshot(
+        template = ToySnapshot(
             coordinates=init_pos.copy(),
             velocities=init_pos.copy(),
-            potential_energy = 0.0,
-            kinetic_energy = 0.0,
             topology=topology
         )
         options={
@@ -177,57 +175,19 @@ class testToyEngine(object):
     def test_snapshot_timestep(self):
         assert_equal(self.sim.snapshot_timestep, 0.02)
 
-    def test_momentum_getter(self):
-        momentum = self.sim.momentum
-        assert_items_equal(momentum.velocities[0],
-                           self.sim.velocities)
-        assert_equal(momentum.kinetic_energy,
-                     self.sim.pes.kinetic_energy(self.sim))
-    
-    def test_momentum_setter(self):
-        raise SkipTest()
-        self.sim.momentum = Momentum(velocities=np.array([[4, 5, 6]]))
-        assert_items_equal(self.sim.velocities, [4, 5])
-
-    def test_configuration_setter(self):
-        raise SkipTest()
-        # This should not work anymore
-        self.sim.configuration = Configuration(
-            coordinates=np.array([[1, 2, 3]])
-        )
-        assert_items_equal(self.sim.positions, [1, 2])
-
-
-    def test_load_configuration(self):
-        configuration = self.sim.configuration
-        assert_items_equal(configuration.coordinates[0],
-                           self.sim.positions)
-        assert_equal(configuration.potential_energy,
-                     self.sim.pes.V(self.sim))
-        assert_equal(configuration.box_vectors, None)
-
     def test_snapshot_get(self):
         snapshot = self.sim.current_snapshot
-        n_spatial=self.sim.n_spatial
-        assert_items_equal(snapshot.momentum.velocities[0],
+        assert_items_equal(snapshot.velocities[0],
                            self.sim.velocities)
-        assert_equal(snapshot.momentum.kinetic_energy,
-                     self.sim.pes.kinetic_energy(self.sim))
-        assert_items_equal(snapshot.configuration.coordinates[0],
+        assert_items_equal(snapshot.coordinates[0],
                            self.sim.positions)
-        assert_equal(snapshot.configuration.potential_energy,
-                     self.sim.pes.V(self.sim))
-        assert_equal(snapshot.configuration.box_vectors, None)
-        
+
     def test_snapshot_set(self):
-        raise SkipTest()
-        snap = Snapshot(coordinates=np.array([[1,2,3]]), 
+        snap = ToySnapshot(coordinates=np.array([[1,2,3]]),
                         velocities=np.array([[4,5,6]]))
-        # note that we truncate the z-direction, regardless of what it is.
-        # This is for a 2D model!
         self.sim.current_snapshot = snap
-        assert_items_equal(self.sim.positions, [1,2])
-        assert_items_equal(self.sim.velocities, [4,5])
+        assert_items_equal(self.sim.positions, [1,2,3])
+        assert_items_equal(self.sim.velocities, [4,5,6])
 
     def test_generate_next_frame(self):
         # we test correctness by integrating forward, then backward
@@ -246,7 +206,7 @@ class testToyEngine(object):
         assert_equal(len(traj), self.sim.n_frames_max)
 
     def test_start_with_snapshot(self):
-        snap = Snapshot(coordinates=np.array([1,2]), 
+        snap = ToySnapshot(coordinates=np.array([1,2]),
                         velocities=np.array([3,4]))
         self.sim.start(snapshot=snap)
         self.sim.stop([snap])
@@ -264,11 +224,9 @@ class testLeapfrogVerletIntegrator(object):
             masses = sys_mass,
             pes = pes
         )
-        template = Snapshot(
+        template = ToySnapshot(
             coordinates=init_pos.copy(),
             velocities=init_pos.copy(),
-            potential_energy = 0.0,
-            kinetic_energy = 0.0,
             topology=topology
         )
         options={
@@ -319,11 +277,9 @@ class testLangevinBAOABIntegrator(object):
             masses = sys_mass,
             pes = pes
         )
-        template = Snapshot(
+        template = ToySnapshot(
             coordinates=init_pos.copy(),
             velocities=init_pos.copy(),
-            potential_energy = 0.0,
-            kinetic_energy = 0.0,
             topology=topology
         )
         options={
