@@ -15,8 +15,8 @@ from ensemble import (
     OptionalEnsemble, join_ensembles
 )
 
-from snapshot import Snapshot, Configuration, Momentum, ToySnapshot, AbstractSnapshot
-
+from snapshot import Snapshot, Momentum, ToySnapshot, AbstractSnapshot
+from snapshot_content import Configuration, Momentum
 from trajectory import Trajectory
 from sample import Sample, SampleSet
 
@@ -96,3 +96,5 @@ from pathmovechange import (
     RejectedSamplePathMoveChange, SubPathMoveChange,
     FilterByEnsemblePathMoveChange
 )
+
+from storage.storage import Storage, AnalysisStorage

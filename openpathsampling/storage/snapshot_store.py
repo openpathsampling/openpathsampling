@@ -1,9 +1,8 @@
-from openpathsampling.snapshot import Snapshot, AbstractSnapshot, ToySnapshot
-from openpathsampling.trajectory import Trajectory
 from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
-
-import features as ft
-from features import ConfigurationStore, MomentumStore
+from openpathsampling.snapshot import Snapshot, AbstractSnapshot, ToySnapshot
+from openpathsampling.features.configuration import ConfigurationStore
+from openpathsampling.features.momentum import MomentumStore
+from openpathsampling.trajectory import Trajectory
 
 
 # =============================================================================================
@@ -16,6 +15,14 @@ class AbstractSnapshotStore(ObjectStore):
     """
 
     def __init__(self, snapshot_class):
+        """
+
+        Attributes
+        ----------
+        snapshot_class : openpathsampling.AbstractSnapshot
+            a snapshot class that this Store is supposed to store
+
+        """
         super(AbstractSnapshotStore, self).__init__(AbstractSnapshot, json=False)
         self.snapshot_class = snapshot_class
 
@@ -26,12 +33,12 @@ class AbstractSnapshotStore(ObjectStore):
 
     def _get(self, idx, from_reversed=False):
         if from_reversed:
-            obj = self.cache[idx ^ 1]
+            obj = self.cache[AbstractSnapshotStore.paired_idx(idx)]
 
             return AbstractSnapshot(
                 is_reversed=not obj.is_reversed,
                 topology=obj.topology,
-                reversed_copy=LoaderProxy(self, idx ^ 1)
+                reversed_copy=LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
             )
         else:
             momentum_reversed = self.vars['momentum_reversed'][idx]
@@ -40,7 +47,7 @@ class AbstractSnapshotStore(ObjectStore):
             return AbstractSnapshot(
                 is_reversed=momentum_reversed,
                 topology=topology,
-                reversed_copy=LoaderProxy(self, idx ^ 1)
+                reversed_copy=LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
             )
 
     def _load(self, idx):
@@ -63,9 +70,33 @@ class AbstractSnapshotStore(ObjectStore):
         except KeyError:
             return self._get(idx)
 
-    def _put(self, idx, snapshot):
+    @staticmethod
+    def paired_idx(idx):
+        """
+        Return the paired index
+
+        Snapshots are stored in pairs (2n, 2n+1) where one is the reversed copy.
+        This make storing CVs easier. This function allows to get the paired index
+        or the index of snapshot.reversed
+
+        The implementation uses the trick that all you have to do is flip the lowest bit
+        that determines even or odd.
+
+        Parameters
+        ----------
+        idx : int
+            the one part of the paired index
+
+        Returns
+        -------
+        int
+            the other part of the paired index
+        """
+        return idx ^ 1
+
+    def _set(self, idx, snapshot):
         self.vars['momentum_reversed'][idx] = snapshot.is_reversed
-        self.vars['momentum_reversed'][idx ^ 1] = not snapshot.is_reversed
+        self.vars['momentum_reversed'][AbstractSnapshotStore.paired_idx(idx)] = not snapshot.is_reversed
 
     def _save(self, snapshot, idx):
         """
@@ -84,10 +115,10 @@ class AbstractSnapshotStore(ObjectStore):
         This also saves all contained frames in the snapshot if not done yet.
         A single Snapshot object can only be saved once!
         """
-        self._put(idx, snapshot)
+        self._set(idx, snapshot)
 
         reversed = snapshot._reversed
-        snapshot._reversed = LoaderProxy(self, idx ^ 1)
+        snapshot._reversed = LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
         reversed._reversed = LoaderProxy(self, idx)
 
         # mark reversed as stored
@@ -99,7 +130,7 @@ class AbstractSnapshotStore(ObjectStore):
         """
         super(AbstractSnapshotStore, self)._init()
 
-        self.init_variable('momentum_reversed', 'bool', chunksizes=(1,))
+        self.create_variable('momentum_reversed', 'bool', chunksizes=(1,))
 
     def all(self):
         return Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
@@ -120,13 +151,13 @@ class SnapshotStore(AbstractSnapshotStore):
     def to_dict(self):
         return {}
 
-    def _put(self, idx, snapshot):
+    def _set(self, idx, snapshot):
         self.vars['configuration'][idx] = snapshot.configuration
         self.vars['momentum'][idx] = snapshot.momentum
         self.write('configuration', idx ^ 1, snapshot)
         self.write('momentum', idx ^ 1, snapshot)
 
-        super(SnapshotStore, self)._put(idx, snapshot)
+        super(SnapshotStore, self)._set(idx, snapshot)
 
     def _get(self, idx, from_reversed=False):
         if from_reversed:
@@ -137,7 +168,7 @@ class SnapshotStore(AbstractSnapshotStore):
                 momentum=obj.momentum,
                 is_reversed=not obj.is_reversed,
                 topology=obj.topology,
-                reversed_copy=LoaderProxy(self, idx ^ 1)
+                reversed_copy=LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
             )
         else:
             configuration = self.vars['configuration'][idx]
@@ -150,7 +181,7 @@ class SnapshotStore(AbstractSnapshotStore):
                 momentum=momentum,
                 is_reversed=momentum_reversed,
                 topology=topology,
-                reversed_copy=LoaderProxy(self, idx ^ 1)
+                reversed_copy=LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
             )
 
 
@@ -163,12 +194,12 @@ class SnapshotStore(AbstractSnapshotStore):
         self.storage.create_store('configurations', ConfigurationStore())
         self.storage.create_store('momenta', MomentumStore())
 
-        self.init_variable('configuration', 'lazyobj.configurations',
+        self.create_variable('configuration', 'lazyobj.configurations',
                            description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
                            chunksizes=(1,)
                            )
 
-        self.init_variable('momentum', 'lazyobj.momenta',
+        self.create_variable('momentum', 'lazyobj.momenta',
                            description="the snapshot index (0..n_momentum-1) 'frame' of snapshot '{idx}'.",
                            chunksizes=(1,)
                            )
@@ -221,13 +252,13 @@ class ToySnapshotStore(AbstractSnapshotStore):
     def to_dict(self):
         return {}
 
-    def _put(self, idx, snapshot):
+    def _set(self, idx, snapshot):
         self.vars['coordinates'][idx] = snapshot.coordinates
         self.vars['velocities'][idx] = snapshot.velocities
         self.write('coordinates', idx ^ 1, snapshot)
         self.write('velocities', idx ^ 1, snapshot)
 
-        super(ToySnapshotStore, self)._put(idx, snapshot)
+        super(ToySnapshotStore, self)._set(idx, snapshot)
 
     def _get(self, idx, from_reversed=False):
         if from_reversed:
@@ -238,7 +269,7 @@ class ToySnapshotStore(AbstractSnapshotStore):
                 velocities=obj.velocities,
                 is_reversed=not obj.is_reversed,
                 topology=obj.topology,
-                reversed_copy=LoaderProxy(self, idx ^ 1)
+                reversed_copy=LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
             )
         else:
             coordinates = self.vars['coordinates'][idx]
@@ -250,7 +281,7 @@ class ToySnapshotStore(AbstractSnapshotStore):
                 velocities=velocities,
                 is_reversed=momentum_reversed,
                 topology=self.storage.topology,
-                reversed_copy=LoaderProxy(self, idx ^ 1)
+                reversed_copy=LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
             )
 
     def _init(self):
@@ -262,14 +293,14 @@ class ToySnapshotStore(AbstractSnapshotStore):
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
-        self.init_variable('coordinates', 'numpy.float32',
+        self.create_variable('coordinates', 'numpy.float32',
                            dimensions=('atom', 'spatial'),
                            description="coordinate of atom '{ix[1]}' in dimension " +
                                        "'{ix[2]}' of configuration '{ix[0]}'.",
                            chunksizes=(1, n_atoms, n_spatial)
                            )
 
-        self.init_variable('velocities', 'numpy.float32',
+        self.create_variable('velocities', 'numpy.float32',
                            dimensions=('atom', 'spatial'),
                            description="the velocity of atom 'atom' in dimension " +
                                        "'coordinate' of momentum 'momentum'.",
@@ -331,33 +362,47 @@ class FeatureSnapshotStore(AbstractSnapshotStore):
         self._variables = list()
 
         for feature in self.features:
-            self._variables += getattr(ft, feature)._variables
+            self._variables += feature._variables
 
     @property
     def features(self):
         return self.snapshot_class.__features__
 
-    def _put(self, idx, snapshot):
+    def _set(self, idx, snapshot):
         for variable in self._variables:
             self.vars[variable][idx] = getattr(snapshot, variable)
-            self.write(variable, idx ^ 1, snapshot)
+            self.write(variable, AbstractSnapshotStore.paired_idx(idx), snapshot)
 
-        self.vars['momentum_reversed'][idx] = snapshot.is_reversed
-        self.vars['momentum_reversed'][idx ^ 1] = not snapshot.is_reversed
+        super(FeatureSnapshotStore, self)._set(idx, snapshot)
 
     def _get(self, idx, from_reversed=False):
+        snapshot = self.snapshot_class.__new__(self.snapshot_class)
         if from_reversed:
             obj = self.cache[idx ^ 1]
 
-            snapshot = self.snapshot_class.__new__(self.snapshot_class)
-            AbstractSnapshot.__init__(snapshot, not obj.is_reversed, LoaderProxy(self, idx ^ 1), self.storage.topology)
+            AbstractSnapshot.__init__(
+                snapshot,
+                not obj.is_reversed,
+                LoaderProxy(
+                    self,
+                    AbstractSnapshotStore.paired_idx(idx)
+                ),
+                self.storage.topology
+            )
 
             for variables in self._variables:
                 setattr(snapshot, variables, getattr(obj, variables))
 
         else:
-            snapshot = self.snapshot_class.__new__(self.snapshot_class)
-            AbstractSnapshot.__init__(snapshot, self.vars['momentum_reversed'][idx], LoaderProxy(self, idx ^ 1), self.storage.topology)
+            AbstractSnapshot.__init__(
+                snapshot,
+                self.vars['momentum_reversed'][idx],
+                LoaderProxy(
+                    self,
+                    AbstractSnapshotStore.paired_idx(idx)
+                ),
+                self.storage.topology
+            )
 
             for variables in self._variables:
                 setattr(snapshot, variables, self.vars[variables][idx])
@@ -368,4 +413,4 @@ class FeatureSnapshotStore(AbstractSnapshotStore):
         super(FeatureSnapshotStore, self)._init()
 
         for feature in self.features:
-            getattr(ft, feature)._init(self)
+            feature._init(self)
