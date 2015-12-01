@@ -6,14 +6,12 @@ Created on 06.07.2014
 """
 
 import logging
+import openpathsampling as paths
+from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-import openpathsampling as paths
-import simtk.unit as u
-from openpathsampling.netcdfplus import NetCDFPlus
-from openpathsampling.netcdfplus import WeakLRUCache, WeakValueCache
 
 # =============================================================================================
 # OPS SPECIFIC STORAGE
@@ -25,11 +23,7 @@ class Storage(NetCDFPlus):
     simulation. This allows effective storage of shooting trajectories
     """
 
-    def get_unit(self, dimension):
-        """
-        Return a simtk.Unit instance from the unit_system the is of the specified dimension, e.g. length, time
-        """
-        return u.Unit({self.unit_system.base_units[u.BaseDimension(dimension)]: 1.0})
+    USE_FEATURE_SNAPSHOTS = True
 
     @property
     def template(self):
@@ -46,23 +40,21 @@ class Storage(NetCDFPlus):
 
         return self._template
 
-    def _setup_class(self):
-        super(Storage, self)._setup_class()
-        # use MD units
-
-        self.dimension_units = {
-            'length': u.nanometers,
-            'velocity': u.nanometers / u.picoseconds,
-            'energy': u.kilojoules_per_mole
-        }
-
     def clone(self, filename, subset):
         """
         Creates a copy of the netCDF file and allows to reduce the used atoms.
 
+        Parameters
+        ----------
+        filename : str
+            the name of the cloned storage
+        subset : list of int
+            a list of atom indices to be kept for the cloned storage
+
         Notes
         -----
         This is mostly used to remove water but keep the data intact.
+
         """
 
         storage2 = Storage(filename=filename, template=self.template.subset(subset), mode='w')
@@ -74,7 +66,7 @@ class Storage(NetCDFPlus):
         for obj in self.momenta:
             storage2.momenta.save(obj.copy(subset=subset), idx=self.momenta.index[obj])
 
-        # All other should be copied one to one. We do this explicitely although we could just copy all
+        # All other should be copied one to one. We do this explicitly although we could just copy all
         # and exclude configurations and momenta, but this seems cleaner
 
         for storage_name in [
@@ -94,6 +86,11 @@ class Storage(NetCDFPlus):
             ensembles, volumes, engines, path movers, shooting point selectors. We do not need to
             reconstruct collective variables since these need to be created again completely and then
             the necessary arrays in the file will be created automatically anyway.
+
+        Parameters
+        ----------
+        filename : str
+            the name of the cloned storage
 
         Notes
         -----
@@ -118,8 +115,7 @@ class Storage(NetCDFPlus):
     def n_spatial(self):
         return self.topology.n_spatial
 
-    def __init__(self, filename, mode=None,
-                 template=None, units=None):
+    def __init__(self, filename, mode=None, template=None):
         """
         Create a netdfplus storage for OPS Objects
 
@@ -133,17 +129,12 @@ class Storage(NetCDFPlus):
         template : openpathsampling.Snapshot
             a Snapshot instance that contains a reference to a Topology, the
             number of atoms and used units
-        units : dict of {str : simtk.unit.Unit } or None
-            representing a dict of string representing a dimension
-            ('length', 'velocity', 'energy') pointing to
-            the simtk.unit.Unit to be used. If not None overrides the
-            standard units used
         """
 
         self._template = template
-        super(Storage, self).__init__(filename, mode, units=units)
+        super(Storage, self).__init__(filename, mode)
 
-    def _register_storages(self):
+    def _create_storages(self):
         """
         Register all Stores used in the OpenPathSampling Storage
 
@@ -151,42 +142,45 @@ class Storage(NetCDFPlus):
 
         # objects with special storages
 
-        self.add('trajectories', paths.storage.TrajectoryStore())
-        self.add('snapshots', paths.storage.SnapshotStore())
-        self.add('configurations', paths.storage.ConfigurationStore())
-        self.add('momenta', paths.storage.MomentumStore())
-        self.add('samples', paths.storage.SampleStore())
-        self.add('samplesets', paths.storage.SampleSetStore())
-        self.add('pathmovechanges', paths.storage.PathMoveChangeStore())
-        self.add('steps', paths.storage.MCStepStore())
+        self.create_store('trajectories', paths.storage.TrajectoryStore())
 
-        self.add('cvs', paths.storage.ObjectDictStore(paths.CollectiveVariable, paths.Snapshot))
-        self.collectivevariables = self.cvs
+        if Storage.USE_FEATURE_SNAPSHOTS:
+            self.create_store('snapshots', paths.storage.FeatureSnapshotStore(self._template.__class__))
+        else:
+            if type(self._template) is paths.Snapshot:
+                self.create_store('snapshots', paths.storage.SnapshotStore())
+            elif type(self._template) is paths.ToySnapshot:
+                self.create_store('snapshots', paths.storage.ToySnapshotStore())
+
+        self.create_store('samples', paths.storage.SampleStore())
+        self.create_store('samplesets', paths.storage.SampleSetStore())
+        self.create_store('pathmovechanges', paths.storage.PathMoveChangeStore())
+        self.create_store('steps', paths.storage.MCStepStore())
+
+        self.create_store('cvs', paths.storage.ObjectDictStore(paths.CollectiveVariable, paths.Snapshot))
 
         # normal objects
 
-        self.add('details', paths.netcdfplus.ObjectStore(paths.Details, has_name=False))
-        self.add('topologies', paths.netcdfplus.ObjectStore(paths.Topology, has_name=True))
-        self.add('pathmovers', paths.netcdfplus.ObjectStore(paths.PathMover, has_name=True))
-        # self.add('shootingpoints'
-                 # paths.storage.ObjectStore(paths.ShootingPoint, has_name=False))
-        self.add('shootingpointselectors',
-                 paths.netcdfplus.ObjectStore(paths.ShootingPointSelector, has_name=True))
-        self.add('engines', paths.netcdfplus.ObjectStore(paths.DynamicsEngine, has_name=True))
-        self.add('pathsimulators',
-                 paths.netcdfplus.ObjectStore(paths.PathSimulator, has_name=True))
-        self.add('transitions', paths.netcdfplus.ObjectStore(paths.Transition, has_name=True))
-        self.add('networks',
-                 paths.netcdfplus.ObjectStore(paths.TransitionNetwork, has_name=True))
-        self.add('schemes',
-                 paths.netcdfplus.ObjectStore(paths.MoveScheme, has_name=True))
+        self.create_store('details', ObjectStore(paths.Details, has_name=False))
+        self.create_store('topologies', ObjectStore(paths.Topology, has_name=True))
+        self.create_store('pathmovers', ObjectStore(paths.PathMover, has_name=True))
+        self.create_store('shootingpointselectors',
+                          ObjectStore(paths.ShootingPointSelector, has_name=True))
+        self.create_store('engines', ObjectStore(paths.DynamicsEngine, has_name=True))
+        self.create_store('pathsimulators',
+                          ObjectStore(paths.PathSimulator, has_name=True))
+        self.create_store('transitions', ObjectStore(paths.Transition, has_name=True))
+        self.create_store('networks',
+                          ObjectStore(paths.TransitionNetwork, has_name=True))
+        self.create_store('schemes',
+                          ObjectStore(paths.MoveScheme, has_name=True))
 
         # nestable objects
 
-        self.add('volumes',
-                 paths.netcdfplus.ObjectStore(paths.Volume, nestable=True, has_name=True))
-        self.add('ensembles',
-                 paths.netcdfplus.ObjectStore(paths.Ensemble, nestable=True, has_name=True))
+        self.create_store('volumes',
+                          ObjectStore(paths.Volume, nestable=True, has_name=True))
+        self.create_store('ensembles',
+                          ObjectStore(paths.Ensemble, nestable=True, has_name=True))
         # special stores
         # self.add('names', paths.storage.NameStore())
 
@@ -211,9 +205,8 @@ class Storage(NetCDFPlus):
         if 'spatial' not in self.dimensions:
             self.createDimension('spatial', self.n_spatial)
 
-        # update the units for dimensions from the template
-        self.dimension_units.update(paths.tools.units_from_snapshot(template))
-        self._init_storages()
+        # since we want to store stuff we need to finalize stores that have not been initialized yet
+        self.finalize_stores()
 
         # TODO: Might not need to save topology
 
@@ -229,12 +222,8 @@ class Storage(NetCDFPlus):
         self.variables['template_idx'][:] = self.snapshots.index[template]
 
     def _restore(self):
-
         self.set_caching_mode('default')
-
-        self._restore_storages()
         self.topology = self.topologies[0]
-
 
     def sync_all(self):
         """
@@ -252,7 +241,7 @@ class Storage(NetCDFPlus):
 
         Parameters
         ----------
-        caching : str
+        mode : str
             One of the following values is allowed 'default', 'production',
             'analysis', 'off', 'lowmemory' and 'memtest'
 
@@ -339,7 +328,6 @@ class Storage(NetCDFPlus):
             'steps': WeakLRUCache(10)
         }
 
-
     @staticmethod
     def memtest_cache_sizes():
         """
@@ -400,7 +388,6 @@ class Storage(NetCDFPlus):
             'details': False,
             'steps': WeakLRUCache(50000)
         }
-
 
     @staticmethod
     def production_cache_sizes():
@@ -469,6 +456,7 @@ class AnalysisStorage(Storage):
     """
     Open a storage in read-only and do caching useful for analysis.
     """
+
     def __init__(self, filename):
         """
         Parameters
@@ -496,4 +484,5 @@ class AnalysisStorage(Storage):
         storage.pathmovers.cache_all()
         storage.pathmovechanges.cache_all()
         storage.steps.cache_all()
-#        storage.trajectories.cache_all()
+
+# storage.trajectories.cache_all()

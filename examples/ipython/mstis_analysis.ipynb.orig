@@ -468,6 +468,12 @@
        "      <td>0.201995</td>\n",
        "    </tr>\n",
        "    <tr>\n",
+       "      <th>({x|opC(x) in [0.0, 0.04]}, {x|opA(x) in [0.0, 0.04]})</th>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0.013289</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
        "      <th>({x|opC(x) in [0.0, 0.04]}, {x|opB(x) in [0.0, 0.04]})</th>\n",
        "      <td>0</td>\n",
        "      <td>0.000000</td>\n",
@@ -1102,7 +1108,8 @@
        "      <td>0.000000</td>\n",
        "      <td>0.000000</td>\n",
        "      <td>0.000000</td>\n",
-       "      <td>0.000000</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
        "    </tr>\n",
        "    <tr>\n",
        "      <th>8</th>\n",
@@ -1118,7 +1125,8 @@
        "      <td>0.000000</td>\n",
        "      <td>0.000000</td>\n",
        "      <td>0.000000</td>\n",
-       "      <td>0.000000</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
        "    </tr>\n",
        "    <tr>\n",
        "      <th>9</th>\n",
@@ -1151,7 +1159,8 @@
        "      <td>0.000000</td>\n",
        "      <td>0.000000</td>\n",
        "      <td>0.000000</td>\n",
-       "      <td>0.000000</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
        "    </tr>\n",
        "    <tr>\n",
        "      <th>2</th>\n",
@@ -1166,7 +1175,11 @@
        "      <td>0.043860</td>\n",
        "      <td>0.000000</td>\n",
        "      <td>0.000000</td>\n",
+<<<<<<< HEAD
+       "      <td>0.041667</td>\n",
+=======
        "      <td>0.049505</td>\n",
+>>>>>>> upstream/master
        "      <td>0.000000</td>\n",
        "      <td>0.000000</td>\n",
        "    </tr>\n",
@@ -1201,7 +1214,9 @@
        "      <td>0.019802</td>\n",
        "      <td>0.000000</td>\n",
        "      <td>0.000000</td>\n",
-       "      <td>0.000000</td>\n",
+       "      <td>0.027778</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
        "    </tr>\n",
        "    <tr>\n",
        "      <th>3</th>\n",
@@ -1236,7 +1251,7 @@
        "      <td>0.061404</td>\n",
        "    </tr>\n",
        "    <tr>\n",
-       "      <th>-1</th>\n",
+       "      <th>2</th>\n",
        "      <td>0.000000</td>\n",
        "      <td>0.000000</td>\n",
        "      <td>0.000000</td>\n",
@@ -1399,12 +1414,12 @@
     }
    ],
    "source": [
-    "history.view.zoom = 1.0\n",
-    "history.view.scale_y = 24\n",
-    "history.view.scale_x = 10\n",
-    "history.view.font_size = 0.35\n",
-    "history.view.horizontal_gap = 0.05\n",
+    "history.options['geometry'].update({\n",
+    "    'scale_y': 24, \n",
+    "    'scale_x': 8\n",
+    "})\n",
     "\n",
+    "history.rebuild()\n",
     "SVG(history.view.to_svg())"
    ]
   },
@@ -1419,7 +1434,7 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "We have 2 decorrelated trajectories.\n"
+      "We have 3 decorrelated trajectories.\n"
      ]
     }
    ],
