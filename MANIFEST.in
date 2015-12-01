@@ -1,3 +1,2 @@
 graft openpathsampling
 recursive-include openpathsampling *.py
-openpathsampling/vis.css
