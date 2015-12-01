@@ -1,8 +1,8 @@
-__author__ = 'Jan-Hendrik Prinz'
-
 import itertools
 import collections
 import random
+
+__author__ = 'Jan-Hendrik Prinz'
 
 
 class TreeSetMixin(object):
@@ -111,7 +111,7 @@ class TreeSetMixin(object):
         This is often specific to the node type and hence overridden by the
         target tree
         """
-        return hex(id(self))
+        return '0x' + hex(id(self))
 
     @property
     def _choices(self):
