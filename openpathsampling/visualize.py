@@ -631,13 +631,13 @@ class PathTreeBuilder(object):
                     'cls': ['hop']
                 },
                 paths.PathReversalMover: {
-                    'name': 'hop',
+                    'name': 'reversal',
                     'overlap': 'line',
                     'fw': '',
                     'bw': '',
-                    'all': 'hidden',
+                    'all': 'blocks',
                     'overlap_label': 'Reversal',
-                    'suffix': 'h',
+                    'suffix': 'r',
                     'label_position': 'left',
                     'cls': ['reversal']
                 },
@@ -1005,7 +1005,7 @@ class PathTreeBuilder(object):
                             doc.shade(left, yp, xp - left + 1, cls=[color])
                         )
 
-        group.translate(32 + doc._w(1 + min_range_x), 0)
+        group.translate(32 + doc._w(1 - min_range_x), 0)
 
         tree_group = group
 
@@ -1346,7 +1346,7 @@ class ReplicaHistoryTree(PathTreeBuilder):
         self.states = []
 
         # build the tree 
-        self.from_samples(self.samples)
+        self.set_samples(self.samples)
 
     def rebuild(self):
         """Rebuild the internal structures.
@@ -1356,7 +1356,7 @@ class ReplicaHistoryTree(PathTreeBuilder):
         could be removed.
 
         """
-        self.from_samples(self.samples)
+        self.set_samples(self.samples)
 
     @property
     def accepted_samples(self):
@@ -1471,6 +1471,7 @@ vis_css = r"""
 }
 .opstree .reversal {
     fill: gold;
+    stroke: gold;
 }
 .opstree .virtual {
     opacity: 0.1;
