@@ -292,8 +292,6 @@ class NetCDFPlus(netCDF4.Dataset):
             if not store._created:
                 logger.info("Initializing store '%s'" % store.name)
                 store._init()
-        # we need to run this twice because in the first round some stores could have
-        # added more stores which we would have missed
 
         for store in self._storages.values():
             if not store._created:
