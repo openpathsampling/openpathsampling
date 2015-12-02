@@ -101,3 +101,5 @@ from pathmovechange import (
 )
 
 from storage.storage import Storage, AnalysisStorage
+
+from bias_function import BiasLookupFunction, BiasEnsembleTable
