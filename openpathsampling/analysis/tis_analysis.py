@@ -23,6 +23,44 @@ def sampleset_sample_generator(storage):
         for sample in sset:
             yield sample
 
+def guess_interface_lambda(crossing_probability, direction=1):
+    """
+    Guesses the lambda for the interface based on the crossing probability.
+    The assumption is that the interface lambda value is the last value
+    where the (reverse) cumulative crossing probability is (nearly) 1.
+
+    Parameters
+    ----------
+    crossing_probability : Histogram
+        the max_lambda histogram
+    direction : int
+        if direction > 0, the order parameter is increasing, and the reverse
+        cumulative histogram is used for the crossing probability. If
+        direction < 0, the cumulative histogram is used for the crossing
+        probability.
+
+    Returns
+    -------
+    float
+        the value of lambda for the interface
+    """
+    lambda_bin = -1
+    if direction > 0:
+        cp_vals = crossing_probability.reverse_cumulative().values()
+        while (abs(cp_vals[lambda_bin+1] - 1.0) < 1e-10):
+            lambda_bin += 1
+        outer_lambda = crossing_probability.bins[lambda_bin]
+    elif direction < 0:
+        cp_vals = crossing_probability.cumulative().values()
+        while (abs(cp_vals[lambda_bin+1] - 1.0) > 1e-10):
+            lambda_bin += 1
+        outer_lambda = crossing_probability.bins[lambda_bin-1]
+    else:
+        raise RuntimeError("Bad direction in guess_interface_lambda: " +
+                           repr(direction))
+    return outer_lambda
+
+
 class Histogrammer(object):
     """
     Basically a dictionary to track what each histogram should be making.
@@ -415,12 +453,13 @@ class TISTransition(Transition):
                     + repr(outer_ensemble))
         outer_cross_prob = self.histograms['max_lambda'][outer_ensemble]
         if outer_lambda is None:
-            lambda_bin = -1
-            outer_cp_vals = outer_cross_prob.reverse_cumulative().values()
-            # should be (almost) 1.0 for anything before correct lambda
-            while (abs(outer_cp_vals[lambda_bin+1] - 1.0) < 1e-7):
-                lambda_bin += 1
-            outer_lambda = outer_cross_prob.bins[lambda_bin]
+            outer_lambda = guess_interface_lambda(outer_cross_prob)
+            # lambda_bin = -1
+            # outer_cp_vals = outer_cross_prob.reverse_cumulative().values()
+            # # should be (almost) 1.0 for anything before correct lambda
+            # while (abs(outer_cp_vals[lambda_bin+1] - 1.0) < 1e-7):
+                # lambda_bin += 1
+            # outer_lambda = outer_cross_prob.bins[lambda_bin]
         logger.info("outer lambda: " + str(outer_lambda))
 
         ctp = self.conditional_transition_probability(storage,
