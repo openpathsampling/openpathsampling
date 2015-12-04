@@ -14,6 +14,15 @@ class BiasFunction(StorableNamedObject):
         new2old = self.probability_new_to_old(sampleset, change)
         return old2new / new2old
 
+    def get_new_old(self, sampleset, change):
+        """Associates changed and original samples.
+
+        Returns tuple (replica, new_sample, old_sample)
+        """
+        # TODO: this should move to sample.py (or pmc.py?) as a free function
+        return [(s.replica, s, sampleset[s.replica]) for s in change.samples]
+
+
 class BiasLookupFunction(BiasFunction):
     """Abstract class for lookup function based bias functions.
     """
@@ -21,7 +30,7 @@ class BiasLookupFunction(BiasFunction):
         super(BiasLookupFunction, self).__init__()
         self.bias_lookup = bias_lookup
         self.sample_reducer = sample_reducer
-    pass
+
 
 class BiasEnsembleTable(BiasFunction):
     def __init__(self, bias_table):
@@ -29,7 +38,7 @@ class BiasEnsembleTable(BiasFunction):
         self.bias_table = bias_table
 
     def probability_old_to_new(self, sampleset, change):
-        changed_replicas = change.samples
+        self.get_new_old(sampleset, change)
         pass
 
     def probability_new_to_old(self, sampleset, change):
