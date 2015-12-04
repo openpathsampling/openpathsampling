@@ -23,7 +23,7 @@ class Storage(NetCDFPlus):
     simulation. This allows effective storage of shooting trajectories
     """
 
-    _ops_version = '0.1.0'
+    _ops_version_ = '0.1.0'
 
     USE_FEATURE_SNAPSHOTS = True
 
@@ -188,7 +188,7 @@ class Storage(NetCDFPlus):
 
     def write_meta(self):
         self.setncattr('storage_format', 'openpathsampling')
-        self.setncattr('storage_version', self._ops_version)
+        self.setncattr('storage_version', self._ops_version_)
 
     def _initialize(self):
         # Set global attributes.

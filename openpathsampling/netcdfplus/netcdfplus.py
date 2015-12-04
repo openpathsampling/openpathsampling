@@ -386,7 +386,10 @@ class NetCDFPlus(netCDF4.Dataset):
         return "Storage @ '" + self.filename + "'"
 
     def __getattr__(self, item):
-        return self.__dict__[item]
+        try:
+            return self.__dict__[item]
+        except KeyError:
+            return self.__class__.__dict__[item]
 
     def __setattr__(self, key, value):
         self.__dict__[key] = value
