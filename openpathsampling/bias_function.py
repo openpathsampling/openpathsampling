@@ -38,8 +38,13 @@ class BiasEnsembleTable(BiasFunction):
         self.bias_table = bias_table
 
     def probability_old_to_new(self, sampleset, change):
-        self.get_new_old(sampleset, change)
-        pass
+        new_old = self.get_new_old(sampleset, change)
+        prob = 1.0
+        for diff in new_old:
+            new = diff[1]
+            old = diff[2]
+            prob *= min(1.0, new/old) # TODO check direction
+        return prob
 
     def probability_new_to_old(self, sampleset, change):
         pass
