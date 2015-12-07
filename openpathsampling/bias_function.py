@@ -43,7 +43,9 @@ class BiasEnsembleTable(BiasFunction):
         for diff in new_old:
             new = diff[1]
             old = diff[2]
-            prob *= min(1.0, new/old) # TODO check direction
+            new_w = self.bias_table[new.ensemble]
+            old_w = self.bias_table[old.ensemble]
+            prob *= min(1.0, new_w/old_w) # TODO check direction
         return prob
 
     def probability_new_to_old(self, sampleset, change):
