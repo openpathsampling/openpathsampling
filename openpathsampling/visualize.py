@@ -675,6 +675,7 @@ class PathTreeBuilder(object):
             'settings': {
                 'register_rejected': False,
                 'time_symmetric': True,
+                'reversal_direction': 'time'
             },
             'geometry': {
                 'scale_x': 15,
@@ -773,10 +774,9 @@ class PathTreeBuilder(object):
 
                     #            print sample.mover.__class__.__name__, 0, index_bw, index_fw, len(traj)-1
 
-            for pos, snapshot in enumerate(sample.trajectory):
+            for pos, snapshot in enumerate(traj):
                 pos_x = shift + pos
                 p_x[snapshot] = pos_x
-
 
             self.samp_list[sample] = {
                 'shift': shift,
@@ -828,16 +828,21 @@ class PathTreeBuilder(object):
         min_range_x = 10000
         max_range_x = -10000
 
-        t_count = 1
-
         group = doc.g(
             class_='tree'
         )
 
         options = self.options
-        assume_reversed_as_same = options['settings']['time_symmetric']
 
-        for sample in samples:
+        reversal_direction = self.options['settings']['reversal_direction']
+        if reversal_direction == 'time':
+            # earlier time is left and later time is right. This leads to complete reversal of frams in reversal moves
+            pass
+        elif reversal_direction == 'state':
+            # for path reversal moves the time order is reversed to keep initial state left and final state right
+            pass
+
+        for pos_y, sample in enumerate(samples):
             info = self.samp_list[sample]
             mover_type = info['mover_type']
             new_sample = info['new_sample']
@@ -867,54 +872,53 @@ class PathTreeBuilder(object):
 
             if view_options['label_position'] == 'left':
                 group.add(
-                    doc.label(shift, t_count, traj_str, cls=cls + ['left'])
+                    doc.label(shift, pos_y, traj_str, cls=cls + ['left'])
                 )
             elif view_options['label_position'] == 'right':
                 group.add(
-                    doc.label(shift + len(traj) - 1, t_count, traj_str,
+                    doc.label(shift + len(traj) - 1, pos_y, traj_str,
                               cls=cls + ['right'])
                 )
 
             if index_bw > 0:
                 group.add(
-                    doc.vertical_connector(shift + index_bw, p_y[traj[index_bw]], t_count,
+                    doc.vertical_connector(shift + index_bw, p_y[traj[index_bw]], pos_y,
                                            cls=cls + ['bw', 'connection'])
                 )
             if index_fw < len(traj) - 1:
                 group.add(
-                    doc.vertical_connector(shift + index_fw + 1, p_y[traj[index_fw]], t_count,
+                    doc.vertical_connector(shift + index_fw + 1, p_y[traj[index_fw]], pos_y,
                                            cls=cls + ['fw', 'connection'])
                 )
 
             if view_options['overlap'] == 'line':
                 group.add(
-                    doc.horizontal_region(shift + index_bw, t_count, index_fw - index_bw + 1,
+                    doc.horizontal_region(shift + index_bw, pos_y, index_fw - index_bw + 1,
                                           view_options['overlap_label'], cls=cls + ['overlap'])
                 )
                 for pos, snapshot in enumerate(sample.trajectory[index_bw:index_fw + 1]):
                     if snapshot not in p_x:
                         p_x[snapshot] = shift + pos + index_bw
-                        p_y[snapshot] = t_count
+                        p_y[snapshot] = pos_y
 
             if view_options['bw'] == 'line':
                 group.add(
-                    doc.horizontal_region(shift + 0, t_count, index_bw, cls=cls + ['bw'])
+                    doc.horizontal_region(shift + 0, pos_y, index_bw, cls=cls + ['bw'])
                 )
                 for pos, snapshot in enumerate(sample.trajectory[0:index_bw]):
                     p_x[snapshot] = shift + pos
-                    p_y[snapshot] = t_count
+                    p_y[snapshot] = pos_y
 
             if view_options['fw'] == 'line':
                 group.add(
-                    doc.horizontal_region(shift + index_fw + 1, t_count, len(traj) - (index_fw + 1), cls=cls + ['fw'])
+                    doc.horizontal_region(shift + index_fw + 1, pos_y, len(traj) - (index_fw + 1), cls=cls + ['fw'])
                 )
                 for pos, snapshot in enumerate(sample.trajectory[index_fw + 1:]):
                     p_x[snapshot] = shift + pos + index_fw + 1
-                    p_y[snapshot] = t_count
+                    p_y[snapshot] = pos_y
 
             for pos, snapshot in enumerate(sample.trajectory):
                 pos_x = shift + pos
-                pos_y = t_count
 
                 data = {
                     'smp': self.storage.idx(sample),
@@ -922,7 +926,7 @@ class PathTreeBuilder(object):
                     'trj': self.storage.idx(sample.trajectory)
                 }
 
-                if not snapshot in p_y or True:
+                if snapshot not in p_y or True:
                     txt = ''
 
                     if self.op is not None:
@@ -971,8 +975,6 @@ class PathTreeBuilder(object):
                 if pos_x > max_range_x:
                     max_range_x = pos_x
 
-            t_count += 1
-
         self.p_x = p_x
         self.p_y = p_y
 
@@ -1014,7 +1016,7 @@ class PathTreeBuilder(object):
         )
 
         group.add(
-            doc.label(0, 0, 'Information', cls=['infobox'])
+            doc.label(0, -1, 'Information', cls=['infobox'])
         )
 
 
@@ -1061,7 +1063,7 @@ class PathTreeBuilder(object):
         width = 64 + tree_scale * (max_range_x - min_range_x + 2) - doc.scale_x * (-0.5 - columns)
         height = doc.scale_y * (max_y + 1.0)
         left_x = (-0.5 - columns) * doc.scale_x
-        top_y = -0.5 * doc.scale_y
+        top_y = -1.5 * doc.scale_y
 
         for tc, s in enumerate(samples):
             group.add(
