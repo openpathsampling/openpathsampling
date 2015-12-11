@@ -182,7 +182,7 @@ class OpenMMEngine(paths.DynamicsEngine):
 
     @property
     def snapshot_timestep(self):
-        return self.nsteps_per_frame * self.options['timestep']
+        return self.nsteps_per_frame * (self.options['timestep'] or 1)
 
     def _build_current_snapshot(self):
         # TODO: Add caching for this and mark if changed
@@ -239,4 +239,6 @@ class OpenMMEngine(paths.DynamicsEngine):
 
     def minimize(self):
         self.simulation.minimizeEnergy()
+        # make sure that we get the minimized structure on request
+        self._current_snapshot = None
 

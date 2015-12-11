@@ -1764,20 +1764,20 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         ]
         loop = [
             outA & leaveX,
-            inX # & hitA # redundant due to stop req for previous outA
+            inX  # & hitA # redundant due to stop req for previous outA
         ]
         end = [
             outA & leaveX,
             OptionalEnsemble(interstitial),
             SingleFrameEnsemble(inA)
         ]
-        ensembles = start + loop*(n_l-1) + end
+        ensembles = start + loop * (n_l - 1) + end
 
         self.n_l = n_l
 
         super(MinusInterfaceEnsemble, self).__init__(ensembles, greedy=greedy)
 
-    def populate_minus_ensemble(self, partial_traj, minus_replica_id, engine):
+    def populate_minus_ensemble(self, partial_traj, minus_replica_id, engine, max_length_retry=None):
         """
         Generate a sample for the minus ensemble by extending `partial_traj`
 
