@@ -24,7 +24,7 @@ omnia channel. ::
 To install the most recent release of OpenPathSampling with conda, use the
 following commands ::
 
-  $ conda config --add channels http://conda.binstar.org/omnia
+  $ conda config --add channels omnia
   $ conda install openpathsampling
 
 If you want the cutting edge of what OpenPathSampling can do, you can
