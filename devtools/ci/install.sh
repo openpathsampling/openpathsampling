@@ -37,11 +37,12 @@ source activate $python
 echo travis_fold:end:install.conda.packages
 
 # Useful for debugging any issues with conda
-conda info -a
+# conda info -a
 
 echo travis_fold:start:install.pip.packages
 echo Install pip packages
-# install python pip packages
+# install python pip packages needed for testing etc.
+# None of these must be necessary for build or installation
 PIP_ARGS="-U"
 $HOME/miniconda2/envs/${python}/bin/pip install $PIP_ARGS -r devtools/ci/requirements-${python}.txt
 echo travis_fold:end:install.pip.packages

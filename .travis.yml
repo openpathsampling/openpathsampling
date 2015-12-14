@@ -10,10 +10,6 @@ install:
   - source devtools/ci/install.sh
   # Don't know what this is meant for
   - export PYTHONUNBUFFERED=true
-  # Try to install our package
-  - ls
-  - pwd
-  # - python setup.py install
 
 script:
   # Build conda package
@@ -25,10 +21,7 @@ script:
   - echo travis_fold:end:conda.build.package
   - echo travis_fold:start:conda.install.package
   - echo Install conda package
-  - conda list -e
-  - conda install --yes --use-local --update-deps $HOME/miniconda2/conda-bld/linux-64/openpathsampling-dev
   - conda install --yes --use-local --update-deps openpathsampling-dev
-  - conda list -e
   - echo travis_fold:end:conda.install.package
 
   # Run tests
