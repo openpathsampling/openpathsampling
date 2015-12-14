@@ -377,7 +377,7 @@ class FullBootstrapping(PathSimulator):
         self.error_max_rounds = True
 
 
-    def run(self, max_ensemble_rounds=None, n_steps_per_round=20):
+    def run(self, max_ensemble_rounds=None, n_steps_per_round=20, build_attempts = 20):
         #print first_traj_ensemble #DEBUG
         has_AA_path = False
         while not has_AA_path:
@@ -397,6 +397,11 @@ class FullBootstrapping(PathSimulator):
                 subtraj = subtrajs[0]
                 # check that this is A->A as well
                 has_AA_path = self.state(subtraj[-1]) and self.state(subtraj[0])
+
+            build_attempts -= 1
+            if build_attempts == 0:
+                raise RuntimeError('Too many attempts. Try another initial snapshot instead.')
+
             
         print "Sampling " + str(self.n_ensembles) + " ensembles."
         bootstrap = paths.Bootstrapping(
