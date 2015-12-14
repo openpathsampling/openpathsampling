@@ -37,7 +37,7 @@ source activate $python
 echo travis_fold:end:install.conda.packages
 
 # Useful for debugging any issues with conda
-# conda info -a
+conda info -a
 
 echo travis_fold:start:install.pip.packages
 echo Install pip packages

@@ -3,6 +3,10 @@
 echo travis_fold:start:nosetests
 echo Run nose tests ...
 
+conda list -e
+conda info
+conda info -e
+
 cd openpathsampling
 cd tests
 testfail=0
