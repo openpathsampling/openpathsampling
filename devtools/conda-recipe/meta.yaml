@@ -23,6 +23,7 @@ requirements:
     - mdtraj
     - svgwrite
     - networkx
+    - matplotlib
 
   run:
     - python
@@ -39,6 +40,7 @@ requirements:
     - mdtraj
     - svgwrite
     - networkx
+    - matplotlib
 
 about:
   home: https://github.com/choderalab/openpathsampling
