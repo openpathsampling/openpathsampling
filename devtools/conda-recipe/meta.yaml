@@ -9,21 +9,9 @@ build:
 requirements:
   build:
     - python
-    - numpy
     - setuptools
-    - numpy
-    - scipy
-    - setuptools
-    - netcdf4
-    - openmm
-    - openmmtools
-    - pymbar
     - docopt
     - jinja2
-    - mdtraj
-    - svgwrite
-    - networkx
-    - matplotlib
 
   run:
     - python
@@ -41,6 +29,8 @@ requirements:
     - svgwrite
     - networkx
     - matplotlib
+    - msmbuilder
+    - pyemma
 
 about:
   home: https://github.com/choderalab/openpathsampling
