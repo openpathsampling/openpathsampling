@@ -1,6 +1,6 @@
 package:
   name: openpathsampling-dev
-  version: "0.0.3"
+  version: !!str 0.0.2
 
 build:
   preserve_egg_dir: True
@@ -9,9 +9,21 @@ build:
 requirements:
   build:
     - python
+    - numpy
     - setuptools
+    - numpy
+    - scipy
+    - setuptools
+    - netcdf4
+    - openmm
+    - openmmtools
+    - pymbar
     - docopt
     - jinja2
+    - mdtraj
+    - svgwrite
+    - networkx
+    - matplotlib
 
   run:
     - python
