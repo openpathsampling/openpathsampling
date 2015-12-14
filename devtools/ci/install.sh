@@ -31,7 +31,7 @@ echo travis_fold:start:install.conda.packages
 echo Install conda packages
 
 conda config --add channels http://conda.anaconda.org/omnia
-conda create --yes -n ${python} python=${python} --file devtools/ci/requirements-conda-${python}.txt
+conda create --yes -n ${python} python=${python}
 conda update --yes conda
 source activate $python
 echo travis_fold:end:install.conda.packages
