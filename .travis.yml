@@ -25,6 +25,7 @@ script:
   - echo travis_fold:end:conda.build.package
   - echo travis_fold:start:conda.install.package
   - echo Install conda package
+  - conda list -e
   - conda install --yes $HOME/miniconda2/conda-bld/linux-64/openpathsampling-*
   - conda list -e
   - echo travis_fold:end:conda.install.package
