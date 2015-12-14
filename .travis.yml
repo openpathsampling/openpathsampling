@@ -13,7 +13,7 @@ install:
   # Try to install our package
   - ls
   - pwd
-  - python setup.py install
+  # - python setup.py install
 
 script:
   # Build conda package
