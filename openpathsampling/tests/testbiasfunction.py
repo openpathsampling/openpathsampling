@@ -27,26 +27,29 @@ class testBiasEnsembleTable(object):
         self.network = paths.MISTISNetwork([
             (self.stateA, ifacesA, xval, self.stateB)
         ])
-        # create the biases
         transition = self.network.transitions[(self.stateA, self.stateB)]
         ensembles = transition.ensembles
+        # create the biases
         bias_table = {}
         bias_table[ensembles[0]] = 1.0
         bias_table[ensembles[1]] = 0.5
         bias_table[ensembles[2]] = 0.2
         self.bias = BiasEnsembleTable(bias_table)
+        # samples, moves, changes
         traj = make_1d_traj([-0.55, -0.45, -0.35, -0.25, -0.15, -0.26,
                              -0.36, -0.46, -0.56])
         s0 = paths.Sample(replica=0, ensemble=ensembles[0], trajectory=traj)
         s1 = paths.Sample(replica=1, ensemble=ensembles[1], trajectory=traj)
         s2 = paths.Sample(replica=2, ensemble=ensembles[2], trajectory=traj)
         self.sample_set = paths.SampleSet([s0, s1, s2])
+        self.sample_set.sanity_check()
         move_01 = paths.EnsembleHopMover(ensembles[0], ensembles[1])
         move_02 = paths.EnsembleHopMover(ensembles[0], ensembles[2])
         move_12 = paths.EnsembleHopMover(ensembles[1], ensembles[2])
         move_21 = paths.EnsembleHopMover(ensembles[2], ensembles[1])
         move_20 = paths.EnsembleHopMover(ensembles[2], ensembles[0])
         move_10 = paths.EnsembleHopMover(ensembles[1], ensembles[0])
+        # NOTE: all changes here are accepted
         self.change_01 = move_01.move(self.sample_set)
         self.change_02 = move_02.move(self.sample_set)
         self.change_12 = move_12.move(self.sample_set)
@@ -60,12 +63,18 @@ class testBiasEnsembleTable(object):
 
     def test_bias_ensemble_old_to_new(self):
         # The o->n change is the denominator of the ratio.
+
+        # the contribution of old_to_new is always 1.0 if the move is
+        # inward; the value of the ratio is determined by the probability of
+        # moving outward
         for change in self.in_changes:
             assert_almost_equal(
                 self.bias.probability_old_to_new(self.sample_set, change),
                 1.0
             )
 
+        # for old_to_new, the probability of moving outerward depends on the
+        # ratio of the probabilities of the two ensembles
         change_vals = { 
             self.change_01 : 0.5,
             self.change_02 : 0.2,
@@ -76,12 +85,36 @@ class testBiasEnsembleTable(object):
                 self.bias.probability_old_to_new(self.sample_set, change),
                 change_vals[change]
             )
-        pass
 
     def test_bias_ensemble_new_to_old(self):
-        pass
+        # The n->o change is the numerator of the ratio.
+
+        # the contribution of new_to_old is always 1.0 if move is outward
+        # (cf test_bias_ensemble_old_to_new)
+        for change in self.out_changes:
+            assert_almost_equal(
+                self.bias.probability_new_to_old(self.sample_set, change),
+                1.0
+            )
+
+        # prob of moving inward is the ratio of the interface weights (cf
+        # test_bias_ensemble_old_to_new)
+        change_vals = {
+            self.change_10 : 0.5,
+            self.change_20 : 0.2,
+            self.change_21 : 0.2 / 0.5
+        }
+        for change in change_vals.keys():
+            assert_almost_equal(
+                self.bias.probability_new_to_old(self.sample_set, change),
+                change_vals[change]
+            )
 
     def test_bias_ensemble_prob_ratio(self):
+        pass
+
+    def test_combo_bias(self):
+        # test what happens if you have more than one sample in the change
         pass
 
 
