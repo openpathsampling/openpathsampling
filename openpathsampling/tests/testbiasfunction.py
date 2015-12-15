@@ -102,7 +102,34 @@ class testBiasEnsembleTable(object):
             )
 
     def test_combo_bias(self):
+        #TODO: we don't support this yet, but we need to at some point
         # test what happens if you have more than one sample in the change
+        # if you do a multi-step bias (in the same direction), then it seems
+        # to me that the total bias should be the same as if it were a
+        # one-step. This is *not* true if hops are in different directions.
+        # Then it depends on the product of the "upstream" hops
+
+        ensembles = self.network.transitions[(self.stateA, self.stateB)].ensembles
+        # all downstream move
+        move_012 = paths.SequentialMover([
+            paths.EnsembleHopMover(ensembles[0], ensembles[1]),
+            paths.EnsembleHopMover(ensembles[1], ensembles[2])
+        ])
+        change_012 = move_012.move(self.sample_set)
+
+        # all upstream move
+        move_210 = paths.SequentialMover([
+            paths.EnsembleHopMover(ensembles[2], ensembles[1]),
+            paths.EnsembleHopMover(ensembles[1], ensembles[0])
+        ])
+        change_210 = move_210.move(self.sample_set)
+
+        # assert_almost_equal(
+            # self.bias.probability_old_to_new(change_210, self.sample_set), 1.0
+        # )
+        # assert_almost_equal(
+            # self.bias.probability_new_to_old(change_210, self.sample_set), 0.2
+        # )
         raise SkipTest
 
 
