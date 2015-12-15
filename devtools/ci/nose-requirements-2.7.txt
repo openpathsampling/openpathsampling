@@ -1,5 +1,2 @@
-pyflakes
-scripttest
 nose-exclude
-coverage
 coveralls

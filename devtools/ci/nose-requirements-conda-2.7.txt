@@ -1,5 +1,4 @@
+nose
 pyflakes
-scripttest
-nose-exclude
 coverage
-coveralls
+scripttest

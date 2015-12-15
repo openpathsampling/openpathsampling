@@ -34,4 +34,5 @@ conda config --add channels http://conda.anaconda.org/omnia
 conda create --yes -n ${python} python=${python}
 conda update --yes conda
 source activate $python
+
 echo travis_fold:end:install.conda.packages
