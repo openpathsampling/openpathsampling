@@ -9,42 +9,36 @@ build:
 requirements:
   build:
     - python
-    - numpy
     - setuptools
     - numpy
     - scipy
-    - setuptools
-    - netcdf4
-    - openmm
-    - openmmtools
-    - pymbar
-    - docopt
-    - jinja2
-    - mdtraj
-    - svgwrite
-    - networkx
-    - matplotlib
-    - ipynbtest
-
-  run:
-    - python
     - pandas
-    - numpy
-    - scipy
     - netcdf4
     - openmm
     - openmmtools
     - pymbar
     - docopt
     - pyyaml
-    - jinja2
     - mdtraj
     - svgwrite
     - networkx
     - matplotlib
-    - msmbuilder
-    - pyemma
-    - ipynbtest
+
+  run:
+    - python
+    - numpy
+    - scipy
+    - pandas
+    - netcdf4
+    - openmm
+    - openmmtools
+    - pymbar
+    - docopt
+    - pyyaml
+    - mdtraj
+    - svgwrite
+    - networkx
+    - matplotlib
 
 about:
   home: https://github.com/choderalab/openpathsampling
