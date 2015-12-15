@@ -19,9 +19,10 @@ class testBiasEnsembleTable(object):
         # create the network
         xval = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(xval, float("-inf"), -0.5)
+        self.stateB = paths.CVRangeVolume(xval, 0.5, float("inf"))
         ifacesA = vf.CVRangeVolumeSet(xval, float("-inf"), [-0.5, -0.4, -0.3])
         self.network = paths.MISTISNetwork([
-            (self.stateA, ifacesA, xval, self.stateA)
+            (self.stateA, ifacesA, xval, self.stateB)
         ])
         # create the 
         pass
