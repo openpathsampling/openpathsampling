@@ -1,5 +1,8 @@
 from openpathsampling.netcdfplus import StorableNamedObject
 
+# NOTE: the biases that return here can still be more than 1. This is
+# correct. You only fix them to min(1, value) in the Metropolis acceptance
+# criterion.
 
 class BiasFunction(StorableNamedObject):
     """Generic bias functions. Everything inherits from here. Abstract."""
@@ -8,11 +11,6 @@ class BiasFunction(StorableNamedObject):
 
     def probability_new_to_old(self, sampleset, change):
         raise NotImplementedError
-
-    def probability_ratio_new_old(self, sampleset, change):
-        old2new = self.probability_old_to_new(sampleset, change)
-        new2old = self.probability_new_to_old(sampleset, change)
-        return old2new / new2old
 
     def get_new_old(self, sampleset, change):
         """Associates changed and original samples.
@@ -33,6 +31,8 @@ class BiasLookupFunction(BiasFunction):
 
 
 class BiasEnsembleTable(BiasFunction):
+    # TODO: bias seems kind of fixed to Metropolis acceptance criterion --
+    # is that okay elsewhere?
     def __init__(self, bias_table):
         super(BiasEnsembleTable, self).__init__()
         self.bias_table = bias_table
@@ -45,8 +45,8 @@ class BiasEnsembleTable(BiasFunction):
             old = diff[2]
             new_w = self.bias_table[new.ensemble]
             old_w = self.bias_table[old.ensemble]
-            prob *= min(1.0, new_w/old_w) # TODO check direction
-        return prob
+            prob *= new_w/old_w 
+        return min(1.0, prob)
 
     def probability_new_to_old(self, sampleset, change):
         new_old = self.get_new_old(sampleset, change)
@@ -56,6 +56,6 @@ class BiasEnsembleTable(BiasFunction):
             old = diff[2]
             new_w = self.bias_table[new.ensemble]
             old_w = self.bias_table[old.ensemble]
-            prob *= min(1.0, old_w/new_w) # TODO check direction
-        return prob
+            prob *= old_w/new_w 
+        return min(1.0, prob)
 
