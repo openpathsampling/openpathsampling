@@ -1,6 +1,6 @@
 package:
   name: openpathsampling-dev
-  version: !!str 0.0.2
+  version: "0.0.3"
 
 build:
   preserve_egg_dir: True
@@ -24,6 +24,7 @@ requirements:
     - svgwrite
     - networkx
     - matplotlib
+    - ipynbtest
 
   run:
     - python
@@ -43,6 +44,7 @@ requirements:
     - matplotlib
     - msmbuilder
     - pyemma
+    - ipynbtest
 
 about:
   home: https://github.com/choderalab/openpathsampling
