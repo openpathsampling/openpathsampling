@@ -3,7 +3,8 @@ package:
   version: "0.0.3"
 
 source:
-  git_url: ../../.git
+#  git_url: ../../.git
+  path: ../../
 
 build:
   preserve_egg_dir: True
