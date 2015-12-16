@@ -61,7 +61,7 @@ class testBiasEnsembleTable(object):
         self.in_changes = [self.change_10, self.change_20, self.change_21]
 
 
-    def test_bias_ensemble_old_to_new(self):
+    def test_bias_ensemble_new_to_old(self):
         # The o->n change is the denominator of the ratio.
 
         # for old_to_new, the probability of moving outerward depends on the
@@ -77,11 +77,11 @@ class testBiasEnsembleTable(object):
         for change in change_vals.keys():
             test_val = min(1.0, change_vals[change])
             assert_almost_equal(
-                self.bias.probability_old_to_new(self.sample_set, change),
+                self.bias.probability_new_to_old(self.sample_set, change),
                 test_val
             )
 
-    def test_bias_ensemble_new_to_old(self):
+    def test_bias_ensemble_old_to_new(self):
         # The n->o change is the numerator of the ratio.
 
         # prob of moving inward is the ratio of the interface weights (cf
@@ -97,7 +97,7 @@ class testBiasEnsembleTable(object):
         for change in change_vals.keys():
             test_val = min(1.0, change_vals[change])
             assert_almost_equal(
-                self.bias.probability_new_to_old(self.sample_set, change),
+                self.bias.probability_old_to_new(self.sample_set, change),
                 test_val
             )
 

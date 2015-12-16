@@ -40,7 +40,7 @@ class BiasEnsembleTable(BiasFunction):
     def bias_value(self, from_ensemble, to_ensemble):
         from_w = self.bias_table[from_ensemble]
         to_w = self.bias_table[to_ensemble]
-        return to_w / from_w
+        return from_w / to_w
 
     def bias_probability(self, from_ensemble, to_ensemble):
         return min(1.0, self.bias_value(from_ensemble, to_ensemble))
