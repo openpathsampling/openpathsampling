@@ -37,15 +37,21 @@ class BiasEnsembleTable(BiasFunction):
         super(BiasEnsembleTable, self).__init__()
         self.bias_table = bias_table
 
+    def bias_value(self, from_ensemble, to_ensemble):
+        from_w = self.bias_table[from_ensemble]
+        to_w = self.bias_table[to_ensemble]
+        return to_w / from_w
+
+    def bias_probability(self, from_ensemble, to_ensemble):
+        return min(1.0, self.bias_value(from_ensemble, to_ensemble))
+
     def probability_old_to_new(self, sampleset, change):
         new_old = self.get_new_old(sampleset, change)
         prob = 1.0
         for diff in new_old:
             new = diff[1]
             old = diff[2]
-            new_w = self.bias_table[new.ensemble]
-            old_w = self.bias_table[old.ensemble]
-            prob *= new_w/old_w 
+            prob *= self.bias_value(old.ensemble, new.ensemble)
         return min(1.0, prob)
 
     def probability_new_to_old(self, sampleset, change):
@@ -54,8 +60,6 @@ class BiasEnsembleTable(BiasFunction):
         for diff in new_old:
             new = diff[1]
             old = diff[2]
-            new_w = self.bias_table[new.ensemble]
-            old_w = self.bias_table[old.ensemble]
-            prob *= old_w/new_w 
+            prob *= self.bias_value(new.ensemble, old.ensemble)
         return min(1.0, prob)
 

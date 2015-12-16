@@ -393,8 +393,14 @@ class EnsembleHopStrategy(ReplicaExchangeStrategy):
             elif n_ens == 1:
                 hop_list.extend([[sig[0][0], sig[1][0]]])
 
-        hops = [paths.EnsembleHopMover(hop[0], hop[1], bias=self.bias)
-                for hop in hop_list]
+        hops = []
+        for hop in hop_list:
+            if self.bias is not None:
+                bias = self.bias.bias_probability(hop[0], hop[1])
+            else:
+                bias = None
+            hops.append(paths.EnsembleHopMover(hop[0], hop[1], bias=bias))
+
         return hops
 
 
