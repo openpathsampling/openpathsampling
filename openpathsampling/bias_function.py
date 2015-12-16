@@ -43,7 +43,9 @@ class BiasEnsembleTable(BiasFunction):
         return from_w / to_w
 
     def bias_probability(self, from_ensemble, to_ensemble):
-        return min(1.0, self.bias_value(from_ensemble, to_ensemble))
+        # I have no idea why this needs ro be wrapped in a float to be
+        # recognized as a float, but apparently it does
+        return float(min(1.0, self.bias_value(from_ensemble, to_ensemble)))
 
     def probability_old_to_new(self, sampleset, change):
         new_old = self.get_new_old(sampleset, change)

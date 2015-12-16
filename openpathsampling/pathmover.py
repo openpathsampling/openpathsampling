@@ -408,6 +408,8 @@ class SampleMover(PathMover):
             random_value=rand
         )
 
+        logger.info("Trial was " + (if accepted: "accepted" else: "rejected"))
+
         return accepted, details
 
     @property
@@ -1079,7 +1081,7 @@ class EnsembleHopMover(SampleMover):
             logger.info("Using dict bias " + str(bias))
         else:
             bias = 1.0
-            logger.info("Using default bias")
+            logger.info("Using default bias: self.bias == " + str(self.bias))
                     
 
         trial = paths.Sample(
