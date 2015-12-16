@@ -399,7 +399,10 @@ class EnsembleHopStrategy(ReplicaExchangeStrategy):
                 bias = self.bias.bias_probability(hop[0], hop[1])
             else:
                 bias = None
-            hops.append(paths.EnsembleHopMover(hop[0], hop[1], bias=bias))
+            hopper = paths.EnsembleHopMover(hop[0], hop[1], bias=bias)
+            hopper.named("EnsembleHop " + str(hop[0].name) + "->" +
+                         str(hop[1].name))
+            hops.append(hopper)
 
         return hops
 

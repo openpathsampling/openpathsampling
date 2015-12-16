@@ -1066,16 +1066,21 @@ class EnsembleHopMover(SampleMover):
 
         sample_details = SampleDetails()
 
+        # TODO: remove this and generalize!!!
         if type(self.bias) is float:
             bias = self.bias
+            logger.info("Using fixed bias " + str(bias))
         elif type(self.bias) is dict:
             # special dict
             ens = self.bias['ensembles']
             e1 = ens.index(ens_from)
             e2 = ens.index(ens_to)
             bias = float(self.bias['values'][e1,e2])
+            logger.info("Using dict bias " + str(bias))
         else:
             bias = 1.0
+            logger.info("Using default bias")
+                    
 
         trial = paths.Sample(
             replica=replica,
