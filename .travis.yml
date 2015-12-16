@@ -13,9 +13,6 @@ install:
 
 script:
   # Build conda package
-
-  # Make sure we are in the root environment for building
-  - source deactivate
   - echo travis_fold:start:conda.build.package
   - conda install --yes conda-build
   - conda build devtools/conda-recipe
