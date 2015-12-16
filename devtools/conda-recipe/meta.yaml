@@ -52,7 +52,7 @@ test:
     - jupyter_client
     - ipynbtest
 
-  import:
+  imports:
     - openpathsampling
 
 about:
