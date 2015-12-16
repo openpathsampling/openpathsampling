@@ -1,4 +1,0 @@
-nose
-pyflakes
-coverage
-scripttest

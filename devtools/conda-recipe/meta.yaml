@@ -2,6 +2,9 @@ package:
   name: openpathsampling-dev
   version: "0.0.3"
 
+source:
+  path: ../../
+
 build:
   preserve_egg_dir: True
   number: 0
@@ -40,6 +43,19 @@ requirements:
     - networkx
     - matplotlib
 
+test:
+  requires:
+    - nose
+    - nose-timer
+    - msmbuilder
+    - pyemma
+    - jupyter_client
+    - ipynbtest
+
+  import:
+    - openpathsampling
+
 about:
   home: https://github.com/choderalab/openpathsampling
   license: GNU Lesser General Public License v2 or later (LGPLv2+)
+  summary: framework for running path sampling MD simulations
