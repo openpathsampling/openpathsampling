@@ -7,7 +7,7 @@ Created on 06.07.2014
 
 import logging
 import openpathsampling as paths
-from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore
+from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, DictStore
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -181,8 +181,10 @@ class Storage(NetCDFPlus):
                           ObjectStore(paths.Volume, nestable=True, has_name=True))
         self.create_store('ensembles',
                           ObjectStore(paths.Ensemble, nestable=True, has_name=True))
+
         # special stores
-        # self.add('names', paths.storage.NameStore())
+
+        self.create_store('tag', DictStore())
 
     def _initialize(self):
         # Set global attributes.
