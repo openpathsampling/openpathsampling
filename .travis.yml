@@ -16,7 +16,6 @@ script:
   - echo travis_fold:start:conda.build.package
   - conda install --yes conda-build
   - conda build devtools/conda-recipe
-  - source activate $python
   - echo travis_fold:end:conda.build.package
 
   # Run tests in _test environment
