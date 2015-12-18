@@ -205,7 +205,7 @@ class ObjectStore(StorableNamedObject):
 
     def find(self, name):
         """
-        Return all objects with a given name
+        Return last object with a given name
 
         Parameters
         ----------
@@ -214,18 +214,16 @@ class ObjectStore(StorableNamedObject):
 
         Returns
         -------
-        list of objects
-            a list of found objects, can be empty [] if no objects with
-            that name exist
+        objects
+            the last object with a given name. This is to mimic immutable object. Once you
+            (re-)save with the same name you replace the old one and hence you leed to load the last
+            stored one.
 
         """
         if self.has_name:
-            if name not in self.name_idx:
-                self.update_name_cache()
-
-            return self[sorted(list(self.name_idx[name]))]
-
-        return []
+            return self.load(name)
+        else:
+            return None
 
     def find_indices(self, name):
         """
@@ -248,27 +246,12 @@ class ObjectStore(StorableNamedObject):
 
         return []
 
-    def find_first(self, name):
-        """
-        Return first object with a given name
-
-        Parameters
-        ----------
-        name : str
-            the name to be searched for
-
-        Returns
-        -------
-        object of None
-            the first found object, can be None if no object with the given
-            name exists
-
-        """
+    def find_all(self, name):
         if self.has_name:
             if len(self.name_idx[name]) > 0:
-                return self[sorted(list(self.name_idx[name]))[0]]
+                return self[sorted(list(self.name_idx[name]))]
 
-        return None
+        return []
 
     def __iter__(self):
         """
