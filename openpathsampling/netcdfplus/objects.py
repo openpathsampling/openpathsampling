@@ -101,7 +101,7 @@ class ObjectStore(StorableNamedObject):
         self._cached_all = False
         self._names_loaded = False
         self.nestable = nestable
-        self.name_idx = dict()
+        self._name_idx = dict()
         self._created = False
 
         self.variables = dict()
@@ -175,9 +175,17 @@ class ObjectStore(StorableNamedObject):
         """
         return self.index.get(obj, None)
 
+    @property
+    def name_idx(self):
+        if not self._names_loaded:
+            if self.has_name:
+                self.update_name_cache()
+
+        return self._name_idx
+
     def update_name_cache(self):
         """
-        Update the internal cache with all stored names in the store.
+        Update the internal name cache with all stored names in the store.
         This allows to load by name for named objects
         """
         if self.has_name:
@@ -189,11 +197,11 @@ class ObjectStore(StorableNamedObject):
 
     def _update_name_in_cache(self, name, idx):
         if name != '':
-            if name not in self.cache:
-                self.name_idx[name] = [idx]
+            if name not in self._name_idx:
+                self._name_idx[name] = {idx}
             else:
-                if idx not in self.cache[name]:
-                    self.name_idx[name].append(idx)
+                if idx not in self._name_idx[name]:
+                    self.name_idx[name].add(idx)
 
     def find(self, name):
         """
@@ -215,7 +223,7 @@ class ObjectStore(StorableNamedObject):
             if name not in self.name_idx:
                 self.update_name_cache()
 
-            return self[self.name_idx[name]]
+            return self[sorted(list(self.name_idx[name]))]
 
         return []
 
@@ -236,10 +244,7 @@ class ObjectStore(StorableNamedObject):
 
         """
         if self.has_name:
-            if name not in self.name_idx:
-                self.update_name_cache()
-
-            return self.name_idx[name]
+            return sorted(list(self.name_idx[name]))
 
         return []
 
@@ -260,11 +265,8 @@ class ObjectStore(StorableNamedObject):
 
         """
         if self.has_name:
-            if name not in self.name_idx:
-                self.update_name_cache()
-
             if len(self.name_idx[name]) > 0:
-                return self[self.name_idx[name][0]]
+                return self[sorted(list(self.name_idx[name]))[0]]
 
         return None
 
@@ -619,26 +621,15 @@ class ObjectStore(StorableNamedObject):
             if self.has_name:
                 if idx in self.name_idx:
                     if len(self.name_idx[idx]) > 1:
-                        logger.debug('Found name "%s" multiple (%d) times in storage! Loading first!' % (
+                        logger.debug('Found name "%s" multiple (%d) times in storage! Loading last!' % (
                             idx, len(self.cache[idx])))
 
-                    n_idx = self.name_idx[idx][0]
+                    n_idx = sorted(list(self.name_idx[idx]))[-1]
                 else:
-                    # since it is not found in the cache before. Refresh the cache
-                    self.update_name_cache()
-
-                    # and give it another shot
-                    if idx in self.name_idx:
-                        if len(self.name_idx[idx]) > 1:
-                            logger.debug('Found name "%s" multiple (%d) times in storage! Loading first!' % (
-                                idx, len(self.cache[idx])))
-
-                        n_idx = self.name_idx[idx][0]
-                    else:
-                        raise ValueError('str "' + idx + '" not found in storage')
+                    raise ValueError('str "' + idx + '" not found in storage')
 
         elif type(idx) is not int:
-            raise ValueError('indices of type "%s" are not allowed in named storage' % type(idx).__name__)
+            raise ValueError('indices of type "%s" are not allowed in named storage (only str and int)' % type(idx).__name__)
 
         # if it is in the cache, return it
         try:
@@ -704,22 +695,30 @@ class ObjectStore(StorableNamedObject):
             elif hasattr(obj, '_idx'):
                 return obj._idx
             else:
-                idx = self.free()
+                n_idx = self.free()
         elif type(idx) is str:
-            # Not yet supported
+            # saving with name as second parameter will try to set the name and save then
             if self.has_name and obj._name_fixed is False:
                 obj.name = idx
-        else:
-            #assume int like
-            idx = int(idx)
+            else:
+                logger.warning('Could not rename object from "%s" to "%s". Already fixed name! Saving using old name' %
+                               (obj._name, idx))
 
-        self.index[obj] = idx
+            n_idx = self.free()
+
+        elif type(idx) is int:
+            # assume int like index. This should not be used since it violates immutablilty
+            n_idx = int(idx)
+        else:
+            raise ValueError('Unsupported index type (only str and int allowed).')
+
+        self.index[obj] = n_idx
 
         # make sure in nested saving that an IDX is not used twice!
-        self.reserve_idx(idx)
+        self.reserve_idx(n_idx)
 
-        logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(idx))
-        self._save(obj, idx)
+        logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(n_idx))
+        self._save(obj, n_idx)
 
         if self.has_name and hasattr(obj, '_name'):
             # logger.debug('Object ' + str(type(obj)) + ' with IDX #' + str(idx))
@@ -732,17 +731,17 @@ class ObjectStore(StorableNamedObject):
 
             obj.fix_name()
 
-            self.storage.variables[self.prefix + '_name'][idx] = obj._name
+            self.storage.variables[self.prefix + '_name'][n_idx] = obj._name
 
         # store the name in the cache
         if hasattr(self, 'cache'):
-            self.cache[idx] = obj
+            self.cache[n_idx] = obj
             if self.has_name and obj._name != '':
                 # and also the name, if it has one so we can load by
                 # name afterwards from cache
-                self._update_name_in_cache(obj._name, idx)
+                self._update_name_in_cache(obj._name, n_idx)
 
-        return idx
+        return n_idx
 
     def load_single(self, idx):
         return self._load(idx)
@@ -814,3 +813,113 @@ class VariableStore(ObjectStore):
 
             self.index[obj] = idx
             self.cache[idx] = obj
+
+
+class DictStore(ObjectStore):
+    def __init__(self, immutable=True):
+        super(DictStore, self).__init__(
+            json=True,
+            has_name=True,
+        )
+
+        self.immutable = immutable
+
+    def to_dict(self):
+        return {
+            'immutable': self.immutable
+        }
+
+
+    def load(self, idx):
+        """
+        Returns an object from the storage.
+
+        Parameters
+        ----------
+        idx : str
+            a string (name) of the objects. This will always return the last object
+            found with the specified name. If immutable is true for the store it
+            assures that there is only a single object per name
+
+        Returns
+        -------
+        object
+            the loaded object
+        """
+
+        if type(idx) is not str:
+            return None
+
+        n_idx = -1
+
+        # we want to load by name and it was not in cache.
+        if idx not in self.name_idx:
+            self.update_name_cache()
+
+        if idx in self.name_idx:
+            if len(self.name_idx[idx]) > 1:
+                logger.debug('Found name "%s" multiple (%d) times in storage! Loading last!' % (
+                    idx, len(self.cache[idx])))
+
+            n_idx = self.name_idx[idx][-1]
+        else:
+
+            # raise ValueError('str "' + idx + '" not found in storage')
+            logger.debug('Name "%s" not found in the storage, returning None instead!' % idx)
+            return None
+
+        # turn into python int if it was a numpy int (in some rare cases!)
+        n_idx = int(n_idx)
+
+        logger.debug('Calling load object of type ' + self.content_class.__name__ + ' and IDX #' + str(idx))
+
+        if n_idx >= len(self):
+            logger.warning('Trying to load from IDX #' + str(n_idx) + ' > number of object ' + str(len(self)))
+            raise RuntimeError('Loading of too large int should be attempted. Problem in name cache. This should never happen!')
+        elif n_idx < 0:
+            logger.warning('Trying to load negative IDX #' + str(n_idx) + ' < 0. This should never happen!!!')
+            raise RuntimeError('Loading of negative int should result in no object. This should never happen!')
+        else:
+            obj = self._load(n_idx)
+
+        return obj
+
+    def save(self, obj, idx=None):
+        """
+        Saves an object to the storage.
+
+        Parameters
+        ----------
+        obj : StorableObject
+            the object to be stored
+        idx : int or string or `None`
+            the index to be used for storing. This is highly discouraged since
+            it changes an immutable object (at least in the storage). It is
+            better to store also the new object and just ignore the
+            previously stored one.
+
+        """
+
+        if idx is None:
+            # a DictStore needs a specific name
+            return -1
+
+        if type(idx) is not str:
+            # key needs to be a string
+            return -1
+
+        if idx in self.name_idx and self.immutable:
+            # immutable means no duplicates, so quit
+            return -1
+
+        n_idx = int(self.free())
+        # make sure in nested saving that an IDX is not used twice!
+        self.reserve_idx(n_idx)
+
+        logger.debug('Saving ' + str(type(obj)) + ' with name "' + idx + '"using IDX #' + str(n_idx))
+        self._save(obj, n_idx)
+
+        self.storage.variables[self.prefix + '_name'][n_idx] = idx
+        self._update_name_in_cache(idx, n_idx)
+
+        return idx
