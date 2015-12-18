@@ -17,12 +17,7 @@ if [[ $MINICONDA_MD5 != $(md5sum $MINICONDA | cut -d ' ' -f 1) ]]; then
 fi
 bash $MINICONDA -b
 
-# This might make the --yes obsolete
-# conda config --set always_yes yes --set changeps1 no
-
 export PATH=$HOME/miniconda2/bin:$PATH
-
-# hash -r
 
 # add omnia and update
 conda config --add channels http://conda.anaconda.org/omnia
