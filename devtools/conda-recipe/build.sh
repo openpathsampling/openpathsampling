@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# this step is done automatically by conda build
 # cp -r $RECIPE_DIR/../.. $SRC_DIR
 $PYTHON setup.py install
 
