@@ -38,9 +38,7 @@ test:
     - nose-timer
     - msmbuilder
     - pyemma
-    - jupyter_client
     - ipynbtest
-    - nbformat
 
   imports:
     - openpathsampling
