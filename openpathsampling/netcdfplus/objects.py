@@ -201,7 +201,7 @@ class ObjectStore(StorableNamedObject):
                 self._name_idx[name] = {idx}
             else:
                 if idx not in self._name_idx[name]:
-                    self.name_idx[name].add(idx)
+                    self._name_idx[name].add(idx)
 
     def find(self, name):
         """
