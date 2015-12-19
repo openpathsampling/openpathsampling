@@ -137,8 +137,13 @@ class ObjectStore(StorableNamedObject):
         return repr(self)
 
     def __repr__(self):
-        return "store.%s[%s]" % (
-            self.prefix, self.content_class.__name__)
+        if self.content_class is not None:
+            return "store.%s[%s]" % (
+                self.prefix, self.content_class.__name__)
+        else:
+            return "store.%s[%s]" % (
+                self.prefix, 'None/ANY')
+
 
     @property
     def simplifier(self):
@@ -196,6 +201,8 @@ class ObjectStore(StorableNamedObject):
                 self._names_loaded = True
 
     def _update_name_in_cache(self, name, idx):
+        # make sure to case unicode to str
+        name = str(name)
         if name != '':
             if name not in self._name_idx:
                 self._name_idx[name] = {idx}
@@ -361,6 +368,14 @@ class ObjectStore(StorableNamedObject):
         except KeyError:
             return None
 
+    def __setitem__(self, key, value):
+        """
+        Enable saving with naming
+        """
+
+        if type(key) is str and self.has_name:
+            self.save(value, key)
+
     def _load(self, idx):
         obj = self.vars['json'][idx]
         return obj
@@ -473,7 +488,7 @@ class ObjectStore(StorableNamedObject):
                                chunksizes=tuple([10240]))
 
         if self.json:
-            self.create_variable("json", 'json',
+            self.create_variable("json", 'jsonobj',
                                description='A json serialized version of the object',
                                chunksizes=tuple([10240]))
 
@@ -801,8 +816,9 @@ class VariableStore(ObjectStore):
 class DictStore(ObjectStore):
     def __init__(self, immutable=True):
         super(DictStore, self).__init__(
-            json=True,
-            has_name=True,
+            None,
+            json=False,
+            has_name=True
         )
 
         self.immutable = immutable
@@ -812,6 +828,12 @@ class DictStore(ObjectStore):
             'immutable': self.immutable
         }
 
+    def _init(self):
+        super(DictStore, self)._init()
+
+        self.create_variable("json", 'json',
+                           description='A json serialized version of the content',
+                           chunksizes=tuple([10240]))
 
     def load(self, idx):
         """
@@ -830,31 +852,30 @@ class DictStore(ObjectStore):
             the loaded object
         """
 
-        if type(idx) is not str:
-            return None
+        if type(idx) is str:
+            n_idx = -1
 
-        n_idx = -1
+            # we want to load by name and it was not in cache.
+            if idx not in self.name_idx:
+                # raise ValueError('str "' + idx + '" not found in storage')
+                print 'not found'
+                logger.debug('Name "%s" not found in the storage, returning None instead!' % idx)
+                return None
 
-        # we want to load by name and it was not in cache.
-        if idx not in self.name_idx:
-            self.update_name_cache()
+            if idx in self.name_idx:
+                if len(self.name_idx[idx]) > 1:
+                    logger.debug('Found name "%s" multiple (%d) times in storage! Loading last!' % (
+                        idx, len(self.cache[idx])))
 
-        if idx in self.name_idx:
-            if len(self.name_idx[idx]) > 1:
-                logger.debug('Found name "%s" multiple (%d) times in storage! Loading last!' % (
-                    idx, len(self.cache[idx])))
+                n_idx = sorted(list(self.name_idx[idx]))[-1]
 
-            n_idx = self.name_idx[idx][-1]
-        else:
-
-            # raise ValueError('str "' + idx + '" not found in storage')
-            logger.debug('Name "%s" not found in the storage, returning None instead!' % idx)
-            return None
+        elif type(idx) is int:
+            n_idx = idx
 
         # turn into python int if it was a numpy int (in some rare cases!)
         n_idx = int(n_idx)
 
-        logger.debug('Calling load object of type ' + self.content_class.__name__ + ' and IDX #' + str(idx))
+        logger.debug('Calling load object of type ' + str(self.content_class) + ' and IDX #' + str(idx))
 
         if n_idx >= len(self):
             logger.warning('Trying to load from IDX #' + str(n_idx) + ' > number of object ' + str(len(self)))
@@ -906,3 +927,23 @@ class DictStore(ObjectStore):
         self._update_name_in_cache(idx, n_idx)
 
         return idx
+
+    def keys(self):
+        return self.name_idx.keys()
+
+    def iterkeys(self):
+        return self.name_idx.iterkeys()
+
+    def __iter__(self):
+        """
+        Add iteration over all names in this DictStore
+        """
+        return self.iterkeys()
+
+    def iteritems(self):
+        for name in self:
+            yield name, self[name]
+
+    def to_dict(self):
+        return {key: value for key, value in self.iteritems()}
+
