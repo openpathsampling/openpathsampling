@@ -943,7 +943,3 @@ class DictStore(ObjectStore):
     def iteritems(self):
         for name in self:
             yield name, self[name]
-
-    def to_dict(self):
-        return {key: value for key, value in self.iteritems()}
-
