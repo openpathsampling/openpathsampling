@@ -2,7 +2,7 @@
 @author David W.H. Swenson
 """
 
-from test_helpers import data_filename
+from test_helpers import data_filename, assert_close_unit
 
 import mdtraj as md
 import numpy as np
@@ -41,7 +41,7 @@ class testCV_Function(object):
 
         md_distances = md.compute_distances(self.mdtraj, atom_pairs)
 
-        my_distances = atom_pair_op( self.traj )
+        my_distances = atom_pair_op(self.traj)
 
         np.testing.assert_allclose(md_distances, my_distances, rtol=10**-6, atol=10**-10)
 
@@ -58,3 +58,16 @@ class testCV_Function(object):
         assert params['cv_return_type'] == 'numpy.float32'
         assert params['cv_return_simtk_unit'] is None
         assert params['cv_return_shape'] == tuple([2])
+
+    def test_register_as_attribute(self):
+        cv = paths.CV_Function('x', lambda x: x.coordinates[:, 0])
+
+        snap = self.traj[0]
+
+        cv.register_as_attribute()
+
+        ref_value = cv(snap)
+        test_value = snap.x
+
+        assert_close_unit(ref_value, test_value)
+

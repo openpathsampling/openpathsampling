@@ -16,6 +16,27 @@ import openpathsampling as paths
 import chaindict as cd
 from openpathsampling.netcdfplus import StorableNamedObject, WeakLRUCache
 
+class CVAttribute(object):
+    """
+    Descriptor class to handle cvs as attributes
+
+    This will only
+
+    """
+
+    def __init__(self, cv):
+        super(CVAttribute, self).__init__()
+        self.cv = cv
+
+    def __get__(self, instance, owner):
+        if instance is not None:
+            return self.cv[instance]
+        else:
+            return self.cv
+
+    def __set__(self, instance, value):
+        if instance is not None:
+            self.cv[instance] = value
 
 class CollectiveVariable(cd.Wrap, StorableNamedObject):
     """
@@ -296,6 +317,16 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         return {
         }
+
+    def register_as_attribute(self):
+        """
+        Attach the cv as an attribute to be used with Snapshots
+        """
+
+        if hasattr(paths.Snapshot, self.name):
+            raise RuntimeWarning('%s is already taken as an attribute. Cannot be registered.' % self.name)
+
+        setattr(paths.Snapshot, self.name, CVAttribute(self))
 
     def sync(self):
         """
