@@ -38,9 +38,8 @@ class ObjectDictStore(ObjectStore):
         """
         self.vars['json'][idx] = objectdict
 
-        if objectdict.store_cache:
+        if objectdict.cv_store_cache:
             self.create_cache(objectdict)
-
 
     def cache_var_name(self, idx):
         if type(idx) is not int:

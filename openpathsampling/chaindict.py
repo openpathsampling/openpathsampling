@@ -77,7 +77,8 @@ class ChainDict(object):
         if isinstance(key, collections.Iterable):
             self._set_list(key, value)
         else:
-            self._set(key, value)
+            if value is not None:
+                self._set(key, value)
 
         # pass __setitem__ to underlying dicts as default
         if self.post is not None:
@@ -99,7 +100,7 @@ class ChainDict(object):
         Default implementation is to not store anything.
         This is mostly used in caching and stores
         """
-        pass
+        [self._set(item, value) for item, value in zip(items, values) if values is not None]
 
     def _get(self, item):
         """
@@ -121,16 +122,42 @@ class ChainDict(object):
     def __call__(self, items):
         return self[items]
 
-    ## ToDo: We might replace + by > to make the passing direction clear
-    def __add__(self, other):
+    def __gt__(self, other):
         """
-        Combine two ChainDicts first + seconds into a new one.
+        Combine two ChainDicts first > next into a new one.
 
-        >>> new_dict = first_dict + fall_back
+        >>> new_dict = first_dict > fall_back
         """
-        other.post = self
+        last = self
+        while last.post is not None:
+            last = last.post
+
+        last.post = other
+        return self
+
+    def __lt__(self, other):
+        """
+        Combine two ChainDicts seconds < first into a new one.
+
+        >>> new_dict = fall_back < first_dict
+        """
+        last = other
+        while last.post is not None:
+            last = last.post
+
+        last.post = self
         return other
 
+    @property
+    def passing_chain(self):
+        chain = [self]
+        while chain[-1].post is not None:
+            chain.append(chain[-1].post)
+
+        return chain
+
+    def str_chain(self):
+        return ' > '.join(map(lambda x : x.__class__.__name__, self.passing_chain))
 
 class Wrap(ChainDict):
     """A ChainDict that passes on all request to the underlying ChainDict
@@ -317,7 +344,6 @@ class ReversibleCacheChainDict(CacheChainDict):
         self.reversible = reversible
 
     def _set(self, item, value):
-        print 'cached'
         self.cache[item] = value
         if self.reversible:
             self.cache[item.reversed] = value
@@ -364,7 +390,7 @@ class StoredDict(ChainDict):
             self.storable.add(key)
 
     def _set_list(self, items, values):
-        [self._set(item, value) for item, value in zip(items, values)]
+        [self._set(item, value) for item, value in zip(items, values) if value is not None]
 
         if self.max_save_buffer_size is not None and len(self.storable) > self.max_save_buffer_size:
             self.sync()
