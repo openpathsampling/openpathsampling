@@ -321,6 +321,14 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     def register_as_attribute(self):
         """
         Attach the cv as an attribute to be used with Snapshots
+
+        Examples
+        --------
+        >>> cv = CV_Function('psi', ...)
+        >>> cv.register_as_attribute()
+
+        Now this works
+        >>> print my_snap.psi
         """
 
         if hasattr(paths.Snapshot, self.name):
