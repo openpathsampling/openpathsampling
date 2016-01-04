@@ -1,5 +1,4 @@
-from openpathsampling.netcdfplus import ObjectStore
-
+from openpathsampling.netcdfplus import ObjectStore, NetCDFPlus
 
 class ObjectDictStore(ObjectStore):
     def __init__(self, content_class, key_class):
@@ -57,14 +56,13 @@ class ObjectDictStore(ObjectStore):
             var_name = self.cache_var_name(idx)
 
             if var_name not in self.storage.variables:
-
-                params = objectdict.return_parameters_from_template(self.storage.template)
+                params = NetCDFPlus.get_value_parameters(objectdict(self.storage.template))
 
                 self.key_store.create_variable(
                     var_name,
-                    var_type=params['cv_return_type'],
-                    dimensions=params['cv_return_shape'],
-                    simtk_unit=params['cv_return_simtk_unit'],
+                    var_type=params['var_type'],
+                    dimensions=params['dimensions'],
+                    simtk_unit=params['simtk_unit'],
                     maskable=True
                 )
                 self.storage.update_delegates()

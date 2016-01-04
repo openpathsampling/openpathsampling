@@ -974,3 +974,98 @@ class NetCDFPlus(netCDF4.Dataset):
         for name in self.variables:
             if name not in self.vars:
                 self.create_variable_delegate(name)
+
+    @staticmethod
+    def get_value_parameters(value):
+        """
+        Compute netcdfplus compatible parameters to store a value
+
+        Parameters
+        ----------
+        value
+
+        Returns
+        -------
+        dict
+            A dictionary containing the approriate input parameters for `var_type`, `dimensions`, `simtk_unit`
+
+        Notes
+        -----
+        This is a utility function to create a CV using a template
+
+        """
+
+        dimensions = None
+        storable = True
+        simtk_unit = None
+
+        test_value = value
+        test_type = value
+
+        if NetCDFPlus.support_simtk_unit:
+            import simtk.unit as u
+
+        if NetCDFPlus.support_simtk_unit and type(test_type) is u.Quantity:
+            # could be a Quantity([..])
+            simtk_unit = test_type.unit
+            test_type = test_type._value
+
+        if type(test_type) is np.ndarray:
+            dimensions = test_type.shape
+        else:
+            if hasattr(test_value, '__len__'):
+                dimensions = len(test_value)
+                test_type = test_value[0]
+                if NetCDFPlus.support_simtk_unit and type(test_type) is u.Quantity:
+                    for val in test_value:
+                        if type(val._value) is not type(test_value._value):
+                            # all values must be of same type
+                            storable = False
+                else:
+                    for val in test_value:
+                        if type(val) is not type(test_value):
+                            # all values must be of same type
+                            storable = False
+
+            if NetCDFPlus.support_simtk_unit and type(test_type) is u.Quantity:
+                # could also be [Quantity, ...]
+                simtk_unit = test_type.unit
+                test_type = test_type._value
+
+        if storable:
+            var_type = NetCDFPlus.identify_var_type(test_type)
+            return {
+                'var_type': var_type,
+                'dimensions': dimensions,
+                'simtk_unit': simtk_unit
+            }
+
+        return {
+        }
+
+    @staticmethod
+    def identify_var_type(instance):
+        """
+        Identify common python and numpy types
+
+        Parameters
+        ----------
+        instance
+            python variable instance to be tested for it numeric type
+
+        Returns
+        -------
+        str
+            a string representation of the variable type
+
+        """
+        ty = type(instance)
+
+        known_types = [float, int, bool, str]
+
+        if ty in known_types:
+            return ty.__name__
+        elif hasattr(instance, 'dtype'):
+            return 'numpy.' + instance.dtype.type.__name__
+        else:
+            return 'None'

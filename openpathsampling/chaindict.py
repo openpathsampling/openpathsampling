@@ -65,21 +65,23 @@ class ChainDict(object):
                 return results
             else:
                 rep = self.post[[p for p in nones]]
-                self._add_new(nones, rep)
+                self._set_list(nones, rep)
 
                 it = iter(rep)
                 return [it.next() if p[1] is None else p[1] for p in zip(items, results)]
 
         return results
 
-    def _add_new(self, items, values):
-        pass
-
     def __setitem__(self, key, value):
+        print self, key, value
         if isinstance(key, collections.Iterable):
             self._set_list(key, value)
         else:
             self._set(key, value)
+
+        # pass __setitem__ to underlying dicts as default
+        if self.post is not None:
+            self.post[key] = value
 
     def _set(self, item, value):
         """
@@ -92,11 +94,12 @@ class ChainDict(object):
 
     def _set_list(self, items, values):
         """
-        Implementation on how to set a list of keys to this chaindict
+        Implementation on how to set multiple values to this chaindict
 
-        Default is to call _set on all single keys
+        Default implementation is to not store anything.
+        This is mostly used in caching and stores
         """
-        [self._set(item, value) for item, value in zip(items, values) if value is not None]
+        pass
 
     def _get(self, item):
         """
@@ -155,6 +158,10 @@ class MergeNumpy(ChainDict):
 
     def __getitem__(self, items):
         return np.array(self.post[items])
+
+    def __setitem__(self, key, value):
+        self.post[key] = value
+
 
 class ExpandSingle(ChainDict):
     """
@@ -225,9 +232,6 @@ class Function(ChainDict):
         self.requires_lists = requires_lists
         self.single_as_scalar = single_as_scalar
 
-    def _contains(self, item):
-        return False
-
     def _get(self, item):
         if self._eval is None:
             return None
@@ -260,12 +264,15 @@ class Function(ChainDict):
 
         return results
 
-
     def get_transformed_view(self, transform):
         def fnc(obj):
             return transform(self(obj))
 
         return fnc
+
+    def __setitem__(self, key, value):
+        # Cannot set the value of a function and it has no fallback
+        pass
 
 
 class CacheChainDict(ChainDict):
@@ -285,21 +292,15 @@ class CacheChainDict(ChainDict):
     def _contains(self, item):
         return item in self.cache
 
-    def _set(self, item, value):
-        if value is not None:
-            self.cache[item] = value
-
     def _get(self, item):
         try:
             return self.cache[item]
         except KeyError:
             return None
 
-    def _add_new(self, items, values):
-        for item, value in zip(items, values):
-            self.cache[item] = value
-            if self.reversible:
-                self.cache[item.reversed] = value
+    def _set(self, item, value):
+        self.cache[item] = value
+
 
 class ReversibleCacheChainDict(CacheChainDict):
     """
@@ -315,11 +316,11 @@ class ReversibleCacheChainDict(CacheChainDict):
         super(ReversibleCacheChainDict, self).__init__(cache)
         self.reversible = reversible
 
-    def _add_new(self, items, values):
-        for item, value in zip(items, values):
-            self.cache[item] = value
-            if self.reversible:
-                self.cache[item.reversed] = value
+    def _set(self, item, value):
+        print 'cached'
+        self.cache[item] = value
+        if self.reversible:
+            self.cache[item.reversed] = value
 
 class LRUChainDict(CacheChainDict):
     """
@@ -356,12 +357,14 @@ class StoredDict(ChainDict):
         self.storable = set()
         self._last_n_objects = 0
 
-    def _add_new(self, items, values):
-        for item, value in zip(items, values):
-            key = self._get_key(item)
-            if key is not None:
-                self.cache[key] = value
-                self.storable.add(key)
+    def _set(self, item, value):
+        key = self._get_key(item)
+        if key is not None:
+            self.cache[key] = value
+            self.storable.add(key)
+
+    def _set_list(self, items, values):
+        [self._set(item, value) for item, value in zip(items, values)]
 
         if self.max_save_buffer_size is not None and len(self.storable) > self.max_save_buffer_size:
             self.sync()
@@ -388,7 +391,6 @@ class StoredDict(ChainDict):
             for key, value in pairs:
                 self.cache[key] = value
             self._last_n_objects = len(self.key_store)
-
 
     def cache_all(self):
         values = self.value_store[:]
@@ -453,20 +455,16 @@ class ReversibleStoredDict(StoredDict):
         super(ReversibleStoredDict, self).__init__(key_store, value_store, main_cache)
         self.reversible = reversible
 
-    def _add_new(self, items, values):
-        for item, value in zip(items, values):
-            key = self._get_key(item)
-            if key is not None:
-                self.cache[key] = value
-                self.storable.add(key)
-                if self.reversible:
-                    # if reversible store also for reversed
-                    s_key = key + 1 - 2 * (key % 2)
-                    self.cache[s_key] = value
-                    self.storable.add(s_key)
-
-        if self.max_save_buffer_size is not None and len(self.storable) > self.max_save_buffer_size:
-            self.sync()
+    def _set(self, item, value):
+        key = self._get_key(item)
+        if key is not None:
+            self.cache[key] = value
+            self.storable.add(key)
+            if self.reversible:
+                # if reversible store also for reversed
+                s_key = key + 1 - 2 * (key % 2)
+                self.cache[s_key] = value
+                self.storable.add(s_key)
 
     def sync(self):
         # Sync objects that had been saved and afterwards the CV was computed

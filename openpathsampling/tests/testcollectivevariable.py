@@ -53,7 +53,7 @@ class testCV_Function(object):
         # little trick. We just predent the atom_pairs_op is a function we want to use
         # it cannot be stored though, but for from_template it is enough
 
-        params = atom_pair_op.return_parameters_from_template(self.traj[0])
+        params = paths.Obatom_pair_op.return_parameters_from_template(self.traj[0])
 
         assert params['cv_return_type'] == 'numpy.float32'
         assert params['cv_return_simtk_unit'] is None
