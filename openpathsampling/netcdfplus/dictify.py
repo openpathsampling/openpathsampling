@@ -175,7 +175,7 @@ class ObjectJSON(object):
                 else:
                     return None
 
-            elif '_marshal' in obj:
+            elif '_marshal' in obj or '_module' in obj:
                 return self.callable_from_dict(obj)
 
             else:

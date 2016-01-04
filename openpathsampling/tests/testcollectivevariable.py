@@ -9,6 +9,7 @@ import numpy as np
 
 import openpathsampling.collectivevariable as op
 import openpathsampling as paths
+from openpathsampling.netcdfplus import NetCDFPlus
 
 from msmbuilder.featurizer import AtomPairsFeaturizer
 
@@ -53,11 +54,11 @@ class testCV_Function(object):
         # little trick. We just predent the atom_pairs_op is a function we want to use
         # it cannot be stored though, but for from_template it is enough
 
-        params = paths.Obatom_pair_op.return_parameters_from_template(self.traj[0])
+        params = NetCDFPlus.get_value_parameters(atom_pair_op(self.traj[0]))
 
-        assert params['cv_return_type'] == 'numpy.float32'
-        assert params['cv_return_simtk_unit'] is None
-        assert params['cv_return_shape'] == tuple([2])
+        assert params['var_type'] == 'numpy.float32'
+        assert params['simtk_unit'] is None
+        assert params['dimensions'] == tuple([2])
 
     def test_register_as_attribute(self):
         cv = paths.CV_Function('x', lambda x: x.coordinates[:, 0])

@@ -4,7 +4,7 @@
 
 import openpathsampling as paths
 import chaindict as cd
-from openpathsampling.netcdfplus import StorableNamedObject, WeakLRUCache, ObjectJSON
+from openpathsampling.netcdfplus import StorableNamedObject, WeakLRUCache, ObjectJSON, create_to_dict
 
 class CVAttribute(object):
     """
@@ -95,8 +95,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             self._cache_dict.cache,
             reversible=self.cv_time_reversible
         )
-        self._store_dict.post = self._cache_dict
-        self._single_dict.post = self._store_dict
+        self._store_dict._post = self._cache_dict
+        self._single_dict._post = self._store_dict
 
     # This is important since we subclass from list and lists are not hashable
     # but CVs should be
@@ -153,6 +153,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         return NotImplemented
 
+    to_dict = create_to_dict(['name', 'cv_time_reversible', 'cv_store_cache'])
 
 class CV_Volume(CollectiveVariable):
     """ Turn a `Volume` into a collective variable
@@ -187,15 +188,16 @@ class CV_Volume(CollectiveVariable):
             False
         )
 
-        self.post = self.post > self._callable_dict
+        self._post = self._post > self._callable_dict
 
     def _eval(self, items):
         result = bool(self.volume(items))
         return result
 
+    to_dict = create_to_dict(['name', 'cv_store_cache', 'volume'])
 
 class CV_Callable(CollectiveVariable):
-    """Turn any callable object `f` into a storable `CollectiveVariable`.
+    """Turn any callable object `cv_callable` into a storable `CollectiveVariable`.
 
     Attributes
     ----------
@@ -207,7 +209,7 @@ class CV_Callable(CollectiveVariable):
     def __init__(
             self,
             name,
-            callable,
+            cv_callable,
             cv_store_cache=True,
             cv_time_reversible=False,
             cv_requires_lists=False,
@@ -219,7 +221,7 @@ class CV_Callable(CollectiveVariable):
         Parameters
         ----------
         name
-        c : callable (function or class with __call__)
+        cv_callable : callable (function or class with __call__)
             The callable to be used
         cv_store_cache
         cv_time_reversible
@@ -283,7 +285,7 @@ class CV_Callable(CollectiveVariable):
         self.cv_wrap_numpy_array = cv_wrap_numpy_array
         self.cv_scalarize_numpy_singletons = cv_scalarize_numpy_singletons
 
-        self.callable = callable
+        self.cv_callable = cv_callable
 
         if kwargs is None:
             kwargs = dict()
@@ -295,105 +297,27 @@ class CV_Callable(CollectiveVariable):
             self.cv_scalarize_numpy_singletons
         )
 
-        post = self.post > self._callable_dict
+        post = self._post > self._callable_dict
 
         if cv_wrap_numpy_array:
             post = cd.MergeNumpy() > post
 
-        self.post = post
-
-    @staticmethod
-    def function_requires_lists(callable, template, **kwargs):
-        """
-        Compute parameters suitable for a callable using a template snapshot
-
-        Parameters
-        ----------
-        callable : callable (function or class with __call__)
-            the callable to be used as a function
-        template : openpathsampling.Snapshot
-            a test snapshot to be evaluated with the callable
-
-        Returns
-        -------
-        dict
-            A dictionary containing the approriate input parameters for `cv_cv_return_type`, `cv_return_shape`,
-            `cv_requires_lists` and `cv_return_simtk_unit`
-
-        Notes
-        -----
-        This is a untility function to create a CV using a template
-
-        See also
-        --------
-        openpathsampling.CollectiveVariable.from_template
-        """
-
-        eval_single = True
-        value_single = None
-
-        eval_list = True
-        value_list = None
-
-        eval_multi = True
-        value_multi = None
-
-        cv_requires_lists = None
-
-        try:
-            # try use single item
-            value_single = callable(template, **kwargs)
-        except:
-            eval_single = False
-
-        try:
-            # try use list item
-            value_list = callable([template], **kwargs)
-        except:
-            eval_list = False
-
-        try:
-            # try use multi list items
-            value_multi = callable([template, template], **kwargs)
-        except:
-            eval_multi = False
-
-        if not eval_multi and not eval_list and not eval_single:
-            # who knows what happened (after loading), since we
-            # cannot use the function we disable the function
-            return False
-
-        # Determine if we can use lists or not
-        if eval_single:
-            cv_requires_lists = False
-
-        if eval_list and eval_multi:
-            # check if results are the same
-
-            #TODO: Check if first and second result are equal. Difficult for numpy
-            try:
-                if len(value_list) == 1:
-                    if len(value_multi) == 2:
-                        cv_requires_lists = True
-
-            except TypeError:
-                cv_requires_lists = False
-
-        return cv_requires_lists
+        self._post = post
 
     def to_dict(self):
         dct = super(CV_Callable, self).to_dict()
-        dct['callable'] = ObjectJSON.callable_to_dict(self.callable)
+        callable_argument = self.__class__.args()[2]
+        dct[callable_argument] = ObjectJSON.callable_to_dict(self.cv_callable)
         dct['cv_requires_lists'] = self.cv_requires_lists
         dct['cv_wrap_numpy_array'] = self.cv_wrap_numpy_array
         dct['cv_scalarize_numpy_singletons'] = self.cv_scalarize_numpy_singletons
-        dct['cv_**kwargs'] = self.kwargs
+        dct['**kwargs'] = self.kwargs
         return dct
 
     @classmethod
     def from_dict(cls, dct):
-        kwargs = dct['cv_**kwargs']
-        del dct['cv_**kwargs']
+        kwargs = dct['**kwargs']
+        del dct['**kwargs']
         dct.update(kwargs)
         obj = cls(**dct)
 
@@ -406,11 +330,11 @@ class CV_Callable(CollectiveVariable):
                 return False
             if self.kwargs != other.kwargs:
                 return False
-            if self.callable is None or other.callable is None:
+            if self.cv_callable is None or other.cv_callable is None:
                 return False
 
-            if hasattr(self.callable.func_code, 'op_code') and hasattr(other.callable.func_code, 'op_code') and \
-                            self.callable.func_code.op_code != other.callable.func_code.op_code:
+            if hasattr(self.cv_callable.func_code, 'op_code') and hasattr(other.cv_callable.func_code, 'op_code') and \
+                            self.cv_callable.func_code.op_code != other.cv_callable.func_code.op_code:
                 # Compare Bytecode. Not perfect, but should be good enough
                 return False
 
@@ -427,16 +351,13 @@ class CV_Function(CV_Callable):
 
     Attributes
     ----------
-    c
+    cv_callable
     """
-
-    allow_marshal = True
-    allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy', 'pandas']
 
     def __init__(
             self,
             name,
-            callable,
+            f,
             cv_store_cache=True,
             cv_time_reversible=False,
             cv_requires_lists=False,
@@ -448,7 +369,7 @@ class CV_Function(CV_Callable):
         Parameters
         ----------
         name : str
-        callable : function
+        f : (callable) function
             The function to be used
         cv_store_cache
         cv_time_reversible
@@ -456,9 +377,9 @@ class CV_Function(CV_Callable):
         cv_wrap_numpy_array
         cv_scalarize_numpy_singletons
         kwargs : **kwargs
-            a dictionary of named arguments which should be given to `c` (for example, the
+            a dictionary of named arguments which should be given to `cv_callable` (for example, the
             atoms which define a specific distance/angle). Finally
-            `c(snapshots, **kwargs)` is called
+            `cv_callable(snapshots, **kwargs)` is called
 
         See also
         --------
@@ -468,7 +389,7 @@ class CV_Function(CV_Callable):
 
         super(CV_Function, self).__init__(
             name,
-            callable=callable,
+            cv_callable=f,
             cv_store_cache=cv_store_cache,
             cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
@@ -479,11 +400,11 @@ class CV_Function(CV_Callable):
 
     @property
     def f(self):
-        return self.callable
+        return self.cv_callable
 
     def _eval(self, items):
         # here the kwargs are used in the callable when it is evaluated
-        return self.callable(items, **self.kwargs)
+        return self.cv_callable(items, **self.kwargs)
 
 
 class CV_Generator(CV_Callable):
@@ -496,7 +417,7 @@ class CV_Generator(CV_Callable):
     def __init__(
             self,
             name,
-            callable,
+            generator,
             cv_store_cache=True,
             cv_time_reversible=False,
             cv_requires_lists=False,
@@ -508,7 +429,7 @@ class CV_Generator(CV_Callable):
         Parameters
         ----------
         name
-        callable : callable class
+        generator : callable class
             a class where instances have a `__call__` attribute
         cv_return_type
         cv_return_shape
@@ -529,7 +450,7 @@ class CV_Generator(CV_Callable):
 
         super(CV_Generator, self).__init__(
             name,
-            callable=callable,
+            cv_callable=generator,
             cv_store_cache=cv_store_cache,
             cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
@@ -539,11 +460,15 @@ class CV_Generator(CV_Callable):
         )
 
         # here the kwargs are used when the callable is created (so only once)
-        self._instance = callable(**self.kwargs)
+        self._instance = generator(**self.kwargs)
 
     @property
     def instance(self):
         return self._instance
+
+    @property
+    def generator(self):
+        return self.cv_callable
 
     def _eval(self, items):
         trajectory = paths.Trajectory(items)
@@ -571,7 +496,7 @@ class CV_MDTraj_Function(CV_Function):
 
     def __init__(self,
                  name,
-                 callable,
+                 f,
                  cv_store_cache=True,
                  cv_time_reversible=True,
                  cv_requires_lists=True,
@@ -583,7 +508,7 @@ class CV_MDTraj_Function(CV_Function):
         Parameters
         ----------
         name : str
-        callable
+        f
         cv_store_cache
         cv_time_reversible
         cv_requires_lists
@@ -598,7 +523,7 @@ class CV_MDTraj_Function(CV_Function):
 
         super(CV_MDTraj_Function, self).__init__(
             name,
-            callable,
+            f,
             cv_store_cache=cv_store_cache,
             cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
@@ -613,11 +538,11 @@ class CV_MDTraj_Function(CV_Function):
         trajectory = paths.Trajectory(items)
 
         t = trajectory.md()
-        return self.callable(t, **self.kwargs)
+        return self.cv_callable(t, **self.kwargs)
 
     @property
     def mdtraj_function(self):
-        return self.callable
+        return self.cv_callable
 
 
 class CV_MSMB_Featurizer(CV_Generator):
@@ -632,7 +557,7 @@ class CV_MSMB_Featurizer(CV_Generator):
     def __init__(
             self,
             name,
-            callable,
+            featurizer,
             cv_store_cache=True,
             cv_wrap_numpy_array=True,
             cv_scalarize_numpy_singletons=True,
@@ -643,7 +568,7 @@ class CV_MSMB_Featurizer(CV_Generator):
         Parameters
         ----------
         name
-        callable : msmbuilder.Featurizer
+        featurizer : msmbuilder.Featurizer, callable
             the featurizer used as a callable class
         **kwargs : **kwargs
             a dictionary of named arguments which should be given to `c` (for example, the
@@ -673,11 +598,11 @@ class CV_MSMB_Featurizer(CV_Generator):
             elif md_kwargs[key].__class__ is paths.Trajectory:
                 md_kwargs[key] = md_kwargs[key].md()
 
-        self._instance = callable(**md_kwargs)
+        self._instance = featurizer(**md_kwargs)
 
         super(CV_Generator, self).__init__(
             name,
-            callable=callable,
+            cv_callable=featurizer,
             cv_store_cache=cv_store_cache,
             cv_time_reversible=True,
             cv_requires_lists=True,
@@ -688,7 +613,7 @@ class CV_MSMB_Featurizer(CV_Generator):
 
     @property
     def featurizer(self):
-        return self.callable
+        return self.cv_callable
 
     def _eval(self, items):
         trajectory = paths.Trajectory(items)

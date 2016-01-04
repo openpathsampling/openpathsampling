@@ -53,18 +53,18 @@ class ChainDict(object):
     """
 
     def __init__(self):
-        self.post = None
+        self._post = None
 
     def __getitem__(self, items):
         # first apply the own _get functions to compute
         results = self._get_list(items)
 
-        if self.post is not None:
+        if self._post is not None:
             nones = [obj[0] for obj in zip(items, results) if obj[1] is None]
             if len(nones) == 0:
                 return results
             else:
-                rep = self.post[[p for p in nones]]
+                rep = self._post[[p for p in nones]]
                 self._set_list(nones, rep)
 
                 it = iter(rep)
@@ -81,8 +81,8 @@ class ChainDict(object):
                 self._set(key, value)
 
         # pass __setitem__ to underlying dicts as default
-        if self.post is not None:
-            self.post[key] = value
+        if self._post is not None:
+            self._post[key] = value
 
     def _set(self, item, value):
         """
@@ -129,10 +129,10 @@ class ChainDict(object):
         >>> new_dict = first_dict > fall_back
         """
         last = self
-        while last.post is not None:
-            last = last.post
+        while last._post is not None:
+            last = last._post
 
-        last.post = other
+        last._post = other
         return self
 
     def __lt__(self, other):
@@ -142,17 +142,17 @@ class ChainDict(object):
         >>> new_dict = fall_back < first_dict
         """
         last = other
-        while last.post is not None:
+        while last._post is not None:
             last = last.post
 
-        last.post = self
+        last._post = self
         return other
 
     @property
     def passing_chain(self):
         chain = [self]
-        while chain[-1].post is not None:
-            chain.append(chain[-1].post)
+        while chain[-1]._post is not None:
+            chain.append(chain[-1]._post)
 
         return chain
 
@@ -170,13 +170,13 @@ class Wrap(ChainDict):
             the underlying chain dict to be used
         """
         super(Wrap, self).__init__()
-        self.post = post
+        self._post = post
 
     def __getitem__(self, items):
-        return self.post[items]
+        return self._post[items]
 
     def __setitem__(self, key, value):
-        self.post[key] = value
+        self._post[key] = value
 
 
 class MergeNumpy(ChainDict):
@@ -184,10 +184,10 @@ class MergeNumpy(ChainDict):
     """
 
     def __getitem__(self, items):
-        return np.array(self.post[items])
+        return np.array(self._post[items])
 
     def __setitem__(self, key, value):
-        self.post[key] = value
+        self._post[key] = value
 
 
 class ExpandSingle(ChainDict):
@@ -197,7 +197,7 @@ class ExpandSingle(ChainDict):
 
     def __getitem__(self, items):
         if type(items) is LoaderProxy:
-            return self.post[[items]][0]
+            return self._post[[items]][0]
         if hasattr(items, '__iter__'):
             try:
                 dummy = len(items)
@@ -207,17 +207,17 @@ class ExpandSingle(ChainDict):
                                 'You can wrap your iterator in list() if you know that it will finish.')
 
             try:
-                return self.post[items.as_proxies()]
+                return self._post[items.as_proxies()]
             except AttributeError:
                 # turn possible iterators into list since we have to do it anyway.
                 # Iterators do not work
-                return self.post[list(items)]
+                return self._post[list(items)]
 
         else:
-            return self.post[[items]][0]
+            return self._post[[items]][0]
 
     def __setitem__(self, key, value):
-        self.post[key] = value
+        self._post[key] = value
 
 class Transform(ChainDict):
     """
@@ -232,10 +232,10 @@ class Transform(ChainDict):
         self.transform = transform
 
     def __getitem__(self, item):
-        return self.post[self.transform(item)]
+        return self._post[self.transform(item)]
 
     def __setitem__(self, key, value):
-        self.post[self.transform(key)] = value
+        self._post[self.transform(key)] = value
 
 
 class Function(ChainDict):
