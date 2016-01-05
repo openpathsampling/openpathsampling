@@ -19,19 +19,19 @@ class ObjectStore(StorableNamedObject):
     Attributes
     ----------
     storage
-    content_class : class
-        a reference to the class type to be stored using this Storage
+    content_class : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+        a reference to the class type to be stored using this Storage. Must be
+        subclassed from :py:func:`openpathsampling.netcdfplus.base.StorableObject`
     has_name : bool
         if `True` objects can also be loaded by a string name
     json : string
         if already computed a JSON Serialized string of the object
     simplifier
-    cache : dict-like (int or str : object)
+    cache : :py:class:`openpathsampling.netcdfplus.cache.Cache`
         a dictionary that holds references to all stored elements by index
         or string for named objects. This is only used for cached access
-        if caching is not `False`
-
-    Methods
+        if caching is not `False`. Must be of type :py:func:`openpathsampling.netcdfplus.base.StorableObject`
+        or subclassed.
 
     """
 
