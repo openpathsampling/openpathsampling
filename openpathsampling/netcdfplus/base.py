@@ -66,11 +66,14 @@ class StorableObject(object):
     @classmethod
     def base(cls):
         if cls._base is None:
-            if cls is not StorableObject and cls is not StorableNamedObject:
+            if cls is not StorableObject and cls is not StorableNamedObject and cls is not StorableUniquelyNamedObject:
                 if StorableObject in cls.__bases__ or StorableNamedObject in cls.__bases__:
                     cls._base = cls
                 else:
-                    cls._base = cls.__base__.base()
+                    if hasattr(cls.__base__, 'base'):
+                        cls._base = cls.__base__.base()
+                    else:
+                        cls._base = cls
 
         return cls._base
 
@@ -219,3 +222,44 @@ class StorableNamedObject(StorableObject):
         return self
 
 
+class StorableUniquelyNamedObject(StorableNamedObject):
+    """Mixin that allows an object to carry a .name property that can be saved
+
+    It is not allowed to rename object once it has been given a name. Also
+    storage usually sets the name to empty if an object has not been named
+    before. This means that you cannot name an object, after is has been saved.
+
+    This also makes sure that no objects of the same base class have the same name.
+    """
+
+    named_references = dict()
+
+    @property
+    def name(self):
+        if self._name == '':
+            return self.default_name
+        else:
+            return self._name
+
+    @name.setter
+    def name(self, name):
+        if self._name_fixed:
+            raise ValueError('Objects cannot be renamed to "%s" after is has been saved, it is already named "%s"' % (
+                name, self._name))
+        else:
+            print self.cls
+            print self.base_cls_name
+            if self.base_cls_name not in StorableUniquelyNamedObject.named_references:
+                StorableUniquelyNamedObject.named_references[self.base_cls_name] = weakref.WeakValueDictionary()
+
+            ref_obj = StorableUniquelyNamedObject.named_references[self.base_cls_name].get(name)
+            if ref_obj is None:
+                self._name = name
+                StorableUniquelyNamedObject.named_references[self.base_cls_name][name] = self
+            elif ref_obj is self:
+                # renaming the same object with the same name
+                pass
+            else:
+                # another object of the same base class exists with the same name
+                raise ValueError('Object "%s" is already named "%s". Try another name instead.' % (
+                repr(ref_obj), name))

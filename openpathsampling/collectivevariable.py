@@ -14,7 +14,7 @@ import numpy as np
 
 import openpathsampling as paths
 import chaindict as cd
-from openpathsampling.netcdfplus import StorableNamedObject, WeakLRUCache
+from openpathsampling.netcdfplus import StorableNamedObject, WeakLRUCache, StorableUniquelyNamedObject
 
 
 class CollectiveVariable(cd.Wrap, StorableNamedObject):
@@ -75,7 +75,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
                 name) == 0:
             raise ValueError('name must be a non-empty string')
 
-        StorableNamedObject.__init__(self)
+        StorableUniquelyNamedObject.__init__(self)
 
         self.name = name
 

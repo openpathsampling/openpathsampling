@@ -38,7 +38,7 @@ class ObjectStore(StorableNamedObject):
 
     default_cache = 10000
 
-    def __init__(self, content_class, json=True, nestable=False, has_name=False):
+    def __init__(self, content_class, json=True, nestable=False, has_name=False, unique_name=True):
         """
 
         Parameters
@@ -54,6 +54,9 @@ class ObjectStore(StorableNamedObject):
         has_name : bool, default: False
             if `True` the store will save the objects `.name` property separatley
             and allow to load by this name.
+        unique_name : bool, default: True
+            if `True` (default) names must be unique and saving two objects with the
+            same name will raise an error.
 
         Notes
         -----
@@ -96,6 +99,7 @@ class ObjectStore(StorableNamedObject):
         self.prefix = None
         self.cache = NoCache()
         self.has_name = has_name
+        self.unique_name = unique_name
         self.json = json
         self._free = set()
         self._cached_all = False
@@ -115,7 +119,8 @@ class ObjectStore(StorableNamedObject):
             'content_class': self.content_class,
             'has_name': self.has_name,
             'json': self.json,
-            'nestable': self.nestable
+            'nestable': self.nestable,
+            'unique_name': self.unique_name
         }
 
     def register(self, storage, name):
@@ -685,6 +690,7 @@ class ObjectStore(StorableNamedObject):
             previously stored one.
 
         """
+        idx_is_str = type(idx) is str
 
         if idx is None:
             if obj in self.index:
@@ -694,13 +700,14 @@ class ObjectStore(StorableNamedObject):
                 return obj._idx
             else:
                 n_idx = self.free()
-        elif type(idx) is str:
+
+        elif idx_is_str:
             # saving with name as second parameter will try to set the name and save then
-            if self.has_name and obj._name_fixed is False:
-                obj.name = idx
-            else:
-                logger.warning('Could not rename object from "%s" to "%s". Already fixed name! Saving using old name' %
-                               (obj._name, idx))
+            if not self.has_name:
+                raise ValueError(
+                    'Cannot store using string idx "%s". Store objects are not nameable.' %
+                    idx
+                )
 
             n_idx = self.free()
 
@@ -709,6 +716,58 @@ class ObjectStore(StorableNamedObject):
             n_idx = int(idx)
         else:
             raise ValueError('Unsupported index type (only str and int allowed).')
+
+        if self.has_name and hasattr(obj, '_name'):
+            name = self._name
+
+            err = list()
+            if idx_is_str:
+                if obj._name_fixed is True and name != idx:
+                    err.append(
+                        'Could not rename object from "%s" to "%s". '
+                        'Already fixed name!' % (obj._name, idx)
+                    )
+
+                    if self._name in self.name_idx and self.unique_name:
+                        err.append(
+                            ('Old name "%s" also already taken in unique name store. '
+                             'This means you cannot save object "%s" at all. '
+                             'In general this should not happen to unsaved objects unless'
+                             'you fixed the name of the object yourself. Check your code'
+                             'for the generation of objets of the same name.') %
+                            (obj._name, obj)
+                        )
+                    else:
+                        err.append(
+                            ('Old name "%s" is still free. Saving without giving a specific name'
+                             'should work') % obj._name
+                        )
+                else:
+                    name = idx
+
+                    if idx in self.name_idx and self.unique_name:
+                        err.append(
+                            ('New name "%s" already taken in unique name store. ' +
+                             'Try different name instead.') % idx
+                        )
+
+                        if self._name in self.name_idx and self.unique_name:
+                            err.append(
+                                ('Current name "%s" already taken in unique name store. ') % obj._name
+                            )
+                        else:
+                            err.append(
+                                ('Current name "%s" is still free. Saving without giving a specific name'
+                                 'should work') % obj._name
+                            )
+
+            if len(err) > 0:
+                raise RuntimeWarning('/n'.join(err))
+
+            if idx_is_str:
+                # Rename to the
+                if not obj._name_fixed:
+                    obj.name = name
 
         self.index[obj] = n_idx
 
@@ -906,14 +965,17 @@ class DictStore(ObjectStore):
 
         if idx is None:
             # a DictStore needs a specific name
+            logger.warning('Saving in a DictStore without specifying a string key is not allowed. ')
             return -1
 
         if type(idx) is not str:
             # key needs to be a string
+            logger.warning('Idx "%s" for DictStore needs to be a string! ' % idx)
             return -1
 
         if idx in self.name_idx and self.immutable:
             # immutable means no duplicates, so quit
+            logger.warning('Trying to re-save existing key "%s". DictStore is immutable so we are skipping.' % idx)
             return -1
 
         n_idx = int(self.free())

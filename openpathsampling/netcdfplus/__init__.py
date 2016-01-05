@@ -1,5 +1,5 @@
 from netcdfplus import NetCDFPlus
-from base import StorableNamedObject, StorableObject
+from base import StorableNamedObject, StorableObject, StorableUniquelyNamedObject
 from proxy import DelayedLoader, lazy_loading_attributes, LoaderProxy
 from cache import WeakKeyCache, WeakLRUCache, WeakValueCache, MaxCache, NoCache, Cache, LRUCache
 from dictify import ObjectJSON, StorableObjectJSON
