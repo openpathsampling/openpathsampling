@@ -56,7 +56,7 @@ class ObjectStore(StorableNamedObject):
 
     default_cache = 10000
 
-    def __init__(self, content_class, json=True, nestable=False, has_name=False, unique_name=True):
+    def __init__(self, content_class, json=True, nestable=False, has_name=False, unique_name=False):
         """
 
         Parameters
