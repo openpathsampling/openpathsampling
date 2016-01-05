@@ -14,7 +14,25 @@ init_log = logging.getLogger('openpathsampling.initialization')
 class ObjectStore(StorableNamedObject):
     """
     Base Class for storing complex objects in a netCDF4 file. It holds a
-    reference to the store file.
+    reference to the store file.`
+
+    Attributes
+    ----------
+    storage
+    content_class : class
+        a reference to the class type to be stored using this Storage
+    has_name : bool
+        if `True` objects can also be loaded by a string name
+    json : string
+        if already computed a JSON Serialized string of the object
+    simplifier
+    cache : dict-like (int or str : object)
+        a dictionary that holds references to all stored elements by index
+        or string for named objects. This is only used for cached access
+        if caching is not `False`
+
+    Methods
+
     """
 
     allowed_types = [
@@ -44,17 +62,17 @@ class ObjectStore(StorableNamedObject):
         Parameters
         ----------
         content_class
-        json : bool, default: True
+        json : bool
             if True the store will use the json pickling to store objects
-        nestable : bool, default: False
+        nestable : bool
             if `True` this marks the content_class to be saved as nested dict
             objects and not a pointing to saved objects. So the saved complex
             object is only stored once and not split into several objects that
             are referenced by each other in a tree-like fashion
-        has_name : bool, default: False
+        has_name : bool
             if `True` the store will save the objects `.name` property separatley
             and allow to load by this name.
-        unique_name : bool, default: True
+        unique_name : bool
             if `True` (default) names must be unique and saving two objects with the
             same name will raise an error.
 
@@ -63,26 +81,6 @@ class ObjectStore(StorableNamedObject):
         Usually you want caching, but limited. Recommended is to use an LRUCache
         with a reasonable number that depends on the typical number of objects to
         cache and their size
-
-        Attributes
-        ----------
-        storage : Storage
-            the reference the Storage object where all data is stored
-        content_class : class
-            a reference to the class type to be stored using this Storage
-        has_name : bool
-            if `True` objects can also be loaded by a string name
-        json : string
-            if already computed a JSON Serialized string of the object
-        simplifier : util.StorableObjectJSON
-            an instance of a JSON Serializer
-        identifier : str
-            name of the netCDF variable that contains the string to be
-            identified by. So far this is `name`
-        cache : dict-like (int or str : object)
-            a dictionary that holds references to all stored elements by index
-            or string for named objects. This is only used for cached access
-            if caching is not `False`
 
         Notes
         -----
@@ -134,6 +132,11 @@ class ObjectStore(StorableNamedObject):
 
     @property
     def storage(self):
+        """
+        storage : Storage
+            the reference the Storage object where all data is stored
+        """
+
         if self._storage is None:
             raise RuntimeError('A store need to be added to a storage to be used!')
 
@@ -152,9 +155,25 @@ class ObjectStore(StorableNamedObject):
 
     @property
     def simplifier(self):
+        """
+        Return the attached simplifier instance used to create JSON serialization
+
+        Returns
+        -------
+        openpathsampling.netcdfplus.base.dictify.StorableObjectJSON
+
+        """
         return self.storage.simplifier
 
     def set_caching(self, caching):
+        """
+        Set the caching mode for this store
+
+        Parameters
+        ----------
+        caching : openpathsampling.netcdf.cache.Cache
+
+        """
         if caching is None:
             caching = self.default_cache
 
@@ -214,13 +233,6 @@ class ObjectStore(StorableNamedObject):
             else:
                 if idx not in self._name_idx[name]:
                     self._name_idx[name].add(idx)
-
-    def _remove_name_in_cache(self, name, idx):
-        # make sure to cast unicode to str
-        name = str(name)
-        if name != '':
-            if name in self._name_idx:
-                self._name_idx[name].discard(idx)
 
     def find(self, name):
         """
@@ -472,9 +484,11 @@ class ObjectStore(StorableNamedObject):
             the number of the next free index in the storage.
             Used to store a new object.
         """
-        count = len(self)
-        self._free = set([idx for idx in self._free if idx >= count])
-        idx = count
+
+        # start at first free position in the storage
+        idx = len(self)
+
+        # and skip also reserved potential stored ones
         while idx in self._free:
             idx += 1
 
@@ -496,17 +510,14 @@ class ObjectStore(StorableNamedObject):
         """
         Locks a name as used
         """
-        self._free_name.add(name)
+        if name != "":
+            self._free_name.add(name)
 
     def release_name(self, name):
         """
         Releases a locked name
         """
         self._free_name.discard(name)
-
-    def release_all_names(self):
-        self._free_name.clear()
-
 
     def is_name_locked(self, name):
         if self.has_name and self.unique_name:
@@ -626,7 +637,6 @@ class ObjectStore(StorableNamedObject):
             return self.index.get(obj, None)
 
         return idx
-
 
     # =============================================================================
     # LOAD/SAVE DECORATORS FOR CACHE HANDLING
