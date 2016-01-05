@@ -703,11 +703,8 @@ class ObjectStore(StorableNamedObject):
 
         Parameters
         ----------
-        idx : int or str
-            either the integer index of the object to be loaded or a string
-            (name) for named objects. This will always return the last object
-            found with the specified name. This allows to effectively change
-            existing objects.
+        idx : int
+            the integer index of the object to be loaded
 
         Returns
         -------
@@ -715,25 +712,15 @@ class ObjectStore(StorableNamedObject):
             the loaded object
         """
 
-        if type(idx) is not str and idx < 0:
+        if type(idx) is not int:
+            raise ValueError(
+                'indices of type "%s" are not allowed in named storage (only str and int)' % type(idx).__name__
+            )
+
+        if idx < 0:
             return None
 
-        n_idx = idx
-
-        if type(idx) is str:
-            # we want to load by name and it was not in cache.
-            if self.has_name:
-                if idx in self.name_idx:
-                    if len(self.name_idx[idx]) > 1:
-                        logger.debug('Found name "%s" multiple (%d) times in storage! Loading last!' % (
-                            idx, len(self.cache[idx])))
-
-                    n_idx = sorted(list(self.name_idx[idx]))[-1]
-                else:
-                    raise ValueError('str "' + idx + '" not found in storage')
-
-        elif type(idx) is not int:
-            raise ValueError('indices of type "%s" are not allowed in named storage (only str and int)' % type(idx).__name__)
+        n_idx = int(idx)
 
         # if it is in the cache, return it
         try:
@@ -743,9 +730,6 @@ class ObjectStore(StorableNamedObject):
 
         except KeyError:
             pass
-
-        # turn into python int if it was a numpy int (in some rare cases!)
-        n_idx = int(n_idx)
 
         logger.debug('Calling load object of type ' + self.content_class.__name__ + ' and IDX #' + str(idx))
 
@@ -760,19 +744,9 @@ class ObjectStore(StorableNamedObject):
 
         self.index[obj] = n_idx
 
-        if self.has_name and hasattr(obj, '_name'):
-            setattr(obj, '_name',
-                    self.storage.variables[self.prefix + '_name'][idx])
-            # make sure that you cannot change the name of loaded objects
-            obj.fix_name()
-
         if obj is not None:
             # update cache there might have been a change due to naming
             self.cache[n_idx] = obj
-
-            # finally store the name of a named object in cache
-            if self.has_name and obj._name != '':
-                self._update_name_in_cache(obj._name, n_idx)
 
         return obj
 
@@ -791,110 +765,30 @@ class ObjectStore(StorableNamedObject):
             previously stored one.
 
         """
-        idx_is_str = type(idx) is str
+
+        if obj in self.index:
+            # has been saved so quit and do nothing
+            return self.index[obj]
+
+        if hasattr(obj, '_idx'):
+            # is a proxy of a saved object so do nothing
+            return obj._idx
+
+        if not isinstance(obj, self.content_class):
+            raise ValueError(
+                'This store can only store object of base type "%s". Given obj is of type "%s". You'
+                'might need to use another store.' % (self.content_class, obj.__class__.__name__)
+            )
 
         if idx is None:
-            if obj in self.index:
-                # has been saved so quit and do nothing
-                return self.index[obj]
-            elif hasattr(obj, '_idx'):
-                return obj._idx
-            else:
-                n_idx = self.free()
-
-        elif idx_is_str:
-            # saving with name as second parameter will try to set the name and save then
-            if not self.has_name:
-                raise ValueError(
-                    'Cannot store using string idx "%s". Store objects are not nameable.' %
-                    idx
-                )
-
             n_idx = self.free()
-
-        elif type(idx) is int:
-            # assume int like index. This should not be used since it violates immutablilty
-            n_idx = int(idx)
         else:
-            raise ValueError('Unsupported index type (only str and int allowed).')
-
-        if self.has_name and hasattr(obj, '_name'):
-            name = obj._name
-            err = list()
-
-            if idx_is_str:
-                if obj._name_fixed is True and name != idx:
-                    err.append(
-                        'Could not rename object from "%s" to "%s". '
-                        'Already fixed name!' % (name, idx)
-                    )
-
-                    if self.is_name_locked(name):
-                        err.append(
-                            ('Old name "%s" also already taken in unique name store. '
-                             'This means you cannot save object "%s" at all. '
-                             'In general this should not happen to unsaved objects unless '
-                             'you fixed the name of the object yourself. Check your code '
-                             'for the generation of objets of the same name.') %
-                            (name, obj)
-                        )
-                    else:
-                        err.append(
-                            ('Old name "%s" is still free. Saving without giving a specific name '
-                             'should work') % name
-                        )
-                else:
-                    if self.is_name_locked(idx):
-                        err.append(
-                            ('New name "%s" already taken in unique name store. ' +
-                             'Try different name instead.') % idx
-                        )
-
-                        if self.is_name_locked(name):
-                            err.append(
-                                ('Current name "%s" already taken in unique name store. ') % name
-                            )
-                        else:
-                            err.append(
-                                ('Current name "%s" is still free. Saving without giving a specific name '
-                                 'should work') % name
-                            )
-            else:
-                if self.is_name_locked(name):
-                    if obj._name_fixed:
-                        err.append(
-                            ('Old name "%s" also already taken in unique name store. '
-                             'This means you cannot save object "%s" at all. '
-                             'In general this should not happen to unsaved objects unless '
-                             'you fixed the name of the object yourself. Check your code '
-                             'for the generation of objets of the same name.') %
-                            (name, obj)
-                        )
-                    else:
-                        err.append(
-                            ('Current name "%s" already taken in unique name store. '
-                             'Try renaming object or saving using other name.') % name
-                        )
-
-            if len(err) > 0:
-                raise RuntimeWarning('/n'.join(err))
-
-            if idx_is_str:
-                # Rename to the
-                if not obj._name_fixed:
-                    obj.name = idx
-
-            if obj._name is None:
-                # this should not happen!
-                logger.debug("Nameable object has not been initialized correctly. Has None in _name")
-                raise AttributeError('_name needs to be a string for nameable objects.')
+            raise ValueError('Unsupported index type (only None allowed).')
 
         self.index[obj] = n_idx
 
         # make sure in nested saving that an IDX is not used twice!
         self.reserve_idx(n_idx)
-        if self.has_name and hasattr(obj, '_name'):
-            self.reserve_name(obj._name)
 
         logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(n_idx))
 
@@ -902,18 +796,6 @@ class ObjectStore(StorableNamedObject):
             self._save(obj, n_idx)
         finally:
             self.release_idx(n_idx)
-            if self.has_name and hasattr(obj, '_name'):
-                self.release_name(obj._name)
-
-        if self.has_name and hasattr(obj, '_name'):
-            # logger.debug('Object ' + str(type(obj)) + ' with IDX #' + str(idx))
-            # logger.debug(repr(obj))
-            # logger.debug("Cleaning up name; currently: " + str(obj._name))
-
-            obj.fix_name()
-
-            self.storage.variables[self.prefix + '_name'][n_idx] = obj._name
-            self._update_name_in_cache(obj._name, n_idx)
 
         # store the name in the cache
         if hasattr(self, 'cache'):
@@ -926,6 +808,201 @@ class ObjectStore(StorableNamedObject):
 
     def load_range(self, start, end):
         return map(self._load, range(start, end))
+
+
+class NamedObjectStore(ObjectStore):
+
+    # =============================================================================
+    # LOAD/SAVE DECORATORS FOR CACHE HANDLING
+    # =============================================================================
+
+    def load(self, idx):
+        """
+        Returns an object from the storage.
+
+        Parameters
+        ----------
+        idx : int or str
+            either the integer index of the object to be loaded or a string
+            (name) for named objects. This will always return the last object
+            found with the specified name. This allows to effectively change
+            existing objects.
+
+        Returns
+        -------
+        :py:class:`openpathsampling.netcdfplus.base.StorableNamedObject`
+            the loaded object
+        """
+
+        if type(idx) is not str and idx < 0:
+            return None
+
+        n_idx = idx
+
+        if type(idx) is str:
+            # we want to load by name and it was not in cache.
+            if idx in self.name_idx:
+                if len(self.name_idx[idx]) > 1:
+                    logger.debug('Found name "%s" multiple (%d) times in storage! Loading last!' % (
+                        idx, len(self.cache[idx])))
+
+                n_idx = sorted(list(self.name_idx[idx]))[-1]
+            else:
+                raise ValueError('str "' + idx + '" not found in storage')
+
+        elif type(idx) is not int:
+            raise ValueError('indices of type "%s" are not allowed in named storage (only str and int)' % type(idx).__name__)
+
+        obj = super(NamedObjectStore, self).load(n_idx)
+
+        if obj is not None:
+            setattr(obj, '_name',
+                    self.storage.variables[self.prefix + '_name'][idx])
+            # make sure that you cannot change the name of loaded objects
+            obj.fix_name()
+
+            # finally store the name of a named object in cache
+            self._update_name_in_cache(obj._name, n_idx)
+
+        return obj
+
+    def save(self, obj, idx=None):
+        """
+        Saves an object to the storage.
+
+        Parameters
+        ----------
+        obj : :py:class:`openpathsampling.netcdfplus.base.StorableNamedObject`
+            the object to be stored
+        idx : int or string or `None`
+            the index to be used for storing. This is highly discouraged since
+            it changes an immutable object (at least in the storage). It is
+            better to store also the new object and just ignore the
+            previously stored one.
+
+        """
+
+        is_str = type(idx) is str
+
+        if not is_str and idx is not None:
+            raise ValueError('Unsupported index type (only str or None allowed).')
+
+        name = obj._name
+        fixed = obj._name_fixed
+
+        if is_str and not fixed:
+            obj.name = idx
+            name = obj._name
+
+        if name is None:
+            # this should not happen!
+            logger.debug("Nameable object has not been initialized correctly. Has None in _name")
+            raise AttributeError('_name needs to be a string for nameable objects.')
+
+        self.reserve_name(name)
+
+        try:
+            n_idx = super(NamedObjectStore, self)._save(obj, idx=None)
+        finally:
+            self.release_name(name)
+
+        obj.fix_name()
+
+        self.storage.variables[self.prefix + '_name'][n_idx] = name
+        self._update_name_in_cache(name, n_idx)
+
+        return n_idx
+
+
+class UniqueNamedObjectStore(NamedObjectStore):
+
+    # =============================================================================
+    # LOAD/SAVE DECORATORS FOR CACHE HANDLING
+    # =============================================================================
+
+    def save(self, obj, idx=None):
+        """
+        Saves an object to the storage.
+
+        Parameters
+        ----------
+        obj : :py:class:`openpathsampling.netcdfplus.base.StorableNamedObject`
+            the object to be stored
+        idx : int or string or `None`
+            the index to be used for storing. This is highly discouraged since
+            it changes an immutable object (at least in the storage). It is
+            better to store also the new object and just ignore the
+            previously stored one.
+
+        """
+
+        is_str = type(idx) is str
+
+        if not is_str and idx is not None:
+            raise ValueError('Unsupported index type (only str or None allowed).')
+
+        name = obj._name
+        fixed = obj._name_fixed
+        err = list()
+
+        if is_str:
+            if fixed and name != idx:
+                err.append(
+                    'Cannot rename object from "%s" to "%s". '
+                    'Already fixed name!' % (name, idx)
+                )
+
+                if self.is_name_locked(name):
+                    err.append(
+                        ('Current name "%s" is also already taken in unique name store. '
+                         'This means you cannot save object "%s" at all. '
+                         'In general this should not happen to unsaved objects unless '
+                         'you fixed the name of the object yourself. Check your code '
+                         'for the generation of objects of the same name.') %
+                        (name, obj)
+                    )
+                else:
+                    err.append(
+                        ('Current name "%s" is still free. Saving without giving a specific name '
+                         'should work. If that is what you want to do.') % name
+                    )
+            else:
+                if self.is_name_locked(idx):
+                    err.append(
+                        ('New name "%s" already taken in unique name store. ' +
+                         'Try different name instead.') % idx
+                    )
+
+                    if self.is_name_locked(name):
+                        err.append(
+                            ('Current name "%s" already taken in unique name store. ') % name
+                        )
+                    else:
+                        err.append(
+                            ('Current name "%s" is still free. Saving without giving a specific name '
+                             'should work') % name
+                        )
+        else:
+            if self.is_name_locked(name):
+                if fixed:
+                    err.append(
+                        ('Current name "%s" is already taken in unique name store. '
+                         'This means you cannot save object "%s" at all. '
+                         'In general this should not happen to unsaved objects unless '
+                         'you fixed the name of the object yourself. Check your code '
+                         'for the generation of objects of the same name.') %
+                        (name, obj)
+                    )
+                else:
+                    err.append(
+                        ('Current name "%s" is already taken in unique name store. '
+                         'Try renaming object or saving using other name.') % name
+                    )
+
+        if len(err) > 0:
+            raise RuntimeWarning('/n'.join(err))
+
+        return super(NamedObjectStore, self)._save(obj)
 
 
 class VariableStore(ObjectStore):
@@ -1097,18 +1174,17 @@ class DictStore(ObjectStore):
 
         if idx is None:
             # a DictStore needs a specific name
-            logger.warning('Saving in a DictStore without specifying a string key is not allowed. ')
-            return -1
+            raise ValueError('Saving in a DictStore without specifying a string key is not allowed. ')
 
         if type(idx) is not str:
             # key needs to be a string
-            logger.warning('Idx "%s" for DictStore needs to be a string! ' % idx)
-            return -1
+            raise ValueError('Index "%s" for DictStore needs to be a string! ' % idx)
 
         if idx in self.name_idx and self.immutable:
             # immutable means no duplicates, so quit
-            logger.warning('Trying to re-save existing key "%s". DictStore is immutable so we are skipping.' % idx)
-            return -1
+            raise RuntimeWarning(
+                    'Cannot re-save existing key "%s" in immutable dict store.' % idx
+            )
 
         n_idx = int(self.free())
         # make sure in nested saving that an IDX is not used twice!
