@@ -79,14 +79,14 @@ class ObjectStore(StorableNamedObject):
         Notes
         -----
         Usually you want caching, but limited. Recommended is to use an LRUCache
-        with a reasonable number that depends on the typical number of objects to
-        cache and their size
+        with a reasonable maximum number of objects that depends on the typical
+        number of objects to cache and their size
 
         Notes
         -----
-        The class that takes care of storing data in a file is called a Storage,
-        so the netCDF subclassed Storage is a storage. The classes that know how
-        to load and save an object from the storage are called stores,
+        The class that takes care of storing data in a file is called a `Storage`,
+        so the netCDF+ subclassed `Storage` is a storage. The classes that know how
+        to load and save an object from the storage are called `Store`,
         like ObjectStore, SampleStore, etc...
 
         """
@@ -122,9 +122,20 @@ class ObjectStore(StorableNamedObject):
             'unique_name': self.unique_name
         }
 
-    def register(self, storage, name):
+    def register(self, storage, prefix):
+        """
+        Associate the object store to a specific storage with a given prefix
+
+        Parameters
+        ----------
+        storage : :class:`openpathsampling.netcdfplus.NetCDFPlus`
+            the storage to be associated with
+        prefix : str
+            the name under which
+
+        """
         self._storage = storage
-        self.prefix = name
+        self.prefix = prefix
 
         self.variables = self.prefix_delegate(self.storage.variables)
         self.units = self.prefix_delegate(self.storage.units)
@@ -132,9 +143,13 @@ class ObjectStore(StorableNamedObject):
 
     @property
     def storage(self):
-        """
-        storage : Storage
-            the reference the Storage object where all data is stored
+        """Return the associated storage object
+
+        Returns
+        -------
+
+        :class:`openpathsampling.netcdfplus.NetCDFPlus`
+            the referenced storage object
         """
 
         if self._storage is None:
@@ -160,7 +175,8 @@ class ObjectStore(StorableNamedObject):
 
         Returns
         -------
-        openpathsampling.netcdfplus.base.dictify.StorableObjectJSON
+        :class:`openpathsampling.netcdfplus.base.dictify.StorableObjectJSON`
+            the simplifier object used in the associated storage
 
         """
         return self.storage.simplifier
@@ -171,7 +187,7 @@ class ObjectStore(StorableNamedObject):
 
         Parameters
         ----------
-        caching : openpathsampling.netcdf.cache.Cache
+        caching : :class:`openpathsampling.netcdf.Cache`
 
         """
         if caching is None:
@@ -193,7 +209,7 @@ class ObjectStore(StorableNamedObject):
 
         Parameters
         ----------
-        obj : object
+        obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
             the object that can be stored in this store for which its index is
             to be returned
 
@@ -206,6 +222,12 @@ class ObjectStore(StorableNamedObject):
 
     @property
     def name_idx(self):
+        """
+
+        Returns
+        -------
+
+        """
         if not self._names_loaded:
             if self.has_name:
                 self.update_name_cache()
@@ -215,6 +237,7 @@ class ObjectStore(StorableNamedObject):
     def update_name_cache(self):
         """
         Update the internal name cache with all stored names in the store.
+
         This allows to load by name for named objects
         """
         if self.has_name:
@@ -245,7 +268,7 @@ class ObjectStore(StorableNamedObject):
 
         Returns
         -------
-        objects
+        :py:class:`openpathsampling.netcdfplus.base.StorableObject`
             the last object with a given name. This is to mimic immutable object. Once you
             (re-)save with the same name you replace the old one and hence you leed to load the last
             stored one.
@@ -299,9 +322,6 @@ class ObjectStore(StorableNamedObject):
         int
             number of stored objects
 
-        Notes
-        -----
-        Equal to `store.count()`
         """
         return len(self.storage.dimensions[self.prefix])
 
@@ -317,7 +337,7 @@ class ObjectStore(StorableNamedObject):
 
         Returns
         -------
-        Iterator()
+        :func:`Iterator()`
             The iterator that iterates the objects in the store
 
         """
@@ -363,18 +383,30 @@ class ObjectStore(StorableNamedObject):
             setattr(obj, attribute, proxy)
 
     def proxy(self, item):
+        """
+        Return a proxy of a object for this store
+
+        Parameters
+        ----------
+        item : :py:class:`openpathsampling.netcdfplus.base.StorableObject` or int
+            The item or index that points to an object in this store and to which
+            a proxy is requested.
+
+        Returns
+        -------
+
+        """
         if item is None:
             return None
 
         if type(item) is not int:
             idx = self.index.get(item, None)
+            if idx is None:
+                return item
         else:
             idx = item
 
-        if idx is None:
-            return item
-        else:
-            return LoaderProxy(self, idx)
+        return LoaderProxy(self, idx)
 
     def __getitem__(self, item):
         """
@@ -431,6 +463,13 @@ class ObjectStore(StorableNamedObject):
     def add_single_to_cache(self, idx, json):
         """
         Add a single object to cache by json
+
+        Parameters
+        ----------
+        idx : int
+            the index where the object was stored
+        json : str
+            json string the represents a serialized version of the stored object
         """
 
         if idx not in self.cache:
@@ -457,26 +496,26 @@ class ObjectStore(StorableNamedObject):
 
         Returns
         -------
-        Trajectoy
-            the actual trajectory object
+        :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            the last stored object in this store
         """
         return self.load(len(self) - 1)
 
     @property
     def first(self):
         """
-        Returns the last stored object. Useful to continue a run.
+        Returns the first stored object.
 
         Returns
         -------
-        Object
-            the actual last stored object
+        :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            the actual first stored object
         """
         return self.load(0)
 
     def free(self):
         """
-        Return the number of the next free index
+        Return the number of the next free index for this store
 
         Returns
         -------
@@ -520,6 +559,22 @@ class ObjectStore(StorableNamedObject):
         self._free_name.discard(name)
 
     def is_name_locked(self, name):
+        """
+        Test whether in a unique name store a name is already taken
+
+        Parameters
+        ----------
+        name : str
+            the name to be tested.
+
+        Returns
+        -------
+        bool
+            the result of the test. If the name exists or is reserved during
+            a saving event this will return `True` and return `False` if the
+            name is free.
+
+        """
         if self.has_name and self.unique_name:
             return name in self.name_idx or name in self._free_name
 
@@ -572,7 +627,7 @@ class ObjectStore(StorableNamedObject):
         dimensions : str or tuple of str
             A tuple representing the dimensions used for the netcdf variable.
             If not specified then the default dimension of the storage is used.
-        units : str
+        simtk_units : str
             A string representing the units used if the var_type is `float`
             the units is set to `none`
         description : str
@@ -582,11 +637,11 @@ class ObjectStore(StorableNamedObject):
             given type. A built-in example for this type is a string which is
             a variable length of char. This make using all the mixed
             stuff superfluous
-        chunksizes : tuple of int
+        chunksizes : tuple of int or int
             A tuple of ints per number of dimensions. This specifies in what
             block sizes a variable is stored. Usually for object related stuff
             we want to store everything of one object at once so this is often
-            (1, ..., ...)
+            (1, ..., ...). A single int is interpreted as a tuple with one entry.
         """
 
         # add the main dimension to the var_type
@@ -650,12 +705,13 @@ class ObjectStore(StorableNamedObject):
         ----------
         idx : int or str
             either the integer index of the object to be loaded or a string
-            (name) for named objects. This will always return the first object
-            found with the specified name.
+            (name) for named objects. This will always return the last object
+            found with the specified name. This allows to effectively change
+            existing objects.
 
         Returns
         -------
-        object
+        :py:class:`openpathsampling.netcdfplus.base.StorableObject`
             the loaded object
         """
 
@@ -726,7 +782,7 @@ class ObjectStore(StorableNamedObject):
 
         Parameters
         ----------
-        obj : StorableObject
+        obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
             the object to be stored
         idx : int or string or `None`
             the index to be used for storing. This is highly discouraged since
@@ -972,7 +1028,7 @@ class DictStore(ObjectStore):
 
         Returns
         -------
-        object
+        :py:class:`openpathsampling.netcdfplus.base.StorableObject`
             the loaded object
         """
 
@@ -1029,7 +1085,7 @@ class DictStore(ObjectStore):
 
         Parameters
         ----------
-        obj : StorableObject
+        obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
             the object to be stored
         idx : int or string or `None`
             the index to be used for storing. This is highly discouraged since
