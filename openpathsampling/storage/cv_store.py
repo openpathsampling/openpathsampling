@@ -6,7 +6,8 @@ class ObjectDictStore(ObjectStore):
         super(ObjectDictStore, self).__init__(
             content_class,
             json=True,
-            has_name=True
+            has_name=True,
+            unique_name=True
         )
         self.key_class = key_class
         self._key_store = None

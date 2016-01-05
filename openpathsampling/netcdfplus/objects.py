@@ -102,6 +102,7 @@ class ObjectStore(StorableNamedObject):
         self.unique_name = unique_name
         self.json = json
         self._free = set()
+        self._free_name = set()
         self._cached_all = False
         self._names_loaded = False
         self.nestable = nestable
@@ -205,7 +206,7 @@ class ObjectStore(StorableNamedObject):
                 self._names_loaded = True
 
     def _update_name_in_cache(self, name, idx):
-        # make sure to case unicode to str
+        # make sure to cast unicode to str
         name = str(name)
         if name != '':
             if name not in self._name_idx:
@@ -213,6 +214,13 @@ class ObjectStore(StorableNamedObject):
             else:
                 if idx not in self._name_idx[name]:
                     self._name_idx[name].add(idx)
+
+    def _remove_name_in_cache(self, name, idx):
+        # make sure to cast unicode to str
+        name = str(name)
+        if name != '':
+            if name in self._name_idx:
+                self._name_idx[name].discard(idx)
 
     def find(self, name):
         """
@@ -478,6 +486,34 @@ class ObjectStore(StorableNamedObject):
         """
         self._free.add(idx)
 
+    def release_idx(self, idx):
+        """
+        Releases a lock on an idx
+        """
+        self._free.discard(idx)
+
+    def reserve_name(self, name):
+        """
+        Locks a name as used
+        """
+        self._free_name.add(name)
+
+    def release_name(self, name):
+        """
+        Releases a locked name
+        """
+        self._free_name.discard(name)
+
+    def release_all_names(self):
+        self._free_name.clear()
+
+
+    def is_name_locked(self, name):
+        if self.has_name and self.unique_name:
+            return name in self.name_idx or name in self._free_name
+
+        return False
+
     def _init(self):
         """
         Initialize the associated storage to allow for object storage. Mainly
@@ -717,48 +753,62 @@ class ObjectStore(StorableNamedObject):
             raise ValueError('Unsupported index type (only str and int allowed).')
 
         if self.has_name and hasattr(obj, '_name'):
-            name = self._name
-
+            name = obj._name
             err = list()
+
             if idx_is_str:
                 if obj._name_fixed is True and name != idx:
                     err.append(
                         'Could not rename object from "%s" to "%s". '
-                        'Already fixed name!' % (obj._name, idx)
+                        'Already fixed name!' % (name, idx)
                     )
 
-                    if self._name in self.name_idx and self.unique_name:
+                    if self.is_name_locked(name):
                         err.append(
                             ('Old name "%s" also already taken in unique name store. '
                              'This means you cannot save object "%s" at all. '
-                             'In general this should not happen to unsaved objects unless'
-                             'you fixed the name of the object yourself. Check your code'
+                             'In general this should not happen to unsaved objects unless '
+                             'you fixed the name of the object yourself. Check your code '
                              'for the generation of objets of the same name.') %
-                            (obj._name, obj)
+                            (name, obj)
                         )
                     else:
                         err.append(
-                            ('Old name "%s" is still free. Saving without giving a specific name'
-                             'should work') % obj._name
+                            ('Old name "%s" is still free. Saving without giving a specific name '
+                             'should work') % name
                         )
                 else:
-                    name = idx
-
-                    if idx in self.name_idx and self.unique_name:
+                    if self.is_name_locked(idx):
                         err.append(
                             ('New name "%s" already taken in unique name store. ' +
                              'Try different name instead.') % idx
                         )
 
-                        if self._name in self.name_idx and self.unique_name:
+                        if self.is_name_locked(name):
                             err.append(
-                                ('Current name "%s" already taken in unique name store. ') % obj._name
+                                ('Current name "%s" already taken in unique name store. ') % name
                             )
                         else:
                             err.append(
-                                ('Current name "%s" is still free. Saving without giving a specific name'
-                                 'should work') % obj._name
+                                ('Current name "%s" is still free. Saving without giving a specific name '
+                                 'should work') % name
                             )
+            else:
+                if self.is_name_locked(name):
+                    if obj._name_fixed:
+                        err.append(
+                            ('Old name "%s" also already taken in unique name store. '
+                             'This means you cannot save object "%s" at all. '
+                             'In general this should not happen to unsaved objects unless '
+                             'you fixed the name of the object yourself. Check your code '
+                             'for the generation of objets of the same name.') %
+                            (name, obj)
+                        )
+                    else:
+                        err.append(
+                            ('Current name "%s" already taken in unique name store. '
+                             'Try renaming object or saving using other name.') % name
+                        )
 
             if len(err) > 0:
                 raise RuntimeWarning('/n'.join(err))
@@ -766,36 +816,42 @@ class ObjectStore(StorableNamedObject):
             if idx_is_str:
                 # Rename to the
                 if not obj._name_fixed:
-                    obj.name = name
+                    obj.name = idx
 
-        self.index[obj] = n_idx
-
-        # make sure in nested saving that an IDX is not used twice!
-        self.reserve_idx(n_idx)
-
-        logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(n_idx))
-        self._save(obj, n_idx)
-
-        if self.has_name and hasattr(obj, '_name'):
-            # logger.debug('Object ' + str(type(obj)) + ' with IDX #' + str(idx))
-            # logger.debug(repr(obj))
-            # logger.debug("Cleaning up name; currently: " + str(obj._name))
             if obj._name is None:
                 # this should not happen!
                 logger.debug("Nameable object has not been initialized correctly. Has None in _name")
                 raise AttributeError('_name needs to be a string for nameable objects.')
 
+        self.index[obj] = n_idx
+
+        # make sure in nested saving that an IDX is not used twice!
+        self.reserve_idx(n_idx)
+        if self.has_name and hasattr(obj, '_name'):
+            self.reserve_name(obj._name)
+
+        logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(n_idx))
+
+        try:
+            self._save(obj, n_idx)
+        finally:
+            self.release_idx(n_idx)
+            if self.has_name and hasattr(obj, '_name'):
+                self.release_name(obj._name)
+
+        if self.has_name and hasattr(obj, '_name'):
+            # logger.debug('Object ' + str(type(obj)) + ' with IDX #' + str(idx))
+            # logger.debug(repr(obj))
+            # logger.debug("Cleaning up name; currently: " + str(obj._name))
+
             obj.fix_name()
 
             self.storage.variables[self.prefix + '_name'][n_idx] = obj._name
+            self._update_name_in_cache(obj._name, n_idx)
 
         # store the name in the cache
         if hasattr(self, 'cache'):
             self.cache[n_idx] = obj
-            if self.has_name and obj._name != '':
-                # and also the name, if it has one so we can load by
-                # name afterwards from cache
-                self._update_name_in_cache(obj._name, n_idx)
 
         return n_idx
 
