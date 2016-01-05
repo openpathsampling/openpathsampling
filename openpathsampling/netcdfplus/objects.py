@@ -149,7 +149,6 @@ class ObjectStore(StorableNamedObject):
             return "store.%s[%s]" % (
                 self.prefix, 'None/ANY')
 
-
     @property
     def simplifier(self):
         return self.storage.simplifier
@@ -930,6 +929,8 @@ class DictStore(ObjectStore):
 
         elif type(idx) is int:
             n_idx = idx
+        else:
+            raise ValueError('Unsupported index type (only str and int allowed).')
 
         # turn into python int if it was a numpy int (in some rare cases!)
         n_idx = int(n_idx)
@@ -937,11 +938,20 @@ class DictStore(ObjectStore):
         logger.debug('Calling load object of type ' + str(self.content_class) + ' and IDX #' + str(idx))
 
         if n_idx >= len(self):
-            logger.warning('Trying to load from IDX #' + str(n_idx) + ' > number of object ' + str(len(self)))
-            raise RuntimeError('Loading of too large int should be attempted. Problem in name cache. This should never happen!')
+            logger.warning(
+                'Trying to load from IDX #' + str(n_idx) +
+                ' > number of objects ' + str(len(self))
+            )
+            raise RuntimeError('Loading of too large int should be attempted. '
+                               'Problem in name cache. This should never happen!')
         elif n_idx < 0:
-            logger.warning('Trying to load negative IDX #' + str(n_idx) + ' < 0. This should never happen!!!')
-            raise RuntimeError('Loading of negative int should result in no object. This should never happen!')
+            logger.warning(
+                'Trying to load negative IDX #' + str(n_idx) + ' < 0. '
+                'This should never happen!!!'
+            )
+            raise RuntimeError(
+                'Loading of negative int should result in no object. This should never happen!'
+            )
         else:
             obj = self._load(n_idx)
 

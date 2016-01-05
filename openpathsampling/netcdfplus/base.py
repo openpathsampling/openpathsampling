@@ -189,6 +189,7 @@ class StorableNamedObject(StorableObject):
                 name, self._name))
         else:
             self._name = name
+            logger.debug('Nameable object is renamed from "%s" to "%s"' % (self._name, name))
 
     @property
     def is_named(self):
