@@ -435,11 +435,6 @@ class ObjectStore(StorableNamedObject):
         # define dimensions used for the specific object
         self.storage.createDimension(self.prefix, 0)
 
-        if self.has_name:
-            self.create_variable("name", 'str',
-                               description='A name',
-                               chunksizes=tuple([10240]))
-
         if self.json:
             self.create_variable("json", 'jsonobj',
                                description='A json serialized version of the object',
@@ -677,6 +672,17 @@ class NamedObjectStore(ObjectStore):
         self._names_loaded = False
         self._name_idx = dict()
 
+    def _init(self):
+        """
+        Initialize the associated storage to allow for object storage. Mainly
+        creates an index dimension with the name of the object.
+        """
+        super(NamedObjectStore, self)._init()
+
+        self.create_variable("name", 'str',
+                           description='A name',
+                           chunksizes=tuple([10240]))
+
     def add_single_to_cache(self, idx, json):
         """
         Add a single object to cache by json
@@ -866,7 +872,7 @@ class NamedObjectStore(ObjectStore):
             logger.debug("Nameable object has not been initialized correctly. Has None in _name")
             raise AttributeError('_name needs to be a string for nameable objects.')
 
-        n_idx = super(NamedObjectStore, self)._save(obj, idx=None)
+        n_idx = super(NamedObjectStore, self).save(obj, idx=None)
 
         obj.fix_name()
 
@@ -1079,18 +1085,14 @@ class VariableStore(ObjectStore):
 
 
 class DictStore(NamedObjectStore):
-    def __init__(self, immutable=True):
+    def __init__(self):
         super(DictStore, self).__init__(
             None,
             json=False
         )
 
-        self.immutable = immutable
-
     def to_dict(self):
-        return {
-            'immutable': self.immutable
-        }
+        return {}
 
     def _init(self):
         super(DictStore, self)._init()
@@ -1187,12 +1189,6 @@ class DictStore(NamedObjectStore):
             # key needs to be a string
             raise ValueError('Index "%s" for DictStore needs to be a string! ' % idx)
 
-        if idx in self.name_idx and self.immutable:
-            # immutable means no duplicates, so quit
-            raise RuntimeWarning(
-                    'Cannot re-save existing key "%s" in immutable dict store.' % idx
-            )
-
         n_idx = int(self.free())
         # make sure in nested saving that an IDX is not used twice!
         self.reserve_idx(n_idx)
@@ -1203,7 +1199,7 @@ class DictStore(NamedObjectStore):
         self.storage.variables[self.prefix + '_name'][n_idx] = idx
         self._update_name_in_cache(idx, n_idx)
 
-        return idx
+        return n_idx
 
     def keys(self):
         return self.name_idx.keys()
@@ -1220,3 +1216,30 @@ class DictStore(NamedObjectStore):
     def iteritems(self):
         for name in self:
             yield name, self[name]
+
+
+class ImmutableDictStore(DictStore):
+
+    def save(self, obj, idx=None):
+        """
+        Saves an object to the storage.
+
+        Parameters
+        ----------
+        obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            the object to be stored
+        idx : int or string or `None`
+            the index to be used for storing. This is highly discouraged since
+            it changes an immutable object (at least in the storage). It is
+            better to store also the new object and just ignore the
+            previously stored one.
+
+        """
+
+        if idx in self.name_idx:
+            # immutable means no duplicates, so quit
+            raise RuntimeWarning(
+                    'Cannot re-save existing key "%s" in immutable dict store.' % idx
+            )
+
+        return super(ImmutableDictStore, self).save(obj, idx)

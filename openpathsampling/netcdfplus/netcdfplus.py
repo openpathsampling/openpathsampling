@@ -8,7 +8,7 @@ init_log = logging.getLogger('openpathsampling.initialization')
 from dictify import StorableObjectJSON
 from proxy import LoaderProxy
 
-from objects import ObjectStore
+from objects import NamedObjectStore, ObjectStore
 
 import numpy as np
 import netCDF4
@@ -211,7 +211,7 @@ class NetCDFPlus(netCDF4.Dataset):
             self.create_dimension('scalar', 1)
 
             # create the store that holds stores
-            self.register_store('stores', ObjectStore(ObjectStore, has_name=True))
+            self.register_store('stores', NamedObjectStore(ObjectStore))
             self.stores._init()
             self.stores.set_caching(True)
             self.update_delegates()
@@ -232,7 +232,7 @@ class NetCDFPlus(netCDF4.Dataset):
             logger.debug("Restore the dict of units from the storage")
 
             # open the store that contains all stores
-            self.register_store('stores', ObjectStore(ObjectStore, has_name=True))
+            self.register_store('stores', NamedObjectStore(ObjectStore))
             self.stores.set_caching(True)
             self.create_variable_delegate('stores_json')
             self.create_variable_delegate('stores_name')
