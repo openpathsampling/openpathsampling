@@ -1175,7 +1175,7 @@ class DictStore(NamedObjectStore):
             # we want to load by name and it was not in cache.
             if idx not in self.name_idx:
                 logger.debug('Name "%s" not found in the storage!' % idx)
-                raise ValueError('str "' + idx + '" not found in storage')
+                raise KeyError('str "' + idx + '" not found in storage')
 
             if idx in self.name_idx:
                 if len(self.name_idx[idx]) > 1:
@@ -1262,14 +1262,17 @@ class DictStore(NamedObjectStore):
         return self.name_idx.iterkeys()
 
     def __iter__(self):
-        """
-        Add iteration over all names in this DictStore
-        """
         return self.iterkeys()
 
     def iteritems(self):
         for name in self:
             yield name, self[name]
+
+    def get(self, idx, default=None):
+        try:
+            return self.load(idx)
+        except KeyError:
+            return default
 
 
 class ImmutableDictStore(DictStore):
