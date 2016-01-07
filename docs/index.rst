@@ -43,7 +43,7 @@ Developing
 .. toctree::
    :maxdepth: 1
 
-   netcdf_format
+   netcdfplus/index
    api
 
 README
